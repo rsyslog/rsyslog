@@ -12,7 +12,7 @@ considered "stunning".
 
 Mailing List
 ============
-    http://lists.adiscon.net/mailman/listinfo/rsyslog
+http://lists.adiscon.net/mailman/listinfo/rsyslog
 
 Installing rsyslog
 ==================
@@ -24,7 +24,7 @@ Project-Provided Packages
 ----------------------------
 Unfortunately, distributions often do not catch up with the pace of rsyslog
 development and as such only offer old versions. To solve that problem, we have
-created packages for current versions ourselfs.
+created packages for current versions ourselves.
 
 They are available for:
  * RPM-based systems: http://www.rsyslog.com/rhelcentos-rpms/
@@ -33,8 +33,7 @@ They are available for:
 
 Building from Source
 --------------------
-Follow the instructions at:
-    http://www.rsyslog.com/doc/build_from_repo.html
+Follow the instructions at: http://www.rsyslog.com/doc/build_from_repo.html
 
 Reporting Bugs
 ==============
@@ -42,8 +41,7 @@ Reporting Bugs
 Talk to the mailing list if you think something is a bug. Often, it's just a
 matter of doing some config trickery.
 
-File bugs at:
-    http://bugzilla.adiscon.com/
+File bugs at: http://bugzilla.adiscon.com/
 
 How to Contribute
 =================
@@ -57,9 +55,7 @@ Documentation
 The main rsyslog documentation is available in HTML format. To read
 it, point your web browser to ./doc/manual.html. Alternatively,
 you can view the documentation for *the most recent rsyslog version*
-online at:
-
-    http://www.rsyslog.com/doc
+online at: http://www.rsyslog.com/doc
 
 Project Philosophy
 ==================
@@ -72,8 +68,7 @@ list discussion results. There is an active commuity around rsyslog.
 
 There is no such thing like being an official member of the rsyslog team. The
 closest to that is being subscribed to the mailing list:
-
-    http://lists.adiscon.net/mailman/listinfo/rsyslog
+http://lists.adiscon.net/mailman/listinfo/rsyslog
 
 This method of open discussions is modelled after the IETF process, which is
 probably the best-known and most successive collaborative standards body.
