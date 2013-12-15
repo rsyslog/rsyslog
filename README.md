@@ -1,4 +1,6 @@
 rsyslog-docs
 ============
 
-Rsyslog documentation
+Documentation for the rsyslog project
+=======
+
