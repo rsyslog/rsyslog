@@ -23,7 +23,13 @@ terminates, the program's stdin will see EOF. The program must than
 terminate. The message format passed to the program can, as usual, be
 modified by defining rsyslog templates.
 
-Note that each time an omprog action is defined, the corresponding
+Note that the pipe process used to send messages to the program is loss-less.
+That means if the program cannot read the pipe quickly enough, the OS
+blocks rsyslog. The OS never throws away any data. Once blocked, rsyslog
+configuration deals as usual with potential congestion. By default, data
+is queued until rsyslog queues get full.
+
+Also note that each time an omprog action is defined, the corresponding
 programm is invoked. A single instance is **not** being re-used. There
 are arguments pro and con re-using existing binaries. For the time
 being, it simply is not done. In the future, we may add an option for
