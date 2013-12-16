@@ -360,6 +360,12 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
+Version 7.4.8  [v7.4-stable] 2013-12-??
+- bugfix: immark did emit messages under kern.=info instead of syslog.=info
+  Note that his can potentially break exisiting configurations that
+  rely on immark sending as kern.=info. Unfortunately, we cannot leave
+  this unfixed as we never should emit messages under the kern facility.
+---------------------------------------------------------------------------
 Version 7.4.7  [v7.4-stable] 2013-12-10
 - bugfix: limiting queue disk space did not work properly
   * queue.maxdiskspace actually initializes queue.maxfilesize
