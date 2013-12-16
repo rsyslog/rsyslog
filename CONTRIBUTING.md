@@ -11,7 +11,7 @@ These are many ways to contribute to the project:
    * the rsyslog forums at http://kb.monitorware.com/rsyslog-f40.html
    * the rsyslog mailing list at http://lists.adiscon.net/mailman/listinfo/rsyslog
  * help with the documentation; you can either contribute
-   * to the rsyslog doc inside the project git
+   * to the [rsyslog doc directory](https://github.com/rsyslog/rsyslog/tree/master/doc), which is shown on http://rsyslog.com/doc
    * to the rsyslog project web site -- just ask us for account creation
    * on the rsyslog wiki at http://wiki.rsyslog.com/
  * become a bug-hunter and help with testing rsyslog development releases
