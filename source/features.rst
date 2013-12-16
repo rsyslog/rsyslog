@@ -38,7 +38,7 @@ Current Features
    fails, control is switched to a prioritized list of backups
 -  support for receiving messages via reliable `RFC
    3195 <http://www.monitorware.com/Common/en/glossary/rfc3195.php>`_
-   delivery (a bit clumpsy to build right now...)
+   delivery (a bit clumsy to build right now...)
 -  ability to generate file names and directories (log targets)
    dynamically, based on many different properties
 -  control of log output format, including ability to present channel
@@ -90,7 +90,7 @@ Current Features
 -  an easy-to-write to plugin interface
 -  ability to send SNMP trap messages
 -  ability to filter out messages based on sequence of arrival
--  support for comma-seperated-values (CSV) output generation (via the
+-  support for comma-separated-values (CSV) output generation (via the
    "csv" property replace option). The CSV format supported is that from
    RFC 4180.
 -  support for arbitrary complex boolean, string and arithmetic

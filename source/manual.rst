@@ -21,10 +21,9 @@ page <http://www.rsyslog.com/sponsors>`_ to honor the project sponsors
 or become one yourself!** We are very grateful for any help towards the
 project goals.
 
-**This documentation is for version 7.4.6 (v7.4-stable branch) of
-rsyslog.** Visit the *`rsyslog status
-page <http://www.rsyslog.com/status>`_* to obtain current version
-information and project status.
+**This documentation is for version 7.5.7 (devel branch) of rsyslog.**
+Visit the *`rsyslog status page <http://www.rsyslog.com/status>`_* to
+obtain current version information and project status.
 
 **If you like rsyslog, you might want to lend us a helping hand.**\ It
 doesn't require a lot of time - even a single mouse click helps. Learn

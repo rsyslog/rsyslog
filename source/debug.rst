@@ -30,7 +30,7 @@ Environment Variables
 There are two environment variables that set several debug settings:
 
 -  The "RSYSLOG\_DEBUGLOG" (sample:
-    RSYSLOG\_DEBUGLOG="/path/to/debuglog/") writes (allmost) all debug
+    RSYSLOG\_DEBUGLOG="/path/to/debuglog/") writes (almost) all debug
    message to the specified log file in addition to stdout. Some system
    messages (e.g. segfault or abort message) are not written to the file
    as we can not capture them.
@@ -177,7 +177,7 @@ about the current threads and their calling stack by sending SIGUSR2.
 However, the usefulness of that information is very much depending on
 rsyslog compile-time settings, must importantly the --enable-rtinst
 configure flag. Note that activating this option causes additional
-overhead and slows down rsyslgod considerable. So if you do that, you
+overhead and slows down rsyslogd considerable. So if you do that, you
 need to check if it is capable to handle the workload. Also, threading
 behavior is modified by the runtime instrumentation.
 
@@ -193,14 +193,14 @@ Interpreting the Logs
 
 Debug logs are primarily meant for rsyslog developers. But they may
 still provide valuable information to users. Just be warned that logs
-sometimes contains informaton the looks like an error, but actually is
+sometimes contains information the looks like an error, but actually is
 none. We put a lot of extra information into the logs, and there are
 some cases where it is OK for an error to happen, we just wanted to
 record it inside the log. The code handles many cases automatically. So,
 in short, the log may not make sense to you, but it (hopefully) makes
 sense to a developer. Note that we developers often need many lines of
 the log file, it is relatively rare that a problem can be diagnosed by
-looking at just a couple of (hundered) log records.
+looking at just a couple of (hundred) log records.
 
 Security Risks
 --------------
@@ -215,9 +215,10 @@ suggested to enable DebugOnDemand mode only for a reason. Note that when
 no debug mode is enabled, SIGUSR1 and SIGUSR2 are completely ignored.
 
 When running in any of the debug modes (including on demand mode), an
-interactive instance of rsyslogd can be aborted by pressing ctl-c.
+interactive instance of rsyslogd can be aborted by pressing ctrl-c.
 
-**See Also**
+See Also
+--------
 
 -  `How to use debug on
    demand <http://www.rsyslog.com/how-to-use-debug-on-demand/>`_
