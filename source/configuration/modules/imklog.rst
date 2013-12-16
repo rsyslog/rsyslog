@@ -1,7 +1,7 @@
 `back <rsyslog_conf_modules.html>`_
 
-Kernel Log Input Module
-=======================
+imklog: Kernel Log Input Module
+===============================
 
 **Module Name:    imklog**
 

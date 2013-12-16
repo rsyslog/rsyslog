@@ -30,6 +30,5 @@ migrating from syslogd to rsyslogd.
    nomatch
    filters
    examples
-   modules/output
-   modules/input
+   modules/index
    global/index

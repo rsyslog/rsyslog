@@ -1,7 +1,7 @@
-`back <rsyslog_conf_modules.html>`_
+:doc:`back <index>`
 
-RFC3195 Input Module
-====================
+im3195: RFC3195 Input Module
+============================
 
 **Module Name:    im3195**
 

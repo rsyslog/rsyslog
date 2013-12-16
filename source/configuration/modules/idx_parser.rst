@@ -9,7 +9,7 @@ message parser documentation <../messageparser>`.
 The current modules are currently provided as part of rsyslog:
 
 .. toctree::
-      :glob:
+   :glob:
 
    pm*
 

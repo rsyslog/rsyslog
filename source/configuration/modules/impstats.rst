@@ -1,7 +1,7 @@
 `back <rsyslog_conf_modules.html>`_
 
-Input Module to Generate Periodic Statistics of Internal Counters
-=================================================================
+impstats: Generate Periodic Statistics of Internal Counters
+===========================================================
 
 **Module Name:    impstats**
 

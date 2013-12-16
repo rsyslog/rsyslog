@@ -20,7 +20,7 @@ module's code is probably an excellent starting base for writing a new
 module. Currently, the following modules existin inside the source tree
 
 .. toctree::
-      :glob:
+   :glob:
 
    mm*
 

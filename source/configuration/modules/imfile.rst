@@ -1,7 +1,7 @@
 `back <rsyslog_conf_modules.html>`_
 
-Text File Input Module
-======================
+imfile: Text File Input Module
+==============================
 
 **Module Name:    imfile**
 

@@ -29,3 +29,4 @@ There exist different classes of loadable modules:
    idx_parser
    idx_messagemod
    idx_stringgen
+   workflow

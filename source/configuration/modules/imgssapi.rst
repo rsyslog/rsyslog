@@ -1,7 +1,7 @@
 `back <rsyslog_conf_modules.html>`_
 
-GSSAPI Syslog Input Module
-==========================
+imgssapi: GSSAPI Syslog Input Module
+====================================
 
 **Module Name:    imgssapi**
 

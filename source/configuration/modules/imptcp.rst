@@ -1,7 +1,7 @@
 `back <rsyslog_conf_modules.html>`_
 
-Plain TCP Syslog Input Module
-=============================
+imptcp: Plain TCP Syslog
+========================
 
 **Module Name:    imptcp**
 
