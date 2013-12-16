@@ -29,6 +29,9 @@ migrating from syslogd to rsyslogd.
    global_index
    nomatch
    filters
+   actions
+   templates
+   output_channels
    examples
    modules/index
    global/index

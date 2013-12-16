@@ -31,4 +31,6 @@ great config of yours does not even work a bit...;))
 .. toctree::
    :maxdepth: 3
 
+   queues
    configuration/index
+   development/index
