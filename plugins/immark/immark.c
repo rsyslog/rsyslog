@@ -193,7 +193,7 @@ CODESTARTrunInput
 			break; /* terminate input! */
 
 		dbgprintf("immark: injecting mark message\n");
-		logmsgInternal(NO_ERRCODE, LOG_INFO, (uchar*)"-- MARK --", MARK);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)"-- MARK --", MARK);
 	}
 ENDrunInput
 
