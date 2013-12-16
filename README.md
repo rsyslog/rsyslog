@@ -9,7 +9,7 @@ generation framework. This will be done in stages starting at the lowest used
 version of Rsyslog and then moving up as we go.
 
 Current Status -
-**_v5-stable_**
-**v7-stable**
-**v7-devel**
-**v8-devel**
+* **_v5-stable_**
+* v7-stable
+* v7-devel
+* v8-devel
