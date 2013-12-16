@@ -27,3 +27,8 @@ documentation <manual.html>`_ instead. When you change the
 configuration, remember to restart rsyslogd, because otherwise it will
 not use your new settings (and you'll end up totally puzzled why this
 great config of yours does not even work a bit...;))
+
+.. toctree::
+   :maxdepth: 3
+
+   configuration/index
