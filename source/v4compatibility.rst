@@ -87,8 +87,8 @@ require that a restart command is typed in if a restart is required.
 Rsyslog will follow this paradigm in the next versions, resulting in
 many benefits. In v4, we provide some support for the old-style
 semantics. We introduced a setting $HUPisRestart which may be set to
-"on" (tradional, heavy operation) or "off" (new, lightweight "file close
-only" operation). The initial versions had the default set to
+"on" (tradional, heavy operationg) or "off" (new, lightweight "file
+close only" operation). The initial versions had the default set to
 traditional behavior, but starting with 4.5.1 we are now using the new
 behavior as the default.
 

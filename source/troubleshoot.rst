@@ -120,25 +120,19 @@ some **consistent** meaningless value. **Do not delete the lines**, as
 this renders the debug log unusable (and makes Rainer quite angry for
 wasted time, aka significantly reduces the chance he will remain
 motivated to look at your problem ;)). For the same reason, make sure
-whatever you change is changed consistently. Really!
+whatever you change is change consistently. Really!
 
-While most debug log files are moderately large, some can get quite to
-extremly large. For those on the larger side, it is a good idea to zip
-them. If the file is less than around 100KiB, it's probably not
-necessary.
-
-A good place to post your debug log is at the `rsyslog support
-forums <http://kb.monitorware.com/rsyslog-f40.html>`_, together with
-your question. This also enables us to keep track of the case. The
-forums accept attachments in various common formats, but rejects others
-for security reasons. The zip, txt, and log extensions are definitely
-permitted, so it probably is a good idea to use one of them. For others,
-please simply try and revert to another format if the forum doesn't like
-what you used.
-
-Please note that all information in your debug file is publically
-visiable. If this is not acceptable for you, you are probably a
-candidate for a `commercial support
+Debug log file can get quite large. Before submitting them, it is a good
+idea to zip them. Rainer has handled files of around 1 to 2 GB. If
+your's is larger ask before submitting. Often, it is sufficient to
+submit the first 2,000 lines of the log file and around another 1,000
+around the area where you see a problem. Also, ask you can submit a file
+via private mail. Private mail is usually a good way to go for large
+files or files with sensitive content. However, do NOT send anything
+sensitive that you do not want the outside to be known. While Rainer so
+far made effort no to leak any sensitive information, there is no
+guarantee that doesn't happen. If you need a guarantee, you are probably
+a candidate for a `commercial support
 contract <professional_support.html>`_. Free support comes without any
 guarantees, include no guarantee on confidentiality [aka "we don't want
 to be sued for work were are not even paid for ;)]. **So if you submit
@@ -221,7 +215,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+ Copyright © 2008-2010 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

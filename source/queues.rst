@@ -512,11 +512,6 @@ needed to be cancelled due to too-long processing. For a large queue,
 this operation may be lengthy. No timeout applies to a required shutdown
 save.
 
-**See Also**
-
--  `Encrypted Disk
-   Queues <http://www.rsyslog.com/encrypted-disk-queues/>`_
-
 [`manual index <manual.html>`_\ ]
 [`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]

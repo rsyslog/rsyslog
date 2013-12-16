@@ -2,156 +2,14 @@ This is a part of the rsyslog.conf documentation.
 
 `back <rsyslog_conf.html>`_
 
-***Note: this documentation describes features present in v7+ of
-rsyslog. If you use an older version, scroll down to "legacy
-parameters".*** If you prefer, you can also `obtain a specific version
-of the rsyslog
-documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
-
 Actions
 -------
 
-Action object describe what is to be done with a message. They are
-implemented via `output modules <rsyslog_conf_modules.html#om>`_.
-
-The action object has different parameters:
-
--  those that apply to all actions and are action specific. These are
-   documented below.
--  parameters for the action queue. While they also apply to all
-   parameters, they are queue-specific, not action-specific (they are
-   the same that are used in rulesets, for example). The are documented
-   separately under `queue parameters <queue_parameters.html>`_.
--  action-specific parameters. These are specific to a certain type of
-   actions. They are documented by the `output
-   module <rsyslog_conf_modules.html#om>`_ in question.
-
-General Action Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
--  **name** word
-   used for statistics gathering and documentation
--  **type** string
-   Mandatory parameter for every action. The name of the module that
-   should be used.
--  **action.writeAllMarkMessages** on/off
-   Normally, mark messages are written to actions only if the action was
-   not recently executed (by default, recently means within the past 20
-   minutes). If this setting is switched to "on", mark messages are
-   always sent to actions, no matter how recently they have been
-   executed. In this mode, mark messages can be used as a kind of
-   heartbeat.
--  **action.execOnlyEveryNthTime** integer
-   If configured, the next action will only be executed every n-th time.
-   For example, if configured to 3, the first two messages that go into
-   the action will be dropped, the 3rd will actually cause the action to
-   execute, the 4th and 5th will be dropped, the 6th executed under the
-   action, ... and so on.
--  **action.execOnlyEveryNthTimeout** integer
-   Has a meaning only if Action.ExecOnlyEveryNthTime is also configured
-   for the same action. If so, the timeout setting specifies after which
-   period the counting of "previous actions" expires and a new action
-   count is begun. Specify 0 (the default) to disable timeouts. Why is
-   this option needed? Consider this case: a message comes in at, eg.,
-   10am. That's count 1. Then, nothing happens for the next 10 hours. At
-   8pm, the next one occurs. That's count 2. Another 5 hours later, the
-   next message occurs, bringing the total count to 3. Thus, this
-   message now triggers the rule. The question is if this is desired
-   behavior? Or should the rule only be triggered if the messages occur
-   within an e.g. 20 minute window? If the later is the case, you need a
-   Action.ExecOnlyEveryNthTimeTimeout="1200"
-   This directive will timeout previous messages seen if they are older
-   than 20 minutes. In the example above, the count would now be always
-   1 and consequently no rule would ever be triggered.
--  **action.execOnlyOnceEveryInterval** integer
-   Execute action only if the last execute is at last seconds in the
-   past (more info in ommail, but may be used with any action)
--  **action.execOnlyWhenPreviousIsSuspended** on/off
-   This directive allows to specify if actions should always be executed
-   ("off," the default) or only if the previous action is suspended
-   ("on"). This directive works hand-in-hand with the multiple actions
-   per selector feature. It can be used, for example, to create rules
-   that automatically switch destination servers or databases to a (set
-   of) backup(s), if the primary server fails. Note that this feature
-   depends on proper implementation of the suspend feature in the output
-   module. All built-in output modules properly support it (most
-   importantly the database write and the syslog message forwarder).
-    Note, however, that a failed action may not immediately be detected.
-   For more information, see the `rsyslog
-   execOnlyWhenPreviousIsSpuspended
-   preciseness <http://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
-   FAQ article.
--  **action.repeatedmsgcontainsoriginalmsg** on/off
-   "last message repeated n times" messages, if generated, have a
-   different format that contains the message that is being repeated.
-   Note that only the first "n" characters are included, with n to be at
-   least 80 characters, most probably more (this may change from version
-   to version, thus no specific limit is given). The bottom line is that
-   n is large enough to get a good idea which message was repeated but
-   it is not necessarily large enough for the whole message. (Introduced
-   with 4.1.5).
--  **action.resumeRetryCount** integer
-   [default 0, -1 means eternal]
--  **action.resumeInterval** integer
-   Sets the ActionResumeInterval for the action. The interval provided
-   is always in seconds. Thus, multiply by 60 if you need minutes and
-   3,600 if you need hours (not recommended). When an action is
-   suspended (e.g. destination can not be connected), the action is
-   resumed for the configured interval. Thereafter, it is retried. If
-   multiple retires fail, the interval is automatically extended. This
-   is to prevent excessive ressource use for retires. After each 10
-   retries, the interval is extended by itself. To be precise, the
-   actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
-   after the 10th try, it by default is 60 and after the 100th try it is
-   330.
-
-Useful Links
-------------
-
--  Rainer's blog posting on the performance of `main and action queue
-   worker
-   threads <http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
-
-Legacy Format
-=============
-
-**Be warned that legacy action format is hard to get right. It is
-recommended to use RainerScript-Style action format whenever possible!**
-A key problem with legacy format is that a single action is defined via
-multiple configurations lines, which may be spread all across
-rsyslog.conf. Even the definition of multiple actions may be intermixed
-(often not intentional!). If legacy actions format needs to be used
-(e.g. some modules may not yet implement the RainerScript format), it is
-strongly recommended to place all configuration statements pertaining to
-a single action closely together.
-
-Please also note that legacy action parameters **do not** affect
-RainerScript action objects. So if you define for example: ````
-
-::
-
-    $actionResumeRetryCount 10
-    action(type="omfwd" target="server1.example.net")
-    @@server2.example.net
-
-server1's "action.resumeRetryCount" parameter is **not** set, instead
-server2's is!
-
-A goal of the new RainerScript action format was to avoid confusion
-which parameters are actually used. As such, it would be
-counter-productive to honor legacy action parameters inside a
-RainerScript definition. As result, both types of action definitions are
-strictly (and nicely) separated from each other. The bottom line is that
-if RainerScript actions are used, one does not need to care about which
-legacy action parameters may (still...) be in effect.
-
-Note that not all modules necessarily support legacy action format.
-Especially newer modules are recommended to NOT support it.
-
-Legacy Description
-~~~~~~~~~~~~~~~~~~
-
-Templates can be used with many actions. If used, the specified template
+The action field of a rule describes what to do with the message. In
+general, message content is written to a kind of "logfile". But also
+other actions might be done, like writing to a database table or
+forwarding to another host.
+ Templates can be used with all actions. If used, the specified template
 is used to generate the message content (instead of the default
 template). To specify a template, write a semicolon after the action
 value immediately followed by the template name.
@@ -528,7 +386,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+ Copyright © 2008-2011 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 2 or higher.

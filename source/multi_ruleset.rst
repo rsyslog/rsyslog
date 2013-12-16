@@ -4,7 +4,7 @@ Multiple Rulesets in rsyslog
 Starting with version 4.5.0 and 5.1.1,
 `rsyslog <http://www.rsyslog.com>`_ supports multiple rulesets within a
 single configuration. This is especially useful for routing the
-reception of remote messages to a set of specific rules. Note that the
+recpetion of remote messages to a set of specific rules. Note that the
 input module must support binding to non-standard rulesets, so the
 functionality may not be available with all inputs.
 
@@ -40,7 +40,7 @@ processed, the config file parser looks for the directive
 
 ::
 
-    ruleset(name="rulesetname");
+    $RuleSet <name>
 
 Where name is any name the user likes (but must not start with
 "RSYSLOG\_", which is the name space reserved for rsyslog use). If it
@@ -49,7 +49,7 @@ know) or switches to an already-existing one (if the name was known).
 All rules defined between this $RuleSet directive and the next one are
 appended to the named ruleset. Note that the reserved name
 "RSYSLOG\_DefaultRuleset" is used to specify rsyslogd's default ruleset.
-You can use that name wherever you can use a ruleset name, including
+You can use that name whereever you can use a ruleset name, including
 when binding an input to it.
 
 Inside a ruleset, messages are processed as described above: they start
@@ -59,7 +59,7 @@ discard action is executed. Note that with multiple rulesets no longer
 **all** rsyslog.conf rules are executed but **only** those that are
 contained within the specific ruleset.
 
-Inputs must explicitly bind to rulesets. If they don't do, the default
+Inputs must explicitely bind to rulesets. If they don't do, the default
 ruleset is bound.
 
 This brings up the next question:
@@ -74,15 +74,15 @@ when a new message arrives, it will be processed via the bound ruleset.
 Rule from all other rulesets are irrelevant and will never be processed.
 
 This makes multiple rulesets very handy to process local and remote
-message via separate means: bind the respective receivers to different
-rule sets, and you do not need to separate the messages by any other
+message via seperate means: bind the respective receivers to different
+rule sets, and you do not need to seperate the messages by any other
 method.
 
-Binding to rulesets is input-specific. For imtcp, this is done via the
+Binding to rulesets is input-specifc. For imtcp, this is done via the
 
 ::
 
-    input(type="imptcp" port="514" ruleset="rulesetname");
+    $InputTCPServerBindRuleset <name>
 
 directive. Note that "name" must be the name of a ruleset that is
 already defined at the time the bind directive is given. There are many
@@ -95,7 +95,7 @@ doing things.
 Why are rulesets important for different parser configurations?
 ---------------------------------------------------------------
 
-Custom message parsers, used to handle different (and potentially
+Custom message parsers, used to handle differnet (and potentially
 otherwise-invalid) message formats, can be bound to rulesets. So
 multiple rulesets can be a very useful way to handle devices sending
 messages in different malformed formats in a consistent way.
@@ -152,12 +152,8 @@ discards it:
 
     # ... module loading ...
     # process remote messages
-    if $fromhost-ip == '192.168.152.137' then {
-            action(type="omfile" file="/var/log/remotefile02")
-            stop
-        }
-
-
+    :fromhost-ip, isequal, "192.0.2.1"    /var/log/remotefile
+    & ~
     # only messages not from 192.0.21 make it past this point
 
     # The authpriv file has restricted access.
@@ -170,8 +166,8 @@ discards it:
     *.emerg                               *
     ... more ...
 
-Note that "stop" is the discard action!. Also note that we assume that
-192.0.2.1 is the sole remote sender (to keep it simple).
+Note the tilde character, which is the discard action!. Also note that
+we assume that 192.0.2.1 is the sole remote sender (to keep it simple).
 
 With multiple rulesets, we can simply define a dedicated ruleset for the
 remote reception case and bind it to the receiver. This may be written
@@ -182,13 +178,66 @@ as follows:
     # ... module loading ...
     # process remote messages
     # define new ruleset and add rules to it:
-    ruleset(name="remote"){
-        action(type="omfile" file="/var/log/remotefile")
-    }
+    $RuleSet remote
+    *.*           /var/log/remotefile
     # only messages not from 192.0.21 make it past this point
 
-    # bind ruleset to tcp listener and activate it:
-    input(type="imptcp" port="10514" ruleset="remote")
+    # bind ruleset to tcp listener
+    $InputTCPServerBindRuleset remote
+    # and activate it:
+    $InputTCPServerRun 10514
+
+    # switch back to the default ruleset:
+    $RuleSet RSYSLOG_DefaultRuleset
+    # The authpriv file has restricted access.
+    authpriv.*    /var/log/secure
+    # Log all the mail messages in one place.
+    mail.*        /var/log/maillog
+    # Log cron stuff
+    cron.*        /var/log/cron
+    # Everybody gets emergency messages
+    *.emerg       *
+    ... more ...
+
+Here, we need to switch back to the default ruleset after we have
+defined our custom one. This is why I recommend a different ordering,
+which I find more intuitive. The sample below has it, and it leads to
+the same results:
+
+::
+
+    # ... module loading ...
+    # at first, this is a copy of the unmodified rsyslog.conf
+    # The authpriv file has restricted access.
+    authpriv.*    /var/log/secure
+    # Log all the mail messages in one place.
+    mail.*        /var/log/maillog
+    # Log cron stuff
+    cron.*        /var/log/cron
+    # Everybody gets emergency messages
+    *.emerg       *
+    ... more ...
+    # end of the "regular" rsyslog.conf. Now come the new definitions:
+
+    # process remote messages
+    # define new ruleset and add rules to it:
+    $RuleSet remote
+    *.*           /var/log/remotefile
+
+    # bind ruleset to tcp listener
+    $InputTCPServerBindRuleset remote
+    # and activate it:
+    $InputTCPServerRun 10514
+
+Here, we do not switch back to the default ruleset, because this is not
+needed as it is completely defined when we begin the "remote" ruleset.
+
+Now look at the examples and compare them to the single-ruleset
+solution. You will notice that we do **not** need a real filter in the
+multi-ruleset case: we can simply use "\*.\*" as all messages now means
+all messages that are being processed by this rule set and all of them
+come in via the TCP receiver! This is what makes using multiple rulesets
+so much easier.
 
 Split local and remote logging for three different ports
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,31 +259,47 @@ This is the config:
 ::
 
     # ... module loading ...
+    # at first, this is a copy of the unmodified rsyslog.conf
+    # The authpriv file has restricted access.
+    authpriv.* /var/log/secure
+    # Log all the mail messages in one place.
+    mail.*  /var/log/maillog
+    # Log cron stuff
+    cron.*  /var/log/cron
+    # Everybody gets emergency messages
+    *.emerg       *
+    ... more ...
+    # end of the "regular" rsyslog.conf. Now come the new definitions:
+
     # process remote messages
 
-    ruleset(name="remote10514"){
-        action(type="omfile" file="/var/log/remote10514")
-    }
+    #define rulesets first
+    $RuleSet remote10514
+    *.*     /var/log/remote10514
 
-    ruleset(name="remote10515"){
-        action(type="omfile" file="/var/log/remote10515")
-    }
+    $RuleSet remote10515
+    *.*     /var/log/remote10515
 
-    ruleset(name="test1"){
-        if prifilt("mail.*") then {
-            /var/log/mail10516
-            stop
-            # note that the stop-command will prevent this message from 
-            # being written to the remote10516 file - as usual...   
-        }
-        /var/log/remote10516
-    }
+    $RuleSet remote10516
+    mail.*  /var/log/mail10516
+    &       ~
+    # note that the discard-action will prevent this messag from 
+    # being written to the remote10516 file - as usual...
+    *.*     /var/log/remote10516
 
+    # and now define listners bound to the relevant ruleset
+    $InputTCPServerBindRuleset remote10514
+    $InputTCPServerRun 10514
 
-    # and now define listeners bound to the relevant ruleset
-    input(type="imptcp" port="10514" ruleset="remote10514")
-    input(type="imptcp" port="10515" ruleset="remote10515")
-    input(type="imptcp" port="10516" ruleset="remote10516")
+    $InputTCPServerBindRuleset remote10515
+    $InputTCPServerRun 10515
+
+    $InputTCPServerBindRuleset remote10516
+    $InputTCPServerRun 10516
+
+Note that the "mail.\*" rule inside the "remote10516" ruleset does not
+affect processing inside any other rule set, including the default rule
+set.
 
 Performance
 -----------
@@ -269,7 +334,7 @@ each of them wants to submit a newly arrived message into the queue at
 the same time, only one can do so while the others need to wait. With
 multiple rulesets, its own queue can be created for each ruleset. If now
 each listener is bound to its own ruleset, concurrent message submission
-is possible. On a machine with a sufficiently large number of cores,
+is possible. On a machine with a sufficiently large number of corse,
 this can result in dramatic performance improvement.
 
 It is highly advised that high-performance systems define a dedicated
@@ -279,6 +344,13 @@ By default, rulesets do **not** have their own queue. It must be
 activated via the
 `$RulesetCreateMainQueue <rsconf1_rulesetcreatemainqueue.html>`_
 directive.
+
+Future Enhancements
+~~~~~~~~~~~~~~~~~~~
+
+In the long term, multiple rule sets will probably lay the foundation
+for even better optimizations. So it is not a bad idea to get aquainted
+with them.
 
 [`manual index <manual.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]

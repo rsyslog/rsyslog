@@ -14,51 +14,33 @@ This module provides native support for logging to MySQL databases. It
 offers superior performance over the more generic
 `omlibdbi <omlibdbi.html>`_ module.
 
-**Action Parameters**:
+**Configuration Directives**:
 
--  **server**
-   Name or address of the MySQL server
--  **serverport**
+ommysql mostly uses the "old style" configuration, with almost
+everything on the action line itself. A few newer features are being
+migrated to the new style-config directive configuration system.
+
+-  **$ActionOmmysqlServerPort <port>**
    Permits to select a non-standard port for the MySQL server. The
    default is 0, which means the system default port is used. There is
-   no need to specify this parameter unless you know the server is
+   no need to specify this directive unless you know the server is
    running on a non-standard listen port.
--  **db**
-   Database to use
--  **uid**
-   logon userid used to connect to server. Must have proper permissions.
--  **pwd**
-   the user's password
--  **template**
-   Template to use when submitting messages.
--  **mysqlconfig.file**
+-  **$OmMySQLConfigFile <file name>**
    Permits the selection of an optional MySQL Client Library
    configuration file (my.cnf) for extended configuration functionality.
    The use of this configuration directive is necessary only if you have
    a non-standard environment or if fine-grained control over the
    database connection is desired.
--  **mysqlconfig.section**
+-  **$OmMySQLConfigSection <string>**
    Permits the selection of the section within the configuration file
-   specified by the **myselconfig.file** parameter.
+   specified by the **$OmMySQLConfigFile** directive.
    This will likely only be used where the database administrator
    provides a single configuration file with multiple profiles.
-   This configuration parameter is ignored unless **mysqlconfig.file**
-   is also used.
+   This configuration directive is ignored unless **$OmMySQLConfigFile**
+   is also used in the rsyslog configration file.
    If omitted, the MySQL Client Library default of "client" will be
    used.
-
-**Legacy (pre-v6) Configuration Directives**:
-
-ommysql mostly uses the "very old style" (v0) configuration, with almost
-everything on the action line itself.
-
--  **$ActionOmmysqlServerPort <port>** - like the "serverport" action
-   parameter.
--  **$OmMySQLConfigFile <file name>** - like the "mysqlconfig.file"
-   action parameter.
--  **$OmMySQLConfigSection <string>** - like the "mysqlconfig.file"
-   action parameter.
--  Action line:
+-  Action parameters:
    **:ommysql:database-server,database-name,database-userid,database-password**
    All parameters should be filled in for a successful connect.
 
@@ -87,13 +69,6 @@ The following sample writes all syslog messages to the database
 "syslog\_db" on mysqlsever.example.com. The server is being accessed
 under the account of "user" with password "pwd".
 
-$ModLoad ommysql \*.\* action(type="ommysql"
-server="mysqlserver.example.com" serverport="1234" db="syslog\_db"
-uid="user" pwd="pwd")
-
-**Legacy Sample:**
-
-The same as above, but in legacy config format (pre rsyslog-v6):
 $ModLoad ommysql $ActionOmmysqlServerPort 1234 # use non-standard port
 \*.\*      :ommysql:mysqlserver.example.com,syslog\_db,user,pwd
 
@@ -102,6 +77,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2012 by `Rainer
+ Copyright © 2008, 2009 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.

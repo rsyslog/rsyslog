@@ -17,7 +17,7 @@ as messages emitted via syslog() are received from a single source.
 
 This module obeys the Solaris door() mechanism to detect a running
 syslogd instance. As such, only one can be active at one time. If it
-detects another active instance at startup, the module disables itself,
+detects another active intance at startup, the module disables itself,
 but rsyslog will continue to run.
 
 **Configuration Directives**:

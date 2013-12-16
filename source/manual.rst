@@ -11,9 +11,9 @@ quite compatible to stock sysklogd and can be used as a drop-in
 replacement. Its `advanced features <features.html>`_ make it suitable
 for enterprise-class, `encryption protected syslog <rsyslog_tls.html>`_
 relay chains while at the same time being very easy to setup for the
-novice user. And as we know what enterprise users really need, there are
-also `rsyslog professional
-services <http://www.rsyslog.com/professional-services>`_ available
+novice user. And as we know what enterprise users really need, there is
+also `professional rsyslog
+support <http://www.rsyslog.com/professional-services>`_ available
 directly from the source!
 
 **Please visit the `rsyslog sponsor's
@@ -21,7 +21,7 @@ page <http://www.rsyslog.com/sponsors>`_ to honor the project sponsors
 or become one yourself!** We are very grateful for any help towards the
 project goals.
 
-**This documentation is for version 7.5.7 (devel branch) of rsyslog.**
+**This documentation is for version 5.10.1 (stable branch) of rsyslog.**
 Visit the *`rsyslog status page <http://www.rsyslog.com/status>`_* to
 obtain current version information and project status.
 
@@ -34,11 +34,8 @@ syslog-ng <rsyslog_ng_comparison.html>`_.
 If you are upgrading from rsyslog v2 or stock sysklogd, `be sure to read
 the rsyslog v3 compatibility notes <v3compatibility.html>`_, and if you
 are upgrading from v3, read the `rsyslog v4 compatibility
-notes <v4compatibility.html>`_, if you upgrade from v4, read the
-`rsyslog v5 compatibility notes <v5compatibility.html>`_, and if you
-upgrade from v5, read the `rsyslog v6 compatibility
-notes <v6compatibility.html>`_. if you upgrade from v6, read the
-`rsyslog v7 compatibility notes <v7compatibility.html>`_.
+notes <v4compatibility.html>`_ and if you upgrade from v4, read the
+`rsyslog v5 compatibility notes <v5compatibility.html>`_.
 
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.
@@ -46,7 +43,7 @@ definitely improve your experience.
 **Follow the links below for the**
 
 -  `troubleshooting rsyslog problems <troubleshoot.html>`_
--  `configuration file format (rsyslog.conf) <rsyslog_conf.html>`_
+-  `configuration file syntax (rsyslog.conf) <rsyslog_conf.html>`_
 -  `a regular expression checker/generator tool for
    rsyslog <http://www.rsyslog.com/tool-regex>`_
 -  `property replacer, an important core

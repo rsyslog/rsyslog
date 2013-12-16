@@ -29,7 +29,7 @@ In 5.3.4, we changed that: message parsers are now loadable modules
 parsers can be added without modifying the rsyslog core, even without
 contributing something back to the project.
 
-But that doesn't answer what a message parser really is. What does it
+But that doesn't answer what a message parser really is. What does ist
 mean to "parse a message" and, maybe more importantly, what is a
 message? To answer these questions correctly, we need to dig down into
 the relevant standards. `RFC5424 <http://tools.ietf.org/html/rfc5424>`_
@@ -68,20 +68,20 @@ parser could undo that.
 A typical example may be a multi-line message: let's assume some
 originator has generated a message for the format "A\\nB" (where \\n
 means LF). If that message is being transmitted via plain tcp syslog,
-the frame delimiter is LF. So the sender will delimit the frame with LF,
-but otherwise send the message unmodified onto the wire (because that is
-how things are -unfortunately- done in plain tcp syslog...). So wire
-will see "A\\nB\\n". When this arrives at the receiver, the transport
-layer will undo the framing. When it sees the LF after A, it thinks it
-finds a valid frame delimiter (in fact, this is the correct view!). So
-the receive will extract one complete message A and one complete message
-B, not knowing that they once were both part of a large multi-line
-message. These two messages are then passed to the upper layers, where
-the message parsers receive them and extract information. However, the
-message parsers never know (or even have a chance to see) that A and B
-belonged together. Even further, in rsyslog there is no guarantee that A
-will be parsed before B - concurrent operations may cause the reverse
-order (and do so very validly).
+the frame delimiter is LF. So the sender will delimite the frame with
+LF, but otherwise send the message unmodified onto the wire (because
+that is how things are -unfortunately- done in plain tcp syslog...). So
+wire will see "A\\nB\\n". When this arrives at the receiver, the
+transport layer will undo the framing. When it sees the LF after A, it
+thinks it finds a valid frame delimiter (in fact, this is the correct
+view!). So the receive will extract one complete message A and one
+complete message B, not knowing that they once were both part of a large
+multi-line message. These two messages are then passed to the upper
+layers, where the message parsers receive them and extract information.
+However, the message parsers never know (or even have a chance to see)
+that A and B belonged together. Even further, in rsyslog there is no
+guarnatee that A will be parsed before B - concurrent operations may
+cause the reverse order (and do so very validly).
 
 The important lesson is: **message parsers can not be used to fix a
 broken framing**. You need a full protocol implementation to do that,
@@ -102,10 +102,10 @@ messages well-looking.
 **This is what message parsers permit you to do: take a (well-known)
 malformed message, parse it according to its semantics and generate
 perfectly valid internal message representations from it.** So as long
-as messages are consistently in the same wrong format (and they usually
+as messages are consistenly in the same wrong format (and they usually
 are!), a message parser can look at that format, parse it, and make the
-message processable just like it were well formed in the first place.
-Plus, one can abuse the interface to do some other "interesting" tricks,
+message processable just like it were wellformed in the first place.
+Plus, one can abuse the interface to do some other "intersting" tricks,
 but that would take us to far.
 
 While this functionality may not sound exciting, it actually solves a
@@ -159,19 +159,19 @@ already supports this.
 
 The position inside the parser chain can be thought of as a priority:
 parser sitting earlier in the chain take precedence over those sitting
-later in it. So more specific parser should go earlier in the chain. A
+later in it. So more specific parser should go ealier in the chain. A
 good example of how this works is the default parser set provided by
 rsyslog: rsyslog.rfc5424 and rsyslog.rfc3164, each one parses according
 to the rfc that has named it. RFC5424 was designed to be distinguishable
 from RFC3164 message by the sequence "1 " immediately after the
 so-called PRI-part (don't worry about these words, it is sufficient if
-you understand there is a well-defined sequence used to identify RFC5424
-messages). In contrary, RFC3164 actually permits everything as a valid
-message. Thus the RFC3164 parser will always parse a message, sometimes
-with quite unexpected outcome (there is a lot of guesswork involved in
-that parser, which unfortunately is unavoidable due to existing
-technology limits). So the default parser chain is to try the RFC5424
-parser first and after it the RFC3164 parser. If we have a
+you understand there is a well-defined sequence used to indentify
+RFC5424 messages). In contrary, RFC3164 actually permits everything as a
+valid message. Thus the RFC3164 parser will always parse a message,
+sometimes with quite unexpected outcome (there is a lot of guesswork
+involved in that parser, which unfortunately is unavoidable due to
+existing techology limits). So the default parser chain is to try the
+RFC5424 parser first and after it the RFC3164 parser. If we have a
 5424-formatted message, that parser will identify and parse it and the
 rsyslog engine will stop processing. But if we receive a legacy syslog
 message, the RFC5424 will detect that it can not parse it, return this
@@ -195,7 +195,7 @@ message, but only in the first 1,000 incidents. This limit is a safety
 measure against message-loops, which otherwise could quickly result from
 a parser chain misconfiguration. **If you do not tolerate loss of
 unparsable messages, you must ensure that each message can be parsed.**
-You can easily achieve this by always using the "rsyslog-rfc3164" parser
+You can easily achive this by always using the "rsyslog-rfc3164" parser
 as the *last* parser inside parser chains. That may result in invalid
 parsing, but you will have a chance to see the invalid message (in debug
 mode, a warning message will be written to the debug log each time a
@@ -205,10 +205,10 @@ Where are parser chains used?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We now know what parser chains are and how they operate. The question is
-now how many parser chains can be active and how it is decided which
+now how many parser chains can be active and how it is decicded which
 parser chain is used on which message. This is controlled via `rsyslog's
 rulesets <multi_ruleset.html>`_. In short, multiple rulesets can be
-defined and there always exist at least one ruleset (for specifics,
+defined and there always exist at least one ruleset (for specifcs,
 follow the `link <multi_ruleset.html>`_). A parser chain is bound to a
 specific ruleset. This is done by virtue of defining parsers via the
 `$RulesetParser <rsconf1_rulesetparser.html>`_ configuration directive
@@ -229,7 +229,7 @@ The correct answer is: generally yes, but it depends. First of all,
 remember that input modules (and specific listeners) may be bound to
 specific rulesets. As parser chains "reside" in rulesets, binding to a
 ruleset also binds to the parser chain that is bound to that ruleset. As
-a number one prerequisite, the input module must support binding to
+a number one prequisite, the input module must support binding to
 different rulesets. Not all do, but their number is growing. For
 example, the important `imudp <imudp.html>`_ and `imtcp <imtcp.html>`_
 input modules support that functionality. Those that do not (for example
@@ -238,7 +238,7 @@ parser chain defined in that ruleset.
 
 If you do not know if the input module in question supports ruleset
 binding, check its documentation page. Those that support it have the
-required directives.
+requiered directives.
 
 Note that it is currently under evaluation if rsyslog will support
 binding parser chains to specific inputs directly, without depending on
@@ -248,11 +248,11 @@ not be possible in the future. In any case, if we decide to add it,
 input modules need to support it, so this functionality would require
 some time to implement.
 
-The cookbook recipe for using different parsers for different devices is
-given as an actual in-depth example in the
+The coockbook recipe for using different parsers for different devices
+is given as an actual in-depth example in the
 `$RulesetParser <rscon1_rulesetsparser.html>`_ configuration directive
-doc page. In short, it is accomplished by defining specific rulesets for
-the required parser chains, defining different listener ports for each
+doc page. In short, it is acomplished by defining specific rulesets for
+the required parser chains, definining different listener ports for each
 of the devices with different format and binding these listeners to the
 correct ruleset (and thus parser chains). Using that approach, a variety
 of different message formats can be supported via a single rsyslog
@@ -264,18 +264,18 @@ Which message parsers are available
 As of this writing, there exist only two message parsers, one for
 RFC5424 format and one for legacy syslog (loosely described in
 `RFC3164 <http://tools.ietf.org/html/rfc3164>`_). These parsers are
-built-in and must not be explicitly loaded. However, message parsers can
-be added with relative ease by anyone knowing to code in C. Then, they
-can be loaded via $ModLoad just like any other loadable module. It is
-expected that the rsyslog project will be contributed additional message
-parsers over time, so that at some point there hopefully is a rich
-choice of them (I intend to add a browsable repository as soon as new
-parsers pop up).
+built-in and must not be explicitely loaded. However, message parsers
+can be added with relative ease by anyone knowing to code in C. Then,
+they can be loaded via $ModLoad just like any other loadable module. It
+is expected that the rsyslog project will be contributed additional
+message parsers over time, so that at some point there hopefully is a
+rich choice of them (I intend to add a browsable repository as soon as
+new parsers pop up).
 
 How to write a message parser?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As a prerequisite, you need to know the exact format that the device is
+As a prequisite, you need to know the exact format that the device is
 sending. Then, you need moderate C coding skills, and a little bit of
 rsyslog internals. I guess the rsyslog specific part should not be that
 hard, as almost all information can be gained from the existing parsers.
@@ -283,8 +283,8 @@ They are rather simple in structure and can be found under the "./tools"
 directory. They are named pmrfc3164.c and pmrfc5424.c. You need to
 follow the usual loadable module guidelines. It is my expectation that
 writing a parser should typically not take longer than a single day,
-with maybe a day more to get acquainted with rsyslog. Of course, I am
-not sure if the number is actually right.
+with maybe a day more to get aquainted with rsyslog. Of course, I am not
+sure if the number is actually right.
 
 If you can not program or have no time to do it, Adiscon can also write
 a message parser for you as part of the `rsyslog professional services
@@ -300,7 +300,7 @@ they all convert message information into rsyslog's well-defined
 internal format. Message parsers were first introduced in rsyslog 5.3.4
 and also offer some interesting ideas that may be explored in the future
 - up to full message normalization capabilities. It is strongly
-recommended that anyone with a heterogeneous environment take a look at
+recommended that anyone with a heterogenous environment take a look at
 message parser capabilities.
 
 [`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual

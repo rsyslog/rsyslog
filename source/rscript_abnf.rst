@@ -24,57 +24,7 @@ Below is the formal language definitionin ABNF (RFC 2234) format:
 
 ::
 
-    ; all of this is a working document and may change! -- rgerhards, 2008-02-24
-
-    script    := *stmt
-    stmt      := (if_stmt / block / vardef / run_s / load_s)
-    vardef    := "var" ["scope" = ("global" / "event")] 
-    block     := "begin" stmt "end"
-    load_s    := "load" constraint ("module") modpath params ; load mod only if expr is true
-    run_s     := "run" constraint ("input") name
-    constraint:= "if" expr ; constrains some one-time commands
-    modpath   := expr
-    params    := ["params" *1param *("," param) "endparams"]
-    param     := paramname) "=" expr
-    paramname := [*(obqualifier ".") name]
-    modpath:= ; path to module
-    ?line? := cfsysline / cfli
-    cfsysline:= BOL "$" *char EOL ; how to handle the first line? (no EOL in front!)
-    BOL := ; Begin of Line - implicitely set on file beginning and after each EOL
-    EOL := 0x0a ;LF
-    if_stmt := "if" expr "then"
-    old_filter:= BOL facility "." severity ; no whitespace allowed between BOL and facility!
-    facility := "*" / "auth" / "authpriv" / "cron" / "daemon" / "kern" / "lpr" / 
-    "mail" / "mark" / "news" / "security" / "syslog" / "user" / "uucp" / 
-    "local0" .. "local7" / "mark"
-    ; The keyword security should not be used anymore
-    ; mark is just internal
-    severity := TBD ; not really relevant in this context
-
-    ; and now the actual expression
-    expr := e_and *("or" e_and)
-    e_and := e_cmp *("and" e_cmp)
-    e_cmp := val 0*1(cmp_op val)
-    val := term *(("+" / "-" / "&") term)
-    term := factor *(("*" / "/" / "%") factor)
-    factor := ["not"] ["-"] terminal
-    terminal := var / constant / function / ( "(" expr ")" )
-    function := name "(" *("," expr) ")"
-    var := "$" varname
-    varname := msgvar / sysvar / ceevar
-    msgvar := name
-    ceevar := "!" name
-    sysvar := "$" name
-    name := alpha *(alnum)
-    constant := string / number
-    string := simpstr / tplstr ; tplstr will be implemented in next phase
-    simpstr := "'" *char "'" ; use your imagination for char ;)
-    tplstr := '"' template '"' ; not initially implemented
-    number := ["-"] 1*digit ; 0nn = octal, 0xnn = hex, nn = decimal
-    cmp_op := "==" / "!=" / "<>" / "<" / ">" / "<=" / ">=" / "contains" / "contains_i" / "startswith" / "startswith_i"
-    digit := %x30-39
-    alpha := "a" ... "z" # all letters
-    alnum :* alpha / digit / "_" /"-" # "-" necessary to cover currently-existing message properties
+    ; all of this is a working document and may change! -- rgerhards, 2008-02-24script    := *stmtstmt      := (if_stmt / block / vardef / run_s / load_s)vardef    := "var" ["scope" = ("global" / "event")] block     := "begin" stmt "end"load_s    := "load" constraint ("module") modpath params ; load mod only if expr is truerun_s     := "run" constraint ("input") nameconstraint:= "if" expr ; constrains some one-time commandsmodpath   := exprparams    := ["params" *1param *("," param) "endparams"]param     := paramname) "=" exprparamname := [*(obqualifier ".") name]modpath:= ; path to module?line? := cfsysline / cflicfsysline:= BOL "$" *char EOL ; how to handle the first line? (no EOL in front!)BOL := ; Begin of Line - implicitely set on file beginning and after each EOLEOL := 0x0a ;LFif_stmt := "if" expr "then"old_filter:= BOL facility "." severity ; no whitespace allowed between BOL and facility!facility := "*" / "auth" / "authpriv" / "cron" / "daemon" / "kern" / "lpr" /  "mail" / "mark" / "news" / "security" / "syslog" / "user" / "uucp" /  "local0" .. "local7" / "mark" ; The keyword security should not be used anymore   ; mark is just internalseverity := TBD ; not really relevant in this context; and now the actual expressionexpr := e_and *("or" e_and)e_and := e_cmp *("and" e_cmp)e_cmp := val 0*1(cmp_op val)val := term *(("+" / "-" / "&") term)term := factor *(("*" / "/" / "%") factor)factor := ["not"] ["-"] terminalterminal := var / constant / function / ( "(" expr ")" )function := name "(" *("," expr) ")"var := "$" varnamevarname := msgvar / sysvarmsgvar := namesysvar := "$" namename := alpha *(alnum)constant := string / numberstring := simpstr / tplstr ; tplstr will be implemented in next phasesimpstr := "'" *char "'" ; use your imagination for char ;)tplstr := '"' template '"' ; not initially implementednumber := ["-"] 1*digit ; 0nn = octal, 0xnn = hex, nn = decimalcmp_op := "==" / "!=" / "<>" / "<" / ">" / "<=" / ">=" / "contains" / "contains_i" / "startswith" / "startswith_i"digit := %x30-39alpha := "a" ... "z" # all lettersalnum :* alpha / digit / "_" /"-" # "-" necessary to cover currently-existing message properties
 
 Samples
 -------

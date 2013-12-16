@@ -5,10 +5,10 @@ UDP spoofing output module (omudpspoof)
 
 **Module Name:    omstdout**
 
-**Authors:**\ Rainer Gerhards <rgerhards@adiscon.com> and David Lang
-<david@lang.hm>
+**Author:**\ David Lang <david@lang.hm> and Rainer Gerhards
+<rgerhards@adiscon.com>
 
-**Available Since**: 5.1.3 / v7 config since 7.2.5
+**Available Since**: 5.1.3
 
 **Description**:
 
@@ -16,27 +16,9 @@ This module is similar to the regular UDP forwarder, but permits to
 spoof the sender address. Also, it enables to circle through a number of
 source ports.
 
-**Important:** This module requires root priveleges for its low-level
-socket access. As such, the **module will not work if rsyslog is
-configured to drop privileges**.
+**Configuration Directives**:
 
-**load() Parameters**:
-
--  **Template**\ [templateName]
-    sets a non-standard default template for this module.
-
- 
-
-**action() parameters**:
-
--  **Target**\ string
-    Name or IP-Address of the system that shall receive messages. Any
-   resolvable name is fine.
--  **Port**\ [Integer, Default 514]
-    Name or numerical value of port to use when connecting to target.
--  **Template**\ [Word]
-    Template to use as message text.
--  **SourceTemplate**\ [Word]
+-  **$ActionOMOMUDPSpoofSourceNameTemplate** <templatename>
     This is the name of the template that contains a numerical IP
    address that is to be used as the source system IP address. While it
    may often be a constant value, it can be generated as usual via the
@@ -44,114 +26,31 @@ configured to drop privileges**.
    specified, the build-in default template
    RSYSLOG\_omudpspoofDfltSourceTpl is used. This template is defined as
    follows:
-    template(name="RSYSLOG\_omudpspoofDfltSourceTpl" type="string"
-   string="%fromhost-ip%")
+    $template RSYSLOG\_omudpspoofDfltSourceTpl,"%fromhost-ip%"
     So in essence, the default template spoofs the address of the system
    the message was received from. This is considered the most important
    use case.
--  **SourcePortStart**\ [Word]
+-  **$ActionOMUDPSpoofTargetHost** <hostname>
+    Host that the messages shall be sent to.
+-  **$ActionOMUDPSpoofTargetPort** <port>
+    Remote port that the messages shall be sent to.
+-  **$ActionOMUDPSpoofDefaultTemplate** <templatename>
+    This setting instructs omudpspoof to use a template different from
+   the default template for all of its actions that do not have a
+   template specified explicitely.
+-  **$ActionOMUDPSpoofSourcePortStart** <number>
     Specifies the start value for circeling the source ports. Must be
    less than or equal to the end value. Default is 32000.
--  **SourcePortEnd**\ [Word]
+-  **$ActionOMUDPSpoofSourcePortEnd** <number>
     Specifies the ending value for circeling the source ports. Must be
    less than or equal to the start value. Default is 42000.
--  **mtu**\ [Integer, default 1500]
-    Maximum MTU supported by the network. Default respects Ethernet and
-   must usually not be adjusted. Setting a too-high MTU can lead to
-   message loss, too low to excess message fragmentation. Change only if
-   you really know what you are doing. This is always given in number of
-   bytes.
-
-**pre-v7 Configuration Directives**:
-
--  **$ActionOMOMUDPSpoofSourceNameTemplate** <templatename> - equivalent
-   to the "sourceTemplate" parameter.
--  **$ActionOMUDPSpoofTargetHost** <hostname> - equivalent to the
-   "target" parameter.
--  **$ActionOMUDPSpoofTargetPort** <port> - equivalent to the "target"
-   parameter.
--  **$ActionOMUDPSpoofDefaultTemplate** <templatename> - equivalent to
-   the "template" load() parameter.
--  **$ActionOMUDPSpoofSourcePortStart** <number> - equivalent to the
-   "SourcePortStart" parameter.
--  **$ActionOMUDPSpoofSourcePortEnd** <number> - equivalent to the
-   "SourcePortEnd" parameter.
 
 **Caveats/Known Bugs:**
 
 -  **IPv6** is currently not supported. If you need this capability,
    please let us know via the rsyslog mailing list.
--  Versions shipped prior to rsyslog 7.2.5 do not support message sizes
-   over 1472 bytes (more pricesely: over the network-supported MTU).
-   Starting with 7.2.5, those messages will be fragmented, up to a total
-   upper limit of 64K (induced by UDP). Message sizes over 64K will be
-   truncated. For older versions, messages over 1472 may be totally
-   discarded or truncated, depending on version and environment.
 
-**Config Samples**
-
-The following sample forwards all syslog messages in standard form to
-the remote server server.example.com. The original sender's address is
-used. We do not care about the source port. This example is considered
-the typical use case for omudpspoof.
-
-module(load="omudpspoof") action(type="omudpspoof"
-target="server.example.com")
-
-The following sample forwards all syslog messages in unmodified form to
-the remote server server.example.com. The sender address 192.0.2.1 with
-fixed source port 514 is used.
-
-module(load="omudpspoof") template(name="spoofaddr" type="string"
-string="192.0.2.1") template(name="spooftemplate" type="string"
-string="%rawmsg%") action(type="omudpspoof" target="server.example.com"
-sourcetemplate="spoofaddr" template="spooftemplate"
-sourceport.start="514" sourceport.end="514)
-
-The following sample is exatly like the previous, but it specifies a
-larger size MTU. If, for example, the envrionment supports Jumbo
-Ethernet frames, increasing the MTU is useful as it reduces packet
-fragmentation, which most often is the source of problems. Note that
-setting the MTU to a value larger than the local-attached network
-supports will lead to send errors and loss of message. So use with care!
-
-module(load="omudpspoof") template(name="spoofaddr" type="string"
-string="192.0.2.1") template(name="spooftemplate" type="string"
-string="%rawmsg%") action(type="omudpspoof" target="server.example.com"
-sourcetemplate="spoofaddr" template="spooftemplate"
-sourceport.start="514" sourceport.end="514 mtu="8000")
-
-Of course, the action can be combined with any type of filter, for
-example a tradition PRI filter:
-
-module(load="omudpspoof") template(name="spoofaddr" type="string"
-string="192.0.2.1") template(name="spooftemplate" type="string"
-string="%rawmsg%") local0.\* action(type="omudpspoof"
-target="server.example.com" sourcetemplate="spoofaddr"
-template="spooftemplate" sourceport.start="514" sourceport.end="514
-mtu="8000")
-
-... or any complex expression-based filter:
-
-module(load="omudpspoof") template(name="spoofaddr" type="string"
-string="192.0.2.1") template(name="spooftemplate" type="string"
-string="%rawmsg%") if prifilt("local0.\*") and $msg contains "error"
-then action(type="omudpspoof" target="server.example.com"
-sourcetemplate="spoofaddr" template="spooftemplate"
-sourceport.start="514" sourceport.end="514 mtu="8000")
-
-and of course it can also be combined with as many other actions as one
-likes:
-
-module(load="omudpspoof") template(name="spoofaddr" type="string"
-string="192.0.2.1") template(name="spooftemplate" type="string"
-string="%rawmsg%") if prifilt("local0.\*") and $msg contains "error"
-then { action(type="omudpspoof" target="server.example.com"
-sourcetemplate="spoofaddr" template="spooftemplate"
-sourceport.start="514" sourceport.end="514 mtu="8000")
-action(type="omfile" file="/var/log/somelog") stop # or whatever... }
-
-**Legacy Sample (pre-v7):**
+**Sample:**
 
 The following sample forwards all syslog messages in standard form to
 the remote server server.example.com. The original sender's address is

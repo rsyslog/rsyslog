@@ -55,54 +55,30 @@ plugin (as omlibdbi is). So in short, you probably save you a lot of
 headache if you make sure you have at least libdbi version 0.8.3 on your
 system.
 
-**Module Parameters**
+**Configuration Directives**:
 
--  **template**
-    The default template to use. This template is used when no template
-   is explicitely specified in the action() statement.
--  **driverdirectory**
-    Path to the libdbi drivers. Usually, you do not need to set it. If
-   you installed libdbi-drivers at a non-standard location, you may need
-   to specify the directory here. If you are unsure, do **not** use this
-   configuration directive. Usually, everything works just fine. Note
-   that this was an action() paramter in rsyslog versions below 7.3.0.
-   However, only the first action's driverdirectory parameter was
-   actually used. This has been cleaned up in 7.3.0, where this now is a
-   module paramter.
-
-**Action Parameters**
-
--  **server**
-   Name or address of the MySQL server
--  **db**
-   Database to use
--  **uid**
-   logon userid used to connect to server. Must have proper permissions.
--  **pwd**
-   the user's password
--  **template**
-   Template to use when submitting messages.
--  **driver**
+-  $ActionLibdbiDriverDirectory /path/to/dbd/drivers
+   This is a global setting. It points libdbi to its driver directory.
+   Usually, you do not need to set it. If you installed libdbi-driver's
+   at a non-standard location, you may need to specify the directory
+   here. If you are unsure, do not use this configuration directive.
+   Usually, everything works just fine.\ ****
+-  **$ActionLibdbiDriver drivername**
     Name of the dbidriver to use, see libdbi-drivers documentation. As a
    quick excerpt, at least those were available at the time of this
    writiting "mysql" (suggest to use ommysql instead), "firebird"
    (Firbird and InterBase), "ingres", "msql", "Oracle", "sqlite",
    "sqlite3", "freetds" (for Microsoft SQL and Sybase) and "pgsql"
    (suggest to use ompgsql instead).
-
-**Legacy (pre-v6) Configuration Directives**:
-
-It is strongly recommended NOT to use legacy format.
-
--  *$ActionLibdbiDriverDirectory /path/to/dbd/drivers* - like the
-   driverdirectory action parameter.
--  *$ActionLibdbiDriver drivername* - like the drivername action
-   parameter
--  *$ActionLibdbiHost hostname* - like the server action parameter
--  *$ActionLibdbiUserName user* - like the uid action parameter
--  *$ActionlibdbiPassword* - like the pwd action parameter
--  *$ActionlibdbiDBName db* - like the db action parameter
--  *selector line: :omlibdbi:``;template``*
+-  $ActionLibdbiHost hostname
+    The host to connect to.
+-  $ActionLibdbiUserName user
+    The user used to connect to the database.
+-  $ActionlibdbiPassword
+    That user's password.
+-  $ActionlibdbiDBName db
+    The database that shall be written to.
+-  selector line: :omlibdbi:;template
     executes the recently configured omlibdbi action. The ;template part
    is optional. If no template is provided, a default template is used
    (which is currently optimized for MySQL - sorry, folks...)
@@ -137,12 +113,6 @@ The following sample writes all syslog messages to the database
 accessed under the account of "user" with password "pwd" (if you have
 empty passwords, just remove the $ActionLibdbiPassword line).
 
-module(load="omlibdbi") \*.\* action(type="omlibdbi" driver="mysql"
-server="mysqlserver.example.com" db="syslog\_db" uid="user" pwd="pwd"
-
-**Legacy Sample:**
-
-The same as above, but in legacy config format (pre rsyslog-v6):
 $ModLoad omlibdbi $ActionLibdbiDriver mysql $ActionLibdbiHost
 mysqlserver.example.com $ActionLibdbiUserName user $ActionLibdbiPassword
 pwd $ActionLibdbiDBName syslog\_db \*.\* :omlibdbi:
@@ -152,6 +122,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2012 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.
+ Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
+version 3 or higher.

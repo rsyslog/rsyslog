@@ -5,82 +5,41 @@ This is a part of the rsyslog.conf documentation.
 Filter Conditions
 -----------------
 
-Rsyslog offers three different types "filter conditions":
+Rsyslog offers four different types "filter conditions":
 
--  `RainerScript <http://www.rainerscript.com/>`_-based filters
+-  BSD-style blocks
 -  "traditional" severity and facility based selectors
 -  property-based filters
+-  expression-based filters
 
-RainerScript-Based Filters
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Blocks
+~~~~~~
 
-RainerScript based filters are the prime means of creating complex
-rsyslog configuration. The permit filtering on arbitrary complex
-expressions, which can include boolean, arithmetic and string
-operations. They also support full nesting of filters, just as you know
-from other scripting environments.
- Scripts based filters are indicated by the keyword "if", as usual. They
-have this format:
- if expr then block else block
- "If" and "then" are fixed keywords that mus be present. "expr" is a
-(potentially quite complex) expression. So the `expression
-documentation <expression.html>`_ for details. The keyword "else" and
-its associated block is optional. Note that a block can contain either a
-single action (chain), or an arbitrary complex script enclosed in curly
-braces, e.g.:
+Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of
+lines is separated from the previous block by a program or hostname
+specification. A block will only log messages corresponding to the most
+recent program and hostname specifications given. Thus, a block which
+selects ‘ppp’ as the program, directly followed by a block that selects
+messages from the hostname ‘dialhost’, then the second block will only
+log messages from the ppp program on dialhost.
 
-::
+A program specification is a line beginning with ‘!prog’ and the
+following blocks will be associated with calls to syslog from that
+specific program. A program specification for ‘foo’ will also match any
+message logged by the kernel with the prefix ‘foo: ’. Alternatively, a
+program specification ‘-foo’ causes the following blocks to be applied
+to messages from any program but the one specified. A hostname
+specification of the form ‘+hostname’ and the following blocks will be
+applied to messages received from the specified hostname. Alternatively,
+a hostname specification ‘-hostname’ causes the following blocks to be
+applied to messages from any host but the one specified. If the hostname
+is given as ‘@’, the local hostname will be used. (NOT YET IMPLEMENTED)
+A program or hostname specification may be reset by giving the program
+or hostname as ‘\*’.
 
-    if $programname == 'prog1' then {
-       action(type="omfile" file="/var/log/prog1.log")
-       if $msg contains 'test' then
-         action(type="omfile" file="/var/log/prog1test.log")
-       else
-         action(type="omfile" file="/var/log/prog1notest.log")
-    }
-
- Other types of filtes can also be combined with the pure RainerScript
-ones. This makes it particularly easy to migrate from early config files
-to RainerScript. Also, the traditional syslog PRI-based filters are a
-good and easy to use addition. While they are legacy, we still recommend
-there use where they are up to the job. We do NOT, however, recommend
-property-based filters any longer. As an example, the following is
-perfectly valid:
-
-::
-
-    if $fromhost == 'host1' then {
-       mail.* action(type="omfile" file="/var/log/host1/mail.log")
-       *.err /var/log/host1/errlog # this is also still valid
-       # 
-       # more "old-style rules" ...
-       #
-    } else {
-       mail.* action(type="omfile" file="/var/log/mail.log")
-       *.err /var/log/errlog
-       # 
-       # more "old-style rules" ...
-       #
-    }
-
- Right now, you need to specify numerical values if you would like to
-check for facilities and severity. These can be found in `RFC
-3164 <http://www.ietf.org/rfc/rfc3164.txt>`_. If you don't like that,
-you can of course also use the textual property - just be sure to use
-the right one. As expression support is enhanced, this will change. For
-example, if you would like to filter on message that have facility
-local0, start with "DEVNAME" and have either "error1" or "error0" in
-their message content, you could use the following filter:
-
-`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
- Please note that the above must all be on one line! And if you would
-like to store all messages except those that contain "error1" or
-"error0", you just need to add a "not":
-
-`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and not ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
- If you would like to do case-insensitive comparisons, use "contains\_i"
-instead of "contains" and "startswith\_i" instead of "startswith".
- Regular expressions are supported via functions (see function list).
+Please note that the "#!prog", "#+hostname" and "#-hostname" syntax
+available in BSD syslogd is not supported by rsyslogd. By default, no
+hostname or program is set.
 
 Selectors
 ~~~~~~~~~
@@ -167,12 +126,6 @@ contains
 Checks if the string provided in value is contained in the property.
 There must be an exact match, wildcards are not supported.
 
-isempty
-
-Checks if the property is empty. The value is discarded. This is
-especially useful when working with normalized data, where some fields
-may be populated based on normalization result. Available since 6.6.2.
-
 isequal
 
 Compares the "value" string provided and the property contents. These
@@ -192,16 +145,9 @@ value. For example, if you search for "val" with
 it will be a match if msg contains "values are in this message" but it
 won't match if the msg contains "There are values in this message" (in
 the later case, contains would match). Please note that "startswith" is
-by far faster than regular expressions. So it makes very much sense
-(performance-wise) to use "startswith".
-
-Note: when processing syslog messages, please note that $msg usually
-starts with a space. The reason for this is RFC3164. Please read the
-`detail
-description <http://www.rsyslog.com/log-normalization-and-the-leading-space/>`_
-of what that means to you. In short, you need to make sure that you
-include the first space if you use "startswith", otherwise you will not
-get matches.
+by far faster than regular expressions. So even once they are
+implemented, it can make very much sense (performance-wise) to use
+"startswith".
 
 regex
 
@@ -275,10 +221,50 @@ for "not" as outlined above). Please note that while it is possible to
 query facility and severity via property-based filters, it is far more
 advisable to use classic selectors (see above) for those cases.
 
-**See Also**
+Expression-Based Filters
+~~~~~~~~~~~~~~~~~~~~~~~~
 
--  `Filter optimization with
-   arrays <http://www.rsyslog.com/filter-optimization-with-arrays/>`_
+Expression based filters allow filtering on arbitrary complex
+expressions, which can include boolean, arithmetic and string
+operations. Expression filters will evolve into a full configuration
+scripting language. Unfortunately, their syntax will slightly change
+during that process. So if you use them now, you need to be prepared to
+change your configuration files some time later. However, we try to
+implement the scripting facility as soon as possible (also in respect to
+stage work needed). So the window of exposure is probably not too long.
+ Expression based filters are indicated by the keyword "if" in column 1
+of a new line. They have this format:
+ if expr then action-part-of-selector-line
+ "If" and "then" are fixed keywords that mus be present. "expr" is a
+(potentially quite complex) expression. So the `expression
+documentation <expression.html>`_ for details.
+"action-part-of-selector-line" is an action, just as you know it (e.g.
+"/var/log/logfile" to write to that file).
+ A few quick samples:
+
+`` *.* /var/log/file1 # the traditional way if $msg contains 'error' then /var/log/errlog # the expression-based way``
+ Right now, you need to specify numerical values if you would like to
+check for facilities and severity. These can be found in `RFC
+3164 <http://www.ietf.org/rfc/rfc3164.txt>`_. If you don't like that,
+you can of course also use the textual property - just be sure to use
+the right one. As expression support is enhanced, this will change. For
+example, if you would like to filter on message that have facility
+local0, start with "DEVNAME" and have either "error1" or "error0" in
+their message content, you could use the following filter:
+
+`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
+ Please note that the above must all be on one line! And if you would
+like to store all messages except those that contain "error1" or
+"error0", you just need to add a "not":
+
+`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and not ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
+ If you would like to do case-insensitive comparisons, use "contains\_i"
+instead of "contains" and "startswith\_i" instead of "startswith".
+ Note that regular expressions are currently NOT supported in
+expression-based filters. These will be added later when function
+support is added to the expression engine (the reason is that regular
+expressions will be a separate loadable module, which requires some more
+prequisites before it can be implemented).
 
 [`manual index <manual.html>`_\ ]
 [`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog

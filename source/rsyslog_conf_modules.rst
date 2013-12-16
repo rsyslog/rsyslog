@@ -40,7 +40,7 @@ interface to message generators.
 
 -  `imfile <imfile.html>`_ -  input module for text files
 -  `imrelp <imrelp.html>`_ - RELP input module
--  `imudp <imudp.html>`_ - udp syslog message input
+-  imudp - udp syslog message input
 -  `imtcp <imtcp.html>`_ - input plugin for tcp syslog
 -  `imptcp <imptcp.html>`_ - input plugin for plain tcp syslog (no TLS
    but faster)
@@ -55,7 +55,6 @@ interface to message generators.
 -  `im3195 <im3195.html>`_ - accepts syslog messages via RFC 3195
 -  `impstats <impstats.html>`_ - provides periodic statistics of rsyslog
    internal counters
--  `imjournal <imjournal.html>`_ - Linux journal inuput module
 
 Output Modules
 --------------
@@ -63,11 +62,6 @@ Output Modules
 Output modules process messages. With them, message formats can be
 transformed and messages be transmitted to various different targets.
 
--  `omfile <omfile.html>`_ - file output module
--  `omfwd <omfwd.html>`_ - syslog forwarding output module
--  `omjournal <omjournal.html>`_ - Linux journal output module
--  `ompipe <ompipe.html>`_ - named pipe output module
--  `omusrmsg <omusrmsg.html>`_ - user message output module
 -  `omsnmp <omsnmp.html>`_ - SNMP trap output module
 -  `omtdout <omstdout.html>`_ - stdout output module (mainly a test
    tool)
@@ -88,9 +82,6 @@ transformed and messages be transmitted to various different targets.
    messages with a spoofed address
 -  `omuxsock <omuxsock.html>`_ - output module Unix domain sockets
 -  `omhdfs <omhdfs.html>`_ - output module for Hadoop's HDFS file system
--  `ommongodb <ommongodb.html>`_ - output module for MongoDB
--  `omelasticsearch <omelasticsearch.html>`_ - output module for
-   ElasticSearch
 
 Parser Modules
 --------------
@@ -122,36 +113,21 @@ or the parser module interface. From the rsyslog core's point of view,
 they actually are output or parser modules, it is their implementation
 that makes them special.
 
-Currently, there exists only a limited set of such modules, but new ones
-could be written with the methods the engine provides. They could be
-used, for example, to add dynamically computed content to message
-(fields).
+Currently, there do not exist any such modules, but could be written
+with the methods the engine provides. They could be used, for example,
+to:
+
+-  anonymize message content
+-  add dynamically computed content to message (fields)
 
 Message modification modules are usually written for one specific task
 and thus usually are not generic enough to be reused. However, existing
 module's code is probably an excellent starting base for writing a new
-module. Currently, the following modules exist inside the source tree:
+module. Currently, the following modules existin inside the source tree
 
--  `mmanon <mmanon.html>`_ - used to anonymize log messages.
--  `mmcount <mmcount.html>`_ - message modification plugin which counts
-   messages
--  `mmfields <mmfields.html>`_ - used to extract fields from specially
-   formatted messages (e.g. CEF)
--  `mmnormalize <mmnormalize.html>`_ - used to normalize log messages.
-   Note that this actually is a **generic** module.
--  `mmjsonparse <mmjsonparse.html>`_ - used to interpret CEE/lumberjack
-   enabled structured log messages.
--  `mmpstrucdata <mmpstrucdata.html>`_ - used to parse RFC5424
-   structured data into json message properties
 -  `mmsnmptrapd <mmsnmptrapd.html>`_ - uses information provided by
    snmptrapd inside the tag to correct the original sender system and
    priority of messages. Implemented via the output module interface.
--  `mmutf8fix <mmutf8fix.html>`_ - used to fix invalid UTF-8 character
-   sequences
--  `mmrfc5424addhmac <mmrfc5424addhmac.html>`_ - custom module for
-   adding HMACs to rfc5424-formatted messages if not already present
--  `mmsequence <mmsequence.html>`_ - sequence generator and counter
-   plugin
 
 String Generator Modules
 ------------------------
@@ -241,7 +217,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+ Copyright © 2008-2010 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

@@ -37,80 +37,6 @@ concatenate them, use the concatenation operator &).  However, all type
 conversions are automatically done by the script interpreter when there
 is need to do so.
 
-Constant Strings
-~~~~~~~~~~~~~~~~
-
-String constants are necessary in many places: comparisons,
-configuration parameter values and function arguments, to name a few
-important ones.
-
-In constant strings, special characters are escape by prepending a
-backslash in front of them -- just in the same way this is done in the C
-programming language or PHP.
-
-If in doubt how to properly escape, use the `RainerScript String Escape
-Online
-Tool <http://www.rsyslog.com/rainerscript-constant-string-escaper/>`_.
-
-Variable (Property) types
--------------------------
-
-All rsyslog properties (see the `property
-replacer <property_replacer.html>`_ page for a list) can be used in
-RainerScript. In addition, it also supports local variables. Local
-variables are local to the current message, but are NOT message
-properties (e.g. the "$!" all JSON property does not contain them).
-
-Only message json (CEE/Lumberjack) properties can be modified by the
-"set" and "unset" statements, not any other message property. Obviously,
-local variables are also modifieable.
-
-Message JSON property names start with "$!" where the bang character
-represents the root.
-
-Local variables names start with "$.", where the dot denotes the root.
-
-Both JSON properties as well as local variables may contain an arbitrary
-deep path before the final element. The bang character is always used as
-path separator, no matter if it is a message property or a local
-variable. For example "$!path1!path2!varname" is a three-level deep
-message property where as the very similar looking
-"$.path1!path2!varname" specifies a three-level deep local variable. The
-bang or dot character immediately following the dollar sign is used by
-rsyslog to separate the different types.
-
-configuration objects
----------------------
-
-main\_queue()
-~~~~~~~~~~~~~
-
-*This object is available since 7.5.3.* This permits to specify
-parameters for the main message queue. Note that only
-`queue-parameters <queue_parameters.html>`_ are permitted for this
-config object. This permits to set the same options like in ruleset and
-action queues. A special statement is needed for the main queue, because
-it is a different object and cannot be configured via any other object.
-
-Note that when the main\_queue() object is configured, the legacy
-$MainMsgQ... statements are ignored.
-
-Example:
-
-main\_queue(queue.size="100000" queue.type="LinkedList")
-
-action()
-~~~~~~~~
-
-The `action <rsyslog_conf_actions.html>`_ object is the primary means of
-describing actions to be carried out.
-
-global()
-~~~~~~~~
-
-This is used to set global configuration parameters. For details, please
-see the `rsyslog global configuration object <global.html>`_.
-
 Expressions
 -----------
 
@@ -137,13 +63,6 @@ should be tested as "a <> b". The "not" operator should be reserved to
 cases where it actually is needed to form a complex boolean expression.
 In those cases, parenthesis are highly recommended.
 
-Lookup Tables
--------------
-
-`Lookup tables <lookup_tables.html>`_ are a powerful construct to obtain
-"class" information based on message content (e.g. to build log file
-names for different server types, departments or remote offices).
-
 Functions
 ---------
 
@@ -153,40 +72,6 @@ RainerScript supports a currently quite limited set of functions:
    variable, if it exists. Returns an empty string if it does not exist.
 -  strlen(str) - returns the length of the provided string
 -  tolower(str) - converts the provided string into lowercase
--  cstr(expr) - converts expr to a string value
--  cnum(expr) - converts expr to a number (integer)
--  re\_match(expr, re) - returns 1, if expr matches re, 0 otherwise
--  re\_extract(expr, re, match, submatch, no-found) - extracts data from
-   a string (property) via a regular expression match. POSIX ERE regular
-   expressions are used. The variable "match" contains the number of the
-   match to use. This permits to pick up more than the first expression
-   match. Submatch is the submatch to match (max 50 supported). The
-   "no-found" parameter specifies which string is to be returned in case
-   when the regular expression is not found. Note that match and
-   submatch start with zero. It currently is not possible to extract
-   more than one submatch with a single call.
--  field(str, delim, matchnbr) - returns a field-based substring. str is
-   the string to search, delim is the delimiter and matchnbr is the
-   match to search for (the first match starts at 1). This works similar
-   as the field based property-replacer option. Versions prior to 7.3.7
-   only support a single character as delimiter character. Starting with
-   version 7.3.7, a full string can be used as delimiter. If a single
-   character is being used as delimiter, delim is the numerical ascii
-   value of the field delimiter character (so that non-printable
-   characters can by specified). If a string is used as delmiter, a
-   multi-character string (e.g. "#011") is to be specified. Samples:
-    set $!usr!field = field($msg, 32, 3); -- the third field, delimited
-   by space
-    set $!usr!field = field($msg, "#011", 3); -- the third field,
-   delmited by "#011"
-    Note that when a single character is specified as string
-   [field($msg, ",", 3)] a string-based extraction is done, which is
-   more performance intense than the equivalent single-character
-   [field($msg, 44 ,3)] extraction.
--  prifilt(constant) - mimics a traditional PRI-based filter (like
-   "\*.\*" or "mail.info"). The traditional filter string must be given
-   as a **constant string**. Dynamic string evaluation is not permitted
-   (for performance reasons).
 
 The following example can be used to build a dynamic filter based on
 some environment variable:
@@ -200,7 +85,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+ Copyright © 2008, 2009 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

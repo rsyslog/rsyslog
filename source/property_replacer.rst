@@ -17,7 +17,7 @@ Syslog message properties are used inside templates. They are accessed
 by putting them between percent signs. Properties can be modified by the
 property replacer. The full syntax is as follows:
 
-    **``%propname:fromChar:toChar:options:fieldname%``**
+    **``%propname:fromChar:toChar:options%``**
 
 Available Properties
 --------------------
@@ -70,7 +70,8 @@ PRI part of the message - undecoded (single value)
 
 **pri-text**
 
-the PRI part of the message in textual form (e.g. "syslog.info")
+the PRI part of the message in a textual form with the numerical PRI
+appended in brackes (e.g. "local0.err<133>")
 
 **iut**
 
@@ -141,25 +142,6 @@ draft-ietf-syslog-protocol
 The contents of the MSGID field from IETF draft
 draft-ietf-syslog-protocol
 
-**parsesuccess**
-
-This returns the status of the **last** called higher level parser, like
-mmjsonparse. A higher level parser parses the actual message for
-additional structured data and maintains an extra property table while
-doing so (this is often referred to as "cee data" because the idea was
-originally rooted in the cee effort, only (but has been extended since
-then). Note that higher level parsers must explicitely support (and set)
-this property. So, depending on the parser, it may not be set correctly.
-If the parser properly supports it, the value "OK" means that parsing
-was successfull, while "FAIL" means the parser could not successfully
-obtain any data. Failure state is not necessarily an error. For example,
-it may simple indicate that the cee-enhanced syslog parser (mmjsonparse)
-did not detect cee-enhanced format, what can be totally valid. Using
-this property, further processing of the message can be directed based
-on this parsing outcome. If no parser has been called at the time this
-property is accessed, it will contain "FAIL".
-**This property is available since version 6.3.8.**
-
 **inputname**
 
 The name of the input module that generated the message (e.g.
@@ -179,10 +161,6 @@ different place than messages generated somewhere.
 The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
 templates for RFC5424 support, when the character set is know to be
 Unicode.
-
-**$uptime**
-
-system-uptime in seconds (as reported by operating system).
 
 **$now**
 
@@ -223,25 +201,11 @@ The current minute (2-digit)
 The name of the current host as it knows itself (probably useful for
 filtering in a generic way)
 
-**$!<name>**
-
-This is the "bridge" to syslog message normalization (via
-`mmnormalize <mmnormalize.html>`_): name is a name defined inside the
-normalization rule. It has the value selected by the rule or none if no
-rule with this field did match. You can also use these properties to
-specify JSON fields from the CEE-enhanced syslog message, once you parse
-it with `mmjsonparse <mmjsonparse.html>`_
-
-**$!all-json**
-
-This is the JSON part of the CEE-enhanced syslog message, which can be
-parsed with `mmjsonparse <mmjsonparse.html>`_
-
 Properties starting with a $-sign are so-called system properties. These
 do NOT stem from the message but are rather internally-generated.
 
-Legacy Character Positions
---------------------------
+Character Positions
+-------------------
 
 **``FromChar``** and **``toChar``** are used to build substrings. They
 specify the offset within the string that should be copied. Offset
@@ -322,6 +286,17 @@ the "ToChar" parameter. An example where the 3rd field (delimited by
 TAB) from the msg property is extracted is as follows: "%msg:F:3%". The
 same example with semicolon as delimiter is "%msg:F,59:3%".
 
+The use of fields does not permit to select substrings, what is rather
+unfortunate. To solve this issue, starting with 6.3.9, fromPos and toPos
+can be specified for strings as well. However, the syntax is quite ugly,
+but it was the only way to integrate this functonality into the
+already-existing system. To do so, use ",fromPos" and ",toPos" during
+field extraction. Let's assume you want to extract the substring from
+position 5 to 9 in the previous example. Then, the syntax is as follows:
+"%msg:F,59,5:3,9%". As you can see, "F,59" means field-mode, with
+semicolon delimiter and ",5" means starting at position 5. Then "3,9"
+means field 3 and string extraction to position 9.
+
 Please note that the special characters "F" and "R" are case-sensitive.
 Only upper case works, lower case will return an error. There are no
 white spaces permitted inside the sequence (that will lead to error
@@ -356,243 +331,6 @@ modeled after perl compatible regular expressions.
 Property Options
 ----------------
 
-**``property options``** are case-insensitive. They are available as of
-version 6.5.0. Currently, the following options are defined:
-
-**Name**
-
-New format. Name of the template / property / constant.
-
-**Outname**
-
-This field permits to specify a field name for structured-data emitting
-property replacer options. It is most useful to set, for example, the
-name for JSON-based fields (like used in ommngodb). For text-based
-modules, it is simply ignored. If not specified, the original property
-name is used, with the exception of properties starting with "$!", where
-that prefix is removed. Note that unnamaned constants are NOT forwarded
-to output modules that expect structure (like ommnogodb). To pass
-constants, an outname must be set.
-
-**CaseConversion**
-
-New format. Additional values below.
-
-upper
-
-convert property to lowercase only
-
-lower
-
-convert property text to uppercase only
-
-**DateFormat**
-
-New format, additional parameter is needed. See below.
-
-mysql
-
-format as mysql date
-
-pgsql
-
-format as pgsql date
-
-rfc3164
-
-format as RFC 3164 date
-
-rfc3164-buggyday
-
-similar to date-rfc3164, but emulates a common coding error: RFC 3164
-demands that a space is written for single-digit days. With this option,
-a zero is written instead. This format seems to be used by syslog-ng and
-the date-rfc3164-buggyday option can be used in migration scenarios
-where otherwise lots of scripts would need to be adjusted. It is
-recommended *not* to use this option when forwarding to remote hosts -
-they may treat the date as invalid (especially when parsing strictly
-according to RFC 3164).
-
-*This feature was introduced in rsyslog 4.6.2 and v4 versions above and
-5.5.3 and all versions above.*
-
-rfc3339
-
-format as RFC 3339 date
-
-unixtimestamp
-
-format as unix timestamp (seconds since epoch)
-
-subseconds
-
-just the subseconds of a timestamp (always 0 for a low precision
-timestamp)
-
-pos-end-relative
-
-the from and to position is relative to the end of the string instead of
-the usual start of string. (available since rsyslog v7.3.10)
-
-**ControlCharacters**
-
-Option values for how to process control characters
-
-escape
-
-replace control characters (ASCII value 127 and values less then 32)
-with an escape sequence. The sequnce is "#<charval>" where charval is
-the 3-digit decimal value of the control character. For example, a
-tabulator would be replaced by "#009".
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
-
-space
-
-replace control characters by spaces
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
-
-drop
-
-drop control characters - the resulting string will neither contain
-control characters, escape sequences nor any other replacement character
-like space.
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
-
-**SecurePath**
-
-Option values for securing path templates.
-
-drop
-
-Drops slashes inside the field (e.g. "a/b" becomes "ab"). Useful for
-secure pathname generation (with dynafiles).
-
-replace
-
-Replace slashes inside the field by an underscore. (e.g. "a/b" becomes
-"a\_b"). Useful for secure pathname generation (with dynafiles).
-
-**Format**
-
-Option values for the general output format.
-
-json
-
-encode the value so that it can be used inside a JSON field. This means
-that several characters (according to the JSON spec) are being escaped,
-for example US-ASCII LF is replaced by "\\n". The json option cannot be
-used together with either jsonf or csv options.
-
-jsonf
-
-*(available in 6.3.9+)* This signifies that the property should be
-expressed as a json **f**\ ield. That means not only the property is
-written, but rather a complete json field in the format
- "fieldname"="value" where "filedname" is the assigend field name (or
-the property name if none was assigned) and value is the end result of
-property replacer operation. Note that value supports all property
-replacer options, like substrings, case converson and the like. Values
-are properly json-escaped. However, field names are (currently) not. It
-is expected that proper field names are configured. The jsonf option
-cannot be used together with either json or csv options.
-
-csv
-
-formats the resulting field (after all modifications) in CSV format as
-specified in `RFC 4180 <http://www.ietf.org/rfc/rfc4180.txt>`_. Rsyslog
-will always use double quotes. Note that in order to have full
-CSV-formatted text, you need to define a proper template. An example is
-this one:
-$template csvline,"%syslogtag:::csv%,%msg:::csv%"
-Most importantly, you need to provide the commas between the fields
-inside the template. The csv option cannot be used together with either
-json or jsonf options.
-*This feature was introduced in rsyslog 4.1.6.*
-
-**droplastlf**
-
-The last LF in the message (if any), is dropped. Especially useful for
-PIX.
-
-**spifno1stsp**
-
-This option looks scary and should probably not be used by a user. For
-any field given, it returns either a single space character or no
-character at all. Field content is never returned. A space is returned
-if (and only if) the first character of the field's content is NOT a
-space. This option is kind of a hack to solve a problem rooted in RFC
-3164: 3164 specifies no delimiter between the syslog tag sequence and
-the actual message text. Almost all implementation in fact delemit the
-two by a space. As of RFC 3164, this space is part of the message text
-itself. This leads to a problem when building the message (e.g. when
-writing to disk or forwarding). Should a delimiting space be included if
-the message does not start with one? If not, the tag is immediately
-followed by another non-space character, which can lead some log parsers
-to misinterpret what is the tag and what the message. The problem
-finally surfaced when the klog module was restructured and the tag
-correctly written. It exists with other message sources, too. The
-solution was the introduction of this special property replacer option.
-Now, the default template can contain a conditional space, which exists
-only if the message does not start with one. While this does not solve
-all issues, it should work good enough in the far majority of all cases.
-If you read this text and have no idea of what it is talking about -
-relax: this is a good indication you will never need this option. Simply
-forget about it ;)
-
-**New character position**
-
-In addition to the above mentioned Character Positions in the legacy
-format, positions can be determined by specifying the correct options
-for the properties. Again, this is mostly for using the list format.
-
-position.From
-
-Character position in the property to start from.
-
-position.To
-
-Character position that determines the end for extraction. If the value
-is "$" then the end of the string will be used.
-
-field.Number
-
-The number of the field, which should be used for the search operation
-with Regex.
-
-field.Delimiter
-
-The Character that should delimit a field. Example: ",". Everything in a
-property until this character is considered a field.
-
-regex.Expression
-
-Value to be compared to property.
-
-regex.Type
-
-Values BRE or ERE
-
-regex.NoMatchMode
-
-DFLT, BLANK, ZERO, FIELD
-
-regex.Match
-
-Match to use.
-
-regex.Submatch
-
-Submatch to use. Values 0-9 whereas 0 = All
-
-Legacy Property Options
------------------------
-
 **``property options``** are case-insensitive. Currently, the following
 options are defined:
 
@@ -604,26 +342,6 @@ convert property to lowercase only
 
 convert property text to uppercase only
 
-**json**
-
-encode the value so that it can be used inside a JSON field. This means
-that several characters (according to the JSON spec) are being escaped,
-for example US-ASCII LF is replaced by "\\n". The json option cannot be
-used together with either jsonf or csv options.
-
-**jsonf**
-
-*(available in 6.3.9+)* This signifies that the property should be
-expressed as a json **f**\ ield. That means not only the property is
-written, but rather a complete json field in the format
- "fieldname"="value" where "filedname" is the assigend field name (or
-the property name if none was assigned) and value is the end result of
-property replacer operation. Note that value supports all property
-replacer options, like substrings, case converson and the like. Values
-are properly json-escaped. However, field names are (currently) not. It
-is expected that proper field names are configured. The jsonf option
-cannot be used together with either json or csv options.
-
 **csv**
 
 formats the resulting field (after all modifications) in CSV format as
@@ -633,8 +351,7 @@ CSV-formatted text, you need to define a proper template. An example is
 this one:
 $template csvline,"%syslogtag:::csv%,%msg:::csv%"
 Most importantly, you need to provide the commas between the fields
-inside the template. The csv option cannot be used together with either
-json or jsonf options.
+inside the template.
 *This feature was introduced in rsyslog 4.1.6.*
 
 **drop-last-lf**
@@ -667,10 +384,6 @@ according to RFC 3164).
 **date-rfc3339**
 
 format as RFC 3339 date
-
-**date-unixtimestamp**
-
-format as unix timestamp (seconds since epoch)
 
 **date-subseconds**
 
@@ -738,36 +451,20 @@ secure pathname generation (with dynafiles).
 Replace slashes inside the field by an underscore. (e.g. "a/b" becomes
 "a\_b"). Useful for secure pathname generation (with dynafiles).
 
-**mandatory-field**
-
-In templates that are used for building field lists (in particular,
-ommongodb), include this field, even if it is empty (or NULL). If not
-set, the field will be removed from the output field set if empty. The
-latter is the default case.
-
 To use multiple options, simply place them one after each other with a
 comma delmimiting them. For example "escape-cc,sp-if-no-1st-sp". If you
 use conflicting options together, the last one will override the
 previous one. For example, using "escape-cc,drop-cc" will use drop-cc
 and "drop-cc,escape-cc" will use escape-cc mode.
 
-Fieldname
----------
-
-*(available in 6.3.9+)*
-
-This field permits to specify a field name for structured-data emitting
-property replacer options. It was initially introduced to support the
-"jsonf" option, for which it provides the capability to set an
-alternative field name. If it is not specified, it defaults to the
-property name. **See also**
+Further Links
+-------------
 
 -  Article on "`Recording the Priority of Syslog
    Messages <rsyslog_recording_pri.html>`_\ " (describes use of
    templates to record severity and facility of a message)
--  `Configuration file format <rsyslog_conf.html>`_, this is where you
+-  `Configuration file syntax <rsyslog_conf.html>`_, this is where you
    actually use the property replacer.
--  Difference between timereported and timegenerated.
 
 [`manual index <manual.html>`_\ ]
 [`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog

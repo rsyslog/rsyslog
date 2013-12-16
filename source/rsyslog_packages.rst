@@ -10,18 +10,10 @@ new distribution, please mail me at
 maintainers are really filling it with life, making it available to the
 average user. I am very grateful for that!
 
-This list has last been updated on 2013-07-25 by `Rainer
+This list has last been updated on 2008-07-11 by `Rainer
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_. New
 packages may appear at any time, so be sure to check this page whenever
 you need a new one.
-
--  **Ubuntu** (maintained by Adiscon)
-
-   -  `http://www.rsyslog.com/ubuntu-repository/ <http://www.rsyslog.com/ubuntu-repository/>`_
-
--  **RHEL/CentOS** (maintained by Adiscon)
-
-   -  `http://www.rsyslog.com/rhelcentos-rpms/ <http://www.rsyslog.com/rhelcentos-rpms/>`_
 
 -  **BSD** (maintained by infofarmer)
 
@@ -72,9 +64,3 @@ alphabetic order of the distribution name.
 If you do not find a suitable package for your distribution, there is no
 reason to panic. It is quite simple to install rsyslog from the source
 tarball, so you should consider that.
-
-**See Also**
-
--  `How to use the Ubuntu
-   repository <http://www.rsyslog.com/how-to-use-the-ubuntu-repository/>`_
-

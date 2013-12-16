@@ -31,14 +31,6 @@ contain a PRI, then none or some spaces and then the exact text
 (case-insensitive) "last message repeated n times" where n must be an
 integer. All other messages are left untouched.
 
-**Please note:** this parser module makes it possible that these
-messages are properly detected. It does **not** drop them. If you intend
-to drop those messages, you need to use the usual filter logic in
-combination with the discard action. As a side-note, please keep on your
-mind that the sender discarded messages when the "last message repeated
-n times" message is emited. You want to consider if that really is what
-you intend to happen. If not, go change the sender.
-
 **Configuration Directives**:
 
 There do not currently exist any configuration directives for this

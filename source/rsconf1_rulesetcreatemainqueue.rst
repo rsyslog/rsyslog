@@ -59,10 +59,10 @@ remote10515 $RulesetCreateMainQueue on # create ruleset-specific queue
 on # create ruleset-specific queue mail.\* /var/log/mail10516 & ~ # note
 that the discard-action will prevent this messag from # being written to
 the remote10516 file - as usual... \*.\* /var/log/remote10516 # and now
-define listeners bound to the relevant ruleset
-$InputTCPServerBindRuleset remote10514 $InputTCPServerRun 10514
-$InputTCPServerBindRuleset remote10515 $InputTCPServerRun 10515
-$InputTCPServerBindRuleset remote10516 $InputTCPServerRun 10516
+define listners bound to the relevant ruleset $InputTCPServerBindRuleset
+remote10514 $InputTCPServerRun 10514 $InputTCPServerBindRuleset
+remote10515 $InputTCPServerRun 10515 $InputTCPServerBindRuleset
+remote10516 $InputTCPServerRun 10516
 
 Note the positions of the directives. With the current config language,
 position is very important. This is ugly, but unfortunately the way it

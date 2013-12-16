@@ -31,35 +31,7 @@ such pooling, provided that some demand for that is voiced. You can also
 mimic the same effect by defining multiple rulesets and including them
 (at the price of some slight performance loss).
 
- 
-
-**Module Parameters**:
-
--  **Template**\ [templateName]
-    sets a new default template for file actions.
-
- 
-
-**Action Parameters**:
-
--  **binary**
-    Mostly equivalent to the "binary" action parameter, but must contain
-   the binary name only. In legacy config, it is **not possible** to
-   specify command line parameters.
-
-**Caveats/Known Bugs:**
-
--  None.
-
-**Sample:**
-
-The following command writes all syslog messages into a file.
-
-Module (load="omprog") \*.\* action(type="omprog"
-binary="/pathto/omprog.py --parm1=\\"value 1\\" --parm2=value2"
-template="RSYSLOG\_TraditionalFileFormat")
-
-**Legacy Configuration Directives**:
+**Configuration Directives**:
 
 -  **$ActionOMProgBinary** <binary>
     The binary program to be executed.
@@ -73,7 +45,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+ Copyright © 2008-2011 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

@@ -34,7 +34,7 @@ Currently, only datagram sockets are supported.
 The following sample writes all messages to the "/tmp/socksample"
 socket.
 
-$ModLoad omuxsock $OMUxSockSocket /tmp/socksample \*.\* :omuxsock:
+$ModLoad omucsock $OMUxSockSocket /tmp/socksample \*.\* :omuxsock:
 [`manual index <manual.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]
 
