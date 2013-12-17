@@ -17,7 +17,7 @@ at :download:`rsyslog-example.conf <rsyslog-example.conf>`.
 
 While rsyslogd contains enhancements over standard syslogd, efforts have
 been made to keep the configuration file as compatible as possible.
-While, for obvious reasons, :doc:`enhanced features <features>` require
+While, for obvious reasons, :doc:`enhanced features <../features>` require
 a different config file syntax, rsyslogd should be able to work with a
 standard syslog.conf file. This is especially useful while you are
 migrating from syslogd to rsyslogd.
@@ -31,6 +31,8 @@ migrating from syslogd to rsyslogd.
    filters
    actions
    templates
+   multi_ruleset
+   droppriv
    output_channels
    examples
    modules/index

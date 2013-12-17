@@ -9,14 +9,15 @@ imgssapi: GSSAPI Syslog Input Module
 
 **Description**:
 
+.. toctree::
+   :maxdepth: 1
+
+   gssapi
+
 Provides the ability to receive syslog messages from the network
 protected via Kerberos 5 encryption and authentication. This module also
 accept plain tcp syslog messages on the same port if configured to do
-so. If you need just plain tcp, use `imtcp <imtcp.html>`_ instead.
-
-There is also an `overview of gssapi support in rsyslog <gssapi.html>`_
-available. We recommend reading it before digging into the configuration
-parameters.
+so. If you need just plain tcp, use :doc:`imtcp <imtcp>` instead.
 
 **Configuration Directives**:
 

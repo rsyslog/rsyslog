@@ -5,14 +5,17 @@ Encrypting Syslog Traffic with TLS (SSL)
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 (2008-07-03)*
 
--  `Overview <rsyslog_secure_tls.html>`_
--  `Sample Scenario <tls_cert_scenario.html>`_
--  `Setting up the CA <tls_cert_ca.html>`_
--  `Generating Machine Certificates <tls_cert_machine.html>`_
--  `Setting up the Central Server <tls_cert_server.html>`_
--  `Setting up syslog Clients <tls_cert_client.html>`_
--  `Setting up the UDP syslog relay <tls_cert_udp_relay.html>`_
--  `Wrapping it all up <tls_cert_summary.html>`_
+.. toctree::
+   :maxdepth: 1
+
+   rsyslog_secure_tls
+   tls_cert_scenario
+   tls_cert_ca
+   tls_cert_machine
+   tls_cert_server
+   tls_cert_client
+   tls_cert_udp_relay
+   tls_cert_errmsgs
 
 Summary
 ~~~~~~~

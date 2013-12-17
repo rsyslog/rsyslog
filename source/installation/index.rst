@@ -6,3 +6,4 @@ Installation
 
    build_from_repo
    install
+   packages

@@ -1,6 +1,6 @@
 `rsyslog module reference <rsyslog_conf_modules.html>`_
 
-parser module for "last message repeated n times" (pmlastmsg)
+pmlastmsg: last message repeated n times
 =============================================================
 
 **Module Name:    pmlastmsg**
