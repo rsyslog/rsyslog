@@ -26,12 +26,8 @@
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
 #include <stdint.h>
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || !defined(HAVE_LSEEK64)
 #include <sys/types.h>
-#endif
-
-#ifndef HAVE_LSEEK64
-#include <unistd.h>
 #endif
 
 /* some universal fixed size integer defines ... */
