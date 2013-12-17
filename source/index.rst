@@ -31,17 +31,19 @@ great config of yours does not even work a bit...;))
 .. toctree::
    :maxdepth: 3
 
+   history
    licensing
    contributors
    how2help
-   feataures
+   features
    installation/index
    queues
    messageparser
    configuration/index
    troubleshooting/index
    development/index
-   tutorials/tls_cert_summary
+   tutorials/index
    free_support
    compatibility/index
    bugs
+

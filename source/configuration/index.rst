@@ -32,8 +32,11 @@ migrating from syslogd to rsyslogd.
    actions
    templates
    multi_ruleset
+   property_replacer
    droppriv
    output_channels
+   expressions
    examples
    modules/index
    global/index
+   ipv6
