@@ -1,14 +1,6 @@
 Building rsyslog from the source repository
 ===========================================
 
-In most cases, people install rsyslog either via a package or use an
-"official" distribution tarball to generate it. But there may be
-situations where it is desirable to build directly from the source
-repository. This is useful for people who would like to participate in
-development or who would like to use the latest, not-yet-released code.
-The later may especially be the case if you are asked to try out an
-experimental version.
-
 Building from the repsitory is not much different than building from the
 source tarball, but some files are missing because they are output files
 and thus do not belong into the repository.
