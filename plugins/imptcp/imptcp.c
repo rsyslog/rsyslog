@@ -727,13 +727,13 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "delimiter is not SP but has ASCII value %d.\n", c);
+					    "delimiter is not SP but has ASCII value %d.", c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
 				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "invalid octet count %d.\n", pThis->iOctetsRemain);
+					    "invalid octet count %d.", pThis->iOctetsRemain);
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
@@ -741,7 +741,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
 					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
-					        "max msg size is %d, truncating...\n", pThis->iOctetsRemain, iMaxLine);
+					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
 			}
 			pThis->inputState = eInMsg;
 		}
@@ -1288,7 +1288,7 @@ sessActivity(ptcpsess_t *pSess)
 				uchar *peerName;
 				int lenPeer;
 				prop.GetString(pSess->peerName, &peerName, &lenPeer);
-				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by remote peer %s.\n",
+				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by remote peer %s.",
 						pSess->sock, peerName);
 			}
 			CHKiRet(closeSess(pSess));

@@ -307,7 +307,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * generate an error message and discard the frame.
 		 */
 		errmsg.LogError(0, NO_ERRCODE, "Incomplete frame at end of stream in session %p - "
-			    "ignoring extra data (a message may be lost).\n", pThis->pStrm);
+			    "ignoring extra data (a message may be lost).", pThis->pStrm);
 		/* nothing more to do */
 	} else { /* here, we have traditional framing. Missing LF at the end
 		 * of message may occur. As such, we process the message in
@@ -375,13 +375,13 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "delimiter is not SP but has ASCII value %d.\n", c);
+					    "delimiter is not SP but has ASCII value %d.", c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
 				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "invalid octet count %d.\n", pThis->iOctetsRemain);
+					    "invalid octet count %d.", pThis->iOctetsRemain);
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
@@ -389,7 +389,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
 					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
-					        "max msg size is %d, truncating...\n", pThis->iOctetsRemain, iMaxLine);
+					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
 			}
 			pThis->inputState = eInMsg;
 		}
