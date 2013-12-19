@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.4.8  [v7.4-stable] 2013-12-??
+- bugfix: guard against control characters in internal (error) messages
+  Thanks to Ahto Truu for alerting us.
 - bugfix: immark did emit messages under kern.=info instead of syslog.=info
   Note that his can potentially break exisiting configurations that
   rely on immark sending as kern.=info. Unfortunately, we cannot leave

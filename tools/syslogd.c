@@ -439,12 +439,23 @@ rsRetVal
 logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 {
 	uchar pszTag[33];
+	size_t lenMsg;
+	unsigned i;
 	msg_t *pMsg;
 	DEFiRet;
 
+	/* we first do a path the remove control characters that may have accidently
+	 * introduced (program error!). This costs performance, but we do not expect
+	 * to be called very frequently in any case ;) -- rgerhards, 2013-12-19.
+	 */
+	lenMsg = ustrlen(msg);
+	for(i = 0 ; i < lenMsg ; ++i) {
+		if(msg[i] < 0x20 || msg[i] == 0x7f)
+			msg[i] = ' ';
+	}
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInternalInputName);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg, lenMsg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
