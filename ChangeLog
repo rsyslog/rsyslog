@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.1.4 [devel] 2013-12-??
+- add exec_template() RainerScript function
 - imrelp: support for TCP KEEPALIVE added
 - bumped librelp dependency to 1.2.2 to support new KEEPALIVE feature
 - Add directives for numerically specifying GIDs/UIDs

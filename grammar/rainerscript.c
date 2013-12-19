@@ -48,6 +48,7 @@
 #include "modules.h"
 #include "ruleset.h"
 #include "msg.h"
+#include "wti.h"
 #include "unicode-helper.h"
 
 DEFobjCurrIf(obj)
@@ -1462,17 +1463,17 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	msg_t *const pMsg)
 {
 	rsRetVal localRet;
-	uchar *pBuf = NULL;
-	size_t lenBuf = 0;
+	actWrkrIParams_t iparam;
 
-	localRet = tplToString(func->funcdata, pMsg, &pBuf, &lenBuf, NULL);
+	wtiInitIParam(&iparam);
+	localRet = tplToString(func->funcdata, pMsg, &iparam, NULL);
 	if(localRet == RS_RET_OK) {
-		ret->d.estr = es_newStrFromCStr((char*)pBuf, ustrlen(pBuf));
+		ret->d.estr = es_newStrFromCStr((char*)iparam.param, iparam.lenStr);
 	} else {
 		ret->d.estr = es_newStrFromCStr("", 0);
 	}
 	ret->datatype = 'S';
-	free(pBuf);
+	free(iparam.param);
 
 	return;
 }

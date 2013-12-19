@@ -186,6 +186,12 @@ finalize_it:
 }
 
 static inline void
+wtiInitIParam(actWrkrIParams_t *piparams)
+{
+	memset(piparams, 0, sizeof(actWrkrIParams_t));
+}
+
+static inline void
 wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
 {
 	pWti->execState.bPrevWasSuspended = 0;
