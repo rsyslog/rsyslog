@@ -1451,6 +1451,33 @@ finalize_it:
 }
 
 
+/* note that we do not need to evaluate any parameters, as the template pointer
+ * is set during initialization().
+ * TODO: think if we can keep our buffer; but that may not be trival thinking about
+ *       multiple threads.
+ */
+static void
+doFunc_exec_template(struct cnffunc *__restrict__ const func,
+	struct var *__restrict__ const ret,
+	msg_t *const pMsg)
+{
+	rsRetVal localRet;
+	uchar *pBuf = NULL;
+	size_t lenBuf = 0;
+
+	localRet = tplToString(func->funcdata, pMsg, &pBuf, &lenBuf, NULL);
+	if(localRet == RS_RET_OK) {
+		ret->d.estr = es_newStrFromCStr((char*)pBuf, ustrlen(pBuf));
+	} else {
+		ret->d.estr = es_newStrFromCStr("", 0);
+	}
+	ret->datatype = 'S';
+	free(pBuf);
+
+	return;
+}
+
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -1558,6 +1585,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		break;
 	case CNFFUNC_RE_EXTRACT:
 		doFunc_re_extract(func, ret, usrptr);
+		break;
+	case CNFFUNC_EXEC_TEMPLATE:
+		doFunc_exec_template(func, ret, (msg_t*) usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -3397,6 +3427,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_FIELD;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"exec_template", sizeof("exec_template") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for exec-template() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_EXEC_TEMPLATE;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"prifilt", sizeof("prifilt") - 1)) {
 		if(nParams != 1) {
 			parser_errmsg("number of parameters for prifilt() must be one "
@@ -3448,6 +3485,31 @@ initFunc_re_match(struct cnffunc *func)
 
 finalize_it:
 	free(regex);
+	RETiRet;
+}
+
+
+static rsRetVal
+initFunc_exec_template(struct cnffunc *func)
+{
+	char *tplName = NULL;
+	DEFiRet;
+
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("exec_template(): param 1 must be a constant string");
+		FINALIZE;
+	}
+
+	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	if(func->funcdata == NULL) {
+		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
+		FINALIZE;
+	}
+
+
+finalize_it:
+	free(tplName);
 	RETiRet;
 }
 
@@ -3538,6 +3600,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_LOOKUP:
 				initFunc_lookup(func);
+				break;
+			case CNFFUNC_EXEC_TEMPLATE:
+				initFunc_exec_template(func);
 				break;
 			default:break;
 		}
