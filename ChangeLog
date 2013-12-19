@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-devel] 2013-11-??
+- add exec_template() RainerScript function
 - add debug.onShutdown and debug.logFile global paramters
   These enebale the new "debug on shutdown" mode, which can be used to
   track hard to find problems that occur during system shutdown.
