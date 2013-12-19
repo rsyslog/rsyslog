@@ -53,7 +53,7 @@ static inline int ustrcmp(uchar *psz1, uchar *psz2)
 	return strcmp((char*) psz1, (char*) psz2);
 }
 
-static inline int ustrlen(uchar *psz)
+static inline int ustrlen(const uchar *psz)
 {
 	return strlen((char*) psz);
 }
