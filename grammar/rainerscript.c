@@ -2197,7 +2197,8 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	free(func->funcdata);
+	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+		free(func->funcdata);
 	free(func->fname);
 }
 
