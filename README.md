@@ -1,4 +1,4 @@
-rsyslog-docs (master)
+rsyslog-docs (master: v8-devel)
 ========================
 
 Documentation for the rsyslog project
