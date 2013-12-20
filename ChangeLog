@@ -257,6 +257,7 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.8  [v7.4-stable] 2013-12-??
+- rsgtutil provides better error messages on unfinished signature blocks
 - bugfix: guard against control characters in internal (error) messages
   Thanks to Ahto Truu for alerting us.
 - bugfix: immark did emit messages under kern.=info instead of syslog.=info
