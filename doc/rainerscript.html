@@ -142,6 +142,11 @@ equivalent single-character [field($msg, 44 ,3)] extraction.
 <li>prifilt(constant) - mimics a traditional PRI-based filter (like "*.*" or
 "mail.info"). The traditional filter string must be given as a <b>constant string</b>.
 Dynamic string evaluation is not permitted (for performance reasons).
+<li>exec_template(templateName) -- executes a template and returns the string generated
+by it. Note that templateName must be a constant string. This is primarily for performance
+reasons. If there is a valid use case for dynamic template names, please let us know
+and we will re-consider the decision. TemplateName can be any template name, including the
+predefined ones.
 </ul>
 <p>The following example can be used to build a dynamic filter based on some environment
 variable:
