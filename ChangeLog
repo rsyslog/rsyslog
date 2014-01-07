@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.2 - 2013-12-??
+Version 1.2.2 - 2014-01-07
 - add capability to enable tcp KEEPALIVE
 - introduced new API relpSrvSetKeepAlive() to support KEEPALIVE
 ----------------------------------------------------------------------
