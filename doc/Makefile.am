@@ -65,14 +65,6 @@ html_files = \
 	tls_cert_ca.jpg \
 	tls_cert.jpg \
 	tls_cert_errmsgs.html \
-	rsyslog_secure_tls.html \
-	tls_cert_server.html \
-	tls_cert_ca.html \
-	tls_cert_summary.html \
-	tls_cert_machine.html \
-	tls_cert_udp_relay.html \
-	tls_cert_client.html \
-	tls_cert_scenario.html \
 	rainerscript.html \
 	global.html \
 	lookup_tables.html \
