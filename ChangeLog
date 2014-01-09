@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.5.8 [v7-release candidate] 2014-01-08
+Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
 - add debug.onShutdown and debug.logFile global paramters
   These enebale the new "debug on shutdown" mode, which can be used to
