@@ -249,6 +249,10 @@ if ENABLE_MMCOUNT
 SUBDIRS += plugins/mmcount
 endif
 
+if ENABLE_MMSEQUENCE
+SUBDIRS += plugins/mmsequence
+endif
+
 if ENABLE_MMFIELDS
 SUBDIRS += plugins/mmfields
 endif
@@ -280,8 +284,7 @@ SUBDIRS += tests
 # temporarily be removed below. The intent behind forcing everthing to compile
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
-DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
-				--enable-imfile \
+DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 				--enable-snmp \
 				--enable-libdbi \
 				--enable-mysql \
@@ -304,11 +307,12 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-gssapi_krb5 \
 				--enable-pmaixforwardedfrom \
 				--enable-pmcisconames \
 				--enable-pmsnare \
-				--enable-mmsnmptrapd \
 				--enable-elasticsearch \
 				--enable-valgrind \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
+#				--enable-mmsnmptrapd \
+#				--enable-gssapi_krb5 \
 #				--enable-extended-tests \
 #				--enable-pgsql 
 ACLOCAL_AMFLAGS = -I m4

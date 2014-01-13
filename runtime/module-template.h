@@ -175,6 +175,44 @@ static rsRetVal freeInstance(void* pModData)\
 	RETiRet;\
 }
 
+/* createWrkrInstance()
+ */
+#define BEGINcreateWrkrInstance \
+static rsRetVal createWrkrInstance(wrkrInstanceData_t **ppWrkrData, instanceData *pData)\
+	{\
+	DEFiRet; /* store error code here */\
+	wrkrInstanceData_t *pWrkrData; /* use this to point to data elements */
+
+#define CODESTARTcreateWrkrInstance \
+	if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
+		*ppWrkrData = NULL;\
+		ENDfunc \
+		return RS_RET_OUT_OF_MEMORY;\
+	} \
+	pWrkrData->pData = pData;
+
+#define ENDcreateWrkrInstance \
+	*ppWrkrData = pWrkrData;\
+	RETiRet;\
+}
+
+/* freeWrkrInstance */
+#define BEGINfreeWrkrInstance \
+static rsRetVal freeWrkrInstance(void* pd)\
+{\
+	DEFiRet;\
+	wrkrInstanceData_t *pWrkrData;
+
+#define CODESTARTfreeWrkrInstance \
+	pWrkrData = (wrkrInstanceData_t*) pd;
+
+#define ENDfreeWrkrInstance \
+	if(pWrkrData != NULL)\
+		free(pWrkrData); /* we need to free this in any case */\
+	RETiRet;\
+}
+
+
 /* isCompatibleWithFeature()
  */
 #define BEGINisCompatibleWithFeature \
@@ -194,7 +232,7 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
  * introduced in v4.3.3 -- rgerhards, 2009-04-27
  */
 #define BEGINbeginTransaction \
-static rsRetVal beginTransaction(instanceData __attribute__((unused)) *pData)\
+static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 
@@ -205,11 +243,28 @@ static rsRetVal beginTransaction(instanceData __attribute__((unused)) *pData)\
 }
 
 
+/* commitTransaction()
+ * Commits a transaction. Note that beginTransaction() must have been
+ * called before this entry point. It receives the full batch of messages
+ * to be processed in pParam parameter.
+ * introduced in v8.1.3 -- rgerhards, 2013-12-04
+ */
+#define BEGINcommitTransaction \
+static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *const pWrkrData, actWrkrIParams_t *const pParams, const unsigned nParams)\
+{\
+	DEFiRet;
+
+#define CODESTARTcommitTransaction /* currently empty, but may be extended */
+
+#define ENDcommitTransaction \
+	RETiRet;\
+}
+
 /* endTransaction()
  * introduced in v4.3.3 -- rgerhards, 2009-04-27
  */
 #define BEGINendTransaction \
-static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
+static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 
@@ -223,7 +278,7 @@ static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
+static rsRetVal doAction(uchar __attribute__((unused)) **ppString, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 
@@ -382,12 +437,12 @@ static rsRetVal newInpInst(struct nvlst *lst)\
  * rgerhard, 2007-08-02
  */
 #define BEGINtryResume \
-static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
+static rsRetVal tryResume(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
 	DEFiRet;
 
 #define CODESTARTtryResume \
-	assert(pData != NULL);
+	assert(pWrkrData != NULL);
 
 #define ENDtryResume \
 	RETiRet;\
@@ -448,8 +503,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	}
 
 /* the following definition is the standard block for queryEtryPt for output
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+ * modules WHICH DO NOT SUPPORT TRANSACTIONS.
  */
 #define CODEqueryEtryPt_STD_OMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
@@ -467,6 +521,34 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = tryResume;\
 	}
 
+/* the following definition is the standard block for queryEtryPt for output
+ * modules using the transaction interface.
+ */
+#define CODEqueryEtryPt_STD_OMODTX_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "beginTransaction")) {\
+		*pEtryPoint = beginTransaction;\
+	} else if(!strcmp((char*) name, "commitTransaction")) {\
+		*pEtryPoint = commitTransaction;\
+	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+		*pEtryPoint = dbgPrintInstInfo;\
+	} else if(!strcmp((char*) name, "freeInstance")) {\
+		*pEtryPoint = freeInstance;\
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
+		*pEtryPoint = parseSelectorAct;\
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+		*pEtryPoint = isCompatibleWithFeature;\
+	} else if(!strcmp((char*) name, "tryResume")) {\
+		*pEtryPoint = tryResume;\
+	}
+
+/* standard queries for output module interface in rsyslog v8+ */
+#define CODEqueryEtryPt_STD_OMOD8_QUERIES \
+	else if(!strcmp((char*) name, "createWrkrInstance")) {\
+		*pEtryPoint = createWrkrInstance;\
+	} else if(!strcmp((char*) name, "freeWrkrInstance")) {\
+		*pEtryPoint = freeWrkrInstance;\
+	}
 
 /* the following definition is queryEtryPt block that must be added
  * if an output module supports the transactional interface.
@@ -976,9 +1058,15 @@ static rsRetVal parse(msg_t *pMsg)\
 
 
 /* strgen() - main entry point of parser modules
+ * Note that we do NOT use size_t as this permits us to store the
+ * values directly into optimized heap structures.
+ * ppBuf is the buffer pointer
+ * pLenBuf is the current max size of this buffer
+ * pStrLen is an output parameter that MUST hold the length
+ *         of the generated string on exit (this is cached)
  */
 #define BEGINstrgen \
-static rsRetVal strgen(msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf) \
+static rsRetVal strgen(msg_t *const pMsg, actWrkrIParams_t *const iparam) \
 {\
 	DEFiRet;
 

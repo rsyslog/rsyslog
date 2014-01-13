@@ -486,110 +486,6 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 }
 
 
-/* Helper to cfline(). This function takes the filter part of a property
- * based filter and decodes it. It processes the line up to the beginning
- * of the action part. A pointer to that beginnig is passed back to the caller.
- * rgerhards 2005-09-15
- */
-rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
-{
-	rsParsObj *pPars;
-	cstr_t *pCSCompOp;
-	cstr_t *pCSPropName;
-	rsRetVal iRet;
-	int iOffset; /* for compare operations */
-
-	ASSERT(pline != NULL);
-
-	dbgprintf("Decoding property-based filter '%s'\n", pline);
-
-	/* create parser object starting with line string without leading colon */
-	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "Error %d constructing parser object - ignoring selector", iRet);
-		return(iRet);
-	}
-
-	/* read property */
-	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
-	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
-		return(iRet);
-	}
-	iRet = propNameToID(pCSPropName, &stmt->d.s_propfilt.propID);
-	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
-		return(iRet);
-	}
-	if(stmt->d.s_propfilt.propID == PROP_CEE) {
-		/* in CEE case, we need to preserve the actual property name */
-		if((stmt->d.s_propfilt.propName =
-		     es_newStrFromBuf((char*)cstrGetSzStrNoNULL(pCSPropName)+2, cstrLen(pCSPropName)-2)) == NULL) {
-			cstrDestruct(&pCSPropName);
-			return(RS_RET_ERR);
-		}
-	}
-	cstrDestruct(&pCSPropName);
-
-	/* read operation */
-	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
-	if(iRet != RS_RET_OK) {
-		errmsg.LogError(0, iRet, "error %d compare operation property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
-		return(iRet);
-	}
-
-	/* we now first check if the condition is to be negated. To do so, we first
-	 * must make sure we have at least one char in the param and then check the
-	 * first one.
-	 * rgerhards, 2005-09-26
-	 */
-	if(rsCStrLen(pCSCompOp) > 0) {
-		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
-			stmt->d.s_propfilt.isNegated = 1;
-			iOffset = 1; /* ignore '!' */
-		} else {
-			stmt->d.s_propfilt.isNegated = 0;
-			iOffset = 0;
-		}
-	} else {
-		stmt->d.s_propfilt.isNegated = 0;
-		iOffset = 0;
-	}
-
-	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
-		stmt->d.s_propfilt.operation = FIOP_CONTAINS;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
-		stmt->d.s_propfilt.operation = FIOP_ISEQUAL;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isempty", 7)) {
-		stmt->d.s_propfilt.operation = FIOP_ISEMPTY;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
-		stmt->d.s_propfilt.operation = FIOP_STARTSWITH;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
-		stmt->d.s_propfilt.operation = FIOP_REGEX;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
-		stmt->d.s_propfilt.operation = FIOP_EREREGEX;
-	} else {
-		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
-		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
-	}
-	rsCStrDestruct(&pCSCompOp); /* no longer needed */
-
-	if(stmt->d.s_propfilt.operation != FIOP_ISEMPTY) {
-		/* read compare value */
-		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
-		if(iRet != RS_RET_OK) {
-			errmsg.LogError(0, iRet, "error %d compare value property - ignoring selector", iRet);
-			rsParsDestruct(pPars);
-			return(iRet);
-		}
-	}
-
-	return rsParsDestruct(pPars);
-}
-
-
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */
@@ -622,12 +518,10 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			bHadWarning = 1;
 			iRet = RS_RET_OK;
 		}
-		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
-			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL,
-					     (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+		if(iRet == RS_RET_OK) {
+			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL)) == RS_RET_OK) {
 				/* here check if the module is compatible with select features
 				 * (currently, we have no such features!) */
-				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				conf->actions.nbrActions++;	/* one more active action! */
 			}
 			break;

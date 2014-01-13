@@ -9,7 +9,7 @@
  *
  * File begun on 2010-06-01 by RGerhards
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -83,28 +83,30 @@ CODESTARTstrgen
 		++lenTotal; /* then we need to introduce one additional space */
 
 	/* now make sure buffer is large enough */
-	if(lenTotal  >= *pLenBuf)
-		CHKiRet(ExtendBuf(ppBuf, pLenBuf, lenTotal));
+	if(lenTotal  >= iparam->lenBuf)
+		CHKiRet(ExtendBuf(iparam, lenTotal));
 
 	/* and concatenate the resulting string */
-	memcpy(*ppBuf, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
-	*(*ppBuf + CONST_LEN_TIMESTAMP_3164) = ' ';
+	memcpy(iparam->param, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
+	iparam->param[CONST_LEN_TIMESTAMP_3164] = ' ';
 
-	memcpy(*ppBuf + CONST_LEN_TIMESTAMP_3164 + 1, pHOSTNAME, lenHOSTNAME);
+	memcpy(iparam->param + CONST_LEN_TIMESTAMP_3164 + 1, pHOSTNAME, lenHOSTNAME);
 	iBuf = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME;
-	*(*ppBuf + iBuf++) = ' ';
+	iparam->param[iBuf++] = ' ';
 
-	memcpy(*ppBuf + iBuf, pTAG, lenTAG);
+	memcpy(iparam->param + iBuf, pTAG, lenTAG);
 	iBuf += lenTAG;
 
 	if(pMSG[0] != ' ')
-		*(*ppBuf + iBuf++) = ' ';
-	memcpy(*ppBuf + iBuf, pMSG, lenMSG);
+		iparam->param[iBuf++] = ' ';
+	memcpy(iparam->param + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
 
 	/* trailer */
-	*(*ppBuf + iBuf++) = '\n';
-	*(*ppBuf + iBuf) = '\0';
+	iparam->param[iBuf++] = '\n';
+	iparam->param[iBuf] = '\0';
+
+	iparam->lenStr = lenTotal - 1; /* do not count \0! */
 
 finalize_it:
 ENDstrgen

@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-24 by RGerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -49,11 +49,20 @@ typedef struct _instanceData {
 	EMPTY_STRUCT
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 /* we do not need a createInstance()!
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 */
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -87,6 +96,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(0)
@@ -114,6 +128,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 

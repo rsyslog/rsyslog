@@ -58,8 +58,14 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	struct json_tokener *tokener;
+	int dummy; /* not needed, but some compilers do not support empty structs */
+	/* REMOVE dummy when real data items are to be added! */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+	struct json_tokener *tokener;
+} wrkrInstanceData_t;
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
@@ -94,14 +100,18 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->tokener = json_tokener_new();
-	if(pData->tokener == NULL) {
+ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+	pWrkrData->tokener = json_tokener_new();
+	if(pWrkrData->tokener == NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "error: could not create json "
-				"tokener, cannot activate action");
+				"tokener, cannot activate instance");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 finalize_it:
-ENDcreateInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -111,9 +121,13 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pData->tokener != NULL)
-		json_tokener_free(pData->tokener);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+	if(pWrkrData->tokener != NULL)
+		json_tokener_free(pWrkrData->tokener);
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -128,28 +142,28 @@ ENDtryResume
 
 
 static rsRetVal
-processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
+processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf)
 {
 	struct json_object *json;
 	const char *errMsg;
 	DEFiRet;
 
-	assert(pData->tokener != NULL);
+	assert(pWrkrData->tokener != NULL);
 	DBGPRINTF("mmjsonparse: toParse: '%s'\n", buf);
-	json_tokener_reset(pData->tokener);
+	json_tokener_reset(pWrkrData->tokener);
 
-	json = json_tokener_parse_ex(pData->tokener, buf, lenBuf);
+	json = json_tokener_parse_ex(pWrkrData->tokener, buf, lenBuf);
 	if(Debug) {
 		errMsg = NULL;
 		if(json == NULL) {
 			enum json_tokener_error err;
 
-			err = pData->tokener->err;
+			err = pWrkrData->tokener->err;
 			if(err != json_tokener_continue)
 				errMsg = json_tokener_errors[err];
 			else
 				errMsg = "Unterminated input";
-		} else if((size_t)pData->tokener->char_offset < lenBuf)
+		} else if((size_t)pWrkrData->tokener->char_offset < lenBuf)
 			errMsg = "Extra characters after JSON object";
 		else if(!json_object_is_type(json, json_type_object))
 			errMsg = "JSON value is not an object";
@@ -159,7 +173,7 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 		}
 	}
 	if(json == NULL
-	   || ((size_t)pData->tokener->char_offset < lenBuf)
+	   || ((size_t)pWrkrData->tokener->char_offset < lenBuf)
 	   || (!json_object_is_type(json, json_type_object))) {
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
@@ -194,7 +208,7 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
 	buf += LEN_COOKIE;
-	CHKiRet(processJSON(pData, pMsg, (char*) buf, strlen((char*)buf)));
+	CHKiRet(processJSON(pWrkrData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
 finalize_it:
 	if(iRet == RS_RET_NO_CEE_MSG) {
@@ -257,6 +271,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

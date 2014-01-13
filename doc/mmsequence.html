@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>mmsequence</title></head>
+
+<body>
+<a href="rsyslog_conf_modules.html">back</a>
+
+<h1>Number generator and counter module (mmsequence)</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; mmsequence</b></p>
+<p><b>Author: </b>Pavel Levshin &lt;pavel@levshin.spb.ru&gt;</p>
+<p><b>Status: </b>Non project-supported module - contact author
+or rsyslog mailing list for questions</p>
+<p><b>Available since</b>: 7.5.6</p>
+<p><b>Description</b>:</p>
+<p>This module generates numeric sequences of different kinds. It can be used
+to count messages up to a limit and to number them. It can generate random
+numbers in a given range.</p>
+
+<p>This module is implemented via the output module interface, so it is
+called just as an action. The number generated is stored in a variable.</p>
+<p>&nbsp;</p>
+<p><b>Action Parameters</b>:</p>
+<ul>
+<li><b>mode</b> "random" or "instance" or "key"
+        <p>Specifies mode of the action. In "random" mode, the module
+        generates uniformly distributed integer numbers in a range defined
+        by "from" and "to".</p>
+
+        <p>In "instance" mode, which is default, the action produces a counter
+		in range [from, to). This counter is specific to this action instance.</p>
+
+        <p>In "key" mode, the counter can be shared between multiple instances.
+        This counter is identified by a name, which is defined with "key"
+        parameter.</p>
+</li>
+<li><b>from</b> [non-negative integer], default "0"
+        <p>Starting value for counters and lower margin for random generator.</p>
+</li>
+<li><b>to</b> [positive integer], default "INT_MAX"
+        <p>Upper margin for all sequences. Note that this margin is not
+        inclusive. When next value for a counter is equal or greater than
+        this parameter, the counter resets to the starting value.</p>
+</li>
+<li><b>step</b> [non-negative integer], default "1"
+        <p>Increment for counters. If step is "0", it can be used to fetch
+        current value without modification. The latter not applies to
+        "random" mode. This is useful in "key" mode or to get constant
+        values in "instance" mode.</p>
+</li>
+<li><b>key</b> [word], default ""
+        <p>Name of the global counter which is used in this action.</p>
+</li>
+<li><b>var</b> [word], default "$!mmsequence"
+        <p>Name of the variable where the number will be stored.
+        Should start with "$".</p>
+</li>
+</ul>
+
+		
+<p><b>Sample</b>:</p>
+<pre>
+# load balance
+Ruleset(
+    name="logd"
+    queue.workerthreads="5"
+    ){
+
+    Action(
+        type="mmsequence"
+        mode="instance"
+        from="0"
+        to="2"
+        var="$.seq"
+    )
+
+    if $.seq == "0" then {
+        Action(
+            type="mmnormalize"
+            userawmsg="on"
+            rulebase="/etc/rsyslog.d/rules.rb"
+        )
+    } else {
+        Action(
+            type="mmnormalize"
+            userawmsg="on"
+            rulebase="/etc/rsyslog.d/rules.rb"
+        )
+    }
+
+    # output logic here
+}
+    # generate random numbers
+    action(
+        type="mmsequence"
+        mode="random"
+        to="100"
+        var="$!rndz"
+    )
+    # count from 0 to 99
+    action(
+        type="mmsequence"
+        mode="instance"
+        to="100"
+        var="$!cnt1"
+    )
+    # the same as before but the counter is global
+    action(
+        type="mmsequence"
+        mode="key"
+        key="key1"
+        to="100"
+        var="$!cnt2"
+    )
+    # count specific messages but place the counter in every message
+    if $msg contains "txt" then
+        action(
+            type="mmsequence"
+            mode="key"
+            to="100"
+            var="$!cnt3"
+        )
+    else
+        action(
+            type="mmsequence"
+            mode="key"
+            to="100"
+            step="0"
+            var="$!cnt3"
+            key=""
+        )
+</pre>
+
+
+<p><b>Legacy Configuration Directives</b>:</p>
+
+    <p>Not supported.</p>
+
+
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+
+</body></html>

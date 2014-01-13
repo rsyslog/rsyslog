@@ -142,7 +142,7 @@ case $1 in
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		cp rsyslog.out.log work-presort
-		sort < rsyslog.out.log > work
+		sort -g < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
@@ -155,7 +155,7 @@ case $1 in
    		# a duplicateof seq-check, but we could not change its calling conventions without
 		# breaking a lot of exitings test cases, so we preferred to duplicate the code here.
 		rm -f work2
-		sort < rsyslog2.out.log > work2
+		sort -g < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
 		./chkseq -fwork2 -s$2 -e$3 $4 $5 $6 $7
@@ -168,7 +168,7 @@ case $1 in
    'gzip-seq-check') # do the usual sequence check, but for gzip files
 		rm -f work
 		ls -l rsyslog.out.log
-		gunzip < rsyslog.out.log | sort > work
+		gunzip < rsyslog.out.log | sort -g > work
 		ls -l work
 		# $4... are just to have the abilit to pass in more options...
 		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7

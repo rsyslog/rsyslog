@@ -1,6 +1,6 @@
 /* The errmsg object. It is used to emit error message inside rsyslog.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -23,7 +23,6 @@
 
 #include "errmsg.h"
 
-/* TODO: define error codes */
 #define NO_ERRCODE -1
 
 /* the errmsg object */
@@ -34,9 +33,11 @@ typedef struct errmsg_s {
 
 /* interfaces */
 BEGINinterface(errmsg) /* name must also be changed in ENDinterface macro! */
-	void  __attribute__((format(printf, 3, 4))) (*LogError)(int iErrno, int iErrCode, char *pszErrFmt, ... );
+	void  __attribute__((format(printf, 3, 4))) (*LogError)(const int iErrno, const int iErrCode, const char *pszErrFmt, ... );
+	/* v2, 2013-11-29 */
+	void  __attribute__((format(printf, 4, 5))) (*LogMsg)(const int iErrno, const int iErrCode, const int severity, const char *pszErrFmt, ... );
 ENDinterface(errmsg)
-#define errmsgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define errmsgCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

@@ -76,7 +76,7 @@ DEFobjCurrIf(zlibw)
 
 /* forward definitions */
 static rsRetVal strmFlushInternal(strm_t *pThis, int bFlushZip);
-static rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+static rsRetVal strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, const size_t lenBuf);
 static rsRetVal strmCloseFile(strm_t *pThis);
 static void *asyncWriterThread(void *pPtr);
 static rsRetVal doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush);
@@ -1553,7 +1553,7 @@ finalize_it:
 
 /* write a *single* character to a stream object -- rgerhards, 2008-01-10
  */
-static rsRetVal strmWriteChar(strm_t *pThis, uchar c)
+static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
 {
 	DEFiRet;
 
@@ -1586,7 +1586,7 @@ finalize_it:
  * strmWrite(), which does the lock (aka: we must not lock it, else we
  * would run into a recursive lock, resulting in a deadlock!)
  */
-static rsRetVal strmWriteLong(strm_t *pThis, long i)
+static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i)
 {
 	DEFiRet;
 	uchar szBuf[32];
@@ -1618,7 +1618,7 @@ finalize_it:
  * worth nothing. -- rgerhards, 2010-03-10
  */
 static rsRetVal
-strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
+strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, size_t lenBuf)
 {
 	DEFiRet;
 	size_t iWrite;

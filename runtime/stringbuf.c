@@ -107,7 +107,8 @@ finalize_it:
 
 /* a helper function for rsCStr*Strf()
  */
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, uchar *fmt, va_list ap)
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap) __attribute__((format(gnu_printf,2, 0)));
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -147,7 +148,7 @@ rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(ppThis, (uchar*)fmt, ap);
+	iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
 	va_end(ap);
 
 	RETiRet;
@@ -315,7 +316,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
 	cstr_t *pStr = NULL;
 
 	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(&pStr, fmt, ap);
+	iRet = rsCStrConstructFromszStrv(&pStr, (char*)fmt, ap);
 	va_end(ap);
 
 	CHKiRet(iRet);
@@ -527,26 +528,6 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 
 /* Trim trailing whitespace from a given string
  */
-rsRetVal rsCStrTrimTrailingWhiteSpace(cstr_t *pThis)
-{
-	register int i;
-	register uchar *pC;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-	i = pThis->iStrLen;
-	pC = pThis->pBuf + i - 1;
-	while(i > 0 && isspace((int)*pC)) {
-		--pC;
-		--i;
-	}
-	/* i now is the new string length! */
-	pThis->iStrLen = i;
-
-	return RS_RET_OK;
-}
-
-/* Trim trailing whitespace from a given string
- */
 rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 {
 	register int i;
@@ -562,8 +543,10 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 		--i;
 	}
 	/* i now is the new string length! */
-	pThis->iStrLen = i;
-	pThis->pBuf[pThis->iStrLen] = '0'; /* we always have this space */
+	if(i != (int) pThis->iStrLen) {
+		pThis->iStrLen = i;
+		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
+	}
 
 done:	return RS_RET_OK;
 }

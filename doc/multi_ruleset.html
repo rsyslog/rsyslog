@@ -89,6 +89,15 @@ modify the ruleset to which the next input is bound but rather provides a system
 default rule set for those inputs that did not explicitly bind to one. As such, the directive
 can not be used as a work-around to bind inputs to non-default rulesets that do not support
 ruleset binding.
+
+<h2>Rulesets and Main Queues</h2>
+By default, rulesets do not have their own queue. It must be activated via
+the $RulesetCreateMainQueue directive, or if using rainerscript format, by
+specifying queue parameters on the ruleset directive, e.g.
+ruleset(name="whatever" queue.type="fixedArray" queue. ...)
+See <a href="http://www.rsyslog.com/doc/queue_parameters.html">http://www.rsyslog.com/doc/queue_parameters.html</a>
+for more details. 
+
 <h2>Examples</h2>
 <h3>Split local and remote logging</h3>
 <p>Let's say you have a pretty standard system that logs its local messages to the usual

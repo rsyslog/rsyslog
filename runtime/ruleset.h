@@ -2,7 +2,7 @@
  *
  * This implements rulesets within rsyslog.
  *
- * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -46,7 +46,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(ruleset_t **ppThis);
 	rsRetVal (*DestructAllActions)(rsconf_t *conf);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
-	rsRetVal (*ProcessBatch)(batch_t*);
+	rsRetVal (*ProcessBatch)(batch_t*, wti_t *);
 	rsRetVal (*GetRuleset)(rsconf_t *conf, ruleset_t **ppThis, uchar*);
 	rsRetVal (*SetDefaultRuleset)(rsconf_t *conf, uchar*);
 	rsRetVal (*SetCurrRuleset)(rsconf_t *conf, uchar*);
@@ -64,8 +64,9 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	/* AddRule() removed */
 	/*TODO:REMOVE*/rsRetVal (*IterateAllActions)(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam);
 	void (*AddScript)(ruleset_t *pThis, struct cnfstmt *script);
+	/* v8: changed processBatch interface */
 ENDinterface(ruleset)
-#define rulesetCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define rulesetCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
@@ -90,6 +91,13 @@ rulesetGetName(ruleset_t *pRuleset)
 	return pRuleset->pszName;
 }
 
+/* returns 1 if the ruleset has a queue associtated, 0 if not */
+static inline int
+rulesetHasQueue(ruleset_t *pRuleset)
+{
+	return pRuleset->pQueue == NULL ? 0 : 1;
+}
+
 
 /* we will most probably convert this module back to traditional C
  * calling sequence, so here we go...
@@ -97,6 +105,7 @@ rulesetGetName(ruleset_t *pRuleset)
 rsRetVal rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName);
 rsRetVal rulesetOptimizeAll(rsconf_t *conf);
 rsRetVal rulesetProcessCnf(struct cnfobj *o);
+rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */
 static inline void

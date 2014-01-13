@@ -49,6 +49,7 @@
 #define CONF_PROGNAME_BUFSIZE		16
 #define CONF_HOSTNAME_BUFSIZE		32
 #define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
+#define CONF_IPARAMS_BUFSIZE		16	/* initial size of iparams array in wti (is automatically extended) */
 #define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
 						 * the message, the less likely is any compression gain. We check for
 						 * gain before we submit the message. But to do so we still need to
@@ -101,52 +102,6 @@
 #ifndef _PATH_CONSOLE
 #define _PATH_CONSOLE	"/dev/console"
 #endif
-
-/* properties are now encoded as (tiny) integers. I do not use an enum as I would like
- * to keep the memory footprint small (and thus cache hits high).
- * rgerhards, 2009-06-26
- */
-typedef uintTiny	propid_t;
-#define PROP_INVALID			0
-#define PROP_MSG			1
-#define PROP_TIMESTAMP			2
-#define PROP_HOSTNAME			3
-#define PROP_SYSLOGTAG			4
-#define PROP_RAWMSG			5
-#define PROP_INPUTNAME			6
-#define PROP_FROMHOST			7
-#define PROP_FROMHOST_IP		8
-#define PROP_PRI			9
-#define PROP_PRI_TEXT			10
-#define PROP_IUT			11
-#define PROP_SYSLOGFACILITY		12
-#define PROP_SYSLOGFACILITY_TEXT	13
-#define PROP_SYSLOGSEVERITY		14
-#define PROP_SYSLOGSEVERITY_TEXT	15
-#define PROP_TIMEGENERATED		16
-#define PROP_PROGRAMNAME		17
-#define PROP_PROTOCOL_VERSION		18
-#define PROP_STRUCTURED_DATA		19
-#define PROP_APP_NAME			20
-#define PROP_PROCID			21
-#define PROP_MSGID			22
-#define PROP_PARSESUCCESS		23
-#define PROP_SYS_NOW			150
-#define PROP_SYS_YEAR			151
-#define PROP_SYS_MONTH			152
-#define PROP_SYS_DAY			153
-#define PROP_SYS_HOUR			154
-#define PROP_SYS_HHOUR			155
-#define PROP_SYS_QHOUR			156
-#define PROP_SYS_MINUTE			157
-#define PROP_SYS_MYHOSTNAME		158
-#define PROP_SYS_BOM			159
-#define PROP_SYS_UPTIME			160
-#define PROP_UUID			161
-#define PROP_CEE			200
-#define PROP_CEE_ALL_JSON		201
-#define PROP_LOCAL_VAR			202
-#define PROP_GLOBAL_VAR			203
 
 
 /* The error codes below are orginally "borrowed" from
@@ -401,7 +356,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RULESET_EXISTS = -2306,/**< ruleset already exists */
 	RS_RET_DEPRECATED = -2307,/**< deprecated functionality is used */
 	RS_RET_DS_PROP_SEQ_ERR = -2308,/**< property sequence error deserializing object */
-	RS_RET_TPL_INVLD_PROP = -2309,/**< property name error in template (unknown name) */
+	RS_RET_INVLD_PROP = -2309,/**< property name error (unknown name) */
 	RS_RET_NO_RULEBASE = -2310,/**< mmnormalize: rulebase can not be found or otherwise invalid */
 	RS_RET_INVLD_MODE = -2311,/**< invalid mode specified in configuration */
 	RS_RET_INVLD_ANON_BITS = -2312,/**< mmanon: invalid number of bits to anonymize specified */
@@ -427,6 +382,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_UDPSEND = -2354,/**< sending msg via UDP failed */
 	RS_RET_LAST_ERRREPORT = -2355,/**< module does not emit more error messages as limit is reached */
 	RS_RET_READ_ERR = -2356,/**< read error occured (file i/o) */
+	RS_RET_CONF_PARSE_WARNING = -2357,/**< warning parsing config file */
+	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
+
+	/* up to 2400 reserved for 7.5 & 7.6 */
+	RS_RET_INVLD_OMOD = -2400, /**< invalid output module, does not provide proper interfaces */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -445,7 +405,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
  * Be sure to call the to-be-returned variable always "iRet" and
  * the function finalizer always "finalize_it".
  */
-#define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#if HAVE_BUILTIN_EXCEPT
+#	define CHKiRet(code) if(__builtin_expect(((iRet = code) != RS_RET_OK), 0)) goto finalize_it
+#else
+#	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#endif
+
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 /* macro below is to handle failing malloc/calloc/strdup... which we almost always handle in the same way... */
@@ -510,6 +475,37 @@ extern pthread_attr_t default_thread_attr;
 extern int default_thr_sched_policy;
 #endif
 
+/* The following structure defines immutable parameters which need to
+ * be passed as action parameters.
+ *
+ * Note that output plugins may request multiple templates. Let's say
+ * an output requests n templates. Than the overall table must hold
+ * n*nbrMsgs records, and each messages begins on a n-boundary. There
+ * is a macro defined below to access the proper element.
+ *
+ * WARNING: THIS STRUCTURE IS PART OF THE ***OUTPUT MODULE INTERFACE***
+ * It is passed into the doCommit() function. Do NOT modify it until
+ * absolutely necessary - all output plugins need to be changed!
+ *
+ * If a change is "just" for internal working, consider adding a
+ * separate paramter outside of this structure. Of course, it is
+ * best to avoid this as well ;-)
+ * rgerhards, 2013-12-04
+ */
+struct __attribute__ ((__packed__)) actWrkrIParams {
+	uchar *param;
+	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
+	uint32_t lenStr;  /* length of current string (if string ptr) */
+};
+
+/* macro to access actWrkrIParams base object:
+ * param is ptr to base address
+ * nActTpls is the number of templates the action has requested
+ * iMsg is the message index
+ * iTpl is the template index
+ * This macro can be used for read and write access.
+ */
+#define actParam(param, nActTpls, iMsg, iTpl) (param[(iMsg*nActTpls)+iTpl])
 
 /* for the time being, we do our own portability handling here. It
  * looks like autotools either does not yet support checks for it, or
@@ -545,13 +541,13 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
  * add them. -- rgerhards, 2008-04-17
  */
 extern uchar *glblModPath; /* module load path */
-extern rsRetVal (*glblErrLogger)(int, uchar*);
+extern void (*glblErrLogger)(const int, const int, const uchar*);
 
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
-rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
+void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define

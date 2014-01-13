@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -69,8 +69,13 @@ typedef struct _instanceData {
 	uchar	*pipe;	/* pipe or template name (display only) */
 	uchar	*tplName;       /* format template to use */
 	short	fd;		/* pipe descriptor for (current) pipe */
+	pthread_mutex_t mutWrite; /* guard against multiple instances writing to same pipe */
 	sbool	bHadError;	/* did we already have/report an error on this pipe? */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	EMPTY_STRUCT
@@ -276,15 +281,27 @@ CODESTARTcreateInstance
 	pData->pipe = NULL;
 	pData->fd = -1;
 	pData->bHadError = 0;
+	pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	pthread_mutex_destroy(&pData->mutWrite);
 	free(pData->pipe);
 	if(pData->fd != -1)
 		close(pData->fd);
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINtryResume
@@ -292,9 +309,14 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
+	instanceData *pData;
 CODESTARTdoAction
-	DBGPRINTF(" (%s)\n", pData->pipe);
+	pData = pWrkrData->pData;
+	DBGPRINTF("ompipe: writing to %s\n", pData->pipe);
+	/* this module is single-threaded by nature */
+	pthread_mutex_lock(&pData->mutWrite);
 	iRet = writePipe(ppString, pData);
+	pthread_mutex_unlock(&pData->mutWrite);
 ENDdoAction
 
 
@@ -390,6 +412,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 

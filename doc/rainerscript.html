@@ -34,47 +34,35 @@ return a valid result, as you can't really add two letters (to
 concatenate them, use the concatenation operator &amp;).
 &nbsp;However, all type conversions are automatically done by the
 script interpreter when there is need to do so.<br>
+<h3>Constant Strings</h3>
+<p>String constants are necessary in many places: comparisons,
+configuration parameter values and function arguments, to name a
+few important ones.
+<p>In constant strings, special characters are escape by prepending a
+backslash in front of them -- just in the same way this is done in the
+C programming language or PHP.
+<p>If in doubt how to properly escape, use the
+<a href="http://www.rsyslog.com/rainerscript-constant-string-escaper/">RainerScript
+String Escape Online Tool</a>.
 <h2>Variable (Property) types</h2>
 <p>All rsyslog properties (see the <a href="property_replacer.html">property
 replacer</a> page for a list) can be used in RainerScript. In addition, it also
-supports local and global variables. Local variables are local to the current message, but are
+supports local variables. Local variables are local to the current message, but are
 NOT message properties (e.g. the "$!" all JSON property does not contain
-them). Global variables have a truely global scope and are NOT bound to
-a specifc message. Thus they can be used to persist values across
-multiple messages (for things like counters). Please note that rsyslog
-ensures proper synchronization for global variables (which also means
-they are slower than the others). HOWEVER, in a highly multithreaded
-configuration operations like<br>
-set $/var = $/var + 1;</br>
-are <b>not</b> atomic, so some updates to the counter variable may be missing. The
-classical sample for this is in a two-thread environment: Variable $/var is set
-to 1 at the start. Now the following happens in the following order:
-<ol>
-<li>Thread A reads 1 from $/var and adds 1, result is 2, but not yet stored
-<li>Thread B reads 1 from $/var and adds 1, result is 2, but not yet stored
-<li>Thread A stores its result of 2
-<li>Thread B stores its result of 2
-</ol>
-After this sequence, $/var contains the value two, which is probably not what was
-expected. Rsyslog does <b>not</b> provide looking primitives for individual variables,
-as this can lead to serious configuration problems if not used 100% correctly.
-However, rsyslog provides (or will in the future provide) special function which
-provide guaranteed atomic updates (in the sample, the end result would be three
-no matter what the scheduling order is).
+them).
 <p>Only message json (CEE/Lumberjack) properties can be modified by
 the "set" and "unset" statements, not any other message property. Obviously,
-local and global variables are also modifieable.
+local variables are also modifieable.
 <p>Message JSON property names start with "$!" where the bang character
 represents the root.
-<p>Local variables names start with "$.", where the dot denotes the root. Similarly,
-global variables start with "$/".
-<p>Both JSON properties as well as global/local variables may contain an arbitrary
+<p>Local variables names start with "$.", where the dot denotes the root.
+<p>Both JSON properties as well as local variables may contain an arbitrary
 deep path before the final element. The bang character is always used as path
-separator, no matter if it is a message property or a global/local variable. For example
+separator, no matter if it is a message property or a local variable. For example
 "$!path1!path2!varname" is a three-level deep message property where as
 the very similar looking "$.path1!path2!varname" specifies a three-level
-deep local variable. The similar global variables is named "$/path1!path2!varname".
-The bang, slash, or dot character immediately following the
+deep local variable.
+The bang or dot character immediately following the
 dollar sign is used by rsyslog to separate the different types.
 <h2>configuration objects</h2>
 <h3>main_queue()</h3>
@@ -89,6 +77,12 @@ $MainMsgQ... statements are ignored.
 <p>Example:</p>
 <textarea rows="2" cols="60">main_queue(queue.size="100000" queue.type="LinkedList")
 </textarea>
+<h3>action()</h3>
+The <a href="rsyslog_conf_actions.html">action</a> object is the primary
+means of describing actions to be carried out.
+<h3>global()</h3>
+<p>This is used to set global configuration parameters. For details, please
+see the <a href="global.html">rsyslog global configuration object</a>.
 <h2>Expressions</h2>
 The language supports arbitrary complex expressions. All usual
 operators are supported. The precedence of operations is as follows
@@ -148,6 +142,11 @@ equivalent single-character [field($msg, 44 ,3)] extraction.
 <li>prifilt(constant) - mimics a traditional PRI-based filter (like "*.*" or
 "mail.info"). The traditional filter string must be given as a <b>constant string</b>.
 Dynamic string evaluation is not permitted (for performance reasons).
+<li>exec_template(templateName) -- executes a template and returns the string generated
+by it. Note that templateName must be a constant string. This is primarily for performance
+reasons. If there is a valid use case for dynamic template names, please let us know
+and we will re-consider the decision. TemplateName can be any template name, including the
+predefined ones.
 </ul>
 <p>The following example can be used to build a dynamic filter based on some environment
 variable:

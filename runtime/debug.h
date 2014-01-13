@@ -109,6 +109,10 @@ void *dbgmalloc(size_t size);
 void dbgOutputTID(char* name);
 int dbgGetDbglogFd(void);
 
+/* external data */
+extern char *pszAltDbgFileName; /* if set, debug output is *also* sent to here */
+extern int altdbg;	/* and the handle for alternate debug output */
+
 /* macros */
 #ifdef DEBUGLESS
 #	define DBGPRINTF(...) {}

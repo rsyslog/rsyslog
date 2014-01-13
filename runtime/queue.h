@@ -103,11 +103,10 @@ struct queue_s {
 	 * the user really wanted...). -- rgerhards, 2008-04-02
 	 */
 	/* end dequeue time window */
-	rsRetVal (*pConsumer)(void *,batch_t*,int*); /* user-supplied consumer function for dequeued messages */
+	rsRetVal (*pConsumer)(void *,batch_t*, wti_t*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
 	 * user pointer array that was dequeued (actual sample: for actions, arg1 is the pAction and arg2
-	 * is pointer to an array of message message pointers), arg3 is a pointer to an interger which is zero
-	 * during normal operations and one if the consumer must urgently shut down.
+	 * is pointer to an array of message message pointers)
 	 */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
@@ -122,7 +121,7 @@ struct queue_s {
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
-	pthread_cond_t notFull, notEmpty;
+	pthread_cond_t notFull;
 	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
@@ -195,14 +194,12 @@ struct queue_s {
 
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
-rsRetVal qqueueEnqMsgDirect(qqueue_t *pThis, msg_t *pMsg);
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, msg_t *pMsg);
 rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, int*));
-rsRetVal qqueueEnqObjDirectBatch(qqueue_t *pThis, batch_t *pBatch);
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*, wti_t *));
 int queueCnfParamsSet(struct nvlst *lst);
 rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst);
 void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis);
@@ -224,6 +221,7 @@ PROTOTYPEpropSetMeth(qqueue, iLowWtrMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(qqueue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
+PROTOTYPEpropSetMeth(qqueue, iNumWorkerThreads, int);
 PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(qqueue, pAction, action_t*);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);

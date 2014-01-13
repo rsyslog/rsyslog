@@ -1,15 +1,12 @@
 /* mmnormalize.c
  * This is a message modification module. It normalizes the input message with
- * the help of liblognorm. The messages EE event structure is updated.
+ * the help of liblognorm. The message's JSON variables are updated.
  *
  * NOTE: read comments in module-template.h for details on the calling interface!
  *
- * TODO: check if we can replace libee via JSON system - currently that part
- * is pretty inefficient... rgerhards, 2012-08-27
- *
  * File begun on 2010-01-01 by RGerhards
  *
- * Copyright 2010-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -39,7 +36,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <libestr.h>
-#include <libee/libee.h>
 #include <json.h>
 #include <liblognorm.h>
 #include "conf.h"
@@ -67,8 +63,12 @@ typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
-	ee_ctx ctxee;		/**< context to be used for libee */
+	char *pszPath;		/**< path of normalized data */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 typedef struct configSettings_s {
 	uchar *rulebase;		/**< name of normalization rulebase to use */
@@ -80,6 +80,7 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
+	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -96,30 +97,21 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 
-/* to be called to build the libee part of the instance ONCE ALL PARAMETERS ARE CORRECT
+/* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
  * (and set within pData!).
  */
 static rsRetVal
 buildInstance(instanceData *pData)
 {
 	DEFiRet;
-	if((pData->ctxee = ee_initCtx()) == NULL) {
-		errmsg.LogError(0, RS_RET_ERR_LIBEE_INIT, "error: could not initialize libee "
-				"ctx, cannot activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBEE_INIT);
-	}
-
 	if((pData->ctxln = ln_initCtx()) == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
-		ee_exitCtx(pData->ctxee);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
-	ln_setEECtx(pData->ctxln, pData->ctxee);
 	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
 		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-				"could not be loaded cannot activate action", cs.rulebase);
-		ee_exitCtx(pData->ctxee);
+				"could not be loaded cannot activate action", pData->rulebase);
 		ln_exitCtx(pData->ctxln);
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
 	}
@@ -137,6 +129,11 @@ ENDinitConfVars
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINbeginCnfLoad
@@ -176,9 +173,14 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
-	ee_exitCtx(pData->ctxee);
 	ln_exitCtx(pData->ctxln);
+	free(pData->pszPath);
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -193,50 +195,28 @@ ENDtryResume
 
 BEGINdoAction
 	msg_t *pMsg;
-	es_str_t *str;
 	uchar *buf;
-	char *cstrJSON;
 	int len;
 	int r;
-	struct ee_event	*event = NULL;
-	struct json_tokener *tokener;
-	struct json_object *json;
+	struct json_object *json = NULL;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
-	/* note that we can performance-optimize the interface, but this also
-	 * requires changes to the libraries. For now, we accept message
-	 * duplication. -- rgerhards, 2010-12-01
-	 */
-	if(pData->bUseRawMsg) {
+	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
-	str = es_newStrFromCStr((char*)buf, len);
-	r = ln_normalize(pData->ctxln, str, &event);
+	r = ln_normalize(pWrkrData->pData->ctxln, (char*)buf, len, &json);
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
 	} else {
 		MsgSetParseSuccess(pMsg, 1);
 	}
-	es_deleteStr(str);
 
-	/* reformat to our json data struct */
-	/* TODO: this is all extremly ineffcient! */
-	ee_fmtEventToJSON(event, &str);
-	cstrJSON = es_str2cstr(str, NULL);
-	ee_deleteEvent(event);
-	dbgprintf("mmnormalize generated: %s\n", cstrJSON);
+ 	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
 
-	tokener = json_tokener_new();
-	json = json_tokener_parse_ex(tokener, cstrJSON, strlen((char*)cstrJSON));
-	json_tokener_free(tokener);
- 	msgAddJSON(pMsg, (uchar*)"!", json);
-
-	free(cstrJSON);
-	es_deleteStr(str);
 ENDdoAction
 
 
@@ -245,12 +225,14 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
+	pData->pszPath = strdup("$!");
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int bDestructPValsOnExit;
+	char *cstr;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
@@ -278,6 +260,23 @@ CODESTARTnewActInst
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "path")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (strlen(cstr) < 2) {
+				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+						"mmnormalize: valid path name should be at least "
+						"2 symbols long, got %s",	cstr);
+				free(cstr);
+			} else if (cstr[0] != '$') {
+				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+						"mmnormalize: valid path name should start with $,"
+						"got %s", cstr);
+				free(cstr);
+			} else {
+				free(pData->pszPath);
+				pData->pszPath = cstr;
+			}
+			continue;
 		} else {
 			DBGPRINTF("mmnormalize: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
@@ -313,6 +312,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	pData->rulebase = cs.rulebase;
 	pData->bUseRawMsg = cs.bUseRawMsg;
+	pData->pszPath = strdup("$!"); /* old interface does not support this feature */
 	/* all config vars auto-reset! */
 	cs.bUseRawMsg = 0;
 	cs.rulebase = NULL; /* we used it up! */
@@ -338,6 +338,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt

@@ -48,6 +48,7 @@
 #include "rainerscript.h"
 #include "srUtils.h"
 #include "modules.h"
+#include "wti.h"
 #include "dirty.h" /* for main ruleset queue creation */
 
 /* static data */
@@ -67,8 +68,8 @@ static struct cnfparamblk rspblk =
 	};
 
 /* forward definitions */
-static rsRetVal processBatch(batch_t *pBatch);
-static rsRetVal scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active);
+static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
+static rsRetVal scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti);
 
 
 /* ---------- linked-list key handling functions (ruleset) ---------- */
@@ -160,226 +161,130 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* This function is similar to processBatch(), but works on a batch that
- * contains rules from multiple rulesets. In this case, we can not push
- * the whole batch through the ruleset. Instead, we examine it and
- * partition it into sub-rulesets which we then push through the system.
- * rgerhards, 2010-06-15
- */
-static inline rsRetVal
-processBatchMultiRuleset(batch_t *pBatch)
+/* driver to iterate over all rulesets */
+DEFFUNC_llExecFunc(doActivateRulesetQueues)
 {
-	ruleset_t *currRuleset;
-	batch_t snglRuleBatch;
-	int i;
-	int iStart;	/* start index of partial batch */
-	int iNew;	/* index for new (temporary) batch */
-	int bHaveUnprocessed;	/* do we (still) have unprocessed entries? (loop term predicate) */
+	DEFiRet;
+	ruleset_t* pThis = (ruleset_t*) pData;
+	dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n",
+		  pThis->pQueue, pThis->pszName);
+	if(pThis->pQueue != NULL)
+		startMainQueue(pThis->pQueue);
+	RETiRet;
+}
+/* activate all ruleset queues */
+rsRetVal
+activateRulesetQueues()
+{
 	DEFiRet;
 
-	do {
-		bHaveUnprocessed = 0;
-		/* search for first unprocessed element */
-		for(iStart = 0 ; iStart < pBatch->nElem && pBatch->eltState[iStart] == BATCH_STATE_DISC ; ++iStart)
-			/* just search, no action */;
-		if(iStart == pBatch->nElem)
-			break; /* everything processed */
+	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
 
-		/* prepare temporary batch */
-		CHKiRet(batchInit(&snglRuleBatch, pBatch->nElem));
-		snglRuleBatch.pbShutdownImmediate = pBatch->pbShutdownImmediate;
-		currRuleset = batchElemGetRuleset(pBatch, iStart);
-		iNew = 0;
-		for(i = iStart ; i < pBatch->nElem ; ++i) {
-			if(batchElemGetRuleset(pBatch, i) == currRuleset) {
-				/* for performance reasons, we copy only those members that we actually need */
-				snglRuleBatch.pElem[iNew].pMsg = pBatch->pElem[i].pMsg;
-				snglRuleBatch.eltState[iNew] = pBatch->eltState[i];
-				++iNew;
-				/* We indicate the element also as done, so it will not be processed again */
-				pBatch->eltState[i] = BATCH_STATE_DISC;
-			} else {
-				bHaveUnprocessed = 1;
-			}
-		}
-		snglRuleBatch.nElem = iNew; /* was left just right by the for loop */
-		batchSetSingleRuleset(&snglRuleBatch, 1);
-		/* process temp batch */
-		processBatch(&snglRuleBatch);
-		batchFree(&snglRuleBatch);
-	} while(bHaveUnprocessed == 1);
-
-finalize_it:
 	RETiRet;
 }
 
-/* return a new "active" structure for the batch. Free with freeActive(). */
-static inline sbool *newActive(batch_t *pBatch)
-{
-	return malloc(sizeof(sbool) * batchNumMsgs(pBatch));
-	
-}
-static inline void freeActive(sbool *active) { free(active); }
-
-
-/* for details, see scriptExec() header comment! */
-/* call action for all messages with filter on */
-static rsRetVal
-execAct(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
-{
-	DEFiRet;
-dbgprintf("RRRR: execAct [%s]: batch of %d elements, active %p\n", modGetName(stmt->d.act->pMod), batchNumMsgs(pBatch), active);
-	pBatch->active = active;
-	stmt->d.act->submitToActQ(stmt->d.act, pBatch);
-	RETiRet;
-}
 
 static rsRetVal
-execSet(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
-	int i;
-	struct var result;
 	DEFiRet;
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(   pBatch->eltState[i] != BATCH_STATE_DISC
-		   && (active == NULL || active[i])) {
-			cnfexprEval(stmt->d.s_set.expr, &result, pBatch->pElem[i].pMsg);
-			msgSetJSONFromVar(pBatch->pElem[i].pMsg, stmt->d.s_set.varname,
-					  &result);
-			varDelete(&result);
-		}
-	}
-	RETiRet;
-}
-
-static rsRetVal
-execUnset(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
-{
-	int i;
-	DEFiRet;
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(   pBatch->eltState[i] != BATCH_STATE_DISC
-		   && (active == NULL || active[i])) {
-			msgUnsetJSON(pBatch->pElem[i].pMsg, stmt->d.s_unset.varname);
-		}
-	}
-	RETiRet;
-}
-
-/* for details, see scriptExec() header comment! */
-/* "stop" simply discards the filtered items - it's just a (hopefully more intuitive
- * shortcut for users.
- */
-static rsRetVal
-execStop(batch_t *pBatch, sbool *active)
-{
-	int i;
-	DEFiRet;
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
-		if(   pBatch->eltState[i] != BATCH_STATE_DISC
-		   && (active == NULL || active[i])) {
-			pBatch->eltState[i] = BATCH_STATE_DISC;
-		}
-	}
-	RETiRet;
-}
-
-/* for details, see scriptExec() header comment! */
-// save current filter, evaluate new one
-// perform then (if any message)
-// if ELSE given:
-//    set new filter, inverted
-//    perform else (if any messages)
-static rsRetVal
-execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
-{
-	sbool *newAct;
-	int i;
-	sbool bRet;
-	sbool allInactive = 1;
-	DEFiRet;
-	newAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if(*(pBatch->pbShutdownImmediate))
-			FINALIZE;
-		if(pBatch->eltState[i] == BATCH_STATE_DISC)
-			continue; /* will be ignored in any case */
-		if(active == NULL || active[i]) {
-			bRet = cnfexprEvalBool(stmt->d.s_if.expr, pBatch->pElem[i].pMsg);
-			allInactive = 0;
-		} else 
-			bRet = 0;
-		newAct[i] = bRet;
-		DBGPRINTF("batch: item %d: expr eval: %d\n", i, bRet);
-	}
-
-	if(allInactive) {
-		DBGPRINTF("execIf: all batch elements are inactive, holding execution\n");
-		freeActive(newAct);
+	if(stmt->d.act->bDisabled) {
+		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
 		FINALIZE;
 	}
 
-	if(stmt->d.s_if.t_then != NULL) {
-		scriptExec(stmt->d.s_if.t_then, pBatch, newAct);
+	DBGPRINTF("executing action %d\n", stmt->d.act->iActionNbr);
+	stmt->d.act->submitToActQ(stmt->d.act, pWti, pMsg);
+	if(iRet != RS_RET_DISCARDMSG) {
+		/* note: we ignore the error code here, as we do NEVER want to
+		 * stop script execution due to action return code
+		 */
+		iRet = RS_RET_OK;
 	}
-	if(stmt->d.s_if.t_else != NULL) {
-		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-			if(*(pBatch->pbShutdownImmediate))
-				FINALIZE;
-			if(pBatch->eltState[i] != BATCH_STATE_DISC
-			   && (active == NULL || active[i]))
-				newAct[i] = !newAct[i];
-			}
-		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
-	}
-	freeActive(newAct);
 finalize_it:
 	RETiRet;
 }
 
-/* for details, see scriptExec() header comment! */
-static void
-execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+static rsRetVal
+execSet(struct cnfstmt *stmt, msg_t *pMsg)
 {
-	sbool *newAct;
-	msg_t *pMsg;
-	int bRet;
-	int i;
-	newAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if(*(pBatch->pbShutdownImmediate))
-			return;
-		if(pBatch->eltState[i] == BATCH_STATE_DISC)
-			continue; /* will be ignored in any case */
-		pMsg = pBatch->pElem[i].pMsg;
-		if(active == NULL || active[i]) {
-			if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
-			   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
-			            & (1<<pMsg->iSeverity)) == 0) )
-				bRet = 0;
-			else
-				bRet = 1;
-		} else 
-			bRet = 0;
-		newAct[i] = bRet;
-		DBGPRINTF("batch: item %d PRIFILT %d\n", i, newAct[i]);
-	}
+	struct var result;
+	DEFiRet;
+	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
+	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result);
+	varDelete(&result);
+	RETiRet;
+}
 
-	if(stmt->d.s_prifilt.t_then != NULL) {
-		scriptExec(stmt->d.s_prifilt.t_then, pBatch, newAct);
+static rsRetVal
+execUnset(struct cnfstmt *stmt, msg_t *pMsg)
+{
+	DEFiRet;
+	msgDelJSON(pMsg, stmt->d.s_unset.varname);
+	RETiRet;
+}
+
+static rsRetVal
+execCall(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
+{
+	DEFiRet;
+	if(stmt->d.s_call.ruleset == NULL) {
+		CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
+	} else {
+		CHKmalloc(pMsg = MsgDup((msg_t*) pMsg));
+		DBGPRINTF("CALL: forwarding message to async ruleset %p\n",
+			  stmt->d.s_call.ruleset->pQueue);
+		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+		MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
+		/* Note: we intentionally use submitMsg2() here, as we process messages
+		 * that were already run through the rate-limiter.
+		 */
+		submitMsg2(pMsg);
 	}
-	if(stmt->d.s_prifilt.t_else != NULL) {
-		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-			if(*(pBatch->pbShutdownImmediate))
-				return;
-			if(pBatch->eltState[i] != BATCH_STATE_DISC
-			   && (active == NULL || active[i]))
-				newAct[i] = !newAct[i];
-			}
-		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
+{
+	sbool bRet;
+	DEFiRet;
+	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg);
+	DBGPRINTF("if condition result is %d\n", bRet);
+	if(bRet) {
+		if(stmt->d.s_if.t_then != NULL)
+			CHKiRet(scriptExec(stmt->d.s_if.t_then, pMsg, pWti));
+	} else {
+		if(stmt->d.s_if.t_else != NULL)
+			CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
 	}
-	freeActive(newAct);
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+execPRIFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
+{
+	int bRet;
+	DEFiRet;
+	if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
+	   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
+		    & (1<<pMsg->iSeverity)) == 0) )
+		bRet = 0;
+	else
+		bRet = 1;
+
+	DBGPRINTF("PRIFILT condition result is %d\n", bRet);
+	if(bRet) {
+		if(stmt->d.s_prifilt.t_then != NULL)
+			CHKiRet(scriptExec(stmt->d.s_prifilt.t_then, pMsg, pWti));
+	} else {
+		if(stmt->d.s_prifilt.t_else != NULL)
+			CHKiRet(scriptExec(stmt->d.s_prifilt.t_else, pMsg, pWti));
+	}
+finalize_it:
+	RETiRet;
 }
 
 
@@ -392,12 +297,11 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	int bRet = 0;
 	rs_size_t propLen;
 
-	if(stmt->d.s_propfilt.propID == PROP_INVALID)
+	if(stmt->d.s_propfilt.prop.id == PROP_INVALID)
 		goto done;
 
-	pszPropVal = MsgGetProp(pMsg, NULL, stmt->d.s_propfilt.propID,
-				stmt->d.s_propfilt.propName, &propLen,
-				&pbMustBeFreed, NULL);
+	pszPropVal = MsgGetProp(pMsg, NULL, &stmt->d.s_propfilt.prop,
+				&propLen, &pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
 	switch(stmt->d.s_propfilt.operation ) {
@@ -441,25 +345,18 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 		bRet = (bRet == 1) ?  0 : 1;
 
 	if(Debug) {
-		char *cstr;
-		if(stmt->d.s_propfilt.propID == PROP_CEE) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE) {
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
-		} else if(stmt->d.s_propfilt.propID == PROP_LOCAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if(stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
-		} else if(stmt->d.s_propfilt.propID == PROP_GLOBAL_VAR) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if(stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
 			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				cstr, pszPropVal);
-			free(cstr);
+				stmt->d.s_propfilt.prop.name, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
-				propIDToName(stmt->d.s_propfilt.propID), pszPropVal);
+				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
 		}
 		if(stmt->d.s_propfilt.isNegated)
 			DBGPRINTF("NOT ");
@@ -482,79 +379,67 @@ done:
 	return bRet;
 }
 
-/* for details, see scriptExec() header comment! */
-static void
-execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
+static rsRetVal
+execPROPFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
-	sbool *thenAct;
 	sbool bRet;
-	int i;
-	thenAct = newActive(pBatch);
-	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-		if(*(pBatch->pbShutdownImmediate))
-			return;
-		if(pBatch->eltState[i] == BATCH_STATE_DISC)
-			continue; /* will be ignored in any case */
-		if(active == NULL || active[i]) {
-			bRet = evalPROPFILT(stmt, pBatch->pElem[i].pMsg);
-		} else 
-			bRet = 0;
-		thenAct[i] = bRet;
-		DBGPRINTF("batch: item %d PROPFILT %d\n", i, thenAct[i]);
-	}
+	DEFiRet;
 
-	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
-	freeActive(thenAct);
+	bRet = evalPROPFILT(stmt, pMsg);
+	DBGPRINTF("PROPFILT condition result is %d\n", bRet);
+	if(bRet)
+		CHKiRet(scriptExec(stmt->d.s_propfilt.t_then, pMsg, pWti));
+finalize_it:
+	RETiRet;
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
  * contained in grammer/rainerscript.c, HOWEVER, that file focusses primarily
  * on the parsing and object creation part. So as an actual executor, it is
  * better suited here.
- * param active: if NULL, all messages are active (to be processed), if non-null
- *               this is an array of the same size as the batch. If 1, the message
- *               is to be processed, otherwise not.
- * NOTE: this function must receive batches which contain a single ruleset ONLY!
  * rgerhards, 2012-09-04
  */
 static rsRetVal
-scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
+scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 {
-	DEFiRet;
 	struct cnfstmt *stmt;
+	DEFiRet;
 
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
+		if(*pWti->pbShutdownImmediate) {
+			DBGPRINTF("scriptExec: ShutdownImmediate set, "
+				  "force terminating\n");	
+			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		}
 		if(Debug) {
-			dbgprintf("scriptExec: batch of %d elements, active %p, active[0]:%d\n",
-				  batchNumMsgs(pBatch), active, (active == NULL ? 1 : active[0]));
 			cnfstmtPrintOnly(stmt, 2, 0);
 		}
 		switch(stmt->nodetype) {
 		case S_NOP:
 			break;
 		case S_STOP:
-			execStop(pBatch, active);
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 			break;
 		case S_ACT:
-			execAct(stmt, pBatch, active);
+			CHKiRet(execAct(stmt, pMsg, pWti));
 			break;
 		case S_SET:
-			execSet(stmt, pBatch, active);
+			CHKiRet(execSet(stmt, pMsg));
 			break;
 		case S_UNSET:
-			execUnset(stmt, pBatch, active);
+			CHKiRet(execUnset(stmt, pMsg));
 			break;
 		case S_CALL:
-			scriptExec(stmt->d.s_call.stmt, pBatch, active);
+			CHKiRet(execCall(stmt, pMsg, pWti));
 			break;
 		case S_IF:
-			execIf(stmt, pBatch, active);
+			CHKiRet(execIf(stmt, pMsg, pWti));
 			break;
 		case S_PRIFILT:
-			execPRIFILT(stmt, pBatch, active);
+			CHKiRet(execPRIFILT(stmt, pMsg, pWti));
 			break;
 		case S_PROPFILT:
-			execPROPFILT(stmt, pBatch, active);
+			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",
@@ -562,36 +447,43 @@ scriptExec(struct cnfstmt *root, batch_t *pBatch, sbool *active)
 			break;
 		}
 	}
+finalize_it:
 	RETiRet;
 }
 
 
 /* Process (consume) a batch of messages. Calls the actions configured.
- * If the whole batch uses a singel ruleset, we can process the batch as 
- * a whole. Otherwise, we need to process it slower, on a message-by-message
- * basis (what can be optimized to a per-ruleset basis)
- * rgerhards, 2005-10-13
+ * This is called by MAIN queues.
  */
 static rsRetVal
-processBatch(batch_t *pBatch)
+processBatch(batch_t *pBatch, wti_t *pWti)
 {
-	ruleset_t *pThis;
+	int i;
+	msg_t *pMsg;
+	ruleset_t *pRuleset;
 	DEFiRet;
-	assert(pBatch != NULL);
 
-	DBGPRINTF("processBatch: batch of %d elements must be processed\n", pBatch->nElem);
-	if(pBatch->bSingleRuleset) {
-		pThis = batchGetRuleset(pBatch);
-		if(pThis == NULL)
-			pThis = ourConf->rulesets.pDflt;
-		ISOBJ_TYPE_assert(pThis, ruleset);
-		CHKiRet(scriptExec(pThis->root, pBatch, NULL));
-	} else {
-		CHKiRet(processBatchMultiRuleset(pBatch));
+	DBGPRINTF("processBATCH: batch of %d elements must be processed\n", pBatch->nElem);
+
+	wtiResetExecState(pWti, pBatch);
+
+	/* execution phase */
+	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
+		pMsg = pBatch->pElem[i].pMsg;
+		DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
+		pRuleset = (pMsg->pRuleset == NULL) ? ourConf->rulesets.pDflt : pMsg->pRuleset;
+		scriptExec(pRuleset->root, pMsg, pWti);
+		// TODO: think if we need a return state of scriptExec - most probably
+		// the answer is "no", as we need to process the batch in any case!
+		// TODO: we must refactor this!  flag messages as committed
+		batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 	}
 
-finalize_it:
-	DBGPRINTF("ruleset.ProcessMsg() returns %d\n", iRet);
+	/* commit phase */
+	dbgprintf("END batch execution phase, entering to commit phase\n");
+	actionCommitAllDirect(pWti);
+
+	DBGPRINTF("processBATCH: batch of %d elements has been processed\n", pBatch->nElem);
 	RETiRet;
 }
 

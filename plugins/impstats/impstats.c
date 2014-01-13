@@ -46,6 +46,7 @@
 #include "glbl.h"
 #include "statsobj.h"
 #include "prop.h"
+#include "ruleset.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -62,6 +63,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(ruleset)
 
 typedef struct configSettings_s {
 	int iStatsInterval;
@@ -77,11 +79,13 @@ struct modConfData_s {
 	int iFacility;
 	int iSeverity;
 	int logfd; /* fd if logging to file, or -1 if closed */
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	statsFmtType_t statsFmt;
 	sbool bLogToSyslog;
 	sbool bResetCtrs;
 	char *logfile;
 	sbool configSetViaV2Method;
+	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -98,7 +102,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "log.syslog", eCmdHdlrBinary, 0 },
 	{ "resetcounters", eCmdHdlrBinary, 0 },
 	{ "log.file", eCmdHdlrGetWord, 0 },
-	{ "format", eCmdHdlrGetWord, 0 }
+	{ "format", eCmdHdlrGetWord, 0 },
+	{ "ruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -127,6 +132,7 @@ CODESTARTmodExit
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -153,15 +159,16 @@ static inline void
 doSubmitMsg(uchar *line)
 {
 	msg_t *pMsg;
-	DEFiRet;
 
-	CHKiRet(msgConstruct(&pMsg));
+	if(msgConstruct(&pMsg) != RS_RET_OK)
+		goto finalize_it;
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)line);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
 	MsgSetMSGoffs(pMsg, 0);
+	MsgSetRuleset(pMsg, runModConf->pBindRuleset);
 	MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd-pstats:"), sizeof("rsyslogd-pstats:") - 1);
 	pMsg->iFacility = runModConf->iFacility;
 	pMsg->iSeverity = runModConf->iSeverity;
@@ -272,6 +279,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->statsFmt = statsFmt_Legacy;
 	loadModConf->logfd = -1;
 	loadModConf->logfile = NULL;
+	loadModConf->pszBindRuleset = NULL;
 	loadModConf->bLogToSyslog = 1;
 	loadModConf->bResetCtrs = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -325,6 +333,8 @@ CODESTARTsetModCnf
 						mode);
 			}
 			free(mode);
+		} else if(!strcmp(modpblk.descr[i].name, "ruleset")) {
+			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("impstats: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -358,6 +368,30 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 
+/* we need our special version of checkRuleset(), as we do not have any instances */
+static inline rsRetVal
+checkRuleset(modConfData_t *modConf)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	modConf->pBindRuleset = NULL;	/* assume default ruleset */
+
+	if(modConf->pszBindRuleset == NULL)
+		FINALIZE;
+
+	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "impstats: ruleset '%s' not found - "
+				"using default ruleset instead", modConf->pszBindRuleset);
+	}
+	CHKiRet(localRet);
+	modConf->pBindRuleset = pRuleset;
+finalize_it:
+	RETiRet;
+}
+
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iStatsInterval == 0) {
@@ -365,6 +399,7 @@ CODESTARTcheckCnf
 				"default of %d seconds", DEFAULT_STATS_PERIOD);
 		pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
 	}
+	iRet = checkRuleset(pModConf);
 ENDcheckCnf
 
 
@@ -422,14 +457,12 @@ BEGINrunInput
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	 * right into the sleep below. Note that we DELIBERATLY output
+	 * final set of stats counters on termination request. Depending
+	 * on configuration, they may not make it to the final destination...
 	 */
-	while(1) {
+	while(glbl.GetGlobalInputTermState() == 0) {
 		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
-
-		if(glbl.GetGlobalInputTermState() == 1)
-			break; /* terminate input! */
-
 		DBGPRINTF("impstats: woke up, generating messages\n");
 		generateStatsMsgs();
 	}
@@ -471,6 +504,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	/* the pstatsinverval is an alias to support a previous screwed-up syntax... */
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));

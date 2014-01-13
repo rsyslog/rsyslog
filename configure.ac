@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[7.5.5],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.1.4],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -32,10 +32,14 @@ AC_CANONICAL_HOST
 PKG_PROG_PKG_CONFIG
 
 # modules we require
-PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.8)
+PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c])
 ])
+
+# if int64 is supported, use it
+AC_CHECK_LIB(json-c, json_object_new_object,,)
+AC_CHECK_FUNCS(json_object_new_int64,,)
 
 case "${host}" in
   *-*-linux*)
@@ -152,6 +156,14 @@ AC_TRY_COMPILE([
 	AC_DEFINE(MAXHOSTNAMELEN, 1024, [Define with a value if your <sys/param.h> does not define MAXHOSTNAMELEN])
 	AC_MSG_RESULT(no; defined as 64)
 )
+
+# Check for __builtin_expect()
+AC_MSG_CHECKING([for __builtin_expect()])
+AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
+               [AC_DEFINE(HAVE_BUILTIN_EXPECT, 1,
+                          Define to 1 if compiler supports __builtin_expect)
+                AC_MSG_RESULT([yes])],
+               [AC_MSG_RESULT([no])])
 
 # check for availability of atomic operations
 RS_ATOMIC_OPERATIONS
@@ -365,6 +377,29 @@ AC_ARG_ENABLE(inet,
 AM_CONDITIONAL(ENABLE_INET, test x$enable_inet = xyes)
 if test "$enable_inet" = "yes"; then
         AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
+fi
+
+# jemalloc
+AC_ARG_ENABLE(jemalloc,
+        [AS_HELP_STRING([--enable-jemalloc],[Enable jemalloc support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_jemalloc="yes" ;;
+          no) enable_jemalloc="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-jemalloc) ;;
+         esac],
+        [enable_jemalloc="no"]
+)
+AM_CONDITIONAL(ENABLE_JEMALLOC, test x$enable_jemalloc = xyes)
+if test "$enable_jemalloc" = "yes"; then
+  AC_CHECK_LIB(
+    [jemalloc],
+    [malloc_stats_print],
+    [RT_LIBS="$RT_LIBS -ljemalloc"
+     AC_DEFINE(HAVE_JEMALLOC, 1, [jemalloc support is integrated.])
+    ],
+    [AC_MSG_FAILURE([jemalloc library is missing])],
+    []
+    )
 fi
 
 
@@ -919,8 +954,7 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
-	PKG_CHECK_MODULES(LIBEE, libee >= 0.4.0)
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 0.3.1)
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.0.0)
 fi
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 
@@ -981,13 +1015,26 @@ AM_CONDITIONAL(ENABLE_MMUTF8FIX, test x$enable_mmutf8fix = xyes)
 AC_ARG_ENABLE(mmcount,
         [AS_HELP_STRING([--enable-mmcount],[Enable message counting @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_xmpp="yes" ;;
-          no) enable_xmpp="no" ;;
+         yes) enable_mmcount="yes" ;;
+          no) enable_mmcount="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmcount) ;;
          esac],
         [enable_mmcount=no]
 )
 AM_CONDITIONAL(ENABLE_MMCOUNT, test x$enable_mmcount = xyes)
+
+
+# mmsequence
+AC_ARG_ENABLE(mmsequence,
+        [AS_HELP_STRING([--enable-mmsequence],[Enable sequence generator @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmsequence="yes" ;;
+          no) enable_mmsequence="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsequence) ;;
+         esac],
+        [enable_mmsequence=no]
+)
+AM_CONDITIONAL(ENABLE_MMSEQUENCE, test x$enable_mmsequence = xyes)
 
 
 # mmfields
@@ -1045,7 +1092,7 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.2.0)
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.2)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
@@ -1328,7 +1375,7 @@ AC_ARG_ENABLE(omruleset,
           no) enable_omruleset="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omruleset) ;;
          esac],
-        [enable_omruleset=yes]
+        [enable_omruleset=no]
 )
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
@@ -1552,6 +1599,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmutf8fix/Makefile \
 		plugins/mmcount/Makefile \
+		plugins/mmsequence/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/mmrfc5424addhmac/Makefile \
@@ -1621,6 +1669,7 @@ echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
+echo "    mmsequence enabled:                       $enable_mmsequence"
 echo
 echo "---{ strgen modules }---"
 echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"

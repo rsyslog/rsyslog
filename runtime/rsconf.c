@@ -254,92 +254,6 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
-/* This function returns the current date in different
- * variants. It is used to construct the $NOW series of
- * system properties. The returned buffer must be freed
- * by the caller when no longer needed. If the function
- * can not allocate memory, it returns a NULL pointer.
- * TODO: this was taken from msg.c and we should consolidate it with the code
- * there. This is especially important when we increase the number of system
- * variables (what we definitely want to do).
- */
-typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
-static rsRetVal
-getNOW(eNOWType eNow, es_str_t **estr)
-{
-	DEFiRet;
-	uchar szBuf[16];
-	struct syslogTime t;
-	es_size_t len;
-
-	datetime.getCurrTime(&t, NULL);
-	switch(eNow) {
-	case NOW_NOW:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar),
-			   	"%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
-		break;
-	case NOW_YEAR:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%4.4d", t.year);
-		break;
-	case NOW_MONTH:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.month);
-		break;
-	case NOW_DAY:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.day);
-		break;
-	case NOW_HOUR:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.hour);
-		break;
-	case NOW_MINUTE:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%2.2d", t.minute);
-		break;
-	default:
-		len = snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "*invld eNow*");
-		break;
-	}
-
-	/* now create a string object out of it and hand that over to the var */
-	*estr = es_newStrFromCStr((char*)szBuf, len);
-
-	RETiRet;
-}
-
-
-
-static inline es_str_t *
-getSysVar(char *name)
-{
-	es_str_t *estr = NULL;
-	rsRetVal iRet = RS_RET_OK;
-
-	if(!strcmp(name, "now")) {
-		CHKiRet(getNOW(NOW_NOW, &estr));
-	} else if(!strcmp(name, "year")) {
-		CHKiRet(getNOW(NOW_YEAR, &estr));
-	} else if(!strcmp(name, "month")) {
-		CHKiRet(getNOW(NOW_MONTH, &estr));
-	} else if(!strcmp(name, "day")) {
-		CHKiRet(getNOW(NOW_DAY, &estr));
-	} else if(!strcmp(name, "hour")) {
-		CHKiRet(getNOW(NOW_HOUR, &estr));
-	} else if(!strcmp(name, "minute")) {
-		CHKiRet(getNOW(NOW_MINUTE, &estr));
-	} else if(!strcmp(name, "myhostname")) {
-		char *hn = (char*)glbl.GetLocalHostName();
-		estr = es_newStrFromCStr(hn, strlen(hn));
-	} else {
-		ABORT_FINALIZE(RS_RET_SYSVAR_NOT_FOUND);
-	}
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		dbgprintf("getSysVar error iRet %d\n", iRet);
-		if(estr == NULL)
-			estr = es_newStrFromCStr("*ERROR*", sizeof("*ERROR*") - 1);
-	}
-	return estr;
-}
-
-
 /* Process input() objects */
 rsRetVal
 inputProcessCnf(struct cnfobj *o)
@@ -376,6 +290,21 @@ finalize_it:
 
 /*------------------------------ interface to flex/bison parser ------------------------------*/
 extern int yylineno;
+
+void
+parser_warnmsg(char *fmt, ...)
+{
+	va_list ap;
+	char errBuf[1024];
+
+	va_start(ap, fmt);
+	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+		errBuf[sizeof(errBuf)-1] = '\0';
+	errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING,
+			"warning during parsing file %s, on or before line %d: %s",
+			cnfcurrfn, yylineno, errBuf);
+	va_end(ap);
+}
 
 void
 parser_errmsg(char *fmt, ...)
@@ -479,30 +408,6 @@ void cnfDoBSDHost(char *ln)
 			"solution (Block '%s')", ln);
 	free(ln);
 }
-
-es_str_t*
-cnfGetVar(char *name, void *usrptr)
-{
-	es_str_t *estr;
-	if(name[0] == '$') {
-		if(name[1] == '$')
-			estr = getSysVar(name+2);
-		else if(name[1] == '!')
-			estr = msgGetCEEVarNew((msg_t*) usrptr, name+2);
-		else
-			estr = msgGetMsgVarNew((msg_t*) usrptr, (uchar*)name+1);
-	} else { /* if this happens, we have a program logic error */
-		estr = es_newStrFromCStr("err: var must start with $",
-				  sizeof("err: var must start with $")-1);
-	}
-	if(Debug) {
-		char *s;
-		s = es_str2cstr(estr, NULL);
-		dbgprintf("rainerscript: var '%s': '%s'\n", name, s);
-		free(s);
-	}
-	return estr;
-}
 /*------------------------------ end interface to flex/bison parser ------------------------------*/
 
 
@@ -596,6 +501,7 @@ dropPrivileges(rsconf_t *cnf)
 static inline void
 tellCoreConfigLoadDone(void)
 {
+	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
 	glblDoneLoadCnf();
 }
 
@@ -774,8 +680,12 @@ activateMainQueue()
 	mainqCnfObj = glbl.GetmainqCnfObj();
 	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
 	/* create message queue */
-	CHKiRet_Hdlr(createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
-		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst)) {
+	iRet = createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
+		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
+	if(iRet == RS_RET_OK) {
+		iRet = startMainQueue(pMsgQueue);
+	}
+	if(iRet != RS_RET_OK) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;
@@ -838,6 +748,7 @@ activate(rsconf_t *cnf)
 	tellModulesActivateConfig();
 	startInputModules();
 	CHKiRet(activateActions());
+	CHKiRet(activateRulesetQueues());
 	CHKiRet(activateMainQueue());
 	/* finally let the inputs run... */
 	runInputModules();
@@ -1315,6 +1226,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 		ABORT_FINALIZE(RS_RET_NO_ACTIONS);
 	}
 	tellLexEndParsing();
+	DBGPRINTF("Number of actions in this configuration: %d\n", iActionNbr);
 	rulesetOptimizeAll(loadConf);
 
 	tellCoreConfigLoadDone();

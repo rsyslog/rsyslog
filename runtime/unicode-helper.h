@@ -36,26 +36,26 @@
 #	define ustrncpy(psz1, psz2, len) strncpy((char*)(psz1), (char*)(psz2), (len))
 #	define ustrdup(psz) (uchar*)strdup((char*)(psz))
 #else
-	static inline uchar* ustrncpy(uchar *psz1, uchar *psz2, size_t len)
+	static inline uchar* ustrncpy(const uchar *psz1, const uchar *psz2, size_t len)
 	{
-		return (uchar*) strncpy((char*) psz1, (char*) psz2, len);
+		return (uchar*) strncpy((const char*) psz1, (const char*) psz2, len);
 	}
 
-	static inline uchar* ustrdup(uchar *psz)
+	static inline uchar* ustrdup(const uchar *psz)
 	{
-		return (uchar*) strdup((char*)psz);
+		return (uchar*) strdup((const char*)psz);
 	}
 
 #endif /* #ifdef DEBUG */
 
-static inline int ustrcmp(uchar *psz1, uchar *psz2)
+static inline int ustrcmp(const uchar *psz1, const uchar *psz2)
 {
 	return strcmp((char*) psz1, (char*) psz2);
 }
 
-static inline int ustrlen(uchar *psz)
+static inline int ustrlen(const uchar *psz)
 {
-	return strlen((char*) psz);
+	return strlen((const char*) psz);
 }
 
 

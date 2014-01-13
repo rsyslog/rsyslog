@@ -2,7 +2,7 @@
  * I am not sure yet if this will become a full-blown object. For now, this header just
  * includes the object definition and is not accompanied by code.
  *
- * Copyright 2009 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2013 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -46,17 +46,6 @@ typedef unsigned char batch_state_t;
  */
 struct batch_obj_s {
 	msg_t *pMsg;
-	/* work variables for action processing; these are reused for each action (or block of
-	 * actions)
-	 */
-	sbool bPrevWasSuspended;
-	/* following are caches to save allocs if not absolutely necessary */
-	uchar *staticActStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for strings */
-				/* a cache to save malloc(), if not absolutely necessary */
-	void *staticActParams[CONF_OMOD_NUMSTRINGS_MAXSIZE]; /**< for anything else */
-	size_t staticLenStrings[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-				/* and the same for the message length (if used) */
-	/* end action work variables */
 };
 
 /* the batch
@@ -77,11 +66,7 @@ struct batch_s {
 	int maxElem;		/* maximum number of elements that this batch supports */
 	int nElem;		/* actual number of element in this entry */
 	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
-	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
-	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
-	sbool *active;		/* which messages are active for processing, NULL=all */
-	sbool bSingleRuleset;	/* do all msgs of this batch use a single ruleset? */
 	batch_obj_t *pElem;	/* batch elements */
 	batch_state_t *eltState;/* state (array!) for individual objects.
 	   			   NOTE: we have moved this out of batch_obj_t because we
@@ -93,27 +78,9 @@ struct batch_s {
 };
 
 
-/* some inline functions (we may move this off to an object .. or not) */
-static inline void
-batchSetSingleRuleset(batch_t *pBatch, sbool val) {
-	pBatch->bSingleRuleset = val;
-}
-
-/* get the batches ruleset (if we have a single ruleset) */
-static inline ruleset_t*
-batchGetRuleset(batch_t *pBatch) {
-	return (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
-}
-
-/* get the ruleset of a specifc element of the batch (index not verified!) */
-static inline ruleset_t*
-batchElemGetRuleset(batch_t *pBatch, int i) {
-	return pBatch->pElem[i].pMsg->pRuleset;
-}
-
 /* get number of msgs for this batch */
 static inline int
-batchNumMsgs(batch_t *pBatch) {
+batchNumMsgs(const batch_t * const pBatch) {
 	return pBatch->nElem;
 }
 
@@ -123,7 +90,7 @@ batchNumMsgs(batch_t *pBatch) {
  * the state table. -- rgerhards, 2010-06-10
  */
 static inline void
-batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
+batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newState) {
 	if(pBatch->eltState[i] != BATCH_STATE_DISC)
 		pBatch->eltState[i] = newState;
 }
@@ -133,9 +100,8 @@ batchSetElemState(batch_t *pBatch, int i, batch_state_t newState) {
  * element index is valid. -- rgerhards, 2010-06-10
  */
 static inline int
-batchIsValidElem(batch_t *pBatch, int i) {
-	return(   (pBatch->eltState[i] != BATCH_STATE_DISC)
-	       && (pBatch->active == NULL || pBatch->active[i]));
+batchIsValidElem(const batch_t * const pBatch, const int i) {
+	return(pBatch->eltState[i] != BATCH_STATE_DISC);
 }
 
 
@@ -144,17 +110,7 @@ batchIsValidElem(batch_t *pBatch, int i) {
  * object itself cannot be freed! -- rgerhards, 2010-06-15
  */
 static inline void
-batchFree(batch_t *pBatch) {
-	int i;
-	int j;
-	for(i = 0 ; i < pBatch->maxElem ; ++i) {
-		for(j = 0 ; j < CONF_OMOD_NUMSTRINGS_MAXSIZE ; ++j) {
-			/* staticActParams MUST be freed immediately (if required),
-			 * so we do not need to do that!
-			 */
-			free(pBatch->pElem[i].staticActStrings[j]);
-		}
-	}
+batchFree(batch_t * const pBatch) {
 	free(pBatch->pElem);
 	free(pBatch->eltState);
 }
@@ -165,13 +121,11 @@ batchFree(batch_t *pBatch) {
  * provided. -- rgerhards, 2010-06-15
  */
 static inline rsRetVal
-batchInit(batch_t *pBatch, int maxElem) {
+batchInit(batch_t *const pBatch, const int maxElem) {
 	DEFiRet;
-	pBatch->iDoneUpTo = 0;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
 	CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
-	// TODO: replace calloc by inidividual writes?
 finalize_it:
 	RETiRet;
 }
@@ -179,7 +133,7 @@ finalize_it:
 
 /* primarily a helper for debug purposes, get human-readble name of state */
 static inline char *
-batchState2String(batch_state_t state) {
+batchState2String(const batch_state_t state) {
 	switch(state) {
 	case BATCH_STATE_RDY:
 		return "BATCH_STATE_RDY";

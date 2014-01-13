@@ -649,9 +649,11 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"createWrkrInstance", &pNew->mod.om.createWrkrInstance));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeWrkrInstance", &pNew->mod.om.freeWrkrInstance));
+
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
@@ -661,11 +663,56 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 
+			pNew->mod.om.supportsTX = 1;
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
-			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
 				pNew->mod.om.beginTransaction = dummyBeginTransaction;
-			else if(localRet != RS_RET_OK)
+				pNew->mod.om.supportsTX = 0;
+			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
+			}
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doAction",
+				   &pNew->mod.om.doAction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.doAction = NULL;
+			} else if(localRet != RS_RET_OK) {
+				ABORT_FINALIZE(localRet);
+			}
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"commitTransaction",
+				   &pNew->mod.om.commitTransaction);
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.om.commitTransaction = NULL;
+			} else if(localRet != RS_RET_OK) {
+				ABORT_FINALIZE(localRet);
+			}
+
+			if(pNew->mod.om.doAction == NULL && pNew->mod.om.commitTransaction == NULL) {
+				errmsg.LogError(0, RS_RET_INVLD_OMOD,
+					"module %s does neither provide doAction() "
+					"nor commitTransaction() interface - cannot "
+					"load", name);
+				ABORT_FINALIZE(RS_RET_INVLD_OMOD);
+			}
+
+			if(pNew->mod.om.commitTransaction != NULL) {
+				if(pNew->mod.om.doAction != NULL){
+					errmsg.LogError(0, RS_RET_INVLD_OMOD,
+						"module %s provides both doAction() "
+						"and commitTransaction() interface, using "
+						"commitTransaction()", name);
+					pNew->mod.om.doAction = NULL;
+				}
+				if(pNew->mod.om.beginTransaction == NULL){
+					errmsg.LogError(0, RS_RET_INVLD_OMOD,
+						"module %s provides both commitTransaction() "
+						"but does not provide beginTransaction() - "
+						"cannot load", name);
+					ABORT_FINALIZE(RS_RET_INVLD_OMOD);
+				}
+			}
+
 
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
 				   &pNew->mod.om.endTransaction);

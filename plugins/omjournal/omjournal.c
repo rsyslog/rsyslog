@@ -56,6 +56,10 @@ DEF_OMOD_STATIC_DATA
 typedef struct _instanceData {
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
@@ -91,6 +95,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
@@ -99,6 +108,11 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINnewActInst
@@ -172,6 +186,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

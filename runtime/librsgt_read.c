@@ -267,7 +267,7 @@ rsgt_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 		rec->tlvlen = c;
 	}
 	if(fread(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) {
-		r = RSGTE_IO;
+		r = feof(fp) ? RSGTE_EOF : RSGTE_IO;
 		goto done;
 	}
 

@@ -8,7 +8,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2013 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -87,6 +87,10 @@ typedef struct _instanceData {
 	uchar *tplName;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	EMPTY_STRUCT
 } configSettings_t;
@@ -115,6 +119,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
@@ -126,6 +135,11 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);
 ENDfreeInstance
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -276,7 +290,7 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	iRet = wallmsg(ppString[0], pData);
+	iRet = wallmsg(ppString[0], pWrkrData->pData);
 ENDdoAction
 
 
@@ -435,6 +449,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

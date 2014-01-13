@@ -63,7 +63,6 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
 
 rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]);
-rsRetVal DecodePropFilter(uchar *pline, struct cnfstmt *stmt);
 rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction);
 extern EHostnameCmpMode eDfltHostnameCmpMode;
 extern cstr_t *pDfltHostnameCmp;

@@ -48,13 +48,14 @@
  * -b   number of messages within a batch (default: 100,000,000 millions)
  * -Y	use multiple threads, one per connection (which means 1 if one only connection
  *  	is configured!)
+ * -y   use RFC5424 style test message
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009, 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009, 2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -111,6 +112,7 @@ static int targetPort = 13514;
 static int numTargetPorts = 1;
 static int dynFileIDs = 0;
 static int extraDataLen = 0; /* amount of extra data to add to message */
+static int useRFC5424Format = 0; /* should the test message be in RFC5424 format? */
 static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
 static int numMsgsToSend; /* number of messages to send */
 static unsigned numConnections = 1; /* number of connections to create */
@@ -363,8 +365,14 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 			snprintf(dynFileIDBuf, sizeof(dynFileIDBuf), "%d:", rand() % dynFileIDs);
 		}
 		if(extraDataLen == 0) {
-			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%c",
-					       msgPRI, dynFileIDBuf, msgNum, frameDelim);
+			if(useRFC5424Format) {
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
+						     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
+						       msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+			} else {
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%c",
+						       msgPRI, dynFileIDBuf, msgNum, frameDelim);
+			}
 		} else {
 			if(bRandomizeExtraData)
 				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
@@ -372,8 +380,14 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);
 			extraData[edLen] = '\0';
-			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s%c",
-					       msgPRI, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
+			if(useRFC5424Format) {
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
+						     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
+						       msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+			} else {
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s%c",
+						       msgPRI, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
+			}
 		}
 	} else {
 		/* use fixed message format from command line */
@@ -830,7 +844,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:Yz:Z:")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -907,6 +921,8 @@ int main(int argc, char *argv[])
 		case 'W':	waittime = atoi(optarg);
 				break;
 		case 'Y':	runMultithreaded = 1;
+				break;
+		case 'y':	useRFC5424Format = 1;
 				break;
 		case 'z':	tlsKeyFile = optarg;
 				break;

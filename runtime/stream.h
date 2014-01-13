@@ -163,7 +163,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ReadChar)(strm_t *pThis, uchar *pC);
 	rsRetVal (*UnreadChar)(strm_t *pThis, uchar c);
 	rsRetVal (*SeekCurrOffs)(strm_t *pThis);
-	rsRetVal (*Write)(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+	rsRetVal (*Write)(strm_t *const pThis, const uchar *const pBuf, size_t lenBuf);
 	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
 	rsRetVal (*WriteLong)(strm_t *pThis, long i);
 	rsRetVal (*SetFName)(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);

@@ -37,6 +37,14 @@ html_files = \
 	omjournal.html \
 	imjournal.html \
 	mmanon.html \
+	mmsequence.html \
+	mmcount.html
+	mmfields.html \
+	mmrfc5424addhmac.html \
+	mmutf8fix.html \
+	omelasticsearch.html \
+	ommongodb.html \
+	queue_parameters.html
 	mmpstrucdata.html \
 	omusrmsg.html \
 	omstdout.html \
@@ -66,15 +74,8 @@ html_files = \
 	tls_cert_ca.jpg \
 	tls_cert.jpg \
 	tls_cert_errmsgs.html \
-	rsyslog_secure_tls.html \
-	tls_cert_server.html \
-	tls_cert_ca.html \
-	tls_cert_summary.html \
-	tls_cert_machine.html \
-	tls_cert_udp_relay.html \
-	tls_cert_client.html \
-	tls_cert_scenario.html \
 	rainerscript.html \
+	global.html \
 	lookup_tables.html \
 	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
@@ -113,6 +114,9 @@ html_files = \
 	v3compatibility.html \
 	v4compatibility.html \
 	v5compatibility.html \
+	v6compatibility.html \
+	v7compatibility.html \
+	v8compatibility.html \
 	im3195.html \
 	netstream.html \
 	ns_gtls.html \
@@ -149,8 +153,6 @@ html_files = \
 	rsconf1_omfileforcechown.html \
 	rsyslog_queue_pointers.jpeg \
 	rsyslog_queue_pointers2.jpeg \
-	v6compatibility.html \
-	v7compatibility.html \
 	rsyslog_conf_basic_structure.html \
 	rsyslog_conf_sysklogd_compatibility.html \
 	imkmsg.html \

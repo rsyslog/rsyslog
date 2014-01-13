@@ -259,8 +259,17 @@ verify(char *name)
 			if(bs != NULL)
 				rsgt_objfree(0x0902, bs);
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
-							&bHasIntermedHashes)) != 0)
+							&bHasIntermedHashes)) != 0) {
+				if(ectx.blkNum == 0) {
+					fprintf(stderr, "EOF before finding any signature block - "
+						"is the file still open and being written to?\n");
+				} else {
+					if(verbose)
+						fprintf(stderr, "EOF after signature block %lld\n",
+							ectx.blkNum);
+				}
 				goto done;
+			}
 			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;

@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <ctype.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -51,6 +52,10 @@ DEF_OMOD_STATIC_DATA
 typedef struct _instanceData {
 	uchar *jsonRoot;	/**< container where to store fields */
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
@@ -98,6 +103,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -108,6 +117,10 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->jsonRoot);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 static inline void
@@ -206,7 +219,8 @@ dbgprintf("DDDD: parseSD_NAME %s\n", sdbuf+*curridx);
 		if(   sdbuf[i] == '=' || sdbuf[i] == '"'
 		   || sdbuf[i] == ']' || sdbuf[i] == ' ')
 			break;
-		namebuf[j] = sdbuf[i++];
+		namebuf[j] = tolower(sdbuf[i]);
+		++i;
 	}
 	namebuf[j] = '\0';
 dbgprintf("DDDD: parseSD_NAME, NAME: '%s'\n", namebuf);
@@ -337,7 +351,7 @@ dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
 	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	json_object_object_add(jroot, "RFC5424-SD", json);
+	json_object_object_add(jroot, "rfc5424-sd", json);
  	msgAddJSON(pMsg, pData->jsonRoot, jroot);
 finalize_it:
 	RETiRet;
@@ -357,7 +371,7 @@ dbgprintf("DDDD: parse mmpstrucdata\n");
 	/* don't check return code - we never want rsyslog to retry
 	 * or suspend this action!
 	 */
-	parse_sd(pData, pMsg);
+	parse_sd(pWrkrData->pData, pMsg);
 dbgprintf("DDDD: done parse mmpstrucdata\n");
 finalize_it:
 ENDdoAction
@@ -385,6 +399,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

@@ -38,6 +38,7 @@
 #include "rainerscript.h"
 #include "conf.h"
 #include "parserif.h"
+#include "parse.h"
 #include "rsconf.h"
 #include "grammar.h"
 #include "queue.h"
@@ -46,6 +47,9 @@
 #include "obj.h"
 #include "modules.h"
 #include "ruleset.h"
+#include "msg.h"
+#include "wti.h"
+#include "unicode-helper.h"
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
@@ -62,8 +66,8 @@ struct cnffunc * cnffuncNew_prifilt(int fac);
  * NOTE: This function MUST be updated if new tokens are defined in the
  *       grammar.
  */
-char *
-tokenToString(int token)
+const char *
+tokenToString(const int token)
 {
 	char *tokstr;
 	static char tokbuf[512];
@@ -114,8 +118,8 @@ tokenToString(int token)
 }
 
 
-char*
-getFIOPName(unsigned iFIOP)
+const char*
+getFIOPName(const unsigned iFIOP)
 {
 	char *pRet;
 	switch(iFIOP) {
@@ -144,8 +148,106 @@ getFIOPName(unsigned iFIOP)
 	return pRet;
 }
 
+
+/* This function takes the filter part of a property
+ * based filter and decodes it. It processes the line up to the beginning
+ * of the action part.
+ */
+static rsRetVal
+DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
+{
+	rsParsObj *pPars = NULL;
+	cstr_t *pCSCompOp = NULL;
+	cstr_t *pCSPropName = NULL;
+	int iOffset; /* for compare operations */
+	DEFiRet;
+
+	ASSERT(pline != NULL);
+
+	DBGPRINTF("Decoding property-based filter '%s'\n", pline);
+
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
+		parser_errmsg("error %d constructing parser object", iRet);
+		ABORT_FINALIZE(iRet);
+	}
+
+	/* read property */
+	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
+	if(iRet != RS_RET_OK) {
+		parser_errmsg("error %d parsing filter property", iRet);
+		rsParsDestruct(pPars);
+		ABORT_FINALIZE(iRet);
+	}
+	CHKiRet(msgPropDescrFill(&stmt->d.s_propfilt.prop, cstrGetSzStrNoNULL(pCSPropName),
+		cstrLen(pCSPropName)));
+
+	/* read operation */
+	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
+	if(iRet != RS_RET_OK) {
+		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		ABORT_FINALIZE(iRet);
+	}
+
+	/* we now first check if the condition is to be negated. To do so, we first
+	 * must make sure we have at least one char in the param and then check the
+	 * first one.
+	 * rgerhards, 2005-09-26
+	 */
+	if(rsCStrLen(pCSCompOp) > 0) {
+		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
+			stmt->d.s_propfilt.isNegated = 1;
+			iOffset = 1; /* ignore '!' */
+		} else {
+			stmt->d.s_propfilt.isNegated = 0;
+			iOffset = 0;
+		}
+	} else {
+		stmt->d.s_propfilt.isNegated = 0;
+		iOffset = 0;
+	}
+
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
+		stmt->d.s_propfilt.operation = FIOP_CONTAINS;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
+		stmt->d.s_propfilt.operation = FIOP_ISEQUAL;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isempty", 7)) {
+		stmt->d.s_propfilt.operation = FIOP_ISEMPTY;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
+		stmt->d.s_propfilt.operation = FIOP_STARTSWITH;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
+		stmt->d.s_propfilt.operation = FIOP_REGEX;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
+		stmt->d.s_propfilt.operation = FIOP_EREREGEX;
+	} else {
+		parser_errmsg("error: invalid compare operation '%s'",
+		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if(stmt->d.s_propfilt.operation != FIOP_ISEMPTY) {
+		/* read compare value */
+		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
+		if(iRet != RS_RET_OK) {
+			parser_errmsg("error %d compare value property", iRet);
+			rsParsDestruct(pPars);
+			ABORT_FINALIZE(iRet);
+		}
+	}
+
+finalize_it:
+	if(pPars != NULL)
+		rsParsDestruct(pPars);
+	if(pCSCompOp != NULL)
+		rsCStrDestruct(&pCSCompOp);
+	if(pCSPropName != NULL)
+		cstrDestruct(&pCSPropName);
+	RETiRet;
+}
+
 static void
-prifiltInvert(struct funcData_prifilt *prifilt)
+prifiltInvert(struct funcData_prifilt *__restrict__ const prifilt)
 {
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
@@ -187,7 +289,7 @@ prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
  * NOTE: fac MUST be in the range 0..24 (not multiplied by 8)!
  */
 static void
-prifiltSetFacility(struct funcData_prifilt *prifilt, int fac, int mode)
+prifiltSetFacility(struct funcData_prifilt *__restrict__ const prifilt, const int fac, const int mode)
 {
 	int i;
 
@@ -224,7 +326,9 @@ prifiltSetFacility(struct funcData_prifilt *prifilt, int fac, int mode)
  * used to keep things simple).
  */
 static void
-prifiltCombine(struct funcData_prifilt *prifilt, struct funcData_prifilt *prifilt2, int mode)
+prifiltCombine(struct funcData_prifilt *__restrict__ const prifilt,
+	       struct funcData_prifilt *__restrict__ const prifilt2,
+	       const int mode)
 {
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
@@ -237,7 +341,7 @@ prifiltCombine(struct funcData_prifilt *prifilt, struct funcData_prifilt *prifil
 
 
 void
-readConfFile(FILE *fp, es_str_t **str)
+readConfFile(FILE * const fp, es_str_t **str)
 {
 	char ln[10240];
 	char buf[512];
@@ -1091,7 +1195,11 @@ var2Number(struct var *r, int *bSuccess)
 		n = es_str2num(r->d.estr, bSuccess);
 	} else {
 		if(r->datatype == 'J') {
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+			n = (r->d.json == NULL) ? 0 : json_object_get_int64(r->d.json);
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
 			n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		} else {
 			n = r->d.n;
 		}
@@ -1103,8 +1211,8 @@ var2Number(struct var *r, int *bSuccess)
 
 /* ensure that retval is a string
  */
-static inline es_str_t *
-var2String(struct var *r, int *bMustFree)
+static es_str_t *
+var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	es_str_t *estr;
 	char *cstr;
@@ -1130,7 +1238,7 @@ var2String(struct var *r, int *bMustFree)
 }
 
 static uchar*
-var2CString(struct var *r, int *bMustFree)
+var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	uchar *cstr;
 	es_str_t *estr;
@@ -1142,8 +1250,25 @@ var2CString(struct var *r, int *bMustFree)
 	return cstr;
 }
 
+/* frees struct var members, but not the struct itself. This is because
+ * it usually is allocated on the stack. Callers why dynamically allocate
+ * struct var need to free the struct themselfes!
+ */
+static void
+varFreeMembers(struct var *r)
+{
+	/* Note: we do NOT need to free JSON objects, as we use 
+	 * json_object_object_get() to obtain the values, which does not
+	 * increment the reference count. So json_object_put() [free] is
+	 * neither required nor permitted (would free the original object!).
+	 * So for the time being the string data type is the only one that
+	 * we currently need to free.
+	 */
+	if(r->datatype == 'S') es_deleteStr(r->d.estr);
+}
+
 static rsRetVal
-doExtractFieldByChar(uchar *str, uchar delim, int matchnbr, uchar **resstr)
+doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
 	int iLen;
@@ -1190,7 +1315,7 @@ finalize_it:
 
 
 static rsRetVal
-doExtractFieldByStr(uchar *str, char *delim, rs_size_t lenDelim, int matchnbr, uchar **resstr)
+doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
 	int iLen;
@@ -1259,7 +1384,7 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 	str = (char*) var2CString(&r[0], &bMustFree);
 	matchnbr = (short) var2Number(&r[2], NULL);
 	submatchnbr = (size_t) var2Number(&r[3], NULL);
-	if(submatchnbr > sizeof(pmatch)/sizeof(regmatch_t)) {
+	if(submatchnbr >= sizeof(pmatch)/sizeof(regmatch_t)) {
 		DBGPRINTF("re_extract() submatch %d is too large\n", submatchnbr);
 		bHadNoMatch = 1;
 		goto finalize_it;
@@ -1307,18 +1432,49 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 					iLenBuf);
 	}
 
-	if(bMustFree) free(str);
-	if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
-	if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
-	if(r[3].datatype == 'S') es_deleteStr(r[3].d.estr);
 finalize_it:
+	if(bMustFree) free(str);
+	varFreeMembers(&r[0]);
+	varFreeMembers(&r[2]);
+	varFreeMembers(&r[3]);
+
 	if(bHadNoMatch) {
 		cnfexprEval(func->expr[4], &r[4], usrptr);
 		estr = var2String(&r[4], &bMustFree);
-		if(r[4].datatype == 'S') es_deleteStr(r[4].d.estr);
+		/* Note that we do NOT free the string that was returned/created
+		 * for r[4]. We pass it to the caller, which in turn frees it.
+		 * This saves us doing one unnecessary memory alloc & write.
+		 */
 	}
 	ret->datatype = 'S';
 	ret->d.estr = estr;
+	return;
+}
+
+
+/* note that we do not need to evaluate any parameters, as the template pointer
+ * is set during initialization().
+ * TODO: think if we can keep our buffer; but that may not be trival thinking about
+ *       multiple threads.
+ */
+static void
+doFunc_exec_template(struct cnffunc *__restrict__ const func,
+	struct var *__restrict__ const ret,
+	msg_t *const pMsg)
+{
+	rsRetVal localRet;
+	actWrkrIParams_t iparam;
+
+	wtiInitIParam(&iparam);
+	localRet = tplToString(func->funcdata, pMsg, &iparam, NULL);
+	if(localRet == RS_RET_OK) {
+		ret->d.estr = es_newStrFromCStr((char*)iparam.param, iparam.lenStr);
+	} else {
+		ret->d.estr = es_newStrFromCStr("", 0);
+	}
+	ret->datatype = 'S';
+	free(iparam.param);
+
 	return;
 }
 
@@ -1327,14 +1483,14 @@ finalize_it:
  * to keep the code small and easier to maintain.
  */
 static inline void
-doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
+doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ const ret,
+	   void *__restrict__ const usrptr)
 {
 	char *fname;
 	char *envvar;
 	int bMustFree;
 	es_str_t *estr;
 	char *str;
-	char *s;
 	uchar *resStr;
 	int retval;
 	struct var r[CNFFUNC_MAX_ARGS];
@@ -1356,6 +1512,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = var2String(&r[0], &bMustFree);
 			ret->d.n = es_strlen(estr);
 			if(bMustFree) es_deleteStr(estr);
+			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		}
 		ret->datatype = 'N';
 		break;
@@ -1376,7 +1533,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'S';
 		if(bMustFree) es_deleteStr(estr);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		free(str);
 		break;
 	case CNFFUNC_TOLOWER:
@@ -1387,7 +1544,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		es_tolower(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_CSTR:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1396,7 +1553,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 			estr = es_strdup(estr);
 		ret->datatype = 'S';
 		ret->d.estr = estr;
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -1407,7 +1564,7 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		} else {
 			cnfexprEval(func->expr[0], &r[0], usrptr);
 			ret->d.n = var2Number(&r[0], NULL);
-			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
 		break;
@@ -1425,10 +1582,13 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'N';
 		if(bMustFree) free(str);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+		varFreeMembers(&r[0]);
 		break;
 	case CNFFUNC_RE_EXTRACT:
 		doFunc_re_extract(func, ret, usrptr);
+		break;
+	case CNFFUNC_EXEC_TEMPLATE:
+		doFunc_exec_template(func, ret, (msg_t*) usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1458,9 +1618,9 @@ doFuncCall(struct cnffunc *func, struct var *ret, void* usrptr)
 		}
 		ret->datatype = 'S';
 		if(bMustFree) free(str);
-		if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
-		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
-		if(r[2].datatype == 'S') es_deleteStr(r[2].d.estr);
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		varFreeMembers(&r[2]);
 		break;
 	case CNFFUNC_PRIFILT:
 		pPrifilt = (struct funcData_prifilt*) func->funcdata;
@@ -1498,22 +1658,31 @@ dbgprintf("DDDD: executing lookup\n");
 }
 
 static inline void
-evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
+evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
+	struct var *__restrict__ const ret)
 {
+	rs_size_t propLen;
+	uchar *pszProp = NULL;
+	unsigned short bMustBeFreed = 0;
 	rsRetVal localRet;
-	es_str_t *estr;
 	struct json_object *json;
 
-	if(var->name[0] == '$' && var->name[1] == '!') {
-		/* TODO: unify string libs */
-		estr = es_newStrFromBuf(var->name+1, strlen(var->name)-1);
-		localRet = msgGetCEEPropJSON((msg_t*)usrptr, estr, &json);
-		es_deleteStr(estr);
+	if(var->prop.id == PROP_CEE        ||
+	   var->prop.id == PROP_LOCAL_VAR  ||
+	   var->prop.id == PROP_GLOBAL_VAR   ) {
+		localRet = msgGetJSONPropJSON((msg_t*)usrptr, &var->prop, &json);
 		ret->datatype = 'J';
 		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+			
+		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name,
+			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
 	} else {
 		ret->datatype = 'S';
-		ret->d.estr = cnfGetVar(var->name, usrptr);
+		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
+		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
+		DBGPRINTF("rainerscript: var %d: '%s'\n", var->prop.id, pszProp);
+		if(bMustBeFreed)
+			free(pszProp);
 	}
 
 }
@@ -1526,7 +1695,8 @@ evalVar(struct cnfvar *var, void *usrptr, struct var *ret)
  * and it was generally 5 to 10 times SLOWER than what we do here...
  */
 static int
-evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
+evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
+		const int cmpop)
 {
 	int i;
 	int r = 0;
@@ -1559,8 +1729,8 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 }
 
 #define FREE_BOTH_RET \
-		if(r.datatype == 'S') es_deleteStr(r.d.estr); \
-		if(l.datatype == 'S') es_deleteStr(l.d.estr)
+		varFreeMembers(&r); \
+		varFreeMembers(&l)
 
 #define COMP_NUM_BINOP(x) \
 	cnfexprEval(expr->l, &l, usrptr); \
@@ -1587,9 +1757,9 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 
 #define FREE_TWO_STRINGS \
 		if(bMustFree) es_deleteStr(estr_r);  \
-		if(expr->r->nodetype != 'S' && expr->r->nodetype != 'A' && r.datatype == 'S') es_deleteStr(r.d.estr);  \
+		if(expr->r->nodetype != 'S' && expr->r->nodetype != 'A') varFreeMembers(&r); \
 		if(bMustFree2) es_deleteStr(estr_l);  \
-		if(l.datatype == 'S') es_deleteStr(l.d.estr)
+		varFreeMembers(&l)
 
 /* evaluate an expression.
  * Note that we try to avoid malloc whenever possible (because of
@@ -1602,10 +1772,11 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
+cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
+	    void *__restrict__ const usrptr)
 {
 	struct var r, l; /* memory for subexpression results */
-	es_str_t *estr_r, *estr_l;
+	es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
 	int convok_r, convok_l;
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
@@ -1640,7 +1811,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 						if(bMustFree) es_deleteStr(estr_r);
 					}
 				}
-				if(r.datatype == 'S') es_deleteStr(r.d.estr);
+				varFreeMembers(&r);
 			}
 		} else if(l.datatype == 'J') {
 			estr_l = var2String(&l, &bMustFree);
@@ -1662,7 +1833,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 						if(bMustFree) es_deleteStr(estr_r);
 					}
 				}
-				if(r.datatype == 'S') es_deleteStr(r.d.estr);
+				varFreeMembers(&r);
 			}
 			if(bMustFree) es_deleteStr(estr_l);
 		} else {
@@ -1679,9 +1850,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 			} else {
 				ret->d.n = (l.d.n == r.d.n); /*CMP*/
 			}
-			if(r.datatype == 'S') es_deleteStr(r.d.estr);
+			varFreeMembers(&r);
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case CMP_NE:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -1909,9 +2080,9 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
-			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
+			varFreeMembers(&r);
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case AND:
 		cnfexprEval(expr->l, &l, usrptr);
@@ -1922,17 +2093,17 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 				ret->d.n = 1ll;
 			else 
 				ret->d.n = 0ll;
-			if(r.datatype == 'S') es_deleteStr(r.d.estr); 
+			varFreeMembers(&r);
 		} else {
 			ret->d.n = 0ll;
 		}
-		if(l.datatype == 'S') es_deleteStr(l.d.estr);
+		varFreeMembers(&l);
 		break;
 	case NOT:
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = !var2Number(&r, &convok_r);
-		if(r.datatype == 'S') es_deleteStr(r.d.estr);
+		varFreeMembers(&r);
 		break;
 	case 'N':
 		ret->datatype = 'N';
@@ -1983,7 +2154,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 		cnfexprEval(expr->r, &r, usrptr);
 		ret->datatype = 'N';
 		ret->d.n = -var2Number(&r, &convok_r);
-		if(r.datatype == 'S') es_deleteStr(r.d.estr);
+		varFreeMembers(&r);
 		break;
 	case 'F':
 		doFuncCall((struct cnffunc*) expr, ret, usrptr);
@@ -2026,14 +2197,15 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	free(func->funcdata);
+	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+		free(func->funcdata);
 	free(func->fname);
 }
 
 /* Destruct an expression and all sub-expressions contained in it.
  */
 void
-cnfexprDestruct(struct cnfexpr *expr)
+cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
 {
 
 	if(expr == NULL) {
@@ -2076,6 +2248,7 @@ cnfexprDestruct(struct cnfexpr *expr)
 		break;
 	case 'V':
 		free(((struct cnfvar*)expr)->name);
+		msgPropDescrDestruct(&(((struct cnfvar*)expr)->prop));
 		break;
 	case 'F':
 		cnffuncDestruct((struct cnffunc*)expr);
@@ -2096,7 +2269,7 @@ cnfexprDestruct(struct cnfexpr *expr)
  * important.
  */
 int
-cnfexprEvalBool(struct cnfexpr *expr, void *usrptr)
+cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
 {
 	int convok;
 	struct var ret;
@@ -2288,11 +2461,12 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		break;
 	case S_CALL:
 		cstr = es_str2cstr(stmt->d.s_call.name, NULL);
-		doIndent(indent); dbgprintf("CALL [%s]\n", cstr);
+		doIndent(indent); dbgprintf("CALL [%s, queue:%d]\n", cstr,
+			stmt->d.s_call.ruleset == NULL ? 0 : 1);
 		free(cstr);
 		break;
 	case S_ACT:
-		doIndent(indent); dbgprintf("ACTION %p [%s:%s]\n", stmt->d.act,
+		doIndent(indent); dbgprintf("ACTION %d [%s:%s]\n", stmt->d.act->iActionNbr,
 			modGetName(stmt->d.act->pMod), stmt->printable);
 		break;
 	case S_IF:
@@ -2333,12 +2507,12 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 	case S_PROPFILT:
 		doIndent(indent); dbgprintf("PROPFILT\n");
 		doIndent(indent); dbgprintf("\tProperty.: '%s'\n",
-			propIDToName(stmt->d.s_propfilt.propID));
-		if(stmt->d.s_propfilt.propName != NULL) {
-			cstr = es_str2cstr(stmt->d.s_propfilt.propName, NULL);
+			propIDToName(stmt->d.s_propfilt.prop.id));
+		if(stmt->d.s_propfilt.prop.id == PROP_CEE ||
+		   stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR ||
+		   stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
 			doIndent(indent);
-			dbgprintf("\tCEE-Prop.: '%s'\n", cstr);
-			free(cstr);
+			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.prop.name);
 		}
 		doIndent(indent); dbgprintf("\tOperation: ");
 		if(stmt->d.s_propfilt.isNegated)
@@ -2371,7 +2545,7 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 }
 
 struct cnfnumval*
-cnfnumvalNew(long long val)
+cnfnumvalNew(const long long val)
 {
 	struct cnfnumval *numval;
 	if((numval = malloc(sizeof(struct cnfnumval))) != NULL) {
@@ -2382,7 +2556,7 @@ cnfnumvalNew(long long val)
 }
 
 struct cnfstringval*
-cnfstringvalNew(es_str_t *estr)
+cnfstringvalNew(es_str_t *const estr)
 {
 	struct cnfstringval *strval;
 	if((strval = malloc(sizeof(struct cnfstringval))) != NULL) {
@@ -2411,7 +2585,7 @@ done:	return ar;
 }
 
 struct cnfarray*
-cnfarrayAdd(struct cnfarray *ar, es_str_t *val)
+cnfarrayAdd(struct cnfarray *__restrict__ const ar, es_str_t *__restrict__ val)
 {
 	es_str_t **newptr;
 	if((newptr = realloc(ar->arr, (ar->nmemb+1)*sizeof(es_str_t*))) == NULL) {
@@ -2445,6 +2619,7 @@ cnfvarNew(char *name)
 	if((var = malloc(sizeof(struct cnfvar))) != NULL) {
 		var->nodetype = 'V';
 		var->name = name;
+		msgPropDescrFill(&var->prop, (uchar*)var->name, strlen(var->name));
 	}
 	return var;
 }
@@ -2498,8 +2673,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		cnfstmtDestructLst(stmt->d.s_prifilt.t_else);
 		break;
 	case S_PROPFILT:
-		if(stmt->d.s_propfilt.propName != NULL)
-			es_deleteStr(stmt->d.s_propfilt.propName);
+		msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
 		if(stmt->d.s_propfilt.regex_cache != NULL)
 			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
 		if(stmt->d.s_propfilt.pCSCompValue != NULL)
@@ -2581,14 +2755,15 @@ struct cnfstmt *
 cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 {
 	struct cnfstmt* cnfstmt;
-	rsRetVal lRet;
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)propfilt;
 		cnfstmt->d.s_propfilt.t_then = t_then;
-		cnfstmt->d.s_propfilt.propName = NULL;
 		cnfstmt->d.s_propfilt.regex_cache = NULL;
 		cnfstmt->d.s_propfilt.pCSCompValue = NULL;
-		lRet = DecodePropFilter((uchar*)propfilt, cnfstmt);
+		if(DecodePropFilter((uchar*)propfilt, cnfstmt) != RS_RET_OK) {
+			cnfstmt->nodetype = S_NOP; /* disable action! */
+			cnfstmtDestructLst(t_then); /* we do no longer need this */
+		}
 	}
 	return cnfstmt;
 }
@@ -2744,7 +2919,10 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
-	if(!strcmp("$syslogseverity", ((struct cnfvar*)expr->l)->name)) {
+	if(expr->l->nodetype != 'V')
+		FINALIZE;
+
+	if(!strcmp("syslogseverity", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
 			int sev = (int) ((struct cnfnumval*)expr->r)->val;
 			if(sev >= 0 && sev <= 7) {
@@ -2758,7 +2936,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 					      "evaluate to FALSE", sev);
 			}
 		}
-	} else if(!strcmp("$syslogfacility", ((struct cnfvar*)expr->l)->name)) {
+	} else if(!strcmp("syslogfacility", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
 			int fac = (int) ((struct cnfnumval*)expr->r)->val;
 			if(fac >= 0 && fac <= 24) {
@@ -2773,6 +2951,7 @@ cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 			}
 		}
 	}
+finalize_it:
 	return expr;
 }
 
@@ -2785,7 +2964,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
 
-	if(!strcmp("$syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
+	if(!strcmp("syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'S') {
 			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
 			int fac = decodeSyslogName((uchar*)cstr, syslogFacNames);
@@ -2803,7 +2982,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 			}
 			free(cstr);
 		}
-	} else if(!strcmp("$syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
+	} else if(!strcmp("syslogseverity-text", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'S') {
 			char *cstr = es_str2cstr(((struct cnfstringval*)expr->r)->estr, NULL);
 			int sev = decodeSyslogName((uchar*)cstr, syslogPriNames);
@@ -2934,11 +3113,14 @@ cnfexprOptimize(struct cnfexpr *expr)
 				expr->r = exprswap;
 			}
 		}
-		if(expr->l->nodetype == 'V') {
-			expr = cnfexprOptimize_CMP_var(expr);
-		}
 		if(expr->r->nodetype == 'A') {
 			cnfexprOptimize_CMPEQ_arr((struct cnfarray *)expr->r);
+		}
+		/* This should be evaluated last because it may change expr
+		 * to a function.
+		 */
+		if(expr->l->nodetype == 'V') {
+			expr = cnfexprOptimize_CMP_var(expr);
 		}
 		break;
 	case CMP_LE:
@@ -3115,8 +3297,14 @@ cnfstmtOptimizeCall(struct cnfstmt *stmt)
 		stmt->nodetype = S_NOP;
 		goto done;
 	}
-	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s\n", pRuleset, rsName);
-	stmt->d.s_call.stmt = pRuleset->root;
+	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s [hasQueue:%d]\n",
+		  pRuleset, rsName, rulesetHasQueue(pRuleset));
+	if(rulesetHasQueue(pRuleset)) {
+		stmt->d.s_call.ruleset = pRuleset;
+	} else {
+		stmt->d.s_call.ruleset = NULL;
+		stmt->d.s_call.stmt = pRuleset->root;
+	}
 done:
 	free(rsName);
 	return;
@@ -3241,6 +3429,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_FIELD;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"exec_template", sizeof("exec_template") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for exec-template() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_EXEC_TEMPLATE;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"prifilt", sizeof("prifilt") - 1)) {
 		if(nParams != 1) {
 			parser_errmsg("number of parameters for prifilt() must be one "
@@ -3296,6 +3491,31 @@ finalize_it:
 }
 
 
+static rsRetVal
+initFunc_exec_template(struct cnffunc *func)
+{
+	char *tplName = NULL;
+	DEFiRet;
+
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("exec_template(): param 1 must be a constant string");
+		FINALIZE;
+	}
+
+	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	if(func->funcdata == NULL) {
+		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
+		FINALIZE;
+	}
+
+
+finalize_it:
+	free(tplName);
+	RETiRet;
+}
+
+
 static inline rsRetVal
 initFunc_prifilt(struct cnffunc *func)
 {
@@ -3322,7 +3542,6 @@ finalize_it:
 static inline rsRetVal
 initFunc_lookup(struct cnffunc *func)
 {
-	struct funcData_prifilt *pData;
 	uchar *cstr = NULL;
 	DEFiRet;
 
@@ -3383,6 +3602,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_LOOKUP:
 				initFunc_lookup(func);
+				break;
+			case CNFFUNC_EXEC_TEMPLATE:
+				initFunc_exec_template(func);
 				break;
 			default:break;
 		}

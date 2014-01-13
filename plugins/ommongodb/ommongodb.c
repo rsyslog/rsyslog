@@ -4,7 +4,7 @@
  * mongodb C interface is crap. Obtain the library here:
  * https://github.com/algernon/libmongo-client
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -71,6 +71,10 @@ typedef struct _instanceData {
 	int bErrMsgPermitted;	/* only one errmsg permitted per connection */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -89,9 +93,15 @@ static struct cnfparamblk actpblk =
 	  actpdescr
 	};
 
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -125,6 +135,10 @@ CODESTARTfreeInstance
 	free(pData->dbNcoll);
 	free(pData->tplName);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -235,12 +249,18 @@ getDefaultBSON(msg_t *pMsg)
 	int severity, facil;
 	gint64 ts_gen, ts_rcv; /* timestamps: generated, received */
 	int secfrac;
+	msgPropDescr_t cProp; /* we use internal implementation knowledge... */
 
-	procid = MsgGetProp(pMsg, NULL, PROP_PROGRAMNAME, NULL, &procid_len, &procid_free, NULL);
-	tag = MsgGetProp(pMsg, NULL, PROP_SYSLOGTAG, NULL, &tag_len, &tag_free, NULL);
-	pid = MsgGetProp(pMsg, NULL, PROP_PROCID, NULL, &pid_len, &pid_free, NULL);
-	sys = MsgGetProp(pMsg, NULL, PROP_HOSTNAME, NULL, &sys_len, &sys_free, NULL);
-	msg = MsgGetProp(pMsg, NULL, PROP_MSG, NULL, &msg_len, &msg_free, NULL);
+	cProp.id = PROP_PROGRAMNAME;
+	procid = MsgGetProp(pMsg, NULL, &cProp, &procid_len, &procid_free, NULL);
+	cProp.id = PROP_SYSLOGTAG;
+	tag = MsgGetProp(pMsg, NULL, &cProp, &tag_len, &tag_free, NULL);
+	cProp.id = PROP_PROCID;
+	pid = MsgGetProp(pMsg, NULL, &cProp, &pid_len, &pid_free, NULL);
+	cProp.id = PROP_HOSTNAME;
+	sys = MsgGetProp(pMsg, NULL, &cProp, &sys_len, &sys_free, NULL);
+	cProp.id = PROP_MSG;
+	msg = MsgGetProp(pMsg, NULL, &cProp, &msg_len, &msg_free, NULL);
 
 	// TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30
 	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
@@ -311,8 +331,11 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 	case json_type_int: {
 		int64_t i;
 
-		/* FIXME: the future version will have get_int64 */
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+		i = json_object_get_int64(json);
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
 		i = json_object_get_int(json);
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		if (i >= INT32_MIN && i <= INT32_MAX)
 			return bson_append_int32(doc, name, i);
 		else
@@ -413,14 +436,17 @@ error:
 
 BEGINtryResume
 CODESTARTtryResume
-	if(pData->conn == NULL) {
-		iRet = initMongoDB(pData, 1);
+	if(pWrkrData->pData->conn == NULL) {
+		iRet = initMongoDB(pWrkrData->pData, 1);
 	}
 ENDtryResume
 
 BEGINdoAction
 	bson *doc = NULL;
+	instanceData *pData;
 CODESTARTdoAction
+	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	/* see if we are ready to proceed */
 	if(pData->conn == NULL) {
 		CHKiRet(initMongoDB(pData, 0));
@@ -445,6 +471,7 @@ CODESTARTdoAction
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&mutDoAct);
 	if(doc != NULL)
 		bson_free(doc);
 ENDdoAction
@@ -551,6 +578,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

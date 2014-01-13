@@ -31,7 +31,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -42,6 +44,7 @@
 #include "prop.h"
 #include "atomic.h"
 #include "errmsg.h"
+#include "action.h"
 #include "rainerscript.h"
 #include "net.h"
 
@@ -60,6 +63,8 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
+int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
+
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
@@ -72,6 +77,7 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static prop_t *propLocalIPIF = NULL;/* IP address to report for the local host (default is 127.0.0.1) */
 static prop_t *propLocalHostName = NULL;/* our hostname as FQDN - read-only after startup */
+static prop_t *propLocalHostNameToDelete = NULL;/* see GenerateLocalHostName function hdr comment! */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, except HUP */
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
@@ -99,10 +105,13 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
+	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
+	{ "debug.logfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
+	{ "action.reportsuspension", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -382,17 +391,31 @@ GetLocalDomain(void)
 /* generate the local hostname property. This must be done after the hostname info
  * has been set as well as PreserveFQDN.
  * rgerhards, 2009-06-30
+ * NOTE: This function tries to avoid locking by not destructing the previous value
+ * immediately. This is so that current readers can  continue to use the previous name.
+ * Otherwise, we would need to use read/write locks to protect the update process.
+ * In order to do so, we save the previous value and delete it when we are called again
+ * the next time. Note that this in theory is racy and can lead to a double-free.
+ * In practice, however, the window of exposure to trigger this is extremely short
+ * and as this functions is very infrequently being called (on HUP), the trigger
+ * condition for this bug is so highly unlikely that it never occurs in practice.
+ * Probably if you HUP rsyslog every few milliseconds, but who does that...
+ * To further reduce risk potential, we do only update the property when there
+ * actually is a hostname change, which makes it even less likely.
+ * rgerhards, 2013-10-28
  */
 static rsRetVal
 GenerateLocalHostNameProperty(void)
 {
-	DEFiRet;
+	uchar *pszPrev;
+	int lenPrev;
+	prop_t *hostnameNew;
 	uchar *pszName;
+	DEFiRet;
 
-	if(propLocalHostName != NULL)
-		prop.Destruct(&propLocalHostName);
+	if(propLocalHostNameToDelete != NULL)
+		prop.Destruct(&propLocalHostNameToDelete);
 
-	CHKiRet(prop.Construct(&propLocalHostName));
 	if(LocalHostNameOverride == NULL) {
 		if(LocalHostName == NULL)
 			pszName = (uchar*) "[localhost]";
@@ -406,8 +429,20 @@ GenerateLocalHostNameProperty(void)
 		pszName = LocalHostNameOverride;
 	}
 	DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
-	CHKiRet(prop.SetString(propLocalHostName, pszName, ustrlen(pszName)));
-	CHKiRet(prop.ConstructFinalize(propLocalHostName));
+
+	if(propLocalHostName == NULL)
+		pszPrev = (uchar*)""; /* make sure strcmp() below does not match */
+	else
+		prop.GetString(propLocalHostName, &pszPrev, &lenPrev);
+
+	if(ustrcmp(pszPrev, pszName)) {
+		/* we need to update */
+		CHKiRet(prop.Construct(&hostnameNew));
+		CHKiRet(prop.SetString(hostnameNew, pszName, ustrlen(pszName)));
+		CHKiRet(prop.ConstructFinalize(hostnameNew));
+		propLocalHostNameToDelete = propLocalHostName;
+		propLocalHostName = hostnameNew;
+	}
 
 finalize_it:
 	RETiRet;
@@ -448,6 +483,14 @@ GetWorkDir(void)
 	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
 }
 
+/* return the "raw" working directory, which means
+ * NULL if unset.
+ */
+const uchar *
+glblGetWorkDirRaw(void)
+{
+	return pszWorkDir;
+}
 
 /* return the current default netstream driver */
 static uchar*
@@ -665,14 +708,32 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
+			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			iMaxLine = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
+			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
+			errmsg.LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
+			if(pszAltDbgFileName == NULL) {
+				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+				if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
+					errmsg.LogError(0, RS_RET_ERR, "debug log file '%s' could not be opened", pszAltDbgFileName);
+				}
+			}
+			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
 		}
 	}
-finalize_it:	;
+
+	if(glblDebugOnShutdown && Debug != DEBUG_FULL) {
+		Debug = DEBUG_ONDEMAND;
+		stddbg = -1;
+	}
+finalize_it:	return;
 }
 
 
@@ -720,6 +781,8 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalHostNameOverride);
 	free(LocalFQDNName);
 	objRelease(prop, CORE_COMPONENT);
+	if(propLocalHostNameToDelete != NULL)
+		prop.Destruct(&propLocalHostNameToDelete);
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
 

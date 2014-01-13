@@ -1,5 +1,1 @@
-This file has been superseeded by the files in the doc folder.
-Please see doc/manual.html for futher details. If you are
-looking for install information doc/install.html is for you!
-If you do not have the doc set, see
-    http://www.rsyslog.com/doc
+see README.md -- this file here is just required for autotools

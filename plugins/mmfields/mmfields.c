@@ -56,6 +56,10 @@ typedef struct _instanceData {
 	uchar *jsonRoot;	/**< container where to store fields */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
@@ -103,6 +107,10 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -113,6 +121,10 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->jsonRoot);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 static inline void
@@ -232,7 +244,7 @@ CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
-	CHKiRet(parse_fields(pData, pMsg, msg, lenMsg));
+	CHKiRet(parse_fields(pWrkrData->pData, pMsg, msg, lenMsg));
 finalize_it:
 ENDdoAction
 
@@ -259,6 +271,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

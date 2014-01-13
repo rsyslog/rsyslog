@@ -6,7 +6,11 @@ TESTS = $(TESTRUNS)
 
 if ENABLE_IMDIAG
 TESTS +=  \
+	stop-localvar.sh \
+	stop-msgvar.sh \
+	rfc5424parser.sh \
 	arrayqueue.sh \
+	global_vars.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
@@ -14,6 +18,7 @@ TESTS +=  \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
+	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
 	imtcp_conndrop.sh \
@@ -45,6 +50,7 @@ TESTS +=  \
 	execonlywhenprevsuspended2.sh \
 	execonlywhenprevsuspended3.sh \
 	execonlywhenprevsuspended4.sh \
+	execonlywhenprevsuspended_multiwrkr.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -53,10 +59,11 @@ TESTS +=  \
 	imuxsock_ccmiddle_root.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
-	queue-persist.sh 
+	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
+	stop.sh \
 	failover-async.sh \
 	failover-double.sh \
 	failover-basic.sh \
@@ -71,6 +78,7 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
+	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	incltest.sh \
@@ -117,6 +125,11 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_MMPSTRUCDATA
+TESTS +=  \
+	mmpstrucdata.sh
+endif
+
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
@@ -132,6 +145,10 @@ endif
 
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh
+endif
+
+if ENABLE_RELP
+TESTS += sndrcv_relp.sh
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -289,6 +306,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_stop.conf \
 	   rscript_stop2.sh \
 	   testsuites/rscript_stop2.conf \
+	   stop.sh \
+	   testsuites/stop.conf \
+	   stop-localvar.sh \
+	   testsuites/stop-localvar.conf \
+	   stop-msgvar.sh \
+	   testsuites/stop-msgvar.conf \
+	   global_vars.sh \
+	   testsuites/global_vars.conf \
+	   rfc5424parser.sh \
+	   testsuites/rfc5424parser.conf \
+	   rs_optimizer_pri.sh \
+	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \
 	   testsuites/rscript_prifilt.conf \
 	   rscript_optimizer1.sh \
@@ -397,6 +426,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv.sh \
 	   testsuites/sndrcv_sender.conf \
 	   testsuites/sndrcv_rcvr.conf \
+	   sndrcv_relp.sh \
+	   testsuites/sndrcv_relp_sender.conf \
+	   testsuites/sndrcv_relp_rcvr.conf \
 	   sndrcv_udp.sh \
 	   testsuites/sndrcv_udp_sender.conf \
 	   testsuites/sndrcv_udp_rcvr.conf \
@@ -460,6 +492,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/master.nolimittag \
 	   rulesetmultiqueue.sh \
 	   testsuites/rulesetmultiqueue.conf \
+	   rulesetmultiqueue-v6.sh \
+	   testsuites/rulesetmultiqueue-v6.conf \
 	   omruleset.sh \
 	   testsuites/omruleset.conf \
 	   omruleset-queue.sh \
@@ -478,6 +512,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/execonlywhenprevsuspended3.conf \
 	   execonlywhenprevsuspended4.sh \
 	   testsuites/execonlywhenprevsuspended4.conf \
+	   execonlywhenprevsuspended_multiwrkr.sh \
+	   testsuites/execonlywhenprevsuspended_multiwrkr.conf \
 	   tabescape_dflt.sh \
 	   testsuites/tabescape_dflt.conf \
 	   testsuites/1.tabescape_dflt \
@@ -511,6 +547,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
+	   mmpstrucdata.sh \
+	   testsuites/mmpstrucdata.conf \
 	   cfg.sh
 
 # TODO: re-enable

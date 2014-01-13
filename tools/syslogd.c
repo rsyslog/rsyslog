@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -417,12 +417,10 @@ finalize_it:
  * function is also passed to the runtime library as the generic error
  * message handler. -- rgerhards, 2008-04-17
  */
-rsRetVal
-submitErrMsg(int iErr, uchar *msg)
+void
+submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
-	DEFiRet;
-	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, 0);
-	RETiRet;
+	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
 }
 
 
@@ -436,15 +434,31 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, int pri, uchar *msg, int flags)
+logmsgInternal(const int iErr, const int pri, const uchar *const msg, int flags)
 {
 	uchar pszTag[33];
+	size_t lenMsg;
+	unsigned i;
+	char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
 	msg_t *pMsg;
 	DEFiRet;
 
+	/* we first do a path the remove control characters that may have accidently
+	 * introduced (program error!). This costs performance, but we do not expect
+	 * to be called very frequently in any case ;) -- rgerhards, 2013-12-19.
+	 */
+	lenMsg = ustrlen(msg);
+	for(i = 0 ; i < lenMsg ; ++i) {
+		if(msg[i] < 0x20 || msg[i] == 0x7f) {
+			if(bufModMsg == NULL) {
+				CHKmalloc(bufModMsg = strdup((char*) msg));
+			}
+			bufModMsg[i] = ' ';
+		}
+	}
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInternalInputName);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	MsgSetRawMsg(pMsg, (bufModMsg == NULL) ? (char*)msg : bufModMsg, lenMsg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
@@ -474,7 +488,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 */
 	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
 		if(LOG_PRI(pri) == LOG_ERR)
-			fprintf(stderr, "rsyslogd: %s\n", msg);
+			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
@@ -484,9 +498,9 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 		 * message to the queue engine.
 		 */
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
-		//submitMsgWithDfltRatelimiter(pMsg);
 	}
 finalize_it:
+	free(bufModMsg);
 	RETiRet;
 }
 
@@ -497,24 +511,19 @@ finalize_it:
  * rgerhards, 2010-06-09
  */
 static inline rsRetVal
-preprocessBatch(batch_t *pBatch) {
+preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
 	prop_t *localName;
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
-	int bSingleRuleset;
-	ruleset_t *batchRuleset; /* the ruleset used for all message inside the batch, if there is a single one */
 	int bIsPermitted;
 	msg_t *pMsg;
 	int i;
 	rsRetVal localRet;
 	DEFiRet;
 
-	bSingleRuleset = 1;
-	batchRuleset = (pBatch->nElem > 0) ? pBatch->pElem[0].pMsg->pRuleset : NULL;
-	
-	for(i = 0 ; i < pBatch->nElem  && !*(pBatch->pbShutdownImmediate) ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
@@ -539,11 +548,7 @@ preprocessBatch(batch_t *pBatch) {
 				pBatch->eltState[i] = BATCH_STATE_DISC;
 			}
 		}
-		if(pMsg->pRuleset != batchRuleset)
-			bSingleRuleset = 0;
 	}
-
-	batchSetSingleRuleset(pBatch, bSingleRuleset);
 
 finalize_it:
 	if(propFromHost != NULL)
@@ -560,17 +565,16 @@ finalize_it:
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, int *pbShutdownImmediate)
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWti)
 {
 	DEFiRet;
 	assert(pBatch != NULL);
-	pBatch->pbShutdownImmediate = pbShutdownImmediate; /* TODO: move this to batch creation! */
-	preprocessBatch(pBatch);
-	ruleset.ProcessBatch(pBatch);
+	preprocessBatch(pBatch, pWti->pbShutdownImmediate);
+	ruleset.ProcessBatch(pBatch, pWti);
 //TODO: the BATCH_STATE_COMM must be set somewhere down the road, but we 
 //do not have this yet and so we emulate -- 2010-06-10
 int i;
-	for(i = 0 ; i < pBatch->nElem  && !*pbShutdownImmediate ; i++) {
+	for(i = 0 ; i < pBatch->nElem  && !*pWti->pbShutdownImmediate ; i++) {
 		pBatch->eltState[i] = BATCH_STATE_COMM;
 	}
 	RETiRet;
@@ -741,6 +745,13 @@ static void doDie(int sig)
 		abort();
 	}
 	bFinished = sig;
+	if(glblDebugOnShutdown) {
+		/* kind of hackish - set to 0, so that debug_swith will enable
+		 * and AND emit the "start debug log" message.
+		 */
+		debugging_on = 0;
+		debug_switch();
+	}
 #	undef MSG1
 #	undef MSG2
 }
@@ -1131,9 +1142,14 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
 		qqueueApplyCnfParam(*ppQueue, lst);
 	}
+	RETiRet;
+}
 
-	/* ... and finally start the queue! */
-	CHKiRet_Hdlr(qqueueStart(*ppQueue)) {
+rsRetVal
+startMainQueue(qqueue_t *pQueue)
+{
+	DEFiRet;
+	CHKiRet_Hdlr(qqueueStart(pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		errmsg.LogError(0, iRet, "could not start (ruleset) main message queue"); \
 	}
@@ -1333,6 +1349,11 @@ static void printVersion(void)
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");
 #endif
+#ifdef	HAVE_JEMALLOC
+	printf("\tmemory allocator:\t\t\tjemalloc\n");
+#else
+	printf("\tmemory allocator:\t\t\tsystem default\n");
+#endif
 #ifdef	RTINST
 	printf("\tRuntime Instrumentation (slow code):\tYes\n");
 #else
@@ -1342,6 +1363,11 @@ static void printVersion(void)
 	printf("\tuuid support:\t\t\t\tYes\n");
 #else
 	printf("\tuuid support:\t\t\t\tNo\n");
+#endif
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+	printf("\tNumber of Bits in RainerScript integers: 64\n");
+#else
+	printf("\tNumber of Bits in RainerScript integers: 32 (due to too-old json-c lib)\n");
 #endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
@@ -1360,7 +1386,7 @@ InitGlobalClasses(void)
 	/* Intialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
 	CHKiRet(rsrtInit(&pErrObj, &obj));
-	CHKiRet(rsrtSetErrLogger(submitErrMsg)); /* set out error handler */
+	rsrtSetErrLogger(submitErrMsg);
 
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "glbl";

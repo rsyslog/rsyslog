@@ -10,7 +10,7 @@
  *
  * File begun on 2009-11-02 by RGerhards
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -70,6 +70,10 @@ typedef struct _instanceData {
 	uchar *pszRulesetName;	/* primarily for debugging/display purposes */
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	ruleset_t *pRuleset;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
 	uchar *pszRulesetName;
@@ -87,9 +91,19 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
+
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINfreeInstance
@@ -117,9 +131,9 @@ BEGINdoAction
 CODESTARTdoAction
 	CHKmalloc(pMsg = MsgDup((msg_t*) ppString[0]));
 	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,
-		  (char*) pData->pszRulesetName, pData->pRuleset);
+		  (char*) pWrkrData->pData->pszRulesetName, pWrkrData->pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
-	MsgSetRuleset(pMsg, pData->pRuleset);
+	MsgSetRuleset(pMsg, pWrkrData->pData->pRuleset);
 	/* Note: we intentionally use submitMsg2() here, as we process messages
 	 * that were already run through the rate-limiter. So it is (at least)
 	 * questionable if they were rate-limited again.
@@ -199,6 +213,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 

@@ -5,7 +5,7 @@
 #include <typedefs.h>
 #include <sys/types.h>
 #include <regex.h>
-
+#include "typedefs.h"
 
 #define	LOG_NFACILITIES	24	/* current number of syslog facilities */
 #define CNFFUNC_MAX_ARGS 32
@@ -171,6 +171,7 @@ struct cnfstmt {
 		struct {
 			es_str_t *name;
 			struct cnfstmt *stmt;
+			ruleset_t *ruleset;	/* non-NULL if the ruleset has a queue assigned */
 		} s_call;
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
@@ -182,8 +183,7 @@ struct cnfstmt {
 			regex_t *regex_cache;/* cache for compiled REs, if used */
 			struct cstr_s *pCSCompValue;/* value to "compare" against */
 			sbool isNegated;
-			uintTiny propID;/* ID of the requested property */
-			es_str_t *propName;/* name of property for CEE-based filters */
+			msgPropDescr_t prop; /* requested property */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_propfilt;
@@ -210,6 +210,7 @@ struct cnfstringval {
 struct cnfvar {
 	unsigned nodetype;
 	char *name;
+	msgPropDescr_t prop;
 };
 
 struct cnfarray {
@@ -236,7 +237,8 @@ enum cnffuncid {
 	CNFFUNC_RE_EXTRACT,
 	CNFFUNC_FIELD,
 	CNFFUNC_PRIFILT,
-	CNFFUNC_LOOKUP
+	CNFFUNC_LOOKUP,
+	CNFFUNC_EXEC_TEMPLATE
 };
 
 struct cnffunc {
@@ -345,7 +347,7 @@ struct cnfarray* cnfarrayNew(es_str_t *val);
 struct cnfarray* cnfarrayDup(struct cnfarray *old);
 struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 void cnfarrayContentDestruct(struct cnfarray *ar);
-char* getFIOPName(unsigned iFIOP);
+const char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 char * tokenval2str(int tok);

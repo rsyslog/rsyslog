@@ -1,7 +1,7 @@
 /* This is the header for template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright (C) 2004-2012 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2004-2013 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -39,8 +39,9 @@ struct template {
 	struct template *pNext;
 	char *pszName;
 	int iLenName;
-	rsRetVal (*pStrgen)(msg_t*, uchar**, size_t *);
-	es_str_t *subtree;	/* subtree name for subtree-type templates */
+	rsRetVal (*pStrgen)(const msg_t*const, actWrkrIParams_t *const iparam);
+	sbool bHaveSubtree;
+	msgPropDescr_t subtree;	/* subtree property name for subtree-type templates */
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
@@ -79,7 +80,7 @@ struct templateEntry {
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			propid_t propid;	/* property to be used */
+			msgPropDescr_t msgProp;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 			unsigned iFieldNr;	/* for field extraction: field to extract */
@@ -103,7 +104,6 @@ struct templateEntry {
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 #endif
 
-			es_str_t *propName;	/**< property name (currently being used for CEE only) */
 
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
@@ -143,7 +143,7 @@ void tplDeleteAll(rsconf_t *conf);
 void tplDeleteNew(rsconf_t *conf);
 void tplPrintList(rsconf_t *conf);
 void tplLastStaticInit(rsconf_t *conf, struct template *tpl);
-rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize);
+rsRetVal ExtendBuf(actWrkrIParams_t *const iparam, const size_t iMinSize);
 int tplRequiresDateCall(struct template *pTpl);
 /* note: if a compiler warning for undefined type tells you to look at this
  * code line below, the actual cause is that you currently MUST include template.h
@@ -151,9 +151,13 @@ int tplRequiresDateCall(struct template *pTpl);
  * rgerhards, 2007-08-06
  */
 rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow);
-rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz, size_t *, struct syslogTime *ttNow);
 rsRetVal tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **, struct syslogTime *ttNow);
 rsRetVal doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal
+tplToString(struct template *__restrict__ const pTpl,
+	    msg_t *__restrict__ const pMsg,
+	    actWrkrIParams_t *__restrict const iparam,
+	    struct syslogTime *const ttNow);
 
 rsRetVal templateInit();
 rsRetVal tplProcessCnf(struct cnfobj *o);

@@ -73,15 +73,7 @@ static inline rsRetVal
 doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 {
 	int bNeedUnlockMutex = 0;
-	rsRetVal localRet;
 	DEFiRet;
-
-	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
-			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
-			ABORT_FINALIZE(RS_RET_DISCARDMSG);
-		}
-	}
 
 	if(ratelimit->bThreadSafe) {
 		pthread_mutex_lock(&ratelimit->mut);
@@ -209,6 +201,14 @@ rsRetVal
 ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 {
 	DEFiRet;
+	rsRetVal localRet;
+
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
+	}
 
 	*ppRepMsg = NULL;
 	/* Only the messages having severity level at or below the
@@ -223,6 +223,10 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 		CHKiRet(doLastMessageRepeatedNTimes(ratelimit, pMsg, ppRepMsg));
 	}
 finalize_it:
+	if(Debug) {
+		if(iRet == RS_RET_DISCARDMSG)
+			dbgprintf("message discarded by ratelimiting\n");
+	}
 	RETiRet;
 }
 

@@ -1,4 +1,213 @@
 ---------------------------------------------------------------------------
+Version 8.1.4 [devel] 2014-01-10
+- add exec_template() RainerScript function
+- imrelp: support for TCP KEEPALIVE added
+- bumped librelp dependency to 1.2.2 to support new KEEPALIVE feature
+- Add directives for numerically specifying GIDs/UIDs
+  The already present directives (FileOwner, FileGroup, DirOwner,
+  DirGroup) translate names to numerical IDs, which depends on the user
+  information being available during rsyslog's startup. This can fail if
+  the information is obtained over a network or from a service such as
+  SSSD. The new directives provide a way to specify the numerical IDs
+  directly and bypass the lookup.
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: action commitTransaction() processing did not properly handle
+  suspended actions
+- bugfix: omelasticsearch fail.es stats counter was improperly maitained
+---------------------------------------------------------------------------
+Version 8.1.3 [devel] 2013-12-06
+
+THIS VERSION CAN BE CONSIDERED A "NORMAL" DEVEL RELEASE. It's no longer
+highly experimental. This assertion is based on real-world feedback.
+
+- changes to the strgen module interface
+- new output module interface for transactional modules
+- performance improvements
+  * reduced number of malloc/frees due to further changes to the
+    output module interface
+  * reduced number of malloc/frees during string template processing
+    We now re-use once allocated string template memory for as long
+    as the worker thread exists. This saves us from doing new memory
+    allocs (and their free counterpart) when the next message is
+    processed. The drawback is that the cache always is the size of
+    the so-far largest message processed. This is not considered a
+    problem, as in any case a single messages' memory footprint should
+    be far lower than that of a whole set of messages (especially on
+    busy servers).
+  * used variable qualifiers (const, __restrict__) to hopefully help
+    the compiler generate somewhat faster code
+- failed action detection more precisely for a number of actions
+  If an action  uses string parameter passing but is non-transactional 
+  it can be executed immediately, giving a quicker indicatio of
+  action failure.
+- bugfix: limiting queue disk space did not work properly
+  * queue.maxdiskspace actually initializes queue.maxfilesize
+  * total size of queue files was not checked against
+    queue.maxdiskspace for disk assisted queues.
+  Thanks to Karol Jurak for the patch.
+---------------------------------------------------------------------------
+Version 8.1.2 [experimental] 2013-11-28
+- support for liblognorm1 added - results in performance improvements
+  Thanks to Pavel Levshin for his work in this regard.
+- support for jemalloc added via --enable-jemalloc
+  Thanks to Pavel Levshin for suggesting jemalloc
+  Note that build system is experimental at this stage.
+- queue defaults have changed
+  * high water mark is now dynamically 90% of queue size
+  * low water makr is now dynamically 70% of queue size
+  * queue.discardMark is now dynamically 98% of queue size
+  * queue.workerThreadMinimumMessage set to queue.size / num workers
+  For queues with very low queue.maxSize (< 100), "emergency" defaults
+  will be used.
+- bugfix: disk queues created files in wrong working directory
+  if the $WorkDirectory was changed multiple times, all queues only
+  used the last value set.
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
+---------------------------------------------------------------------------
+Version 8.1.1 [experimental] 2013-11-19
+- bugfix: STOP/discard(~) was mostly NOT honored
+  This lead to execution of config code that was not meant to be executed.
+- bugfix: memory leak on worker thread termination
+- bugfix: potential segfault in omfile under heavy load
+  Thanks to Pavel Levshin for alerting us.
+- bugfix: mmsequence: instance mode did not work
+  Thanks to Pavel Levshin for the patch
+- bugfix: segfault on startup when certain script constructs are used
+  e.g. "if not $msg ..."
+- omhiredis: now supports v8 output module interface and works again
+  Thanks to Pavel Levshin for the patch
+- mmaudit: now supports v8 output module interface and work again
+- bugfix: potential abort on startup in debug mode
+  This depends on template type being used. The root cause was a 
+  non-necessary debug output, which were at the wrong spot (leftover from
+  initial testing).
+  Thanks to Pavel Levshin for alerting us and providing a patch
+  proposal.
+---------------------------------------------------------------------------
+Version 8.1.0 [experimental] 2013-11-15
+- rewritten core engine for higher performance and new features
+  In detail:
+  * completely rewritten rule execution engine
+  * completely changed output module interface
+  * remodelled output module interface
+  * enabled important output modules to support full concurrent
+    operation
+  The core engine has been considerably changed and must be considered
+  experimental at this stage. Note that it does not yet include all
+  features planned for v8, but is close to this goal. In theory, the
+  engine should perform much better, especially on complex configurations
+  and busy servers. Most importantly, actions instances can now be called
+  concurrently from worker threads and many important output modules
+  support multiple concurrent action instances natively.
+- module omruleset is no longer enabled by default.
+  Note that it has been deprecated in v7 and been replaced by the "call"
+  statement. Also, it can still be build without problems, the option must
+  just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.5.8 [v7-release candidate] 2014-01-09
+- add exec_template() RainerScript function
+- add debug.onShutdown and debug.logFile global paramters
+  These enebale the new "debug on shutdown" mode, which can be used to
+  track hard to find problems that occur during system shutdown.
+- Add directives for numerically specifying GIDs/UIDs
+  The already present directives (FileOwner, FileGroup, DirOwner,
+  DirGroup) translate names to numerical IDs, which depends on the user
+  information being available during rsyslog's startup. This can fail if
+  the information is obtained over a network or from a service such as
+  SSSD. The new directives provide a way to specify the numerical IDs
+  directly and bypass the lookup.
+  Thanks to Tomas Heinrich for the patch.
+- actions now report if they suspend and resume themselves
+  this is by default on and controllable by the action.reportSuspension
+  global parameter
+- bugfix: omelasticsearch fail.es stats counter was improperly maintained
+- bugfix: mmrfc5424addhmac: "key" parameter was not properly processed
+- add new impstats action counters:
+  * suspended
+  * suspended.duration
+  * resumed
+---------------------------------------------------------------------------
+Version 7.5.7 [v7-devel] 2013-11-25
+- queue defaults have changed
+  * high water mark is now dynamically 90% of queue size
+  * low water makr is now dynamically 70% of queue size
+  * queue.discardMark is now dynamically 98% of queue size
+  * queue.workerThreadMinimumMessage set to queue.size / num workers
+  For queues with very low queue.maxSize (< 100), "emergency" defaults
+  will be used.
+- worker thread pool handling has been improved
+  Among others, permits pool to actually shrink (was quite hard with
+  previous implementation. This will also improve performance and/or
+  lower system overhead on busy systems.
+  Thanks to Pavel Levshin for the enhancement.
+- bugfix: mmpstrucdata generated inaccessible properties
+- bugfix: RainerScript optimizer did not optimize PRI filters
+  things like "if $syslogfacility-text == "local3"" were not converted
+  to PRIFILT. This was a regression introduced in 7.5.6.
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
+- bugfix: segfault on startup when certain script constructs are used
+  e.g. "if not $msg ..."
+- bugfix: ommysql lost configfile/section parameters after first close
+  This means that when a connection was broken, it was probably
+  re-instantiated with different parameters than configured.
+- bugfix: regression in template processing with subtrees in templates
+  Thanks to Pavel Levshin for the fix
+- bugfix: regular worker threads are not properly (re)started if DA
+  mode is active.
+  This occurs only under rare conditions, but definitely is a bug that
+  needed to be addressed. It probably is present since version 4.
+  Note that this patch has not been applied to v7.4-stable, as it
+  is very unlikely to happen and the fix itself has some regression
+  potential (the fix looks very solid, but it addresses a core component).
+  Thanks to Pavel Levshin for the fix
+- now emit warning message if om with msg passing mode uses action queue
+  These can modify the message, and this causes races.
+- bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
+  Thanks to Tomas Heinrich for the patch.
+---------------------------------------------------------------------------
+Version 7.5.6 [devel] 2013-10-29
+- impstats: add capability to bind to a ruleset
+- improved performance of RainerScript variable access
+  by refactoring the whole body of variable handling code. This also
+  solves some of the anomalies experienced in some versions of rsyslog.
+  All variable types are now handled in unified code, including
+  access via templates.
+- RainerScript: make use of 64 bit for numbers where available
+  Thanks to Pavel Levshin for enhancement.
+- slight performance optimization if GCC is used
+  We give branch prediction hints for the frequent RETiRet macro which is
+  used for error handling. Some slight performance gain is to be expected
+  from that.
+- removed global variable support
+  The original idea was not well thought out and global variables, as
+  implemented, worked far different from what anybody would expect. As
+  such, we consider the current approach as an experiment that did not
+  work out and opt to removing it, clearing the way for a better future
+  solution. Note: global vars were introduced in 7.5.3 on Sept, 11th 2013.
+- new module mmsequence, primarily used for action load balancing
+  Thanks to Pavel Levshin for contributing this module.
+- bugfix: unset statement always worked on message var, even if local
+  var was given
+- imudp: support for binding to ruleset added
+- bugfix: segfault if variable was assigned to non-container subtree
+  Thanks to Pavel Levshin for the fix
+- bugfix: imuxsock did not suport addtl sockets if syssock was disabled
+  Thanks to Pavel Levshin for the fix
+- bugfix: running imupd on multiple threads lead to segfault if recvmmsg
+  is available
+- bugfix: imudp when using recvmmsg could report wrong sender IP
+- bugfix: segfault if re_extract() function was used and no match found
+- bugfix: omelasticsearch did not compile on platforms without atomic
+  instructions
+- bugfix: potential misadressing on startup if property-filter was used
+  This could happen if the property name was longer than 127 chars, a case
+  that would not happen in practice.
+- bugfix: invalid property filter was not properly disabled in ruleset
+  Note: the cosmetic memory leak introduced with that patch in 7.4.5 is
+  now also fixed.
+- imported bugfixes from 7.4.6 stable release
+---------------------------------------------------------------------------
 Version 7.5.5 [devel] 2013-10-16
 - imfile: permit to monitor an unlimited number of files
 - imptcp: add "defaultTZ" input parameter
@@ -153,7 +362,73 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
-Version 7.4.5  [v7.4-stable] 2013-09-??
+Version 7.4.8  [v7.4-stable] 2014-01-08
+- rsgtutil provides better error messages on unfinished signature blocks
+- bugfix: guard against control characters in internal (error) messages
+  Thanks to Ahto Truu for alerting us.
+- bugfix: immark did emit messages under kern.=info instead of syslog.=info
+  Note that his can potentially break exisiting configurations that
+  rely on immark sending as kern.=info. Unfortunately, we cannot leave
+  this unfixed as we never should emit messages under the kern facility.
+---------------------------------------------------------------------------
+Version 7.4.7  [v7.4-stable] 2013-12-10
+- bugfix: limiting queue disk space did not work properly
+  * queue.maxdiskspace actually initializes queue.maxfilesize
+  * total size of queue files was not checked against
+    queue.maxdiskspace for disk assisted queues.
+  Thanks to Karol Jurak for the patch.
+- bugfix: linux kernel-like ratelimiter did not work properly with all
+  inputs (for example, it did not work with imdup). The reason was that
+  the PRI value was used, but that needed parsing of the message, which
+  was done too late.
+- bugfix: disk queues created files in wrong working directory
+  if the $WorkDirectory was changed multiple times, all queues only
+  used the last value set.
+- bugfix: legacy directive $ActionQueueWorkerThreads was not honored
+- bugfix: segfault on startup when certain script constructs are used
+  e.g. "if not $msg ..."
+- bugfix: imuxsock: UseSysTimeStamp config parameter did not work correctly
+  Thanks to Tomas Heinrich for alerting us and provinding a solution
+  suggestion.
+- bugfix: $SystemLogUseSysTimeStamp/$SystemLogUsePIDFromSystem did not work
+  Thanks to Tomas Heinrich for the patch.
+- improved checking of queue config parameters on startup
+- bugfix: call to ruleset with async queue did not use the queue
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=443
+- bugfix: if imtcp is loaded and no listeners are configured (which is
+  uncommon), rsyslog crashes during shutdown.
+---------------------------------------------------------------------------
+Version 7.4.6  [v7.4-stable] 2013-10-31
+- bugfix: potential abort during HUP
+  This could happen when one of imklog, imzmq3, imkmsg, impstats,
+  imjournal, or imuxsock were under heavy load during a HUP.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=489
+  Thanks to Guy Rozendorn for reporting the problem and Peval Levhshin for
+  his analysis.
+- bugfix: imtcp flowControl parameter incorrectly defaulted to "off"
+  This could cause message loss on systems under heavy load and was
+  a change-of-behaviour to previous version. This is a regression
+  most probably introduced in 5.9.0 (but did not try hard to find the
+  exact point of its introduction).
+- now requires libestr 0.1.9 as earlier versions lead to problems with
+  number handling in RainerScript
+- bugfix: memory leak in strlen() RainerScript function
+  Thanks to Gregoire Seux for reportig this bug.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=486
+- bugfix: buffer overrun if re_extract function was called for submatch 50
+  Thanks to Pavel Levshin for reporting the problem and its location.
+- bugfix: memleak in re_extract() function
+  Thanks to Pavel Levshin for reporting this problem.
+- bugfix: potential abort in RainerScript optimizer
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=488
+  Thanks to Thomas Doll for reporting the problem and Pavel Levshin for
+  fixing it.
+- bugfix: memory leak in omhiredis
+  Thanks to Pavel Levshin for the fix
+- bugfix: segfault if variable was assigned to non-container subtree
+  Thanks to Pavel Levshin for the fix
+---------------------------------------------------------------------------
+Version 7.4.5  [v7.4-stable] 2013-10-22
 - mmanon: removed the check for specific "terminator characters" after 
   last octet. As it turned out, this didn't work in practice as there
   was an enormous set of potential terminator chars -- so removing
@@ -165,6 +440,16 @@ Version 7.4.5  [v7.4-stable] 2013-09-??
 - now requires libestr 0.1.8 as early versions had a nasty bug in
   string comparisons
 - omelasticsearch: add failed.httprequests stats counter
+- bugfix: invalid property filter was not properly disabled in ruleset
+  Note that this bugfix introduces a very slight memory leak, which is
+  cosmetic, as it just holds data until termination that is no longer
+  needed. It is just the part of the config that was invalid. We will
+  "fix" this "issue" in the devel version first, as the fix is a bit
+  too intrusive to do without hard need in the stable version.
+- bugfix: segfault if re_extract() function was used and no match found
+- bugfix: potential misadressing on startup if property-filter was used
+  This could happen if the property name was longer than 127 chars, a case
+  that would not happen in practice.
 - bugfix: omelasticsearch: correct failed.http stats counter
 - bugfix: omelasticsearch: did not correctly initialize stats counters
 - bugfix: omelasticsearch: failed.es counter was only maintained in bulk mode

@@ -15,16 +15,55 @@ Queues need to be configured in the action or ruleset it should affect. If nothi
 default values will be used. Thus, the default ruleset has only the default main queue. Specific Action 
 queues are not set up by default.</p>
 <ul>
-	<li><strong>queue.filename</strong> name</li>
-	<li><strong>queue.size</strong> number</li>
+	<li><strong>queue.filename</strong> name<br>
+		File name to be used for the queue files. Please note that
+		this is actually just the file name. A directory can NOT be
+		specified in this paramter. If the files shall be
+		created in a specific directory, specify
+		queue.spoolDirectory for this. The filename is used to build 
+		to complete path for queue files.</li>
+	<li><strong>queue.spoolDirectory</strong> name<br>
+		This is the directory into which queue files will be stored.
+		Note that the directory must exist, it is NOT automatically
+		created by rsyslog. If no spoolDirectory is specified, the
+		work directory is used.
+		</li>
+	<li><strong>queue.size</strong> number <br>
+		This is the maximum size of the queue in number of messages.
+		Note that setting the queue size to very small values (roughly
+		below 100 messages) is not supported and can lead to 
+		unpredictable results.<br>
+		For more information on the current status of this restriction
+		see the <a href="http://www.rsyslog.com/lower-bound-for-queue-sizes/">rsyslog
+		FAQ: "lower bound for queue sizes"</a>.</li>
 	<li><strong>queue.dequeuebatchsize</strong> number 
 	<br>default 16</li>
-	<li><strong>queue.maxdiskspace</strong> number</li>
+	<li><strong>queue.maxdiskspace</strong> number
+	<br>The maximum size that all queue files together will use on disk.
+	Note that the actual size may be slightly larger than the configured max, as
+	rsyslog never writes partial queue records.
 	<li><strong>queue.highwatermark</strong> number
-	<br>default 8000</li>
+	<br>This applies to disk-assisted queues, only.
+	When the queue fills up to this number of messages, the queue begins
+	to spool messages to disk. Please note that this should note happen as
+	part of usual processing, because disk queue mode is very considerably
+	slower than in-memory queue mode. Going to disk should be reserved for
+	cases where an output action destination is offline for some period.
 	<li><strong>queue.lowwatermark</strong> number
 	<br>default 2000</li>
-	<li><strong>queue.fulldelaymark</strong> number</li>
+	<li><strong>queue.fulldelaymark</strong> number</br>
+	Number of messages when the queue should block delayable messages. Messages
+	are NO LONGER PROCESSED until the queue has sufficient space again. If
+	a message is delayable depends on the input. For example, messages
+	received via imtcp are delayable (because TCP can push back), but those
+	received via imudp are not (as UDP does not permit a push back). The
+	intent behind this setting is to leave some space in an almost-full
+	queue for non-delayable messages, which would be lost if the queue runs
+	out of space.</br></br>
+	Please note that if you use a DA queue, setting the fulldelaymark ABOVE the
+	highwatermark makes the queue never activate disk mode for delayable
+	inputs. So this is probably not what you want.
+	</li>
 	<li><strong>queue.lightdelaymark</strong> number</li>
 	<li><strong>queue.discardmark</strong> number
 	<br>default 9750]</li>

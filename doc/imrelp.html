@@ -101,6 +101,25 @@ information was contained in
 <a href="http://gnutls.org/manual/html_node/Priority-Strings.html">section 6.10 of the GnuTLS manual</a>.
 <br><b>Note: this is an expert parameter.</b> Do not use if you do
 not exactly know what you are doing.
+
+<li><b>KeepAlive</b> &lt;on/<b>off</b>&gt; (available in 8.1.4+)<br>
+enable of disable keep-alive packets at the tcp socket layer. The default is
+to disable them.</li>
+<li><b>KeepAlive.Probes</b> &lt;number&gt; (available in 8.1.4+)<br>
+The number of unacknowledged probes to send before considering the connection dead and notifying the application layer.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
+<li><b>KeepAlive.Interval</b> &lt;number&gt; (available in 8.1.4+)<br>
+The interval between subsequent keepalive probes, regardless of what the connection has exchanged in the meantime.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
+<li><b>KeepAlive.Time</b> &lt;number&gt; (available in 8.1.4+)<br>
+The interval between the last data packet sent (simple ACKs are not considered data) and the first keepalive probe; after the connection is marked to need keepalive, this counter is not used any further.
+The default, 0, means that the operating system defaults are used. This has only 
+effect if keep-alive is enabled. The functionality may not be available on
+all platforms.
 </li>
 </ul>
 <b>Caveats/Known Bugs:</b>
