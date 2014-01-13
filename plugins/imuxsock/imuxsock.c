@@ -1216,31 +1216,31 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "socket")) {
 			inst->sockName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(modpblk.descr[i].name, "createpath")) {
+		} else if(!strcmp(inppblk.descr[i].name, "createpath")) {
 			inst->bCreatePath = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "parsetrusted")) {
+		} else if(!strcmp(inppblk.descr[i].name, "parsetrusted")) {
 			inst->bParseTrusted = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "ignoreownmessages")) {
+		} else if(!strcmp(inppblk.descr[i].name, "ignoreownmessages")) {
 			inst->bDiscardOwnMsgs = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "unlink")) {
+		} else if(!strcmp(inppblk.descr[i].name, "unlink")) {
 			inst->bUnlink = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "hostname")) {
+		} else if(!strcmp(inppblk.descr[i].name, "hostname")) {
 			inst->pLogHostName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(modpblk.descr[i].name, "ignoretimestamp")) {
+		} else if(!strcmp(inppblk.descr[i].name, "ignoretimestamp")) {
 			inst->bIgnoreTimestamp = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "flowcontrol")) {
+		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
 			inst->bUseFlowCtl = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "usesystimestamp")) {
+		} else if(!strcmp(inppblk.descr[i].name, "usesystimestamp")) {
 			inst->bUseSysTimeStamp = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "annotate")) {
+		} else if(!strcmp(inppblk.descr[i].name, "annotate")) {
 			inst->bAnnotate = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "usepidfromsystem")) {
+		} else if(!strcmp(inppblk.descr[i].name, "usepidfromsystem")) {
 			inst->bWritePid = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
-		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.severity")) {
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.severity")) {
 			inst->ratelimitSeverity = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imuxsock: program error, non-handled "
