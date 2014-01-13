@@ -1,9 +1,6 @@
 Welcome to rsyslog
 ==================
 
-- `Rsyslog Website <http://www.rsyslog.com/>`_ 
-- `Project Status Page <http://www.rsyslog.com/status>`_
-
 Rsyslog is an enhanced syslogd suitable both for small systems as well 
 as large enterprises.
 
@@ -16,7 +13,7 @@ to restart rsyslogd, because otherwise it will not use your new settings
 not even work a bit...;))
 
 Manual
-======
+------
 
 .. toctree::
    :maxdepth: 3
@@ -38,3 +35,8 @@ Manual
    compatibility/index
    bugs
 
+Related Links
+=============
+
+- `Rsyslog Website <http://www.rsyslog.com/>`_ 
+- `Project Status Page <http://www.rsyslog.com/status>`_

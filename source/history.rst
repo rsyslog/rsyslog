@@ -3,11 +3,12 @@ RSyslog - History
 
 **Rsyslog is a GPL-ed, enhanced syslogd. Among others, it offers support
 for reliable syslog over TCP, writing to MySQL databases and fully
-configurable output formats (including great timestamps).** Rsyslog was
-initiated by `Rainer Gerhards <http://www.gerhards.net/rainer>`_. If you
-are interested to learn why  Rainer initiated  the project, you may want
-to read his blog posting on "`why the world needs another
-syslogd <http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html>`_\ ".
+configurable output formats (including great timestamps).** 
+
+Rsyslog was initiated by `Rainer Gerhards <http://www.gerhards.net/rainer>`_. 
+If you are interested to learn why Rainer initiated the project, you may want
+to read his blog posting on "`why the world needs another syslogd 
+<http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html>`_\ ".
 
 Rsyslog has been forked in **2004** from the `sysklogd standard
 package <http://www.infodrom.org/projects/sysklogd/>`_. The goal of the
