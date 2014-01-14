@@ -5,8 +5,12 @@ Tutorials
    :maxdepth: 2
 
    secure_tls
-   high_database_rate
-   pgsql
-   reliable_forwarding
    tls_cert_summary
    tls
+   database
+   high_database_rate
+   reliable_forwarding
+   php_syslog_ng
+   recording_pri
+   stunnel
+   failover_syslog_server.

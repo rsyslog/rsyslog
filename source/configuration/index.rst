@@ -35,7 +35,7 @@ migrating from syslogd to rsyslogd.
    property_replacer
    droppriv
    output_channels
-   expressions
+   expression
    examples
    modules/index
    global/index

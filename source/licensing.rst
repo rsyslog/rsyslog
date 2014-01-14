@@ -1,11 +1,10 @@
-rsyslog licensing
-=================
+Licensing
+=========
 
-**Most important things first: if you intend to use rsyslog inside a
-GPLv3 compatible project, you are free to do so.** You don't even need
-to continue reading. If you intend to use rsyslog inside a non-GPLv3
-compatible project, rsyslog offers you some liberties to do that, too.
-However, you then need to study the licensing details in depth.
+If you intend to use rsyslog inside a GPLv3 compatible project, you are free to
+do so. You don't even need to continue reading. If you intend to use rsyslog
+inside a non-GPLv3 compatible project, rsyslog offers you some liberties to do
+that, too. However, you then need to study the licensing details in depth.
 
 The project hopes this is a good compromise, which also gives a boost to
 fellow free software developers who release under GPLv3.
@@ -72,8 +71,6 @@ will probably still be covered by GPL. We are following a similar
 licensing model in GnuTLS, which makes effort to reserve some
 functionality exclusively to open source projects.
 
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

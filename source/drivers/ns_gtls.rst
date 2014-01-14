@@ -1,7 +1,7 @@
 gtls Network Stream Driver
 ==========================
 
-This `network stream driver <netstream.html>`_ implements a TLS
+This network stream driver implements a TLS
 protected transport via the `GnuTLS
 library <http://www.gnu.org/software/gnutls/>`_.
 
@@ -40,12 +40,3 @@ Even in x509/fingerprint mode, both the client and sever certificate
 currently must be signed by the same root CA. This is an artifact of the
 underlying GnuTLS library and the way we use it. It is expected that we
 can resolve this issue in the future.
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
