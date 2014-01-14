@@ -14,3 +14,4 @@ experimental version.
 
    build_from_repo
    packages
+   install
