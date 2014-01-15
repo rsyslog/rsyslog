@@ -56,7 +56,7 @@ start() {
 }
 stop() {
     echo -n $"Shutting down system logger: "
-    killproc -p "${PIDFILE}" $exec
+    killproc -p "${PIDFILE}" -d 30 $exec
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && rm -f $lockfile
