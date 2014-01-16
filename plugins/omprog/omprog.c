@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2013 Adiscon GmbH.
+ * Copyright 2009-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -34,6 +34,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <wait.h>
 #include <pthread.h>
 #include "conf.h"
@@ -58,10 +59,13 @@ typedef struct _instanceData {
 	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
 	pid_t pid;			/* pid of currently running process */
-	int fdPipe;			/* file descriptor to write to */
+	int fdPipeOut;			/* file descriptor to write to */
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 	int iParams;		/* Holds the count of parameters if set*/
 	pthread_mutex_t mut;	/* make sure only one instance is active */
+	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
+	int fdOutput;		/* it's fd (-1 if closed) */
+	int fdPipeIn;		/* fd we receive messages from the program (if we want to) */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -78,6 +82,7 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "output", eCmdHdlrString, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -114,8 +119,8 @@ BEGINfreeInstance
 	int i;
 CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mut);
-	if(pData->szBinary != NULL)
-		free(pData->szBinary);
+	free(pData->szBinary);
+	free(pData->outputFileName);
 	if(pData->aParams != NULL) {
 		for (i = 0; i < pData->iParams; i++) {
 			free(pData->aParams[i]);
@@ -139,27 +144,101 @@ CODESTARTtryResume
 ENDtryResume
 
 
+/* As this is assume to be a debug function, we only make
+ * best effort to write the message but do *not* try very
+ * hard to handle errors. -- rgerhards, 2014-01-16
+ */
+static void
+writeProgramOutput(instanceData *__restrict__ const pData,
+	const char *__restrict__ const buf,
+	const ssize_t lenBuf)
+{
+	char errStr[1024];
+	ssize_t r;
+
+dbgprintf("omprog: writeProgramOutput, fd %d\n", pData->fdOutput);
+	if(pData->fdOutput == -1) {
+		pData->fdOutput = open((char*)pData->outputFileName,
+				       O_WRONLY | O_APPEND | O_CREAT, 0600);
+		if(pData->fdOutput == -1) {
+			DBGPRINTF("omprog: error opening output file %s: %s\n",
+				   pData->outputFileName, 
+				   rs_strerror_r(errno, errStr, sizeof(errStr)));
+			goto done;
+		}
+	}
+
+	r = write(pData->fdOutput, buf, (size_t) lenBuf);
+	if(r != lenBuf) {
+		DBGPRINTF("omprog: problem writing output file %s: bytes "
+			  "requested %lld, written %lld, msg: %s\n",
+			   pData->outputFileName, (long long) lenBuf, (long long) r,
+			   rs_strerror_r(errno, errStr, sizeof(errStr)));
+	}
+done:	return;
+}
+
+
+/* check output of the executed program
+ * If configured to care about the output, we check if there is some and,
+ * if so, properly handle it.
+ */
+static void
+checkProgramOutput(instanceData *__restrict__ const pData)
+{
+	char buf[4096];
+	ssize_t r;
+
+dbgprintf("omprog: checking prog output, fd %d\n", pData->fdPipeIn);
+	if(pData->fdPipeIn == -1)
+		goto done;
+
+	do {
+memset(buf, 0, sizeof(buf));
+		r = read(pData->fdPipeIn, buf, sizeof(buf));
+dbgprintf("omprog: read state %lld, data '%s'\n", (long long) r, buf);
+		if(r > 0)
+			writeProgramOutput(pData, buf, r);
+	} while(r > 0);
+
+done:	return;
+}
+
+
+
 /* execute the child process (must be called in child context
  * after fork).
  */
-
-static void execBinary(instanceData *pData, int fdStdin)
+static void
+execBinary(instanceData *pData, int fdStdin, int fdStdOutErr)
 {
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
+	char errStr[1024];
 	char *newenviron[] = { NULL };
 
 	assert(pData != NULL);
 
 	fclose(stdin);
 	if(dup(fdStdin) == -1) {
-		DBGPRINTF("omprog: dup() failed\n");
+		DBGPRINTF("omprog: dup() stdin failed\n");
 		/* do some more error handling here? Maybe if the module
 		 * gets some more widespread use...
 		 */
 	}
-	/*fclose(stdout);*/
+	if(pData->outputFileName == NULL) {
+		close(fdStdOutErr);
+	} else {
+		fclose(stdout);
+		if(dup(fdStdOutErr) == -1) {
+			DBGPRINTF("omprog: dup() stdout failed\n");
+		}
+		fclose(stderr);
+		if(dup(fdStdOutErr) == -1) {
+			DBGPRINTF("omprog: dup() stderr failed\n");
+		}
+	}
 
 	/* we close all file handles as we fork soon
 	 * Is there a better way to do this? - mail me! rgerhards@adiscon.com
@@ -182,8 +261,10 @@ static void execBinary(instanceData *pData, int fdStdin)
 
 	/* finally exec child */
 	iRet = execve((char*)pData->szBinary, pData->aParams, newenviron);
-	if (iRet == -1) {
-		dbgprintf("omprog: failed to execute binary '%s' with return code: %d\n", pData->szBinary, errno); 
+	if(iRet == -1) {
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		dbgprintf("omprog: failed to execute binary '%s': %s\n",
+			  pData->szBinary, errStr); 
 	}
 	
 	/* we should never reach this point, but if we do, we terminate */
@@ -197,13 +278,18 @@ static void execBinary(instanceData *pData, int fdStdin)
 static rsRetVal
 openPipe(instanceData *pData)
 {
-	int pipefd[2];
+	int pipestdin[2];
+	int pipestdout[2];
 	pid_t cpid;
+	int flags;
 	DEFiRet;
 
 	assert(pData != NULL);
 
-	if(pipe(pipefd) == -1) {
+	if(pipe(pipestdin) == -1) {
+		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+	}
+	if(pipe(pipestdout) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
@@ -215,20 +301,29 @@ openPipe(instanceData *pData)
 	if(cpid == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_FORK);
 	}
+	pData->pid = cpid;
 
 	if(cpid == 0) {    
-		/* we are now the child, just set the right selectors and
-		 * exec the binary. If that fails, there is not much we can do.
-		 */
-		close(pipefd[1]);
-		execBinary(pData, pipefd[0]);
+		/* we are now the child, just exec the binary. */
+		close(pipestdin[1]); /* close those pipe "ports" that */
+		close(pipestdout[0]); /* we don't need */
+		execBinary(pData, pipestdin[0], pipestdout[1]);
 		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
 	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
-	pData->fdPipe = pipefd[1];
-	pData->pid = cpid;
-	close(pipefd[0]);
+	if(pData->outputFileName != NULL) {
+		pData->fdPipeIn = dup(pipestdout[0]);
+		/* we need to set our fd to be non-blocking! */
+		flags = fcntl(pData->fdPipeIn, F_GETFL);
+		flags |= O_NONBLOCK;
+		fcntl(pData->fdPipeIn, F_SETFL, flags);
+	} else {
+		pData->fdPipeIn = -1;
+	}
+	close(pipestdin[0]);
+	close(pipestdout[1]);
+	pData->fdPipeOut = pipestdin[1];
 	pData->bIsRunning = 1;
 finalize_it:
 	RETiRet;
@@ -265,6 +360,21 @@ cleanup(instanceData *pData)
 		}
 	}
 
+dbgprintf("DDDD: omprog: try to catch late messages\n");
+	checkProgramOutput(pData); /* try to catch any late messages */
+
+	if(pData->fdOutput != -1) {
+		close(pData->fdOutput);
+		pData->fdOutput = -1;
+	}
+	if(pData->fdPipeIn != -1) {
+		close(pData->fdPipeIn);
+		pData->fdPipeIn = -1;
+	}
+	if(pData->fdPipeOut != -1) {
+		close(pData->fdPipeOut);
+		pData->fdPipeOut = -1;
+	}
 	pData->bIsRunning = 0;
 	RETiRet;
 }
@@ -282,7 +392,6 @@ tryRestart(instanceData *pData)
 	iRet = openPipe(pData);
 	RETiRet;
 }
-
 
 /* write to pipe
  * note that we do not try to run block-free. If the users fears something
@@ -304,7 +413,9 @@ writePipe(instanceData *pData, uchar *szMsg)
 	writeOffset = 0;
 
 	do {
-		lenWritten = write(pData->fdPipe, ((char*)szMsg)+writeOffset, lenWrite);
+		checkProgramOutput(pData);
+dbgprintf("omprog: writing to prog (fd %d): %s\n", pData->fdPipeOut, szMsg);
+		lenWritten = write(pData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
@@ -324,6 +435,7 @@ writePipe(instanceData *pData, uchar *szMsg)
 		}
 	} while(lenWritten != lenWrite);
 
+	checkProgramOutput(pData);
 
 finalize_it:
 	RETiRet;
@@ -352,8 +464,11 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->szBinary = NULL;
 	pData->aParams = NULL;
+	pData->outputFileName = NULL;
 	pData->iParams = 0;
-	pData->fdPipe = -1;
+	pData->fdPipeOut = -1;
+	pData->fdPipeIn = -1;
+	pData->fdOutput = -1;
 	pData->bIsRunning = 0;
 }
 
@@ -456,6 +571,8 @@ CODESTARTnewActInst
 				pData->aParams[iPrm] = NULL; 
 
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "output")) {
+			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
