@@ -1870,6 +1870,21 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					}
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l != r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1951,6 +1966,21 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) >= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l >= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) >= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1984,6 +2014,21 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) < 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l < r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) < 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -2017,6 +2062,21 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) > 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l > r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) > 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
