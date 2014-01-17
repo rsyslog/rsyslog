@@ -1821,9 +1821,9 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					if(convok_l) {
 						ret->d.n = (n_l == r.d.n); /*CMP*/
 					} else {
-						estr_r = var2String(&r, &bMustFree);
+						estr_r = var2String(&r, &bMustFree2);
 						ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
-						if(bMustFree) es_deleteStr(estr_r);
+						if(bMustFree2) es_deleteStr(estr_r);
 					}
 				}
 				varFreeMembers(&r);
