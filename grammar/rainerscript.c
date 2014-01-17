@@ -1593,7 +1593,7 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
+cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 {
 	struct var r, l; /* memory for subexpression results */
 	es_str_t *estr_r, *estr_l;
@@ -1601,7 +1601,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	dbgprintf("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
+	DBGPRINTF("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1730,6 +1730,22 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) <= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l <= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) <= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(r.datatype == 'S') es_deleteStr(r.d.estr);
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1986,6 +2002,7 @@ cnfexprEval(struct cnfexpr *expr, struct var *ret, void* usrptr)
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
+	DBGPRINTF("eval expr %p, return datatype '%c'\n", expr, ret->datatype);
 }
 
 //---------------------------------------------------------
