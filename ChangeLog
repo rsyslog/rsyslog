@@ -366,6 +366,14 @@ Version 7.5.0 [devel] 2013-06-11
   connections
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
+Version 7.4.9  [v7.4-stable] never released
+- bugfix: potential double-free in RainerScript equal comparison
+  happens if the left-hand operand is JSON object and the right-hand
+  operand is a non-string that does not convert to a number (for
+  example, it can be another JSON object, probably the only case that
+  could happen in practice). This is very unlikely to be triggered.
+- bugfix: some RainerScript Json(Variable)/string comparisons were wrong
+---------------------------------------------------------------------------
 Version 7.4.8  [v7.4-stable] 2014-01-08
 - rsgtutil provides better error messages on unfinished signature blocks
 - bugfix: guard against control characters in internal (error) messages
