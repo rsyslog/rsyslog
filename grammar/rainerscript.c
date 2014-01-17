@@ -1917,7 +1917,6 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 					if(bMustFree2) es_deleteStr(estr_r);
 				}
 			}
-			if(r.datatype == 'S') es_deleteStr(r.d.estr);
 			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
