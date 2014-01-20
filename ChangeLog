@@ -2,6 +2,8 @@
 Version 8.1.5 [devel] 2014-01-??
 - imfile now supports inotify (but must be explicitely turned on)
 - imfile no longer has a limit on number of monitored files
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
 ---------------------------------------------------------------------------
 Version 8.1.4 [devel] 2014-01-10
 - add exec_template() RainerScript function
