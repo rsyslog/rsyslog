@@ -257,6 +257,8 @@ Version 7.5.0 [devel] 2013-06-11
   Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 7.4.9  [v7.4-stable] never released
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
 - bugfix: potential double-free in RainerScript equal comparison
   happens if the left-hand operand is JSON object and the right-hand
   operand is a non-string that does not convert to a number (for
