@@ -111,6 +111,10 @@ Version 8.1.0 [experimental] 2013-11-15
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
 ---------------------------------------------------------------------------
+Version 7.5.9 [v7-release candidate] 2014-01-??
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
+---------------------------------------------------------------------------
 Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
 - add debug.onShutdown and debug.logFile global paramters
