@@ -153,7 +153,7 @@ ENDdoAction
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":omjournal:", sizeof(":omjournal:") - 1)) {
+	if(!strncmp((char*) p, ":omjournal:", sizeof(":omjournal:") - 1)) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omjournal supports only v6+ config format, use: "
 			"action(type=\"omjournal\" ...)");
