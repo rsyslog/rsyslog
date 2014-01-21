@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
-Version 7.4.9  [v7.4-stable] never released
+Version 7.4.9  [v7.4-stable] 2014-01-??
+- added ProcessInternalMessages global system parameter
+  This permits to inject rsyslog status messages into *another* main
+  syslogd or the journal.
 - bugfix: imuxsock input parameters were not accepted
   due to copy&paste error. Thanks to Andy Goldstein for the fix.
 - bugfix: potential double-free in RainerScript equal comparison
