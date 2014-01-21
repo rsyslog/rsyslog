@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.9  [v7.4-stable] 2014-01-??
+Version 7.4.9  [v7.4-stable] 2014-01-22
 - added ProcessInternalMessages global system parameter
   This permits to inject rsyslog status messages into *another* main
   syslogd or the journal.
