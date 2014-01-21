@@ -489,7 +489,6 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 	size_t lenMsg;
 	unsigned i;
 	char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
-	msg_t *pMsg;
 	DEFiRet;
 
 	/* we first do a path the remove control characters that may have accidently
@@ -506,7 +505,7 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 		}
 	}
 
-	if(0) {
+	if(bProcessInternalMessages) {
 		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));

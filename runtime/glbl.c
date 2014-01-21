@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -61,6 +61,10 @@ DEFobjCurrIf(net)
  * For this object, these variables are obviously what makes the "meat" of the
  * class...
  */
+int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal messages?
+					 * 1 - yes
+					 * 0 - send them to libstdlog (e.g. to push to journal)
+					 */
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
@@ -103,6 +107,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
+	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -607,11 +612,29 @@ glblPrepCnf(void)
 void
 glblProcessCnf(struct cnfobj *o)
 {
+	int i;
+
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
 	dbgprintf("glbl param blk after glblProcessCnf:\n");
 	cnfparamsPrint(&paramblk, cnfparamvals);
+
+	/* The next thing is a bit hackish and should be changed in higher
+	 * versions. There are a select few parameters which we need to
+	 * act on immediately. These are processed here.
+	 */
+	for(i = 0 ; i < paramblk.nParams ; ++i) {
+		if(!cnfparamvals[i].bUsed)
+			continue;
+		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
+			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+		}
+	}
 }
 
+
+/* This processes the "regular" parameters which are to be set after the
+ * config has been fully loaded.
+ */
 void
 glblDoneLoadCnf(void)
 {

@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -37,6 +37,7 @@
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
 extern pid_t glbl_ourpid;
+extern int bProcessInternalMessages;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
