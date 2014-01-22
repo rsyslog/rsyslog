@@ -61,9 +61,14 @@ DEFobjCurrIf(ruleset)
 static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
+static int bPrettyPrintCC = 0; /* pretty print control characters instead of using cCCEscapeChar and octal representation */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+
+static char hexdigit[16] =
+	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
+	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 /* This is the list of all parsers known to us.
  * This is also used to unload all modules on shutdown.
@@ -319,6 +324,9 @@ SanitizeMsg(msg_t *pMsg)
 	size_t iDst;
 	size_t iMaxLine;
 	size_t maxDest;
+	uchar pc;
+	int pi;
+	int maxLastCharSize = 3;
 	sbool bUpdatedLen = RSFALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
@@ -386,7 +394,13 @@ SanitizeMsg(msg_t *pMsg)
 	 * obviously no need to sanitize, so we can go over that quickly...
 	 */
 	iMaxLine = glbl.GetMaxLine();
-	maxDest = lenMsg * 4; /* message can grow at most four-fold */
+	if (bPrettyPrintCC) {
+		maxDest = lenMsg * 6; /* message can grow at most six-fold */
+		maxLastCharSize = 5;
+	} else {
+		maxDest = lenMsg * 4; /* message can grow at most four-fold */
+	}
+
 	if(maxDest > iMaxLine)
 		maxDest = iMaxLine;	/* but not more than the max size! */
 	if(maxDest < sizeof(szSanBuf))
@@ -398,7 +412,7 @@ SanitizeMsg(msg_t *pMsg)
 		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
 	}
 	iDst = iSrc;
-	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
+	while(iSrc < lenMsg && iDst < maxDest - maxLastCharSize) { /* leave some space if last char must be escaped */
 		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
@@ -408,10 +422,47 @@ SanitizeMsg(msg_t *pMsg)
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
 				 */
-				pDst[iDst++] = cCCEscapeChar;
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+				if (bPrettyPrintCC) {
+					pDst[iDst++] = '\\';
+
+					switch (pszMsg[iSrc]) {
+					case '\a':
+						pDst[iDst++] = 'a';
+						break;
+					case '\b':
+						pDst[iDst++] = 'b';
+						break;
+					case '\f':
+						pDst[iDst++] = 'f';
+						break;
+					case '\n':
+						pDst[iDst++] = 'n';
+						break;
+					case '\r':
+						pDst[iDst++] = 'r';
+						break;
+					case '\t':
+						pDst[iDst++] = 't';
+						break;
+					case '\v':
+						pDst[iDst++] = 'v';
+						break;
+					default:
+						pDst[iDst++] = 'u';
+						pc = pszMsg[iSrc];
+						iDst += 4;
+						for (pi = 0 ; pi < 4 ; ++pi) {
+							pDst[iDst - pi] = hexdigit[pc % 16];
+							pc = pc / 16;
+						}
+					break;
+					}
+				} else {
+					pDst[iDst++] = cCCEscapeChar;
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+				}
 			}
 		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
 			/* In this case, we also do the conversion. Note that this most
@@ -662,6 +713,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cCCEscapeChar = '#';
+	bPrettyPrintCC = 0;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is to escape control characters */
@@ -716,6 +768,7 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"prettyprintcontrolcharacters", 0, eCmdHdlrBinary, NULL, &bPrettyPrintCC, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
