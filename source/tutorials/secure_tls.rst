@@ -1,9 +1,7 @@
 Encrypting Syslog Traffic with TLS (SSL)
 ========================================
 
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-06-17)*
+Written by `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ (2008-06-17)
 
 -  `Overview <rsyslog_secure_tls.html>`_
 -  `Sample Scenario <tls_cert_scenario.html>`_
@@ -111,6 +109,7 @@ instructions.
    :alt: TLS/SSL protected syslog
 
    TLS/SSL protected syslog
+   
 Feedback requested
 ~~~~~~~~~~~~~~~~~~
 

@@ -97,6 +97,7 @@ commented-out last forwarding action activated:
    :alt: rsyslog configuration graph for a default fedora rsyslog.conf
 
    rsyslog configuration graph for a default fedora rsyslog.conf
+   
 This is the typical structure for a simple rsyslog configuration. There
 are a couple of actions, each guarded by a filter. Messages run from top
 to bottom and control branches whenever a filter evaluates to true. As
@@ -147,12 +148,3 @@ areas that draw your attention.
 **Sample:**
 
 ``$DirOwner /path/to/graphfile-file.dot``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.

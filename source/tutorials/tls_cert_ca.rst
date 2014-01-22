@@ -1,9 +1,7 @@
 Encrypting Syslog Traffic with TLS (SSL)
 ========================================
 
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-06-17)*
+Written by `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ (2008-06-17)
 
 -  `Overview <rsyslog_secure_tls.html>`_
 -  `Sample Scenario <tls_cert_scenario.html>`_
@@ -56,9 +54,10 @@ installed by default).
 
        certtool --generate-privkey --outfile ca-key.pem
 
-    This takes a short while. Be sure to do some work on your
+   This takes a short while. Be sure to do some work on your
    workstation, it waits for radom input. Switching between windows is
    sufficient ;)
+   
 
 #. now create the (self-signed) CA certificate itself:
 
@@ -79,7 +78,7 @@ Sample Screen Session
 
 Text in red is user input. Please note that for some questions, there is
 no user input given. This means the default was accepted by simply
-pressing the enter key. ````
+pressing the enter key. 
 
 ::
 

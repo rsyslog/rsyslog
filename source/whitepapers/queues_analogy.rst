@@ -1,7 +1,5 @@
-`back <rsyslog_conf_global.html>`_
-
-Turning Lanes and Rsyslog Queues - an Analogy
-=============================================
+Turning Lanes and Rsyslog Queues
+================================
 
 If there is a single object absolutely vital to understanding the way
 rsyslog works, this object is queues. Queues offer a variety of

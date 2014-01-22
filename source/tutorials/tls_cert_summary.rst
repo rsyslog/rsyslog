@@ -1,14 +1,12 @@
 Encrypting Syslog Traffic with TLS (SSL)
 ========================================
 
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-07-03)*
+Written by `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ (2008-07-03)
 
 .. toctree::
    :maxdepth: 1
 
-   rsyslog_secure_tls
+   secure_tls
    tls_cert_scenario
    tls_cert_ca
    tls_cert_machine

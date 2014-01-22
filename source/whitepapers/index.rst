@@ -12,6 +12,8 @@ White Papers
 .. toctree::
    :maxdepth: 1
    
-   rsyslog_ng_comparisons
+   rsyslog_ng_comparison
    syslog_parsing
    syslog_protocol
+   queues_analogy
+   preserve_in_nat

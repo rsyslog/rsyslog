@@ -38,6 +38,7 @@ migrating from syslogd to rsyslogd.
    output_channels
    expression
    examples
+   modules
    modules/index
    global/index
    ipv6

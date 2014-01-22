@@ -61,13 +61,15 @@ Manual
    licensing
    contributors
    how2help
+   community
    features
+   proposals/index
    installation/index
    queues
    messageparser
    configuration/index
    drivers/index
-   rainerscript/rainerscript
+   rainerscript/index
    troubleshooting/index
    development/index
    tutorials/index
@@ -77,10 +79,14 @@ Manual
    bugs
 
 Related Links
-=============
+-------------
 
 .. [1] `Rsyslog Website <http://www.rsyslog.com/>`_ 
 .. [2] `Project Status Page <http://www.rsyslog.com/status>`_
 .. [3] `Rsyslog Change Log <http://www.rsyslog.com/Topic4.phtml>`_
 .. [4] `Rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
 .. [5] `Professional Rsyslog Support <http://www.rsyslog.com/professional-services>`_
+.. [6] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
+.. [7] `Rainer's twitter feed <http://twitter.com/rgerhards>`_
+.. [8] `Rainer's Blog <http://blog.gerhards.net/>`_
+

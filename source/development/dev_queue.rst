@@ -13,7 +13,7 @@ intend to update this document somewhat later when I have reached the
 "store-and-forward" milestone.**
 
 Some definitions
-================
+----------------
 
 A queue is DA-enabled if it is configured to use disk-assisted mode when
 there is need to. A queue is in DA mode (or DA run mode), when it
@@ -206,7 +206,7 @@ All other cases can be handled by checking the termination criteria
 immediately at the start of the worker and then once again for each run.
 The logic follows this simplified flow diagram:
 
-`|image0| <queueWorkerLogic.jpg>`_
+.. |image0| image:: queueWorkerLogic.jpg
 
 Some of the more subtle aspects of worker processing (e.g. enqueue
 thread signaling and other fine things) have been left out in order to
@@ -297,6 +297,8 @@ destruction - this is what enables us to persist the disk queue!
 After that point, left over queue resources (mutexes, dynamic memory,
 ...) are freed and the queue object is actually destructed.
 
+
+
 Copyright
 ---------
 
@@ -310,4 +312,4 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
 copy of the license can be viewed at
 `http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
 
-.. |image0| image:: queueWorkerLogic_small.jpg
+
