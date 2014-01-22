@@ -2,6 +2,10 @@
 Version 8.1.5 [devel] 2014-01-??
 - imfile now supports inotify (but must be explicitely turned on)
 - imfile no longer has a limit on number of monitored files
+- added ProcessInternalMessages global system parameter
+  This permits to inject rsyslog status messages into *another* main
+  syslogd or the journal.
+- new dependency: liblogging-stdlog (for submitting to external logger)
 - bugfix: imuxsock input parameters were not accepted
   due to copy&paste error. Thanks to Andy Goldstein for the fix.
 ---------------------------------------------------------------------------
