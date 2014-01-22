@@ -42,11 +42,11 @@ doesn't require a lot of time - even a single mouse click helps. Learn
 demand, there is now a 
 :doc:`side-by-side comparison between rsyslog and syslog-ng <whitepapers/rsyslog_ng_comparison>`.
 
-If you are upgrading from rsyslog v2 or stock sysklogd, `be sure to read
-the rsyslog v3 compatibility notes <v3compatibility.html>`_, and if you
+If you are upgrading from rsyslog v2 or stock sysklogd, be sure to read
+the :doc:`rsyslog v3 compatibility notes <compatibility/v3compatibility>`, and if you
 are upgrading from v3, read the `rsyslog v4 compatibility
 notes <v4compatibility.html>`_ and if you upgrade from v4, read the
-:doc:`rsyslog v5 compatibility notes <v5compatibility>`.
+:doc:`rsyslog v5 compatibility notes <compatibility/v5compatibility>`.
 
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.
@@ -71,6 +71,7 @@ Manual
    troubleshooting/index
    development/index
    tutorials/index
+   whitepapers/index
    free_support
    compatibility/index
    bugs

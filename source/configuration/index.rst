@@ -26,6 +26,7 @@ migrating from syslogd to rsyslogd.
 .. toctree::
    :maxdepth: 2
 
+   basic_structure
    global_index
    nomatch
    filters
