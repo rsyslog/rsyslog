@@ -1,24 +1,22 @@
 Welcome to Rsyslog
 ==================
 
-Rsyslog\ [1]_ is an enhanced syslogd suitable both for small systems as well 
-as large enterprises that supports, among others, :doc:`MySQL <tutorials/database>`
+rsyslog\ [1]_ is an enhanced syslogd scalable for small systems as well 
+as large enterprises. rsyslog supports, among others, :doc:`MySQL <tutorials/database>`
 , :doc:`PostgreSQL <tutorials/database>`, :doc:`failover log
 destinations <tutorials/failover_syslog_server>`,
-syslog/tcp, fine grain output format control, high precision timestamps,
+syslog/tcp transport, fine grain output format control, high precision timestamps,
 queued operations and the ability to filter on any message part.
 
-Rsyslog supports plain old syslog.conf format, except that
-the config file is now called rsyslog.conf. This should help you get
-started quickly. To use the more advanced features, you need to learn
-a bit about its new features. When you change the configuration, remember 
-to restart rsyslogd, because otherwise the newly added configurations settings 
-will not be loaded.
+Rsyslog supports the original syslog.conf configuration formatting in it's
+rsyslog.conf config file. This should help with getting an environment started 
+quickly. To use the more advanced features, you need to learn
+a bit about rsyslog's new features. 
 
 Compatability
 -------------
 
-Rsyslog is compatible to stock sysklogd and can be used as a drop-in
+rsyslog is compatible to stock sysklogd and can be used as a drop-in
 replacement. Its :doc:`features <features>` make it suitable
 for enterprise-class, :doc:`encryption protected syslog <tutorials/tls>` 
 relay chains while at the same time being very easy to setup for the
@@ -29,7 +27,7 @@ also professional rsyslog support\ [5]_ available directly from the source!
 Sponsors and Community
 ----------------------
 
-Please visit the Rsyslog Sponsor's Page\ [4]_ to honor the project sponsors or 
+Please visit the rsyslog Sponsor's Page\ [4]_ to honor the project sponsors or 
 become one yourself! We are very grateful for any help towards the project 
 goals.
 
@@ -51,41 +49,48 @@ notes <v4compatibility.html>`_ and if you upgrade from v4, read the
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.
 
-Manual
-------
+Reference
+---------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    history
    licensing
-   contributors
    how2help
    community
    features
    proposals/index
-   installation/index
-   queues
-   messageparser
-   configuration/index
-   drivers/index
-   rainerscript/index
-   troubleshooting/index
-   development/index
-   tutorials/index
    whitepapers/index
    free_support
    compatibility/index
+   contributors
    bugs
+
+Manual
+------
+.. toctree::
+   :maxdepth: 3
+   
+   installation/index
+   drivers/index
+   rainerscript/index
+   messageparser
+   configuration/index
+   queues
+   troubleshooting/index
+   development/index
+   tutorials/index
+   
 
 Related Links
 -------------
 
-.. [1] `Rsyslog Website <http://www.rsyslog.com/>`_ 
+.. [1] `rsyslog Website <http://www.rsyslog.com/>`_ 
 .. [2] `Project Status Page <http://www.rsyslog.com/status>`_
-.. [3] `Rsyslog Change Log <http://www.rsyslog.com/Topic4.phtml>`_
-.. [4] `Rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
-.. [5] `Professional Rsyslog Support <http://www.rsyslog.com/professional-services>`_
+.. [3] `rsyslog Change Log <http://www.rsyslog.com/Topic4.phtml>`_
+.. [4] `rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
+.. [5] `Professional rsyslog Support <http://www.rsyslog.com/professional-services>`_
 .. [6] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
 .. [7] `Rainer's twitter feed <http://twitter.com/rgerhards>`_
 .. [8] `Rainer's Blog <http://blog.gerhards.net/>`_
