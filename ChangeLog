@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.1.5 [devel] 2014-01-??
+Version 8.1.5 [devel] 2014-01-24
 - imfile now supports inotify (but must be explicitely turned on)
 - imfile no longer has a limit on number of monitored files
 - added ProcessInternalMessages global system parameter
