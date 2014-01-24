@@ -38,8 +38,22 @@ must also be set (or the respective environment variable).
 This is used to specify the debug log file name. It is used for all debug
 output. Please note that the RSYSLOG_DEBUGLOG environment variable always
 <b>overrides</b> the value of debug.logFile.
+<li><b>parser.escapeControlCharactersCStyle</b><br>
+If enabled ("on") and
+<a href="rsconf1_escapecontrolcharactersonreceive.html">escapeControlCharactersOnReceive</a>
+is enabled ("on"), rsyslog will escape control characters in incoming messages
+like you would in C. A newline character will become "\n", tab to "\t", escape becomes "\x1C".
+If you wish to escape characters above 127 with hex escape sequences then
+<a href="rsconf1_escape8bitcharsonreceive.html">escape8BitCharsOnReceive</a> can be enabled ("on").
+A hex escape sequence will be printed for each byte in the character, &Aacute; becomes "\xC3\x81".
+</li>
 </ul>
 
+<p><b>Sample:</b></p>
+<textarea rows="15" cols="60">global (
+    parser.escapeControlCharactersCStyle="on"
+)
+</textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="rainerscript.html">RainerScript reference</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
