@@ -45,6 +45,7 @@
 #include "atomic.h"
 #include "errmsg.h"
 #include "action.h"
+#include "parser.h"
 #include "rainerscript.h"
 #include "net.h"
 
@@ -103,6 +104,7 @@ static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client t
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "workdirectory", eCmdHdlrString, 0 },
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
+	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
@@ -708,6 +710,8 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+	    } else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
+	        bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
 			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
