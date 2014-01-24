@@ -325,8 +325,6 @@ SanitizeMsg(msg_t *pMsg)
 	size_t iMaxLine;
 	size_t maxDest;
 	uchar pc;
-	int pi;
-	int maxLastCharSize = 3;
 	sbool bUpdatedLen = RSFALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
@@ -394,12 +392,7 @@ SanitizeMsg(msg_t *pMsg)
 	 * obviously no need to sanitize, so we can go over that quickly...
 	 */
 	iMaxLine = glbl.GetMaxLine();
-	if (bParserEscapeCCCStyle) {
-		maxDest = lenMsg * 6; /* message can grow at most six-fold */
-		maxLastCharSize = 5;
-	} else {
-		maxDest = lenMsg * 4; /* message can grow at most four-fold */
-	}
+	maxDest = lenMsg * 4; /* message can grow at most four-fold */
 
 	if(maxDest > iMaxLine)
 		maxDest = iMaxLine;	/* but not more than the max size! */
@@ -412,7 +405,7 @@ SanitizeMsg(msg_t *pMsg)
 		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
 	}
 	iDst = iSrc;
-	while(iSrc < lenMsg && iDst < maxDest - maxLastCharSize) { /* leave some space if last char must be escaped */
+	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
 		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
@@ -426,11 +419,17 @@ SanitizeMsg(msg_t *pMsg)
 					pDst[iDst++] = '\\';
 
 					switch (pszMsg[iSrc]) {
+					case '\0':
+						pDst[iDst++] = '0';
+						break;
 					case '\a':
 						pDst[iDst++] = 'a';
 						break;
 					case '\b':
 						pDst[iDst++] = 'b';
+						break;
+					case '\e':
+						pDst[iDst++] = 'e';
 						break;
 					case '\f':
 						pDst[iDst++] = 'f';
@@ -448,15 +447,15 @@ SanitizeMsg(msg_t *pMsg)
 						pDst[iDst++] = 'v';
 						break;
 					default:
-						pDst[iDst++] = 'u';
+						pDst[iDst++] = 'x';
+
 						pc = pszMsg[iSrc];
-						iDst += 4;
-						for (pi = 0 ; pi < 4 ; ++pi) {
-							pDst[iDst - pi] = hexdigit[pc % 16];
-							pc = pc / 16;
-						}
-					break;
+						pDst[iDst++] = hexdigit[(pc & 0xF0) >> 4];
+						pDst[iDst++] = hexdigit[pc & 0xF];
+
+						break;
 					}
+
 				} else {
 					pDst[iDst++] = cCCEscapeChar;
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
@@ -464,14 +463,25 @@ SanitizeMsg(msg_t *pMsg)
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 				}
 			}
+
 		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
-			/* In this case, we also do the conversion. Note that this most
-			 * probably breaks European languages. -- rgerhards, 2010-01-27
-			 */
-			pDst[iDst++] = cCCEscapeChar;
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+			if (bParserEscapeCCCStyle) {
+				pDst[iDst++] = '\\';
+				pDst[iDst++] = 'x';
+
+				pc = pszMsg[iSrc];
+				pDst[iDst++] = hexdigit[(pc & 0xF0) >> 4];
+				pDst[iDst++] = hexdigit[pc & 0xF];
+
+			} else {
+				/* In this case, we also do the conversion. Note that this most
+				 * probably breaks European languages. -- rgerhards, 2010-01-27
+				 */
+				pDst[iDst++] = cCCEscapeChar;
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
+				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+			}
 		} else {
 			pDst[iDst++] = pszMsg[iSrc];
 		}
