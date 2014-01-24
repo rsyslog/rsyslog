@@ -22,6 +22,12 @@ for skeletons is ever increasing. If there is not yet a skeleton for
 your favorite languagem, we will gladly help you creating one. It's
 really easy and usually done with just a couple of code lines!
 
+How to write your own plugin?
+=============================
+See the [INTERFACE](INTERFACE.md) file. And see the [skeletons](skeletons)
+subdirectory for exisiting ready-to-copy sample plugins that do the
+necessary plumbing.
+
 Evolving this Interface
 =======================
 The interface is build via omprog, and is currently being evolved. What
