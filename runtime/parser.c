@@ -58,7 +58,6 @@ DEFobjCurrIf(ruleset)
 /* static data */
 
 /* config data */
-static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
@@ -408,7 +407,7 @@ SanitizeMsg(msg_t *pMsg)
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
 				 */
-				pDst[iDst++] = cCCEscapeChar;
+				pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
@@ -417,7 +416,7 @@ SanitizeMsg(msg_t *pMsg)
 			/* In this case, we also do the conversion. Note that this most
 			 * probably breaks European languages. -- rgerhards, 2010-01-27
 			 */
-			pDst[iDst++] = cCCEscapeChar;
+			pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
 			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
@@ -661,7 +660,6 @@ ENDobjQueryInterface(parser)
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	cCCEscapeChar = '#';
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is to escape control characters */
@@ -714,7 +712,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));

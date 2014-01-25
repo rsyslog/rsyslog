@@ -89,6 +89,7 @@ static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm d
 static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
 static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
+static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
 static DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
@@ -111,7 +112,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
-	{ "action.reportsuspension", eCmdHdlrBinary, 0 }
+	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
+	{ "parser.controlcharacterescapeprefix", eCmdHdlrGetChar, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -155,6 +157,7 @@ SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
+SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
@@ -580,6 +583,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(StripDomains)
 	SIMP_PROP(LocalHosts)
+	SIMP_PROP(ParserControlCharacterEscapePrefix)
 	SIMP_PROP(DfltNetstrmDrvr)
 	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
@@ -613,6 +617,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bOptimizeUniProc = 1;
 	bPreserveFQDN = 0;
 	iMaxLine = 8192;
+	cCCEscapeChar = '#';
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -715,6 +720,8 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
 			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
 			errmsg.LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
+			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
