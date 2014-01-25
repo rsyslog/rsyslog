@@ -1,5 +1,15 @@
 ---------------------------------------------------------------------------
 Version 8.1.5 [devel] 2014-01-24
+- omprog: ability to execute multiple program instances per action
+  It can now execute one program instance per worker thread. This is
+  generally a very good thing the have performance wise. Usually, this
+  should cause no problems with the invoked program. For that reason,
+  we have decided to make this the default mode of operation. If not
+  desired, it can be turned off via the 'forceSingleInstance="on"'
+  action parameter.
+  CHANGE OF BEHAVIOUR: previous versions did always execute only one
+  instance per action, no matter how many workers were active. If
+  your program has special needs, you need to change your configuration.
 - imfile now supports inotify (but must be explicitely turned on)
 - imfile no longer has a limit on number of monitored files
 - added ProcessInternalMessages global system parameter

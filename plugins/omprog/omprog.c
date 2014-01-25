@@ -58,6 +58,7 @@ typedef struct _instanceData {
 	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
 	int iParams;		/* Holds the count of parameters if set*/
+	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
 
@@ -78,6 +79,7 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "forcesingleinstance", eCmdHdlrBinary, CNFPARAM_REQUIRED },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -327,8 +329,11 @@ finalize_it:
 
 
 BEGINdoAction
+	instanceData *pData;
 CODESTARTdoAction
-	pthread_mutex_lock(&pWrkrData->pData->mut);
+	pData = pWrkrData->pData;
+	if(pData->bForceSingleInst)
+		pthread_mutex_lock(&pData->mut);
 	if(pWrkrData->bIsRunning == 0) {
 		openPipe(pWrkrData);
 	}
@@ -337,7 +342,8 @@ CODESTARTdoAction
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;
-	pthread_mutex_unlock(&pWrkrData->pData->mut);
+	if(pData->bForceSingleInst)
+		pthread_mutex_unlock(&pData->mut);
 ENDdoAction
 
 
@@ -347,6 +353,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->szBinary = NULL;
 	pData->aParams = NULL;
 	pData->iParams = 0;
+	pData->bForceSingleInst = 0;
 }
 
 BEGINnewActInst
@@ -448,6 +455,8 @@ CODESTARTnewActInst
 				pData->aParams[iPrm] = NULL; 
 
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
+			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -458,6 +467,7 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
+	DBGPRINTF("omprog: bForceSingleInst %d\n", pData->bForceSingleInst);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

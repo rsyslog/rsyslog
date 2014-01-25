@@ -49,6 +49,14 @@ the price of some slight performance loss).
 	reasons, but can be any executable (like a perl or python script for example).
 	Command line parameters can be given as one would expect: just space-delimit
 	them and place them after the program name.
+
+	<li><b>forceSingleInstace</b> binary ("on", "off"), available in v8.1.6+<br>
+	When rsyslog runs an action on multiple worker threads, it spawns multiple
+	instances (one per worker) of the program. This is controlled via this setting.
+	The default is "off". If set to "on", only a single instance per action is
+	ever executed. This may be important for some use cases, but should generally
+	only be needed if there is a hard technical restriction inside the executed
+	program.
 </ul>
 <p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
 <p><b>Sample:</b></p>
