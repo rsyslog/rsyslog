@@ -467,7 +467,7 @@ Useful for secure pathname generation (with dynafiles).
 <td>Option values for the general output format.</td>
 </tr>
 <tr>
-<td valign="top">json</td>
+<td valign="top"><a name="json">json</a></td>
 <td>encode the value so that it can be used inside a JSON field. This means
 that several characters (according to the JSON spec) are being escaped, for 
 example US-ASCII LF is replaced by "\n".<br>
@@ -475,7 +475,7 @@ The json option cannot be used together with either jsonf, jsonr, jsonfr, or csv
 </td>
 </tr>
 <tr>
-<td valign="top">jsonf</td>
+<td valign="top"><a name="jsonf">jsonf</a></td>
 <td><i>(available in 6.3.9+)</i><br>
 This signifies that the property should be expressed as a json <b>f</b>ield.
 That means not only the property is written, but rather a complete json field in
@@ -490,7 +490,7 @@ The jsonf option cannot be used together with either json, jsonr, jsonfr, or csv
 </td>
 </tr>
 <tr>
-<td valign="top">jsonr</td>
+<td valign="top"><a name="jsonr">jsonr</a></td>
 <td><i>(available in ???)</i><br>
 This signifies that the property should be used <b>r</b>aw, as is. This means
 that any already escaped strings will not be escaped again, but any characters
@@ -508,7 +508,7 @@ The jsonr option cannot be used together with either json, jsonf, jsonfr, or csv
 </td>
 </tr>
 <tr>
-<td valign="top">jsonfr</td>
+<td valign="top"><a name="jsonfr">jsonfr</a></td>
 <td><i>(available in ???)</i><br>
 This signifies that the property should be expressed as a json <b>f</b>ield and
 the value should be used <b>r</b>aw, as is.<br>
@@ -517,7 +517,7 @@ The jsonfr option cannot be used together with either json, jsonf, jsonr, or csv
 </td>
 </tr>
 <tr>
-<td valign="top">csv</td>
+<td valign="top"><a name="csv">csv</a></td>
 <td>formats the resulting field (after all modifications) in CSV format
 as specified in <a href="http://www.ietf.org/rfc/rfc4180.txt">RFC 4180</a>.
 Rsyslog will always use double quotes. Note that in order to have full CSV-formatted
