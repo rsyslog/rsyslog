@@ -2622,10 +2622,11 @@ finalize_it:
 
 /* Encode a JSON value and add it to provided string. Note that 
  * the string object may be NULL. In this case, it is created
- * if and only if escaping is needed.
+ * if and only if escaping is needed. if escapeAll is false, previously
+ * escaped strings are left as is
  */
 static rsRetVal
-jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
+jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 {
 	unsigned char c;
 	es_size_t i;
@@ -2667,18 +2668,20 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
 				es_addBuf(dst, "\\/", 2);
 				break;
 			case '\\':
-				ni = i + 1;
-				if (ni <= buflen) {
-					nc = pSrc[ni];
+				if (escapeAll == RSFALSE) {
+					ni = i + 1;
+					if (ni <= buflen) {
+						nc = pSrc[ni];
 
-					/* Attempt to not double encode */
-					if (   nc == '"' || nc == '/' || nc == '\\' || nc == 'b' || nc == 'f'
-					    || nc == 'n' || nc == 'r' || nc == 't' || nc == 'u') {
-						
-						es_addChar(dst, c);
-						es_addChar(dst, nc);
-						i = ni;
-						break;
+						/* Attempt to not double encode */
+						if (   nc == '"' || nc == '/' || nc == '\\' || nc == 'b' || nc == 'f'
+							|| nc == 'n' || nc == 'r' || nc == 't' || nc == 'u') {
+
+							es_addChar(dst, c);
+							es_addChar(dst, nc);
+							i = ni;
+							break;
+						}
 					}
 				}
 
@@ -2727,7 +2730,7 @@ finalize_it:
  * rgerhards, 2012-03-16
  */
 static rsRetVal
-jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escapeAll)
 {
 	unsigned buflen;
 	uchar *pSrc;
@@ -2736,7 +2739,7 @@ jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
 
 	pSrc = *ppRes;
 	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
-	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
 
 	if(dst != NULL) {
 		/* we updated the string and need to replace the
@@ -2765,7 +2768,7 @@ finalize_it:
  * something to consider at a later stage. rgerhards, 2012-04-19
  */
 static rsRetVal
-jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen)
+jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escapeAll)
 {
 	unsigned buflen;
 	uchar *pSrc;
@@ -2779,7 +2782,7 @@ jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFre
 	es_addChar(&dst, '"');
 	es_addBuf(&dst, (char*)pTpe->fieldName, pTpe->lenFieldName);
 	es_addBufConstcstr(&dst, "\":\"");
-	CHKiRet(jsonAddVal(pSrc, buflen, &dst));
+	CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
 	es_addChar(&dst, '"');
 
 	if(*pbMustBeFreed)
@@ -3691,9 +3694,13 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 		bufLen = -1;
 		*pbMustBeFreed = 1;
 	} else if(pTpe->data.field.options.bJSON) {
-		jsonEncode(&pRes, pbMustBeFreed, &bufLen);
+		jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSTRUE);
 	} else if(pTpe->data.field.options.bJSONf) {
-		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen);
+		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSTRUE);
+	} else if(pTpe->data.field.options.bJSONr) {
+		jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSFALSE);
+	} else if(pTpe->data.field.options.bJSONfr) {
+		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSFALSE);
 	}
 
 	*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
