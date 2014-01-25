@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2013 Adiscon GmbH.
+ * Copyright 2009-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -57,15 +57,15 @@ typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
-	pid_t pid;			/* pid of currently running process */
-	int fdPipe;			/* file descriptor to write to */
-	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 	int iParams;		/* Holds the count of parameters if set*/
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
+	pid_t pid;		/* pid of currently running process */
+	int fdPipe;		/* file descriptor to write to */
+	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -100,6 +100,8 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	pWrkrData->fdPipe = -1;
+	pWrkrData->bIsRunning = 0;
 ENDcreateWrkrInstance
 
 
@@ -143,14 +145,12 @@ ENDtryResume
  * after fork).
  */
 
-static void execBinary(instanceData *pData, int fdStdin)
+static void execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin)
 {
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
 	char *newenviron[] = { NULL };
-
-	assert(pData != NULL);
 
 	fclose(stdin);
 	if(dup(fdStdin) == -1) {
@@ -181,9 +181,10 @@ static void execBinary(instanceData *pData, int fdStdin)
 	alarm(0);
 
 	/* finally exec child */
-	iRet = execve((char*)pData->szBinary, pData->aParams, newenviron);
+	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if (iRet == -1) {
-		dbgprintf("omprog: failed to execute binary '%s' with return code: %d\n", pData->szBinary, errno); 
+		dbgprintf("omprog: failed to execute binary '%s' with return code: %d\n",
+			  pWrkrData->pData->szBinary, errno); 
 	}
 	
 	/* we should never reach this point, but if we do, we terminate */
@@ -195,19 +196,18 @@ static void execBinary(instanceData *pData, int fdStdin)
  * rgerhards, 2009-04-01
  */
 static rsRetVal
-openPipe(instanceData *pData)
+openPipe(wrkrInstanceData_t *pWrkrData)
 {
 	int pipefd[2];
 	pid_t cpid;
 	DEFiRet;
 
-	assert(pData != NULL);
-
 	if(pipe(pipefd) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
-	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n", pData->szBinary, pData->iParams);
+	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n",
+		  pWrkrData->pData->szBinary, pWrkrData->pData->iParams);
 
 	/* NO OUTPUT AFTER FORK! */
 
@@ -221,15 +221,15 @@ openPipe(instanceData *pData)
 		 * exec the binary. If that fails, there is not much we can do.
 		 */
 		close(pipefd[1]);
-		execBinary(pData, pipefd[0]);
+		execBinary(pWrkrData, pipefd[0]);
 		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
 	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
-	pData->fdPipe = pipefd[1];
-	pData->pid = cpid;
+	pWrkrData->fdPipe = pipefd[1];
+	pWrkrData->pid = cpid;
 	close(pipefd[0]);
-	pData->bIsRunning = 1;
+	pWrkrData->bIsRunning = 1;
 finalize_it:
 	RETiRet;
 }
@@ -238,34 +238,33 @@ finalize_it:
 /* clean up after a terminated child
  */
 static inline rsRetVal
-cleanup(instanceData *pData)
+cleanup(wrkrInstanceData_t *pWrkrData)
 {
 	int status;
 	int ret;
 	char errStr[1024];
 	DEFiRet;
 
-	assert(pData != NULL);
-	assert(pData->bIsRunning == 1);
-	ret = waitpid(pData->pid, &status, 0);
-	if(ret != pData->pid) {
+	assert(pWrkrData->bIsRunning == 1);
+	ret = waitpid(pWrkrData->pid, &status, 0);
+	if(ret != pWrkrData->pid) {
 		/* if waitpid() fails, we can not do much - try to ignore it... */
 		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
 			   rs_strerror_r(errno, errStr, sizeof(errStr)));
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",
-			  pData->szBinary, status);
+			  pWrkrData->pData->szBinary, status);
 		if(WIFEXITED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
-					pData->szBinary, WEXITSTATUS(status));
+					pWrkrData->pData->szBinary, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
-					pData->szBinary, WTERMSIG(status));
+					pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
 	}
 
-	pData->bIsRunning = 0;
+	pWrkrData->bIsRunning = 0;
 	RETiRet;
 }
 
@@ -273,13 +272,12 @@ cleanup(instanceData *pData)
 /* try to restart the binary when it has stopped.
  */
 static inline rsRetVal
-tryRestart(instanceData *pData)
+tryRestart(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
-	assert(pData != NULL);
-	assert(pData->bIsRunning == 0);
+	assert(pWrkrData->bIsRunning == 0);
 
-	iRet = openPipe(pData);
+	iRet = openPipe(pWrkrData);
 	RETiRet;
 }
 
@@ -290,7 +288,7 @@ tryRestart(instanceData *pData)
  * own action queue.
  */
 static rsRetVal
-writePipe(instanceData *pData, uchar *szMsg)
+writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 {
 	int lenWritten;
 	int lenWrite;
@@ -298,20 +296,18 @@ writePipe(instanceData *pData, uchar *szMsg)
 	char errStr[1024];
 	DEFiRet;
 	
-	assert(pData != NULL);
-
 	lenWrite = strlen((char*)szMsg);
 	writeOffset = 0;
 
 	do {
-		lenWritten = write(pData->fdPipe, ((char*)szMsg)+writeOffset, lenWrite);
+		lenWritten = write(pWrkrData->fdPipe, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
-				DBGPRINTF("omprog: Program '%s' terminated, trying to restart\n",
-					  pData->szBinary);
-				CHKiRet(cleanup(pData));
-				CHKiRet(tryRestart(pData));
+				DBGPRINTF("omprog: program '%s' terminated, trying to restart\n",
+					  pWrkrData->pData->szBinary);
+				CHKiRet(cleanup(pWrkrData));
+				CHKiRet(tryRestart(pWrkrData));
 				break;
 			default:
 				DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
@@ -331,19 +327,17 @@ finalize_it:
 
 
 BEGINdoAction
-	instanceData *pData;
 CODESTARTdoAction
-	pData = pWrkrData->pData;
-	pthread_mutex_lock(&pData->mut);
-	if(pData->bIsRunning == 0) {
-		openPipe(pData);
+	pthread_mutex_lock(&pWrkrData->pData->mut);
+	if(pWrkrData->bIsRunning == 0) {
+		openPipe(pWrkrData);
 	}
 	
-	iRet = writePipe(pData, ppString[0]);
+	iRet = writePipe(pWrkrData, ppString[0]);
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;
-	pthread_mutex_unlock(&pData->mut);
+	pthread_mutex_unlock(&pWrkrData->pData->mut);
 ENDdoAction
 
 
@@ -353,8 +347,6 @@ setInstParamDefaults(instanceData *pData)
 	pData->szBinary = NULL;
 	pData->aParams = NULL;
 	pData->iParams = 0;
-	pData->fdPipe = -1;
-	pData->bIsRunning = 0;
 }
 
 BEGINnewActInst
