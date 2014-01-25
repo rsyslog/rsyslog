@@ -131,7 +131,9 @@ It supports the following parameters:
 <li>securepath - used for creating pathnames suitable for use in dynafile templates
 <li>format - specifiy format on a field basis. Supported values are "csv", for use when
 csv-data is generated, "json", which formats proper json content (but without a field
-header) and "jsonf", which formats as a complete json field.
+header), "jsonf", which formats as a complete json field, "jsonr" which avoids double
+escaping the value but makes it safe for a json field, and "jsonfr" which is the combination
+of "jsonf" and "jsonr".
 <li>position.from - obtain substring starting from this position (1 is the first position)
 <li>position.to - obtain substring up to this position
 <li>position.relativeToEnd - the from and to position is relative to the end of the string
