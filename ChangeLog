@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 8.1.6 [devel] 2014-01-??
+- added external plugin interface
+- ommongodb: add authentication support (untested)
+  Thanks to JT for the patch.
+  See also: https://github.com/rsyslog/rsyslog/pull/17
+---------------------------------------------------------------------------
 Version 8.1.5 [devel] 2014-01-24
 - omprog: ability to execute multiple program instances per action
   It can now execute one program instance per worker thread. This is
