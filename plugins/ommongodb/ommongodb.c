@@ -193,10 +193,10 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	// perform authentication
+	/* perform authentication */
 	if(pData->uid && pData->pwd) {
 
-	  // require both uid and pwd before attempting authentication
+	  /* require both uid and pwd before attempting authentication */
 	  if(!pData->uid || !pData->pwd) {
 	    dbgprintf("ommongodb: authentication requires uid and pwd attributes set; skipping");
 	  }
@@ -206,7 +206,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	      dbgprintf("ommongodb: could not authenticate %s against '%s'", pData->uid, pData->db);
 	    }
 
-	    // no point in continuing with an unauthenticated connection
+	    /* no point in continuing with an unauthenticated connection */
 	    closeMongoDB(pData);	 
 	    ABORT_FINALIZE(RS_RET_SUSPEND);
 	  }
@@ -284,7 +284,7 @@ getDefaultBSON(msg_t *pMsg)
 	cProp.id = PROP_MSG;
 	msg = MsgGetProp(pMsg, NULL, &cProp, &msg_len, &msg_free, NULL);
 
-	// TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30
+	/* TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30 */
 	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
 dbgprintf("ommongodb: ts_gen is %lld\n", (long long) ts_gen);
 dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac, pMsg->tTIMESTAMP.secfracPrecision);
