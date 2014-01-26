@@ -1,6 +1,6 @@
 #! /usr/bin/perl
 
-#	A skeleton for a perk rsyslog output plugin
+#   A skeleton for a perl rsyslog output plugin
 #   Copyright (C) 2014 by Adiscon GmbH
 #
 #   This file is part of rsyslog.
@@ -25,7 +25,6 @@ use IO::Handle;
 use IO::Select;
 
 # skeleton config parameters
-my $pollPeriod = 0.75;	# the number of seconds between polling for new messages
 my $maxAtOnce = 1024;	# max nbr of messages that are processed within one batch
 
 # App logic global variables
@@ -71,18 +70,16 @@ $STDIN->add(\*STDIN);
 # Enter main Loop
 my $keepRunning = 1; 
 while ($keepRunning) {
-	print "Looping! \n";
 	my @msgs; 
 	my $stdInLine; 
 	my $msgsInBatch = 0; 
 	while ($keepRunning) {
 		#sleep(1);
+		# We seem to have not timeout for select - or do we?
 		if ($STDIN->can_read($pollPeriod)) {
 			$stdInLine = <STDIN>;
-			print "Got '$stdInLine' from STDIN\n";
 			if (length($stdInLine) > 0) {
 				push (@msgs, $stdInLine); 
-				print "Added to msgs: " . $stdInLine; 
 
 				$msgsInBatch++; 
 				if ($msgsInBatch >= $maxAtOnce) {
@@ -92,7 +89,6 @@ while ($keepRunning) {
 		}
 	}
 	
-	print "Flushing msgs...\n"; 
 	onReceive(@msgs);
 }
 
