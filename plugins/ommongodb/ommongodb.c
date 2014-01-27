@@ -200,7 +200,8 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	  if(!pData->uid || !pData->pwd) {
 	    dbgprintf("ommongodb: authentication requires uid and pwd attributes set; skipping");
 	  }
-	  else if(!mongo_sync_cmd_authenticate(pData->conn, pData->db, pData->uid, pData->pwd)) {
+	  else if(!mongo_sync_cmd_authenticate(pData->conn, (const gchar*)pData->db,
+	  	  			(const gchar*)pData->uid, (const gchar*)pData->pwd)) {
 	    if(!bSilent) {
 	      reportMongoError(pData);
 	      dbgprintf("ommongodb: could not authenticate %s against '%s'", pData->uid, pData->db);
@@ -208,7 +209,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 
 	    /* no point in continuing with an unauthenticated connection */
 	    closeMongoDB(pData);	 
-	    ABORT_FINALIZE(RS_RET_SUSPEND);
+	    ABORT_FINALIZE(RS_RET_SUSPENDED);
 	  }
 	  else {
 	    dbgprintf("ommongodb: authenticated with %s against '%s'", pData->uid, pData->db);
