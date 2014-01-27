@@ -62,7 +62,6 @@ static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no
 static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
-static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 
 /* This is the list of all parsers known to us.
  * This is also used to unload all modules on shutdown.
@@ -342,7 +341,7 @@ SanitizeMsg(msg_t *pMsg)
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
-	if(bDropTrailingLF && pszMsg[lenMsg-1] == '\n') {
+	if(glbl.GetParserDropTrailingLFOnReception() && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
 		pszMsg[lenMsg] = '\0';
@@ -664,7 +663,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is to escape control characters */
 	bEscapeTab = 1; /* default is to escape control characters */
-	bDropTrailingLF = 1; /* default is to drop trailing LF's on reception */
 
 	return RS_RET_OK;
 }
@@ -712,7 +710,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
