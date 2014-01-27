@@ -84,7 +84,7 @@ static configSettings_t cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "output", eCmdHdlrString, 0 },
-	{ "forcesingleinstance", eCmdHdlrBinary, CNFPARAM_REQUIRED },
+	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
