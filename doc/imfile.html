@@ -40,14 +40,19 @@ $InputRunFileMonitor multiple times.
 <p><b>Configuration Directives</b>:</p>
 <p><b>Module Directives</b></p>
 <ul>
-<li><span style="font-weight: bold;">PollingInterval
-seconds</span><br>
-This is a global setting. It specifies how often files are to be polled
-for new data. The time specified is in seconds. The <span style="font-weight: bold;">default value</span> is 10
-seconds. Please note that future
-releases of imfile may support per-file polling intervals, but
-currently this is not the case. If multiple PollingInterval
-statements are present in rsyslog.conf, only the last one is used.<br>
+<li><b>mode</b> (requires v8.1.5+)<br>
+This specifies if imfile is shall run in inotify ("inotify", <b>default</b>)
+or polling ("polling") mode. Traditionally, imfile used polling mode, which is much more
+resource-intense (and slower) than inotify mode. It is suggested that users
+turn on "polling" mode only if they experience strange problems in inotify mode.
+In theory, there never should be a reason to enable "polling" mode and later versions
+will most probably remove that mode.
+
+<li><b>PollingInterval</b><br>
+This setting specifies how often files are to be polled for new data.
+For obvious reasons, it has effect only if imfile is runnin in polling mode.
+The time specified is in seconds. The <b>default value</b>
+is 10 seconds.<br>
 A short poll interval provides more rapid message forwarding, but
 requires more system resources. While it is possible, we stongly
 recommend not to set the polling interval to 0 seconds. That will make
@@ -61,16 +66,28 @@ nothing is left to be processed.</li>
 
 <p><b>Action Directives</b></p>
 <ul>
-<li><strong>(required) File&nbsp;/path/to/file</strong><br>
-The file being monitored. So far, this must be an absolute name (no
-macros or templates)</li>
-<li><span style="font-weight: bold;">(required) Tag
-tag:</span><br>
+<li><b>File</b> (mandatory)<br>
+The file to be monitored. This must be an absolute name.</li>
+
+<li><b>Tag</b> (mandatory)<br>
 The tag to be used for messages that originate from this file. If you
 would like to see the colon after the tag, you need to specify it here
-(as shown above).</li>
-<li><span style="font-weight: bold;">(required) StateFile
-&lt;name-of-state-file&gt;</span><br>
+(like 'tag="tag:"').</li>
+
+<li><b>Facility</b><br>
+The syslog facility to be assigned to lines read. Can be specified in
+textual form (e.g. "local0", "local1", ...) or as numbers (e.g. 128 for
+"local0"). Textual form is suggested. <b>Default</b> is
+"local0".</li>
+
+<li><b>Severity</b><br>
+The syslog severity to be assigned to lines read. Can be specified in
+textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4 for
+"info"). Textual form is suggested. <b>Default</b>
+is "notice".</li>
+
+<li><b>StateFile</b><br>
+This is the name of this file's state file.
 Rsyslog must keep track of which parts of the to be monitored file it
 already processed. This is done in the state file. This file always is
 created in the rsyslog working directory (configurable via
@@ -80,18 +97,7 @@ things may happen. Rsyslog currently does not check if a name is
 specified multiple times.
 Note that when $WorkDirectory is not set or set to a non-writable
 location, the state file will not be generated.</li>
-<li><span style="font-weight: bold;">Facility
-facility</span><br>
-The syslog facility to be assigned to lines read. Can be specified in
-textual form (e.g. "local0", "local1", ...) or as numbers (e.g. 128 for
-"local0"). Textual form is suggested. <span style="font-weight: bold;">Default</span> &nbsp;is
-"local0".<span style="font-weight: bold;"></span></li>
-<li><span style="font-weight: bold;">Severity</span><br>
-The
-syslog severity to be assigned to lines read. Can be specified in
-textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4 for
-"info"). Textual form is suggested. <span style="font-weight: bold;">Default</span>
-is "notice".</li>
+
 <li><b>PersistStateInterval</b> [lines]</b><br>
 Specifies how often the state file shall be written when processing the input
 file. The <strong>default</strong> value is 0, which means a new state file is only written when 
@@ -101,11 +107,13 @@ been processed. This setting can be used to guard against message duplication du
 to fatal errors (like power fail). Note that this setting affects imfile
 performance, especially when set to a low value. Frequently writing the state
 file is very time consuming.
+
 <li><b>ReadMode</b> [mode]</b><br>
 This mode should defined when having multiline messages. The value can range from 0-2 and determines the multiline detection method.
 <br>0 (<strong>default</strong>) - line based (Each line is a new message)
 <br>1 - paragraph (There is a blank line between log messages)
 <br>2 - indented (New log messages start at the beginning of a line. If a line starts with a space it is part of the log message before it)
+
 <li><b>escapeLF</b> [<b>on</b>/off] (requires v7.5.3+)<br>
 This is only meaningful if multi-line messages are to be processed. LF characters embedded into
 syslog messages cause a lot of trouble, as most tools and even the legacy syslog TCP protocol
@@ -115,6 +123,7 @@ escaping. By default, escaping is turned on. If you turn it off, make sure you t
 with all associated tools. Please note that if you intend to use plain TCP syslog with embedded
 LF characters, you need to enable octet-counted framing. For more details, see Rainer's blog posting on
 <a href="http://blog.gerhards.net/2013/09/imfile-multi-line-messages.html">imfile LF escaping</a>.
+
 <li><b>MaxLinesAtOnce</b> [number]</b>
 <br>
 This is useful if multiple files need to be monitored. If set to 0, each file
@@ -124,6 +133,7 @@ will be fully processed and then processing switches to the next file
 switched. This provides a kind of mutiplexing the load of multiple files and
 probably leads to a more natural distribution of events when multiple busy files
 are monitored. The <strong>default</strong> is 1024.
+
 <li><b>MaxSubmitAtOnce</b> [number]</b>
 <br>
 This is an expert option. It can be used to set the maximum input batch size that 
@@ -134,16 +144,9 @@ good indication that you should NOT modify the default.
 <li><b>Ruleset</b> &lt;ruleset&gt;
 Binds the listener to a specific <a href="multi_ruleset.html">ruleset</a>.</li>
 </ul>
+
 <b>Caveats/Known Bugs:</b>
-<p>So far, only 100 files can be monitored. If more are needed,
-the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p><p>Powertop
-users may want to notice that imfile utilizes polling. Thus, it is no
-good citizen when it comes to conserving system power consumption. We
-are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
-</p>
+<p>Currently none.
 <p><b>Sample:</b></p>
 <p>The following sample monitors two files. If you need just one,
 remove the second one. If you need more, add them according to the
@@ -208,16 +211,6 @@ equivalent to: MaxLinesAtOnce
 Available in 5.7.5+, 6.1.5+<br>
 equivalent to: Ruleset </li>
 </ul>
-<b>Caveats/Known Bugs:</b>
-<p>So far, only 100 files can be monitored. If more are needed,
-the source needs to be patched. See define MAX_INPUT_FILES in imfile.c</p><p>Powertop
-users may want to notice that imfile utilizes polling. Thus, it is no
-good citizen when it comes to conserving system power consumption. We
-are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
-</p>
 <p><b>Sample:</b></p>
 <p>The following sample monitors two files. If you need just one,
 remove the second one. If you need more, add them according to the
@@ -248,7 +241,7 @@ $InputFilePollInterval 10
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2014 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>

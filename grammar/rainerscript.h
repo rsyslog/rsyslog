@@ -237,7 +237,8 @@ enum cnffuncid {
 	CNFFUNC_RE_EXTRACT,
 	CNFFUNC_FIELD,
 	CNFFUNC_PRIFILT,
-	CNFFUNC_LOOKUP
+	CNFFUNC_LOOKUP,
+	CNFFUNC_EXEC_TEMPLATE
 };
 
 struct cnffunc {
@@ -310,7 +311,7 @@ void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
-void cnfexprEval(struct cnfexpr *expr, struct var *ret, void *pusr);
+void cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);

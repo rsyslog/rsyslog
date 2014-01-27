@@ -118,6 +118,8 @@ struct templateEntry {
 				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
 				unsigned bJSON: 1;		/* format field JSON escaped */
 				unsigned bJSONf: 1;		/* format field JSON *field* (n/v pair) */
+				unsigned bJSONr: 1;		/* format field JSON non escaped */
+				unsigned bJSONfr: 1;		/* format field JSON *field* non escaped (n/v pair) */
 				unsigned bMandatory: 1;		/* mandatory field - emit even if empty */
 				unsigned bFromPosEndRelative: 1;/* is From/To-Pos relative to end of string? */
 			} options;		/* options as bit fields */

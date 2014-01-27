@@ -19,7 +19,16 @@ stdin. The binary is free to do whatever it wants with the supplied data.
 If the program terminates, it is re-started. If rsyslog terminates, the
 program's stdin will see EOF. The program must than terminate. The message format
 passed to the program can, as usual, be modified by defining rsyslog templates.
-<p>Note that each time an omprog action is defined, the corresponding programm
+
+<p>Note that the pipe process used to send messages to the program is loss-less.
+That means if the program cannot read the pipe quickly enough, the OS
+blocks rsyslog. The OS never throws away any data. Once blocked, rsyslog
+configuration deals as usual with potential congestion. By default, data
+is queued until rsyslog queues get full.
+
+<p>The executed program is guarded against SIGINT.
+
+<p>Also note that each time an omprog action is defined, the corresponding programm
 is invoked. A single instance is <b>not</b> being re-used. There are arguments pro and
 con re-using existing binaries. For the time being, it simply is not done. In the future,
 we may add an option for such pooling, provided that some demand for that is voiced.
@@ -37,9 +46,34 @@ the price of some slight performance loss).
 <p>&nbsp;</p>
 <p><b>Action Parameters</b>:</p>
 <ul>
-	<li><strong>binary </strong><br>
-	Mostly equivalent to the "binary" action parameter, but must contain the binary name
-	only. In legacy config, it is <b>not possible</b> to specify command line parameters.
+	<li><b>binary </b><br>
+	This is the program to be executed. It is named binary for historic
+	reasons, but can be any executable (like a perl or python script for example).
+	Command line parameters can be given as one would expect: just space-delimit
+	them and place them after the program name.
+
+	<li><b>forceSingleInstace</b> binary ("on", "off"), available in v8.1.6+<br>
+	When rsyslog runs an action on multiple worker threads, it spawns multiple
+	instances (one per worker) of the program. This is controlled via this setting.
+	The default is "off". If set to "on", only a single instance per action is
+	ever executed. This may be important for some use cases, but should generally
+	only be needed if there is a hard technical restriction inside the executed
+	program.
+
+	<li><b>output </b> "file name", available in v8.1.6+<br>
+	This is primarily a debug setting. By default, no output file is set. If
+	one is configured, the programs standard output and standard error are
+	written to this file. This permits to follow what the program does. It
+	may even be used as a debug vehicle for developers of the to be executed
+	program.<br>
+	This file is always appended and never truncated. If multiple instances
+	use the same output file, all data is intermixed inside that single file.
+	Note that this can frequently happen on a busy system when multiple
+	worker instances are active.
+	<br>
+	Note that at the time of this writing, there were problems connecting 
+	python's stdout to the file. For other languages, we have not seen this
+	problem so far. For python, stderr works well.
 </ul>
 <p><b>Caveats/Known Bugs:</b></p><ul><li>None.</li></ul>
 <p><b>Sample:</b></p>
@@ -55,7 +89,8 @@ the price of some slight performance loss).
 <p><b>Legacy Configuration Directives</b>:</p>
 <ul>
 <li><b>$ActionOMProgBinary</b> &lt;binary&gt;<br>
-The binary program to be executed.
+	Mostly equivalent to the "binary" action parameter, but must contain the binary name
+	only. In legacy config, it is <b>not possible</b> to specify command line parameters.
 </ul>
 <b>Caveats/Known Bugs:</b>
 <p>Currently none known.
@@ -63,7 +98,7 @@ The binary program to be executed.
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008-2013 by <a href="http://www.gerhards.net/rainer">Rainer
+Copyright &copy; 2008-2014 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
