@@ -58,7 +58,6 @@ DEFobjCurrIf(ruleset)
 /* static data */
 
 /* config data */
-static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 
@@ -360,12 +359,13 @@ SanitizeMsg(msg_t *pMsg)
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
 		if(pszMsg[iSrc] < 32) {
-			if(bSpaceLFOnRcv && pszMsg[iSrc] == '\n')
+			if(glbl.GetParserSpaceLFOnReceive() && pszMsg[iSrc] == '\n') {
 				pszMsg[iSrc] = ' ';
-			else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
+			} else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
 				bNeedSanitize = 1;
-				if (!bSpaceLFOnRcv)
+				if (!glbl.GetParserSpaceLFOnReceive()) {
 					break;
+			    }
 			}
 		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
 			bNeedSanitize = 1;
@@ -658,7 +658,6 @@ ENDobjQueryInterface(parser)
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is to escape control characters */
 	bEscapeTab = 1; /* default is to escape control characters */
 
@@ -708,7 +707,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
