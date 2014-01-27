@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.1.4],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.1.5],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -33,6 +33,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
+PKG_CHECK_MODULES(LIBLOGSTD, libstdlog >= 1.0.0)
 PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c])
 ])

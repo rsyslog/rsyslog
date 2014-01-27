@@ -58,18 +58,19 @@ typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
-	pid_t pid;			/* pid of currently running process */
-	int fdPipeOut;			/* file descriptor to write to */
-	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 	int iParams;		/* Holds the count of parameters if set*/
-	pthread_mutex_t mut;	/* make sure only one instance is active */
+	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
-	int fdOutput;		/* it's fd (-1 if closed) */
-	int fdPipeIn;		/* fd we receive messages from the program (if we want to) */
+	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
+	pid_t pid;		/* pid of currently running process */
+	int fdOutput;		/* it's fd (-1 if closed) */
+	int fdPipeOut;		/* file descriptor to write to */
+	int fdPipeIn;		/* fd we receive messages from the program (if we want to) */
+	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -83,6 +84,7 @@ static configSettings_t cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "output", eCmdHdlrString, 0 },
+	{ "forcesingleinstance", eCmdHdlrBinary, CNFPARAM_REQUIRED },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -105,6 +107,10 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	pWrkrData->fdPipeIn = -1;
+	pWrkrData->fdPipeOut = -1;
+	pWrkrData->fdOutput = -1;
+	pWrkrData->bIsRunning = 0;
 ENDcreateWrkrInstance
 
 
@@ -149,30 +155,30 @@ ENDtryResume
  * hard to handle errors. -- rgerhards, 2014-01-16
  */
 static void
-writeProgramOutput(instanceData *__restrict__ const pData,
+writeProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	const char *__restrict__ const buf,
 	const ssize_t lenBuf)
 {
 	char errStr[1024];
 	ssize_t r;
 
-dbgprintf("omprog: writeProgramOutput, fd %d\n", pData->fdOutput);
-	if(pData->fdOutput == -1) {
-		pData->fdOutput = open((char*)pData->outputFileName,
+dbgprintf("omprog: writeProgramOutput, fd %d\n", pWrkrData->fdOutput);
+	if(pWrkrData->fdOutput == -1) {
+		pWrkrData->fdOutput = open((char*)pWrkrData->pData->outputFileName,
 				       O_WRONLY | O_APPEND | O_CREAT, 0600);
-		if(pData->fdOutput == -1) {
+		if(pWrkrData->fdOutput == -1) {
 			DBGPRINTF("omprog: error opening output file %s: %s\n",
-				   pData->outputFileName, 
+				   pWrkrData->pData->outputFileName, 
 				   rs_strerror_r(errno, errStr, sizeof(errStr)));
 			goto done;
 		}
 	}
 
-	r = write(pData->fdOutput, buf, (size_t) lenBuf);
+	r = write(pWrkrData->fdOutput, buf, (size_t) lenBuf);
 	if(r != lenBuf) {
 		DBGPRINTF("omprog: problem writing output file %s: bytes "
 			  "requested %lld, written %lld, msg: %s\n",
-			   pData->outputFileName, (long long) lenBuf, (long long) r,
+			   pWrkrData->pData->outputFileName, (long long) lenBuf, (long long) r,
 			   rs_strerror_r(errno, errStr, sizeof(errStr)));
 	}
 done:	return;
@@ -184,21 +190,21 @@ done:	return;
  * if so, properly handle it.
  */
 static void
-checkProgramOutput(instanceData *__restrict__ const pData)
+checkProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData)
 {
 	char buf[4096];
 	ssize_t r;
 
-dbgprintf("omprog: checking prog output, fd %d\n", pData->fdPipeIn);
-	if(pData->fdPipeIn == -1)
+dbgprintf("omprog: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
+	if(pWrkrData->fdPipeIn == -1)
 		goto done;
 
 	do {
 memset(buf, 0, sizeof(buf));
-		r = read(pData->fdPipeIn, buf, sizeof(buf));
+		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf));
 dbgprintf("omprog: read state %lld, data '%s'\n", (long long) r, buf);
 		if(r > 0)
-			writeProgramOutput(pData, buf, r);
+			writeProgramOutput(pWrkrData, buf, r);
 	} while(r > 0);
 
 done:	return;
@@ -210,15 +216,13 @@ done:	return;
  * after fork).
  */
 static void
-execBinary(instanceData *pData, int fdStdin, int fdStdOutErr)
+execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 {
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
 	char errStr[1024];
 	char *newenviron[] = { NULL };
-
-	assert(pData != NULL);
 
 	fclose(stdin);
 	if(dup(fdStdin) == -1) {
@@ -227,7 +231,7 @@ execBinary(instanceData *pData, int fdStdin, int fdStdOutErr)
 		 * gets some more widespread use...
 		 */
 	}
-	if(pData->outputFileName == NULL) {
+	if(pWrkrData->pData->outputFileName == NULL) {
 		close(fdStdOutErr);
 	} else {
 		fclose(stdout);
@@ -260,11 +264,11 @@ execBinary(instanceData *pData, int fdStdin, int fdStdOutErr)
 	alarm(0);
 
 	/* finally exec child */
-	iRet = execve((char*)pData->szBinary, pData->aParams, newenviron);
+	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if(iRet == -1) {
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("omprog: failed to execute binary '%s': %s\n",
-			  pData->szBinary, errStr); 
+			  pWrkrData->pData->szBinary, errStr); 
 	}
 	
 	/* we should never reach this point, but if we do, we terminate */
@@ -276,15 +280,13 @@ execBinary(instanceData *pData, int fdStdin, int fdStdOutErr)
  * rgerhards, 2009-04-01
  */
 static rsRetVal
-openPipe(instanceData *pData)
+openPipe(wrkrInstanceData_t *pWrkrData)
 {
 	int pipestdin[2];
 	int pipestdout[2];
 	pid_t cpid;
 	int flags;
 	DEFiRet;
-
-	assert(pData != NULL);
 
 	if(pipe(pipestdin) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
@@ -293,7 +295,8 @@ openPipe(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
 
-	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n", pData->szBinary, pData->iParams);
+	DBGPRINTF("omprog: executing program '%s' with '%d' parameters\n",
+		  pWrkrData->pData->szBinary, pWrkrData->pData->iParams);
 
 	/* NO OUTPUT AFTER FORK! */
 
@@ -301,30 +304,31 @@ openPipe(instanceData *pData)
 	if(cpid == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_FORK);
 	}
-	pData->pid = cpid;
+	pWrkrData->pid = cpid;
 
 	if(cpid == 0) {    
 		/* we are now the child, just exec the binary. */
 		close(pipestdin[1]); /* close those pipe "ports" that */
 		close(pipestdout[0]); /* we don't need */
-		execBinary(pData, pipestdin[0], pipestdout[1]);
+		execBinary(pWrkrData, pipestdin[0], pipestdout[1]);
 		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
 	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
-	if(pData->outputFileName != NULL) {
-		pData->fdPipeIn = dup(pipestdout[0]);
+	if(pWrkrData->pData->outputFileName != NULL) {
+		pWrkrData->fdPipeIn = dup(pipestdout[0]);
 		/* we need to set our fd to be non-blocking! */
-		flags = fcntl(pData->fdPipeIn, F_GETFL);
+		flags = fcntl(pWrkrData->fdPipeIn, F_GETFL);
 		flags |= O_NONBLOCK;
-		fcntl(pData->fdPipeIn, F_SETFL, flags);
+		fcntl(pWrkrData->fdPipeIn, F_SETFL, flags);
 	} else {
-		pData->fdPipeIn = -1;
+		pWrkrData->fdPipeIn = -1;
 	}
 	close(pipestdin[0]);
 	close(pipestdout[1]);
-	pData->fdPipeOut = pipestdin[1];
-	pData->bIsRunning = 1;
+	pWrkrData->pid = cpid;
+	pWrkrData->fdPipeOut = pipestdin[1];
+	pWrkrData->bIsRunning = 1;
 finalize_it:
 	RETiRet;
 }
@@ -333,49 +337,48 @@ finalize_it:
 /* clean up after a terminated child
  */
 static inline rsRetVal
-cleanup(instanceData *pData)
+cleanup(wrkrInstanceData_t *pWrkrData)
 {
 	int status;
 	int ret;
 	char errStr[1024];
 	DEFiRet;
 
-	assert(pData != NULL);
-	assert(pData->bIsRunning == 1);
-	ret = waitpid(pData->pid, &status, 0);
-	if(ret != pData->pid) {
+	assert(pWrkrData->bIsRunning == 1);
+	ret = waitpid(pWrkrData->pid, &status, 0);
+	if(ret != pWrkrData->pid) {
 		/* if waitpid() fails, we can not do much - try to ignore it... */
 		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
 			   rs_strerror_r(errno, errStr, sizeof(errStr)));
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",
-			  pData->szBinary, status);
+			  pWrkrData->pData->szBinary, status);
 		if(WIFEXITED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
-					pData->szBinary, WEXITSTATUS(status));
+					pWrkrData->pData->szBinary, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
-					pData->szBinary, WTERMSIG(status));
+					pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
 	}
 
-dbgprintf("DDDD: omprog: try to catch late messages\n");
-	checkProgramOutput(pData); /* try to catch any late messages */
+	checkProgramOutput(pWrkrData); /* try to catch any late messages */
 
-	if(pData->fdOutput != -1) {
-		close(pData->fdOutput);
-		pData->fdOutput = -1;
+	if(pWrkrData->fdOutput != -1) {
+		close(pWrkrData->fdOutput);
+		pWrkrData->fdOutput = -1;
 	}
-	if(pData->fdPipeIn != -1) {
-		close(pData->fdPipeIn);
-		pData->fdPipeIn = -1;
+	if(pWrkrData->fdPipeIn != -1) {
+		close(pWrkrData->fdPipeIn);
+		pWrkrData->fdPipeIn = -1;
 	}
-	if(pData->fdPipeOut != -1) {
-		close(pData->fdPipeOut);
-		pData->fdPipeOut = -1;
+	if(pWrkrData->fdPipeOut != -1) {
+		close(pWrkrData->fdPipeOut);
+		pWrkrData->fdPipeOut = -1;
 	}
-	pData->bIsRunning = 0;
+	pWrkrData->bIsRunning = 0;
+	pWrkrData->bIsRunning = 0;
 	RETiRet;
 }
 
@@ -383,13 +386,12 @@ dbgprintf("DDDD: omprog: try to catch late messages\n");
 /* try to restart the binary when it has stopped.
  */
 static inline rsRetVal
-tryRestart(instanceData *pData)
+tryRestart(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
-	assert(pData != NULL);
-	assert(pData->bIsRunning == 0);
+	assert(pWrkrData->bIsRunning == 0);
 
-	iRet = openPipe(pData);
+	iRet = openPipe(pWrkrData);
 	RETiRet;
 }
 
@@ -399,7 +401,7 @@ tryRestart(instanceData *pData)
  * own action queue.
  */
 static rsRetVal
-writePipe(instanceData *pData, uchar *szMsg)
+writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 {
 	int lenWritten;
 	int lenWrite;
@@ -407,22 +409,20 @@ writePipe(instanceData *pData, uchar *szMsg)
 	char errStr[1024];
 	DEFiRet;
 	
-	assert(pData != NULL);
-
 	lenWrite = strlen((char*)szMsg);
 	writeOffset = 0;
 
 	do {
-		checkProgramOutput(pData);
-dbgprintf("omprog: writing to prog (fd %d): %s\n", pData->fdPipeOut, szMsg);
-		lenWritten = write(pData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
+		checkProgramOutput(pWrkrData);
+dbgprintf("omprog: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szMsg);
+		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
-				DBGPRINTF("omprog: Program '%s' terminated, trying to restart\n",
-					  pData->szBinary);
-				CHKiRet(cleanup(pData));
-				CHKiRet(tryRestart(pData));
+				DBGPRINTF("omprog: program '%s' terminated, trying to restart\n",
+					  pWrkrData->pData->szBinary);
+				CHKiRet(cleanup(pWrkrData));
+				CHKiRet(tryRestart(pWrkrData));
 				break;
 			default:
 				DBGPRINTF("omprog: error %d writing to pipe: %s\n", errno,
@@ -435,7 +435,7 @@ dbgprintf("omprog: writing to prog (fd %d): %s\n", pData->fdPipeOut, szMsg);
 		}
 	} while(lenWritten != lenWrite);
 
-	checkProgramOutput(pData);
+	checkProgramOutput(pWrkrData);
 
 finalize_it:
 	RETiRet;
@@ -445,17 +445,20 @@ finalize_it:
 BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
+dbgprintf("DDDD:omprog processing message\n");
 	pData = pWrkrData->pData;
-	pthread_mutex_lock(&pData->mut);
-	if(pData->bIsRunning == 0) {
-		openPipe(pData);
+	if(pData->bForceSingleInst)
+		pthread_mutex_lock(&pData->mut);
+	if(pWrkrData->bIsRunning == 0) {
+		openPipe(pWrkrData);
 	}
 	
-	iRet = writePipe(pData, ppString[0]);
+	iRet = writePipe(pWrkrData, ppString[0]);
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;
-	pthread_mutex_unlock(&pData->mut);
+	if(pData->bForceSingleInst)
+		pthread_mutex_unlock(&pData->mut);
 ENDdoAction
 
 
@@ -466,10 +469,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->aParams = NULL;
 	pData->outputFileName = NULL;
 	pData->iParams = 0;
-	pData->fdPipeOut = -1;
-	pData->fdPipeIn = -1;
-	pData->fdOutput = -1;
-	pData->bIsRunning = 0;
+	pData->bForceSingleInst = 0;
 }
 
 BEGINnewActInst
@@ -573,6 +573,8 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "output")) {
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
+			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -583,6 +585,7 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
+	DBGPRINTF("omprog: bForceSingleInst %d\n", pData->bForceSingleInst);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

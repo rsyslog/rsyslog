@@ -308,6 +308,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_stop2.conf \
 	   stop.sh \
 	   testsuites/stop.conf \
+	   rscript_le.sh \
+	   testsuites/rscript_le.conf \
+	   rscript_ge.sh \
+	   testsuites/rscript_ge.conf \
+	   rscript_lt.sh \
+	   testsuites/rscript_lt.conf \
+	   rscript_gt.sh \
+	   testsuites/rscript_gt.conf \
+	   rscript_ne.sh \
+	   testsuites/rscript_ne.conf \
+	   rscript_eq.sh \
+	   testsuites/rscript_eq.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
 	   stop-msgvar.sh \

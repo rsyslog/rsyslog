@@ -1,7 +1,31 @@
 ---------------------------------------------------------------------------
-Version 8.1.5 [devel] 2014-01-??
+Version 8.1.6 [devel] 2014-01-??
+- add new jsonr property replacer option
+  Thanks to Nathan Brown for the patch.
+- added external plugin interface
+- ommongodb: add authentication support (untested)
+  Thanks to JT for the patch.
+  See also: https://github.com/rsyslog/rsyslog/pull/17
+---------------------------------------------------------------------------
+Version 8.1.5 [devel] 2014-01-24
+- omprog: ability to execute multiple program instances per action
+  It can now execute one program instance per worker thread. This is
+  generally a very good thing the have performance wise. Usually, this
+  should cause no problems with the invoked program. For that reason,
+  we have decided to make this the default mode of operation. If not
+  desired, it can be turned off via the 'forceSingleInstance="on"'
+  action parameter.
+  CHANGE OF BEHAVIOUR: previous versions did always execute only one
+  instance per action, no matter how many workers were active. If
+  your program has special needs, you need to change your configuration.
 - imfile now supports inotify (but must be explicitely turned on)
 - imfile no longer has a limit on number of monitored files
+- added ProcessInternalMessages global system parameter
+  This permits to inject rsyslog status messages into *another* main
+  syslogd or the journal.
+- new dependency: liblogging-stdlog (for submitting to external logger)
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
 ---------------------------------------------------------------------------
 Version 8.1.4 [devel] 2014-01-10
 - add exec_template() RainerScript function
@@ -108,6 +132,14 @@ Version 8.1.0 [experimental] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.5.9 [v7-release candidate] 2014-01-??
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
+- added ProcessInternalMessages global system parameter
+  This permits to inject rsyslog status messages into *another* main
+  syslogd or the journal.
+- new dependency: liblogging-stdlog (for submitting to external logger)
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
@@ -365,6 +397,20 @@ Version 7.5.0 [devel] 2013-06-11
 - add -S command line option to specify IP address to use for RELP client
   connections
   Thanks to Axel Rau for the patch.
+---------------------------------------------------------------------------
+Version 7.4.9  [v7.4-stable] 2014-01-22
+- added ProcessInternalMessages global system parameter
+  This permits to inject rsyslog status messages into *another* main
+  syslogd or the journal.
+- new dependency: liblogging-stdlog (for submitting to external logger)
+- bugfix: imuxsock input parameters were not accepted
+  due to copy&paste error. Thanks to Andy Goldstein for the fix.
+- bugfix: potential double-free in RainerScript equal comparison
+  happens if the left-hand operand is JSON object and the right-hand
+  operand is a non-string that does not convert to a number (for
+  example, it can be another JSON object, probably the only case that
+  could happen in practice). This is very unlikely to be triggered.
+- bugfix: some RainerScript Json(Variable)/string comparisons were wrong
 ---------------------------------------------------------------------------
 Version 7.4.8  [v7.4-stable] 2014-01-08
 - rsgtutil provides better error messages on unfinished signature blocks

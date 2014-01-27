@@ -1772,7 +1772,7 @@ evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
+cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
 	    void *__restrict__ const usrptr)
 {
 	struct var r, l; /* memory for subexpression results */
@@ -1781,7 +1781,7 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	dbgprintf("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
+	DBGPRINTF("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1828,9 +1828,9 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(convok_l) {
 						ret->d.n = (n_l == r.d.n); /*CMP*/
 					} else {
-						estr_r = var2String(&r, &bMustFree);
+						estr_r = var2String(&r, &bMustFree2);
 						ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
-						if(bMustFree) es_deleteStr(estr_r);
+						if(bMustFree2) es_deleteStr(estr_r);
 					}
 				}
 				varFreeMembers(&r);
@@ -1877,6 +1877,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					}
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l != r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1910,6 +1925,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) <= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l <= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) <= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1943,6 +1973,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) >= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l >= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) >= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1976,6 +2021,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) < 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l < r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) < 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -2009,6 +2069,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) > 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l > r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) > 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -2166,6 +2241,7 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
+	DBGPRINTF("eval expr %p, return datatype '%c'\n", expr, ret->datatype);
 }
 
 //---------------------------------------------------------
