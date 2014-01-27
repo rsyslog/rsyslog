@@ -30,7 +30,7 @@ character (being '#' by default).
 	<a href="property_replacer.html">property replacer</a> options do not work 
 	as expected because control characters are already removed upon message 
 	reception. If you intend to use these property replacer options, you must 
-	turn off $Escape8BitCharactersOnReceive.</li>
+	turn off parser.escape8BitCharactersOnReceive.</li>
 </ul>
 <p><b>Sample:</b></p>
 <p><code>
@@ -39,7 +39,7 @@ character (being '#' by default).
     )
 </code></p>
 <p><b>Legacy sample:</b></p>
-<p><code>$Escape8BitCharactersOnReceive on</code></p>
+<p><code>$Escape8BitCharactersOnReceive off</code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
