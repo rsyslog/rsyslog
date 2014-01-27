@@ -5,11 +5,18 @@
 <body>
 <a href="rsyslog_conf_global.html">back</a>
 
-<h2>$EscapeControlCharactersOnReceive</h2>
+<h2>parser.escapeControlCharactersOnReceive</h2>
 <p><b>Type:</b> global configuration directive</p>
 <p><b>Default:</b> on</p>
 <p><b>Description:</b></p>
-<p>This directive instructs rsyslogd to replace control characters during reception of the message. The intent is to provide a way to stop non-printable messages from entering the syslog system as whole. If this option is turned on, all control-characters are converted to a 3-digit octal number and be prefixed with the $ControlCharacterEscapePrefix character (being '\' by default). For example, if the BEL character (ctrl-g) is included in the message, it would be converted to "\007". To be compatible to sysklogd, this option must be turned on.</p>
+<p>
+    This directive instructs rsyslogd to replace control characters during reception of the message. The intent is to
+    provide a way to stop non-printable messages from entering the syslog system as whole. If this option is turned on,
+    all control-characters are converted to a 3-digit octal number and be prefixed with the
+    <a href="rsconf1_controlcharacterescapeprefix.html">parser.controlCharacterEscapePrefix</a>
+    character (being '#' by default). For example, if the BEL character (ctrl-g) is included in the message,
+    it would be converted to "#007". To be compatible to sysklogd, this option must be turned on.
+</p>
 <p><b>Warning:</b></p>
 <ul>
 	<li>turning on this option most probably destroys non-western character sets 
@@ -23,7 +30,13 @@
 	turn off $EscapeControlCharactersOnReceive.</li>
 </ul>
 <p><b>Sample:</b></p>
-<p><code><b>$EscapeControlCharactersOnReceive on</b></code></p>
+<p><code>
+    global (
+        parser.escapeControlCharactersOnReceive="on"
+    )
+</code></p>
+<p><b>Legacy sample:</b></p>
+<p><code>$EscapeControlCharactersOnReceive on</code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
