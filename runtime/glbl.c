@@ -91,6 +91,7 @@ static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the ne
 static int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 static uchar cCCEscapeChar = '#'; /* character to be used to start an escape sequence for control chars */
 static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -116,7 +117,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "parser.controlcharacterescapeprefix", eCmdHdlrGetChar, 0 },
-	{ "parser.droptrailinglfonreception", eCmdHdlrBinary, 0 }
+	{ "parser.droptrailinglfonreception", eCmdHdlrBinary, 0 },
+	{ "parser.escapecontrolcharactersonreceive", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -162,6 +164,7 @@ SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
 SIMP_PROP(ParserDropTrailingLFOnReception, bDropTrailingLF, int)
+SIMP_PROP(ParserEscapeControlCharactersOnReceive, bEscapeCCOnRcv, int)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
@@ -589,6 +592,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(LocalHosts)
 	SIMP_PROP(ParserControlCharacterEscapePrefix)
 	SIMP_PROP(ParserDropTrailingLFOnReception)
+	SIMP_PROP(ParserEscapeControlCharactersOnReceive)
 	SIMP_PROP(DfltNetstrmDrvr)
 	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
@@ -624,6 +628,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMaxLine = 8192;
 	cCCEscapeChar = '#';
 	bDropTrailingLF = 1;
+	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -730,6 +735,8 @@ glblDoneLoadCnf(void)
 			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
         } else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
             bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
+        } else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
+            bEscapeCCOnRcv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -780,6 +787,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* Deprecated parser config options */
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 
 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassInit(glbl)
