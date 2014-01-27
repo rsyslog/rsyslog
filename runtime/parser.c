@@ -58,7 +58,6 @@ DEFobjCurrIf(ruleset)
 /* static data */
 
 /* config data */
-static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 
 /* This is the list of all parsers known to us.
@@ -367,7 +366,7 @@ SanitizeMsg(msg_t *pMsg)
 					break;
 			    }
 			}
-		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			bNeedSanitize = 1;
 			break;
 		}
@@ -410,7 +409,7 @@ SanitizeMsg(msg_t *pMsg)
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 			}
-		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			/* In this case, we also do the conversion. Note that this most
 			 * probably breaks European languages. -- rgerhards, 2010-01-27
 			 */
@@ -658,7 +657,6 @@ ENDobjQueryInterface(parser)
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bEscape8BitChars = 0; /* default is to escape control characters */
 	bEscapeTab = 1; /* default is to escape control characters */
 
 	return RS_RET_OK;
@@ -707,7 +705,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
