@@ -79,8 +79,8 @@ This is plumbing that DOES NOT need to be CHANGED
 onInit()
 keepRunning = 1
 while keepRunning == 1:
-	msgs = []
 	while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
+		msgs = []
 	        msgsInBatch = 0
 		while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
 			line = sys.stdin.readline()
