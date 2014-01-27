@@ -643,6 +643,17 @@ finalize_it:
 	RETiRet;
 }
 
+/* Helper that checks to see if a property already has a format
+ * type defined
+ */
+static int hasFormat(struct templateEntry *pTpe) {
+	return (
+		pTpe->data.field.options.bCSV ||
+		pTpe->data.field.options.bJSON ||
+		pTpe->data.field.options.bJSONf ||
+		pTpe->data.field.options.bJSONr
+	);
+}
 
 /* Helper to do_Parameter(). This parses the formatting options
  * specified in a template variable. It returns the passed-in pointer
@@ -713,25 +724,39 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
 			pTpe->data.field.options.bFromPosEndRelative = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
-		 	if(pTpe->data.field.options.bJSON || pTpe->data.field.options.bJSONf) {
+			if(hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, csv) - csv ignored");
+					"one option out of (json, jsonf, jsonr, jsonfr, csv) - csv ignored");
 			} else {
 				pTpe->data.field.options.bCSV = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "json")) {
-		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+			if(hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, csv) - json ignored");
+					"one option out of (json, jsonf, jsonr, jsonfr, csv) - json ignored");
 			} else {
 				pTpe->data.field.options.bJSON = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "jsonf")) {
-		 	if(pTpe->data.field.options.bCSV || pTpe->data.field.options.bJSON) {
+			if(hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, csv) - jsonf ignored");
+					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonf ignored");
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "jsonr")) {
+			if(hasFormat(pTpe)) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonr ignored");
+			} else {
+				pTpe->data.field.options.bJSONr = 1;
+			}
+		 } else if(!strcmp((char*)Buf, "jsonfr")) {
+			if(hasFormat(pTpe)) {
+				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
+					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonfr ignored");
+			} else {
+				pTpe->data.field.options.bJSONfr = 1;
 			}
 		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
 			 pTpe->data.field.options.bMandatory = 1;
@@ -743,7 +768,6 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 	*pp = p;
 }
-
 
 /* helper to tplAddLine. Parses a parameter and generates
  * the necessary structure.
@@ -1359,7 +1383,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int bPosRelativeToEnd = 0;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
-	enum {F_NONE, F_CSV, F_JSON, F_JSONF} formatType = F_NONE;
+	enum {F_NONE, F_CSV, F_JSON, F_JSONF, F_JSONR, F_JSONFR} formatType = F_NONE;
 	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
 	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
 	enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
@@ -1451,6 +1475,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				formatType = F_JSON;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonf", sizeof("jsonf")-1)) {
 				formatType = F_JSONF;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonr", sizeof("jsonr")-1)) {
+				formatType = F_JSONR;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonfr", sizeof("jsonfr")-1)) {
+				formatType = F_JSONFR;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
@@ -1580,6 +1608,12 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		break;
 	case F_JSONF:
 		pTpe->data.field.options.bJSONf = 1;
+		break;
+	case F_JSONR:
+		pTpe->data.field.options.bJSONr = 1;
+		break;
+	case F_JSONFR:
+		pTpe->data.field.options.bJSONfr = 1;
 		break;
 	}
 	switch(controlchr) {
@@ -2138,6 +2172,12 @@ void tplPrintList(rsconf_t *conf)
 				}
 				if(pTpe->data.field.options.bJSONf) {
 					dbgprintf("[format as JSON field] ");
+				}
+				if(pTpe->data.field.options.bJSONr) {
+					dbgprintf("[format as JSON without re-escaping] ");
+				}
+				if(pTpe->data.field.options.bJSONfr) {
+					dbgprintf("[format as JSON field without re-escaping] ");
 				}
 				if(pTpe->data.field.options.bMandatory) {
 					dbgprintf("[mandatory field] ");

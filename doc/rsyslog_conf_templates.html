@@ -129,9 +129,14 @@ It supports the following parameters:
 "escape", which escapes them, "space", which replaces them by a single space, and
 "drop", which simply removes them from the string.
 <li>securepath - used for creating pathnames suitable for use in dynafile templates
-<li>format - specifiy format on a field basis. Supported values are "csv", for use when
-csv-data is generated, "json", which formats proper json content (but without a field
-header) and "jsonf", which formats as a complete json field.
+<li>format - specifiy format on a field basis. Supported values are:
+    <ul>
+        <li>"<a href="property_replacer.html#csv">csv</a>" for use when csv-data is generated</li>
+        <li>"<a href="property_replacer.html#json">json</a>" which formats proper json content (but without a field header)</li>
+        <li>"<a href="property_replacer.html#jsonf">jsonf</a>" which formats as a complete json field</li>
+        <li>"<a href="property_replacer.html#jsonr">jsonr</a>" which avoids double escaping the value but makes it safe for a json field</li>
+        <li>"<a href="property_replacer.html#jsonfr">jsonfr</a>" which is the combination of "jsonf" and "jsonr".</li>
+    </ul>
 <li>position.from - obtain substring starting from this position (1 is the first position)
 <li>position.to - obtain substring up to this position
 <li>position.relativeToEnd - the from and to position is relative to the end of the string
