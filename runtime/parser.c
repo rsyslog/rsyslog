@@ -646,17 +646,6 @@ CODESTARTobjQueryInterface(parser)
 finalize_it:
 ENDobjQueryInterface(parser)
 
-
-
-/* Reset config variables to default values.
- * rgerhards, 2007-07-17
- */
-static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	return RS_RET_OK;
-}
-
 /* This destroys the master parserlist and all of its parser entries. MUST only be
  * done when the module is shut down. Parser modules are NOT unloaded, rsyslog
  * does that at a later stage for all dynamically loaded modules.
@@ -699,8 +688,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 	InitParserList(&pParsLstRoot);
 	InitParserList(&pDfltParsLst);

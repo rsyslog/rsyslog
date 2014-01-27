@@ -748,16 +748,16 @@ glblDoneLoadCnf(void)
 			errmsg.LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-        } else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
-            bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
-        } else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
-            bEscapeCCOnRcv = (int) cnfparamvals[i].val.d.n;
-        } else if(!strcmp(paramblk.descr[i].name, "parser.spacelfonreceive")) {
-            bSpaceLFOnRcv = (int) cnfparamvals[i].val.d.n;
-        } else if(!strcmp(paramblk.descr[i].name, "parser.escape8bitcharactersonreceive")) {
-            bEscape8BitChars = (int) cnfparamvals[i].val.d.n;
-        } else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
-            bEscapeTab = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
+			bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
+			bEscapeCCOnRcv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.spacelfonreceive")) {
+			bSpaceLFOnRcv = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.escape8bitcharactersonreceive")) {
+			bEscape8BitChars = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
+			bEscapeTab = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -812,7 +812,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 
-    CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassInit(glbl)
