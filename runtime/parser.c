@@ -57,9 +57,6 @@ DEFobjCurrIf(ruleset)
 
 /* static data */
 
-/* config data */
-static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
-
 /* This is the list of all parsers known to us.
  * This is also used to unload all modules on shutdown.
  */
@@ -395,7 +392,7 @@ SanitizeMsg(msg_t *pMsg)
 	}
 	iDst = iSrc;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
+		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab())) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
@@ -657,8 +654,6 @@ ENDobjQueryInterface(parser)
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bEscapeTab = 1; /* default is to escape control characters */
-
 	return RS_RET_OK;
 }
 
@@ -705,7 +700,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 	InitParserList(&pParsLstRoot);
