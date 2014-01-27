@@ -234,11 +234,11 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	if(pWrkrData->pData->outputFileName == NULL) {
 		close(fdStdOutErr);
 	} else {
-		fclose(stdout);
+		close(1);
 		if(dup(fdStdOutErr) == -1) {
 			DBGPRINTF("omprog: dup() stdout failed\n");
 		}
-		fclose(stderr);
+		close(2);
 		if(dup(fdStdOutErr) == -1) {
 			DBGPRINTF("omprog: dup() stderr failed\n");
 		}
@@ -258,6 +258,11 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	sigAct.sa_handler = SIG_DFL;
 	for(i = 1 ; i < NSIG ; ++i)
 		sigaction(i, &sigAct, NULL);
+	/* we need to block SIGINT, otherwise our program is cancelled when we are
+	 * stopped in debug mode.
+	 */
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGINT, &sigAct, NULL);
 	sigemptyset(&set);
         sigprocmask(SIG_SETMASK, &set, NULL);
 
@@ -266,8 +271,12 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	/* finally exec child */
 	iRet = execve((char*)pWrkrData->pData->szBinary, pWrkrData->pData->aParams, newenviron);
 	if(iRet == -1) {
+		/* Note: this will go to stdout of the **child**, so rsyslog will never
+		 * see it except when stdout is captured. If we use the plugin interface,
+		 * we can use this to convey a proper status back!
+		 */
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("omprog: failed to execute binary '%s': %s\n",
+		DBGPRINTF("omprog: failed to execute binary '%s': %s\n",
 			  pWrkrData->pData->szBinary, errStr); 
 	}
 	

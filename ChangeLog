@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.1.6 [devel] 2014-01-??
+- omprog: guard program-to-be-executed against CTL-C
+  This can frequently happen in debug mode, where rsyslog is terminated
+  by ctl-c. In any case, SIGINT is not meant to control the child process,
+  so it should be blocked.
 - omprog bugfix: parameter "forceSingleInstance" is NOT mandatory
 - add new jsonr property replacer option
   Thanks to Nathan Brown for the patch.
