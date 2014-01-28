@@ -64,6 +64,14 @@ def onExit():
 -------------------------------------------------------
 This is plumbing that DOES NOT need to be CHANGED
 -------------------------------------------------------
+Implementor's note: Python seems to very agressively
+buffer stdouot. The end result was that rsyslog does not
+receive the script's messages in a timely manner (sometimes
+even never, probably due to races). To prevent this, we
+flush stdout after we have done processing. This is especially
+important once we get to the point where the plugin does
+two-way conversations with rsyslog. Do NOT change this!
+See also: https://github.com/rsyslog/rsyslog/issues/22
 """
 onInit()
 keepRunning = 1
@@ -82,4 +90,5 @@ while keepRunning == 1:
 				break;
 		if len(msgs) > 0:
 			onReceive(msgs)
+			sys.stdout.flush() # very important, Python buffers far too much!
 onExit()
