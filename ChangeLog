@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 8.1.6 [devel] 2014-01-??
+- parser global parameters can now be set using RainerScript global()
+  Thanks to Nathan Brown for the patch.
+  See also: https://github.com/rsyslog/rsyslog/pull/23
 - omprog: guard program-to-be-executed against CTL-C
   This can frequently happen in debug mode, where rsyslog is terminated
   by ctl-c. In any case, SIGINT is not meant to control the child process,
