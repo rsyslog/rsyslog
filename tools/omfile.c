@@ -215,6 +215,10 @@ struct modConfData_s {
 	uchar 	*tplName;	/* default template */
 	int fCreateMode; /* default mode to use when creating files */
 	int fDirCreateMode; /* default mode to use when creating files */
+	uid_t fileUID;	/* default IDs for creation */
+	uid_t dirUID;
+	gid_t fileGID;
+	gid_t dirGID;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -225,7 +229,15 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 static struct cnfparamdescr modpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 },
-	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 }
+	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
+	{ "dirowner", eCmdHdlrUID, 0 },
+	{ "dirownernum", eCmdHdlrInt, 0 },
+	{ "dirgroup", eCmdHdlrGID, 0 },
+	{ "dirgroupnum", eCmdHdlrInt, 0 },
+	{ "fileowner", eCmdHdlrUID, 0 },
+	{ "fileownernum", eCmdHdlrInt, 0 },
+	{ "filegroup", eCmdHdlrGID, 0 },
+	{ "filegroupnum", eCmdHdlrInt, 0 },
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -832,6 +844,10 @@ CODESTARTbeginCnfLoad
 	pModConf->tplName = NULL;
 	pModConf->fCreateMode = 0644;
 	pModConf->fDirCreateMode = 0700;
+	pModConf->fileUID = -1;
+	pModConf->dirUID = -1;
+	pModConf->fileGID = -1;
+	pModConf->dirGID = -1;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -851,8 +867,10 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if(!pvals[i].bUsed) {
 			continue;
+		}
+
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
@@ -864,6 +882,22 @@ CODESTARTsetModCnf
 			loadModConf->fDirCreateMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "filecreatemode")) {
 			loadModConf->fCreateMode = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "dirowner")) {
+			loadModConf->dirUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "dirownernum")) {
+			loadModConf->dirUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "dirgroup")) {
+			loadModConf->dirGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "dirgroupnum")) {
+			loadModConf->dirGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "fileowner")) {
+			loadModConf->fileUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "fileownernum")) {
+			loadModConf->fileUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "filegroup")) {
+			loadModConf->fileGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "filegroupnum")) {
+			loadModConf->fileGID = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -978,10 +1012,10 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 {
 	pData->fname = NULL;
 	pData->tplName = NULL;
-	pData->fileUID = -1;
-	pData->fileGID = -1;
-	pData->dirUID = -1;
-	pData->dirGID = -1;
+	pData->fileUID = loadModConf->fileUID;
+	pData->fileGID = loadModConf->fileGID;
+	pData->dirUID = loadModConf->dirUID;
+	pData->dirGID = loadModConf->dirGID;
 	pData->bFailOnChown = 1;
 	pData->iDynaFileCacheSize = 10;
 	pData->fCreateMode = loadModConf->fCreateMode;
