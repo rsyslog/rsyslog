@@ -5,13 +5,19 @@
 <body>
 <a href="rsyslog_conf_global.html">back</a>
 
-<h2>$DropTrailingLFOnReception</h2>
+<h2>parser.dropTrailingLFOnReception</h2>
 <p><b>Type:</b> global configuration directive</p>
 <p><b>Default:</b> on</p>
 <p><b>Description:</b></p>
 <p>Syslog messages frequently have the line feed character (LF) as the last character of the message. In almost all cases, this LF should not really become part of the message. However, recent IETF syslog standardization recommends against modifying syslog messages (e.g. to keep digital signatures valid). This option allows to specify if trailing LFs should be dropped or not. The default is to drop them, which is consistent with what sysklogd does.</p>
 <p><b>Sample:</b></p>
-<p><code><b>$DropTrailingLFOnRecption on</b></code></p>
+<p><code>
+    global (
+        parser.dropTrailingLFOnReception="on"
+    )
+</code></p>
+<p><b>Legacy sample:</b></p>
+<p><code>$DropTrailingLFOnRecption on</code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

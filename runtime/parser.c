@@ -59,13 +59,6 @@ int bParserEscapeCCCStyle = 0;
 
 /* static data */
 
-/* config data */
-static uchar cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
-static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
-static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
-static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
-static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
-static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 static char hexdigit[16] =
 	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
@@ -349,7 +342,7 @@ SanitizeMsg(msg_t *pMsg)
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
-	if(bDropTrailingLF && pszMsg[lenMsg-1] == '\n') {
+	if(glbl.GetParserDropTrailingLFOnReception() && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
 		pszMsg[lenMsg] = '\0';
@@ -369,14 +362,15 @@ SanitizeMsg(msg_t *pMsg)
 	int bNeedSanitize = 0;
 	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
 		if(pszMsg[iSrc] < 32) {
-			if(bSpaceLFOnRcv && pszMsg[iSrc] == '\n')
+			if(glbl.GetParserSpaceLFOnReceive() && pszMsg[iSrc] == '\n') {
 				pszMsg[iSrc] = ' ';
-			else if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
+			} else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
 				bNeedSanitize = 1;
-				if (!bSpaceLFOnRcv)
+				if (!glbl.GetParserSpaceLFOnReceive()) {
 					break;
+			    }
 			}
-		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			bNeedSanitize = 1;
 			break;
 		}
@@ -406,11 +400,11 @@ SanitizeMsg(msg_t *pMsg)
 	}
 	iDst = iSrc;
 	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || bEscapeTab)) {
+		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab())) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
-			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
+			if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
 				/* we are configured to escape control characters. Please note
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
@@ -457,14 +451,14 @@ SanitizeMsg(msg_t *pMsg)
 					}
 
 				} else {
-					pDst[iDst++] = cCCEscapeChar;
+					pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 				}
 			}
 
-		} else if(pszMsg[iSrc] > 127 && bEscape8BitChars) {
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			if (bParserEscapeCCCStyle) {
 				pDst[iDst++] = '\\';
 				pDst[iDst++] = 'x';
@@ -477,7 +471,7 @@ SanitizeMsg(msg_t *pMsg)
 				/* In this case, we also do the conversion. Note that this most
 				 * probably breaks European languages. -- rgerhards, 2010-01-27
 				 */
-				pDst[iDst++] = cCCEscapeChar;
+				pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
@@ -714,24 +708,6 @@ CODESTARTobjQueryInterface(parser)
 finalize_it:
 ENDobjQueryInterface(parser)
 
-
-
-/* Reset config variables to default values.
- * rgerhards, 2007-07-17
- */
-static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	cCCEscapeChar = '#';
-	bEscapeCCOnRcv = 1; /* default is to escape control characters */
-	bSpaceLFOnRcv = 0;
-	bEscape8BitChars = 0; /* default is to escape control characters */
-	bEscapeTab = 1; /* default is to escape control characters */
-	bDropTrailingLF = 1; /* default is to drop trailing LF's on reception */
-
-	return RS_RET_OK;
-}
-
 /* This destroys the master parserlist and all of its parser entries. MUST only be
  * done when the module is shut down. Parser modules are NOT unloaded, rsyslog
  * does that at a later stage for all dynamically loaded modules.
@@ -774,14 +750,6 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, NULL, &bSpaceLFOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscape8BitChars, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary, NULL, &bEscapeTab, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 	InitParserList(&pParsLstRoot);
 	InitParserList(&pDfltParsLst);

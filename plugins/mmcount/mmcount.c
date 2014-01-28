@@ -59,7 +59,12 @@ typedef struct _instanceData {
 	char *pszValue;
 	int valueCounter;
 	struct hashtable *ht;
+	pthread_mutex_t mut;
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
@@ -107,7 +112,12 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -119,6 +129,10 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
 
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 static inline void
 setInstParamDefaults(instanceData *pData)
@@ -250,10 +264,12 @@ BEGINdoAction
 	struct json_object *keyjson = NULL;
 	char *pszValue;
 	int *pCounter;
+	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	appname = getAPPNAME(pMsg, LOCK_MUTEX);
 
+	pthread_mutex_lock(&pData->mut);
 	if(0 != strcmp(appname, pData->pszAppName)) {
 		/* we are not working for this appname. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
@@ -295,6 +311,7 @@ CODESTARTdoAction
 		json = json_object_new_int(*pCounter);
 	}
 finalize_it:
+	pthread_mutex_unlock(&pData->mut);
 	if(estr) {
 		es_deleteStr(estr);
 	}
@@ -327,6 +344,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt

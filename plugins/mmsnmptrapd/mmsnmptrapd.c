@@ -73,6 +73,10 @@ typedef struct _instanceData {
 	struct severMap_s *severMap;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 typedef struct configSettings_s {
 	uchar *pszTagName;	/**< name of tag start value that indicates snmptrapd initiated message */
 	uchar *pszSeverityMapping; /**< severitystring to numerical code mapping for snmptrapd string */
@@ -92,6 +96,10 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
@@ -109,6 +117,10 @@ CODESTARTfreeInstance
 	free(pData->pszTagName);
 	free(pData->pszTagID);
 ENDfreeInstance
+
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
@@ -225,7 +237,9 @@ BEGINdoAction
 	uchar *pszTag;
 	uchar pszSever[512];
 	uchar pszHost[512];
+	instanceData *pData;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
 	dbgprintf("XXXX: mmsnmptrapd called with pMsg %p\n", pMsg);
 	getTAG(pMsg, &pszTag, &lenTAG);
@@ -362,6 +376,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
 

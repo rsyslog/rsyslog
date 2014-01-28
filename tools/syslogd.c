@@ -21,7 +21,7 @@
  * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -82,6 +82,7 @@
 #endif
 
 #include <signal.h>
+#include <liblogging/libstdlog.h>
 
 #if HAVE_PATHS_H
 #include <paths.h>
@@ -430,11 +431,13 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
 	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 }
 
-/* rgerhards 2004-11-09: the following is a function that can be used
- * to log a message orginating from the syslogd itself.
+/* This function logs a message to rsyslog itself, using its own
+ * internal structures. This means external programs (like the
+ * system journal) will never see this message.
  */
-rsRetVal
-logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
+static rsRetVal
+logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
+	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
 	msg_t *pMsg;
@@ -442,7 +445,7 @@ logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInternalInputName);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg, lenMsg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
@@ -462,19 +465,6 @@ logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
 
-	/* we now check if we should print internal messages out to stderr. This was
-	 * suggested by HKS as a way to help people troubleshoot rsyslog configuration
-	 * (by running it interactively. This makes an awful lot of sense, so I add
-	 * it here. -- rgerhards, 2008-07-28
-	 * Note that error messages can not be disable during a config verify. This
-	 * permits us to process unmodified config files which otherwise contain a
-	 * supressor statement.
-	 */
-	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
-		if(LOG_PRI(pri) == LOG_ERR)
-			fprintf(stderr, "rsyslogd: %s\n", msg);
-	}
-
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pMsg);
 	} else {
@@ -484,6 +474,59 @@ logmsgInternal(const int iErr, const int pri, const uchar *msg, int flags)
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
 	}
 finalize_it:
+	RETiRet;
+}
+
+
+/* rgerhards 2004-11-09: the following is a function that can be used
+ * to log a message orginating from the syslogd itself.
+ */
+rsRetVal
+logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
+{
+	size_t lenMsg;
+	unsigned i;
+	char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
+	DEFiRet;
+
+	/* we first do a path the remove control characters that may have accidently
+	 * introduced (program error!). This costs performance, but we do not expect
+	 * to be called very frequently in any case ;) -- rgerhards, 2013-12-19.
+	 */
+	lenMsg = ustrlen(msg);
+	for(i = 0 ; i < lenMsg ; ++i) {
+		if(msg[i] < 0x20 || msg[i] == 0x7f) {
+			if(bufModMsg == NULL) {
+				CHKmalloc(bufModMsg = strdup((char*) msg));
+			}
+			bufModMsg[i] = ' ';
+		}
+	}
+
+	if(bProcessInternalMessages) {
+		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
+					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
+					   flags));
+	} else {
+		stdlog_log(NULL, LOG_PRI(pri), "%s",
+			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+	}
+
+	/* we now check if we should print internal messages out to stderr. This was
+	 * suggested by HKS as a way to help people troubleshoot rsyslog configuration
+	 * (by running it interactively. This makes an awful lot of sense, so I add
+	 * it here. -- rgerhards, 2008-07-28
+	 * Note that error messages can not be disabled during a config verify. This
+	 * permits us to process unmodified config files which otherwise contain a
+	 * supressor statement.
+	 */
+	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
+		if(LOG_PRI(pri) == LOG_ERR)
+			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+	}
+
+finalize_it:
+	free(bufModMsg);
 	RETiRet;
 }
 

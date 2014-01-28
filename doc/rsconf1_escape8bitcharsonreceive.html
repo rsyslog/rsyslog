@@ -5,7 +5,7 @@
 <body>
 <a href="rsyslog_conf_global.html">back</a>
 
-<h2>$Escape8BitCharactersOnReceive</h2>
+<h2>parser.escape8BitCharactersOnReceive</h2>
 <p><b>Type:</b> global configuration directive</p>
 <p><b>Default:</b> off</p>
 <p><b>Available Since:</b> 5.5.2</p>
@@ -17,7 +17,9 @@ Please note that this escaping breaks Unicode and many other encodings. Most imp
 it can be assumed that Asian and European characters will be rendered hardly readable by 
 this settings. However, it may still be useful when the logs themself are primarily
 in English and only occasionally contain local script.
-If this option is turned on, all control-characters are converted to a 3-digit octal number and be prefixed with the $ControlCharacterEscapePrefix character (being '#' by default).
+If this option is turned on, all control-characters are converted to a 3-digit octal number and be prefixed with the
+<a href="rsconf1_controlcharacterescapeprefix.html">parser.controlCharacterEscapePrefix</a>
+character (being '#' by default).
 <p><b>Warning:</b></p>
 <ul>
 	<li>turning on this option most probably destroys non-western character sets 
@@ -28,10 +30,16 @@ If this option is turned on, all control-characters are converted to a 3-digit o
 	<a href="property_replacer.html">property replacer</a> options do not work 
 	as expected because control characters are already removed upon message 
 	reception. If you intend to use these property replacer options, you must 
-	turn off $Escape8BitCharactersOnReceive.</li>
+	turn off parser.escape8BitCharactersOnReceive.</li>
 </ul>
 <p><b>Sample:</b></p>
-<p><code><b>$Escape8BitCharactersOnReceive on</b></code></p>
+<p><code>
+    global (
+        parser.escape8BitCharactersOnReceive="off"
+    )
+</code></p>
+<p><b>Legacy sample:</b></p>
+<p><code>$Escape8BitCharactersOnReceive off</code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

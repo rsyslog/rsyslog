@@ -48,6 +48,7 @@
 #include "modules.h"
 #include "ruleset.h"
 #include "msg.h"
+#include "wti.h"
 #include "unicode-helper.h"
 
 DEFobjCurrIf(obj)
@@ -1451,6 +1452,33 @@ finalize_it:
 }
 
 
+/* note that we do not need to evaluate any parameters, as the template pointer
+ * is set during initialization().
+ * TODO: think if we can keep our buffer; but that may not be trival thinking about
+ *       multiple threads.
+ */
+static void
+doFunc_exec_template(struct cnffunc *__restrict__ const func,
+	struct var *__restrict__ const ret,
+	msg_t *const pMsg)
+{
+	rsRetVal localRet;
+	actWrkrIParams_t iparam;
+
+	wtiInitIParam(&iparam);
+	localRet = tplToString(func->funcdata, pMsg, &iparam, NULL);
+	if(localRet == RS_RET_OK) {
+		ret->d.estr = es_newStrFromCStr((char*)iparam.param, iparam.lenStr);
+	} else {
+		ret->d.estr = es_newStrFromCStr("", 0);
+	}
+	ret->datatype = 'S';
+	free(iparam.param);
+
+	return;
+}
+
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -1558,6 +1586,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		break;
 	case CNFFUNC_RE_EXTRACT:
 		doFunc_re_extract(func, ret, usrptr);
+		break;
+	case CNFFUNC_EXEC_TEMPLATE:
+		doFunc_exec_template(func, ret, (msg_t*) usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1741,7 +1772,7 @@ evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
+cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
 	    void *__restrict__ const usrptr)
 {
 	struct var r, l; /* memory for subexpression results */
@@ -1750,7 +1781,7 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 	int bMustFree, bMustFree2;
 	long long n_r, n_l;
 
-	dbgprintf("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
+	DBGPRINTF("eval expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	/* note: comparison operations are extremely similar. The code can be copyied, only
 	 * places flagged with "CMP" need to be changed.
@@ -1797,9 +1828,9 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(convok_l) {
 						ret->d.n = (n_l == r.d.n); /*CMP*/
 					} else {
-						estr_r = var2String(&r, &bMustFree);
+						estr_r = var2String(&r, &bMustFree2);
 						ret->d.n = !es_strcmp(estr_l, estr_r); /*CMP*/
-						if(bMustFree) es_deleteStr(estr_r);
+						if(bMustFree2) es_deleteStr(estr_r);
 					}
 				}
 				varFreeMembers(&r);
@@ -1846,6 +1877,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					}
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr); /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l != r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r); /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1879,6 +1925,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) <= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l <= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) <= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1912,6 +1973,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) >= 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l >= r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) >= 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1945,6 +2021,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) < 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l < r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) < 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -1978,6 +2069,21 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 					if(bMustFree) es_deleteStr(estr_r);
 				}
 			}
+		} else if(l.datatype == 'J') {
+			estr_l = var2String(&l, &bMustFree);
+			if(r.datatype == 'S') {
+				ret->d.n = es_strcmp(estr_l, r.d.estr) > 0; /*CMP*/
+			} else {
+				n_l = var2Number(&l, &convok_l);
+				if(convok_l) {
+					ret->d.n = (n_l > r.d.n); /*CMP*/
+				} else {
+					estr_r = var2String(&r, &bMustFree2);
+					ret->d.n = es_strcmp(estr_l, estr_r) > 0; /*CMP*/
+					if(bMustFree2) es_deleteStr(estr_r);
+				}
+			}
+			if(bMustFree) es_deleteStr(estr_l);
 		} else {
 			if(r.datatype == 'S') {
 				n_r = var2Number(&r, &convok_r);
@@ -2135,6 +2241,7 @@ cnfexprEval(struct cnfexpr *__restrict__ const expr, struct var *__restrict__ co
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
+	DBGPRINTF("eval expr %p, return datatype '%c'\n", expr, ret->datatype);
 }
 
 //---------------------------------------------------------
@@ -2166,7 +2273,8 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	free(func->funcdata);
+	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+		free(func->funcdata);
 	free(func->fname);
 }
 
@@ -3397,6 +3505,13 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_FIELD;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"exec_template", sizeof("exec_template") - 1)) {
+		if(nParams != 1) {
+			parser_errmsg("number of parameters for exec-template() must be one "
+				      "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_EXEC_TEMPLATE;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"prifilt", sizeof("prifilt") - 1)) {
 		if(nParams != 1) {
 			parser_errmsg("number of parameters for prifilt() must be one "
@@ -3448,6 +3563,31 @@ initFunc_re_match(struct cnffunc *func)
 
 finalize_it:
 	free(regex);
+	RETiRet;
+}
+
+
+static rsRetVal
+initFunc_exec_template(struct cnffunc *func)
+{
+	char *tplName = NULL;
+	DEFiRet;
+
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("exec_template(): param 1 must be a constant string");
+		FINALIZE;
+	}
+
+	tplName = es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	func->funcdata = tplFind(ourConf, tplName, strlen(tplName));
+	if(func->funcdata == NULL) {
+		parser_errmsg("exec_template(): template '%s' could not be found", tplName);
+		FINALIZE;
+	}
+
+
+finalize_it:
+	free(tplName);
 	RETiRet;
 }
 
@@ -3538,6 +3678,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_LOOKUP:
 				initFunc_lookup(func);
+				break;
+			case CNFFUNC_EXEC_TEMPLATE:
+				initFunc_exec_template(func);
 				break;
 			default:break;
 		}
