@@ -93,4 +93,5 @@ while keepRunning == 1:
 				break;
 		if len(msgs) > 0:
 			onReceive(msgs)
+			sys.stdout.flush() # very important, Python buffers far too much!
 onExit()
