@@ -45,7 +45,6 @@
 #include "atomic.h"
 #include "errmsg.h"
 #include "action.h"
-#include "parser.h"
 #include "rainerscript.h"
 #include "net.h"
 
@@ -99,7 +98,8 @@ static int bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 static int bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
-static int bEscapeTab = 1;	/* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
+static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
+static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -115,7 +115,6 @@ static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client t
 static struct cnfparamdescr cnfparamdescr[] = {
 	{ "workdirectory", eCmdHdlrString, 0 },
 	{ "dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0 },
-	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "localhostname", eCmdHdlrGetWord, 0 },
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
@@ -131,6 +130,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.spacelfonreceive", eCmdHdlrBinary, 0 },
 	{ "parser.escape8bitcharactersonreceive", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
+	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -181,6 +181,7 @@ SIMP_PROP(ParserEscapeControlCharactersOnReceive, bEscapeCCOnRcv, int)
 SIMP_PROP(ParserSpaceLFOnReceive, bSpaceLFOnRcv, int)
 SIMP_PROP(ParserEscape8BitCharactersOnReceive, bEscape8BitChars, int)
 SIMP_PROP(ParserEscapeControlCharacterTab, bEscapeTab, int)
+SIMP_PROP(ParserEscapeControlCharactersCStyle, bParserEscapeCCCStyle, int)
 #ifdef USE_UNLIMITED_SELECT
 SIMP_PROP(FdSetSize, iFdSetSize, int)
 #endif
@@ -612,6 +613,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(ParserSpaceLFOnReceive)
 	SIMP_PROP(ParserEscape8BitCharactersOnReceive)
 	SIMP_PROP(ParserEscapeControlCharacterTab)
+	SIMP_PROP(ParserEscapeControlCharactersCStyle)
 	SIMP_PROP(DfltNetstrmDrvr)
 	SIMP_PROP(DfltNetstrmDrvrCAF)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile)
@@ -651,6 +653,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bSpaceLFOnRcv = 0;
 	bEscape8BitChars = 0; /* default is not to escape control characters */
 	bEscapeTab = 1; /* default is to escape tab characters */
+	bParserEscapeCCCStyle = 0;
 #ifdef USE_UNLIMITED_SELECT
 	iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask);
 #endif
@@ -764,8 +767,6 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name,
 				"dropmsgswithmaliciousdnsptrrecords")) {
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
-	    } else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
-	        bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
 			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
@@ -785,6 +786,8 @@ glblDoneLoadCnf(void)
 			bEscape8BitChars = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactertab")) {
 			bEscapeTab = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
+			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);

@@ -55,8 +55,6 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(ruleset)
 
-int bParserEscapeCCCStyle = 0;
-
 /* static data */
 
 static char hexdigit[16] =
@@ -409,7 +407,7 @@ SanitizeMsg(msg_t *pMsg)
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
 				 */
-				if (bParserEscapeCCCStyle) {
+				if (glbl.GetParserEscapeControlCharactersCStyle()) {
 					pDst[iDst++] = '\\';
 
 					switch (pszMsg[iSrc]) {
@@ -459,7 +457,7 @@ SanitizeMsg(msg_t *pMsg)
 			}
 
 		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
-			if (bParserEscapeCCCStyle) {
+			if (glbl.GetParserEscapeControlCharactersCStyle()) {
 				pDst[iDst++] = '\\';
 				pDst[iDst++] = 'x';
 
