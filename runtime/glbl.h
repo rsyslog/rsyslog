@@ -62,6 +62,13 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
+	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
+	SIMP_PROP(ParserDropTrailingLFOnReception, int)
+	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
+	SIMP_PROP(ParserSpaceLFOnReceive, int)
+	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
+	SIMP_PROP(ParserEscapeControlCharacterTab, int)
+
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
 	prop_t* (*GetLocalHostNameProp)(void);
