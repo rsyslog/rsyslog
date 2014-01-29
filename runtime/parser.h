@@ -21,7 +21,6 @@
 #ifndef INCLUDED_PARSER_H
 #define INCLUDED_PARSER_H
 
-
 /* we create a small helper object, a list of parsers, that we can use to
  * build a chain of them whereever this is needed (initially thought to be
  * used in ruleset.c as well as ourselvs).

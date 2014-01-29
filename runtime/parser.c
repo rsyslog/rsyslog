@@ -57,6 +57,10 @@ DEFobjCurrIf(ruleset)
 
 /* static data */
 
+static char hexdigit[16] =
+	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
+	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
 /* This is the list of all parsers known to us.
  * This is also used to unload all modules on shutdown.
  */
@@ -311,6 +315,7 @@ SanitizeMsg(msg_t *pMsg)
 	size_t iDst;
 	size_t iMaxLine;
 	size_t maxDest;
+	uchar pc;
 	sbool bUpdatedLen = RSFALSE;
 	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
@@ -380,6 +385,7 @@ SanitizeMsg(msg_t *pMsg)
 	 */
 	iMaxLine = glbl.GetMaxLine();
 	maxDest = lenMsg * 4; /* message can grow at most four-fold */
+
 	if(maxDest > iMaxLine)
 		maxDest = iMaxLine;	/* but not more than the max size! */
 	if(maxDest < sizeof(szSanBuf))
@@ -401,19 +407,73 @@ SanitizeMsg(msg_t *pMsg)
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
 				 */
+				if (glbl.GetParserEscapeControlCharactersCStyle()) {
+					pDst[iDst++] = '\\';
+
+					switch (pszMsg[iSrc]) {
+					case '\0':
+						pDst[iDst++] = '0';
+						break;
+					case '\a':
+						pDst[iDst++] = 'a';
+						break;
+					case '\b':
+						pDst[iDst++] = 'b';
+						break;
+					case '\e':
+						pDst[iDst++] = 'e';
+						break;
+					case '\f':
+						pDst[iDst++] = 'f';
+						break;
+					case '\n':
+						pDst[iDst++] = 'n';
+						break;
+					case '\r':
+						pDst[iDst++] = 'r';
+						break;
+					case '\t':
+						pDst[iDst++] = 't';
+						break;
+					case '\v':
+						pDst[iDst++] = 'v';
+						break;
+					default:
+						pDst[iDst++] = 'x';
+
+						pc = pszMsg[iSrc];
+						pDst[iDst++] = hexdigit[(pc & 0xF0) >> 4];
+						pDst[iDst++] = hexdigit[pc & 0xF];
+
+						break;
+					}
+
+				} else {
+					pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
+					pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+				}
+			}
+
+		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
+			if (glbl.GetParserEscapeControlCharactersCStyle()) {
+				pDst[iDst++] = '\\';
+				pDst[iDst++] = 'x';
+
+				pc = pszMsg[iSrc];
+				pDst[iDst++] = hexdigit[(pc & 0xF0) >> 4];
+				pDst[iDst++] = hexdigit[pc & 0xF];
+
+			} else {
+				/* In this case, we also do the conversion. Note that this most
+				 * probably breaks European languages. -- rgerhards, 2010-01-27
+				 */
 				pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
 				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 			}
-		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
-			/* In this case, we also do the conversion. Note that this most
-			 * probably breaks European languages. -- rgerhards, 2010-01-27
-			 */
-			pDst[iDst++] = glbl.GetParserControlCharacterEscapePrefix();
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
-			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
 		} else {
 			pDst[iDst++] = pszMsg[iSrc];
 		}
@@ -692,4 +752,3 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	InitParserList(&pParsLstRoot);
 	InitParserList(&pDfltParsLst);
 ENDObjClassInit(parser)
-
