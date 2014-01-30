@@ -1,9 +1,11 @@
 Rsyslog - what is it?
 =====================
-Rsyslog is a high-performance, modular system event processor. While it started
-as a regular syslogd, it has evolved into a kind of swiss army knife of logging,
-being able to accept inputs from a wide variety of sources, transform them, and
-output to the results to diverse destinations.
+Rsyslog is a rocket-fast log processing system.
+
+It offers high-performance, great security features and a modular design.
+While it started as a regular syslogd, rsyslog has evolved into a kind of swiss
+army knife of logging, being able to accept inputs from a wide variety of sources,
+transform them, and output to the results to diverse destinations.
 
 Rsyslog can deliver over one million messages per second  to local destinations
 when limited processing is applied (based on v7, December 2013). Even with
