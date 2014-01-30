@@ -1,6 +1,6 @@
 Rsyslog - what is it?
 =====================
-Rsyslog is a rocket-fast log processing system.
+Rsyslog is a **r**ocket-fast **sys**tem for **log** processing.
 
 It offers high-performance, great security features and a modular design.
 While it started as a regular syslogd, rsyslog has evolved into a kind of swiss
