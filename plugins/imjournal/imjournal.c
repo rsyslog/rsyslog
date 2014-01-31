@@ -175,14 +175,13 @@ readjournal() {
 
 	/* Get message text */
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar *)"log message from journal doesn't have MESSAGE", 0);
-		iRet = RS_RET_OK;
-		goto ret;
-	}
-	message = strndup(get+8, length-8);
-	if (message == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto ret;
+		message = strdup("");
+	} else {
+		message = strndup(get+8, length-8);
+		if (message == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			goto ret;
+		}
 	}
 
 	/* Get message priority */
