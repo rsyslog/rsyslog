@@ -13,7 +13,7 @@ Input Module to Generate Periodic Statistics of Internal Counters
 
 This module provides periodic output of rsyslog internal counters. Note
 that the whole statistics system is currently under development. So
-availabilty and format of counters may change and is not yet stable (so
+availability and format of counters may change and is not yet stable (so
 be prepared to change your trending scripts when you upgrade to a newer
 rsyslog version).
 
@@ -25,7 +25,7 @@ regular syslog stream, the module can also be configured to write
 statistics data into a (local) file.
 
 Note that loading this module has impact on rsyslog performance.
-Depending on settings, this impact may be noticable (for high-load
+Depending on settings, this impact may be noticeable (for high-load
 environments).
 
 The rsyslog website has an updated overview of available `rsyslog
@@ -50,14 +50,27 @@ This module supports module parameters, only.
    interval is what is configured here plus the actual time required to
    generate messages. In general, the difference should not really
    matter.
--  **facility**\ [templateName]
+-  **facility**\ [facility number]
     The numerical syslog facility code to be used for generated
    messages. Default is 5 (syslog). This is useful for filtering
    messages.
--  **severity**\ [templateName]
+-  **severity**\ [severity number]
     The numerical syslog severity code to be used for generated
    messages. Default is 6 (info).This is useful for filtering messages.
--  **format**\ [json/cee/**legacy**](rsyslog v6.3.8+ only)
+-  **resetCounters**\ [**off**/on] - available since 7.5.3
+    When set to "on", counters are automatically reset after they are
+   emitted. In that case, the contain only deltas to the last value
+   emitted. When set to "off", counters always accumulate their values.
+   Note that in auto-reset mode not all counters can be reset. Some
+   counters (like queue size) are directly obtained from internal object
+   and cannot be modified. Also, auto-resetting introduces some
+   additional slight inaccuracies due to the multi-threaded nature of
+   rsyslog and the fact that for performance reasons it cannot serialize
+   access to counter variables. As an alternative to auto-reset mode,
+   you can use rsyslog's statistics manipulation scripts to create delta
+   values from the regular statistic logs. This is the suggested method
+   if deltas are not necessarily needed in real-time.
+-  **format**\ [json/cee/**legacy**] - available since 6.3.8
     Specifies the format of emitted stats messages. The default of
    "legacy" is compatible with pre v6-rsyslog. The other options provide
    support for structured formats (note the "cee" is actually "project
@@ -80,6 +93,8 @@ This module supports module parameters, only.
    shall not be used solely. Note that turning on file logging does NOT
    turn of syslog logging. If that is desired log.syslog="off" must be
    explicitely set.
+-  **Ruleset** [ruleset] - available since 7.5.6
+    Binds the listener to a specific `ruleset <multi_ruleset.html>`_.
 
 **Legacx Configuration Directives**:
 

@@ -145,7 +145,9 @@ default, it is usually well-chosen and applicable in most cases.
    an as-needed basis
 -  `**$DirCreateMode** <omfile.html>`_
 -  `**$DirGroup** <omfile.html>`_
+-  `**$DirGroupNum** <omfile.html>`_
 -  `**$DirOwner** <omfile.html>`_
+-  `**$DirOwnerNum** <omfile.html>`_
 -  `**$DropMsgsWithMaliciousDnsPTRRecords** <rsconf1_dropmsgswithmaliciousdnsptrrecords.html>`_
 -  `**$DropTrailingLFOnReception** <rsconf1_droptrailinglfonreception.html>`_
 -  `**$DynaFileCacheSize** <omfile.html>`_
@@ -160,7 +162,9 @@ default, it is usually well-chosen and applicable in most cases.
 -  `**$FailOnChownFailure** <omfile.html>`_
 -  `**$FileCreateMode** <omfile.html>`_
 -  `**$FileGroup** <omfile.html>`_
+-  `**$FileGroupNum** <omfile.html>`_
 -  `**$FileOwner** <omfile.html>`_
+-  `**$FileOwnerNum** <omfile.html>`_
 -  `**$GenerateConfigGraph** <rsconf1_generateconfiggraph.html>`_
 -  `**$GssForwardServiceName** <rsconf1_gssforwardservicename.html>`_
 -  `**$GssListenServiceName** <rsconf1_gsslistenservicename.html>`_

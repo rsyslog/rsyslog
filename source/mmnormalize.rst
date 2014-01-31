@@ -19,7 +19,7 @@ should be possible to normalize events in realtime.
 
 This module is implemented via the output module interface. This means
 that mmnormalize should be called just like an action. After it has been
-called, the normalized message properties are avaialable and can be
+called, the normalized message properties are available and can be
 accessed. These properties are called the "CEE/lumberjack" properties,
 because liblognorm creates a format that is inspired by the
 CEE/lumberjack approach.

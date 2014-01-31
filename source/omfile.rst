@@ -15,19 +15,34 @@ remote if methods like NFS are used). Both files named with static names
 as well files with names based on message content are supported by this
 module. It is a built-in module that does not need to be loaded.
 
- 
-
 **Module Parameters**:
 
 -  **Template**\ [templateName]
-    sets a new default template for file actions.
+    Set the default template to be used if an action is not configured
+   to use a specific template.
+-  **DirCreateMode**\ [default 0700]
+    Sets the default DirCreateMode to be used for an action if no
+   explicit one is specified.
+-  **FileCreateMode**\ [default 0644]
+    Sets the default DirCreateMode to be used for an action if no
+   explicit one is specified.
 
  
 
 **Action Parameters**:
 
--  **DynaFileCacheSize**\ (not mandatory, default will be used)
-    Defines a template to be used for the output.
+-  **Template**\ [templateName]
+    Sets the template to be used for this action. If not specified, the
+   default template is applied.
+-  **DynaFileCacheSize**\ (not mandatory, default 10)
+    Applies only if dynamic filenames are used.
+    Specifies the number of DynaFiles that will be kept open. The
+   default is 10. Note that this is a per-action value, so if you have
+   multiple dynafile actions, each of them have their individual caches
+   (which means the numbers sum up). Ideally, the cache size exactly
+   matches the need. You can use `impstats <impstats.html>`_ to tune
+   this value. Note that a too-low cache size can be a very considerable
+   performance bottleneck.
 -  **ZipLevel**\ 0..9 [default 0]
     if greater 0, turns on gzip compression of the output file. The
    higher the number, the better the compression, but also the more CPU
@@ -42,7 +57,8 @@ module. It is a built-in module that does not need to be loaded.
    option set to "on" may be four to five times as large as files
    processed in "off" mode.
 -  **FlushInterval**\ (not mandatory, default will be used)
-    Defines a template to be used for the output.
+    Defines, in seconds, the interval after which unwritten data is
+   flushed.
 -  **ASyncWriting**\ on/off [default off]
     if turned on, the files will be written in asynchronous mode via a
    separate thread. In that case, double buffers will be used so that
@@ -75,28 +91,49 @@ module. It is a built-in module that does not need to be loaded.
    existing. The parameter is a user name, for which the userid is
    obtained by rsyslogd during startup processing. Interim changes to
    the user mapping are not detected.
+-  **DirOwnerNum** available in 7.5.8+ and 8.1.4+
+    Set the file owner for directories newly created. Please note that
+   this setting does not affect the owner of directories already
+   existing. The parameter is a numerical ID, which is used regardless
+   of whether the user actually exists. This can be useful if the user
+   mapping is not available to rsyslog during startup.
 -  **DirGroup**
     Set the group for directories newly created. Please note that this
    setting does not affect the group of directories already existing.
    The parameter is a group name, for which the groupid is obtained by
    rsyslogd on during startup processing. Interim changes to the user
    mapping are not detected.
+-  **DirGroupNum**
+    Set the group for directories newly created. Please note that this
+   setting does not affect the group of directories already existing.
+   The parameter is a numerical ID, which is used regardless of whether
+   the group actually exists. This can be useful if the group mapping is
+   not available to rsyslog during startup.
 -  **FileOwner**
     Set the file owner for files newly created. Please note that this
    setting does not affect the owner of files already existing. The
    parameter is a user name, for which the userid is obtained by
    rsyslogd during startup processing. Interim changes to the user
    mapping are not detected.
+-  **FileOwnerNum** available in 7.5.8+ and 8.1.4+
+    Set the file owner for files newly created. Please note that this
+   setting does not affect the owner of files already existing. The
+   parameter is a numerical ID, which which is used regardless of
+   whether the user actually exists. This can be useful if the user
+   mapping is not available to rsyslog during startup.
 -  **FileGroup**
     Set the group for files newly created. Please note that this setting
    does not affect the group of files already existing. The parameter is
    a group name, for which the groupid is obtained by rsyslogd during
    startup processing. Interim changes to the user mapping are not
    detected.
--  **DirCreateMode**\ [defaul 0700]
-    This is the same as $FileCreateMode, but for directories
-   automatically generated.
--  **FileCreateMode**\ [default 0644]
+-  **FileGroupNum** available in 7.5.8+ and 8.1.4+
+    Set the group for files newly created. Please note that this setting
+   does not affect the group of files already existing. The parameter is
+   a numerical ID, which is used regardless of whether the group
+   actually exists. This can be useful if the group mapping is not
+   available to rsyslog during startup.
+-  **FileCreateMode**\ [default equelly-named module parameter]
     The FileCreateMode directive allows to specify the creation mode
    with which rsyslogd creates new files. If not specified, the value
    0644 is used (which retains backward-compatibility with earlier
@@ -108,6 +145,9 @@ module. It is a built-in module that does not need to be loaded.
    FileCreateMode may be specified multiple times. If so, it specifies
    the creation mode for all selector lines that follow until the next
    $FileCreateMode directive. Order of lines is vitally important.
+-  **DirCreateMode**\ [default equelly-named module parameter]
+    This is the same as FileCreateMode, but for directories
+   automatically generated.
 -  **FailOnCHOwnFailure**\ on/off [default on]
     This option modifies behaviour of file creation. If different owners
    or groups are specified for new files or directories and rsyslogd
@@ -119,7 +159,8 @@ module. It is a built-in module that does not need to be loaded.
 -  **CreateDirs**\ on/off [default on]
     create directories on an as-needed basis
 -  **Sync**\ on/off [default off]
-    enables file syncing capability of omfile.
+    enables file syncing capability of omfile. Note that this causes an
+   enormous performance hit if enabled.
 -  **File**
     If the file already exists, new data is appended to it. Existing
    data is not truncated. If the file does not already exist, it is
@@ -144,8 +185,6 @@ module. It is a built-in module that does not need to be loaded.
 -  **Cry.Provider**\ [ProviderName]
     Selects a crypto provider for log encryption. Currently, there only
    is one provider called "`gcry <cryprov_gcry.html>`_\ ".
--  **Template**\ [templateName]
-    sets a new default template for file actions.
 
 **See Also**
 
@@ -175,8 +214,8 @@ module. It is a built-in module that does not need to be loaded.
 
 The following command writes all syslog messages into a file.
 
-Module (load="builtin:omfile") \*.\* action(type="omfile"
-DirCreateMode="0700" FileCreateMode="0644" File="/var/log/messages")
+action(type="omfile" DirCreateMode="0700" FileCreateMode="0644"
+File="/var/log/messages")
 
 **Legacy Configuration Directives**:
 

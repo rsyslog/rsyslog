@@ -12,8 +12,8 @@ TCP Syslog Input Module
 **Description**:
 
 Provides the ability to receive syslog messages via TCP. Encryption is
-natively provided by selecting the approprioate network stream driver
-and can also be provided by using `stunnel <rsyslog_stunnel.html>`_ (an
+natively provided by selecting the appropriate network stream driver and
+can also be provided by using `stunnel <rsyslog_stunnel.html>`_ (an
 alternative is the use the `imgssapi <imgssapi.html>`_ module).
 
 **Configuration Directives**:
@@ -70,7 +70,7 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
    preserve some queue space for inputs that can not throttle (like
    UDP), but it may have some undesired effect in some configurations.
    Still, we consider this as a useful setting and thus it is the
-   default. To turn the handling off, simply configure that explicitely.
+   default. To turn the handling off, simply configure that explicitly.
 -  **MaxListeners** <number>
     Sets the maximum number of listeners (server ports) supported.
    Default is 20. This must be set before the first $InputTCPServerRun
@@ -78,9 +78,19 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
 -  **MaxSessions** <number>
     Sets the maximum number of sessions supported. Default is 200. This
    must be set before the first $InputTCPServerRun directive
+-  **StreamDriver.Name** <name>
+    Sets the driver name and overrides the system default. This enables
+   e.g. to define a system default of "gtls" (for TLS transmission) and
+   override it to "ptcp" (traditional unprotected plain tcp). Note,
+   however, that this is a module parameter. Currently, imtcp does not
+   support mixed TLS/non-TLS listeners. If this is desired, use imtcp
+   for TLS, and imptcp for non-TLS. However, setting the stream driver
+   enables you to use e.g. plain tcp for the imtcp listeners while
+   setting the system default to TLS, which is then used by multiple
+   forwarding (omfwd) actions.
 -  **StreamDriver.Mode** <number>
     Sets the driver mode for the currently selected `network stream
-   driver <netstream.html>`_. <number> is driver specifc.
+   driver <netstream.html>`_. <number> is driver specific.
 -  **StreamDriver.AuthMode** <mode-string>
     Sets the authentication mode for the currently selected `network
    stream driver <netstream.html>`_. <mode-string> is driver specifc.
@@ -95,7 +105,7 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
    Array of peers:
    PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]
 
-**Action Directives**:
+**Input Parameters**:
 
 -  **Port** <port>
     Starts a TCP server on selected port
@@ -112,6 +122,19 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
    unchanged until you know very well what you do. It may be useful to
    turn it off, if you know this framing is not used and some senders
    emit multi-line messages into the message stream.
+-  **defaultTZ** <timezone-info>
+    This is an **experimental** parameter; details may change at any
+   time and it may also be discoutinued without any early warning.
+    Permits to set a default timezone for this listener. This is useful
+   when working with legacy syslog (RFC3164 et al) residing in different
+   timezones. If set it will be used as timezone for all messages **that
+   do not contain timezone info**. Currently, the format **must** be
+   "+/-hh:mm", e.g. "-05:00", "+01:30". Other formats, including TZ
+   names (like EST) are NOT yet supported. Note that consequently no
+   daylight saving settings are evaluated when working with timezones.
+   If an invalid format is used, "interesting" things can happen, among
+   them malformed timestamps and rsyslogd segfaults. This will obviously
+   be changed at the time this feature becomes non-experimental.
 -  **RateLimit.Interval** [number] - (available since 7.3.1) specifies
    the rate-limiting interval in seconds. Default value is 0, which
    turns off rate limiting. Set it to a number of seconds (5

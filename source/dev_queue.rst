@@ -103,7 +103,7 @@ practice, this is highly unlikely (but only for the main message queue)
 because rsyslog issues a startup message. HOWEVER, we can not rely on
 that, it would introduce a race. If the primary rsyslog thread (the one
 that issues the message) is scheduled very late and there is a low
-inactivty timeout for queue workers, the queue worker may terminate
+inactivity timeout for queue workers, the queue worker may terminate
 before the startup message is issued. And if the on-disk queue holds
 only a few messages, it may become empty before the DA worker is
 re-initiated again. So it is possible that the DA run mode termination
@@ -135,7 +135,7 @@ restarted. In some cases, the queue shutdown process may initiate the
 One might think that it would be more natural for the DA queue to detect
 being idle and shut down itself. However, there are some issues
 associated with that. Most importantly, all queue worker threads need to
-be shut down during queue destruction. Only after that has happend,
+be shut down during queue destruction. Only after that has happened,
 final destruction steps can happen (else we would have a myriad of
 races). However, it is the DA queues worker thread that detects it is
 empty (empty queue detection always happens at the consumer side and
@@ -147,9 +147,9 @@ mention the other issues - so let's forget about it). As such, the
 thread that enqueues messages must destruct the queue - and that is the
 primary queue's DA worker thread.
 
-There are some subleties due to thread synchronization and the fact that
-the DA consumer may not be running (in a **case-2 startup**). So it is
-not trivial to reliably change the queue back from DA run mode to
+There are some subtleties due to thread synchronization and the fact
+that the DA consumer may not be running (in a **case-2 startup**). So it
+is not trivial to reliably change the queue back from DA run mode to
 regular run mode. The priority is a clean switch. We accept the fact
 that there may be situations where we cleanly shut down DA run mode,
 just to re-enable it with the very next message being enqueued. While
@@ -167,7 +167,7 @@ The primary queue's DA worker thread may wait at two different places:
 Case 2 is unlikely, but may happen (see info above on a case 2 startup).
 
 **The DA worker may also not wait at all,** because it is actively
-executing and shuffeling messages between the queues. In that case,
+executing and shuffling messages between the queues. In that case,
 however, the program flow passes both of the two wait conditions but
 simply does not wait.
 

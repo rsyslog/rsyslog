@@ -52,7 +52,8 @@ Flow Control Statements
 
 -  **if expr then ... else ...** - conditional execution
 -  **stop** - stops processing the current message
--  **call** - calls a ruleset (just like a subroutine call)
+-  **`call <rainerscript_call.html>`_** - calls a ruleset (just like a
+   subroutine call)
 -  **continue** - a NOP, useful e.g. inside the then part of an if
 
 Data Manipulation Statements

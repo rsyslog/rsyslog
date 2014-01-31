@@ -52,6 +52,65 @@ If in doubt how to properly escape, use the `RainerScript String Escape
 Online
 Tool <http://www.rsyslog.com/rainerscript-constant-string-escaper/>`_.
 
+Variable (Property) types
+-------------------------
+
+All rsyslog properties (see the `property
+replacer <property_replacer.html>`_ page for a list) can be used in
+RainerScript. In addition, it also supports local variables. Local
+variables are local to the current message, but are NOT message
+properties (e.g. the "$!" all JSON property does not contain them).
+
+Only message json (CEE/Lumberjack) properties can be modified by the
+"set" and "unset" statements, not any other message property. Obviously,
+local variables are also modifieable.
+
+Message JSON property names start with "$!" where the bang character
+represents the root.
+
+Local variables names start with "$.", where the dot denotes the root.
+
+Both JSON properties as well as local variables may contain an arbitrary
+deep path before the final element. The bang character is always used as
+path separator, no matter if it is a message property or a local
+variable. For example "$!path1!path2!varname" is a three-level deep
+message property where as the very similar looking
+"$.path1!path2!varname" specifies a three-level deep local variable. The
+bang or dot character immediately following the dollar sign is used by
+rsyslog to separate the different types.
+
+configuration objects
+---------------------
+
+main\_queue()
+~~~~~~~~~~~~~
+
+*This object is available since 7.5.3.* This permits to specify
+parameters for the main message queue. Note that only
+`queue-parameters <queue_parameters.html>`_ are permitted for this
+config object. This permits to set the same options like in ruleset and
+action queues. A special statement is needed for the main queue, because
+it is a different object and cannot be configured via any other object.
+
+Note that when the main\_queue() object is configured, the legacy
+$MainMsgQ... statements are ignored.
+
+Example:
+
+main\_queue(queue.size="100000" queue.type="LinkedList")
+
+action()
+~~~~~~~~
+
+The `action <rsyslog_conf_actions.html>`_ object is the primary means of
+describing actions to be carried out.
+
+global()
+~~~~~~~~
+
+This is used to set global configuration parameters. For details, please
+see the `rsyslog global configuration object <rsyslog_global>`_.
+
 Expressions
 -----------
 
@@ -77,21 +136,6 @@ so that you can pick whichever you like best. So inquality of a and b
 should be tested as "a <> b". The "not" operator should be reserved to
 cases where it actually is needed to form a complex boolean expression.
 In those cases, parenthesis are highly recommended.
-
-configuration objects
----------------------
-
-action()
-~~~~~~~~
-
-The `action <rsyslog_conf_actions.html>`_ object is the primary means of
-describing actions to be carried out.
-
-global()
-~~~~~~~~
-
-This is used to set global configuration parameters. For details, please
-see the `rsyslog global configuration object <global.html>`_.
 
 Lookup Tables
 -------------

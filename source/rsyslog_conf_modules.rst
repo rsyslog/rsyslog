@@ -133,13 +133,25 @@ module's code is probably an excellent starting base for writing a new
 module. Currently, the following modules exist inside the source tree:
 
 -  `mmanon <mmanon.html>`_ - used to anonymize log messages.
+-  `mmcount <mmcount.html>`_ - message modification plugin which counts
+   messages
+-  `mmfields <mmfields.html>`_ - used to extract fields from specially
+   formatted messages (e.g. CEF)
 -  `mmnormalize <mmnormalize.html>`_ - used to normalize log messages.
    Note that this actually is a **generic** module.
 -  `mmjsonparse <mmjsonparse.html>`_ - used to interpret CEE/lumberjack
    enabled structured log messages.
+-  `mmpstrucdata <mmpstrucdata.html>`_ - used to parse RFC5424
+   structured data into json message properties
 -  `mmsnmptrapd <mmsnmptrapd.html>`_ - uses information provided by
    snmptrapd inside the tag to correct the original sender system and
    priority of messages. Implemented via the output module interface.
+-  `mmutf8fix <mmutf8fix.html>`_ - used to fix invalid UTF-8 character
+   sequences
+-  `mmrfc5424addhmac <mmrfc5424addhmac.html>`_ - custom module for
+   adding HMACs to rfc5424-formatted messages if not already present
+-  `mmsequence <mmsequence.html>`_ - sequence generator and counter
+   plugin
 
 String Generator Modules
 ------------------------

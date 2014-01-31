@@ -88,11 +88,11 @@ the input they are specified with.
    effect if keep-alive is enabled. The functionality may not be
    available on all platforms.
 -  **KeepAlive.Interval** <number>
-    The interval between subsequential keepalive probes, regardless of
-   what the connection has exchanged in the meantime. The default, 0,
-   means that the operating system defaults are used. This has only
-   effect if keep-alive is enabled. The functionality may not be
-   available on all platforms.
+    The interval between subsequent keepalive probes, regardless of what
+   the connection has exchanged in the meantime. The default, 0, means
+   that the operating system defaults are used. This has only effect if
+   keep-alive is enabled. The functionality may not be available on all
+   platforms.
 -  **KeepAlive.Time** <number>
     The interval between the last data packet sent (simple ACKs are not
    considered data) and the first keepalive probe; after the connection
@@ -112,12 +112,29 @@ the input they are specified with.
 -  **Address** <name>
     On multi-homed machines, specifies to which local address the
    listerner should be bound.
+-  **defaultTZ** <timezone-info>
+    This is an **experimental** parameter; details may change at any
+   time and it may also be discoutinued without any early warning.
+    Permits to set a default timezone for this listener. This is useful
+   when working with legacy syslog (RFC3164 et al) residing in different
+   timezones. If set it will be used as timezone for all messages **that
+   do not contain timezone info**. Currently, the format **must** be
+   "+/-hh:mm", e.g. "-05:00", "+01:30". Other formats, including TZ
+   names (like EST) are NOT yet supported. Note that consequently no
+   daylight saving settings are evaluated when working with timezones.
+   If an invalid format is used, "interesting" things can happen, among
+   them malformed timestamps and rsyslogd segfaults. This will obviously
+   be changed at the time this feature becomes non-experimental.
 -  **RateLimit.Interval** [number] - (available since 7.3.1) specifies
    the rate-limiting interval in seconds. Default value is 0, which
    turns off rate limiting. Set it to a number of seconds (5
    recommended) to activate rate-limiting.
 -  **RateLimit.Burst** [number] - (available since 7.3.1) specifies the
    rate-limiting burst in number of messages. Default is 10,000.
+-  **compression.mode**\ *mode*
+    *mode* is one of "none" or "stream:always". It is the counterpart to
+   the compression modes set in `omfile <omfile.html>`_. Please see it's
+   documentation for details.
 
 **Caveats/Known Bugs:**
 

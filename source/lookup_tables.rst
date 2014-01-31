@@ -126,7 +126,7 @@ This function is used to actually do the table lookup. Format:
 
 ::
 
-    lookup_table("name", indexvalue)
+    lookup("name", indexvalue)
 
 Parameters
 ^^^^^^^^^^

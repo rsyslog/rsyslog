@@ -2,11 +2,17 @@ This is a part of the rsyslog.conf documentation.
 
 `back <rsyslog_conf.html>`_
 
+***Note: this documentation describes features present in v7+ of
+rsyslog. If you use an older version, scroll down to "legacy
+parameters".*** If you prefer, you can also `obtain a specific version
+of the rsyslog
+documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
+
 Actions
 -------
 
 Action object describe what is to be done with a message. They are
-implemented via `outpout modules <rsyslog_conf_modules.html#om>`_.
+implemented via `output modules <rsyslog_conf_modules.html#om>`_.
 
 The action object has different parameters:
 
@@ -14,9 +20,11 @@ The action object has different parameters:
    documented below.
 -  parameters for the action queue. While they also apply to all
    parameters, they are queue-specific, not action-specific (they are
-   the same that are used in rulesets, for example).
+   the same that are used in rulesets, for example). The are documented
+   separately under `queue parameters <queue_parameters.html>`_.
 -  action-specific parameters. These are specific to a certain type of
-   actions. They are documented by the output module in question.
+   actions. They are documented by the `output
+   module <rsyslog_conf_modules.html#om>`_ in question.
 
 General Action Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,8 +105,15 @@ General Action Parameters
    after the 10th try, it by default is 60 and after the 100th try it is
    330.
 
+Useful Links
+------------
+
+-  Rainer's blog posting on the performance of `main and action queue
+   worker
+   threads <http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
+
 Legacy Format
--------------
+=============
 
 **Be warned that legacy action format is hard to get right. It is
 recommended to use RainerScript-Style action format whenever possible!**

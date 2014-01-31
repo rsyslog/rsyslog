@@ -68,6 +68,11 @@ Currently none.
    always zero-filled and replacementChar is of no use. If it is
    specified, an error message is emitted and the parameter ignored.
 
+**See Also**
+
+-  `Howto anonymize messages that go to specific
+   files <http://www.rsyslog.com/howto-anonymize-messages-that-go-to-specific-files/>`_
+
 **Caveats/Known Bugs:**
 
 -  **only IPv4** is supported

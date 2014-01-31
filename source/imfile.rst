@@ -103,6 +103,19 @@ multiple times.
    1 - paragraph (There is a blank line between log messages)
    2 - indented (New log messages start at the beginning of a line. If a
    line starts with a space it is part of the log message before it)
+-  **escapeLF** [**on**/off] (requires v7.5.3+)
+    This is only meaningful if multi-line messages are to be processed.
+   LF characters embedded into syslog messages cause a lot of trouble,
+   as most tools and even the legacy syslog TCP protocol do not expect
+   these. If set to "on", this option avoid this trouble by properly
+   escaping LF characters to the 4-byte sequence "#012". This is
+   consistent with other rsyslog control character escaping. By default,
+   escaping is turned on. If you turn it off, make sure you test very
+   carefully with all associated tools. Please note that if you intend
+   to use plain TCP syslog with embedded LF characters, you need to
+   enable octet-counted framing. For more details, see Rainer's blog
+   posting on `imfile LF
+   escaping <http://blog.gerhards.net/2013/09/imfile-multi-line-messages.html>`_.
 -  **MaxLinesAtOnce** [number]
     This is useful if multiple files need to be monitored. If set to 0,
    each file will be fully processed and then processing switches to the
@@ -150,6 +163,12 @@ input(type="imfile" File="/path/to/file2" Tag="tag2"
 StateFile="statefile2") # ... and so on ... #
 
 **Legacy Configuration Directives**:
+
+Note: in order to preserve compatibility with previous versions, the LF
+escaping in multi-line messages is turned off for legacy-configured file
+monitors (the "escapeLF" input parameter). This can cause serious
+problems. So it is highly suggested that new deployments use the new
+input() statement and keep LF escaping turned on.
 
 -  **$InputFileName /path/to/file**
     equivalent to: File

@@ -23,7 +23,7 @@ The rsyslog package contains several components:
 Each of these components can be thought of as individual projects. In
 fact, some of the plugins have different main authors than the rest of
 the rsyslog package. All of these components are currently put together
-into a single "rsyslog" package (tarball) for convinience: this makes it
+into a single "rsyslog" package (tarball) for convenience: this makes it
 easier to distribute a consistent version where everything is included
 (and in the right versions) to build a full system. Platform package
 maintainers in general take the overall package and split off the

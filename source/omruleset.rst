@@ -9,6 +9,16 @@ ruleset output/including module (omruleset)
 
 **Available Since**: 5.3.4
 
+**Deprecated in**: 7.2.0+
+
+**Deprecation note**
+
+This module exists only for backwards-compatibility reasons. **Do no
+longer use it in new configurations.** It has been replaced by the much
+more efficient `"call" RainerScript
+statement <rainerscript_call.html>`_. The "call" statement supports
+everything omruleset does, but in an easier to use way.
+
 **Description**:
 
 This is a very special "output" module. It permits to pass a message

@@ -4,7 +4,7 @@ Multiple Rulesets in rsyslog
 Starting with version 4.5.0 and 5.1.1,
 `rsyslog <http://www.rsyslog.com>`_ supports multiple rulesets within a
 single configuration. This is especially useful for routing the
-recpetion of remote messages to a set of specific rules. Note that the
+reception of remote messages to a set of specific rules. Note that the
 input module must support binding to non-standard rulesets, so the
 functionality may not be available with all inputs.
 

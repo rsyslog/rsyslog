@@ -18,7 +18,7 @@ an ordinary user. That is probably the safest way of operations.
 However, if a startup as root is required, you can use the
 $PrivDropToGroup and $PrivDropToUser config directives to specify a
 group and/or user that rsyslogd should drop to after initialization.
-Once this happend, the daemon runs without high privileges (depending,
+Once this happens, the daemon runs without high privileges (depending,
 of course, on the permissions of the user account you specified).
 
 There is some additional information available in the `rsyslog

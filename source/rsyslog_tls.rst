@@ -21,8 +21,7 @@ have found the right spot.
 
 This is a quick guide. There is a more elaborate guide currently under
 construction which provides a much more secure environment. It is highly
-recommended to `at least have a look at
-it <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_.
+recommended to `at least have a look at it <rsyslog_secure_tls.html>`_.
 
 Background
 ----------

@@ -23,7 +23,7 @@ engine.
    startup and shutdown) and these do not stem from the kernel.
    Historically, under Linux, these too have "kern" facility. Thus, on
    Linux platforms the default is "kern" while on others it is
-   "syslogd". You usually do not need to specify this configuratin
+   "syslogd". You usually do not need to specify this configuration
    directive - it is included primarily for few limited cases where it
    is needed for good reason. Bottom line: if you don't have a good idea
    why you should use this setting, do not touch it.

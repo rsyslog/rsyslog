@@ -15,14 +15,22 @@ need to be loaded.
 
  
 
-**Global Configuration Directives**:
+***Note: this documentation describes features present in v7+ of
+rsyslog. If you use an older version, scroll down to "legacy
+parameters".*** If you prefer, you can also `obtain a specific version
+of the rsyslog
+documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
+
+ 
+
+**Module Parameters**:
 
 -  **Template**\ [templateName]
     sets a non-standard default template for this module.
 
  
 
-**Action specific Configuration Directives**:
+**Action Parameters**:
 
 -  **Target**\ string
     Name or IP-Address of the system that shall receive messages. Any
@@ -58,18 +66,67 @@ need to be loaded.
    receiver supports octet-counted framing, it is suggested to use that
    framing mode.
 -  **ZipLevel**\ 0..9 [default 0]
-    Compression level for messages. Rsyslog implements a proprietary
-   capability to zip transmitted messages. Note that compression happens
-   on a message-per-message basis. As such, there is a performance gain
-   only for larger messages. Before compressing a message, rsyslog
-   checks if there is some gain by compression. If so, the message is
-   sent compressed. If not, it is sent uncompressed. As such, it is
-   totally valid that compressed and uncompressed messages are
-   intermixed within a conversation.
+    Compression level for messages.
+   Up until rsyslog 7.5.1, this was the only compression setting that
+   rsyslog understood. Starting with 7.5.1, we have different
+   compression modes. All of them are affected by the ziplevel. If,
+   however, no mode is explicitely set, setting ziplevel also turns on
+   "single" compression mode, so pre 7.5.1 configuration will continue
+   to work as expected.
    The compression level is specified via the usual factor of 0 to 9,
    with 9 being the strongest compression (taking up most processing
    time) and 0 being no compression at all (taking up no extra
    processing time).
+-  **maxErrorMessages**\ integer [default 5], available since 7.5.4
+    This sets the maximum number of error messages that omfwd emits
+   during regular operations. The reason for such an upper limit is that
+   error messages are conveyed back to rsyslog's input message stream.
+   So if there would be no limit, an endless loop could be initiated if
+   the failing action would need to process its own error messages and
+   the emit a new one. This is also the reason why the default is very
+   conservatively low. Note that version prior to 7.5.4 did not report
+   any error messages for the same reason. Also note that with the
+   initial implementation only errors during UDP forwarding are logged.
+-  **compression.mode** *mode*
+    *mode* is one of "none", "single", or "stream:always". The default
+   is "none", in which no compression happens at all.
+   In "single" compression mode, Rsyslog implements a proprietary
+   capability to zip transmitted messages. That compression happens on a
+   message-per-message basis. As such, there is a performance gain only
+   for larger messages. Before compressing a message, rsyslog checks if
+   there is some gain by compression. If so, the message is sent
+   compressed. If not, it is sent uncompressed. As such, it is totally
+   valid that compressed and uncompressed messages are intermixed within
+   a conversation.
+   In "stream:always" compression mode the full stream is being
+   compressed. This also uses non-standard protocol and is compatible
+   only with receives that have the same abilities. This mode offers
+   potentially very high compression ratios. With typical syslog
+   messages, it can be as high as 95+% compression (so only one
+   twentieth of data is actually transmitted!). Note that this mode
+   introduces extra latency, as data is only sent when the compressor
+   emits new compressed data. For typical syslog messages, this can mean
+   that some hundered messages may be held in local buffers before they
+   are actually sent. This mode has been introduced in 7.5.1.
+   **Note: currently only imptcp supports receiving stream-compressed
+   data.**
+-  **compression.stream.flushOnTXEnd** *[**on**/off*] (requires 7.5.3+)
+    This setting affects stream compression mode, only. If enabled (the
+   default), the compression buffer will by emptied at the end of a
+   rsyslog batch. If set to "off", end of batch will not affect
+   compression at all.
+    While setting it to "off" can potentially greatly improve
+   compression ratio, it will also introduce severe delay between when a
+   message is being processed by rsyslog and actually sent out to the
+   network. We have seen cases where for several thousand message not a
+   single byte was sent. This is good in the sense that it can happen
+   only if we have a great compression ratio. This is most probably a
+   very good mode for busy machines which will process several thousand
+   messages per second and te resulting short delay will not pose any
+   problems. However, the default is more conservative, while it works
+   more "naturally" with even low message traffic. Even in flush mode,
+   notable compression should be achivable (but we do not yet have
+   practice reports on actual compression ratios).
 -  **RebindInterval**\ integer
     Permits to specify an interval at which the current connection is
    broken and re-established. This setting is primarily an aid to load
@@ -121,8 +178,7 @@ need to be loaded.
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-Module (load="builtin:omfwd") \*.\* action(type="omfwd"
-Target="192.168.2.11" Port="10514" Protocol="tcp" )
+action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
 
 **Legacy Configuration Directives**:
 
@@ -176,6 +232,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
+ Copyright © 2008-2013 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.
