@@ -217,10 +217,10 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'rsyslogdoc', u'Rsyslog Documentation',
-     [u'foo bar'], 1),
-    ('modules/omelasticsearch', 'omelasticsearch', u'omelasticsearch Documentation',
-     [u'foo bar'], 1)
+    ('queues', 'rsyslog-queues', u'Rsyslog Documentation: Queues',
+     [u'Rainer Gerhards'], 1),
+    ('configuration/actions', 'rsyslog-actions', u'Rsyslog Documentation: Actions',
+     [u'Rainer Gerhards'], 1),
 ]
 
 # If true, show URL addresses after external links.
