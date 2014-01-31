@@ -24,6 +24,9 @@ really easy and usually done with just a couple of code lines!
 
 How to write your own plugin?
 =============================
+View this presentation to learn howto write a plugin in 2 minutes:
+    http://www.slideshare.net/rainergerhards1/writing-rsyslog-p
+
 See the [INTERFACE](INTERFACE.md) file. And see the [skeletons](skeletons)
 subdirectory for exisiting ready-to-copy sample plugins that do the
 necessary plumbing.
