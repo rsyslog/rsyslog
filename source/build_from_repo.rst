@@ -18,7 +18,7 @@ Obtaining the Source
 
 First of all, you need to download the sources. Rsyslog is kept in git.
 The "`Where to find the rsyslog source
-codea <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
+code <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
 page on the project site will point you to the current repository
 location.
 

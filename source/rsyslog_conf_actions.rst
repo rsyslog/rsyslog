@@ -34,13 +34,15 @@ General Action Parameters
 -  **type** string
    Mandatory parameter for every action. The name of the module that
    should be used.
--  **action.writeAllMarkMessages** on/off
-   Normally, mark messages are written to actions only if the action was
-   not recently executed (by default, recently means within the past 20
-   minutes). If this setting is switched to "on", mark messages are
-   always sent to actions, no matter how recently they have been
-   executed. In this mode, mark messages can be used as a kind of
-   heartbeat.
+-  **action.writeAllMarkMessages** *on*/off
+   This setting tells if mark messages are always written ("on", the
+   default) or only if the action was not recently executed ("off"). By
+   default, recently means within the past 20 minutes. If this setting
+   is "on", mark messages are always sent to actions, no matter how
+   recently they have been executed. In this mode, mark messages can be
+   used as a kind of heartbeat. This mode also enables faster processing
+   inside the rule engine. So it should be set to "off" only when there
+   is a good reason to do so.
 -  **action.execOnlyEveryNthTime** integer
    If configured, the next action will only be executed every n-th time.
    For example, if configured to 3, the first two messages that go into

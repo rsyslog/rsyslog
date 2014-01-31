@@ -94,6 +94,28 @@ Clients send messages to the RELP server via omrelp.
    manual <http://gnutls.org/manual/html_node/Priority-Strings.html>`_.
    **Note: this is an expert parameter.** Do not use if you do not
    exactly know what you are doing.
+-  **KeepAlive** <on/**off**> (available in 8.1.4+)
+    enable of disable keep-alive packets at the tcp socket layer. The
+   default is to disable them.
+-  **KeepAlive.Probes** <number> (available in 8.1.4+)
+    The number of unacknowledged probes to send before considering the
+   connection dead and notifying the application layer. The default, 0,
+   means that the operating system defaults are used. This has only
+   effect if keep-alive is enabled. The functionality may not be
+   available on all platforms.
+-  **KeepAlive.Interval** <number> (available in 8.1.4+)
+    The interval between subsequent keepalive probes, regardless of what
+   the connection has exchanged in the meantime. The default, 0, means
+   that the operating system defaults are used. This has only effect if
+   keep-alive is enabled. The functionality may not be available on all
+   platforms.
+-  **KeepAlive.Time** <number> (available in 8.1.4+)
+    The interval between the last data packet sent (simple ACKs are not
+   considered data) and the first keepalive probe; after the connection
+   is marked to need keepalive, this counter is not used any further.
+   The default, 0, means that the operating system defaults are used.
+   This has only effect if keep-alive is enabled. The functionality may
+   not be available on all platforms.
 
 **Caveats/Known Bugs:**
 

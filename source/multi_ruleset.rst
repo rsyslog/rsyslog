@@ -119,6 +119,16 @@ did not explicitly bind to one. As such, the directive can not be used
 as a work-around to bind inputs to non-default rulesets that do not
 support ruleset binding.
 
+Rulesets and Main Queues
+------------------------
+
+By default, rulesets do not have their own queue. It must be activated
+via the $RulesetCreateMainQueue directive, or if using rainerscript
+format, by specifying queue parameters on the ruleset directive, e.g.
+ruleset(name="whatever" queue.type="fixedArray" queue. ...) See
+`http://www.rsyslog.com/doc/queue\_parameters.html <http://www.rsyslog.com/doc/queue_parameters.html>`_
+for more details.
+
 Examples
 --------
 

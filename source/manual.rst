@@ -21,7 +21,7 @@ page <http://www.rsyslog.com/sponsors>`_ to honor the project sponsors
 or become one yourself!** We are very grateful for any help towards the
 project goals.
 
-**This documentation is for version 7.5.7 (devel branch) of rsyslog.**
+**This documentation is for version 8.1.3 (devel branch) of rsyslog.**
 Visit the *`rsyslog status page <http://www.rsyslog.com/status>`_* to
 obtain current version information and project status.
 
@@ -31,14 +31,17 @@ doesn't require a lot of time - even a single mouse click helps. Learn
 demand, there is now a `side-by-side comparison between rsyslog and
 syslog-ng <rsyslog_ng_comparison.html>`_.
 
+If you upgrade from v7, read the `rsyslog v8 compatibility
+notes <v8compatibility.html>`_. if you upgrade from v6, read the
+`rsyslog v7 compatibility notes <v7compatibility.html>`_. if you upgrade
+from v5, read the `rsyslog v6 compatibility
+notes <v6compatibility.html>`_. if you upgrade from v4, read the
+`rsyslog v5 compatibility notes <v5compatibility.html>`_. if you upgrade
+from v3, read the `rsyslog v4 compatibility
+notes <v4compatibility.html>`_.
+
 If you are upgrading from rsyslog v2 or stock sysklogd, `be sure to read
-the rsyslog v3 compatibility notes <v3compatibility.html>`_, and if you
-are upgrading from v3, read the `rsyslog v4 compatibility
-notes <v4compatibility.html>`_, if you upgrade from v4, read the
-`rsyslog v5 compatibility notes <v5compatibility.html>`_, and if you
-upgrade from v5, read the `rsyslog v6 compatibility
-notes <v6compatibility.html>`_. if you upgrade from v6, read the
-`rsyslog v7 compatibility notes <v7compatibility.html>`_.
+the rsyslog v3 compatibility notes <v3compatibility.html>`_,
 
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.

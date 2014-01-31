@@ -64,31 +64,39 @@ Output modules process messages. With them, message formats can be
 transformed and messages be transmitted to various different targets.
 
 -  `omfile <omfile.html>`_ - file output module
--  `omfwd <omfwd.html>`_ - syslog forwarding output module
+-  `omfwd <omfwd.html>`_ (does NOT yet work in v8) - syslog forwarding
+   output module
 -  `omjournal <omjournal.html>`_ - Linux journal output module
 -  `ompipe <ompipe.html>`_ - named pipe output module
 -  `omusrmsg <omusrmsg.html>`_ - user message output module
--  `omsnmp <omsnmp.html>`_ - SNMP trap output module
+-  `omsnmp <omsnmp.html>`_ (does NOT yet work in v8) - SNMP trap output
+   module
 -  `omtdout <omstdout.html>`_ - stdout output module (mainly a test
    tool)
--  `omrelp <omrelp.html>`_ - RELP output module
+-  `omrelp <omrelp.html>`_ (does NOT yet work in v8) - RELP output
+   module
 -  `omruleset <omruleset.html>`_ - forward message to another ruleset
--  omgssapi - output module for GSS-enabled syslog
+-  omgssapi (does NOT yet work in v8) - output module for GSS-enabled
+   syslog
 -  `ommysql <ommysql.html>`_ - output module for MySQL
--  ompgsql - output module for PostgreSQL
--  `omlibdbi <omlibdbi.html>`_ - generic database output module
-   (Firebird/Interbase, MS SQL, Sybase, SQLLite, Ingres, Oracle, mSQL)
--  `ommail <ommail.html>`_ - permits rsyslog to alert folks by mail if
-   something important happens
--  `omprog <omprog.html>`_ - permits sending messages to a program for
-   custom processing
--  `omoracle <omoracle.html>`_ - output module for Oracle (native OCI
-   interface)
--  `omudpspoof <omudpspoof.html>`_ - output module sending UDP syslog
-   messages with a spoofed address
--  `omuxsock <omuxsock.html>`_ - output module Unix domain sockets
--  `omhdfs <omhdfs.html>`_ - output module for Hadoop's HDFS file system
--  `ommongodb <ommongodb.html>`_ - output module for MongoDB
+-  ompgsql (does NOT yet work in v8) - output module for PostgreSQL
+-  `omlibdbi <omlibdbi.html>`_ (does NOT yet work in v8) - generic
+   database output module (Firebird/Interbase, MS SQL, Sybase, SQLLite,
+   Ingres, Oracle, mSQL)
+-  `ommail <ommail.html>`_ (does NOT yet work in v8) - permits rsyslog
+   to alert folks by mail if something important happens
+-  `omprog <omprog.html>`_ (does NOT yet work in v8) - permits sending
+   messages to a program for custom processing
+-  `omoracle <omoracle.html>`_ (orphaned) - output module for Oracle
+   (native OCI interface)
+-  `omudpspoof <omudpspoof.html>`_ (does NOT yet work in v8) - output
+   module sending UDP syslog messages with a spoofed address
+-  `omuxsock <omuxsock.html>`_ (does NOT yet work in v8) - output module
+   Unix domain sockets
+-  `omhdfs <omhdfs.html>`_ (does NOT yet work in v8) - output module for
+   Hadoop's HDFS file system
+-  `ommongodb <ommongodb.html>`_ (does NOT yet work in v8) - output
+   module for MongoDB
 -  `omelasticsearch <omelasticsearch.html>`_ - output module for
    ElasticSearch
 
