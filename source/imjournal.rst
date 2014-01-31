@@ -5,7 +5,8 @@ Systemd Journal Input Module
 
 **Module Name:    imjournal**
 
-**Author:**\ Milan Bartos <mbartos@redhat.com>
+**Author:**\ Milan Bartos <mbartos@redhat.com> (This module is not
+project-supported)
 
 **Description**:
 

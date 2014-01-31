@@ -31,6 +31,13 @@ environments).
 The rsyslog website has an updated overview of available `rsyslog
 statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
 
+**Note that there is a `rsyslog statistics online
+analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ available.** It
+can be given a impstats-generated file and will return problems it
+detects. Note that the analyzer cannot replace a human in getting things
+right, but it is expected to be a good aid in starting to understand and
+gain information from the pstats logs. <7p>
+
 **Module Confguration Parameters**:
 
 This module supports module parameters, only.

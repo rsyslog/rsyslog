@@ -222,9 +222,8 @@ Implementation Details
 ----------------------
 
 The lookup table functionality is implemented via highly efficient
-algorithms. The string lookup is based on a parse tree and has O(1) time
-complexity. The array lookup is also O(1). In case of sparseArray, we
-have O(log n).
+algorithms. The string lookup has O(log n) time complexity. The array
+lookup is O(1). In case of sparseArray, we have O(log n).
 
 To preserve space and, more important, increase cache hit performance,
 equal data values are only stored once, no matter how often a lookup

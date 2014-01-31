@@ -21,7 +21,7 @@ page <http://www.rsyslog.com/sponsors>`_ to honor the project sponsors
 or become one yourself!** We are very grateful for any help towards the
 project goals.
 
-**This documentation is for version 7.4.6 (v7.4-stable branch) of
+**This documentation is for version 7.4.8 (v7.4-stable branch) of
 rsyslog.** Visit the *`rsyslog status
 page <http://www.rsyslog.com/status>`_* to obtain current version
 information and project status.
@@ -68,7 +68,8 @@ feed <http://twitter.com/rgerhards>`_.**
 -  `obtaining rsyslog from the source
    repository <build_from_repo.html>`_
 -  `rsyslog and IPv6 <ipv6.html>`_ (which is fully supported)
--  `native TLS encryption for syslog <rsyslog_secure_tls.html>`_
+-  `native TLS encryption for
+   syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
 -  `using multiple rule sets in rsyslog <multi_ruleset.html>`_
 -  `ssl-encrypting syslog with stunnel <rsyslog_stunnel.html>`_
 -  `writing syslog messages to MySQL (and other databases as

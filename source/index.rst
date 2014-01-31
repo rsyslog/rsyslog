@@ -1,7 +1,7 @@
 Welcome to rsyslog
 ==================
 
-`Rsyslog <http://www.rsyslog.com/>`_ **is an enhanced syslogd suitable
+**`Rsyslog <http://www.rsyslog.com/>`_ is an enhanced syslogd suitable
 both for small systems as well as large enterprises.**
 
 This page provide a few quick pointers which hopefully make your

@@ -37,6 +37,21 @@ concatenate them, use the concatenation operator &).  However, all type
 conversions are automatically done by the script interpreter when there
 is need to do so.
 
+Constant Strings
+~~~~~~~~~~~~~~~~
+
+String constants are necessary in many places: comparisons,
+configuration parameter values and function arguments, to name a few
+important ones.
+
+In constant strings, special characters are escape by prepending a
+backslash in front of them -- just in the same way this is done in the C
+programming language or PHP.
+
+If in doubt how to properly escape, use the `RainerScript String Escape
+Online
+Tool <http://www.rsyslog.com/rainerscript-constant-string-escaper/>`_.
+
 Expressions
 -----------
 
@@ -62,6 +77,21 @@ so that you can pick whichever you like best. So inquality of a and b
 should be tested as "a <> b". The "not" operator should be reserved to
 cases where it actually is needed to form a complex boolean expression.
 In those cases, parenthesis are highly recommended.
+
+configuration objects
+---------------------
+
+action()
+~~~~~~~~
+
+The `action <rsyslog_conf_actions.html>`_ object is the primary means of
+describing actions to be carried out.
+
+global()
+~~~~~~~~
+
+This is used to set global configuration parameters. For details, please
+see the `rsyslog global configuration object <global.html>`_.
 
 Lookup Tables
 -------------

@@ -32,16 +32,13 @@ General Action Parameters
    minutes). If this setting is switched to "on", mark messages are
    always sent to actions, no matter how recently they have been
    executed. In this mode, mark messages can be used as a kind of
-   heartbeat. Note that this option auto-resets to "off", so if you
-   intend to use it with multiple actions, it must be specified in front
-   off all selector lines that should provide this functionality.
+   heartbeat.
 -  **action.execOnlyEveryNthTime** integer
    If configured, the next action will only be executed every n-th time.
    For example, if configured to 3, the first two messages that go into
    the action will be dropped, the 3rd will actually cause the action to
    execute, the 4th and 5th will be dropped, the 6th executed under the
-   action, ... and so on. Note: this setting is automatically re-set
-   when the actual action is defined.
+   action, ... and so on.
 -  **action.execOnlyEveryNthTimeout** integer
    Has a meaning only if Action.ExecOnlyEveryNthTime is also configured
    for the same action. If so, the timeout setting specifies after which
@@ -61,7 +58,7 @@ General Action Parameters
 -  **action.execOnlyOnceEveryInterval** integer
    Execute action only if the last execute is at last seconds in the
    past (more info in ommail, but may be used with any action)
--  **action.execOnlyWhenpReviousIsSuspended** on/off
+-  **action.execOnlyWhenPreviousIsSuspended** on/off
    This directive allows to specify if actions should always be executed
    ("off," the default) or only if the previous action is suspended
    ("on"). This directive works hand-in-hand with the multiple actions
@@ -71,6 +68,11 @@ General Action Parameters
    depends on proper implementation of the suspend feature in the output
    module. All built-in output modules properly support it (most
    importantly the database write and the syslog message forwarder).
+    Note, however, that a failed action may not immediately be detected.
+   For more information, see the `rsyslog
+   execOnlyWhenPreviousIsSpuspended
+   preciseness <http://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
+   FAQ article.
 -  **action.repeatedmsgcontainsoriginalmsg** on/off
    "last message repeated n times" messages, if generated, have a
    different format that contains the message that is being repeated.
@@ -79,7 +81,7 @@ General Action Parameters
    to version, thus no specific limit is given). The bottom line is that
    n is large enough to get a good idea which message was repeated but
    it is not necessarily large enough for the whole message. (Introduced
-   with 4.1.5). Once set, it affects all following actions.
+   with 4.1.5).
 -  **action.resumeRetryCount** integer
    [default 0, -1 means eternal]
 -  **action.resumeInterval** integer

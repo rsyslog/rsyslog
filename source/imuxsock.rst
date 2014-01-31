@@ -96,8 +96,9 @@ SysSock.Annotate and Annotate).
    burst in number of messages. Default is 200.
 -  **SysSock.RateLimit.Severity** [numerical severity] - specifies the
    severity of messages that shall be rate-limited.
--  **SysSock.UseSysTimeStamp** [**on**/off] the same as
-   $InputUnixListenSocketUseSysTimeStamp, but for the system log socket.
+-  **SysSock.UseSysTimeStamp** [**on**/off] the same as the input
+   parameter UseSysTimeStamp, but for the system log socket. See
+   description there.
 -  **SysSock.Annotate** <on/**off**> turn on annotation/trusted
    properties for the system log socket.
 -  **SysSock.ParseTrusted** <on/**off**> if Annotation is turned on,
@@ -139,7 +140,7 @@ SysSock.Annotate and Annotate).
    but the default is "off" to keep compatible with earlier versions of
    rsyslog.
 -  **UseSysTimeStamp** [**on**/off] instructs imuxsock to obtain message
-   time from the system (via control messages) insted of using time
+   time from the system (via control messages) instead of using time
    recorded inside the message. This may be most useful in combination
    with systemd. Note: this option was introduced with version 5.9.1.
    Due to the usefulness of it, we decided to enable it by default. As

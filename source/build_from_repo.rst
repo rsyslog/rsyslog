@@ -16,17 +16,11 @@ and thus do not belong into the repository.
 Obtaining the Source
 --------------------
 
-First of all, you need to download the sources. Rsyslog is currently
-kept in a git repository. You can clone this repository either via http
-or git protocol (with the later being much faster. URLS are:
-
--  git://git.adiscon.com/git/rsyslog.git
--  http://git.adiscon.com/git/rsyslog.git
-
-There is also a browsable version (gitweb) available at
-`http://git.adiscon.com/?p=rsyslog.git;a=summary <http://git.adiscon.com/?p=rsyslog.git;a=summary>`_.
-This version also offers snapshots of each commit for easy download. You
-can use these if you do not have git present on your system.
+First of all, you need to download the sources. Rsyslog is kept in git.
+The "`Where to find the rsyslog source
+code <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
+page on the project site will point you to the current repository
+location.
 
 After you have cloned the repository, you are in the master branch by
 default. This is where we keep the devel branch. If you need any other
@@ -89,14 +83,14 @@ example, can be done as follows:
 
     ./configure CFLAGS="-march=i586 -mcpu=i686" --enable-imfile ... (whatever you need)
 
-These settings should resolve the issue .
+These settings should resolve the issue.
 
 [`manual index <manual.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008, 2009 by `Rainer
+ Copyright © 2008-2013 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
