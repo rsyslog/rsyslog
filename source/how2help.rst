@@ -13,10 +13,6 @@ This is our wish list:
    -  spread word about rsyslog in forums and newsgroups
    -  place a link to `www.rsyslog.com <http://www.rsyslog.com>`_ from
       your home page
-   -  you may also want to tell others about the `log analyzer tool
-      created by the same folks as
-      rsyslog <http://loganalyzer.adiscon.com>`_ - at least, if you like
-      it ;)
 
 -  let us know about rsyslog - we are eager for feedback
 
