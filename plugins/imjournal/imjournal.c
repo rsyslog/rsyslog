@@ -85,6 +85,7 @@ static struct cnfparamblk modpblk =
 	};
 
 #define DFLT_persiststateinterval 10
+#define DFLT_SEVERITY LOG_PRI(LOG_NOTICE)
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
 
@@ -170,7 +171,7 @@ readjournal() {
 
 	long prefixlen = 0;
 
-	int priority = 0;
+	int severity = DFLT_SEVERITY;
 	int facility = 0;
 
 	/* Get message text */
@@ -184,11 +185,19 @@ readjournal() {
 		}
 	}
 
-	/* Get message priority */
+	/* Get message severity ("priority" in journald's terminology) */
 	if (sd_journal_get_data(j, "PRIORITY", &get, &length) >= 0) {
-		get2 = strndup(get, length);
-		priority = ((char *)get2)[9] - '0';
-		free (get2);
+		if (length == 10) {
+			severity = ((char *)get)[9] - '0';
+			if (severity < 0 || 7 < severity) {
+				dbgprintf("The value of the 'PRIORITY' field is "
+					"out of bounds: %d, resetting\n", severity);
+				severity = DFLT_SEVERITY;
+			}
+		} else {
+			dbgprintf("The value of the 'PRIORITY' field has an "
+				"unexpected length: %d\n", length);
+		}
 	}
 
 	/* Get syslog facility */
@@ -348,7 +357,7 @@ readjournal() {
 	}
 
 	/* submit message */
-	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, priority, &tv, json);
+	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json);
 
 finalize_it:
 	free(sys_iden_help);
