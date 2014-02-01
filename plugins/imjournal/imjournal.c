@@ -86,6 +86,7 @@ static struct cnfparamblk modpblk =
 
 #define DFLT_persiststateinterval 10
 #define DFLT_SEVERITY LOG_PRI(LOG_NOTICE)
+#define DFLT_FACILITY LOG_FAC(LOG_USER)
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
 
@@ -159,7 +160,6 @@ readjournal() {
 	const void *get;
 	const void *pidget;
 	char *parse;
-	char *get2;
 	size_t length;
 	size_t pidlength;
 
@@ -172,7 +172,7 @@ readjournal() {
 	long prefixlen = 0;
 
 	int severity = DFLT_SEVERITY;
-	int facility = 0;
+	int facility = DFLT_FACILITY;
 
 	/* Get message text */
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
@@ -202,21 +202,21 @@ readjournal() {
 
 	/* Get syslog facility */
 	if (sd_journal_get_data(j, "SYSLOG_FACILITY", &get, &length) >= 0) {
-		get2 = strndup(get, length);
-		char f = ((char *)get2)[16];
-		if (f >= '0' && f <= '9') {
-			facility += f - '0';
+		if (length == 17 || length == 18) {
+			facility = ((char *)get)[16] - '0';
+			if (length == 18) {
+				facility *= 10;
+				facility += ((char *)get)[17] - '0';
+			}
+			if (facility < 0 || 23 < facility) {
+				dbgprintf("The value of the 'FACILITY' field is "
+					"out of bounds: %d, resetting\n", facility);
+				facility = DFLT_FACILITY;
+			}
+		} else {
+			dbgprintf("The value of the 'FACILITY' field has an "
+				"unexpected length: %d\n", length);
 		}
-		f = ((char *)get2)[17];
-		if (f >= '0' && f <= '9') {
-			facility *= 10;
-			facility += (f - '0');
-		}
-		free (get2);
-	} else {
-		/* message is missing facility -> internal systemd journal msg, drop */
-		iRet = RS_RET_OK;
-		goto free_message;
 	}
 
 	/* Get message identifier, client pid and add ':' */
