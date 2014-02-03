@@ -15,8 +15,38 @@ The process of this work will be done as follows:
 4. Repeat 2 and 3 merging current repo with next highest until Master is merged and updated.
 
 Current Status -
-* **_v5-stable_** - (In Development)
-* v7-stable - (In Queue)
-* v7-devel - (In Queue)
-* v8-devel - (In Queue)
+* v5-stable - (In Development)
+* v7-stable - (In Development)
+* v7-devel - (In Development)
+* **_v8-devel_** - (In Development)
 
+## Instructions
+
+These assume default installs of Python for Windows and Linux
+
+### Generate HTML Documentation on Linux
+
+1.  Download the pip installer from here: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+2.  Run: python ./get-pip.py
+3.  Run: pip install sphinx
+4.  Checkout Branch in Repo –
+  1.  Run: git clone https://github.com/rsyslog/rsyslog-doc.git
+  2.  Run: cd rsyslog-doc
+  3.  Run: git checkout v5-stable
+5.  Run: sphinx-build -b html source build
+6.  open rsyslog-doc/build/index.html in a browser
+
+###Generate HTML Documentation on Linux
+
+1.  Download the pip installer from here: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+2.  Download and install Git for windows if you don’t already have Git:
+  1.  https://code.google.com/p/msysgit/downloads/list?can=3&q=full+installer+official+git&colspec=Filename+Summary+Uploaded+ReleaseDate+Size+DownloadCount
+  2.  Install Git for Windows.
+3.  Run: c:\python27\python get-pip.py
+4.  Run: c:\python27\scripts\pip install sphinx
+5.  Checkout Branch in Repo –
+  1.  Run: git clone https://github.com/rsyslog/rsyslog-doc.git
+  2.  Run: cd rsyslog-doc
+  3.  Run: git checkout v5-stable
+6.  Run: c:\python27\scripts\sphinx-build -b html source build
+7. open rsyslog-doc/build/index.html in a browser

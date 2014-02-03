@@ -1,0 +1,255 @@
+This is a part of the rsyslog.conf documentation.
+
+`Back to rsyslog.conf manual <rsyslog_conf.html>`_
+
+Modules
+=======
+
+Rsyslog has a modular design. This enables functionality to be
+dynamically loaded from modules, which may also be written by any third
+party. Rsyslog itself offers all non-core functionality as modules.
+Consequently, there is a growing number of modules. Here is the entry
+point to their documentation and what they do (list is currently not
+complete)
+
+Please note that each module provides configuration directives, which
+are NOT necessarily being listed below. Also remember, that a modules
+configuration directive (and functionality) is only available if it has
+been loaded (using $ModLoad).
+
+It is relatively easy to write a rsyslog module. **If none of the
+provided modules solve your need, you may consider writing one or have
+one written for you by `Adiscon's professional services for
+rsyslog <http://www.rsyslog.com/professional-services>`_**\ (this often
+is a very cost-effective and efficient way of getting what you need).
+
+There exist different classes of loadable modules:
+
+-  `Input Modules <rsyslog_conf_modules.html#im>`_
+-  `Output Modules <rsyslog_conf_modules.html#om>`_
+-  `Parser Modules <rsyslog_conf_modules.html#pm>`_
+-  `Message Modification Modules <rsyslog_conf_modules.html#mm>`_
+-  `String Generator Modules <rsyslog_conf_modules.html#sm>`_
+-  `Library Modules <rsyslog_conf_modules.html#lm>`_
+
+Input Modules
+-------------
+
+Input modules are used to gather messages from various sources. They
+interface to message generators.
+
+-  `imfile <imfile.html>`_ -  input module for text files
+-  `imrelp <imrelp.html>`_ - RELP input module
+-  `imudp <imudp.html>`_ - udp syslog message input
+-  `imtcp <imtcp.html>`_ - input plugin for tcp syslog
+-  `imptcp <imptcp.html>`_ - input plugin for plain tcp syslog (no TLS
+   but faster)
+-  `imgssapi <imgssapi.html>`_ - input plugin for plain tcp and
+   GSS-enabled syslog
+-  immark - support for mark messages
+-  `imklog <imklog.html>`_ - kernel logging
+-  `imuxsock <imuxsock.html>`_ - unix sockets, including the system log
+   socket
+-  `imsolaris <imsolaris.html>`_ - input for the Sun Solaris system log
+   source
+-  `im3195 <im3195.html>`_ - accepts syslog messages via RFC 3195
+-  `impstats <impstats.html>`_ - provides periodic statistics of rsyslog
+   internal counters
+-  `imjournal <imjournal.html>`_ - Linux journal inuput module
+
+Output Modules
+--------------
+
+Output modules process messages. With them, message formats can be
+transformed and messages be transmitted to various different targets.
+
+-  `omfile <omfile.html>`_ - file output module
+-  `omfwd <omfwd.html>`_ (does NOT yet work in v8) - syslog forwarding
+   output module
+-  `omjournal <omjournal.html>`_ - Linux journal output module
+-  `ompipe <ompipe.html>`_ - named pipe output module
+-  `omusrmsg <omusrmsg.html>`_ - user message output module
+-  `omsnmp <omsnmp.html>`_ (does NOT yet work in v8) - SNMP trap output
+   module
+-  `omtdout <omstdout.html>`_ - stdout output module (mainly a test
+   tool)
+-  `omrelp <omrelp.html>`_ (does NOT yet work in v8) - RELP output
+   module
+-  `omruleset <omruleset.html>`_ - forward message to another ruleset
+-  omgssapi (does NOT yet work in v8) - output module for GSS-enabled
+   syslog
+-  `ommysql <ommysql.html>`_ - output module for MySQL
+-  ompgsql (does NOT yet work in v8) - output module for PostgreSQL
+-  `omlibdbi <omlibdbi.html>`_ (does NOT yet work in v8) - generic
+   database output module (Firebird/Interbase, MS SQL, Sybase, SQLLite,
+   Ingres, Oracle, mSQL)
+-  `ommail <ommail.html>`_ (does NOT yet work in v8) - permits rsyslog
+   to alert folks by mail if something important happens
+-  `omprog <omprog.html>`_ (does NOT yet work in v8) - permits sending
+   messages to a program for custom processing
+-  `omoracle <omoracle.html>`_ (orphaned) - output module for Oracle
+   (native OCI interface)
+-  `omudpspoof <omudpspoof.html>`_ (does NOT yet work in v8) - output
+   module sending UDP syslog messages with a spoofed address
+-  `omuxsock <omuxsock.html>`_ (does NOT yet work in v8) - output module
+   Unix domain sockets
+-  `omhdfs <omhdfs.html>`_ (does NOT yet work in v8) - output module for
+   Hadoop's HDFS file system
+-  `ommongodb <ommongodb.html>`_ (does NOT yet work in v8) - output
+   module for MongoDB
+-  `omelasticsearch <omelasticsearch.html>`_ - output module for
+   ElasticSearch
+
+Parser Modules
+--------------
+
+Parser modules are used to parse message content, once the message has
+been received. They can be used to process custom message formats or
+invalidly formatted messages. For details, please see the `rsyslog
+message parser documentation <messageparser.html>`_.
+
+The current modules are currently provided as part of rsyslog:
+
+-  pmrfc5424[builtin] - rsyslog.rfc5424 - parses RFC5424-formatted
+   messages (the new syslog standard)
+-  pmrfc3164[builtin] - rsyslog.rfc3164 - the traditional/legacy syslog
+   parser
+-  pmrfc3164sd - rsyslog.rfc3164sd - a contributed module supporting
+   RFC5424 structured data inside RFC3164 messages (not supported by the
+   rsyslog team)
+-  `pmlastmsg <pmlastmsg.html>`_ - rsyslog.lastmsg - a parser module
+   that handles the typically malformed "last messages repated n times"
+   messages emitted by some syslogds.
+
+Message Modification Modules
+----------------------------
+
+Message modification modules are used to change the content of messages
+being processed. They can be implemented using either the output module
+or the parser module interface. From the rsyslog core's point of view,
+they actually are output or parser modules, it is their implementation
+that makes them special.
+
+Currently, there exists only a limited set of such modules, but new ones
+could be written with the methods the engine provides. They could be
+used, for example, to add dynamically computed content to message
+(fields).
+
+Message modification modules are usually written for one specific task
+and thus usually are not generic enough to be reused. However, existing
+module's code is probably an excellent starting base for writing a new
+module. Currently, the following modules exist inside the source tree:
+
+-  `mmanon <mmanon.html>`_ - used to anonymize log messages.
+-  `mmcount <mmcount.html>`_ - message modification plugin which counts
+   messages
+-  `mmfields <mmfields.html>`_ - used to extract fields from specially
+   formatted messages (e.g. CEF)
+-  `mmnormalize <mmnormalize.html>`_ - used to normalize log messages.
+   Note that this actually is a **generic** module.
+-  `mmjsonparse <mmjsonparse.html>`_ - used to interpret CEE/lumberjack
+   enabled structured log messages.
+-  `mmpstrucdata <mmpstrucdata.html>`_ - used to parse RFC5424
+   structured data into json message properties
+-  `mmsnmptrapd <mmsnmptrapd.html>`_ - uses information provided by
+   snmptrapd inside the tag to correct the original sender system and
+   priority of messages. Implemented via the output module interface.
+-  `mmutf8fix <mmutf8fix.html>`_ - used to fix invalid UTF-8 character
+   sequences
+-  `mmrfc5424addhmac <mmrfc5424addhmac.html>`_ - custom module for
+   adding HMACs to rfc5424-formatted messages if not already present
+-  `mmsequence <mmsequence.html>`_ - sequence generator and counter
+   plugin
+
+String Generator Modules
+------------------------
+
+String generator modules are used, as the name implies, to generate
+strings based on the message content. They are currently tightly coupled
+with the template system. Their primary use is to speed up template
+processing by providing a native C interface to template generation.
+These modules exist since 5.5.6. To get an idea of the potential
+speedup, the default file format, when generated by a string generator,
+provides a roughly 5% speedup. For more complex strings, especially
+those that include multiple regular expressions, the speedup may be
+considerably higher.
+
+String generator modules are written to a quite simple interface.
+However, a word of caution is due: they access the rsyslog message
+object via a low-level interface. That interface is not guaranteed yet
+to stay stable. So it may be necessary to modify string generator
+modules if the interface changes. Obviously, we will not do that without
+good reason, but it may happen.
+
+Rsyslog comes with a set of core, build-in string generators, which are
+used to provide those default templates that we consider to be
+time-critical:
+
+-  smfile - the default rsyslog file format
+-  smfwd - the default rsyslog (network) forwarding format
+-  smtradfile - the traditional syslog file format
+-  smfwd - the traditional syslog (network) forwarding format
+
+Note that when you replace these defaults be some custom strings, you
+will loose some performance (around 5%). For typical systems, this is
+not really relevant. But for a high-performance systems, it may be very
+relevant. To solve that issue, create a new string generator module for
+your custom format, starting out from one of the default generators
+provided. If you can not do this yourself, you may want to contact
+`Adiscon <mailto:info%40adiscon.com>`_ as we offer custom development of
+string generators at a very low price.
+
+Note that string generator modules can be dynamically loaded. However,
+the default ones provided are so important that they are build right
+into the executable. But this does not need to be done that way (and it
+is straightforward to do it dynamic).
+
+Library Modules
+---------------
+
+Library modules provide dynamically loadable functionality for parts of
+rsyslog, most often for other loadable modules. They can not be
+user-configured and are loaded automatically by some components. They
+are just mentioned so that error messages that point to library moduls
+can be understood. No module list is provided.
+
+Where are the modules integrated into the Message Flow?
+-------------------------------------------------------
+
+Depending on their module type, modules may access and/or modify
+messages at various stages during rsyslog's processing. Note that only
+the "core type" (e.g. input, output) but not any type derived from it
+(message modification module) specifies when a module is called.
+
+The simplified workflow is as follows:
+
+.. figure:: module_workflow.png
+   :align: center
+   :alt: 
+
+As can be seen, messages are received by input modules, then passed to
+one or many parser modules, which generate the in-memory representation
+of the message and may also modify the message itself. The, the internal
+representation is passed to output modules, which may output a message
+and (with the interfaces newly introduced in v5) may also modify
+messageo object content.
+
+String generator modules are not included inside this picture, because
+they are not a required part of the workflow. If used, they operate "in
+front of" the output modules, because they are called during template
+generation.
+
+Note that the actual flow is much more complex and depends a lot on
+queue and filter settings. This graphic above is a high-level message
+flow diagram.
+
+[`manual index <manual.html>`_\ ]
+[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
+site <http://www.rsyslog.com/>`_\ ]
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+ Copyright © 2008-2013 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.
