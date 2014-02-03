@@ -1,4 +1,4 @@
-rsyslog-docs (v5-stable)
+rsyslog-docs (v7-stable)
 ========================
 
 Documentation for the rsyslog project
@@ -15,8 +15,8 @@ The process of this work will be done as follows:
 4. Repeat 2 and 3 merging current repo with next highest until Master is merged and updated.
 
 Current Status -
-* **_v5-stable_** - (In Development)
-* v7-stable - (In Queue)
+* v5-stable - (In Development)
+* **_v7-stable_** - (In Queue)
 * v7-devel - (In Queue)
 * v8-devel - (In Queue)
 
