@@ -1,5 +1,5 @@
 Contributor Hall of Fame
-------------------------
+========================
 
 **This page is dedicated to all the people who helped make
 `rsyslog <http://www.rsyslog.com/>`_ become a reality.** Unfortunately,

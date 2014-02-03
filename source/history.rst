@@ -1,15 +1,16 @@
 RSyslog - History
 =================
 
-**Rsyslog is a GPL-ed, enhanced syslogd. Among others, it offers support
+Rsyslog is a GPL-ed, enhanced syslogd. Among others, it offers support
 for reliable syslog over TCP, writing to MySQL databases and fully
-configurable output formats (including great timestamps).** Rsyslog was
-initiated by `Rainer Gerhards <http://www.gerhards.net/rainer>`_. If you
-are interested to learn why  Rainer initiated  the project, you may want
-to read his blog posting on "`why the world needs another
-syslogd <http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html>`_\ ".
+configurable output formats (including great timestamps).
 
-Rsyslog has been forked in **2004** from the `sysklogd standard
+Rsyslog was initiated by `Rainer Gerhards <http://www.gerhards.net/rainer>`_. 
+If you are interested to learn why Rainer initiated the project, you may want
+to read his blog posting on "`why the world needs another syslogd 
+<http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html>`_\ ".
+
+Rsyslog was forked in **2004** from the `sysklogd standard
 package <http://www.infodrom.org/projects/sysklogd/>`_. The goal of the
 rsyslog project is to provide a feature-richer and reliable syslog
 daemon while retaining drop-in replacement capabilities to stock
@@ -139,30 +140,9 @@ features, but had a number of major features exclusive to it. With
 3.12.0, I consider rsyslog fully superior to syslog-ng (except for
 platform support).
 
-Following the Fedora Developer's conference in Brno **2012**, rsyslog
-got very serious on implementing **structured logging** in project
-Lumberjack (CEE) style. Project Lumberjack was a much broader effort and
-brought closer collaboration with the syslog-ng folks, which helped to
-maintain and improve interoperability. In the **late
-winter/spring/summer 2012** timeframe numerous engine enhancements were
-made and plugins written (among them the first "official" interfaces to
-the Linux audit subsystem). At the end of the year, this culminated in
-the rsyslog 7, which not only implemented Lumberjack but also was the
-first one to support full condition nesting in rsyslog.conf (and a ton
-of other features as well).
-
-In **spring 2013** major new security features were engineered, namely
-anonymization support, as well as log file signing and encryption
-capabilities.
-
 Be sure to visit Rainer's `syslog
 blog <http://rgerhards.blogspot.com/>`_ to get some more insight into
 the development and futures of rsyslog and syslog in general. Don't be
 shy to post to either the blog or the `rsyslog
 forums <http://www.rsyslog.com/PNphpBB2.phtml>`_.
-
-Some useful links
------------------
-
--  `the rsyslog change log <http://www.rsyslog.com/Topic4.phtml>`_
 
