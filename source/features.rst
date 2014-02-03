@@ -1,5 +1,3 @@
-`back <rsyslog_conf.html>`_
-
 RSyslog - Features
 ==================
 

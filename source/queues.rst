@@ -9,8 +9,8 @@ part "consumes" this something. The "something" is most often syslog
 messages, but queues may also be used for other purposes.
 
 This document provides a good insight into technical details, operation
-modes and implications. In addition to it, an `rsyslog queue concepts
-overview <queues_analogy.html>`_ document exists which tries to explain
+modes and implications. In addition to it, an :doc:`rsyslog queue concepts
+overview <whitepapers/queues_analogy>` document exists which tries to explain
 queues with the help of some analogies. This may probably be a better
 place to start reading about queues. I assume that once you have
 understood that document, the material here will be much easier to grasp
@@ -511,11 +511,6 @@ includes data elements there were begun being processed by workers that
 needed to be cancelled due to too-long processing. For a large queue,
 this operation may be lengthy. No timeout applies to a required shutdown
 save.
-
-**See Also**
-
--  `Encrypted Disk
-   Queues <http://www.rsyslog.com/encrypted-disk-queues/>`_
 
 [`manual index <manual.html>`_\ ]
 [`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
