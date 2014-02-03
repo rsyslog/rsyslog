@@ -82,7 +82,7 @@
 #endif
 
 #include <signal.h>
-#include <liblogging/libstdlog.h>
+#include <liblogging/stdlog.h>
 
 #if HAVE_PATHS_H
 #include <paths.h>
