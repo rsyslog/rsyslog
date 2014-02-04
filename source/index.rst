@@ -1,8 +1,18 @@
 Welcome to Rsyslog
 ==================
 
-rsyslog\ [1]_ is an enhanced syslogd scalable for small systems as well 
-as large enterprises. rsyslog supports, among others, :doc:`MySQL <tutorials/database>`
+**Rsyslog\ [1]_ is a rocket-fast system for log processing.**
+It offers high-performance, great security features and a modular design.
+While it started as a regular syslogd, rsyslog has evolved into a kind of
+**swiss army knife of logging**, being able to
+
+- accept inputs from a wide variety of sources,
+- transform them,
+- and output the results to diverse destinations.
+
+Rsyslog has a strong enterprise focus but also scales down to small
+systems.
+It supports, among others, :doc:`MySQL <tutorials/database>`
 , :doc:`PostgreSQL <tutorials/database>`, :doc:`failover log
 destinations <tutorials/failover_syslog_server>`,
 syslog/tcp transport, fine grain output format control, high precision timestamps,
