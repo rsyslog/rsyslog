@@ -261,6 +261,8 @@ ENDtryResume
 
 
 BEGINbeginTransaction
+if(pData->f_hpgsql == NULL)
+       initPgSQL(pData, 0);
 CODESTARTbeginTransaction
 dbgprintf("ompgsql: beginTransaction\n");
 	iRet = writePgSQL((uchar*) "begin", pData); /* TODO: make user-configurable */
@@ -347,6 +349,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
+	        /* The next line is replaced because as explained in libpq docs,
+                 * We can't keep a PGcon open if parent of a  tread  forks.
+                 * So init close the connection to release all FD, handles, etc...
+                 *
+                 * CHKiRet(initPgSQL(pData, 0));
+                 */
+                if ( initPgSQL(pData, 0) == RS_RET_OK ) {
+                        dbgprintf("init ompgsql success now close it\n");
+                        closePgSQL(pData);
+                        FINALIZE;
+                }
 		CHKiRet(initPgSQL(pData, 0));
 	}
 
