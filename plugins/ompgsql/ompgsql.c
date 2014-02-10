@@ -261,10 +261,10 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-if(pData->f_hpgsql == NULL)
-       initPgSQL(pData, 0);
 CODESTARTbeginTransaction
-dbgprintf("ompgsql: beginTransaction\n");
+	dbgprintf("ompgsql: beginTransaction\n");
+	if(pData->f_hpgsql == NULL)
+	       initPgSQL(pData, 0);
 	iRet = writePgSQL((uchar*) "begin", pData); /* TODO: make user-configurable */
 ENDbeginTransaction
 
