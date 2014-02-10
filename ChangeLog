@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 7.4.10  [v7.4-stable] 2014-02-??
+- ompgsql bugfix: improper handling of auto-backgrounding mode 
+  If rsyslog was set to auto-background itself (default code behaviour, but
+  many distros now turn it off for good reason), ompgsql could not
+  properly connect. This could even lead to a segfault. The core reason
+  was that a PG session handle was kept open over a fork, something that
+  is explicitely forbidden in the PG API.
+  Thanks to Alain for the analysis and the patch.
+---------------------------------------------------------------------------
 Version 7.4.9  [v7.4-stable] 2014-01-22
 - added ProcessInternalMessages global system parameter
   This permits to inject rsyslog status messages into *another* main
