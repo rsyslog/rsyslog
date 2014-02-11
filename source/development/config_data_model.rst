@@ -30,9 +30,9 @@ Variables/Properties
 --------------------
 Rsyslog supports
 
-- traditional syslog (RFC-based) message properties
-- structured data content, including any non-syslog properties
-- Variables
+* traditional syslog (RFC-based) message properties
+* structured data content, including any non-syslog properties
+* Variables
   - global
   - local
   - message-enhancing (like message properties)
@@ -135,9 +135,9 @@ Remember that rsyslog does intentionally not support loop statements. So
 control-of-flow boils down to
 
 * conditional statements
-  * "if ... then ... else ..."
-  * syslog PRI-based filters
-  * property-based filters
+  - "if ... then ... else ..."
+  - syslog PRI-based filters
+  - property-based filters
 * stop
 
 Where "stop" terminates processing of this message. The conditional statements 
