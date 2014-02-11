@@ -68,7 +68,11 @@ static struct configSettings_s {
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int bIgnorePrevious;
+	int iDfltSeverity;
+	int iDfltFacility;
 } cs;
+
+static rsRetVal facilityHdlr(uchar **pp, void *pVal);
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
@@ -76,7 +80,9 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
-	{ "ignorepreviousmessages", eCmdHdlrBinary, 0 }
+	{ "ignorepreviousmessages", eCmdHdlrBinary, 0 },
+	{ "defaultseverity", eCmdHdlrSeverity, 0 },
+	{ "defaultfacility", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -95,6 +101,40 @@ static prop_t *pLocalHostIP = NULL;	/* a pseudo-constant propterty for 127.0.0.1
 
 static ratelimit_t *ratelimiter = NULL;
 static sd_journal *j;
+
+
+/* ugly workaround to handle facility numbers; values
+ * derived from names need to be eight times smaller,
+ * i.e.: 0..23
+ */
+static rsRetVal facilityHdlr(uchar **pp, void *pVal)
+{
+	DEFiRet;
+	char *p;
+
+	skipWhiteSpace(pp);
+	p = (char *) *pp;
+
+	if (isdigit((int) *p)) {
+		*((int *) pVal) = (int) strtol(p, (char **) pp, 10);
+	} else {
+		int len;
+		syslogName_t *c;
+
+		for (len = 0; p[len] && !isspace((int) p[len]); len++)
+			/* noop */;
+		for (c = syslogFacNames; c->c_name; c++) {
+			if (!strncasecmp(p, (char *) c->c_name, len)) {
+				*((int *) pVal) = LOG_FAC(c->c_val);
+				break;
+			}
+		}
+		*pp += len;
+	}
+
+	RETiRet;
+}
+
 
 /* enqueue the the journal message into the message queue.
  * The provided msg string is not freed - thus must be done
@@ -171,8 +211,8 @@ readjournal() {
 
 	long prefixlen = 0;
 
-	int severity = DFLT_SEVERITY;
-	int facility = DFLT_FACILITY;
+	int severity = cs.iDfltSeverity;
+	int facility = cs.iDfltFacility;
 
 	/* Get message text */
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
@@ -192,7 +232,7 @@ readjournal() {
 			if (severity < 0 || 7 < severity) {
 				dbgprintf("The value of the 'PRIORITY' field is "
 					"out of bounds: %d, resetting\n", severity);
-				severity = DFLT_SEVERITY;
+				severity = cs.iDfltSeverity;
 			}
 		} else {
 			dbgprintf("The value of the 'PRIORITY' field has an "
@@ -211,7 +251,7 @@ readjournal() {
 			if (facility < 0 || 23 < facility) {
 				dbgprintf("The value of the 'FACILITY' field is "
 					"out of bounds: %d, resetting\n", facility);
-				facility = DFLT_FACILITY;
+				facility = cs.iDfltFacility;
 			}
 		} else {
 			dbgprintf("The value of the 'FACILITY' field has an "
@@ -577,6 +617,8 @@ CODESTARTbeginCnfLoad
 	cs.stateFile = NULL;
 	cs.ratelimitBurst = 20000;
 	cs.ratelimitInterval = 600;
+	cs.iDfltSeverity = DFLT_SEVERITY;
+	cs.iDfltFacility = DFLT_FACILITY;
 ENDbeginCnfLoad
 
 
@@ -665,6 +707,17 @@ CODESTARTsetModCnf
 			cs.ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
 			cs.bIgnorePrevious = (int) pvals[i].val.d.n; 
+		} else if (!strcmp(modpblk.descr[i].name, "defaultseverity")) {
+			cs.iDfltSeverity = (int) pvals[i].val.d.n;
+		} else if (!strcmp(modpblk.descr[i].name, "defaultfacility")) {
+			/* ugly workaround to handle facility numbers; values
+			   derived from names need to be eight times smaller */
+
+			char *fac, *p;
+
+			fac = p = es_str2cstr(pvals[i].val.d.estr, NULL);
+			facilityHdlr((uchar **) &p, (void *) &cs.iDfltFacility);
+			free(fac);
 		} else {
 			dbgprintf("imjournal: program error, non-handled "
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -718,6 +771,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.stateFile, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalignorepreviousmessages", 0, eCmdHdlrBinary,
 		NULL, &cs.bIgnorePrevious, STD_LOADABLE_MODULE_ID)); 
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultseverity", 0, eCmdHdlrSeverity,
+		NULL, &cs.iDfltSeverity, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultfacility", 0, eCmdHdlrCustomHandler,
+		facilityHdlr, &cs.iDfltFacility, STD_LOADABLE_MODULE_ID));
 
 
 ENDmodInit
