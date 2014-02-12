@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.4.10  [v7.4-stable] 2014-02-??
+Version 7.4.10  [v7.4-stable] 2014-02-12
 - bugfix: json templates are improperly created
   Strings miss the terminating NUL character, which obviously can lead
   to all sorts of problems.
