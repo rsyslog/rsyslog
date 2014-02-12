@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 7.5.9 [v7-release candidate] 2014-01-??
+Version 7.6.0 [v7.6-stable] 2014-01-??
+This starts a new stable branch based on 7.5.8 plus the following changes:
 - bugfix: imuxsock input parameters were not accepted
   due to copy&paste error. Thanks to Andy Goldstein for the fix.
 - added ProcessInternalMessages global system parameter
