@@ -361,7 +361,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 							   pTpe->data.field.propName,  &propLen,
 							   &bMustBeFreed, ttNow);
 				if(pTpe->data.field.options.bMandatory || propLen > 0) {
-					jsonf = json_object_new_string_len((char*)pVal, propLen);
+					jsonf = json_object_new_string_len((char*)pVal, propLen+1);
 					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 				}
 				if(bMustBeFreed) { /* json-c makes its own private copy! */
