@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.4.10  [v7.4-stable] 2014-02-??
+- bugfix: json templates are improperly created
+  Strings miss the terminating NUL character, which obviously can lead
+  to all sorts of problems.
+  See also: https://github.com/rsyslog/rsyslog/issues/27
+  Thanks to Alain for the analysis and the patch.
 - ompgsql bugfix: improper handling of auto-backgrounding mode 
   If rsyslog was set to auto-background itself (default code behaviour, but
   many distros now turn it off for good reason), ompgsql could not
