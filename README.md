@@ -20,6 +20,11 @@ Current Status -
 * v7-devel - (In Development)
 * **_v8-devel_** - (In Development)
 
+## Learning the doc tools
+
+If you are new to rst and Sphinx, visit the Sphinx doc to get started:
+http://sphinx-doc.org/contents.html
+
 ## Instructions
 
 These assume default installs of Python for Windows and Linux
