@@ -6,6 +6,18 @@ Version 7.5.9 [v7-release candidate] 2014-01-??
   This permits to inject rsyslog status messages into *another* main
   syslogd or the journal.
 - new dependency: liblogging-stdlog (for submitting to external logger)
+- bugfix: json templates are improperly created
+  Strings miss the terminating NUL character, which obviously can lead
+  to all sorts of problems.
+  See also: https://github.com/rsyslog/rsyslog/issues/27
+  Thanks to Alain for the analysis and the patch.
+- ompgsql bugfix: improper handling of auto-backgrounding mode 
+  If rsyslog was set to auto-background itself (default code behaviour, but
+  many distros now turn it off for good reason), ompgsql could not
+  properly connect. This could even lead to a segfault. The core reason
+  was that a PG session handle was kept open over a fork, something that
+  is explicitely forbidden in the PG API.
+  Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
@@ -263,6 +275,20 @@ Version 7.5.0 [devel] 2013-06-11
 - add -S command line option to specify IP address to use for RELP client
   connections
   Thanks to Axel Rau for the patch.
+---------------------------------------------------------------------------
+Version 7.4.10  [v7.4-stable] 2014-02-12
+- bugfix: json templates are improperly created
+  Strings miss the terminating NUL character, which obviously can lead
+  to all sorts of problems.
+  See also: https://github.com/rsyslog/rsyslog/issues/27
+  Thanks to Alain for the analysis and the patch.
+- ompgsql bugfix: improper handling of auto-backgrounding mode 
+  If rsyslog was set to auto-background itself (default code behaviour, but
+  many distros now turn it off for good reason), ompgsql could not
+  properly connect. This could even lead to a segfault. The core reason
+  was that a PG session handle was kept open over a fork, something that
+  is explicitely forbidden in the PG API.
+  Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 7.4.9  [v7.4-stable] 2014-01-22
 - added ProcessInternalMessages global system parameter

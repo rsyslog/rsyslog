@@ -262,7 +262,9 @@ ENDtryResume
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("ompgsql: beginTransaction\n");
+	dbgprintf("ompgsql: beginTransaction\n");
+	if(pData->f_hpgsql == NULL)
+	       initPgSQL(pData, 0);
 	iRet = writePgSQL((uchar*) "begin", pData); /* TODO: make user-configurable */
 ENDbeginTransaction
 
@@ -346,8 +348,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if (iPgSQLPropErr) { 
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-	} else {
-		CHKiRet(initPgSQL(pData, 0));
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
