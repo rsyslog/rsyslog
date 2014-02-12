@@ -1,7 +1,7 @@
 Welcome to Rsyslog
 ==================
 
-**Rsyslog\ [1]_ is a rocket-fast system for log processing.**
+`Rsyslog <http://www.rsyslog.com/>`_ is a **r**\ ocket-fast **sys**\ tem for **log** processing.
 It offers high-performance, great security features and a modular design.
 While it started as a regular syslogd, rsyslog has evolved into a kind of
 **swiss army knife of logging**, being able to
