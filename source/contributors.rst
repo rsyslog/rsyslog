@@ -61,5 +61,3 @@ varmojfekoj@gmail.com
 -  provided contributions before I started this list, so there are
    probably some missing
 -  provided patches for several memory leaks
-
-Last Updated: 2007-07-19
