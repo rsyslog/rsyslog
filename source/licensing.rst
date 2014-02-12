@@ -70,10 +70,3 @@ runtime library branch and all of these will be LGPL. Some select extras
 will probably still be covered by GPL. We are following a similar
 licensing model in GnuTLS, which makes effort to reserve some
 functionality exclusively to open source projects.
-
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Last Update: 2008-04-15.
-Released under the GNU GPL version 3 or higher.
