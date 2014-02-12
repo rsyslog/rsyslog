@@ -20,6 +20,11 @@ Current Status -
 * **_v7-devel_** - (In Development)
 * v8-devel - (In Development)
 
+## Learning the doc tools
+
+If you are new to rst and Sphinx, visit the Sphinx doc to get started:
+http://sphinx-doc.org/contents.html
+
 ## Instructions
 
 These assume default installs of Python for Windows and Linux
@@ -36,7 +41,7 @@ These assume default installs of Python for Windows and Linux
 5.  Run: sphinx-build -b html source build
 6.  open rsyslog-doc/build/index.html in a browser
 
-###Generate HTML Documentation on Linux
+###Generate HTML Documentation on Windows
 
 1.  Download the pip installer from here: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
 2.  Download and install Git for windows if you don’t already have Git:
