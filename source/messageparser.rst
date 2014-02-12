@@ -3,8 +3,8 @@
 Message parsers in rsyslog
 ==========================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2009-11-06)*
+Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+(2009-11-06)
 
 Intro
 -----
@@ -302,12 +302,3 @@ and also offer some interesting ideas that may be explored in the future
 - up to full message normalization capabilities. It is strongly
 recommended that anyone with a heterogenous environment take a look at
 message parser capabilities.
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.

@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 Understanding rsyslog Queues
 ============================
 
@@ -366,9 +364,18 @@ usual textual severity as well as a numerical one. To understand it, you
 must be aware of the numerical severity values. They are defined in RFC
 3164:
 
-::
-
-            Numerical         Severity          Code           0       Emergency: system is unusable           1       Alert: action must be taken immediately           2       Critical: critical conditions           3       Error: error conditions           4       Warning: warning conditions           5       Notice: normal but significant condition           6       Informational: informational messages           7       Debug: debug-level messages
+        ==== ========
+        Code Severity
+        ==== ========
+        0    Emergency: system is unusable
+        1    Alert: action must be taken immediately
+        2    Critical: critical conditions
+        3    Error: error conditions
+        4    Warning: warning conditions
+        5    Notice: normal but significant condition
+        6    Informational: informational messages
+        7    Debug: debug-level messages
+        ==== ========
 
 Anything of the specified severity and (numerically) above it is
 discarded. To turn message discarding off, simply specify the discard
@@ -511,14 +518,3 @@ includes data elements there were begun being processed by workers that
 needed to be cancelled due to too-long processing. For a large queue,
 this operation may be lengthy. No timeout applies to a required shutdown
 save.
-
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008, 2009 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.
