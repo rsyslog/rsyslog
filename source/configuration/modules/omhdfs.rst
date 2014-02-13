@@ -1,5 +1,5 @@
-Unix sockets Output Module (omhdfs)
-===================================
+omhdfs: Hadoop Filesystem Output Module
+=======================================
 
 **Module Name:    omhdfs**
 
