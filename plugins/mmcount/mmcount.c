@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <json/json.h>
+#include <json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
