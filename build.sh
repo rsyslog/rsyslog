@@ -13,9 +13,14 @@ MASTERBRANCH=v8-devel
 for version in `git branch | cut -c3-`
   do 
     VER=$(if [[ ${version} == 'master' ]];then echo ${MASTERBRANCH} ; else echo ${version}; fi)
+    echo "Checkout Branch ${versions}"
     git checkout ${version}
+    echo "Fetch Branch ${versions}"
     git fetch origin ${version}
+    echo "Reset Branch ${versions}"
     git reset --hard origin/${version}
+    echo "Pull Branch ${versions}"
     git pull ${version}
+    echo "Build ${versions}"
     sphinx-build -b html source ${VER}
 done
