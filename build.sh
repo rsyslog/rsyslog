@@ -14,7 +14,7 @@ for version in `git branch | cut -c3-`
   do 
     VER=$(if [[ ${version} == 'master' ]];then echo ${MASTERBRANCH} ; else echo ${version}; fi)
     git checkout ${version}
-    git fetch origin/${version}
+    git fetch origin ${version}
     git reset --hard origin/${version}
     git pull ${version}
     sphinx-build -b html source ${VER}
