@@ -20,7 +20,7 @@ for version in `git branch | cut -c3-`
     echo "Reset Branch ${versions}"
     git reset --hard origin/${version}
     echo "Pull Branch ${versions}"
-    git pull ${version}
+    git pull origin ${version}
     echo "Build ${versions}"
     sphinx-build -b html source ${VER}
 done
