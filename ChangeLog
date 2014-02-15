@@ -33,6 +33,9 @@ Version 8.1.6 [devel] 2014-01-??
   was that a PG session handle was kept open over a fork, something that
   is explicitely forbidden in the PG API.
   Thanks to Alain for the analysis and the patch.
+- bugfix: ommongodb's template parameter was mandatory but should have
+  been optional
+  Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 8.1.5 [devel] 2014-01-24
 - omprog: ability to execute multiple program instances per action
@@ -159,6 +162,11 @@ Version 8.1.0 [experimental] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.6.1 [v7.6-stable] 2014-02-??
+- bugfix: ommongodb's template parameter was mandatory but should have
+  been optional
+  Thanks to Alain for the analysis and the patch.
 ---------------------------------------------------------------------------
 Version 7.6.0 [v7.6-stable] 2014-02-12
 This starts a new stable branch based on 7.5.8 plus the following changes:
