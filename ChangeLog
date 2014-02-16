@@ -164,6 +164,10 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-02-??
+- build system improvements
+  * autoconf subdir option
+  * support for newer json-c packages
+  Thanks to Michael Biebl for the patches.
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
   Thanks to Alain for the analysis and the patch.

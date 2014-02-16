@@ -35,7 +35,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <limits.h>
-#include <json/json.h>
+#include <json.h>
 #include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
