@@ -1149,7 +1149,7 @@ AC_ARG_ENABLE(rfc3195,
         [enable_rfc3195=no]
 )
 if test "x$enable_rfc3195" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.1)
+	PKG_CHECK_MODULES(LIBLOGGING, liblogging-rfc3195 >= 1.0.1)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
 
