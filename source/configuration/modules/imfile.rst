@@ -24,28 +24,25 @@ last processed location and continues to work from there upon restart.
 So no data is lost during a restart (except, as noted above, if the file
 is rotated just in this very moment).
 
-Currently, the file must have a fixed name and location (directory). It
-is planned to add support for dynamically generating file names in the
-future.
 
 Multiple files may be monitored by specifying $InputRunFileMonitor
 multiple times.
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-Configuration Directives
-------------------------
 Module Directives
-+++++++++++++++++
+-----------------
 
--  PollingInterval seconds
-    This is a global setting. It specifies how often files are to be
+.. function:: PollingInterval seconds
+
+   This is a global setting. It specifies how often files are to be
    polled for new data. The time specified is in seconds. The default
    value is 10 seconds. Please note that future releases of imfile may
    support per-file polling intervals, but currently this is not the
    case. If multiple PollingInterval statements are present in
    rsyslog.conf, only the last one is used.
-    A short poll interval provides more rapid message forwarding, but
+   
+   A short poll interval provides more rapid message forwarding, but
    requires more system resources. While it is possible, we stongly
    recommend not to set the polling interval to 0 seconds. That will
    make rsyslogd become a CPU hog, taking up considerable resources. It
@@ -56,7 +53,7 @@ Module Directives
    happen when nothing is left to be processed.
 
 Action Directives
-+++++++++++++++++
+-----------------
 
 .. function:: File </path/to/file>
 
@@ -116,7 +113,8 @@ Action Directives
    line starts with a space it is part of the log message before it)
 
 .. function:: MaxLinesAtOnce [number]
-    This is useful if multiple files need to be monitored. If set to 0,
+
+   This is useful if multiple files need to be monitored. If set to 0,
    each file will be fully processed and then processing switches to the
    next file (this was the default in previous versions). If it is set,
    a maximum of [number] lines is processed in sequence for each file,
@@ -141,18 +139,14 @@ Action Directives
 Caveats/Known Bugs
 ------------------
 
-So far, only 100 files can be monitored. If more are needed, the source
-needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
+* Only 100 files can be monitored. If more are needed, the source needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
 
-Powertop users may want to notice that imfile utilizes polling. Thus, it
-is no good citizen when it comes to conserving system power consumption.
-We are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
+* The file must have a fixed name and location (directory). It is planned to add support for dynamically generating file names in the future.
 
-Example
--------
+* Powertop users may want to notice that imfile utilizes polling. Thus, it is no good citizen when it comes to conserving system power consumption. We are currently evaluating to move to inotify(). However, there are a number of subtle issues, which needs to be worked out first. We will make the change as soon as we can. If you can afford it, we recommend using a long polling interval in the mean time.
+
+Configuration Example
+---------------------
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
