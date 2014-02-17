@@ -18,7 +18,7 @@ for version in `git branch | cut -c3-`
     echo "Fetch Branch ${versions}"
     git fetch origin ${version}
     echo "Reset Branch ${versions}"
-    git reset --hard origin/${version}
+    git reset --hard
     echo "Pull Branch ${versions}"
     git pull origin ${version}
     echo "Build ${versions}"
