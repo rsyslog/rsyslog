@@ -1,4 +1,4 @@
-rsyslog-docs (v7-devel)
+rsyslog-docs (v7-stable)
 ========================
 
 Documentation for the rsyslog project
@@ -17,7 +17,6 @@ The process of this work will be done as follows:
 Current Status -
 * v5-stable - (In Development)
 * v7-stable - (In Development)
-* **_v7-devel_** - (In Development)
 * v8-devel - (In Development)
 
 ## Learning the doc tools
