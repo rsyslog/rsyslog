@@ -1,18 +1,19 @@
 Encrypting Syslog Traffic with TLS (SSL)
 ========================================
 
-*Written by `Rainer
+Written by `Rainer
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-05-06)*
+(2008-05-06)
 
 Abstract
 --------
 
-***In this paper, I describe how to encrypt
-`syslog <http://www.monitorware.com/en/topics/syslog/>`_ messages on the
-network.** Encryption is vital to keep the confidiental content of
+**In this paper, I describe how to encrypt**
+`syslog <http://www.monitorware.com/en/topics/syslog/>`_ 
+**messages on the network.**
+Encryption is vital to keep the confidiental content of
 syslog messages secure. I describe the overall approach and provide an
-HOWTO do it with `rsyslog's <http://www.rsyslog.com>`_ TLS features. *
+HOWTO do it with `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
 
 Please note that TLS is the more secure successor of SSL. While people
 often talk about "SSL encryption" they actually mean "TLS encryption".
