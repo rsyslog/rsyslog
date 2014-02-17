@@ -1,5 +1,5 @@
 rsyslog-docs (master: v8-devel)
-========================
+===============================
 
 Documentation for the rsyslog project
 -------------------------------------
@@ -17,8 +17,7 @@ The process of this work will be done as follows:
 Current Status -
 * v5-stable - (In Development)
 * v7-stable - (In Development)
-* v7-devel - (In Development)
-* **_v8-devel_** - (In Development)
+* v8-devel - (In Development)
 
 ## Learning the doc tools
 
