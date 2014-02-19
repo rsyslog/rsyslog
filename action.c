@@ -1286,8 +1286,7 @@ processBatchMain(void *__restrict__ const pVoid,
 		}
 	}
 
-	if(!pWti->execState.bDoAutoCommit)
-		iRet = actionCommit(pAction, pWti);
+	iRet = actionCommit(pAction, pWti);
 	RETiRet;
 }
 

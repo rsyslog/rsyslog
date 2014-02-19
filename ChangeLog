@@ -36,6 +36,11 @@ Version 8.1.6 [devel] 2014-01-??
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
   Thanks to Alain for the analysis and the patch.
+- bugfix: end of batch processing was not 100% correct. Could lead to
+  outputs not properly wirting messages. At least omelasticsearch did not
+  write anything to the database due to this bug.
+  See: https://github.com/rsyslog/rsyslog/issues/10
+  Thanks to Radu Gheorghe for reporting the issue.
 ---------------------------------------------------------------------------
 Version 8.1.5 [devel] 2014-01-24
 - omprog: ability to execute multiple program instances per action
