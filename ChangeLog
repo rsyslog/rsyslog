@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.1.6 [devel] 2014-01-??
+Version 8.1.6 [release candidate] 2014-02-20
 - omfile: permit to set global defaults for action parameters
   Thanks to Nathan Brown for the patch.
   See also: https://github.com/rsyslog/rsyslog/pull/23
