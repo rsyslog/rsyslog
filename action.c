@@ -373,14 +373,12 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
 		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
-	} else {
-		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
-		pszAName[sizeof(pszAName)-1] = '\0'; /* to be on the save side */
+		pThis->pszName = ustrdup(pszAName);
 	}
 
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
-	CHKiRet(statsobj.SetName(pThis->statsobj, pszAName));
+	CHKiRet(statsobj.SetName(pThis->statsobj, pThis->pszName));
 
 	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
@@ -406,13 +404,9 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 	/* create our queue */
 
 	/* generate a friendly name for the queue */
-	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue",
-			 iActionNbr);
-	} else {
-		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
-		pszAName[63] = '\0'; /* to be on the save side */
-	}
+	snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "%s queue",
+		 pThis->pszName);
+
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
 	 * This is only possible if some features, which require strict sequence, are

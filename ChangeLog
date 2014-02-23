@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-02-??
+- better and more consistent action naming, action queus now always 
+  contain the word "queue" after the action name
 - build system improvements
   * autoconf subdir option
   * support for newer json-c packages
