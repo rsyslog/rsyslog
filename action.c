@@ -690,8 +690,9 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
 			if(bActionReportSuspension) {
-				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
-					      pThis->pszName);
+				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+					      "resumed (module '%s')",
+					      pThis->pszName, pThis->pMod->pszName);
 			}
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {

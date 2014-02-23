@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-02-??
+- "action resumed" message now also specifies module type
+  which makes troubleshooting a bit easier. Note that we cannot output all
+  the config details (like destination etc) as this would require much more
+  elaborate code changes, which we at least do not like to do in the
+  stable version.
 - better and more consistent action naming, action queus now always 
   contain the word "queue" after the action name
 - build system improvements

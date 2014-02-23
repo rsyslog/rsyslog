@@ -77,7 +77,7 @@ struct action_s {
 	qqueue_t *pQueue;	/* action queue */
 	pthread_mutex_t mutAction; /* primary action mutex */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
-	uchar *pszName;		/* action name (for documentation) */
+	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS);
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
