@@ -7,6 +7,9 @@ Version 8.2.0 [v8-stable] 2014-02-??
   stable version.
 - better and more consistent action naming, action queus now always 
   contain the word "queue" after the action name
+- bugfix: ompipe did resume itself even when it was still in error
+  See: https://github.com/rsyslog/rsyslog/issues/35
+  Thanks to github user schplat for reporting
 ---------------------------------------------------------------------------
 Version 8.1.6 [release candidate] 2014-02-20
 - omfile: permit to set global defaults for action parameters
