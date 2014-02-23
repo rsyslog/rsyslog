@@ -306,6 +306,12 @@ ENDfreeWrkrInstance
 
 BEGINtryResume
 CODESTARTtryResume
+	if(pData->fd == -1) {
+		rsRetVal iRetLocal;
+		iRetLocal = preparePipe(pData);
+		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+			iRet = RS_RET_SUSPENDED;
+	}
 ENDtryResume
 
 BEGINdoAction

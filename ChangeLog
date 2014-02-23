@@ -189,6 +189,9 @@ Version 7.6.1 [v7.6-stable] 2014-02-??
   * autoconf subdir option
   * support for newer json-c packages
   Thanks to Michael Biebl for the patches.
+- bugfix: ompipe did resume itself even when it was still in error
+  See: https://github.com/rsyslog/rsyslog/issues/35
+  Thanks to github user schplat for reporting
 - bugfix: "action xxx suspended" did report incorrect error code
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
