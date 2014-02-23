@@ -377,9 +377,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
 		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
-	} else {
-		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
-		pszAName[sizeof(pszAName)-1] = '\0'; /* to be on the save side */
+		pThis->pszName = ustrdup(pszAName);
 	}
 
 	/* cache transactional attribute */
@@ -397,7 +395,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
-	CHKiRet(statsobj.SetName(pThis->statsobj, pszAName));
+	CHKiRet(statsobj.SetName(pThis->statsobj, pThis->pszName));
 
 	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
@@ -423,13 +421,9 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	/* create our queue */
 
 	/* generate a friendly name for the queue */
-	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d queue",
-			 iActionNbr);
-	} else {
-		ustrncpy(pszAName, pThis->pszName, sizeof(pszAName));
-		pszAName[63] = '\0'; /* to be on the save side */
-	}
+	snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "%s queue",
+		 pThis->pszName);
+
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
 	 * This is only possible if some features, which require strict sequence, are
@@ -654,7 +648,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	if(bActionReportSuspension) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
-		errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
+		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 			      "action '%s' suspended, next retry is %s",
 			      pThis->pszName, timebuf);
 	}
@@ -701,8 +695,9 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
 			if(bActionReportSuspension) {
-				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' resumed",
-					      pThis->pszName);
+				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+					      "resumed (module '%s')",
+					      pThis->pszName, pThis->pMod->pszName);
 			}
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {

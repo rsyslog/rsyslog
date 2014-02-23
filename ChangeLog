@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 8.2.0 [v8-stable] 2014-02-??
+- "action resumed" message now also specifies module type
+  which makes troubleshooting a bit easier. Note that we cannot output all
+  the config details (like destination etc) as this would require much more
+  elaborate code changes, which we at least do not like to do in the
+  stable version.
+- better and more consistent action naming, action queus now always 
+  contain the word "queue" after the action name
+---------------------------------------------------------------------------
 Version 8.1.6 [release candidate] 2014-02-20
 - omfile: permit to set global defaults for action parameters
   Thanks to Nathan Brown for the patch.
@@ -169,10 +178,18 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-02-??
+- "action resumed" message now also specifies module type
+  which makes troubleshooting a bit easier. Note that we cannot output all
+  the config details (like destination etc) as this would require much more
+  elaborate code changes, which we at least do not like to do in the
+  stable version.
+- better and more consistent action naming, action queus now always 
+  contain the word "queue" after the action name
 - build system improvements
   * autoconf subdir option
   * support for newer json-c packages
   Thanks to Michael Biebl for the patches.
+- bugfix: "action xxx suspended" did report incorrect error code
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
   Thanks to Alain for the analysis and the patch.
