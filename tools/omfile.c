@@ -805,7 +805,7 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));
 			if(pData->pStrm == NULL) {
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->fname);
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output file '%s'", pData->fname);
 			}
 		}
 	}

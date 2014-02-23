@@ -154,7 +154,7 @@ preparePipe(instanceData *pData)
 		if(!pData->bHadError) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output pipe '%s': %s",
+			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s': %s",
 				        pData->pipe, errStr);
 			pData->bHadError = 1;
 		}
