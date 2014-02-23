@@ -643,7 +643,7 @@ actionSuspend(action_t * const pThis)
 	if(bActionReportSuspension) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
-		errmsg.LogMsg(0, RS_RET_NOT_FOUND, LOG_WARNING,
+		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 			      "action '%s' suspended, next retry is %s",
 			      pThis->pszName, timebuf);
 	}
