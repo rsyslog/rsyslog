@@ -83,6 +83,7 @@ Manual
    :maxdepth: 3
    
    installation/index
+   usecases/index
    drivers/index
    rainerscript/index
    messageparser
