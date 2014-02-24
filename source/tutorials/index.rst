@@ -4,7 +4,6 @@ Tutorials
 .. toctree::
    :maxdepth: 2
 
-   secure_tls
    tls_cert_summary
    tls
    database

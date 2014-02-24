@@ -1,21 +1,5 @@
-Encrypting Syslog Traffic with TLS (SSL)
-========================================
-
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-06-18)*
-
--  `Overview <rsyslog_secure_tls.html>`_
--  `Sample Scenario <tls_cert_scenario.html>`_
--  `Setting up the CA <tls_cert_ca.html>`_
--  `Generating Machine Certificates <tls_cert_machine.html>`_
--  `Setting up the Central Server <tls_cert_server.html>`_
--  `Setting up syslog Clients <tls_cert_client.html>`_
--  `Setting up the UDP syslog relay <tls_cert_udp_relay.html>`_
--  `Wrapping it all up <tls_cert_summary.html>`_
-
-generating the machine certificate
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Generating the machine certificate
+==================================
 
 In this step, we generate certificates for each of the machines. Please
 note that both clients and servers need certificates. The certificate
@@ -174,17 +158,3 @@ machine:
 
 **Never provide anyone with ca-key.pem!** Also, make sure nobody but the
 machine in question gets hold of key.pem.
-
-Copyright
----------
-
-Copyright (c) 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
