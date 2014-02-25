@@ -29,8 +29,8 @@ Sample Configuration
 
    # now define our ruleset, which also includes
    # threading and queue parameters.
-   ruleset(queue.type="fixedArray"
-           size="250000"
+   ruleset(name="writeRemoteData" 
+           queue.type="fixedArray" size="250000"
 	   queue.dequeueBatchSize="4096"
 	   queue.workerThreads="4"
 	   queue.workerThreadMinimumMessages="60000"
