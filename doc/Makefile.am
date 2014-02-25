@@ -38,13 +38,13 @@ html_files = \
 	imjournal.html \
 	mmanon.html \
 	mmsequence.html \
-	mmcount.html
+	mmcount.html \
 	mmfields.html \
 	mmrfc5424addhmac.html \
 	mmutf8fix.html \
 	omelasticsearch.html \
 	ommongodb.html \
-	queue_parameters.html
+	queue_parameters.html \
 	mmpstrucdata.html \
 	omusrmsg.html \
 	omstdout.html \

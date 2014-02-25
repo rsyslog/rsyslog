@@ -18,6 +18,9 @@ Version 7.6.1 [v7.6-stable] 2014-02-??
 - bugfix: ommongodb's template parameter was mandatory but should have
   been optional
   Thanks to Alain for the analysis and the patch.
+- bugfix: only partial doc was put into distribution tarball
+  Thanks to Michael Biebl for alerting us.
+  see also: https://github.com/rsyslog/rsyslog/issues/31
 ---------------------------------------------------------------------------
 Version 7.6.0 [v7.6-stable] 2014-02-12
 This starts a new stable branch based on 7.5.8 plus the following changes:
