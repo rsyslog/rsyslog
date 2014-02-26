@@ -305,6 +305,7 @@ ENDfreeWrkrInstance
 
 
 BEGINtryResume
+	instanceData *__restrict__ const pData = pWrkrData->pData;
 CODESTARTtryResume
 	if(pData->fd == -1) {
 		rsRetVal iRetLocal;
