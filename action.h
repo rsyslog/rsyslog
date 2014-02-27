@@ -43,6 +43,7 @@ struct action_s {
 	int	iActionNbr;	/* this action's number (ID) */
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
+	sbool	bReportSuspension;/* should suspension (and reactivation) of the action reported */
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	sbool	bDisabled;
 	sbool	isTransactional;

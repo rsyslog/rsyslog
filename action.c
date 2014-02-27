@@ -185,6 +185,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.execonlywhenpreviousissuspended", eCmdHdlrBinary, 0 }, /* legacy: actionexeconlywhenpreviousissuspended */
 	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
+	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk pblk =
@@ -348,6 +349,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bRepMsgHasMsg = 0;
 	pThis->bDisabled = 0;
 	pThis->isTransactional = 0;
+	pThis->bReportSuspension = -1; /* indicate "not yet set" */
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -645,7 +647,16 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 		  "duration %d\n",
 		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
 		  getActionNbrResRtry(pWti, pThis), suspendDuration);
-	if(bActionReportSuspension) {
+
+	/* we need to defer setting the action's own bReportSuspension state until
+	 * after the full config has been processed. So the most simple case to do
+	 * that is here. It's not a performance problem, as it happens infrequently.
+	 * it's not a threading race problem, as always the same value will be written.
+	 */
+	if(pThis->bReportSuspension == -1)
+		pThis->bReportSuspension = bActionReportSuspension;
+
+	if(pThis->bReportSuspension) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
@@ -694,7 +705,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
-			if(bActionReportSuspension) {
+			if(pThis->bReportSuspension) {
 				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
@@ -1582,6 +1593,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bRepMsgHasMsg = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeretrycount")) {
 			pAction->iResumeRetryCount = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspension")) {
+			pAction->bReportSuspension = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {
