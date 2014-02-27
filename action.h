@@ -51,6 +51,7 @@ struct action_s {
 	time_t	tLastExec;	/* time this action was last executed */
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
+	sbool	bReportSuspension;/* should suspension (and reactivation) of the action reported */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	action_state_t eState;	/* current state of action */
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */

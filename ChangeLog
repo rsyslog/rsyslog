@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-02-??
+- added "action.reportSuspension" action parameter
+  This now permits to control handling on a per-action basis rather to
+  the previous "global setting only".
 - "action resumed" message now also specifies module type
   which makes troubleshooting a bit easier. Note that we cannot output all
   the config details (like destination etc) as this would require much more
