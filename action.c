@@ -344,6 +344,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bExecWhenPrevSusp = 0;
 	pThis->bRepMsgHasMsg = 0;
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
+	pThis->bJustResumed = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -699,11 +700,7 @@ actionDoRetry(action_t *pThis, int *pbShutdownImmediate)
 		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
-			if(pThis->bReportSuspension) {
-				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
-					      "resumed (module '%s')",
-					      pThis->pszName, pThis->pMod->pszName);
-			}
+			pThis->bJustResumed = 1;
 			actionSetState(pThis, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
@@ -949,6 +946,26 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 done:	RETiRet;
 }
 
+/* This is used in resume processing. We only finally know that a resume
+ * worked when we have been able to actually process a messages. As such,
+ * we need to do some cleanup and status tracking in that case.
+ */
+static void
+actionSetActionWorked(action_t *__restrict__ const pThis)
+{
+dbgprintf("DDDDD: action worked, iResumeOKinRow %d, bJustResumed %d\n", pThis->iResumeOKinRow, pThis->bJustResumed);
+	pThis->iResumeOKinRow = 0; /* we had a successful call! */
+
+	if(pThis->bJustResumed) {
+		/* OK, we *really* could resume, so tell user! */
+		if(pThis->bReportSuspension) {
+			errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+				      "resumed (module '%s')",
+				      pThis->pszName, pThis->pMod->pszName);
+		}
+		pThis->bJustResumed = 0;
+	}
+}
 
 /* call the DoAction output plugin entry point
  * rgerhards, 2008-01-28
@@ -968,16 +985,16 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg, void *actParams)
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			actionSetActionWorked(pThis); /* we had a successful call! */
 			break;
 		case RS_RET_DEFER_COMMIT:
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			actionSetActionWorked(pThis); /* we had a successful call! */
 			/* we are done, action state remains the same */
 			break;
 		case RS_RET_PREVIOUS_COMMITTED:
 			/* action state remains the same, but we had a commit. */
 			pThis->bHadAutoCommit = 1;
-			pThis->iResumeOKinRow = 0; /* we had a successful call! */
+			actionSetActionWorked(pThis); /* we had a successful call! */
 			break;
 		case RS_RET_SUSPENDED:
 			actionRetry(pThis);
