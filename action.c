@@ -643,6 +643,7 @@ actionSuspend(action_t * const pThis)
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
 		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
 		  pThis->iNbrResRtry);
+
 	/* we need to defer setting the action's own bReportSuspension state until
 	 * after the full config has been processed. So the most simple case to do
 	 * that is here. It's not a performance problem, as it happens infrequently.
@@ -959,7 +960,7 @@ dbgprintf("DDDDD: action worked, iResumeOKinRow %d, bJustResumed %d\n", pThis->i
 	if(pThis->bJustResumed) {
 		/* OK, we *really* could resume, so tell user! */
 		if(pThis->bReportSuspension) {
-			errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+			errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
 				      "resumed (module '%s')",
 				      pThis->pszName, pThis->pMod->pszName);
 		}
