@@ -1,17 +1,6 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
-***Note: this documentation describes features present in v7+ of
-rsyslog. If you use an older version, scroll down to "legacy
-parameters".*** If you prefer, you can also `obtain a specific version
-of the rsyslog
-documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
-
 Actions
 -------
-
-Action object describe what is to be done with a message. They are
+The Action object describe what is to be done with a message. They are
 implemented via `output modules <rsyslog_conf_modules.html#om>`_.
 
 The action object has different parameters:
@@ -30,7 +19,12 @@ General Action Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  **name** word
-   used for statistics gathering and documentation
+
+   This names the action. The name is used for statistics gathering
+   and documentation. If no name is given, one is dynamically generated
+   based on the occurence of this action inside the rsyslog configuration.
+   Actions are sequentially numbered from 1 to n.
+
 -  **type** string
    Mandatory parameter for every action. The name of the module that
    should be used.
@@ -541,7 +535,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2011 by `Rainer
+ Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 2 or higher.
