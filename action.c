@@ -181,6 +181,7 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  */
 static int iActionNbr = 0;
 int bActionReportSuspension = 1;
+int bActionReportSuspensionCont = 0;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -194,6 +195,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
+	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk pblk =
@@ -344,6 +346,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bExecWhenPrevSusp = 0;
 	pThis->bRepMsgHasMsg = 0;
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
+	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
 	pThis->bJustResumed = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
@@ -629,6 +632,19 @@ actionSuspend(action_t * const pThis)
 	int suspendDuration;
 	char timebuf[32];
 
+	/* we need to defer setting the action's own bReportSuspension state until
+	 * after the full config has been processed. So the most simple case to do
+	 * that is here. It's not a performance problem, as it happens infrequently.
+	 * it's not a threading race problem, as always the same value will be written.
+	 */
+	if(pThis->bReportSuspension == -1)
+		pThis->bReportSuspension = bActionReportSuspension;
+	if(pThis->bReportSuspensionCont == -1) {
+		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
+		if(pThis->bReportSuspensionCont == -1)
+			pThis->bReportSuspension = 1;
+	}
+
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
 	 */
@@ -640,25 +656,17 @@ actionSuspend(action_t * const pThis)
 	if(pThis->iNbrResRtry == 0) {
 		STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
 	}
-	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
-		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
-		  pThis->iNbrResRtry);
-
-	/* we need to defer setting the action's own bReportSuspension state until
-	 * after the full config has been processed. So the most simple case to do
-	 * that is here. It's not a performance problem, as it happens infrequently.
-	 * it's not a threading race problem, as always the same value will be written.
-	 */
-	if(pThis->bReportSuspension == -1)
-		pThis->bReportSuspension = bActionReportSuspension;
-
-	if(pThis->bReportSuspension) {
+	if(   pThis->bReportSuspensionCont
+	   || (pThis->bReportSuspension && pThis->iNbrResRtry == 0) ) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 			      "action '%s' suspended, next retry is %s",
 			      pThis->pszName, timebuf);
 	}
+	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d\n",
+		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
+		  pThis->iNbrResRtry);
 }
 
 
@@ -954,7 +962,6 @@ done:	RETiRet;
 static void
 actionSetActionWorked(action_t *__restrict__ const pThis)
 {
-dbgprintf("DDDDD: action worked, iResumeOKinRow %d, bJustResumed %d\n", pThis->iResumeOKinRow, pThis->bJustResumed);
 	pThis->iResumeOKinRow = 0; /* we had a successful call! */
 
 	if(pThis->bJustResumed) {
@@ -1838,6 +1845,8 @@ actionApplyCnfParam(action_t *pAction, struct cnfparamvals *pvals)
 			pAction->iResumeRetryCount = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspension")) {
 			pAction->bReportSuspension = (int) pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
+			pAction->bReportSuspensionCont = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {

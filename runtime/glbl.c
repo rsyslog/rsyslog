@@ -116,6 +116,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
+	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -733,6 +734,8 @@ glblDoneLoadCnf(void)
 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {
 			bActionReportSuspension = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspensioncontinuation")) {
+			bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
 			iMaxLine = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
