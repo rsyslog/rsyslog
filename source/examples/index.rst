@@ -1,5 +1,5 @@
-Use Cases
-=========
+Examples
+========
 
 .. toctree::
    :maxdepth: 2
