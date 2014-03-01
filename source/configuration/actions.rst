@@ -104,6 +104,19 @@ General Action Parameters
    actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
    after the 10th try, it by default is 60 and after the 100th try it is
    330.
+- **action.reportSuspension** on/off
+  Configures rsyslog to report suspension and reactivation
+  of the action. This is useful to note which actions have
+  problems (e.g. connecting to a remote system) and when.
+  The default for this setting is the equally-named global
+  parameter.
+- **action.reportSuspensionContinuation** on/off
+  Configures rsyslog to report continuation of action suspension.
+  This emits new messages whenever an action is to be retried, but
+  continues to fail. If set to "on", *action.reportSuspension* is
+  also automatically set to "on".
+  The default for this setting is the equally-named global
+  parameter.
 
 Useful Links
 ------------
