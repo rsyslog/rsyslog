@@ -173,6 +173,7 @@ configSettings_t cs_save;				/* our saved (scope!) config settings */
  */
 int iActionNbr = 0;
 int bActionReportSuspension = 1;
+int bActionReportSuspensionCont = 0;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -186,6 +187,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
+	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk pblk =
@@ -350,6 +352,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bDisabled = 0;
 	pThis->isTransactional = 0;
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
+	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -632,6 +635,19 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	int suspendDuration;
 	char timebuf[32];
 
+	/* we need to defer setting the action's own bReportSuspension state until
+	 * after the full config has been processed. So the most simple case to do
+	 * that is here. It's not a performance problem, as it happens infrequently.
+	 * it's not a threading race problem, as always the same value will be written.
+	 */
+	if(pThis->bReportSuspension == -1)
+		pThis->bReportSuspension = bActionReportSuspension;
+	if(pThis->bReportSuspensionCont == -1) {
+		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
+		if(pThis->bReportSuspensionCont == -1)
+			pThis->bReportSuspension = 1;
+	}
+
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
 	 */
@@ -643,26 +659,19 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	if(getActionNbrResRtry(pWti, pThis) == 0) {
 		STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
 	}
-	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
-		  "duration %d\n",
-		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
-		  getActionNbrResRtry(pWti, pThis), suspendDuration);
 
-	/* we need to defer setting the action's own bReportSuspension state until
-	 * after the full config has been processed. So the most simple case to do
-	 * that is here. It's not a performance problem, as it happens infrequently.
-	 * it's not a threading race problem, as always the same value will be written.
-	 */
-	if(pThis->bReportSuspension == -1)
-		pThis->bReportSuspension = bActionReportSuspension;
-
-	if(pThis->bReportSuspension) {
+	if(   pThis->bReportSuspensionCont
+	   || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0) ) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
 			      "action '%s' suspended, next retry is %s",
 			      pThis->pszName, timebuf);
 	}
+	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
+		  "duration %d\n",
+		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
+		  getActionNbrResRtry(pWti, pThis), suspendDuration);
 }
 
 
@@ -710,6 +719,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
 			}
+			setActionJustResumed(pWti, pThis, 1);
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
@@ -972,6 +982,25 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 done:	return;
 }
 
+/* This is used in resume processing. We only finally know that a resume
+ * worked when we have been able to actually process a messages. As such,
+ * we need to do some cleanup and status tracking in that case.
+ */
+static void
+actionSetActionWorked(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
+{
+	setActionResumeInRow(pWti, pThis, 0);
+
+	if(getActionJustResumed(pWti, pThis)) {
+		/* OK, we *really* could resume, so tell user! */
+		if(pThis->bReportSuspension) {
+			errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
+				      "resumed (module '%s')",
+				      pThis->pszName, pThis->pMod->pszName);
+		}
+		setActionJustResumed(pWti, pThis, 0);
+	}
+}
 
 static rsRetVal
 handleActionExecResult(action_t *__restrict__ const pThis,
@@ -982,16 +1011,16 @@ handleActionExecResult(action_t *__restrict__ const pThis,
 	switch(ret) {
 		case RS_RET_OK:
 			actionCommitted(pThis, pWti);
-			setActionResumeInRow(pWti, pThis, 0);
+			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
 			break;
 		case RS_RET_DEFER_COMMIT:
-			setActionResumeInRow(pWti, pThis, 0);
+			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
 			/* we are done, action state remains the same */
 			break;
 		case RS_RET_PREVIOUS_COMMITTED:
 			/* action state remains the same, but we had a commit. */
 			pThis->bHadAutoCommit = 1;
-			setActionResumeInRow(pWti, pThis, 0);
+			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
 			break;
 		case RS_RET_SUSPENDED:
 			actionRetry(pThis, pWti);
@@ -1595,6 +1624,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->iResumeRetryCount = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspension")) {
 			pAction->bReportSuspension = (int) pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
+			pAction->bReportSuspensionCont = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {

@@ -44,6 +44,7 @@ typedef struct actWrkrInfo {
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct {
 		unsigned actState : 3;
+		unsigned bJustResumed : 1;
 	} flags;
 	union {
 		struct {
@@ -115,6 +116,19 @@ setActionState(wti_t * const pWti, action_t * const pAction, uint8_t newState)
 {
 	pWti->actWrkrInfo[pAction->iActionNbr].flags.actState = newState;
 }
+
+static inline int
+getActionJustResumed(wti_t * const pWti, action_t * const pAction)
+{
+	return(pWti->actWrkrInfo[pAction->iActionNbr].flags.bJustResumed);
+}
+
+static inline void
+setActionJustResumed(wti_t * const pWti, action_t * const pAction, int val)
+{
+	pWti->actWrkrInfo[pAction->iActionNbr].flags.bJustResumed = val;
+}
+
 
 static inline uint16_t
 getActionResumeInRow(wti_t * const pWti, action_t * const pAction)

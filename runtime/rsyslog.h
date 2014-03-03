@@ -384,6 +384,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_READ_ERR = -2356,/**< read error occured (file i/o) */
 	RS_RET_CONF_PARSE_WARNING = -2357,/**< warning parsing config file */
 	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
+	RS_RET_RESUMED = -2359,/**< status: action was resumed (used for reporting) */
 
 	/* up to 2400 reserved for 7.5 & 7.6 */
 	RS_RET_INVLD_OMOD = -2400, /**< invalid output module, does not provide proper interfaces */

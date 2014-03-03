@@ -13,13 +13,18 @@ unpredictable.
 
 <p>The following paramters can be set:
 <ul>
-<li><b>action.reportSuspension</b> - binary, default "on", v7.5.8+c<br>
+<li><b>action.reportSuspension</b> - binary, default "on", v7.5.8+<br>
 If enabled ("on") action will log message under syslog.* when an action 
 suspends or resume itself. This usually happens when there are problems
 connecting to backend systems. If disabled ("off"), these messages are
 not generated. These messages can be useful in detecting problems with
 backend systems. Most importantly, frequent suspension and resumption
 points to a problem area.
+<li><b>action.reportSuspensionContinuation</b> - binary, default "off", v7.6.1+, v8.2.0+<br>
+If enabled ("on") the action will not only report the first suspension but
+each time the suspension is prolonged. Otherwise, the follow-up messages
+are not logged. If this setting is set to "on", action.reportSuspension is
+also automaticaly turned "on".
 <li><a href="rsconf1_controlcharacterescapeprefix.html"><b>parser.controlCharacterEscapePrefix</b></a></li>
 <li><a href="rsconf1_droptrailinglfonreception.html"><b>parser.dropTrailingLFOnReception</b></a></li>
 <li><a href="rsconf1_escapecontrolcharactersonreceive.html"><b>parser.escapeControlCharactersOnReceive</b></a></li>

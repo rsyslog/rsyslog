@@ -73,6 +73,13 @@ When an action is suspended (e.g. destination can not be connected), the action 
 	    problems (e.g. connecting to a remote system) and when.
 	    The default for this setting is the equally-named global
 	    parameter.</li>
+	<li><b>action.reportSuspensionContinuation</b> on/off
+	<br>Configures rsyslog to report continuation of action suspension.
+	    This emits new messages whenever an action is to be retried, but
+	    continues to fail. If set to "on", action.reportSuspension is
+	    also automatically set to "on".
+	    The default for this setting is the equally-named global
+	    parameter.</li>
 </ul>
 
 

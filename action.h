@@ -31,6 +31,7 @@
 /* external data */
 extern int glbliActionResumeRetryCount;
 extern int bActionReportSuspension;
+extern int bActionReportSuspensionCont;
 
 
 /* the following struct defines the action object data structure
@@ -44,6 +45,7 @@ struct action_s {
 	sbool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	sbool	bWriteAllMarkMsgs;/* should all mark msgs be written (not matter how recent the action was executed)? */
 	sbool	bReportSuspension;/* should suspension (and reactivation) of the action reported */
+	sbool	bReportSuspensionCont;
 	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
 	sbool	bDisabled;
 	sbool	isTransactional;
