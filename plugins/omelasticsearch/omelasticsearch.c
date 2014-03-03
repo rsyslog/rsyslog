@@ -87,6 +87,7 @@ typedef struct _instanceData {
 	sbool dynBulkId;
 	sbool bulkmode;
 	sbool asyncRepl;
+        sbool useHttps;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -120,6 +121,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynparent", eCmdHdlrBinary, 0 },
 	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "asyncrepl", eCmdHdlrBinary, 0 },
+        { "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
@@ -210,6 +212,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdynamic search type=%d\n", pData->dynSrchType);
 	dbgprintf("\tdynamic parent=%d\n", pData->dynParent);
 	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
+        dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
@@ -231,7 +234,12 @@ setBaseURL(instanceData *pData, es_str_t **url)
 
 	*url = es_newStr(128);
 	snprintf(portBuf, sizeof(portBuf), "%d", pData->port);
-	r = es_addBuf(url, "http://", sizeof("http://")-1);
+        if (pData->useHttps) {
+  		r = es_addBuf(url, "https://", sizeof("https://")-1);
+	}
+	else {
+		r = es_addBuf(url, "http://", sizeof("http://")-1);
+	}
 	if(r == 0) r = es_addBuf(url, (char*)pData->server, strlen((char*)pData->server));
 	if(r == 0) r = es_addChar(url, ':');
 	if(r == 0) r = es_addBuf(url, portBuf, strlen(portBuf));
@@ -782,6 +790,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->dynSrchType = 0;
 	pData->dynParent = 0;
 	pData->asyncRepl = 0;
+        pData->useHttps = 0;
 	pData->bulkmode = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
@@ -832,6 +841,8 @@ CODESTARTnewActInst
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {
 			pData->asyncRepl = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
+			pData->useHttps = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynbulkid")) {
