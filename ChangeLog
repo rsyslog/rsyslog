@@ -14,6 +14,11 @@ Version 7.6.1 [v7.6-stable] 2014-02-??
   * autoconf subdir option
   * support for newer json-c packages
   Thanks to Michael Biebl for the patches.
+- imjournal enhancements:
+  * log entries with empty message field are no longer ignored
+  * invalid facility and severity values are replaced by defaults
+  * new config parameters to set default facility and severity
+  Thanks to Tomas Heinrich for implementing this
 - bugfix: ompipe did resume itself even when it was still in error
   See: https://github.com/rsyslog/rsyslog/issues/35
   Thanks to github user schplat for reporting
@@ -302,6 +307,13 @@ Version 7.5.0 [devel] 2013-06-11
 - add -S command line option to specify IP address to use for RELP client
   connections
   Thanks to Axel Rau for the patch.
+---------------------------------------------------------------------------
+Version 7.4.11  [v7.4-stable] *never released*
+- imjournal enhancements:
+  * log entries with empty message field are no longer ignored
+  * invalid facility and severity values are replaced by defaults
+  * new config parameters to set default facility and severity
+  Thanks to Tomas Heinrich for implementing this
 ---------------------------------------------------------------------------
 Version 7.4.10  [v7.4-stable] 2014-02-12
 - bugfix: json templates are improperly created
