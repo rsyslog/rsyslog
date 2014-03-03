@@ -2,9 +2,9 @@
  * Implementation of a tcp-based syslog server.
  *
  * This is a limited-capability implementation of a syslog tcp server.
- * 
+ *
  * @author Rainer Gerhards
- * 
+ *
  * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -121,6 +121,10 @@ public class SyslogServerTCP extends Thread {
 		catch(Exception e) {
 			System.out.println("Error during server run " + e.toString());
 		}
-			
+
+	}
+
+	public int getSocketLocalPort() {
+		return lstnSock.getLocalPort();
 	}
 }
