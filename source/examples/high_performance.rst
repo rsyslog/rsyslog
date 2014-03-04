@@ -14,9 +14,9 @@ Sample Configuration
 ::
 
    # load required modules
-   module(load="impudp" threads="2"
-          timeRequery="8" batchSize=128)
-   module(type="imptcp" thread="3")
+   module(load="imudp" threads="2"
+          timeRequery="8" batchSize="128")
+   module(load="imptcp" threads="3")
 
    # listeners
    # repeat blocks if more listeners are needed
@@ -30,7 +30,8 @@ Sample Configuration
    # now define our ruleset, which also includes
    # threading and queue parameters.
    ruleset(name="writeRemoteData" 
-           queue.type="fixedArray" size="250000"
+           queue.type="fixedArray"
+           queue.size="250000"
 	   queue.dequeueBatchSize="4096"
 	   queue.workerThreads="4"
 	   queue.workerThreadMinimumMessages="60000"
