@@ -3817,7 +3817,6 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
-		dbgprintf("AAAA: next JSONPath elt: '%s'\n", namebuf);
 		json = json_object_object_get(root, (char*)namebuf);
 	} else
 		json = root;
@@ -3857,7 +3856,6 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 	struct json_object_iter it;
 
 	json_object_object_foreachC(json, it) {
-DBGPRINTF("AAAA jsonMerge adds '%s'\n", it.key);
 		json_object_object_add(existing, it.key,
 			json_object_get(it.val));
 	}
@@ -3940,7 +3938,6 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 			if(json_object_get_type(json) == json_type_object) {
 				CHKiRet(jsonMerge(*pjroot, json));
 			} else {
-//dbgprintf("AAAA: leafnode already exists, type is %d, update with %d\n", (int)json_object_get_type(leafnode), (int)json_object_get_type(json));
 				/* TODO: improve the code below, however, the current
 				 *       state is not really bad */
 				if(json_object_get_type(leafnode) == json_type_object) {
@@ -3979,7 +3976,6 @@ msgDelJSON(msg_t * const pM, uchar *name)
 	uchar *leaf;
 	DEFiRet;
 
-dbgprintf("AAAA: unset variable '%s'\n", name);
 	MsgLock(pM);
 
 	if(name[0] == '!') {
@@ -4011,7 +4007,6 @@ dbgprintf("AAAA: unset variable '%s'\n", name);
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
 		leafnode = json_object_object_get(parent, (char*)leaf);
-DBGPRINTF("AAAA: unset found JSON value path '%s', " "leaf '%s', leafnode %p\n", name, leaf, leafnode);
 		if(leafnode == NULL) {
 			DBGPRINTF("unset JSON: could not find '%s'\n", name);
 			ABORT_FINALIZE(RS_RET_JNAME_NOTFOUND);
