@@ -109,6 +109,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "debug.logfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
+        { "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 }
@@ -694,6 +695,10 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriverkeyfile")) {
 			free(pszDfltNetstrmDrvrKeyFile);
 			pszDfltNetstrmDrvrKeyFile = (uchar*)
+				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
+			free(pszDfltNetstrmDrvrCertFile);
+			pszDfltNetstrmDrvrCertFile = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			free(pszDfltNetstrmDrvrCAF);
