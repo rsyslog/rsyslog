@@ -67,3 +67,26 @@ interface is evolved. So there is no need to wait for a new interface version.
 Interfaces for external input, filter and message modification plugins are
 planned. Most probably, they will become available in the order mentioned
 in the last sentence.
+
+External Message Modification Modules
+-------------------------------------
+**Note: Work in progress, no code yet written!**
+
+The external plugin will use stdin to receive the message that it potentially
+can modify. The message will be LF-terminated, and no LF must be present within
+the message itself. The initial idea is that a pure JSON representation is
+provided, but it is open for discussion if custom templates are also
+to be supported. This would have some performance advantages if the
+module just needs to take care of a subset of the message properties.
+
+The plugin will emit a JSON representation of those properties
+that **need to be modified** and their new values to stdout. Again, this
+is delmited by LF, with no LF permitted inside the JSON representation.
+Only properties that are to be changed must be included in the response.
+Unchanged properties should NOT be included in the response, as this would
+increase processing cost. If no property is to be modified, an empty
+JSON representation is to be provided.
+
+The plugin must emit one response line for each message (line) received, and
+must do so in the same order in which the messages were put in stdin. Note that like the output module interface, multiple instances of the plugin may be
+activated. See for more information above.
