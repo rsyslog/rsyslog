@@ -72,6 +72,9 @@ EXTRA_DIST = \
 	rsyslog.service.in
 
 SUBDIRS = doc compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+# external plugin driver is always enabled (core component)
+SUBDIRS += plugins/mmexternal
+
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
