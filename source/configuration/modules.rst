@@ -38,24 +38,24 @@ Input Modules
 Input modules are used to gather messages from various sources. They
 interface to message generators.
 
--  `imfile <imfile.html>`_ -  input module for text files
--  `imrelp <imrelp.html>`_ - RELP input module
--  `imudp <imudp.html>`_ - udp syslog message input
--  `imtcp <imtcp.html>`_ - input plugin for tcp syslog
--  `imptcp <imptcp.html>`_ - input plugin for plain tcp syslog (no TLS
+-  `imfile <modules/imfile.html>`_ -  input module for text files
+-  `imrelp <modules/imrelp.html>`_ - RELP input module
+-  `imudp <modules/imudp.html>`_ - udp syslog message input
+-  `imtcp <modules/imtcp.html>`_ - input plugin for tcp syslog
+-  `imptcp <modules/imptcp.html>`_ - input plugin for plain tcp syslog (no TLS
    but faster)
--  `imgssapi <imgssapi.html>`_ - input plugin for plain tcp and
+-  `imgssapi <modules/imgssapi.html>`_ - input plugin for plain tcp and
    GSS-enabled syslog
 -  immark - support for mark messages
--  `imklog <imklog.html>`_ - kernel logging
--  `imuxsock <imuxsock.html>`_ - unix sockets, including the system log
+-  `imklog <modules/imklog.html>`_ - kernel logging
+-  `imuxsock <modules/imuxsock.html>`_ - unix sockets, including the system log
    socket
--  `imsolaris <imsolaris.html>`_ - input for the Sun Solaris system log
+-  `imsolaris <modules/imsolaris.html>`_ - input for the Sun Solaris system log
    source
--  `im3195 <im3195.html>`_ - accepts syslog messages via RFC 3195
--  `impstats <impstats.html>`_ - provides periodic statistics of rsyslog
+-  `im3195 <modules/im3195.html>`_ - accepts syslog messages via RFC 3195
+-  `impstats <modules/impstats.html>`_ - provides periodic statistics of rsyslog
    internal counters
--  `imjournal <imjournal.html>`_ - Linux journal inuput module
+-  `imjournal <modules/imjournal.html>`_ - Linux journal inuput module
 
 Output Modules
 --------------
@@ -63,41 +63,41 @@ Output Modules
 Output modules process messages. With them, message formats can be
 transformed and messages be transmitted to various different targets.
 
--  `omfile <omfile.html>`_ - file output module
--  `omfwd <omfwd.html>`_ (does NOT yet work in v8) - syslog forwarding
+-  `omfile <modules/omfile.html>`_ - file output module
+-  `omfwd <modules/omfwd.html>`_ (does NOT yet work in v8) - syslog forwarding
    output module
--  `omjournal <omjournal.html>`_ - Linux journal output module
--  `ompipe <ompipe.html>`_ - named pipe output module
--  `omusrmsg <omusrmsg.html>`_ - user message output module
--  `omsnmp <omsnmp.html>`_ (does NOT yet work in v8) - SNMP trap output
+-  `omjournal <modules/omjournal.html>`_ - Linux journal output module
+-  `ompipe <modules/ompipe.html>`_ - named pipe output module
+-  `omusrmsg <modules/omusrmsg.html>`_ - user message output module
+-  `omsnmp <modules/omsnmp.html>`_ (does NOT yet work in v8) - SNMP trap output
    module
--  `omtdout <omstdout.html>`_ - stdout output module (mainly a test
+-  `omtdout <modules/omstdout.html>`_ - stdout output module (mainly a test
    tool)
--  `omrelp <omrelp.html>`_ (does NOT yet work in v8) - RELP output
+-  `omrelp <modules/omrelp.html>`_ (does NOT yet work in v8) - RELP output
    module
--  `omruleset <omruleset.html>`_ - forward message to another ruleset
+-  `omruleset <modules/omruleset.html>`_ - forward message to another ruleset
 -  omgssapi (does NOT yet work in v8) - output module for GSS-enabled
    syslog
--  `ommysql <ommysql.html>`_ - output module for MySQL
+-  `ommysql <modules/ommysql.html>`_ - output module for MySQL
 -  ompgsql (does NOT yet work in v8) - output module for PostgreSQL
--  `omlibdbi <omlibdbi.html>`_ (does NOT yet work in v8) - generic
+-  `omlibdbi <modules/omlibdbi.html>`_ (does NOT yet work in v8) - generic
    database output module (Firebird/Interbase, MS SQL, Sybase, SQLLite,
    Ingres, Oracle, mSQL)
--  `ommail <ommail.html>`_ (does NOT yet work in v8) - permits rsyslog
+-  `ommail <modules/ommail.html>`_ (does NOT yet work in v8) - permits rsyslog
    to alert folks by mail if something important happens
--  `omprog <omprog.html>`_ (does NOT yet work in v8) - permits sending
+-  `omprog <modules/omprog.html>`_ (does NOT yet work in v8) - permits sending
    messages to a program for custom processing
--  `omoracle <omoracle.html>`_ (orphaned) - output module for Oracle
+-  `omoracle <modules/omoracle.html>`_ (orphaned) - output module for Oracle
    (native OCI interface)
--  `omudpspoof <omudpspoof.html>`_ (does NOT yet work in v8) - output
+-  `omudpspoof <modules/omudpspoof.html>`_ (does NOT yet work in v8) - output
    module sending UDP syslog messages with a spoofed address
--  `omuxsock <omuxsock.html>`_ (does NOT yet work in v8) - output module
+-  `omuxsock <modules/omuxsock.html>`_ (does NOT yet work in v8) - output module
    Unix domain sockets
--  `omhdfs <omhdfs.html>`_ (does NOT yet work in v8) - output module for
+-  `omhdfs <modules/omhdfs.html>`_ (does NOT yet work in v8) - output module for
    Hadoop's HDFS file system
--  `ommongodb <ommongodb.html>`_ (does NOT yet work in v8) - output
+-  `ommongodb <modules/ommongodb.html>`_ (does NOT yet work in v8) - output
    module for MongoDB
--  `omelasticsearch <omelasticsearch.html>`_ - output module for
+-  `omelasticsearch <modules/omelasticsearch.html>`_ - output module for
    ElasticSearch
 
 Parser Modules
@@ -110,14 +110,14 @@ message parser documentation <messageparser.html>`_.
 
 The current modules are currently provided as part of rsyslog:
 
--  pmrfc5424[builtin] - rsyslog.rfc5424 - parses RFC5424-formatted
+-  `pmrfc5424[builtin] <modules/pmrfc5424.html>`_ - rsyslog.rfc5424 - parses RFC5424-formatted
    messages (the new syslog standard)
--  pmrfc3164[builtin] - rsyslog.rfc3164 - the traditional/legacy syslog
+-  `pmrfc3164[builtin] <modules/pmrfc3164.html>`_ - rsyslog.rfc3164 - the traditional/legacy syslog
    parser
--  pmrfc3164sd - rsyslog.rfc3164sd - a contributed module supporting
+-  `pmrfc3164sd <modules/pmrfc3164sd.html>`_ - rsyslog.rfc3164sd - a contributed module supporting
    RFC5424 structured data inside RFC3164 messages (not supported by the
    rsyslog team)
--  `pmlastmsg <pmlastmsg.html>`_ - rsyslog.lastmsg - a parser module
+-  `pmlastmsg <modules/pmlastmsg.html>`_ - rsyslog.lastmsg - a parser module
    that handles the typically malformed "last messages repated n times"
    messages emitted by some syslogds.
 
@@ -140,25 +140,25 @@ and thus usually are not generic enough to be reused. However, existing
 module's code is probably an excellent starting base for writing a new
 module. Currently, the following modules exist inside the source tree:
 
--  `mmanon <mmanon.html>`_ - used to anonymize log messages.
--  `mmcount <mmcount.html>`_ - message modification plugin which counts
+-  `mmanon <modules/mmanon.html>`_ - used to anonymize log messages.
+-  `mmcount <../mmcount.html>`_ - message modification plugin which counts
    messages
--  `mmfields <mmfields.html>`_ - used to extract fields from specially
+-  `mmfields <../mmfields.html>`_ - used to extract fields from specially
    formatted messages (e.g. CEF)
--  `mmnormalize <mmnormalize.html>`_ - used to normalize log messages.
+-  `mmnormalize <modules/mmnormalize.html>`_ - used to normalize log messages.
    Note that this actually is a **generic** module.
--  `mmjsonparse <mmjsonparse.html>`_ - used to interpret CEE/lumberjack
+-  `mmjsonparse <modules/mmjsonparse.html>`_ - used to interpret CEE/lumberjack
    enabled structured log messages.
--  `mmpstrucdata <mmpstrucdata.html>`_ - used to parse RFC5424
+-  `mmpstrucdata <../mmpstrucdata.html>`_ - used to parse RFC5424
    structured data into json message properties
--  `mmsnmptrapd <mmsnmptrapd.html>`_ - uses information provided by
+-  `mmsnmptrapd <modules/mmsnmptrapd.html>`_ - uses information provided by
    snmptrapd inside the tag to correct the original sender system and
    priority of messages. Implemented via the output module interface.
--  `mmutf8fix <mmutf8fix.html>`_ - used to fix invalid UTF-8 character
+-  `mmutf8fix <../mmutf8fix.html>`_ - used to fix invalid UTF-8 character
    sequences
--  `mmrfc5424addhmac <mmrfc5424addhmac.html>`_ - custom module for
+-  `mmrfc5424addhmac <../mmrfc5424addhmac.html>`_ - custom module for
    adding HMACs to rfc5424-formatted messages if not already present
--  `mmsequence <mmsequence.html>`_ - sequence generator and counter
+-  `mmsequence <../mmsequence.html>`_ - sequence generator and counter
    plugin
 
 String Generator Modules
