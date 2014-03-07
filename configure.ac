@@ -1563,6 +1563,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imkmsg/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
+		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/omjournal/Makefile \
 		plugins/pmrfc3164sd/Makefile \
