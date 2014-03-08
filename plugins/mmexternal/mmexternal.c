@@ -181,20 +181,16 @@ done:	return;
 }
 
 
-/* check output of the executed program
- * If configured to care about the output, we check if there is some and,
- * if so, properly handle it.
+/* Get reply from external program. Note that we *must* receive one
+ * reply for each message sent (half-duplex protocol).
  */
 static void
-checkProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData)
+getProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData)
 {
 	char buf[4096];
 	ssize_t r;
 
 dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
-	if(pWrkrData->fdPipeIn == -1)
-		goto done;
-
 	do {
 memset(buf, 0, sizeof(buf));
 		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf));
@@ -320,15 +316,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 	}
 
 	DBGPRINTF("mmexternal: child has pid %d\n", (int) cpid);
-	if(pWrkrData->pData->outputFileName != NULL) {
-		pWrkrData->fdPipeIn = dup(pipestdout[0]);
-		/* we need to set our fd to be non-blocking! */
-		flags = fcntl(pWrkrData->fdPipeIn, F_GETFL);
-		flags |= O_NONBLOCK;
-		fcntl(pWrkrData->fdPipeIn, F_SETFL, flags);
-	} else {
-		pWrkrData->fdPipeIn = -1;
-	}
+	pWrkrData->fdPipeIn = dup(pipestdout[0]);
 	close(pipestdin[0]);
 	close(pipestdout[1]);
 	pWrkrData->pid = cpid;
@@ -367,8 +355,6 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 					pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
 	}
-
-	checkProgramOutput(pWrkrData); /* try to catch any late messages */
 
 	if(pWrkrData->fdOutput != -1) {
 		close(pWrkrData->fdOutput);
@@ -418,7 +404,6 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 	writeOffset = 0;
 
 	do {
-		checkProgramOutput(pWrkrData);
 dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szMsg);
 		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
@@ -440,7 +425,7 @@ dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szM
 		}
 	} while(lenWritten != lenWrite);
 
-	checkProgramOutput(pWrkrData);
+	getProgramReply(pWrkrData);
 
 finalize_it:
 	RETiRet;
