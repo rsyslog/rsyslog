@@ -1,10 +1,5 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Actions
 -------
-
 The action field of a rule describes what to do with the message. In
 general, message content is written to a kind of "logfile". But also
 other actions might be done, like writing to a database table or
