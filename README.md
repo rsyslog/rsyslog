@@ -16,9 +16,8 @@ The process of this work will be done as follows:
 
 Current Status -
 * v5-stable - (In Development)
-* **_v7-stable_** - (In Queue)
-* v7-devel - (In Queue)
-* v8-devel - (In Queue)
+* v7-stable - (In Development)
+* v8-devel - (In Development)
 
 ## Learning the doc tools
 

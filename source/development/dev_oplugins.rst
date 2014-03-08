@@ -21,20 +21,10 @@ functionality, too. Nobody has taken this route so far so if you would
 like to do that, it is highly suggested to post your plan on the rsyslog
 mailing list, first (so that we can offer advise).
 
-The rsyslog distribution tarball contains two plugins that are extremely
-well targeted for getting started:
-
--  omtemplate
--  omstdout
-
-Plugin omtemplate was specifically created to provide a copy template
-for new output plugins. It is bare of real functionality but has ample
-comments. Even if you decide to start from another plugin (or even from
-scratch), be sure to read omtemplate source and comments first. The
-omstdout is primarily a testing aide, but offers support for the two
-different parameter-passing conventions plugins can use (plus the way to
-differentiate between the two). It also is not bare of functionaly, only
-mostly bare of it ;). But you can actually execute it and play with it.
+The rsyslog distribution tarball contains the omstdout plugin which is
+extremely well targeted for getting started. Just note that this plugin
+itself is not meant for production use. But it is very simplistic and so
+a really good starting point to grasp the core ideas.
 
 In any case, you should also read the comments in
 ./runtime/module-template.h. Output plugins are build based on a large
@@ -46,21 +36,9 @@ can (in most cases) "code as usual". However, all macros and entry
 points need to be provided and thus reading the code comments in the
 files mentioned is highly suggested.
 
-In short, the best idea is to start with a template. Let's assume you
-start by copying omtemplate. Then, the basic steps you need to do are:
-
--  cp ./plugins/omtemplate ./plugins/your-plugin
--  mv cd ./plugins/your-plugin
--  vi Makefile.am, adjust to your-plugin
--  mv omtemplate.c your-plugin.c
--  cd ../..
--  vi Makefile.am configure.ac
-   search for omtemplate, copy and modify (follow comments)
-
-Basically, this is all you need to do ... Well, except, of course,
-coding your plugin ;). For testing, you need rsyslog's debugging
-support. Some useful information is given in "`troubleshooting
-rsyslog <troubleshoot.html>`_ from the doc set.
+For testing, you need rsyslog's debugging support. Some useful
+information is given in "`troubleshooting rsyslog <troubleshoot.html>`_
+from the doc set.
 
 Special Topics
 --------------
@@ -177,6 +155,12 @@ made and the array-passing capability not blindly be used.** In such
 cases, we can not guard the plugin from segfaulting and if the plugin
 (as currently always) is run within rsyslog's process space, that
 results in a segfault for rsyslog. So do not do this.
+
+Another possible mode is OMSR\_TPL\_AS\_JSON, where instead of the
+template a json-c memory object tree is passed to the module. The module
+can extract data via json-c API calls. It MUST NOT modify the provided
+structure. This mode is primarily aimed at plugins that need to process
+tree-like data, as found for example in MongoDB or ElasticSearch.
 
 Batching of Messages
 ~~~~~~~~~~~~~~~~~~~~

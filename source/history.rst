@@ -136,7 +136,7 @@ effort evolved out of the need to have complex expression support, which
 was also the first use case. On February, 28th rsyslog 3.12.0 was
 released, the first version to contain expression support. This also
 meant that rsyslog from that date on supported all syslog-ng major
-features, but had a number of major features exlusive to it. With
+features, but had a number of major features exclusive to it. With
 3.12.0, I consider rsyslog fully superior to syslog-ng (except for
 platform support).
 

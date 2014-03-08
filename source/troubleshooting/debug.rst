@@ -62,8 +62,16 @@ There are two environment variables that set several debug settings:
    -  **DebugOnDemand** - if present, turns on the debug system but does
       not enable debug output itself. You need to send SIGUSR1 to turn
       it on when desired.
+   -  **OutputTidToStderr** - if present, makes rsyslog output
+      information about the thread id (tid) of newly create processesto
+      stderr. Note that not necessarily all new threads are reported
+      (depends on the code, e.g. of plugins). This is only available
+      under Linux. This usually does NOT work when privileges have been
+      dropped (that's not a bug, but the way it is).
    -  **help** - display a very short list of commands - hopefully a
       life saver if you can't access the documentation...
+
+   Individual options are separated by spaces.
 
 Why Environment Variables?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +99,30 @@ For these reasons, we utilize environment variables to initialize and
 configure the debugging system. We understand this may be somewhat
 painful, but now you know there are at least some good reasons for doing
 so.
+
+HOWEVER, if you have a too hard time to set debug instructions using the
+environment variables, there is a cure, described in the next paragraph.
+
+Enabling Debug via rsyslog.conf
+-------------------------------
+
+As described in the previous paragraph, enabling debug via rsyslog.conf
+may not be perfect for some debugging needs, but basic debug output will
+work - and that is what most often is requried. There are limited
+options available, but these cover the most important use cases.
+
+Debug processing is done via legacy config statements. There currently
+is no plan to move these over to the v6+ config system. Availabe
+settings are
+
+-  $DebugFile <filename> - sets the debug file name
+-  $DebugLevel <0\|1\|2> - sets the respective debug level, where 0
+   means debug off, 1 is debug on demand activated (but debug mode off)
+   and 2 is full debug mode.
+
+Note that in theory it is forbidden to specify these parameters more
+than once. However, we do not enforce that and if it happens results are
+undefined.
 
 Getting debug information from a running Instance
 -------------------------------------------------
@@ -185,12 +217,17 @@ no debug mode is enabled, SIGUSR1 and SIGUSR2 are completely ignored.
 When running in any of the debug modes (including on demand mode), an
 interactive instance of rsyslogd can be aborted by pressing ctl-c.
 
+**See Also**
+
+-  `How to use debug on
+   demand <http://www.rsyslog.com/how-to-use-debug-on-demand/>`_
+
 [`manual index <manual.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2010 by `Rainer
+ Copyright © 2008-2013 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

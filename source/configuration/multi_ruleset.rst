@@ -4,7 +4,7 @@ Multiple Rulesets in rsyslog
 Starting with version 4.5.0 and 5.1.1,
 `rsyslog <http://www.rsyslog.com>`_ supports multiple rulesets within a
 single configuration. This is especially useful for routing the
-recpetion of remote messages to a set of specific rules. Note that the
+reception of remote messages to a set of specific rules. Note that the
 input module must support binding to non-standard rulesets, so the
 functionality may not be available with all inputs.
 
@@ -49,7 +49,7 @@ know) or switches to an already-existing one (if the name was known).
 All rules defined between this $RuleSet directive and the next one are
 appended to the named ruleset. Note that the reserved name
 "RSYSLOG\_DefaultRuleset" is used to specify rsyslogd's default ruleset.
-You can use that name whereever you can use a ruleset name, including
+You can use that name wherever you can use a ruleset name, including
 when binding an input to it.
 
 Inside a ruleset, messages are processed as described above: they start
@@ -59,7 +59,7 @@ discard action is executed. Note that with multiple rulesets no longer
 **all** rsyslog.conf rules are executed but **only** those that are
 contained within the specific ruleset.
 
-Inputs must explicitely bind to rulesets. If they don't do, the default
+Inputs must explicitly bind to rulesets. If they don't do, the default
 ruleset is bound.
 
 This brings up the next question:
@@ -74,11 +74,11 @@ when a new message arrives, it will be processed via the bound ruleset.
 Rule from all other rulesets are irrelevant and will never be processed.
 
 This makes multiple rulesets very handy to process local and remote
-message via seperate means: bind the respective receivers to different
-rule sets, and you do not need to seperate the messages by any other
+message via separate means: bind the respective receivers to different
+rule sets, and you do not need to separate the messages by any other
 method.
 
-Binding to rulesets is input-specifc. For imtcp, this is done via the
+Binding to rulesets is input-specific. For imtcp, this is done via the
 
 ::
 
@@ -95,7 +95,7 @@ doing things.
 Why are rulesets important for different parser configurations?
 ---------------------------------------------------------------
 
-Custom message parsers, used to handle differnet (and potentially
+Custom message parsers, used to handle different (and potentially
 otherwise-invalid) message formats, can be bound to rulesets. So
 multiple rulesets can be a very useful way to handle devices sending
 messages in different malformed formats in a consistent way.
@@ -334,7 +334,7 @@ each of them wants to submit a newly arrived message into the queue at
 the same time, only one can do so while the others need to wait. With
 multiple rulesets, its own queue can be created for each ruleset. If now
 each listener is bound to its own ruleset, concurrent message submission
-is possible. On a machine with a sufficiently large number of corse,
+is possible. On a machine with a sufficiently large number of cores,
 this can result in dramatic performance improvement.
 
 It is highly advised that high-performance systems define a dedicated

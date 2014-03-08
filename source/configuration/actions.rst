@@ -1,8 +1,7 @@
 Actions
 -------
-
-Action object describe what is to be done with a message. They are
-implemented via `outpout modules <rsyslog_conf_modules.html#om>`_.
+The Action object describe what is to be done with a message. They are
+implemented via `output modules <rsyslog_conf_modules.html#om>`_.
 
 The action object has different parameters:
 
@@ -10,15 +9,22 @@ The action object has different parameters:
    documented below.
 -  parameters for the action queue. While they also apply to all
    parameters, they are queue-specific, not action-specific (they are
-   the same that are used in rulesets, for example).
+   the same that are used in rulesets, for example). The are documented
+   separately under `queue parameters <queue_parameters.html>`_.
 -  action-specific parameters. These are specific to a certain type of
-   actions. They are documented by the output module in question.
+   actions. They are documented by the `output
+   module <rsyslog_conf_modules.html#om>`_ in question.
 
 General Action Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  **name** word
-   used for statistics gathering and documentation
+
+   This names the action. The name is used for statistics gathering
+   and documentation. If no name is given, one is dynamically generated
+   based on the occurence of this action inside the rsyslog configuration.
+   Actions are sequentially numbered from 1 to n.
+
 -  **type** string
    Mandatory parameter for every action. The name of the module that
    should be used.
@@ -92,9 +98,29 @@ General Action Parameters
    actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
    after the 10th try, it by default is 60 and after the 100th try it is
    330.
+- **action.reportSuspension** on/off
+  Configures rsyslog to report suspension and reactivation
+  of the action. This is useful to note which actions have
+  problems (e.g. connecting to a remote system) and when.
+  The default for this setting is the equally-named global
+  parameter.
+- **action.reportSuspensionContinuation** on/off
+  Configures rsyslog to report continuation of action suspension.
+  This emits new messages whenever an action is to be retried, but
+  continues to fail. If set to "on", *action.reportSuspension* is
+  also automatically set to "on".
+  The default for this setting is the equally-named global
+  parameter.
+
+Useful Links
+------------
+
+-  Rainer's blog posting on the performance of `main and action queue
+   worker
+   threads <http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
 
 Legacy Format
--------------
+=============
 
 **Be warned that legacy action format is hard to get right. It is
 recommended to use RainerScript-Style action format whenever possible!**

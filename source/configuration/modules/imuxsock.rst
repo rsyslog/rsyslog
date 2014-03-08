@@ -44,7 +44,7 @@ To turn off rate limiting, set the interval to zero.
 **Unix log sockets can be flow-controlled.** That is, if processing
 queues fill up, the unix socket reader is blocked for a short while.
 This may be useful to prevent overruning the queues (which may cause
-exessive disk-io where it actually would not be needed). However,
+excessive disk-io where it actually would not be needed). However,
 flow-controlling a log socket (and especially the system log socket) can
 lead to a very unresponsive system. As such, flow control is disabled by
 default. That means any log records are places as quickly as possible
@@ -127,9 +127,9 @@ SysSock.Annotate and Annotate).
 -  **RateLimit.Interval** [number] - specifies the rate-limiting
    interval in seconds. Default value is 0, which turns off rate
    limiting. Set it to a number of seconds (5 recommended) to activate
-   rate-limiting. The default of 0 has been choosen as people
-   experienced problems with this feature activated by default. Now it
-   needs an explicit opt-in by setting this parameter.
+   rate-limiting. The default of 0 has been chosen as people experienced
+   problems with this feature activated by default. Now it needs an
+   explicit opt-in by setting this parameter.
 -  **RateLimit.Burst** [number] - specifies the rate-limiting burst in
    number of messages. Default is 200.
 -  **RateLimit.Severity** [numerical severity] - specifies the severity

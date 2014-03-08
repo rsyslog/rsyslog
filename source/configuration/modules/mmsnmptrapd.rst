@@ -42,7 +42,7 @@ The following logic is applied to all message being processed:
    snmptrapd/severity/hostname. A configurable mapping table will be
    used to drive a new severity value from that severity string. If no
    mapping has been defined, the original severity is not changed.
-#. It replaces the "FromHost" value with the derived value from step2
+#. It replaces the "FromHost" value with the derived value from step 2
 #. It replaces the "Severity" value with the derived value from step 3
 
 Note that the placement of this module inside the configuration is
@@ -67,12 +67,12 @@ output modules are also available to mmsnmptrapd.
    this tag when it comes to matching incoming messages. It MUST not be
    given, except if two slashes are required for whatever reasons (so
    "tag/" results in a check for "tag//" at the start of the tag field).
--  **$mmsnmptrapdSeverityMapping** [severtiymap]
+-  **$mmsnmptrapdSeverityMapping** [severitymap]
     This specifies the severity mapping table. It needs to be specified
    as a list. Note that due to the current config system **no
    whitespace** is supported inside the list, so be sure not to use any
    whitespace inside it.
-    The list is constructed of Severtiy-Name/Severity-Value pairs,
+    The list is constructed of Severity-Name/Severity-Value pairs,
    delimited by comma. Severity-Name is a case-sensitive string, e.g.
    "warning" and an associated numerical value (e.g. 4). Possible values
    are in the rage 0..7 and are defined in RFC5424, table 2. The given

@@ -29,8 +29,32 @@ Clients send messages to the RELP server via omrelp.
 
 **Configuration Directives**:
 
--  InputRELPServerRun <port>
+-  **Port** <port>
     Starts a RELP server on selected port
+
+**Caveats/Known Bugs:**
+
+-  ruleset can only be bound via legacy configuration format
+-  To obtain the remote system's IP address, you need to have at least
+   librelp 1.0.0 installed. Versions below it return the hostname
+   instead of the IP address.
+-  Contrary to other inputs, the ruleset can only be bound to all
+   listeners, not specific ones. This is due to a currently existing
+   limitation in librelp.
+
+**Sample:**
+
+This sets up a RELP server on port 20514.
+
+module(load="imrelp") # needs to be done just once input(type="imrelp"
+port="20514")
+
+**Legacy Configuration Directives**:
+
+-  InputRELPServerBindRuleset <name> (available in 6.3.6+) Binds the
+   specified ruleset to all RELP listeners.
+-  InputRELPServerRun <port>
+    equivalent to: Port
 
 **Caveats/Known Bugs:**
 
@@ -38,6 +62,9 @@ Clients send messages to the RELP server via omrelp.
 -  To obtain the remote system's IP address, you need to have at least
    librelp 1.0.0 installed. Versions below it return the hostname
    instead of the IP address.
+-  Contrary to other inputs, the ruleset can only be bound to all
+   listeners, not specific ones. This is due to a currently existing
+   limitation in librelp.
 
 **Sample:**
 
@@ -50,6 +77,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
+ Copyright © 2008-2011 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.
