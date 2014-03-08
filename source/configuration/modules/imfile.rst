@@ -1,13 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
 imfile: Text File Input Module
 ==============================
-
-**Module Name:    imfile**
-
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Description**:
 
 Provides the ability to convert any standard text file into a syslog
 message. A standard text file is a file consisting of printable
@@ -39,42 +31,59 @@ future.
 Multiple files may be monitored by specifying $InputRunFileMonitor
 multiple times.
 
-**Configuration Directives**:
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
--  **$InputFileName /path/to/file**
-    The file being monitored. So far, this must be an absolute name (no
+Configuration Directives
+------------------------
+
+.. function:: $InputFileName /path/to/file
+
+   The file being monitored. So far, this must be an absolute name (no
    macros or templates)
--  $InputFileTag tag:
-    The tag to be used for messages that originate from this file. If
+
+.. function:: $InputFileTag tag:
+
+   The tag to be used for messages that originate from this file. If
    you would like to see the colon after the tag, you need to specify it
    here (as shown above).
--  $InputFileStateFile <name-of-state-file>
-    Rsyslog must keep track of which parts of the to be monitored file
+
+.. function:: $InputFileStateFile /path/to/state/file
+
+   Rsyslog must keep track of which parts of the to be monitored file
    it already processed. This is done in the state file. This file
    always is created in the rsyslog working directory (configurable via
    $WorkDirectory). Be careful to use unique names for different files
    being monitored. If there are duplicates, all sorts of "interesting"
    things may happen. Rsyslog currently does not check if a name is
    specified multiple times.
--  $InputFileFacility facility
-    The syslog facility to be assigned to lines read. Can be specified
+
+.. function:: $InputFileFacility facility
+
+   The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
    128 for "local0"). Textual form is suggested. Default  is "local0".
--  $InputFileSeverity
-    The syslog severity to be assigned to lines read. Can be specified
+
+.. function:: $InputFileSeverity severity
+
+   The syslog severity to be assigned to lines read. Can be specified
    in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
    for "info"). Textual form is suggested. Default is "notice".
--  $InputRunFileMonitor
-    This activates the current monitor. It has no parameters. If you
+
+.. function:: $InputRunFileMonitor
+
+   This activates the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
--  $InputFilePollInterval seconds
-    This is a global setting. It specifies how often files are to be
+
+.. function:: $InputFilePollInterval seconds
+
+   This is a global setting. It specifies how often files are to be
    polled for new data. The time specified is in seconds. The default
    value is 10 seconds. Please note that future releases of imfile may
    support per-file polling intervals, but currently this is not the
    case. If multiple $InputFilePollInterval statements are present in
    rsyslog.conf, only the last one is used.
-    A short poll interval provides more rapid message forwarding, but
+
+   A short poll interval provides more rapid message forwarding, but
    requires more system ressources. While it is possible, we stongly
    recommend not to set the polling interval to 0 seconds. That will
    make rsyslogd become a CPU hog, taking up considerable ressources. It
@@ -83,9 +92,12 @@ multiple times.
    should be well enough. Please note that imfile keeps reading files as
    long as there is any data in them. So a "polling sleep" will only
    happen when nothing is left to be processed.
--  **$InputFilePersistStateInterval** [lines]
-    Available in 4.7.3+, 5.6.2+
-    Specifies how often the state file shall be written when processing
+
+.. function:: $InputFilePersistStateInterval lines
+
+   *Available in 4.7.3+, 5.6.2+*
+
+   Specifies how often the state file shall be written when processing
    the input file. The default value is 0, which means a new state file
    is only written when the monitored files is being closed (end of
    rsyslogd execution). Any other value n means that the state file is
@@ -94,11 +106,16 @@ multiple times.
    (like power fail). Note that this setting affects imfile performance,
    especially when set to a low value. Frequently writing the state file
    is very time consuming.
--  **$InputFileReadMode** [mode]
-    Available in 5.7.5+
--  **$InputFileMaxLinesAtOnce** [number]
-    Available in 5.9.0+
-    This is useful if multiple files need to be monitored. If set to 0,
+
+.. function:: $InputFileReadMode mode
+
+   *Available in 5.7.5+*
+
+.. function:: $InputFileMaxLinesAtOnce number
+
+   *Available in 5.9.0+*
+
+   This is useful if multiple files need to be monitored. If set to 0,
    each file will be fully processed and then processing switches to the
    next file (this was the default in previous versions). If it is set,
    a maximum of [number] lines is processed in sequence for each file,
@@ -106,11 +123,15 @@ multiple times.
    the load of multiple files and probably leads to a more natural
    distribution of events when multiple busy files are monitored. The
    default is 10240.
--  $InputFileBindRuleset <ruleset>
-    Available in 5.7.5+, 6.1.5+ Binds the listener to a specific
-   `ruleset <multi_ruleset.html>`_.
+.. function:: $InputFileBindRuleset ruleset
 
-**Caveats/Known Bugs:**
+   *Available in 5.7.5+, 6.1.5+*
+
+   Binds the listener to a specific
+   `ruleset <multi_ruleset>`_.
+
+Caveats/Known Bugs
+------------------
 
 So far, only 100 files can be monitored. If more are needed, the source
 needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
@@ -122,7 +143,8 @@ number of subtle issues, which needs to be worked out first. We will
 make the change as soon as we can. If you can afford it, we recommend
 using a long polling interval in the mean time.
 
-**Sample:**
+Example
+-------
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
@@ -131,18 +153,23 @@ puts rsyslog's config files). Note that only commands actually needed
 need to be specified. The second file uses less commands and uses
 defaults instead.
 
-$ModLoad imfile # needs to be done just once # File 1 $InputFileName
-/path/to/file1 $InputFileTag tag1: $InputFileStateFile stat-file1
-$InputFileSeverity error $InputFileFacility local7 $InputRunFileMonitor
-# File 2 $InputFileName /path/to/file2 $InputFileTag tag2:
-$InputFileStateFile stat-file2 $InputRunFileMonitor # ... and so on ...
-# # check for new lines every 10 seconds $InputFilePollingInterval 10
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+  $ModLoad imfile # needs to be done just once 
+  # File 1 
+  $InputFileName /path/to/file1 
+  $InputFileTag tag1: 
+  $InputFileStateFile stat-file1
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
+  $InputFileSeverity error 
+  $InputFileFacility local7 
+  $InputRunFileMonitor
+  
+  # File 2 
+  $InputFileName /path/to/file2 
+  $InputFileTag tag2:
+
+  $InputFileStateFile stat-file2 
+  $InputRunFileMonitor 
+  # ... and so on ...
+  # check for new lines every 10 seconds $InputFilePollingInterval 10

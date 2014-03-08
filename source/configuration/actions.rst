@@ -1,7 +1,3 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Actions
 -------
 
@@ -506,14 +502,3 @@ template is used for the action. There can only be one template name for
 each given action. The default template is specific to each action. For
 a description of what a template is and what you can do with it, see
 "TEMPLATES" at the top of this document.
-
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008-2011 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-2 or higher.

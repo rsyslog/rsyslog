@@ -1,22 +1,5 @@
-Encrypting Syslog Traffic with TLS (SSL)
-========================================
-
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-06-17)*
-
--  `Overview <rsyslog_secure_tls.html>`_
--  `Sample Scenario <tls_cert_scenario.html>`_
--  `Setting up the CA <tls_cert_ca.html>`_
--  `Generating Machine Certificates <tls_cert_machine.html>`_
--  `Setting up the Central Server <tls_cert_server.html>`_
--  `Setting up syslog Clients <tls_cert_client.html>`_
--  `Setting up the UDP syslog relay <tls_cert_udp_relay.html>`_
--  `Wrapping it all up <tls_cert_summary.html>`_
--  `Frequently seen Error Messages <tls_cert_errmsgs.html>`_
-
 Error Messages
-~~~~~~~~~~~~~~
+==============
 
 This page covers error message you may see when setting up
 
@@ -34,7 +17,7 @@ shipped by many systems will do that, recording them e.g. in
 /etc/messages).
 
 certificate invalid
-~~~~~~~~~~~~~~~~~~~
+------------------~
 
 Sample:
 `` not permitted to talk to peer, certificate invalid: insecure algorithm``
@@ -68,7 +51,7 @@ configuration or certificates. This could be caused by a new perception
 of the TLS library of what is secure and what not.
 
 GnuTLS error -64
-~~~~~~~~~~~~~~~~
+----------------
 
 Sample:
 ``unexpected GnuTLS error -64 in nsd_gtls.c:517: Error while reading file.``
@@ -87,7 +70,7 @@ by a couple of things, some of them not obvious:
    to lead to this -64 error.
 
 info on invalid cert
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 Sample:
 `` info on invalid cert: peer provided 1 certificate(s). Certificate 1 info: certificate valid from Wed Jun 18 11:45:44 2008 to Sat Jun 16 11:45:53 2018; Certificate public key: RSA; DN: C=US,O=Sample Corp,OU=Certs,L=Somehwere,ST=CA,CN=somename; Issuer DN: C=US,O=Sample Corp,OU=Certs,L=Somewhere,ST=CA,CN=somename,EMAIL=xxx@example.com; SAN:DNSname: machine.example.net;``
@@ -100,17 +83,3 @@ understand why the initial error message was issued.
 Please note that you can NOT diagnose problems based on this message
 alone. It follows in a number of error cases and does not pinpoint any
 problems by itself.
-
-Copyright
----------
-
-Copyright (c) 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.

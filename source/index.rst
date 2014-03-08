@@ -23,7 +23,7 @@ rsyslog.conf config file. This should help with getting an environment started
 quickly. To use the more advanced features, you need to learn
 a bit about rsyslog's new features. 
 
-Compatability
+Compatibility
 -------------
 
 rsyslog is compatible to stock sysklogd and can be used as a drop-in

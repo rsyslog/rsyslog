@@ -1,21 +1,5 @@
-Encrypting Syslog Traffic with TLS (SSL)
-========================================
-
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-07-03)*
-
--  `Overview <rsyslog_secure_tls.html>`_
--  `Sample Scenario <tls_cert_scenario.html>`_
--  `Setting up the CA <tls_cert_ca.html>`_
--  `Generating Machine Certificates <tls_cert_machine.html>`_
--  `Setting up the Central Server <tls_cert_server.html>`_
--  `Setting up syslog Clients <tls_cert_client.html>`_
--  `Setting up the UDP syslog relay <tls_cert_udp_relay.html>`_
--  `Wrapping it all up <tls_cert_summary.html>`_
-
 Setting up the UDP syslog relay
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+===============================
 
 In this step, we configure the UDP relay ada.example.net. As a reminder,
 that machine relays messages from a local router, which only supports
@@ -95,17 +79,3 @@ we do not show any rules to write local files. Feel free to add them.
 
 **Be sure to safeguard at least the private key (machine-key.pem)!** If
 some third party obtains it, you security is broken!
-
-Copyright
----------
-
-Copyright © 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.2 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
-copy of the license can be viewed at
-`http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
