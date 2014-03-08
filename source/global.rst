@@ -8,13 +8,18 @@ unpredictable.
 
 The following paramters can be set:
 
--  **action.reportSuspension** - binary, default "on", v7.5.8+c
-    If enabled ("on") action will log message under syslog.\* when an
+-  **action.reportSuspension** - binary, default "on", v7.5.8+
+   If enabled ("on") action will log message under *syslog.\** when an
    action suspends or resume itself. This usually happens when there are
    problems connecting to backend systems. If disabled ("off"), these
    messages are not generated. These messages can be useful in detecting
    problems with backend systems. Most importantly, frequent suspension
    and resumption points to a problem area.
+- **action.reportSuspensionContinuation** - binary, default "off", v7.6.1+, v8.2.0+
+  If enabled ("on") the action will not only report the first suspension but
+  each time the suspension is prolonged. Otherwise, the follow-up messages
+  are not logged. If this setting is set to "on", action.reportSuspension is
+  also automaticaly turned "on".
 -  workDirectory
 -  dropMsgsWithMaliciousDNSPtrRecords
 -  localHostname
