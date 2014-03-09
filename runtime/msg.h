@@ -193,6 +193,7 @@ void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
+rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);

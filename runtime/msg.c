@@ -3795,6 +3795,22 @@ finalize_it:
 #undef	isProp
 
 
+/* set message properties based on JSON string. This function does it all,
+ * including parsing the JSON string. If an error is detected, the operation
+ * is aborted at the time of error. Any modifications made before the
+ * error ocurs are still PERSISTED.
+ * This function is meant to support the external message modifiction module
+ * interface. As such, replacing properties is expressively permited. Note that
+ * properties which were derived from the message during parsing are NOT
+ * updated if the underlying (raw)msg property is changed.
+ */
+rsRetVal
+MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json)
+{
+	DBGPRINTF("DDDD: JSON string for message mod: '%s'\n", json);
+}
+
+
 /* get the severity - this is an entry point that
  * satisfies the base object class getSeverity semantics.
  * rgerhards, 2008-01-14
