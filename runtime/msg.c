@@ -3807,7 +3807,12 @@ finalize_it:
 rsRetVal
 MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json)
 {
-	DBGPRINTF("DDDD: JSON string for message mod: '%s'\n", json);
+	DEFiRet;
+	DBGPRINTF("DDDDDD: JSON string for message mod: '%s'\n", json);
+	if(!strcmp(json, "{}")) /* shortcut for a common case */
+		FINALIZE;
+finalize_it:
+	RETiRet;
 }
 
 

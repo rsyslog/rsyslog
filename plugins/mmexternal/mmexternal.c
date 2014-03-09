@@ -146,7 +146,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-/* As this is assume to be a debug function, we only make
+/* As this is just a debug function, we only make
  * best effort to write the message but do *not* try very
  * hard to handle errors. -- rgerhards, 2014-01-16
  */
@@ -158,7 +158,9 @@ writeProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	char errStr[1024];
 	ssize_t r;
 
-dbgprintf("mmexternal: writeProgramOutput, fd %d\n", pWrkrData->fdOutput);
+	if(pWrkrData->pData->outputFileName == NULL)
+		goto done;
+
 	if(pWrkrData->fdOutput == -1) {
 		pWrkrData->fdOutput = open((char*)pWrkrData->pData->outputFileName,
 				       O_WRONLY | O_APPEND | O_CREAT, 0600);
@@ -181,6 +183,18 @@ done:	return;
 }
 
 
+/* process reply we received from external program */
+static void
+processReply(wrkrInstanceData_t *__restrict__ const pWrkrData,
+	const char *__restrict__ const buf)
+{
+	// TODO: we need to have the message object here -- so we 
+	// obviously must insist on message object passing mode.
+	// For testers, we use NULL, which currently works (but
+	// soon will no longer!)
+	MsgSetPropsViaJSON(NULL, buf);
+}
+
 /* Get reply from external program. Note that we *must* receive one
  * reply for each message sent (half-duplex protocol).
  */
@@ -192,14 +206,16 @@ getProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData)
 
 dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 	do {
-memset(buf, 0, sizeof(buf));
-		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf));
+		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf)-1);
+		buf[r] = '\0'; /* space reserved in read! */
 dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, buf);
-		if(r > 0)
+		if(r > 0) {
 			writeProgramOutput(pWrkrData, buf, r);
+			processReply(pWrkrData, buf);
+		}
 	} while(r > 0);
 
-done:	return;
+	return;
 }
 
 
@@ -219,21 +235,15 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	fclose(stdin);
 	if(dup(fdStdin) == -1) {
 		DBGPRINTF("mmexternal: dup() stdin failed\n");
-		/* do some more error handling here? Maybe if the module
-		 * gets some more widespread use...
-		 */
 	}
-	if(pWrkrData->pData->outputFileName == NULL) {
-		close(fdStdOutErr);
-	} else {
-		close(1);
-		if(dup(fdStdOutErr) == -1) {
-			DBGPRINTF("mmexternal: dup() stdout failed\n");
-		}
-		close(2);
-		if(dup(fdStdOutErr) == -1) {
-			DBGPRINTF("mmexternal: dup() stderr failed\n");
-		}
+	close(1);
+	if(dup(fdStdOutErr) == -1) {
+		DBGPRINTF("mmexternal: dup() stdout failed\n");
+	}
+	/* todo: different pipe for stderr? */
+	close(2);
+	if(dup(fdStdOutErr) == -1) {
+		DBGPRINTF("mmexternal: dup() stderr failed\n");
 	}
 
 	/* we close all file handles as we fork soon
@@ -286,7 +296,6 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 	int pipestdin[2];
 	int pipestdout[2];
 	pid_t cpid;
-	int flags;
 	DEFiRet;
 
 	if(pipe(pipestdin) == -1) {
