@@ -285,6 +285,7 @@ static rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	relpSrv_t *pSrv;
+	int relpRet;
 	uchar statname[64];
 	int i;
 	DEFiRet;
@@ -317,7 +318,17 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	/* end stats counters */
 	relpSrvSetUsrPtr(pSrv, inst);
 	if(inst->bEnableTLS) {
-		relpSrvEnableTLS(pSrv);
+		relpRet = relpSrvEnableTLS(pSrv);
+		if(relpRet == RELP_RET_ERR_NO_TLS) {
+			errmsg.LogError(0, RS_RET_RELP_NO_TLS,
+					"imrelp: could not activate relp TLS, librelp "
+					"does not support it!");
+			ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
+		} else if(relpRet != RELP_RET_OK) {
+			errmsg.LogError(0, RS_RET_RELP_ERR,
+					"imrelp: could not activate relp TLS, code %d", relpRet);
+			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		if(inst->bEnableTLSZip) {
 			relpSrvEnableTLSZip(pSrv);
 		}
@@ -327,7 +338,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		relpSrvSetGnuTLSPriString(pSrv, (char*)inst->pristring);
 		if(relpSrvSetAuthMode(pSrv, (char*)inst->authmode) != RELP_RET_OK) {
 			errmsg.LogError(0, RS_RET_RELP_ERR,
-					"imrelp: invalid auth mode '%s'\n", inst->authmode);
+					"imrelp: invalid auth mode '%s'", inst->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
 		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
@@ -340,7 +351,12 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			relpSrvAddPermittedPeer(pSrv, (char*)inst->permittedPeers.name[i]);
 		}
 	}
-	CHKiRet(relpEngineListnerConstructFinalize(pRelpEngine, pSrv));
+	relpRet = relpEngineListnerConstructFinalize(pRelpEngine, pSrv);
+	if(relpRet != RELP_RET_OK) {
+		errmsg.LogError(0, RS_RET_RELP_ERR,
+				"imrelp: could not activate relp listner, code %d", relpRet);
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	}
 
 finalize_it:
 	RETiRet;

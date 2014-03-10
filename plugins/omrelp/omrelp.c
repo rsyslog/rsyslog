@@ -7,7 +7,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2013 Adiscon GmbH.
+ * Copyright 2008-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -361,11 +361,16 @@ static rsRetVal doConnect(instanceData *pData)
 
 	if(iRet == RELP_RET_OK) {
 		pData->bIsConnected = 1;
+	} else if(iRet == RELP_RET_ERR_NO_TLS) {
+		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "Could not connect, librelp does NOT "
+				"support TLS");
+		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
 	} else {
 		pData->bIsConnected = 0;
 		iRet = RS_RET_SUSPENDED;
 	}
 
+finalize_it:
 	RETiRet;
 }
 

@@ -10,6 +10,9 @@ Version 7.6.1 [v7.6-stable] 2014-02-??
   stable version.
 - better and more consistent action naming, action queus now always 
   contain the word "queue" after the action name
+- add support for "tls-less" librelp
+  we now require librelp 1.2.3, as we need the new error code definition
+  See also: https://github.com/rsyslog/librelp/issues/1
 - build system improvements
   * autoconf subdir option
   * support for newer json-c packages
