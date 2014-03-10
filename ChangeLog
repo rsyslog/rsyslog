@@ -5,6 +5,14 @@ Version 1.2.3 - 2014-03-11
   Use --disable-tls to select this mode. If set, RELP_RET_ERR_NO_TLS
   will be returned on calls that selected TLS mode.
   See also: https://github.com/rsyslog/librelp/issues/1
+- API change: two functions that used to return void now return state
+  these are:
+  * relpSrvEnableTLS();
+  * relpSrvEnableTLSZip();
+  This change is acceptable because the state must not necessary be
+  evaluated. If not, the same error is returned a bit later in the
+  calling sequence. Having it early, however, may help with better
+  error messages. So it's still optional to check.
 - bugfix: configure required too-old version of GnuTLS
   This lead to successful builds which later on would not execute.
 ----------------------------------------------------------------------
