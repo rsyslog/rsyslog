@@ -46,7 +46,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STRERROR_R
 AC_TYPE_SIGNAL
 AC_CHECK_FUNCS([strerror_r epoll_create epoll_create1])
-PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
+PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.9.10)
 
 # debug mode settings
 AC_ARG_ENABLE(debug,
