@@ -1,4 +1,13 @@
 ----------------------------------------------------------------------
+Version 1.2.3 - 2014-03-11
+- add ability to build librelp without TLS
+  This is required on some platforms where GnuTLS is too old 
+  Use --disable-tls to select this mode. If set, RELP_RET_ERR_NO_TLS
+  will be returned on calls that selected TLS mode.
+  See also: https://github.com/rsyslog/librelp/issues/1
+- bugfix: configure required too-old version of GnuTLS
+  This lead to successful builds which later on would not execute.
+----------------------------------------------------------------------
 Version 1.2.2 - 2014-01-07
 - add capability to enable tcp KEEPALIVE
 - introduced new API relpSrvSetKeepAlive() to support KEEPALIVE

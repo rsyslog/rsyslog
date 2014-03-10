@@ -1,6 +1,6 @@
 /* This implements the relp mapping onto TCP.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -48,19 +48,19 @@
 #include "relpclt.h"
 #include "relpsess.h"
 #include "tcp.h"
-#include <gnutls/gnutls.h>
-#include <gnutls/x509.h>
-#if GNUTLS_VERSION_NUMBER <= 0x020b00
-#	include <gcrypt.h>
+#ifdef ENABLE_TLS
+#	include <gnutls/gnutls.h>
+#	include <gnutls/x509.h>
+#	if GNUTLS_VERSION_NUMBER <= 0x020b00
+#		include <gcrypt.h>
+		GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#	endif
+	static int called_gnutls_global_init = 0;
 #endif
 
-#if GNUTLS_VERSION_NUMBER <= 0x020b00
-GCRY_THREAD_OPTION_PTHREAD_IMPL;
-#endif
-
-static int called_gnutls_global_init = 0;
 
 
+#ifdef ENABLE_TLS
 /* forward definitions */
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
 static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry);
@@ -74,6 +74,7 @@ relpTcpFreePermittedPeers(relpTcp_t *pThis)
 		free(pThis->permittedPeers.peer[i].name);
 	pThis->permittedPeers.nmemb = 0;
 }
+#endif /* #ifdef ENABLE_TLS */
 
 /** Construct a RELP tcp instance
  * This is the first thing that a caller must do before calling any
@@ -125,7 +126,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 {
 	relpTcp_t *pThis;
 	int i;
+#ifdef ENABLE_TLS
 	int gnuRet;
+#endif /* #ifdef ENABLE_TLS */
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -144,6 +147,7 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		free(pThis->socks);
 	}
 
+#ifdef ENABLE_TLS
 	if(pThis->bTLSActive) {
 		gnuRet = gnutls_bye(pThis->session, GNUTLS_SHUT_RDWR);
 		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
@@ -151,8 +155,9 @@ relpTcpDestruct(relpTcp_t **ppThis)
 		}
 		gnutls_deinit(pThis->session);
 	}
-
 	relpTcpFreePermittedPeers(pThis);
+#endif /* #ifdef ENABLE_TLS */
+
 	free(pThis->pRemHostIP);
 	free(pThis->pRemHostName);
 	free(pThis->pristring);
@@ -196,6 +201,7 @@ callOnErr(const relpTcp_t *__restrict__ const pThis,
 }
 
 
+#ifdef ENABLE_TLS
 /* helper to call an error code handler if gnutls failed. If there is a failure, 
  * an error message is pulled form gnutls and the error message properly 
  * populated.
@@ -230,6 +236,7 @@ callOnAuthErr(relpTcp_t *pThis, char *authdata, char *emsg, relpRetVal ecode)
 		pThis->pEngine->onAuthErr(pThis->pUsr, authdata, emsg, ecode);
 	}
 }
+#endif /* #ifdef ENABLE_TLS */
 
 /* abort a tcp connection. This is much like relpTcpDestruct(), but tries
  * to discard any unsent data. -- rgerhards, 2008-03-24
@@ -361,12 +368,12 @@ finalize_it:
  * tcp object.
  */
 relpRetVal
-relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
+relpTcpSetPermittedPeers(relpTcp_t __attribute__((unused)) *pThis,
+	relpPermittedPeers_t __attribute__((unused)) *pPeers)
 {
 	ENTER_RELPFUNC;
+#ifdef ENABLE_TLS
 	int i;
-	RELPOBJ_assert(pThis, Tcp);
-	
 	relpTcpFreePermittedPeers(pThis);
 	if(pPeers->nmemb != 0) {
 		if((pThis->permittedPeers.peer =
@@ -383,6 +390,9 @@ relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers)
 		}
 	}
 	pThis->permittedPeers.nmemb = pPeers->nmemb;
+#else
+	ABORT_FINALIZE(RELP_RET_ERR_NO_TLS);
+#endif /* #ifdef ENABLE_TLS */
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -476,20 +486,28 @@ finalize_it:
 
 /* Enable TLS mode. */
 relpRetVal
-relpTcpEnableTLS(relpTcp_t *pThis)
+relpTcpEnableTLS(relpTcp_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
+#ifdef ENABLE_TLS
 	pThis->bEnableTLS = 1;
+#else
+	iRet = RELP_RET_ERR_NO_TLS;
+#endif /* #ifdef ENABLE_TLS */
 	LEAVE_RELPFUNC;
 }
 
 relpRetVal
-relpTcpEnableTLSZip(relpTcp_t *pThis)
+relpTcpEnableTLSZip(relpTcp_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
+#ifdef ENABLE_TLS
 	pThis->bEnableTLSZip = 1;
+#else
+	iRet = RELP_RET_ERR_NO_TLS;
+#endif /* #ifdef ENABLE_TLS */
 	LEAVE_RELPFUNC;
 }
 
@@ -502,6 +520,7 @@ relpTcpSetDHBits(relpTcp_t *pThis, int bits)
 	LEAVE_RELPFUNC;
 }
 
+#ifdef ENABLE_TLS
 /* set TLS priority string, common code both for client and server */
 static relpRetVal
 relpTcpTLSSetPrio(relpTcp_t *pThis)
@@ -587,6 +606,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 finalize_it:
   	LEAVE_RELPFUNC;
 }
+#endif /* #ifdef ENABLE_TLS */
 
 /* Enable KEEPALIVE handling on the socket.  */
 static void
@@ -707,12 +727,14 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	}
 
 	pThis->sock = iNewSock;
+#ifdef ENABLE_TLS
 	if(pSrv->pTcp->bEnableTLS) {
 		pThis->bEnableTLS = 1;
 		pThis->pSrv = pSrv;
 		CHKRet(relpTcpSetPermittedPeers(pThis, &(pSrv->permittedPeers)));
 		CHKRet(relpTcpAcceptConnReqInitTLS(pThis, pSrv));
 	}
+#endif /* #ifdef ENABLE_TLS */
 
 	*ppThis = pThis;
 
@@ -728,6 +750,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+#ifdef ENABLE_TLS
 /* Convert a fingerprint to printable data. The function must be provided a
  * sufficiently large buffer. 512 bytes shall always do.
  */
@@ -867,7 +890,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-/* Compile a wildcard - must not yet be comipled */
+/* Compile a wildcard - must not yet be compiled */
 static relpRetVal
 relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry)
 {
@@ -1273,6 +1296,7 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#endif /* #ifdef ENABLE_TLS */
 
 
 /* initialize the tcp socket for a listner
@@ -1362,9 +1386,11 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 			continue;
 		}
 
+#ifdef ENABLE_TLS
 		if(pThis->bEnableTLS) {
 			CHKRet(relpTcpLstnInitTLS(pThis));
 		}
+#endif /* #ifdef ENABLE_TLS */
 
 	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
@@ -1431,10 +1457,11 @@ finalize_it:
 relpRetVal
 relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 {
-	int r;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
+#ifdef ENABLE_TLS
+	int r;
 	if(pThis->bEnableTLS) {
 		r = gnutls_record_recv(pThis->session, pRcvBuf, *pLenBuf);
 		if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
@@ -1447,8 +1474,11 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 		}
 		*pLenBuf = (r < 0) ? -1 : r;
 	} else {
+#endif /* #ifdef ENABLE_TLS */
 		*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+#ifdef ENABLE_TLS
 	}
+#endif /* #ifdef ENABLE_TLS */
 
 	LEAVE_RELPFUNC;
 }
@@ -1500,6 +1530,7 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
+#ifdef ENABLE_TLS
 	if(pThis->bEnableTLS) {
 		written = gnutls_record_send(pThis->session, pBuf, *pLenBuf);
 		pThis->pEngine->dbgprint("librelp: TLS send returned %d\n", (int) written);
@@ -1514,6 +1545,7 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 			}
 		}
 	} else {
+#endif /* #ifdef ENABLE_TLS */
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
 		if(written == -1) {
 			switch(errno) {
@@ -1527,13 +1559,16 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 					break;
 			}
 		}
+#ifdef ENABLE_TLS
 	}
+#endif /* #ifdef ENABLE_TLS */
 
 	*pLenBuf = written;
 finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+#ifdef ENABLE_TLS
 /* this is only called for client-initiated sessions */
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
@@ -1628,6 +1663,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#endif /* #ifdef ENABLE_TLS */
 
 /* open a connection to a remote host (server).
  * This is only use for client initiated connections.
@@ -1672,10 +1708,12 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
+#ifdef ENABLE_TLS
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpConnectTLSInit(pThis));
 		pThis->bTLSActive = 1;
 	}
+#endif /* #ifdef ENABLE_TLS */
 
 finalize_it:
 	if(res != NULL)
@@ -1693,6 +1731,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+#ifdef ENABLE_TLS
 /* return direction in which retry must be done. We return the original
  * gnutls code, which means:
  * "0 if trying to read data, 1 if trying to write data."
@@ -1724,6 +1763,7 @@ relpTcpRtryHandshake(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#endif /* #ifdef ENABLE_TLS */
 
 
 /* wait until a socket is writable again. This is primarily for use in client cases.

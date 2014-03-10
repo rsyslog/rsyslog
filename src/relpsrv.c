@@ -1,6 +1,6 @@
 /* The relp server.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -322,9 +322,9 @@ relpSrvRun(relpSrv_t *pThis)
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine, RELP_SRV_CONN, pThis));
 	relpTcpSetUsrPtr(pTcp, pThis->pUsr);
 	if(pThis->bEnableTLS) {
-		relpTcpEnableTLS(pTcp);
+		CHKRet(relpTcpEnableTLS(pTcp));
 		if(pThis->bEnableTLSZip) {
-			relpTcpEnableTLSZip(pTcp);
+			CHKRet(relpTcpEnableTLSZip(pTcp));
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
 		relpTcpSetGnuTLSPriString(pTcp, pThis->pristring);
