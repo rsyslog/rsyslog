@@ -679,7 +679,9 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 {
 	relpEngSessLst_t *pSessEtry;
 	relpTcp_t *pTcp;
+#	ifdef ENABLE_TLS
 	relpRetVal localRet;
+#	endif
 
 	pSessEtry = (relpEngSessLst_t*) epd->ptr;
 	if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
@@ -689,12 +691,18 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 		} else if(relpTcpRtryOp(pTcp) == relpTCP_RETRY_recv) {
 			doRecv(pThis, pSessEtry, epd->sock);
 		} else {
-			localRet = relpTcpRtryHandshake(pTcp);
-			if(localRet != RELP_RET_OK) {
-				pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
-						epd->sock, localRet);
-				relpEngineDelSess(pThis, pSessEtry);
-			}
+#			ifdef ENABLE_TLS
+				localRet = relpTcpRtryHandshake(pTcp);
+				if(localRet != RELP_RET_OK) {
+					pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
+							epd->sock, localRet);
+					relpEngineDelSess(pThis, pSessEtry);
+				}
+#			else
+					pThis->dbgprint("librelp error: handshake retry requested in "
+							"non-TLS mode");
+				
+#			endif /* #ifdef ENABLE_TLS */
 		}
 	} else {
 		if(doRecv(pThis, pSessEtry, epd->sock) == RELP_RET_OK) {
@@ -727,6 +735,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		 */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
+#			ifdef ENABLE_TLS
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
 				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
@@ -734,7 +743,9 @@ engineEventLoopRun(relpEngine_t *pThis)
 				} else {
 					epoll_set_events(pThis, pSessEtry, sock, EPOLLOUT);
 				}
-			} else {
+			} else
+#			endif /* #ifdef ENABLE_TLS */
+			{
 				/* now check if a send request is outstanding and, if so, add it */
 				if(relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
 					epoll_set_events(pThis, pSessEtry, sock, EPOLLIN);
@@ -810,6 +821,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 		/* Add all sessions for reception and sending (they all have just one socket) */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
+#			ifdef ENABLE_TLS
 			if(relpSessTcpRequiresRtry(pSessEtry->pSess)) {
 				pThis->dbgprint("librelp: retry op requested for sock %d\n", sock);
 				if(relpTcpGetRtryDirection(pSessEtry->pSess->pTcp) == 0) {
@@ -817,7 +829,9 @@ engineEventLoopRun(relpEngine_t *pThis)
 				} else {
 					FD_SET(sock, &writefds);
 				}
-			} else {
+			} else
+#			endif /* #ifdef ENABLE_TLS */
+			{
 				FD_SET(sock, &readfds);
 				/* now check if a send request is outstanding and, if so, add it */
 				if(!relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
@@ -878,12 +892,18 @@ engineEventLoopRun(relpEngine_t *pThis)
 						doRecv(pThis, pSessEtry, sock);
 						--nfds; /* indicate we have processed one */
 					} else {
-						localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
-						if(localRet != RELP_RET_OK) {
-							pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
-									sock, localRet);
-							relpEngineDelSess(pThis, pSessEtry);
-						}
+#						ifdef ENABLE_TLS
+							localRet = relpTcpRtryHandshake(pSessEtry->pSess->pTcp);
+							if(localRet != RELP_RET_OK) {
+								pThis->dbgprint("relp session %d handshake iRet %d, tearing it down\n",
+										sock, localRet);
+								relpEngineDelSess(pThis, pSessEtry);
+							}
+#						else
+							pThis->dbgprint("librelp error: handshake retry requested in "
+									"non-TLS mode");
+				
+#						endif /* #ifdef ENABLE_TLS */
 					}
 				}
 			} else {
