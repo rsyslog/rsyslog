@@ -304,7 +304,7 @@ readjournal() {
 		/* ... but we know better than to trust the specs */
 		if (equal_sign == NULL) {
 			errmsg.LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
-				"returned a malformed field (has no '='): '%s'", get);
+				"returned a malformed field (has no '='): '%s'", (char*)get);
 			continue; /* skip the entry */
 		}
 

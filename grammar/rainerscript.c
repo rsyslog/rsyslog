@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1362,7 +1362,7 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 	short matchnbr;
 	regmatch_t pmatch[50];
 	int bMustFree;
-	es_str_t *estr;
+	es_str_t *estr = NULL; /* init just to keep compiler happy */
 	char *str;
 	struct var r[CNFFUNC_MAX_ARGS];
 	int iLenBuf;

@@ -178,7 +178,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen);
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...);
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Append an integer to the string. No special formatting is

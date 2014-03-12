@@ -404,8 +404,8 @@ checkInstance(instanceConf_t *inst)
 	}
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
-	CHKmalloc(inst->pszFileBaseName = ustrdup(basen));
-	CHKmalloc(inst->pszDirName = ustrdup(dirn));
+	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup(basen));
+	CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
 
 	if(dirn[0] == '\0') {
 		dirn[0] = '/';
