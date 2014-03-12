@@ -11,9 +11,11 @@ source $srcdir/diag.sh init
 # set instance-specific debugging parameters!
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log2"
+echo starting receiver
 source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 #export RSYSLOG_DEBUGLOG="log"
 #valgrind="valgrind"
+echo starting sender
 source $srcdir/diag.sh startup rcvr_fail_restore_sender.conf
 # re-set params so that new instances do not thrash it...
 #unset RSYSLOG_DEBUG
