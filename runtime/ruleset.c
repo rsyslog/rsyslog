@@ -294,6 +294,8 @@ execCall(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		scriptExec(stmt->d.s_call.stmt, pBatch, active);
 	} else {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
+			if(pBatch->eltState[i] == BATCH_STATE_DISC)
+				continue; /* will be ignored in any case */
 			if(active == NULL || active[i]) {
 				CHKmalloc(pMsg = MsgDup((msg_t*) pBatch->pElem[i].pMsg));
 				DBGPRINTF("CALL: forwarding message %d to async ruleset %p\n",
