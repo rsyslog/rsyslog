@@ -294,15 +294,17 @@ execCall(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 		scriptExec(stmt->d.s_call.stmt, pBatch, active);
 	} else {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
-			CHKmalloc(pMsg = MsgDup((msg_t*) pBatch->pElem[i].pMsg));
-			DBGPRINTF("CALL: forwarding message %d to async ruleset %p\n",
-				  i, stmt->d.s_call.ruleset->pQueue);
-			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
-			MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
-			/* Note: we intentionally use submitMsg2() here, as we process messages
-			 * that were already run through the rate-limiter.
-			 */
-			submitMsg2(pMsg);
+			if(active == NULL || active[i]) {
+				CHKmalloc(pMsg = MsgDup((msg_t*) pBatch->pElem[i].pMsg));
+				DBGPRINTF("CALL: forwarding message %d to async ruleset %p\n",
+					  i, stmt->d.s_call.ruleset->pQueue);
+				MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+				MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
+				/* Note: we intentionally use submitMsg2() here, as we process messages
+				 * that were already run through the rate-limiter.
+				 */
+				submitMsg2(pMsg);
+			}
 		}
 	}
 finalize_it:
