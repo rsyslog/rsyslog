@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.3 - 2014-03-11
+Version 1.2.3 - 2014-03-13
 - add ability to build librelp without TLS
   This is required on some platforms where GnuTLS is too old 
   Use --disable-tls to select this mode. If set, RELP_RET_ERR_NO_TLS
