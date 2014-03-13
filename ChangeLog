@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 8.2.0 [v8-stable] 2014-02-??
+- add "defaultnetstreamdrivercertfile" global variable to set a default
+  for the certfile. 
+  Thanks to Radu Gheorghe for the patch.
 - omelasticsearch: add new "usehttps" parameter for secured connections
   Thanks to Radu Gheorghe for the patch.
 - "action resumed" message now also specifies module type
