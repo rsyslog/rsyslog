@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.6.1 [v7.6-stable] 2014-02-??
+Version 7.6.1 [v7.6-stable] 2014-03-13
 - added "action.reportSuspension" action parameter
   This now permits to control handling on a per-action basis rather to
   the previous "global setting only".
@@ -8,7 +8,7 @@ Version 7.6.1 [v7.6-stable] 2014-02-??
   the config details (like destination etc) as this would require much more
   elaborate code changes, which we at least do not like to do in the
   stable version.
-- better and more consistent action naming, action queus now always 
+- better and more consistent action naming, action queues now always 
   contain the word "queue" after the action name
 - add support for "tls-less" librelp
   we now require librelp 1.2.3, as we need the new error code definition
