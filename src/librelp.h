@@ -190,8 +190,10 @@ relpRetVal relpEngineSetOnGenericErr(relpEngine_t *pThis,
 /* exposed server property set functions */
 relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr);
-relpRetVal relpSrvEnableTLS(relpSrv_t *pThis);
-relpRetVal relpSrvEnableTLSZip(relpSrv_t *pThis);
+void relpSrvEnableTLS(relpSrv_t *pThis) __attribute__ ((deprecated));
+void relpSrvEnableTLSZip(relpSrv_t *pThis) __attribute__ ((deprecated));
+relpRetVal relpSrvEnableTLS2(relpSrv_t *pThis);
+relpRetVal relpSrvEnableTLSZip2(relpSrv_t *pThis);
 void relpSrvSetDHBits(relpSrv_t *pThis, int bits);
 void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAliveIntvl, const int iKeepAliveProbes, const int iKeepAliveTime);
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);

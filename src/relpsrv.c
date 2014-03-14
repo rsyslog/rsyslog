@@ -285,7 +285,7 @@ relpSrvSetDHBits(relpSrv_t *pThis, int bits)
 	pThis->dhBits = bits;
 }
 relpRetVal
-relpSrvEnableTLS(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLS2(relpSrv_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
 #ifdef ENABLE_TLS
@@ -296,7 +296,7 @@ relpSrvEnableTLS(relpSrv_t __attribute__((unused)) *pThis)
 	LEAVE_RELPFUNC;
 }
 relpRetVal
-relpSrvEnableTLSZip(relpSrv_t __attribute__((unused)) *pThis)
+relpSrvEnableTLSZip2(relpSrv_t __attribute__((unused)) *pThis)
 {
 	ENTER_RELPFUNC;
 #ifdef ENABLE_TLS
@@ -305,6 +305,16 @@ relpSrvEnableTLSZip(relpSrv_t __attribute__((unused)) *pThis)
 	iRet = RELP_RET_ERR_NO_TLS;
 #endif /* #ifdef ENABLE_TLS */
 	LEAVE_RELPFUNC;
+}
+void
+relpSrvEnableTLS(relpSrv_t *pThis)
+{
+	relpSrvEnableTLS2(pThis);
+}
+void
+relpSrvEnableTLSZip(relpSrv_t *pThis)
+{
+	relpSrvEnableTLSZip2(pThis);
 }
 
 void

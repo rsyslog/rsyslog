@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------
+Version 1.2.4 - 2014-03-14
+- correct API/ABI change in 1.2.3
+  My reasoning was flawed, and we could run into problems with
+  apps that required the new version but could not detect that an
+  older one was installed.
+  Thanks to Michael Biebl for pointing this out.
+  What we have done is:
+  - revert back to previous state (return void)
+    * relpSrvEnableTLS();
+    * relpSrvEnableTLSZip();
+    These functions are now deprecated.
+  - introduce new functions that return a state
+    * relpSrvEnableTLS2();
+    * relpSrvEnableTLSZip2();
+----------------------------------------------------------------------
 Version 1.2.3 - 2014-03-13
+  ************************************************************
+  * NOTE: this version should NOT be used due to the API     *
+  *       change specified below.                            *
+  ************************************************************
 - add ability to build librelp without TLS
   This is required on some platforms where GnuTLS is too old 
   Use --disable-tls to select this mode. If set, RELP_RET_ERR_NO_TLS
