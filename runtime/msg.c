@@ -2406,12 +2406,15 @@ finalize_it:
  * terminated by '\0'.
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
+void MsgSetRawMsg(msg_t *pThis, const char* pszRawMsg, size_t lenMsg)
 {
+dbgprintf("DDDDD: extern MsgSetRawMsg: %s\n", pszRawMsg);
+	int deltaSize;
 	assert(pThis != NULL);
 	if(pThis->pszRawMsg != pThis->szRawMsg)
 		free(pThis->pszRawMsg);
 
+	deltaSize = lenMsg - pThis->iLenRawMsg;
 	pThis->iLenRawMsg = lenMsg;
 	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
@@ -2424,6 +2427,13 @@ void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
 
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
 	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
+	/* correct other information */
+dbgprintf("DDDDDD: iLenRawMsg %d, offMsg %d, delta %d, lenMsg %d\n", pThis->iLenRawMsg, pThis->offMSG, deltaSize, pThis->iLenMSG);
+	if(pThis->iLenRawMsg > pThis->offMSG)
+		pThis->iLenMSG += deltaSize;
+	else
+		pThis->iLenMSG = 0;
+dbgprintf("AAAAAA: iLenRawMsg %d, offMsg %d, delta %d, lenMsg %d\n", pThis->iLenRawMsg, pThis->offMSG, deltaSize, pThis->iLenMSG);
 }
 
 
@@ -3795,68 +3805,23 @@ finalize_it:
 #undef	isProp
 
 
-#if 0
-/* go through JSON object and modify each provided property.
- * I think we are only interested in the top-level objects. Lower
- * levels can be handled by the respective handlers themselves 
- * (as they nativel work on json objects!).
+/* Set a single property based on the JSON object provided. The
+ * property name is extracted from the JSON object.
  */
-static gboolean
-BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
+static rsRetVal
+msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json)
 {
-	switch(json != NULL ? json_object_get_type(json) : json_type_null) {
-	case json_type_null:
-		return bson_append_null(doc, name);
-	case json_type_boolean:
-		return bson_append_boolean(doc, name,
-					   json_object_get_boolean(json));
-	case json_type_double:
-		return bson_append_double(doc, name,
-					  json_object_get_double(json));
-	case json_type_int: {
-		int64_t i;
+	const char *psz;
+	DEFiRet;
 
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
-		i = json_object_get_int64(json);
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-		i = json_object_get_int(json);
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
-		if (i >= INT32_MIN && i <= INT32_MAX)
-			return bson_append_int32(doc, name, i);
-		else
-			return bson_append_int64(doc, name, i);
+	dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
+	if(!strcmp(name, "rawmsg")) {
+		psz = json_object_get_string(json);
+		MsgSetRawMsg(pMsg, psz, strlen(psz));
 	}
-	case json_type_object: {
-		bson *sub;
-		gboolean ok;
-
-		sub = BSONFromJSONObject(json);
-		if (sub == NULL)
-			return FALSE;
-		ok = bson_append_document(doc, name, sub);
-		bson_free(sub);
-		return ok;
-	}
-	case json_type_array: {
-		bson *sub;
-		gboolean ok;
-
-		sub = BSONFromJSONArray(json);
-		if (sub == NULL)
-			return FALSE;
-		ok = bson_append_document(doc, name, sub);
-		bson_free(sub);
-		return ok;
-	}
-	case json_type_string:
-		return bson_append_string(doc, name,
-					  json_object_get_string(json), -1);
-
-	default:
-		return FALSE;
-	}
+	/* we ignore unknown properties */
+	RETiRet;
 }
-#endif
 
 
 /* set message properties based on JSON string. This function does it all,
@@ -3873,7 +3838,6 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json;
-	struct json_object_iter it;
 	const char *errMsg;
 	DEFiRet;
 
@@ -3905,8 +3869,8 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 	}
  
-	json_object_object_foreachC(json, it) {
-		dbgprintf("DDDDD: key: '%s'\n", it.key); // it.val
+	json_object_object_foreach(json, name, val) {
+		msgSetPropViaJSON(pMsg, name, val);
 	}
 
 finalize_it:

@@ -181,7 +181,7 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
+void MsgSetRawMsg(msg_t *pMsg, const char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
