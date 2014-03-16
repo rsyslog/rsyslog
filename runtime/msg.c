@@ -3795,6 +3795,70 @@ finalize_it:
 #undef	isProp
 
 
+#if 0
+/* go through JSON object and modify each provided property.
+ * I think we are only interested in the top-level objects. Lower
+ * levels can be handled by the respective handlers themselves 
+ * (as they nativel work on json objects!).
+ */
+static gboolean
+BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
+{
+	switch(json != NULL ? json_object_get_type(json) : json_type_null) {
+	case json_type_null:
+		return bson_append_null(doc, name);
+	case json_type_boolean:
+		return bson_append_boolean(doc, name,
+					   json_object_get_boolean(json));
+	case json_type_double:
+		return bson_append_double(doc, name,
+					  json_object_get_double(json));
+	case json_type_int: {
+		int64_t i;
+
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+		i = json_object_get_int64(json);
+#else /* HAVE_JSON_OBJECT_NEW_INT64 */
+		i = json_object_get_int(json);
+#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
+		if (i >= INT32_MIN && i <= INT32_MAX)
+			return bson_append_int32(doc, name, i);
+		else
+			return bson_append_int64(doc, name, i);
+	}
+	case json_type_object: {
+		bson *sub;
+		gboolean ok;
+
+		sub = BSONFromJSONObject(json);
+		if (sub == NULL)
+			return FALSE;
+		ok = bson_append_document(doc, name, sub);
+		bson_free(sub);
+		return ok;
+	}
+	case json_type_array: {
+		bson *sub;
+		gboolean ok;
+
+		sub = BSONFromJSONArray(json);
+		if (sub == NULL)
+			return FALSE;
+		ok = bson_append_document(doc, name, sub);
+		bson_free(sub);
+		return ok;
+	}
+	case json_type_string:
+		return bson_append_string(doc, name,
+					  json_object_get_string(json), -1);
+
+	default:
+		return FALSE;
+	}
+}
+#endif
+
+
 /* set message properties based on JSON string. This function does it all,
  * including parsing the JSON string. If an error is detected, the operation
  * is aborted at the time of error. Any modifications made before the
@@ -3805,13 +3869,49 @@ finalize_it:
  * updated if the underlying (raw)msg property is changed.
  */
 rsRetVal
-MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json)
+MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const jsonstr)
 {
+	struct json_tokener *tokener = NULL;
+	struct json_object *json;
+	struct json_object_iter it;
+	const char *errMsg;
 	DEFiRet;
-	DBGPRINTF("DDDDDD: JSON string for message mod: '%s'\n", json);
-	if(!strcmp(json, "{}")) /* shortcut for a common case */
+
+	DBGPRINTF("DDDDDD: JSON string for message mod: '%s'\n", jsonstr);
+	if(!strcmp((char*)jsonstr, "{}")) /* shortcut for a common case */
 		FINALIZE;
+
+	tokener = json_tokener_new();
+
+	json = json_tokener_parse_ex(tokener, (char*)jsonstr, ustrlen(jsonstr));
+	if(Debug) {
+		errMsg = NULL;
+		if(json == NULL) {
+			enum json_tokener_error err;
+
+			err = tokener->err;
+			if(err != json_tokener_continue)
+				errMsg = json_tokener_errors[err];
+			else
+				errMsg = "Unterminated input";
+		} else if(!json_object_is_type(json, json_type_object))
+			errMsg = "JSON value is not an object";
+		if(errMsg != NULL) {
+			DBGPRINTF("MsgSetPropsViaJSON: Error parsing JSON '%s': %s\n",
+					jsonstr, errMsg);
+		}
+	}
+	if(json == NULL) {
+		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+	}
+ 
+	json_object_object_foreachC(json, it) {
+		dbgprintf("DDDDD: key: '%s'\n", it.key); // it.val
+	}
+
 finalize_it:
+	if(tokener != NULL)
+		json_tokener_free(tokener);
 	RETiRet;
 }
 
