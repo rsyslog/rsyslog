@@ -329,7 +329,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	relpSrvSetKeepAlive(pSrv, inst->bKeepAlive, inst->iKeepAliveIntvl,
 			    inst->iKeepAliveProbes, inst->iKeepAliveTime);
 	if(inst->bEnableTLS) {
-		relpRet = relpSrvEnableTLS(pSrv);
+		relpRet = relpSrvEnableTLS2(pSrv);
 		if(relpRet == RELP_RET_ERR_NO_TLS) {
 			errmsg.LogError(0, RS_RET_RELP_NO_TLS,
 					"imrelp: could not activate relp TLS, librelp "
@@ -341,7 +341,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
 		if(inst->bEnableTLSZip) {
-			relpSrvEnableTLSZip(pSrv);
+			relpSrvEnableTLSZip2(pSrv);
 		}
 		if(inst->dhBits) {
 			relpSrvSetDHBits(pSrv, inst->dhBits);
