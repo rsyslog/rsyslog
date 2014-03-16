@@ -35,7 +35,7 @@ def onInit():
 	# most often, nothing to do here
 
 
-def onReceive(msgs):
+def onReceive(msg):
 	"""This is the entry point where actual work needs to be done. It receives
 	   the messge from rsyslog and now needs to examine it, do any processing
 	   necessary. The to-be-modified properties (one or many) need to be pushed
@@ -79,3 +79,4 @@ while keepRunning == 1:
 	else: # an empty line means stdin has been closed
 		keepRunning = 0
 onExit()
+sys.stdout.flush() # very important, Python buffers far too much!

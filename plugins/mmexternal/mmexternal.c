@@ -38,6 +38,7 @@
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
+#include "msg.h"
 #include "errmsg.h"
 #include "cfsysline.h"
 
@@ -151,7 +152,7 @@ ENDtryResume
  * hard to handle errors. -- rgerhards, 2014-01-16
  */
 static void
-writeProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData,
+writeOutputDebug(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	const char *__restrict__ const buf,
 	const ssize_t lenBuf)
 {
@@ -183,23 +184,12 @@ done:	return;
 }
 
 
-/* process reply we received from external program */
-static void
-processReply(wrkrInstanceData_t *__restrict__ const pWrkrData,
-	const char *__restrict__ const buf)
-{
-	// TODO: we need to have the message object here -- so we 
-	// obviously must insist on message object passing mode.
-	// For testers, we use NULL, which currently works (but
-	// soon will no longer!)
-	MsgSetPropsViaJSON(NULL, buf);
-}
 
 /* Get reply from external program. Note that we *must* receive one
  * reply for each message sent (half-duplex protocol).
  */
 static void
-getProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData)
+processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
 {
 	char buf[4096];
 	ssize_t r;
@@ -210,8 +200,8 @@ dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 		buf[r] = '\0'; /* space reserved in read! */
 dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, buf);
 		if(r > 0) {
-			writeProgramOutput(pWrkrData, buf, r);
-			processReply(pWrkrData, buf);
+			writeOutputDebug(pWrkrData, buf, r);
+			MsgSetPropsViaJSON(pMsg, (uchar*)buf);
 		}
 	} while(r > 0);
 
@@ -401,20 +391,23 @@ tryRestart(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
+callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict__ const pMsg)
 {
 	int lenWritten;
 	int lenWrite;
 	int writeOffset;
 	char errStr[1024];
+	uchar msgStr[4096];
+	uchar *rawmsg; /* string to be processed by external program */
 	DEFiRet;
 	
-	lenWrite = strlen((char*)szMsg);
+	getRawMsg(pMsg, &rawmsg, &lenWrite);
+	lenWrite = snprintf((char*)msgStr, sizeof(msgStr), "%s\n", rawmsg); // TODO: make this more solid!
 	writeOffset = 0;
 
 	do {
-dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szMsg);
-		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
+dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, msgStr);
+		lenWritten = write(pWrkrData->fdPipeOut, ((char*)msgStr)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
@@ -434,7 +427,7 @@ dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szM
 		}
 	} while(lenWritten != lenWrite);
 
-	getProgramReply(pWrkrData);
+	processProgramReply(pWrkrData, pMsg);
 
 finalize_it:
 	RETiRet;
@@ -452,7 +445,7 @@ dbgprintf("DDDD:mmexternal processing message\n");
 		openPipe(pWrkrData);
 	}
 	
-	iRet = writePipe(pWrkrData, ppString[0]);
+	iRet = callExtProg(pWrkrData, (msg_t*)ppString[0]);
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;
@@ -581,9 +574,7 @@ CODESTARTnewActInst
 		}
 	}
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
-						"RSYSLOG_FileFormat" : (char*)pData->tplName),
-						OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	DBGPRINTF("mmexternal: bForceSingleInst %d\n", pData->bForceSingleInst);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
