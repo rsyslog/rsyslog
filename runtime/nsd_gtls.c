@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -50,6 +50,7 @@
 #include "nsd_ptcp.h"
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
+#include "unicode-helper.h"
 
 /* things to move to some better place/functionality - TODO */
 #define CRLFILE "crl.pem"
@@ -288,12 +289,12 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
 		activation_time = gnutls_x509_crt_get_activation_time(cert);
-		ctime_r(&activation_time, szBuf);
-		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
-		CHKiRet(rsCStrAppendStrf(pStr, (uchar*)"Certificate 1 info: "
+		ctime_r(&activation_time, (char*)szBuf);
+		szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
+		CHKiRet(rsCStrAppendStrf(pStr, "Certificate 1 info: "
 			"certificate valid from %s ", szBuf));
-		ctime_r(&expiration_time, szBuf);
-		szBuf[strlen(szBuf) - 1] = '\0'; /* strip linefeed */
+		ctime_r(&expiration_time, (char*)szBuf);
+		szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
 		CHKiRet(rsCStrAppendStrf(pStr, "to %s; ", szBuf));
 
 		/* Extract some of the public key algorithm's parameters */
@@ -303,20 +304,20 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 		/* names */
 		tmp = szBufLen;
-		if(gnutls_x509_crt_get_dn(cert, szBuf, &tmp)
+		if(gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp)
 		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
 			szBufLen = tmp;
 			szBuf = malloc(tmp);
-			gnutls_x509_crt_get_dn(cert, szBuf, &tmp);
+			gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp);
 		}
 		CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
 
 		tmp = szBufLen;
-		if(gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp)
+		if(gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp)
 		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
 			szBufLen = tmp;
 			szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-			gnutls_x509_crt_get_issuer_dn(cert, szBuf, &tmp);
+			gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp);
 		}
 		CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
 

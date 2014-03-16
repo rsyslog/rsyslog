@@ -309,7 +309,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 
 /* append a printf-style formated string
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, uchar *fmt, ...)
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
