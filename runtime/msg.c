@@ -2408,7 +2408,6 @@ finalize_it:
  */
 void MsgSetRawMsg(msg_t *pThis, const char* pszRawMsg, size_t lenMsg)
 {
-dbgprintf("DDDDD: extern MsgSetRawMsg: %s\n", pszRawMsg);
 	int deltaSize;
 	assert(pThis != NULL);
 	if(pThis->pszRawMsg != pThis->szRawMsg)
@@ -2428,12 +2427,10 @@ dbgprintf("DDDDD: extern MsgSetRawMsg: %s\n", pszRawMsg);
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
 	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
 	/* correct other information */
-dbgprintf("DDDDDD: iLenRawMsg %d, offMsg %d, delta %d, lenMsg %d\n", pThis->iLenRawMsg, pThis->offMSG, deltaSize, pThis->iLenMSG);
 	if(pThis->iLenRawMsg > pThis->offMSG)
 		pThis->iLenMSG += deltaSize;
 	else
 		pThis->iLenMSG = 0;
-dbgprintf("AAAAAA: iLenRawMsg %d, offMsg %d, delta %d, lenMsg %d\n", pThis->iLenRawMsg, pThis->offMSG, deltaSize, pThis->iLenMSG);
 }
 
 
