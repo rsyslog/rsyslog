@@ -2631,7 +2631,7 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 	unsigned char c;
 	es_size_t i;
 	char numbuf[4];
-	int ni;
+	unsigned ni;
 	unsigned char nc;
 	int j;
 	DEFiRet;
