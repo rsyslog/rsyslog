@@ -82,11 +82,11 @@ Manual
 .. toctree::
    :maxdepth: 3
    
+   configuration/index
    installation/index
    drivers/index
    rainerscript/index
    messageparser
-   configuration/index
    queues
    troubleshooting/index
    development/index
