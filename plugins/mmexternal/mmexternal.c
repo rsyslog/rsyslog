@@ -57,6 +57,10 @@ typedef struct _instanceData {
 	uchar *tplName;		/* assigned output template */
 	int iParams;		/* Holds the count of parameters if set*/
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
+	int inputProp;		/* what to provide as input to the external program? */
+#define	INPUT_MSG 0
+#define	INPUT_RAWMSG 1
+#define INPUT_JSON 2
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
@@ -80,9 +84,9 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "interface.input", eCmdHdlrString, 0 },
 	{ "output", eCmdHdlrString, 0 },
-	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "forcesingleinstance", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -99,6 +103,7 @@ ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->inputProp = INPUT_MSG;
 	pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
 
@@ -406,11 +411,18 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 	int writeOffset;
 	char errStr[1024];
 	uchar msgStr[4096];
-	uchar *rawmsg; /* string to be processed by external program */
+	uchar *inputstr; /* string to be processed by external program */
 	DEFiRet;
 	
-	getRawMsg(pMsg, &rawmsg, &lenWrite);
-	lenWrite = snprintf((char*)msgStr, sizeof(msgStr), "%s\n", rawmsg); // TODO: make this more solid!
+	if(pWrkrData->pData->inputProp == INPUT_MSG) {
+		inputstr = getMSG(pMsg);
+		lenWrite = getMSGLen(pMsg);
+	} else if(pWrkrData->pData->inputProp == INPUT_RAWMSG) {
+		getRawMsg(pMsg, &inputstr, &lenWrite);
+	} else  {
+		DBGPRINTF("DDDDD: JSON mode not yet supported!\n");
+	}
+	lenWrite = snprintf((char*)msgStr, sizeof(msgStr), "%s\n", inputstr); // TODO: make this more solid!
 	writeOffset = 0;
 
 	do {
@@ -484,6 +496,7 @@ BEGINnewActInst
 	es_str_t *estrBinary;
 	es_str_t *estrParams;
 	es_str_t *estrTmp;
+	const char *cstr = NULL;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -576,8 +589,20 @@ CODESTARTnewActInst
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "interface.input")) {
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(cstr, "msg"))
+				pData->inputProp = INPUT_MSG;
+			else if(!strcmp(cstr, "rawmsg"))
+				pData->inputProp = INPUT_RAWMSG;
+			else if(!strcmp(cstr, "fulljson"))
+				pData->inputProp = INPUT_JSON;
+			else {
+				errmsg.LogError(0, RS_RET_INVLD_INTERFACE_INPUT,
+					"mmexternal: invalid interface.input paramter '%s'",
+					cstr);
+				ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
+			}
 		} else {
 			dbgprintf("mmexternal: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
@@ -585,7 +610,9 @@ CODESTARTnewActInst
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	DBGPRINTF("mmexternal: bForceSingleInst %d\n", pData->bForceSingleInst);
+	DBGPRINTF("mmexternal: interface.input '%s', mode %d\n", cstr, pData->inputProp);
 CODE_STD_FINALIZERnewActInst
+	free((void*)cstr);
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 

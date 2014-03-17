@@ -389,6 +389,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 
 	/* up to 2400 reserved for 7.5 & 7.6 */
 	RS_RET_INVLD_OMOD = -2400, /**< invalid output module, does not provide proper interfaces */
+	RS_RET_INVLD_INTERFACE_INPUT = -2401, /**< invalid value for "interface.input" parameter (ext progs) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
