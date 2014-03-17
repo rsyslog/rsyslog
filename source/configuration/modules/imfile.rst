@@ -237,28 +237,35 @@ Legacy Configuration Directives
 
 .. function:: $InputFilePersistStateInterval lines
 
-   *Available in 4.7.3+, 5.6.2+*
-
    Specifies how often the state file shall be written when processing
    the input file. The default value is 0, which means a new state file
    is only written when the monitored files is being closed (end of
 
 .. function:: $InputFileReadMode mode
 
-   *Available in 5.7.5+*
-
 .. function:: $InputFileMaxLinesAtOnce number
-
-   *Available in 5.9.0+*
 
    This is useful if multiple files need to be monitored. If set to 0,
    default is 10240.
 
 .. function:: $InputFileBindRuleset ruleset
 
-   *Available in 5.7.5+, 6.1.5+*
-
    Equivalent to: Ruleset
+   Binds the listener to a specific
+   :doc:`ruleset <../multi_ruleset>`.
+
+Caveats/Known Bugs
+------------------
+
+So far, only 100 files can be monitored. If more are needed, the source
+needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
+
+Powertop users may want to notice that imfile utilizes polling. Thus, it
+is no good citizen when it comes to conserving system power consumption.
+We are currently evaluating to move to inotify(). However, there are a
+number of subtle issues, which needs to be worked out first. We will
+make the change as soon as we can. If you can afford it, we recommend
+using a long polling interval in the mean time.
 
 Legacy Example
 --------------
