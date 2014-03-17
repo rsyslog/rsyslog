@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.4 - 2014-03-14
+Version 1.2.4 - 2014-03-17
 - correct API/ABI change in 1.2.3
   My reasoning was flawed, and we could run into problems with
   apps that required the new version but could not detect that an
