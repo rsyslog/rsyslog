@@ -51,6 +51,9 @@ This module provides native support for logging to
    it was indexed on the `primary
    shard <http://www.elasticsearch.org/guide/appendix/glossary.html#primary_shard>`_
    only - thus trading some consistency for speed.
+-  **usehttps**\ <on/**off**>
+    Send events over HTTPS instead of HTTP. Good for when you have
+   Elasticsearch behind Apache or something else that can add HTTPS.
 -  **timeout**
     How long Elasticsearch will wait for a primary shard to be available
    for indexing your log before sending back an error. Defaults to "1m".
