@@ -376,7 +376,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	int i;
 	unsigned lsent = 0;
 	sbool bSendSuccess;
-	int lasterrno;
+	int lasterrno = ENOENT;
 	char errStr[1024];
 
 	if(pData->iRebindInterval && (pData->nXmit++ % pData->iRebindInterval == 0)) {
