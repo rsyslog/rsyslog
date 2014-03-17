@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 7.6.2 [v7.6-stable] 2014-03-17
+- support for librelp 1.2.4
+  This was necessary due to the problems with librelp 1.2.3 API stability.
+  We now use the new native 1.2.4 APIs to learn about the state of
+  librelp's TLS support.
+  For obvious reasons, librelp 1.2.4 is now required.
+---------------------------------------------------------------------------
 Version 7.6.1 [v7.6-stable] 2014-03-13
 - added "action.reportSuspension" action parameter
   This now permits to control handling on a per-action basis rather to
