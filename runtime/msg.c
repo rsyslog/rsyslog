@@ -2373,7 +2373,7 @@ void MsgSetMSGoffs(msg_t * const pMsg, short offs)
  * the caller is responsible for freeing it.
  * rgerhards, 2009-06-23
  */
-rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
+rsRetVal MsgReplaceMSG(msg_t *pThis, const uchar* pszMSG, int lenMSG)
 {
 	int lenNew;
 	uchar *bufNew;
@@ -3815,6 +3815,9 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	if(!strcmp(name, "rawmsg")) {
 		psz = json_object_get_string(json);
 		MsgSetRawMsg(pMsg, psz, strlen(psz));
+	} else if(!strcmp(name, "msg")) {
+		psz = json_object_get_string(json);
+		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
 	}
 	/* we ignore unknown properties */
 	RETiRet;

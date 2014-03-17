@@ -192,18 +192,26 @@ static void
 processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
 {
 	char buf[4096];
+	char errStr[1024];
 	ssize_t r;
 
 dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 	do {
 		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf)-1);
-		buf[r] = '\0'; /* space reserved in read! */
+		if(r > 0)
+			buf[r] = '\0'; /* space reserved in read! */
+		else
+			buf[0] = '\0';
 dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, buf);
+		if(Debug && r == -1) {
+			DBGPRINTF("mmexternal: error reading from external program: %s\n",
+				   rs_strerror_r(errno, errStr, sizeof(errStr)));
+		}
 		if(r > 0) {
 			writeOutputDebug(pWrkrData, buf, r);
 			MsgSetPropsViaJSON(pMsg, (uchar*)buf);
 		}
-	} while(r > 0);
+	} while(0); // TODO: change this so that we actually read one line!
 
 	return;
 }
@@ -451,6 +459,7 @@ dbgprintf("DDDD:mmexternal processing message\n");
 		iRet = RS_RET_SUSPENDED;
 	if(pData->bForceSingleInst)
 		pthread_mutex_unlock(&pData->mut);
+dbgprintf("DDDD:mmexternal DONE processing message\n");
 ENDdoAction
 
 
