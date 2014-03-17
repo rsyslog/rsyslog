@@ -3818,8 +3818,13 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	} else if(!strcmp(name, "msg")) {
 		psz = json_object_get_string(json);
 		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "$!")) {
+		msgAddJSON(pMsg, (uchar*)"!", json);
+	} else {
+		/* we ignore unknown properties */
+		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
+			  name);
 	}
-	/* we ignore unknown properties */
 	RETiRet;
 }
 
