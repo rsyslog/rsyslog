@@ -36,7 +36,6 @@
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
-#include "template.h"
 #include "module-template.h"
 #include "msg.h"
 #include "errmsg.h"
@@ -54,7 +53,6 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
-	uchar *tplName;		/* assigned output template */
 	int iParams;		/* Holds the count of parameters if set*/
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	int inputProp;		/* what to provide as input to the external program? */
