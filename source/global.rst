@@ -25,8 +25,13 @@ The following paramters can be set:
 -  localHostname
 -  preserveFQDN
 -  defaultNetstreamDriverCAFile
+    For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_, the CA certificate that can verify the machine keys and certs (see below)
 -  defaultNetstreamDriverKeyFile
+    Machine private key
+-  defaultNetstreamDriverCertFile - v8.2.0+
+    Machine public key (certificate)
 -  defaultNetstreamDriver
+    Set it to "gtls" to enable TLS for `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
 -  maxMessageSize
 -  **debug.onShutdown** available in 7.5.8+
     If enabled ("on"), rsyslog will log debug messages when a system
