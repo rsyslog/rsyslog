@@ -53,6 +53,12 @@ If some of these tools are missing, you will see errors like this one:
 The actual error message will vary. In the case shown here, pkg-config
 was missing.
 
+**Important:** the build dependencies must be present **before** creating
+the build environment is begun. Otherwise, some hard to interpret errors may
+occur. For example, the error above will also occur if you install
+pkg-config, but *after* you have run *autoreconf*. So be sure everything
+is in place *before* you create the build environment.
+
 Creating the Build Environment
 ------------------------------
 
