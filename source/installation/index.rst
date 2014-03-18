@@ -1,17 +1,23 @@
 Installation
 ============
 
-In most cases, people install rsyslog either via a package or use an
-"official" distribution tarball to generate it. But there may be
-situations where it is desirable to build directly from the source
-repository. This is useful for people who would like to participate in
-development or who would like to use the latest, not-yet-released code.
-The latter may especially be the case if you are asked to try out an
-experimental version.
+Installation is usually as simple as saying
+
+``$ sudo yum install rsyslog``
+
+or
+
+``$ sudo apt-get install rsyslog``
+
+However, distributions usually provide rather old versions of
+rsyslog, and so there are chances you want to have something
+newer. In that case, you need to either use the rsyslog project's
+own packages, a distribution tarball or build directly from repo.
+All of this is detailled in this chapter.
 
 .. toctree::
    :maxdepth: 2
 
    packages
-   build_from_repo
    install
+   build_from_repo
