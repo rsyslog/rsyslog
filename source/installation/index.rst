@@ -19,5 +19,5 @@ All of this is detailled in this chapter.
    :maxdepth: 2
 
    packages
-   install
+   install_from_source
    build_from_repo

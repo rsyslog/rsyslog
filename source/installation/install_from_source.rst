@@ -1,5 +1,5 @@
-HOWTO install rsyslog
-=====================
+Installing rsyslog from source
+==============================
 
 *Written by* `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 
@@ -7,26 +7,17 @@ Abstract
 --------
 
 **In this paper, I describe how to install**
-`rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
-step-by-step guide, targeted to those who want to quickly get it up and
-running. For more elaborate information, please consult the rest of the
-`manual set <manual.html>`_.
+`rsyslog <http://www.rsyslog.com/>`_ from source.
 
 How to make your life easier...
 -------------------------------
 
-Some folks have thankfully created `RPMs/packages for
-rsyslog <rsyslog_packages.html>`_. If you use them, you can spare
-yourself many of the steps below. This is highly recommended if there is
-a package for your distribution available.
+Note that there are many `RPMs/packages for rsyslog <rsyslog_packages.html>`_
+available, including project-supported ones for the latest releases.
+So in general, it is not necessary to build rsyslog from source.
 
 Steps To Do
 -----------
-
-Rsyslog does currently only have very limited availability as a package
-(if you volunteer to create one, `drop me a
-line <mailto:rgerhards@adiscon.com>`_). Thus, this guide focuses on
-installing from the source, which thankfully is **quite easy**.
 
 Step 1 - Download Software
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,7 +31,7 @@ Load the most recent build from
 `http://www.rsyslog.com/downloads <http://www.rsyslog.com/downloads>`_.
 Extract the software with "tar xzf -nameOfDownloadSet-". This will
 create a new subdirectory rsyslog-version in the current working
-directory. CD into that.
+directory. cd into that.
 
 Depending on your system configuration, you also need to install some
 build tools, most importantly make, the gcc compiler and the MySQL
@@ -51,6 +42,47 @@ see if nice error messages pop up during the compile process. If they
 do, you can still install the missing build environment tools. So this
 is nothing that you need to look at very carefully.
 
+
+Build Requirements
+~~~~~~~~~~~~~~~~~~
+
+At a minimum, the following development tools must be present on the
+system:
+
+* C compiler (usually gcc)
+* make
+* libtool
+* zlib development package
+* rst2man (part of Python docutils) if you want to generate the man files
+
+Also, development versions of the following supporting libraries are
+necessary:
+
+* liblogging (only stdlog component is hard requirement)
+* libestr
+
+Depending on which plugins are enabled, additional dependencies exist.
+These are reported during the ./configure run.
+
+**Important**: you need the **development** version of the packages in
+question. That is the version which is used by developers to build software
+that uses the respecitive package. Usually, they are separate from the
+regular user package. So if you just install the regular package but not
+the development one, ./configure will fail.
+
+As a concrete example, you may want to build ommysql. It obviously requires
+a package like *mysql-client*, but that is just the regular package and not
+sufficient to buid rsyslog succesfully. To do so, you need to also install
+something named like *mysql-client-dev*.
+
+Usually, the regular package is
+automatically installed, when you select the development package, but not
+vice versa. The exact behaviour and names depend on the distribution you use.
+It is quite common to name development packages something along the line of
+*pkgname-dev* or *pkgname-devel* where *pkgname* is the regular package name
+(like *mysql-client* in the above example).
+
+
 Step 2 - Run ./configure
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -58,9 +90,15 @@ Run ./configure to adopt rsyslog to your environment. While doing so,
 you can also enable options. Configure will display selected options
 when it is finished. For example, to enable MySQL support, run
 
-./configure --enable-mysql
+``./configure --enable-mysql``
 
 Please note that MySQL support by default is NOT disabled.
+
+To learn which ./configure options are available and what their
+default values are, use
+
+``./configure --help``
+
 
 Step 3 - Compile
 ~~~~~~~~~~~~~~~~
@@ -74,7 +112,7 @@ cases.
 Step 4 - Install
 ~~~~~~~~~~~~~~~~
 
-Again, that is quite easy. All it takes is a "make install". That will
+Again, that is quite easy. All it takes is a "sudo make install". That will
 copy the rsyslogd and the man pages to the relevant directories.
 
 Step 5 - Configure rsyslogd
@@ -106,7 +144,13 @@ need to enable MySQL support during step 2 if you want to do that!).
 Step 6 - Disable stock syslogd
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In almost all cases, there already is stock syslogd installed. Because
+**You can skip this and the following steps if rsyslog was already
+installed as the stock
+syslogd on your system (e.g. via a distribution default or package).**
+In this case, you are finished.
+
+If another syslogd is installed, it must be disabled and rsyslog set
+to become the default. This is because
 both it and rsyslogd listen to the same sockets, they can NOT be run
 concurrently. So you need to disable the stock syslogd. To do this, you
 typically must change your rc.d startup scripts.
@@ -151,29 +195,19 @@ rotation. As long as you use the same log file names, the log rotation
 scripts will probably work quite well. There is one caveat, though. The
 scripts need to tell syslogd that the files have been rotated. To do
 this, they typically have a part using syslogd's init script to do that.
-Obviously, the default scripts do not know about rsyslogd, so they
-manipulate syslogd. If that happens, in most cases an additional
-instance of stock syslogd is started (in almost all cases, this was not
-functional, but it is at least distracting). It also means that rsyslogd
+Obviously, scripts for other default daemons do not know about rsyslogd, so they
+manipulate the other one. If that happens, in most cases an additional
+instance of that daemon is started.  It also means that rsyslogd
 is not properly told about the log rotation, which will lead it to
 continue to write to the now-rotated files.
 
 So you need to fix these scripts. See your distro-specific documentation
-how they are located. Under most Linuxes, the primary script to modify
-is /etc/cron.daily/sysklogd. Watch for a comment "Restart syslogd"
-(usually at the very end of the file). The restart command must be
-changed to use rsyslogd's rc script.
-
-Also, if you use klogd together with rsyslogd (under most Linuxes you
-will do that), you need to make sure that klogd is restarted after
-rsyslogd is restarted. So it might be a good idea to put a klogd
-reload-or-restart command right after the rsyslogd command in your daily
-script. This can save you lots of troubles.
+how they are located.
 
 Done
 ~~~~
 
-This concludes the steps necessary to install rsyslogd. Of course, it is
+This concludes the steps necessary to install rsyslog. Of course, it is
 always a good idea to test everything thoroughly. At a minimalist level,
 you should do a reboot and after that check if everything has come up
 correctly. Pay attention not only to running processes, but also check
@@ -197,8 +231,8 @@ usually need to read only if you are really curios ;)
 Feedback requested
 ~~~~~~~~~~~~~~~~~~
 
-I would appreciate feedback on this tutorial. It is still in its
-infancy, so additional ideas, comments or bug sighting reports are very
+I would appreciate feedback on this tutorial.
+Additional ideas, comments or bug sighting reports are very
 welcome. Please `let me know <mailto:rgerhards@adiscon.com>`_ about
 them.
 
@@ -221,6 +255,9 @@ Revision History
 -  2008-10-01 \* `Rainer
    Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
    added info on building from source repository
+-  2014-03181 \* `Rainer
+   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
+   revamped doc to match current state.
 
 Copyright
 ~~~~~~~~~
