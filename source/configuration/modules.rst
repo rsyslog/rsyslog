@@ -1,9 +1,14 @@
-This is a part of the rsyslog.conf documentation.
-
-`Back to rsyslog.conf manual <rsyslog_conf.html>`_
-
 Modules
 =======
+
+**This document is outdated and primarily contains historical
+information. Do not trust it to build code. It currently is under
+review.**
+
+This document is incomplete. The module interface is also quite
+incomplete and under development. Do not currently use it! You may
+want to visit `Rainer's blog <http://rgerhards.blogspot.com/>`_ to learn
+what's going on.
 
 Rsyslog has a modular design. This enables functionality to be
 dynamically loaded from modules, which may also be written by any third
@@ -204,6 +209,55 @@ the default ones provided are so important that they are build right
 into the executable. But this does not need to be done that way (and it
 is straightforward to do it dynamic).
 
+
+Overview
+--------
+
+In theory, modules provide input and output, among other functions, in
+rsyslog. In practice, modules are only utilized for output in the
+current release. The module interface is not yet completed and a moving
+target. We do not recommend to write a module based on the current
+specification. If you do, please be prepared that future released of
+rsyslog will probably break your module.
+
+A goal of modularization is to provide an easy to use plug-in interface.
+However, this goal is not yet reached and all modules must be statically
+linked.
+
+Module "generation"
+-------------------
+
+There is a lot of plumbing that is always the same in all modules. For
+example, the interface definitions, answering function pointer queries
+and such. To get rid of these laborious things, I generate most of them
+automatically from a single file. This file is named module-template.h.
+It also contains the current best description of the interface
+"specification".
+
+One thing that can also be achieved with it is the capability to cope
+with a rapidly changing interface specification. The module interface is
+evolving. Currently, it is far from being finished. As I moved the
+monolithic code to modules, I needed (and still need) to make many
+"non-clean" code hacks, just to get it working. These things are now
+gradually being removed. However, this requires frequent changes to the
+interfaces, as things move in and out while working towards a clean
+interface. All the interim is necessary to reach the goal. This
+volatility of specifications is the number one reasons I currently
+advise against implementing your own modules (hint: if you do, be sure
+to use module-template.h and be prepared to fix newly appearing and
+disappearing data elements).
+
+Naming Conventions
+------------------
+
+Source
+~~~~~~
+
+Output modules, and only output modules, should start with a file name
+of "om" (e.g. "omfile.c", "omshell.c"). Similarly, input modules will
+use "im" and filter modules "fm". The third character shall not be a
+hyphen.
+
 Library Modules
 ---------------
 
@@ -243,13 +297,3 @@ Note that the actual flow is much more complex and depends a lot on
 queue and filter settings. This graphic above is a high-level message
 flow diagram.
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008-2013 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.
