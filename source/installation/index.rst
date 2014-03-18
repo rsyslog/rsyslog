@@ -12,6 +12,6 @@ experimental version.
 .. toctree::
    :maxdepth: 2
 
-   build_from_repo
    packages
+   build_from_repo
    install
