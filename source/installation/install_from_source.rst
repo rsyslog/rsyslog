@@ -52,14 +52,22 @@ system:
 * C compiler (usually gcc)
 * make
 * libtool
-* zlib development package
 * rst2man (part of Python docutils) if you want to generate the man files
+* Bison and Flex (preferrably, otherwise yacc and lex)
+* zlib development package (usually *libz-dev*)
+* json-c (usually named *libjson0-dev* or similar)
+* libuuid (usually *uuid-dev*, if not present use --disable-uuid)
+* libgcrypt (usually *libgcrypt-dev*)
 
-Also, development versions of the following supporting libraries are
-necessary:
+Also, development versions of the following supporting libraries 
+that the rsyslog project provides are necessary:
 
 * liblogging (only stdlog component is hard requirement)
 * libestr
+
+In contrast to the other dependencies, recent versions of rsyslog may
+require recent versions of these libraries as well, so there is a chance
+that they must be built from source, too.
 
 Depending on which plugins are enabled, additional dependencies exist.
 These are reported during the ./configure run.
