@@ -5,8 +5,12 @@ About rsyslog Modules
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 (2007-07-28)*
 
-**This document is incomplete. The module interface is also quite
-incomplete and under development. Do not currently use it!** You may
+**This document is outdated and primarily contains historical
+information. Do not trust it to build code. It currently is under
+review.**
+
+This document is incomplete. The module interface is also quite
+incomplete and under development. Do not currently use it! You may
 want to visit `Rainer's blog <http://rgerhards.blogspot.com/>`_ to learn
 what's going on.
 
