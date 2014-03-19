@@ -151,8 +151,9 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_ERR_INVAL	RELPERR_BASE + 41	/**< some parameter is invalid (like EINVAL) */
 #define RELP_RET_ERR_EPOLL_CTL	RELPERR_BASE + 42	/**< epoll_ctl() failed */
 #define RELP_RET_ERR_INTERNAL	RELPERR_BASE + 43	/**< internal error in librelp (bug) */
-#define RELP_RET_WRN_NO_KEEPALIVE	RELPERR_BASE + 44/**< KEEPALIVE cannot be enabled */
+#define RELP_RET_WRN_NO_KEEPALIVE RELPERR_BASE + 44	/**< KEEPALIVE cannot be enabled */
 #define RELP_RET_ERR_NO_TLS	RELPERR_BASE + 45	/**< librelp compiled without TLS support */
+#define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

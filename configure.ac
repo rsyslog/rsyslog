@@ -74,7 +74,7 @@ if test "$enable_tls" = "yes"; then
 		gnutls_certificate_set_verify_function(NULL, NULL);
 		],[
 		AC_MSG_RESULT(yes)
-		AC_DEFINE(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION, 1, [we can do proper certificate validaton])
+		AC_DEFINE(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION, 1, [do we have gnutls_certificate_set_verify_function])
 		have_gnutls_certificate_set_verify_function=yes
 		],[
 		AC_MSG_RESULT(no; authentication disabled)

@@ -4,6 +4,10 @@
  *
  * This file is part of librelp.
  *
+ * Note: gnutls_certificate_set_verify_function is problematic, as it
+ *       is not available in old GnuTLS versions, but rather important
+ *       for verifying certificates correctly.
+ *
  * Librelp is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -1271,6 +1275,7 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		}
 		gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);
 	} else {
+#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
 		r = gnutls_certificate_allocate_credentials(&pThis->xcred);
 		if(chkGnutlsCode(pThis, "Failed to allocate certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
@@ -1292,6 +1297,9 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		if(pThis->authmode == eRelpAuthMode_None)
 			pThis->authmode = eRelpAuthMode_Fingerprint;
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
+#		else /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION   */
+		ABORT_FINALIZE(RELP_RET_ERR_NO_TLS_AUTH);
+#		endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION   */
 	}
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -1606,6 +1614,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
 	} else {
+#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
 		r = gnutls_certificate_allocate_credentials(&pThis->xcred);
 		if(chkGnutlsCode(pThis, "Failed to allocate certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
@@ -1633,6 +1642,9 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 		if(pThis->authmode == eRelpAuthMode_None)
 			pThis->authmode = eRelpAuthMode_Fingerprint;
 		gnutls_certificate_set_verify_function(pThis->xcred, relpTcpVerifyCertificateCallback);
+#		else /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION   */
+		ABORT_FINALIZE(RELP_RET_ERR_NO_TLS_AUTH);
+#		endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION   */
 	}
 
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
