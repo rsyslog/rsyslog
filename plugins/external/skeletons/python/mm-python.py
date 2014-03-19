@@ -21,7 +21,7 @@
 """
 
 import sys
-import select
+import json
 
 # skeleton config parameters
 # currently none
@@ -46,7 +46,7 @@ def onReceive(msg):
 	   and so each message needs to be fully processed (rsyslog will wait for the
 	   reply before the next message is pushed to this module).
 	"""
-	print "{\"msg\":\"test\", \"$!\":{\"field1\":\"1\"}}"
+	print json.dumps({'msg': msg + "-modified"})
 
 def onExit():
 	""" Do everything that is needed to finish processing (e.g.
@@ -74,6 +74,7 @@ keepRunning = 1
 while keepRunning == 1:
 	msg = sys.stdin.readline()
 	if msg:
+		msg = msg[:len(msg)-1] # remove LF
 		onReceive(msg)
 		sys.stdout.flush() # very important, Python buffers far too much!
 	else: # an empty line means stdin has been closed
