@@ -18,7 +18,7 @@ Obtaining the Source
 
 First of all, you need to download the sources. Rsyslog is kept in git.
 The "`Where to find the rsyslog source
-codea <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
+code <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
 page on the project site will point you to the current repository
 location.
 
@@ -31,9 +31,17 @@ For example, the command to check out the beta branch is "git checkout
 Prequisites
 -----------
 
-To build the compilation system, you need the **pkg-config** package (an
-utility for autotools) present on your system. Otherwise, configure will
-fail with something like
+To build the compilation system, you need
+
+* GNU autotools (autoconf, automake, ...)
+* libtool
+* pkg-config
+
+Unfortunately, the actual package names vary between distributions. Doing
+a search for the names above inside the packaging system should lead to
+the right path, though.
+
+If some of these tools are missing, you will see errors like this one:
 
 ::
 
@@ -41,6 +49,15 @@ fail with something like
     checking for FSSTND support... yes
     ./configure: line 25895: syntax error near unexpected token `RELP,'
     ./configure: line 25895: ` PKG_CHECK_MODULES(RELP, relp >= 0.1.1)'
+
+The actual error message will vary. In the case shown here, pkg-config
+was missing.
+
+**Important:** the build dependencies must be present **before** creating
+the build environment is begun. Otherwise, some hard to interpret errors may
+occur. For example, the error above will also occur if you install
+pkg-config, but *after* you have run *autoreconf*. So be sure everything
+is in place *before* you create the build environment.
 
 Creating the Build Environment
 ------------------------------
@@ -51,46 +68,12 @@ everything you need. Once this is done, you can follow the usual
 tarball (see the `rsyslog install guide <install.html>`_, starting at
 step 2, for further details about that).
 
-Special Compile-Time Options
-----------------------------
 
-On some platforms, compile-time issues occur, like the one shown below:
-
-::
-
-    make[2]: Entering directory `/home/az/RSyslog/rsyslog-5.5.0/tools'
-      CCLD   rsyslogd
-    rsyslogd-omfile.o: In function `getClockFileAccess':
-    /home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
-    /home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
-    /home/az/RSyslog/rsyslog-5.5.0/tools/omfile.c:91: undefined reference to `__sync_fetch_and_add_8'
-
-Note that the exact error messages can be different. These type of
-errors stem down to atomic instruction support in GCC, which is somewhat
-depending on the machine architecture it compiles code for. Very old
-machines (like the original i386) do not even at all provide support for
-these instructions.
-
-The availability of atomic instructions is vital for rsyslog - it can
-not be built without them. Consequently, there is a configure check
-included for them. But under some circumstances, GCC seems to report
-they are available, but does not provide implementations for all of them
-(at least this is my observation...). The simple cure is to make sure
-that GCC generates code for a modern-enough architecture. This, for
-example, can be done as follows:
-
-::
-
-    ./configure CFLAGS="-march=i586 -mcpu=i686" --enable-imfile ... (whatever you need)
-
-These settings should resolve the issue.
-
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+[`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
