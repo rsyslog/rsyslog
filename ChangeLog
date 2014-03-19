@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 7.6.3 [v7.6-stable] 2014-03-??
+- add capability to override GnuTLS path in build process
+  Thanks to Clayton Shotwell for the patch
+---------------------------------------------------------------------------
 Version 7.6.2 [v7.6-stable] 2014-03-17
 - support for librelp 1.2.4
   This was necessary due to the problems with librelp 1.2.3 API stability.
