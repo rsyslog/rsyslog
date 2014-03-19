@@ -797,22 +797,18 @@ AC_ARG_ENABLE(libgcrypt,
         [enable_libgcrypt=yes]
 )
 if test "x$enable_libgcrypt" = "xyes"; then
-        AC_CHECK_PROG(
-      	    [HAVE_LIBGCRYPT_CONFIG],
-            [libgcrypt-config],
-            [yes],,,
-            )
-        if test "x${HAVE_LIBGCRYPT_CONFIG}" != "xyes"; then
+	AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
+        if test "x${LIBGCRYPT_CONFIG}" = "xno"; then
            AC_MSG_FAILURE([libgcrypt-config not found in PATH])
         fi
         AC_CHECK_LIB(
 		[gcrypt],
         	[gcry_cipher_open],
-        	[LIBGCRYPT_CFLAGS="`libgcrypt-config --cflags`"
-        	LIBGCRYPT_LIBS="`libgcrypt-config --libs`"
+        	[LIBGCRYPT_CFLAGS="`${LIBGCRYPT_CONFIG} --cflags`"
+        	LIBGCRYPT_LIBS="`${LIBGCRYPT_CONFIG} --libs`"
         	],
         	[AC_MSG_FAILURE([libgcrypt is missing])],
-        	[`libgcrypt-config --libs --cflags`]
+        	[`${LIBGCRYPT_CONFIG} --libs --cflags`]
         	)
 	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
 fi
