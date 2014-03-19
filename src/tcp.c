@@ -66,7 +66,9 @@
 
 #ifdef ENABLE_TLS
 /* forward definitions */
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 static int relpTcpVerifyCertificateCallback(gnutls_session_t session);
+#endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
 static relpRetVal relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry);
 
 /* helper to free permittedPeer structure */
@@ -755,6 +757,7 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
 /* Convert a fingerprint to printable data. The function must be provided a
  * sufficiently large buffer. 512 bytes shall always do.
  */
@@ -809,6 +812,7 @@ done:
 	}
 	return r;
 }
+#endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
 
 /* add a wildcard entry to this permitted peer. Entries are always
  * added at the tail of the list. pszStr and lenStr identify the wildcard
@@ -936,6 +940,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
 /* check a peer against a wildcard entry. This is a more lengthy
  * operation.
  */
@@ -1237,6 +1242,7 @@ done:
 		gnutls_x509_crt_deinit(cert);
 	return r;
 }
+#endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION */
 
 #if 0 /* enable if needed for debugging */
 static void logFunction(int level, const char *msg)
