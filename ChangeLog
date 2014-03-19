@@ -10,6 +10,8 @@ Version 8.2.0 [v8-stable] 2014-02-??
   the config details (like destination etc) as this would require much more
   elaborate code changes, which we at least do not like to do in the
   stable version.
+- add capability to override GnuTLS path in build process
+  Thanks to Clayton Shotwell for the patch
 - better and more consistent action naming, action queus now always 
   contain the word "queue" after the action name
 - bugfix: ompipe did resume itself even when it was still in error
@@ -184,6 +186,10 @@ Version 8.1.0 [experimental] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.6.3 [v7.6-stable] 2014-03-??
+- add capability to override GnuTLS path in build process
+  Thanks to Clayton Shotwell for the patch
 ---------------------------------------------------------------------------
 Version 7.6.2 [v7.6-stable] 2014-03-17
 - support for librelp 1.2.4
