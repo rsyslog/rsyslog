@@ -58,9 +58,33 @@ AC_ARG_ENABLE(tls,
         [enable_tls="yes"]
 )
 if test "$enable_tls" = "yes"; then
-	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.9.10)
+	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
         AC_DEFINE(ENABLE_TLS, 1, [Defined if TLS support is enabled])
+	# Check if we have support for proper cert validation
+	AC_MSG_CHECKING(if we have gnutls_certificate_set_verify_function)
+	save_CFLAGS="$CFLAGS"
+	CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
+	save_LIBS="$LIBS"
+	LIBS="$LIBS $GNUTLS_LIBS"
+	AC_TRY_LINK(
+		[
+		#include <gnutls/gnutls.h>
+		#include <gnutls/x509.h>
+		], [
+		gnutls_certificate_set_verify_function(NULL, NULL);
+		],[
+		AC_MSG_RESULT(yes)
+		AC_DEFINE(HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION, 1, [we can do proper certificate validaton])
+		have_gnutls_certificate_set_verify_function=yes
+		],[
+		AC_MSG_RESULT(no; authentication disabled)
+		have_gnutls_certificate_set_verify_function=no
+		]
+	)
+	CFLAGS="$save_CFLAGS"
+	LIBS="$save_LIBS"
 fi
+
 
 # debug mode settings
 AC_ARG_ENABLE(debug,
@@ -91,6 +115,7 @@ AC_OUTPUT
 echo "*****************************************************"
 echo "librelp will be compiled with the following settings:"
 echo
-echo "Debug mode enabled:          $enable_debug"
-echo "TLS enabled:                 $enable_tls"
+echo "Debug mode enabled:            $enable_debug"
+echo "TLS enabled:                   $enable_tls"
+echo "TLS authentication supported:  $have_gnutls_certificate_set_verify_function"
 
