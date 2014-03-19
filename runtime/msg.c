@@ -3877,6 +3877,7 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 	json_object_object_foreach(json, name, val) {
 		msgSetPropViaJSON(pMsg, name, val);
 	}
+	json_object_put(json);
 
 finalize_it:
 	if(tokener != NULL)
