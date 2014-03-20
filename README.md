@@ -41,7 +41,7 @@ Reporting Bugs
 Talk to the mailing list if you think something is a bug. Often, it's just a
 matter of doing some config trickery.
 
-File bugs at: http://bugzilla.adiscon.com/
+File bugs at: https://github.com/rsyslog/rsyslog/issues
 
 How to Contribute
 =================
