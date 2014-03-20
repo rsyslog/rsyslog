@@ -1,4 +1,9 @@
 ----------------------------------------------------------------------
+Version 1.2.5 - 2014-03-20
+- permit to use anonymous TLS on platforms where GnuTLS misses
+  certificate verification function. This permits to use at least
+  anon TLS on platforms like RHEL and CENTOS 6.
+----------------------------------------------------------------------
 Version 1.2.4 - 2014-03-17
 - correct API/ABI change in 1.2.3
   My reasoning was flawed, and we could run into problems with
