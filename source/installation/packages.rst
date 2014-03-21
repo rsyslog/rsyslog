@@ -1,65 +1,26 @@
 rsyslog packages
 ================
 
-**Thanks to some volunteers, rsyslog is also available in package form
-on some distributions.** All currently known packages are listed below.
-If I have forgotten one or if you would like to maintain a package for a
-new distribution, please mail me at
-`rgerhards@adiscon.com <mailto:rgerhards@adiscon.com>`_. Any help is
-\*deeply\* appreciated. While I create the core daemon, the package
-maintainers are really filling it with life, making it available to the
-average user. I am very grateful for that!
+**Rsyslog is packaged for all major distributions.** Unfortunately, often
+rather old versions are provided. This is especially the case for
+so-called enterprise distributions.
 
-This list has last been updated on 2008-07-11 by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_. New
-packages may appear at any time, so be sure to check this page whenever
-you need a new one.
+As long as you do not run into trouble with one of these old versions, using
+the distribution-provided packages is easy and a good idea. If you need
+new features, better performance and sometimes even a fix for a bug that
+the distro did not backport, you can use alternative packages.
 
--  **BSD** (maintained by infofarmer)
+The rsyslog project offers current packages for a number of "big" distributions.
+They can be found at http://www.rsyslog.com in the download section.
 
-   -  `http://www.freshports.org/sysutils/rsyslog/ <http://www.freshports.org/sysutils/rsyslog/>`_
+Note that some distributions (like Fedora) usually keep up with development
+rather quickly and so we do not provide special packages for them.
 
--  **CentOS 4.3** (maintained by James Bergamin)
-
-   -  `http://www.se-community.com/~james/rsyslog/ <http://www.se-community.com/~james/rsyslog/>`_
-
--  **Debian** (maintained by Michael Biebl)
-
-   -  `http://packages.debian.org/sid/rsyslog <http://packages.debian.org/sid/rsyslog>`_
-
--  **Fedora**
-
-   -  Starting with Fedora 8, rsyslog is available as part of the core
-      distribution.
-
--  **openSUSE** (maintained by darix)
-
-   -  `http://download.opensuse.org/repositories/home:/darix/ <http://download.opensuse.org/repositories/home:/darix/>`_
-
--  **Red Hat Enterprise Linux**
-
-   -  Starting with RHEL 5.2, rsyslog is available as part of the core
-      distribution.
-
--  **Ubuntu**
-
-   -  Starting with hardy, rsyslog is available from the universe
-      repository.
-
--  Almost any Linux
-
-   -  Bennet Todd maintains packages that should work on almost any
-      Linux. He keeps a current i386 tree. There is also a PPC tree, but
-      that one is not paid much attention for (anyhow, it is known to
-      typically work well, too). Please visit
-      `http://bent.latency.net/bent/ <http://bent.latency.net/bent/>`_,
-      select the relevant tree and then do a search for rsyslog. Please
-      note, however, that as of this writing the versions in this
-      repository have been aged a bit. So it may be worth trying to find
-      some other places first.
-
-Just in case you are interested, the list of distribution is sorted by
-alphabetic order of the distribution name.
+**Packaging is a community effort.** If you would like to see support for an
+additional distribution and know how to build packages, please consider
+contributing to the project and joining the packaging team. Also, rsyslog's
+presence on github also contains the sources for the currently
+maintained packages. They can be found at https://github.com/rsyslog.
 
 If you do not find a suitable package for your distribution, there is no
 reason to panic. It is quite simple to install rsyslog from the source

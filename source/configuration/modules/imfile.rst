@@ -95,8 +95,6 @@ Configuration Directives
 
 .. function:: $InputFilePersistStateInterval lines
 
-   *Available in 4.7.3+, 5.6.2+*
-
    Specifies how often the state file shall be written when processing
    the input file. The default value is 0, which means a new state file
    is only written when the monitored files is being closed (end of
@@ -109,11 +107,7 @@ Configuration Directives
 
 .. function:: $InputFileReadMode mode
 
-   *Available in 5.7.5+*
-
 .. function:: $InputFileMaxLinesAtOnce number
-
-   *Available in 5.9.0+*
 
    This is useful if multiple files need to be monitored. If set to 0,
    each file will be fully processed and then processing switches to the
@@ -124,8 +118,6 @@ Configuration Directives
    distribution of events when multiple busy files are monitored. The
    default is 10240.
 .. function:: $InputFileBindRuleset ruleset
-
-   *Available in 5.7.5+, 6.1.5+*
 
    Binds the listener to a specific
    `ruleset <multi_ruleset>`_.
