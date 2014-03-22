@@ -363,7 +363,8 @@ static rsRetVal doConnect(instanceData *pData)
 		pData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
 		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "Could not connect, librelp does NOT "
-				"support TLS");
+				"does not support TLS (most probably GnuTLS lib "
+				"is too old)!");
 		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
 	} else {
 		pData->bIsConnected = 0;
