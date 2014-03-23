@@ -1,4 +1,12 @@
 ----------------------------------------------------------------------
+Version 1.2.6 - 2014-03-20
+- report error when preparing for non-anon TLS and this is unsupported
+  The error is reported when the processes own certificate is set,
+  which also turns off anon TLS. We now check if TLS AUTH is supported
+  and, if not, return an error. This enables better error tracking
+  in the client, as otherwise the problem is reported much later
+  or even not at all (in the case of a relp server).
+----------------------------------------------------------------------
 Version 1.2.5 - 2014-03-20
 - permit to use anonymous TLS on platforms where GnuTLS misses
   certificate verification function. This permits to use at least
