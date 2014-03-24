@@ -349,11 +349,11 @@ relpSrvRun(relpSrv_t *pThis)
 			CHKRet(relpTcpEnableTLSZip(pTcp));
 		}
 		relpTcpSetDHBits(pTcp, pThis->dhBits);
-		relpTcpSetGnuTLSPriString(pTcp, pThis->pristring);
-		relpTcpSetAuthMode(pTcp, pThis->authmode);
-		relpTcpSetCACert(pTcp, pThis->caCertFile);
-		relpTcpSetOwnCert(pTcp, pThis->ownCertFile);
-		relpTcpSetPrivKey(pTcp, pThis->privKey);
+		CHKRet(relpTcpSetGnuTLSPriString(pTcp, pThis->pristring));
+		CHKRet(relpTcpSetAuthMode(pTcp, pThis->authmode));
+		CHKRet(relpTcpSetCACert(pTcp, pThis->caCertFile));
+		CHKRet(relpTcpSetOwnCert(pTcp, pThis->ownCertFile));
+		CHKRet(relpTcpSetPrivKey(pTcp, pThis->privKey));
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
