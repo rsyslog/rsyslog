@@ -105,7 +105,6 @@ AC_TYPE_UINT8_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
-AC_C_TYPEOF
 
 sa_includes="\
 $ac_includes_default
