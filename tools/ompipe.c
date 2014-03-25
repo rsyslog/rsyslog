@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -288,18 +288,35 @@ ENDfreeInstance
 
 
 BEGINtryResume
+	fd_set wrds;
+	struct timeval tv;
+	int ready;
 CODESTARTtryResume
 	if(pData->fd == -1) {
 		rsRetVal iRetLocal;
 		iRetLocal = preparePipe(pData);
 		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
-			iRet = RS_RET_SUSPENDED;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+	} else {
+		/* we can reach this if the pipe is full, so we need
+		 * to check if we can write again. /dev/xconsole is the
+		 * ugly example of why this is necessary.
+		 */
+		FD_ZERO(&wrds);
+		FD_SET(pData->fd, &wrds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
+		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", ready);
+		if(ready != 1)
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+finalize_it:
 ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF(" (%s)\n", pData->pipe);
+	DBGPRINTF("ompipe writing to: %s\n", pData->pipe);
 	iRet = writePipe(ppString, pData);
 ENDdoAction
 
