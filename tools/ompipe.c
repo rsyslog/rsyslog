@@ -353,17 +353,8 @@ CODESTARTnewActInst
 	}
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
-						"RSYSLOG_ForwardFormat" : (char*)pData->tplName),
+						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
-	/* Old flawed template code
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) "RSYSLOG_FileFormat",
-			OMSR_NO_RQD_TPL_OPTS));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_NO_RQD_TPL_OPTS));
-	}*/
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
