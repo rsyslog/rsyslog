@@ -307,7 +307,7 @@ CODESTARTtryResume
 		tv.tv_sec = 0;
 		tv.tv_usec = 0;
 		ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
-		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", ready);
+		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", pData->fd, ready);
 		if(ready != 1)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
