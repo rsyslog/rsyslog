@@ -105,7 +105,6 @@ AC_TYPE_UINT8_T
 AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
-AC_C_TYPEOF
 
 sa_includes="\
 $ac_includes_default
@@ -1089,7 +1088,7 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.2.4)
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.5)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 

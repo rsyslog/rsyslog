@@ -17,6 +17,14 @@ Version 8.2.0 [v8-stable] 2014-02-??
 - bugfix: ompipe did resume itself even when it was still in error
   See: https://github.com/rsyslog/rsyslog/issues/35
   Thanks to github user schplat for reporting
+- bugfix: ompipe used invalid default template
+  This is a regression from an old change (didn't track it down precisely,
+  but over a year ago). It used the Forwarding template instead of
+  the file template (so we have a full syslog header). This fix corrects
+  it back to previous behaviour, but new scripts that used the wrong
+  format may now need to have the RSYSLOG_ForwardingFormat template
+  explicitely be applied.
+  closes: https://github.com/rsyslog/rsyslog/issues/50
 ---------------------------------------------------------------------------
 Version 8.1.6 [release candidate] 2014-02-20
 - omfile: permit to set global defaults for action parameters
@@ -190,6 +198,32 @@ Version 8.1.0 [experimental] 2013-11-15
 Version 7.6.3 [v7.6-stable] 2014-03-??
 - add capability to override GnuTLS path in build process
   Thanks to Clayton Shotwell for the patch
+- support for librelp 1.2.5
+  Support new return states of librelp 1.2.5 to emit better error messages
+  For obvious reasons, librelp 1.2.5 is now required.
+- bugfix: ompipe used invalid default template
+  This is a regression from an old change (didn't track it down precisely,
+  but over a year ago). It used the Forwarding template instead of
+  the file template (so we have a full syslog header). This fix corrects
+  it back to previous behaviour, but new scripts that used the wrong
+  format may now need to have the RSYSLOG_ForwardingFormat template
+  explicitely be applied.
+  closes: https://github.com/rsyslog/rsyslog/issues/50
+- bugfix: ompipe did emit many suspension messages for /dev/xconsole
+  (hopefully now) closes: https://github.com/rsyslog/rsyslog/issues/35
+  When it was present, but nobody reading from it. The problem
+  is the way the rsyslog v7 engine tries to resolve failures in outputs.
+  It does some retries, and along those lines some state information gets
+  lost and it is close to impossible to retain it. However, the actual
+  root problem is that ompipe does not reliably detect if it is able to
+  recover. The problem here is that it actually does not know this
+  before it does an actual write. These two things together mess up the
+  logic that suppresses invalid resumption/suspension messages
+  (actually, the plugin switches state really that often).
+  Nevertheless, the prime problem with /dev/xconsole (and probably
+  most other pipes as well) is that it gets full. So I have now added
+  code that checks, during resume processing, if the pipe is writable.
+  If it is not, resume is deferred. That should address the case.
 ---------------------------------------------------------------------------
 Version 7.6.2 [v7.6-stable] 2014-03-17
 - support for librelp 1.2.4
