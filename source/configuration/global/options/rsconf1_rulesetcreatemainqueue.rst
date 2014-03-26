@@ -22,7 +22,7 @@ to use different types of main message queues.
 The ruleset queue is created with the parameters that are specified for
 the main message queue at the time the directive is given. If different
 queue configurations are desired, different main message queue
-directives must be used in front of the $RulesetCreateMainQueue
+directives must be used **in front of** the $RulesetCreateMainQueue
 directive. Note that this directive may only be given once per ruleset.
 If multiple statements are specified, only the first is used and for the
 others error messages are emitted.
@@ -36,8 +36,8 @@ To learn more about this feature, please be sure to read about
 **Caveats:**
 
 The configuration statement "$RulesetCreateMainQueue off" has no effect
-at all. The capability to specify this is an artifact of the current
-(ugly!) configuration language.
+at all. The capability to specify this is an artifact of the legacy
+configuration language.
 
 **Example:**
 
@@ -51,28 +51,49 @@ example, we use different processing. Of course, all messages could also
 have been processed in the same way ($IncludeConfig may be useful in
 that case!).
 
-$ModLoad imtcp # at first, this is a copy of the unmodified rsyslog.conf
-#define rulesets first $RuleSet remote10514 $RulesetCreateMainQueue on #
-create ruleset-specific queue \*.\* /var/log/remote10514 $RuleSet
-remote10515 $RulesetCreateMainQueue on # create ruleset-specific queue
-\*.\* /var/log/remote10515 $RuleSet remote10516 $RulesetCreateMainQueue
-on # create ruleset-specific queue mail.\* /var/log/mail10516 & ~ # note
-that the discard-action will prevent this messag from # being written to
-the remote10516 file - as usual... \*.\* /var/log/remote10516 # and now
-define listners bound to the relevant ruleset $InputTCPServerBindRuleset
-remote10514 $InputTCPServerRun 10514 $InputTCPServerBindRuleset
-remote10515 $InputTCPServerRun 10515 $InputTCPServerBindRuleset
-remote10516 $InputTCPServerRun 10516
+::
 
-Note the positions of the directives. With the current config language,
-position is very important. This is ugly, but unfortunately the way it
-currently works.
+  $ModLoad imtcp
+  # at first, this is a copy of the unmodified rsyslog.conf
+  #define rulesets first
+  $RuleSet remote10514
+  $RulesetCreateMainQueue on # create ruleset-specific queue
+  *.*     /var/log/remote10514
+  
+  $RuleSet remote10515
+  $RulesetCreateMainQueue on # create ruleset-specific queue
+  *.*     /var/log/remote10515
+  
+  $RuleSet remote10516
+  $RulesetCreateMainQueue on # create ruleset-specific queue
+  mail.*	/var/log/mail10516
+  &       ~
+  # note that the discard-action will prevent this messag from 
+  # being written to the remote10516 file - as usual...
+  *.*     /var/log/remote10516
+  
+  # and now define listeners bound to the relevant ruleset
+  $InputTCPServerBindRuleset remote10514
+  $InputTCPServerRun 10514
+  
+  $InputTCPServerBindRuleset remote10515
+  $InputTCPServerRun 10515
+  
+  $InputTCPServerBindRuleset remote10516
+  $InputTCPServerRun 10516
+
+
+Note the positions of the directives. With the legacy language,
+position is very important. It is highly suggested to use
+the *ruleset()* object in RainerScript config language if you intend
+to use ruleset queues. The configuration is much more straightforward in
+that language and less error-prone.
 
 [`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
 index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
