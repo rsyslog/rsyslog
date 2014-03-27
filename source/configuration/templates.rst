@@ -72,12 +72,14 @@ replacer <property_replacer.html>`_ (nice name, huh) and it can do cool
 things, too. For example, it can pick a substring or do date-specific
 formatting. More on this is below, on some lines of the property
 replacer.
- The <options> part is optional. It carries options influencing the
+
+The <options> part is optional. It carries options influencing the
 template as whole. See details below. Be sure NOT to mistake template
 options with property options - the later ones are processed by the
 property replacer and apply to a SINGLE property, only (and not the
 whole template).
- Template options are case-insensitive. Currently defined are:
+
+Template options are case-insensitive. Currently defined are:
 
 **sql** - format the string suitable for a SQL statement in MySQL
 format. This will replace single quotes ("'") and the backslash
@@ -99,7 +101,8 @@ have violated the sql standard and introduced their own escape methods,
 it is impossible to have a single option doing all the work.  So you
 yourself must make sure you are using the right format. **If you choose
 the wrong one, you are still vulnerable to sql injection.**
- Please note that the database writer \*checks\* that the sql option is
+
+Please note that the database writer \*checks\* that the sql option is
 present in the template. If it is not present, the write database action
 is disabled. This is to guard you against accidental forgetting it and
 then becoming vulnerable to SQL injection. The sql option can also be
@@ -115,13 +118,18 @@ default MySQL configuration, this is a good choice. However, if you have
 turned on ``NO_BACKSLASH_ESCAPES`` in your MySQL config, you need to
 supply a template with the stdsql option. Otherwise you will become
 vulnerable to SQL injection.
- To escape:
- % = \\%
- \\ = \\\\ --> '\\' is used to escape (as in C)
- $template TraditionalFormat,"%timegenerated% %HOSTNAME%
-%syslogtag%%msg%\\n"
- Properties can be accessed by the `property
-replacer <property_replacer.html>`_ (see there for details).
+
+Escaping is done as in C.  For example to escape the percent symbol:
+
+``\%``
+
+To escape a backslash use another backslash:
+
+``\\``
+
+``$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"``
+
+Properties can be accessed by the `property replacer <property_replacer.html>`_ (see there for details).
 
 **Please note that templates can also by used to generate selector lines
 with dynamic file names.** For example, if you would like to split
@@ -175,14 +183,22 @@ self-explanatory. Note that each $Template statement is on a **single**
 line, but probably broken accross several lines for display purposes by
 your browsers. Lines are separated by empty lines.
 
-`` $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
+``$template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"``
+
+``$template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"``
+
+``$template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"``
+
+``$template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"``
+
+``$template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
 
 [`manual index <manual.html>`_\ ]
 [`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
 site <http://www.rsyslog.com/>`_\ ]
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_ project.
+
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

@@ -41,7 +41,7 @@ otherwise the newly added configurations settings will not be loaded.
    output_channels
    expression
    examples
-   modules
    modules/index
+   modules
    global/index
    ipv6
