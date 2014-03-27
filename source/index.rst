@@ -74,7 +74,6 @@ Reference
    whitepapers/index
    free_support
    compatibility/index
-   bugs
 
 Manual
 ------
