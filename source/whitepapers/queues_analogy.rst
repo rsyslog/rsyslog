@@ -24,6 +24,7 @@ describes the data flow inside rsyslog:
    :alt: rsyslog data flow
 
    rsyslog data flow
+
 Note that there is a `video
 tutorial <http://www.rsyslog.com/Article350.phtml>`_ available on the
 data flow. It is not perfect, but may aid in understanding this picture.
@@ -75,6 +76,7 @@ In our simplified view, we have the following picture:
    :alt: rsyslog queues and TV analogy
 
    rsyslog queues and TV analogy
+
 The lower part of the picture lists the equivalent rsyslog entities, in
 an abstracted way. Every queue has a producer (in the above sample the
 input) and a consumer (in the above sample the Parser and Filter
@@ -249,6 +251,7 @@ queue is something like a U-turn:
    :alt: message processing in an rsyslog action queue in direct mode
 
    message processing in an rsyslog action queue in direct mode
+
 The message starts to execute the action and once this is done,
 processing flow continues. In a real-life analogy, this may be the route
 of a delivery man who needs to drop a parcel in a side street before he
@@ -276,6 +279,7 @@ Now look at the overall picture from a slightly different angle:
    :alt: message processing in an rsyslog action queue in direct mode
 
    message processing in an rsyslog action queue in direct mode
+
 The number of all connected green and red arrows is four - one each for
 action 1, 2 and 3 (this one is dotted as action 4 was a special case)
 and one for the "main lane" as well as action 3 (this one contains the
@@ -359,12 +363,10 @@ If you have not done so before, it may be worth reading the `rsyslog
 queue user's guide, <queues.html>`_ which most importantly lists all the
 knobs you can turn to tweak queue operation.
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+[`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
