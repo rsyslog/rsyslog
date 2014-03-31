@@ -1,7 +1,7 @@
 troubleshooting rsyslog
 -----------------------
 
-**Having trouble with `rsyslog <http://www.rsyslog.com>`_?** This page
+**Having trouble with** `rsyslog <http://www.rsyslog.com>`_? This page
 provides some tips on where to look for help and what to do if you need
 to ask for assistance. This page is continously being expanded.
 
@@ -34,31 +34,21 @@ the only cure is to make sure senders emit well-formed messages.
 
 **Configuration Problems**
 
-Rsyslog 3.21.1 and above has been enhanced to support extended
+Rsyslog has support for
 configuration checking. It offers a special command line switch (-N1)
 that puts it into "config verfication mode". In that mode, it interprets
-and check the configuration file, but does not startup. This mode can be
+and checks the configuration file, but does not startup. This mode can be
 used in parallel to a running instance of rsyslogd.
 
 To enable it, run rsyslog interactively as follows:
 
-***/path/to/rsyslogd -f/path/to/config-file -N1***
+::
+
+ $ /path/to/rsyslogd -f/path/to/config-file -N1
 
 You should also specify other options you usually give (like -c3 and
 whatever else). Any problems experienced are reported to stderr [aka
 "your screen" (if not redirected)].
-
-**Configuration Graphs**
-
-Starting with rsyslog 4.3.1, the
-"`$GenerateConfigGraph <rsconf1_generateconfiggraph.html>`_\ " command
-is supported, a very valuable troubleshooting tool. It permits to
-generate a graph of how rsyslogd understood its configuration file. It
-is assumed that many configuration issues can easily be detected just by
-looking at the configuration graph. Full details of how to generate the
-graphs, and what to look for can be found in the
-"`$GenerateConfigGraph <rsconf1_generateconfiggraph.html>`_\ " manual
-page.
 
 **Asking for Help**
 
@@ -159,7 +149,7 @@ clean code. But valgrind can not detect everything, most importantly not
 code pathes that are never executed. So of most use for us is
 information about aborts and abort locations.
 
-Unforutnately, faults rooted in adressing errors typically show up only
+Unfortunately, faults rooted in adressing errors typically show up only
 later, so the actual abort location is in an unrelated spot. To help
 track down the original spot, `libc later than 5.4.23 offers
 support <http://www.gnu.org/software/hello/manual/libc/Heap-Consistency-Checking.html>`_
@@ -215,7 +205,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2010 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
