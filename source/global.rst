@@ -40,7 +40,11 @@ The following paramters can be set:
 - **defaultNetstreamDriver**
 
   Set it to "gtls" to enable TLS for `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
+
 - **maxMessageSize**
+
+  The maximum message size rsyslog can process. Default is 4K. Anything
+  above the maximum size will be truncated.
 
 - **debug.onShutdown** available in 7.5.8+
 
