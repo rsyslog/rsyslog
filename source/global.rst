@@ -28,8 +28,31 @@ The following paramters can be set:
     For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_, the CA certificate that can verify the machine keys and certs (see below)
 -  defaultNetstreamDriverKeyFile
     Machine private key
--  defaultNetstreamDriverCertFile - v8.2.0+
-    Machine public key (certificate)
+
+- defaultNetstreamDriverCertFile - v8.2.0+
+
+  Machine public key (certificate)
+
+- **processInternalMessages** binary (on/off), available in v7.4.9+, 7.6.0+, 8.1.5+
+
+  This tell rsyslog if it shall process internal messages itself. This is
+  the default mode of operations ("on") and usually the best. However, if
+  this (instance) of rsyslog is not the main instance and there is another
+  main logging system, rsyslog internal messages will not be inserted into
+  the main instance's syslog stream. To do this, set the parameter to "off",
+  in which case rsyslog will send messages to the system log sink (and if
+  it is the only instance, receive them back from there). This also works
+  with systemd journal and will make rsyslog messages show up in the
+  systemd status control information. 
+
+- **stdlog.channelspec** - v8.2.0+
+
+  Permits to set the liblogging-stdlog channel specifier string. This
+  in turn permits to send rsyslog log messages to a destination different
+  from the system default. Note that this parameter has only effect if
+  *processInternalMessages* is set to "off". Otherwise it is silently
+  ignored.
+
 -  defaultNetstreamDriver
     Set it to "gtls" to enable TLS for `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
 -  maxMessageSize
