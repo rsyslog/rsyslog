@@ -58,6 +58,7 @@ CLEANFILES = \
 endif
 
 EXTRA_DIST = \
+	rsyslog-doc.tar.gz \
 	platform/README \
 	platform/freebsd/rsyslogd \
 	platform/slackware/rc.rsyslogd \
