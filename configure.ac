@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.1.6],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.2.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -33,7 +33,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
-PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.1)
+PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3)
 PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c])
 ])
@@ -1556,7 +1556,6 @@ AC_CONFIG_FILES([Makefile \
 		compat/Makefile \
 		grammar/Makefile \
 		tools/Makefile \
-		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
 		plugins/im3195/Makefile \

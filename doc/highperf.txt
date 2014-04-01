@@ -1,4 +1,0 @@
-links to high performance papers:
-
-- http://www.kegel.com/c10k.html
-- http://pl.atyp.us/content/tech/servers.html (**)
