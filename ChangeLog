@@ -6,6 +6,8 @@ Version 8.2.0 [v8-stable] 2014-02-??
   This was agreed upon on the rsyslog mailing list. For doc issues
   and corrections, be sure to work with the rsyslog-doc project. It is
   currently hosted at https://github.com/rsyslog/rsyslog-doc
+- add support for specifying the liblogging-stdlog channel spec
+  new global parameter "stdlog.channelspec"
 - add "defaultnetstreamdrivercertfile" global variable to set a default
   for the certfile. 
   Thanks to Radu Gheorghe for the patch.

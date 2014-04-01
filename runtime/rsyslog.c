@@ -35,7 +35,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -59,6 +59,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <liblogging/stdlog.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -136,6 +137,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 
 	if(iRefCount == 0) {
 		/* init runtime only if not yet done */
+		stdlog_init(0);
+		stdlog_hdl = NULL;
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	    	CHKiRet(pthread_getschedparam(pthread_self(),
 			    		      &default_thr_sched_policy,

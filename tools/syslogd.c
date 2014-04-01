@@ -508,7 +508,7 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));
 	} else {
-		stdlog_log(NULL, LOG_PRI(pri), "%s",
+		stdlog_log(stdlog_hdl, LOG_PRI(pri), "%s",
 			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
 

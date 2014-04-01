@@ -64,6 +64,7 @@ DEFobjCurrIf(net)
  * class...
  */
 int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
+stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal messages?
@@ -71,6 +72,7 @@ int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal mess
 					 * 0 - send them to libstdlog (e.g. to push to journal)
 					 */
 static uchar *pszWorkDir = NULL;
+static uchar *stdlog_chanspec = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
@@ -133,6 +135,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escape8bitcharactersonreceive", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
+	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -697,6 +700,11 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
+			stdlog_chanspec = (uchar*)
+				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
+					(char*) stdlog_chanspec);
 		}
 	}
 }
