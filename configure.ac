@@ -1109,30 +1109,6 @@ fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
 
-# Support using cached man file copies, to avoid the need for rst2man
-# in the build environment
-AC_ARG_ENABLE(cached_man_pages,
-        [AS_HELP_STRING([--enable-cached-man-pages],[Enable using cached versions of man files (avoid rst2man) @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_cached_man_pages="yes" ;;
-          no) enable_cached_man_pages="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-cached-man-pages) ;;
-         esac],
-        [enable_cached_man_pages=no]
-)
-if test "x$enable_cached_man_pages" = "xno"; then
-# obtain path for rst2man
-  if test "x$enable_libgcrypt" = "xyes" || \
-     test "x$enable_guardtime" = "xyes"; then
-        AC_PATH_PROGS([RST2MAN], [rst2man rst2man.py], "no")
-        if test "x${RST2MAN}" == "xno"; then
-            AC_MSG_FAILURE([rst2man not found in PATH])
-        fi
-  fi
-fi
-
-
-
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
@@ -1541,6 +1517,40 @@ AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 
 # END HIREDIS SUPPORT
 
+
+AC_CHECKING([if required man pages already exist])
+have_to_generate_man_pages="no"
+
+# man pages for libgcrypt module
+if test "x$enable_usertools" = "xyes" && test "x$enable_libgcrypt" = "xyes"; then
+    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
+        [],
+        [have_to_generate_man_pages="yes"]
+    )
+fi
+
+# man pages for GuardTime module
+if test "x$enable_usertools" = "xyes" && test "x$enable_guardtime" = "xyes"; then
+    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
+        [],
+        [have_to_generate_man_pages="yes"]
+    )
+fi
+
+if test "x$have_to_generate_man_pages" = "xyes"; then
+    AC_MSG_RESULT([Some man pages are missing. We need rst2man to generate the missing man pages from source...])
+else
+    AC_MSG_RESULT([All required man pages found. We don't need rst2man!])
+fi
+
+if test "x$have_to_generate_man_pages" = "xyes"; then
+    # We need rst2man to generate our man pages
+    AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [])
+    if test -z "$RST2MAN"; then
+        AC_MSG_ERROR([rst2man is required to build man pages. You can use the release tarball with pregenerated man pages to avoid this depedency.])
+    fi
+fi
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		compat/Makefile \
@@ -1616,7 +1626,7 @@ echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    GUI components will be built:             $enable_gui"
-echo "    cached man files will be used:            $enable_cached_man_pages"
+echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
