@@ -2373,7 +2373,7 @@ void MsgSetMSGoffs(msg_t * const pMsg, short offs)
  * the caller is responsible for freeing it.
  * rgerhards, 2009-06-23
  */
-rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
+rsRetVal MsgReplaceMSG(msg_t *pThis, const uchar* pszMSG, int lenMSG)
 {
 	int lenNew;
 	uchar *bufNew;
@@ -2406,12 +2406,14 @@ finalize_it:
  * terminated by '\0'.
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
+void MsgSetRawMsg(msg_t *pThis, const char* pszRawMsg, size_t lenMsg)
 {
+	int deltaSize;
 	assert(pThis != NULL);
 	if(pThis->pszRawMsg != pThis->szRawMsg)
 		free(pThis->pszRawMsg);
 
+	deltaSize = lenMsg - pThis->iLenRawMsg;
 	pThis->iLenRawMsg = lenMsg;
 	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
@@ -2424,6 +2426,11 @@ void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
 
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
 	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
+	/* correct other information */
+	if(pThis->iLenRawMsg > pThis->offMSG)
+		pThis->iLenMSG += deltaSize;
+	else
+		pThis->iLenMSG = 0;
 }
 
 
@@ -3793,6 +3800,90 @@ finalize_it:
 	RETiRet;
 }
 #undef	isProp
+
+
+/* Set a single property based on the JSON object provided. The
+ * property name is extracted from the JSON object.
+ */
+static rsRetVal
+msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json)
+{
+	const char *psz;
+	DEFiRet;
+
+	dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
+	if(!strcmp(name, "rawmsg")) {
+		psz = json_object_get_string(json);
+		MsgSetRawMsg(pMsg, psz, strlen(psz));
+	} else if(!strcmp(name, "msg")) {
+		psz = json_object_get_string(json);
+		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "$!")) {
+		msgAddJSON(pMsg, (uchar*)"!", json);
+	} else {
+		/* we ignore unknown properties */
+		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
+			  name);
+	}
+	RETiRet;
+}
+
+
+/* set message properties based on JSON string. This function does it all,
+ * including parsing the JSON string. If an error is detected, the operation
+ * is aborted at the time of error. Any modifications made before the
+ * error ocurs are still PERSISTED.
+ * This function is meant to support the external message modifiction module
+ * interface. As such, replacing properties is expressively permited. Note that
+ * properties which were derived from the message during parsing are NOT
+ * updated if the underlying (raw)msg property is changed.
+ */
+rsRetVal
+MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const jsonstr)
+{
+	struct json_tokener *tokener = NULL;
+	struct json_object *json;
+	const char *errMsg;
+	DEFiRet;
+
+	DBGPRINTF("DDDDDD: JSON string for message mod: '%s'\n", jsonstr);
+	if(!strcmp((char*)jsonstr, "{}")) /* shortcut for a common case */
+		FINALIZE;
+
+	tokener = json_tokener_new();
+
+	json = json_tokener_parse_ex(tokener, (char*)jsonstr, ustrlen(jsonstr));
+	if(Debug) {
+		errMsg = NULL;
+		if(json == NULL) {
+			enum json_tokener_error err;
+
+			err = tokener->err;
+			if(err != json_tokener_continue)
+				errMsg = json_tokener_errors[err];
+			else
+				errMsg = "Unterminated input";
+		} else if(!json_object_is_type(json, json_type_object))
+			errMsg = "JSON value is not an object";
+		if(errMsg != NULL) {
+			DBGPRINTF("MsgSetPropsViaJSON: Error parsing JSON '%s': %s\n",
+					jsonstr, errMsg);
+		}
+	}
+	if(json == NULL) {
+		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+	}
+ 
+	json_object_object_foreach(json, name, val) {
+		msgSetPropViaJSON(pMsg, name, val);
+	}
+	json_object_put(json);
+
+finalize_it:
+	if(tokener != NULL)
+		json_tokener_free(tokener);
+	RETiRet;
+}
 
 
 /* get the severity - this is an entry point that

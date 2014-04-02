@@ -181,8 +181,8 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
-rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
+void MsgSetRawMsg(msg_t *pMsg, const char* pszRawMsg, size_t lenMsg);
+rsRetVal MsgReplaceMSG(msg_t *pThis, const uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 uchar *getRcvFrom(msg_t *pM);
@@ -193,6 +193,7 @@ void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
+rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);
