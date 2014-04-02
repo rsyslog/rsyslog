@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.2.0 [v8-stable] 2014-04-02
+This starts a new stable branch based on 8.1.6 plus the following changes:
 - we now use doc from the rsyslog-doc project
   As such, the ./doc subtree has been removed. Instead, a cache of the
   rsyslog-doc project's files has been included in ./rsyslog-doc.tar.gz.
