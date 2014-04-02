@@ -1,8 +1,11 @@
 ---------------------------------------------------------------------------
-Version 8.2.0 [v8-stable] 2014-02-??
+Version 8.2.0 [v8-stable] 2014-04-02
+This starts a new stable branch based on 8.1.6 plus the following changes:
 - we now use doc from the rsyslog-doc project
   As such, the ./doc subtree has been removed. Instead, a cache of the
   rsyslog-doc project's files has been included in ./rsyslog-doc.tar.gz.
+  Note that the exact distribution mode for the doc is still under
+  discussion and may change in future releases.
   This was agreed upon on the rsyslog mailing list. For doc issues
   and corrections, be sure to work with the rsyslog-doc project. It is
   currently hosted at https://github.com/rsyslog/rsyslog-doc
@@ -20,7 +23,7 @@ Version 8.2.0 [v8-stable] 2014-02-??
   stable version.
 - add capability to override GnuTLS path in build process
   Thanks to Clayton Shotwell for the patch
-- better and more consistent action naming, action queus now always 
+- better and more consistent action naming, action queues now always 
   contain the word "queue" after the action name
 - bugfix: ompipe did resume itself even when it was still in error
   See: https://github.com/rsyslog/rsyslog/issues/35
