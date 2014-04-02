@@ -70,6 +70,10 @@ typedef struct wrkrInstanceData {
 	int fdPipeOut;		/* file descriptor to write to */
 	int fdPipeIn;		/* fd we receive messages from the program (if we want to) */
 	int bIsRunning;		/* is binary currently running? 0-no, 1-yes */
+	char *respBuf;		/* buffer to read exernal plugin's response */
+	int maxLenRespBuf;	/* (current) maximum length of response buffer */
+	int lenRespBuf;		/* actual nbr of chars in response buffer */
+	int idxRespBuf;		/* last char read from response buffer */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -111,6 +115,10 @@ CODESTARTcreateWrkrInstance
 	pWrkrData->fdPipeOut = -1;
 	pWrkrData->fdOutput = -1;
 	pWrkrData->bIsRunning = 0;
+	pWrkrData->respBuf = NULL;
+	pWrkrData->maxLenRespBuf = 0;
+	pWrkrData->lenRespBuf = 0;
+	pWrkrData->idxRespBuf = 0;
 ENDcreateWrkrInstance
 
 
@@ -137,6 +145,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	free(pWrkrData->respBuf);
 ENDfreeWrkrInstance
 
 
@@ -187,34 +196,56 @@ done:	return;
 }
 
 
-
 /* Get reply from external program. Note that we *must* receive one
- * reply for each message sent (half-duplex protocol).
+ * reply for each message sent (half-duplex protocol). As such, the last
+ * char we read MUST be \n ... we cannot have multiple LF as this is
+ * forbidden by the plugin interface. We cannot have multiple responses
+ * for multiple messages, as we are in half-duplex mode! This makes
+ * things quite a bit simpler. So don't think the simple code does
+ * not handle those border-cases that are describe to cannot exist!
  */
 static void
 processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
 {
-	char buf[4096];
 	char errStr[1024];
 	ssize_t r;
+	int numCharsRead;
+	char *newptr;
 
 dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
+	numCharsRead = 0;
 	do {
-		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf)-1);
-		if(r > 0)
-			buf[r] = '\0'; /* space reserved in read! */
-		else
-			buf[0] = '\0';
-dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, buf);
+		if(pWrkrData->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
+			pWrkrData->maxLenRespBuf += 4096;
+			if((newptr = realloc(pWrkrData->respBuf, pWrkrData->maxLenRespBuf)) == NULL) {
+				DBGPRINTF("mmexternal: error realloc responseBuf: %s\n",
+					   rs_strerror_r(errno, errStr, sizeof(errStr)));
+				/* emergency - fake no update */
+				strcpy(pWrkrData->respBuf, "{}\n");
+				numCharsRead = 3;
+				break;
+			}
+			pWrkrData->respBuf = newptr;
+		}
+		r = read(pWrkrData->fdPipeIn, pWrkrData->respBuf+numCharsRead,
+			 pWrkrData->maxLenRespBuf-numCharsRead-1);
+		if(r > 0) {
+			numCharsRead += r;
+			pWrkrData->respBuf[numCharsRead] = '\0'; /* space reserved in read! */
+		} else {
+			/* emergency - fake no update */
+			strcpy(pWrkrData->respBuf, "{}\n");
+			numCharsRead = 3;
+		}
+dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, pWrkrData->respBuf);
 		if(Debug && r == -1) {
 			DBGPRINTF("mmexternal: error reading from external program: %s\n",
 				   rs_strerror_r(errno, errStr, sizeof(errStr)));
 		}
-		if(r > 0) {
-			writeOutputDebug(pWrkrData, buf, r);
-			MsgSetPropsViaJSON(pMsg, (uchar*)buf);
-		}
-	} while(0); // TODO: change this so that we actually read one line!
+	} while(pWrkrData->respBuf[numCharsRead-1] != '\n');
+
+	writeOutputDebug(pWrkrData, pWrkrData->respBuf, numCharsRead);
+	MsgSetPropsViaJSON(pMsg, (uchar*)pWrkrData->respBuf);
 
 	return;
 }
