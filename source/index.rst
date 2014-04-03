@@ -46,9 +46,7 @@ project status.
 
 If you like rsyslog, you might want to lend us a helping hand. It
 doesn't require a lot of time - even a single mouse click helps. Learn
-:doc:`how to help the rsyslog project <how2help>`. Due to popular
-demand, there is now a 
-:doc:`side-by-side comparison between rsyslog and syslog-ng <whitepapers/rsyslog_ng_comparison>`.
+:doc:`how to help the rsyslog project <how2help>`.
 
 If you are upgrading from rsyslog v2 or stock sysklogd, be sure to read
 the :doc:`rsyslog v3 compatibility notes <compatibility/v3compatibility>`, and if you
@@ -74,18 +72,17 @@ Reference
    whitepapers/index
    free_support
    compatibility/index
-   bugs
 
 Manual
 ------
 .. toctree::
    :maxdepth: 3
    
+   configuration/index
    installation/index
    drivers/index
    rainerscript/index
    messageparser
-   configuration/index
    queues
    troubleshooting/index
    development/index
