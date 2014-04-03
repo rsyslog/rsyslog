@@ -1,18 +1,18 @@
 Recording the Priority of Syslog Messages
 =========================================
 
-*Written by `Rainer
+*Written by* `Rainer
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2007-06-18)*
+*(2007-06-18)*
 
 Abstract
 --------
 
-***The so-called priority (PRI) is very important in syslog messages,
+**The so-called priority (PRI) is very important in syslog messages,
 because almost all filtering in syslog.conf is based on it.** However,
 many syslogds (including the Linux stock sysklogd) do not provide a way
 to record that value. In this article, I'll give a brief overview of how
-PRI can be written to a log file.*
+PRI can be written to a log file.
 
 Background
 ----------

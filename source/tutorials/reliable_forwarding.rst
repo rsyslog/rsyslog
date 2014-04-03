@@ -1,14 +1,14 @@
 Reliable Forwarding of syslog Messages with Rsyslog
 ===================================================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2008-06-27)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2008-06-27)*
 
 Abstract
 --------
 
-***In this paper, I describe how to forward
-`syslog <http://www.monitorware.com/en/topics/syslog/>`_ messages
+**In this paper, I describe how to forward**
+`syslog <http://www.monitorware.com/en/topics/syslog/>`_ **messages
 (quite) reliable to a central rsyslog server.** This depends on rsyslog
 being installed on the client system and it is recommended to have it
 installed on the server system. Please note that industry-standard

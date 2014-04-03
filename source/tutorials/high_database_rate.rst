@@ -3,14 +3,14 @@
 Handling a massive syslog database insert rate with Rsyslog
 ===========================================================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2008-01-31)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2008-01-31)*
 
 Abstract
 --------
 
-***In this paper, I describe how log massive amounts of
-`syslog <http://www.monitorware.com/en/topics/syslog/>`_ messages to a
+**In this paper, I describe how log massive amounts of**
+`syslog <http://www.monitorware.com/en/topics/syslog/>`_ **messages to a
 database.**\ This HOWTO is currently under development and thus a bit
 brief. Updates are promised ;).*
 
@@ -168,6 +168,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

@@ -1,7 +1,7 @@
 troubleshooting rsyslog
 -----------------------
 
-**Having trouble with `rsyslog <http://www.rsyslog.com>`_?** This page
+**Having trouble with** `rsyslog <http://www.rsyslog.com>`_? This page
 provides some tips on where to look for help and what to do if you need
 to ask for assistance. This page is continously being expanded.
 
@@ -215,7 +215,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2010 by `Rainer
+Copyright © 2008-2010 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

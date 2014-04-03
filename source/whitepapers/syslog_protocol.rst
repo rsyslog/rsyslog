@@ -3,10 +3,10 @@
 syslog-protocol support in rsyslog
 ==================================
 
-**`Rsyslog <http://www.rsyslog.com/>`_  provides a trial implementation
-of the proposed
+`rsyslog <http://www.rsyslog.com/>`_ **provides a trial implementation
+of the proposed**
 `syslog-protocol <http://www.monitorware.com/Common/en/glossary/syslog-protocol.php>`_
-standard.** The intention of this implementation is to find out what
+**standard.** The intention of this implementation is to find out what
 inside syslog-protocol is causing problems during implementation. As
 syslog-protocol is a standard under development, its support in rsyslog
 is highly volatile. It may change from release to release. So while it
@@ -224,6 +224,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
