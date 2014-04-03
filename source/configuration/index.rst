@@ -34,9 +34,9 @@ otherwise the newly added configurations settings will not be loaded.
    nomatch
    filters
    actions
+   property_replacer
    templates
    multi_ruleset
-   property_replacer
    droppriv
    output_channels
    expression
