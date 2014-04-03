@@ -12,18 +12,20 @@ Let's assume you have a primary and two secondary central servers. Then, you
 can use the following config file excerpt to send data to them:
 rsyslog.conf:
 
-*.* @@primary-syslog.example.com
-$ActionExecOnlyWhenPreviousIsSuspended on
-& @@secondary-1-syslog.example.com
-& @@secondary-2-syslog.example.com
-& /var/log/localbuffer
-$ActionExecOnlyWhenPreviousIsSuspended off
+::
+
+  *.* @@primary-syslog.example.com
+  $ActionExecOnlyWhenPreviousIsSuspended on
+  & @@secondary-1-syslog.example.com
+  & @@secondary-2-syslog.example.com
+  & /var/log/localbuffer
+  $ActionExecOnlyWhenPreviousIsSuspended off
 
 This selector processes all messages it receives (*.*). It tries to forward 
 every message to primary-syslog.example.com (via tcp). If it can not reach that
- server, it tries secondary-1-syslog.example.com, if that fails too, it tries 
- secondary-2-syslog.example.com. If neither of these servers can be connected, 
- the data is stored in /var/log/localbuffer. Please note that the secondaries 
- and the local log buffer are only used if the one before them does not work. 
- So ideally, /var/log/localbuffer will never receive a message. If one of the 
- servers resumes operation, it automatically takes over processing again.
+server, it tries secondary-1-syslog.example.com, if that fails too, it tries 
+secondary-2-syslog.example.com. If neither of these servers can be connected, 
+the data is stored in /var/log/localbuffer. Please note that the secondaries 
+and the local log buffer are only used if the one before them does not work. 
+So ideally, /var/log/localbuffer will never receive a message. If one of the 
+servers resumes operation, it automatically takes over processing again.
