@@ -1,15 +1,15 @@
 SSL Encrypting Syslog with Stunnel
 ==================================
 
-*Written by `Rainer
+*Written by* `Rainer
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2005-07-22)*
+*(2005-07-22)*
 
 Abstract
 --------
 
-***In this paper, I describe how to encrypt
-`syslog <http://www.monitorware.com/en/topics/syslog/>`_ messages on the
+**In this paper, I describe how to encrypt**
+`syslog <http://www.monitorware.com/en/topics/syslog/>`_ **messages on the
 network.** Encryption is vital to keep the confidiental content of
 syslog messages secure. I describe the overall approach and provide an
 HOWTO do it with the help of `rsyslogd <http://www.rsyslog.com>`_ and
@@ -321,6 +321,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

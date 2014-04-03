@@ -1,21 +1,21 @@
 Using php-syslog-ng with rsyslog
 ================================
 
-*Written by `Rainer
+*Written by* `Rainer
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2005-08-04)*
+*(2005-08-04)*
 
 Note: it has been reported that this guide is somewhat outdated. Please
 use with care. Also, please note that **rsyslog's "native" web frontend
-is `phpLogCon <http://www.phplogcon.org>`_**, which provides best
+is** `phpLogCon <http://www.phplogcon.org>`_, which provides best
 integration and a lot of extra functionality.
 
 Abstract
 --------
 
-***In this paper, I describe how to use
-`php-syslog-ng <http://www.vermeer.org/projects/php-syslog-ng>`_ with
-`rsyslogd <http://www.rsyslog.com/>`_.** Php-syslog-ng is a popular web
+**In this paper, I describe how to use**
+`php-syslog-ng <http://www.vermeer.org/projects/php-syslog-ng>`_ **with**
+`rsyslogd <http://www.rsyslog.com/>`_. Php-syslog-ng is a popular web
 interface to syslog data. Its name stem from the fact that it usually
 picks up its data from a database created by
 `syslog-ng <http://www.balabit.com/products/syslog_ng/>`_ and some

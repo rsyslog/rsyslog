@@ -1,17 +1,17 @@
 HOWTO install rsyslog
 =====================
 
-*Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_*
+*Written by* `Rainer
+Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 
 Abstract
 --------
 
-***In this paper, I describe how to install
-`rsyslog <http://www.rsyslog.com/>`_.** It is intentionally a brief
+**In this paper, I describe how to install** 
+`rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
 step-by-step guide, targeted to those who want to quickly get it up and
 running. For more elaborate information, please consult the rest of the
-`manual set <manual.html>`_.*
+`manual set <manual.html>`_.
 
 How to make your life easier...
 -------------------------------
@@ -242,6 +242,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 1.2 or higher.

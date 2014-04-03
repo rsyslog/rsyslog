@@ -4,7 +4,7 @@ Free Services for Rsyslog
 *A personal word from Rainer, the lead developer of rsyslog:*
 
 **The rsyslog community provides ample free support resources. Please
-see our `troubleshooting guide <troubleshoot.html>`_ to get started.**
+see our** `troubleshooting guide <troubleshoot.html>`_ **to get started.**
 
 Every now and then I receive private mail with support questions. I
 appreciate any feedback, but I must limit my resources so that I can
