@@ -3,8 +3,8 @@
 rsyslog vs. syslog-ng
 =====================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2008-05-06)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2008-05-06)*
 
 *Warning*: this comparison is a little outdated, take it with a grain of
 salt and be sure to check the links at the bottom (both syslog-ng as
@@ -593,6 +593,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

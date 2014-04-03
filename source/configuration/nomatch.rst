@@ -26,9 +26,9 @@ The other mode is "**FIELD**\ ", in which the complete field is
 returned. This may be useful in cases where absense of a match is
 considered a failure and the message that triggered it shall be logged.
 
-If in doubt, **it is highly suggested to use the `rsyslog online regular
+If in doubt, **it is highly suggested to use the** `rsyslog online regular
 expression checker and generator <http://www.rsyslog.com/tool-regex>`_
-to see these options in action**. With that online tool, you can craft
+**to see these options in action**. With that online tool, you can craft
 regular expressions based on samples and try out the different modes.
 
 Summary of nomatch Modes
@@ -54,6 +54,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

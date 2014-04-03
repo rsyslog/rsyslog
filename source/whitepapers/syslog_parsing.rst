@@ -1,11 +1,11 @@
 syslog parsing in rsyslog
 =========================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2008-09-23)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2008-09-23)*
 
-**We regularly receive messages asking why
-`rsyslog <http://www.rsyslog.com>`_ parses this or that message
+**We regularly receive messages asking why**
+`rsyslog <http://www.rsyslog.com>`_ **parses this or that message
 incorrectly.** Of course, it turns out that rsyslog does the right
 thing, but the message sender does not. And also of course, this is not
 even of the slightest help to the end user experiencing the problem ;).
@@ -281,6 +281,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

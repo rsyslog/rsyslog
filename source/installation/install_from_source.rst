@@ -6,8 +6,11 @@ Installing rsyslog from source
 Abstract
 --------
 
-**In this paper, I describe how to install**
-`rsyslog <http://www.rsyslog.com/>`_ from source.
+**In this paper, I describe how to install** 
+`rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
+step-by-step guide, targeted to those who want to quickly get it up and
+running. For more elaborate information, please consult the rest of the
+`manual set <manual.html>`_.
 
 How to make your life easier...
 -------------------------------
@@ -280,11 +283,3 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
 copy of the license can be viewed at
 `http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
 
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 1.2 or higher.

@@ -1,8 +1,8 @@
 Writing syslog messages to MySQL, PostgreSQL or any other supported Database
 ============================================================================
 
-*Written by*\ `*Rainer
-Gerhards* <http://www.adiscon.com/en/people/rainer-gerhards.php>`_\ *with
+*Written by* \ `Rainer
+Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_\ *with
 some additions by Marc Schiffbauer (2008-02-28)*
 
 Abstract
