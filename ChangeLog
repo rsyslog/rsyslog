@@ -198,6 +198,19 @@ Version 8.1.0 [experimental] 2013-11-15
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
 ---------------------------------------------------------------------------
+Version 7.6.4 [v7.6-stable] 2014-03-??
+- new omfile default module parameters
+  * filecreatemode
+  * fileowner
+  * fileownernum
+  * filegroup
+  * filegroupnum
+  * dirowner
+  * dirownernum
+  * dirgroup
+  * dirgroupnum
+  Thanks to Karol Jurak for the patch.
+---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
   Thanks to Clayton Shotwell for the patch
