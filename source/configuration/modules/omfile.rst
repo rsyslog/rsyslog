@@ -27,6 +27,15 @@ module. It is a built-in module that does not need to be loaded.
     Sets the default DirCreateMode to be used for an action if no
    explicit one is specified.
 
+- **filecreatemode**
+- **fileowner**
+- **fileownernum**
+- **filegroup**
+- **filegroupnum**
+- **dirowner**
+- **dirownernum**
+- **dirgroup**
+- **dirgroupnum**
  
 
 **Action Parameters**:
