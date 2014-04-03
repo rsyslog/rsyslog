@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 8.3.0 [v8-stable] 2014-04-??
+- improved error message for invalid field extraction in string template
+  see also:
+  http://kb.monitorware.com/problem-with-field-based-extraction-t12299.html
+---------------------------------------------------------------------------
 Version 8.2.0 [v8-stable] 2014-04-02
 This starts a new stable branch based on 8.1.6 plus the following changes:
 - we now use doc from the rsyslog-doc project

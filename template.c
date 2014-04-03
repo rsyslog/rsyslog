@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2013 Rainer Gerhards and Adiscon
+ * Copyright 2004-2014 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -45,6 +45,7 @@
 #include "strgen.h"
 #include "rsconf.h"
 #include "msg.h"
+#include "parserif.h"
 #include "unicode-helper.h"
 
 /* static data */
@@ -931,7 +932,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 						if(iNum < 0 || iNum > 255) {
 							errmsg.LogError(0, NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
 							pTpe->data.field.field_delim = 9;
-						  } else {
+						} else {
 							pTpe->data.field.field_delim = iNum;
 #							ifdef STRICT_GPLV3
 							if (*p == '+') {
@@ -945,8 +946,12 @@ do_Parameter(uchar **pp, struct template *pTpl)
 								while(isdigit((int)*p))
 									iNum = iNum * 10 + *p++ - '0';
 								pTpe->data.field.iFromPos = iNum;
+							} else if(*p != ':') {
+								parser_errmsg("error: invalid character '%c' in frompos after \"F,\", property: '%s' "
+									      "be sure to use DECIMAL character codes!", *p, (char*) *pp);
+								ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 							}
-						  }
+						}
 					}
 				} else {
 					/* invalid character after F, so we need to reject
