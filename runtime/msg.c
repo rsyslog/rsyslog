@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1941,7 +1941,7 @@ void MsgSetRuleset(msg_t * const pMsg, ruleset_t *pRuleset)
 /* set TAG in msg object
  * (rewritten 2009-06-18 rgerhards)
  */
-void MsgSetTAG(msg_t * const pMsg, uchar* pszBuf, size_t lenBuf)
+void MsgSetTAG(msg_t *__restrict__ const pMsg, const uchar* pszBuf, const size_t lenBuf)
 {
 	uchar *pBuf;
 	assert(pMsg != NULL);
@@ -2322,7 +2322,7 @@ finalize_it:
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
+void MsgSetHOSTNAME(msg_t *pThis, const uchar* pszHOSTNAME, const int lenHOSTNAME)
 {
 	assert(pThis != NULL);
 
@@ -3811,6 +3811,12 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	const char *psz;
 	DEFiRet;
 
+	// TODO: think if we need to lock the message mutex. For some updates
+	// we probably need to!
+	
+	/* note: json_object_get_string() manages the memory of the returned
+	 *       string. So we MUST NOT free it!
+	 */
 	dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
 	if(!strcmp(name, "rawmsg")) {
 		psz = json_object_get_string(json);
@@ -3818,6 +3824,12 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	} else if(!strcmp(name, "msg")) {
 		psz = json_object_get_string(json);
 		MsgReplaceMSG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "syslogtag")) {
+		psz = json_object_get_string(json);
+		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "hostname") || !strcmp(name, "source")) {
+		psz = json_object_get_string(json);
+		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz)); 
 	} else if(!strcmp(name, "$!")) {
 		msgAddJSON(pMsg, (uchar*)"!", json);
 	} else {

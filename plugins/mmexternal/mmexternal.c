@@ -292,7 +292,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 	sigAct.sa_handler = SIG_DFL;
 	for(i = 1 ; i < NSIG ; ++i)
 		sigaction(i, &sigAct, NULL);
-	/* we need to block SIGINT, otherwise our program is cancelled when we are
+	/* we need to block SIGINT, otherwise the external program is cancelled when we are
 	 * stopped in debug mode.
 	 */
 	sigAct.sa_handler = SIG_IGN;
