@@ -73,7 +73,7 @@ ENDobjDestruct(prop)
 /* set string, we make our own private copy! This MUST only be called BEFORE
  * ConstructFinalize()!
  */
-static rsRetVal SetString(prop_t *pThis, uchar *psz, int len)
+static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
@@ -142,7 +142,7 @@ static rsRetVal AddRef(prop_t *pThis)
  * convenience, it is alos (very, very) slightly faster.
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateStringProp(prop_t **ppThis, uchar* psz, int len)
+static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len)
 {
 	DEFiRet;
 	propConstruct(ppThis);
@@ -161,7 +161,7 @@ static rsRetVal CreateStringProp(prop_t **ppThis, uchar* psz, int len)
  * existing property).
  * rgerhards, 2009-07-01
  */
-rsRetVal CreateOrReuseStringProp(prop_t **ppThis, uchar *psz, int len)
+rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len)
 {
 	uchar *pszPrev;
 	int lenPrev;
