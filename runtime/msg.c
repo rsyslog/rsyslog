@@ -1794,7 +1794,7 @@ MsgSetAfterPRIOffs(msg_t * const pMsg, short offs)
  * which already obtained the lock. So in general, this function here must
  * only be called when it it safe to do so without it aquiring a lock.
  */
-rsRetVal MsgSetAPPNAME(msg_t * const pMsg, char* pszAPPNAME)
+rsRetVal MsgSetAPPNAME(msg_t *__restrict__ const pMsg, const char* pszAPPNAME)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
@@ -1812,7 +1812,7 @@ finalize_it:
 
 /* rgerhards 2004-11-24: set PROCID in msg object
  */
-rsRetVal MsgSetPROCID(msg_t * const pMsg, char* pszPROCID)
+rsRetVal MsgSetPROCID(msg_t *__restrict__ const pMsg, const char* pszPROCID)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -1881,7 +1881,7 @@ char *getPROCID(msg_t * const pM, sbool bLockMutex)
 
 /* rgerhards 2004-11-24: set MSGID in msg object
  */
-rsRetVal MsgSetMSGID(msg_t * const pMsg, char* pszMSGID)
+rsRetVal MsgSetMSGID(msg_t * const pMsg, const char* pszMSGID)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -2084,7 +2084,7 @@ uchar *getRcvFrom(msg_t * const pM)
 
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
-rsRetVal MsgSetStructuredData(msg_t * const pMsg, char* pszStrucData)
+rsRetVal MsgSetStructuredData(msg_t * const pMsg, const char* pszStrucData)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pMsg, msg);
@@ -2264,7 +2264,7 @@ void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
-void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
+void MsgSetRcvFromStr(msg_t * const pThis, const uchar *psz, const int len, prop_t **ppProp)
 {
 	assert(pThis != NULL);
 	assert(ppProp != NULL);
@@ -2299,7 +2299,7 @@ rsRetVal MsgSetRcvFromIP(msg_t *pThis, prop_t *new)
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
-rsRetVal MsgSetRcvFromIPStr(msg_t *pThis, uchar *psz, int len, prop_t **ppProp)
+rsRetVal MsgSetRcvFromIPStr(msg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp)
 {
 	DEFiRet;
 	assert(pThis != NULL);

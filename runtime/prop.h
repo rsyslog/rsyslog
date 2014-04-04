@@ -42,12 +42,12 @@ BEGINinterface(prop) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(prop_t **ppThis);
 	rsRetVal (*ConstructFinalize)(prop_t *pThis);
 	rsRetVal (*Destruct)(prop_t **ppThis);
-	rsRetVal (*SetString)(prop_t *pThis, uchar* psz, int len);
+	rsRetVal (*SetString)(prop_t *pThis, const uchar* psz, const int len);
 	rsRetVal (*GetString)(prop_t *pThis, uchar** ppsz, int *plen);
 	int      (*GetStringLen)(prop_t *pThis);
 	rsRetVal (*AddRef)(prop_t *pThis);
-	rsRetVal (*CreateStringProp)(prop_t **ppThis, uchar* psz, int len);
-	rsRetVal (*CreateOrReuseStringProp)(prop_t **ppThis, uchar *psz, int len);
+	rsRetVal (*CreateStringProp)(prop_t **ppThis, const uchar* psz, const int len);
+	rsRetVal (*CreateOrReuseStringProp)(prop_t **ppThis, const uchar *psz, const int len);
 ENDinterface(prop)
 #define propCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

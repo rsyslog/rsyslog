@@ -50,7 +50,7 @@
 
 static inline int ustrcmp(const uchar *psz1, const uchar *psz2)
 {
-	return strcmp((char*) psz1, (char*) psz2);
+	return strcmp((const char*) psz1, (const char*) psz2);
 }
 
 static inline int ustrlen(const uchar *psz)
