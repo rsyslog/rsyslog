@@ -41,16 +41,16 @@
 		return (uchar*) strncpy((char*) psz1, (char*) psz2, len);
 	}
 
-	static inline uchar* ustrdup(uchar *psz)
+	static inline uchar* ustrdup(const uchar *psz)
 	{
 		return (uchar*) strdup((char*)psz);
 	}
 
 #endif /* #ifdef DEBUG */
 
-static inline int ustrcmp(uchar *psz1, uchar *psz2)
+static inline int ustrcmp(const uchar *psz1, const uchar *psz2)
 {
-	return strcmp((char*) psz1, (char*) psz2);
+	return strcmp((const char*) psz1, (const char*) psz2);
 }
 
 static inline int ustrlen(const uchar *psz)
