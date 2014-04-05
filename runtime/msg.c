@@ -3809,6 +3809,8 @@ static rsRetVal
 msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json)
 {
 	const char *psz;
+	prop_t *propFromHost = NULL;
+	prop_t *propRcvFromIP = NULL;
 	DEFiRet;
 
 	// TODO: think if we need to lock the message mutex. For some updates
@@ -3827,9 +3829,24 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	} else if(!strcmp(name, "syslogtag")) {
 		psz = json_object_get_string(json);
 		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "procid")) {
+		psz = json_object_get_string(json);
+		MsgSetPROCID(pMsg, psz);
+	} else if(!strcmp(name, "msgid")) {
+		psz = json_object_get_string(json);
+		MsgSetMSGID(pMsg, psz);
+	} else if(!strcmp(name, "structured-data")) {
+		psz = json_object_get_string(json);
+		MsgSetStructuredData(pMsg, psz);
 	} else if(!strcmp(name, "hostname") || !strcmp(name, "source")) {
 		psz = json_object_get_string(json);
 		MsgSetHOSTNAME(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "fromhost")) {
+		psz = json_object_get_string(json);
+		MsgSetRcvFromStr(pMsg, (const uchar*) psz, 0, &propFromHost);
+	} else if(!strcmp(name, "fromhost-ip")) {
+		psz = json_object_get_string(json);
+		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
 		msgAddJSON(pMsg, (uchar*)"!", json);
 	} else {
