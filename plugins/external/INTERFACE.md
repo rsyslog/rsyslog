@@ -70,14 +70,20 @@ in the last sentence.
 
 External Message Modification Modules
 -------------------------------------
-**Note: Work in progress, no code yet written!**
-
 The external plugin will use stdin to receive the message that it potentially
 can modify. The message will be LF-terminated, and no LF must be present within
-the message itself. The initial idea is that a pure JSON representation is
-provided, but it is open for discussion if custom templates are also
-to be supported. This would have some performance advantages if the
-module just needs to take care of a subset of the message properties.
+the message itself.  By default, the MSG part of the message is provided as input.
+The "interface.input" parameter can be used to modify this. It currently support
+either "msg" (the default) or "rawmsg", which is the complete message (including
+header) as received by rsyslog. In the future, the value "json" will permit to 
+receive a JSON encoded copy of the message.
+
+**Note**: if multi-line messages are to be processed, JSON representation **must**
+be used, otherwise errors will happen.
+
+The ability to use non-JSON representations is primarily a performance
+enhancement. Building the JSON representation causes some overhead, and
+very often access to either msg or rawmsg is fully sufficient.
 
 The plugin will emit a JSON representation of those properties
 that **need to be modified** and their new values to stdout. Again, this
@@ -88,5 +94,27 @@ increase processing cost. If no property is to be modified, an empty
 JSON representation is to be provided.
 
 The plugin must emit one response line for each message (line) received, and
-must do so in the same order in which the messages were put in stdin. Note that like the output module interface, multiple instances of the plugin may be
-activated. See for more information above.
+must do so in the same order in which the messages were put in stdin. Note that
+like the output module interface, multiple instances of the plugin may be
+activated. See above for more information.
+
+Most message properties can be modified. Modifieable are:
+* rawmsg
+* msg
+* syslogtab
+* msgid
+* procid
+* structured-data
+* hostname (aliased "source")
+* fromhost
+* fromhost-ip
+* all message variable ("$!" tree)
+
+If the message variable tree is modified, new variables may also be *added*. Deletion
+of message variables is not directly supported. If this is desired, it is suggested 
+to set the variable in question to the empty string ("").
+
+Implemetation
+-------------
+The plugin interface is implemented via the "mmexternal" native plugin. See it's
+documentation on how to tie your plugin into rsyslog's procesing flow.
