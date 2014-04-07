@@ -1952,6 +1952,66 @@ getJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "rawmsg", jval);
 
+#warning TODO: check property names
+	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "timereported", jval);
+
+	jval = json_object_new_string(getHOSTNAME(pMsg));
+	json_object_object_add(json, "hostname", jval);
+
+	getTAG(pMsg, &pRes, &bufLen);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "syslogtag", jval);
+
+	getInputName(pMsg, &pRes, &bufLen);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "inputname", jval);
+
+	jval = json_object_new_string((char*)getRcvFrom(pMsg));
+	json_object_object_add(json, "fromhost", jval);
+
+	jval = json_object_new_string((char*)getRcvFromIP(pMsg));
+	json_object_object_add(json, "fromhost-ip", jval);
+
+	jval = json_object_new_string(getPRI(pMsg));
+	json_object_object_add(json, "pri", jval);
+
+	jval = json_object_new_string(getFacility(pMsg));
+	json_object_object_add(json, "syslogfacility", jval);
+
+	jval = json_object_new_string(getSeverity(pMsg));
+	json_object_object_add(json, "syslogseverity", jval);
+
+	pRes = (uchar*)getTimeGenerated(pMsg, tplFmtRFC3339Date);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "timegenerated", jval);
+
+	jval = json_object_new_string((char*)getProgramName(pMsg, LOCK_MUTEX));
+	json_object_object_add(json, "programname", jval);
+
+	jval = json_object_new_string(getProtocolVersionString(pMsg));
+	json_object_object_add(json, "protocolversion", jval);
+
+	MsgGetStructuredData(pMsg, &pRes, &bufLen);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "structured-data", jval);
+
+	jval = json_object_new_string(getAPPNAME(pMsg, LOCK_MUTEX));
+	json_object_object_add(json, "appname", jval);
+
+	jval = json_object_new_string(getPROCID(pMsg, LOCK_MUTEX));
+	json_object_object_add(json, "procid", jval);
+
+	jval = json_object_new_string(getMSGID(pMsg));
+	json_object_object_add(json, "procid", jval);
+
+#ifdef USE_LIBUUID
+	getUUID(pMsg, &pRes, &bufLen);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "uuid", jval);
+#endif
+
 	pRes = (uchar*) strdup(json_object_get_string(json));
 	json_object_put(json);
 	return pRes;
