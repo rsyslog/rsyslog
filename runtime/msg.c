@@ -505,6 +505,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_PROCID;
 	} else if(!strcmp((char*) pName, "msgid")) {
 		*pPropID = PROP_MSGID;
+	} else if(!strcmp((char*) pName, "jsonmesg")) {
+		*pPropID = PROP_JSONMESG;
 	} else if(!strcmp((char*) pName, "parsesuccess")) {
 		*pPropID = PROP_PARSESUCCESS;
 #ifdef USE_LIBUUID
@@ -600,6 +602,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("procid");
 		case PROP_MSGID:
 			return UCHAR_CONSTANT("msgid");
+		case PROP_JSONMESG:
+			return UCHAR_CONSTANT("jsonmesg");
 		case PROP_PARSESUCCESS:
 			return UCHAR_CONSTANT("parsesuccess");
 		case PROP_SYS_NOW:
@@ -1929,6 +1933,30 @@ void MsgSetParseSuccess(msg_t * const pMsg, int bSuccess)
 	pMsg->bParseSuccess = bSuccess;
 }
 
+
+/* return full message as a json string */
+static const uchar*
+getJSONMESG(msg_t *__restrict__ const pMsg)
+{
+	struct json_object *json;
+	struct json_object *jval;
+	uchar *pRes; /* result pointer */
+	rs_size_t bufLen = -1; /* length of string or -1, if not known */
+
+	json = json_object_new_object();
+
+	jval = json_object_new_string((char*)getMSG(pMsg));
+	json_object_object_add(json, "msg", jval);
+
+	getRawMsg(pMsg, &pRes, &bufLen);
+	jval = json_object_new_string((char*)pRes);
+	json_object_object_add(json, "rawmsg", jval);
+
+	pRes = (uchar*) strdup(json_object_get_string(json));
+	json_object_put(json);
+	return pRes;
+}
+
 /* rgerhards 2009-06-12: set associated ruleset
  */
 void MsgSetRuleset(msg_t * const pMsg, ruleset_t *pRuleset)
@@ -2953,6 +2981,9 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			break;
 		case PROP_MSGID:
 			pRes = (uchar*)getMSGID(pMsg);
+			break;
+		case PROP_JSONMESG:
+			pRes = (uchar*)getJSONMESG(pMsg);
 			break;
 #ifdef USE_LIBUUID
 		case PROP_UUID:

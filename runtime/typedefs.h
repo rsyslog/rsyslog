@@ -191,6 +191,7 @@ typedef uintTiny	propid_t;
 #define PROP_PROCID			21
 #define PROP_MSGID			22
 #define PROP_PARSESUCCESS		23
+#define PROP_JSONMESG			24
 #define PROP_SYS_NOW			150
 #define PROP_SYS_YEAR			151
 #define PROP_SYS_MONTH			152
