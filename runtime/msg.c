@@ -1952,7 +1952,6 @@ getJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "rawmsg", jval);
 
-#warning TODO: check property names
 	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timereported", jval);
@@ -1991,26 +1990,28 @@ getJSONMESG(msg_t *__restrict__ const pMsg)
 	json_object_object_add(json, "programname", jval);
 
 	jval = json_object_new_string(getProtocolVersionString(pMsg));
-	json_object_object_add(json, "protocolversion", jval);
+	json_object_object_add(json, "protocol-version", jval);
 
 	MsgGetStructuredData(pMsg, &pRes, &bufLen);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "structured-data", jval);
 
 	jval = json_object_new_string(getAPPNAME(pMsg, LOCK_MUTEX));
-	json_object_object_add(json, "appname", jval);
+	json_object_object_add(json, "app-name", jval);
 
 	jval = json_object_new_string(getPROCID(pMsg, LOCK_MUTEX));
 	json_object_object_add(json, "procid", jval);
 
 	jval = json_object_new_string(getMSGID(pMsg));
-	json_object_object_add(json, "procid", jval);
+	json_object_object_add(json, "msgid", jval);
 
 #ifdef USE_LIBUUID
 	getUUID(pMsg, &pRes, &bufLen);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "uuid", jval);
 #endif
+
+	json_object_object_add(json, "$!", pMsg->json);
 
 	pRes = (uchar*) strdup(json_object_get_string(json));
 	json_object_put(json);

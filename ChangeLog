@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-stable] 2014-04-??
+- new $jsonmesg property with JSON representation of whole message object
+  closes: https://github.com/rsyslog/rsyslog/issues/19
 - improved error message for invalid field extraction in string template
   see also:
   http://kb.monitorware.com/problem-with-field-based-extraction-t12299.html
