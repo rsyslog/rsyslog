@@ -8,7 +8,7 @@
   * PRI filter) are very hard to beat in ease of use, at least for simpler
   * cases.
   *
-  * Copyright 2011-2012 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -29,6 +29,7 @@
   * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
   */
 %{
+#include "config.h"
 #include <stdio.h>
 #include <libestr.h>
 #include "rainerscript.h"

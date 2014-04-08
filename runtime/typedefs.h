@@ -3,7 +3,7 @@
  *
  * Begun 2010-11-25 RGerhards
  *
- * Copyright (C) 2005-2013 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -158,7 +158,9 @@ typedef enum {
 } fiop_t;
 
 #ifndef HAVE_LSEEK64
-	typedef off_t off64_t;
+#	ifndef	HAVE_OFF64_T
+		typedef off_t off64_t;
+#	endif
 #endif
 
 
