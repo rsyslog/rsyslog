@@ -9,7 +9,7 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011-2013 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -29,6 +29,10 @@
   * A copy of the GPL can be found in the file "COPYING" in this distribution.
   * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
   */
+
+%{
+#include "config.h"
+%}
 
 %option noyywrap nodefault case-insensitive yylineno
  /*%option noyywrap nodefault case-insensitive */
