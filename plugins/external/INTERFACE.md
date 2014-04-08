@@ -73,10 +73,13 @@ External Message Modification Modules
 The external plugin will use stdin to receive the message that it potentially
 can modify. The message will be LF-terminated, and no LF must be present within
 the message itself.  By default, the MSG part of the message is provided as input.
-The "interface.input" parameter can be used to modify this. It currently support
-either "msg" (the default) or "rawmsg", which is the complete message (including
-header) as received by rsyslog. In the future, the value "json" will permit to 
-receive a JSON encoded copy of the message.
+The "interface.input" parameter can be used to modify this. It may has the following
+values:
+
+* "msg" (the default)
+* "rawmsg", which is the complete message (including header) as received by rsyslog
+* "json", which is the complete message object (with all properties broken
+  out) as a JSON object string. This is the "jsonmesg" dynamic message property.
 
 **Note**: if multi-line messages are to be processed, JSON representation **must**
 be used, otherwise errors will happen.

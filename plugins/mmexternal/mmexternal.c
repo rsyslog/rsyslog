@@ -440,16 +440,17 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 	int writeOffset;
 	char errStr[1024];
 	uchar msgStr[4096];
-	uchar *inputstr; /* string to be processed by external program */
+	const uchar *inputstr; /* string to be processed by external program */
 	DEFiRet;
 	
 	if(pWrkrData->pData->inputProp == INPUT_MSG) {
 		inputstr = getMSG(pMsg);
 		lenWrite = getMSGLen(pMsg);
 	} else if(pWrkrData->pData->inputProp == INPUT_RAWMSG) {
-		getRawMsg(pMsg, &inputstr, &lenWrite);
+		getRawMsg(pMsg, (uchar**)&inputstr, &lenWrite);
 	} else  {
-		DBGPRINTF("DDDDD: JSON mode not yet supported!\n");
+		inputstr = msgGetJSONMESG(pMsg);
+		lenWrite = strlen((const char*)inputstr);
 	}
 	lenWrite = snprintf((char*)msgStr, sizeof(msgStr), "%s\n", inputstr); // TODO: make this more solid!
 	writeOffset = 0;

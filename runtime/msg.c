@@ -1935,8 +1935,8 @@ void MsgSetParseSuccess(msg_t * const pMsg, int bSuccess)
 
 
 /* return full message as a json string */
-static const uchar*
-getJSONMESG(msg_t *__restrict__ const pMsg)
+const uchar*
+msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 {
 	struct json_object *json;
 	struct json_object *jval;
@@ -3044,7 +3044,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getMSGID(pMsg);
 			break;
 		case PROP_JSONMESG:
-			pRes = (uchar*)getJSONMESG(pMsg);
+			pRes = (uchar*)msgGetJSONMESG(pMsg);
 			break;
 #ifdef USE_LIBUUID
 		case PROP_UUID:
