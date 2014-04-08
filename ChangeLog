@@ -6,6 +6,15 @@ Version 8.3.0 [v8-stable] 2014-04-??
   see also:
   http://kb.monitorware.com/problem-with-field-based-extraction-t12299.html
 ---------------------------------------------------------------------------
+Version 8.2.1 [v8-stable] 2014-04-??
+- doc is no longer shipped as part of the rsyslog tarball
+  Instead, the rsyslog-doc project creates its own tarball. This is the
+  result of a mailing list discussion after the 8.2.0 release with a
+  tarball-in-tarball approach, which was disliked by almost all distro
+  maintainers. This move also has the advantage of de-coupling the
+  release cycles of both projects a bit (which turned out to be a bit
+  problematic in practice).
+---------------------------------------------------------------------------
 Version 8.2.0 [v8-stable] 2014-04-02
 This starts a new stable branch based on 8.1.6 plus the following changes:
 - we now use doc from the rsyslog-doc project
