@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-stable] 2014-04-??
+- external message modification modules are now supported
+  They are bound via the new native module "mmexternal". Also, a sample
+  skeleton for an external python message modification module has been
+  added.
 - new $jsonmesg property with JSON representation of whole message object
   closes: https://github.com/rsyslog/rsyslog/issues/19
 - improved error message for invalid field extraction in string template
