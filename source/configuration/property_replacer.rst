@@ -156,6 +156,24 @@ trying to filter messages based on where they originated - e.g. locally
 generated messages ("rsyslogd", "imuxsock", "imklog") should go to a
 different place than messages generated somewhere.
 
+**jsonmesg**
+
+*Available since rsyslog 8.3.0*
+
+The whole message object as JSON representation. Note that the JSON
+string will *not* include and LF and it will contain *all other message
+properties* specified here as respective JSON containers. It also inlcudes
+all message variables in the "$!" subtree (this may be null if none are
+present).
+
+This property is primarily meant as an interface to other systems and
+tools that want access to the full property set (namely external
+plugins). Note that it contains the same data items potentially multiple
+times. For example, parts of the syslog tag will by containened in the
+rawmsg, syslogtag, and programname properties. As such, this property
+has some additional overhead. Thus, it is suggested to be used only
+when there is actual need for it.
+
 **$bom**
 
 The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
@@ -473,7 +491,7 @@ site <http://www.rsyslog.com/>`_\ ]
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008, 2009 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. 
 
