@@ -1,25 +1,28 @@
-`back to rsyslog module overview <rsyslog_conf_modules.html>`_
+imudp: UDP Syslog Input Module
+==============================
 
-UDP Syslog Input Module
-=======================
-
-===========================  ======================
+===========================  ===========================================================================
 **Module Name:**             **imudp**
-**Author:**                  Rainer Gerhards <rgerhards@adiscon.com>
-===========================  ======================
-
-**Description**:
+**Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
 Provides the ability to receive syslog messages via UDP.
 
 Multiple receivers may be configured by specifying multiple input
 statements.
 
-**Configuration Parameters**:
+Note that in order to enable UDP reception, Firewall rules probably
+need to be modified as well. Also, SELinux may need additional rules.
 
-**Module Parameters**:
+Configuration Parameters
+------------------------
 
--  **TimeRequery** <nbr-of-times>
+Module Parameters
+^^^^^^^^^^^^^^^^^
+
+.. function::  TimeRequery <nbr-of-times>
+
+   *Default: 2*
 
    This is a performance optimization. Getting the system time is very
    costly. With this setting, imudp can be instructed to obtain the
@@ -43,18 +46,24 @@ statements.
    However, we advise not to set the "timeRequery" parameter to a large
    value (larger than 10) if input batches are used.
 
--  **SchedulingPolicy** <rr/fifo/other>
+.. function::  SchedulingPolicy <rr/fifo/other>
+
+   *Default: unset*
 
    Can be used the set the scheduler priority, if the necessary
    functionality is provided by the platform. Most useful to select
    "fifo" for real-time processing under Linux (and thus reduce chance
    of packet loss).
 
--  **SchedulingPriority** <number>
+.. function::  SchedulingPriority <number>
+
+   *Default: unset*
 
    Scheduling priority to use.
 
--  **batchSize** <number>
+.. function::  batchSize <number>
+
+   *Default: 32*
 
    This parameter is only meaningful if the system support recvmmsg()
    (newer Linux OSs do this). The parameter is silently ignored if the
@@ -69,7 +78,12 @@ statements.
    it above a value of 128, except if experimental results show that
    this is useful.
 
--  **threads** <number> (default 1), available since 7.5.5
+.. function::  threads <number>
+
+   *Available since: 7.5.5*
+
+   *Default: 1*
+
    Number of worker threads to process incoming messages. These threads
    are utilized to pull data off the network. On a busy system,
    additional threads (but not more than there are CPUs/Cores) can help
@@ -79,15 +93,21 @@ statements.
    set to 32. It may increase in the future when massive multicore
    processors become available.
 
-**Input Parameters**:
+Input Parameters
+^^^^^^^^^^^^^^^^
 
--  **Address** <IP>
+.. function::  Address <IP>
 
-   local IP address (or name) the UDP listens should bind to
+   *Default: \**
 
--  **Port** <port>
+   Local IP address (or name) the UDP server should bind to. Use \"*"
+   to bind to all of the machine's addresses.
 
-   default 514, start UDP server on this port. Either a single port can
+.. function::  Port <port>
+
+   *Default: 514*
+
+   Specifies the port the server shall listen to.. Either a single port can
    be specified or an array of ports. If multiple ports are specified, a
    listener will be automatically started for each port. Thus, no
    additional inputs need to be configured.
@@ -96,23 +116,37 @@ statements.
 
    Array of ports: Port=["514","515","10514","..."]
 
--  **Ruleset** <ruleset>
+.. function::  Ruleset <ruleset>
+
+   *Default: RSYSLOG_DefaultRuleset*
 
    Binds the listener to a specific `ruleset <../multi_ruleset.html>`_.
 
--  **RateLimit.Interval** [number] - (available since 7.3.1) specifies
+.. function::  RateLimit.Interval [number]
+   
+   *Available since: 7.3.1*
 
-   the rate-limiting interval in seconds. Default value is 0, which
-   turns off rate limiting. Set it to a number of seconds (5
-   recommended) to activate rate-limiting.
+   *Default: 0*
 
--  **RateLimit.Burst** [number] - (available since 7.3.1) specifies the
+   The rate-limiting interval in seconds. Value 0 turns off rate limiting.
+   Set it to a number of seconds (5 recommended) to activate rate-limiting.
 
-   rate-limiting burst in number of messages. Default is 10,000.
+.. function::  RateLimit.Burst [number]
 
--  **InputName** [name] - (available since 7.3.9) specifies the value of
+   *Available since: 7.3.1*
 
-   the inputname. In older versions, this was always "imudp" for all
+   *Default: 10000*
+
+   Specifies the rate-limiting burst in number of messages.
+
+.. function::  InputName [name]
+
+   *Available since: 7.3.9*
+
+   *Default: imudp*
+
+   specifies the value of the inputname. In older versions, this was always
+   "imudp" for all
    listeners, which still is the default. Starting with 7.3.9 it can be
    set to different values for each listener. Note that when a single
    input statement defines multipe listner ports, the inputname will be
@@ -123,9 +157,13 @@ statements.
    string. This is primarily meant to be used togehter with
    "InputName.AppendPort" to set the inputname equal to the port.
 
--  **InputName.AppendPort** [on/**off**] - (available since 7.3.9)
+.. function::  InputName.AppendPort [on/off]
 
-   appends the port the the inputname. Note that when no inputname is
+   *Available since: 7.3.9*
+
+   *Default: off*
+
+   Appends the port the the inputname. Note that when no inputname is
    specified, the default of "imudp" is used and the port is appended to
    that default. So, for example, a listner port of 514 in that case
    will lead to an inputname of "imudp514". The ability to append a port
@@ -133,7 +171,9 @@ statements.
    each of the inputnames shall be unique. Note that there currently is
    no differentiation between IPv4/v6 listeners on the same port.
 
--  **defaultTZ** <timezone-info>
+.. function::  defaultTZ <timezone-info>
+
+   *Default: unset*
 
    This is an **experimental** parameter; details may change at any
    time and it may also be discoutinued without any early warning.
@@ -148,10 +188,14 @@ statements.
    them malformed timestamps and rsyslogd segfaults. This will obviously
    be changed at the time this feature becomes non-experimental.
 
--  **rcvbufSize** [size] - (available since 7.5.3) This request a socket
+.. function::  rcvbufSize [size]
 
-   receive buffer of specific size from the operating system. It is an
-   expert parameter, which should only be changed for a good reason.
+   *Available since: 7.5.3*
+
+   *Default: unset*
+
+   This request a socket receive buffer of specific size from the operating system. It
+   is an expert parameter, which should only be changed for a good reason.
    Note that setting this parameter disables Linux auto-tuning, which
    usually works pretty well. The default value is 0, which means "keep
    the OS buffer size unchanged". This is a size value. So in addition
@@ -163,20 +207,23 @@ statements.
    setsockopt() call with SO\_RCVBUF (and SO\_RCVBUFFORCE if it is
    available).
 
-**See Also**
+See Also
+--------
 
 -  Description of `rsyslog statistic
-   counters <http://www.rsyslog.com/rsyslog-statistic-counter/>`_ This
-   also describes all imudp counters.
+   counters <http://www.rsyslog.com/rsyslog-statistic-counter/>`_.
+   This also describes all imudp counters.
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+------------------
 
 -  Scheduling parameters are set **after** privileges have been dropped.
    In most cases, this means that setting them will not be possible
    after privilege drop. This may be worked around by using a
    sufficiently-privileged user account.
 
-**Samples:**
+Samples
+-------
 
 This sets up an UPD server on port 514:
 
@@ -201,8 +248,8 @@ number:
 ::
 
     module(load="imudp")
-    input(type="imudp" port=["10514","10515","10516"] inputname="udp"
-          inputname.appendPort="on")
+    input(type="imudp" port=["10514","10515","10516"]
+          inputname="udp" inputname.appendPort="on")
 
 The next example is almost equal to the previous one, but now the
 inputname property will just be set to the port number. So if a message
@@ -213,10 +260,11 @@ that we set the inputname to the empty string.
 ::
 
     module(load="imudp")
-    input(type="imudp" port=["10514","10515","10516"] inputname=""
-          inputname.appendPort="on")
+    input(type="imudp" port=["10514","10515","10516"]
+          inputname="" inputname.appendPort="on")
 
-**Legacy Configuration Directives**:
+Legacy Configuration Directives
+-------------------------------
 
 Multiple receivers may be configured by specifying $UDPServerRun
 multiple times.
@@ -242,7 +290,8 @@ multiple times.
 
    equivalent to: SchedulingPriority
 
-**Legacy Sample:**
+Legacy Sample
+^^^^^^^^^^^^^
 
 This sets up an UPD server on port 514:
 
