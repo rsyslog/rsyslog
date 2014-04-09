@@ -18,7 +18,7 @@
  *
  * CDDL HEADER END
  */
-/* Portions Copyright 2010 by Rainer Gerhards and Adiscon
+/* Portions Copyright 2010-2014 by Rainer Gerhards and Adiscon
  */
 /*
  * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
@@ -39,6 +39,7 @@
  * software developed by the University of California, Berkeley, and its
  * contributors.
  */
+#include "config.h"
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
