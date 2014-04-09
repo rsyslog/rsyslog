@@ -154,7 +154,7 @@ Input Parameters
    use "InputName.AppendPort" to make them unique. Note that the
    "InputName" parameter can be an empty string. In that case, the
    corresponding inputname property will obviously also be the empty
-   string. This is primarily meant to be used togehter with
+   string. This is primarily meant to be used together with
    "InputName.AppendPort" to set the inputname equal to the port.
 
 .. function::  InputName.AppendPort [on/off]
@@ -266,29 +266,24 @@ that we set the inputname to the empty string.
 Legacy Configuration Directives
 -------------------------------
 
+Legacy configuration parameters should **not** be used when crafting new
+configuration files. It is easy to get things wrong with them.
+
+====================================== ==================== =======================
+Directive                              Equivalent Parameter Requires
+====================================== ==================== =======================
+$UDPServerTimeRequery <nbr-of-times>   *TimeRequery*
+$IMUDPSchedulingPolicy <rr/fifo/other> *SchedulingPolicy*   4.7.4+, 5.7.3+, 6.1.3+
+$IMUDPSchedulingPriority <number>      *SchedulingPriority* 4.7.4+, 5.7.3+, 6.1.3+
+$UDPServerAddress <IP>                 Address              
+$UDPServerRun <port>                   Port
+$InputUDPServerBindRuleset <ruleset>   Ruleset              5.3.2+
+====================================== ==================== =======================
+
+Note: module parameters are given in *italics*. All others are input paramters.
+
 Multiple receivers may be configured by specifying $UDPServerRun
 multiple times.
-
--  $UDPServerAddress <IP>
-
-   equivalent to: Address
--  $UDPServerRun <port>
-
-   equivalent to: Port
--  $UDPServerTimeRequery <nbr-of-times>
-
-   equivalent to: TimeRequery
--  $InputUDPServerBindRuleset <ruleset> Available since 5.3.2+
-
-   equivalent to: Ruleset
--  $IMUDPSchedulingPolicy <rr/fifo/other> Available since 4.7.4+,
-   5.7.3+, 6.1.3+.
-
-   equivalent to: SchedulingPolicy
--  $IMUDPSchedulingPriority <number> Available since 4.7.4+, 5.7.3+,
-   6.1.3+.
-
-   equivalent to: SchedulingPriority
 
 Legacy Sample
 ^^^^^^^^^^^^^
