@@ -3,11 +3,11 @@
 UDP Syslog Input Module
 =======================
 
-**Module Name:    imudp**
-
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Multi-Ruleset Support:**\ since 5.3.2
+===========================  ======================
+**Module Name:**             **imudp**
+**Author:**                  Rainer Gerhards <rgerhards@adiscon.com>
+**Multi-Ruleset Support:**   since 5.3.2
+===========================  ======================
 
 **Description**:
 
@@ -203,7 +203,10 @@ multiple times.
 
 This sets up an UPD server on port 514:
 
-$ModLoad imudp # needs to be done just once $UDPServerRun 514
+::
+
+   $ModLoad imudp # needs to be done just once
+   $UDPServerRun 514
 
 [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
