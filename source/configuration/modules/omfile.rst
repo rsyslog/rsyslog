@@ -5,7 +5,7 @@ File Output Module
 
 **Module Name:    omfile**
 
-**Author:**\ Rainer Gerhards <rgergards@adiscon.com>
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
 **Description**:
 
@@ -193,7 +193,7 @@ module. It is a built-in module that does not need to be loaded.
    is one provider called "`gt <sigprov_gt.html>`_\ ".
 -  **Cry.Provider**\ [ProviderName]
     Selects a crypto provider for log encryption. Currently, there only
-   is one provider called "`gcry <cryprov_gcry.html>`_\ ".
+   is one provider called "`gcry <../cryprov_gcry.html>`_\ ".
 
 **See Also**
 
