@@ -1,8 +1,8 @@
 Compatibility Notes for rsyslog v3
 ==================================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2008-03-28)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2008-03-28)*
 
 Rsyslog aims to be a drop-in replacement for sysklogd. However, version
 3 has some considerable enhancements, which lead to some backward
@@ -34,14 +34,14 @@ It is suggested that input modules be loaded in the top part of the
 config file. Here is an example, also highlighting the most important
 modules:
 
-**$ModLoad immark # provides --MARK-- message capability
- $ModLoad imudp # provides UDP syslog reception
- $ModLoad imtcp # provides TCP syslog reception
-**\ **$ModLoad imgssapi # provides GSSAPI syslog reception
-**\ **$ModLoad imuxsock # provides support for local system logging
-(e.g. via logger command)
- $ModLoad imklog # provides kernel logging support (previously done by
-rklogd)**
+::
+
+  $ModLoad immark # provides --MARK-- message capability
+  $ModLoad imudp # provides UDP syslog reception
+  $ModLoad imtcp # provides TCP syslog reception
+  $ModLoad imgssapi # provides GSSAPI syslog reception
+  $ModLoad imuxsock # provides support for local system logging (e.g. via logger command)
+  $ModLoad imklog # provides kernel logging support (previously done by rklogd)
 
 Command Line Options
 --------------------
@@ -96,8 +96,10 @@ The -m command line option is emulated in compatibiltiy mode. To replace
 it, use the following config directives (compatibility mode
 auto-generates them):
 
-**$ModLoad immark
- $MarkMessagePeriod 1800 # 30 minutes**
+::
+
+  $ModLoad immark
+  $MarkMessagePeriod 1800 # 30 minutes
 
 -r Option
 ---------
@@ -111,10 +113,11 @@ directive.
 The following example configures an UDP syslog server at the local
 address 192.0.2.1 on port 514:
 
-**$ModLoad imudp
- $UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun
-directive!
- $UDPServerRun 514**
+::
+
+  $ModLoad imudp
+  $UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!
+  $UDPServerRun 514
 
 "$UDPServerAddress \*" means listen on all local interfaces. This is the
 default if no directive is specified.
@@ -122,12 +125,13 @@ default if no directive is specified.
 Please note that now multiple listeners are supported. For example, you
 can do the following:
 
-**$ModLoad imudp
- $UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun
-directive!
- $UDPServerRun 514
- $UDPServerAddress \* # all local interfaces
- $UDPServerRun 1514**
+::
+
+  $ModLoad imudp
+  $UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!
+  $UDPServerRun 514
+  $UDPServerAddress \* # all local interfaces
+  $UDPServerRun 1514
 
 These config file settings run two listeners: one at 192.0.2.1:514 and
 one on port 1514, which listens on all local interfaces.
@@ -149,7 +153,9 @@ klogd
 klogd has (finally) been replaced by a loadable input module. To enable
 klogd functionality, do
 
-**$ModLoad imklog**
+::
+
+  $ModLoad imklog
 
 Note that this can not be handled by the compatibility layer, as klogd
 was a separate binary.A limited set of klogd command line settings is
@@ -191,7 +197,9 @@ great high-precision time stamps, which greatly aid in getting the right
 sequence of logging events. If you do not like that, you can easily turn
 them off by placing
 
-``$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat``
+::
+
+  $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
 
 right at the start of your rsyslog.conf. This will use the previous
 format. Please note that the name is case-sensitive and must be
@@ -219,9 +227,10 @@ need to be explicitely enabled. To make this as painless as possible,
 rsyslog comes with a canned template that contains everything necessary.
  To enable high-precision timestamps, just use:
 
-``$ActionForwardDefaultTemplate RSYSLOG_ForwardFormat # for plain TCP and UDP``
+::
 
-``$ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFormat # for GSS-API``
+  $ActionForwardDefaultTemplate RSYSLOG_ForwardFormat # for plain TCP and UDP
+  $ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFormat # for GSS-API
 
 And, of course, you can always set different forwarding formats by just
 specifying the right template.
