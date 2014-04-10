@@ -1,8 +1,8 @@
 Compatibility Notes for rsyslog v4
 ==================================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2009-07-15)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2009-07-15)*
 
 The changes introduced in rsyslog v4 are numerous, but not very
 intrusive. This document describes things to keep in mind when moving
@@ -115,10 +115,16 @@ Note: as always documented, outchannels are an experimental feature that
 may be removed and/or changed in the future. There is one concrete
 change done starting with 4.6.7: let's assume an outchannel "mychannel"
 was defined. Then, this channel could be used inside an
-`` *.* $mychannel`` This is still supported and will remain to be
+
+\*.\* $mychannel 
+
+This is still supported and will remain to be
 supported in v4. However, there is a new variant which explicitely tells
 this is to be handled by omfile. This new syntax is as follows:
-`` *.* :omfile:$mychannel`` Note that future versions, specifically
+
+\*.\* :omfile:$mychannel 
+
+Note that future versions, specifically
 starting with v6, the older syntax is no longer supported. So users are
 strongly advised to switch to the new syntax. As an aid to the
 conversion process, rsyslog 4.7.4 and above issue a warning message if
