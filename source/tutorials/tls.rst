@@ -1,9 +1,8 @@
 Encrypting Syslog Traffic with TLS (SSL)
 ========================================
 
-Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2008-05-06)
+*Written by* `Rainer Gerhards  <http://www.gerhards.net/rainer>`_
+*(2008-05-06)*
 
 Abstract
 --------
@@ -119,8 +118,6 @@ To configure the server, you need to tell it where are its certificate
 files, to use the gtls driver and start up a listener. This is done as
 follows:
 
-    ````
-
     ::
 
         # make gtls driver the default
@@ -214,7 +211,7 @@ itself can (and must) be distributed. To generate it, do the following:
 
        certtool --generate-privkey --outfile ca-key.pem
 
-    This takes a short while. Be sure to do some work on your
+   This takes a short while. Be sure to do some work on your
    workstation, it waits for radom input. Switching between windows is
    sufficient ;)
 
@@ -235,7 +232,7 @@ itself can (and must) be distributed. To generate it, do the following:
 #. You need to distribute this certificate to all peers and you need to
    point to it via the $DefaultNetstreamDriverCAFile config directive.
    All other certificates will be issued by this CA.
-    Important: do only distribute the ca.pem, NOT ca-key.pem (the
+   Important: do only distribute the ca.pem, NOT ca-key.pem (the
    private key). Distributing the CA private key would totally breach
    security as everybody could issue new certificates on the behalf of
    this CA.
@@ -338,16 +335,15 @@ me know <mailto:rgerhards@adiscon.com>`_.
 Revision History
 ----------------
 
--  2008-05-06 \* `Rainer Gerhards <http://www.gerhards.net/rainer>`_ \*
+-  2008-05-06 \* `Rainer Gerhards`_ \*
    Initial Version created
--  2008-05-26 \* `Rainer Gerhards <http://www.gerhards.net/rainer>`_ \*
+-  2008-05-26 \* `Rainer Gerhards`_ \*
    added information about certificates
 
 Copyright
 ---------
 
-Copyright (c) 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
+Copyright (c) 2008-2014 `Rainer Gerhards`_ and
 `Adiscon <http://www.adiscon.com/en/>`_.
 
 Permission is granted to copy, distribute and/or modify this document
@@ -357,12 +353,4 @@ Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
 copy of the license can be viewed at
 `http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
- Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.
+[`rsyslog site <http://www.rsyslog.com/>`_\ ]
