@@ -12,6 +12,10 @@ Version 8.3.0 [v8-devel] 2014-04-10
   see also:
   http://kb.monitorware.com/problem-with-field-based-extraction-t12299.html
 - fix build problems on Solaris
+- NOTE: a json-c API that we begun to use requires the compiler to be in
+  c99 mode. By default, we select it automatically. If you modify this and
+  use gcc, be sure to include "-std=c99" in your compiler flags. This seems
+  to be necessary only for older versions of gcc.
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-??
 - doc is no longer shipped as part of the rsyslog tarball
