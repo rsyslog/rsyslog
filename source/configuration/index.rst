@@ -45,3 +45,4 @@ otherwise the newly added configurations settings will not be loaded.
    modules
    global/index
    ipv6
+   cryprov_gcry

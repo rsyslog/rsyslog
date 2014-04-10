@@ -134,7 +134,7 @@ Action Directives
 
 .. function:: Ruleset <ruleset> 
 
-   Binds the listener to a specific :doc:`ruleset <multi_ruleset>`.
+   Binds the listener to a specific :doc:`ruleset <../multi_ruleset>`.
 
 Caveats/Known Bugs
 ------------------

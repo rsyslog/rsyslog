@@ -2,7 +2,7 @@ Variable (Property) types
 =========================
 
 All rsyslog properties (see the :doc:`property
-replacer <property_replacer>` page for a list) can be used in
+replacer <../configuration/property_replacer>` page for a list) can be used in
 RainerScript. In addition, it also supports local variables. Local
 variables are local to the current message, but are NOT message
 properties (e.g. the "$!" all JSON property does not contain them).
