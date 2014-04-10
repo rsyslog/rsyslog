@@ -27,17 +27,17 @@ wiki <http://wiki.rsyslog.com/index.php/Security#Dropping_Privileges>`_.
 **Configuration Directives**:
 
 -  **$PrivDropToUser**
-    Name of the user rsyslog should run under after startup. Please note
+   Name of the user rsyslog should run under after startup. Please note
    that this user is looked up in the system tables. If the lookup
    fails, privileges are NOT dropped. Thus it is advisable to use the
    less convenient $PrivDropToUserID directive. If the user id can be
    looked up, but can not be set, rsyslog aborts.
 -  **$PrivDropToUserID**
-    Much the same as $PrivDropToUser, except that a numerical user id
+   Much the same as $PrivDropToUser, except that a numerical user id
    instead of a name is specified.Thus, privilege drop will always
    happen. rsyslogd aborts.
 -  **$PrivDropToGroup**
-    Name of the group rsyslog should run under after startup. Please
+   Name of the group rsyslog should run under after startup. Please
    note that this user is looked up in the system tables. If the lookup
    fails, privileges are NOT dropped. Thus it is advisable to use the
    less convenient $PrivDropToGroupID directive. Note that all
@@ -45,7 +45,7 @@ wiki <http://wiki.rsyslog.com/index.php/Security#Dropping_Privileges>`_.
    is specified. If the group id can be looked up, but can not be set,
    rsyslog aborts.
 -  **$PrivDropToGroupID**
-    Much the same as $PrivDropToGroup, except that a numerical group id
+   Much the same as $PrivDropToGroup, except that a numerical group id
    instead of a name is specified. Thus, privilege drop will always
    happen.
 

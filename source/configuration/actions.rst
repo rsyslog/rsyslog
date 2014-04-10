@@ -164,7 +164,7 @@ Templates can be used with many actions. If used, the specified template
 is used to generate the message content (instead of the default
 template). To specify a template, write a semicolon after the action
 value immediately followed by the template name.
- Beware: templates MUST be defined BEFORE they are used. It is OK to
+Beware: templates MUST be defined BEFORE they are used. It is OK to
 define some templates, then use them in selector lines, define more
 templates and use use them in the following selector lines. But it is
 NOT permitted to use a template in a selector line that is above its
@@ -200,7 +200,7 @@ file in the current directory. Please note that rsyslogd usually changes
 its working directory to the root, so relative file names must be tested
 with care (they were introduced primarily as a debugging vehicle, but
 may have useful other applications as well).
- You may prefix each entry with the minus "-'' sign to omit syncing the
+You may prefix each entry with the minus "-'' sign to omit syncing the
 file after every logging. Note that you might lose information if the
 system crashes right behind a write attempt. Nevertheless this might
 give you back some performance, especially if you run programs that use
@@ -429,21 +429,23 @@ probably be developed as plugins. By default, a
 `MonitorWare <http://www.monitorware.com/>`_-compatible schema is
 required for this to work. You can create that schema with the
 createDB.SQL file that came with the rsyslog package. You can also
- use any other schema of your liking - you just need to define a proper
+use any other schema of your liking - you just need to define a proper
 template and assign this template to the action.
- The database writer is called by specifying a greater-then sign (">")
+The database writer is called by specifying a greater-then sign (">")
 in front of the database connect information. Immediately after that
- sign the database host name must be given, a comma, the database name,
+sign the database host name must be given, a comma, the database name,
 another comma, the database user, a comma and then the user's password.
 If a specific template is to be used, a semicolon followed by the
 template name can follow the connect information. This is as follows:
- >dbhost,dbname,dbuser,dbpassword;dbtemplate
+>dbhost,dbname,dbuser,dbpassword;dbtemplate
 
 **Important: to use the database functionality, the MySQL output module
 must be loaded in the config file** BEFORE the first database table
 action is used. This is done by placing the
 
-``$ModLoad ommysql``
+::
+
+  $ModLoad ommysql
 
 directive some place above the first use of the database write (we
 recommend doing at the the beginning of the config file).
