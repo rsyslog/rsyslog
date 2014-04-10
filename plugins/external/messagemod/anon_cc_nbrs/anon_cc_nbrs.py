@@ -1,7 +1,8 @@
 #! /usr/bin/python
 
-"""A skeleton for a python rsyslog message modification plugin
-   Copyright (C) 2014 by Adiscon GmbH
+"""A message modification plugin to anonymize credit card numbers.
+
+   Copyright (C) 2014 by Adiscon GmbH and Peter Slavov
 
    This file is part of rsyslog.
 

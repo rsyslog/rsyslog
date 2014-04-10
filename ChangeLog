@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-stable] 2014-04-??
+- new plugin for anonymizing credit card numbers
+  Thanks to Peter Slavov for providing the code.
 - external message modification modules are now supported
   They are bound via the new native module "mmexternal". Also, a sample
   skeleton for an external python message modification module has been
