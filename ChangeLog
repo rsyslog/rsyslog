@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.3.0 [v8-stable] 2014-04-??
+Version 8.3.0 [v8-devel] 2014-04-10
 - new plugin for anonymizing credit card numbers
   Thanks to Peter Slavov for providing the code.
 - external message modification modules are now supported
@@ -11,6 +11,7 @@ Version 8.3.0 [v8-stable] 2014-04-??
 - improved error message for invalid field extraction in string template
   see also:
   http://kb.monitorware.com/problem-with-field-based-extraction-t12299.html
+- fix build problems on Solaris
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-??
 - doc is no longer shipped as part of the rsyslog tarball
