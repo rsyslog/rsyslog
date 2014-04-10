@@ -16,8 +16,6 @@ You can also browse the following online resources:
 -  `syslog device configuration
    guide <http://www.monitorware.com/en/syslog-enabled-products/>`_
    (off-site)
--  `rsyslog discussion forum - use this for technical
-   support <http://www.rsyslog.com/PNphpBB2.phtml>`_
 -  `deutsches rsyslog
    forum <http://kb.monitorware.com/rsyslog-f49.html>`_ (forum in German
    language)
