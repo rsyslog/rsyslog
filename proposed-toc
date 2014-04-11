@@ -1,0 +1,41 @@
+This is a proposal for a future TOC. It is put into the repo in order
+to facilitate discussion of how it finally shall look. 
+
+* What is rsyslog?
+
+* Overview and installation
+** Message flow in rsyslog
+** Legacy configuration format and RainerScript
+** Properties
+** Templates
+** Installation
+*** Packages
+*** Installing from sources
+
+* Input modules
+[list of modules here]
+
+* Message modifier modules
+[list of mm* here; maybe also include parsers and string generators? or
+should they have their own sections?]
+
+* Queues
+** Overview of how queues work (explain in-memory vs disk vs disk-assisted)
+** Main message queue (options go here)
+** Action queues
+
+* Controlling the flow
+** RainerScript (Data types, expressions, functions go here)
+** Filter conditions
+** Variables
+** Rulesets
+
+* General Options
+** the global() object
+** dropping privileges
+
+* Extending rsyslog
+** native plugins (probably with subsections here)
+** external plugins (probably with subsections here)
+
+* Tutorials
