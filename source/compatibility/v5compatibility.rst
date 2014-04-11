@@ -1,8 +1,8 @@
 Compatibility Notes for rsyslog v5
 ==================================
 
-*Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-(2009-07-15)*
+*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*(2009-07-15)*
 
 The changes introduced in rsyslog v5 are numerous, but not very
 intrusive. This document describes things to keep in mind when moving
