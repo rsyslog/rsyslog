@@ -28,39 +28,50 @@ a file. It is expected that the users customizes both messages. In an
 effort to support cell phones (including SMS gateways), there is an
 option to turn off the body part at all. This is considered to be useful
 to send a short alert to a pager-like device.
- It is highly recommended to use the  "$ActionExecOnlyOnceEveryInterval
+It is highly recommended to use the  "$ActionExecOnlyOnceEveryInterval
 <seconds>" directive to limit the amount of mails that potentially be
 generated. With it, mails are sent at most in a <seconds> interval. This
 may be your life safer. And remember that an hour has 3,600 seconds, so
 if you would like to receive mails at most once every two hours, include
 a "$ActionExecOnlyOnceEveryInterval 7200" immediately before the ommail
-action. Messages sent more frequently are simpy discarded.
+action. Messages sent more frequently are simpy discarded. Please note
+that once you used $ACtionExecOnlyOnceEveryInterval, this setting is
+preserved for all other actions as well. As such, it would also apply
+to actions writing to e.g. files and databases after the directive is
+given. This is usually not desired. To prevent it, reset the value
+to zero after the mail action has been defined.
 
 **Configuration Directives**:
 
 -  $ActionMailSMTPServer
-    Name or IP address of the SMTP server to be used. Must currently be
+
+   Name or IP address of the SMTP server to be used. Must currently be
    set. The default is 127.0.0.1, the SMTP server on the local machine.
    Obviously it is not good to expect one to be present on each machine,
    so this value should be specified.
 -  $ActionMailSMTPPort
-    Port number or name of the SMTP port to be used. The default is 25,
+
+   Port number or name of the SMTP port to be used. The default is 25,
    the standard SMTP port.
 -  $ActionMailFrom
-    The email address used as the senders address. There is no default.
+
+   The email address used as the senders address. There is no default.
 -  $ActionMailTo
-    The recipient email addresses. There is no default. To specify
+
+   The recipient email addresses. There is no default. To specify
    multiple recpients, repeat this directive as often as needed. Note:
    **This directive must be specified for each new action and is
    automatically reset.** [Multiple recipients are supported for 3.21.2
    and above.]
 -  $ActionMailSubject
-    The name of the template to be used as the mail subject. If this is
+
+   The name of the template to be used as the mail subject. If this is
    not specified, a more or less meaningless mail subject is generated
    (we don't tell you the exact text because that can change - if you
    want to have something specific, configure it!).
 -  $ActionMailEnableBody
-    Setting this to "off" permits to exclude the actual message body.
+
+   Setting this to "off" permits to exclude the actual message body.
    This may be useful for pager-like devices or cell phone SMS messages.
    The default is "on", which is appropriate for allmost all cases. Turn
    it off only if you know exactly what you do!
@@ -101,25 +112,40 @@ line breaks. A message is sent at most once every 6 hours, any other
 messages are silently discarded (or, to be precise, not being forwarded
 - they are still being processed by the rest of the configuration file).
 
-$ModLoad ommail $ActionMailSMTPServer mail.example.net $ActionMailFrom
-rsyslog@example.net $ActionMailTo operator@example.net $template
-mailSubject,"disk problem on %hostname%" $template mailBody,"RSYSLOG
-Alert\\r\\nmsg='%msg%'" $ActionMailSubject mailSubject # make sure we
-receive a mail only once in six # hours (21,600 seconds ;))
-$ActionExecOnlyOnceEveryInterval 21600 # the if ... then ... mailBody
-mus be on one line! if $msg contains 'hard disk fatal failure' then
-:ommail:;mailBody
+::
+
+  $ModLoad ommail
+  $ActionMailSMTPServer mail.example.net
+  $ActionMailFrom rsyslog@example.net
+  $ActionMailTo operator@example.net $template mailSubject,"disk problem on %hostname%"
+  $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
+  $ActionMailSubject mailSubject
+  # make sure we receive a mail only once in six
+  # hours (21,600 seconds ;))
+  $ActionExecOnlyOnceEveryInterval 21600
+  # the if ... then ... mailBody must be on one line!
+  if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
+  # re-set interval so that other actions are not affected
+  $ActionExecOnlyOnceEveryInterval 0
 
 The sample below is the same, but sends mail to two recipients:
 
-$ModLoad ommail $ActionMailSMTPServer mail.example.net $ActionMailFrom
-rsyslog@example.net $ActionMailTo operator@example.net $ActionMailTo
-admin@example.net $template mailSubject,"disk problem on %hostname%"
-$template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'" $ActionMailSubject
-mailSubject # make sure we receive a mail only once in six # hours
-(21,600 seconds ;)) $ActionExecOnlyOnceEveryInterval 21600 # the if ...
-then ... mailBody mus be on one line! if $msg contains 'hard disk fatal
-failure' then :ommail:;mailBody
+::
+
+  $ModLoad ommail
+  $ActionMailSMTPServer mail.example.net
+  $ActionMailFrom rsyslog@example.net
+  $ActionMailTo operator@example.net
+  $ActionMailTo admin@example.net
+  $template mailSubject,"disk problem on %hostname%" $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
+  $ActionMailSubject mailSubject
+  # make sure we receive a mail only once in six
+  # hours (21,600 seconds ;))
+  $ActionExecOnlyOnceEveryInterval 21600
+  # the if ...  then ... mailBody mus be on one line!
+  if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
+  # re-set interval so that other actions are not affected
+  $ActionExecOnlyOnceEveryInterval 0
 
 A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost "`Why is
@@ -131,6 +157,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
