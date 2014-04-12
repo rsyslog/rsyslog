@@ -42,7 +42,6 @@ otherwise the newly added configurations settings will not be loaded.
    expression
    examples
    modules/index
-   modules
    global/index
    ipv6
    cryprov_gcry
