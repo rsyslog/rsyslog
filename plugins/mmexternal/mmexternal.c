@@ -629,7 +629,7 @@ CODESTARTnewActInst
 				pData->inputProp = INPUT_JSON;
 			else {
 				errmsg.LogError(0, RS_RET_INVLD_INTERFACE_INPUT,
-					"mmexternal: invalid interface.input paramter '%s'",
+					"mmexternal: invalid interface.input parameter '%s'",
 					cstr);
 				ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
 			}
