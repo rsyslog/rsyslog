@@ -228,6 +228,17 @@ File="/var/log/messages")
 
 **Legacy Configuration Directives**:
 
+Note that the legacy configuration parameters do **not** affect
+new-style action definitions via the action() object. This is
+by design. To set default for action() objects, use module parameters
+in the
+
+::
+
+  module(load="builtin:omfile" ...)
+
+object.
+
 -  **$DynaFileCacheSize**
     equivalent to the "dynaFileCacheSize" parameter
 -  **$OMFileZipLevel**
