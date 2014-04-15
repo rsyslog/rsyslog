@@ -58,7 +58,8 @@ and can also be specified as decimal numbers, but don't do that, you
 have been warned. Both facilities and priorities are described in
 syslog(3). The names mentioned below correspond to the similar
 LOG\_-values in /usr/include/syslog.h.
- The facility is one of the following keywords: auth, authpriv, cron,
+
+The facility is one of the following keywords: auth, authpriv, cron,
 daemon, kern, lpr, mail, mark, news, security (same as auth), syslog,
 user, uucp and local0 through local7. The keyword security should not be
 used anymore and mark is only for internal use and therefore should not
@@ -66,19 +67,22 @@ be used in applications. Anyway, you may want to specify and redirect
 these messages here. The facility specifies the subsystem that produced
 the message, i.e. all mail programs log with the mail facility
 (LOG\_MAIL) if they log using syslog.
- The priority is one of the following keywords, in ascending order:
+
+The priority is one of the following keywords, in ascending order:
 debug, info, notice, warning, warn (same as warning), err, error (same
 as err), crit, alert, emerg, panic (same as emerg). The keywords error,
 warn and panic are deprecated and should not be used anymore. The
 priority defines the severity of the message.
- The behavior of the original BSD syslogd is that all messages of the
+
+The behavior of the original BSD syslogd is that all messages of the
 specified priority and higher are logged according to the given action.
 Rsyslogd behaves the same, but has some extensions.
- In addition to the above mentioned names the rsyslogd(8) understands
+
+In addition to the above mentioned names the rsyslogd(8) understands
 the following extensions: An asterisk ("\*'') stands for all facilities
 or all priorities, depending on where it is used (before or after the
 period). The keyword none stands for no priority of the given facility.
- You can specify multiple facilities with the same priority pattern in
+You can specify multiple facilities with the same priority pattern in
 one statement using the comma (",'') operator. You may specify as much
 facilities as you want. Remember that only the facility part from such a
 statement is taken, a priority part would be skipped.
@@ -232,18 +236,21 @@ during that process. So if you use them now, you need to be prepared to
 change your configuration files some time later. However, we try to
 implement the scripting facility as soon as possible (also in respect to
 stage work needed). So the window of exposure is probably not too long.
- Expression based filters are indicated by the keyword "if" in column 1
+
+Expression based filters are indicated by the keyword "if" in column 1
 of a new line. They have this format:
- if expr then action-part-of-selector-line
- "If" and "then" are fixed keywords that mus be present. "expr" is a
+
+if expr then action-part-of-selector-line
+
+"If" and "then" are fixed keywords that mus be present. "expr" is a
 (potentially quite complex) expression. So the `expression
 documentation <expression.html>`_ for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
 "/var/log/logfile" to write to that file).
- A few quick samples:
+A few quick samples:
 
 `` *.* /var/log/file1 # the traditional way if $msg contains 'error' then /var/log/errlog # the expression-based way``
- Right now, you need to specify numerical values if you would like to
+Right now, you need to specify numerical values if you would like to
 check for facilities and severity. These can be found in `RFC
 3164 <http://www.ietf.org/rfc/rfc3164.txt>`_. If you don't like that,
 you can of course also use the textual property - just be sure to use
@@ -253,14 +260,14 @@ local0, start with "DEVNAME" and have either "error1" or "error0" in
 their message content, you could use the following filter:
 
 `` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
- Please note that the above must all be on one line! And if you would
+Please note that the above must all be on one line! And if you would
 like to store all messages except those that contain "error1" or
 "error0", you just need to add a "not":
 
 `` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and not ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
- If you would like to do case-insensitive comparisons, use "contains\_i"
+If you would like to do case-insensitive comparisons, use "contains\_i"
 instead of "contains" and "startswith\_i" instead of "startswith".
- Note that regular expressions are currently NOT supported in
+Note that regular expressions are currently NOT supported in
 expression-based filters. These will be added later when function
 support is added to the expression engine (the reason is that regular
 expressions will be a separate loadable module, which requires some more
