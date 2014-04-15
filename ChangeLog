@@ -4,6 +4,7 @@ Version 8.3.1 [v8-devel] 2014-04-??
 - added plugin to rewrite message facility and/or severity
   Name: fac-sever-rewrite.py
 - bugfix: using UUID property could cause segfault
+- bugfix/mmexternal: memory leak
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-devel] 2014-04-10
 - new plugin for anonymizing credit card numbers

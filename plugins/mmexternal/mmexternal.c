@@ -440,7 +440,7 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 	int writeOffset;
 	char errStr[1024];
 	uchar msgStr[4096];
-	const uchar *inputstr; /* string to be processed by external program */
+	const uchar *inputstr = NULL; /* string to be processed by external program */
 	DEFiRet;
 	
 	if(pWrkrData->pData->inputProp == INPUT_MSG) {
@@ -480,6 +480,7 @@ dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, msg
 	processProgramReply(pWrkrData, pMsg);
 
 finalize_it:
+	free((void*)inputstr);
 	RETiRet;
 }
 
