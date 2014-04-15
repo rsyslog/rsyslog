@@ -3045,6 +3045,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			break;
 		case PROP_JSONMESG:
 			pRes = (uchar*)msgGetJSONMESG(pMsg);
+			*pbMustBeFreed = 1;
 			break;
 #ifdef USE_LIBUUID
 		case PROP_UUID:

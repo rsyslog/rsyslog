@@ -5,6 +5,7 @@ Version 8.3.1 [v8-devel] 2014-04-??
   Name: fac-sever-rewrite.py
 - bugfix: using UUID property could cause segfault
 - bugfix/mmexternal: memory leak
+- bugfix: memory leak when using "jsonmesg" property
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-devel] 2014-04-10
 - new plugin for anonymizing credit card numbers
