@@ -7,6 +7,8 @@ Version 8.2.1 [v8-stable] 2014-04-??
   maintainers. This move also has the advantage of de-coupling the
   release cycles of both projects a bit (which turned out to be a bit
   problematic in practice).
+- bugfix: mmutf8fix did not detect two invalid sequences
+  Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 8.2.0 [v8-stable] 2014-04-02
 This starts a new stable branch based on 8.1.6 plus the following changes:
