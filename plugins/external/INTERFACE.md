@@ -104,7 +104,9 @@ activated. See above for more information.
 Most message properties can be modified. Modifieable are:
 * rawmsg
 * msg
-* syslogtab
+* syslogtag
+* syslogfacility
+* syslogseverity
 * msgid
 * procid
 * structured-data

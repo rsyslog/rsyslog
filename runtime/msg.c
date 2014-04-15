@@ -3901,6 +3901,7 @@ static rsRetVal
 msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json)
 {
 	const char *psz;
+	int val;
 	prop_t *propFromHost = NULL;
 	prop_t *propRcvFromIP = NULL;
 	DEFiRet;
@@ -3921,6 +3922,18 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 	} else if(!strcmp(name, "syslogtag")) {
 		psz = json_object_get_string(json);
 		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "syslogfacility")) {
+		val = json_object_get_int(json);
+		if(val >= 0 && val <= 24)
+			pMsg->iFacility = val;
+		else
+			DBGPRINTF("mmexternal: invalid fac %d requested -- ignored\n", val);
+	} else if(!strcmp(name, "syslogseverity")) {
+		val = json_object_get_int(json);
+		if(val >= 0 && val <= 7)
+			pMsg->iSeverity = val;
+		else
+			DBGPRINTF("mmexternal: invalid fac %d requested -- ignored\n", val);
 	} else if(!strcmp(name, "procid")) {
 		psz = json_object_get_string(json);
 		MsgSetPROCID(pMsg, psz);
