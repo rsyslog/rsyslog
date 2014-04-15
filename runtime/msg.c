@@ -1422,7 +1422,7 @@ static void msgSetUUID(msg_t * const pM)
 	uuid_t uuid;
 	static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
 
-	dbgprintf("[MsgSetUUID] START\n");
+	dbgprintf("[MsgSetUUID] START, lenRes %llu\n", (long long unsigned) lenRes);
 	assert(pM != NULL);
 
 	if((pM->pszUUID = (uchar*) MALLOC(lenRes)) == NULL) {
@@ -1436,8 +1436,8 @@ static void msgSetUUID(msg_t * const pM)
 			pM->pszUUID[byte_nbr * 2 + 1] = hex_char[uuid [byte_nbr] & 15];
 		}
 
+		pM->pszUUID[lenRes-1] = '\0';
 		dbgprintf("[MsgSetUUID] UUID : %s LEN: %d \n", pM->pszUUID, (int)lenRes);
-		pM->pszUUID[lenRes] = '\0';
 	}
 	dbgprintf("[MsgSetUUID] END\n");
 }
