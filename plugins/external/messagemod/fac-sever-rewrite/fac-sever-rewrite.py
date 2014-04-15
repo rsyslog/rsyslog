@@ -6,7 +6,7 @@
          probably be a good idea to add command line options for the most
 	 common cases. Anyone up for that?
 
-   Copyright (C) 2014 by Adiscon GmbH and Peter Slavov
+   Copyright (C) 2014 by Adiscon GmbH
 
    This file is part of rsyslog.
 
