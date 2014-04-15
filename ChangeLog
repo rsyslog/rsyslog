@@ -1,3 +1,8 @@
+---------------------------------------------------------------------------
+Version 8.3.1 [v8-devel] 2014-04-??
+- external message modification interface now support modifying message PRI
+- added plugin to rewrite message facility and/or severity
+  Name: fac-sever-rewrite.py
 - bugfix: using UUID property could cause segfault
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-devel] 2014-04-10
