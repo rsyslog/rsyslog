@@ -254,9 +254,14 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 				; /* nothing to do, all well */
 			} else if((c & 0xe0) == 0xc0) {
 				/* 2-byte sequence */
-				strtIdx = i;
-				seqLen = bytesLeft = 1;
-				codepoint = c & 0x1f;
+				/* 0xc0 and 0xc1 are illegal */
+				if(c == 0xc0 || c == 0xc1) {
+					msg[i] = pData->replChar;
+				} else {
+					strtIdx = i;
+					seqLen = bytesLeft = 1;
+					codepoint = c & 0x1f;
+				}
 			} else if((c & 0xf0) == 0xe0) {
 				/* 3-byte sequence */
 				strtIdx = i;
