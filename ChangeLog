@@ -17,6 +17,11 @@ Version 8.3.1 [v8-devel] 2014-04-??
 - bugfix: memory leak when using "jsonmesg" property
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.
+- bugfix: build problems with lexer.l on some platforms
+  For some reason, the strdup() prototype and others are missing. I admit
+  that I don't know why, as this happens only in 8.3.0+ and there is no
+  indication of changes to the affected files. In any case, we need to
+  fix this, and the current solution works at least as an interim one.
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-devel] 2014-04-10
 - new plugin for anonymizing credit card numbers

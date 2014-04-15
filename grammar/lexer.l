@@ -32,6 +32,8 @@
 
 %{
 #include "config.h"
+#include "parserif.h"
+char *strdup(const char*);
 %}
 
 %option noyywrap nodefault case-insensitive yylineno
