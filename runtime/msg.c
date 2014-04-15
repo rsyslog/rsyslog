@@ -2006,8 +2006,12 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	json_object_object_add(json, "msgid", jval);
 
 #ifdef USE_LIBUUID
-	getUUID(pMsg, &pRes, &bufLen);
-	jval = json_object_new_string((char*)pRes);
+	if(pMsg->pszUUID == NULL) {
+		jval = NULL;
+	} else {
+		getUUID(pMsg, &pRes, &bufLen);
+		jval = json_object_new_string((char*)pRes);
+	}
 	json_object_object_add(json, "uuid", jval);
 #endif
 
