@@ -1,4 +1,3 @@
-- bugfix: using UUID property could cause segfault
 ---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-03-??
 - new omfile default module parameters
@@ -12,6 +11,7 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   * dirgroup
   * dirgroupnum
   Thanks to Karol Jurak for the patch.
+- bugfix: using UUID property could cause segfault
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
