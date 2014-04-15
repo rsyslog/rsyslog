@@ -146,7 +146,7 @@ processJSON(instanceData *pData, msg_t *pMsg, char *buf, size_t lenBuf)
 
 			err = pData->tokener->err;
 			if(err != json_tokener_continue)
-				errMsg = json_tokener_errors[err];
+				errMsg = json_tokener_error_desc(err);
 			else
 				errMsg = "Unterminated input";
 		} else if((size_t)pData->tokener->char_offset < lenBuf)
