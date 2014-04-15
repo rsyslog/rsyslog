@@ -15,6 +15,8 @@ Version 8.3.1 [v8-devel] 2014-04-??
 - bugfix: using UUID property could cause segfault
 - bugfix/mmexternal: memory leak
 - bugfix: memory leak when using "jsonmesg" property
+- bugfix: mmutf8fix did not detect two invalid sequences
+  Thanks to Axel Rau for the patch.
 ---------------------------------------------------------------------------
 Version 8.3.0 [v8-devel] 2014-04-10
 - new plugin for anonymizing credit card numbers
