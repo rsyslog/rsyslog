@@ -45,11 +45,13 @@ into rswyslog.
 
 **Sample:**
 
-The following command writes all syslog messages into a file.
+The following config file snippet is used to write execute an external
+message modification module "mmexternal.py". Note that the path to the
+module is specified here. This is necessary if the module is not in the
+default search path.
 
 ::
 
-  module (load="mmexternal")
-  action(type="mmexternal"
-         binary="/pathto/mmexternal.py 
+  module (load="mmexternal") # needs to be done only once inside the config
 
+  action(type="mmexternal" binary="/path/to/mmexternal.py")
