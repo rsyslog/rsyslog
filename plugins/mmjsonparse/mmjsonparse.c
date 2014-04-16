@@ -160,7 +160,7 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 
 			err = pWrkrData->tokener->err;
 			if(err != json_tokener_continue)
-				errMsg = json_tokener_errors[err];
+				errMsg = json_tokener_error_desc(err);
 			else
 				errMsg = "Unterminated input";
 		} else if((size_t)pWrkrData->tokener->char_offset < lenBuf)
