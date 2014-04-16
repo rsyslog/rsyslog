@@ -27,134 +27,108 @@ case-insensitive (prior to 3.17.0, they were case-senstive). Currently
 supported are:
 
 **msg**
+  the MSG part of the message (aka "the message" ;))
 
-the MSG part of the message (aka "the message" ;))
-
-**rawmsg**
-
-the message excactly as it was received from the socket. Should be
-useful for debugging.
+rawmsg
+  the message excactly as it was received from the socket. Should be
+  useful for debugging.
 
 **hostname**
-
-hostname from the message
+  hostname from the message
 
 **source**
-
-alias for HOSTNAME
+  alias for HOSTNAME
 
 **fromhost**
-
-hostname of the system the message was received from (in a relay chain,
-this is the system immediately in front of us and not necessarily the
-original sender). This is a DNS-resolved name, except if that is not
-possible or DNS resolution has been disabled.
+  hostname of the system the message was received from (in a relay chain,
+  this is the system immediately in front of us and not necessarily the
+  original sender). This is a DNS-resolved name, except if that is not
+  possible or DNS resolution has been disabled.
 
 **fromhost-ip**
-
-The same as fromhost, but alsways as an IP address. Local inputs (like
-imklog) use 127.0.0.1 in this property.
+  The same as fromhost, but alsways as an IP address. Local inputs (like
+  imklog) use 127.0.0.1 in this property.
 
 **syslogtag**
-
-TAG from the message
+  TAG from the message
 
 **programname**
-
-the "static" part of the tag, as defined by BSD syslogd. For example,
-when TAG is "named[12345]", programname is "named".
+  the "static" part of the tag, as defined by BSD syslogd. For example,
+  when TAG is "named[12345]", programname is "named".
 
 **pri**
-
-PRI part of the message - undecoded (single value)
+  PRI part of the message - undecoded (single value)
 
 **pri-text**
-
-the PRI part of the message in a textual form with the numerical PRI
-appended in brackes (e.g. "local0.err<133>")
+  the PRI part of the message in a textual form with the numerical PRI
+  appended in brackes (e.g. "local0.err<133>")
 
 **iut**
-
-the monitorware InfoUnitType - used when talking to a
-`MonitorWare <http://www.monitorware.com>`_ backend (also for
-`phpLogCon <http://www.phplogcon.org/>`_)
+  the monitorware InfoUnitType - used when talking to a
+  `MonitorWare <http://www.monitorware.com>`_ backend (also for
+  `Adiscon LogAnalyzer <http://www.phplogcon.org/>`_)
 
 **syslogfacility**
-
-the facility from the message - in numerical form
+  the facility from the message - in numerical form
 
 **syslogfacility-text**
-
-the facility from the message - in text form
+  the facility from the message - in text form
 
 **syslogseverity**
-
-severity from the message - in numerical form
+  severity from the message - in numerical form
 
 **syslogseverity-text**
-
-severity from the message - in text form
+  severity from the message - in text form
 
 **syslogpriority**
-
-an alias for syslogseverity - included for historical reasons (be
-careful: it still is the severity, not PRI!)
+  an alias for syslogseverity - included for historical reasons (be
+  careful: it still is the severity, not PRI!)
 
 **syslogpriority-text**
-
-an alias for syslogseverity-text
+  an alias for syslogseverity-text
 
 **timegenerated**
-
-timestamp when the message was RECEIVED. Always in high resolution
+  timestamp when the message was RECEIVED. Always in high resolution
 
 **timereported**
-
-timestamp from the message. Resolution depends on what was provided in
-the message (in most cases, only seconds)
+  timestamp from the message. Resolution depends on what was provided in
+  the message (in most cases, only seconds)
 
 **timestamp**
-
-alias for timereported
+  alias for timereported
 
 **protocol-version**
-
-The contents of the PROTCOL-VERSION field from IETF draft
-draft-ietf-syslog-protcol
+  The contents of the PROTCOL-VERSION field from IETF draft
+  draft-ietf-syslog-protcol
 
 **structured-data**
-
-The contents of the STRUCTURED-DATA field from IETF draft
-draft-ietf-syslog-protocol
+  The contents of the STRUCTURED-DATA field from IETF draft
+  draft-ietf-syslog-protocol
 
 **app-name**
-
-The contents of the APP-NAME field from IETF draft
-draft-ietf-syslog-protocol
+  The contents of the APP-NAME field from IETF draft
+  draft-ietf-syslog-protocol
 
 **procid**
-
-The contents of the PROCID field from IETF draft
-draft-ietf-syslog-protocol
+  The contents of the PROCID field from IETF draft
+  draft-ietf-syslog-protocol
 
 **msgid**
-
-The contents of the MSGID field from IETF draft
-draft-ietf-syslog-protocol
+  The contents of the MSGID field from IETF draft
+  draft-ietf-syslog-protocol
 
 **inputname**
-
-The name of the input module that generated the message (e.g.
-"imuxsock", "imudp"). Note that not all modules necessarily provide this
-property. If not provided, it is an empty string. Also note that the
-input module may provide any value of its liking. Most importantly, it
-is **not** necessarily the module input name. Internal sources can also
-provide inputnames. Currently, "rsyslogd" is defined as inputname for
-messages internally generated by rsyslogd, for example startup and
-shutdown and error messages. This property is considered useful when
-trying to filter messages based on where they originated - e.g. locally
-generated messages ("rsyslogd", "imuxsock", "imklog") should go to a
-different place than messages generated somewhere.
+  The name of the input module that generated the message (e.g.
+  "imuxsock", "imudp"). Note that not all modules necessarily provide this
+  property. If not provided, it is an empty string. Also note that the
+  input module may provide any value of its liking. Most importantly, it
+  is **not** necessarily the module input name. Internal sources can also
+  provide inputnames. Currently, "rsyslogd" is defined as inputname for
+  messages internally generated by rsyslogd, for example startup and
+  shutdown and error messages. This property is considered useful when
+  trying to filter messages based on where they originated - e.g. locally
+  generated messages ("rsyslogd", "imuxsock", "imklog") should go to a
+  different place than messages generated somewhere.
 
 **jsonmesg**
 
@@ -175,49 +149,39 @@ has some additional overhead. Thus, it is suggested to be used only
 when there is actual need for it.
 
 **$bom**
-
-The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
-templates for RFC5424 support, when the character set is know to be
-Unicode.
-
+  The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
+  templates for RFC5424 support, when the character set is know to be
+  Unicode.
+  
 **$now**
-
-The current date stamp in the format YYYY-MM-DD
+  The current date stamp in the format YYYY-MM-DD
 
 **$year**
-
-The current year (4-digit)
+  The current year (4-digit)
 
 **$month**
-
-The current month (2-digit)
+  The current month (2-digit)
 
 **$day**
-
-The current day of the month (2-digit)
+  The current day of the month (2-digit)
 
 **$hour**
-
-The current hour in military (24 hour) time (2-digit)
+  The current hour in military (24 hour) time (2-digit)
 
 **$hhour**
-
-The current half hour we are in. From minute 0 to 29, this is always 0
-while from 30 to 59 it is always 1.
+  The current half hour we are in. From minute 0 to 29, this is always 0
+  while from 30 to 59 it is always 1.
 
 **$qhour**
-
-The current quarter hour we are in. Much like $HHOUR, but values range
-from 0 to 3 (for the four quater hours that are in each hour)
+  The current quarter hour we are in. Much like $HHOUR, but values range
+  from 0 to 3 (for the four quater hours that are in each hour)
 
 **$minute**
-
-The current minute (2-digit)
+  The current minute (2-digit)
 
 **$myhostname**
-
-The name of the current host as it knows itself (probably useful for
-filtering in a generic way)
+  The name of the current host as it knows itself (probably useful for
+  filtering in a generic way)
 
 Properties starting with a $-sign are so-called system properties. These
 do NOT stem from the message but are rather internally-generated.
@@ -272,15 +236,19 @@ The following is a sample of an ERE expression that takes the first
 submatch from the message string and replaces the expression with the
 full field if no match is found:
 
+::
+
 %msg:R,ERE,1,FIELD:for (vlan[0-9]\*):--end%
 
 and this takes the first submatch of the second match of said
 expression:
 
+::
+
 %msg:R,ERE,1,FIELD,1:for (vlan[0-9]\*):--end%
 
-**Please note: there is also a `rsyslog regular expression
-checker/generator <http://www.rsyslog.com/tool-regex>`_ online tool
+**Please note: there is also a** `rsyslog regular expression
+checker/generator <http://www.rsyslog.com/tool-regex>`_ **online tool
 available.** With that tool, you can check your regular expressions and
 also generate a valid property replacer sequence. Usage of this tool is
 recommended. Depending on the version offered, the tool may not cover
@@ -296,7 +264,7 @@ character by specifying a comma and the **decimal** US-ASCII value of
 the delimiter immediately after the "F". For example, to use comma (",")
 as a delimiter, use this field specifier: "F,44".  If your syslog data
 is delimited, this is a quicker way to extract than via regular
-expressions (actually, a \*much\* quicker way). Field counting starts at
+expressions (actually, a *much* quicker way). Field counting starts at
 1. Field zero is accepted, but will always lead to a "field not found"
 error. The same happens if a field number higher than the number of
 fields in the property is requested. The field number must be placed in
@@ -341,7 +309,9 @@ test      2", "1 test     23", "1 test  234567"
 As you can see, the fields are delimited by space characters, but their
 exact number is unknown. They can properly be extracted as follows:
 
-"%msg:F,32:2%" to "%msg:F,32+:2%".
+::
+
+   "%msg:F,32:2%" to "%msg:F,32+:2%".
 
 This feature was suggested by Zhuang Yuyao and implemented by him. It is
 modeled after perl compatible regular expressions.
@@ -353,121 +323,106 @@ Property Options
 options are defined:
 
 **uppercase**
-
-convert property to lowercase only
+  convert property to lowercase only
 
 **lowercase**
-
-convert property text to uppercase only
+  convert property text to uppercase only
 
 **csv**
-
-formats the resulting field (after all modifications) in CSV format as
-specified in `RFC 4180 <http://www.ietf.org/rfc/rfc4180.txt>`_. Rsyslog
-will always use double quotes. Note that in order to have full
-CSV-formatted text, you need to define a proper template. An example is
-this one:
-$template csvline,"%syslogtag:::csv%,%msg:::csv%"
-Most importantly, you need to provide the commas between the fields
-inside the template.
-*This feature was introduced in rsyslog 4.1.6.*
+  formats the resulting field (after all modifications) in CSV format as
+  specified in `RFC 4180 <http://www.ietf.org/rfc/rfc4180.txt>`_. Rsyslog
+  will always use double quotes. Note that in order to have full
+  CSV-formatted text, you need to define a proper template. An example is
+  this one:
+  $template csvline,"%syslogtag:::csv%,%msg:::csv%"
+  Most importantly, you need to provide the commas between the fields
+  inside the template.
+  *This feature was introduced in rsyslog 4.1.6.*
 
 **drop-last-lf**
-
-The last LF in the message (if any), is dropped. Especially useful for
-PIX.
+  The last LF in the message (if any), is dropped. Especially useful for
+  PIX.
 
 **date-mysql**
-
-format as mysql date
+  format as mysql date
 
 **date-rfc3164**
-
-format as RFC 3164 date
+  format as RFC 3164 date
 
 **date-rfc3164-buggyday**
+  similar to date-rfc3164, but emulates a common coding error: RFC 3164
+  demands that a space is written for single-digit days. With this option,
+  a zero is written instead. This format seems to be used by syslog-ng and
+  the date-rfc3164-buggyday option can be used in migration scenarios
+  where otherwise lots of scripts would need to be adjusted. It is
+  recommended *not* to use this option when forwarding to remote hosts -
+  they may treat the date as invalid (especially when parsing strictly
+  according to RFC 3164).
 
-similar to date-rfc3164, but emulates a common coding error: RFC 3164
-demands that a space is written for single-digit days. With this option,
-a zero is written instead. This format seems to be used by syslog-ng and
-the date-rfc3164-buggyday option can be used in migration scenarios
-where otherwise lots of scripts would need to be adjusted. It is
-recommended *not* to use this option when forwarding to remote hosts -
-they may treat the date as invalid (especially when parsing strictly
-according to RFC 3164).
-
-*This feature was introduced in rsyslog 4.6.2 and v4 versions above and
-5.5.3 and all versions above.*
+  *This feature was introduced in rsyslog 4.6.2 and v4 versions above and
+  5.5.3 and all versions above.*
 
 **date-rfc3339**
-
-format as RFC 3339 date
+  format as RFC 3339 date
 
 **date-subseconds**
-
-just the subseconds of a timestamp (always 0 for a low precision
-timestamp)
+  just the subseconds of a timestamp (always 0 for a low precision
+  timestamp)
 
 **escape-cc**
-
-replace control characters (ASCII value 127 and values less then 32)
-with an escape sequence. The sequnce is "#<charval>" where charval is
-the 3-digit decimal value of the control character. For example, a
-tabulator would be replaced by "#009".
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters (ASCII value 127 and values less then 32)
+  with an escape sequence. The sequnce is "#<charval>" where charval is
+  the 3-digit decimal value of the control character. For example, a
+  tabulator would be replaced by "#009".
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **space-cc**
-
-replace control characters by spaces
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters by spaces
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **drop-cc**
-
-drop control characters - the resulting string will neither contain
-control characters, escape sequences nor any other replacement character
-like space.
- Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  drop control characters - the resulting string will neither contain
+  control characters, escape sequences nor any other replacement character
+  like space.
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **sp-if-no-1st-sp**
-
-This option looks scary and should probably not be used by a user. For
-any field given, it returns either a single space character or no
-character at all. Field content is never returned. A space is returned
-if (and only if) the first character of the field's content is NOT a
-space. This option is kind of a hack to solve a problem rooted in RFC
-3164: 3164 specifies no delimiter between the syslog tag sequence and
-the actual message text. Almost all implementation in fact delemit the
-two by a space. As of RFC 3164, this space is part of the message text
-itself. This leads to a problem when building the message (e.g. when
-writing to disk or forwarding). Should a delimiting space be included if
-the message does not start with one? If not, the tag is immediately
-followed by another non-space character, which can lead some log parsers
-to misinterpret what is the tag and what the message. The problem
-finally surfaced when the klog module was restructured and the tag
-correctly written. It exists with other message sources, too. The
-solution was the introduction of this special property replacer option.
-Now, the default template can contain a conditional space, which exists
-only if the message does not start with one. While this does not solve
-all issues, it should work good enough in the far majority of all cases.
-If you read this text and have no idea of what it is talking about -
-relax: this is a good indication you will never need this option. Simply
-forget about it ;)
+  This option looks scary and should probably not be used by a user. For
+  any field given, it returns either a single space character or no
+  character at all. Field content is never returned. A space is returned
+  if (and only if) the first character of the field's content is NOT a
+  space. This option is kind of a hack to solve a problem rooted in RFC
+  3164: 3164 specifies no delimiter between the syslog tag sequence and
+  the actual message text. Almost all implementation in fact delemit the
+  two by a space. As of RFC 3164, this space is part of the message text
+  itself. This leads to a problem when building the message (e.g. when
+  writing to disk or forwarding). Should a delimiting space be included if
+  the message does not start with one? If not, the tag is immediately
+  followed by another non-space character, which can lead some log parsers
+  to misinterpret what is the tag and what the message. The problem
+  finally surfaced when the klog module was restructured and the tag
+  correctly written. It exists with other message sources, too. The
+  solution was the introduction of this special property replacer option.
+  Now, the default template can contain a conditional space, which exists
+  only if the message does not start with one. While this does not solve
+  all issues, it should work good enough in the far majority of all cases.
+  If you read this text and have no idea of what it is talking about -
+  relax: this is a good indication you will never need this option. Simply
+  forget about it ;)
 
 **secpath-drop**
-
-Drops slashes inside the field (e.g. "a/b" becomes "ab"). Useful for
-secure pathname generation (with dynafiles).
+  Drops slashes inside the field (e.g. "a/b" becomes "ab"). Useful for
+  secure pathname generation (with dynafiles).
 
 **secpath-replace**
-
-Replace slashes inside the field by an underscore. (e.g. "a/b" becomes
-"a\_b"). Useful for secure pathname generation (with dynafiles).
+  Replace slashes inside the field by an underscore. (e.g. "a/b" becomes
+  "a\_b"). Useful for secure pathname generation (with dynafiles).
 
 To use multiple options, simply place them one after each other with a
 comma delmimiting them. For example "escape-cc,sp-if-no-1st-sp". If you
@@ -484,16 +439,12 @@ Further Links
 -  `Configuration file syntax <rsyslog_conf.html>`_, this is where you
    actually use the property replacer.
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+[`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008-2014 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. 
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+and `Adiscon <http://www.adiscon.com/>`_. 
 
-Released under the GNU GPL version
-2 or higher.
+Released under the GNU GPL version 2 or higher.
