@@ -5,6 +5,12 @@ SSL Encrypting Syslog with Stunnel
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 *(2005-07-22)*
 
+HISTORICAL DOCUMENT
+-------------------
+**Note: this is an outdated HISTORICAL document.** A much better description on
+`securing syslog with TLS  <http://www.rsyslog.com/doc/master/tutorials/tls_cert_summary.html>`_
+is available.
+
 Abstract
 --------
 
