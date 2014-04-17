@@ -1,5 +1,12 @@
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-??
+- permits to build against json-c 0.12
+  Unfortunately, json-c had an ABI breakage, so this is necessary. Note
+  that versions prior to 0.12 had security issues (CVE-2013-6370,
+  CVE-2013-6371) and so it is desirable to link against the new version.
+  Thanks to Thomas D. for the patch. Note that at least some distros
+  have fixed the security issue in older versions of json-c, so this
+  seems to apply mostly when building from sources.
 - doc is no longer shipped as part of the rsyslog tarball
   Instead, the rsyslog-doc project creates its own tarball. This is the
   result of a mailing list discussion after the 8.2.0 release with a
