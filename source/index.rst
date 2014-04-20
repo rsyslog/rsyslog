@@ -87,6 +87,7 @@ Manual
    troubleshooting/index
    development/index
    tutorials/index
+   historical/stunnel.rst
    
 
 Related Links
