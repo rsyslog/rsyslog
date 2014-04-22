@@ -1019,7 +1019,7 @@ relpTcpChkOnePeerWildcard(tcpPermittedPeerWildcardComp_t *pRoot, char *peername,
 	 * empty. That happens frequently if the domain root (e.g. "example.com.")
 	 * is properly given.
 	 */
-	if(pWildcard->wildcardType == tcpPEER_WILDCARD_EMPTY_COMPONENT)
+	if(pWildcard != NULL && pWildcard->wildcardType == tcpPEER_WILDCARD_EMPTY_COMPONENT)
 		pWildcard = pWildcard->pNext;
 
 	if(pWildcard != NULL) {
