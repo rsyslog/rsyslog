@@ -1053,6 +1053,8 @@ relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatc
 		} else {
 			relpTcpChkOnePeerWildcard(pThis->permittedPeers.peer[i].wildcardRoot,
 			        peername, pbFoundPositiveMatch);
+			if (*pbFoundPositiveMatch)
+				break;
 		}
 	}
 }
