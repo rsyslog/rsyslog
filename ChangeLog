@@ -1,4 +1,9 @@
 ----------------------------------------------------------------------
+Version 1.2.7 - 2014-04-??
+- bugfix: potential misadressing in wildcard match
+  see: https://github.com/rsyslog/librelp/pull/3
+  Thanks to Sebastian Schmidt for the patch.
+----------------------------------------------------------------------
 Version 1.2.6 - 2014-03-20
 - report error when preparing for non-anon TLS and this is unsupported
   The error is reported when the processes own certificate is set,
