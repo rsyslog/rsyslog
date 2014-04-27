@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 8.3.2 [v8-devel] 2014-05-??
+- imrelp: added support for per-listener ruleset and inputname
+  see: https://github.com/rsyslog/rsyslog/pull/63
+  Thanks to bobthesecurityguy github user for the patch
+---------------------------------------------------------------------------
 Version 8.3.1 [v8-devel] 2014-04-24
 - external message modification interface now support modifying message PRI
 - "jsonmesg" property will include uuid only if one was previously generated

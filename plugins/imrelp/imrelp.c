@@ -202,9 +202,7 @@ onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
 	pMsg->msgFlags  = PARSE_HOSTNAME | NEEDS_PARSING;
 
-	/* TODO: optimize this, we can store it inside the session, requires
-	 * changes to librelp --> next librelp iteration?. rgerhards, 2012-10-29
-	 */
+	/* TODO: optimize this, we can store it inside the session */
 	MsgSetRcvFromStr(pMsg, pHostname, ustrlen(pHostname), &pProp);
 	CHKiRet(prop.Destruct(&pProp));
 	CHKiRet(MsgSetRcvFromIPStr(pMsg, pIP, ustrlen(pIP), &pProp));
