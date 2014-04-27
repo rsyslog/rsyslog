@@ -62,22 +62,22 @@ output modules are also available to mmsnmptrapd.
 **Configuration Directives**:
 
 -  **$mmsnmptrapdTag** [tagname]
-    tells the module which start string inside the tag to look for. The
+   tells the module which start string inside the tag to look for. The
    default is "snmptrapd". Note that a slash is automatically added to
    this tag when it comes to matching incoming messages. It MUST not be
    given, except if two slashes are required for whatever reasons (so
    "tag/" results in a check for "tag//" at the start of the tag field).
 -  **$mmsnmptrapdSeverityMapping** [severtiymap]
-    This specifies the severity mapping table. It needs to be specified
+   This specifies the severity mapping table. It needs to be specified
    as a list. Note that due to the current config system **no
    whitespace** is supported inside the list, so be sure not to use any
    whitespace inside it.
-    The list is constructed of Severtiy-Name/Severity-Value pairs,
+   The list is constructed of Severtiy-Name/Severity-Value pairs,
    delimited by comma. Severity-Name is a case-sensitive string, e.g.
    "warning" and an associated numerical value (e.g. 4). Possible values
    are in the rage 0..7 and are defined in RFC5424, table 2. The given
    sample would be specified as "warning/4".
-    If multiple instances of mmsnmptrapd are used, each instance uses
+   If multiple instances of mmsnmptrapd are used, each instance uses
    the most recently defined $mmsnmptrapdSeverityMapping before itself.
 
 **Caveats/Known Bugs:**
@@ -101,6 +101,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2011 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2011 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

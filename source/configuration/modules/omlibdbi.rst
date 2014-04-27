@@ -43,7 +43,7 @@ rsyslog just does the "insert" and most of the time is spent either in
 the database engine or rsyslog itself. It's hard to think of any
 considerable time spent in the libdbi abstraction layer.
 
-Setup
+**Setup**
 
 In order for this plugin to work, you need to have libdbi, the libdbi
 driver for your database backend and the client software for your
@@ -62,24 +62,24 @@ system.
    Usually, you do not need to set it. If you installed libdbi-driver's
    at a non-standard location, you may need to specify the directory
    here. If you are unsure, do not use this configuration directive.
-   Usually, everything works just fine.\ ****
--  **$ActionLibdbiDriver drivername**
-    Name of the dbidriver to use, see libdbi-drivers documentation. As a
+   Usually, everything works just fine.\ 
+-  $ActionLibdbiDriver drivername
+   Name of the dbidriver to use, see libdbi-drivers documentation. As a
    quick excerpt, at least those were available at the time of this
    writiting "mysql" (suggest to use ommysql instead), "firebird"
    (Firbird and InterBase), "ingres", "msql", "Oracle", "sqlite",
    "sqlite3", "freetds" (for Microsoft SQL and Sybase) and "pgsql"
    (suggest to use ompgsql instead).
 -  $ActionLibdbiHost hostname
-    The host to connect to.
+   The host to connect to.
 -  $ActionLibdbiUserName user
-    The user used to connect to the database.
+   The user used to connect to the database.
 -  $ActionlibdbiPassword
-    That user's password.
+   That user's password.
 -  $ActionlibdbiDBName db
-    The database that shall be written to.
+   The database that shall be written to.
 -  selector line: :omlibdbi:;template
-    executes the recently configured omlibdbi action. The ;template part
+   executes the recently configured omlibdbi action. The ;template part
    is optional. If no template is provided, a default template is used
    (which is currently optimized for MySQL - sorry, folks...)
 
@@ -122,6 +122,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
+
 Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

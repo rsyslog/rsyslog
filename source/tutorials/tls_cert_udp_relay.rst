@@ -55,7 +55,6 @@ Sample syslog.conf
 
 Keep in mind that this rsyslog.conf sends messages via TCP, only. Also,
 we do not show any rules to write local files. Feel free to add them.
-````
 
 ::
 

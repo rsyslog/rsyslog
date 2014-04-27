@@ -12,12 +12,12 @@ syslogd instance. As such, only one can be active at one time. If it
 detects another active intance at startup, the module disables itself,
 but rsyslog will continue to run.
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** \ Rainer Gerhards <rgerhards@adiscon.com>
 
 Configuration Directives
 ------------------------
 
-.. functions:: $IMSolarisLogSocketName <name>
+| functions:: $IMSolarisLogSocketName <name>
 
    This is the name of the log socket (stream) to read. If not given,
    /dev/log is read.

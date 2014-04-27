@@ -103,7 +103,7 @@ $SystemLogSocketAnnotate and $InputUnixListenSocketAnnotate).
    slightly different than previous versions. However, we do not see how
    this could negatively affect existing environments.
 -  **$SystemLogSocketIgnoreMsgTimestamp** [**on**/off]
-    Ignore timestamps included in the messages, applies to messages
+   Ignore timestamps included in the messages, applies to messages
    received via the system log socket.
 -  **$OmitLocalLogging** (imuxsock) [on/**off**] -- former -o option; do
    NOT listen for the local log socket. This is most useful if you run
@@ -206,7 +206,8 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2012 by `Rainer
+
+Copyright © 2008-2012 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

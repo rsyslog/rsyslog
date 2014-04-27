@@ -18,10 +18,10 @@ be processed by the receiver.
 **Configuration Directives**:
 
 -  **$OMUxSockSocket**
-    Name of the socket to send data to. This has no default and **must**
+   Name of the socket to send data to. This has no default and **must**
    be set.
 -  **$OMUxSockDefaultTemplate**
-    This can be used to override the default template to be used
+   This can be used to override the default template to be used
    together with omuxsock. This is primarily useful if there are many
    forwarding actions and each of them should use the same template.
 
@@ -40,6 +40,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2010 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2010 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
