@@ -1,7 +1,3 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Configuration Directives
 ------------------------
 
@@ -15,6 +11,17 @@ Here is a list in alphabetical order. Follow links for a description.
 Not all directives have an in-depth description right now. Default
 values for them are in bold. A more in-depth description will appear as
 implementation progresses.
+
+**Important:** While these parameters are traditionally documentated as
+"global directives", many of them are actually not global but affect
+those objects that sequentially follow it in rsyslog.conf. For example,
+*$Action...* directives modify the next action. When they are reset
+after the action definition, the set value still applies to all actions
+defined with it. This type of config has become much clearer in the
+enhanced format that is available in rsyslog v7 and above. In any case,
+we strongly suggest to update to a more recent version. Version 5 is
+heavily outdated and no longer supported by the rsyslog project since
+many years.
 
 **Be sure to read information about `queues in rsyslog <queues.html>`_**
 - many parameter settings modify queue parameters. If in doubt, use the
