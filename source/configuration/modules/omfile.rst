@@ -95,7 +95,7 @@ module. It is a built-in module that does not need to be loaded.
    quite conservative, it is useful to go up to 64k, and 128K if you
    used gzip compression (then, even higher sizes may make sense)
 -  **DirOwner**
-    Set the file owner for directories newly created. Please note that
+   Set the file owner for directories newly created. Please note that
    this setting does not affect the owner of directories already
    existing. The parameter is a user name, for which the userid is
    obtained by rsyslogd during startup processing. Interim changes to
@@ -202,6 +202,12 @@ module. It is a built-in module that does not need to be loaded.
 
 **Caveats/Known Bugs:**
 
+-  people often report problems that dynafiles are not properly created.
+   The common cause for this problem is SELinux rules, which do not permit
+   the create of those files (check generated file names and pathes!). The
+   same happens for generic permission issues (this is often a problem
+   under Ubuntu where permissions are dropped by default)
+
 -  One needs to be careful with log rotation if signatures and/or
    encryption are being used. These create side-files, which form a set
    and must be kept together.
@@ -294,7 +300,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2014 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
