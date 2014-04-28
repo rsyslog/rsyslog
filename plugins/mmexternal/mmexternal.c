@@ -453,8 +453,8 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 		inputstr = msgGetJSONMESG(pMsg);
 		lenWrite = strlen((const char*)inputstr);
 	}
-	writeOffset = 0;
 
+	writeOffset = 0;
 	do {
 		DBGPRINTF("mmexternal: writing to prog (fd %d, offset %d): %s\n",
 			  pWrkrData->fdPipeOut, (int) writeOffset, inputstr);
@@ -470,11 +470,11 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
-				// TODO: reset buffers!
 				DBGPRINTF("mmexternal: program '%s' terminated, trying to restart\n",
 					  pWrkrData->pData->szBinary);
 				CHKiRet(cleanup(pWrkrData));
 				CHKiRet(tryRestart(pWrkrData));
+				writeOffset = 0;
 				break;
 			default:
 				DBGPRINTF("mmexternal: error %d writing to pipe: %s\n", errno,
