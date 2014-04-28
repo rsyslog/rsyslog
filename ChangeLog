@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.2.7 - 2014-04-??
+- bugfix: librelp was incompatible with C++ without a real reason
+  Thanks to Ivan Kryak for the patch
 - bugfix: potential misadressing in wildcard match
   see: https://github.com/rsyslog/librelp/pull/3
   Thanks to Sebastian Schmidt for the patch.
