@@ -118,11 +118,22 @@ struct instanceConf_s {
 struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
+	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
 	sbool configSetViaV2Method;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "ruleset", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
@@ -472,6 +483,7 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
+	pModConf->pszBindRuleset = NULL;
 	loadModConf->configSetViaV2Method = 0;
 	/* init legacy config variables */
 	cs.pszBindRuleset = NULL;
@@ -480,25 +492,70 @@ ENDbeginCnfLoad
 
 
 BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
 CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for imrelp:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "ruleset")) {
+			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("imrelp: program error, non-handled "
+			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+		}
+	}
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
 	loadModConf->configSetViaV2Method = 1;
 ENDsetModCnf
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
+	if(loadModConf->pszBindRuleset == NULL) {
+		if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
+			loadModConf->pszBindRuleset = NULL;
+		} else {
+			CHKmalloc(loadModConf->pszBindRuleset = ustrdup(cs.pszBindRuleset));
+		}
+	} else {
+		if((cs.pszBindRuleset != NULL) && (cs.pszBindRuleset[0] != '\0')) {
+			errmsg.LogError(0, RS_RET_DUP_PARAM, "imrelp: warning: ruleset "
+					"set via legacy directive ignored");
+		}
+	}
+finalize_it:
 	free(cs.pszBindRuleset);
 	cs.pszBindRuleset = NULL;
+	loadModConf = NULL; /* done loading */
+	// TODO: remove next 2 later
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
-	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
 CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
+		if(inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
+			CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
+		}
 		std_checkRuleset(pModConf, inst);
 	}
+finalize_it:
 ENDcheckCnf
 
 
@@ -539,6 +596,7 @@ CODESTARTfreeCnf
 		inst = inst->next;
 		free(del);
 	}
+	free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
 /* This is used to terminate the plugin. Note that the signal handler blocks
