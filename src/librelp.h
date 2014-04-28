@@ -50,7 +50,6 @@ typedef struct relpFrame_s relpFrame_t;
 typedef struct relpSendbuf_s relpSendbuf_t;
 typedef struct relpOffers_s relpOffers_t;
 typedef struct relpOffer_s relpOffer_t;
-typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 
 /* IDs of librelp objects */
 typedef enum relpObjID_e {
@@ -85,6 +84,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 	eRelpCmdState_Disabled = 5  /**< feature can NOT be used (set during open handshake) */
 };
 
+typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 
 /* macro to assert we are dealing with the right relp object */
 #ifdef NDEBUG
