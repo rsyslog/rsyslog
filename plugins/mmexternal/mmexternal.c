@@ -32,7 +32,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <wait.h>
-#include <pthread.h>
+#include <sys/uio.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -438,8 +438,9 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 	int lenWritten;
 	int lenWrite;
 	int writeOffset;
+	int i_iov;
 	char errStr[1024];
-	uchar msgStr[4096];
+	struct iovec iov[2];
 	const uchar *inputstr = NULL; /* string to be processed by external program */
 	DEFiRet;
 	
@@ -452,15 +453,24 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 		inputstr = msgGetJSONMESG(pMsg);
 		lenWrite = strlen((const char*)inputstr);
 	}
-	lenWrite = snprintf((char*)msgStr, sizeof(msgStr), "%s\n", inputstr); // TODO: make this more solid!
 	writeOffset = 0;
 
 	do {
-dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, msgStr);
-		lenWritten = write(pWrkrData->fdPipeOut, ((char*)msgStr)+writeOffset, lenWrite);
+		DBGPRINTF("mmexternal: writing to prog (fd %d, offset %d): %s\n",
+			  pWrkrData->fdPipeOut, (int) writeOffset, inputstr);
+		i_iov = 0;
+		if(writeOffset < lenWrite) {
+			iov[0].iov_base = (char*)inputstr+writeOffset;
+			iov[0].iov_len = lenWrite - writeOffset;
+			++i_iov;
+		}
+		iov[i_iov].iov_base = "\n";
+		iov[i_iov].iov_len = 1;
+		lenWritten = writev(pWrkrData->fdPipeOut, iov, i_iov+1);
 		if(lenWritten == -1) {
 			switch(errno) {
 			case EPIPE:
+				// TODO: reset buffers!
 				DBGPRINTF("mmexternal: program '%s' terminated, trying to restart\n",
 					  pWrkrData->pData->szBinary);
 				CHKiRet(cleanup(pWrkrData));
@@ -475,7 +485,7 @@ dbgprintf("mmexternal: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, msg
 		} else {
 			writeOffset += lenWritten;
 		}
-	} while(lenWritten != lenWrite);
+	} while(lenWritten != lenWrite+1);
 
 	processProgramReply(pWrkrData, pMsg);
 

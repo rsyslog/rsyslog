@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 8.3.2 [v8-devel] 2014-05-??
+- bugfix: mmexternal did not properly process messages over 4KiB
+  The data to be passed to the external plugin was truncated after 4KiB.
+  see: https://github.com/rsyslog/rsyslog/issues/64
 - imrelp: added support for per-listener ruleset and inputname
   see: https://github.com/rsyslog/rsyslog/pull/63
   Thanks to bobthesecurityguy github user for the patch
