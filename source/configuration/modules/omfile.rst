@@ -202,6 +202,12 @@ module. It is a built-in module that does not need to be loaded.
 
 **Caveats/Known Bugs:**
 
+-  people often report problems that dynafiles are not properly created.
+   The common cause for this problem is SELinux rules, which do not permit
+   the create of those files (check generated file names and pathes!). The
+   same happens for generic permission issues (this is often a problem
+   under Ubuntu where permissions are dropped by default)
+
 -  One needs to be careful with log rotation if signatures and/or
    encryption are being used. These create side-files, which form a set
    and must be kept together.
