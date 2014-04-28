@@ -72,7 +72,6 @@ static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 /* config settings */
 typedef struct configSettings_s {
-	uchar *pszInputName;		/* value for inputname property */
 	uchar *pszBindRuleset;		/* name of Ruleset to bind to */
 } configSettings_t;
 static configSettings_t cs;
@@ -304,11 +303,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
-	if((cs.pszInputName == NULL) || (cs.pszInputName[0] == '\0')) {
-		inst->pszInputName = NULL;
-	} else {
-	CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
-	}
 	inst->pBindRuleset = NULL;
 finalize_it:
 	free(pNewVal);
@@ -487,7 +481,6 @@ CODESTARTbeginCnfLoad
 	loadModConf->configSetViaV2Method = 0;
 	/* init legacy config variables */
 	cs.pszBindRuleset = NULL;
-	cs.pszInputName = NULL;
 ENDbeginCnfLoad
 
 
@@ -541,9 +534,6 @@ finalize_it:
 	free(cs.pszBindRuleset);
 	cs.pszBindRuleset = NULL;
 	loadModConf = NULL; /* done loading */
-	// TODO: remove next 2 later
-	free(cs.pszInputName);
-	cs.pszInputName = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
@@ -667,8 +657,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	free(cs.pszBindRuleset);
 	cs.pszBindRuleset = NULL;
-	free(cs.pszInputName);
-	cs.pszInputName = NULL;
 	return RS_RET_OK;
 }
 
@@ -707,8 +695,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
 		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverinputname", 0, eCmdHdlrGetWord,
-		NULL, &cs.pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverrun", 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
