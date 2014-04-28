@@ -118,7 +118,6 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
-	sbool configSetViaV2Method;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -160,6 +159,7 @@ static struct cnfparamblk inppblk =
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
 /* ------------------------------ callbacks ------------------------------ */
 
@@ -478,9 +478,9 @@ CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->pszBindRuleset = NULL;
-	loadModConf->configSetViaV2Method = 0;
 	/* init legacy config variables */
 	cs.pszBindRuleset = NULL;
+	bLegacyCnfModGlobalsPermitted = 1;
 ENDbeginCnfLoad
 
 
@@ -510,10 +510,13 @@ CODESTARTsetModCnf
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
+	/* remove all of our legacy module handlers, as they can not used in addition
+	 * the the new-style config method.
+	 */
+	bLegacyCnfModGlobalsPermitted = 0;
 finalize_it:
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &modpblk);
-	loadModConf->configSetViaV2Method = 1;
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -693,8 +696,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
-		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr2((uchar*)"inputrelpserverbindruleset", 0, eCmdHdlrGetWord,
+				   NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverrun", 0, eCmdHdlrGetWord,
 				   addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
