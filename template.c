@@ -1549,6 +1549,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtUnixDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
 				datefmt = tplFmtSecFrac;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wdayname", sizeof("wdayname")-1)) {
+				datefmt = tplFmtWDayName;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
