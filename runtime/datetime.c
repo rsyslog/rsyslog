@@ -5,7 +5,7 @@
  * in a useful manner. It is still undecided if all functions will continue
  * to stay here or some will be moved into parser modules (once we have them).
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -987,6 +987,28 @@ int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
 	snprintf(pBuf, 11, "%u", (unsigned) syslogTime2time_t(ts));
 	return 11;
 }
+
+/* 0 - Sunday, 1, Monday, ...
+ * Note that we cannot use strftime() and helpers as they rely on the TZ
+ * variable (again, arghhhh). So we need to do it ourselves...
+ */
+int getWeekdayNbr(struct syslogTime *ts)
+{
+	int wday;
+	int g, f;
+
+	g = ts->year;
+	if(ts->month < 3) {
+		g--;
+		f = ts->month + 13;
+	} else {
+		f = ts->month + 1;
+	}
+	wday = ((36525*g)/100) + ((306*f)/10) + ts->day - 621049; 
+	wday %= 7;
+	return wday;
+}
+
 
 
 /* queryInterface function

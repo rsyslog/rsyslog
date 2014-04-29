@@ -187,7 +187,7 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
+char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt, unsigned short *pbMustBeFreed);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);

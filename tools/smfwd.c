@@ -75,7 +75,7 @@ CODESTARTstrgen
 	/* first obtain all strings and their length (if not fixed) */
 	pPRI = getPRI(pMsg);
 	lenPRI = strlen(pPRI);
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
+	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date, NULL);
 	lenTimeStamp = ustrlen(pTimeStamp);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);

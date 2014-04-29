@@ -94,6 +94,8 @@ static char *two_digits[100] = {
 	"80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
 	"90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
 
+static char *wdayNames[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
 static struct {
 	uchar *pszName;
 	short lenName;
@@ -1539,8 +1541,9 @@ getPRI(msg_t * const pM)
 
 
 char *
-getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
+getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__restrict__ const pbMustBeFreed)
 {
+	char *szret;
 	BEGINfunc
 	if(pM == NULL)
 		return "";
@@ -1604,12 +1607,14 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 			MsgUnlock(pM);
 		}
 		return(pM->pszTIMESTAMP_SecFrac);
+	case tplFmtWDayName:
+		return wdayNames[getWeekdayNbr(&pM->tTIMESTAMP)];
 	}
 	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
-static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
+static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__restrict__ const pbMustBeFreed)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -1952,7 +1957,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "rawmsg", jval);
 
-	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date);
+	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date, NULL);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timereported", jval);
 
@@ -1982,7 +1987,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string(getSeverity(pMsg));
 	json_object_object_add(json, "syslogseverity", jval);
 
-	pRes = (uchar*)getTimeGenerated(pMsg, tplFmtRFC3339Date);
+	pRes = (uchar*)getTimeGenerated(pMsg, tplFmtRFC3339Date, NULL);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timegenerated", jval);
 
@@ -2973,7 +2978,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				datefmt = pTpe->data.field.eDateFormat;
 			else
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeReported(pMsg, datefmt);
+			pRes = (uchar*)getTimeReported(pMsg, datefmt, pbMustBeFreed);
 			break;
 		case PROP_HOSTNAME:
 			pRes = (uchar*)getHOSTNAME(pMsg);
@@ -3027,7 +3032,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				datefmt = pTpe->data.field.eDateFormat;
 			else
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeGenerated(pMsg, datefmt);
+			pRes = (uchar*)getTimeGenerated(pMsg, datefmt, pbMustBeFreed);
 			break;
 		case PROP_PROGRAMNAME:
 			pRes = getProgramName(pMsg, LOCK_MUTEX);
