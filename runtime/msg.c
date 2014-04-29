@@ -1695,6 +1695,8 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt, unsign
 			MsgUnlock(pM);
 		}
 		return(pM->pszRcvdAt_SecFrac);
+	case tplFmtWDayName:
+		return wdayNames[getWeekdayNbr(&pM->tTIMESTAMP)];
 	}
 	ENDfunc
 	return "INVALID eFmt OPTION!";
