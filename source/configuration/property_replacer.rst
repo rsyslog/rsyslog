@@ -369,6 +369,10 @@ options are defined:
   just the subseconds of a timestamp (always 0 for a low precision
   timestamp)
 
+**date-wdayname**
+  just the abbreviated english name of the weekday (e.g. "Mon", "Sat") of
+  the timestamp.
+
 **escape-cc**
   replace control characters (ASCII value 127 and values less then 32)
   with an escape sequence. The sequnce is "#<charval>" where charval is
