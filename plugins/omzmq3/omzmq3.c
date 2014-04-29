@@ -255,21 +255,18 @@ static rsRetVal initZMQ(instanceData* pData) {
     RETiRet;
 }
 
-rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
-	DEFiRet;
+rsRetVal writeZMQ(uchar* umsg, instanceData* pData) {
+        DEFiRet;
 
     /* initialize if necessary */
     if(NULL == pData->socket)
-		CHKiRet(initZMQ(pData));
-    
+                CHKiRet(initZMQ(pData));
+
     /* send it */
-    int result = zstr_send(pData->socket, (char*)msg);
-    
-    /* whine if things went wrong */
-    if (result == -1) {
-        errmsg.LogError(0, NO_ERRCODE, "omzmq3: send of %s failed: %s", msg, zmq_strerror(errno));
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
+    char* msg;
+    msg = (char*)umsg;
+    zmq_send(pData->socket, msg, strlen(msg), ZMQ_NOBLOCK);
+
  finalize_it:
     RETiRet;
 }
