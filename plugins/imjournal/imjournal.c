@@ -218,7 +218,7 @@ readjournal() {
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
 		message = strdup("");
 	} else {
-		message = strndup(get+8, length-8);
+		message = strndup(((const char*)get)+8, length-8);
 		if (message == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto ret;
@@ -261,7 +261,7 @@ readjournal() {
 
 	/* Get message identifier, client pid and add ':' */
 	if (sd_journal_get_data(j, "SYSLOG_IDENTIFIER", &get, &length) >= 0) {
-		sys_iden = strndup(get+18, length-18);
+		sys_iden = strndup(((const char*)get)+18, length-18);
 	} else {
 		sys_iden = strdup("journal");
 	}
@@ -271,7 +271,7 @@ readjournal() {
 	}
 
 	if (sd_journal_get_data(j, "SYSLOG_PID", &pidget, &pidlength) >= 0) {
-		sys_pid = strndup(pidget+11, pidlength-11);
+		sys_pid = strndup(((const char*)pidget)+11, pidlength-11);
 		if (sys_pid == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			free (sys_iden);
@@ -376,7 +376,7 @@ readjournal() {
 
 		prefixlen++; /* remove '=' */
 
-		data = strndup(get + prefixlen, l - prefixlen);
+		data = strndup(((const char*)get) + prefixlen, l - prefixlen);
 		if (data == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			free (name);
