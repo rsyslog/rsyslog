@@ -365,9 +365,45 @@ options are defined:
 **date-rfc3339**
   format as RFC 3339 date
 
+**date-year**
+  just the year part (4-digit) of a timestamp
+
+**date-month**
+  just the month part (2-digit) of a timestamp
+
+**date-day**
+  just the day part (2-digit) of a timestamp
+
+**date-hour**
+  just the hour part (2-digit, 24-hour clock) of a timestamp
+
+**date-minute**
+  just the minute part (2-digit) of a timestamp
+
+**date-second**
+  just the second part (2-digit) of a timestamp
+
 **date-subseconds**
   just the subseconds of a timestamp (always 0 for a low precision
   timestamp)
+
+**date-tzoffshour**
+  just the timezone offset hour part (2-digit) of a timestamp
+
+**date-tzoffsmin**
+  just the timezone offset minute part (2-digit) of a timestamp. Note 
+  that this is usually 0, but there are some time zones that have
+  offsets which are not hourly-granular. If so, this is the minute
+  offset.
+
+**date-tzoffsdirection**
+  just the timezone offset direction part of a timestamp. This 
+  specifies if the offsets needs to be added ("+") or subtracted ("-")
+  to the timestamp in order to get UTC.
+
+**date-wday**
+  just the weekday number of the timstamp. This is a single digit,
+  with 0=Sunday, 1=Monday, ..., 6=Saturday.
 
 **date-wdayname**
   just the abbreviated english name of the weekday (e.g. "Mon", "Sat") of
