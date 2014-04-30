@@ -1569,7 +1569,6 @@ getPRI(msg_t * const pM)
 char *
 getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__restrict__ const pbMustBeFreed)
 {
-	char *szret;
 	BEGINfunc
 	if(pM == NULL)
 		return "";
@@ -1638,24 +1637,24 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__re
 	case tplFmtWDay:
 		return one_digit[getWeekdayNbr(&pM->tTIMESTAMP)];
 	case tplFmtMonth:
-		return two_digits[pM->tTIMESTAMP.month];
+		return two_digits[(int)pM->tTIMESTAMP.month];
 	case tplFmtYear:
 		if(pM->tTIMESTAMP.year >= 1967 && pM->tTIMESTAMP.year <= 2099)
 			return years[pM->tTIMESTAMP.year - 1967];
 		else
 			return "YEAR OUT OF RANGE(1967-2099)";
 	case tplFmtDay:
-		return two_digits[pM->tTIMESTAMP.day];
+		return two_digits[(int)pM->tTIMESTAMP.day];
 	case tplFmtHour:
-		return two_digits[pM->tTIMESTAMP.hour];
+		return two_digits[(int)pM->tTIMESTAMP.hour];
 	case tplFmtMinute:
-		return two_digits[pM->tTIMESTAMP.minute];
+		return two_digits[(int)pM->tTIMESTAMP.minute];
 	case tplFmtSecond:
-		return two_digits[pM->tTIMESTAMP.second];
+		return two_digits[(int)pM->tTIMESTAMP.second];
 	case tplFmtTZOffsHour:
-		return two_digits[pM->tTIMESTAMP.OffsetHour];
+		return two_digits[(int)pM->tTIMESTAMP.OffsetHour];
 	case tplFmtTZOffsMin:
-		return two_digits[pM->tTIMESTAMP.OffsetMinute];
+		return two_digits[(int)pM->tTIMESTAMP.OffsetMinute];
 	case tplFmtTZOffsDirection:
 		return (pM->tTIMESTAMP.OffsetMode == '+')? "+" : "-";
 	}
@@ -1749,24 +1748,24 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt, unsign
 	case tplFmtWDay:
 		return one_digit[getWeekdayNbr(&pM->tRcvdAt)];
 	case tplFmtMonth:
-		return two_digits[pM->tRcvdAt.month];
+		return two_digits[(int)pM->tRcvdAt.month];
 	case tplFmtYear:
 		if(pM->tRcvdAt.year >= 1967 && pM->tRcvdAt.year <= 2099)
 			return years[pM->tRcvdAt.year - 1967];
 		else
 			return "YEAR OUT OF RANGE(1967-2099)";
 	case tplFmtDay:
-		return two_digits[pM->tRcvdAt.day];
+		return two_digits[(int)pM->tRcvdAt.day];
 	case tplFmtHour:
-		return two_digits[pM->tRcvdAt.hour];
+		return two_digits[(int)pM->tRcvdAt.hour];
 	case tplFmtMinute:
-		return two_digits[pM->tRcvdAt.minute];
+		return two_digits[(int)pM->tRcvdAt.minute];
 	case tplFmtSecond:
-		return two_digits[pM->tRcvdAt.second];
+		return two_digits[(int)pM->tRcvdAt.second];
 	case tplFmtTZOffsHour:
-		return two_digits[pM->tRcvdAt.OffsetHour];
+		return two_digits[(int)pM->tRcvdAt.OffsetHour];
 	case tplFmtTZOffsMin:
-		return two_digits[pM->tRcvdAt.OffsetMinute];
+		return two_digits[(int)pM->tRcvdAt.OffsetMinute];
 	case tplFmtTZOffsDirection:
 		return (pM->tRcvdAt.OffsetMode == '+')? "+" : "-";
 	}
