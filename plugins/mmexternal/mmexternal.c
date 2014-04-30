@@ -207,6 +207,7 @@ done:	return;
 static void
 processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
 {
+	rsRetVal iRet;
 	char errStr[1024];
 	ssize_t r;
 	int numCharsRead;
@@ -245,7 +246,11 @@ dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, pWrkrData->
 	} while(pWrkrData->respBuf[numCharsRead-1] != '\n');
 
 	writeOutputDebug(pWrkrData, pWrkrData->respBuf, numCharsRead);
-	MsgSetPropsViaJSON(pMsg, (uchar*)pWrkrData->respBuf);
+	iRet = MsgSetPropsViaJSON(pMsg, (uchar*)pWrkrData->respBuf);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'",
+				pWrkrData->respBuf, pWrkrData->pData->szBinary);
+	}
 
 	return;
 }

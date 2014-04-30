@@ -4087,7 +4087,7 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 					jsonstr, errMsg);
 		}
 	}
-	if(json == NULL) {
+	if(json == NULL || !json_object_is_type(json, json_type_object)) {
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 	}
  

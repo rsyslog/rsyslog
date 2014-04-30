@@ -15,6 +15,10 @@ Version 8.3.2 [v8-devel] 2014-05-??
   For string templates, these are property options and they are 
   prefixed with "date-" (e.g. "date-year", "date-month", ...)
   see also: https://github.com/rsyslog/rsyslog/issues/65
+- bugfix: mmexternal segfault when external plugin sent invalid reply
+  ... or no reply at all. This happened if the reply was imporper JSON.
+  Now, we emit an error message in those cases.
+  see also: https://github.com/rsyslog/rsyslog/issues/69
 - bugfix: mmexternal did potentially pass incomplete data to restarted
   external plugin
   This could happen if EPIPE was returned "too late", in which case the
