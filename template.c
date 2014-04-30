@@ -706,6 +706,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
 		 } else if(!strcmp((char*)Buf, "date-wdayname")) {
 			pTpe->data.field.eDateFormat = tplFmtWDayName;
+		 } else if(!strcmp((char*)Buf, "date-wday")) {
+			pTpe->data.field.eDateFormat = tplFmtWDay;
 		 } else if(!strcmp((char*)Buf, "date-year")) {
 			pTpe->data.field.eDateFormat = tplFmtYear;
 		 } else if(!strcmp((char*)Buf, "date-month")) {
@@ -1569,6 +1571,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtSecFrac;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wdayname", sizeof("wdayname")-1)) {
 				datefmt = tplFmtWDayName;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wday", sizeof("wday")-1)) {
+				datefmt = tplFmtWDay;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"year", sizeof("year")-1)) {
 				datefmt = tplFmtYear;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"month", sizeof("month")-1)) {

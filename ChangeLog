@@ -4,15 +4,17 @@ Version 8.3.2 [v8-devel] 2014-05-??
   - year
   - month
   - day
-  - wdayname
+  - wday
   - hour
   - minute
   - second
   - tzoffshour
   - tzoffsmin
   - tzoffsdirection
+  - wdayname
   For string templates, these are property options and they are 
   prefixed with "date-" (e.g. "date-year", "date-month", ...)
+  see also: https://github.com/rsyslog/rsyslog/issues/65
 - bugfix: mmexternal did potentially pass incomplete data to restarted
   external plugin
   This could happen if EPIPE was returned "too late", in which case the

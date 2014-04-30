@@ -82,6 +82,8 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(var)
 
+static char *one_digit[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
 static char *two_digits[100] = {
 	"00", "01", "02", "03", "04", "05", "06", "07", "08", "09",
 	"10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
@@ -1633,6 +1635,8 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__re
 		return(pM->pszTIMESTAMP_SecFrac);
 	case tplFmtWDayName:
 		return wdayNames[getWeekdayNbr(&pM->tTIMESTAMP)];
+	case tplFmtWDay:
+		return one_digit[getWeekdayNbr(&pM->tTIMESTAMP)];
 	case tplFmtMonth:
 		return two_digits[pM->tTIMESTAMP.month];
 	case tplFmtYear:
@@ -1742,6 +1746,8 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt, unsign
 		return(pM->pszRcvdAt_SecFrac);
 	case tplFmtWDayName:
 		return wdayNames[getWeekdayNbr(&pM->tRcvdAt)];
+	case tplFmtWDay:
+		return one_digit[getWeekdayNbr(&pM->tRcvdAt)];
 	case tplFmtMonth:
 		return two_digits[pM->tRcvdAt.month];
 	case tplFmtYear:
