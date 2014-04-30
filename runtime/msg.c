@@ -1567,7 +1567,7 @@ getPRI(msg_t * const pM)
 
 
 char *
-getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__restrict__ const pbMustBeFreed)
+getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -1662,7 +1662,7 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__re
 	return "INVALID eFmt OPTION!";
 }
 
-static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt, unsigned short *__restrict__ const pbMustBeFreed)
+static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -2030,7 +2030,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "rawmsg", jval);
 
-	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date, NULL);
+	pRes = (uchar*)getTimeReported(pMsg, tplFmtRFC3339Date);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timereported", jval);
 
@@ -2060,7 +2060,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	jval = json_object_new_string(getSeverity(pMsg));
 	json_object_object_add(json, "syslogseverity", jval);
 
-	pRes = (uchar*)getTimeGenerated(pMsg, tplFmtRFC3339Date, NULL);
+	pRes = (uchar*)getTimeGenerated(pMsg, tplFmtRFC3339Date);
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timegenerated", jval);
 
@@ -3051,7 +3051,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				datefmt = pTpe->data.field.eDateFormat;
 			else
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeReported(pMsg, datefmt, pbMustBeFreed);
+			pRes = (uchar*)getTimeReported(pMsg, datefmt);
 			break;
 		case PROP_HOSTNAME:
 			pRes = (uchar*)getHOSTNAME(pMsg);
@@ -3105,7 +3105,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				datefmt = pTpe->data.field.eDateFormat;
 			else
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeGenerated(pMsg, datefmt, pbMustBeFreed);
+			pRes = (uchar*)getTimeGenerated(pMsg, datefmt);
 			break;
 		case PROP_PROGRAMNAME:
 			pRes = getProgramName(pMsg, LOCK_MUTEX);
