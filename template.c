@@ -706,6 +706,24 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
 		 } else if(!strcmp((char*)Buf, "date-wdayname")) {
 			pTpe->data.field.eDateFormat = tplFmtWDayName;
+		 } else if(!strcmp((char*)Buf, "date-year")) {
+			pTpe->data.field.eDateFormat = tplFmtYear;
+		 } else if(!strcmp((char*)Buf, "date-month")) {
+			pTpe->data.field.eDateFormat = tplFmtMonth;
+		 } else if(!strcmp((char*)Buf, "date-day")) {
+			pTpe->data.field.eDateFormat = tplFmtDay;
+		 } else if(!strcmp((char*)Buf, "date-hour")) {
+			pTpe->data.field.eDateFormat = tplFmtHour;
+		 } else if(!strcmp((char*)Buf, "date-minute")) {
+			pTpe->data.field.eDateFormat = tplFmtMinute;
+		 } else if(!strcmp((char*)Buf, "date-second")) {
+			pTpe->data.field.eDateFormat = tplFmtSecond;
+		 } else if(!strcmp((char*)Buf, "date-tzoffshour")) {
+			pTpe->data.field.eDateFormat = tplFmtTZOffsHour;
+		 } else if(!strcmp((char*)Buf, "date-tzoffsmin")) {
+			pTpe->data.field.eDateFormat = tplFmtTZOffsMin;
+		 } else if(!strcmp((char*)Buf, "date-tzoffsdirection")) {
+			pTpe->data.field.eDateFormat = tplFmtTZOffsDirection;
 		 } else if(!strcmp((char*)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp((char*)Buf, "uppercase")) {
@@ -1551,6 +1569,24 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtSecFrac;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wdayname", sizeof("wdayname")-1)) {
 				datefmt = tplFmtWDayName;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"year", sizeof("year")-1)) {
+				datefmt = tplFmtYear;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"month", sizeof("month")-1)) {
+				datefmt = tplFmtMonth;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"day", sizeof("day")-1)) {
+				datefmt = tplFmtDay;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"hour", sizeof("hour")-1)) {
+				datefmt = tplFmtHour;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"minute", sizeof("minute")-1)) {
+				datefmt = tplFmtMinute;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"second", sizeof("second")-1)) {
+				datefmt = tplFmtSecond;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffshour", sizeof("tzoffshour")-1)) {
+				datefmt = tplFmtTZOffsHour;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsmin", sizeof("tzoffsmin")-1)) {
+				datefmt = tplFmtTZOffsMin;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection", sizeof("tzoffsdirection")-1)) {
+				datefmt = tplFmtTZOffsDirection;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",

@@ -991,6 +991,9 @@ int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
 /* 0 - Sunday, 1, Monday, ...
  * Note that we cannot use strftime() and helpers as they rely on the TZ
  * variable (again, arghhhh). So we need to do it ourselves...
+ * Note: in the year 2100, this algorithm does not work correctly (due to
+ * leap time rules. To fix it then (*IF* this code really still exists then),
+ * just use 2100 as new anchor year and adapt the initial day number.
  */
 int getWeekdayNbr(struct syslogTime *ts)
 {

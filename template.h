@@ -60,7 +60,9 @@ enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
 enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
                       tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4,
 		      tplFmtSecFrac = 5, tplFmtRFC3164BuggyDate = 6, tplFmtUnixDate = 7,
-		      tplFmtWDayName = 8};
+		      tplFmtWDayName = 8, tplFmtYear = 9, tplFmtMonth = 10, tplFmtDay = 11,
+		      tplFmtHour = 12, tplFmtMinute = 13, tplFmtSecond = 14,
+		      tplFmtTZOffsHour = 15, tplFmtTZOffsMin = 16, tplFmtTZOffsDirection = 17};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 enum tplRegexType { TPL_REGEX_BRE = 0, /* posix BRE */
 		    TPL_REGEX_ERE = 1  /* posix ERE */
