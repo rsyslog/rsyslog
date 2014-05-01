@@ -293,7 +293,7 @@ The following command writes all syslog messages into a file.
   $ModLoad omfile
   $DirCreateMode 0700
   $FileCreateMode 0644
-  \*.\* /var/log/messages
+  *.* /var/log/messages
 
 [`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
 index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
