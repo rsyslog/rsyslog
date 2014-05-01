@@ -495,7 +495,11 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 	processProgramReply(pWrkrData, pMsg);
 
 finalize_it:
-	free((void*)inputstr);
+	/* we need to free json input strings, only. All others point to memory
+	 * inside the msg object, which is destroyed when the msg is destroyed.
+	 */
+	if(pWrkrData->pData->inputProp == INPUT_JSON)
+		free((void*)inputstr);
 	RETiRet;
 }
 
