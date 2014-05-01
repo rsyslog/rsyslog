@@ -15,6 +15,10 @@ Version 8.3.2 [v8-devel] 2014-05-??
   For string templates, these are property options and they are 
   prefixed with "date-" (e.g. "date-year", "date-month", ...)
   see also: https://github.com/rsyslog/rsyslog/issues/65
+- bugfix: mmexternal remove framing char before processing JSON reply
+  This did not have any real bad effects, but caused unnecessary
+  processing, as empty replies were not properly detected. Otherwise,
+  the bug was not noticible from the user's PoV.
 - bugfix: mmexternal segfault due to invalid free in non-json input mode
   closes: https://github.com/rsyslog/rsyslog/issues/70
 - bugfix: mmexternal segfault when external plugin sent invalid reply

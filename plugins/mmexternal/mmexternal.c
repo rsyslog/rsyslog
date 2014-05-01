@@ -246,6 +246,8 @@ dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, pWrkrData->
 	} while(pWrkrData->respBuf[numCharsRead-1] != '\n');
 
 	writeOutputDebug(pWrkrData, pWrkrData->respBuf, numCharsRead);
+	/* strip LF, which is not part of the JSON message but framing */
+	pWrkrData->respBuf[numCharsRead-1] = '\0';
 	iRet = MsgSetPropsViaJSON(pMsg, (uchar*)pWrkrData->respBuf);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "mmexternal: invalid reply '%s' from program '%s'",
