@@ -17,13 +17,28 @@ Module Parameters
 ^^^^^^^^^^^^^^^^^
 
 .. function:: Ruleset <name>
-   Binds the specified ruleset to **all** RELP listeners.
+   Binds the specified ruleset to **all** RELP listeners. This can be
+   overridden at the instance level.
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
 
 .. function:: Port <port>
+
    Starts a RELP server on selected port
+
+.. function:: Name <name>
+
+   Sets a name for the inputname property of this listener.  If no name
+   is set, "imrelp" is used by default.  Setting a name is not strictly
+   necessary, but can be useful to apply filtering based on which input
+   the message was received from.
+
+.. function:: Ruleset <name>
+
+   Binds specified ruleset to this listener.  This overrides the
+   module-level Ruleset parameter.
+
 .. function:: tls on/off
 
    *Default is off*
@@ -149,9 +164,6 @@ Caveats/Known Bugs
 -  To obtain the remote system's IP address, you need to have at least
    librelp 1.0.0 installed. Versions below it return the hostname
    instead of the IP address.
--  Contrary to other inputs, the ruleset can only be bound to all
-   listeners, not specific ones. This is due to a currently existing
-   limitation in librelp.
 
 Example
 -------
@@ -180,8 +192,8 @@ Caveats/Known Bugs
    librelp 1.0.0 installed. Versions below it return the hostname
    instead of the IP address.
 -  Contrary to other inputs, the ruleset can only be bound to all
-   listeners, not specific ones. This is due to a currently existing
-   limitation in librelp.
+   listeners, not specific ones. This issue is resolved in the
+   non-Legacy configuration format.
 
 Example
 -------
