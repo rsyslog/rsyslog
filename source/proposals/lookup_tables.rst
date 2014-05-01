@@ -103,16 +103,19 @@ Parameters
 ^^^^^^^^^^
 
 -  **name** (mandatory)
-    Defines the name of lookup table for further reference inside the
+
+   Defines the name of lookup table for further reference inside the
    configuration. Names must be unique. Note that it is possible, though
    not advisible, to have different names for the same file.
 -  **file** (mandatory)
-    Specifies the full path for the lookup table file. This file must be
+
+   Specifies the full path for the lookup table file. This file must be
    readable for the user rsyslog is run under (important when dropping
    privileges). It must point to a valid lookup table file as described
    above.
 -  **reloadOnHUP** (optional, default "on")
-    Specifies if the table shall automatically be reloaded as part of
+
+   Specifies if the table shall automatically be reloaded as part of
    HUP processing. For static tables, the default is "off" and
    specifying "on" triggers an error message. Note that the default of
    "on" may be somewhat suboptimal performance-wise, but probably is
@@ -132,18 +135,21 @@ Parameters
 ^^^^^^^^^^
 
 -  **return value**
-    The function returns the string that is associated with the given
+
+   The function returns the string that is associated with the given
    indexvalue. If the indexvalue is not present inside the lookup table,
    the "nomatch" string is returned (or an empty string if it is not
    defined).
 -  **name** (constant string)
-    The lookup table to be used. Note that this must be specificed as a
+
+   The lookup table to be used. Note that this must be specificed as a
    constant. In theory, variable table names could be made possible, but
    their runtime behaviour is not as good as for static names, and we do
    not (yet) see good use cases where dynamic table names could be
    useful.
 -  **indexvalue** (expression)
-    The value to be looked up. While this is an arbitrary RainerScript
+
+   The value to be looked up. While this is an arbitrary RainerScript
    expression, it's final value is always converted to a string in order
    to conduct the lookup. For example, "lookup(table, 3+4)" would be
    exactly the same as "lookup(table, "7")". In most cases, indexvalue
@@ -176,12 +182,15 @@ Parameters
 ^^^^^^^^^^
 
 -  **name** (string)
-    The lookup table to be used.
+
+   The lookup table to be used.
 -  **errOnFail** (boolean, default "on")
-    Specifies whether or not an error message is to be emitted if there
+
+   Specifies whether or not an error message is to be emitted if there
    are any problems reloading the lookup table.
 -  **valueOnFail** (optional, string)
-    This parameter affects processing if the lookup table cannot be
+
+   This parameter affects processing if the lookup table cannot be
    loaded for some reason: If the parameter is not present, the previous
    table will be kept in use. If the parameter is given, the previous
    table will no longer be used, and instead an empty table be with
@@ -234,6 +243,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

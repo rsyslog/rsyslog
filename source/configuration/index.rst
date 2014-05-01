@@ -5,6 +5,8 @@ Rsyslog Configuration
 /etc. By default, rsyslogd reads the file /etc/rsyslog.conf. This may be
 changed by a command line option.
 
+Note that **configurations can be built interactively** via the online
+`rsyslog configuration builder <http://www.rsyslog.com/rsyslog-configuration-builder/>`_ tool.
 `Configuration file examples can be found in the rsyslog
 wiki <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_. Also
 keep the `rsyslog config
@@ -42,6 +44,6 @@ otherwise the newly added configurations settings will not be loaded.
    expression
    examples
    modules/index
-   modules
    global/index
    ipv6
+   cryprov_gcry

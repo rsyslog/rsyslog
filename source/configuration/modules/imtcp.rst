@@ -8,10 +8,10 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
-Configuration Directives
+Configuration Parameters
 ------------------------
 
-Global Directives
+Global Parameters
 ^^^^^^^^^^^^^^^^^
 
 .. function:: AddtlFrameDelimiter <Delimiter>
@@ -105,7 +105,7 @@ Global Directives
    Array of peers:
    PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]
 
-Action Directives
+Action Parameters
 ^^^^^^^^^^^^^^^^^
 
 .. function:: Port <port>

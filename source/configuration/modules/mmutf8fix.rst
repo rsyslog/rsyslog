@@ -85,27 +85,31 @@ In this snippet, we write one file without fixing UTF-8 and another one
 with the message fixed. Note that once mmutf8fix has run, access to the
 original message is no longer possible.
 
-module(load="mmutf8fix") action(type="omfile"
-file="/path/to/non-fixed.log") action(type="mmutf8fix")
-action(type="omfile" file="/path/to/fixed.log")
+::
+  module(load="mmutf8fix") action(type="omfile"
+  file="/path/to/non-fixed.log") action(type="mmutf8fix")
+  action(type="omfile" file="/path/to/fixed.log")
 
 In this sample, we fix only message originating from host 10.0.0.1.
 
-module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
-action(type="mmutf8fix") # all other actions here...
+::
+
+  module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
+  action(type="mmutf8fix") # all other actions here...
 
 This is mostly the same as the previous sample, but uses
 "controlcharacters" processing mode.
 
-module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
-action(type="mmutf8fix" mode="controlcharacters") # all other actions
-here...
+::
+
+  module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
+  action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
 
 [`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
 index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

@@ -27,7 +27,8 @@ default, it is usually well-chosen and applicable in most cases.
    e.g. when generating a configuration graph. Available sice 4.3.1.
 -  $ActionExecOnlyOnceEveryInterval <seconds> - execute action only if
    the last execute is at last <seconds> seconds in the past (more info
-   in `ommail <ommail.html>`_, but may be used with any action)
+   in `ommail <ommail.html>`_, but may be used with any action). To
+   disable this setting, use value 0.
 -  ***$ActionExecOnlyEveryNthTime** <number>* - If configured, the next
    action will only be executed every n-th time. For example, if
    configured to 3, the first two messages that go into the action will
