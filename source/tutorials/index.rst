@@ -11,6 +11,5 @@ Tutorials
    reliable_forwarding
    php_syslog_ng
    recording_pri
-   stunnel
    failover_syslog_server
    log_rotation_fix_size
