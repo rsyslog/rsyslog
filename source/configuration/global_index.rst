@@ -48,16 +48,16 @@ default, it is usually well-chosen and applicable in most cases.
    the same action. If so, the timeout setting specifies after which
    period the counting of "previous actions" expires and a new action
    count is begun. Specify 0 (the default) to disable timeouts.
-    *Why is this option needed?* Consider this case: a message comes in
+   *Why is this option needed?* Consider this case: a message comes in 
    at, eg., 10am. That's count 1. Then, nothing happens for the next 10
    hours. At 8pm, the next one occurs. That's count 2. Another 5 hours
    later, the next message occurs, bringing the total count to 3. Thus,
    this message now triggers the rule.
-    The question is if this is desired behavior? Or should the rule only
+   The question is if this is desired behavior? Or should the rule only
    be triggered if the messages occur within an e.g. 20 minute window?
    If the later is the case, you need a
-    $ActionExecOnlyEveryNthTimeTimeout 1200
-    This directive will timeout previous messages seen if they are older
+   $ActionExecOnlyEveryNthTimeTimeout 1200
+   This directive will timeout previous messages seen if they are older
    than 20 minutes. In the example above, the count would now be always
    1 and consequently no rule would ever be triggered.
 -  $ActionFileDefaultTemplate [templateName] - sets a new default
@@ -219,7 +219,7 @@ default, it is usually well-chosen and applicable in most cases.
    default should be sufficient for almost all cases. Do not set this
    below 1k, as it would cause interoperability problems with other
    syslog implementations.
-    Change the setting to e.g. 32768 if you would like to support large
+   Change the setting to e.g. 32768 if you would like to support large
    message sizes for IHE (32k is the current maximum needed for IHE). I
    was initially tempted to set the default to 32k, but there is a some
    memory footprint with the current implementation in rsyslog.
@@ -357,6 +357,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
+
 Copyright © 2008-2010 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version

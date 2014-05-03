@@ -116,7 +116,7 @@ Configuration Directives
 
 .. function:: $InputTCPServerStreamDriverAuthMode <mode-string>
 
-    Sets the authentication mode for the currently selected `network
+   Sets the authentication mode for the currently selected `network
    stream driver <netstream.html>`_. <mode-string> is driver specifc.
 
 .. function:: $InputTCPServerStreamDriverPermittedPeer <id-string>

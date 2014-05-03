@@ -160,13 +160,11 @@ After the command has finished, you should have a usable stunnel.pem in
 your working directory.
 
 Next is to create a configuration file for stunnel. It will direct
-stunnel what to do. You can used the following basic file:
+stunnel what to do. You can use the following basic file:
 
-    ````
+::
 
-    ::
-
-        ; Certificate/key is needed in server modecert = /etc/stunnel/stunnel.pem; Some debugging stuff useful for troubleshootingdebug = 7foreground=yes
+; Certificate/key is needed in server modecert = /etc/stunnel/stunnel.pem; Some debugging stuff useful for troubleshootingdebug = 7foreground=yes
 
         [ssyslog]
         accept  = 60514
@@ -202,8 +200,6 @@ certificate (of course, you can use one if you would like to
 authenticate the client, but this is beyond the scope of this paper). So
 the basic thing you need to do is create the stunnel configuration file.
 
-    ````
-
     ::
 
         ; Some debugging stuff useful for troubleshootingdebug = 7foreground=yes
@@ -233,13 +229,11 @@ stock syslogd, you do this via the "@host" forwarding directive. The
 same works with rsyslog, but it suppports extensions to use tcp. Add the
 following line to your /etc/rsyslog.conf:
 
-    ````
-
     ::
 
         *.*      @@127.0.0.1:61514
 
-**
+
 
 Please note the double at-sign (@@). This is no typo. It tells rsyslog
 to use tcp instead of udp delivery. In this sample, all messages are

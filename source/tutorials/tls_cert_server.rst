@@ -90,7 +90,7 @@ Sample syslog.conf
 ~~~~~~~~~~~~~~~~~~
 
 Keep in mind that this rsyslog.conf accepts messages via TCP, only. The
-only other source accepted is messages from the server itself. ````
+only other source accepted is messages from the server itself. 
 
 ::
 

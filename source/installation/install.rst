@@ -91,12 +91,12 @@ load the most common plug-ins, add the following to the top of
 rsyslog.conf:
 
 $ModLoad immark # provides --MARK-- message capability
- $ModLoad imudp # provides UDP syslog reception
- $ModLoad imtcp # provides TCP syslog reception and GSS-API (if compiled
+$ModLoad imudp # provides UDP syslog reception
+$ModLoad imtcp # provides TCP syslog reception and GSS-API (if compiled
 to support it)
- $ModLoad imuxsock # provides support for local system logging (e.g. via
+$ModLoad imuxsock # provides support for local system logging (e.g. via
 logger command)
- $ModLoad imklog # provides kernel logging support (previously done by
+$ModLoad imklog # provides kernel logging support (previously done by
 rklogd)
 
 Change rsyslog.conf for any further enhancements you would like to see.

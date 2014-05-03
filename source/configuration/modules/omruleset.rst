@@ -55,7 +55,7 @@ before using omruleset!**
 **Configuration Directives**:
 
 -  **$ActionOmrulesetRulesetName** ruleset-to-submit-to
-    This directive specifies the name of the ruleset that the message
+   This directive specifies the name of the ruleset that the message
    provided to omruleset should be submitted to. This ruleset must
    already have been defined. Note that the directive is automatically
    reset after each :omruleset: action and there is no default. This is
@@ -129,6 +129,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

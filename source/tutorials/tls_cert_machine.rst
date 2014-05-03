@@ -43,7 +43,7 @@ that will be using this certificate. For example, if you generate a
 certificate for a machine named "server.example.com", you need to use
 that name. If you generate a certificate for "client.example.com", you
 need to use this name. Make sure that each machine certificate has a
-unique name. If not, you can not apply proper access control. ````
+unique name. If not, you can not apply proper access control. 
 
 ::
 

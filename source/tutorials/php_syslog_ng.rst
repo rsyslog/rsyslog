@@ -59,7 +59,7 @@ this article, we simply modify `rsyslog.conf <rsyslog_conf.html>`_\ so
 that it writes to the database. That is easy. Just these two lines are
 needed:
 
-    ``$template syslog-ng,"insert into logs(host, facility, priority, tag, date,      time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%,      '%syslogtag%',  '%timereported:::date-mysql%', '%timereported:::date-mysql%',      '%msg%')", SQL      *.*             >mysql-server,syslog,user,pass;syslog-ng     ``
+    ``$template syslog-ng,"insert into logs(host, facility, priority, tag, date,      time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%,      '%syslogtag%',  '%timereported:::date-mysql%', '%timereported:::date-mysql%',      '%msg%')", SQL      *.*,           mysql-server,syslog,user,pass;syslog-ng``
 
 These are just **two** lines. I have color-coded them so that you see
 what belongs together (the colors have no other meaning). The green line
