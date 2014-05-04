@@ -352,27 +352,30 @@ options are defined:
   timestamp)
 
 **escape-cc**
-  replace control characters (ASCII value 127 and values less then 32)
-  with an escape sequence. The sequnce is "#<charval>" where charval is
-  the 3-digit decimal value of the control character. For example, a
-  tabulator would be replaced by "#009".
-  Note: using this option requires that
-  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-  is set to off.
+
+replace control characters (ASCII value 127 and values less then 32)
+with an escape sequence. The sequnce is "#<charval>" where charval is
+the 3-digit decimal value of the control character. For example, a
+tabulator would be replaced by "#009".
+Note: using this option requires that
+`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+is set to off.
 
 **space-cc**
-  replace control characters by spaces
-  Note: using this option requires that
-  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-  is set to off.
+
+replace control characters by spaces
+Note: using this option requires that
+`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+is set to off.
 
 **drop-cc**
-  drop control characters - the resulting string will neither contain
-  control characters, escape sequences nor any other replacement character
-  like space.
-  Note: using this option requires that
-  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-  is set to off.
+
+drop control characters - the resulting string will neither contain
+control characters, escape sequences nor any other replacement character
+like space.
+Note: using this option requires that
+`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+is set to off.
 
 **sp-if-no-1st-sp**
   This option looks scary and should probably not be used by a user. For
