@@ -1,13 +1,11 @@
 /* imdiag.c
- * This is a diagnostics module, primarily meant for troubleshooting
- * and information about the runtime state of rsyslog. It is implemented
- * as an input plugin, because that interface best suits our needs
- * and also enables us to inject test messages (something not yet
- * implemented).
+ * This is a testbench tool. It started out with a broader scope,
+ * but we dropped this idea. To learn about rsyslog runtime statistics
+ * have a look at impstats.
  *
  * File begun on 2008-07-25 by RGerhards
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
