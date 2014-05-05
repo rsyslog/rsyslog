@@ -877,11 +877,9 @@ AC_ARG_ENABLE(mail,
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
 
-# imdiag support (so far we do not need a library, but we need to turn this on and off)
-# note that we enable this be default, because an important point is to make
-# it available to users who do not know much about how to handle things. It
-# would complicate things if we first needed to tell them how to enable imdiag.
-# rgerhards, 2008-07-25
+# imdiag support
+# This is a core testbench tool. You need to enable it if you want to
+# use not only a small subset of the testbench.
 AC_ARG_ENABLE(imdiag,
         [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=no@:>@])],
         [case "${enableval}" in
