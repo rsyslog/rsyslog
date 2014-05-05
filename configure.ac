@@ -401,28 +401,6 @@ if test "$enable_jemalloc" = "yes"; then
 fi
 
 
-#
-# The following define determines whether the package adheres to the
-# file system standard.
-#
-AC_MSG_CHECKING(for FSSTND support)
-AC_ARG_ENABLE([fsstnd],
-  [AS_HELP_STRING([--disable-fsstnd], [Disable support for FSSTND])],
-  [
-    if test "x${enableval}" = "xyes"; then
-      AC_MSG_RESULT([yes])
-      AC_DEFINE([FSSTND], [1], [Description])
-    else
-      AC_MSG_RESULT([no])
-    fi
-  ],
-  [
-    # enabled by default
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([FSSTND], [1], [Description])
-  ])
-
-
 # support for unlimited select() syscall
 AC_ARG_ENABLE(unlimited_select,
         [AS_HELP_STRING([--enable-unlimited-select],[Enable unlimited select() syscall @<:@default=no@:>@])],

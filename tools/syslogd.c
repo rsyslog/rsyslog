@@ -161,27 +161,10 @@ static rsRetVal queryLocalHostname(void);
 
 #if defined(SYSLOGD_PIDNAME)
 #	undef _PATH_LOGPID
-#	if defined(FSSTND)
-#		ifdef OS_BSD
-#			define _PATH_VARRUN "/var/run/"
-#		endif
-#		if defined(__sun) || defined(__hpux)
-#			define _PATH_VARRUN "/var/run/"
-#		endif
-#		define _PATH_LOGPID _PATH_VARRUN SYSLOGD_PIDNAME
-#	else
-#		define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
-#	endif
+#	define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
 #else
 #	ifndef _PATH_LOGPID
-#		if defined(__sun) || defined(__hpux)
-#			define _PATH_VARRUN "/var/run/"
-#		endif
-#		if defined(FSSTND)
-#			define _PATH_LOGPID _PATH_VARRUN "rsyslogd.pid"
-#		else
-#			define _PATH_LOGPID "/etc/rsyslogd.pid"
-#		endif
+#		define _PATH_LOGPID "/etc/rsyslogd.pid"
 #	endif
 #endif
 
