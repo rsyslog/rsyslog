@@ -21,12 +21,12 @@ priority!
 **Configuration Directives**:
 
 -  **$ActionOMStdoutArrayInterface** [on\|**off**
-    This setting instructs omstdout to use the alternate array based
+   This setting instructs omstdout to use the alternate array based
    method of parameter passing. If used, the values will be output with
    commas between the values but no other padding bytes. This is a test
    aid for the alternate calling interface.
 -  **$ActionOMStdoutEnsureLFEnding** [**on**\ \|off
-    Makes sure that each message is written with a terminating LF. This
+   Makes sure that each message is written with a terminating LF. This
    is needed for the automatted tests. If the message contains a
    trailing LF, none is added.
 
@@ -39,6 +39,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+
+Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
