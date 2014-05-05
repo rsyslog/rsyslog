@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-03-??
+- removed obsolete --disable-fsstnd configure option
+  Thanks to Thomas D. for alerting us.
+  Closes: https://github.com/rsyslog/rsyslog/issues/72
 - permits to build against json-c 0.12
   Unfortunately, json-c had an ABI breakage, so this is necessary. Note
   that versions prior to 0.12 had security issues (CVE-2013-6370,
