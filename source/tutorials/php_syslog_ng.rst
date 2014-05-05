@@ -7,7 +7,7 @@ Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 
 Note: it has been reported that this guide is somewhat outdated. Please
 use with care. Also, please note that **rsyslog's "native" web frontend
-is** `phpLogCon <http://www.phplogcon.org>`_, which provides best
+is** `Adiscon LogAnalyzer <http://www.phplogcon.org>`_, which provides best
 integration and a lot of extra functionality.
 
 Abstract
@@ -43,7 +43,30 @@ skip any steps refering to configure syslog-ng. Make sure you create the
 database schema in `MySQL <http://www.mysql.com/>`_. As of this writing,
 the expected schema can be created via this script:
 
-    ``CREATE DATABASE syslog     !     USE syslog     !     CREATE TABLE logs (     host varchar(32) default NULL,     facility varchar(10) default NULL,     priority varchar(10) default NULL,     level varchar(10) default NULL,     tag varchar(10) default NULL,     date date default NULL,     time time default NULL,     program varchar(15) default NULL,     msg text,     seq int(10) unsigned NOT NULL auto_increment,     PRIMARY KEY (seq),     KEY host (host),     KEY seq (seq),     KEY program (program),     KEY time (time),     KEY date (date),     KEY priority (priority),     KEY facility (facility)     ) TYPE=MyISAM;``
+::
+
+  CREATE DATABASE syslog
+  USE syslog
+  CREATE TABLE logs(host varchar(32) default NULL,
+                    facility varchar(10)
+                    default NULL,
+                    priority varchar(10) default NULL,
+                    level varchar(10) default NULL,
+                    tag varchar(10) default NULL,
+                    date date default NULL,
+                    time time default NULL,
+                    program varchar(15) default NULL,
+                    msg text,
+                    seq int(10) unsigned NOT NULL auto_increment,
+                    PRIMARY KEY (seq),
+                    KEY host (host),
+                    KEY seq (seq),
+                    KEY program (program),
+                    KEY time (time),
+                    KEY date (date),
+                    KEY priority (priority),
+                    KEY facility (facility
+                   ) TYPE=MyISAM;``
 
 Please note that at the time you are reading this paper, the schema
 might have changed. Check for any differences. As we customize rsyslogd
@@ -59,7 +82,10 @@ this article, we simply modify `rsyslog.conf <rsyslog_conf.html>`_\ so
 that it writes to the database. That is easy. Just these two lines are
 needed:
 
-    ``$template syslog-ng,"insert into logs(host, facility, priority, tag, date,      time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%,      '%syslogtag%',  '%timereported:::date-mysql%', '%timereported:::date-mysql%',      '%msg%')", SQL      *.*             >mysql-server,syslog,user,pass;syslog-ng     ``
+::
+
+  $template syslog-ng,"insert into logs(host, facility, priority, tag, date, time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%, '%syslogtag%', '%timereported:::date-mysql%', '%timereported:::date-mysql%', '%msg%')", SQL
+  *.*,           mysql-server,syslog,user,pass;syslog-ng
 
 These are just **two** lines. I have color-coded them so that you see
 what belongs together (the colors have no other meaning). The green line
@@ -68,7 +94,8 @@ schema. Rsyslogd allows you to fully control the statement sent to the
 database. This allows you to write to any database format, including
 your homegrown one (if you so desire). Please note that there is a small
 inefficiency in our current usage: the
-``'%timereported:::date-mysql%'``  property is used for both the time
+``'%timereported:::date-mysql%'``
+property is used for both the time
 and the date (if you wonder about what all these funny characters mean,
 see the `rsyslogd property replacer manual <property_replacer.html>`_) .
 We could have extracted just the date and time parts of the respective
@@ -115,7 +142,7 @@ infrastructure.
 
 Please note that the `MonitorWare
 family <http://www.monitorware.com/en/>`_ (to which rsyslog belongs)
-also offers a web-interface: `phpLogCon <http://www.phplogcon.org/>`_.
+also offers a web-interface: `Adiscon LogAnalyzer`_.
 From my point of view, obviously, **phpLogCon is the more natural choice
 for a web interface to be used together with rsyslog**. It also offers
 superb functionality and provides, for example,native display of Windows

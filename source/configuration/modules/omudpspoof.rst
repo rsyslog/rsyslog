@@ -19,30 +19,30 @@ source ports.
 **Configuration Directives**:
 
 -  **$ActionOMOMUDPSpoofSourceNameTemplate** <templatename>
-    This is the name of the template that contains a numerical IP
+   This is the name of the template that contains a numerical IP
    address that is to be used as the source system IP address. While it
    may often be a constant value, it can be generated as usual via the
    property replacer, as long as it is a valid IPv4 address. If not
    specified, the build-in default template
    RSYSLOG\_omudpspoofDfltSourceTpl is used. This template is defined as
    follows:
-    $template RSYSLOG\_omudpspoofDfltSourceTpl,"%fromhost-ip%"
-    So in essence, the default template spoofs the address of the system
+   $template RSYSLOG\_omudpspoofDfltSourceTpl,"%fromhost-ip%"
+   So in essence, the default template spoofs the address of the system
    the message was received from. This is considered the most important
    use case.
 -  **$ActionOMUDPSpoofTargetHost** <hostname>
-    Host that the messages shall be sent to.
+   Host that the messages shall be sent to.
 -  **$ActionOMUDPSpoofTargetPort** <port>
-    Remote port that the messages shall be sent to.
+   Remote port that the messages shall be sent to.
 -  **$ActionOMUDPSpoofDefaultTemplate** <templatename>
-    This setting instructs omudpspoof to use a template different from
+   This setting instructs omudpspoof to use a template different from
    the default template for all of its actions that do not have a
    template specified explicitely.
 -  **$ActionOMUDPSpoofSourcePortStart** <number>
-    Specifies the start value for circeling the source ports. Must be
+   Specifies the start value for circeling the source ports. Must be
    less than or equal to the end value. Default is 32000.
 -  **$ActionOMUDPSpoofSourcePortEnd** <number>
-    Specifies the ending value for circeling the source ports. Must be
+   Specifies the ending value for circeling the source ports. Must be
    less than or equal to the start value. Default is 42000.
 
 **Caveats/Known Bugs:**
@@ -85,6 +85,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
+
 Copyright © 2009-2012 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version

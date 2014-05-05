@@ -1,7 +1,3 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Configuration Directives
 ------------------------
 
@@ -15,6 +11,17 @@ Here is a list in alphabetical order. Follow links for a description.
 Not all directives have an in-depth description right now. Default
 values for them are in bold. A more in-depth description will appear as
 implementation progresses.
+
+**Important:** While these parameters are traditionally documentated as
+"global directives", many of them are actually not global but affect
+those objects that sequentially follow it in rsyslog.conf. For example,
+*$Action...* directives modify the next action. When they are reset
+after the action definition, the set value still applies to all actions
+defined with it. This type of config has become much clearer in the
+enhanced format that is available in rsyslog v7 and above. In any case,
+we strongly suggest to update to a more recent version. Version 5 is
+heavily outdated and no longer supported by the rsyslog project since
+many years.
 
 **Be sure to read information about `queues in rsyslog <queues.html>`_**
 - many parameter settings modify queue parameters. If in doubt, use the
@@ -41,16 +48,16 @@ default, it is usually well-chosen and applicable in most cases.
    the same action. If so, the timeout setting specifies after which
    period the counting of "previous actions" expires and a new action
    count is begun. Specify 0 (the default) to disable timeouts.
-    *Why is this option needed?* Consider this case: a message comes in
+   *Why is this option needed?* Consider this case: a message comes in 
    at, eg., 10am. That's count 1. Then, nothing happens for the next 10
    hours. At 8pm, the next one occurs. That's count 2. Another 5 hours
    later, the next message occurs, bringing the total count to 3. Thus,
    this message now triggers the rule.
-    The question is if this is desired behavior? Or should the rule only
+   The question is if this is desired behavior? Or should the rule only
    be triggered if the messages occur within an e.g. 20 minute window?
    If the later is the case, you need a
-    $ActionExecOnlyEveryNthTimeTimeout 1200
-    This directive will timeout previous messages seen if they are older
+   $ActionExecOnlyEveryNthTimeTimeout 1200
+   This directive will timeout previous messages seen if they are older
    than 20 minutes. In the example above, the count would now be always
    1 and consequently no rule would ever be triggered.
 -  $ActionFileDefaultTemplate [templateName] - sets a new default
@@ -212,7 +219,7 @@ default, it is usually well-chosen and applicable in most cases.
    default should be sufficient for almost all cases. Do not set this
    below 1k, as it would cause interoperability problems with other
    syslog implementations.
-    Change the setting to e.g. 32768 if you would like to support large
+   Change the setting to e.g. 32768 if you would like to support large
    message sizes for IHE (32k is the current maximum needed for IHE). I
    was initially tempted to set the default to 32k, but there is a some
    memory footprint with the current implementation in rsyslog.
@@ -350,6 +357,7 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
+
 Copyright © 2008-2010 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version

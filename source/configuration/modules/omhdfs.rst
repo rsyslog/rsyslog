@@ -19,9 +19,9 @@ system.
 -  **$OMHDFSHost** [name]
     Name or IP address of the HDFS host to connect to.
 -  **$OMHDFSPort** [name]
-    Port on which to connect to the HDFS host.
+   Port on which to connect to the HDFS host.
 -  **$OMHDFSDefaultTemplate** [name]
-    Default template to be used when none is specified. This saves the
+   Default template to be used when none is specified. This saves the
    work of specifying the same template ever and ever again. Of course,
    the default template can be overwritten via the usual method.
 
@@ -40,13 +40,13 @@ how to do it better, please drop us a line!
    -  JAVA\_INCLUDES - must have all include pathes that are needed to
       build JNI C programms, including the -I options necessary for gcc.
       An example is
-       # export
+      # export
       JAVA\_INCLUDES="-I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86\_64/include
       -I/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0.x86\_64/include/linux"
    -  JAVA\_LIBS - must have all library pathes that are needed to build
       JNI C programms, including the -l/-L options necessary for gcc. An
       example is
-       # export export
+      # export export
       JAVA\_LIBS="-L/usr/java/jdk1.6.0\_21/jre/lib/amd64
       -L/usr/java/jdk1.6.0\_21/jre/lib/amd64/server -ljava -ljvm
       -lverify"
@@ -65,6 +65,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
+
 Copyright © 2010 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

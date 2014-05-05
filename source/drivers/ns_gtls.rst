@@ -15,7 +15,8 @@ Supported Driver Modes
 Note: mode 0 does not provide any benefit over the ptcp driver. This
 mode exists for technical reasons, but should not be used. It may be
 removed in the future.
- Supported Authentication Modes
+
+Supported Authentication Modes
 
 -  anon - anonymous authentication as described in IETF's
    draft-ietf-syslog-transport-tls-12 Internet draft

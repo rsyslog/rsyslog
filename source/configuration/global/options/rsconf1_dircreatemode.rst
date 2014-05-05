@@ -25,7 +25,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2007-2009 by `Rainer
+Copyright © 2007-2009 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
