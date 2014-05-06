@@ -1,6 +1,6 @@
 `rsyslog.conf configuration directive <rsyslog_conf_global.html>`_
 
-$AboortOnUncleanConfig
+$AbortOnUncleanConfig
 ----------------------
 
 **Type:** global configuration directive
