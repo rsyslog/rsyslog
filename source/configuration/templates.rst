@@ -99,18 +99,18 @@ sample of that use case from the rsylsog testbench:
         constant(value="\n")
     }
 
-The following escape sequences are recogniced inside the constant text:
+The following escape sequences are recognized inside the constant text:
 
 -  \\\\ - single backslash
 -  \\n - LF
 -  \\ooo - (three octal digits) - represents character with this
    numerical value (e.g. \\101 equals "A"). Note that three octal digits
-   must be given (in contrast to some languagues, where between one and
+   must be given (in contrast to some languages, where between one and
    three are valid). While we support octal notation, we recommend to
    use hex notation as this is better known.
 -  \\xhh - (where h is a hex digit) - represents character with this
    numerical value (e.g. \\x41 equals "A"). Note that two hexadecimal
-   digits must be given (in contrast to some languagues where one or two
+   digits must be given (in contrast to some languages where one or two
    are valid).
 -  ... some others ... list needs to be extended
 
@@ -153,7 +153,7 @@ property or modifying it. It supports the following parameters:
    them from the string.
 -  securepath - used for creating pathnames suitable for use in dynafile
    templates
--  format - specifiy format on a field basis. Supported values are:
+-  format - specify format on a field basis. Supported values are:
 
    -  "`csv <property_replacer.html#csv>`_\ " for use when csv-data is
       generated
@@ -202,7 +202,7 @@ includes all CEE data, while template(name="tpl2" type="subtree"
 subtree="$!usr!tpl2") includes only the subtree starting at $!usr!tpl2.
 The core idea when using this type of template is that the actual data
 is prefabricated via set and unset script statements, and the resulting
-strucuture is then used inside the template. This method MUST be used if
+structure is then used inside the template. This method MUST be used if
 a complete subtree needs to be placed *directly* into the object's root.
 With all other template types, only subcontainers can be generated. Note
 that subtree type can also be used with text-based outputs, like omfile.
@@ -249,7 +249,7 @@ coded. While this is inflexible, it provides superior performance, and
 is often used for that reason (not that "regular" templates are slow -
 but in very demanding environments that "last bit" can make a
 difference). Refer to the plugin's documentation for further details.
-For this type, the paramter **plugin** must be specified and must
+For this type, the parameter **plugin** must be specified and must
 contain the name of the plugin as it identifies itself. Note that the
 plugin must be loaded prior to being used inside a template.
 Config example:
@@ -286,7 +286,7 @@ field.
 At no time, multiple template option should be used. This can cause
 unpredictable behaviour and is against all logic.
 
-Either the **sql** or **stdsql**  option **must** be specified when a
+Either the **sql** or **stdsql** option **must** be specified when a
 template is used for writing to a database, otherwise injection might
 occur. Please note that due to the unfortunate fact that several vendors
 have violated the sql standard and introduced their own escape methods,
@@ -414,7 +414,7 @@ legacy format
 
 In pre v6-versions of rsyslog, you need to use the ``$template``
 statement to configure templates. They provide the equivalent to string-
-and plugin-based templates. The legacy syntax continous to work in v7,
+and plugin-based templates. The legacy syntax continuous to work in v7,
 however we recommend to avoid legacy format for newly written config
 files. Legacy and current config statements can coexist within the same
 config file.
@@ -453,7 +453,7 @@ templates that you can use without the need to define it:
 -  RSYSLOG\_TraditionalFileFormat - the "old style" default log file
    format with low-precision timestamps
 -  RSYSLOG\_FileFormat - a modern-style logfile format similar to
-   TraditionalFileFormat, buth with high-precision timestamps and
+   TraditionalFileFormat, both with high-precision timestamps and
    timezone information
 -  RSYSLOG\_TraditionalForwardFormat - the traditional forwarding format
    with low-precision timestamps. Most useful if you send messages to
@@ -467,7 +467,7 @@ templates that you can use without the need to define it:
    and timezone information. Recommended to be used when sending
    messages to rsyslog 3.12.5 or above.
 -  RSYSLOG\_SyslogProtocol23Format - the format specified in IETF's
-   internet-draft ietf-syslog-protocol-23, which is assumed to be come
+   internet-draft ietf-syslog-protocol-23, which is assumed to become
    the new syslog standard RFC. This format includes several
    improvements. The rsyslog message parser understands this format, so
    you can use it together with all relatively recent versions of
@@ -549,7 +549,7 @@ replacer.
 replacer <property_replacer.html>`_ (see there for details).
 
 Templates can be used in the form of a **list** as well. This has been
-introduced with **6.5.0** The list consists of two parts which are
+introduced with **6.5.0**. The list consists of two parts which are
 either a **constant** or a **property**. The constants are taking the
 part of "text" that you usually enter in string-based templates. The
 properties stay variable, as they are a substitute for different values
@@ -596,7 +596,7 @@ in rsyslog previous to version 6. Note that this format is still
 supported, so there is no hard need to upgrade existing configurations.
 However, it is strongly recommended that the legacy constructs are not
 used when crafting new templates. Note that each $Template statement is
-on a **single** line, but probably broken accross several lines for
+on a **single** line, but probably broken across several lines for
 display purposes by your browsers. Lines are separated by empty lines.
 Keep in mind, that line breaks are important in legacy format.
 
