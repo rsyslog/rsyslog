@@ -20,9 +20,6 @@ reduced (this is the "Last line repeated n times" feature). If set to
 logged. In very early versions of rsyslog, this was controlled by the
 *-e* command line option.
 
-This directives affects selector lines until a new directive is
-specified.
-
 What is a repeated message
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -47,9 +44,13 @@ Discussion
 
 * Very old versions of rsyslog did not have the ability to include the
   repeated message itself within the repeat message.
-* Old versions of rsyslog did not account for the actual message origin,
-  so two processes emitting an equally-looking messsage would have
-  triggered the repeated message reduction code.
+* Versions before 7.3.2 applied repeat message reduction to the output
+  side. This had some implications:
+  - they did not account for the actual message origin, so two processes
+    emitting an equally-looking messsage triggered the repeated message
+    reduction code
+  - repeat message processing could be set on a per-action basis, which
+    has switched to per-input basis for 7.3.2 and above
 * While turning this feature on can save some space in logs, most log analysis
   tools need to see the repeated messages, they can't handle the
   "last message repeated" format.
