@@ -43,5 +43,6 @@ otherwise the newly added configurations settings will not be loaded.
    examples
    modules/index
    modules
+   action/index
    global/index
    ipv6
