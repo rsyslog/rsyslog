@@ -40,6 +40,7 @@ specifies a layered architecture for the syslog protocol:
    :alt: RFC5424 syslog protocol layers
 
    RFC5424 syslog protocol layers
+
 For us important is the distinction between the syslog transport and the
 upper layers. The transport layer specifies how a stream of messages is
 assembled at the sender side and how this stream of messages is
@@ -250,7 +251,7 @@ some time to implement.
 
 The coockbook recipe for using different parsers for different devices
 is given as an actual in-depth example in the
-`$RulesetParser <rscon1_rulesetsparser.html>`_ configuration directive
+`$RulesetParser`_ configuration directive
 doc page. In short, it is acomplished by defining specific rulesets for
 the required parser chains, definining different listener ports for each
 of the devices with different format and binding these listeners to the

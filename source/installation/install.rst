@@ -206,29 +206,24 @@ them.
 Revision History
 ~~~~~~~~~~~~~~~~
 
--  2005-08-08 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-08-08 \* `Rainer Gerhards`_ \*
    Initial version created
--  2005-08-09 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-08-09 \* `Rainer Gerhards`_ \*
    updated to include distro-specific directories, which are now
    mandatory
--  2005-09-06 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-09-06 \* `Rainer Gerhards`_ \*
    added information on log rotation scripts
--  2007-07-13 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
+-  2007-07-13 \* `Rainer Gerhards`_  \*
    updated to new autotools-based build system
--  2008-10-01 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
+-  2008-10-01 \* `Rainer Gerhards`_  \*
    added info on building from source repository
 
 Copyright
 ~~~~~~~~~
 
 Copyright © 2005-2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
+Gerhards`_ and
+`Adiscon`_.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -243,6 +238,6 @@ site <http://www.rsyslog.com/>`_\ ]
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 1.2 or higher.

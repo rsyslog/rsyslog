@@ -288,25 +288,20 @@ me know <mailto:rgerhards@adiscon.com>`_.
 Revision History
 ----------------
 
--  2005-07-22 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-07-22 \* `Rainer Gerhards`_ \*
    Initial Version created
--  2005-07-26 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-07-26 \* `Rainer Gerhards`_ \*
    Some text brush-up, hyperlinks added
--  2005-08-03 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-08-03 \* `Rainer Gerhards`_ \*
    license added
--  2008-05-05 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2008-05-05 \* `Rainer Gerhards`_ \*
    updated to reflect native TLS capability of rsyslog 3.19.0 and above
 
 Copyright
 ---------
 
-Copyright (c) 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
+Copyright (c) 2008 `Rainer Gerhards`_ and
+`Adiscon`_.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -321,6 +316,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
