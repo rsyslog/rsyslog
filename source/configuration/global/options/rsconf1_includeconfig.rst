@@ -29,7 +29,7 @@ ignored). `Michael Biebl had the idea to this
 functionality <http://sourceforge.net/tracker/index.php?func=detail&aid=1764088&group_id=123448&atid=696555>`_.
 Let me quote him:
 
-    *Say you can add an option
+    Say you can add an option
      $IncludeConfig /etc/rsyslog.d/
      (which probably would make a good default)
      to /etc/rsyslog.conf, which would then merge and include all
@@ -47,7 +47,7 @@ Let me quote him:
     approach
      would be much cleaner and less error prone, than having to munge
     around
-     with the /etc/rsyslog.conf file directly.*
+     with the /etc/rsyslog.conf file directly.
 
 **Sample:**
 
