@@ -39,12 +39,12 @@ reliability in case a message could not be received. You need to be sure
 about the implications before applying this option. In general, it is
 NOT recommended to use the -A option.
 
-***\***\ rsyslog does not support RFC 3195 over IPv6. The reason is that
+**\***\ rsyslog does not support RFC 3195 over IPv6. The reason is that
 the RFC 3195 library, `liblogging <http://www.liblogging.org/>`_,
 supports IPv4, only. Currently, there are no plans to update either
 rsyslog to another RFC 3195 stack or update liblogging. There is simply
-no demand for 3195 solutions.*
+no demand for 3195 solutions.
 
 Last Updated: 2007-07-02
- Copyright © 2007 by Rainer Gerhards, released under the GNU GPL V2 or
+Copyright © 2007 by Rainer Gerhards, released under the GNU GPL V2 or
 later.
