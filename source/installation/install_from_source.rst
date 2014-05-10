@@ -249,21 +249,16 @@ them.
 Revision History
 ~~~~~~~~~~~~~~~~
 
--  2005-08-08 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-08-08 \* `Rainer Gerhards`_ \*
    Initial version created
--  2005-08-09 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-08-09 \* `Rainer Gerhards`_ \*
    updated to include distro-specific directories, which are now
    mandatory
--  2005-09-06 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2005-09-06 \* `Rainer Gerhards`_ \*
    added information on log rotation scripts
--  2007-07-13 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
+-  2007-07-13 \* `Rainer Gerhards`_  \*
    updated to new autotools-based build system
--  2008-10-01 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
+-  2008-10-01 \* `Rainer Gerhards`_  \*
    added info on building from source repository
 -  2014-03181 \* `Rainer
    Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
@@ -272,9 +267,11 @@ Revision History
 Copyright
 ~~~~~~~~~
 
-Copyright © 2005-2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+
+Copyright © 2005-2008 `Rainer Gerhards`_ and
+and `Adiscon <http://www.adiscon.com/>`_.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -282,4 +279,3 @@ any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
 copy of the license can be viewed at
 `http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
-

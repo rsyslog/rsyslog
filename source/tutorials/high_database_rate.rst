@@ -141,19 +141,15 @@ me know <mailto:rgerhards@adiscon.com>`_.
 Revision History
 ----------------
 
--  2008-01-28 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2008-01-28 \* `Rainer Gerhards`_ \*
    Initial Version created
--  2008-01-28 \* `Rainer
-   Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ \*
+-  2008-01-28 \* `Rainer Gerhards`_ \*
    Updated to new v3.11.0 capabilities
 
 Copyright
 ---------
 
-Copyright (c) 2008 `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_ and
-`Adiscon <http://www.adiscon.com/en/>`_.
+Copyright (c) 2008 Rainer Gerhards and Adiscon.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -168,6 +164,6 @@ site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008 by `Rainer Gerhards`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

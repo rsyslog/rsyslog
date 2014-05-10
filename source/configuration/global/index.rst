@@ -1,5 +1,5 @@
-Global Options
-==============
+Global Configuration Statements
+===============================
 
 .. toctree::
    :glob:

@@ -39,7 +39,7 @@ A template that can be used for the database write (please note the SQL template
 
 The following template emulates
 `WinSyslog <http://www.winsyslog.com/en/>`_ format (it's an
-`Adiscon <http://www.adiscon.com/en/>`_ format, you do not feel bad if
+`Adiscon`_ format, you do not feel bad if
 you don't know it ;)). It's interesting to see how it takes different
 parts out of the date stamps. What happens is that the date stamp is
 split into the actual date and time and the these two are combined with
