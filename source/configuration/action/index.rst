@@ -12,6 +12,18 @@ These statements can be used with all types of actions.
    :glob:
 
    *action*
+   *rsconf1_repeatedmsgreduction*
+
+Ruleset-Specific Configuration Statements
+-----------------------------------------
+These statements can be used to set ruleset parameters. To set
+these parameters, first use *$RuleSet*, **then** use these configuration
+directives.
+
+.. toctree::
+   :glob:
+
+   *rule*
 
 omfile-specific Configuration Statements
 ----------------------------------------
