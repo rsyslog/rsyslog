@@ -44,5 +44,6 @@ otherwise the newly added configurations settings will not be loaded.
    modules/index
    modules
    action/index
+   ruleset/index
    global/index
    ipv6
