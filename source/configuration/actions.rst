@@ -173,18 +173,24 @@ precisely a single filter of such a selector line). Each action must be
 on its own line and the line must start with an ampersand ('&')
 character and have no filters. An example would be
 
-``*.=crit :omusrmsg:rger & root & /var/log/critmsgs``
+::
+
+  *.=crit :omusrmsg:rger
+  & root
+  & /var/log/critmsgs
 
 These three lines send critical messages to the user rger and root and
 also store them in /var/log/critmsgs. **Using multiple actions per
-selector is** convenient and also **offers a performance benefit**. As
+selector is** convenient and also **offers a performance benefits**. As
 the filter needs to be evaluated only once, there is less computation
 required to process the directive compared to the otherwise-equal config
 directives below:
 
-``*.=crit :omusrmsg:rger *.=crit root *.=crit /var/log/critmsgs``
+::
 
- 
+  *.=crit :omusrmsg:rger
+  *.=crit root
+  *.=crit /var/log/critmsgs
 
 Regular File
 ~~~~~~~~~~~~
@@ -488,6 +494,11 @@ like all all other actions.
 Shell Execute
 ~~~~~~~~~~~~~
 
+**NOTE: This action is only supported for backwards compatibility.
+For new configs, use** :doc:`omprog <modules/omprog>` **instead.
+It provides a more solid
+and secure solution with higher performance.**
+
 This executes a program in a subshell. The program is passed the
 template-generated message as the only command line parameter. Rsyslog
 waits until the program terminates and only then continues to run.
@@ -528,5 +539,12 @@ Every ACTION can be followed by a template name. If so, that template is
 used for message formatting. If no name is given, a hard-coded default
 template is used for the action. There can only be one template name for
 each given action. The default template is specific to each action. For
-a description of what a template is and what you can do with it, see
-"TEMPLATES" at the top of this document.
+a description of what a template is and what you can do with it, see the
+:doc:`template<templates>` documentation.
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+Copyright © 2008-2014 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+2 or higher.

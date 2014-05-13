@@ -120,7 +120,7 @@ Action Parameters
 
 .. function:: Ruleset <ruleset>
    
-   Binds the listener to a specific :doc:`ruleset <../multi_ruleset>`.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 .. function:: SupportOctetCountedFraming on/off
 

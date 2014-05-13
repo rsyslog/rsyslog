@@ -478,47 +478,47 @@ templates that you can use without the need to define it:
    property problems. This format is meant to be written to a log file.
    Do **not** use for production or remote forwarding.
 
+<<<<<<< HEAD
 The following is legacy documentation soon to be integrated.
 ------------------------------------------------------------
-
-Starting with 5.5.6, there are actually two different types of template:
+Starting with 5.5.6, there are actually two differnt types of template:
 
 -  string based
 -  string-generator module based
 
-`String-generator module <rsyslog_conf_modules.html#sm>`_ based
-templates have been introduced in 5.5.6. They permit a string generator,
-actually a C "program", the generate a format. Obviously, it is more
-work required to code such a generator, but the reward is speed
-improvement. If you do not need the ultimate throughput, you can forget
-about string generators (so most people never need to know what they
-are). You may just be interested in learning that for the most important
-default formats, rsyslog already contains highly optimized string
-generators and these are called without any need to configure anything.
-But if you have written (or purchased) a string generator module, you
-need to know how to call it. Each such module has a name, which you need
-to know (look it up in the module doc or ask the developer). Let's
-assume that "mystrgen" is the module name. Then you can define a
-template for that strgen in the following way:
+String-based Templates
+~~~~~~~~~~~~~~~~~~~~~~
 
-    ``template(name="MyTemplateName" type="plugin" string="mystrgen")``
+A template consists of a template directive, a name, the actual template
+text and optional options. A sample is:
 
-Legacy example:
+    ``$template MyTemplateName,"\7Text %property% some more text\n",<options>``
 
-    ``$template MyTemplateName,=mystrgen``
+The "$template" is the template directive. It tells rsyslog that this
+line contains a template. "MyTemplateName" is the template name. All
+other config lines refer to this name. The text within quotes is the
+actual template text. The backslash is an escape character, much as it
+is in C. It does all these "cool" things. For example, \\7 rings the
+bell (this is an ASCII value), \\n is a new line. C programmers and perl
+coders have the advantage of knowing this, but the set in rsyslog is a
+bit restricted currently.
 
-(Of course, you must have first loaded the module via $ModLoad).
+All text in the template is used literally, except for things within
+percent signs. These are properties and allow you access to the contents
+of the syslog message. Properties are accessed via the `property
+replacer <property_replacer.html>`_ and it can do cool
+things, too. For example, it can pick a substring or do date-specific
+formatting. More on this is below, on some lines of the property
+replacer.
 
-The important part is the equal sign in the legacy format: it tells the
-rsyslog config parser that no string follows but a strgen module name.
+String-based Template Samples
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are no additional parameters but the module name supported. This
-is because there is no way to customize anything inside such a
-"template" other than by modifying the code of the string generator.
-
-So for most use cases, string-generator module based templates are
-**not** the route to take. Usually, we use **string based templates**
-instead. This is what the rest of the documentation now talks about.
+This section provides some sample of what the default formats would look
+as a text-based template. Hopefully, their description is
+self-explanatory. Note that each $template statement is on a **single**
+line, but probably broken accross several lines for display purposes by
+your browsers. Lines are separated by empty lines.
 
 A template consists of a template directive, a name, the actual template
 text and optional options. A sample is:
@@ -588,6 +588,39 @@ Legacy example:
 This template can then be used when defining an output selector line. It
 will result in something like "/var/log/system-localhost.log"
 
+String Generator based Templates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`String-generator module <rsyslog_conf_modules.html#sm>`_ based
+templates have been introduced in 5.5.6. They permit a string generator,
+actually a C "program", the generate a format. Obviously, it is more
+work required to code such a generator, but the reward is speed
+improvement. If you do not need the ultimate throughput, you can forget
+about string generators (so most people never need to know what they
+are). You may just be interested in learning that for the most important
+default formats, rsyslog already contains highly optimized string
+generators and these are called without any need to configure anything.
+But if you have written (or purchased) a string generator module, you
+need to know how to call it. Each such module has a name, which you need
+to know (look it up in the module doc or ask the developer). Let's
+assume that "mystrgen" is the module name. Then you can define a
+template for that strgen in the following way:
+
+    ``$template MyTemplateName,=mystrgen``
+
+(Of course, you must have first loaded the module via $ModLoad).
+
+The important part is the equal sign: it tells the rsyslog config parser
+that no string follows but a strgen module name.
+
+There are no additional parameters but the module name supported. This
+is because there is no way to customize anything inside such a
+"template" other than by modifying the code of the string generator.
+
+So for most use cases, string-generator module based templates are
+**not** the route to take. Usually, us use **string based templates**
+instead.
+
 Legacy String-based Template Samples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -602,7 +635,8 @@ Keep in mind, that line breaks are important in legacy format.
 
 `` $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
 
-**See Also**
+See Also
+--------
 
 -  `How to bind a
    template <http://www.rsyslog.com/how-to-bind-a-template/>`_
@@ -610,3 +644,9 @@ Keep in mind, that line breaks are important in legacy format.
    message <http://www.rsyslog.com/adding-the-bom-to-a-message/>`_
 -  `How to separate log files by host name of the sending
    device <http://www.rsyslog.com/article60/>`_
+
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_ project.
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
+version 2 or higher.

@@ -1,5 +1,3 @@
-`back <rsyslog_conf_templates.html>`_
-
 The Property Replacer
 =====================
 
@@ -11,7 +9,7 @@ property value or manipulate the value, e.g. by converting all
 characters to lower case.
 
 Accessing Properties
-====================
+--------------------
 
 Syslog message properties are used inside templates. They are accessed
 by putting them between percent signs. Properties can be modified by the
@@ -196,7 +194,7 @@ property replacer sequence with a regular expression is:
 It is possible to specify some parametes after the "R". These are
 comma-separated. They are:
 
-R,<regexp-type>,<submatch>,<`nomatch <rsyslog_conf_nomatch.html>`_\ >,<match-number>
+R,<regexp-type>,<submatch>,<:doc:`nomatch <nomatch>`\ >,<match-number>
 
 regexp-type is either "BRE" for Posix basic regular expressions or "ERE"
 for extended ones. The string must be given in upper case. The default
@@ -211,7 +209,7 @@ be more natural to have the match-number in front of submatch, but this
 would break backward-compatibility. So the match-number must be
 specified after "nomatch".
 
-`nomatch <rsyslog_conf_nomatch.html>`_ specifies what should be used in
+:doc:`nomatch <nomatch>` specifies what should be used in
 case no match is found.
 
 The following is a sample of an ERE expression that takes the first
@@ -424,12 +422,13 @@ Further Links
 -  `Configuration file syntax <rsyslog_conf.html>`_, this is where you
    actually use the property replacer.
 
-[`rsyslog site <http://www.rsyslog.com/>`_\ ]
+.. toctree::
+   :maxdepth: 2
+
+   nomatch
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-
 Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. 
-
 Released under the GNU GPL version 2 or higher.
