@@ -1,13 +1,15 @@
-`back <rsyslog_conf_global.html>`_
-
 $AllowedSender
 --------------
 
-**Type:** global configuration directive
+**Type:** input configuration directive
 
 **Default:** all allowed
 
 **Description:**
+
+*Note:* this feature is supported for backward-compatibility, only.
+The rsyslog team recommends to use proper firewalling instead of
+this feature.
 
 Allowed sender lists can be used to specify which remote systems are
 allowed to send syslog messages to rsyslogd. With them, further hurdles
@@ -21,11 +23,14 @@ Allowed sender lists can be defined for UDP and TCP senders separately.
 There can be as many allowed senders as needed. The syntax to specify
 them is:
 
-``$AllowedSender , ip[/bits], ip[/bits]``
+::
+
+  $AllowedSender <type>, ip[/bits], ip[/bits]
 
 "$AllowedSender" is the directive - it must be written exactly as shown
-and the $ must start at the first column of the line. "" is either "UDP"
-or "TCP". It must immediately be followed by the comma, else you will
+and the $ must start at the first column of the line. "<type>" is either "UDP"
+or "TCP" (or "GSS", if this is enabled during compilation).
+It must immediately be followed by the comma, else you will
 receive an error message. "ip[/bits]" is a machine or network ip address
 as in "192.0.2.0/24" or "127.0.0.1". If the "/bits" part is omitted, a
 single host is assumed (32 bits or mask 255.255.255.255). "/0" is not
@@ -60,14 +65,12 @@ to stick with hard-coded IP addresses wherever possible.
 
 **Sample:**
 
-``$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, *.example.net, somehost.example.com``
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+  $AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, *.example.net, somehost.example.com
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2007 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+project.  
+Copyright © 2007-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
