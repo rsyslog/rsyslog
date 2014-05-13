@@ -30,20 +30,20 @@ otherwise the newly added configurations settings will not be loaded.
    :maxdepth: 2
 
    basic_structure
-   global_index
-   nomatch
-   filters
-   actions
-   property_replacer
    templates
+   property_replacer
+   filters
+   ../rainerscript/index
+   expression
+   actions
    multi_ruleset
    droppriv
-   output_channels
-   expression
    examples
    modules/index
-   modules
+   global_index
    action/index
    ruleset/index
    global/index
+   output_channels
+   modules
    ipv6

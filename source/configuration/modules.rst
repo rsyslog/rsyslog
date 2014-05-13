@@ -1,9 +1,9 @@
-About rsyslog Modules
-=====================
+Developing rsyslog modules (outdated)
+=====================================
 
 *Written by `Rainer
-Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-(2007-07-28)*
+Gerhards* <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
+*(2007-07-28)*
 
 **This document is outdated and primarily contains historical
 information. Do not trust it to build code. It currently is under

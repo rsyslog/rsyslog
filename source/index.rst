@@ -18,11 +18,6 @@ destinations <tutorials/failover_syslog_server>`,
 syslog/tcp transport, fine grain output format control, high precision timestamps,
 queued operations and the ability to filter on any message part.
 
-Rsyslog supports the original syslog.conf configuration formatting in it's
-rsyslog.conf config file. This should help with getting an environment started 
-quickly. To use the more advanced features, you need to learn
-a bit about rsyslog's new features. 
-
 Manual
 ------
 .. toctree::
@@ -30,7 +25,6 @@ Manual
    
    configuration/index
    installation/index
-   rainerscript/index
    messageparser
    queues
    troubleshooting/index

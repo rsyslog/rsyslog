@@ -1,7 +1,3 @@
-This is a part of the rsyslog.conf - documentation.
-
-`back <rsyslog_conf.html>`_
-
 Templates
 ---------
 
@@ -21,35 +17,8 @@ Starting with 5.5.6, there are actually two differnt types of template:
 -  string based
 -  string-generator module based
 
-`String-generator module <rsyslog_conf_modules.html#sm>`_ based
-templates have been introduced in 5.5.6. They permit a string generator,
-actually a C "program", the generate a format. Obviously, it is more
-work required to code such a generator, but the reward is speed
-improvement. If you do not need the ultimate throughput, you can forget
-about string generators (so most people never need to know what they
-are). You may just be interested in learning that for the most important
-default formats, rsyslog already contains highly optimized string
-generators and these are called without any need to configure anything.
-But if you have written (or purchased) a string generator module, you
-need to know how to call it. Each such module has a name, which you need
-to know (look it up in the module doc or ask the developer). Let's
-assume that "mystrgen" is the module name. Then you can define a
-template for that strgen in the following way:
-
-    ``$template MyTemplateName,=mystrgen``
-
-(Of course, you must have first loaded the module via $ModLoad).
-
-The important part is the equal sign: it tells the rsyslog config parser
-that no string follows but a strgen module name.
-
-There are no additional parameters but the module name supported. This
-is because there is no way to customize anything inside such a
-"template" other than by modifying the code of the string generator.
-
-So for most use cases, string-generator module based templates are
-**not** the route to take. Usually, us use **string based templates**
-instead. This is what the rest of the documentation now talks about.
+String-based Templates
+~~~~~~~~~~~~~~~~~~~~~~
 
 A template consists of a template directive, a name, the actual template
 text and optional options. A sample is:
@@ -175,11 +144,11 @@ templates that you can use without the need to define it:
    Do **not** use for production or remote forwarding.
 
 String-based Template Samples
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This section provides some sample of what the default formats would look
 as a text-based template. Hopefully, their description is
-self-explanatory. Note that each $Template statement is on a **single**
+self-explanatory. Note that each $template statement is on a **single**
 line, but probably broken accross several lines for display purposes by
 your browsers. Lines are separated by empty lines.
 
@@ -193,12 +162,41 @@ your browsers. Lines are separated by empty lines.
 
 ``$template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+String Generator based Templates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`String-generator module <rsyslog_conf_modules.html#sm>`_ based
+templates have been introduced in 5.5.6. They permit a string generator,
+actually a C "program", the generate a format. Obviously, it is more
+work required to code such a generator, but the reward is speed
+improvement. If you do not need the ultimate throughput, you can forget
+about string generators (so most people never need to know what they
+are). You may just be interested in learning that for the most important
+default formats, rsyslog already contains highly optimized string
+generators and these are called without any need to configure anything.
+But if you have written (or purchased) a string generator module, you
+need to know how to call it. Each such module has a name, which you need
+to know (look it up in the module doc or ask the developer). Let's
+assume that "mystrgen" is the module name. Then you can define a
+template for that strgen in the following way:
+
+    ``$template MyTemplateName,=mystrgen``
+
+(Of course, you must have first loaded the module via $ModLoad).
+
+The important part is the equal sign: it tells the rsyslog config parser
+that no string follows but a strgen module name.
+
+There are no additional parameters but the module name supported. This
+is because there is no way to customize anything inside such a
+"template" other than by modifying the code of the string generator.
+
+So for most use cases, string-generator module based templates are
+**not** the route to take. Usually, us use **string based templates**
+instead.
+
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_ project.
-
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
