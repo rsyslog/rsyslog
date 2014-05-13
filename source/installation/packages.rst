@@ -1,6 +1,5 @@
-rsyslog Packages
-================
-
+Installing rsyslog from Package
+===============================
 Installing from package is usually the most convenient way to install
 rsyslog. Usually, the regular package manager can be used.
 
@@ -45,7 +44,7 @@ For that reason, rsyslog comes with multiple packages:
 
 * *core package* (usually just called "rsyslog") - this contains core
   technology that is required as a base for all other packages. It also
-  contains like the file writer or syslog forwareder that is extremely
+  contains modules like the file writer or syslog forwareder that is extremely
   often used and has little dependencies.
 * *feature package* (usually called "rsyslog-feature") - there are
   multiple of these packages. What exactly is available and how it is

@@ -1,5 +1,5 @@
-Building rsyslog from the source repository
-===========================================
+Installing rsyslog from the source repository
+=============================================
 
 Building from the repsitory is not much different than building from the
 source tarball, but some files are missing because they are output files

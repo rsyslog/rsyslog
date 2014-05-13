@@ -43,8 +43,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Rsyslog'
-copyright = u'2008-2013, Rainer Gerhards and Adiscon'
+project = u'rsyslog'
+copyright = u'2008-2014, Rainer Gerhards and Adiscon'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
