@@ -23,6 +23,38 @@ rsyslog.conf config file. This should help with getting an environment started
 quickly. To use the more advanced features, you need to learn
 a bit about rsyslog's new features. 
 
+Manual
+------
+.. toctree::
+   :maxdepth: 2
+   
+   configuration/index
+   installation/index
+   rainerscript/index
+   messageparser
+   queues
+   troubleshooting/index
+   development/index
+   tutorials/index
+   drivers/index
+   historical/index
+   
+Reference
+---------
+
+.. toctree::
+   :maxdepth: 1
+
+   history
+   licensing
+   how2help
+   community
+   features
+   proposals/index
+   whitepapers/index
+   free_support
+   compatibility/index
+
 Compatibility
 -------------
 
@@ -56,39 +88,6 @@ notes <v4compatibility.html>`_ and if you upgrade from v4, read the
 
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.
-
-Reference
----------
-
-.. toctree::
-   :maxdepth: 1
-
-   history
-   licensing
-   how2help
-   community
-   features
-   proposals/index
-   whitepapers/index
-   free_support
-   compatibility/index
-
-Manual
-------
-.. toctree::
-   :maxdepth: 3
-   
-   configuration/index
-   installation/index
-   drivers/index
-   rainerscript/index
-   messageparser
-   queues
-   troubleshooting/index
-   development/index
-   tutorials/index
-   historical/stunnel.rst
-   
 
 Related Links
 -------------

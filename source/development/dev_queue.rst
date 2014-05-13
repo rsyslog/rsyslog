@@ -20,10 +20,10 @@ there is need to. A queue is in DA mode (or DA run mode), when it
 actually runs disk assisted.
 
 Implementation Details
-======================
+----------------------
 
 Disk-Assisted Mode
-------------------
+~~~~~~~~~~~~~~~~~~
 
 Memory-Type queues may utilize disk-assisted (DA) mode. DA mode is
 enabled whenever a queue file name prefix is provided. This is called
@@ -63,7 +63,7 @@ I also do this so that I know clearly what to develop to, so please be
 patient if the information is a bit too in-depth ;)
 
 DA Run Mode Initialization
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Three cases:
 
@@ -122,7 +122,7 @@ the primary queue. To prevent a hold due to reaching the low water mark,
 that mark must be changed to 0 before the DA worker starts.
 
 DA Run Mode Shutdown
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 In essence, DA run mode is terminated when the DA queue is empty and the
 primary worker queue size is below the high water mark. It is also
@@ -224,7 +224,7 @@ because they require us to restart workers in some situations where we
 may expect a running one. So always keep them on your mind.
 
 Queue Destruction
------------------
+~~~~~~~~~~~~~~~~~
 
 Now let's consider **the case of destruction of the primary
 queue.**\ During destruction, our focus is on loosing as few messages as
@@ -300,9 +300,9 @@ After that point, left over queue resources (mutexes, dynamic memory,
 
 
 Copyright
----------
+~~~~~~~~~
 
-Copyright (c) 2008 `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright (c) 2008-2014 `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/en/>`_.
 
 Permission is granted to copy, distribute and/or modify this document
