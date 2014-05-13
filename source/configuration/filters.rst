@@ -222,6 +222,39 @@ documentation <expression.html>`_ for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
 "/var/log/logfile" to write to that file).
 
+BSD-style Blocks
+----------------
+
+**Note:** rsyslog v7+ does no longer support BSD-style blocks
+for technical reasons. So it is strongly recommended **not** to
+use them.
+
+Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of
+lines is separated from the previous block by a program or hostname
+specification. A block will only log messages corresponding to the most
+recent program and hostname specifications given. Thus, a block which
+selects ‘ppp’ as the program, directly followed by a block that selects
+messages from the hostname ‘dialhost’, then the second block will only
+log messages from the ppp program on dialhost.
+
+A program specification is a line beginning with ‘!prog’ and the
+following blocks will be associated with calls to syslog from that
+specific program. A program specification for ‘foo’ will also match any
+message logged by the kernel with the prefix ‘foo: ’. Alternatively, a
+program specification ‘-foo’ causes the following blocks to be applied
+to messages from any program but the one specified. A hostname
+specification of the form ‘+hostname’ and the following blocks will be
+applied to messages received from the specified hostname. Alternatively,
+a hostname specification ‘-hostname’ causes the following blocks to be
+applied to messages from any host but the one specified. If the hostname
+is given as ‘@’, the local hostname will be used. (NOT YET IMPLEMENTED)
+A program or hostname specification may be reset by giving the program
+or hostname as ‘\*’.
+
+Please note that the "#!prog", "#+hostname" and "#-hostname" syntax
+available in BSD syslogd is not supported by rsyslogd. By default, no
+hostname or program is set.
+
 Examples
 --------
 
@@ -258,39 +291,6 @@ expression-based filters. These will be added later when function
 support is added to the expression engine (the reason is that regular
 expressions will be a separate loadable module, which requires some more
 prequisites before it can be implemented).
-
-BSD-style Blocks
-----------------
-
-**Note:** rsyslog v7+ does no longer support BSD-style blocks
-for technical reasons. So it is strongly recommended **not** to
-use them.
-
-Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of
-lines is separated from the previous block by a program or hostname
-specification. A block will only log messages corresponding to the most
-recent program and hostname specifications given. Thus, a block which
-selects ‘ppp’ as the program, directly followed by a block that selects
-messages from the hostname ‘dialhost’, then the second block will only
-log messages from the ppp program on dialhost.
-
-A program specification is a line beginning with ‘!prog’ and the
-following blocks will be associated with calls to syslog from that
-specific program. A program specification for ‘foo’ will also match any
-message logged by the kernel with the prefix ‘foo: ’. Alternatively, a
-program specification ‘-foo’ causes the following blocks to be applied
-to messages from any program but the one specified. A hostname
-specification of the form ‘+hostname’ and the following blocks will be
-applied to messages received from the specified hostname. Alternatively,
-a hostname specification ‘-hostname’ causes the following blocks to be
-applied to messages from any host but the one specified. If the hostname
-is given as ‘@’, the local hostname will be used. (NOT YET IMPLEMENTED)
-A program or hostname specification may be reset by giving the program
-or hostname as ‘\*’.
-
-Please note that the "#!prog", "#+hostname" and "#-hostname" syntax
-available in BSD syslogd is not supported by rsyslogd. By default, no
-hostname or program is set.
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
