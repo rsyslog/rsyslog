@@ -46,6 +46,7 @@ otherwise the newly added configurations settings will not be loaded.
    examples
    modules/index
    action/index
+   ruleset/index
    global/index
    ipv6
    cryprov_gcry
