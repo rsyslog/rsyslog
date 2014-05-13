@@ -25,12 +25,10 @@ Manual
    
    configuration/index
    installation/index
-   messageparser
-   queues
+   concepts/index
    troubleshooting/index
-   development/index
    tutorials/index
-   drivers/index
+   development/index
    historical/index
    
 Reference

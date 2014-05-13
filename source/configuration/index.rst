@@ -1,5 +1,5 @@
-Rsyslog Configuration
-=====================
+Configuration
+=============
 
 **Rsyslogd is configured via the rsyslog.conf file**, typically found in
 /etc. By default, rsyslogd reads the file /etc/rsyslog.conf. This may be
@@ -36,7 +36,6 @@ otherwise the newly added configurations settings will not be loaded.
    ../rainerscript/index
    expression
    actions
-   multi_ruleset
    droppriv
    examples
    modules/index
@@ -45,5 +44,4 @@ otherwise the newly added configurations settings will not be loaded.
    ruleset/index
    global/index
    output_channels
-   modules
    ipv6

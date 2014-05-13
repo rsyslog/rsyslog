@@ -7,4 +7,6 @@ environments.
 .. toctree::
    :maxdepth: 2
    
+   php_syslog_ng
    stunnel
+   module_devel

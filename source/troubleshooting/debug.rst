@@ -1,12 +1,17 @@
 Rsyslog Debug Support
 =====================
 
-Rsyslog provides a number of debug aides. Some of them are activated by
-adding the --enable-rtinst ./configure option ("rtinst" means runtime
-instrumentation). Turning debugging on obviously costs some performance
-(in some cases considerable).
+For harder to find issues, rsyslog has integrated debug support. Usually,
+this is not required for finding configuration issues but rather
+to hunt for program or plugin bugs. However, there are several
+occasions where debug log has proven to be quite helpful in finding
+out configuration issues.
 
-This is document is just being created and thus terse.
+Part of debug supports is activated by
+adding the ``--enable-rtinst`` ./configure option ("rtinst" means runtime
+instrumentation). Turning debugging on obviously costs some performance
+(in some cases considerable). For typical cases, runtime instrumentation
+is *not* required.
 
 Signals supported
 -----------------
@@ -185,12 +190,9 @@ no debug mode is enabled, SIGUSR1 and SIGUSR2 are completely ignored.
 When running in any of the debug modes (including on demand mode), an
 interactive instance of rsyslogd can be aborted by pressing ctl-c.
 
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008-2010 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

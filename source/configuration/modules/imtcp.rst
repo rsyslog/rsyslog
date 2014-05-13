@@ -128,7 +128,7 @@ Configuration Directives
 
 .. function:: $InputTCPServerBindRuleset <ruleset>
 
-   Binds the listener to a specific :doc:`ruleset <../multi_ruleset>`.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 .. function:: $InputTCPSupportOctetCountedFraming on/off
 

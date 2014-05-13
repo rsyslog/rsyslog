@@ -8,7 +8,7 @@ messages, but queues may also be used for other purposes.
 
 This document provides a good insight into technical details, operation
 modes and implications. In addition to it, an :doc:`rsyslog queue concepts
-overview <whitepapers/queues_analogy>` document exists which tries to explain
+overview <../whitepapers/queues_analogy>` document exists which tries to explain
 queues with the help of some analogies. This may probably be a better
 place to start reading about queues. I assume that once you have
 understood that document, the material here will be much easier to grasp
