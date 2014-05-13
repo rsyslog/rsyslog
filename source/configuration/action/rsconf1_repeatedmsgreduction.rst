@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $RepeatedMsgReduction
 ---------------------
 
@@ -44,13 +42,17 @@ Discussion
 
 * Very old versions of rsyslog did not have the ability to include the
   repeated message itself within the repeat message.
+
 * Versions before 7.3.2 applied repeat message reduction to the output
   side. This had some implications:
+
   - they did not account for the actual message origin, so two processes
     emitting an equally-looking messsage triggered the repeated message
     reduction code
+
   - repeat message processing could be set on a per-action basis, which
     has switched to per-input basis for 7.3.2 and above
+
 * While turning this feature on can save some space in logs, most log analysis
   tools need to see the repeated messages, they can't handle the
   "last message repeated" format.
@@ -66,11 +68,8 @@ This turns on repeated message reduction (**not** recommended):
 
  $RepeatedMsgReduction on    # do not log repeated messages
 
-[`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-
 Copyright © 2007-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
