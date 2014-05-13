@@ -24,3 +24,12 @@ These statements are specific to omfile-based actions.
    *omfile*
    *dir*
    *file*
+
+omgssapi-specific Configuration Statements
+----------------------------------------
+These statements are specific to omgssapi actions.
+
+.. toctree::
+   :glob:
+
+   *gss*
