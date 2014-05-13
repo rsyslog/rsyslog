@@ -26,7 +26,7 @@ These statements are specific to omfile-based actions.
    *file*
 
 omgssapi-specific Configuration Statements
-----------------------------------------
+------------------------------------------
 These statements are specific to omgssapi actions.
 
 .. toctree::

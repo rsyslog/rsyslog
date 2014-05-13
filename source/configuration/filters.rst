@@ -1,48 +1,15 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Filter Conditions
------------------
+=================
 
 Rsyslog offers four different types "filter conditions":
 
--  BSD-style blocks
 -  "traditional" severity and facility based selectors
 -  property-based filters
 -  expression-based filters
-
-Blocks
-~~~~~~
-
-Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of
-lines is separated from the previous block by a program or hostname
-specification. A block will only log messages corresponding to the most
-recent program and hostname specifications given. Thus, a block which
-selects ‘ppp’ as the program, directly followed by a block that selects
-messages from the hostname ‘dialhost’, then the second block will only
-log messages from the ppp program on dialhost.
-
-A program specification is a line beginning with ‘!prog’ and the
-following blocks will be associated with calls to syslog from that
-specific program. A program specification for ‘foo’ will also match any
-message logged by the kernel with the prefix ‘foo: ’. Alternatively, a
-program specification ‘-foo’ causes the following blocks to be applied
-to messages from any program but the one specified. A hostname
-specification of the form ‘+hostname’ and the following blocks will be
-applied to messages received from the specified hostname. Alternatively,
-a hostname specification ‘-hostname’ causes the following blocks to be
-applied to messages from any host but the one specified. If the hostname
-is given as ‘@’, the local hostname will be used. (NOT YET IMPLEMENTED)
-A program or hostname specification may be reset by giving the program
-or hostname as ‘\*’.
-
-Please note that the "#!prog", "#+hostname" and "#-hostname" syntax
-available in BSD syslogd is not supported by rsyslogd. By default, no
-hostname or program is set.
+-  BSD-style blocks (not upward compatible)
 
 Selectors
-~~~~~~~~~
+---------
 
 **Selectors are the traditional way of filtering syslog messages.** They
 have been kept in rsyslog with their original syntax, because it is
@@ -102,7 +69,7 @@ exclamation mark must occur before the equals sign, just use it
 intuitively.
 
 Property-Based Filters
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Property-based filters are unique to rsyslogd. They allow to filter on
 any property, like HOSTNAME, syslogtag and msg. A list of all
@@ -112,7 +79,7 @@ properties, not the replacer is supported). With this filter, each
 properties can be checked against a specified value, using a specified
 compare operation.
 
-A property-based filter must start with a colon in column 0. This tells
+A property-based filter must start with a colon **in column 0**. This tells
 rsyslogd that it is the new filter type. The colon must be followed by
 the property name, a comma, the name of the compare operation to carry
 out, another comma and then the value to compare against. This value
@@ -123,43 +90,41 @@ as follows:
 
 ``:property, [!]compare-operation, "value"``
 
+Compare-Operations
+~~~~~~~~~~~~~~~~~~
+
 The following **compare-operations** are currently supported:
 
-contains
+**contains**
+  Checks if the string provided in value is contained in the property.
+  There must be an exact match, wildcards are not supported.
 
-Checks if the string provided in value is contained in the property.
-There must be an exact match, wildcards are not supported.
+**isequal**
+  Compares the "value" string provided and the property contents. These
+  two values must be exactly equal to match. The difference to contains is
+  that contains searches for the value anywhere inside the property value,
+  whereas all characters must be identical for isequal. As such, isequal
+  is most useful for fields like syslogtag or FROMHOST, where you probably
+  know the exact contents.
 
-isequal
+**startswith**
+  Checks if the value is found exactly at the beginning of the property
+  value. For example, if you search for "val" with
 
-Compares the "value" string provided and the property contents. These
-two values must be exactly equal to match. The difference to contains is
-that contains searches for the value anywhere inside the property value,
-whereas all characters must be identical for isequal. As such, isequal
-is most useful for fields like syslogtag or FROMHOST, where you probably
-know the exact contents.
+  ``:msg, startswith, "val"``
 
-startswith
+  it will be a match if msg contains "values are in this message" but it
+  won't match if the msg contains "There are values in this message" (in
+  the later case, *"contains"* would match). Please note that "startswith" is
+  by far faster than regular expressions. So even once they are
+  implemented, it can make very much sense (performance-wise) to use
+  "startswith".
 
-Checks if the value is found exactly at the beginning of the property
-value. For example, if you search for "val" with
+**regex**
+  Compares the property against the provided POSIX BRE regular expression.
 
-``:msg, startswith, "val"``
-
-it will be a match if msg contains "values are in this message" but it
-won't match if the msg contains "There are values in this message" (in
-the later case, contains would match). Please note that "startswith" is
-by far faster than regular expressions. So even once they are
-implemented, it can make very much sense (performance-wise) to use
-"startswith".
-
-regex
-
-Compares the property against the provided POSIX BRE regular expression.
-
-ereregex
-
-Compares the property against the provided POSIX ERE regular expression.
+**ereregex**
+  Compares the property against the provided POSIX ERE regular expression.
 
 You can use the bang-character (!) immediately in front of a
 compare-operation, the outcome of this operation is negated. For
@@ -176,14 +141,21 @@ Using negation can be useful if you would like to do some generic
 processing but exclude some specific events. You can use the discard
 action in conjunction with that. A sample would be:
 
-``*.* /var/log/allmsgs-including-informational.log :msg, contains, "informational"  ~  *.* /var/log/allmsgs-but-informational.log``
+::
 
-Do not overlook the red tilde in line 2! In this sample, all messages
+  *.* /var/log/allmsgs-including-informational.log
+  :msg, contains, "informational"  ~
+  *.* /var/log/allmsgs-but-informational.log
+
+Do not overlook the tilde in line 2! In this sample, all messages
 are written to the file allmsgs-including-informational.log. Then, all
 messages containing the string "informational" are discarded. That means
 the config file lines below the "discard line" (number 2 in our sample)
 will not be applied to this message. Then, all remaining lines will also
 be written to the file allmsgs-but-informational.log.
+
+Value Part
+~~~~~~~~~~
 
 **Value** is a quoted string. It supports some escape sequences:
 
@@ -226,7 +198,7 @@ query facility and severity via property-based filters, it is far more
 advisable to use classic selectors (see above) for those cases.
 
 Expression-Based Filters
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 Expression based filters allow filtering on arbitrary complex
 expressions, which can include boolean, arithmetic and string
@@ -240,31 +212,45 @@ stage work needed). So the window of exposure is probably not too long.
 Expression based filters are indicated by the keyword "if" in column 1
 of a new line. They have this format:
 
-if expr then action-part-of-selector-line
+::
 
-"If" and "then" are fixed keywords that mus be present. "expr" is a
+  if expr then action-part-of-selector-line
+
+"if" and "then" are fixed keywords that mus be present. "expr" is a
 (potentially quite complex) expression. So the `expression
 documentation <expression.html>`_ for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
 "/var/log/logfile" to write to that file).
-A few quick samples:
 
-`` *.* /var/log/file1 # the traditional way if $msg contains 'error' then /var/log/errlog # the expression-based way``
+Examples
+--------
+
+::
+
+  *.* /var/log/file1 # the traditional way
+  if $msg contains 'error' then /var/log/errlog # the expression-based way
+
 Right now, you need to specify numerical values if you would like to
 check for facilities and severity. These can be found in `RFC
-3164 <http://www.ietf.org/rfc/rfc3164.txt>`_. If you don't like that,
+5424 <http://www.ietf.org/rfc/rfc5424.txt>`_. If you don't like that,
 you can of course also use the textual property - just be sure to use
 the right one. As expression support is enhanced, this will change. For
 example, if you would like to filter on message that have facility
 local0, start with "DEVNAME" and have either "error1" or "error0" in
 their message content, you could use the following filter:
 
-`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
+::
+
+  if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog
+
 Please note that the above must all be on one line! And if you would
 like to store all messages except those that contain "error1" or
 "error0", you just need to add a "not":
 
-`` if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and not ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog``
+::
+
+  if $syslogfacility-text == 'local0' and $msg startswith 'DEVNAME' and not ($msg contains 'error1' or $msg contains 'error0') then /var/log/somelog
+
 If you would like to do case-insensitive comparisons, use "contains\_i"
 instead of "contains" and "startswith\_i" instead of "startswith".
 Note that regular expressions are currently NOT supported in
@@ -273,12 +259,41 @@ support is added to the expression engine (the reason is that regular
 expressions will be a separate loadable module, which requires some more
 prequisites before it can be implemented).
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+BSD-style Blocks
+----------------
+
+**Note:** rsyslog v7+ does no longer support BSD-style blocks
+for technical reasons. So it is strongly recommended **not** to
+use them.
+
+Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of
+lines is separated from the previous block by a program or hostname
+specification. A block will only log messages corresponding to the most
+recent program and hostname specifications given. Thus, a block which
+selects ‘ppp’ as the program, directly followed by a block that selects
+messages from the hostname ‘dialhost’, then the second block will only
+log messages from the ppp program on dialhost.
+
+A program specification is a line beginning with ‘!prog’ and the
+following blocks will be associated with calls to syslog from that
+specific program. A program specification for ‘foo’ will also match any
+message logged by the kernel with the prefix ‘foo: ’. Alternatively, a
+program specification ‘-foo’ causes the following blocks to be applied
+to messages from any program but the one specified. A hostname
+specification of the form ‘+hostname’ and the following blocks will be
+applied to messages received from the specified hostname. Alternatively,
+a hostname specification ‘-hostname’ causes the following blocks to be
+applied to messages from any host but the one specified. If the hostname
+is given as ‘@’, the local hostname will be used. (NOT YET IMPLEMENTED)
+A program or hostname specification may be reset by giving the program
+or hostname as ‘\*’.
+
+Please note that the "#!prog", "#+hostname" and "#-hostname" syntax
+available in BSD syslogd is not supported by rsyslogd. By default, no
+hostname or program is set.
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.
