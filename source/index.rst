@@ -12,16 +12,39 @@ While it started as a regular syslogd, rsyslog has evolved into a kind of
 
 Rsyslog has a strong enterprise focus but also scales down to small
 systems.
-It supports, among others, :doc:`MySQL <tutorials/database>`
-, :doc:`PostgreSQL <tutorials/database>`, :doc:`failover log
-destinations <tutorials/failover_syslog_server>`,
+It supports, among others, :doc:`MySQL <tutorials/database>`,
+:doc:`PostgreSQL <tutorials/database>`,
+:doc:`failover log destinations <tutorials/failover_syslog_server>`,
 syslog/tcp transport, fine grain output format control, high precision timestamps,
 queued operations and the ability to filter on any message part.
 
-Rsyslog supports the original syslog.conf configuration formatting in it's
-rsyslog.conf config file. This should help with getting an environment started 
-quickly. To use the more advanced features, you need to learn
-a bit about rsyslog's new features. 
+Manual
+------
+.. toctree::
+   :maxdepth: 2
+   
+   configuration/index
+   installation/index
+   concepts/index
+   troubleshooting/index
+   tutorials/index
+   development/index
+   historical/index
+   
+Reference
+---------
+.. toctree::
+   :maxdepth: 1
+
+   history
+   licensing
+   how2help
+   community
+   features
+   proposals/index
+   whitepapers/index
+   free_support
+   compatibility/index
 
 Compatibility
 -------------
@@ -56,40 +79,6 @@ notes <v4compatibility.html>`_ and if you upgrade from v4, read the
 
 Rsyslog will work even if you do not read the doc, but doing so will
 definitely improve your experience.
-
-Reference
----------
-
-.. toctree::
-   :maxdepth: 1
-
-   history
-   licensing
-   how2help
-   community
-   features
-   proposals/index
-   whitepapers/index
-   free_support
-   compatibility/index
-
-Manual
-------
-.. toctree::
-   :maxdepth: 3
-   
-   configuration/index
-   installation/index
-   examples/index
-   drivers/index
-   rainerscript/index
-   messageparser
-   queues
-   troubleshooting/index
-   development/index
-   tutorials/index
-   historical/stunnel.rst
-   
 
 Related Links
 -------------

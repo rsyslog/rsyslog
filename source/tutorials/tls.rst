@@ -1,5 +1,5 @@
-Encrypting Syslog Traffic with TLS (SSL)
-========================================
+Encrypting Syslog Traffic with TLS (SSL) [short version]
+========================================================
 
 *Written by* `Rainer Gerhards  <http://www.gerhards.net/rainer>`_
 *(2008-05-06)*

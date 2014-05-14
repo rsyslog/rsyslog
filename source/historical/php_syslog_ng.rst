@@ -5,8 +5,10 @@ Using php-syslog-ng with rsyslog
 Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
 *(2005-08-04)*
 
-Note: it has been reported that this guide is somewhat outdated. Please
-use with care. Also, please note that **rsyslog's "native" web frontend
+Note: it has been reported that this guide is somewhat outdated. Most
+importantly, this guide is for the **original** php-syslog-ng and
+**cannot** be used for it successor logzilla. Please
+use the guide with care. Also, please note that **rsyslog's "native" web frontend
 is** `Adiscon LogAnalyzer <http://www.phplogcon.org>`_, which provides best
 integration and a lot of extra functionality.
 

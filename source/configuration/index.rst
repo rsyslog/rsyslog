@@ -1,5 +1,5 @@
-Rsyslog Configuration
-=====================
+Configuration
+=============
 
 **Rsyslogd is configured via the rsyslog.conf file**, typically found in
 /etc. By default, rsyslogd reads the file /etc/rsyslog.conf. This may be
@@ -23,7 +23,6 @@ While, for obvious reasons, :doc:`enhanced features <../features>` require
 a different config file syntax, rsyslogd should be able to work with a
 standard syslog.conf file. This is especially useful while you are
 migrating from syslogd to rsyslogd.
-   modules
 
 When you change the configuration, remember to restart rsyslogd, because 
 otherwise the newly added configurations settings will not be loaded.
@@ -33,19 +32,19 @@ otherwise the newly added configurations settings will not be loaded.
    :maxdepth: 2
 
    basic_structure
-   global_index
-   nomatch
-   filters
-   actions
-   property_replacer
    templates
-   multi_ruleset
-   droppriv
-   output_channels
+   property_replacer
+   filters
+   ../rainerscript/index
    expression
+   actions
+   droppriv
    examples
    modules/index
+   global_index
    action/index
+   ruleset/index
    global/index
+   output_channels
    ipv6
    cryprov_gcry

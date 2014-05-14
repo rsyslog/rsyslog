@@ -1,23 +1,21 @@
-Installing rsyslog from source
+Installing rsyslog from Source
 ==============================
 
 *Written by* `Rainer Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_
-
-Abstract
---------
 
 **In this paper, I describe how to install** 
 `rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
 step-by-step guide, targeted to those who want to quickly get it up and
 running. For more elaborate information, please consult the rest of the
-`manual set <manual.html>`_.
+:doc:`manual set <../index>`.
 
 How to make your life easier...
 -------------------------------
 
-Note that there are many `RPMs/packages for rsyslog <rsyslog_packages.html>`_
-available, including project-supported ones for the latest releases.
-So in general, it is not necessary to build rsyslog from source.
+There are :doc:`RPMs/packages for rsyslog <packages>` available.
+If you use them, you can spare yourself many of the steps below.
+This is highly recommended if there is a package for your distribution
+available.
 
 Steps To Do
 -----------
@@ -101,7 +99,9 @@ Run ./configure to adopt rsyslog to your environment. While doing so,
 you can also enable options. Configure will display selected options
 when it is finished. For example, to enable MySQL support, run
 
-``./configure --enable-mysql``
+::
+
+ ./configure --enable-mysql
 
 Please note that MySQL support by default is NOT disabled.
 
@@ -256,9 +256,9 @@ Revision History
    mandatory
 -  2005-09-06 \* `Rainer Gerhards`_ \*
    added information on log rotation scripts
--  2007-07-13 \* `Rainer Gerhards`_  \*
+-  2007-07-13 \* `Rainer Gerhards`_ \*
    updated to new autotools-based build system
--  2008-10-01 \* `Rainer Gerhards`_  \*
+-  2008-10-01 \* `Rainer Gerhards`_ \*
    added info on building from source repository
 -  2014-03181 \* `Rainer
    Gerhards <http://www.adiscon.com/en/people/rainer-gerhards.php>`_  \*
@@ -267,15 +267,15 @@ Revision History
 Copyright
 ~~~~~~~~~
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-
-Copyright © 2005-2008 `Rainer Gerhards`_ and
-and `Adiscon <http://www.adiscon.com/>`_.
-
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts. A
 copy of the license can be viewed at
 `http://www.gnu.org/copyleft/fdl.html <http://www.gnu.org/copyleft/fdl.html>`_.
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+Copyright © 2005-2008 by `Rainer Gerhards`_
+and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
+version 1.2 or higher.
