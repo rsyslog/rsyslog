@@ -184,18 +184,3 @@ To understand queue parameters, read
 -  **$MainMsgQueueWorkerThreads** <number>, num worker threads, default 1,
    recommended 1
 -  **$MainMsgQueueWorkerThreadMinumumMessages** <number>, default 100
-
-
-Ruleset-specific Directives
----------------------------
-The following directives are used to define rulesets. Please keep in mind
-that each ruleset has a *main* queue. To specify parameter for these
-ruleset (main) queues, use the main queue configuration directives.
-
--  **$Ruleset** *name* - starts a new ruleset or switches back to one
-   already defined. All following actions belong to that new rule set.
-   the *name* does not yet exist, it is created. To switch back to
-   rsyslog's default ruleset, specify "RSYSLOG\_DefaultRuleset") as the
-   name. All following actions belong to that new rule set. It is
-   advised to also read our paper on
-   :doc:`using multiple rule sets in rsyslog <../../concepts/multi_ruleset>`.

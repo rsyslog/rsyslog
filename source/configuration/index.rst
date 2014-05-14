@@ -65,6 +65,7 @@ will not be loaded by the running instance.
 
    basic_structure
    templates
+   properties
    property_replacer
    filters
    ../rainerscript/index
