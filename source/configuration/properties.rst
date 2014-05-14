@@ -2,17 +2,23 @@ rsyslog Properties
 ==================
 
 Data items in rsyslog are called "properties". They can have different
-origin and use. The most important ones are those that stem from received
+origin. The most important ones are those that stem from received
 messages. But there are also others. Whenever you want to access data items,
 you need to access the resprective property.
+
+Properties are used in
+
+- :doc:`templates <templates>`
+- conditional statements
+
+The property name is case-insensitive (prior to 3.17.0, they were case-senstive).
 
 Message Properties
 ------------------
 These are extracted by rsyslog parsers from the original message. All message
 properties start with a letter.
 
-The property name is case-insensitive (prior to 3.17.0, they were case-senstive).
-Currently supported are:
+The following message properties exist:
 
 **msg**
   the MSG part of the message (aka "the message" ;))
@@ -130,6 +136,8 @@ can be quite old. In contrast, ``$now`` is the system time when the message
 is being processed. Depending on your needs, you need one or the other. Usually,
 the message-based timestamp is the more important one, but that really depdends
 on the use case.
+
+The following system properties exist:
 
 **$bom**
   The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
