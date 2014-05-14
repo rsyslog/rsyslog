@@ -23,7 +23,6 @@ While, for obvious reasons, :doc:`enhanced features <../features>` require
 a different config file syntax, rsyslogd should be able to work with a
 standard syslog.conf file. This is especially useful while you are
 migrating from syslogd to rsyslogd.
-   modules
 
 When you change the configuration, remember to restart rsyslogd, because 
 otherwise the newly added configurations settings will not be loaded.
@@ -42,6 +41,7 @@ otherwise the newly added configurations settings will not be loaded.
    droppriv
    examples
    modules/index
+   global_index
    action/index
    ruleset/index
    global/index
