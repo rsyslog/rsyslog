@@ -20,7 +20,6 @@ and must start with a dollar-sign.
    property_replacer
    filters
    ../rainerscript/index
-   expression
    actions
    examples
    index_directives
