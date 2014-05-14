@@ -1,9 +1,8 @@
 Global Configuration Statements
 ===============================
 Global configuration statements, as their name implies, usually affect
-some global features. However, some are specific to a set of input
-modules. Finally, we also include some directives that modify only
-a single input module, which is nowhere else documented.
+some global features. However, some also affect main queues, which
+are "global" to a ruleset.
 
 True Global Directives
 ----------------------
@@ -121,32 +120,6 @@ True Global Directives
    This is applied at the beginning of the parser stage and cannot
    be overridden (neither at the input nor parser level). Consequently,
    it affects all inputs and parsers.
-
-Directives affecting multiple Input Modules
--------------------------------------------
-While these directives only affect input modules, they are global in
-the sense that they cannot be overwritten for specific input
-instances. So they apply globally for all inputs that support these
-directives.
-
-.. toctree::
-   :glob:
-
-   options/rsconf1_allowedsender
-   options/rsconf1_dropmsgswithmaliciousdnsptrrecords
-   options/rsconf1_controlcharacterescapeprefix
-   options/rsconf1_droptrailinglfonreception
-   options/rsconf1_escape8bitcharsonreceive
-   options/rsconf1_escapecontrolcharactersonreceive
-
-immark-specific Directives
---------------------------
-
-.. toctree::
-   :glob:
-
-   options/rsconf1_markmessageperiod
-
 
 main queue specific Directives
 ------------------------------
