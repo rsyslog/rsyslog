@@ -1,8 +1,5 @@
-nomatch mode - property replacer - rsyslog.con
-==============================================
-
-This is a part of the `rsyslog.conf documentation <rsyslog_conf.html>`_
-of the `property replacer <property_replacer.html>`_.
+Property Replacer nomatch mode
+------------------------------
 
 **The "nomatch-Mode" specifies which string the property replacer shall
 return if a regular expression did not find the search string.**.
@@ -32,7 +29,7 @@ expression checker and generator <http://www.rsyslog.com/tool-regex>`_
 regular expressions based on samples and try out the different modes.
 
 Summary of nomatch Modes
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 +------------+-----------------------------------------------------------+
 | **Mode**   | **Returned**                                              |
@@ -48,12 +45,8 @@ Summary of nomatch Modes
 |            | `Interactive Tool <http://www.rsyslog.com/tool-regex>`_   |
 +------------+-----------------------------------------------------------+
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 2 or higher.

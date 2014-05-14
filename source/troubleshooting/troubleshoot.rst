@@ -1,5 +1,5 @@
-troubleshooting rsyslog
------------------------
+troubleshooting problems
+========================
 
 **Having trouble with** `rsyslog <http://www.rsyslog.com>`_? This page
 provides some tips on where to look for help and what to do if you need
@@ -14,10 +14,12 @@ Useful troubleshooting ressources are:
    package, that often needs to be installed separately.
 -  The `rsyslog wiki <http://wiki.rsyslog.com>`_ provides user tips and
    experiences.
--  Check `the bugzilla <http://bugzilla.adiscon.com>`_ to see if your
+-  Check the `rsyslog github issue tracker <https://github.com/rsyslog/rsyslog/issues>`_ and 
+   `the bugzilla <http://bugzilla.adiscon.com>`_ to see if your
    problem is a known (and even fixed ;)) bug.
 
-**Malformed Messages and Message Properties**
+Malformed Messages and Message Properties
+-----------------------------------------
 
 A common trouble source are `ill-formed syslog
 messages <syslog_parsing.html>`_, which lead to to all sorts of
@@ -32,7 +34,8 @@ but rather use the host that sent the message (taken from the socket
 layer). Of course, this does not work over NAT or relay chains, where
 the only cure is to make sure senders emit well-formed messages.
 
-**Configuration Problems**
+Configuration Problems
+----------------------
 
 Rsyslog has support for
 configuration checking. It offers a special command line switch (-N1)
@@ -46,23 +49,25 @@ To enable it, run rsyslog interactively as follows:
 
  $ /path/to/rsyslogd -f/path/to/config-file -N1
 
-You should also specify other options you usually give (like -c3 and
+You should also specify other options you usually give (like -c5 and
 whatever else). Any problems experienced are reported to stderr [aka
 "your screen" (if not redirected)].
 
-**Asking for Help**
+Asking for Help
+---------------
 
 If you can't find the answer yourself, you should look at these places
 for community help.
 
--  The `rsyslog forum <http://kb.monitorware.com/rsyslog-f40.html>`_.
-   This is the preferred method of obtaining support.
 -  The `rsyslog mailing
    list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_. This is a
    low-volume list which occasional gets traffic spikes. The mailing
    list is probably a good place for complex questions.
+   This is the preferred method of obtaining support.
+-  The `rsyslog forum <http://kb.monitorware.com/rsyslog-f40.html>`_.
 
-**Debug Log**
+Debug Log
+---------
 
 If you ask for help, there are chances that we need to ask for an
 rsyslog debug log. The debug log is a detailled report of what rsyslog
@@ -83,18 +88,18 @@ can also be controlled via some environment options. Please see
 
 In general, it is advisable to run rsyslogd in the foreground to obtain
 the log. To do so, make sure you know which options are usually used
-when you start rsyslogd as a background daemon. Let's assume "-c3" is
+when you start rsyslogd as a background daemon. Let's assume "-c5" is
 the only option used. Then, do the following:
 
 -  make sure rsyslogd as a daemon is stopped (verify with ps -ef\|grep
    rsyslogd)
 -  make sure you have a console session with root permissions
--  run rsyslogd interactively: /sbin/rsyslogd ..your options.. -dn >
-   logfile
+-  run rsyslogd interactively: ```/sbin/rsyslogd ..your options.. -dn >
+   logfile```
    where "your options" is what you usually use. /sbin/rsyslogd is the
    full path to the rsyslogd binary (location different depending on
    distro). In our case, the command would be
-   /sbin/rsyslogd -c3 -dn > logfile
+   ```/sbin/rsyslogd -c5 -dn > logfile```
 -  press ctrl-C when you have sufficient data (e.g. a device logged a
    record)
    **NOTE: rsyslogd will NOT stop automatically - you need to ctrl-c out
@@ -129,7 +134,8 @@ to be sued for work were are not even paid for ;)]. **So if you submit
 debug logs, do so at your sole risk**. By submitting them, you accept
 this policy.
 
-**Segmentation Faults**
+Segmentation Faults
+-------------------
 
 Rsyslog has a very rapid development process, complex capabilities and
 now gradually gets more and more exposure. While we are happy about
@@ -178,6 +184,7 @@ would appreciate if you could extract the most important information.
 This is done as follows:
 
 -  $gdb /path/to/rsyslogd
+-  $core /core.1234
 -  $info thread
 -  you'll see a number of threads (in the range 0 to n with n being the
    highest number). For **each** of them, do the following (let's assume
@@ -198,5 +205,5 @@ unusual deployment scenarios. Unfortunately, this is hard to achieve,
 especially with limited resources. So we are depending on cooperation
 from users. This is your chance to make a big contribution to the
 project without the need to program or do anything else except get a
-problem solved ;)
+problem solved.
 

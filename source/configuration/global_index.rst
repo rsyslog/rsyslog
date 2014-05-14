@@ -23,13 +23,10 @@ we strongly suggest to update to a more recent version. Version 5 is
 heavily outdated and no longer supported by the rsyslog project since
 many years.
 
-**Be sure to read information about `queues in rsyslog <queues.html>`_**
+**Be sure to read information about** `queues in rsyslog <queues.html>`_
 - many parameter settings modify queue parameters. If in doubt, use the
 default, it is usually well-chosen and applicable in most cases.
 
--  `$AbortOnUncleanConfig <rsconf1_abortonuncleanconfig.html>`_ - abort
-   startup if there is any issue with the config file
--  `$ActionExecOnlyWhenPreviousIsSuspended <rsconf1_actionexeconlywhenpreviousissuspended.html>`_
 -  $ActionName <a\_single\_word> - used primarily for documentation,
    e.g. when generating a configuration graph. Available sice 4.3.1.
 -  $ActionExecOnlyOnceEveryInterval <seconds> - execute action only if
@@ -95,7 +92,6 @@ default, it is usually well-chosen and applicable in most cases.
 -  $ActionQueueWorkerThreads <number>, num worker threads, default 1,
    recommended 1
 -  $ActionQueueWorkerThreadMinumumMessages <number>, default 100
--  `$ActionResumeInterval <rsconf1_actionresumeinterval.html>`_
 -  $ActionResumeRetryCount <number> [default 0, -1 means eternal]
 -  $ActionSendResendLastMsgOnReconnect <[on/**off**]> specifies if the
    last message is to be resend when a connecition breaks and has been
@@ -135,11 +131,6 @@ default, it is usually well-chosen and applicable in most cases.
    heartbeat. Note that this option auto-resets to "off", so if you
    intend to use it with multiple actions, it must be specified in front
    off **all** selector lines that should provide this functionality.
--  `$AllowedSender <rsconf1_allowedsender.html>`_
--  `$ControlCharacterEscapePrefix <rsconf1_controlcharacterescapeprefix.html>`_
--  `$DebugPrintCFSyslineHandlerList <rsconf1_debugprintcfsyslinehandlerlist.html>`_
--  `$DebugPrintModuleList <rsconf1_debugprintmodulelist.html>`_
--  `$DebugPrintTemplateList <rsconf1_debugprinttemplatelist.html>`_
 -  $DefaultNetstreamDriver <drivername>, the default `network stream
    driver <netstream.html>`_ to use. Defaults
    to ptcp.$DefaultNetstreamDriverCAFile </path/to/cafile.pem>
@@ -152,28 +143,13 @@ default, it is usually well-chosen and applicable in most cases.
 -  **$CreateDirs** [**on**/off] - create directories on an as-needed
    basis
 -  `$DirCreateMode <rsconf1_dircreatemode.html>`_
--  `$DirGroup <rsconf1_dirgroup.html>`_
--  `$DirOwner <rsconf1_dirowner.html>`_
--  `$DropMsgsWithMaliciousDnsPTRRecords <rsconf1_dropmsgswithmaliciousdnsptrrecords.html>`_
--  `$DropTrailingLFOnReception <rsconf1_droptrailinglfonreception.html>`_
--  `$DynaFileCacheSize <rsconf1_dynafilecachesize.html>`_
--  `$Escape8BitCharactersOnReceive <rsconf1_escape8bitcharsonreceive.html>`_
--  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
--  **$EscapeControlCharactersOnReceive** [**on**\ \|off] - escape
-   USASCII HT character
 -  $SpaceLFOnReceive [on/**off**] - instructs rsyslogd to replace LF
    with spaces during message reception (sysklogd compatibility aid)
 -  $ErrorMessagesToStderr [**on**\ \|off] - direct rsyslogd error
    message to stderr (in addition to other targets)
--  `$FailOnChownFailure <rsconf1_failonchownfailure.html>`_
--  `$FileCreateMode <rsconf1_filecreatemode.html>`_
--  `$FileGroup <rsconf1_filegroup.html>`_
--  `$FileOwner <rsconf1_fileowner.html>`_
--  `$GenerateConfigGraph <rsconf1_generateconfiggraph.html>`_
 -  `$GssForwardServiceName <rsconf1_gssforwardservicename.html>`_
 -  `$GssListenServiceName <rsconf1_gsslistenservicename.html>`_
 -  `$GssMode <rsconf1_gssmode.html>`_
--  `$IncludeConfig <rsconf1_includeconfig.html>`_
 -  MainMsgQueueCheckpointInterval <number>
 -  **$LocalHostName** [name] - this directive permits to overwrite the
    system hostname with the one specified in the directive. If the
@@ -197,7 +173,6 @@ default, it is usually well-chosen and applicable in most cases.
 -  $MainMsgQueueFileName <name>
 -  $MainMsgQueueHighWaterMark <number> [default 8000]
 -  $MainMsgQueueImmediateShutdown [on/**off**]
--  `$MainMsgQueueSize <rsconf1_mainmsgqueuesize.html>`_
 -  $MainMsgQueueLowWaterMark <number> [default 2000]
 -  $MainMsgQueueMaxFileSize <size\_nbr>, default 1m
 -  $MainMsgQueueTimeoutActionCompletion <number> [number is timeout in
@@ -213,8 +188,7 @@ default, it is usually well-chosen and applicable in most cases.
 -  $MainMsgQueueWorkerThreads <number>, num worker threads, default 1,
    recommended 1
 -  $MainMsgQueueWorkerThreadMinumumMessages <number>, default 100
--  `$MarkMessagePeriod <rsconf1_markmessageperiod.html>`_ (immark)
--  ***$MaxMessageSize*** <size\_nbr>, default 2k - allows to specify
+-  **$MaxMessageSize** <size\_nbr>, default 2k - allows to specify
    maximum supported message size (both for sending and receiving). The
    default should be sufficient for almost all cases. Do not set this
    below 1k, as it would cause interoperability problems with other
@@ -236,9 +210,6 @@ default, it is usually well-chosen and applicable in most cases.
    Note that 2k, the current default, is the smallest size that must be
    supported in order to be compliant to the upcoming new syslog RFC
    series.
--  `$MaxOpenFiles <rsconf1_maxopenfiles.html>`_
--  `$ModDir <rsconf1_moddir.html>`_
--  `$ModLoad <rsconf1_modload.html>`_
 -  **$OMFileAsyncWriting** [on/**off**], if turned on, the files will be
    written in asynchronous mode via a separate thread. In that case,
    double buffers will be used so that one buffer can be filled while
@@ -268,8 +239,6 @@ default, it is usually well-chosen and applicable in most cases.
    compression and should be switched to off for that use case. Note
    that the default -on- is primarily an aid to preserve the traditional
    syslogd behaviour.
--  `$omfileForceChown <rsconf1_omfileforcechown.html>`_ - force
-   ownership change for all files
 -  **$RepeatedMsgContainsOriginalMsg** [on/**off**] - "last message
    repeated n times" messages, if generated, have a different format
    that contains the message that is being repeated. Note that only the
@@ -279,8 +248,6 @@ default, it is usually well-chosen and applicable in most cases.
    is large enough to get a good idea which message was repeated but it
    is not necessarily large enough for the whole message. (Introduced
    with 4.1.5). Once set, it affects all following actions.
--  `$RepeatedMsgReduction <rsconf1_repeatedmsgreduction.html>`_
--  `$ResetConfigVariables <rsconf1_resetconfigvariables.html>`_
 -  **$Ruleset** *name* - starts a new ruleset or switches back to one
    already defined. All following actions belong to that new rule set.
    the *name* does not yet exist, it is created. To switch back to
@@ -288,10 +255,6 @@ default, it is usually well-chosen and applicable in most cases.
    name. All following actions belong to that new rule set. It is
    advised to also read our paper on `using multiple rule sets in
    rsyslog <multi_ruleset.html>`_.
--  **`$RulesetCreateMainQueue <rsconf1_rulesetcreatemainqueue.html>`_**
-   on - creates a ruleset-specific main queue.
--  **`$RulesetParser <rsconf1_rulesetparser.html>`_** - enables to set a
-   specific (list of) message parsers to be used with the ruleset.
 -  **$OptimizeForUniprocessor** [on/**off**] - turns on optimizatons
    which lead to better performance on uniprocessors. If you run on
    multicore-machiens, turning this off lessens CPU load. The default
@@ -337,7 +300,6 @@ default, it is usually well-chosen and applicable in most cases.
    rsyslog.conf**. Otherwise, if error messages are triggered before
    this directive is processed, rsyslog will fix the local host IP to
    "127.0.0.1", what than can not be reset.
--  `$UMASK <rsconf1_umask.html>`_
 
 **Where <size\_nbr> or integers are specified above,** modifiers can be
 used after the number part. For example, 1k means 1024. Supported are
@@ -351,14 +313,10 @@ specify either "1000" or "1,000" with the same result. Please note that
 rsyslogd simply ignores the punctuation. From it's point of view,
 "1,,0.0.,.,0" also has the value 1000.
 
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008-2010 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

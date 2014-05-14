@@ -13,7 +13,7 @@ specified, we use one of these hardcoded templates. Search for
 "template\_" in syslogd.c and you will find the hardcoded ones.
 
 Templates are specified by template() statements. They can also be
-specified via $Template legacy statements. Note that these are scheduled
+specified via $template legacy statements. Note that these are scheduled
 for removal in later versions of rsyslog, so it is probably a good idea
 to avoid them for new uses.
 
@@ -26,10 +26,17 @@ reads the config file. As such, templates are not affected by
 if-statements or config nesting.
 
 The basic structure of the template statement is as follows:
- ``template(parameters)``
- In addition to this simpler syntax, list templates (to be described
+
+::
+
+   template(parameters)
+
+In addition to this simpler syntax, list templates (to be described
 below) support an extended syntax:
- ``template(parameters) { list-descriptions }``
+
+::
+
+   template(parameters) { list-descriptions }
 
 Each template has a parameter **name**, which specifies the templates
 name, and a parameter **type**, which specifies the template type. The
@@ -218,7 +225,11 @@ Use case
 A typical use case is to first create a custom subtree and then include
 it into the template, like in this small example:
 
-    ``set $!usr!tpl2!msg = $msg; set $!usr!tpl2!dataflow = field($msg, 58, 2); template(name="tpl2" type="subtree" subtree="$!usr!tpl2") ``
+::
+
+   set $!usr!tpl2!msg = $msg;
+   set $!usr!tpl2!dataflow = field($msg, 58, 2);
+   template(name="tpl2" type="subtree" subtree="$!usr!tpl2")
 
 Here, we assume that $msg contains various fields, and the data from a
 field is to be extracted and stored - together with the message - as
@@ -234,11 +245,33 @@ property replacer). These variables are taken from message or other
 dynamic content when the final string to be passed to a plugin is
 generated. String-based templates are a great way to specify textual
 content, especially if no complex manipulation to properties is
-necessary. Full details on how to specify template text can be found
-below.
-Config example:
+necessary.
 
-    ``template(name="tpl3" type="string" string="%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n") ``
+This is a sample for a string-based template:
+
+::
+
+   template(name="tpl3" type="string"
+            string="%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+           )
+
+The text between percent signs ('%') is interpreted by the rsyslog
+:doc:`property replacer <property_replacer>`. In a nutshell,
+it contains the property to use as well as options for formatting
+and further processing. This is very similar to what the ``property`` 
+object in list templates does (it actually is just a different language to
+express most of the same things).
+
+Everything outside of the percent signs is constant text. In the
+above case, we have mostly spaces between the property values. At the
+end of the string, an escape sequence is used.
+
+Escape sequences permit to specify nonprintable characters. They work
+very similar to escape sequences in C and many other languages. They
+are initiated by the backslash characters and followed by one or more
+characters that specify the actual character. For example \\7 is the
+US-ASCII BEL character and \\n is a newline. The set is similar to
+what C and perl support, but a bit more limited.
 
 plugin
 ~~~~~~
@@ -264,7 +297,7 @@ template as whole and is part of the template parameters. See details
 below. Be sure NOT to mistake template options with property options -
 the latter ones are processed by the property replacer and apply to a
 SINGLE property, only (and not the whole template).
- Template options are case-insensitive. Currently defined are:
+Template options are case-insensitive. Currently defined are:
 
 **option.sql** - format the string suitable for a SQL statement in MySQL
 format. This will replace single quotes ("'") and the backslash
@@ -293,7 +326,7 @@ have violated the sql standard and introduced their own escape methods,
 it is impossible to have a single option doing all the work.  So you
 yourself must make sure you are using the right format. **If you choose
 the wrong one, you are still vulnerable to sql injection.**
- Please note that the database writer \*checks\* that the sql option is
+Please note that the database writer *checks* that the sql option is
 present in the template. If it is not present, the write database action
 is disabled. This is to guard you against accidental forgetting it and
 then becoming vulnerable to SQL injection. The sql option can also be
@@ -301,7 +334,7 @@ useful with files - especially if you want to import them into a
 database on another machine for performance reasons. However, do NOT use
 it if you do not have a real need for it - among others, it takes some
 toll on the processing time. Not much, but on a really busy system you
-might notice it ;)
+might notice it.
 
 The default template for the write to database action has the sql option
 set. As we currently support only MySQL and the sql option matches the
@@ -309,11 +342,11 @@ default MySQL configuration, this is a good choice. However, if you have
 turned on ``NO_BACKSLASH_ESCAPES`` in your MySQL config, you need to
 supply a template with the stdsql option. Otherwise you will become
 vulnerable to SQL injection.
- To escape:
- % = \\%
- \\ = \\\\ --> '\\' is used to escape (as in C)
- template (name="TraditionalFormat" type="string"
-string="%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"
+
+::
+
+   template (name="TraditionalFormat" type="string"
+   string="%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"
 
 Examples
 ~~~~~~~~
@@ -340,8 +373,8 @@ The equivalent string template looks like this:
 ::
 
     template(name="FileFormat" type="string"
-      string= "%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
-    )
+             string= "%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+            )
 
 Note that the template string itself must be on a single line.
 
@@ -368,8 +401,8 @@ The equivalent string template looks like this:
 ::
 
     template(name="forwardFormat" type="string"
-      string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
-    )
+             string="<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+            )
 
 Note that the template string itself must be on a single line.
 
@@ -404,10 +437,30 @@ The equivalent string template looks like this:
 ::
 
     template(name="stdSQLformat" type="string" option.sql="on"
-      string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')"
-    )
+             string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')"
+            )
 
 Note that the template string itself must be on a single line.
+
+Creating Dynamic File Names for omfile
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Templates can be used to generate actions with dynamic file names.
+For example, if you would like to split syslog messages from different hosts
+to different files (one per host), you can define the following template:
+
+::
+
+   template (name="DynFile" type="string" string="/var/log/system-%HOSTNAME%.log")
+
+Legacy example:
+
+::
+
+   $template DynFile,"/var/log/system-%HOSTNAME%.log"
+
+This template can then be used when defining an action. It
+will result in something like "/var/log/system-localhost.log"
 
 legacy format
 -------------
@@ -420,7 +473,12 @@ files. Legacy and current config statements can coexist within the same
 config file.
 
 The general format is
-``$template name,param[,options]`` where "name" is the template name and
+
+::
+
+  $template name,param[,options]
+  
+where "name" is the template name and
 "param" is a single parameter that specifies template content. The
 optional "options" part is used to set template options.
 
@@ -429,7 +487,10 @@ string
 
 The parameter is the same string that with the current-style format you
 specify in the **string** parameter, for example:
-``$template strtpl,"PRI: %pri%, MSG: %msg%\n"``
+
+::
+
+  $template strtpl,"PRI: %pri%, MSG: %msg%\n"
 
 Note that list templates are not available in legacy format, so you need
 to use complex property replacer constructs to do complex things.
@@ -440,7 +501,10 @@ plugin
 This is equivalent to the "plugin"-type template directive. Here, the
 parameter is the plugin name, with an equal sign prepended. An example
 is:
-``$template plugintpl,=myplugin``
+
+::
+
+   $template plugintpl,=myplugin
 
 Reserved Template Names
 -----------------------
@@ -450,23 +514,23 @@ Do NOT use them if, otherwise you may receive a conflict in the future
 (and quite unpredictable behaviour). There is a small set of pre-defined
 templates that you can use without the need to define it:
 
--  RSYSLOG\_TraditionalFileFormat - the "old style" default log file
+-  **RSYSLOG\_TraditionalFileFormat** - the "old style" default log file
    format with low-precision timestamps
--  RSYSLOG\_FileFormat - a modern-style logfile format similar to
+-  **RSYSLOG\_FileFormat** - a modern-style logfile format similar to
    TraditionalFileFormat, both with high-precision timestamps and
    timezone information
--  RSYSLOG\_TraditionalForwardFormat - the traditional forwarding format
+-  **RSYSLOG\_TraditionalForwardFormat** - the traditional forwarding format
    with low-precision timestamps. Most useful if you send messages to
    other syslogd's or rsyslogd below version 3.12.5.
--  RSYSLOG\_SysklogdFileFormat - sysklogd compatible log file format. If
-   used with options: $SpaceLFOnReceive on;
-   $EscapeControlCharactersOnReceive off; $DropTrailingLFOnReception
-   off, the log format will conform to sysklogd log format.
--  RSYSLOG\_ForwardFormat - a new high-precision forwarding format very
+-  **RSYSLOG\_SysklogdFileFormat** - sysklogd compatible log file format. If
+   used with options: ``$SpaceLFOnReceive on``,
+   ``$EscapeControlCharactersOnReceive off``,
+   ``$DropTrailingLFOnReception off``, the log format will conform to sysklogd log format.
+-  **RSYSLOG\_ForwardFormat** - a new high-precision forwarding format very
    similar to the traditional one, but with high-precision timestamps
    and timezone information. Recommended to be used when sending
    messages to rsyslog 3.12.5 or above.
--  RSYSLOG\_SyslogProtocol23Format - the format specified in IETF's
+-  **RSYSLOG\_SyslogProtocol23Format** - the format specified in IETF's
    internet-draft ietf-syslog-protocol-23, which is assumed to become
    the new syslog standard RFC. This format includes several
    improvements. The rsyslog message parser understands this format, so
@@ -474,119 +538,12 @@ templates that you can use without the need to define it:
    rsyslog. Other syslogd's may get hopelessly confused if receiving
    that format, so check before you use it. Note that the format is
    unlikely to change when the final RFC comes out, but this may happen.
--  RSYSLOG\_DebugFormat - a special format used for troubleshooting
+-  **RSYSLOG\_DebugFormat** - a special format used for troubleshooting
    property problems. This format is meant to be written to a log file.
    Do **not** use for production or remote forwarding.
 
-The following is legacy documentation soon to be integrated.
-------------------------------------------------------------
 
-Starting with 5.5.6, there are actually two different types of template:
 
--  string based
--  string-generator module based
-
-`String-generator module <rsyslog_conf_modules.html#sm>`_ based
-templates have been introduced in 5.5.6. They permit a string generator,
-actually a C "program", the generate a format. Obviously, it is more
-work required to code such a generator, but the reward is speed
-improvement. If you do not need the ultimate throughput, you can forget
-about string generators (so most people never need to know what they
-are). You may just be interested in learning that for the most important
-default formats, rsyslog already contains highly optimized string
-generators and these are called without any need to configure anything.
-But if you have written (or purchased) a string generator module, you
-need to know how to call it. Each such module has a name, which you need
-to know (look it up in the module doc or ask the developer). Let's
-assume that "mystrgen" is the module name. Then you can define a
-template for that strgen in the following way:
-
-    ``template(name="MyTemplateName" type="plugin" string="mystrgen")``
-
-Legacy example:
-
-    ``$template MyTemplateName,=mystrgen``
-
-(Of course, you must have first loaded the module via $ModLoad).
-
-The important part is the equal sign in the legacy format: it tells the
-rsyslog config parser that no string follows but a strgen module name.
-
-There are no additional parameters but the module name supported. This
-is because there is no way to customize anything inside such a
-"template" other than by modifying the code of the string generator.
-
-So for most use cases, string-generator module based templates are
-**not** the route to take. Usually, we use **string based templates**
-instead. This is what the rest of the documentation now talks about.
-
-A template consists of a template directive, a name, the actual template
-text and optional options. A sample is:
-
-    ``template(name="MyTemplateName" type="string" string="Example: Text %property% some more text\n" options)``
-
-Legacy example:
-
-    ``$template MyTemplateName,"\7Text %property% some more text\n",<options>``
-
-The "template" (legacy: $template) is the template directive. It tells
-rsyslog that this line contains a template. "MyTemplateName" is the
-template name. All other config lines refer to this name. The text
-within "string" is the actual template text. The backslash is an escape
-character, much as it is in C. It does all these "cool" things. For
-example, \\7 rings the bell (this is an ASCII value), \\n is a new line.
-C programmers and perl coders have the advantage of knowing this, but
-the set in rsyslog is a bit restricted currently.
-
-All text in the template is used literally, except for things within
-percent signs. These are properties and allow you access to the contents
-of the syslog message. Properties are accessed via the `property
-replacer <property_replacer.html>`_ (nice name, huh) and it can do cool
-things, too. For example, it can pick a substring or do date-specific
-formatting. More on this is below, on some lines of the property
-replacer.
- Properties can be accessed by the `property
-replacer <property_replacer.html>`_ (see there for details).
-
-Templates can be used in the form of a **list** as well. This has been
-introduced with **6.5.0**. The list consists of two parts which are
-either a **constant** or a **property**. The constants are taking the
-part of "text" that you usually enter in string-based templates. The
-properties stay variable, as they are a substitute for different values
-of a certain type. This type of template is extremely useful for
-complicated cases, as it helps you to easily keep an overview over the
-template. Though, it has the disadvantage of needing more effort to
-create it.
-
-Config example:
-
-    ``template(name="MyTemplate" type="list" option.json="off") {     constant(value="Test: ")     property(name="msg" outname="mymessage")     constant(value=" --!!!-- ")     property(name="timereported" dateFormat="rfc3339" caseConversion="lower")     constant(value="\n")     }``
-
-First, the general template option will be defined. The values of the
-template itself get defined in the curly brackets. As it can be seen, we
-have constants and properties in exchange. Whereas constants will be
-filled with a value and probably some options, properties do direct to a
-property and the options that could be needed additional format
-definitions.
-
-We suggest to use separate lines for all constants and properties. This
-helps to keep a good overview over the different parts of the template.
-Though, writing it in a single line will work, it is much harder to
-debug if anything goes wrong with the template.
-
-**Please note that templates can also be used to generate selector lines
-with dynamic file names.** For example, if you would like to split
-syslog messages from different hosts to different files (one per host),
-you can define the following template:
-
-    ``template (name="DynFile" type="string" string="/var/log/system-%HOSTNAME%.log")``
-
-Legacy example:
-
-    ``$template DynFile,"/var/log/system-%HOSTNAME%.log"``
-
-This template can then be used when defining an output selector line. It
-will result in something like "/var/log/system-localhost.log"
 
 Legacy String-based Template Samples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -595,14 +552,21 @@ This section provides some default templates in legacy format, as used
 in rsyslog previous to version 6. Note that this format is still
 supported, so there is no hard need to upgrade existing configurations.
 However, it is strongly recommended that the legacy constructs are not
-used when crafting new templates. Note that each $Template statement is
+used when crafting new templates. Note that each $template statement is
 on a **single** line, but probably broken across several lines for
 display purposes by your browsers. Lines are separated by empty lines.
 Keep in mind, that line breaks are important in legacy format.
 
-`` $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"  $template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"  $template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
+::
 
-**See Also**
+  $template FileFormat,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+  $template TraditionalFileFormat,"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+  $template ForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+  $template TraditionalForwardFormat,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%"
+  $template StdSQLFormat,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL``
+
+See Also
+--------
 
 -  `How to bind a
    template <http://www.rsyslog.com/how-to-bind-a-template/>`_
@@ -610,3 +574,9 @@ Keep in mind, that line breaks are important in legacy format.
    message <http://www.rsyslog.com/adding-the-bom-to-a-message/>`_
 -  `How to separate log files by host name of the sending
    device <http://www.rsyslog.com/article60/>`_
+
+
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_ project.
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
+version 2 or higher.

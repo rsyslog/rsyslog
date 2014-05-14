@@ -1,5 +1,5 @@
-Building rsyslog from the source repository
-===========================================
+Installing rsyslog from the source repository
+=============================================
 
 In most cases, people install rsyslog either via a package or use an
 "official" distribution tarball to generate it. But there may be

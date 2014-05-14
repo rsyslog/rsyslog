@@ -8,7 +8,7 @@ messages, but queues may also be used for other purposes.
 
 This document provides a good insight into technical details, operation
 modes and implications. In addition to it, an :doc:`rsyslog queue concepts
-overview <whitepapers/queues_analogy>` document exists which tries to explain
+overview <../whitepapers/queues_analogy>` document exists which tries to explain
 queues with the help of some analogies. This may probably be a better
 place to start reading about queues. I assume that once you have
 understood that document, the material here will be much easier to grasp
@@ -23,7 +23,7 @@ potentially de-couples the filter processing from the actual action
 (e.g. writing to file, database or forwarding to another host).
 
 Where are Queues Used?
-======================
+----------------------
 
 Currently, queues are used for the main message queue and for the
 actions.
@@ -65,7 +65,7 @@ Consequently, the number of worker threads is fixed to one for action
 queues and can not be changed.
 
 Queue Modes
-===========
+-----------
 
 Rsyslog supports different queue modes, some with submodes. Each of them
 has specific advantages and disadvantages. Selecting the right queue
@@ -73,7 +73,7 @@ mode is quite important when tuning rsyslogd. The queue mode (aka
 "type") is set via the "*$<object>QueueType*\ " config directive.
 
 Direct Queues
--------------
+~~~~~~~~~~~~~
 
 Direct queues are **non**-queuing queues. A queue in direct mode does
 neither queue nor buffer any of the queue elements but rather passes the
@@ -98,7 +98,7 @@ To create a direct queue, use the "*$<object>QueueType Direct*\ " config
 directive.
 
 Disk Queues
------------
+~~~~~~~~~~~
 
 Disk queues use disk drives for buffering. The important fact is that
 the always use the disk and do not buffer anything in memory. Thus, the
@@ -154,7 +154,7 @@ default being off. Activating this option has a performance penalty, so
 it should not be turned on without reason.
 
 In-Memory Queues
-----------------
+~~~~~~~~~~~~~~~~
 
 In-memory queue mode is what most people have on their mind when they
 think about computing queues. Here, the enqueued data elements are held
@@ -202,7 +202,7 @@ To create an in-memory queue, use the "*$<object>QueueType
 LinkedList*\ " or  "*$<object>QueueType FixedArray*\ " config directive.
 
 Disk-Assisted Memory Queues
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If a disk queue name is defined for in-memory queues (via
 *$<object>QueueFileName*), they automatically become "disk-assisted"
@@ -273,7 +273,7 @@ screw up the system here (yes, a feature enhancement request is filed
 ;)).
 
 Limiting the Queue Size
-=======================
+-----------------------
 
 All queues, including disk queues, have a limit of the number of
 elements they can enqueue. This is set via the "*$<object>QueueSize*\ "
@@ -303,7 +303,7 @@ running out of space (future version will have an auto-size-limit logic,
 that then kicks in in such situations).
 
 Worker Thread Pools
-===================
+-------------------
 
 Each queue (except in "direct" mode) has an associated pool of worker
 threads. Worker threads carry out the action to be performed on the data
@@ -340,7 +340,7 @@ we keep them running. If you would like to never shutdown any worker
 threads, specify -1 for this parameter.
 
 Discarding Messages
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 If the queue reaches the so called "discard watermark" (a number of
 queued elements), less important messages can automatically be
@@ -393,7 +393,7 @@ is absolutely unavoidable and you prefer to discard less important
 messages first.
 
 Filled-Up Queues
-================
+----------------
 
 If the queue has either reached its configured maximum number of entries
 or disk space, it is finally full. If so, rsyslogd throttles the data
@@ -422,7 +422,7 @@ it can lead to something like a complete hang of the system. The same
 problem does not apply to action queues.
 
 Rate Limiting
--------------
+~~~~~~~~~~~~~
 
 Rate limiting provides a way to prevent rsyslogd from processing things
 too fast. It can, for example, prevent overruning a receiver system.
@@ -436,7 +436,7 @@ messages can be sent within a second (actually less, as there is also
 some time needed for the processing itself).
 
 Processing Timeframes
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Queues can be set to dequeue (process) messages only during certain
 timeframes. This is useful if you, for example, would like to transfer
@@ -456,7 +456,7 @@ parameter can be found in the `rsyslog
 wiki <http://wiki.rsyslog.com/index.php/OffPeakHours>`_.
 
 Performance
------------
+~~~~~~~~~~~
 
 The locking involved with maintaining the queue has a potentially large
 performance impact. How large this is, and if it exists at all, depends
@@ -489,7 +489,7 @@ different defaults for the actual parts of rsyslog processing that
 utilize queues. So you need to check these object's defaults.
 
 Terminating Queues
-------------------
+~~~~~~~~~~~~~~~~~~
 
 Terminating a process sounds easy, but can be complex. Terminating a
 running queue is in fact the most complex operation a queue object can
