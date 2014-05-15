@@ -1,5 +1,5 @@
-Global Configuration Statements
-===============================
+Legacy Global Configuration Statements
+======================================
 Global configuration statements, as their name implies, usually affect
 some global features. However, some also affect main queues, which
 are "global" to a ruleset.
