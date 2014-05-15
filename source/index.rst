@@ -27,6 +27,7 @@ Manual
    installation/index
    concepts/index
    troubleshooting/index
+   examples/index
    tutorials/index
    development/index
    historical/index
