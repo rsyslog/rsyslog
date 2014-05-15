@@ -61,8 +61,8 @@ Processing Principles
 - actions consist of the action call itself (e.g. ":omusrmsg:") as
   well as all action-defining configuration statements ($Action... directives)
 
-- $Action... directives **must** be specified in front of the action
-  they are intended to configure
+- if legacy format is used (see below), $Action... directives **must** be
+  specified in front of the action they are intended to configure
 
 - some config directives automatically refer to their previous values 
   after being applied, others not. See the respective doc for details. Be
@@ -84,8 +84,8 @@ A different "root" configuration file can be specified via the ``-f <file>``
 rsyslogd command line option. This is usually done within some init
 script or similiar facility.
 
-Statements
-----------
+Statement Types
+---------------
 Rsyslog supports three different types of configuration statements
 concurrently:
 
@@ -133,8 +133,8 @@ Flow Control Statements
 
 -  **if expr then ... else ...** - conditional execution
 -  **stop** - stops processing the current message
--  **`call <rainerscript_call.html>`_** - calls a ruleset (just like a
-   subroutine call)
+-  :doc:`call <../rainerscript/rainerscript_call>` - calls a ruleset
+   (just like a subroutine call)
 -  **continue** - a NOP, useful e.g. inside the then part of an if
 
 Flow control is also provided by :doc:`filter conditions <filters>`.
