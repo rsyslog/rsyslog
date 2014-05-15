@@ -127,6 +127,7 @@ extern int yydebug; /* interface to flex */
 #include "sd-daemon.h"
 #include "rainerscript.h"
 #include "ratelimit.h"
+#include "janitor.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -1307,11 +1308,13 @@ mainloop(void)
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = 86400 /*1 day*/;
+		tvSelectTimeout.tv_sec = 10;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
 			break;	/* exit as quickly as possible */
+
+		janitorRun();
 
 		if(bHadHUP) {
 			doHUP();
