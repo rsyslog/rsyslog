@@ -21,7 +21,14 @@
 #ifndef INCLUDED_JANITOR_H
 #define INCLUDED_JANITOR_H
 
+struct janitorEtry {
+	struct janitorEtry *next;
+	char *id;	/* ID used to remove entry */
+	void (*cb)(void *pUsr);
+	void *pUsr;	/* user-settable pointer (passed to callback) */
+};
 
+rsRetVal janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr);
 void janitorRun(void);
 
 #endif /* #ifndef INCLUDED_JANITOR_H */
