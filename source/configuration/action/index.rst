@@ -1,8 +1,11 @@
-Action-Specific Configuration Statements
-========================================
+Legacy Action-Specific Configuration Statements
+===============================================
 
-Statements modify the next action(s) that is/are defined after the respective
-statement.
+Statements modify the next action(s) that is/are defined **via legacy syntax**
+after the respective statement.
+Actions defined via the action() object are **not** affected by the 
+legacy statements listed here. Use the action() object properties
+instead.
 
 Generic action configuration Statements
 ---------------------------------------

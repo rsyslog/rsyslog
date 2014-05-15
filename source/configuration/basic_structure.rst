@@ -72,6 +72,8 @@ Processing Principles
   is a pain. The rsyslog project strongly recommends using at least version 7,
   where these problems are solved and configuration is much easier.
 
+- legacy configuration statements (those starting with $) do **not** affect
+  RainerScript objects (e.g. actions).
 
 
 Configuration File
