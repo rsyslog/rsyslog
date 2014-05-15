@@ -1,44 +1,91 @@
 Basic Structure
 ===============
-Rsyslog supports standard sysklogd's configuration file format and
-extends it. So in general, you can take a "normal" syslog.conf and use
-it together with rsyslogd. It will understand everything. However, to
-use most of rsyslogd's unique features, you need to add extended
-configuration directives.
 
-Rsyslogd supports the classical, selector-based rule lines. They are
-still at the heart of it and all actions are initiated via rule lines. A
-rule lines is any line not starting with a $ or the comment sign (#).
-Lines starting with $ carry rsyslog-specific directives.
+This section describes how rsyslog configuration basically works. Think
+of rsyslog as a big logging and event processing toolset. It can be considered
+as a framework with some basic processing that is fixed in the way data flows,
+but is highly custumizable in the details of this message flow. During
+configuration, this customization is done by defining and customizing
+the rsyslog objects.
 
-Every rule line consists of two fields, a selector field and an action
-field. These two fields are separated by one or more spaces or tabs. The
-selector field specifies a pattern of facilities and priorities
-belonging to the specified action.
+Quick overview of message flow and objects
+------------------------------------------
+Messages enter rsyslog with the help of input modules. Then, they are
+passed to ruleset, where rules are conditionally applied. When a rule
+matches, the message is transferred to an action, which then does 
+something to the message, e.g. write it to a file or database or
+forward it to a remote host.
 
-Lines starting with a hash mark ("#'') and empty lines are ignored.
- 
-Configuration File Syntax Differences
--------------------------------------
-Rsyslogd uses a slightly different syntax for its configuration file
-than the original BSD sources. Originally all messages of a specific
-priority and above were forwarded to the log file. The modifiers "='',
-"!'' and "!-'' were added to make rsyslogd more flexible and to use it
-in a more intuitive manner.
+Processing Principles
+---------------------
 
-The original BSD syslogd doesn't understand spaces as separators
-between the selector and the action field.
+- inputs submit received messages to rulesets
 
-When compared to syslogd from sysklogd package, rsyslogd offers
-additional `features <features.html>`_ (like template and database
-support). For obvious reasons, the syntax for defining such features is
-available in rsyslogd, only.
+  * if the ruleset is not specifically bound, the default ruleset is used
 
-Basic rsyslog.conf Structure
-============================
+- by default, there is one ruleset (RSYSLOG_DefaultRuleset)
 
-This is a part of the rsyslog.conf documentation.
+- additional rulesets can be user-defined
 
+- each ruleset contains of zero or many rules
+
+  * while it is permitted to have zero rules inside a ruleset,
+    this obviously makes no sense
+
+- a rule consists of a filter and an action list
+
+- filters provide yes/no decisions and thus control-of-flow capability
+
+- if a filter "matches" (filter says "yes"), the corresponding
+  action list is executed. If it does not match, nothing special
+  happens
+
+- rules are evaluated in sequence from the first to the last rule
+  **inside** the given ruleset. No rules from unrelated rulesets are
+  ever executed.
+
+- all rules are **always** fully evaluated, no matter if a filter matches
+  or not (so we do **not** stop at the first match). If message processing
+  shall stop, the "discard" action (represented by the tilde character) must
+  explicitely be executed. If discard is executed, message processing 
+  immediately stops, without eveluating any further rules.
+
+- an action list constains one or many actions
+
+- inside an action list no further filters are possible
+
+- to have more than one action inside a list, the ampersand character
+  must be placed in the position of the filter, and this must immediately
+  follow the previous action
+
+- actions consist of the action call itself (e.g. ":omusrmsg:") as
+  well as all action-defining configuration statements ($Action... directives)
+
+- if legacy format is used (see below), $Action... directives **must** be
+  specified in front of the action they are intended to configure
+
+- some config directives automatically refer to their previous values 
+  after being applied, others not. See the respective doc for details. Be
+  warned that this is currently not always properly documented.
+
+- in general, rsyslog v5 is heavily outdated and its native config language
+  is a pain. The rsyslog project strongly recommends using at least version 7,
+  where these problems are solved and configuration is much easier.
+
+
+
+Configuration File
+------------------
+Upon startup, rsyslog reads its configuration from the ``rsyslog.conf``
+file by default. This file may contain references to include other
+config files.
+
+A different "root" configuration file can be specified via the ``-f <file>``
+rsyslogd command line option. This is usually done within some init
+script or similiar facility.
+
+Statement Types
+---------------
 Rsyslog supports three different types of configuration statements
 concurrently:
 
@@ -86,9 +133,11 @@ Flow Control Statements
 
 -  **if expr then ... else ...** - conditional execution
 -  **stop** - stops processing the current message
--  **`call <rainerscript_call.html>`_** - calls a ruleset (just like a
-   subroutine call)
+-  :doc:`call <../rainerscript/rainerscript_call>` - calls a ruleset
+   (just like a subroutine call)
 -  **continue** - a NOP, useful e.g. inside the then part of an if
+
+Flow control is also provided by :doc:`filter conditions <filters>`.
 
 Data Manipulation Statements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
