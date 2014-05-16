@@ -72,6 +72,8 @@ Processing Principles
   is a pain. The rsyslog project strongly recommends using at least version 7,
   where these problems are solved and configuration is much easier.
 
+- legacy configuration statements (those starting with $) do **not** affect
+  RainerScript objects (e.g. actions).
 
 
 Configuration File
@@ -108,6 +110,42 @@ The rsyslog.conf files consists of statements. For old style (sysklogd &
 legacy rsyslog), lines do matter. For new style (RainerScript) line
 spacing is irrelevant. Most importantly, this means with new style
 actions and all other objects can split across lines as users want to.
+
+Recommended use of Statement Types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In general it is recommended to use RainerScript type statements, as
+these provide clean and easy to read control-of-flow as well as
+no doubt about which parameters are active. They also have no
+side-effects with include files, which can be a major obstacle with
+legacy rsyslog statements.
+
+For very simple things sysklogd statement types are still suggested,
+especially if the full config consists of such simple things. The
+classical sample is writing to files (or forwarding) via priority.
+In sysklogd, this looks like:
+
+::
+
+   mail.info /var/log/mail.log
+   mail.err @server.example.net
+
+This is hard to beat in simplicity, still being thaught in courses
+and a lot of people know this syntax. It is perfectly fine to use
+these constructs even in newly written config files.
+
+**As a rule of thumb, RainerScript config statements should be used
+when**
+
+- configuration parameters are required (e.g. the ``Action...``
+  type of legacy statements)
+- more elaborate control-of-flow is required (e.g. when multiple
+  actions must be nested under the same condition)
+
+It is usually **not** recommended to use rsyslog legacy config format
+(those directives starting with a dollar sign). However, some few
+settings and modules have not yet been converted to RainerScript. In
+those cases, the legacy syntax must be used.
 
 Comments
 --------

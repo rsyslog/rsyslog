@@ -1,5 +1,5 @@
-Ruleset-Specific Configuration Statements
-=========================================
+Ruleset-Specific Legacy Configuration Statements
+================================================
 These statements can be used to set ruleset parameters. To set
 these parameters, first use *$Ruleset*, **then** use the other
 configuration directives. Please keep in mind
