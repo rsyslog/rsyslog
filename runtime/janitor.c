@@ -56,6 +56,34 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal
+janitorDelEtry(const char *__restrict__ const id)
+{
+	struct janitorEtry *curr, *prev = NULL;
+	DEFiRet;
+
+	pthread_mutex_lock(&janitorMut);
+	for(curr = janitorRoot ; curr != NULL ; curr = curr->next) {
+		if(!strcmp(curr->id, id)) {
+			if(prev == NULL) {
+				janitorRoot = curr->next;
+			} else {
+				prev->next = curr->next;
+			}
+			free(curr->id);
+			free(curr);
+			DBGPRINTF("janitor: deleted entry '%s'\n", id);
+			ABORT_FINALIZE(RS_RET_OK);
+		}
+		prev = curr;
+	}
+	DBGPRINTF("janitor: to be deleted entry '%s' not found\n", id);
+	iRet = RS_RET_NOT_FOUND;
+finalize_it:
+	pthread_mutex_unlock(&janitorMut);
+	RETiRet;
+}
+
 /* run the janitor; all entries are processed */
 void
 janitorRun(void)

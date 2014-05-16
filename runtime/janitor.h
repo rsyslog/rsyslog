@@ -29,6 +29,7 @@ struct janitorEtry {
 };
 
 rsRetVal janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr);
+rsRetVal janitorDelEtry(const char *__restrict__ const id);
 void janitorRun(void);
 
 #endif /* #ifndef INCLUDED_JANITOR_H */

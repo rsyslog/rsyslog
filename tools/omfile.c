@@ -1001,6 +1001,8 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);
 	free(pData->fname);
+	if(pData->iCloseTimeout > 0)
+		janitorDelEtry(pData->janitorID);
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
