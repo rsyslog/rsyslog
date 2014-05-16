@@ -185,6 +185,7 @@ typedef struct _instanceData {
 	STATSCOUNTER_DEF(ctrEvict, mutCtrEvict);
 	STATSCOUNTER_DEF(ctrMiss, mutCtrMiss);
 	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
+	STATSCOUNTER_DEF(ctrCloseTimeouts, mutCtrCloseTimeouts);
 	char janitorID[128];		/* holds ID for janitor calls */
 } instanceData;
 
@@ -930,6 +931,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 			pCache[i]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[i]->pName,
 			(int) pCache[i]->nInactive);
 		if(pCache[i]->nInactive >= pData->iCloseTimeout) {
+			STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 			dynaFileDelCacheEntry(pData, i, 1);
 			if(pData->iCurrElt == i)
 				pData->iCurrElt = -1; /* no longer available! */
@@ -952,6 +954,7 @@ janitorCB(void *pUsr)
 			DBGPRINTF("omfile janitor: checking file %s, inactive since %d\n",
 				pData->fname, pData->nInactive);
 			if(pData->nInactive >= pData->iCloseTimeout) {
+				STATSCOUNTER_INC(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
 				closeFile(pData);
 			} else {
 				pData->nInactive += janitorInterval;
@@ -1122,6 +1125,9 @@ setupInstStatsCtrs(instanceData *__restrict__ const pData)
 	STATSCOUNTER_INIT(pData->ctrMax, pData->mutCtrMax);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("maxused"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrMax)));
+	STATSCOUNTER_INIT(pData->ctrCloseTimeouts, pData->mutCtrCloseTimeouts);
+	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("closetimeouts"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrCloseTimeouts)));
 	CHKiRet(statsobj.ConstructFinalize(pData->stats));
 
 finalize_it:

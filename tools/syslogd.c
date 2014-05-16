@@ -1294,21 +1294,11 @@ mainloop(void)
 	struct timeval tvSelectTimeout;
 
 	BEGINfunc
-	/* first check if we have any internal messages queued and spit them out. We used
-	 * to do that on any loop iteration, but that is no longer necessry. The reason
-	 * is that once we reach this point here, we always run on multiple threads and
-	 * thus the main queue is properly initialized. -- rgerhards, 2008-06-09
-	 */
+	/* first check if we have any internal messages queued and spit them out. */
 	processImInternal();
 
 	while(!bFinished){
-		/* this is now just a wait - please note that we do use a near-"eternal"
-		 * timeout of 1 day. This enables us to help safe the environment
-		 * by not unnecessarily awaking rsyslog on a regular tick (just think
-		 * powertop, for example). In that case, we primarily wait for a signal,
-		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
-		 */
-		tvSelectTimeout.tv_sec = janitorInterval /* TODO: * 60 */;
+		tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
