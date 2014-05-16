@@ -1308,7 +1308,7 @@ mainloop(void)
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = 10;
+		tvSelectTimeout.tv_sec = janitorInterval /* TODO: * 60 */;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)

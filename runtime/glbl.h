@@ -104,6 +104,7 @@ ENDinterface(glbl)
 PROTOTYPEObj(glbl);
 
 extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
+extern short janitorInterval;
 
 static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }
 static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }

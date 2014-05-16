@@ -102,6 +102,7 @@ static int bSpaceLFOnRcv = 0; /* replace newlines with spaces on reception: 0 - 
 static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no, 1 - yes */
 static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
+short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -136,6 +137,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
+	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -812,6 +814,8 @@ glblDoneLoadCnf(void)
 				}
 			}
 			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
+		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
+			janitorInterval = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
