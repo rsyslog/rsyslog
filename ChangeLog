@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.3.3 [v8-devel] 2014-05-??
+- added a cleanup process (janitor); permits to close omfile files after a
+  timeout
 - removed obsolete --disable-fsstnd configure option
   Thanks to Thomas D. for alerting us.
   Closes: https://github.com/rsyslog/rsyslog/issues/72
