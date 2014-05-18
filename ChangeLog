@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.2.2 [v8-stable] 2014-04-??
 - make omgssapi build under v8
+  note that we could do this to the stable, because there is NO regression
+  chance at all: only omgssapi was changed, and this module did NOT work
+  previously.
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-17
 - permits to build against json-c 0.12
