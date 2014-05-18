@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -88,6 +88,10 @@ typedef struct _instanceData {
 	OM_uint32 gss_flags;
 } instanceData;
 
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
+
 /* config data */
 
 typedef enum gss_mode_e {
@@ -101,6 +105,7 @@ static struct configSettings_s {
 	gss_mode_t gss_mode;
 } cs;
 
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -120,6 +125,11 @@ static char *getFwdSyslogPt(instanceData *pData)
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
+
+
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
@@ -163,6 +173,9 @@ CODESTARTfreeInstance
 		free(pData->f_hname);
 ENDfreeInstance
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -379,14 +392,19 @@ static rsRetVal doTryResume(instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doTryResume(pData);
+	pthread_mutex_lock(&mutDoAct);
+	iRet = doTryResume(pWrkrData->pData);
+	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
 
 BEGINdoAction
 	char *psz = NULL; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
+	instanceData *pData;
 CODESTARTdoAction
+	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
 		dbgprintf("internal error in omgssapi.c, eDestFORW_SUSP in doAction()!\n");
@@ -465,6 +483,7 @@ finalize_it:
 		free(psz);
 	}
 #	endif
+	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
 
@@ -656,6 +675,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 

@@ -2,6 +2,10 @@
 Version 8.3.3 [v8-devel] 2014-05-??
 - added a cleanup process (janitor); permits to close omfile files after a
   timeout
+- make omgssapi build under v8.3 [import vom v8.2]
+  note that we could do this to the stable, because there is NO regression
+  chance at all: only omgssapi was changed, and this module did NOT work
+  previously.
 - removed obsolete --disable-fsstnd configure option
   Thanks to Thomas D. for alerting us.
   Closes: https://github.com/rsyslog/rsyslog/issues/72
@@ -91,6 +95,12 @@ Version 8.3.0 [v8-devel] 2014-04-10
   c99 mode. By default, we select it automatically. If you modify this and
   use gcc, be sure to include "-std=c99" in your compiler flags. This seems
   to be necessary only for older versions of gcc.
+---------------------------------------------------------------------------
+Version 8.2.2 [v8-stable] 2014-04-??
+- make omgssapi build under v8
+  note that we could do this to the stable, because there is NO regression
+  chance at all: only omgssapi was changed, and this module did NOT work
+  previously.
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-17
 - permits to build against json-c 0.12
