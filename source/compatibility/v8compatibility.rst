@@ -28,7 +28,6 @@ Modules WITHOUT v8 Support
 The following modules will not properly build under rsyslog v8 and need
 to be updated:
 
--  plugins/omgssapi
 -  plugins/omhdfs
 -  plugins/omrabbitmq - not project supported
 -  plugins/omzmq3 - not project supported
@@ -46,7 +45,7 @@ The following modules have been updated and successfully build, but no
 care.
 
 -  mmsequence
--  omprog
+-  plugins/omgssapi
 -  omsnmp
 -  mmfields
 -  mmpstrucdata
