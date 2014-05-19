@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 General Queue Parameters
 ------------------------
 
@@ -15,21 +13,21 @@ ruleset has only the default main queue. Specific Action queues are not
 set up by default.
 
 -  **queue.filename** name
-    File name to be used for the queue files. Please note that this is
+   File name to be used for the queue files. Please note that this is
    actually just the file name. A directory can NOT be specified in this
    paramter. If the files shall be created in a specific directory,
    specify queue.spoolDirectory for this. The filename is used to build
    to complete path for queue files.
 -  **queue.spoolDirectory** name
-    This is the directory into which queue files will be stored. Note
+   This is the directory into which queue files will be stored. Note
    that the directory must exist, it is NOT automatically created by
    rsyslog. If no spoolDirectory is specified, the work directory is
    used.
 -  **queue.size** number
-    This is the maximum size of the queue in number of messages. Note
+   This is the maximum size of the queue in number of messages. Note
    that setting the queue size to very small values (roughly below 100
    messages) is not supported and can lead to unpredictable results.
-    For more information on the current status of this restriction see
+   For more information on the current status of this restriction see
    the `rsyslog FAQ: "lower bound for queue
    sizes" <http://www.rsyslog.com/lower-bound-for-queue-sizes/>`_.
 -  **queue.dequeuebatchsize** number
@@ -82,7 +80,7 @@ set up by default.
 -  **queue.workerthreadminimummessages** number
    default 100
 -  **queue.maxfilesize** size\_nbr
-    default 1m
+   default 1m
 -  **queue.saveonshutdown** on/\ **off**
 -  **queue.dequeueslowdown** number
    number is timeout in microseconds (1000000us is 1sec!), default 0 (no
@@ -94,15 +92,14 @@ set up by default.
 
 The following is a sample of a TCP forwarding action with its own queue.
 
-action(type="omfwd" target="192.168.2.11" port="10514" protocol="tcp"
-queue.filename="forwarding" queue.size="1000000" queue.type="LinkedList"
-)
- [`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+::
+
+  action(type="omfwd" target="192.168.2.11" port="10514" protocol="tcp"
+         queue.filename="forwarding" queue.size="1000000" queue.type="LinkedList"
+        )
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
