@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-MongoDB Output Module
-=====================
+ommongodb: MongoDB Output Module
+================================
 
 **Module Name:    ommongodb**
 
@@ -61,15 +59,15 @@ The following sample writes all syslog messages to the database "syslog"
 and into the collection "log" on mongosever.example.com. The server is
 being accessed under the account of "user" with password "pwd".
 
-module(load="ommongodb") \*.\* action(type="ommongodb"
-server="mongoserver.example.com" db="syslog" collection="log" uid="user"
-pwd="pwd")
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+  module(load="ommongodb")
+  action(type="ommongodb"
+         server="mongoserver.example.com" db="syslog" collection="log"
+         uid="user" pwd="pwd")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008-2012 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.

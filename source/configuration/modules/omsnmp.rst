@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-SNMP Output Module
-==================
+omsnmp: SNMP Trap Output Module
+===============================
 
 **Module Name:    omsnmp**
 
@@ -127,16 +125,19 @@ package installed.
 
 The following commands send every message as a snmp trap.
 
-$ModLoad omsnmp $actionsnmptransport udp $actionsnmptarget localhost
-$actionsnmptargetport 162 $actionsnmpversion 1 $actionsnmpcommunity
-public \*.\* :omsnmp:
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+   $ModLoad omsnmp
+   $actionsnmptransport udp
+   $actionsnmptarget localhost
+   $actionsnmptargetport 162
+   $actionsnmpversion 1
+   $actionsnmpcommunity public
+   *.* :omsnmp:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

@@ -1,7 +1,5 @@
-`rsyslog module reference <rsyslog_conf_modules.html>`_
-
-UDP spoofing output module (omudpspoof)
-=======================================
+omudpspoof: UDP spoofing output module
+======================================
 
 **Module Name:    omstdout**
 
@@ -80,13 +78,10 @@ $ModLoad omudpspoof $template spoofaddr,"192.0.2.1"
 $ActionOMUDPSpoofSourceNameTemplate spoofaddr
 $ActionOMUDPSpoofTargetHost server.example.com \*.\*      :omudpspoof:
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2009-2012 by `Rainer
+Copyright © 2009-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

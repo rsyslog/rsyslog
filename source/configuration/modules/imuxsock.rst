@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-Unix Socket Input
-=================
+imuxsock: Unix Socket Input
+===========================
 
 **Module Name:    imuxsock**
 
@@ -70,10 +68,10 @@ SysSock.Annotate and Annotate).
 **Global Parameters**
 
 -  **SysSock.IgnoreTimestamp** [**on**/off]
-    Ignore timestamps included in the messages, applies to messages
+   Ignore timestamps included in the messages, applies to messages
    received via the system log socket.
 -  **SysSock.IgnoreOwnMessages** [**on**/off] (available since 7.3.7)
-    Ignores messages that originated from the same instance of rsyslogd.
+   Ignores messages that originated from the same instance of rsyslogd.
    There usually is no reason to receive messages from ourselfs. This
    setting is vital when writing messages to the Linux journal. See
    `omjournal <omjournal.html>`_ module documentation for a more
@@ -106,7 +104,7 @@ SysSock.Annotate and Annotate).
    (which can be accessed via RainerScript JSON Variables, e.g. "$!pid")
    instead of adding them to the message.
 -  **SysSock.Unlink** <**on**/off> (available since 7.3.9)
-    if turned on (default), the system socket is unlinked and re-created
+   if turned on (default), the system socket is unlinked and re-created
    when opened and also unlinked when finally closed. Note that this
    setting has no effect when running under systemd control (because
    systemd handles the socket).
@@ -117,7 +115,7 @@ SysSock.Annotate and Annotate).
    Ignore timestamps included in the message. Applies to the next socket
    being added.
 -  **IgnoreOwnMessages** [**on**/off] (available since 7.3.7)
-    Ignore messages that originated from the same instance of rsyslogd.
+   Ignore messages that originated from the same instance of rsyslogd.
    There usually is no reason to receive messages from ourselfs. This
    setting is vital when writing messages to the Linux journal. See
    `omjournal <omjournal.html>`_ module documentation for a more
@@ -177,7 +175,7 @@ SysSock.Annotate and Annotate).
 -  **ParseTrusted** <on/**off**> equivalent to the SysSock.ParseTrusted
    module parameter, but applies to the input that is being defined.
 -  **Unlink** <**on**/off> (available since 7.3.9)
-    if turned on (default), the socket is unlinked and re-created when
+   if turned on (default), the socket is unlinked and re-created when
    opened and also unlinked when finally closed. Set it to off if you
    handle socket creation yourself. Note that handling socket creation
    oneself has the advantage that a limited amount of messages may be
@@ -329,11 +327,9 @@ The following sample is used activate message annotation and thus
 trusted properties on the system log socket. $ModLoad imuxsock # needs
 to be done just once $SystemLogSocketAnnotate on
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008-2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
+
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

@@ -295,8 +295,6 @@ This sets up an UPD server on port 514:
    $ModLoad imudp # needs to be done just once
    $UDPServerRun 514
 
-[`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_

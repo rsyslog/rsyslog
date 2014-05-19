@@ -60,12 +60,13 @@ how to do it better, please drop us a line!
 
 **Sample:**
 
-$ModLoad omhdfs $OMHDFSFileName /var/log/logfile \*.\* :omhdfs: [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+::
+
+  $ModLoad omhdfs $OMHDFSFileName /var/log/logfile \*.\* :omhdfs:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2010 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2010-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
