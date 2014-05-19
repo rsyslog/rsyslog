@@ -1,7 +1,5 @@
-`back to rsyslog module documentation <rsyslog_conf_modules.html>`_
-
-RELP Output Module (omrelp)
-===========================
+omrelp: RELP Output Module
+==========================
 
 **Module Name:    omrelp**
 
@@ -47,12 +45,9 @@ $ModLoad omrelp # forward messages to the remote server "myserv" on #
 port 2514 \*.\* :omrelp:centralserv:2514;RSYSLOG\_ForwardFormat Note: to
 use IPv6 addresses, encode them in [::1] format.
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

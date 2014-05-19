@@ -1,5 +1,5 @@
-Unix sockets Output Module (omuxsock)
-=====================================
+omuxsock: Unix sockets Output Module
+====================================
 
 **Module Name:    omuxsock**
 
@@ -34,13 +34,15 @@ Currently, only datagram sockets are supported.
 The following sample writes all messages to the "/tmp/socksample"
 socket.
 
-$ModLoad omucsock $OMUxSockSocket /tmp/socksample \*.\* :omuxsock:
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
+::
+  
+  $ModLoad omucsock
+  $OMUxSockSocket /tmp/socksample
+  *.* :omuxsock:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2010 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2010-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

@@ -1,5 +1,5 @@
-Mail Output Module (ommail)
-===========================
+ommail: Mail Output Module
+==========================
 
 **Module Name:    ommail**
 
@@ -151,9 +151,6 @@ A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost "`Why is
 native email capability an advantage for a
 syslogd? <http://rgerhards.blogspot.com/2008/04/why-is-native-email-capability.html>`_\ "
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

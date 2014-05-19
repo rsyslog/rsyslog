@@ -1,5 +1,5 @@
-Program integration Output module
-=================================
+omprog: Program integration Output module
+=========================================
 
 **Module Name:    omprog**
 
@@ -43,7 +43,7 @@ mimic the same effect by defining multiple rulesets and including them
 **Action Parameters**:
 
 -  **binary**
-    Mostly equivalent to the "binary" action parameter, but must contain
+   Mostly equivalent to the "binary" action parameter, but must contain
    the binary name only. In legacy config, it is **not possible** to
    specify command line parameters.
 
@@ -62,9 +62,15 @@ template="RSYSLOG\_TraditionalFileFormat")
 **Legacy Configuration Directives**:
 
 -  **$ActionOMProgBinary** <binary>
-    The binary program to be executed.
+   The binary program to be executed.
 
 **Caveats/Known Bugs:**
 
 Currently none known.
 
+This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
+project.
+Copyright © 2008-2014 by `Rainer
+Gerhards <http://www.gerhards.net/rainer>`_ and
+`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
+3 or higher.
