@@ -29,11 +29,11 @@ RainerScript supports a currently quite limited set of functions:
    value of the field delimiter character (so that non-printable
    characters can by specified). If a string is used as delmiter, a
    multi-character string (e.g. "#011") is to be specified. Samples:
-    set $!usr!field = field($msg, 32, 3); -- the third field, delimited
+   ``set $!usr!field = field($msg, 32, 3);`` -- the third field, delimited
    by space
-    set $!usr!field = field($msg, "#011", 3); -- the third field,
+   ``set $!usr!field = field($msg, "#011", 3);`` -- the third field,
    delmited by "#011"
-    Note that when a single character is specified as string
+   Note that when a single character is specified as string
    [field($msg, ",", 3)] a string-based extraction is done, which is
    more performance intense than the equivalent single-character
    [field($msg, 44 ,3)] extraction.
