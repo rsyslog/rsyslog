@@ -69,10 +69,6 @@ considerably changed. It is suggested to review some of the
 project-provided plugins for full details. In this doc, we describe the
 most important changes from a high level perspective.
 
-**NOTE: the v8 output module interface is not yet stable.** It is highly
-likely that additional changes will be made within the next weeks. So if
-you convert a module now, be prepared for additional mandatory changes.
-
 **Multi-thread awareness required**
 
 The new engine activates one **worker**\ instance of output actions on
