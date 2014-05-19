@@ -1,11 +1,9 @@
-`back <rsyslog_conf_modules.html>`_
-
-Forwarding Output Module
-========================
+omfwd: syslog Forwarding Output Module
+======================================
 
 **Module Name:    omfwd**
 
-**Author:**\ Rainer Gerhards <rgergards@adiscon.com>
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
 **Description**:
 
@@ -15,9 +13,9 @@ need to be loaded.
 
  
 
-***Note: this documentation describes features present in v7+ of
+**Note: this documentation describes features present in v7+ of
 rsyslog. If you use an older version, scroll down to "legacy
-parameters".*** If you prefer, you can also `obtain a specific version
+parameters".** If you prefer, you can also `obtain a specific version
 of the rsyslog
 documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
 
@@ -26,26 +24,26 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
 **Module Parameters**:
 
 -  **Template**\ [templateName]
-    sets a non-standard default template for this module.
+   sets a non-standard default template for this module.
 
  
 
 **Action Parameters**:
 
 -  **Target**\ string
-    Name or IP-Address of the system that shall receive messages. Any
+   Name or IP-Address of the system that shall receive messages. Any
    resolvable name is fine.
 -  **Port**\ [Default 514]
-    Name or numerical value of port to use when connecting to target.
+   Name or numerical value of port to use when connecting to target.
 -  **Protocol**\ udp/tcp [default udp]
-    Type of protocol to use for forwarding. Note that \`\`tcp'' means
+   Type of protocol to use for forwarding. Note that \`\`tcp'' means
    both legacy plain tcp syslog as well as RFC5425-based TCL-encrypted
    syslog. Which one is selected depends on the protocol drivers set
    before the action commend. Note that as of 6.3.6, there is no way to
    specify this within the action itself.
 -  **TCP\_Framing**\ \`\`traditional'' or \`\`octet-counted'' [default
    traditional]
-    Framing-Mode to be for forwarding. This affects only TCP-based
+   Framing-Mode to be for forwarding. This affects only TCP-based
    protocols. It is ignored for UDP. In protocol engineering,
    \`\`framing'' means how multiple messages over the same connection
    are separated. Usually, this is transparent to users. Unfortunately,
@@ -66,7 +64,7 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    receiver supports octet-counted framing, it is suggested to use that
    framing mode.
 -  **ZipLevel**\ 0..9 [default 0]
-    Compression level for messages.
+   Compression level for messages.
    Up until rsyslog 7.5.1, this was the only compression setting that
    rsyslog understood. Starting with 7.5.1, we have different
    compression modes. All of them are affected by the ziplevel. If,
@@ -78,7 +76,7 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    time) and 0 being no compression at all (taking up no extra
    processing time).
 -  **maxErrorMessages**\ integer [default 5], available since 7.5.4
-    This sets the maximum number of error messages that omfwd emits
+   This sets the maximum number of error messages that omfwd emits
    during regular operations. The reason for such an upper limit is that
    error messages are conveyed back to rsyslog's input message stream.
    So if there would be no limit, an endless loop could be initiated if
@@ -88,7 +86,7 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    any error messages for the same reason. Also note that with the
    initial implementation only errors during UDP forwarding are logged.
 -  **compression.mode** *mode*
-    *mode* is one of "none", "single", or "stream:always". The default
+   *mode* is one of "none", "single", or "stream:always". The default
    is "none", in which no compression happens at all.
    In "single" compression mode, Rsyslog implements a proprietary
    capability to zip transmitted messages. That compression happens on a
@@ -111,11 +109,11 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    **Note: currently only imptcp supports receiving stream-compressed
    data.**
 -  **compression.stream.flushOnTXEnd** *[**on**/off*] (requires 7.5.3+)
-    This setting affects stream compression mode, only. If enabled (the
+   This setting affects stream compression mode, only. If enabled (the
    default), the compression buffer will by emptied at the end of a
    rsyslog batch. If set to "off", end of batch will not affect
    compression at all.
-    While setting it to "off" can potentially greatly improve
+   While setting it to "off" can potentially greatly improve
    compression ratio, it will also introduce severe delay between when a
    message is being processed by rsyslog and actually sent out to the
    network. We have seen cases where for several thousand message not a
@@ -128,7 +126,7 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    notable compression should be achivable (but we do not yet have
    practice reports on actual compression ratios).
 -  **RebindInterval**\ integer
-    Permits to specify an interval at which the current connection is
+   Permits to specify an interval at which the current connection is
    broken and re-established. This setting is primarily an aid to load
    balancers. After the configured number of messages has been
    transmitted, the current connection is terminated and a new one
@@ -138,23 +136,23 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    as a \`\`new connection'' by load balancers, which in turn forward
    messages to another physical target system.
 -  **StreamDriver**\ string
-    Set the file owner for directories newly created. Please note that
+   Set the file owner for directories newly created. Please note that
    this setting does not affect the owner of directories already
    existing. The parameter is a user name, for which the userid is
    obtained by rsyslogd during startup processing. Interim changes to
    the user mapping are not detected.
 -  **StreamDriverMode**\ integer [default 0]
-    mode to use with the stream driver (driver-specific)
+   mode to use with the stream driver (driver-specific)
 -  **StreamDriverAuthMode**\ string
-    authentication mode to use with the stream driver. Note that this
+   authentication mode to use with the stream driver. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific).
 -  **StreamDriverPermittedPeers**\ string
-    accepted fingerprint (SHA1) or name of remote peer. Note that this
+   accepted fingerprint (SHA1) or name of remote peer. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific)
 -  **ResendLastMSGOnReconnect**\ on/off
-    Permits to resend the last message when a connection is reconnected.
+   Permits to resend the last message when a connection is reconnected.
    This setting affects TCP-based syslog, only. It is most useful for
    traditional, plain TCP syslog. Using this protocol, it is not always
    possible to know which messages were successfully transmitted to the
@@ -178,14 +176,16 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
+::
+
+  action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
 
 **Legacy Configuration Directives**:
 
 -  **$ActionForwardDefaultTemplateName**\ string [templatename]
-    sets a new default template for UDP and plain TCP forwarding action
+   sets a new default template for UDP and plain TCP forwarding action
 -  **$ActionSendTCPRebindInterval**\ integer
-    instructs the TCP send action to close and re-open the connection to
+   instructs the TCP send action to close and re-open the connection to
    the remote host every nbr of messages sent. Zero, the default, means
    that no such processing is done. This directive is useful for use
    with load-balancers. Note that there is some performance overhead
@@ -194,27 +194,27 @@ action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
    configuration, a rule of thumb is that it should be not be much more
    often than once per second).
 -  **$ActionSendUDPRebindInterval**\ integer
-    instructs the UDP send action to rebind the send socket every nbr of
+   instructs the UDP send action to rebind the send socket every nbr of
    messages sent. Zero, the default, means that no rebind is done. This
    directive is useful for use with load-balancers.
 -  **$ActionSendStreamDriver**\ <driver basename>
-    just like $DefaultNetstreamDriver, but for the specific action
+   just like $DefaultNetstreamDriver, but for the specific action
 -  **$ActionSendStreamDriverMode**\ <mode> [default 0]
-    mode to use with the stream driver (driver-specific)
+   mode to use with the stream driver (driver-specific)
 -  **$ActionSendStreamDriverAuthMode**\ <mode>
-    authentication mode to use with the stream driver. Note that this
+   authentication mode to use with the stream driver. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific))
 -  **$ActionSendStreamDriverPermittedPeers**\ <ID>
-    accepted fingerprint (SHA1) or name of remote peer. Note that this
+   accepted fingerprint (SHA1) or name of remote peer. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific)
 -  **$ActionSendResendLastMsgOnReconnect**\ on/off [default off]
-    specifies if the last message is to be resend when a connecition
+   specifies if the last message is to be resend when a connecition
    breaks and has been reconnected. May increase reliability, but comes
    at the risk of message duplication.
 -  **$ResetConfigVariables**
-    Resets all configuration variables to their default value. Any
+   Resets all configuration variables to their default value. Any
    settings made will not be applied to configuration lines following
    the $ResetConfigVariables. This is a good method to make sure no
    side-effects exists from previous directives. This directive has no
@@ -225,14 +225,14 @@ action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-$ModLoad omfwd \*.\* @@192.168.2.11:10514
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
+  $ModLoad omfwd
+  *.* @@192.168.2.11:10514
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2013 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
