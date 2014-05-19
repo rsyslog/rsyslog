@@ -29,7 +29,6 @@ The following modules will not properly build under rsyslog v8 and need
 to be updated:
 
 -  plugins/omhdfs
--  plugins/omrabbitmq - not project supported
 -  plugins/omzmq3 - not project supported
 -  plugins/mmrfc5424addhmac - was a custom project, requires sponsoring
    for conversion
@@ -53,6 +52,7 @@ care.
 -  omlibdbi - will be tested soon
 -  ommongodb - larger changes still outstanding
 -  ompgsql - larger chages still outstanding
+-  plugins/omrabbitmq - not project supported
 -  omuxsock
 
 In addition to bug reports, success reports are also appreciated for
