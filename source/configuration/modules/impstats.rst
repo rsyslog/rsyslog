@@ -116,7 +116,7 @@ This module supports module parameters, only.
 
 .. function:: Ruleset [ruleset]
 
-   Binds the listener to a specific :doc:`ruleset <../multi_ruleset>`.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -132,7 +132,7 @@ directives.
 -  $PStatSeverity <numerical severity> - same as the "severity"
    parameter.
 -  $PStatJSON <on/**off**> (rsyslog v6.3.8+ only)
-    If set to on, stats messages are emitted as structured cee-enhanced
+   If set to on, stats messages are emitted as structured cee-enhanced
    syslog. If set to off, legacy format is used (which is compatible
    with pre v6-rsyslog).
 

@@ -1,5 +1,5 @@
 Actions
--------
+=======
 The Action object describe what is to be done with a message. They are
 implemented via `output modules <rsyslog_conf_modules.html#om>`_.
 
@@ -16,7 +16,7 @@ The action object has different parameters:
    module <rsyslog_conf_modules.html#om>`_ in question.
 
 General Action Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 
 -  **name** word
 
@@ -70,7 +70,7 @@ General Action Parameters
    depends on proper implementation of the suspend feature in the output
    module. All built-in output modules properly support it (most
    importantly the database write and the syslog message forwarder).
-    Note, however, that a failed action may not immediately be detected.
+   Note, however, that a failed action may not immediately be detected.
    For more information, see the `rsyslog
    execOnlyWhenPreviousIsSpuspended
    preciseness <http://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
@@ -120,7 +120,7 @@ Useful Links
    threads <http://blog.gerhards.net/2013/06/rsyslog-performance-main-and-action.html>`_
 
 Legacy Format
-=============
+-------------
 
 **Be warned that legacy action format is hard to get right. It is
 recommended to use RainerScript-Style action format whenever possible!**
@@ -133,7 +133,7 @@ strongly recommended to place all configuration statements pertaining to
 a single action closely together.
 
 Please also note that legacy action parameters **do not** affect
-RainerScript action objects. So if you define for example: ````
+RainerScript action objects. So if you define for example:
 
 ::
 

@@ -134,7 +134,7 @@ Action Directives
 
 .. function:: Ruleset <ruleset> 
 
-   Binds the listener to a specific :doc:`ruleset <../multi_ruleset>`.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 Caveats/Known Bugs
 ------------------
@@ -252,7 +252,7 @@ Legacy Configuration Directives
 
    Equivalent to: Ruleset
    Binds the listener to a specific
-   :doc:`ruleset <../multi_ruleset>`.
+   :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 Caveats/Known Bugs
 ------------------
