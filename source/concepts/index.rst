@@ -8,7 +8,8 @@ the respective objects.
 .. toctree::
    :maxdepth: 2
    
-   queues.rst
+   queues
+   janitor
    messageparser
    multi_ruleset
    netstrm_drvr

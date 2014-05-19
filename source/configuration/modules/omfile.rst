@@ -2,7 +2,7 @@ omfile: File Output Module
 ==========================
 
 ===========================  ===========================================================================
-**Module Name:**             **omfile**
+**Module Name:**             **omfile**
 **Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
@@ -90,6 +90,19 @@ Note that one of the parameters *file* or *dynaFile* must be specified.
 
    Sets the template to be used for this action.
 
+.. function::  closeTimeout [minutes]
+
+   *Default: for static files: 0; for dynamic files: 10*
+   
+   *Available since: 8.3.3*
+
+   Specifies after how many minutes of inactivity a file is
+   automatically closed. Note that this functionality is implemented
+   based on the 
+   :doc:`janitor process <../../concepts/janitor>`.
+   See its doc to understand why and how janitor-based times are
+   approximate.
+
 .. function::  dynaFileCacheSize [size]
 
    *Default: 10*
@@ -129,7 +142,7 @@ Note that one of the parameters *file* or *dynaFile* must be specified.
 
 .. function::  flushInterval [interval]
 
-   *Default: TODO*
+   *Default: 1*
 
    Defines, in seconds, the interval after which unwritten data is
    flushed.

@@ -71,6 +71,12 @@ The following paramters can be set:
   The maximum message size rsyslog can process. Default is 4K. Anything
   above the maximum size will be truncated.
 
+- **janitorInterval** [minutes], available since 8.3.3
+
+  Sets the interval at which the
+  :doc:`janitor process <../concepts/janitor>`
+  runs.
+
 - **debug.onShutdown** available in 7.5.8+
 
   If enabled ("on"), rsyslog will log debug messages when a system
