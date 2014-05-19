@@ -28,7 +28,7 @@ rather quickly and so we do not provide special packages for them.
 
 If you do not find a suitable package for your distribution, there is no
 reason to panic. It is quite simple to
-:doc:`install rsyslog from the source tarball <install>`,
+:doc:`install rsyslog from the source tarball <install_from_source>`,
 so you should consider that.
 
 Package Structure
