@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-Unix Socket Input
-=================
+imuxsock: Unix Socket Input
+===========================
 
 **Module Name:    imuxsock**
 
@@ -201,13 +199,10 @@ The following sample is used activate message annotation and thus
 trusted properties on the system log socket. $ModLoad imuxsock # needs
 to be done just once $SystemLogSocketAnnotate on
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2008-2012 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

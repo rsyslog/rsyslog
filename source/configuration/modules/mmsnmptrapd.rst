@@ -1,9 +1,7 @@
-`back to rsyslog module overview <rsyslog_conf_modules.html>`_
-
 mmsnmptrapd message modification module
 =======================================
 
-**Module Name:    imtcp**
+**Module Name:    mmsnmptrapd
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com> (custom-created)
 
@@ -96,12 +94,9 @@ warning/4,error/3 \*.\* :mmsnmptrapd: # \*now\* message is modified
 \*.\* /path/to/file/with/modifiedMessage # this file receives modified
 messages # ... rest of config ...
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 
-Copyright © 2011 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2011-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

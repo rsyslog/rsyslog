@@ -1,5 +1,5 @@
-Program integration Output module
-=================================
+omprog: Program integration Output module
+=========================================
 
 **Module Name:    omprog**
 
@@ -40,12 +40,9 @@ mimic the same effect by defining multiple rulesets and including them
 
 Currently none known.
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008-2011 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

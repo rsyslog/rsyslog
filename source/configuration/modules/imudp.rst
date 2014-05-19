@@ -1,7 +1,5 @@
-`back to rsyslog module overview <rsyslog_conf_modules.html>`_
-
-UDP Syslog Input Module
-=======================
+imudp: UDP Syslog Input Module
+==============================
 
 ===========================  ======================
 **Module Name:**             **imudp**
@@ -57,8 +55,6 @@ This sets up an UPD server on port 514:
 
    $ModLoad imudp # needs to be done just once
    $UDPServerRun 514
-
-[`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
