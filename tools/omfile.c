@@ -1341,7 +1341,7 @@ CODESTARTnewActInst
 	setupInstStatsCtrs(pData);
 
 	if(pData->iCloseTimeout == -1) { /* unset? */
-		pData->iCloseTimeout = (pData->bDynamicName) ? 15 : 0;
+		pData->iCloseTimeout = (pData->bDynamicName) ? 10 : 0;
 	}
 
 	snprintf(pData->janitorID, sizeof(pData->janitorID), "omfile:%sfile:%s:%p",
@@ -1442,6 +1442,7 @@ CODESTARTparseSelectorAct
 	pData->iFlushInterval = cs.iFlushInterval;
 	pData->bUseAsyncWriter = cs.bUseAsyncWriter;
 	pData->bVeryRobustZip = 0;	/* cannot be specified via legacy conf */
+	pData->iCloseTimeout = 0;	/* cannot be specified via legacy conf */
 	setupInstStatsCtrs(pData);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
