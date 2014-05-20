@@ -60,6 +60,7 @@ DEFobjCurrIf(errmsg)
 
 /* global data */
 static struct hashtable *files;		/* holds all file objects that we know */
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct configSettings_s {
 	uchar *fileName;	
@@ -90,6 +91,10 @@ typedef struct _instanceData {
 	uchar ioBuf[64*1024];
 	unsigned offsBuf;
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 /* forward definitions (down here, need data types) */
 static inline rsRetVal fileClose(file_t *pFile);
@@ -387,6 +392,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINfreeInstance
 CODESTARTfreeInstance
 	if(pData->pFile != NULL)
@@ -394,8 +404,15 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
+
 BEGINtryResume
+	instanceData *pData = pWrkrData->pData;
 CODESTARTtryResume
+	pthread_mutex_lock(&mutDoAct);
 	fileClose(pData->pFile);
 	fileOpen(pData->pFile);
 	if(pData->pFile->fh == NULL){
@@ -403,6 +420,7 @@ CODESTARTtryResume
 			  pData->pFile->name);
 		iRet = RS_RET_SUSPENDED;
 	}
+	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
 
 
@@ -413,20 +431,26 @@ ENDbeginTransaction
 
 
 BEGINdoAction
+	instanceData *pData = pWrkrData->pData;
 CODESTARTdoAction
 	DBGPRINTF("omhdfs: action to to write to %s\n", pData->pFile->name);
+	pthread_mutex_lock(&mutDoAct);
 	iRet = addData(pData, ppString[0]);
-dbgprintf("omhdfs: done doAction\n");
+	DBGPRINTF("omhdfs: done doAction\n");
+	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
 
 BEGINendTransaction
+	instanceData *pData = pWrkrData->pData;
 CODESTARTendTransaction
 dbgprintf("omhdfs: endTransaction\n");
+	pthread_mutex_lock(&mutDoAct);
 	if(pData->offsBuf != 0) {
 		DBGPRINTF("omhdfs: data unwritten at end of transaction, persisting...\n");
 		iRet = fileWrite(pData->pFile, pData->ioBuf, &pData->offsBuf);
 	}
+	pthread_mutex_unlock(&mutDoAct);
 ENDendTransaction
 
 
@@ -526,6 +550,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
