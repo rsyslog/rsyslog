@@ -104,13 +104,14 @@ Version 8.3.0 [v8-devel] 2014-04-10
   to be necessary only for older versions of gcc.
 ---------------------------------------------------------------------------
 Version 8.2.2 [v8-stable] 2014-04-??
-- made most of the missing (contributed) modules build under v8
+- made the missing (contributed) modules build under v8
   Note that we could do this to the stable, because there is NO regression
   chance at all: only the modules themselves were changed, and they did
   NOT work at all previously. Please also note that most of these modules
   did not yet receive real testing. As we don't have the necessary
   environments (easily enough available), we depend on users submitting
   error reports and helping to iron out any issues that may arise.
+  Modules:
   * mmrfc5424addhmac
   * omrabbitmq
   * omgssapi
