@@ -301,6 +301,8 @@ ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
 	}
 	/* pThis->severity == 0 - all messages are ratelimited */
 	pThis->bReduceRepeatMsgs = loadConf->globals.bReduceRepeatMsgs;
+	DBGPRINTF("ratelimit:%s:new ratelimiter:bReduceRepeatMsgs %d\n",
+		  pThis->name, pThis->bReduceRepeatMsgs);
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;

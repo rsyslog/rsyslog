@@ -68,8 +68,8 @@ struct severMap_s {
 
 typedef struct _instanceData {
 	uchar *pszTagName;
-	uchar *pszTagID;	/* chaced: name plus trailing shlash (for compares) */
-	int lenTagID;		/* cached length of tag ID, for performance reasons */
+	uchar *pszTagID;	/* cached: name plus trailing shlash (for compares) */
+	int lenTagID;		/* cached: length of tag ID, for performance reasons */
 	struct severMap_s *severMap;
 } instanceData;
 
@@ -202,7 +202,6 @@ getTagComponent(uchar *tag, uchar *dst, int *lenDst)
 		++i;
 	}
 	dst[i] = '\0';
-dbgprintf("XXXX: getTagComponent dst on output: '%s', len %d\n", dst, i);
 	*lenDst = i;
 done:
 	return i;
@@ -241,7 +240,6 @@ BEGINdoAction
 CODESTARTdoAction
 	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
-	dbgprintf("XXXX: mmsnmptrapd called with pMsg %p\n", pMsg);
 	getTAG(pMsg, &pszTag, &lenTAG);
 	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
@@ -250,18 +248,16 @@ CODESTARTdoAction
 	}
 
 	lenSever = sizeof(pszSever);
-dbgprintf("XXXX: pszTag: '%s', lenID %d\n", pszTag, pData->lenTagID);
 	getTagComponent(pszTag+pData->lenTagID-1, pszSever, &lenSever);
 	lenHost = sizeof(pszHost);
 	getTagComponent(pszTag+pData->lenTagID+lenSever, pszHost, &lenHost);
-	dbgprintf("XXXX: mmsnmptrapd sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost,lenHost);
+	DBGPRINTF("mmsnmptrapd: sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost,lenHost);
 
 	if(pszHost[lenHost-1] == ':') {
 		pszHost[lenHost-1] = '\0';
 		--lenHost;
 	}
 	sevCode = lookupSeverityCode(pData, pszSever);
-dbgprintf("XXXX: severity for message is %d\n", sevCode);
 	/* now apply new settings */
 	MsgSetTAG(pMsg, pData->pszTagName, pData->lenTagID);
 	MsgSetHOSTNAME(pMsg, pszHost, lenHost);
