@@ -22,8 +22,8 @@ environments, but in general the overhead is pretty light.
 The rsyslog website has an updated overview of available `rsyslog
 statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
 
-**Note that there is a `rsyslog statistics online
-analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ available.** It
+**Note that there is a** `rsyslog statistics online
+analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ **available.** It
 can be given a impstats-generated file and will return problems it
 detects. Note that the analyzer cannot replace a human in getting things
 right, but it is expected to be a good aid in starting to understand and
@@ -112,7 +112,7 @@ This module supports module parameters, only.
    will probably be lost. Logging to file an be a useful alternative if
    for some reasons (e.g. full queues) the regular syslog stream method
    shall not be used solely. Note that turning on file logging does NOT
-   turn of syslog logging. If that is desired log.syslog="off" must be
+   turn off syslog logging. If that is desired log.syslog="off" must be
    explicitely set.
 
 .. function:: Ruleset [ruleset]
@@ -192,7 +192,10 @@ in 10 minute intervals:
 
 ::
 
-  $ModLoad impstats $PStatInterval 600 $PStatSeverity 7 syslog.=debug /var/log/rsyslog-stats
+  $ModLoad impstats
+  $PStatInterval 600
+  $PStatSeverity 7
+  syslog.=debug /var/log/rsyslog-stats
 
 See Also
 --------
