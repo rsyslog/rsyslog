@@ -1,5 +1,12 @@
 ---------------------------------------------------------------------------
 Version 8.3.3 [v8-devel] 2014-05-??
+- made the missing (contributed) modules build under v8 [import from 8.2.2]
+  Modules:
+  * mmrfc5424addhmac
+  * omrabbitmq
+  * omgssapi
+  * omhdfs
+  * omzmq3
 - added a cleanup process (janitor); permits to close omfile files after a
   timeout
 - make omgssapi build under v8.3 [import vom v8.2]
