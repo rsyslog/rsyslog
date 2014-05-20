@@ -1,6 +1,8 @@
 impstats: Generate Periodic Statistics of Internal Counters
 ===========================================================
 
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+
 This module provides periodic output of rsyslog internal counters.
 
 The set of available counters will be output as a set of syslog
@@ -32,14 +34,6 @@ When browsing this page, please be sure to take note of which rsyslog
 version is required to provide a specific counter. Counters are 
 continously being added, and older versions do not support everything.
 
-**Note that there is a** `rsyslog statistics online
-analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ **available.** It
-can be given a impstats-generated file and will return problems it
-detects. Note that the analyzer cannot replace a human in getting things
-right, but it is expected to be a good aid in starting to understand and
-gain information from the pstats logs.
-
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
 Configuration Directives
 ------------------------
