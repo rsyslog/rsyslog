@@ -1,11 +1,9 @@
 impstats: Generate Periodic Statistics of Internal Counters
 ===========================================================
 
-This module provides periodic output of rsyslog internal counters. Note
-that the whole statistics system is currently under development. So
-availability and format of counters may change and is not yet stable (so
-be prepared to change your trending scripts when you upgrade to a newer
-rsyslog version).
+**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+
+This module provides periodic output of rsyslog internal counters.
 
 The set of available counters will be output as a set of syslog
 messages. This output is periodic, with the interval being configurable
@@ -14,21 +12,28 @@ counter messages (default is syslog.=info). Besides logging to the
 regular syslog stream, the module can also be configured to write
 statistics data into a (local) file.
 
-Note that loading this module has impact on rsyslog performance.
-Depending on settings, this impact may be noticeable (for high-load
-environments).
+When logging to the regular syslog stream, impstats records are emitted
+just like regular log messages. As such,
+counters increase when processing these messages. This must be taken into
+consideration when testing and troubleshooting.
 
-The rsyslog website has an updated overview of available `rsyslog
-statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
+Note that loading this module has some impact on rsyslog performance.
+Depending on settings, this impact may be noticable for high-load
+environments, but in general the overhead is pretty light.
 
-**Note that there is a `rsyslog statistics online
-analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ available.** It
+**Note that there is a** `rsyslog statistics online
+analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ **available.** It
 can be given a impstats-generated file and will return problems it
 detects. Note that the analyzer cannot replace a human in getting things
 right, but it is expected to be a good aid in starting to understand and
-gain information from the pstats logs. <7p>
+gain information from the pstats logs.
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+The rsyslog website has an overview of available `rsyslog
+statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_. 
+When browsing this page, please be sure to take note of which rsyslog
+version is required to provide a specific counter. Counters are 
+continously being added, and older versions do not support everything.
+
 
 Configuration Directives
 ------------------------
@@ -111,7 +116,7 @@ This module supports module parameters, only.
    will probably be lost. Logging to file an be a useful alternative if
    for some reasons (e.g. full queues) the regular syslog stream method
    shall not be used solely. Note that turning on file logging does NOT
-   turn of syslog logging. If that is desired log.syslog="off" must be
+   turn off syslog logging. If that is desired log.syslog="off" must be
    explicitely set.
 
 .. function:: Ruleset [ruleset]
@@ -141,7 +146,6 @@ Caveats/Known Bugs
 
 -  This module MUST be loaded right at the top of rsyslog.conf,
    otherwise stats may not get turned on in all places.
-
 
 Example
 -------
@@ -192,7 +196,10 @@ in 10 minute intervals:
 
 ::
 
-  $ModLoad impstats $PStatInterval 600 $PStatSeverity 7 syslog.=debug /var/log/rsyslog-stats
+  $ModLoad impstats
+  $PStatInterval 600
+  $PStatSeverity 7
+  syslog.=debug /var/log/rsyslog-stats
 
 See Also
 --------
