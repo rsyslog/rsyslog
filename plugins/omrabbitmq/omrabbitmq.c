@@ -3,6 +3,7 @@
  * This output plugin enables rsyslog to send messages to the RabbitMQ.
  *
  * Copyright 2012-2013 Vaclav Tomec
+ * Copyright 2014 Rainer Gerhards
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -52,6 +53,7 @@ MODULE_CNFNAME("omrabbitmq")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
+static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _instanceData {
 	/* here you need to define all action-specific data. A record of type 
@@ -71,6 +73,10 @@ typedef struct _instanceData {
 	uchar *routing_key;
 	uchar *tplName;
 } instanceData;
+
+typedef struct wrkrInstanceData {
+	instanceData *pData;
+} wrkrInstanceData_t;
 
 
 /* tables for interfacing with the v6 config system */
@@ -226,6 +232,11 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 
+BEGINcreateWrkrInstance
+CODESTARTcreateWrkrInstance
+ENDcreateWrkrInstance
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	/* use this to specify if select features are supported by this
@@ -254,6 +265,10 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+ENDfreeWrkrInstance
+
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	/* permits to spit out some debug info */
@@ -270,6 +285,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
+	instanceData *pData = pWrkrData->pData;
 CODESTARTtryResume
 	/* this is called when an action has been suspended and the
 	 * rsyslog core tries to resume it. The action must then
@@ -293,14 +309,17 @@ CODESTARTtryResume
 	 * not always be the case.
 	 */
 
+	pthread_mutex_lock(&mutDoAct);
 	if (pData->conn == NULL) {
 		iRet = initRabbitMQ(pData);
 	}
+	pthread_mutex_unlock(&mutDoAct);
 
 ENDtryResume
 
 
 BEGINdoAction
+	instanceData *pData = pWrkrData->pData;
 CODESTARTdoAction
 	/* this is where you receive the message and need to carry out the
 	 * action. Data is provided in ppString[i] where 0 <= i <= num of strings
@@ -315,6 +334,7 @@ CODESTARTdoAction
 
 	amqp_bytes_t body_bytes;
 
+	pthread_mutex_lock(&mutDoAct);
 	if (pData->conn == NULL) {
 		CHKiRet(initRabbitMQ(pData));
 	}
@@ -330,7 +350,7 @@ CODESTARTdoAction
 	}
 
 finalize_it:
-
+	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
 
@@ -455,6 +475,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 	CODEqueryEtryPt_STD_OMOD_QUERIES
 	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+	CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
