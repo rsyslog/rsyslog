@@ -26,7 +26,7 @@ These paramters can be used with the "module()" statement. They apply
 globaly to all inputs defined by the module.
 
 -  Threads <number>
-    Number of helper worker threads to process incoming messages. These
+   Number of helper worker threads to process incoming messages. These
    threads are utilized to pull data off the network. On a busy system,
    additional helper threads (but not more than there are CPUs/Cores)
    can help improving performance. The default value is two, which means
@@ -80,7 +80,7 @@ the input they are specified with.
 
    *Defaults to off*
 
-    instructs imptcp to emit a message if the remote peer closes a
+   instructs imptcp to emit a message if the remote peer closes a
    connection.
 
 .. function:: KeepAlive on/off
