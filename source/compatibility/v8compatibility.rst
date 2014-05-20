@@ -22,20 +22,6 @@ mark messages are now always processed. Note that this enables faster
 processing inside rsyslog. To change to previous behaviour, you need to
 add action.writeAllMarkMessages="off" to the actions in question.
 
-Modules WITHOUT v8 Support
---------------------------
-
-The following modules will not properly build under rsyslog v8 and need
-to be updated:
-
--  plugins/omhdfs
--  plugins/omzmq3 - not project supported
--  plugins/mmrfc5424addhmac - was a custom project, requires sponsoring
-   for conversion
--  plugins/omoracle - orphaned since a while -- use omlibdbi instead
--  plugins/mmsnmptrapd - waiting for demand
--  plugins/mmcount - scheduled to be updated soon
-
 Untested Modules
 ----------------
 
@@ -49,10 +35,11 @@ care.
 -  mmfields
 -  mmpstrucdata
 -  plugins/mmaudit
--  omlibdbi - will be tested soon
 -  ommongodb - larger changes still outstanding
--  ompgsql - larger chages still outstanding
+-  ompgsql
 -  plugins/omrabbitmq - not project supported
+-  plugins/omzmq3 - not project supported
+-  plugins/omhdfs (transaction support should be improved, requires sponsor)
 -  omuxsock
 
 In addition to bug reports, success reports are also appreciated for
