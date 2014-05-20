@@ -1,20 +1,20 @@
 impstats: Generate Periodic Statistics of Internal Counters
 ===========================================================
 
-This module provides periodic output of rsyslog internal counters. Note
-that the whole statistics system is currently under development. So
-availabilty and format of counters may change and is not yet stable (so
-be prepared to change your trending scripts when you upgrade to a newer
-rsyslog version).
+This module provides periodic output of rsyslog internal counters.
 
 The set of available counters will be output as a set of syslog
 messages. This output is periodic, with the interval being configurable
 (default is 5 minutes). Be sure that your configuration records the
-counter messages (default is syslog.info).
+counter messages (default is syslog.=info).
 
-Note that loading this module has impact on rsyslog performance.
-Depending on settings, this impact may be noticable (for high-load
-environments).
+The impstats records are emitted just like regular log messages. As such,
+counters increase when processing these messages. This must be taken into
+consideration when testing and troubleshooting.
+
+Note that loading this module has some impact on rsyslog performance.
+Depending on settings, this impact may be noticable for high-load
+environments, but in general the overhead is pretty light.
 
 The rsyslog website has an updated overview of available `rsyslog
 statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
@@ -50,7 +50,6 @@ Caveats/Known Bugs
 
 -  This module MUST be loaded right at the top of rsyslog.conf,
    otherwise stats may not get turned on in all places.
--  experimental code
 
 Example
 -------
