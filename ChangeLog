@@ -1,13 +1,15 @@
 ---------------------------------------------------------------------------
 Version 8.2.2 [v8-stable] 2014-04-??
-- make omrabbitmq build under v8
-  note that we could do this to the stable, because there is NO regression
-  chance at all: only omgssapi was changed, and this module did NOT work
-  previously.
-- make omgssapi build under v8
-  note that we could do this to the stable, because there is NO regression
-  chance at all: only omgssapi was changed, and this module did NOT work
-  previously.
+- made most of the missing (contributed) modules build under v8
+  Note that we could do this to the stable, because there is NO regression
+  chance at all: only the modules themselves were changed, and they did
+  NOT work at all previously. Please also note that most of these modules
+  did not yet receive real testing. As we don't have the necessary
+  environments (easily enough available), we depend on users submitting
+  error reports and helping to iron out any issues that may arise.
+  * omrabbitmq
+  * omgssapi
+  * omzmq3
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-17
 - permits to build against json-c 0.12
