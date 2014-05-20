@@ -17,8 +17,9 @@ In general (see note about HUP below), janitor based activities scheduled
 to occur after *n* minutes will occur after *n* and *(n + 2\*janitorInterval)*
 minutes.
 
-To reduce the potential delay caused by janitor invocation, the interval
-at which the janitor runs can be be adjusted. If high precision is
+To reduce the potential delay caused by janitor invocation,
+:ref:`the interval at which the janitor runs can be be adjusted <global_janitorInterval>`\ .
+If high precision is
 required, it should be set to one minute. Janitor-based activities will
 still be NET times, but the time frame will be much smaller. In the
 example with the file timeout, it would be between 5 and 6 minutes if the
