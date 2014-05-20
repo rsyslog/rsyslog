@@ -105,9 +105,9 @@ auto-generates them):
 ---------
 
 Is no longer available in native mode. However, it is understood in
-compatibility mode (if no -c option is given). Use the **$UDPSeverRun
-<port>** config file directives. You can now also set the local address
-the server should listen to via **$UDPServerAddress <ip>** config
+compatibility mode (if no -c option is given). Use the ``$UDPSeverRun
+<port>`` config file directives. You can now also set the local address
+the server should listen to via ``$UDPServerAddress <ip>`` config
 directive.
 
 The following example configures an UDP syslog server at the local
@@ -119,7 +119,7 @@ address 192.0.2.1 on port 514:
   $UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!
   $UDPServerRun 514
 
-"$UDPServerAddress \*" means listen on all local interfaces. This is the
+``$UDPServerAddress \*`` means listen on all local interfaces. This is the
 default if no directive is specified.
 
 Please note that now multiple listeners are supported. For example, you
@@ -171,13 +171,18 @@ not specified otherwise (by placing a dash in front of the output file
 name). While this was a useful feature in past days where hardware was
 much less reliable and UPS seldom, this no longer is useful in today's
 worl. Instead, the syncing is a high performace hit. With it, rsyslogd
-writes files around 50 \*times\* slower than without it. It also affects
+writes files around 50 **times** slower than without it. It also affects
 overall system performance due to the high IO activity. In rsyslog v3,
 syncing has been turned off by default. This is done via a specific
-configuration directive "$ActionFileEnableSync on/off" which is off by
+configuration directive
+
+::
+  $ActionFileEnableSync on/off
+
+which is off by
 default. So even if rsyslogd finds sync selector lines, it ignores them
 by default. In order to enable file syncing, the administrator must
-specify "$ActionFileEnableSync on" at the top of rsyslog.conf. This
+specify ``$ActionFileEnableSync on`` at the top of rsyslog.conf. This
 ensures that syncing only happens in some installations where the
 administrator actually wanted that (performance-intense) feature. In the
 fast majority of cases (if not all), this dramatically increases
