@@ -104,6 +104,7 @@ Version 8.2.2 [v8-stable] 2014-04-??
   did not yet receive real testing. As we don't have the necessary
   environments (easily enough available), we depend on users submitting
   error reports and helping to iron out any issues that may arise.
+  * mmrfc5424addhmac
   * omrabbitmq
   * omgssapi
   * omhdfs
