@@ -4,4 +4,6 @@ Compatibility
 .. toctree::
    :glob:
 
-   v*compatibility
+   v5compatibility
+   v4compatibility
+   v3compatibility

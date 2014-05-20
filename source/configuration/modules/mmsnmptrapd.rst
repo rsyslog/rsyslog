@@ -1,7 +1,7 @@
 mmsnmptrapd message modification module
 =======================================
 
-**Module Name:    mmsnmptrapd
+**Module Name:**    mmsnmptrapd
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com> (custom-created)
 
