@@ -19,8 +19,18 @@ Note that loading this module has some impact on rsyslog performance.
 Depending on settings, this impact may be noticable for high-load
 environments, but in general the overhead is pretty light.
 
-The rsyslog website has an updated overview of available `rsyslog
-statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_.
+**Note that there is a** `rsyslog statistics online
+analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ **available.** It
+can be given a impstats-generated file and will return problems it
+detects. Note that the analyzer cannot replace a human in getting things
+right, but it is expected to be a good aid in starting to understand and
+gain information from the pstats logs.
+
+The rsyslog website has an overview of available `rsyslog
+statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_. 
+When browsing this page, please be sure to take note of which rsyslog
+version is required to provide a specific counter. Counters are 
+continously being added, and older versions do not support everything.
 
 **Note that there is a** `rsyslog statistics online
 analyzer <http://www.rsyslog.com/impstats-analyzer/>`_ **available.** It
