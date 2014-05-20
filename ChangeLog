@@ -9,6 +9,7 @@ Version 8.2.2 [v8-stable] 2014-04-??
   error reports and helping to iron out any issues that may arise.
   * omrabbitmq
   * omgssapi
+  * omhdfs
   * omzmq3
 ---------------------------------------------------------------------------
 Version 8.2.1 [v8-stable] 2014-04-17
