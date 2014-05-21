@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -56,7 +56,7 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("omhdfs")
+/* MODULE_CNFNAME("omhdfs") we need this only when we convert the module to v2 config system */
 
 /* internal structures
  */
@@ -74,11 +74,6 @@ typedef struct configSettings_s {
 	int hdfsPort;
 } configSettings_t;
 static configSettings_t cs;
-
-
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-ENDinitConfVars
 
 typedef struct {
 	uchar	*name;
