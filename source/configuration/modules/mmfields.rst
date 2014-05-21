@@ -50,7 +50,7 @@ Currently none.
 **Action Confguration Parameters**:
 
 -  **separator** - separatorChar (default ',')
-    This is the character used to separate fields. Currently, only a
+   This is the character used to separate fields. Currently, only a
    single character is permitted, while the RainerScript method permits
    to specify multi-character separator strings. For CEF, this is not
    required. If there is actual need to support multi-character
@@ -62,7 +62,7 @@ Currently none.
    The fields are named f\ *nbr*, where *nbr* is the field number
    starting with one and being incremented for each field.
 -  **jsonRoot** - path (default "!")
-    This parameters specifies into which json path the extracted fields
+   This parameters specifies into which json path the extracted fields
    shall be written. The default is to use the json root object itself.
 
 **Caveats/Known Bugs:**
@@ -92,6 +92,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

@@ -105,18 +105,16 @@ template="CEETemplate")
 **Legacy Configuration Directives**:
 
 -  **$imjournalPersistStateInterval**
-    Equivalent to: PersistStateInterval
+   Equivalent to: PersistStateInterval
 -  **$imjournalStateFile**
-    Equivalent to: StateFile
+   Equivalent to: StateFile
 -  **$imjournalRatelimitInterval**
-    Equivalent to: ratelimit.interval
+   Equivalent to: ratelimit.interval
 -  **$imjournalRatelimitBurst**
-    Equivalent to: ratelimit.burst
+   Equivalent to: ratelimit.burst
 -  **$ImjournalIgnorePreviousMessages**
-    Equivalent to: ignorePreviousMessages
+   Equivalent to: ignorePreviousMessages
 -  **$ImjournalDefaultSeverity**
     Equivalent to: DefaultSeverity
 -  **$ImjournalDefaultFacility**
     Equivalent to: DefaultFacility
-    
-

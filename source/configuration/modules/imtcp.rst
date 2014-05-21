@@ -49,7 +49,7 @@ Global Parameters
 
    *Default is off*
 
-    enable of disable keep-alive packets at the tcp socket layer. The
+   enable of disable keep-alive packets at the tcp socket layer. The
    default is to disable them.
 
 .. function:: FlowControl on/off
