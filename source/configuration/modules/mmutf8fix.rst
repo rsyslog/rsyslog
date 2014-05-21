@@ -56,7 +56,7 @@ Currently none.
 **Action Confguration Parameters**:
 
 -  **mode** - **utf-8**/controlcharacters
-    This sets the basic detection mode.
+   This sets the basic detection mode.
    In **utf-8** mode (the default), proper UTF-8 encoding is checked and
    bytes which are not proper UTF-8 sequences are acted on. If a proper
    multi-byte start sequence byte is detected but any of the following
@@ -72,7 +72,7 @@ Currently none.
    useful if it is known that no characters outside of the US-ASCII
    alphabet need to be processed.
 -  **replacementChar** - default " " (space), a single character
-    This is the character that invalid sequences are replaced by.
+   This is the character that invalid sequences are replaced by.
    Currently, it MUST be a **printable** US-ASCII character.
 
 **Caveats/Known Bugs:**
