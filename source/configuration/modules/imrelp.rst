@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`__
-
 RELP Input Module
 =================
 
@@ -162,18 +160,18 @@ Input Parameters
 **Input Parameters**:
 
 -  **Port** <port>
-    Starts a RELP server on selected port
+   Starts a RELP server on selected port
 -  **tls** (not mandatory, values "on","off", default "off")
-    If set to "on", the RELP connection will be encrypted by TLS, so
+   If set to "on", the RELP connection will be encrypted by TLS, so
    that the data is protected against observers. Please note that both
    the client and the server must have set TLS to either "on" or "off".
    Other combinations lead to unpredictable results.
 -  **tls.compression** (not mandatory, values "on","off", default "off")
-    The controls if the TLS stream should be compressed (zipped). While
+   The controls if the TLS stream should be compressed (zipped). While
    this increases CPU use, the network bandwidth should be reduced. Note
    that typical text-based log records usually compress rather well.
 -  **tls.dhbits** (not mandatory, integer)
-    This setting controls how many bits are used for Diffie-Hellman key
+   This setting controls how many bits are used for Diffie-Hellman key
    generation. If not set, the librelp default is used. For secrity
    reasons, at least 1024 bits should be used. Please note that the
    number of bits must be supported by GnuTLS. If an invalid number is
@@ -186,7 +184,7 @@ Input Parameters
    listener. Only peers which have been listed in this parameter may
    connect. The validation bases on the certificate the remote peer
    presents.
-    The *peer* parameter lists permitted certificate fingerprints. Note
+   The *peer* parameter lists permitted certificate fingerprints. Note
    that it is an array parameter, so either a single or multiple
    fingerprints can be listed. When a non-permitted peer connects, the
    refusal is logged together with it's fingerprint. So if the
@@ -210,7 +208,7 @@ Input Parameters
    match on any one of these names is considered good and permits the
    peer to talk to rsyslog.
 -  **tls.prioritystring** (not mandatory, string)
-    This parameter permits to specify the so-called "priority string" to
+   This parameter permits to specify the so-called "priority string" to
    GnuTLS. This string gives complete control over all crypto
    parameters, including compression setting. For this reason, when the
    prioritystring is specified, the "tls.compression" parameter has no
@@ -222,7 +220,8 @@ Input Parameters
    **Note: this is an expert parameter.** Do not use if you do not
    exactly know what you are doing.
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+------------------
 
 -  see description
 -  To obtain the remote system's IP address, you need to have at least
@@ -234,30 +233,21 @@ Input Parameters
 
 **Sample:**
 
-| This sets up a RELP server on port 20514.
+This sets up a RELP server on port 20514.
 
-module(load="imrelp") # needs to be done just once input(type="imrelp"
-port="20514")
+::
+
+  module(load="imrelp") # needs to be done just once 
+  input(type="imrelp" port="20514")
 
 **Legacy Configuration Directives**:
 
 -  InputRELPServerBindRuleset <name> (available in 6.3.6+) equivalent
    to: RuleSet
 -  InputRELPServerRun <port>
-    equivalent to: Port
+   equivalent to: Port
 
-Caveats/Known Bugs
-------------------
-
--  To obtain the remote system's IP address, you need to have at least
-   librelp 1.0.0 installed. Versions below it return the hostname
-   instead of the IP address.
--  Contrary to other inputs, the ruleset can only be bound to all
-   listeners, not specific ones. This is due to a currently existing
-   limitation in librelp.
-
-**Sample:**
-
+**Legacy Sample:**
 This sets up a RELP server on port 20514.
 
 ::
