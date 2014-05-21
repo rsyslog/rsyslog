@@ -36,7 +36,12 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <pthread.h>
-#include <hdfs.h>
+#ifdef HAVE_HDFS_H 
+#  include <hdfs.h>
+#endif
+#ifdef HAVE_HADOOP_HDFS_H 
+#  include <hadoop/hdfs.h>
+#endif
 
 #include "syslogd-types.h"
 #include "srUtils.h"

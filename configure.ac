@@ -1397,10 +1397,9 @@ AC_ARG_ENABLE(omhdfs,
          esac],
         [enable_omhdfs=no]
 )
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
+if test "x$enable_omhdfs"; then
+	AC_CHECK_HEADERS([hdfs.h hadoop/hdfs.h])
+fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
 
