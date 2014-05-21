@@ -36,13 +36,13 @@ Currently none.
 **Action Confguration Parameters**:
 
 -  **key**
-    The "key" (string) to be used to generate the hmac.
+   The "key" (string) to be used to generate the hmac.
 -  **hashfunction**
-    An openssl hash function name for the function to be used. This is
+   An openssl hash function name for the function to be used. This is
    passed on to openssl, so see the openssl list of supported function
    names.
 -  **sd\_id**
-    The RFC5424 structured data ID to be used by this module. This is
+   The RFC5424 structured data ID to be used by this module. This is
    the SD-ID that will be added. Note that nothing is added if this
    SD-ID is already present.
 
@@ -66,7 +66,7 @@ as follows:
 #. let m' be m with the configured SD-ID removed (everything between
    []). Otherwise, m' must be an exact duplicate of m.
 #. call openssl's HMAC function as follows:
-    ``HMAC(hashfunction, key, len(key), m', len(m'), hash, &hashlen);``
+   ``HMAC(hashfunction, key, len(key), m', len(m'), hash, &hashlen);``
    Where hashfunction and key are the configured values and hash is an
    output buffer for the hash.
 #. let h be the extracted hash value obtained from m within the relevant
@@ -94,6 +94,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

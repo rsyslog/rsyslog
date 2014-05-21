@@ -42,15 +42,15 @@ plugin only if there is hard need to do so.**
 **Module Directives**
 
 -  **PersistStateInterval** number-of-messages
-    This is a global setting. It specifies how often should the journal
+   This is a global setting. It specifies how often should the journal
    state be persisted. The persists happens after each
    *number-of-messages*. This option is useful for rsyslog to start
    reding from the last journal message it read.
 -  **StateFile** /path/to/file
-    This is a global setting. It specifies where the state file for
+   This is a global setting. It specifies where the state file for
    persisting journal state is located.
 -  **ratelimit.interval** seconds (default: 600)
-    Specifies the interval in seconds onto which rate-limiting is to be
+   Specifies the interval in seconds onto which rate-limiting is to be
    applied. If more than ratelimit.burst messages are read during that
    interval, further messages up to the end of the interval are
    discarded. The number of messages discarded is emitted at the end of
@@ -63,11 +63,11 @@ plugin only if there is hard need to do so.**
    have reported us such problems with the journal database -
    information current as of June 2013).
 -  **ratelimit.burst** messages (default: 20000)
-    Specifies the maximum number of messages that can be emitted within
+   Specifies the maximum number of messages that can be emitted within
    the ratelimit.interval interval. For futher information, see
    description there.
 -  **IgnorePreviousMessages** [**off**/on]
-    This option specifies whether imjournal should ignore messages
+   This option specifies whether imjournal should ignore messages
    currently in journal and read only new messages. This option is only
    used when there is no StateFile to avoid message loss.
 
@@ -93,13 +93,13 @@ template="CEETemplate")
 **Legacy Configuration Directives**:
 
 -  **$imjournalPersistStateInterval**
-    Equivalent to: PersistStateInterval
+   Equivalent to: PersistStateInterval
 -  **$imjournalStateFile**
-    Equivalent to: StateFile
+   Equivalent to: StateFile
 -  **$imjournalRatelimitInterval**
-    Equivalent to: ratelimit.interval
+   Equivalent to: ratelimit.interval
 -  **$imjournalRatelimitBurst**
-    Equivalent to: ratelimit.burst
+   Equivalent to: ratelimit.burst
 -  **$ImjournalIgnorePreviousMessages**
-    Equivalent to: ignorePreviousMessages
+   Equivalent to: ignorePreviousMessages
 

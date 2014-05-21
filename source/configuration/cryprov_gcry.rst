@@ -25,8 +25,7 @@ files as well as dynafiles). Both files together form a set. So you need
 to archive both in order to prove integrity.
 
 -  **cry.algo** <Encryption Algorithm>
-    The algorithm (cipher) to be used for encryption. The default
-   algorithm is "AES128".
+   The algorithm (cipher) to be used for encryption. The default algorithm is "AES128".
    Currently, the following Algorithms are supported:
 
    -  3DES
@@ -48,14 +47,14 @@ to archive both in order to prove integrity.
    -  CAMELLIA192
    -  CAMELLIA256
 
-    The actual availability of an algorithms depends on which ones are
+   The actual availability of an algorithms depends on which ones are
    compiled into libgcrypt. Note that some versions of libgcrypt simply
    abort the process (rsyslogd in this case!) if a supported algorithm
    is select but not available due to libgcrypt build settings. There is
    nothing rsyslog can do against this. So in order to avoid production
    downtime, always check carefully when you change the algorithm.
 -  **cry.mode** <Algorithm Mode>
-    The encryption mode to be used. Default ist Cipher Block Chaining
+   The encryption mode to be used. Default ist Cipher Block Chaining
    (CBC). Note that not all encryption modes can be used together with
    all algorithms.
    Currently, the following modes are supported:
@@ -69,16 +68,16 @@ to archive both in order to prove integrity.
    -  AESWRAP
 
 -  **cry.key** <encryption key>
-    TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
+   TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
    inside rsyslog.conf. This is the actual key, and as such this mode is
    highly insecure. However, it can be useful for intial testing steps.
    This option may be removed in the future.
 -  **cry.keyfile** <filename>
-    Reads the key from the specified file. The file must contain the
+   Reads the key from the specified file. The file must contain the
    key, only, no headers or other meta information. Keyfiles can be
    generated via the rscrytool utility.
 -  **cry.keyprogram** <path to program>
-    If given, the key is provided by a so-called "key program". This
+   If given, the key is provided by a so-called "key program". This
    program is executed and must return the key to (as well as some meta
    information) via stdout. The core idea of key programs is that using
    this interface the user can implement as complex (and secure) method
@@ -95,8 +94,9 @@ This encrypts a log file. Default parameters are used, they key is
 provided via a keyfile.
 
 action(type="omfile" file="/var/log/somelog" cry.provider="gcry"
-keyfile="/secured/path/to/keyfile") Note that the keyfile can be
-generated via the rscrytool utility (see its documentation for how to
+keyfile="/secured/path/to/keyfile") 
+
+Note that the keyfile can be generated via the rscrytool utility (see its documentation for how to
 actually do that).
 
 [`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
@@ -104,6 +104,6 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.

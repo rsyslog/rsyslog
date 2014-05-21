@@ -15,10 +15,10 @@ to the syslog engine.
 
 The printk log buffer contains log records. These records are exported
 by /dev/kmsg device as structured data in the following format:
- "level,sequnum,timestamp;<message text>\\n"
- There could be continuation lines starting with space that contains
+"level,sequnum,timestamp;<message text>\\n"
+There could be continuation lines starting with space that contains
 key/value pairs.
- Log messages are parsed as necessary into rsyslog msg\_t structure.
+Log messages are parsed as necessary into rsyslog msg\_t structure.
 Continuation lines are parsed as json key/value pairs and added into
 rsyslog's message json representation.
 
@@ -48,7 +48,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2008-2009 by `Rainer
+Copyright © 2008-2009 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
