@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`__
-
 RELP Input Module
 =================
 
@@ -35,18 +33,18 @@ Clients send messages to the RELP server via omrelp.
 **Input Parameters**:
 
 -  **Port** <port>
-    Starts a RELP server on selected port
+   Starts a RELP server on selected port
 -  **tls** (not mandatory, values "on","off", default "off")
-    If set to "on", the RELP connection will be encrypted by TLS, so
+   If set to "on", the RELP connection will be encrypted by TLS, so
    that the data is protected against observers. Please note that both
    the client and the server must have set TLS to either "on" or "off".
    Other combinations lead to unpredictable results.
 -  **tls.compression** (not mandatory, values "on","off", default "off")
-    The controls if the TLS stream should be compressed (zipped). While
+   The controls if the TLS stream should be compressed (zipped). While
    this increases CPU use, the network bandwidth should be reduced. Note
    that typical text-based log records usually compress rather well.
 -  **tls.dhbits** (not mandatory, integer)
-    This setting controls how many bits are used for Diffie-Hellman key
+   This setting controls how many bits are used for Diffie-Hellman key
    generation. If not set, the librelp default is used. For secrity
    reasons, at least 1024 bits should be used. Please note that the
    number of bits must be supported by GnuTLS. If an invalid number is
@@ -59,7 +57,7 @@ Clients send messages to the RELP server via omrelp.
    listener. Only peers which have been listed in this parameter may
    connect. The validation bases on the certificate the remote peer
    presents.
-    The *peer* parameter lists permitted certificate fingerprints. Note
+   The *peer* parameter lists permitted certificate fingerprints. Note
    that it is an array parameter, so either a single or multiple
    fingerprints can be listed. When a non-permitted peer connects, the
    refusal is logged together with it's fingerprint. So if the
@@ -83,7 +81,7 @@ Clients send messages to the RELP server via omrelp.
    match on any one of these names is considered good and permits the
    peer to talk to rsyslog.
 -  **tls.prioritystring** (not mandatory, string)
-    This parameter permits to specify the so-called "priority string" to
+   This parameter permits to specify the so-called "priority string" to
    GnuTLS. This string gives complete control over all crypto
    parameters, including compression setting. For this reason, when the
    prioritystring is specified, the "tls.compression" parameter has no
@@ -107,39 +105,33 @@ Clients send messages to the RELP server via omrelp.
 
 **Sample:**
 
-| This sets up a RELP server on port 20514.
+This sets up a RELP server on port 20514.
 
-module(load="imrelp") # needs to be done just once input(type="imrelp"
-port="20514")
+::
+
+  module(load="imrelp") # needs to be done just once 
+  input(type="imrelp" port="20514")
 
 **Legacy Configuration Directives**:
 
 -  InputRELPServerBindRuleset <name> (available in 6.3.6+) equivalent
    to: RuleSet
 -  InputRELPServerRun <port>
-    equivalent to: Port
+   equivalent to: Port
 
-**Caveats/Known Bugs:**
+**Legacy Sample:**
 
--  To obtain the remote system's IP address, you need to have at least
-   librelp 1.0.0 installed. Versions below it return the hostname
-   instead of the IP address.
--  Contrary to other inputs, the ruleset can only be bound to all
-   listeners, not specific ones. This is due to a currently existing
-   limitation in librelp.
+This sets up a RELP server on port 20514.
 
-**Sample:**
+::
 
-| This sets up a RELP server on port 20514.
+  $ModLoad imrelp # needs to be done just once
+  $InputRELPServerRun 20514
 
-$ModLoad imrelp # needs to be done just once $InputRELPServerRun 20514
 
-[`rsyslog.conf overview <rsyslog_conf.html>`__\ ] [`manual
-index <manual.html>`__\ ] [`rsyslog site <http://www.rsyslog.com/>`__\ ]
-
-| This documentation is part of the
+This documentation is part of the
 `rsyslog <http://www.rsyslog.com/>`__ project.
-|  Copyright © 2008-2013 by `Rainer
+Copyright © 2008-2014 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`__ and
 `Adiscon <http://www.adiscon.com/>`__. Released under the GNU GPL
 version 3 or higher.
