@@ -36,7 +36,7 @@ same message.
 **Action Parameters**:
 
 -  **ruleBase** [word]
-    Specifies which rulebase file is to use. If there are multiple
+   Specifies which rulebase file is to use. If there are multiple
    mmnormalize instances, each one can use a different file. However, a
    single instance can use only a single file. This parameter MUST be
    given, because normalization can only happen based on a rulebase. It
@@ -44,7 +44,7 @@ same message.
    how to create the rulebase can be found in the `liblognorm
    manual <http://www.liblognorm.com/files/manual/index.html>`_.
 -  **useRawMsg** [boolean]
-    Specifies if the raw message should be used for normalization (on)
+   Specifies if the raw message should be used for normalization (on)
    or just the MSG part of the message (off). Default is "off".
 -  **path** [word], defaults to "$!"
     Specifies the JSON path under which parsed elements should be
@@ -91,7 +91,7 @@ index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
- Copyright © 2010-2012 by `Rainer
+Copyright © 2010-2012 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.
