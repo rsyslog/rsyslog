@@ -1,18 +1,15 @@
 omfwd: syslog Forwarding Output Module
 ======================================
 
-**Module Name:    omfwd**
+**Module Name:**  **omfwd**
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Description**:
+**Author:**       Rainer Gerhards <rgerhards@adiscon.com>
 
 The omfwd plug-in provides the core functionality of traditional message
 forwarding via UDP and plain TCP. It is a built-in module that does not
 need to be loaded.
 
  
-
 **Note: this documentation describes features present in v7+ of
 rsyslog. If you use an older version, scroll down to "legacy
 parameters".** If you prefer, you can also `obtain a specific version
@@ -21,36 +18,44 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
 
  
 
-**Module Parameters**:
+Module Parameters
+-----------------
 
--  **Template**\ [templateName]
+-  **Template** [templateName]
+
    sets a non-standard default template for this module.
-
  
 
-**Action Parameters**:
+Action Parameters
+-----------------
 
--  **Target**\ string
+-  **Target** string
+
    Name or IP-Address of the system that shall receive messages. Any
    resolvable name is fine.
--  **Port**\ [Default 514]
+
+-  **Port** [Default 514]
+
    Name or numerical value of port to use when connecting to target.
--  **Protocol**\ udp/tcp [default udp]
+
+-  **Protocol** udp/tcp [default udp]
+
    Type of protocol to use for forwarding. Note that \`\`tcp'' means
    both legacy plain tcp syslog as well as RFC5425-based TCL-encrypted
    syslog. Which one is selected depends on the protocol drivers set
    before the action commend. Note that as of 6.3.6, there is no way to
    specify this within the action itself.
--  **TCP\_Framing**\ \`\`traditional'' or \`\`octet-counted'' [default
-   traditional]
+
+-  **TCP\_Framing** "traditional" or "octet-counted" [default traditional]
+
    Framing-Mode to be for forwarding. This affects only TCP-based
    protocols. It is ignored for UDP. In protocol engineering,
-   \`\`framing'' means how multiple messages over the same connection
+   "framing" means how multiple messages over the same connection
    are separated. Usually, this is transparent to users. Unfortunately,
    the early syslog protocol evolved, and so there are cases where users
    need to specify the framing. The traditional framing is
-   nontransparent. With it, messages are end when a LF (aka \`\`line
-   break'', \`\`return'') is encountered, and the next message starts
+   nontransparent. With it, messages are end when a LF (aka "line
+   break", "return") is encountered, and the next message starts
    immediately after the LF. If multi-line messages are received, these
    are essentially broken up into multiple message, usually with all but
    the first message segment being incorrectly formatted. The
@@ -63,19 +68,24 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    set as default, even though it has defects. If it is known that the
    receiver supports octet-counted framing, it is suggested to use that
    framing mode.
--  **ZipLevel**\ 0..9 [default 0]
+
+-  **ZipLevel** 0..9 [default 0]
+
    Compression level for messages.
+
    Up until rsyslog 7.5.1, this was the only compression setting that
    rsyslog understood. Starting with 7.5.1, we have different
    compression modes. All of them are affected by the ziplevel. If,
    however, no mode is explicitely set, setting ziplevel also turns on
    "single" compression mode, so pre 7.5.1 configuration will continue
    to work as expected.
+
    The compression level is specified via the usual factor of 0 to 9,
    with 9 being the strongest compression (taking up most processing
    time) and 0 being no compression at all (taking up no extra
    processing time).
--  **maxErrorMessages**\ integer [default 5], available since 7.5.4
+-  **maxErrorMessages** integer [default 5], available since 7.5.4
+
    This sets the maximum number of error messages that omfwd emits
    during regular operations. The reason for such an upper limit is that
    error messages are conveyed back to rsyslog's input message stream.
@@ -85,7 +95,9 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    conservatively low. Note that version prior to 7.5.4 did not report
    any error messages for the same reason. Also note that with the
    initial implementation only errors during UDP forwarding are logged.
+
 -  **compression.mode** *mode*
+
    *mode* is one of "none", "single", or "stream:always". The default
    is "none", in which no compression happens at all.
    In "single" compression mode, Rsyslog implements a proprietary
@@ -96,6 +108,7 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    compressed. If not, it is sent uncompressed. As such, it is totally
    valid that compressed and uncompressed messages are intermixed within
    a conversation.
+
    In "stream:always" compression mode the full stream is being
    compressed. This also uses non-standard protocol and is compatible
    only with receives that have the same abilities. This mode offers
@@ -106,13 +119,17 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    emits new compressed data. For typical syslog messages, this can mean
    that some hundered messages may be held in local buffers before they
    are actually sent. This mode has been introduced in 7.5.1.
+
    **Note: currently only imptcp supports receiving stream-compressed
    data.**
+
 -  **compression.stream.flushOnTXEnd** *[**on**/off*] (requires 7.5.3+)
+
    This setting affects stream compression mode, only. If enabled (the
    default), the compression buffer will by emptied at the end of a
    rsyslog batch. If set to "off", end of batch will not affect
    compression at all.
+
    While setting it to "off" can potentially greatly improve
    compression ratio, it will also introduce severe delay between when a
    message is being processed by rsyslog and actually sent out to the
@@ -125,7 +142,9 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    more "naturally" with even low message traffic. Even in flush mode,
    notable compression should be achivable (but we do not yet have
    practice reports on actual compression ratios).
--  **RebindInterval**\ integer
+
+-  **RebindInterval** integer
+
    Permits to specify an interval at which the current connection is
    broken and re-established. This setting is primarily an aid to load
    balancers. After the configured number of messages has been
@@ -135,23 +154,33 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    are cycled and not reused too frequently). This usually is perceived
    as a \`\`new connection'' by load balancers, which in turn forward
    messages to another physical target system.
--  **StreamDriver**\ string
+
+-  **StreamDriver** string
+
    Set the file owner for directories newly created. Please note that
    this setting does not affect the owner of directories already
    existing. The parameter is a user name, for which the userid is
    obtained by rsyslogd during startup processing. Interim changes to
    the user mapping are not detected.
--  **StreamDriverMode**\ integer [default 0]
+
+-  **StreamDriverMode** integer [default 0]
+
    mode to use with the stream driver (driver-specific)
--  **StreamDriverAuthMode**\ string
+
+-  **StreamDriverAuthMode** string
+
    authentication mode to use with the stream driver. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific).
--  **StreamDriverPermittedPeers**\ string
+
+-  **StreamDriverPermittedPeers** string
+
    accepted fingerprint (SHA1) or name of remote peer. Note that this
    directive requires TLS netstream drivers. For all others, it will be
    ignored. (driver-specific)
--  **ResendLastMSGOnReconnect**\ on/off
+
+-  **ResendLastMSGOnReconnect** on/off
+
    Permits to resend the last message when a connection is reconnected.
    This setting affects TCP-based syslog, only. It is most useful for
    traditional, plain TCP syslog. Using this protocol, it is not always
@@ -162,16 +191,28 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    reduces potential message loss, but comes at the price that some
    messages may be duplicated (what usually is more acceptable).
 
-**See Also**
+   Please note that busy systems probably loose more than a
+   single message in such cases. This is caused by an
+   `inherant unreliability in plain tcp syslog
+   <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
+   and there is no way rsyslog could prevent this from happening
+   (if you read the detail description, be sure to follow the link
+   to the follow-up posting). In order to prevent these problems,
+   we recommend the use of :doc:`omrelp <omrelp>`.
+
+See Also
+--------
 
 -  `Encrypted Disk
    Queues <http://www.rsyslog.com/encrypted-disk-queues/>`_
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+------------------
 
--  None.
+Currently none.
 
-**Sample:**
+Sample
+------
 
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
@@ -180,7 +221,8 @@ TCP port 10514.
 
   action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
 
-**Legacy Configuration Directives**:
+Legacy Configuration Directives
+-------------------------------
 
 -  **$ActionForwardDefaultTemplateName**\ string [templatename]
    sets a new default template for UDP and plain TCP forwarding action
@@ -220,7 +262,8 @@ TCP port 10514.
    side-effects exists from previous directives. This directive has no
    parameters.
 
-**Legacy Sample:**
+Legacy Sample
+-------------
 
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
