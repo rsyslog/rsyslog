@@ -38,7 +38,6 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
-#include "ommysql.h"
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
