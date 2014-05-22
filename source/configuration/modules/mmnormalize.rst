@@ -47,7 +47,7 @@ same message.
    Specifies if the raw message should be used for normalization (on)
    or just the MSG part of the message (off). Default is "off".
 -  **path** [word], defaults to "$!"
-    Specifies the JSON path under which parsed elements should be
+   Specifies the JSON path under which parsed elements should be
    placed. By default, all parsed properties are merged into root of
    message properties. You can place them under a subtree, instead. You
    can place them in local variables, also, by setting path="$.".
