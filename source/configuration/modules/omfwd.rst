@@ -162,6 +162,15 @@ documentation <http://www.rsyslog.com/how-to-obtain-a-specific-doc-version/>`_.
    reduces potential message loss, but comes at the price that some
    messages may be duplicated (what usually is more acceptable).
 
+   Please note that busy systems probably loose more than a
+   single message in such cases. This is caused by an
+   `inherant unreliability in plain tcp syslog
+   <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
+   and there is no way rsyslog could prevent this from happening
+   (if you read the detail description, be sure to follow the link
+   to the follow-up posting). In order to prevent these problems,
+   we recommend the use of :doc:`omrelp <omrelp>`.
+
 **See Also**
 
 -  `Encrypted Disk
