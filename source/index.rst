@@ -24,6 +24,7 @@ Manual
    :maxdepth: 2
    
    configuration/index
+   examples/index
    installation/index
    concepts/index
    troubleshooting/index
