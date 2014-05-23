@@ -6,7 +6,7 @@
  * 
  * Work on this module begun 2009-11-18 by Rainer Gerhards.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -66,7 +66,9 @@ loadDrvr(nspoll_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(pBaseDrvrName == NULL) { /* if no drvr name is set, use system default */
+		CHKmalloc(pBaseDrvrName = (uchar*) strdup((char*) glbl.GetDfltNetstrmDrvr()));
+	}
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
@@ -105,6 +107,7 @@ CODESTARTobjDestruct(nspoll)
 	 * a driver name string as load indicator (because we also need that string
 	 * to release the driver 
 	 */
+	free(pThis->pBaseDrvrName);
 	if(pThis->pDrvrName != NULL) {
 		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
