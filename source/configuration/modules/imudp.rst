@@ -120,7 +120,7 @@ Input Parameters
 
    *Default: RSYSLOG_DefaultRuleset*
 
-   Binds the listener to a specific `ruleset <../multi_ruleset.html>`_.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 .. function::  RateLimit.Interval [number]
    
