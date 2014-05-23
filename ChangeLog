@@ -253,6 +253,7 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   * dirgroup
   * dirgroupnum
   Thanks to Karol Jurak for the patch.
+- bugfix: memory leak in TCP TLS mode
 - bugfix: using UUID property could cause segfault
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.
