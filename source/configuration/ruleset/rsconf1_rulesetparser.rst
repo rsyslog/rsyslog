@@ -59,7 +59,7 @@ avoid this, you can either use $Include or `omruleset <omruleset.html>`_
 (what probably provides the best solution).
 
 More information about rulesets in general can be found in
-`multi-ruleset support in rsyslog <multi_ruleset.html>`_.
+:doc:`multi-ruleset support in rsyslog <../../concepts/multi_ruleset>`.
 
 **Caveats:**
 

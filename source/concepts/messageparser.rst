@@ -207,12 +207,13 @@ Where are parser chains used?
 
 We now know what parser chains are and how they operate. The question is
 now how many parser chains can be active and how it is decicded which
-parser chain is used on which message. This is controlled via `rsyslog's
-rulesets <multi_ruleset.html>`_. In short, multiple rulesets can be
-defined and there always exist at least one ruleset (for specifcs,
-follow the `link <multi_ruleset.html>`_). A parser chain is bound to a
+parser chain is used on which message. This is controlled via
+:doc:`rsyslog's rulesets <multi_ruleset>`. In short, multiple rulesets can be
+defined and there always exist at least one ruleset.
+A parser chain is bound to a
 specific ruleset. This is done by virtue of defining parsers via the
-`$RulesetParser <rsconf1_rulesetparser.html>`_ configuration directive
+:doc:`$RulesetParser <../configuration/ruleset/rsconf1_rulesetparser>`
+configuration directive
 (for specifics, see there). If no such directive is specified, the
 default parser chain is used. As of this writing, the default parser
 chain always consists of "rsyslog.rfc5424", "rsyslog.rfc3164", in that
@@ -251,7 +252,7 @@ some time to implement.
 
 The coockbook recipe for using different parsers for different devices
 is given as an actual in-depth example in the
-`$RulesetParser`_ configuration directive
+`$RulesetParser` configuration directive
 doc page. In short, it is acomplished by defining specific rulesets for
 the required parser chains, definining different listener ports for each
 of the devices with different format and binding these listeners to the
@@ -289,7 +290,7 @@ sure if the number is actually right.
 
 If you can not program or have no time to do it, Adiscon can also write
 a message parser for you as part of the `rsyslog professional services
-offering <http://www.rsyslog/professional-services>`_.
+offering <http://www.rsyslog.com/professional-services>`_.
 
 Conclusion
 ----------

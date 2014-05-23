@@ -120,7 +120,7 @@ Configuration Directives
 .. function:: $InputFileBindRuleset ruleset
 
    Binds the listener to a specific
-   `ruleset <multi_ruleset>`_.
+   :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 Caveats/Known Bugs
 ------------------

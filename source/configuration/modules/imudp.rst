@@ -41,7 +41,7 @@ multiple times.
 
 -  *$InputUDPServerBindRuleset* <ruleset>
 
-   Binds the listener to a specific `ruleset <../multi_ruleset.html>`_.
+   Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 **Caveats/Known Bugs:**
 

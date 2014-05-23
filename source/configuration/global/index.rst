@@ -66,7 +66,7 @@ True Global Directives
 -  **$DefaultRuleset** [name] - changes the default ruleset for unbound
    inputs to the provided *name* (the default default ruleset is named
    "RSYSLOG\_DefaultRuleset"). It is advised to also read our paper on
-   `using multiple rule sets in rsyslog <multi_ruleset.html>`_.
+   :doc:`using multiple rule sets in rsyslog <../../concepts/multi_ruleset>`.
 -  **$DefaultNetstreamDriver** <drivername>, the default `network stream
    driver <netstream.html>`_ to use. Defaults to ptcp.
 -  **$DefaultNetstreamDriverCAFile** </path/to/cafile.pem>

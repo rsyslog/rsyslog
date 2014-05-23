@@ -144,5 +144,5 @@ input. In the analogy, this means that when a message comes in via that
 input, the "program" (ruleset) bound to it will be executed (but not any
 other!).
 
-There is detail documentation available for `rsyslog
-rulesets <multi_ruleset.html>`_.
+There is detail documentation available for
+:doc:`rsyslog rulesets <../concepts/multi_ruleset>`.
