@@ -9,4 +9,5 @@ environments.
    
    php_syslog_ng
    stunnel
+   multi_ruleset_legacy_format_samples
    module_devel
