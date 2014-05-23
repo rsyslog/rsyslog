@@ -280,6 +280,13 @@ activated via the
 `$RulesetCreateMainQueue <rsconf1_rulesetcreatemainqueue.html>`_
 directive.
 
+See Also
+--------
+.. toctree::
+   :maxdepth: 1
+   
+   ../historical/multi_ruleset_legacy_format_samples
+   
 This documentation is part of the `rsyslog`_
 project.
 Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_

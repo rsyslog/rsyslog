@@ -1,20 +1,22 @@
-Multiple Rulesets in rsyslog
-============================
+Legacy Format Samples for Multiple Rulesets
+===========================================
 
-Starting with version 4.5.0 and 5.1.1,
-rsyslog supports multiple rulesets within a
-single configuration. This is especially useful for routing the
-reception of remote messages to a set of specific rules. Note that the
-input module must support binding to non-standard rulesets, so the
-functionality may not be available with all inputs.
+This chapter complements rsyslog's documentation of
+:doc:`rulesets <../concepts/multi_ruleset>`.
+While the base document focusses on RainerScript format, it
+does not provide samples in legacy format. These are included
+in this document.
 
-**Attention: this guide is shortened and only contains the samples in
-legacy format.** Please follow this link to the full guide in the new
-config format "list":
-`http://www.rsyslog.com/doc/multi\_ruleset.html <http://www.rsyslog.com/doc/multi_ruleset.html>`_
+**Important:** do **not** use legacy ruleset defintions for new
+configurations. Especially with rulesets, legacy format is extremely
+hard to get right. The information in this page is included in order
+to help you understand already existing configurations using the
+ruleset feature. We even recommend to convert any such configs
+to RainerScript format because of its increased robustness
+and simplicity.
 
-Examples
---------
+Legacy ruleset support was available starting with version 4.5.0
+and 5.1.1.
 
 Split local and remote logging
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -195,11 +197,8 @@ Note that the "mail.\*" rule inside the "remote10516" ruleset does not
 affect processing inside any other rule set, including the default rule
 set.
 
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2009 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Copyright © 2009-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
 and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
 version 3 or higher.
