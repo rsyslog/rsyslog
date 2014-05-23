@@ -2,7 +2,6 @@ Error Messages
 ==============
 
 This page covers error message you may see when setting up
-
 `rsyslog <http://www.rsyslog.com>`_ with TLS. Please note that many of
 the message stem back to the TLS library being used. In those cases,
 there is not always a good explanation available in rsyslog alone.
@@ -17,10 +16,13 @@ shipped by many systems will do that, recording them e.g. in
 /etc/messages).
 
 certificate invalid
-------------------~
+-------------------
 
 Sample:
-`` not permitted to talk to peer, certificate invalid: insecure algorithm``
+
+::
+
+  not permitted to talk to peer, certificate invalid: insecure algorithm
 
 This message may occur during connection setup. It indicates that the
 remote peer's certificate can not be accepted. The reason for this is
@@ -54,7 +56,10 @@ GnuTLS error -64
 ----------------
 
 Sample:
-``unexpected GnuTLS error -64 in nsd_gtls.c:517: Error while reading file.``
+
+::
+
+  unexpected GnuTLS error -64 in nsd_gtls.c:517: Error while reading file.
 
 This error points to an encoding error witht the pem file in question.
 It means "base 64 encoding error". From my experience, it can be caused
@@ -73,7 +78,10 @@ info on invalid cert
 --------------------
 
 Sample:
-`` info on invalid cert: peer provided 1 certificate(s). Certificate 1 info: certificate valid from Wed Jun 18 11:45:44 2008 to Sat Jun 16 11:45:53 2018; Certificate public key: RSA; DN: C=US,O=Sample Corp,OU=Certs,L=Somehwere,ST=CA,CN=somename; Issuer DN: C=US,O=Sample Corp,OU=Certs,L=Somewhere,ST=CA,CN=somename,EMAIL=xxx@example.com; SAN:DNSname: machine.example.net;``
+
+::
+
+  info on invalid cert: peer provided 1 certificate(s). Certificate 1 info: certificate valid from Wed Jun 18 11:45:44 2008 to Sat Jun 16 11:45:53 2018; Certificate public key: RSA; DN: C=US,O=Sample Corp,OU=Certs,L=Somehwere,ST=CA,CN=somename; Issuer DN: C=US,O=Sample Corp,OU=Certs,L=Somewhere,ST=CA,CN=somename,EMAIL=xxx@example.com; SAN:DNSname: machine.example.net;
 
 This is **not** an error message in itself. It always follows the actual
 error message and tells you what is seen in the peer's certificate. This
