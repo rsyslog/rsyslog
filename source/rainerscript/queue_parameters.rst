@@ -3,7 +3,7 @@ General Queue Parameters
 
 Queue parameters can be used together with the following statements:
 
-- `action() <rsyslog_conf_actions.html>`_
+- :doc:`action() <../configuration/actions>`
 - ruleset()
 - main\_queue()
 
