@@ -63,18 +63,20 @@ set up by default.
    \*numerical\* severity! default 8 (nothing discarded)
 -  **queue.checkpointinterval** number
    Disk queues by default do not update housekeeping structures every time 
-   it writes to disk. This is for performance reasons. In the event of failure, 
+   the queue writes to disk. This is for performance reasons. In the event of failure, 
    data will still be lost (except when data is mangled via the file structures).
    However, disk queues can be set to write bookkeeping information on checkpoints 
    (every n records), so that this can be made ultra-reliable, too. If the 
    checkpoint interval is set to one, no data can be lost, but the queue is 
    exceptionally slow.
--  **queue.syncqueuefiles** on/off 
+-  **queue.syncqueuefiles** on/off (default "off")
+
    Disk-based queues can be made very reliable by issuing a (f)sync after each 
-   write operation. Starting with version 4.3.2, this can be requested via 
-   "<object>QueueSyncQueueFiles on/off with the default being off. Activating 
-   this option has a performance penalty, so it should not be turned on without 
-   reason.
+   write operation. This happens when you set the parameter to "on".
+   Activating this option has a performance penalty, so it should not
+   be turned on without a good reason. Note that the penalty also depends on
+   *queue.checkpointInterval* frequency.
+
 -  **queue.type** [FixedArray/LinkedList/**Direct**/Disk]
 -  **queue.workerthreads** number
    number of worker threads, default 1, recommended 1
