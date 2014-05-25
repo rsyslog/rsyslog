@@ -3,14 +3,17 @@ General Queue Parameters
 
 Queue parameters can be used together with the following statements:
 
--  `action() <rsyslog_conf_actions.html>`_
--  ruleset()
--  main\_queue()
+- `action() <rsyslog_conf_actions.html>`_
+- ruleset()
+- main\_queue()
 
 Queues need to be configured in the action or ruleset it should affect.
 If nothing is configured, default values will be used. Thus, the default
 ruleset has only the default main queue. Specific Action queues are not
 set up by default.
+
+To fully understand queue parameters and how they interact, be sure to
+read the :doc:`queues <../concepts/queues>` documentation.
 
 -  **queue.filename** name
    File name to be used for the queue files. Please note that this is
