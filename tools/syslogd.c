@@ -43,8 +43,6 @@
 #include "config.h"
 #include "rsyslog.h"
 
-#define DEFUPRI		(LOG_USER|LOG_NOTICE)
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -100,39 +98,25 @@ extern int yydebug; /* interface to flex */
 #include "syslogd.h"
 
 #include "msg.h"
-#include "modules.h"
-#include "action.h"
 #include "iminternal.h"
 #include "cfsysline.h"
 #include "threads.h"
-#include "wti.h"
-#include "queue.h"
-#include "stream.h"
-#include "conf.h"
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"
-#include "batch.h"
 #include "unicode-helper.h"
-#include "ruleset.h"
 #include "net.h"
-#include "prop.h"
 #include "rsconf.h"
 #include "dnscache.h"
 #include "sd-daemon.h"
-#include "rainerscript.h"
 #include "ratelimit.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime) /* TODO: make go away! */
-DEFobjCurrIf(conf)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(ruleset)
-DEFobjCurrIf(prop)
-DEFobjCurrIf(parser)
 DEFobjCurrIf(rsconf)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
@@ -153,14 +137,6 @@ void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 rsRetVal rsyslogd_InitGlobalClasses(void);
 rsRetVal rsyslogd_InitStdRatelimiters(void);
 
-
-#ifndef _PATH_MODDIR
-#       if defined(__FreeBSD__)
-#               define _PATH_MODDIR     "/usr/local/lib/rsyslog/"
-#       else
-#               define _PATH_MODDIR     "/lib/rsyslog/"
-#       endif
-#endif
 
 #if defined(SYSLOGD_PIDNAME)
 #	undef _PATH_LOGPID
@@ -654,14 +630,6 @@ obtainClassPointers(void)
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 	pErrObj = "datetime";
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	pErrObj = "ruleset";
-	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
-	pErrObj = "conf";
-	CHKiRet(objUse(conf,     CORE_COMPONENT));
-	pErrObj = "prop";
-	CHKiRet(objUse(prop,     CORE_COMPONENT));
-	pErrObj = "parser";
-	CHKiRet(objUse(parser,     CORE_COMPONENT));
 	pErrObj = "rsconf";
 	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
@@ -696,9 +664,6 @@ GlobalClassExit(void)
 
 	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	objRelease(prop,     CORE_COMPONENT);
-	objRelease(conf,     CORE_COMPONENT);
-	objRelease(ruleset,  CORE_COMPONENT);
 	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);
