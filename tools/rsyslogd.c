@@ -53,6 +53,18 @@ extern int realMain(int argc, char **argv);
 extern rsRetVal queryLocalHostname(void);
 
 
+void
+rsyslogd_usage(void)
+{
+	fprintf(stderr, "usage: rsyslogd [options]\n"
+			"use \"man rsyslogd\" for details. To run rsyslog "
+			"interactively, use \"rsyslogd -n\""
+			"to run it in debug mode use \"rsyslogd -dn\"\n"
+			"For further information see http://www.rsyslog.com/doc\n");
+	exit(1); /* "good" exit - done to terminate usage() */
+}
+
+
 /* Use all objects we need. This is called by the GPLv3 part.
  */
 rsRetVal

@@ -148,6 +148,7 @@ rsRetVal queryLocalHostname(void);
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
 extern ratelimit_t *dflt_ratelimiter;
+void rsyslogd_usage(void);
 void rsyslogd_mainloop(void);
 rsRetVal rsyslogdInit(void);
 
@@ -221,16 +222,6 @@ static char **crunch_list(char *list);
 static void reapchild();
 static void debug_switch();
 static void sighup_handler();
-
-
-static int usage(void)
-{
-	fprintf(stderr, "usage: rsyslogd [-46AdnqQvwx] [-l<hostlist>] [-s<domainlist>]\n"
-			"                [-f<conffile>] [-i<pidfile>] [-N<level>] [-M<module load path>]\n"
-			"                [-u<number>]\n"
-			"For further information see http://www.rsyslog.com/doc\n");
-	exit(1); /* "good" exit - done to terminate usage() */
-}
 
 
 /* ------------------------------ some support functions for imdiag ------------------------------ *
@@ -1552,12 +1543,12 @@ int realMain(int argc, char **argv)
 			exit(0); /* exit for -v option - so this is a "good one" */
 		case '?':
 		default:
-			usage();
+			rsyslogd_usage();
 		}
 	}
 
 	if(argc - optind)
-		usage();
+		rsyslogd_usage();
 
 	DBGPRINTF("rsyslogd %s startup, module path '%s', cwd:%s\n",
 		  VERSION, glblModPath == NULL ? "" : (char*)glblModPath,
@@ -1692,7 +1683,7 @@ int realMain(int argc, char **argv)
 			break;
                case '?':
 		default:
-			usage();
+			rsyslogd_usage();
 		}
 	}
 
