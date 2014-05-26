@@ -210,7 +210,6 @@ int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is ava
 				 * queueing mode (mode DIRECT!), then this is set to 0.
 				 */
 
-extern	int errno;
 
 /* main message queue and its configuration parameters */
 qqueue_t *pMsgQueue = NULL;				/* the main message queue */
@@ -316,11 +315,6 @@ static char **crunch_list(char *list)
 	strcpy(result[count],p);
 	result[++count] = NULL;
 
-#if 0
-	count=0;
-	while (result[count])
-		DBGPRINTF("#%d: %s\n", count, StripDomains[count++]);
-#endif
 	return result;
 }
 
@@ -883,192 +877,6 @@ static void doexit()
 	exit(0); /* "good" exit, only during child-creation */
 }
 
-#if 0 /* TODO: re-enable, currently not used */
-/* helper to generateConfigDAG, to print out all actions via
- * the llExecFunc() facility.
- * rgerhards, 2007-08-02
- */
-struct dag_info {
-	FILE *fp;	/* output file */
-	int iActUnit;	/* current action unit number */
-	int iAct;	/* current action in unit */
-	int bDiscarded;	/* message discarded (config error) */
-	};
-DEFFUNC_llExecFunc(generateConfigDAGAction)
-{
-	action_t *pAction;
-	uchar *pszModName;
-	uchar *pszVertexName;
-	struct dag_info *pDagInfo;
-	DEFiRet;
-
-	pDagInfo = (struct dag_info*) pParam;
-	pAction = (action_t*) pData;
-
-	pszModName = module.GetStateName(pAction->pMod);
-
-	/* vertex */
-	if(pAction->pszName == NULL) {
-		if(!strcmp((char*)pszModName, "builtin-discard"))
-			pszVertexName = (uchar*)"discard";
-		else
-			pszVertexName = pszModName;
-	} else {
-		pszVertexName = pAction->pszName;
-	}
-
-	fprintf(pDagInfo->fp, "\tact%d_%d\t\t[label=\"%s\"%s%s]\n",
-		pDagInfo->iActUnit, pDagInfo->iAct, pszVertexName,
-		pDagInfo->bDiscarded ? " style=dotted color=red" : "",
-		(pAction->pQueue->qType == QUEUETYPE_DIRECT) ? "" : " shape=hexagon"
-		);
-
-	/* edge */
-	if(pDagInfo->iAct == 0) {
-	} else {
-		fprintf(pDagInfo->fp, "\tact%d_%d -> act%d_%d[%s%s]\n",
-			pDagInfo->iActUnit, pDagInfo->iAct - 1,
-			pDagInfo->iActUnit, pDagInfo->iAct,
-			pDagInfo->bDiscarded ? " style=dotted color=red" : "",
-			pAction->bExecWhenPrevSusp ? " label=\"only if\\nsuspended\"" : "" );
-	}
-
-	/* check for discard */
-	if(!strcmp((char*) pszModName, "builtin-discard")) {
-		fprintf(pDagInfo->fp, "\tact%d_%d\t\t[shape=box]\n",
-			pDagInfo->iActUnit, pDagInfo->iAct);
-		pDagInfo->bDiscarded = 1;
-	}
-
-
-	++pDagInfo->iAct;
-
-	RETiRet;
-}
-
-
-/* create config DAG
- * This functions takes a rsyslog config and produces a .dot file for use
- * with graphviz (http://www.graphviz.org). This is done in an effort to
- * document, and also potentially troubleshoot, configurations. Plus, I
- * consider it a nice feature to explain some concepts. Note that the
- * current version only produces a graph with relatively little information.
- * This is a foundation that may be later expanded (if it turns out to be
- * useful enough).
- * rgerhards, 2009-05-11
- */
-static rsRetVal
-generateConfigDAG(uchar *pszDAGFile)
-{
-	//rule_t *f;
-	FILE *fp;
-	int iActUnit = 1;
-	//int bHasFilter = 0;	/* filter associated with this action unit? */
-	//int bHadFilter;
-	//int i;
-	struct dag_info dagInfo;
-	//char *pszFilterName;
-	char szConnectingNode[64];
-	DEFiRet;
-
-	assert(pszDAGFile != NULL);
-	
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
-		"Configuration graph generation is unfortunately disabled "
-		"in the current code base.", 0);
-	ABORT_FINALIZE(RS_RET_FILENAME_INVALID);
-
-	if((fp = fopen((char*) pszDAGFile, "w")) == NULL) {
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
-			"configuraton graph output file could not be opened, none generated", 0);
-		ABORT_FINALIZE(RS_RET_FILENAME_INVALID);
-	}
-
-	dagInfo.fp = fp;
-
-	/* from here on, we assume writes go well. This here is a really
-	 * unimportant utility function and if something goes wrong, it has
-	 * almost no effect. So let's not overdo this...
-	 */
-	fprintf(fp, "# graph created by rsyslog " VERSION "\n\n"
-	 	    "# use the dot tool from http://www.graphviz.org to visualize!\n"
-		    "digraph rsyslogConfig {\n"
-		    "\tinputs [shape=tripleoctagon]\n"
-		    "\tinputs -> act0_0\n"
-		    "\tact0_0 [label=\"main\\nqueue\" shape=hexagon]\n"
-		    /*"\tmainq -> act1_0\n"*/
-		    );
-	strcpy(szConnectingNode, "act0_0");
-	dagInfo.bDiscarded = 0;
-
-/* TODO: re-enable! */
-#if 0
-	for(f = Files; f != NULL ; f = f->f_next) {
-		/* BSD-Style filters are currently ignored */
-		bHadFilter = bHasFilter;
-		if(f->f_filter_type == FILTER_PRI) {
-			bHasFilter = 0;
-			for (i = 0; i <= LOG_NFACILITIES; i++)
-				if (f->f_filterData.f_pmask[i] != 0xff) {
-					bHasFilter = 1;
-					break;
-				}
-		} else {
-			bHasFilter = 1;
-		}
-
-		/* we know we have a filter, so it can be false */
-		switch(f->f_filter_type) {
-			case FILTER_PRI:
-				pszFilterName = "pri filter";
-				break;
-			case FILTER_PROP:
-				pszFilterName = "property filter";
-				break;
-			case FILTER_EXPR:
-				pszFilterName = "script filter";
-				break;
-		}
-
-		/* write action unit node */
-		if(bHasFilter) {
-			fprintf(fp, "\t%s -> act%d_end\t[label=\"%s:\\nfalse\"]\n",
-				szConnectingNode, iActUnit, pszFilterName);
-			fprintf(fp, "\t%s -> act%d_0\t[label=\"%s:\\ntrue\"]\n",
-				szConnectingNode, iActUnit, pszFilterName);
-			fprintf(fp, "\tact%d_end\t\t\t\t[shape=point]\n", iActUnit);
-			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_end", iActUnit);
-		} else {
-			fprintf(fp, "\t%s -> act%d_0\t[label=\"no filter\"]\n",
-				szConnectingNode, iActUnit);
-			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_0", iActUnit);
-		}
-
-		/* draw individual nodes */
-		dagInfo.iActUnit = iActUnit;
-		dagInfo.iAct = 0;
-		dagInfo.bDiscarded = 0;
-		llExecFunc(&f->llActList, generateConfigDAGAction, &dagInfo); /* actions */
-
-		/* finish up */
-		if(bHasFilter && !dagInfo.bDiscarded) {
-			fprintf(fp, "\tact%d_%d -> %s\n",
-				iActUnit, dagInfo.iAct - 1, szConnectingNode);
-		}
-
-		++iActUnit;
-	}
-#endif
-
-	fprintf(fp, "\t%s -> act%d_0\n", szConnectingNode, iActUnit);
-	fprintf(fp, "\tact%d_0\t\t[label=discard shape=box]\n"
-		    "}\n", iActUnit);
-	fclose(fp);
-
-finalize_it:
-	RETiRet;
-}
-#endif
 
 
 /* create a main message queue, now also used for ruleset queues. This function
@@ -1361,12 +1169,6 @@ GlobalClassExit(void)
 	strExit();
 	ratelimitModExit();
 
-#if 0
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	/* the following classes were intialized by objClassInit() */
-	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	CHKiRet(objUse(module,   CORE_COMPONENT));
-#endif
 	dnscacheDeinit();
 	rsrtExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 
