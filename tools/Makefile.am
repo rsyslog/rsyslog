@@ -7,6 +7,7 @@ man_MANS = rsyslogd.8 rsyslog.conf.5
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
 	syslogd.c \
+	rsyslogd.c \
 	syslogd.h \
 	omshell.c \
 	omshell.h \
