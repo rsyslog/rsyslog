@@ -41,7 +41,7 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(ruleset)
 
-static ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
+ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 
 /* imports from syslogd.c, these should go away over time (as we
  * migrate/replace more and more code to ASL 2.0).
@@ -66,9 +66,6 @@ rsyslogdInit(void)
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
-
-	pErrObj = "defaut ratelimiter";
-	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

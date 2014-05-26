@@ -147,6 +147,7 @@ static rsRetVal GlobalClassExit(void);
 rsRetVal queryLocalHostname(void);
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
+extern ratelimit_t *dflt_ratelimiter;
 void rsyslogd_mainloop(void);
 rsRetVal rsyslogdInit(void);
 
@@ -1920,7 +1921,7 @@ int realMain(int argc, char **argv)
 	}
 	CHKiRet(localRet);
 
-	//CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
+	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	/* TODO: add linux-type limiting capability */
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
 	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
