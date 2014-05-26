@@ -144,7 +144,11 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 /* forward definitions */
 static rsRetVal GlobalClassExit(void);
-static rsRetVal queryLocalHostname(void);
+rsRetVal queryLocalHostname(void);
+
+/* forward defintions from rsyslogd.c (ASL 2.0 code) */
+void rsyslogd_mainloop(void);
+rsRetVal rsyslogdInit(void);
 
 
 #ifndef _PATH_LOGCONF 
@@ -179,9 +183,9 @@ static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 /* mypid is read-only after the initial fork() */
-static int bHadHUP = 0; /* did we have a HUP? */
+int bHadHUP = 0; /* did we have a HUP? */
 
-static int bFinished = 0;	/* used by termination signal handler, read-only except there
+int bFinished = 0;	/* used by termination signal handler, read-only except there
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
@@ -196,8 +200,6 @@ struct queuefilenames_s {
 	uchar *name;
 } *queuefilenames = NULL;
 
-
-static ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 static ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
@@ -405,13 +407,6 @@ void
 submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
 	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
-}
-
-
-static inline rsRetVal
-submitMsgWithDfltRatelimiter(msg_t *pMsg)
-{
-	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 }
 
 /* This function logs a message to rsyslog itself, using its own
@@ -627,12 +622,6 @@ submitMsg2(msg_t *pMsg)
 
 finalize_it:
 	RETiRet;
-}
-
-rsRetVal
-submitMsg(msg_t *pMsg)
-{
-	return submitMsgWithDfltRatelimiter(pMsg);
 }
 
 
@@ -1227,106 +1216,6 @@ void sighup_handler()
 void sigttin_handler()
 {
 }
-
-/* this function pulls all internal messages from the buffer
- * and puts them into the processing engine.
- * We can only do limited error handling, as this would not
- * really help us. TODO: add error messages?
- * rgerhards, 2007-08-03
- */
-static inline void processImInternal(void)
-{
-	msg_t *pMsg;
-
-	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsgWithDfltRatelimiter(pMsg);
-	}
-}
-
-
-/* helper to doHUP(), this "HUPs" each action. The necessary locking
- * is done inside the action class and nothing we need to take care of.
- * rgerhards, 2008-10-22
- */
-DEFFUNC_llExecFunc(doHUPActions)
-{
-	BEGINfunc
-	actionCallHUPHdlr((action_t*) pData);
-	ENDfunc
-	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
-}
-
-
-/* This function processes a HUP after one has been detected. Note that this
- * is *NOT* the sighup handler. The signal is recorded by the handler, that record
- * detected inside the mainloop and then this function is called to do the
- * real work. -- rgerhards, 2008-10-22
- * Note: there is a VERY slim chance of a data race when the hostname is reset.
- * We prefer to take this risk rather than sync all accesses, because to the best
- * of my analysis it can not really hurt (the actual property is reference-counted)
- * but the sync would require some extra CPU for *each* message processed.
- * rgerhards, 2012-04-11
- */
-static inline void
-doHUP(void)
-{
-	char buf[512];
-
-	if(ourConf->globals.bLogStatusMsgs) {
-		snprintf(buf, sizeof(buf) / sizeof(char),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
-			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
-			 (int) glblGetOurPid());
-			errno = 0;
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
-	}
-
-	queryLocalHostname(); /* re-read our name */
-	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
-	lookupDoHUP();
-}
-
-
-/* This is the main processing loop. It is called after successful initialization.
- * When it returns, the syslogd terminates.
- * Its sole function is to provide some housekeeping things. The real work is done
- * by the other threads spawned.
- */
-static void
-mainloop(void)
-{
-	struct timeval tvSelectTimeout;
-
-	BEGINfunc
-	/* first check if we have any internal messages queued and spit them out. We used
-	 * to do that on any loop iteration, but that is no longer necessry. The reason
-	 * is that once we reach this point here, we always run on multiple threads and
-	 * thus the main queue is properly initialized. -- rgerhards, 2008-06-09
-	 */
-	processImInternal();
-
-	while(!bFinished){
-		/* this is now just a wait - please note that we do use a near-"eternal"
-		 * timeout of 1 day. This enables us to help safe the environment
-		 * by not unnecessarily awaking rsyslog on a regular tick (just think
-		 * powertop, for example). In that case, we primarily wait for a signal,
-		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
-		 */
-		tvSelectTimeout.tv_sec = 86400 /*1 day*/;
-		tvSelectTimeout.tv_usec = 0;
-		select(1, NULL, NULL, NULL, &tvSelectTimeout);
-		if(bFinished)
-			break;	/* exit as quickly as possible */
-
-		if(bHadHUP) {
-			doHUP();
-			bHadHUP = 0;
-			continue;
-		}
-	}
-	ENDfunc
-}
-
 /* print version and compile-time setting information.
  */
 static void printVersion(void)
@@ -1430,6 +1319,8 @@ InitGlobalClasses(void)
 	initRainerscript();
 	ratelimitModInit();
 
+	CHKiRet(rsyslogdInit()); /* ASL 2.0 part */
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* we know we are inside the init sequence, so we can safely emit
@@ -1485,7 +1376,7 @@ GlobalClassExit(void)
 /* query our host and domain names - we need to do this early as we may emit
  * rgerhards, 2012-04-11
  */
-static rsRetVal
+rsRetVal
 queryLocalHostname(void)
 {
 	uchar *LocalHostName;
@@ -2029,7 +1920,7 @@ int realMain(int argc, char **argv)
 	}
 	CHKiRet(localRet);
 
-	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
+	//CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	/* TODO: add linux-type limiting capability */
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
 	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
@@ -2079,7 +1970,7 @@ int realMain(int argc, char **argv)
 
 	sd_notify(0, "READY=1");
 
-	mainloop();
+	rsyslogd_mainloop();
 
 	/* do any de-init's that need to be done AFTER this comment */
 
@@ -2099,17 +1990,3 @@ finalize_it:
 	ENDfunc
 	return 0;
 }
-
-
-/* This is the main entry point into rsyslogd. This must be a function in its own
- * right in order to intialize the debug system in a portable way (otherwise we would
- * need to have a statement before variable definitions.
- * rgerhards, 20080-01-28
- */
-int main(int argc, char **argv)
-{
-	dbgClassInit();
-	return realMain(argc, argv);
-}
-/* vim:set ai:
- */
