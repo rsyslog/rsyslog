@@ -149,8 +149,10 @@ rsRetVal queryLocalHostname(void);
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
 extern uchar *ConfFile;
 extern ratelimit_t *dflt_ratelimiter;
-void rsyslogd_usage(void);
-rsRetVal rsyslogdInit(void);
+extern void rsyslogd_usage(void);
+extern rsRetVal rsyslogdInit(void);
+extern void rsyslogd_destructAllActions(void);
+extern void rsyslogd_sigttin_handler();
 
 
 #ifndef _PATH_MODDIR
@@ -198,7 +200,6 @@ struct queuefilenames_s {
 } *queuefilenames = NULL;
 
 static ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
-int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
@@ -340,44 +341,6 @@ void untty(void)
 	}
 }
 #endif
-
-
-/* This takes a received message that must be decoded and submits it to
- * the main message queue. This is a legacy function which is being provided
- * to aid older input plugins that do not support message creation via
- * the new interfaces themselves. It is not recommended to use this
- * function for new plugins. -- rgerhards, 2009-10-12
- */
-rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
-{
-	prop_t *pProp = NULL;
-	msg_t *pMsg;
-	DEFiRet;
-
-	/* we now create our own message object and submit it to the queue */
-	if(stTime == NULL) {
-		CHKiRet(msgConstruct(&pMsg));
-	} else {
-		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
-	}
-	if(pInputName != NULL)
-		MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsg(pMsg, (char*)msg, len);
-	MsgSetFlowControlType(pMsg, flowCtlType);
-	MsgSetRuleset(pMsg, pRuleset);
-	pMsg->msgFlags  = flags | NEEDS_PARSING;
-
-	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &pProp);
-	CHKiRet(prop.Destruct(&pProp));
-	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
-	CHKiRet(prop.Destruct(&pProp));
-	CHKiRet(submitMsg2(pMsg));
-
-finalize_it:
-	RETiRet;
-}
 
 
 /* this is a special function used to submit an error message. This
@@ -746,16 +709,6 @@ static void doDie(int sig)
 }
 
 
-/* Finalize and destruct all actions.
- */
-static inline void
-destructAllActions(void)
-{
-	ruleset.DestructAllActions(runConf);
-	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
-}
-
-
 /* die() is called when the program shall end. This typically only occurs
  * during sigterm or during the initialization.
  * As die() is intended to shutdown rsyslogd, it is
@@ -812,7 +765,7 @@ syslogd_die(void)
 	 * repeated msgs.
 	 */
 	DBGPRINTF("Terminating outputs...\n");
-	destructAllActions();
+	rsyslogd_destructAllActions();
 
 	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 
@@ -1008,9 +961,6 @@ void sighup_handler()
 	sigaction(SIGHUP, &sigAct, NULL);
 }
 
-void sigttin_handler()
-{
-}
 /* print version and compile-time setting information.
  */
 static void printVersion(void)
@@ -1448,7 +1398,7 @@ doGlblProcessInit(void)
 	sigaction(SIGCHLD, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
-	sigAct.sa_handler = sigttin_handler;
+	sigAct.sa_handler = rsyslogd_sigttin_handler;
 	sigaction(SIGTTIN, &sigAct, NULL); /* (ab)used to interrupt input threads */
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);

@@ -38,11 +38,15 @@
 #include "errmsg.h"
 #include "threads.h"
 #include "dnscache.h"
+#include "prop.h"
+#include "unicode-helper.h"
 #include "dirty.h"
 
 DEFobjCurrIf(obj)
+DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 
+int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
 
@@ -70,6 +74,14 @@ rsyslogd_usage(void)
 }
 
 
+void
+rsyslogd_sigttin_handler()
+{
+	/* this is just a dummy to care for our sigttin input
+	 * module cancel interface. The important point is that
+	 * it actually does *nothing*.
+	 */
+}
 /* Use all objects we need. This is called by the GPLv3 part.
  */
 rsRetVal
@@ -83,6 +95,8 @@ rsyslogdInit(void)
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
+	pErrObj = "prop";
+	CHKiRet(objUse(prop,     CORE_COMPONENT));
 
 	dnscacheInit();
 	initRainerscript();
@@ -123,6 +137,44 @@ static inline void processImInternal(void)
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
 		ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 	}
+}
+
+
+/* This takes a received message that must be decoded and submits it to
+ * the main message queue. This is a legacy function which is being provided
+ * to aid older input plugins that do not support message creation via
+ * the new interfaces themselves. It is not recommended to use this
+ * function for new plugins. -- rgerhards, 2009-10-12
+ */
+rsRetVal
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
+	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
+{
+	prop_t *pProp = NULL;
+	msg_t *pMsg;
+	DEFiRet;
+
+	/* we now create our own message object and submit it to the queue */
+	if(stTime == NULL) {
+		CHKiRet(msgConstruct(&pMsg));
+	} else {
+		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
+	}
+	if(pInputName != NULL)
+		MsgSetInputName(pMsg, pInputName);
+	MsgSetRawMsg(pMsg, (char*)msg, len);
+	MsgSetFlowControlType(pMsg, flowCtlType);
+	MsgSetRuleset(pMsg, pRuleset);
+	pMsg->msgFlags  = flags | NEEDS_PARSING;
+
+	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname), &pProp);
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(MsgSetRcvFromIPStr(pMsg, hnameIP, ustrlen(hnameIP), &pProp));
+	CHKiRet(prop.Destruct(&pProp));
+	CHKiRet(submitMsg2(pMsg));
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -207,6 +259,16 @@ mainloop(void)
 		}
 	}
 	ENDfunc
+}
+
+
+/* Finalize and destruct all actions.
+ */
+void
+rsyslogd_destructAllActions(void)
+{
+	ruleset.DestructAllActions(runConf);
+	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
 }
 
 
