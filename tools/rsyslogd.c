@@ -36,12 +36,15 @@
 #include "action.h"
 #include "iminternal.h"
 #include "errmsg.h"
+#include "threads.h"
+#include "dnscache.h"
 #include "dirty.h"
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(ruleset)
 
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
+uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
 
 /* imports from syslogd.c, these should go away over time (as we
  * migrate/replace more and more code to ASL 2.0).
@@ -51,6 +54,8 @@ extern int bFinished;
 
 extern int realMain(int argc, char **argv);
 extern rsRetVal queryLocalHostname(void);
+void syslogdInit(int argc, char **argv);
+void syslogd_die(void);
 
 
 void
@@ -78,6 +83,10 @@ rsyslogdInit(void)
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
+
+	dnscacheInit();
+	initRainerscript();
+	ratelimitModInit();
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -165,8 +174,8 @@ doHUP(void)
  * Its sole function is to provide some housekeeping things. The real work is done
  * by the other threads spawned.
  */
-void
-rsyslogd_mainloop(void)
+static void
+mainloop(void)
 {
 	struct timeval tvSelectTimeout;
 
@@ -209,5 +218,13 @@ rsyslogd_mainloop(void)
 int main(int argc, char **argv)
 {
 	dbgClassInit();
-	return realMain(argc, argv);
+	syslogdInit(argc, argv);
+
+	mainloop();
+
+	/* do any de-init's that need to be done AFTER this comment */
+
+	syslogd_die();
+
+	thrdExit();
 }

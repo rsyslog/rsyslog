@@ -147,15 +147,11 @@ static rsRetVal GlobalClassExit(void);
 rsRetVal queryLocalHostname(void);
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
+extern uchar *ConfFile;
 extern ratelimit_t *dflt_ratelimiter;
 void rsyslogd_usage(void);
-void rsyslogd_mainloop(void);
 rsRetVal rsyslogdInit(void);
 
-
-#ifndef _PATH_LOGCONF 
-#define _PATH_LOGCONF	"/etc/rsyslog.conf"
-#endif
 
 #ifndef _PATH_MODDIR
 #       if defined(__FreeBSD__)
@@ -181,7 +177,6 @@ rsRetVal rsyslogdInit(void);
 rsconf_t *ourConf;				/* our config object */
 
 static prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
-static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 /* mypid is read-only after the initial fork() */
@@ -769,12 +764,12 @@ destructAllActions(void)
  * any calls to die() in new code!
  * rgerhards, 2005-10-24
  */
-static void
-die(int sig)
+void
+syslogd_die(void)
 {
 	char buf[256];
 
-	DBGPRINTF("exiting on signal %d\n", sig);
+	DBGPRINTF("exiting on signal %d\n", bFinished);
 
 	/* IMPORTANT: we should close the inputs first, and THEN send our termination
 	 * message. If we do it the other way around, logmsgInternal() may block on
@@ -794,11 +789,11 @@ die(int sig)
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
-	if(sig && runConf->globals.bLogStatusMsgs) {
+	if(bFinished && runConf->globals.bLogStatusMsgs) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
-		 (int) glblGetOurPid(), sig);
+		 (int) glblGetOurPid(), bFinished);
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
@@ -1115,9 +1110,6 @@ InitGlobalClasses(void)
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
 	CHKiRet(objUse(net, LM_NET_FILENAME));
-	dnscacheInit();
-	initRainerscript();
-	ratelimitModInit();
 
 	CHKiRet(rsyslogdInit()); /* ASL 2.0 part */
 
@@ -1469,7 +1461,8 @@ doGlblProcessInit(void)
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
  */
-int realMain(int argc, char **argv)
+void
+syslogdInit(int argc, char **argv)
 {
 	rsRetVal localRet;
 	int ch;
@@ -1764,13 +1757,6 @@ int realMain(int argc, char **argv)
 
 	sd_notify(0, "READY=1");
 
-	rsyslogd_mainloop();
-
-	/* do any de-init's that need to be done AFTER this comment */
-
-	die(bFinished);
-
-	thrdExit();
 
 finalize_it:
 	if(iRet == RS_RET_VALIDATION_RUN) {
@@ -1782,5 +1768,4 @@ finalize_it:
 	}
 
 	ENDfunc
-	return 0;
 }
