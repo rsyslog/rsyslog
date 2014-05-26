@@ -106,6 +106,18 @@ rsyslogd_sigttin_handler()
 	 */
 }
 
+rsRetVal
+rsyslogd_InitStdRatelimiters(void)
+{
+	DEFiRet;
+	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
+	/* TODO: add linux-type limiting capability */
+	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
+	/* TODO: make internalMsg ratelimit settings configurable */
+finalize_it:
+	RETiRet;
+}
 #if 0
 /* Use all objects we need. This is called by the GPLv3 part.
  */
@@ -193,6 +205,10 @@ finalize_it:
 		 * messages to stderr. -- rgerhards, 2008-04-02
 		 */
 		fprintf(stderr, "Error during class init for object '%s' - failing...\n", pErrObj);
+		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
+				"Did you do a \"make install\"?\n"
+				"Suggested action: run rsyslogd with -d -n options to see what exactly "
+				"fails.\n");
 	}
 
 	RETiRet;
@@ -735,34 +751,15 @@ rsyslogd_destructAllActions(void)
 int main(int argc, char **argv)
 {
 	dbgClassInit();
-	rsRetVal iRet = RS_RET_OK;
-
 	syslogdInit(argc, argv);
-	/*CHKiRet_Hdlr(InitGlobalClasses()) {
-		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
-				"Did you do a \"make install\"?\n"
-				"Suggested action: run rsyslogd with -d -n options to see what exactly "
-				"fails.\n");
-		FINALIZE;
-	}
-	*/
-
-
 
 	mainloop();
 
 	/* do any de-init's that need to be done AFTER this comment */
-
 	syslogd_die();
-
 	thrdExit();
-
-	/* destruct our global properties */
 	if(pInternalInputName != NULL)
 		prop.Destruct(&pInternalInputName);
-	exit(0);
 
-finalize_it:
-	fprintf(stderr, "rsyslogd: unexpected error during initialization - use debug mode\n");
-	exit(1);
+	exit(0);
 }

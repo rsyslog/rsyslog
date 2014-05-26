@@ -151,6 +151,7 @@ extern void rsyslogd_destructAllActions(void);
 extern void rsyslogd_sigttin_handler();
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 rsRetVal rsyslogd_InitGlobalClasses(void);
+rsRetVal rsyslogd_InitStdRatelimiters(void);
 
 
 #ifndef _PATH_MODDIR
@@ -635,22 +636,13 @@ static void printVersion(void)
 }
 
 
-/* Method to initialize all global classes and use the objects that we need.
- * rgerhards, 2008-01-04
- * rgerhards, 2008-04-16: the actual initialization is now carried out by the runtime
- */
+/* obtain ptrs to all clases we need.  */
 static rsRetVal
-InitGlobalClasses(void)
+obtainClassPointers(void)
 {
 	DEFiRet;
 	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-#if 0
-	/* Intialize the runtime system */
-	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
-	CHKiRet(rsrtInit(&pErrObj, &obj));
-	rsrtSetErrLogger(rsyslogd_submitErrMsg);
-#endif
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 
 	/* Now tell the system which classes we need ourselfs */
@@ -673,26 +665,16 @@ InitGlobalClasses(void)
 	pErrObj = "rsconf";
 	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
-#if 0
-	/* intialize some dummy classes that are not part of the runtime */
-	pErrObj = "action";
-	CHKiRet(actionClassInit());
-	pErrObj = "template";
-	CHKiRet(templateInit());
-#endif
-
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
 	CHKiRet(objUse(net, LM_NET_FILENAME));
-
-	//CHKiRet(rsyslogdInit()); /* ASL 2.0 part */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* we know we are inside the init sequence, so we can safely emit
 		 * messages to stderr. -- rgerhards, 2008-04-02
 		 */
-		fprintf(stderr, "Error during class init for object '%s' - failing...\n", pErrObj);
+		fprintf(stderr, "Error obtaining object '%s' - failing...\n", pErrObj);
 	}
 
 	RETiRet;
@@ -1125,14 +1107,8 @@ syslogdInit(int argc, char **argv)
 
 	ppid = getpid();
 
-	rsyslogd_InitGlobalClasses();
-	CHKiRet_Hdlr(InitGlobalClasses()) {
-		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
-				"Did you do a \"make install\"?\n"
-				"Suggested action: run rsyslogd with -d -n options to see what exactly "
-				"fails.\n");
-		FINALIZE;
-	}
+	CHKiRet(rsyslogd_InitGlobalClasses());
+	CHKiRet(obtainClassPointers());
 
 	/* doing some core initializations */
 
@@ -1276,12 +1252,8 @@ syslogdInit(int argc, char **argv)
 		localRet = RS_RET_OK;
 	}
 	CHKiRet(localRet);
-
-	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
-	/* TODO: add linux-type limiting capability */
-	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
-	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
-	/* TODO: make internalMsg ratelimit settings configurable */
+	
+	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
