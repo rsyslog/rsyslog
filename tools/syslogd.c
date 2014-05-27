@@ -89,8 +89,6 @@
 #include <paths.h>
 #endif
 
-extern int yydebug; /* interface to flex */
-
 #include <netdb.h>
 
 #include "pidfile.h"
@@ -152,7 +150,7 @@ void rsyslogdDoDie(int sig);
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
-static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
+char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 int bHadHUP = 0; 	/* did we have a HUP? */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
@@ -160,14 +158,12 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
  			 * termination.
 			 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-static pid_t ppid;	/* This is a quick and dirty hack used for spliting main/startup thread */
-int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
+pid_t ppid;	/* This is a quick and dirty hack used for spliting main/startup thread */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
 
 /* up to the next comment, prototypes that should be removed by reordering */
 /* Function prototypes. */
-static char **crunch_list(char *list);
 static void reapchild();
 
 
@@ -183,7 +179,7 @@ static void reapchild();
  * and permits us to move to ASL 2.0 (but we need to check the fine details). 
  * Probably it is best just to rewrite this code.
  */
-static char **crunch_list(char *list)
+char **syslogd_crunch_list(char *list)
 {
 	int count, i;
 	char *p, *q;
@@ -335,7 +331,7 @@ void syslogd_sighup_handler()
 
 /* print version and compile-time setting information.
  */
-static void printVersion(void)
+void syslogd_printVersion(void)
 {
 	printf("rsyslogd %s, ", VERSION);
 	printf("compiled with:\n");
@@ -398,8 +394,8 @@ static void printVersion(void)
 
 
 /* obtain ptrs to all clases we need.  */
-static rsRetVal
-obtainClassPointers(void)
+rsRetVal
+syslogd_obtainClassPointers(void)
 {
 	DEFiRet;
 	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
@@ -534,79 +530,11 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* some support for command line option parsing. Any non-trivial options must be
- * buffered until the complete command line has been parsed. This is necessary to
- * prevent dependencies between the options. That, in turn, means we need to have
- * something that is capable of buffering options and there values. The follwing
- * functions handle that.
- * rgerhards, 2008-04-04
- */
-typedef struct bufOpt {
-	struct bufOpt *pNext;
-	char optchar;
-	char *arg;
-} bufOpt_t;
-static bufOpt_t *bufOptRoot = NULL;
-static bufOpt_t *bufOptLast = NULL;
-
-/* add option buffer */
-static rsRetVal
-bufOptAdd(char opt, char *arg)
-{
-	DEFiRet;
-	bufOpt_t *pBuf;
-
-	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-	pBuf->optchar = opt;
-	pBuf->arg = arg;
-	pBuf->pNext = NULL;
-
-	if(bufOptLast == NULL) {
-		bufOptRoot = pBuf; /* then there is also no root! */
-	} else {
-		bufOptLast->pNext = pBuf;
-	}
-	bufOptLast = pBuf;
-
-finalize_it:
-	RETiRet;
-}
-
-
-
-/* remove option buffer from top of list, return values and destruct buffer itself.
- * returns RS_RET_END_OF_LINKEDLIST when no more options are present.
- * (we use int *opt instead of char *opt to keep consistent with getopt())
- */
-static rsRetVal
-bufOptRemove(int *opt, char **arg)
-{
-	DEFiRet;
-	bufOpt_t *pBuf;
-
-	if(bufOptRoot == NULL)
-		ABORT_FINALIZE(RS_RET_END_OF_LINKEDLIST);
-	pBuf = bufOptRoot;
-
-	*opt = pBuf->optchar;
-	*arg = pBuf->arg;
-
-	bufOptRoot = pBuf->pNext;
-	free(pBuf);
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* global initialization, to be done only once and before the mainloop is started.
  * rgerhards, 2008-07-28 (extracted from realMain())
  */
-static rsRetVal
-doGlblProcessInit(void)
+rsRetVal
+syslogd_doGlblProcessInit(void)
 {
 	struct sigaction sigAct;
 	int num_fds;
@@ -742,268 +670,10 @@ doGlblProcessInit(void)
 }
 
 
-/* This is the main entry point into rsyslogd. Over time, we should try to
- * modularize it a bit more...
- */
 void
-syslogdInit(int argc, char **argv)
+syslogdInit(void)
 {
-	rsRetVal localRet;
-	int ch;
-	extern int optind;
-	extern char *optarg;
-	int bEOptionWasGiven = 0;
-	int iHelperUOpt;
-	int bChDirRoot = 1; /* change the current working directory to "/"? */
-	char *arg;	/* for command line option processing */
-	char cwdbuf[128]; /* buffer to obtain/display current working directory */
-	DEFiRet;
-
-	/* first, parse the command line options. We do not carry out any actual work, just
-	 * see what we should do. This relieves us from certain anomalies and we can process
-	 * the parameters down below in the correct order. For example, we must know the
-	 * value of -M before we can do the init, but at the same time we need to have
-	 * the base classes init before we can process most of the options. Now, with the
-	 * split of functionality, this is no longer a problem. Thanks to varmofekoj for
-	 * suggesting this algo.
-	 * Note: where we just need to set some flags and can do so without knowledge
-	 * of other options, we do this during the inital option processing.
-	 * rgerhards, 2008-04-04
-	 */
-	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:vwx")) != EOF) {
-		switch((char)ch) {
-                case '4':
-                case '6':
-                case 'A':
-		case 'f': /* configuration file */
-		case 'i': /* pid file name */
-		case 'l':
-		case 'n': /* don't fork */
-		case 'N': /* enable config verify mode */
-		case 'q': /* add hostname if DNS resolving has failed */
-		case 'Q': /* dont resolve hostnames in ACL to IPs */
-		case 's':
-		case 'S': /* Source IP for local client to be used on multihomed host */
-		case 'T': /* chroot on startup (primarily for testing) */
-		case 'u': /* misc user settings */
-		case 'w': /* disable disallowed host warnings */
-		case 'x': /* disable dns for remote messages */
-			CHKiRet(bufOptAdd(ch, optarg));
-			break;
-		case 'd': /* debug - must be handled now, so that debug is active during init! */
-			debugging_on = 1;
-			Debug = 1;
-			yydebug = 1;
-			break;
-		case 'D': /* BISON debug */
-			yydebug = 1;
-			break;
-		case 'e':		/* log every message (no repeat message supression) */
-			bEOptionWasGiven = 1;
-			break;
-		case 'M': /* default module load path -- this MUST be carried out immediately! */
-			glblModPath = (uchar*) optarg;
-			break;
-		case 'v': /* MUST be carried out immediately! */
-			printVersion();
-			exit(0); /* exit for -v option - so this is a "good one" */
-		case '?':
-		default:
-			rsyslogd_usage();
-		}
-	}
-
-	if(argc - optind)
-		rsyslogd_usage();
-
-	DBGPRINTF("rsyslogd %s startup, module path '%s', cwd:%s\n",
-		  VERSION, glblModPath == NULL ? "" : (char*)glblModPath,
-		  getcwd(cwdbuf, sizeof(cwdbuf)));
-
-	/* we are done with the initial option parsing and processing. Now we init the system. */
-
-	ppid = getpid();
-
-	CHKiRet(rsyslogd_InitGlobalClasses());
-	CHKiRet(obtainClassPointers());
-
-	/* doing some core initializations */
-
-	/* get our host and domain names - we need to do this early as we may emit
-	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
-	 */
-	queryLocalHostname();
-
-	/* initialize the objects */
-	if((iRet = modInitIminternal()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
-
-
-	/* END core initializations - we now come back to carrying out command line options*/
-
-	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
-		switch((char)ch) {
-                case '4':
-	                glbl.SetDefPFFamily(PF_INET);
-                        break;
-                case '6':
-                        glbl.SetDefPFFamily(PF_INET6);
-                        break;
-                case 'A':
-                        send_to_all++;
-                        break;
-		case 'S':		/* Source IP for local client to be used on multihomed host */
-			if(glbl.GetSourceIPofLocalClient() != NULL) {
-				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
-			} else {
-				glbl.SetSourceIPofLocalClient((uchar*)arg);
-			}
-			break;
-		case 'f':		/* configuration file */
-			ConfFile = (uchar*) arg;
-			break;
-		case 'i':		/* pid file name */
-			PidFile = arg;
-			break;
-		case 'l':
-			if(glbl.GetLocalHosts() != NULL) {
-				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
-			} else {
-				glbl.SetLocalHosts(crunch_list(arg));
-			}
-			break;
-		case 'n':		/* don't fork */
-			doFork = 0;
-			break;
-		case 'N':		/* enable config verify mode */
-			iConfigVerify = atoi(arg);
-			break;
-		case 'q':               /* add hostname if DNS resolving has failed */
-		        *(net.pACLAddHostnameOnFail) = 1;
-		        break;
-		case 'Q':               /* dont resolve hostnames in ACL to IPs */
-		        *(net.pACLDontResolve) = 1;
-		        break;
-		case 's':
-			if(glbl.GetStripDomains() != NULL) {
-				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
-			} else {
-				glbl.SetStripDomains(crunch_list(arg));
-			}
-			break;
-		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
-			if(chroot(arg) != 0) {
-				perror("chroot");
-				exit(1);
-			}
-			break;
-		case 'u':		/* misc user settings */
-			iHelperUOpt = atoi(arg);
-			if(iHelperUOpt & 0x01)
-				glbl.SetParseHOSTNAMEandTAG(0);
-			if(iHelperUOpt & 0x02)
-				bChDirRoot = 0;
-			break;
-		case 'w':		/* disable disallowed host warnigs */
-			glbl.SetOption_DisallowWarning(0);
-			break;
-		case 'x':		/* disable dns for remote messages */
-			glbl.SetDisableDNS(1);
-			break;
-               case '?':
-		default:
-			rsyslogd_usage();
-		}
-	}
-
-	if(iRet != RS_RET_END_OF_LINKEDLIST)
-		FINALIZE;
-
-	if(iConfigVerify) {
-		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
-			VERSION, iConfigVerify, ConfFile);
-	}
-
-	localRet = rsconf.Load(&ourConf, ConfFile);
 	/* oxpa <iippolitov@gmail.com> contribution, need to check ASL 2.0 */
 	queryLocalHostname();	/* need to re-query to pick up a changed hostname due to config */
 	/* end oxpa */
-
-	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
-		if(loadConf->globals.bAbortOnUncleanConfig) {
-			fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
-					"Check error log for details, fix errors and restart. As a last\n"
-					"resort, you may want to remove $AbortOnUncleanConfig to permit a\n"
-					"startup with a dirty config.\n");
-			exit(2);
-		}
-		if(iConfigVerify) {
-			/* a bit dirty, but useful... */
-			exit(1);
-		}
-		localRet = RS_RET_OK;
-	}
-	CHKiRet(localRet);
-	
-	CHKiRet(rsyslogd_InitStdRatelimiters());
-
-	if(bChDirRoot) {
-		if(chdir("/") != 0)
-			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-	}
-
-	/* process compatibility mode settings */
-	if(bEOptionWasGiven) {
-		errmsg.LogError(0, NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
-					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
-					    "http://www.rsyslog.com/rptdmsgreduction to learn "
-					    "more and cast your vote if you want us to keep this feature.");
-	}
-
-	if(!iConfigVerify)
-		CHKiRet(doGlblProcessInit());
-
-	/* Send a signal to the parent so it can terminate.  */
-	if(glblGetOurPid() != ppid)
-		kill(ppid, SIGTERM);
-
-	CHKiRet(rsyslogdInit()); /* LICENSE NOTE: contribution from Michael Terry */
-
-	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-	}
-
-	/* END OF INTIALIZATION */
-	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
-
-	/* close stderr and stdout if they are kept open during a fork. Note that this
-	 * may introduce subtle security issues: if we are in a jail, one may break out of
-	 * it via these descriptors. But if I close them earlier, error messages will (once
-	 * again) not be emitted to the user that starts the daemon. As root jail support
-	 * is still in its infancy (and not really done), we currently accept this issue.
-	 * rgerhards, 2009-06-29
-	 */
-	if(doFork) {
-		close(1);
-		close(2);
-		ourConf->globals.bErrMsgToStderr = 0;
-	}
-
-	sd_notify(0, "READY=1");
-
-
-finalize_it:
-	if(iRet == RS_RET_VALIDATION_RUN) {
-		fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
-	} else if(iRet != RS_RET_OK) {
-		fprintf(stderr, "rsyslogd: run failed with error %d (see rsyslog.h "
-				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
-		exit(1);
-	}
-
-	ENDfunc
 }
