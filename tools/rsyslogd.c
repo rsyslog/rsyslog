@@ -784,6 +784,47 @@ doHUP(void)
 	lookupDoHUP();
 }
 
+/* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable
+ * to indicate the program should terminate. However, it does not terminate
+ * it itself, because that causes issues with multi-threading. The actual
+ * termination is then done on the main thread. This solution might introduce
+ * a minimal delay, but it is much cleaner than the approach of doing everything
+ * inside the signal handler.
+ * rgerhards, 2005-10-26
+ * Note:
+ * - we do not call DBGPRINTF() as this may cause us to block in case something
+ *   with the threading is wrong.
+ * - we do not really care about the return state of write(), but we need this
+ *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
+ */
+void
+rsyslogdDoDie(int sig)
+{
+#	define MSG1 "DoDie called.\n"
+#	define MSG2 "DoDie called 5 times - unconditional exit\n"
+	static int iRetries = 0; /* debug aid */
+	dbgprintf(MSG1);
+	if(Debug == DEBUG_FULL) {
+		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
+	}
+	if(iRetries++ == 4) {
+		if(Debug == DEBUG_FULL) {
+			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
+		}
+		abort();
+	}
+	bFinished = sig;
+	if(glblDebugOnShutdown) {
+		/* kind of hackish - set to 0, so that debug_swith will enable
+		 * and AND emit the "start debug log" message.
+		 */
+		debugging_on = 0;
+		rsyslogdDebugSwitch();
+	}
+#	undef MSG1
+#	undef MSG2
+}
+
 
 /* This is the main processing loop. It is called after successful initialization.
  * When it returns, the syslogd terminates.
