@@ -47,6 +47,10 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "debug.h"
+#include "srUtils.h"
+#include "rsconf.h"
+#include "cfsysline.h"
+#include "datetime.h"
 #include "dirty.h"
 #include "janitor.h"
 
@@ -56,6 +60,9 @@ DEFobjCurrIf(parser)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(rsconf)
+DEFobjCurrIf(module)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 
 /* imports from syslogd.c, these should go away over time (as we
@@ -69,22 +76,31 @@ extern int realMain(int argc, char **argv);
 extern rsRetVal queryLocalHostname(void);
 void syslogdInit(int argc, char **argv);
 void syslogd_die(void);
+void syslogd_releaseClassPointers(void);
+void syslogd_sighup_handler();
 /* end syslogd.c imports */
 
 /* forward definitions */
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 
+
+/* global data items */
+rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
+int bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
+			* If the main queue is either not yet ready or not running in 
+			* queueing mode (mode DIRECT!), then this is set to 0.
+			*/
+qqueue_t *pMsgQueue = NULL;	/* default main message queue */
+prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
+ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 
 static struct queuefilenames_s {
 	struct queuefilenames_s *next;
 	uchar *name;
 } *queuefilenames = NULL;
-
-prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
-ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 
 
 void
@@ -96,6 +112,23 @@ rsyslogd_usage(void)
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
+}
+
+/* This is a support function for imdiag. It returns back the approximate
+ * current number of messages in the main message queue
+ * This number includes the messages that reside in an associated DA queue (if
+ * it exists) -- rgerhards, 2009-10-14
+ * Note that this is imprecise, but needed for the testbench. It should not be used
+ * for any other purpose -- impstats is the right tool for all other cases.
+ */
+rsRetVal
+diagGetMainMsgQSize(int *piSize)
+{
+	DEFiRet;
+	assert(piSize != NULL);
+	*piSize = (pMsgQueue->pqDA != NULL) ? pMsgQueue->pqDA->iQueueSize : 0;
+	*piSize += pMsgQueue->iQueueSize;
+	RETiRet;
 }
 
 
@@ -120,32 +153,7 @@ rsyslogd_InitStdRatelimiters(void)
 finalize_it:
 	RETiRet;
 }
-#if 0
-/* Use all objects we need. This is called by the GPLv3 part.
- */
-rsRetVal
-rsyslogdInit(void)
-{
-	DEFiRet;
-	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-
-	/* Now tell the system which classes we need ourselfs */
-	pErrObj = "ruleset";
-	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
-	pErrObj = "prop";
-	CHKiRet(objUse(prop,     CORE_COMPONENT));
-
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		fprintf(stderr, "Error during initialization for object '%s' - failing...\n", pErrObj);
-	}
-
-	RETiRet;
-}
-#endif
 
 /* Method to initialize all global classes and use the objects that we need.
  * rgerhards, 2008-01-04
@@ -167,10 +175,10 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	/*pErrObj = "module";
+	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 	pErrObj = "datetime";
-	CHKiRet(objUse(datetime, CORE_COMPONENT));*/
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	/*pErrObj = "conf";
@@ -179,8 +187,8 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(prop,     CORE_COMPONENT));
 	pErrObj = "parser";
 	CHKiRet(objUse(parser,     CORE_COMPONENT));
-	/*pErrObj = "rsconf";
-	CHKiRet(objUse(rsconf,     CORE_COMPONENT));*/
+	pErrObj = "rsconf";
+	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
 	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
@@ -589,6 +597,66 @@ multiSubmitFlush(multi_submit_t *pMultiSub)
 	RETiRet;
 }
 
+rsRetVal
+rsyslogdInit(void)
+{
+	char bufStartUpMsg[512];
+	struct sigaction sigAct;
+	DEFiRet;
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = syslogd_sighup_handler;
+	sigaction(SIGHUP, &sigAct, NULL);
+
+	CHKiRet(rsconf.Activate(ourConf));
+	DBGPRINTF(" started.\n");
+
+	if(ourConf->globals.bLogStatusMsgs) {
+               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
+			 (int) glblGetOurPid());
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+void
+rsyslogdDebugSwitch()
+{
+	time_t tTime;
+	struct tm tp;
+	struct sigaction sigAct;
+
+	datetime.GetTime(&tTime);
+	localtime_r(&tTime, &tp);
+	if(debugging_on == 0) {
+		debugging_on = 1;
+		dbgprintf("\n");
+		dbgprintf("\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+	} else {
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
+		debugging_on = 0;
+	}
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = rsyslogdDebugSwitch;
+	sigaction(SIGUSR1, &sigAct, NULL);
+}
+
 
 /* this function pulls all internal messages from the buffer
  * and puts them into the processing engine.
@@ -686,6 +754,47 @@ doHUP(void)
 	lookupDoHUP();
 }
 
+/* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable
+ * to indicate the program should terminate. However, it does not terminate
+ * it itself, because that causes issues with multi-threading. The actual
+ * termination is then done on the main thread. This solution might introduce
+ * a minimal delay, but it is much cleaner than the approach of doing everything
+ * inside the signal handler.
+ * rgerhards, 2005-10-26
+ * Note:
+ * - we do not call DBGPRINTF() as this may cause us to block in case something
+ *   with the threading is wrong.
+ * - we do not really care about the return state of write(), but we need this
+ *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
+ */
+void
+rsyslogdDoDie(int sig)
+{
+#	define MSG1 "DoDie called.\n"
+#	define MSG2 "DoDie called 5 times - unconditional exit\n"
+	static int iRetries = 0; /* debug aid */
+	dbgprintf(MSG1);
+	if(Debug == DEBUG_FULL) {
+		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
+	}
+	if(iRetries++ == 4) {
+		if(Debug == DEBUG_FULL) {
+			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
+		}
+		abort();
+	}
+	bFinished = sig;
+	if(glblDebugOnShutdown) {
+		/* kind of hackish - set to 0, so that debug_swith will enable
+		 * and AND emit the "start debug log" message.
+		 */
+		debugging_on = 0;
+		rsyslogdDebugSwitch();
+	}
+#	undef MSG1
+#	undef MSG2
+}
+
 
 /* This is the main processing loop. It is called after successful initialization.
  * When it returns, the syslogd terminates.
@@ -725,27 +834,109 @@ void
 rsyslogd_destructAllActions(void)
 {
 	ruleset.DestructAllActions(runConf);
-	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
+	bHaveMainQueue = 0; /* flag that internal messages need to be temporarily stored */
 }
 
 
+/* de-initialize everything, make ready for termination */
+static void
+deinitAll(void)
+{
+	char buf[256];
+
+	DBGPRINTF("exiting on signal %d\n", bFinished);
+
+	/* IMPORTANT: we should close the inputs first, and THEN send our termination
+	 * message. If we do it the other way around, logmsgInternal() may block on
+	 * a full queue and the inputs still fill up that queue. Depending on the
+	 * scheduling order, we may end up with logmsgInternal being held for a quite
+	 * long time. When the inputs are terminated first, that should not happen
+	 * because the queue is drained in parallel. The situation could only become
+	 * an issue with extremely long running actions in a queue full environment.
+	 * However, such actions are at least considered poorly written, if not
+	 * outright wrong. So we do not care about this very remote problem.
+	 * rgerhards, 2008-01-11
+	 */
+
+	/* close the inputs */
+	DBGPRINTF("Terminating input threads...\n");
+	glbl.SetGlobalInputTermination();
+	thrdTerminateAll();
+
+	/* and THEN send the termination log message (see long comment above) */
+	if(bFinished && runConf->globals.bLogStatusMsgs) {
+		(void) snprintf(buf, sizeof(buf) / sizeof(char),
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
+		 (int) glblGetOurPid(), bFinished);
+		errno = 0;
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+	}
+	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
+	 * otherwise we have seen cases where the message did not make it to log
+	 * files, even on idle systems.
+	 */
+	srSleep(0, 50);
+
+	/* drain queue (if configured so) and stop main queue worker thread pool */
+	DBGPRINTF("Terminating main queue...\n");
+	qqueueDestruct(&pMsgQueue);
+	pMsgQueue = NULL;
+
+	/* Free ressources and close connections. This includes flushing any remaining
+	 * repeated msgs.
+	 */
+	DBGPRINTF("Terminating outputs...\n");
+	rsyslogd_destructAllActions();
+
+	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+
+	DBGPRINTF("destructing current config...\n");
+	rsconf.Destruct(&runConf);
+
+	modExitIminternal();
+
+	if(pInternalInputName != NULL)
+		prop.Destruct(&pInternalInputName);
+
+	/* the following line cleans up CfSysLineHandlers that were not based on loadable
+	 * modules. As such, they are not yet cleared.  */
+	unregCfSysLineHdlrs();
+
+	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
+
+	syslogd_releaseClassPointers();
+
+	parserClassExit();
+	rsconfClassExit();
+	strExit();
+	ratelimitModExit();
+	dnscacheDeinit();
+	thrdExit();
+
+	module.UnloadAndDestructAll(eMOD_LINK_ALL);
+
+	rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
+	DBGPRINTF("Clean shutdown completed, bye\n");
+
+	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
+	dbgClassExit();
+
+	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
+	syslogd_die();
+}
 /* This is the main entry point into rsyslogd. This must be a function in its own
  * right in order to intialize the debug system in a portable way (otherwise we would
  * need to have a statement before variable definitions.
  * rgerhards, 20080-01-28
  */
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	dbgClassInit();
 	syslogdInit(argc, argv);
 
 	mainloop();
-
-	/* do any de-init's that need to be done AFTER this comment */
-	syslogd_die();
-	thrdExit();
-	if(pInternalInputName != NULL)
-		prop.Destruct(&pInternalInputName);
-
-	exit(0);
+	deinitAll();
+	return 0;
 }
