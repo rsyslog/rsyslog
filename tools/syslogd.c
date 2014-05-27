@@ -99,7 +99,6 @@ extern int yydebug; /* interface to flex */
 
 #include "msg.h"
 #include "iminternal.h"
-#include "cfsysline.h"
 #include "threads.h"
 #include "errmsg.h"
 #include "datetime.h"
@@ -122,7 +121,6 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 
 /* forward definitions */
-static rsRetVal GlobalClassExit(void);
 rsRetVal queryLocalHostname(void);
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
@@ -378,97 +376,11 @@ static void doDie(int sig)
 }
 
 
-/* die() is called when the program shall end. This typically only occurs
- * during sigterm or during the initialization.
- * As die() is intended to shutdown rsyslogd, it is
- * safe to call exit() here. Just make sure that die() itself is not called
- * at inapropriate places. As a general rule of thumb, it is a bad idea to add
- * any calls to die() in new code!
- * rgerhards, 2005-10-24
- */
+/* GPL code - maybe check BSD sources? */
 void
 syslogd_die(void)
 {
-	char buf[256];
-
-	DBGPRINTF("exiting on signal %d\n", bFinished);
-
-	/* IMPORTANT: we should close the inputs first, and THEN send our termination
-	 * message. If we do it the other way around, logmsgInternal() may block on
-	 * a full queue and the inputs still fill up that queue. Depending on the
-	 * scheduling order, we may end up with logmsgInternal being held for a quite
-	 * long time. When the inputs are terminated first, that should not happen
-	 * because the queue is drained in parallel. The situation could only become
-	 * an issue with extremely long running actions in a queue full environment.
-	 * However, such actions are at least considered poorly written, if not
-	 * outright wrong. So we do not care about this very remote problem.
-	 * rgerhards, 2008-01-11
-	 */
-
-	/* close the inputs */
-	DBGPRINTF("Terminating input threads...\n");
-	glbl.SetGlobalInputTermination();
-	thrdTerminateAll();
-
-	/* and THEN send the termination log message (see long comment above) */
-	if(bFinished && runConf->globals.bLogStatusMsgs) {
-		(void) snprintf(buf, sizeof(buf) / sizeof(char),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
-		 (int) glblGetOurPid(), bFinished);
-		errno = 0;
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
-	}
-	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
-	 * otherwise we have seen cases where the message did not make it to log
-	 * files, even on idle systems.
-	 */
-	srSleep(0, 50);
-
-	/* drain queue (if configured so) and stop main queue worker thread pool */
-	DBGPRINTF("Terminating main queue...\n");
-	qqueueDestruct(&pMsgQueue);
-	pMsgQueue = NULL;
-
-	/* Free ressources and close connections. This includes flushing any remaining
-	 * repeated msgs.
-	 */
-	DBGPRINTF("Terminating outputs...\n");
-	rsyslogd_destructAllActions();
-
-	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
-
-	DBGPRINTF("destructing current config...\n");
-	rsconf.Destruct(&runConf);
-
-	/* rger 2005-02-22
-	 * now clean up the in-memory structures. OK, the OS
-	 * would also take care of that, but if we do it
-	 * ourselfs, this makes finding memory leaks a lot
-	 * easier.
-	 */
-	/* de-init some modules */
-	modExitIminternal();
-
-	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
-
-	/* the following line cleans up CfSysLineHandlers that were not based on loadable
-	 * modules. As such, they are not yet cleared.
-	 */
-	unregCfSysLineHdlrs();
-
-	/* terminate the remaining classes */
-	GlobalClassExit();
-
-	module.UnloadAndDestructAll(eMOD_LINK_ALL);
-
-	DBGPRINTF("Clean shutdown completed, bye\n");
-	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
-	dbgClassExit();
-
-	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
 	remove_pid(PidFile);
-	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
 /*
@@ -632,34 +544,11 @@ finalize_it:
 }
 
 
-/* Method to exit all global classes. We do not do any error checking here,
- * because that wouldn't help us at all. So better try to deinit blindly
- * as much as succeeds (which usually means everything will). We just must
- * be careful to do the de-init in the opposite order of the init, because
- * of the dependencies. However, its not as important this time, because
- * we have reference counting.
- * rgerhards, 2008-03-10
- */
-static rsRetVal
-GlobalClassExit(void)
+void
+syslogd_releaseClassPointers(void)
 {
-	DEFiRet;
-
-	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
-	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);
-
-	/* TODO: implement the rest of the deinit */
-	/* dummy "classes */
-	strExit();
-	ratelimitModExit();
-
-	dnscacheDeinit();
-	rsrtExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
-
-	RETiRet;
 }
 
 

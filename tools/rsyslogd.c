@@ -46,6 +46,9 @@
 #include "errmsg.h"
 #include "glbl.h"
 #include "debug.h"
+#include "srUtils.h"
+#include "rsconf.h"
+#include "cfsysline.h"
 #include "dirty.h"
 
 DEFobjCurrIf(obj)
@@ -54,6 +57,8 @@ DEFobjCurrIf(parser)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(rsconf)
+DEFobjCurrIf(module)
 DEFobjCurrIf(glbl)
 
 /* imports from syslogd.c, these should go away over time (as we
@@ -67,6 +72,7 @@ extern int realMain(int argc, char **argv);
 extern rsRetVal queryLocalHostname(void);
 void syslogdInit(int argc, char **argv);
 void syslogd_die(void);
+void syslogd_releaseClassPointers(void);
 /* end syslogd.c imports */
 
 /* forward definitions */
@@ -188,9 +194,9 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	/*pErrObj = "module";
+	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
-	pErrObj = "datetime";
+	/*pErrObj = "datetime";
 	CHKiRet(objUse(datetime, CORE_COMPONENT));*/
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
@@ -200,8 +206,8 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(prop,     CORE_COMPONENT));
 	pErrObj = "parser";
 	CHKiRet(objUse(parser,     CORE_COMPONENT));
-	/*pErrObj = "rsconf";
-	CHKiRet(objUse(rsconf,     CORE_COMPONENT));*/
+	pErrObj = "rsconf";
+	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
 	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
@@ -766,23 +772,105 @@ rsyslogd_destructAllActions(void)
 }
 
 
+/* de-initialize everything, make ready for termination */
+static void
+deinitAll(void)
+{
+	char buf[256];
+
+	DBGPRINTF("exiting on signal %d\n", bFinished);
+
+	/* IMPORTANT: we should close the inputs first, and THEN send our termination
+	 * message. If we do it the other way around, logmsgInternal() may block on
+	 * a full queue and the inputs still fill up that queue. Depending on the
+	 * scheduling order, we may end up with logmsgInternal being held for a quite
+	 * long time. When the inputs are terminated first, that should not happen
+	 * because the queue is drained in parallel. The situation could only become
+	 * an issue with extremely long running actions in a queue full environment.
+	 * However, such actions are at least considered poorly written, if not
+	 * outright wrong. So we do not care about this very remote problem.
+	 * rgerhards, 2008-01-11
+	 */
+
+	/* close the inputs */
+	DBGPRINTF("Terminating input threads...\n");
+	glbl.SetGlobalInputTermination();
+	thrdTerminateAll();
+
+	/* and THEN send the termination log message (see long comment above) */
+	if(bFinished && runConf->globals.bLogStatusMsgs) {
+		(void) snprintf(buf, sizeof(buf) / sizeof(char),
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
+		 (int) glblGetOurPid(), bFinished);
+		errno = 0;
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+	}
+	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
+	 * otherwise we have seen cases where the message did not make it to log
+	 * files, even on idle systems.
+	 */
+	srSleep(0, 50);
+
+	/* drain queue (if configured so) and stop main queue worker thread pool */
+	DBGPRINTF("Terminating main queue...\n");
+	qqueueDestruct(&pMsgQueue);
+	pMsgQueue = NULL;
+
+	/* Free ressources and close connections. This includes flushing any remaining
+	 * repeated msgs.
+	 */
+	DBGPRINTF("Terminating outputs...\n");
+	rsyslogd_destructAllActions();
+
+	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+
+	DBGPRINTF("destructing current config...\n");
+	rsconf.Destruct(&runConf);
+
+	modExitIminternal();
+
+	if(pInternalInputName != NULL)
+		prop.Destruct(&pInternalInputName);
+
+	/* the following line cleans up CfSysLineHandlers that were not based on loadable
+	 * modules. As such, they are not yet cleared.  */
+	unregCfSysLineHdlrs();
+
+	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
+
+	syslogd_releaseClassPointers();
+
+	parserClassExit();
+	rsconfClassExit();
+	strExit();
+	ratelimitModExit();
+	dnscacheDeinit();
+	thrdExit();
+
+	module.UnloadAndDestructAll(eMOD_LINK_ALL);
+
+	rsrtExit(); /* runtime MUST always be deinitialized LAST (except for debug system) */
+	DBGPRINTF("Clean shutdown completed, bye\n");
+
+	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
+	dbgClassExit();
+
+	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
+	syslogd_die();
+}
 /* This is the main entry point into rsyslogd. This must be a function in its own
  * right in order to intialize the debug system in a portable way (otherwise we would
  * need to have a statement before variable definitions.
  * rgerhards, 20080-01-28
  */
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	dbgClassInit();
 	syslogdInit(argc, argv);
 
 	mainloop();
-
-	/* do any de-init's that need to be done AFTER this comment */
-	syslogd_die();
-	thrdExit();
-	if(pInternalInputName != NULL)
-		prop.Destruct(&pInternalInputName);
-
-	exit(0);
+	deinitAll();
+	return 0;
 }
