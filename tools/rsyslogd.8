@@ -1,7 +1,7 @@
 .\" Copyright 2004-2008 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "16 October 2012" "Version 6.4.3" "Linux System Administration"
+.TH RSYSLOGD 8 "27 May 2014" "Version 8.3.3" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -239,16 +239,6 @@ kill -HUP $(cat /var/run/rsyslogd.pid)
 This lets
 .B rsyslogd
 perform close all open files.
-Also, in v3 a full restart will be done in order to read changed configuration files.
-Note that this means a full rsyslogd restart is done. This has, among others,
-the consequence that TCP and other connections are torn down. Also, if any
-queues are not running in disk assisted mode or are not set to persist data
-on shutdown, queue data is lost. HUPing rsyslogd is an extremely expensive
-operation and should only be done when actually necessary. Actually, it is
-a rsyslgod stop immediately followed by a restart. Future versions will remove
-this restart functionality of HUP (it will go away in v5). So it is advised to use
-HUP only for closing files, and a "real restart" (e.g. /etc/rc.d/rsyslogd restart)
-to activate configuration changes.
 .TP
 .B TERM ", " INT ", " QUIT
 .B Rsyslogd
