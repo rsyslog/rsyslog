@@ -102,11 +102,9 @@
 #include "msg.h"
 #include "iminternal.h"
 #include "threads.h"
-#include "errmsg.h"
 #include "parser.h"
 #include "unicode-helper.h"
 #include "net.h"
-#include "rsconf.h"
 #include "dnscache.h"
 #include "sd-daemon.h"
 #include "ratelimit.h"
@@ -114,8 +112,6 @@
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(rsconf)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
@@ -400,10 +396,6 @@ syslogd_obtainClassPointers(void)
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "glbl";
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
-	pErrObj = "errmsg";
-	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	pErrObj = "rsconf";
-	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
