@@ -101,7 +101,6 @@ extern int yydebug; /* interface to flex */
 #include "iminternal.h"
 #include "threads.h"
 #include "errmsg.h"
-#include "datetime.h"
 #include "parser.h"
 #include "unicode-helper.h"
 #include "net.h"
@@ -113,8 +112,6 @@ extern int yydebug; /* interface to flex */
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime) /* TODO: make go away! */
-DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rsconf)
 DEFobjCurrIf(net) /* TODO: make go away! */
@@ -134,6 +131,8 @@ extern void rsyslogd_sigttin_handler();
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 rsRetVal rsyslogd_InitGlobalClasses(void);
 rsRetVal rsyslogd_InitStdRatelimiters(void);
+rsRetVal rsyslogdInit(void);
+void rsyslogdDebugSwitch();
 
 
 #if defined(SYSLOGD_PIDNAME)
@@ -174,8 +173,6 @@ int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 /* Function prototypes. */
 static char **crunch_list(char *list);
 static void reapchild();
-static void debug_switch();
-static void sighup_handler();
 
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
@@ -285,7 +282,7 @@ void untty(void)
 }
 #endif
 
-/* all functions stems back to sysklogd */
+/* function stems back to sysklogd */
 static void
 reapchild()
 {
@@ -299,39 +296,6 @@ reapchild()
 
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 	errno = saved_errno;
-}
-
-
-static void debug_switch()
-{
-	time_t tTime;
-	struct tm tp;
-	struct sigaction sigAct;
-
-	datetime.GetTime(&tTime);
-	localtime_r(&tTime, &tp);
-	if(debugging_on == 0) {
-		debugging_on = 1;
-		dbgprintf("\n");
-		dbgprintf("\n");
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-	} else {
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("\n");
-		dbgprintf("\n");
-		debugging_on = 0;
-	}
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = debug_switch;
-	sigaction(SIGUSR1, &sigAct, NULL);
 }
 
 
@@ -369,7 +333,7 @@ static void doDie(int sig)
 		 * and AND emit the "start debug log" message.
 		 */
 		debugging_on = 0;
-		debug_switch();
+		rsyslogdDebugSwitch();
 	}
 #	undef MSG1
 #	undef MSG2
@@ -394,49 +358,13 @@ static void doexit()
 }
 
 
-
-/* INIT -- Initialize syslogd
- * Note that if iConfigVerify is set, only the config file is verified but nothing
- * else happens. -- rgerhards, 2008-07-28
- */
-static rsRetVal
-init(void)
-{
-	char bufStartUpMsg[512];
-	struct sigaction sigAct;
-	DEFiRet;
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
-
-	CHKiRet(rsconf.Activate(ourConf));
-	DBGPRINTF(" started.\n");
-
-	/* we now generate the startup message. It now includes everything to
-	 * identify this instance. -- rgerhards, 2005-08-17
-	 */
-	if(ourConf->globals.bLogStatusMsgs) {
-               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) glblGetOurPid());
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
  * a flag variable which will tells the main loop to do "the right thing".
  */
-void sighup_handler()
+void syslogd_sighup_handler()
 {
 	struct sigaction sigAct;
 
@@ -444,7 +372,7 @@ void sighup_handler()
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sighup_handler;
+	sigAct.sa_handler = syslogd_sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 }
 
@@ -521,10 +449,6 @@ obtainClassPointers(void)
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	pErrObj = "module";
-	CHKiRet(objUse(module,   CORE_COMPONENT));
-	pErrObj = "datetime";
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	pErrObj = "rsconf";
 	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
@@ -548,7 +472,6 @@ void
 syslogd_releaseClassPointers(void)
 {
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	objRelease(datetime, CORE_COMPONENT);
 }
 
 
@@ -845,7 +768,7 @@ doGlblProcessInit(void)
 	sigaction(SIGQUIT, &sigAct, NULL);
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
+	sigAct.sa_handler = Debug ? rsyslogdDebugSwitch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
 	sigAct.sa_handler = rsyslogd_sigttin_handler;
 	sigaction(SIGTTIN, &sigAct, NULL); /* (ab)used to interrupt input threads */
@@ -1120,7 +1043,7 @@ syslogdInit(int argc, char **argv)
 	if(glblGetOurPid() != ppid)
 		kill(ppid, SIGTERM);
 
-	CHKiRet(init()); /* LICENSE NOTE: contribution from Michael Terry */
+	CHKiRet(rsyslogdInit()); /* LICENSE NOTE: contribution from Michael Terry */
 
 	if(Debug && debugging_on) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
