@@ -1,10 +1,16 @@
 /**
- * \brief This is the main file of the rsyslogd daemon.
+ * main rsyslog file with GPLv3 content.
+ *
+ * *********************** NOTE ************************
+ * * Do no longer patch this file. If there is hard    *
+ * * need to, talk to Rainer as to how we can make any *
+ * * patch be licensed under ASL 2.0.                  *
+ * * THIS FILE WILL GO AWAY. The new main file is      *
+ * * rsyslogd.c.                                       *
+ * *****************************************************
  *
  * Please visit the rsyslog project at
- *
  * http://www.rsyslog.com
- *
  * to learn more about it and discuss any questions you may have.
  *
  * rsyslog had initially been forked from the sysklogd project.
@@ -17,8 +23,6 @@
  *
  * This Project was intiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>.
- *
- * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
  * Copyright 2003-2014 Rainer Gerhards and Adiscon GmbH.
@@ -101,7 +105,6 @@ extern int yydebug; /* interface to flex */
 #include "iminternal.h"
 #include "threads.h"
 #include "errmsg.h"
-#include "datetime.h"
 #include "parser.h"
 #include "unicode-helper.h"
 #include "net.h"
@@ -113,8 +116,6 @@ extern int yydebug; /* interface to flex */
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime) /* TODO: make go away! */
-DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rsconf)
 DEFobjCurrIf(net) /* TODO: make go away! */
@@ -134,6 +135,9 @@ extern void rsyslogd_sigttin_handler();
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 rsRetVal rsyslogd_InitGlobalClasses(void);
 rsRetVal rsyslogd_InitStdRatelimiters(void);
+rsRetVal rsyslogdInit(void);
+void rsyslogdDebugSwitch();
+void rsyslogdDoDie(int sig);
 
 
 #if defined(SYSLOGD_PIDNAME)
@@ -148,24 +152,15 @@ rsRetVal rsyslogd_InitStdRatelimiters(void);
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
-
-rsconf_t *ourConf;				/* our config object */
-
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
-/* mypid is read-only after the initial fork() */
-int bHadHUP = 0; /* did we have a HUP? */
-
+int bHadHUP = 0; 	/* did we have a HUP? */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
-				 * is either 0 or the number of the signal that requested the
- 				 * termination.
-				 */
+			 * is either 0 or the number of the signal that requested the
+ 			 * termination.
+			 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-
-#define LIST_DELIMITER	':'		/* delimiter between two hosts */
-
-static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
-
+static pid_t ppid;	/* This is a quick and dirty hack used for spliting main/startup thread */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
@@ -174,10 +169,9 @@ int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 /* Function prototypes. */
 static char **crunch_list(char *list);
 static void reapchild();
-static void debug_switch();
-static void sighup_handler();
 
 
+#define LIST_DELIMITER	':'		/* delimiter between two hosts */
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
@@ -285,7 +279,7 @@ void untty(void)
 }
 #endif
 
-/* all functions stems back to sysklogd */
+/* function stems back to sysklogd */
 static void
 reapchild()
 {
@@ -301,79 +295,6 @@ reapchild()
 	errno = saved_errno;
 }
 
-
-static void debug_switch()
-{
-	time_t tTime;
-	struct tm tp;
-	struct sigaction sigAct;
-
-	datetime.GetTime(&tTime);
-	localtime_r(&tTime, &tp);
-	if(debugging_on == 0) {
-		debugging_on = 1;
-		dbgprintf("\n");
-		dbgprintf("\n");
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-	} else {
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("\n");
-		dbgprintf("\n");
-		debugging_on = 0;
-	}
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = debug_switch;
-	sigaction(SIGUSR1, &sigAct, NULL);
-}
-
-
-/* doDie() is a signal handler. If called, it sets the bFinished variable
- * to indicate the program should terminate. However, it does not terminate
- * it itself, because that causes issues with multi-threading. The actual
- * termination is then done on the main thread. This solution might introduce
- * a minimal delay, but it is much cleaner than the approach of doing everything
- * inside the signal handler.
- * rgerhards, 2005-10-26
- * Note:
- * - we do not call DBGPRINTF() as this may cause us to block in case something
- *   with the threading is wrong.
- * - we do not really care about the return state of write(), but we need this
- *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
- */
-static void doDie(int sig)
-{
-#	define MSG1 "DoDie called.\n"
-#	define MSG2 "DoDie called 5 times - unconditional exit\n"
-	static int iRetries = 0; /* debug aid */
-	dbgprintf(MSG1);
-	if(Debug == DEBUG_FULL) {
-		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
-	}
-	if(iRetries++ == 4) {
-		if(Debug == DEBUG_FULL) {
-			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
-		}
-		abort();
-	}
-	bFinished = sig;
-	if(glblDebugOnShutdown) {
-		/* kind of hackish - set to 0, so that debug_swith will enable
-		 * and AND emit the "start debug log" message.
-		 */
-		debugging_on = 0;
-		debug_switch();
-	}
-#	undef MSG1
-#	undef MSG2
-}
 
 
 /* GPL code - maybe check BSD sources? */
@@ -394,48 +315,13 @@ static void doexit()
 }
 
 
-/* INIT -- Initialize syslogd
- * Note that if iConfigVerify is set, only the config file is verified but nothing
- * else happens. -- rgerhards, 2008-07-28
- */
-static rsRetVal
-init(void)
-{
-	char bufStartUpMsg[512];
-	struct sigaction sigAct;
-	DEFiRet;
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
-
-	CHKiRet(rsconf.Activate(ourConf));
-	DBGPRINTF(" started.\n");
-
-	/* we now generate the startup message. It now includes everything to
-	 * identify this instance. -- rgerhards, 2005-08-17
-	 */
-	if(ourConf->globals.bLogStatusMsgs) {
-               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) glblGetOurPid());
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
  * a flag variable which will tells the main loop to do "the right thing".
  */
-void sighup_handler()
+void syslogd_sighup_handler()
 {
 	struct sigaction sigAct;
 
@@ -443,7 +329,7 @@ void sighup_handler()
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sighup_handler;
+	sigAct.sa_handler = syslogd_sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 }
 
@@ -525,10 +411,6 @@ obtainClassPointers(void)
 	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
-	pErrObj = "module";
-	CHKiRet(objUse(module,   CORE_COMPONENT));
-	pErrObj = "datetime";
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	pErrObj = "rsconf";
 	CHKiRet(objUse(rsconf,     CORE_COMPONENT));
 
@@ -552,7 +434,6 @@ void
 syslogd_releaseClassPointers(void)
 {
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	objRelease(datetime, CORE_COMPONENT);
 }
 
 
@@ -842,14 +723,14 @@ doGlblProcessInit(void)
 	sigaction(SIGSEGV, &sigAct, NULL);
 	sigAct.sa_handler = sigsegvHdlr;
 	sigaction(SIGABRT, &sigAct, NULL);
-	sigAct.sa_handler = doDie;
+	sigAct.sa_handler = rsyslogdDoDie;
 	sigaction(SIGTERM, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
+	sigAct.sa_handler = Debug ? rsyslogdDoDie : SIG_IGN;
 	sigaction(SIGINT, &sigAct, NULL);
 	sigaction(SIGQUIT, &sigAct, NULL);
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
+	sigAct.sa_handler = Debug ? rsyslogdDebugSwitch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
 	sigAct.sa_handler = rsyslogd_sigttin_handler;
 	sigaction(SIGTTIN, &sigAct, NULL); /* (ab)used to interrupt input threads */
@@ -1124,7 +1005,7 @@ syslogdInit(int argc, char **argv)
 	if(glblGetOurPid() != ppid)
 		kill(ppid, SIGTERM);
 
-	CHKiRet(init()); /* LICENSE NOTE: contribution from Michael Terry */
+	CHKiRet(rsyslogdInit()); /* LICENSE NOTE: contribution from Michael Terry */
 
 	if(Debug && debugging_on) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");

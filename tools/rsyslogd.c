@@ -50,6 +50,7 @@
 #include "srUtils.h"
 #include "rsconf.h"
 #include "cfsysline.h"
+#include "datetime.h"
 #include "dirty.h"
 
 DEFobjCurrIf(obj)
@@ -60,6 +61,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rsconf)
 DEFobjCurrIf(module)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 
 /* imports from syslogd.c, these should go away over time (as we
@@ -74,6 +76,7 @@ extern rsRetVal queryLocalHostname(void);
 void syslogdInit(int argc, char **argv);
 void syslogd_die(void);
 void syslogd_releaseClassPointers(void);
+void syslogd_sighup_handler();
 /* end syslogd.c imports */
 
 /* forward definitions */
@@ -81,6 +84,7 @@ void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 
 
 /* global data items */
+rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
@@ -197,8 +201,8 @@ rsyslogd_InitGlobalClasses(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
-	/*pErrObj = "datetime";
-	CHKiRet(objUse(datetime, CORE_COMPONENT));*/
+	pErrObj = "datetime";
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	pErrObj = "ruleset";
 	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	/*pErrObj = "conf";
@@ -617,6 +621,66 @@ multiSubmitFlush(multi_submit_t *pMultiSub)
 	RETiRet;
 }
 
+rsRetVal
+rsyslogdInit(void)
+{
+	char bufStartUpMsg[512];
+	struct sigaction sigAct;
+	DEFiRet;
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = syslogd_sighup_handler;
+	sigaction(SIGHUP, &sigAct, NULL);
+
+	CHKiRet(rsconf.Activate(ourConf));
+	DBGPRINTF(" started.\n");
+
+	if(ourConf->globals.bLogStatusMsgs) {
+               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
+			 (int) glblGetOurPid());
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+void
+rsyslogdDebugSwitch()
+{
+	time_t tTime;
+	struct tm tp;
+	struct sigaction sigAct;
+
+	datetime.GetTime(&tTime);
+	localtime_r(&tTime, &tp);
+	if(debugging_on == 0) {
+		debugging_on = 1;
+		dbgprintf("\n");
+		dbgprintf("\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+	} else {
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
+		debugging_on = 0;
+	}
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = rsyslogdDebugSwitch;
+	sigaction(SIGUSR1, &sigAct, NULL);
+}
+
 
 /* this function pulls all internal messages from the buffer
  * and puts them into the processing engine.
@@ -712,6 +776,47 @@ doHUP(void)
 	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
 	lookupDoHUP();
+}
+
+/* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable
+ * to indicate the program should terminate. However, it does not terminate
+ * it itself, because that causes issues with multi-threading. The actual
+ * termination is then done on the main thread. This solution might introduce
+ * a minimal delay, but it is much cleaner than the approach of doing everything
+ * inside the signal handler.
+ * rgerhards, 2005-10-26
+ * Note:
+ * - we do not call DBGPRINTF() as this may cause us to block in case something
+ *   with the threading is wrong.
+ * - we do not really care about the return state of write(), but we need this
+ *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
+ */
+void
+rsyslogdDoDie(int sig)
+{
+#	define MSG1 "DoDie called.\n"
+#	define MSG2 "DoDie called 5 times - unconditional exit\n"
+	static int iRetries = 0; /* debug aid */
+	dbgprintf(MSG1);
+	if(Debug == DEBUG_FULL) {
+		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
+	}
+	if(iRetries++ == 4) {
+		if(Debug == DEBUG_FULL) {
+			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
+		}
+		abort();
+	}
+	bFinished = sig;
+	if(glblDebugOnShutdown) {
+		/* kind of hackish - set to 0, so that debug_swith will enable
+		 * and AND emit the "start debug log" message.
+		 */
+		debugging_on = 0;
+		rsyslogdDebugSwitch();
+	}
+#	undef MSG1
+#	undef MSG2
 }
 
 
