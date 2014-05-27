@@ -151,32 +151,7 @@ rsyslogd_InitStdRatelimiters(void)
 finalize_it:
 	RETiRet;
 }
-#if 0
-/* Use all objects we need. This is called by the GPLv3 part.
- */
-rsRetVal
-rsyslogdInit(void)
-{
-	DEFiRet;
-	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-
-	/* Now tell the system which classes we need ourselfs */
-	pErrObj = "ruleset";
-	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
-	pErrObj = "prop";
-	CHKiRet(objUse(prop,     CORE_COMPONENT));
-
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		fprintf(stderr, "Error during initialization for object '%s' - failing...\n", pErrObj);
-	}
-
-	RETiRet;
-}
-#endif
 
 /* Method to initialize all global classes and use the objects that we need.
  * rgerhards, 2008-01-04
