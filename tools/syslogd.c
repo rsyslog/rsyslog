@@ -288,11 +288,13 @@ void untty(void)
 	pid_t pid;
 
 	if(!Debug) {
+		/* Peng Haitao <penght@cn.fujitsu.com> contribution */
 		pid = getpid();
 		if (setpgid(pid, pid) < 0) {
 			perror("setpgid");
 			exit(1);
 		}
+		/* end Peng Haitao <penght@cn.fujitsu.com> contribution */
 
 		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
@@ -568,7 +570,9 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
 #endif
+/* Yann Droneaud <yann@droneaud.fr> contribution */
 #if defined(_LARGE_FILES) || (defined (_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS >= 64)
+/* end Yann Droneaud <yann@droneaud.fr> contribution */
 	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");
 #else
 	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
@@ -588,7 +592,9 @@ static void printVersion(void)
 #else
 	printf("\t32bit Atomic operations supported:\tNo\n");
 #endif
+/* 	mono_matsuko <aiueov@hotmail.co.jp> contribution */
 #ifdef	HAVE_ATOMIC_BUILTINS_64BIT
+/* end	mono_matsuko <aiueov@hotmail.co.jp> contribution */
 	printf("\t64bit Atomic operations supported:\tYes\n");
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");
@@ -748,8 +754,10 @@ queryLocalHostname(void)
 		}
 	}
 
+	/* Marius Tomaschewski <mt@suse.com> contribution */
 	/* LocalDomain is "" or part of LocalHostName, allocate a new string */
 	CHKmalloc(LocalDomain = (uchar*)strdup((char*)LocalDomain));
+	/* Marius Tomaschewski <mt@suse.com> contribution */
 
 	/* Convert to lower case to recognize the correct domain laterly */
 	for(p = LocalDomain ; *p ; p++)
@@ -762,11 +770,13 @@ queryLocalHostname(void)
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
 
+	/* Canonical contribution - ASL 2.0 fine (email exchange 2014-05-27) */
 	if ( strlen((char*)LocalDomain) )  {
 		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+2));/* one for dot, one for NUL! */
 		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
 			glbl.SetLocalFQDNName(LocalFQDNName);
 		}
+	/* end canonical contrib */
 
 	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 finalize_it:
@@ -863,8 +873,10 @@ doGlblProcessInit(void)
 			sigAct.sa_handler = doexit;
 			sigaction(SIGTERM, &sigAct, NULL);
 
+			/* RH contribution */
 			/* stop writing debug messages to stdout (if debugging is on) */
 			stddbg = -1;
+			/* end RH contribution */
 
 			dbgprintf("ready for forking\n");
 			if (fork()) {
@@ -1200,7 +1212,9 @@ syslogdInit(int argc, char **argv)
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
+	/* oxpa <iippolitov@gmail.com> contribution, need to check ASL 2.0 */
 	queryLocalHostname();	/* need to re-query to pick up a changed hostname due to config */
+	/* end oxpa */
 
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
