@@ -99,7 +99,6 @@ extern int yydebug; /* interface to flex */
 
 #include "msg.h"
 #include "iminternal.h"
-#include "cfsysline.h"
 #include "threads.h"
 #include "errmsg.h"
 #include "datetime.h"
@@ -122,7 +121,6 @@ DEFobjCurrIf(net) /* TODO: make go away! */
 
 
 /* forward definitions */
-static rsRetVal GlobalClassExit(void);
 rsRetVal queryLocalHostname(void);
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
@@ -170,14 +168,6 @@ static pid_t ppid; /* This is a quick and dirty hack used for spliting main/star
 
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
-int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
-				 * If the main queue is either not yet ready or not running in 
-				 * queueing mode (mode DIRECT!), then this is set to 0.
-				 */
-
-
-/* main message queue and its configuration parameters */
-qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 
 
 /* up to the next comment, prototypes that should be removed by reordering */
@@ -188,34 +178,16 @@ static void debug_switch();
 static void sighup_handler();
 
 
-/* ------------------------------ some support functions for imdiag ------------------------------ *
- * This is a bit dirty, but the only way to do it, at least with reasonable effort.
- * rgerhards, 2009-05-25
- */
-
-/* return back the approximate current number of messages in the main message queue
- * This number includes the messages that reside in an associated DA queue (if
- * it exists) -- rgerhards, 2009-10-14
- */
-rsRetVal
-diagGetMainMsgQSize(int *piSize)
-{
-	DEFiRet;
-	assert(piSize != NULL);
-	*piSize = (pMsgQueue->pqDA != NULL) ? pMsgQueue->pqDA->iQueueSize : 0;
-	*piSize += pMsgQueue->iQueueSize;
-	RETiRet;
-}
-
-
-/* ------------------------------ end support functions for imdiag  ------------------------------ */
-
-
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
  * during startup. Anyhow, when we review the code here, we might want to
  * reconsider the exit()s.
+ * Note: this stems back to sysklogd, so we cannot put it under ASL 2.0. But
+ * we may want to check if the code inside the BSD sources is exactly the same
+ * (remember that sysklogd forked the BSD sources). If so, the BSD license applies
+ * and permits us to move to ASL 2.0 (but we need to check the fine details). 
+ * Probably it is best just to rewrite this code.
  */
 static char **crunch_list(char *list)
 {
@@ -274,6 +246,7 @@ static char **crunch_list(char *list)
 }
 
 
+/* also stems back to sysklogd in whole */
 void untty(void)
 #ifdef HAVE_SETSID
 {
@@ -288,11 +261,13 @@ void untty(void)
 	pid_t pid;
 
 	if(!Debug) {
+		/* Peng Haitao <penght@cn.fujitsu.com> contribution */
 		pid = getpid();
 		if (setpgid(pid, pid) < 0) {
 			perror("setpgid");
 			exit(1);
 		}
+		/* end Peng Haitao <penght@cn.fujitsu.com> contribution */
 
 		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
@@ -310,6 +285,7 @@ void untty(void)
 }
 #endif
 
+/* all functions stems back to sysklogd */
 static void
 reapchild()
 {
@@ -400,97 +376,11 @@ static void doDie(int sig)
 }
 
 
-/* die() is called when the program shall end. This typically only occurs
- * during sigterm or during the initialization.
- * As die() is intended to shutdown rsyslogd, it is
- * safe to call exit() here. Just make sure that die() itself is not called
- * at inapropriate places. As a general rule of thumb, it is a bad idea to add
- * any calls to die() in new code!
- * rgerhards, 2005-10-24
- */
+/* GPL code - maybe check BSD sources? */
 void
 syslogd_die(void)
 {
-	char buf[256];
-
-	DBGPRINTF("exiting on signal %d\n", bFinished);
-
-	/* IMPORTANT: we should close the inputs first, and THEN send our termination
-	 * message. If we do it the other way around, logmsgInternal() may block on
-	 * a full queue and the inputs still fill up that queue. Depending on the
-	 * scheduling order, we may end up with logmsgInternal being held for a quite
-	 * long time. When the inputs are terminated first, that should not happen
-	 * because the queue is drained in parallel. The situation could only become
-	 * an issue with extremely long running actions in a queue full environment.
-	 * However, such actions are at least considered poorly written, if not
-	 * outright wrong. So we do not care about this very remote problem.
-	 * rgerhards, 2008-01-11
-	 */
-
-	/* close the inputs */
-	DBGPRINTF("Terminating input threads...\n");
-	glbl.SetGlobalInputTermination();
-	thrdTerminateAll();
-
-	/* and THEN send the termination log message (see long comment above) */
-	if(bFinished && runConf->globals.bLogStatusMsgs) {
-		(void) snprintf(buf, sizeof(buf) / sizeof(char),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
-		 (int) glblGetOurPid(), bFinished);
-		errno = 0;
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
-	}
-	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
-	 * otherwise we have seen cases where the message did not make it to log
-	 * files, even on idle systems.
-	 */
-	srSleep(0, 50);
-
-	/* drain queue (if configured so) and stop main queue worker thread pool */
-	DBGPRINTF("Terminating main queue...\n");
-	qqueueDestruct(&pMsgQueue);
-	pMsgQueue = NULL;
-
-	/* Free ressources and close connections. This includes flushing any remaining
-	 * repeated msgs.
-	 */
-	DBGPRINTF("Terminating outputs...\n");
-	rsyslogd_destructAllActions();
-
-	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
-
-	DBGPRINTF("destructing current config...\n");
-	rsconf.Destruct(&runConf);
-
-	/* rger 2005-02-22
-	 * now clean up the in-memory structures. OK, the OS
-	 * would also take care of that, but if we do it
-	 * ourselfs, this makes finding memory leaks a lot
-	 * easier.
-	 */
-	/* de-init some modules */
-	modExitIminternal();
-
-	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
-
-	/* the following line cleans up CfSysLineHandlers that were not based on loadable
-	 * modules. As such, they are not yet cleared.
-	 */
-	unregCfSysLineHdlrs();
-
-	/* terminate the remaining classes */
-	GlobalClassExit();
-
-	module.UnloadAndDestructAll(eMOD_LINK_ALL);
-
-	DBGPRINTF("Clean shutdown completed, bye\n");
-	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
-	dbgClassExit();
-
-	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
 	remove_pid(PidFile);
-	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
 /*
@@ -568,7 +458,9 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
 #endif
+/* Yann Droneaud <yann@droneaud.fr> contribution */
 #if defined(_LARGE_FILES) || (defined (_FILE_OFFSET_BITS) && _FILE_OFFSET_BITS >= 64)
+/* end Yann Droneaud <yann@droneaud.fr> contribution */
 	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");
 #else
 	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
@@ -588,7 +480,9 @@ static void printVersion(void)
 #else
 	printf("\t32bit Atomic operations supported:\tNo\n");
 #endif
+/* 	mono_matsuko <aiueov@hotmail.co.jp> contribution */
 #ifdef	HAVE_ATOMIC_BUILTINS_64BIT
+/* end	mono_matsuko <aiueov@hotmail.co.jp> contribution */
 	printf("\t64bit Atomic operations supported:\tYes\n");
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");
@@ -654,34 +548,11 @@ finalize_it:
 }
 
 
-/* Method to exit all global classes. We do not do any error checking here,
- * because that wouldn't help us at all. So better try to deinit blindly
- * as much as succeeds (which usually means everything will). We just must
- * be careful to do the de-init in the opposite order of the init, because
- * of the dependencies. However, its not as important this time, because
- * we have reference counting.
- * rgerhards, 2008-03-10
- */
-static rsRetVal
-GlobalClassExit(void)
+void
+syslogd_releaseClassPointers(void)
 {
-	DEFiRet;
-
-	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	parserClassExit();					/* this is hack, currently core_modules do not get this automatically called */
-	rsconfClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(datetime, CORE_COMPONENT);
-
-	/* TODO: implement the rest of the deinit */
-	/* dummy "classes */
-	strExit();
-	ratelimitModExit();
-
-	dnscacheDeinit();
-	rsrtExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
-
-	RETiRet;
 }
 
 
@@ -753,8 +624,10 @@ queryLocalHostname(void)
 		}
 	}
 
+	/* Marius Tomaschewski <mt@suse.com> contribution */
 	/* LocalDomain is "" or part of LocalHostName, allocate a new string */
 	CHKmalloc(LocalDomain = (uchar*)strdup((char*)LocalDomain));
+	/* Marius Tomaschewski <mt@suse.com> contribution */
 
 	/* Convert to lower case to recognize the correct domain laterly */
 	for(p = LocalDomain ; *p ; p++)
@@ -767,11 +640,13 @@ queryLocalHostname(void)
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
 
+	/* Canonical contribution - ASL 2.0 fine (email exchange 2014-05-27) */
 	if ( strlen((char*)LocalDomain) )  {
 		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+2));/* one for dot, one for NUL! */
 		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
 			glbl.SetLocalFQDNName(LocalFQDNName);
 		}
+	/* end canonical contrib */
 
 	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 finalize_it:
@@ -868,8 +743,10 @@ doGlblProcessInit(void)
 			sigAct.sa_handler = doexit;
 			sigaction(SIGTERM, &sigAct, NULL);
 
+			/* RH contribution */
 			/* stop writing debug messages to stdout (if debugging is on) */
 			stddbg = -1;
+			/* end RH contribution */
 
 			dbgprintf("ready for forking\n");
 			if (fork()) {
@@ -1205,7 +1082,9 @@ syslogdInit(int argc, char **argv)
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
+	/* oxpa <iippolitov@gmail.com> contribution, need to check ASL 2.0 */
 	queryLocalHostname();	/* need to re-query to pick up a changed hostname due to config */
+	/* end oxpa */
 
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
