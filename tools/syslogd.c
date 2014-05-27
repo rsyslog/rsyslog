@@ -1,10 +1,8 @@
 /**
- * \brief This is the main file of the rsyslogd daemon.
+ * main rsyslog file with GPLv3 content.
  *
  * Please visit the rsyslog project at
- *
  * http://www.rsyslog.com
- *
  * to learn more about it and discuss any questions you may have.
  *
  * rsyslog had initially been forked from the sysklogd project.
@@ -17,8 +15,6 @@
  *
  * This Project was intiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>.
- *
- * For further information, please see http://www.rsyslog.com
  *
  * rsyslog - An Enhanced syslogd Replacement.
  * Copyright 2003-2014 Rainer Gerhards and Adiscon GmbH.
@@ -148,11 +144,8 @@ void rsyslogdDebugSwitch();
 #	define _PATH_TTY	"/dev/tty"
 #endif
 
-rsconf_t *ourConf;				/* our config object */
-
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
-/* mypid is read-only after the initial fork() */
 int bHadHUP = 0; /* did we have a HUP? */
 
 int bFinished = 0;	/* used by termination signal handler, read-only except there

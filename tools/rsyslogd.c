@@ -83,6 +83,7 @@ void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 
 
 /* global data items */
+rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
