@@ -1017,16 +1017,11 @@ syslogdInit(int argc, char **argv)
                 case '4':
                 case '6':
                 case 'A':
-                case 'a':
 		case 'f': /* configuration file */
-		case 'h':
 		case 'i': /* pid file name */
 		case 'l':
-		case 'm': /* mark interval */
 		case 'n': /* don't fork */
 		case 'N': /* enable config verify mode */
-                case 'o':
-                case 'p':
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
@@ -1035,13 +1030,7 @@ syslogdInit(int argc, char **argv)
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
 		case 'x': /* disable dns for remote messages */
-		case 'g': /* enable tcp gssapi logging */
-		case 'r': /* accept remote messages */
-		case 't': /* enable tcp logging */
 			CHKiRet(bufOptAdd(ch, optarg));
-			break;
-		case 'c':		/* compatibility mode */
-			fprintf(stderr, "rsyslogd: error: option -c is no longer supported - ignored\n");
 			break;
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;
@@ -1109,9 +1098,6 @@ syslogdInit(int argc, char **argv)
                 case 'A':
                         send_to_all++;
                         break;
-                case 'a':
-			fprintf(stderr, "rsyslogd: error -a is no longer supported, use module imuxsock instead");
-                        break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
 			if(glbl.GetSourceIPofLocalClient() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
@@ -1121,11 +1107,6 @@ syslogdInit(int argc, char **argv)
 			break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) arg;
-			break;
-		case 'g':		/* enable tcp gssapi logging */
-			fprintf(stderr,	"rsyslogd: -g option no longer supported - ignored\n");
-		case 'h':
-			fprintf(stderr, "rsyslogd: error -h is no longer supported - ignored");
 			break;
 		case 'i':		/* pid file name */
 			PidFile = arg;
@@ -1137,20 +1118,11 @@ syslogdInit(int argc, char **argv)
 				glbl.SetLocalHosts(crunch_list(arg));
 			}
 			break;
-		case 'm':		/* mark interval */
-			fprintf(stderr, "rsyslogd: error -m is no longer supported - use immark instead");
-			break;
 		case 'n':		/* don't fork */
 			doFork = 0;
 			break;
 		case 'N':		/* enable config verify mode */
 			iConfigVerify = atoi(arg);
-			break;
-                case 'o':
-			fprintf(stderr, "error -o is no longer supported, use module imuxsock instead");
-                        break;
-                case 'p':
-			fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        *(net.pACLAddHostnameOnFail) = 1;
@@ -1158,18 +1130,12 @@ syslogdInit(int argc, char **argv)
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
 		        *(net.pACLDontResolve) = 1;
 		        break;
-		case 'r':		/* accept remote messages */
-			fprintf(stderr, "rsyslogd: error option -r is no longer supported - ignored");
-			break;
 		case 's':
 			if(glbl.GetStripDomains() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
 				glbl.SetStripDomains(crunch_list(arg));
 			}
-			break;
-		case 't':		/* enable tcp logging */
-			fprintf(stderr, "rsyslogd: error option -t is no longer supported - ignored");
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
 			if(chroot(arg) != 0) {
