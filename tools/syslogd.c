@@ -1,6 +1,14 @@
 /**
  * main rsyslog file with GPLv3 content.
  *
+ * *********************** NOTE ************************
+ * * Do no longer patch this file. If there is hard    *
+ * * need to, talk to Rainer as to how we can make any *
+ * * patch be licensed under ASL 2.0.                  *
+ * * THIS FILE WILL GO AWAY. The new main file is      *
+ * * rsyslogd.c.                                       *
+ * *****************************************************
+ *
  * Please visit the rsyslog project at
  * http://www.rsyslog.com
  * to learn more about it and discuss any questions you may have.
@@ -144,21 +152,15 @@ void rsyslogdDoDie(int sig);
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
-
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
-int bHadHUP = 0; /* did we have a HUP? */
-
+int bHadHUP = 0; 	/* did we have a HUP? */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
-				 * is either 0 or the number of the signal that requested the
- 				 * termination.
-				 */
+			 * is either 0 or the number of the signal that requested the
+ 			 * termination.
+			 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-
-#define LIST_DELIMITER	':'		/* delimiter between two hosts */
-
-static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
-
+static pid_t ppid;	/* This is a quick and dirty hack used for spliting main/startup thread */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
@@ -169,6 +171,7 @@ static char **crunch_list(char *list);
 static void reapchild();
 
 
+#define LIST_DELIMITER	':'		/* delimiter between two hosts */
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
