@@ -142,6 +142,17 @@ calls. Also, the numerical parameters are now unsigned and no longer
 size\_t. This permits us to store them directly into optimized heap
 structures.
 
+Specifics for Version 8.3 and 8.4
+---------------------------------
+
+Unsupported Command Line Options Removed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The command line options a, h, m, o, p, g, r, t and c were not 
+supported since many versions. However, they spit out an error
+message that they were unsupported. This error message now no
+longer appears, instead the regular usage() display happens.
+This should not have any effect to users.
+
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
