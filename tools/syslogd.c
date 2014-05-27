@@ -170,14 +170,6 @@ static pid_t ppid; /* This is a quick and dirty hack used for spliting main/star
 
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
-int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
-				 * If the main queue is either not yet ready or not running in 
-				 * queueing mode (mode DIRECT!), then this is set to 0.
-				 */
-
-
-/* main message queue and its configuration parameters */
-qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 
 
 /* up to the next comment, prototypes that should be removed by reordering */
@@ -188,34 +180,16 @@ static void debug_switch();
 static void sighup_handler();
 
 
-/* ------------------------------ some support functions for imdiag ------------------------------ *
- * This is a bit dirty, but the only way to do it, at least with reasonable effort.
- * rgerhards, 2009-05-25
- */
-
-/* return back the approximate current number of messages in the main message queue
- * This number includes the messages that reside in an associated DA queue (if
- * it exists) -- rgerhards, 2009-10-14
- */
-rsRetVal
-diagGetMainMsgQSize(int *piSize)
-{
-	DEFiRet;
-	assert(piSize != NULL);
-	*piSize = (pMsgQueue->pqDA != NULL) ? pMsgQueue->pqDA->iQueueSize : 0;
-	*piSize += pMsgQueue->iQueueSize;
-	RETiRet;
-}
-
-
-/* ------------------------------ end support functions for imdiag  ------------------------------ */
-
-
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
  * during startup. Anyhow, when we review the code here, we might want to
  * reconsider the exit()s.
+ * Note: this stems back to sysklogd, so we cannot put it under ASL 2.0. But
+ * we may want to check if the code inside the BSD sources is exactly the same
+ * (remember that sysklogd forked the BSD sources). If so, the BSD license applies
+ * and permits us to move to ASL 2.0 (but we need to check the fine details). 
+ * Probably it is best just to rewrite this code.
  */
 static char **crunch_list(char *list)
 {
@@ -274,6 +248,7 @@ static char **crunch_list(char *list)
 }
 
 
+/* also stems back to sysklogd in whole */
 void untty(void)
 #ifdef HAVE_SETSID
 {
@@ -311,6 +286,8 @@ void untty(void)
 	}
 }
 #endif
+
+/* all functions stems back to sysklogd */
 static void
 reapchild()
 {

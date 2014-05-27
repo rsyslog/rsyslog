@@ -72,17 +72,23 @@ void syslogd_die(void);
 /* forward definitions */
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 
+
+/* global data items */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
 uchar *ConfFile = (uchar*) "/etc/rsyslog.conf";
+int bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
+			* If the main queue is either not yet ready or not running in 
+			* queueing mode (mode DIRECT!), then this is set to 0.
+			*/
+qqueue_t *pMsgQueue = NULL;	/* default main message queue */
+prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
+ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 
 static struct queuefilenames_s {
 	struct queuefilenames_s *next;
 	uchar *name;
 } *queuefilenames = NULL;
-
-prop_t *pInternalInputName = NULL;	/* there is only one global inputName for all internally-generated messages */
-ratelimit_t *internalMsg_ratelimiter = NULL; /* ratelimiter for rsyslog-own messages */
 
 
 void
@@ -94,6 +100,23 @@ rsyslogd_usage(void)
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
+}
+
+/* This is a support function for imdiag. It returns back the approximate
+ * current number of messages in the main message queue
+ * This number includes the messages that reside in an associated DA queue (if
+ * it exists) -- rgerhards, 2009-10-14
+ * Note that this is imprecise, but needed for the testbench. It should not be used
+ * for any other purpose -- impstats is the right tool for all other cases.
+ */
+rsRetVal
+diagGetMainMsgQSize(int *piSize)
+{
+	DEFiRet;
+	assert(piSize != NULL);
+	*piSize = (pMsgQueue->pqDA != NULL) ? pMsgQueue->pqDA->iQueueSize : 0;
+	*piSize += pMsgQueue->iQueueSize;
+	RETiRet;
 }
 
 
@@ -739,7 +762,7 @@ void
 rsyslogd_destructAllActions(void)
 {
 	ruleset.DestructAllActions(runConf);
-	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
+	bHaveMainQueue = 0; /* flag that internal messages need to be temporarily stored */
 }
 
 
