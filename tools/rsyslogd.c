@@ -995,6 +995,7 @@ initAll(int argc, char **argv)
 finalize_it:
 	if(iRet == RS_RET_VALIDATION_RUN) {
 		fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
+		exit(0);
 	} else if(iRet != RS_RET_OK) {
 		fprintf(stderr, "rsyslogd: run failed with error %d (see rsyslog.h "
 				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
