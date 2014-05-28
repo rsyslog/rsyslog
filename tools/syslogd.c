@@ -626,7 +626,8 @@ syslogd_doGlblProcessInit(void)
 	}
 	else
 	{
-		fputs("Pidfile (and pid) already exist.\n", stderr);
+		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n",
+			PidFile, getpid());
 		exit(1); /* exit during startup - questionable */
 	}
 	glblSetOurPid(getpid());
