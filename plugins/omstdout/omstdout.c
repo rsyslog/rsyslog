@@ -156,7 +156,7 @@ CODESTARTdoAction
 	 * needs to be more solid. -- rgerhards, 2012-11-28
 	 */
 	if((r = write(1, toWrite, len)) != (int) len) { /* 1 is stdout! */
-		DBGPRINTF("omstdout: error %d writing to stdout[%d]: %s\n",
+		DBGPRINTF("omstdout: error %d writing to stdout[%zd]: %s\n",
 			r, len, toWrite);
 	}
 	if(pWrkrData->pData->bEnsureLFEnding && toWrite[len-1] != '\n') {

@@ -24,6 +24,7 @@
 #include "config.h"
 #include "rsyslog.h"
 
+#include <signal.h>
 #include <liblogging/stdlog.h>
 #ifdef OS_SOLARIS
 #	include <errno.h>
