@@ -1479,7 +1479,7 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 		 if(bytesDel != 0) {
 			pThis->tVars.disk.sizeOnDisk -= bytesDel;
 			DBGOPRINT((obj_t*) pThis, "doDeleteBatch: a %lld octet file has been deleted, now %lld octets disk "
-					"space used\n", bytesDel, pThis->tVars.disk.sizeOnDisk);
+					"space used\n", (long long) bytesDel, pThis->tVars.disk.sizeOnDisk);
 			/* awake possibly waiting enq process */
 			pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
 		}
