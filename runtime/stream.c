@@ -301,9 +301,11 @@ CheckFileChange(strm_t *pThis)
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	DBGPRINTF("stream/after deserialize checking for file change on '%s', "
-		  "inode %u/%u, size/currOffs %llu/%llu\n",
-	  pThis->pszCurrFName, (unsigned) pThis->inode,
-	  (unsigned) statName.st_ino, statName.st_size, pThis->iCurrOffs);
+		"inode %u/%u, size/currOffs %llu/%llu\n",
+		pThis->pszCurrFName, (unsigned) pThis->inode,
+		(unsigned) statName.st_ino,
+		(long long unsigned) statName.st_size,
+		(long long unsigned) pThis->iCurrOffs);
 	if(pThis->inode != statName.st_ino || statName.st_size < pThis->iCurrOffs) {
 		DBGPRINTF("stream: file %s has changed\n", pThis->pszCurrFName);
 		pThis->iCurrOffs = 0;
@@ -1460,7 +1462,7 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
 	i = lseek64(pThis->fd, offs, SEEK_SET);
 	if(i != offs) {
-		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, offs);
+		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, (long long) offs);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */

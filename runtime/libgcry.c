@@ -154,7 +154,7 @@ eiCheckFiletype(gcryfile gf)
 		close(gf->fd);
 		gf->fd = -1;
 	}
-	DBGPRINTF("eiCheckFiletype read %d bytes: '%s'\n", didRead, hdrBuf);
+	DBGPRINTF("eiCheckFiletype read %zd bytes: '%s'\n", didRead, hdrBuf);
 	if(   didRead != toRead
 	   || strncmp(hdrBuf, "FILETYPE:" RSGCRY_FILETYPE_NAME "\n", toRead))
 		iRet = RS_RET_EI_INVLD_FILE;
@@ -213,7 +213,7 @@ eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
 	}
 	valueLen = strlen(value);
 	if(valueLen/2 != leniv) {
-		DBGPRINTF("length of IV is %d, expected %d\n",
+		DBGPRINTF("length of IV is %zd, expected %zd\n",
 			valueLen/2, leniv);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -322,7 +322,7 @@ eiClose(gcryfile gf, off64_t offsLogfile)
 		return;
 	if(gf->openMode == 'w') {
 		/* 2^64 is 20 digits, so the snprintf buffer is large enough */
-		len = snprintf(offs, sizeof(offs), "%lld", offsLogfile);
+		len = snprintf(offs, sizeof(offs), "%lld", (long long) offsLogfile);
 		eiWriteRec(gf, "END:", 4, offs, len);
 	}
 	gcry_cipher_close(gf->chd);
@@ -429,7 +429,7 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 	unsigned i;
 	size_t nPad;
 	nPad = (pF->blkLength - *plen % pF->blkLength) % pF->blkLength;
-	DBGPRINTF("libgcry: addPadding %d chars, blkLength %d, mod %d, pad %d\n",
+	DBGPRINTF("libgcry: addPadding %zd chars, blkLength %zd, mod %zd, pad %zd\n",
 		  *plen, pF->blkLength, *plen % pF->blkLength, nPad);
 	for(i = 0 ; i < nPad ; ++i)
 		buf[(*plen)+i] = 0x00;
