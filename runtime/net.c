@@ -1318,14 +1318,14 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbu
 		if(Debug || rcvbuf != 0) {
 			optlen = sizeof(actrcvbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual rcvbuf size %d\n", *s, actrcvbuf);
+				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
 				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
-						"cannot set rcvbuf size %d for socket %d, value now is %d",
+						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
 						rcvbuf, *s, actrcvbuf/2);
 				}
 			} else {
-				dbgprintf("could not obtain rcvbuf size for socket %d: %s\n",
+				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
 					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}

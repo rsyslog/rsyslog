@@ -1042,6 +1042,7 @@ CODESTARTactivateCnf
 #	ifdef HAVE_RECVMMSG
 	lenRcvBuf *= runModConf->batchSize;
 #	endif
+	DBGPRINTF("imudp: config params iMaxLine %d, lenRcvBuf %d\n", iMaxLine, lenRcvBuf);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 #		ifdef HAVE_RECVMMSG
 		CHKmalloc(wrkrInfo[i].recvmsg_iov = MALLOC(runModConf->batchSize * sizeof(struct iovec)));

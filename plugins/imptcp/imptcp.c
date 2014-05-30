@@ -1720,6 +1720,7 @@ BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
 CODESTARTactivateCnfPrePrivDrop
 	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
+	DBGPRINTF("imptcp: config params iMaxLine %d\n", iMaxLine);
 
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
