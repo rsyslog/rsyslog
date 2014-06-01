@@ -713,11 +713,11 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
 	}
 
-	if(pSrv->bKeepAlive)
-		EnableKeepAlive(pThis, pSrv, iNewSock);
-
 	/* construct our object so that we can use it... */
 	CHKRet(relpTcpConstruct(&pThis, pEngine, RELP_SRV_CONN, pSrv));
+
+	if(pSrv->bKeepAlive)
+		EnableKeepAlive(pThis, pSrv, iNewSock);
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
 	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
