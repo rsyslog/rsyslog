@@ -59,8 +59,6 @@ DEFobjCurrIf(netstrm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(datetime)
 
-static int iMaxLine; /* maximum size of a single message */
-
 
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
@@ -72,7 +70,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 		/* now allocate the message reception buffer */
-		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(sizeof(uchar) * iMaxLine + 1));
+		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(sizeof(uchar) * glbl.GetMaxLine() + 1));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -358,6 +356,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
+	int iMaxLine = glbl.GetMaxLine();
 
 	if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && c >= '0' && c <= '9') {
@@ -547,7 +546,6 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
 	objRelease(glbl, CORE_COMPONENT);
 
 	/* set our own handlers */
