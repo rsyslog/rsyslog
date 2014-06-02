@@ -1,5 +1,5 @@
-RELP Input Module
-=================
+imrelp: RELP Input Module
+=========================
 
 **Module Name:    imrelp**
 
