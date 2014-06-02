@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-/dev/kmsg Log Input Module
-==========================
+imkmsg: /dev/kmsg Log Input Module
+==================================
 
 **Module Name:    imkmsg**
 

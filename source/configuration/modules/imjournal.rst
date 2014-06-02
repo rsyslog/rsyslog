@@ -1,7 +1,5 @@
-`back <rsyslog_conf_modules.html>`_
-
-Systemd Journal Input Module
-============================
+imjournal: Systemd Journal Input Module
+=======================================
 
 **Module Name:    imjournal**
 
