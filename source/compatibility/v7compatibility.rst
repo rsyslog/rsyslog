@@ -101,6 +101,18 @@ successive failures. This still gives the plugin a chance to recover. In extreme
 cases, a plugin may now enter suspend mode where it previously did not do so.
 In practice, we do NOT expect that.
 
+omfile: file creation time
+--------------------------
+Originally, omfile created files immediately during startup, no matter if
+they were written to or not. In v7, this has changed. Files are only created
+when they are needed for the first time.
+
+Also, in pre-v7 files were created *before* privileges were dropped. This meant
+that files could be written to locations where the actual desired rsyslog
+user was *not* permitted to. In v7, this has been fixed. This is fix also
+the prime reason that files are now created on demand (which is later in the
+process and after the privilege drop).
+
 Notes for the 7.3/7.4 branch
 ----------------------------
 

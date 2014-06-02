@@ -124,6 +124,8 @@ Useful Links
 Legacy Format
 -------------
 
+.. _legacy-action-order:
+
 **Be warned that legacy action format is hard to get right. It is
 recommended to use RainerScript-Style action format whenever possible!**
 A key problem with legacy format is that a single action is defined via
