@@ -50,9 +50,9 @@ need to enable it via the SysSock.FlowControl and FlowControl config
 directives. Just make sure you thought about the implications. Note that
 for many systems, turning on flow control does not hurt.
 
-Starting with rsyslog 5.9.4, **`trusted syslog
+Starting with rsyslog 5.9.4, `trusted syslog
 properties <http://www.rsyslog.com/what-are-trusted-properties/>`_ are
-available**. These require a recent enough Linux Kernel and access to
+available. These require a recent enough Linux Kernel and access to
 the /proc file system. In other words, this may not work on all
 platforms and may not work fully when privileges are dropped (depending
 on how they are dropped). Note that trusted properties can be very
