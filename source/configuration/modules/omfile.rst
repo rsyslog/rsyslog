@@ -25,6 +25,17 @@ Note that legacy directives **do not** affect new-style RainerScript configurati
 objects. See :doc:`basic configuration structure doc <../basic_structure>` to
 learn about different configuration languages in use by rsyslog.
 
+General Notes
+^^^^^^^^^^^^^
+
+As can be seen in the parameters below, owner and groups can be set either by
+name or by direct id (uid, gid). While using a name is more convenient, using
+the id is more robust. There may be some situations where the OS is not able
+to do the name-to-id resolution, and these cases the owner information will be
+set to the process default. This seems to be uncommon and depends on the
+authentication provider and service start order. In general, using names
+is fine.
+
 Module Parameters
 ^^^^^^^^^^^^^^^^^
 
@@ -35,27 +46,81 @@ Module Parameters
    Set the default template to be used if an action is not configured
    to use a specific template.
 
--  **DirCreateMode**\ [default 0700]
-   Sets the default DirCreateMode to be used for an action if no
-   explicit one is specified.
--  **FileCreateMode**\ [default 0644]
-   Sets the default DirCreateMode to be used for an action if no
+.. function::  dirCreateMode [octalNumber]
+
+   *Default: 0700*
+
+   Sets the default dirCreateMode to be used for an action if no
    explicit one is specified.
 
-- **filecreatemode**
-- **fileowner**
-- **fileownernum**
-- **filegroup**
-- **filegroupnum**
-- **dirowner**
-- **dirownernum**
-- **dirgroup**
-- **dirgroupnum**
+.. function::  fileCreateMode [default 0644] [octalNumber]
+
+   *Default: 0644*
+
+   Sets the default fileCreateMode to be used for an action if no
+   explicit one is specified.
+
+.. function:: fileOwner [userName]
+
+   *Default: process user*
+
+   Sets the default fileOwner to be used for an action if no
+   explicit one is specified.
+
+.. function:: fileOwnerNum [uid]
+
+   *Default: process user*
+
+   Sets the default fileOwnerNum to be used for an action if no
+   explicit one is specified.
+
+.. function:: fileGroup [groupName]
+
+   *Default: process user's primary group*
+
+   Sets the default fileGroup to be used for an action if no
+   explicit one is specified.
+
+.. function:: fileGroupNum [gid]
+
+   *Default: process user's primary group*
+
+   Sets the default fileGroupNum to be used for an action if no
+   explicit one is specified.
+
+.. function:: dirOwner [userName]
+
+   *Default: process user*
+
+   Sets the default dirOwner to be used for an action if no
+   explicit one is specified.
+
+.. function:: dirOwnerNum [uid]
+
+   *Default: process user*
+
+   Sets the default dirOwnerNum to be used for an action if no
+   explicit one is specified.
+
+.. function:: dirGroup [groupName]
+
+   *Default: process user's primary group*
+
+   Sets the default dirGroup to be used for an action if no
+   explicit one is specified.
+
+.. function:: dirGroupNum [gid]
+
+   *Default: process user's primary group*
+
+   Sets the default dirGroupNum to be used for an action if no
+   explicit one is specified.
  
 
 Action Parameters
 ^^^^^^^^^^^^^^^^^
-Note that one of the parameters *file* or *dynaFile* must be specified.
+Note that **one** of the parameters *file* or *dynaFile* must be specified. This
+selects whether a static or dynamic file (name) shall be written to.
 
 .. function::  file [fileName]
 
@@ -271,7 +336,7 @@ Note that one of the parameters *file* or *dynaFile* must be specified.
    actually exists. This can be useful if the group mapping is not
    available to rsyslog during startup.
 
-.. function::  fileCreateMode
+.. function::  fileCreateMode [octalNumber]
 
    *Default: equally-named module parameter*
 
@@ -283,18 +348,15 @@ Note that one of the parameters *file* or *dynaFile* must be specified.
    Please note that the actual permission depend on rsyslogd's process
    umask. If in doubt, use "$umask 0000" right at the beginning of the
    configuration file to remove any restrictions.
-   FileCreateMode may be specified multiple times. If so, it specifies
-   the creation mode for all selector lines that follow until the next
-   $FileCreateMode directive. Order of lines is vitally important.
 
-.. function::  dirCreateMode
+.. function::  dirCreateMode [octalNumber]
 
    *Default: equally-named module parameter*
 
    This is the same as FileCreateMode, but for directories
    automatically generated.
 
-.. function::  failOnCHOwnFailuer [switch]
+.. function::  failOnChOwnFailuer [switch]
 
    *Default: equally-named module parameter*
 
@@ -382,7 +444,7 @@ The following command writes all syslog messages into a file.
 
 ::
 
-  action(type="omfile" DirCreateMode="0700" FileCreateMode="0644"
+  action(type="omfile" dirCreateMode="0700" FileCreateMode="0644"
          File="/var/log/messages")
 
 Legacy Configuration Directives
@@ -398,6 +460,10 @@ in the
   module(load="builtin:omfile" ...)
 
 object.
+
+Read about :ref:`the importance of order in legacy configuration<legacy-action-order>`
+to understand how to use these configuration directives.
+**Legacy directives should NOT be used when writing new configuration files.**
 
 -  **$DynaFileCacheSize**
    equivalent to the "dynaFileCacheSize" parameter
@@ -443,7 +509,6 @@ The following command writes all syslog messages into a file.
 
 ::
 
-  $ModLoad omfile
   $DirCreateMode 0700
   $FileCreateMode 0644
   *.* /var/log/messages
