@@ -1,11 +1,10 @@
 imuxsock: Unix Socket Input
 ===========================
 
-**Module Name:    imuxsock**
-
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-**Description**:
+===========================  ===========================================================================
+**Module Name:**             **imuxsock**
+**Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
 
 **Provides the ability to accept syslog messages via local Unix sockets.
 Most importantly, this is the mechanism by which the syslog(3) call
@@ -63,9 +62,11 @@ properties at the end. For these reasons, the feature is **not enabled
 by default**. If you want to use it, you must turn it on (via
 SysSock.Annotate and Annotate).
 
-**Configuration Directives**:
+Configuration Parameters
+------------------------
 
-**Global Parameters**
+Global Parameters
+^^^^^^^^^^^^^^^^^
 
 -  **SysSock.IgnoreTimestamp** [**on**/off]
    Ignore timestamps included in the messages, applies to messages
@@ -109,7 +110,8 @@ SysSock.Annotate and Annotate).
    setting has no effect when running under systemd control (because
    systemd handles the socket).
 
-**Input Instance Parameters**
+Input Parameters
+^^^^^^^^^^^^^^^^
 
 -  **IgnoreTimestamp** [**on**/off]
    Ignore timestamps included in the message. Applies to the next socket
@@ -181,39 +183,48 @@ SysSock.Annotate and Annotate).
    oneself has the advantage that a limited amount of messages may be
    queued by the OS if rsyslog is not running.
 
-**See Also**
+See Also
+--------
 
 -  `What are "trusted
    properties"? <http://www.rsyslog.com/what-are-trusted-properties/>`_
 -  `Why does imuxsock not work on
    Solaris? <http://www.rsyslog.com/why-does-imuxsock-not-work-on-solaris/>`_
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+------------------
 
 -  There is a compile-time limit of 50 concurrent sockets. If you need
    more, you need to change the array size in imuxsock.c.
 -  This documentation is sparse and incomplete.
 
-**Sample:**
+Samples
+-------
 
 The following sample is the minimum setup required to accept syslog
 messages from applications running on the local system.
 
-module(load="imuxsock" # needs to be done just once
-SysSock.FlowControl="on") # enable flow control (use if needed)
+::
+
+   module(load="imuxsock" # needs to be done just once
+          SysSock.FlowControl="on") # enable flow control (use if needed)
 
 The following sample is similiar to the first one, but enables trusted
 properties, which are put into JSON/lumberjack variables.
 
-module(load="imuxsock" SysSock.Annotate="on" SysSock.ParseTrusted="on")
+::
+
+  module(load="imuxsock" SysSock.Annotate="on" SysSock.ParseTrusted="on")
 
 The following sample is a configuration where rsyslogd pulls logs from
 two jails, and assigns different hostnames to each of the jails:
 
-module(load="imuxsock") # needs to be done just once
-input(type="imuxsock" HostName="jail1.example.net"
-Socket="/jail/1/dev/log") input(type="imuxsock"
-HostName="jail2.example.net" Socket="/jail/2/dev/log")
+::
+
+  module(load="imuxsock") # needs to be done just once
+  input(type="imuxsock" HostName="jail1.example.net"
+        Socket="/jail/1/dev/log") input(type="imuxsock"
+        HostName="jail2.example.net" Socket="/jail/2/dev/log")
 
 The following sample is a configuration where rsyslogd reads the openssh
 log messages via a separate socket, but this socket is created on a
@@ -222,18 +233,41 @@ to create the socket directories, because it otherwise can not open the
 socket and thus not listen to openssh messages. Note that it is vital
 not to place any other socket between the CreatePath and the Socket.
 
-module(load="imuxsock") # needs to be done just once
-input(type="imuxsock" Socket="/var/run/sshd/dev/log" CreatePath="on")
+::
+
+  module(load="imuxsock") # needs to be done just once
+  input(type="imuxsock" Socket="/var/run/sshd/dev/log" CreatePath="on")
 
 The following sample is used to turn off input rate limiting on the
-system log socket. module(load="imuxsock" # needs to be done just once
-SysSock.RateLimit.Interval="0") # turn off rate limiting
+system log socket.
+
+::
+
+  module(load="imuxsock" # needs to be done just once
+         SysSock.RateLimit.Interval="0") # turn off rate limiting
 
 The following sample is used activate message annotation and thus
 trusted properties on the system log socket. module(load="imuxsock" #
 needs to be done just once SysSock.Annotate="on")
 
-**Legacy Configuration Directives**:
+Legacy Configuration Directives
+-------------------------------
+
+**Legacy directives should NOT be used when writing new configuration files.**
+
+Note that the legacy configuration parameters do **not** affect
+new-style definitions via the input() object. This is
+by design. To set defaults for input() objects, use module parameters
+in the
+
+::
+
+  module(load="imuxsock" ...)
+
+object.
+
+Read about :ref:`the importance of order in legacy configuration<legacy-action-order>`
+to understand how to use these configuration directives.
 
 -  **$InputUnixListenSocketIgnoreMsgTimestamp** [**on**/off]
    equivalent to: IgnoreTimestamp.
@@ -296,16 +330,21 @@ needs to be done just once SysSock.Annotate="on")
 The following sample is the minimum setup required to accept syslog
 messages from applications running on the local system.
 
-$ModLoad imuxsock # needs to be done just once
-$SystemLogSocketFlowControl on # enable flow control (use if needed)
+::
+
+  $ModLoad imuxsock # needs to be done just once
+  $SystemLogSocketFlowControl on # enable flow control (use if needed)
 
 The following sample is a configuration where rsyslogd pulls logs from
 two jails, and assigns different hostnames to each of the jails:
 
-$ModLoad imuxsock # needs to be done just once
-$InputUnixListenSocketHostName jail1.example.net $AddUnixListenSocket
-/jail/1/dev/log $InputUnixListenSocketHostName jail2.example.net
-$AddUnixListenSocket /jail/2/dev/log
+::
+
+  $ModLoad imuxsock # needs to be done just once
+  $InputUnixListenSocketHostName jail1.example.net
+  $AddUnixListenSocket /jail/1/dev/log
+  $InputUnixListenSocketHostName jail2.example.net
+  $AddUnixListenSocket /jail/2/dev/log
 
 The following sample is a configuration where rsyslogd reads the openssh
 log messages via a separate socket, but this socket is created on a
@@ -315,21 +354,30 @@ socket and thus not listen to openssh messages. Note that it is vital
 not to place any other socket between the
 $InputUnixListenSocketCreatePath and the $InputUnixListenSocketHostName.
 
-$ModLoad imuxsock # needs to be done just once
-$InputUnixListenSocketCreatePath on # turn on for \*next\* socket
-$InputUnixListenSocket /var/run/sshd/dev/log
+::
+
+  $ModLoad imuxsock # needs to be done just once
+  $InputUnixListenSocketCreatePath on # turn on for *next* socket
+  $InputUnixListenSocket /var/run/sshd/dev/log
 
 The following sample is used to turn off input rate limiting on the
-system log socket. $ModLoad imuxsock # needs to be done just once
-$SystemLogRateLimitInterval 0 # turn off rate limiting
+system log socket.
 
-The following sample is used activate message annotation and thus
-trusted properties on the system log socket. $ModLoad imuxsock # needs
-to be done just once $SystemLogSocketAnnotate on
+::
+
+  $ModLoad imuxsock # needs to be done just once
+  $SystemLogRateLimitInterval 0 # turn off rate limiting
+
+The following sample is used to activate message annotation and thus
+trusted properties on the system log socket.
+
+::
+
+  $ModLoad imuxsock # needs to be done just once
+  $SystemLogSocketAnnotate on
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-
 Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
 3 or higher.

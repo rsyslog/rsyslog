@@ -6,6 +6,7 @@ interface to message generators.
 
 .. toctree::
    :glob:
+   :maxdepth: 1
 
    im*
 
