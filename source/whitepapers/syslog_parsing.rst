@@ -16,8 +16,8 @@ Syslog Standardization
 ----------------------
 
 The syslog protocol has not been standardized until relatively
-recently.The first document "smelling" a bit like a standard is `RFC
-3164 <http://www.ietf.org/rfc/rfc3164.txt>`_, which dates back to August
+recently.The first document "smelling" a bit like a standard is
+:rfc:`3164`, which dates back to August
 2001. The problem is that this document is no real standard. It has
 assigned "informational" status by the `IETF <http://www.ietf.org>`_
 which means it provides some hopefully useful information but does not
@@ -27,7 +27,7 @@ comply to RFC3164 and it also does not stop some techs to tell you "this
 and that does not comply to RFC3164, so it is <anybody else but them>'s
 fault".
 
-Then, there is `RFC3195 <http://www.ietf.org/rfc/rfc3195.txt>`_, which
+Then, there is :rfc:`3195`, which
 is a real standard. In it's section 3 it makes (a somewhat questionable)
 reference to (informational) RFC 3164 which may be interpreted in a way
 that RFC3195 standardizes the format layed out in RFC 3164 by virtue of
