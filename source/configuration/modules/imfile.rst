@@ -33,6 +33,8 @@ multiple times.
 Module Directives
 -----------------
 
+.. index:: 
+   single: imfile; PollingInterval
 .. function:: PollingInterval seconds
 
    This is a global setting. It specifies how often files are to be
@@ -55,12 +57,16 @@ Module Directives
 Action Directives
 -----------------
 
+.. index:: 
+   single: imfile; File
 .. function:: File </path/to/file>
 
    **(Required Parameter)**
    The file being monitored. So far, this must be an absolute name (no
    macros or templates)
 
+.. index:: 
+   single: imfile; Tag
 .. function:: Tag <tag:>
 
    **(Required Parameter)**
@@ -68,6 +74,8 @@ Action Directives
    you would like to see the colon after the tag, you need to specify it
    here (as shown above).
 
+.. index:: 
+   single: imfile; StateFile
 .. function:: StateFile <name-of-state-file>
 
    Rsyslog must keep track of which parts of the to be monitored file
@@ -79,18 +87,24 @@ Action Directives
    specified multiple times. Note that when $WorkDirectory is not set or
    set to a non-writable location, the state file will not be generated.
 
+.. index:: 
+   single: imfile; Facility
 .. function:: Facility <facility>
 
    The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
    128 for "local0"). Textual form is suggested. Default  is "local0".
 
+.. index:: 
+   single: imfile; Severity
 .. function:: Severity
 
    The syslog severity to be assigned to lines read. Can be specified
    in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
    for "info"). Textual form is suggested. Default is "notice".
 
+.. index:: 
+   single: imfile; PersistStateInterval
 .. function:: PersistStateInterval [lines]
 
    Specifies how often the state file shall be written when processing
@@ -103,6 +117,8 @@ Action Directives
    especially when set to a low value. Frequently writing the state file
    is very time consuming.
 
+.. index:: 
+   single: imfile; ReadMode
 .. function:: ReadMode [mode]
 
    This mode should defined when having multiline messages. The value
@@ -112,6 +128,8 @@ Action Directives
    2 - indented (New log messages start at the beginning of a line. If a
    line starts with a space it is part of the log message before it)
 
+.. index:: 
+   single: imfile; MaxLinesAtOnce
 .. function:: MaxLinesAtOnce [number]
 
    This is useful if multiple files need to be monitored. If set to 0,
@@ -123,6 +141,8 @@ Action Directives
    distribution of events when multiple busy files are monitored. The
    **default** is 1024.
 
+.. index:: 
+   single: imfile; MaxSubmitAtOnce
 .. function:: MaxSubmitAtOnce [number]
 
    This is an expert option. It can be used to set the maximum input
@@ -132,6 +152,8 @@ Action Directives
    you do not know what this doc here talks about, this is a good
    indication that you should NOT modify the default.
 
+.. index:: 
+   single: imfile;  Ruleset
 .. function:: Ruleset <ruleset> 
 
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
@@ -181,14 +203,20 @@ Legacy Configuration Directives
    The file being monitored. So far, this must be an absolute name (no
    macros or templates)
 
+.. index:: 
+   single: imfile; $InputFileName
 .. function:: $InputFileName /path/to/file
 
+.. index:: 
+   single: imfile; $InputFileTag
 .. function:: $InputFileTag tag:
 
    The tag to be used for messages that originate from this file. If
    you would like to see the colon after the tag, you need to specify it
    here (as shown above).
 
+.. index:: 
+   single: imfile; $InputFileStateFile
 .. function:: $InputFileStateFile /path/to/state/file
 
    Rsyslog must keep track of which parts of the to be monitored file
@@ -199,23 +227,31 @@ Legacy Configuration Directives
    things may happen. Rsyslog currently does not check if a name is
    specified multiple times.
 
+.. index:: 
+   single: imfile; $InputFileFacility
 .. function:: $InputFileFacility facility
 
    The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
    128 for "local0"). Textual form is suggested. Default  is "local0".
 
+.. index:: 
+   single: imfile; $InputFileSeverity
 .. function:: $InputFileSeverity severity
 
    The syslog severity to be assigned to lines read. Can be specified
    in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
    for "info"). Textual form is suggested. Default is "notice".
 
+.. index:: 
+   single: imfile; $InputRunFileMonitor
 .. function:: $InputRunFileMonitor
 
    This activates the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
 
+.. index:: 
+   single: imfile; $InputFilePollInterval
 .. function:: $InputFilePollInterval seconds
 
    This is a global setting. It specifies how often files are to be
@@ -235,19 +271,27 @@ Legacy Configuration Directives
    long as there is any data in them. So a "polling sleep" will only
    happen when nothing is left to be processed.
 
+.. index:: 
+   single: imfile; $InputFilePersistStateInterval
 .. function:: $InputFilePersistStateInterval lines
 
    Specifies how often the state file shall be written when processing
    the input file. The default value is 0, which means a new state file
    is only written when the monitored files is being closed (end of
 
+.. index:: 
+   single: imfile; $InputFileReadMode
 .. function:: $InputFileReadMode mode
 
+.. index:: 
+   single: imfile; $InputFileMaxLinesAtOnce
 .. function:: $InputFileMaxLinesAtOnce number
 
    This is useful if multiple files need to be monitored. If set to 0,
    default is 10240.
 
+.. index:: 
+   single: imfile; $InputFileBindRuleset
 .. function:: $InputFileBindRuleset ruleset
 
    Equivalent to: Ruleset
