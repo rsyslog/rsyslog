@@ -264,8 +264,8 @@ Examples
   if $msg contains 'error' then /var/log/errlog # the expression-based way
 
 Right now, you need to specify numerical values if you would like to
-check for facilities and severity. These can be found in `RFC
-5424 <http://www.ietf.org/rfc/rfc5424.txt>`_. If you don't like that,
+check for facilities and severity. These can be found in :rfc:`5424`.
+If you don't like that,
 you can of course also use the textual property - just be sure to use
 the right one. As expression support is enhanced, this will change. For
 example, if you would like to filter on message that have facility
