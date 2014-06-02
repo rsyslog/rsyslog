@@ -1,7 +1,15 @@
 imfile: Text File Input Module
 ==============================
 
-Provides the ability to convert any standard text file into a syslog
+.. index:: ! imfile 
+
+===========================  ===========================================================================
+**Module Name:**             **imfile**
+**Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
+
+This modul provides the ability to convert any standard text file
+into a syslog
 message. A standard text file is a file consisting of printable
 characters with lines being delimited by LF.
 
@@ -24,13 +32,7 @@ last processed location and continues to work from there upon restart.
 So no data is lost during a restart (except, as noted above, if the file
 is rotated just in this very moment).
 
-
-Multiple files may be monitored by specifying $InputRunFileMonitor
-multiple times.
-
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
-
-Module Directives
+Module Parameters
 -----------------
 
 .. index:: 
@@ -54,7 +56,7 @@ Module Directives
    long as there is any data in them. So a "polling sleep" will only
    happen when nothing is left to be processed.
 
-Action Directives
+Action Parameters
 -----------------
 
 .. index:: 
@@ -249,6 +251,10 @@ Legacy Configuration Directives
 
    This activates the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
+
+   Multiple files may be monitored by specifying $InputRunFileMonitor
+   multiple times.
+
 
 .. index:: 
    single: imfile; $InputFilePollInterval
