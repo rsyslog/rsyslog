@@ -96,6 +96,8 @@ are sitting in the RFC editor queue waiting for a transport mapping to
 be completed. I personally expect them to be assigned RFC numbers in
 2009.
 
+Update: the numbers are now assigned and the base RFC is :rfc:`5424`.
+
 Practical Format Requirements
 -----------------------------
 
@@ -183,8 +185,8 @@ this requires considerable effort and also has quite some runtime
 overhead. I try to avoid this for now (but I may do it, especially if
 someone sponsors this work ;)). Side-note: if you want to be a bit
 scared about potential formats, you may want to have a look at my paper
-*"`On the Nature of Syslog
-Data <http://www.monitorware.com/en/workinprogress/nature-of-syslog-data.php>`_\ "*.
+"`On the Nature of Syslog
+Data <http://www.monitorware.com/en/workinprogress/nature-of-syslog-data.php>`_\ ".
 
 Work-Around
 -----------
@@ -195,8 +197,8 @@ these look like.
 
 If that cure is not available, there are some things you can do in
 rsyslog to handle the situation. First of all, be sure to read about
-`rsyslog.conf format <rsyslog_conf.html>`_ and the `property replacer
-and properties <property_replacer.html>`_ specifically. You need to
+:doc:`rsyslog.conf format <../configuration/basic_structure>` and the
+:doc:`property replacer <../configuration/property_replacer>` specifically. You need to
 understand that everything is configured in rsyslog. And that the
 message is parsed into properties. There are also properties available
 which do not stem back directly to parsing. Most importantly, %fromhost%
