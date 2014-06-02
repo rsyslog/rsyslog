@@ -235,6 +235,9 @@ createInstance(instanceConf_t **pinst)
 
 	inst->pszBindPort = NULL;
 	inst->bKeepAlive = 0;
+	inst->iKeepAliveIntvl = 0;
+	inst->iKeepAliveProbes = 0;
+	inst->iKeepAliveTime = 0;
 	inst->bEnableTLS = 0;
 	inst->bEnableTLSZip = 0;
 	inst->dhBits = 0;
