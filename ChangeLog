@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.2.2 [v8-stable] 2014-04-??
+Version 8.2.2 [v8-stable] 2014-06-02
 - made the missing (contributed) modules build under v8
   Note that we could do this to the stable, because there is NO regression
   chance at all: only the modules themselves were changed, and they did
