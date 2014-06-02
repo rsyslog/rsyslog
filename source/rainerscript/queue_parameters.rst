@@ -3,14 +3,17 @@ General Queue Parameters
 
 Queue parameters can be used together with the following statements:
 
--  `action() <rsyslog_conf_actions.html>`_
--  ruleset()
--  main\_queue()
+- :doc:`action() <../configuration/actions>`
+- ruleset()
+- main\_queue()
 
 Queues need to be configured in the action or ruleset it should affect.
 If nothing is configured, default values will be used. Thus, the default
 ruleset has only the default main queue. Specific Action queues are not
 set up by default.
+
+To fully understand queue parameters and how they interact, be sure to
+read the :doc:`queues <../concepts/queues>` documentation.
 
 -  **queue.filename** name
    File name to be used for the queue files. Please note that this is
@@ -45,25 +48,38 @@ set up by default.
    where an output action destination is offline for some period.
 -  **queue.lowwatermark** number
    default 2000
--  **queue.fulldelaymark** number Number of messages when the queue
-   should block delayable messages. Messages are NO LONGER PROCESSED
-   until the queue has sufficient space again. If a message is delayable
-   depends on the input. For example, messages received via imtcp are
-   delayable (because TCP can push back), but those received via imudp
-   are not (as UDP does not permit a push back). The intent behind this
-   setting is to leave some space in an almost-full queue for
-   non-delayable messages, which would be lost if the queue runs out of
-   space. Please note that if you use a DA queue, setting the
-   fulldelaymark ABOVE the highwatermark makes the queue never activate
-   disk mode for delayable inputs. So this is probably not what you
-   want.
+-  **queue.fulldelaymark** number 
+   Number of messages when the queue should block delayable messages. 
+   Messages are NO LONGER PROCESSED until the queue has sufficient space 
+   again. If a message is delayable depends on the input. For example, 
+   messages received via imtcp are delayable (because TCP can push back), 
+   but those received via imudp are not (as UDP does not permit a push back).
+   The intent behind this setting is to leave some space in an almost-full 
+   queue for non-delayable messages, which would be lost if the queue runs 
+   out of space. Please note that if you use a DA queue, setting the 
+   fulldelaymark ABOVE the highwatermark makes the queue never activate 
+   disk mode for delayable inputs. So this is probably not what you want.
 -  **queue.lightdelaymark** number
 -  **queue.discardmark** number
    default 9750]
 -  **queue.discardseverity** number
    \*numerical\* severity! default 8 (nothing discarded)
 -  **queue.checkpointinterval** number
--  **queue.syncqueuefiles** on/off
+   Disk queues by default do not update housekeeping structures every time 
+   the queue writes to disk. This is for performance reasons. In the event of failure, 
+   data will still be lost (except when data is mangled via the file structures).
+   However, disk queues can be set to write bookkeeping information on checkpoints 
+   (every n records), so that this can be made ultra-reliable, too. If the 
+   checkpoint interval is set to one, no data can be lost, but the queue is 
+   exceptionally slow.
+-  **queue.syncqueuefiles** on/off (default "off")
+
+   Disk-based queues can be made very reliable by issuing a (f)sync after each 
+   write operation. This happens when you set the parameter to "on".
+   Activating this option has a performance penalty, so it should not
+   be turned on without a good reason. Note that the penalty also depends on
+   *queue.checkpointInterval* frequency.
+
 -  **queue.type** [FixedArray/LinkedList/**Direct**/Disk]
 -  **queue.workerthreads** number
    number of worker threads, default 1, recommended 1
