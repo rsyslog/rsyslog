@@ -19,8 +19,12 @@ actions needs to be carried out. Empty lines are **not** processed, as
 they would result in empty syslog records. They are simply ignored.
 
 As new lines are written they are taken from the file and processed.
-Please note that this happens based on a polling interval and not
-immediately. The file monitor support file rotation. To fully work,
+Depending on the selected mode, this happens via inotify or based on
+a polling interval. Especially in polling mode, reading the file is
+not immediately. But there are also slight delays (due to process
+scheduling and internal processing) in inotify mode.
+
+The file monitor support file rotation. To fully work,
 rsyslogd must run while the file is rotated. Then, any remaining lines
 from the old file are read and processed and when done with that, the
 new file is being processed from the beginning. If rsyslogd is stopped
@@ -32,19 +36,38 @@ last processed location and continues to work from there upon restart.
 So no data is lost during a restart (except, as noted above, if the file
 is rotated just in this very moment).
 
+Currently, the file must have a fixed name and location (directory).
+It is planned to add support for dynamically generating file names in the
+future.
+
 Module Parameters
 -----------------
+
+.. index:: 
+   single: imfile; mode
+.. function:: mode ["inotify"/"polling"]
+
+   *Default: "inotify"*
+
+   *Available since: 8.1.5*
+
+  This specifies if imfile is shall run in inotify ("inotify") or polling
+  ("polling") mode. Traditionally, imfile used polling mode, which is
+  much more resource-intense (and slower) than inotify mode. It is
+  suggested that users turn on "polling" mode only if they experience
+  strange problems in inotify mode. In theory, there never should be a
+  reason to enable "polling" mode and later versions will most probably
+  remove that mode. 
 
 .. index:: 
    single: imfile; PollingInterval
 .. function:: PollingInterval seconds
 
+   *Default: 10*
+
    This is a global setting. It specifies how often files are to be
-   polled for new data. The time specified is in seconds. The default
-   value is 10 seconds. Please note that future releases of imfile may
-   support per-file polling intervals, but currently this is not the
-   case. If multiple PollingInterval statements are present in
-   rsyslog.conf, only the last one is used.
+   polled for new data. The time specified is in seconds. During each
+   polling interval, all files are processed in a round-robin fashion.
    
    A short poll interval provides more rapid message forwarding, but
    requires more system resources. While it is possible, we stongly
@@ -55,6 +78,8 @@ Module Parameters
    should be well enough. Please note that imfile keeps reading files as
    long as there is any data in them. So a "polling sleep" will only
    happen when nothing is left to be processed.
+
+   **We recomend to use inotify mode.**
 
 Action Parameters
 -----------------
@@ -163,11 +188,7 @@ Action Parameters
 Caveats/Known Bugs
 ------------------
 
-* Only 100 files can be monitored. If more are needed, the source needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
-
-* The file must have a fixed name and location (directory). It is planned to add support for dynamically generating file names in the future.
-
-* Powertop users may want to notice that imfile utilizes polling. Thus, it is no good citizen when it comes to conserving system power consumption. We are currently evaluating to move to inotify(). However, there are a number of subtle issues, which needs to be worked out first. We will make the change as soon as we can. If you can afford it, we recommend using a long polling interval in the mean time.
+currently none
 
 Configuration Example
 ---------------------
@@ -202,12 +223,18 @@ defaults instead.
 Legacy Configuration Directives
 -------------------------------
 
-   The file being monitored. So far, this must be an absolute name (no
-   macros or templates)
+Note: in order to preserve compatibility with previous versions, the LF escaping
+in multi-line messages is turned off for legacy-configured file monitors
+(the "escapeLF" input parameter). This can cause serious problems. So it is highly
+suggested that new deployments use the new :ref:`input() statement<stmt_input>`
+and keep LF escaping turned on. 
 
 .. index:: 
    single: imfile; $InputFileName
 .. function:: $InputFileName /path/to/file
+
+   The file being monitored. So far, this must be an absolute name (no
+   macros or templates)
 
 .. index:: 
    single: imfile; $InputFileTag
