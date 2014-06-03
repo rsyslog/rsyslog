@@ -1,6 +1,8 @@
 imudp: UDP Syslog Input Module
 ==============================
 
+.. index:: ! imudp 
+
 ===========================  ===========================================================================
 **Module Name:**             **imudp**
 **Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
@@ -16,6 +18,8 @@ need to be modified as well. Also, SELinux may need additional rules.
 
 Configuration Parameters
 ------------------------
+
+.. index:: imudp; module parameters
 
 Module Parameters
 ^^^^^^^^^^^^^^^^^
@@ -93,8 +97,12 @@ Module Parameters
    set to 32. It may increase in the future when massive multicore
    processors become available.
 
+.. index:: imudp; input parameters
+
 Input Parameters
 ^^^^^^^^^^^^^^^^
+
+..index:: imudp; address (input parameter)
 
 .. function::  Address <IP>
 
@@ -103,6 +111,8 @@ Input Parameters
    Local IP address (or name) the UDP server should bind to. Use \"*"
    to bind to all of the machine's addresses.
 
+.. index:: 
+   single: imudp; port (input parameter)
 .. function::  Port <port>
 
    *Default: 514*
