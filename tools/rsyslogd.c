@@ -81,7 +81,6 @@ void syslogd_die(void);
 void syslogd_releaseClassPointers(void);
 void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
-void syslogd_printVersion(void);
 rsRetVal syslogd_doGlblProcessInit(void);
 rsRetVal syslogd_obtainClassPointers(void);
 /* end syslogd.c imports */
@@ -139,6 +138,56 @@ diagGetMainMsgQSize(int *piSize)
 	*piSize += pMsgQueue->iQueueSize;
 	RETiRet;
 }
+
+/* print version and compile-time setting information */
+static void
+printVersion(void)
+{
+	printf("rsyslogd %s, ", VERSION);
+	printf("compiled with:\n");
+#ifdef FEATURE_REGEXP
+	printf("\tFEATURE_REGEXP:\t\t\t\tYes\n");
+#else
+	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
+#endif
+#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
+	printf("\tGSSAPI Kerberos 5 support:\t\tYes\n");
+#else
+	printf("\tGSSAPI Kerberos 5 support:\t\tNo\n");
+#endif
+#ifndef	NDEBUG
+	printf("\tFEATURE_DEBUG (debug build, slow code):\tYes\n");
+#else
+	printf("\tFEATURE_DEBUG (debug build, slow code):\tNo\n");
+#endif
+#ifdef	HAVE_ATOMIC_BUILTINS
+	printf("\t32bit Atomic operations supported:\tYes\n");
+#else
+	printf("\t32bit Atomic operations supported:\tNo\n");
+#endif
+#ifdef	HAVE_ATOMIC_BUILTINS64
+	printf("\t64bit Atomic operations supported:\tYes\n");
+#else
+	printf("\t64bit Atomic operations supported:\tNo\n");
+#endif
+#ifdef	RTINST
+	printf("\tRuntime Instrumentation (slow code):\tYes\n");
+#else
+	printf("\tRuntime Instrumentation (slow code):\tNo\n");
+#endif
+#ifdef	USE_LIBUUID
+	printf("\tuuid support:\t\t\t\tYes\n");
+#else
+	printf("\tuuid support:\t\t\t\tNo\n");
+#endif
+#ifdef HAVE_JSON_OBJECT_NEW_INT64
+	printf("\tNumber of Bits in RainerScript integers: 64\n");
+#else
+	printf("\tNumber of Bits in RainerScript integers: 32 (due to too-old json-c lib)\n");
+#endif
+	printf("\nSee http://www.rsyslog.com for more information.\n");
+}
+
 
 
 void
@@ -782,7 +831,7 @@ initAll(int argc, char **argv)
 			glblModPath = (uchar*) optarg;
 			break;
 		case 'v': /* MUST be carried out immediately! */
-			syslogd_printVersion();
+			printVersion();
 			exit(0); /* exit for -v option - so this is a "good one" */
 		case '?':
 		default:
