@@ -190,9 +190,9 @@
 #endif
 
 /* we need to handle 64bit atomics seperately as some platforms have 
- * 32 bit atomics, but not 64 biot ones... -- rgerhards, 2010-12-01
+ * 32 bit atomics, but not 64 bit ones... -- rgerhards, 2010-12-01
  */
-#ifdef HAVE_ATOMIC_BUILTINS_64BIT
+#ifdef HAVE_ATOMIC_BUILTINS64
 #	define ATOMIC_INC_uint64(data, phlpmut) ((void) __sync_fetch_and_add(data, 1))
 #	define ATOMIC_DEC_unit64(data, phlpmut) ((void) __sync_sub_and_fetch(data, 1))
 #	define ATOMIC_INC_AND_FETCH_uint64(data, phlpmut) __sync_fetch_and_add(data, 1)
@@ -224,6 +224,6 @@
 #	define DEF_ATOMIC_HELPER_MUT64(x)  pthread_mutex_t x
 #	define INIT_ATOMIC_HELPER_MUT64(x) pthread_mutex_init(&(x), NULL)
 #	define DESTROY_ATOMIC_HELPER_MUT64(x) pthread_mutex_destroy(&(x))
-#endif /* #ifdef HAVE_ATOMIC_BUILTINS_64BIT */
+#endif /* #ifdef HAVE_ATOMIC_BUILTINS64 */
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */
