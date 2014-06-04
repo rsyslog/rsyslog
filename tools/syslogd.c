@@ -358,9 +358,7 @@ void syslogd_printVersion(void)
 #else
 	printf("\t32bit Atomic operations supported:\tNo\n");
 #endif
-/* 	mono_matsuko <aiueov@hotmail.co.jp> contribution */
-#ifdef	HAVE_ATOMIC_BUILTINS_64BIT
-/* end	mono_matsuko <aiueov@hotmail.co.jp> contribution */
+#ifdef	HAVE_ATOMIC_BUILTINS64
 	printf("\t64bit Atomic operations supported:\tYes\n");
 #else
 	printf("\t64bit Atomic operations supported:\tNo\n");
