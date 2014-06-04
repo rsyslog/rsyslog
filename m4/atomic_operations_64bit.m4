@@ -47,7 +47,7 @@ int main()
 }], [ap_cv_atomic_builtins_64=yes], [ap_cv_atomic_builtins_64=no], [ap_cv_atomic_builtins_64=no])])
 
 if test "$ap_cv_atomic_builtins_64" = "yes"; then
-    AC_DEFINE(HAVE_ATOMIC_BUILTINS_64BIT, 1, [Define if compiler provides 64 bit atomic builtins])
+    AC_DEFINE(HAVE_ATOMIC_BUILTINS64, 1, [Define if compiler provides 64 bit atomic builtins])
 fi
 
 ])
