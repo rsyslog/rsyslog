@@ -2058,8 +2058,6 @@ Version 6.2.0  [v6-stable], 2012-01-09
 - bugfix: omfile returns fatal error code for things that go really wrong
   previously, RS_RET_RESUME was returned, which lead to a loop inside the
   rule engine as omfile could not really recover.
-- bugfix: rsyslogd -v always said 64 atomics were not present
-  thanks to mono_matsuko for the patch
 - bugfix: potential abort after reading invalid X.509 certificate
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=290
   Thanks to Tomas Heinrich for the patch
