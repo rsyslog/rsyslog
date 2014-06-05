@@ -220,14 +220,17 @@ defaults instead.
 
   # ... and so on ... #
 
-Legacy Configuration Directives
--------------------------------
+Legacy Configuration
+--------------------
 
 Note: in order to preserve compatibility with previous versions, the LF escaping
 in multi-line messages is turned off for legacy-configured file monitors
 (the "escapeLF" input parameter). This can cause serious problems. So it is highly
 suggested that new deployments use the new :ref:`input() statement<stmt_input>`
 and keep LF escaping turned on. 
+
+Legacy Configuration Directives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. index:: 
    single: imfile; $InputFileName
@@ -330,21 +333,8 @@ and keep LF escaping turned on.
    Binds the listener to a specific
    :doc:`ruleset <../../concepts/multi_ruleset>`.
 
-Caveats/Known Bugs
-------------------
-
-So far, only 100 files can be monitored. If more are needed, the source
-needs to be patched. See define MAX\_INPUT\_FILES in imfile.c
-
-Powertop users may want to notice that imfile utilizes polling. Thus, it
-is no good citizen when it comes to conserving system power consumption.
-We are currently evaluating to move to inotify(). However, there are a
-number of subtle issues, which needs to be worked out first. We will
-make the change as soon as we can. If you can afford it, we recommend
-using a long polling interval in the mean time.
-
 Legacy Example
---------------
+^^^^^^^^^^^^^^
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
