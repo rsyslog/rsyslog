@@ -65,8 +65,10 @@ Module Parameters
 
    *Default: 10*
 
-   This is a global setting. It specifies how often files are to be
-   polled for new data. The time specified is in seconds. During each
+   This setting specifies how often files are to be
+   polled for new data. For obvious reasons, it has effect only if
+   imfile is running in polling mode. 
+   The time specified is in seconds. During each
    polling interval, all files are processed in a round-robin fashion.
    
    A short poll interval provides more rapid message forwarding, but
@@ -81,12 +83,12 @@ Module Parameters
 
    **We recomend to use inotify mode.**
 
-Action Parameters
------------------
+Input Parameters
+----------------
 
 .. index:: 
    single: imfile; File
-.. function:: File </path/to/file>
+.. function:: File [/path/to/file]
 
    **(Required Parameter)**
    The file being monitored. So far, this must be an absolute name (no
@@ -94,17 +96,18 @@ Action Parameters
 
 .. index:: 
    single: imfile; Tag
-.. function:: Tag <tag:>
+.. function:: Tag [tag:]
 
    **(Required Parameter)**
    The tag to be used for messages that originate from this file. If
    you would like to see the colon after the tag, you need to specify it
-   here (as shown above).
+   here (like 'tag="myTagValue:"').
 
 .. index:: 
    single: imfile; StateFile
-.. function:: StateFile <name-of-state-file>
+.. function:: StateFile [name-of-state-file]
 
+   This is the name of this file's state file.
    Rsyslog must keep track of which parts of the to be monitored file
    it already processed. This is done in the state file. This file
    always is created in the rsyslog working directory (configurable via
@@ -116,7 +119,7 @@ Action Parameters
 
 .. index:: 
    single: imfile; Facility
-.. function:: Facility <facility>
+.. function:: Facility [facility]
 
    The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
@@ -124,7 +127,7 @@ Action Parameters
 
 .. index:: 
    single: imfile; Severity
-.. function:: Severity
+.. function:: Severity [syslogSeverity]
 
    The syslog severity to be assigned to lines read. Can be specified
    in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
@@ -150,10 +153,29 @@ Action Parameters
 
    This mode should defined when having multiline messages. The value
    can range from 0-2 and determines the multiline detection method.
-   0 (**default**) - line based (Each line is a new message)
+
+   0 - (**default**) line based (each line is a new message)
+
    1 - paragraph (There is a blank line between log messages)
-   2 - indented (New log messages start at the beginning of a line. If a
+
+   2 - indented (new log messages start at the beginning of a line. If a
    line starts with a space it is part of the log message before it)
+
+.. index:: 
+   single: imfile; escapeLF
+.. function:: escapeLF [on/off] (requires v7.5.3+)
+
+   This is only meaningful if multi-line messages are to be processed.
+   LF characters embedded into syslog messages cause a lot of trouble,
+   as most tools and even the legacy syslog TCP protocol do not expect
+   these. If set to "on", this option avoid this trouble by properly
+   escaping LF characters to the 4-byte sequence "#012". This is
+   consistent with other rsyslog control character escaping. By default,
+   escaping is turned on. If you turn it off, make sure you test very
+   carefully with all associated tools. Please note that if you intend
+   to use plain TCP syslog with embedded LF characters, you need to
+   enable octet-counted framing.
+   For more details, see Rainer's blog posting on imfile LF escaping. 
 
 .. index:: 
    single: imfile; MaxLinesAtOnce
@@ -236,14 +258,13 @@ Legacy Configuration Directives
    single: imfile; $InputFileName
 .. function:: $InputFileName /path/to/file
 
-   The file being monitored. So far, this must be an absolute name (no
-   macros or templates)
+   equivalent to "file"
 
 .. index:: 
    single: imfile; $InputFileTag
 .. function:: $InputFileTag tag:
 
-   The tag to be used for messages that originate from this file. If
+   equivalent to: "tag"
    you would like to see the colon after the tag, you need to specify it
    here (as shown above).
 
@@ -251,29 +272,19 @@ Legacy Configuration Directives
    single: imfile; $InputFileStateFile
 .. function:: $InputFileStateFile /path/to/state/file
 
-   Rsyslog must keep track of which parts of the to be monitored file
-   it already processed. This is done in the state file. This file
-   always is created in the rsyslog working directory (configurable via
-   $WorkDirectory). Be careful to use unique names for different files
-   being monitored. If there are duplicates, all sorts of "interesting"
-   things may happen. Rsyslog currently does not check if a name is
-   specified multiple times.
+   equivalent to: "StateFile"
 
 .. index:: 
    single: imfile; $InputFileFacility
 .. function:: $InputFileFacility facility
 
-   The syslog facility to be assigned to lines read. Can be specified
-   in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
-   128 for "local0"). Textual form is suggested. Default  is "local0".
+   equivalent to: "Facility"
 
 .. index:: 
    single: imfile; $InputFileSeverity
 .. function:: $InputFileSeverity severity
 
-   The syslog severity to be assigned to lines read. Can be specified
-   in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
-   for "info"). Textual form is suggested. Default is "notice".
+   equivalent to: "Severity"
 
 .. index:: 
    single: imfile; $InputRunFileMonitor
@@ -282,65 +293,42 @@ Legacy Configuration Directives
    This activates the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
 
-   Multiple files may be monitored by specifying $InputRunFileMonitor
-   multiple times.
-
 .. index:: 
    single: imfile; $InputFilePollInterval
 .. function:: $InputFilePollInterval seconds
 
-   This is a global setting. It specifies how often files are to be
-   polled for new data. The time specified is in seconds. The default
-   value is 10 seconds. Please note that future releases of imfile may
-   support per-file polling intervals, but currently this is not the
-   case. If multiple $InputFilePollInterval statements are present in
-   rsyslog.conf, only the last one is used.
-
-   A short poll interval provides more rapid message forwarding, but
-   requires more system ressources. While it is possible, we stongly
-   recommend not to set the polling interval to 0 seconds. That will
-   make rsyslogd become a CPU hog, taking up considerable ressources. It
-   is supported, however, for the few very unusual situations where this
-   level may be needed. Even if you need quick response, 1 seconds
-   should be well enough. Please note that imfile keeps reading files as
-   long as there is any data in them. So a "polling sleep" will only
-   happen when nothing is left to be processed.
+   equivalent to: "PollingInterval"
 
 .. index:: 
    single: imfile; $InputFilePersistStateInterval
 .. function:: $InputFilePersistStateInterval lines
 
-   Specifies how often the state file shall be written when processing
-   the input file. The default value is 0, which means a new state file
-   is only written when the monitored files is being closed (end of
+   equivalent to: "PersistStateInterval"
 
 .. index:: 
    single: imfile; $InputFileReadMode
 .. function:: $InputFileReadMode mode
+   equivalent to: "ReadMode"
 
 .. index:: 
    single: imfile; $InputFileMaxLinesAtOnce
 .. function:: $InputFileMaxLinesAtOnce number
 
-   This is useful if multiple files need to be monitored. If set to 0,
-   default is 10240.
+   equivalent to: "MaxLinesAtOnce"
 
 .. index:: 
    single: imfile; $InputFileBindRuleset
 .. function:: $InputFileBindRuleset ruleset
 
    Equivalent to: Ruleset
-   Binds the listener to a specific
-   :doc:`ruleset <../../concepts/multi_ruleset>`.
 
 Legacy Example
 ^^^^^^^^^^^^^^
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
-This code must be placed in /etc/rsyslog.conf (or wherever your distro
-puts rsyslog's config files). Note that only commands actually needed
-need to be specified. The second file uses less commands and uses
+Note that only non-default parametrs actually needed
+need to be specified. The second file uses less directives and uses
 defaults instead.
 
 ::
