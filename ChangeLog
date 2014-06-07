@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 1.2.8 - 2014-06-??
+- bugfix: segfault if KEEPALIVE is used
+  Thanks to Tomas Heinrich for the patch.
+----------------------------------------------------------------------
 Version 1.2.7 - 2014-04-29
 - bugfix: librelp was incompatible with C++ without a real reason
   Thanks to Ivan Kryak for the patch
