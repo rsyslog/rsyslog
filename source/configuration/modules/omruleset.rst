@@ -35,9 +35,9 @@ extreme scenario, but users building an audit-grade system need to know
 this restriction. For regular installations, it should not really be
 relevant.
 
-**At minimum, be sure you understand the
-`$RulesetCreateMainQueue <rsconf1_rulesetcreatemainqueue.html>`_
-directive as well as the importance of statement order in rsyslog.conf
+**At minimum, be sure you understand the**
+:doc:`$RulesetCreateMainQueue <../ruleset/rsconf1_rulesetcreatemainqueue>`
+**directive as well as the importance of statement order in rsyslog.conf
 before using omruleset!**
 
 **Recommended Use:**
@@ -77,17 +77,28 @@ simple. Note that we create a ruleset-specific main queue (for
 simplicity with the default main queue parameters) in order to avoid
 re-queueing messages back into the main queue.
 
-$ModLoad omruleset # define ruleset for commonly written file $RuleSet
-commonAction $RulesetCreateMainQueue on \*.\* /path/to/file.log #switch
-back to default ruleset $ruleset RSYSLOG\_DefaultRuleset # begin first
-action # note that we must first specify which ruleset to use for
-omruleset: $ActionOmrulesetRulesetName CommonAction mail.info
-:omruleset: #end first action # begin second action # note that we must
-first specify which ruleset to use for omruleset:
-$ActionOmrulesetRulesetName CommonAction :FROMHOST, isequal,
-"myhost.example.com" :omruleset: #end second action # of course, we can
-have "regular" actions alongside :omrulset: actions \*.\*
-/path/to/general-message-file.log
+::
+
+  $ModLoad omruleset # define ruleset for commonly written file
+  $RuleSet commonAction
+  $RulesetCreateMainQueue on
+  *.* /path/to/file.log
+
+  #switch back to default ruleset
+  $ruleset RSYSLOG_DefaultRuleset
+  # begin first action
+  # note that we must first specify which ruleset to use for omruleset:
+  $ActionOmrulesetRulesetName CommonAction
+  mail.info :omruleset:
+  # end first action
+
+  # begin second action
+  # note that we must first specify which ruleset to use for omruleset:
+  $ActionOmrulesetRulesetName CommonAction
+  :FROMHOST, isequal, "myhost.example.com" :omruleset:
+  #end second action
+  # of course, we can have "regular" actions alongside :omrulset: actions
+  *.* /path/to/general-message-file.log
 
 The next example is used to creat a high-performance nested and filter
 condition. Here, it is first checked if the message contains a string
@@ -98,19 +109,33 @@ slower) expression-based filters. Also, this enables pipeline
 processing, in that second ruleset is executed in parallel to the first
 one.
 
-$ModLoad omruleset # define "second" ruleset $RuleSet nested
-$RulesetCreateMainQueue on # again, we use our own queue mail.\*
-/path/to/mailerr.log kernel.\* /path/to/kernelerr.log auth.\*
-/path/to/autherr.log #switch back to default ruleset $ruleset
-RSYSLOG\_DefaultRuleset # begin first action - here we filter on "error"
-# note that we must first specify which ruleset to use for omruleset:
-$ActionOmrulesetRulesetName nested :msg, contains, "error :omruleset:
-#end first action # begin second action - as an example we can do
-anything else in # this processing. Note that these actions are
-processed concurrently # to the ruleset "nested" :FROMHOST, isequal,
-"myhost.example.com" /path/to/host.log #end second action # of course,
-we can have "regular" actions alongside :omrulset: actions \*.\*
-/path/to/general-message-file.log
+::
+
+  $ModLoad omruleset
+  # define "second" ruleset
+  $RuleSet nested
+  $RulesetCreateMainQueue on
+  # again, we use our own queue
+  mail.* /path/to/mailerr.log
+  kernel.* /path/to/kernelerr.log
+  auth.* /path/to/autherr.log
+  
+  #switch back to default ruleset
+  $ruleset RSYSLOG_DefaultRuleset
+  # begin first action - here we filter on "error"
+  # note that we must first specify which ruleset to use for omruleset:
+  $ActionOmrulesetRulesetName nested
+  :msg, contains, "error :omruleset:
+  #end first action
+  
+  # begin second action - as an example we can do anything else in
+  # this processing. Note that these actions are processed concurrently
+  # to the ruleset "nested"
+  :FROMHOST, isequal, "myhost.example.com" /path/to/host.log
+  #end second action
+
+  # of course, we can have "regular" actions alongside :omrulset: actions
+  *.* /path/to/general-message-file.log
 
 **Caveats/Known Bugs:**
 
