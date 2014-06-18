@@ -58,6 +58,7 @@ CLEANFILES = \
 endif
 
 EXTRA_DIST = \
+	README.md \
 	platform/README \
 	platform/freebsd/rsyslogd \
 	platform/slackware/rc.rsyslogd \
