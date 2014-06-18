@@ -25,6 +25,8 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
 - bugfix: using UUID property could cause segfault
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.
+- bugfix: busy loop in tcp listener when running out of file descriptors
+  Thanks to Susant Sahani for the patch.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
