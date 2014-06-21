@@ -134,13 +134,8 @@ void rsyslogdDebugSwitch();
 void rsyslogdDoDie(int sig);
 
 
-#if defined(SYSLOGD_PIDNAME)
-#	undef _PATH_LOGPID
-#	define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
-#else
-#	ifndef _PATH_LOGPID
-#		define _PATH_LOGPID "/etc/rsyslogd.pid"
-#	endif
+#ifndef _PATH_LOGPID
+#	define _PATH_LOGPID "/var/run/rsyslogd.pid"
 #endif
 
 #ifndef _PATH_TTY
