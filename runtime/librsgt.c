@@ -406,6 +406,7 @@ readStateFile(gtfile gf)
 		free(gf->blkStrtHash);
 		goto err;
 	}
+	close(fd);
 return;
 
 err:
