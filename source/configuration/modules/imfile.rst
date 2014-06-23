@@ -248,8 +248,8 @@ Legacy Configuration
 Note: in order to preserve compatibility with previous versions, the LF escaping
 in multi-line messages is turned off for legacy-configured file monitors
 (the "escapeLF" input parameter). This can cause serious problems. So it is highly
-suggested that new deployments use the new :ref:`input() statement<stmt_input>`
-and keep LF escaping turned on. 
+suggested that new deployments use the new :ref:`input() <cfgobj_input>` configuration 
+object and keep LF escaping turned on. 
 
 Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
