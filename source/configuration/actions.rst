@@ -1,7 +1,11 @@
 Actions
 =======
+
+.. index:: ! action 
+.. _cfgobj_input:
+
 The Action object describe what is to be done with a message. They are
-implemented via `output modules <rsyslog_conf_modules.html#om>`_.
+implemented via :doc:`output modules <modules/idx_output>`.
 
 The action object has different parameters:
 
@@ -10,10 +14,10 @@ The action object has different parameters:
 -  parameters for the action queue. While they also apply to all
    parameters, they are queue-specific, not action-specific (they are
    the same that are used in rulesets, for example). The are documented
-   separately under `queue parameters <queue_parameters.html>`_.
+   separately under :doc:`queue parameters <../rainerscript/queue_parameters>`.
 -  action-specific parameters. These are specific to a certain type of
-   actions. They are documented by the `output
-   module <rsyslog_conf_modules.html#om>`_ in question.
+   actions. They are documented by the :doc:`output modules<modules/idx_output>`
+   in question.
 
 General Action Parameters
 -------------------------

@@ -21,6 +21,7 @@ and must start with a dollar-sign.
    filters
    ../rainerscript/index
    actions
+   input
    examples
    index_directives
    modules/index
