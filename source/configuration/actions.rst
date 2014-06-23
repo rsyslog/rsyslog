@@ -1,5 +1,9 @@
 Actions
 =======
+
+.. index:: ! action 
+.. _cfgobj_input:
+
 The Action object describe what is to be done with a message. They are
 implemented via :doc:`output modules <modules/idx_output>`.
 

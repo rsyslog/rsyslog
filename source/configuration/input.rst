@@ -2,6 +2,7 @@ Input
 =====
 
 .. index:: ! input 
+.. _cfgobj_input:
 
 The ``input`` object, as its name suggests, describes message input sources.
 Without input, no processing happens at all, because no messages enter the
