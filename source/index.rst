@@ -47,17 +47,6 @@ Reference
    free_support
    compatibility/index
 
-Compatibility
--------------
-
-rsyslog is compatible to stock sysklogd and can be used as a drop-in
-replacement. Its :doc:`features <features>` make it suitable
-for enterprise-class, :doc:`encryption protected syslog <tutorials/tls>` 
-relay chains while at the same time being very easy to setup for the
-novice user. Knowing the difficulty in creating a well defined Rsyslog 
-environment that meets the needs of enterprise users, there is
-also professional rsyslog support\ [5]_ available directly from the source!
-
 Sponsors and Community
 ----------------------
 
@@ -72,14 +61,6 @@ If you like rsyslog, you might want to lend us a helping hand. It
 doesn't require a lot of time - even a single mouse click helps. Learn
 :doc:`how to help the rsyslog project <how2help>`.
 
-If you are upgrading from rsyslog v2 or stock sysklogd, be sure to read
-the :doc:`rsyslog v3 compatibility notes <compatibility/v3compatibility>`, and if you
-are upgrading from v3, read the `rsyslog v4 compatibility
-notes <v4compatibility.html>`_ and if you upgrade from v4, read the
-:doc:`rsyslog v5 compatibility notes <compatibility/v5compatibility>`.
-
-Rsyslog will work even if you do not read the doc, but doing so will
-definitely improve your experience.
 
 Related Links
 -------------

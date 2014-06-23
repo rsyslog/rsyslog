@@ -4,8 +4,14 @@ configuration objects
 action()
 --------
 
-The `action <rsyslog_conf_actions.html>`_ object is the primary means of
+The :doc:`action <../configuration/actions>`  object is the primary means of
 describing actions to be carried out.
+
+input()
+-------
+
+The :doc:`input <../configuration/input>` object is the primary means of
+describing inputs, which are used to gather messages for rsyslog processing.
 
 global()
 --------
