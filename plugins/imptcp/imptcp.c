@@ -631,7 +631,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 
 	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
-		if(errno == EAGAIN || errno == EWOULDBLOCK)
+		if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
