@@ -1,5 +1,3 @@
-`rsyslog documentation <manual.html>`_
-
 Message parsers in rsyslog
 ==========================
 

@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 IP Address Anonimization Module (mmanon)
 ========================================
 
@@ -109,9 +107,6 @@ insufficient to fulfill legal requirements (if such exist).
 module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
 action(type="mmanon" ipv4.bits="12") action(type="omfile"
 file="/path/to/anon.log")
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

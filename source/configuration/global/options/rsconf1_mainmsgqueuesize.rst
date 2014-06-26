@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $MainMsgQueueSize
 -----------------
 
@@ -33,9 +31,6 @@ a 32 bit system.
 **Sample:**
 
 ``$MainMsgQueueSize 100000 # 100,000 may be a value to handle burst traffic``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

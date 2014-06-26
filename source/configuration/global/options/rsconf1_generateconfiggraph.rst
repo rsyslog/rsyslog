@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $GenerateConfigGraph
 --------------------
 

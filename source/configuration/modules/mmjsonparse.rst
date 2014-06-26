@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 Log Message Normalization Module
 ================================
 
@@ -42,9 +40,6 @@ module(load="mmjsonparse") action(type="mmjsonparse")
 The same in legacy format:
 
 $ModLoad mmjsonparse \*.\* :mmjsonparse:
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

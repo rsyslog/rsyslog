@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 RFC5424 structured data parsing module (mmpstrucdata)
 =====================================================
 
@@ -75,9 +73,6 @@ This will output:
 As you can seem, you can address each of the individual items. Note that
 the case of the RFC5424 parameter names has been converted to lower
 case.
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

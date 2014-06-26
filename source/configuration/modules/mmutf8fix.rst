@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 Fix invalid UTF-8 Sequences (mmutf8fix)
 =======================================
 
@@ -104,9 +102,6 @@ This is mostly the same as the previous sample, but uses
 
   module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
   action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

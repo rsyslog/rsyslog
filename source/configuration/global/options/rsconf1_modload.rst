@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $ModLoad
 --------
 
@@ -25,9 +23,6 @@ The default module directory is ignored in that case.
 **Sample:**
 
 ``$ModLoad ommysql # load MySQL functionality $ModLoad /rsyslog/modules/ompgsql.so # load the postgres module via absolute path``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

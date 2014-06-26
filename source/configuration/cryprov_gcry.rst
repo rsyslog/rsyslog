@@ -1,5 +1,3 @@
-`back to rsyslog module overview <rsyslog_conf_modules.html>`_
-
 libgcrypt Log Crypto Provider (gcry)
 ====================================
 
@@ -98,9 +96,6 @@ keyfile="/secured/path/to/keyfile")
 
 Note that the keyfile can be generated via the rscrytool utility (see its documentation for how to
 actually do that).
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

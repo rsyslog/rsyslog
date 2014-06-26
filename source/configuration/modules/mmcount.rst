@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 mmcount
 =======
 
@@ -46,9 +44,6 @@ mailing list for questions
             $ActionExecOnlyOnceEveryInterval 30
             :ommail:;RSYSLOG_SyslogProtocol23Format
          }
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
