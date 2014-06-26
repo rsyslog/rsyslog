@@ -3,7 +3,7 @@ omudpspoof: UDP spoofing output module
 
 **Module Name:    omstdout**
 
-**Author:**\ David Lang <david@lang.hm> and Rainer Gerhards
+**Author:** David Lang <david@lang.hm> and Rainer Gerhards
 <rgerhards@adiscon.com>
 
 **Available Since**: 5.1.3
@@ -55,18 +55,22 @@ the remote server server.example.com. The original sender's address is
 used. We do not care about the source port. This example is considered
 the typical use case for omudpspoof.
 
-$ModLoad omudpspoof $ActionOMUDPSpoofTargetHost server.example.com
-\*.\*      :omudpspoof:
+::
+
+  $ModLoad omudpspoof $ActionOMUDPSpoofTargetHost server.example.com
+  *.*      :omudpspoof:
 
 The following sample forwards all syslog messages in unmodified form to
 the remote server server.example.com. The sender address 192.0.2.1 with
 fixed source port 514 is used.
 
-$ModLoad omudpspoof $template spoofaddr,"192.0.2.1" $template
-spooftemplate,"%rawmsg%" $ActionOMUDPSpoofSourceNameTemplate spoofaddr
-$ActionOMUDPSpoofTargetHost server.example.com
-$ActionOMUDPSpoofSourcePortStart 514 $ActionOMUDPSpoofSourcePortEnd 514
-\*.\*      :omudpspoof:;spooftemplate
+::
+
+ $ModLoad omudpspoof $template spoofaddr,"192.0.2.1" $template
+ spooftemplate,"%rawmsg%" $ActionOMUDPSpoofSourceNameTemplate spoofaddr
+ $ActionOMUDPSpoofTargetHost server.example.com
+ $ActionOMUDPSpoofSourcePortStart 514 $ActionOMUDPSpoofSourcePortEnd 514
+ *.*      :omudpspoof:;spooftemplate
 
 The following sample is similar to the previous, but uses as many
 defaults as possible. In that sample, a source port in the range
@@ -74,9 +78,12 @@ defaults as possible. In that sample, a source port in the range
 canned default forwarding format. Note that if any parameters have been
 changed, the previously set defaults will be used!
 
-$ModLoad omudpspoof $template spoofaddr,"192.0.2.1"
-$ActionOMUDPSpoofSourceNameTemplate spoofaddr
-$ActionOMUDPSpoofTargetHost server.example.com \*.\*      :omudpspoof:
+::
+
+  $ModLoad omudpspoof $template spoofaddr,"192.0.2.1"
+  $ActionOMUDPSpoofSourceNameTemplate spoofaddr
+  $ActionOMUDPSpoofTargetHost server.example.com
+  *.*      :omudpspoof:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
