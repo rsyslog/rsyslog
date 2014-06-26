@@ -1,5 +1,3 @@
-`back <rsyslog_conf_output.html>`_
-
 Log rotation with rsyslog
 =========================
 
@@ -59,10 +57,6 @@ With this approach two files for logging are used, each with a maximum
 size of 50 MB. So we can say we have successfully configured a log
 rotation which satisfies our requirement. We keep the logs at a
 fixed-size level of 100 MB.
-
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

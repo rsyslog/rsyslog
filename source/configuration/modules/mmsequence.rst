@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 Number generator and counter module (mmsequence)
 ================================================
 
@@ -142,9 +140,6 @@ called just as an action. The number generated is stored in a variable.
 **Legacy Configuration Directives**:
 
 Not supported.
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

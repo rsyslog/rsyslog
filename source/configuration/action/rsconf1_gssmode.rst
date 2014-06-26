@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $GssMode
 --------
 
@@ -19,9 +17,6 @@ encrypted if both sides support it.
 **Sample:**
 
 ``$GssMode Encryption``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

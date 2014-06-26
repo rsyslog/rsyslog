@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 Log Message Normalization Module
 ================================
 
@@ -85,9 +83,6 @@ The same in legacy format:
 
 $ModLoad mmnormalize $mmnormalizeRuleBase /path/to/rulebase.rb \*.\*
 :mmnormalize:
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

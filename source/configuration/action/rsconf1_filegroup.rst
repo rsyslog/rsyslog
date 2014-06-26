@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $FileGroup
 ----------
 
@@ -17,9 +15,6 @@ processing. Interim changes to the user mapping are not detected.
 **Sample:**
 
 ``$FileGroup loggroup``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

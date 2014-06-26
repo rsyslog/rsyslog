@@ -1,7 +1,3 @@
-This is a part of the rsyslog.conf documentation.
-
-`back <rsyslog_conf.html>`_
-
 Output Channels
 ---------------
 
@@ -62,10 +58,6 @@ writing to a single file. Meanwhile, rsyslogd has been fixed to support
 files larger 2gb, but obviously only on file systems and operating
 system versions that do so. So it can still make sense to enforce a 2gb
 file size limit.
-
-[`manual index <manual.html>`_\ ]
-[`rsyslog.conf <rsyslog_conf.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

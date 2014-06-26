@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $omfileForceChown
 -----------------
 
@@ -66,9 +64,6 @@ version 4, but may disappear at any time for any version greater than 4.
 **Sample:**
 
 ``$FileOwner loguser $omfileForceChown on``
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

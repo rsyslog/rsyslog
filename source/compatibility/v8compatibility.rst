@@ -146,9 +146,6 @@ calls. Also, the numerical parameters are now unsigned and no longer
 size\_t. This permits us to store them directly into optimized heap
 structures.
 
-[`manual index <manual.html>`_\ ] [`rsyslog
-site <http://www.rsyslog.com/>`_\ ]
-
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
 Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
