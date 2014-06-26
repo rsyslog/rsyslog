@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -172,6 +172,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "inputname", eCmdHdlrGetWord, 0 },
 	{ "inputname.appendport", eCmdHdlrBinary, 0 },
+	{ "name", eCmdHdlrGetWord, 0 },
+	{ "name.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
@@ -841,6 +843,7 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 {
 	instanceConf_t *inst;
 	int i;
+	int bAppendPortUsed = 0;
 	DEFiRet;
 
 	CHKiRet(createInstance(&inst));
@@ -850,9 +853,39 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			continue;	/* array, handled by caller */
+		} else if(!strcmp(inppblk.descr[i].name, "name")) {
+			if(inst->inputname != NULL) {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
+						"paramter specified - only one can be used");
+				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+			}
+			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "name.appendport")) {
+			if(bAppendPortUsed) {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
+						"inputname.appendport paramter specified - only one can be used");
+				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+			}
+			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
+			bAppendPortUsed = 1;
 		} else if(!strcmp(inppblk.descr[i].name, "inputname")) {
+			errmsg.LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname "
+					"used. Suggest to use name instead");
+			if(inst->inputname != NULL) {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
+						"parameter specified - only one can be used");
+				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+			}
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "inputname.appendport")) {
+			errmsg.LogError(0, RS_RET_DEPRECATED , "imudp: deprecated parameter inputname.appendport "
+					"used. Suggest to use name.appendport instead");
+			if(bAppendPortUsed) {
+				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
+						"inputname.appendport parameter specified - only one can be used");
+				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+			}
+			bAppendPortUsed = 1;
 			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
 			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);

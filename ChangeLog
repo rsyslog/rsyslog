@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.3.3 [v8-devel] 2014-05-??
+- unify input object naming
+  imudp now supports "name" paramter, as other inputs do. "inputname" has
+  been deprecated, but can still be used. Same applies to "appendport"
+  subparamter". Thanks to "Nick Syslog" for the suggestion.
 - made the missing (contributed) modules build under v8 [import from 8.2.2]
   Modules:
   * mmrfc5424addhmac
