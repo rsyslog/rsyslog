@@ -149,37 +149,57 @@ Input Parameters
 
    Specifies the rate-limiting burst in number of messages.
 
-.. function::  InputName [name]
+.. function::  name [name]
 
-   *Available since: 7.3.9*
+   *Available since: 8.3.3*
 
    *Default: imudp*
 
-   specifies the value of the inputname. In older versions, this was always
-   "imudp" for all
+   specifies the value of the inputname property. In older versions,
+   this was always "imudp" for all
    listeners, which still is the default. Starting with 7.3.9 it can be
    set to different values for each listener. Note that when a single
    input statement defines multipe listner ports, the inputname will be
    the same for all of them. If you want to differentiate in that case,
-   use "InputName.AppendPort" to make them unique. Note that the
-   "InputName" parameter can be an empty string. In that case, the
+   use "name.appendPort" to make them unique. Note that the
+   "name" parameter can be an empty string. In that case, the
    corresponding inputname property will obviously also be the empty
    string. This is primarily meant to be used together with
-   "InputName.AppendPort" to set the inputname equal to the port.
+   "name.appendPort" to set the inputname equal to the port.
 
-.. function::  InputName.AppendPort [on/off]
+.. function::  InputName [name]
+
+   *Available since: 7.3.9*
+
+   **Deprecated**
+
+   This provides the same functionality as "name". It is the historical
+   parameter name and should not be used in new configurations. It is
+   scheduled to be removed some time in the future.
+
+.. function::  name.appendPort [on/off]
 
    *Available since: 7.3.9*
 
    *Default: off*
 
-   Appends the port the the inputname. Note that when no inputname is
+   Appends the port the the inputname property. Note that when no "name" is
    specified, the default of "imudp" is used and the port is appended to
    that default. So, for example, a listner port of 514 in that case
    will lead to an inputname of "imudp514". The ability to append a port
    is most useful when multiple ports are defined for a single input and
    each of the inputnames shall be unique. Note that there currently is
    no differentiation between IPv4/v6 listeners on the same port.
+
+.. function::  InputName.AppendPort [on/off]
+
+   *Available since: 7.3.9*
+
+   **Deprecated**
+
+   This provides the same functionality as "name.appendPort". It is the historical
+   parameter name and should not be used in new configurations. It is
+   scheduled to be removed some time in the future.
 
 .. function::  defaultTZ <timezone-info>
 
