@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $ActionResumeInterval
 ---------------------
 
@@ -25,9 +23,6 @@ after the 10th try, it by default is 60 and after the 100th try it is
 **Sample:**
 
 $ActionResumeInterval 30 
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

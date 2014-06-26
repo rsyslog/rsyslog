@@ -1,5 +1,3 @@
-`rsyslog.conf configuration directive <rsyslog_conf_global.html>`_
-
 $RulesetParser
 --------------
 
@@ -108,9 +106,6 @@ case), please see the example section on the
 Note the positions of the directives. With the current config language,
 **sequence of statements is very important**. This is ugly, but
 unfortunately the way it currently works.
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

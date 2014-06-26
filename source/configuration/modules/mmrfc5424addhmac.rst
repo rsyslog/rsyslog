@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 mmrfc5424addhmac
 ================
 
@@ -88,9 +86,6 @@ development of a verification tool, please simply email
 **Caveats/Known Bugs:**
 
 -  none
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

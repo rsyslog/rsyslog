@@ -1,5 +1,3 @@
-`back <rsyslog_conf_global.html>`_
-
 $ActionExecOnlyWhenPreviousIsSuspended
 --------------------------------------
 
@@ -36,9 +34,6 @@ undesired results (but you can try it if you like).
 **Sample:**
 
 \*.\* @@primary-syslog.example.com $ActionExecOnlyWhenPreviousIsSuspended on &   @@secondary-1-syslog.example.com    # & is used to have more than one action for &   @@secondary-2-syslog.example.com    # the same selector - the mult-action feature &   /var/log/localbuffer $ActionExecOnlyWhenPreviousIsSuspended off # to re-set it for the next selector 
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

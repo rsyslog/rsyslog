@@ -1,5 +1,3 @@
-`back <rsyslog_conf_modules.html>`_
-
 Fields Extraction Module (mmfields)
 ===================================
 
@@ -86,9 +84,6 @@ module(load="mmfields") template(name="ftpl" type=string
 string="%$!%\\n") action(type="omfields" separator=":"
 jsonRoot="!mmfields") action(type="omfile" file="/path/to/logfile"
 template="ftpl")
-
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.

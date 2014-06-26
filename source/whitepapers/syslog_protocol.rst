@@ -1,5 +1,3 @@
-`back <features.html>`_
-
 syslog-protocol support in rsyslog
 ==================================
 
