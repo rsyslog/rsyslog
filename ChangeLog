@@ -373,6 +373,10 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
 - bugfix: using UUID property could cause segfault
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.
+- bugfix: file descriptor leak with Guardtime signatures
+  When a .gtstate file is opened it is never closed. This is especially
+  bad when dynafiles frequently get evicted from dynafile cache and be
+  re-opened again.
 - bugfix: busy loop in tcp listener when running out of file descriptors
   Thanks to Susant Sahani for the patch.
 ---------------------------------------------------------------------------
