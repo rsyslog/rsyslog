@@ -6,7 +6,12 @@
  * -p	target port (default 13514)
  * -n	number of target ports (targets are in range -p..(-p+-n-1)
  *      Note -c must also be set to at LEAST the number of -n!
- * -c	number of connections (default 1)
+ * -c	number of connections (default 1), use negative number
+ *      to set a "soft limit": if tcpflood cannot open the 
+ *      requested number of connections, gracefully degrade to
+ *      whatever number could be opened. This is useful in environments
+ *      where system config constraints cannot be overriden (e.g.
+ *      vservers, non-admin users, ...)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)
  * -P	PRI to be used for generated messages (default is 167).
@@ -115,7 +120,8 @@ static int extraDataLen = 0; /* amount of extra data to add to message */
 static int useRFC5424Format = 0; /* should the test message be in RFC5424 format? */
 static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
 static int numMsgsToSend; /* number of messages to send */
-static unsigned numConnections = 1; /* number of connections to create */
+static int numConnections = 1; /* number of connections to create */
+static int softLimitConnections  = 0; /* soft connection limit, see -c option description */
 static int *sockArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
@@ -210,7 +216,7 @@ int openConn(int *fd)
 	int rnd;
 
 	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-		perror("socket()");
+		perror("\nsocket()");
 		return(1);
 	}
 
@@ -272,6 +278,12 @@ int openConnections(void)
 		}
 		if(openConn(&(sockArray[i])) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
+			if(softLimitConnections) {
+				numConnections = i - 1;
+				printf("Connection limit is soft, continuing with only %d "
+				       "connections.\n", numConnections);
+				break;
+			}
 			return 1;
 		}
 		if(transport == TP_TLS) {
@@ -854,7 +866,11 @@ int main(int argc, char *argv[])
 				break;
 		case 'n':	numTargetPorts = atoi(optarg);
 				break;
-		case 'c':	numConnections = (unsigned) atoi(optarg);
+		case 'c':	numConnections = atoi(optarg);
+				if(numConnections < 0) {
+					numConnections *= -1;
+					softLimitConnections = 1;
+				}
 				break;
 		case 'C':	numFileIterations = atoi(optarg);
 				break;
