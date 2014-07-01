@@ -1953,8 +1953,6 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		DBGPRINTF("template: '%s' assigned\n", pTplName);
 	}
 
-	pAction->pMod = pMod;
-	pAction->pModData = pModData;
 	/* check if the module is compatible with select features (currently no such features exist) */
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
