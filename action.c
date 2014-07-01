@@ -309,7 +309,7 @@ rsRetVal actionDestruct(action_t *pThis)
 	if(pThis->statsobj != NULL)
 		statsobj.Destruct(&pThis->statsobj);
 
-	if(pThis->pMod != NULL)
+	if(pThis->pModData != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	pthread_mutex_destroy(&pThis->mutAction);
