@@ -1299,6 +1299,7 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
+					*bMustRestoreActivePtr = 1;
 					*activeSave = pBatch->active;
 					copyActive(pBatch);
 				}
