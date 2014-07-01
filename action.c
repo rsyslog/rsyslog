@@ -2048,8 +2048,10 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		 * (currently no such features exist) */
 		pAction->eState = ACT_STATE_RDY; /* action is enabled */
 		loadConf->actions.nbrActions++;	/* one more active action! */
+		*ppAction = pAction;
+	} else {
+		// TODO: cleanup
 	}
-	*ppAction = pAction;
 
 finalize_it:
 	free(cnfModName);
