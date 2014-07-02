@@ -1129,7 +1129,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 {
 	struct cnfobj *o;
 
-	if((o = malloc(sizeof(struct nvlst))) != NULL) {
+	if((o = malloc(sizeof(struct cnfobj))) != NULL) {
 		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
