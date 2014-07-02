@@ -1321,6 +1321,9 @@ doExtractFieldByStr(uchar *str, char *delim, rs_size_t lenDelim, int matchnbr, u
 	uchar *pFldEnd;
 	DEFiRet;
 
+	if (str == NULL || delim == NULL)
+		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
+
 	/* first, skip to the field in question */
 	iCurrFld = 1;
 	pFld = str;
