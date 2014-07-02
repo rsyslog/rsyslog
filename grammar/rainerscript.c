@@ -1298,7 +1298,7 @@ doExtractFieldByChar(uchar *str, uchar delim, int matchnbr, uchar **resstr)
 			    * step back a little not to copy it as part of the field. */
 		/* we got our end pointer, now do the copy */
 		iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(uchar)));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
@@ -1343,7 +1343,7 @@ doExtractFieldByStr(uchar *str, char *delim, rs_size_t lenDelim, int matchnbr, u
 			iLen = pFldEnd - pFld;
 		}
 		/* we got our end pointer, now do the copy */
-		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(uchar)));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
