@@ -349,6 +349,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
 	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
 	pThis->bJustResumed = 0;
+	pThis->eParamPassing = ACT_STRING_PASSING;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	pthread_mutex_init(&pThis->mutAction, NULL);
