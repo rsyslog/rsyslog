@@ -1736,6 +1736,17 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
 	ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
 	FREE_BOTH_RET
 
+#define COMP_NUM_BINOP_DIV(x) \
+	cnfexprEval(expr->l, &l, usrptr); \
+	cnfexprEval(expr->r, &r, usrptr); \
+	ret->datatype = 'N'; \
+	if((ret->d.n = var2Number(&r, &convok_r)) == 0) { \
+		/* division by zero */ \
+	} else { \
+		ret->d.n = var2Number(&l, &convok_l) x ret->d.n; \
+	} \
+	FREE_BOTH_RET
+
 /* NOTE: array as right-hand argument MUST be handled by user */
 #define PREP_TWO_STRINGS \
 		cnfexprEval(expr->l, &l, usrptr); \
@@ -2216,10 +2227,10 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
 		COMP_NUM_BINOP(*);
 		break;
 	case '/':
-		COMP_NUM_BINOP(/);
+		COMP_NUM_BINOP_DIV(/);
 		break;
 	case '%':
-		COMP_NUM_BINOP(%);
+		COMP_NUM_BINOP_DIV(%);
 		break;
 	case 'M':
 		cnfexprEval(expr->r, &r, usrptr);
@@ -3161,13 +3172,23 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case '/':
 		if(getConstNumber(expr, &ln, &rn))  {
 			expr->nodetype = 'N';
-			((struct cnfnumval*)expr)->val = ln / rn;
+			if(rn == 0) {
+				/* division by zero */
+				((struct cnfnumval*)expr)->val = 0;
+			} else {
+				((struct cnfnumval*)expr)->val = ln / rn;
+			}
 		}
 		break;
 	case '%':
 		if(getConstNumber(expr, &ln, &rn))  {
 			expr->nodetype = 'N';
-			((struct cnfnumval*)expr)->val = ln % rn;
+			if(rn == 0) {
+				/* division by zero */
+				((struct cnfnumval*)expr)->val = 0;
+			} else {
+				((struct cnfnumval*)expr)->val = ln % rn;
+			}
 		}
 		break;
 	case CMP_NE:
