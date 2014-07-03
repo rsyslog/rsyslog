@@ -1277,6 +1277,19 @@ AC_ARG_ENABLE(pmcisconames,
 AM_CONDITIONAL(ENABLE_PMCISCONAMES, test x$enable_pmcisconames = xyes)
 
 
+# settings for pmciscoios
+AC_ARG_ENABLE(pmciscoios,
+        [AS_HELP_STRING([--enable-pmciscoios],[Compiles ciscoios parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmciscoios="yes" ;;
+          no) enable_pmciscoios="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmciscoios) ;;
+         esac],
+        [enable_pmciscoios=no]
+)
+AM_CONDITIONAL(ENABLE_PMCISCOIOS, test x$enable_pmciscoios = xyes)
+
+
 # settings for pmaixforwardedfrom
 AC_ARG_ENABLE(pmaixforwardedfrom,
         [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
@@ -1548,6 +1561,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/pmrfc3164sd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
+		plugins/pmciscoios/Makefile \
 		plugins/pmsnare/Makefile \
 		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
@@ -1639,6 +1653,7 @@ echo "---{ parser modules }---"
 echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
+echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo

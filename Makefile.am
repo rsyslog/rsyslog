@@ -130,6 +130,10 @@ if ENABLE_PMCISCONAMES
 SUBDIRS += plugins/pmcisconames
 endif
 
+if ENABLE_PMCISCOIOS
+SUBDIRS += plugins/pmciscoios
+endif
+
 if ENABLE_PMAIXFORWARDEDFROM
 SUBDIRS += plugins/pmaixforwardedfrom
 endif
