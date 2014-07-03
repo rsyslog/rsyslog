@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.3.3 [v8-devel] 2014-05-??
+Version 8.3.3 [v8-devel] 2014-06-26
 - unify input object naming
   imudp now supports "name" paramter, as other inputs do. "inputname" has
   been deprecated, but can still be used. Same applies to "appendport"
