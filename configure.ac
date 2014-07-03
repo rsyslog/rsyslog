@@ -3,7 +3,7 @@
 
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[8.3.3],[rsyslog@lists.adiscon.com])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects serial-tests])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
