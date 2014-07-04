@@ -3714,13 +3714,17 @@ cnffuncNew_prifilt(int fac)
 {
 	struct cnffunc* func;
 
+	fac >>= 3;
+	if (fac >= LOG_NFACILITIES + 1 || fac < 0)
+		return NULL;
+
 	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
 		func->nodetype = 'F';
 		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
 		func->nParams = 0;
 		func->fID = CNFFUNC_PRIFILT;
 		func->funcdata = calloc(1, sizeof(struct funcData_prifilt));
-		((struct funcData_prifilt *)func->funcdata)->pmask[fac >> 3] = TABLE_ALLPRI;
+		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
 	return func;
 }
