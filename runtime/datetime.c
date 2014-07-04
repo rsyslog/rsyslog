@@ -363,6 +363,11 @@ finalize_it:
  * If a *valid* timestamp is found, the string length is decremented
  * by the number of characters processed. If it is not a valid timestamp,
  * the length is kept unmodified. -- rgerhards, 2009-09-23
+ *
+ * We support this format:
+ * Mon mm [yyyy] hh:mm:ss[.subsec]
+ * Note that [yyyy] and [.subsec] are non-standard but frequently occur.
+ * subsec was added in 2014-07-08 rgerhards
  */
 static rsRetVal
 ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
@@ -374,6 +379,8 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	int hour; /* 24 hour clock */
 	int minute;
 	int second;
+	int secfrac;	/* fractional seconds (must be 32 bit!) */
+	int secfracPrecision;
 	/* end variables to temporarily hold time information while we parse */
 	int lenStr;
 	uchar *pszTS;
@@ -590,6 +597,19 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	if(second < 0 || second > 60)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
+	/* as an extension e.g. found in CISCO IOS, we support sub-second resultion.
+	 * It's presence is indicated by a dot immediately following the second.
+	 */
+	if(lenStr > 0 && *pszTS == '.') {
+		--lenStr;
+		uchar *pszStart = ++pszTS;
+		secfrac = srSLMGParseInt32(&pszTS, &lenStr);
+		secfracPrecision = (int) (pszTS - pszStart);
+	} else {
+		secfracPrecision = 0;
+		secfrac = 0;
+	}
+
 	/* we provide support for an extra ":" after the date. While this is an
 	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
 	 * to permit it as a valid case. -- rgerhards, 2008-09-12
@@ -618,8 +638,8 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	pTime->hour = hour;
 	pTime->minute = minute;
 	pTime->second = second;
- 	pTime->secfracPrecision = 0;
-	pTime->secfrac = 0;
+	pTime->secfrac = secfrac;
+	pTime->secfracPrecision = secfracPrecision;
 	*pLenStr = lenStr;
 
 finalize_it:
