@@ -65,8 +65,7 @@ BEGINparse
 	uchar *p2parse;
 	long long msgcounter;
 	int lenMsg;
-	int i;	/* general index for parsing */
-	int j;	/* index for target buffers */
+	int i;
 	uchar bufParseTAG[512];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
 CODESTARTparse
@@ -80,55 +79,56 @@ CODESTARTparse
 	 * the ": " terminator sequence
 	 */
 	msgcounter = 0;
-	while(i < lenMsg && (p2parse[i] >= '0' && p2parse[i] <= '9') ) {
-		msgcounter = msgcounter * 10 + p2parse[i] - '0';
-		++i;
+	while(lenMsg > 0 && (*p2parse >= '0' && *p2parse <= '9') ) {
+		msgcounter = msgcounter * 10 + *p2parse - '0';
+		++p2parse;
 	}
 	DBGPRINTF("pmciscoios: msgcntr %lld\n", msgcounter);
 
 	/* delimiter check */
-	if(i+1 >= lenMsg || p2parse[i] != ':' || p2parse[i] != ' ')
+	if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
+		DBGPRINTF("pmciscoios: fail after seqno: '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	i += 2;
+	}
+	p2parse += 2;
 
 
-	/* now parse year */
+dbgprintf("p2parse ptr %p: '%s'\n", &p2parse, p2parse);
+	/* now parse timestamp */
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 	} else {
+		DBGPRINTF("pmciscoios: fail at timestamp: '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
-
-	/* delimiter check */
-	if(i+1 >= lenMsg || p2parse[i] != ':' || p2parse[i] != ' ')
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	i += 2;
+	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
 	/* parse syslog tag. must always start with '%', else we have a field mismatch */
-	if(i >= lenMsg || p2parse[i] != '%')
+	if(lenMsg < 1 || *p2parse != '%') {
+		DBGPRINTF("pmciscoios: fail at tag begin (no '%%'): '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-
-
-	j = 0;
-	while(i < lenMsg && *p2parse != ':' && *p2parse != ' ' && i < (int) sizeof(bufParseTAG) - 2) {
-		bufParseTAG[j++] = p2parse[i];
 	}
 
+	i = 0;
+	while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < (int) sizeof(bufParseTAG) - 2) {
+		bufParseTAG[i++] = *p2parse++;
+		--lenMsg;
+	}
 	/* delimiter check */
-	if(i+1 >= lenMsg || p2parse[i] != ':' || p2parse[i] != ' ')
+	if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
+		DBGPRINTF("pmciscoios: fail after tag: '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-
-	if(i < lenMsg && p2parse[i] == ':') {
-		++i; 
-		bufParseTAG[j++] = ':';
 	}
-	bufParseTAG[j] = '\0';	/* terminate string */
+
+	++p2parse;
+	bufParseTAG[i++] = ':';
+	bufParseTAG[i] = '\0';	/* terminate string */
 
 	/* if we reach this point, we have a wellformed message and can persist the values */
-	MsgSetMSGoffs(pMsg, i); /* The unparsed rest is the actual MSG (for consistency, start it with SP) */
-	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 	MsgSetTAG(pMsg, bufParseTAG, i);
+	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
+	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 finalize_it:
 ENDparse
 
@@ -150,7 +150,7 @@ CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
-BEGINmodInit(pmrfc3164)
+BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
@@ -161,6 +161,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	DBGPRINTF("pmciscoios parser init called\n");
 ENDmodInit
-
-/* vim:set ai:
- */
