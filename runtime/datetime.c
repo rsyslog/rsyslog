@@ -365,8 +365,10 @@ finalize_it:
  * the length is kept unmodified. -- rgerhards, 2009-09-23
  *
  * We support this format:
- * Mon mm [yyyy] hh:mm:ss[.subsec]
+ * [yyyy] Mon mm [yyyy] hh:mm:ss[.subsec]
  * Note that [yyyy] and [.subsec] are non-standard but frequently occur.
+ * Also [yyyy] can only occur once -- if it occurs twice, we flag the
+ * timestamp as invalid.
  * subsec was added in 2014-07-08 rgerhards
  */
 static rsRetVal
@@ -393,6 +395,21 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	assert(pLenStr != NULL);
 	lenStr = *pLenStr;
 
+	if(lenStr < 3)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+
+	/* first check if we have a year in front of the timestamp. some devices (e.g. Brocade)
+	 * do this. As it is pretty straightforward to detect and chance of misinterpretation
+	 * is low, we try to parse it.
+	 */
+	if(*pszTS >= '0' && *pszTS <= '9') {
+		/* OK, either we have a prepended year or an invalid format! */
+		year = srSLMGParseInt32(&pszTS, &lenStr);
+		if(year < 1970 || year > 2100 || *pszTS != ' ')
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		++pszTS; /* skip SP */
+	}
+
 	/* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
 	 * we may see the following character sequences occur:
 	 *
@@ -414,9 +431,6 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	 * june, when it first manifested. This also lead to invalid parsing of the rest
 	 * of the message, as the time stamp was not detected to be correct. - rgerhards
 	 */
-	if(lenStr < 3)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-
 	switch(*pszTS++)
 	{
 	case 'j':
@@ -565,7 +579,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 
 	/* time part */
 	hour = srSLMGParseInt32(&pszTS, &lenStr);
-	if(hour > 1970 && hour < 2100) {
+	if(year == 0 && hour > 1970 && hour < 2100) {
 		/* if so, we assume this actually is a year. This is a format found
 		 * e.g. in Cisco devices.
 		 * (if you read this 2100+ trying to fix a bug, congratulate me
