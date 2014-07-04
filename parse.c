@@ -414,7 +414,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.
 	 */	
-  	CHKiRet(cstrConvSzStrAndDestruct(pCStr, &pszIP, 0));
+  	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
 
 	*pIP = calloc(1, sizeof(struct NetAddr));
 	

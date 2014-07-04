@@ -457,11 +457,14 @@ uchar*  rsCStrGetSzStr(cstr_t *pThis)
  * PLEASE NOTE: the caller must free the memory returned in ppSz in any case
  * (except, of course, if it is NULL).
  */
-rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
+rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
 {
 	DEFiRet;
 	uchar* pRetBuf;
+	cstr_t *pThis;
 
+	assert(ppThis != NULL);
+	pThis = *ppThis;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(ppSz != NULL);
 	assert(bRetNULL == 0 || bRetNULL == 1);
@@ -475,7 +478,7 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
 		}
 	} else
 		pRetBuf = pThis->pBuf;
-	
+
 	*ppSz = pRetBuf;
 
 finalize_it:
@@ -484,6 +487,8 @@ finalize_it:
 	 * also free the sz String buffer, which we pass on to the user.
 	 */
 	RSFREEOBJ(pThis);
+	*ppThis = NULL;
+
 	RETiRet;
 }
 
