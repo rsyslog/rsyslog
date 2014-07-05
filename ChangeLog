@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 8.2.3 [v8-stable] 2014-??-??
+- bugfix: ommysql: handle/mem leak upon termination of worker thread
+  This could become bad if the (instance) worker threads are often
+  started and terminated. But it takes quite a while to show effect.
+---------------------------------------------------------------------------
 Version 8.2.2 [v8-stable] 2014-06-02
 - made the missing (contributed) modules build under v8
   Note that we could do this to the stable, because there is NO regression
