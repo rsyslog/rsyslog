@@ -104,7 +104,9 @@ if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
 	mysql-basic-cnf6.sh \
-	mysql-asyn.sh 
+	mysql-asyn.sh \
+	mysql-actq-mt.sh \
+	mysql-actq-mt-withpause.sh
 if ENABLE_OMLIBDBI
 TESTS +=  \
 	libdbi-basic.sh \
@@ -113,7 +115,8 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
-	mysql-asyn-vg.sh 
+	mysql-asyn-vg.sh \
+	mysql-actq-mt-withpause-vg.sh 
 endif
 endif
 
@@ -559,6 +562,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mysql-asyn.sh \
 	   mysql-asyn-vg.sh \
 	   testsuites/mysql-asyn.conf \
+	   mysql-actq-mt.sh \
+	   mysql-actq-mt-withpause.sh \
+	   mysql-actq-mt-withpause-vg.sh \
+	   testsuites/mysql-actq-mt.conf \
 	   mmpstrucdata.sh \
 	   testsuites/mmpstrucdata.conf \
 	   cfg.sh
