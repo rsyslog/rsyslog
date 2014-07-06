@@ -31,6 +31,13 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   re-opened again.
 - bugfix: busy loop in tcp listener when running out of file descriptors
   Thanks to Susant Sahani for the patch.
+- bugfix: output modules with parameters with multiple passing modes
+  could caused strange behaviour including aborts
+  This was due to the fact that the action module only preserved and
+  processed the last set passing mode. Note that this was not a problem
+  for the plugins provided by the rsyslog git: none of them uses different
+  passing modes.
+  Thanks to Tomas Heinrich for providing a very detailled bug report.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
