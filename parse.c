@@ -416,7 +416,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	 */	
   	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
 
-	*pIP = calloc(1, sizeof(struct NetAddr));
+	if((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	
 	if (*((char*)pszIP) == '[') {
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
