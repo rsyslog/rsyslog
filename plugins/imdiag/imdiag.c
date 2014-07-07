@@ -244,7 +244,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	iFrom = atoi((char*)wordBuf);
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
 	nMsgs = atoi((char*)wordBuf);
-	ratelimitNew(&ratelimit, "imdiag", "injectmsg");
+	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 
 	for(i = 0 ; i < nMsgs ; ++i) {
 		doInjectMsg(i + iFrom, ratelimit);
