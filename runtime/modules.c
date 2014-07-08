@@ -64,7 +64,6 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(parser)
 DEFobjCurrIf(strgen)
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
@@ -731,13 +730,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 		case eMOD_LIB:
 			break;
 		case eMOD_PARSER:
-			/* first, we need to obtain the parser object. We could not do that during
-			 * init as that would have caused class bootstrap issues which are not
-			 * absolutely necessary. Note that we can call objUse() multiple times, it
-			 * handles that.
-			 */
-			CHKiRet(objUse(parser, CORE_COMPONENT));
-			/* here, we create a new parser object */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"parse2",
 				   &pNew->mod.pm.parse2);
 			if(localRet == RS_RET_OK) {
@@ -765,7 +757,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			 * handles that.
 			 */
 			CHKiRet(objUse(strgen, CORE_COMPONENT));
-			/* here, we create a new parser object */
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"strgen", &pNew->mod.sm.strgen));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetName", &GetName));
 			CHKiRet(GetName(&pName));
@@ -1373,7 +1364,6 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
 	free(pModDir);
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
