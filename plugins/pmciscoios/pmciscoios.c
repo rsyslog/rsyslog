@@ -139,6 +139,7 @@ BEGINparse2
 	long long msgcounter;
 	int lenMsg;
 	int i;
+	int iHostname;
 	uchar bufParseTAG[512];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
 CODESTARTparse2
@@ -148,13 +149,13 @@ CODESTARTparse2
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
-	/* first obtain the message counter. It must be numeric up until
+	/* first obtain the MESSAGE COUNTER. It must be numeric up until
 	 * the ": " terminator sequence
 	 */
 	msgcounter = 0;
 	while(lenMsg > 0 && (*p2parse >= '0' && *p2parse <= '9') ) {
 		msgcounter = msgcounter * 10 + *p2parse - '0';
-		++p2parse;
+		++p2parse, --lenMsg;
 	}
 	DBGPRINTF("pmciscoios: msgcntr %lld\n", msgcounter);
 
@@ -165,8 +166,25 @@ CODESTARTparse2
 	}
 	p2parse += 2;
 
+	/* ORIGIN (optional) */
+	if(pInst->bOriginPresent) {
+		iHostname = 0;
+		while(   lenMsg > 1
+		      && !(*p2parse == ':' && *(p2parse+1) == ' ')  /* IPv6 is e.g. "::1" (loopback) */
+		      && iHostname < (int) sizeof(bufParseHOSTNAME) - 1 ) {
+			bufParseHOSTNAME[iHostname++] = *p2parse++;
+			--lenMsg;
+		}
+		bufParseHOSTNAME[iHostname] = '\0';
+		/* delimiter check */
+		if(lenMsg < 2 || *(p2parse+1) != ' ') {
+			DBGPRINTF("pmciscoios: fail after origin: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+		p2parse += 2;
+	}
 
-	/* now parse timestamp */
+	/* TIMESTAMP */
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
@@ -176,7 +194,7 @@ CODESTARTparse2
 	}
 	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
-	/* parse syslog tag. must always start with '%', else we have a field mismatch */
+	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
 	if(lenMsg < 1 || *p2parse != '%') {
 		DBGPRINTF("pmciscoios: fail at tag begin (no '%%'): '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
@@ -199,6 +217,8 @@ CODESTARTparse2
 
 	/* if we reach this point, we have a wellformed message and can persist the values */
 	MsgSetTAG(pMsg, bufParseTAG, i);
+	if(pInst->bOriginPresent)
+		MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 finalize_it:
