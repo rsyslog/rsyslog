@@ -93,9 +93,8 @@ CODESTARTparse
 	p2parse += 2;
 
 
-dbgprintf("p2parse ptr %p: '%s'\n", &p2parse, p2parse);
 	/* now parse timestamp */
-	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
+	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 	} else {

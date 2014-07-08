@@ -34,7 +34,7 @@ typedef struct datetime_s {
 BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds);
 	rsRetVal (*ParseTIMESTAMP3339)(struct syslogTime *pTime, uchar** ppszTS, int*);
-	rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, uchar** pszTS, int*);
+	rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, uchar** pszTS, int*, const int bParseTZ);
 	int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst);
 	int (*formatTimestampToPgSQL)(struct syslogTime *ts, char *pDst);
 	int (*formatTimestamp3339)(struct syslogTime *ts, char* pBuf);
@@ -48,7 +48,7 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
 	time_t (*syslogTime2time_t)(struct syslogTime *ts);
 ENDinterface(datetime)
-#define datetimeCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define datetimeCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 /* interface changes:
  * 1 - initial version
  * 2 - not compatible to 1 - bugfix required ParseTIMESTAMP3164 to accept char ** as
@@ -58,7 +58,11 @@ ENDinterface(datetime)
  * 4 - formatTimestamp3164 takes a third int parameter
  * 5 - merge of versions 3 + 4 (2010-03-09)
  * 6 - see above
+ * 8 - ParseTIMESTAMP3164 has addtl parameter to permit TZ string parsing
  */
+
+#define PARSE3164_TZSTRING 1
+#define NO_PARSE3164_TZSTRING 0
 
 /* prototypes */
 PROTOTYPEObj(datetime);

@@ -365,14 +365,17 @@ finalize_it:
  * the length is kept unmodified. -- rgerhards, 2009-09-23
  *
  * We support this format:
- * [yyyy] Mon mm [yyyy] hh:mm:ss[.subsec]
+ * [yyyy] Mon mm [yyyy] hh:mm:ss[.subsec][ TZSTRING:]
  * Note that [yyyy] and [.subsec] are non-standard but frequently occur.
  * Also [yyyy] can only occur once -- if it occurs twice, we flag the
- * timestamp as invalid.
- * subsec was added in 2014-07-08 rgerhards
+ * timestamp as invalid. if bParseTZ is true, we try to obtain a
+ * TZSTRING. Note that in this case it MUST be terminated by a colon
+ * (Cisco format). This option is a bit dangerous, as it could already
+ * by the tag. So it MUST only be enabled in specialised parsers.
+ * subsec, [yyyy] in front, TZSTRING was added in 2014-07-08 rgerhards
  */
 static rsRetVal
-ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
+ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const int bParseTZ)
 {
 	/* variables to temporarily hold time information while we parse */
 	int month;
@@ -383,6 +386,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	int second;
 	int secfrac;	/* fractional seconds (must be 32 bit!) */
 	int secfracPrecision;
+	char tzstring[16];
 	/* end variables to temporarily hold time information while we parse */
 	int lenStr;
 	uchar *pszTS;
@@ -622,6 +626,19 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
 	} else {
 		secfracPrecision = 0;
 		secfrac = 0;
+	}
+
+	/* try to parse the TZSTRING if we are instructed to do so */
+	if(bParseTZ && lenStr > 2 && *pszTS == ' ') {
+		int i;
+		for(  ++pszTS, --lenStr, i = 0
+		    ; lenStr > 0 && i < (int) sizeof(tzstring) - 1 && *pszTS != ':' && *pszTS != ' '
+		    ; --lenStr)
+			tzstring[i++] = *pszTS++;
+		if(i > 0) {
+			/* found TZ, apply it */
+			tzstring[i] = '\0';
+		}
 	}
 
 	/* we provide support for an extra ":" after the date. While this is an
