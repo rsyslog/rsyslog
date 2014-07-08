@@ -1032,14 +1032,14 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->rcvdDecompressed)));
 	CHKiRet(statsobj.ConstructFinalize(pLstn->stats));
 
+	CHKiRet(addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd));
+
 	/* add to start of server's listener list */
 	pLstn->prev = NULL;
 	pLstn->next = pSrv->pLstn;
 	if(pSrv->pLstn != NULL)
 		pSrv->pLstn->prev = pLstn;
 	pSrv->pLstn = pLstn;
-
-	iRet = addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
