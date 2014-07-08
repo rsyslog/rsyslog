@@ -1005,10 +1005,10 @@ static rsRetVal
 addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 {
 	DEFiRet;
-	ptcplstn_t *pLstn;
+	ptcplstn_t *pLstn = NULL;
 	uchar statname[64];
 
-	CHKmalloc(pLstn = malloc(sizeof(ptcplstn_t)));
+	CHKmalloc(pLstn = calloc(1, sizeof(ptcplstn_t)));
 	pLstn->pSrv = pSrv;
 	pLstn->bSuppOctetFram = pSrv->bSuppOctetFram;
 	pLstn->sock = sock;
@@ -1042,6 +1042,14 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	iRet = addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pLstn != NULL) {
+			if(pLstn->stats != NULL)
+				statsobj.Destruct(&(pLstn->stats));
+			free(pLstn);
+		}
+	}
+
 	RETiRet;
 }
 
