@@ -502,8 +502,10 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	
 	DEFiRet;
 
-        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+	*peerName = NULL;
+	*peerIP = NULL;
 
+	error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if(error) {
                 DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*)szHname, "???");
@@ -544,6 +546,12 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	CHKiRet(prop.ConstructFinalize(*peerIP));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(*peerName != NULL)
+			prop.Destruct(peerName);
+		if(*peerIP != NULL)
+			prop.Destruct(peerIP);
+	}
 	if(bMaliciousHName)
 		iRet = RS_RET_MALICIOUS_HNAME;
 	RETiRet;
@@ -655,6 +663,8 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	}
 	if(sockflags == -1) {
 		DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
+		prop.Destruct(peerName);
+		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -1411,7 +1421,12 @@ lstnActivity(ptcplstn_t *pLstn)
 		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
 			break;
 		CHKiRet(localRet);
-		CHKiRet(addSess(pLstn, newSock, peerName, peerIP));
+		localRet = addSess(pLstn, newSock, peerName, peerIP);
+		if(localRet != RS_RET_OK) {
+			prop.Destruct(peerName);
+			prop.Destruct(peerIP);
+			ABORT_FINALIZE(localRet);
+		}
 	}
 
 finalize_it:
