@@ -218,8 +218,10 @@ readklog(modConfData_t *pModConf)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		if((pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1))) == NULL)
+		if((pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1))) == NULL) {
 			iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
+			pRcv = bufRcv;
+		}
 	}
 
 	len = 0;
