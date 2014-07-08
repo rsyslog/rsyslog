@@ -640,7 +640,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			pNew->mod.im.bCanRun = 0;
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"newInpInst", &pNew->mod.im.newInpInst);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
-				pNew->mod.om.newActInst = NULL;
+				pNew->mod.im.newInpInst = NULL;
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
