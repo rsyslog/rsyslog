@@ -182,6 +182,8 @@ int fileno(FILE *stream);
 				  BEGIN INITIAL; }
 "main_queue"[ \n\t]*"("		{ yylval.objType = CNFOBJ_MAINQ;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"timezone"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TIMEZONE;
+				  BEGIN INOBJ; return BEGINOBJ; }
 "global"[ \n\t]*"("		{ yylval.objType = CNFOBJ_GLOBAL;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "template"[ \n\t]*"("		{ yylval.objType = CNFOBJ_TPL;
