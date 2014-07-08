@@ -425,6 +425,44 @@ static rsRetVal newInpInst(struct nvlst *lst)\
 }
 
 
+
+/* newParserInst()
+ * This is basically the equivalent to newActInst() for creating parser
+ * module (listener) instances.
+ */
+#define BEGINnewParserInst \
+static rsRetVal newParserInst(struct nvlst *lst, void *pinst)\
+{\
+	instanceConf_t *inst; \
+	DEFiRet;
+
+#define CODESTARTnewParserInst \
+
+#define CODE_STD_FINALIZERnewParserInst
+
+#define ENDnewParserInst \
+	if(iRet == RS_RET_OK) \
+		*((instanceConf_t**)pinst) = inst; \
+	RETiRet;\
+}
+
+
+/* freeParserInst */
+#define BEGINfreeParserInst \
+static rsRetVal freeParserInst(void* pi)\
+{\
+	DEFiRet;\
+	instanceConf_t *pInst;
+
+#define CODESTARTfreeParserInst\
+	pInst = (instanceConf_t*) pi;
+
+#define ENDfreeParserInst\
+	if(pInst != NULL)\
+		free(pInst);\
+	RETiRet;\
+}
+
 /* tryResume()
  * This entry point is called to check if a module can resume operations. This
  * happens when a module requested that it be suspended. In suspended state,
@@ -666,6 +704,24 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	} else if(!strcmp((char*) name, "GetParserName")) {\
 		*pEtryPoint = GetParserName;\
 	}
+
+/* the following definition is the standard block for queryEtryPt for PARSER
+ * modules obeying the v2+ config interface.
+ */
+#define CODEqueryEtryPt_STD_PMOD2_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "parse2")) {\
+		*pEtryPoint = parse2;\
+	} else if(!strcmp((char*) name, "GetParserName")) {\
+		*pEtryPoint = GetParserName;\
+	} else if(!strcmp((char*) name, "newParserInst")) {\
+		*pEtryPoint = newParserInst;\
+	} else if(!strcmp((char*) name, "freeParserInst")) {\
+		*pEtryPoint = freeParserInst;\
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+
+
 
 /* the following definition is the standard block for queryEtryPt for Strgen
  * modules. This can be used if no specific handling (e.g. to cover version
@@ -1040,7 +1096,7 @@ static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData,
 }
 
 
-/* parse() - main entry point of parser modules
+/* parse() - main entry point of parser modules (v1 config interface)
  */
 #define BEGINparse \
 static rsRetVal parse(msg_t *pMsg)\
@@ -1051,6 +1107,22 @@ static rsRetVal parse(msg_t *pMsg)\
 	assert(pMsg != NULL);
 
 #define ENDparse \
+	RETiRet;\
+}
+
+
+/* parse2() - main entry point of parser modules (v2+ config interface)
+ */
+#define BEGINparse2 \
+static rsRetVal parse2(instanceConf_t *const pInst, msg_t *pMsg)\
+{\
+	DEFiRet;
+
+#define CODESTARTparse2 \
+	assert(pInst != NULL);\
+	assert(pMsg != NULL);
+
+#define ENDparse2 \
 	RETiRet;\
 }
 

@@ -555,7 +555,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
 	uchar *pName;
-	parser_t *pParser; /* used for parser modules */
 	strgen_t *pStrgen; /* used for strgen modules */
 	rsRetVal (*GetName)(uchar**);
 	rsRetVal (*modGetType)(eModType_t *pType);
@@ -739,24 +738,25 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			 */
 			CHKiRet(objUse(parser, CORE_COMPONENT));
 			/* here, we create a new parser object */
-			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parse", &pNew->mod.pm.parse));
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"parse2",
+				   &pNew->mod.pm.parse2);
+			if(localRet == RS_RET_OK) {
+				pNew->mod.pm.parse = NULL;
+				CHKiRet((*pNew->modQueryEtryPt)((uchar*)"newParserInst",
+					&pNew->mod.pm.newParserInst));
+				CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeParserInst",
+					&pNew->mod.pm.freeParserInst));
+			} else if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+				pNew->mod.pm.parse2 = NULL;
+				pNew->mod.pm.newParserInst = NULL;
+				pNew->mod.pm.freeParserInst = NULL;
+				CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parse", &pNew->mod.pm.parse));
+			} else {
+				ABORT_FINALIZE(localRet);
+			}
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"GetParserName", &GetName));
 			CHKiRet(GetName(&pName));
-			CHKiRet(parser.Construct(&pParser));
-
-			/* check some features */
-			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
-			if(localRet == RS_RET_OK){
-				CHKiRet(parser.SetDoSanitazion(pParser, RSTRUE));
-			}
-			localRet = pNew->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
-			if(localRet == RS_RET_OK){
-				CHKiRet(parser.SetDoPRIParsing(pParser, RSTRUE));
-			}
-
-			CHKiRet(parser.SetName(pParser, pName));
-			CHKiRet(parser.SetModPtr(pParser, pNew));
-			CHKiRet(parser.ConstructFinalize(pParser));
+			CHKiRet(parserConstructViaModAndName(pNew, pName, NULL));
 			break;
 		case eMOD_STRGEN:
 			/* first, we need to obtain the strgen object. We could not do that during

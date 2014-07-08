@@ -108,6 +108,16 @@ static struct cnfparamblk inppblk =
 	  inppdescr
 	};
 
+static struct cnfparamdescr parserpdescr[] = {
+	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED }
+};
+static struct cnfparamblk parserpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
+	  parserpdescr
+	};
+
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
@@ -254,6 +264,55 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
+rsRetVal
+parserProcessCnf(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	modInfo_t *pMod;
+	uchar *cnfModName = NULL;
+	uchar *parserName = NULL;
+	int paramIdx;
+	void *parserInst;
+	parser_t *myparser;
+	DEFiRet;
+
+	pvals = nvlstGetParams(o->nvlst, &parserpblk, NULL);
+	if(pvals == NULL) {
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	DBGPRINTF("input param blk after parserProcessCnf:\n");
+	cnfparamsPrint(&parserpblk, pvals);
+	paramIdx = cnfparamGetIdx(&parserpblk, "name");
+	parserName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
+	if(parser.FindParser(&myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
+		errmsg.LogError(0, RS_RET_PARSER_NAME_EXISTS,
+			"parser module name '%s' already exists", cnfModName);
+		ABORT_FINALIZE(RS_RET_PARSER_NAME_EXISTS);
+	}
+
+	paramIdx = cnfparamGetIdx(&parserpblk, "type");
+	cnfModName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
+	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_PARSER)) == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "parser module name '%s' is unknown", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
+	}
+	if(pMod->mod.pm.newParserInst == NULL) {
+		errmsg.LogError(0, RS_RET_MOD_NO_PARSER_STMT,
+				"parser module '%s' does not support parser() statement", cnfModName);
+		ABORT_FINALIZE(RS_RET_MOD_NO_INPUT_STMT);
+	}
+	CHKiRet(pMod->mod.pm.newParserInst(o->nvlst, &parserInst));
+
+	/* all well, so let's (try) to add parser to config */
+	CHKiRet(parserConstructViaModAndName(pMod, parserName, parserInst));
+finalize_it:
+	free(cnfModName);
+	free(parserName);
+	cnfparamvalsDestruct(pvals, &parserpblk);
+	RETiRet;
+}
+
+
 /* Process input() objects */
 rsRetVal
 inputProcessCnf(struct cnfobj *o)
@@ -350,6 +409,9 @@ void cnfDoObj(struct cnfobj *o)
 		break;
 	case CNFOBJ_LOOKUP_TABLE:
 		lookupProcessCnf(o);
+		break;
+	case CNFOBJ_PARSER:
+		parserProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
 		if(tplProcessCnf(o) != RS_RET_OK)
