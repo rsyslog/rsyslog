@@ -1088,6 +1088,14 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	iRet = addEPollSock(epolld_sess, pSess, sock, &pSess->epd);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pSess != NULL) {
+			if(pSess->pMsg != NULL)
+				free(pSess->pMsg);
+			free(pSess);
+		}
+	}
+
 	RETiRet;
 }
 
