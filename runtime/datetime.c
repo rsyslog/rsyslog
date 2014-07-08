@@ -387,6 +387,9 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const
 	int secfrac;	/* fractional seconds (must be 32 bit!) */
 	int secfracPrecision;
 	char tzstring[16];
+	char OffsetMode = '\0';	/* UTC offset: \0 -> indicate no update */
+	char OffsetHour;	/* UTC offset in hours */
+	int OffsetMinute;	/* UTC offset in minutes */
 	/* end variables to temporarily hold time information while we parse */
 	int lenStr;
 	uchar *pszTS;
@@ -638,6 +641,18 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const
 		if(i > 0) {
 			/* found TZ, apply it */
 			tzstring[i] = '\0';
+			if(!strcmp(tzstring, "CET")) {
+				OffsetMode = '+';
+				OffsetHour = 1;
+				OffsetMinute = 0;
+			} else if(!strcmp(tzstring, "CEST")) {
+				OffsetMode = '+';
+				OffsetHour = 2;
+				OffsetMinute = 0;
+			} else {
+				DBGPRINTF("ParseTIMESTAMP3164: invalid TZ string '%s' -- ignored\n",
+					  tzstring);
+			}
 		}
 	}
 
@@ -671,6 +686,11 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const
 	pTime->second = second;
 	pTime->secfrac = secfrac;
 	pTime->secfracPrecision = secfracPrecision;
+	if(OffsetMode != '\0') { /* need to update TZ info? */
+		pTime->OffsetMode = OffsetMode;
+		pTime->OffsetHour = OffsetHour;
+		pTime->OffsetMinute = OffsetMinute;
+	}
 	*pLenStr = lenStr;
 
 finalize_it:
