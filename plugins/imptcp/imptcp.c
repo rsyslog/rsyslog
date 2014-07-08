@@ -498,6 +498,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
 	struct addrinfo hints, *res;
+	sbool bMaliciousHName = 0;
 	
 	DEFiRet;
 
@@ -525,7 +526,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 				/* OK, we know we have evil, so let's indicate this to our caller */
 				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
 				DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				iRet = RS_RET_MALICIOUS_HNAME;
+				bMaliciousHName = 1;
 			}
 		} else {
 			strcpy((char*)szHname, (char*)szIP);
@@ -543,6 +544,8 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	CHKiRet(prop.ConstructFinalize(*peerIP));
 
 finalize_it:
+	if(bMaliciousHName)
+		iRet = RS_RET_MALICIOUS_HNAME;
 	RETiRet;
 }
 
