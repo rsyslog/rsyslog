@@ -379,6 +379,14 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   re-opened again.
 - bugfix: busy loop in tcp listener when running out of file descriptors
   Thanks to Susant Sahani for the patch.
+- bugfix: mishandling of input modules not supporting new input instances
+  If they did not support this, accidently the output module part of the
+  module union was written, leading to unpredictable results. Note: all
+  core modules do support this interface, but some contributed or very
+  old ones do not.
+- bugfix: double-free when ruleset() parser parameters were used
+  While unlikely, this could cause stability issues even after the
+  config phase.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
