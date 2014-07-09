@@ -1432,6 +1432,7 @@ lstnActivity(ptcplstn_t *pLstn)
 		CHKiRet(localRet);
 		localRet = addSess(pLstn, newSock, peerName, peerIP);
 		if(localRet != RS_RET_OK) {
+			close(newSock);
 			prop.Destruct(peerName);
 			prop.Destruct(peerIP);
 			ABORT_FINALIZE(localRet);
