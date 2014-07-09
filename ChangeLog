@@ -36,6 +36,9 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   module union was written, leading to unpredictable results. Note: all
   core modules do support this interface, but some contributed or very
   old ones do not.
+- bugfix: double-free when ruleset() parser parameters were used
+  While unlikely, this could cause stability issues even after the
+  config phase.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process

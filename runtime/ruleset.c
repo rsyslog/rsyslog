@@ -998,7 +998,7 @@ rulesetProcessCnf(struct cnfobj *o)
 		for(i = 0 ; i <  ar->nmemb ; ++i) {
 			parserName = (uchar*)es_str2cstr(ar->arr[i], NULL);
 			doRulesetAddParser(pRuleset, parserName);
-			free(parserName);
+			/* note parserName is freed in doRulesetAddParser()! */
 		}
 	}
 
