@@ -116,13 +116,7 @@ static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* si
 #endif
 static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client to be used on multihomed host */
 
-struct tzinfo {
-	char *id;
-	char offsMode;
-	int8_t offsHour;
-	int8_t offsMin;
-};
-struct tzinfo *tzinfos = NULL;
+tzinfo_t *tzinfos = NULL;
 static int ntzinfos;
 
 /* tables for interfacing with the v6 config system */
@@ -722,8 +716,8 @@ static inline rsRetVal
 addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 {
 	DEFiRet;
-	struct tzinfo *newti;
-	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(struct tzinfo)));
+	tzinfo_t *newti;
+	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(tzinfo_t)));
 	CHKmalloc(newti[ntzinfos].id = strdup((char*)tzid));
 	newti[ntzinfos].offsMode = offsMode;
 	newti[ntzinfos].offsHour = offsHour;
@@ -733,6 +727,18 @@ finalize_it:
 	RETiRet;
 }
 
+
+static int
+bs_arrcmp_tzinfo(const void *s1, const void *s2)
+{
+	return strcmp((char*)s1, (char*)((tzinfo_t*)s2)->id);
+}
+/* returns matching timezone info or NULL if no entry exists */
+tzinfo_t*
+glblFindTimezoneInfo(char *id)
+{
+	return (tzinfo_t*) bsearch(id, tzinfos, ntzinfos, sizeof(tzinfo_t), bs_arrcmp_tzinfo);
+}
 
 /* handle the timezone() object. Each incarnation adds one additional
  * zone info to the global table of time zones.
@@ -858,7 +864,7 @@ glblDestructMainqCnfObj()
 static int
 qs_arrcmp_tzinfo(const void *s1, const void *s2)
 {
-	return strcmp(((struct tzinfo*)s1)->id, ((struct tzinfo*)s2)->id);
+	return strcmp(((tzinfo_t*)s1)->id, ((tzinfo_t*)s2)->id);
 }
 
 /* This processes the "regular" parameters which are to be set after the
@@ -870,7 +876,7 @@ glblDoneLoadCnf(void)
 	int i;
 	unsigned char *cstr;
 
-	qsort(tzinfos, ntzinfos, sizeof(struct tzinfo), qs_arrcmp_tzinfo);
+	qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
 	displayTzinfos();
 

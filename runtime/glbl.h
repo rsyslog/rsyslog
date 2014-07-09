@@ -116,5 +116,6 @@ void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj();
 void glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(void);
+tzinfo_t* glblFindTimezoneInfo(char *id);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

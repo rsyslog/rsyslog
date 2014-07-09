@@ -640,18 +640,15 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const
 			tzstring[i++] = *pszTS++;
 		if(i > 0) {
 			/* found TZ, apply it */
+			tzinfo_t* tzinfo;
 			tzstring[i] = '\0';
-			if(!strcmp(tzstring, "CET")) {
-				OffsetMode = '+';
-				OffsetHour = 1;
-				OffsetMinute = 0;
-			} else if(!strcmp(tzstring, "CEST")) {
-				OffsetMode = '+';
-				OffsetHour = 2;
-				OffsetMinute = 0;
-			} else {
+			if((tzinfo = glblFindTimezoneInfo((char*) tzstring)) == NULL) {
 				DBGPRINTF("ParseTIMESTAMP3164: invalid TZ string '%s' -- ignored\n",
 					  tzstring);
+			} else {
+				OffsetMode = tzinfo->offsMode;
+				OffsetHour = tzinfo->offsHour;
+				OffsetMinute = tzinfo->offsMin;
 			}
 		}
 	}

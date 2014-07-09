@@ -106,6 +106,14 @@ struct syslogTime {
 };
 typedef struct syslogTime syslogTime_t;
 
+struct tzinfo {
+	char *id;
+	char offsMode;
+	int8_t offsHour;
+	int8_t offsMin;
+};
+typedef struct tzinfo tzinfo_t;
+
 #endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
 /* vi:set ai:
  */
