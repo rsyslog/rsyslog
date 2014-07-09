@@ -375,7 +375,7 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
 {
 	DEFiRet;
-	msg_t *pMsg;
+	msg_t *pMsg = NULL;
 
 	assert(pThrd != NULL);
 
@@ -435,6 +435,12 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pMsg != NULL) {
+			msgDestruct(&pMsg);
+		}
+	}
+
 	RETiRet;
 }
 
