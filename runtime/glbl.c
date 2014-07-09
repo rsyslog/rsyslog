@@ -696,6 +696,16 @@ glblPrepCnf(void)
 
 
 static void
+freeTimezoneInfo(void)
+{
+	int i;
+	for(i = 0 ; i < ntzinfos ; ++i)
+		free(tzinfos[i].id);
+	free(tzinfos);
+	tzinfos = NULL;
+}
+
+static void
 displayTzinfos(void)
 {
 	int i;
@@ -1013,6 +1023,7 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalHostName);
 	free(LocalHostNameOverride);
 	free(LocalFQDNName);
+	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);
 	if(propLocalHostNameToDelete != NULL)
 		prop.Destruct(&propLocalHostNameToDelete);
