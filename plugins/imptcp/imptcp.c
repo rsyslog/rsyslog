@@ -318,11 +318,17 @@ destructSess(ptcpsess_t *pSess)
 static void
 destructSrv(ptcpsrv_t *pSrv)
 {
-	ratelimitDestruct(pSrv->ratelimiter);
-	prop.Destruct(&pSrv->pInputName);
+	if(pSrv->ratelimiter != NULL)
+		ratelimitDestruct(pSrv->ratelimiter);
+	if(pSrv->pInputName != NULL)
+		prop.Destruct(&pSrv->pInputName);
 	pthread_mutex_destroy(&pSrv->mutSessLst);
-	free(pSrv->pszInputName);
-	free(pSrv->port);
+	if(pSrv->pszInputName != NULL)
+		free(pSrv->pszInputName);
+	if(pSrv->port != NULL)
+		free(pSrv->port);
+	if(pSrv->lstnIP != NULL)
+		free(pSrv->lstnIP);
 	free(pSrv);
 }
 
@@ -1281,9 +1287,9 @@ static inline rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
-	ptcpsrv_t *pSrv;
+	ptcpsrv_t *pSrv = NULL;
 
-	CHKmalloc(pSrv = MALLOC(sizeof(ptcpsrv_t)));
+	CHKmalloc(pSrv = calloc(1, sizeof(ptcpsrv_t)));
 	pthread_mutex_init(&pSrv->mutSessLst, NULL);
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
@@ -1323,6 +1329,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		if(pSrv != NULL) {
+			destructSrv(pSrv);
+		}
 	}
 	RETiRet;
 }
