@@ -36,6 +36,7 @@ struct parser_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	uchar *pName;		/* name of this parser */
 	modInfo_t *pModule;	/* pointer to parser's module */
+	void *pInst;		/* instance data for the parser (v2+ module interface) */
 	sbool bDoSanitazion;	/* do standard message sanitazion before calling parser? */
 	sbool bDoPRIParsing;	/* do standard PRI parsing before calling parser? */
 };
@@ -65,6 +66,7 @@ void printParserList(parserList_t *pList);
 
 /* prototypes */
 PROTOTYPEObj(parser);
+rsRetVal parserConstructViaModAndName(modInfo_t *restrict pMod, uchar *const restrict pName, void *parserInst);
 
 
 #endif /* #ifndef INCLUDED_PARSER_H */

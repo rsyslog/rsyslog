@@ -134,7 +134,7 @@ AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
 		/* add at tail */
 		pTail->pNext = pThis;
 	}
-
+DBGPRINTF("DDDDD: added parser '%s' to list %p\n", pParser->pName, ppListRoot);
 finalize_it:
 	RETiRet;
 }
@@ -191,6 +191,68 @@ finalize_it:
 }
 
 
+/* set the parser name - string is copied over, call can continue to use it,
+ * but must free it if desired.
+ */
+static rsRetVal
+SetName(parser_t *pThis, uchar *name)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, parser);
+	assert(name != NULL);
+
+	if(pThis->pName != NULL) {
+		free(pThis->pName);
+		pThis->pName = NULL;
+	}
+
+	CHKmalloc(pThis->pName = ustrdup(name));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* set a pointer to "our" module. Note that no module
+ * pointer must already be set.
+ */
+static rsRetVal
+SetModPtr(parser_t *pThis, modInfo_t *pMod)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	assert(pMod != NULL);
+	assert(pThis->pModule == NULL);
+	pThis->pModule = pMod;
+	return RS_RET_OK;
+}
+
+
+/* Specify if we should do standard message sanitazion before we pass the data
+ * down to the parser.
+ */
+static rsRetVal
+SetDoSanitazion(parser_t *pThis, int bDoIt)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	pThis->bDoSanitazion = bDoIt;
+	return RS_RET_OK;
+}
+
+
+/* Specify if we should do standard PRI parsing before we pass the data
+ * down to the parser module.
+ */
+static rsRetVal
+SetDoPRIParsing(parser_t *pThis, int bDoIt)
+{
+	ISOBJ_TYPE_assert(pThis, parser);
+	pThis->bDoPRIParsing = bDoIt;
+	return RS_RET_OK;
+}
+
+
+
 
 BEGINobjConstruct(parser) /* be sure to specify the object type also in END macro! */
 ENDobjConstruct(parser)
@@ -211,9 +273,46 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* construct a parser object via a pointer to the parser module
+ * and the name. This is a separate function because we need it
+ * in multiple spots inside the code.
+ */
+rsRetVal
+parserConstructViaModAndName(modInfo_t *restrict pMod, uchar *const restrict pName, void *pInst)
+{
+	rsRetVal localRet;
+	parser_t *pParser;
+	DEFiRet;
+
+	if(pInst == NULL && pMod->mod.pm.newParserInst != NULL) {
+		/* this happens for the default instance on ModLoad time */
+		CHKiRet(pMod->mod.pm.newParserInst(NULL, &pInst));
+	}
+	CHKiRet(parserConstruct(&pParser));
+	/* check some features */
+	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
+	if(localRet == RS_RET_OK){
+		CHKiRet(SetDoSanitazion(pParser, RSTRUE));
+	}
+	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
+	if(localRet == RS_RET_OK){
+		CHKiRet(SetDoPRIParsing(pParser, RSTRUE));
+	}
+
+	CHKiRet(SetName(pParser, pName));
+	CHKiRet(SetModPtr(pParser, pMod));
+	pParser->pInst = pInst;
+	CHKiRet(parserConstructFinalize(pParser));
+finalize_it:
+	RETiRet;
+}
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(parser)
 	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
+	if(pThis->pInst != NULL) {
+		pThis->pModule->mod.pm.freeParserInst(pThis->pInst);
+	}
 	free(pThis->pName);
 ENDobjDestruct(parser)
 
@@ -586,7 +685,10 @@ ParseMsg(msg_t *pMsg)
 			}
 			bIsSanitized = RSTRUE;
 		}
-		localRet = pParser->pModule->mod.pm.parse(pMsg);
+		if(pParser->pModule->mod.pm.parse2 == NULL)
+			localRet = pParser->pModule->mod.pm.parse(pMsg);
+		else
+			localRet = pParser->pModule->mod.pm.parse2(pParser->pInst, pMsg);
 		DBGPRINTF("Parser '%s' returned %d\n", pParser->pName, localRet);
 		if(localRet != RS_RET_COULD_NOT_PARSE)
 			break;
@@ -614,68 +716,6 @@ ParseMsg(msg_t *pMsg)
 finalize_it:
 	RETiRet;
 }
-
-/* set the parser name - string is copied over, call can continue to use it,
- * but must free it if desired.
- */
-static rsRetVal
-SetName(parser_t *pThis, uchar *name)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, parser);
-	assert(name != NULL);
-
-	if(pThis->pName != NULL) {
-		free(pThis->pName);
-		pThis->pName = NULL;
-	}
-
-	CHKmalloc(pThis->pName = ustrdup(name));
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* set a pointer to "our" module. Note that no module
- * pointer must already be set.
- */
-static rsRetVal
-SetModPtr(parser_t *pThis, modInfo_t *pMod)
-{
-	ISOBJ_TYPE_assert(pThis, parser);
-	assert(pMod != NULL);
-	assert(pThis->pModule == NULL);
-	pThis->pModule = pMod;
-	return RS_RET_OK;
-}
-
-
-/* Specify if we should do standard message sanitazion before we pass the data
- * down to the parser.
- */
-static rsRetVal
-SetDoSanitazion(parser_t *pThis, int bDoIt)
-{
-	ISOBJ_TYPE_assert(pThis, parser);
-	pThis->bDoSanitazion = bDoIt;
-	return RS_RET_OK;
-}
-
-
-/* Specify if we should do standard PRI parsing before we pass the data
- * down to the parser module.
- */
-static rsRetVal
-SetDoPRIParsing(parser_t *pThis, int bDoIt)
-{
-	ISOBJ_TYPE_assert(pThis, parser);
-	pThis->bDoPRIParsing = bDoIt;
-	return RS_RET_OK;
-}
-
-
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(parser)

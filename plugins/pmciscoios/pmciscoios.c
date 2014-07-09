@@ -43,6 +43,7 @@
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
 PARSER_NAME("rsyslog.ciscoios")
+MODULE_CNFNAME("pmciscoios")
 
 /* internal structures */
 DEF_PMOD_STATIC_DATA
@@ -51,6 +52,20 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 
+
+/* parser instance parameters */
+static struct cnfparamdescr parserpdescr[] = {
+	{ "present.origin", eCmdHdlrBinary, 0 }
+};
+static struct cnfparamblk parserpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
+	  parserpdescr
+	};
+
+struct instanceConf_s {
+	int bOriginPresent; /* is ORIGIN field present? */
+};
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -61,27 +76,86 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-BEGINparse
+/* create input instance, set default paramters, and
+ * add it to the list of instances.
+ */
+static rsRetVal
+createInstance(instanceConf_t **pinst)
+{
+	instanceConf_t *inst;
+	DEFiRet;
+	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
+	inst->bOriginPresent = 0;
+	*pinst = inst;
+finalize_it:
+	RETiRet;
+}
+
+BEGINnewParserInst
+	struct cnfparamvals *pvals;
+	int i;
+CODESTARTnewParserInst
+	DBGPRINTF("newParserInst (pmciscoios)\n");
+
+	CHKiRet(createInstance(&inst));
+
+	if(lst == NULL)
+		FINALIZE;  /* just set defaults, no param block! */
+
+	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("parser param blk in pmciscoios:\n");
+		cnfparamsPrint(&parserpblk, pvals);
+	}
+
+	for(i = 0 ; i < parserpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
+			inst->bOriginPresent = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("pmciscoios: program error, non-handled "
+			  "param '%s'\n", parserpblk.descr[i].name);
+		}
+	}
+finalize_it:
+CODE_STD_FINALIZERnewParserInst
+	if(lst != NULL)
+		cnfparamvalsDestruct(pvals, &parserpblk);
+ENDnewParserInst
+
+
+BEGINfreeParserInst
+CODESTARTfreeParserInst
+	dbgprintf("pmciscoios: free parser instance %p\n", pInst);
+ENDfreeParserInst
+
+
+BEGINparse2
 	uchar *p2parse;
 	long long msgcounter;
 	int lenMsg;
 	int i;
+	int iHostname;
 	uchar bufParseTAG[512];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
-CODESTARTparse
+CODESTARTparse2
 	DBGPRINTF("Message will now be parsed by pmciscoios\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
-	/* first obtain the message counter. It must be numeric up until
+	/* first obtain the MESSAGE COUNTER. It must be numeric up until
 	 * the ": " terminator sequence
 	 */
 	msgcounter = 0;
 	while(lenMsg > 0 && (*p2parse >= '0' && *p2parse <= '9') ) {
 		msgcounter = msgcounter * 10 + *p2parse - '0';
-		++p2parse;
+		++p2parse, --lenMsg;
 	}
 	DBGPRINTF("pmciscoios: msgcntr %lld\n", msgcounter);
 
@@ -92,8 +166,25 @@ CODESTARTparse
 	}
 	p2parse += 2;
 
+	/* ORIGIN (optional) */
+	if(pInst->bOriginPresent) {
+		iHostname = 0;
+		while(   lenMsg > 1
+		      && !(*p2parse == ':' && *(p2parse+1) == ' ')  /* IPv6 is e.g. "::1" (loopback) */
+		      && iHostname < (int) sizeof(bufParseHOSTNAME) - 1 ) {
+			bufParseHOSTNAME[iHostname++] = *p2parse++;
+			--lenMsg;
+		}
+		bufParseHOSTNAME[iHostname] = '\0';
+		/* delimiter check */
+		if(lenMsg < 2 || *(p2parse+1) != ' ') {
+			DBGPRINTF("pmciscoios: fail after origin: '%s'\n", p2parse);
+			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+		}
+		p2parse += 2;
+	}
 
-	/* now parse timestamp */
+	/* TIMESTAMP */
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
@@ -103,7 +194,7 @@ CODESTARTparse
 	}
 	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
-	/* parse syslog tag. must always start with '%', else we have a field mismatch */
+	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
 	if(lenMsg < 1 || *p2parse != '%') {
 		DBGPRINTF("pmciscoios: fail at tag begin (no '%%'): '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
@@ -126,10 +217,12 @@ CODESTARTparse
 
 	/* if we reach this point, we have a wellformed message and can persist the values */
 	MsgSetTAG(pMsg, bufParseTAG, i);
+	if(pInst->bOriginPresent)
+		MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 finalize_it:
-ENDparse
+ENDparse2
 
 
 BEGINmodExit
@@ -144,7 +237,7 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD_QUERIES
+CODEqueryEtryPt_STD_PMOD2_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
