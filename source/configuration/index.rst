@@ -22,6 +22,7 @@ and must start with a dollar-sign.
    ../rainerscript/index
    actions
    input
+   parser
    examples
    index_directives
    modules/index
