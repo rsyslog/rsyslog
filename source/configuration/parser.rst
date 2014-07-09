@@ -67,6 +67,8 @@ The following example creates a custom parser definition and uses it within a ru
      ... do something here ...
   }
 
+A more elaborate example can also be found in the
+:doc:`Cisco IOS message parser module <modules/pmciscoios>` documentation.
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
