@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.3.4 [v8-devel] 2014-??-??
+- new tzinfo config object -- permits to define time zone offsets
+  This is a utility object that currently is being used by some parsers.
 - bugfix: mishandling of input modules not supporting new input instances
   If they did not support this, accidently the output module part of the
   module union was written, leading to unpredictable results. Note: all

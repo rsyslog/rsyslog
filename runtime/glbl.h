@@ -111,6 +111,7 @@ static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
+void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj();
 void glblDoneLoadCnf(void);

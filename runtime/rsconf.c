@@ -397,6 +397,9 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_GLOBAL:
 		glblProcessCnf(o);
 		break;
+	case CNFOBJ_TIMEZONE:
+		glblProcessTimezone(o);
+		break;
 	case CNFOBJ_MAINQ:
 		glblProcessMainQCnf(o);
 		bDestructObj = 0;

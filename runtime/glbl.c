@@ -34,7 +34,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <ctype.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -45,6 +47,7 @@
 #include "atomic.h"
 #include "errmsg.h"
 #include "action.h"
+#include "parserif.h"
 #include "rainerscript.h"
 #include "net.h"
 
@@ -113,6 +116,14 @@ static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof (fd_mask); /* si
 #endif
 static uchar *SourceIPofLocalClient = NULL;	/* [ar] Source IP for local client to be used on multihomed host */
 
+struct tzinfo {
+	char *id;
+	char offsMode;
+	int8_t offsHour;
+	int8_t offsMin;
+};
+struct tzinfo *tzinfos = NULL;
+static int ntzinfos;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -144,6 +155,16 @@ static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
 	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
 	  cnfparamdescr
+	};
+
+static struct cnfparamdescr timezonecnfparamdescr[] = {
+	{ "id", eCmdHdlrString, 0 },
+	{ "offset", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk timezonepblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(timezonecnfparamdescr)/sizeof(struct cnfparamdescr),
+	  timezonecnfparamdescr
 	};
 
 static struct cnfparamvals *cnfparamvals = NULL;
@@ -679,6 +700,98 @@ glblPrepCnf(void)
 	cnfparamvals = NULL;
 }
 
+
+static void
+displayTzinfos(void)
+{
+	int i;
+	if(!Debug)
+		return;
+	for(i = 0 ; i < ntzinfos ; ++i)
+		dbgprintf("tzinfo: '%s':%c%2.2d:%2.2d\n",
+			tzinfos[i].id, tzinfos[i].offsMode,
+			tzinfos[i].offsHour, tzinfos[i].offsMin);
+}
+
+
+/* Note: this function is NOT thread-safe!
+ * This is currently not needed as used only during
+ * initialization.
+ */
+static inline rsRetVal
+addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
+{
+	DEFiRet;
+	struct tzinfo *newti;
+	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(struct tzinfo)));
+	CHKmalloc(newti[ntzinfos].id = strdup((char*)tzid));
+	newti[ntzinfos].offsMode = offsMode;
+	newti[ntzinfos].offsHour = offsHour;
+	newti[ntzinfos].offsMin = offsMin;
+	++ntzinfos, tzinfos = newti;
+finalize_it:
+	RETiRet;
+}
+
+
+/* handle the timezone() object. Each incarnation adds one additional
+ * zone info to the global table of time zones.
+ */
+void
+glblProcessTimezone(struct cnfobj *o)
+{
+	struct cnfparamvals *pvals;
+	uchar *id = NULL;
+	uchar *offset = NULL;
+	char offsMode;
+	int8_t offsHour;
+	int8_t offsMin;
+	int i;
+
+	pvals = nvlstGetParams(o->nvlst, &timezonepblk, NULL);
+	dbgprintf("timezone param blk after glblProcessTimezone:\n");
+	cnfparamsPrint(&timezonepblk, pvals);
+
+	for(i = 0 ; i < timezonepblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(timezonepblk.descr[i].name, "id")) {
+			id = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(timezonepblk.descr[i].name, "offset")) {
+			offset = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("glblProcessTimezone: program error, non-handled "
+			  "param '%s'\n", timezonepblk.descr[i].name);
+		}
+	}
+
+	if(   strlen((char*)offset) != 6
+	   || !(offset[0] == '-' || offset[0] == '+')
+	   || !(isdigit(offset[1]) && isdigit(offset[2]))
+	   || offset[3] != ':'
+	   || !(isdigit(offset[4]) && isdigit(offset[5]))
+	  ) {
+		parser_errmsg("timezone offset has invalid format. Must be +/-hh:mm, e.g. \"-07:00\".");
+		goto done;
+	}
+
+	offsHour = (offset[1] - '0') * 10 + offset[2] - '0';
+	offsMin  = (offset[4] - '0') * 10 + offset[5] - '0';
+	offsMode = offset[0];
+
+	if(offsHour > 12 || offsMin > 59) {
+		parser_errmsg("timezone offset outside of supported range (hours 0..12, minutes 0..59)");
+		goto done;
+	}
+	
+	addTimezoneInfo(id, offsMode, offsHour, offsMin);
+
+done:
+	cnfparamvalsDestruct(pvals, &timezonepblk);
+	free(id);
+	free(offset);
+}
+
 /* handle a global config object. Note that multiple global config statements
  * are permitted (because of plugin support), so once we got a param block,
  * we need to hold to it.
@@ -739,6 +852,14 @@ glblDestructMainqCnfObj()
 	mainqCnfObj = NULL;
 }
 
+/* comparison function for qsort() and string array compare
+ * this is for the string lookup table type
+ */
+static int
+qs_arrcmp_tzinfo(const void *s1, const void *s2)
+{
+	return strcmp(((struct tzinfo*)s1)->id, ((struct tzinfo*)s2)->id);
+}
 
 /* This processes the "regular" parameters which are to be set after the
  * config has been fully loaded.
@@ -748,6 +869,10 @@ glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
+
+	qsort(tzinfos, ntzinfos, sizeof(struct tzinfo), qs_arrcmp_tzinfo);
+	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
+	displayTzinfos();
 
 	if(cnfparamvals == NULL)
 		goto finalize_it;
@@ -826,6 +951,7 @@ glblDoneLoadCnf(void)
 		Debug = DEBUG_ONDEMAND;
 		stddbg = -1;
 	}
+
 finalize_it:	return;
 }
 
