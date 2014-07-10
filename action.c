@@ -490,7 +490,7 @@ actionConstructFinalize(action_t *pThis, struct nvlst *lst)
 
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 
-	if(pThis->eParamPassing == ACT_MSG_PASSING && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
+	if(pThis->bUsesMsgPassingMode && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
 		parser_warnmsg("module %s with message passing mode uses "
 			"non-direct queue. This most probably leads to undesired "
 			"results", (char*)modGetName(pThis->pMod));
@@ -869,7 +869,7 @@ prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *
 	pMsg = pElem->pMsg;
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		switch(pAction->eParamPassing) {
+		switch(pAction->peParamPassing[i]) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pElem->staticActStrings[i]),
 					&pElem->staticLenStrings[i], ttNow));
@@ -885,9 +885,8 @@ prepareDoActionParams(action_t *pAction, batch_obj_t *pElem, struct syslogTime *
 				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
 				pElem->staticActParams[i] = (void*) json;
 				break;
-			default:dbgprintf("software bug/error: unknown pAction->eParamPassing %d in prepareDoActionParams\n",
-					   (int) pAction->eParamPassing);
-				assert(0); /* software bug if this happens! */
+			default:dbgprintf("software bug/error: unknown pAction->peParamPassing[%d] %d in prepareDoActionParams\n",
+					  i, (int) pAction->peParamPassing[i]);
 				break;
 		}
 	}
@@ -915,16 +914,13 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 
 	ASSERT(pAction != NULL);
 
-	if(pAction->eParamPassing == ACT_STRING_PASSING || pAction->eParamPassing == ACT_MSG_PASSING)
-		goto done; /* we need to do nothing with these types! */
-
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pBatch->pbShutdownImmediate) ; ++i) {
 		pElem = &(pBatch->pElem[i]);
 		if(batchIsValidElem(pBatch, i)) {
-			switch(pAction->eParamPassing) {
-			case ACT_ARRAY_PASSING:
-				ppMsgs = (uchar***) pElem->staticActParams;
-				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+			for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+				switch(pAction->peParamPassing[j]) {
+				case ACT_ARRAY_PASSING:
+					ppMsgs = (uchar***) pElem->staticActParams;
 					if(((uchar**)ppMsgs)[j] != NULL) {
 						jArr = 0;
 						while(ppMsgs[j][jArr] != NULL) {
@@ -935,24 +931,22 @@ static rsRetVal releaseBatch(action_t *pAction, batch_t *pBatch)
 						d_free(((uchar**)ppMsgs)[j]);
 						((uchar**)ppMsgs)[j] = NULL;
 					}
-				}
-				break;
-			case ACT_JSON_PASSING:
-				for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+					break;
+				case ACT_JSON_PASSING:
 					json_object_put((struct json_object*)
 							pElem->staticActParams[j]);
 					pElem->staticActParams[j] = NULL;
+					break;
+				case ACT_STRING_PASSING:
+				case ACT_MSG_PASSING:
+					/* no need to do anything with these */
+					break;
 				}
-				break;
-			case ACT_STRING_PASSING:
-			case ACT_MSG_PASSING:
-				/* can never happen, just to keep compiler happy! */
-				break;
 			}
 		}
 	}
 
-done:	RETiRet;
+	RETiRet;
 }
 
 /* This is used in resume processing. We only finally know that a resume
@@ -1371,10 +1365,11 @@ processBatchMain(action_t *pAction, batch_t *pBatch, int *pbShutdownImmediate)
 	 * return an error code. If so, the code from processAction has priority.
 	 * rgerhards, 2010-12-17
 	 */
-	localRet = releaseBatch(pAction, pBatch);
-
-	if(iRet == RS_RET_OK)
-		iRet = localRet;
+	if(pAction->bNeedReleaseBatch) {
+		localRet = releaseBatch(pAction, pBatch);
+		if(iRet == RS_RET_OK)
+			iRet = localRet;
+	}
 	
 	if(bMustRestoreActivePtr) {
 		free(pBatch->active);
@@ -1909,10 +1904,13 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
 	 */
 	if(pAction->iNumTpls > 0) {
-		/* we first need to create the template pointer array */
+		/* we first need to create the template arrays */
 		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
+		CHKmalloc(pAction->peParamPassing = (paramPassing_t*)calloc(pAction->iNumTpls, sizeof(paramPassing_t)));
 	}
 	
+	pAction->bUsesMsgPassingMode = 0;
+	pAction->bNeedReleaseBatch = 0;
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
 		/* Ok, we got everything, so it now is time to look up the template
@@ -1939,13 +1937,16 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 
 		/* set parameter-passing mode */
 		if(iTplOpts & OMSR_TPL_AS_ARRAY) {
-			pAction->eParamPassing = ACT_ARRAY_PASSING;
+			pAction->peParamPassing[i] = ACT_ARRAY_PASSING;
+			pAction->bNeedReleaseBatch = 1;
 		} else if(iTplOpts & OMSR_TPL_AS_MSG) {
-			pAction->eParamPassing = ACT_MSG_PASSING;
+			pAction->peParamPassing[i] = ACT_MSG_PASSING;
+			pAction->bUsesMsgPassingMode = 1;
 		} else if(iTplOpts & OMSR_TPL_AS_JSON) {
-			pAction->eParamPassing = ACT_JSON_PASSING;
+			pAction->peParamPassing[i] = ACT_JSON_PASSING;
+			pAction->bNeedReleaseBatch = 1;
 		} else {
-			pAction->eParamPassing = ACT_STRING_PASSING;
+			pAction->peParamPassing[i] = ACT_STRING_PASSING;
 		}
 
 		DBGPRINTF("template: '%s' assigned\n", pTplName);
