@@ -307,6 +307,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	pthread_mutex_destroy(&pThis->mutAction);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
+	d_free(pThis->peParamPassing);
 
 finalize_it:
 	d_free(pThis);
