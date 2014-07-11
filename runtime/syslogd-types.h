@@ -114,6 +114,9 @@ struct tzinfo {
 };
 typedef struct tzinfo tzinfo_t;
 
+typedef enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,
+	  ACT_JSON_PASSING = 3} paramPassing_t;
+
 #endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
 /* vi:set ai:
  */
