@@ -29,3 +29,9 @@ parser()
 
 The :doc:`parser <../configuration/parser>` object is used to define
 custom parser objects.
+
+timezone()
+----------
+
+The :doc:`timezone <../configuration/timezone>` object is used to define
+timezone settings.

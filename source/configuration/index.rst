@@ -23,6 +23,7 @@ and must start with a dollar-sign.
    actions
    input
    parser
+   timezone
    examples
    index_directives
    modules/index

@@ -15,6 +15,11 @@ Nevertheless, it should be fairly easy to adapt it to additional
 requirements. So be sure to ask if you run into problems with
 format issues.
 
+Note that if your Cisco system emits timezone information in a supported
+format, rsyslog will pick it up. In order to apply proper timezone offsets,
+the timezone ids (e.g. "EST") must be configured via the
+:doc:`timezone object <../timezone>`.
+
 Parser Parameters
 -----------------
 
