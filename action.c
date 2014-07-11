@@ -1916,23 +1916,24 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		/* Ok, we got everything, so it now is time to look up the template
 		 * (Hint: templates MUST be defined before they are used!)
 		 */
-		if(   !(iTplOpts & OMSR_TPL_AS_MSG)
-		   && (pAction->ppTpl[i] =
-		   	tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
-			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-				 " Could not find template '%s' - action disabled",
-				 pTplName);
-			errno = 0;
-			errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
-			ABORT_FINALIZE(RS_RET_NOT_FOUND);
-		}
-		/* check required template options */
-		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-		   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
-			errno = 0;
-			errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
-				"the SQL or stdSQL option in your template!\n");
-			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+		if(!(iTplOpts & OMSR_TPL_AS_MSG)) {
+		   	if((pAction->ppTpl[i] =
+				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
+				snprintf(errMsg, sizeof(errMsg) / sizeof(char),
+					 " Could not find template '%s' - action disabled",
+					 pTplName);
+				errno = 0;
+				errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
+				ABORT_FINALIZE(RS_RET_NOT_FOUND);
+			}
+			/* check required template options */
+			if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
+			   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
+				errno = 0;
+				errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
+					"the SQL or stdSQL option in your template!\n");
+				ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+			}
 		}
 
 		/* set parameter-passing mode */
