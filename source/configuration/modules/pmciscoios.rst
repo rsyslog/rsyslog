@@ -57,16 +57,16 @@ actual processing:
        ... do processing here ...
    }
 
-   ruleset(name="withoutOrigin" parser="rsyslog.pmciscoios") {
+   ruleset(name="withoutOrigin" parser="rsyslog.ciscoios") {
        /* this ruleset uses the default parser which was
         * created during module load
         */
        call common
    }
 
-   parser(name="custom.pmciscoios.withOrigin" type="pmciscoios"
+   parser(name="custom.ciscoios.withOrigin" type="pmciscoios"
           present.origin="on")
-   ruleset(name="withOrigin" parser="custom.pmciscoios.withOrigin") {
+   ruleset(name="withOrigin" parser="custom.ciscoios.withOrigin") {
        /* this ruleset uses the parser defined immediately above */
        call common
    }
@@ -90,9 +90,9 @@ definitions interact. In this case, we can use a single listener.
 
    input(type="imtcp" port="10514" ruleset="ciscoBoth")
 
-   parser(name="custom.pmciscoios.withOrigin" type="pmciscoios"
+   parser(name="custom.ciscoios.withOrigin" type="pmciscoios"
           present.origin="on")
    ruleset(name="ciscoBoth"
-           parser=["custom.pmciscoios.withOrigin", "rsyslog.pmciscoios"]) {
+           parser=["custom.ciscoios.withOrigin", "rsyslog.ciscoios"]) {
        ... do processing here ...
    }
