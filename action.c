@@ -309,13 +309,14 @@ rsRetVal actionDestruct(action_t *pThis)
 	if(pThis->statsobj != NULL)
 		statsobj.Destruct(&pThis->statsobj);
 
-	if(pThis->pMod != NULL)
+	if(pThis->pModData != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	pthread_mutex_destroy(&pThis->mutAction);
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
+	d_free(pThis->peParamPassing);
 
 finalize_it:
 	d_free(pThis);
@@ -1298,6 +1299,7 @@ prepareBatch(action_t *pAction, batch_t *pBatch, sbool **activeSave, int *bMustR
 			if(prepareDoActionParams(pAction, pElem, &ttNow) != RS_RET_OK) {
 				/* make sure we have our copy of "active" array */
 				if(!*bMustRestoreActivePtr) {
+					*bMustRestoreActivePtr = 1;
 					*activeSave = pBatch->active;
 					copyActive(pBatch);
 				}
@@ -1953,8 +1955,6 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		DBGPRINTF("template: '%s' assigned\n", pTplName);
 	}
 
-	pAction->pMod = pMod;
-	pAction->pModData = pModData;
 	/* check if the module is compatible with select features (currently no such features exist) */
 	pAction->eState = ACT_STATE_RDY; /* action is enabled */
 
@@ -2050,8 +2050,10 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		 * (currently no such features exist) */
 		pAction->eState = ACT_STATE_RDY; /* action is enabled */
 		loadConf->actions.nbrActions++;	/* one more active action! */
+		*ppAction = pAction;
+	} else {
+		// TODO: cleanup
 	}
-	*ppAction = pAction;
 
 finalize_it:
 	free(cnfModName);
