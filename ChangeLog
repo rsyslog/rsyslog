@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 8.3.4 [v8-devel] 2014-??-??
+Version 8.3.4 [v8-devel] 2014-07-11
+- new pmciscoios parser supporting various Cisco IOS formats
+- RFC3164 timestamp parser now accepts timezones and subsecond resolution
+  ... at least for some common formats and where we could do so without
+  running risk of breaking proper formats (or introducing regressions)
 - new parser config object -- permits to define custom parser definitions
 - new tzinfo config object -- permits to define time zone offsets
   This is a utility object that currently is being used by some parsers.
