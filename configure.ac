@@ -913,6 +913,9 @@ AC_ARG_ENABLE(imdiag,
          esac],
         [enable_imdiag=no]
 )
+if test "x$enable_imdiag" = "xyes"; then
+	AC_DEFINE([ENABLE_IMDIAG], [1], [Indicator that IMDIAG is present])
+fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 
 
