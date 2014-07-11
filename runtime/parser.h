@@ -66,7 +66,7 @@ void printParserList(parserList_t *pList);
 
 /* prototypes */
 PROTOTYPEObj(parser);
-rsRetVal parserConstructViaModAndName(modInfo_t *restrict pMod, uchar *const restrict pName, void *parserInst);
+rsRetVal parserConstructViaModAndName(modInfo_t *pMod, uchar *const pName, void *parserInst);
 
 
 #endif /* #ifndef INCLUDED_PARSER_H */

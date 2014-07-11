@@ -279,7 +279,7 @@ finalize_it:
  * in multiple spots inside the code.
  */
 rsRetVal
-parserConstructViaModAndName(modInfo_t *restrict pMod, uchar *const restrict pName, void *pInst)
+parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restrict__ pName, void *pInst)
 {
 	rsRetVal localRet;
 	parser_t *pParser;
