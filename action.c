@@ -301,7 +301,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	if(pThis->statsobj != NULL)
 		statsobj.Destruct(&pThis->statsobj);
 
-	if(pThis->pMod != NULL)
+	if(pThis->pModData != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	pthread_mutex_destroy(&pThis->mutAction);
@@ -1823,8 +1823,10 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 		/* check if the module is compatible with select features
 		 * (currently no such features exist) */
 		loadConf->actions.nbrActions++;	/* one more active action! */
+		*ppAction = pAction;
+	} else {
+		// TODO: cleanup
 	}
-	*ppAction = pAction;
 
 finalize_it:
 	free(cnfModName);
