@@ -232,6 +232,12 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-03-??
+- add --enable-generate-man-pages configure switch (default: enabled)
+  This forces generation of man pages, even if cached ones exists. This
+  "fixes" a typical release tarball nit. While it is hackish, the
+  benefit is clear given the history of failed tarball releases since
+  we changed the cached man page handling. It was just too easy to get
+  that wrong.
 - removed obsolete --disable-fsstnd configure option
   Thanks to Thomas D. for alerting us.
   Closes: https://github.com/rsyslog/rsyslog/issues/72
