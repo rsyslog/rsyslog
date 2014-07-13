@@ -318,11 +318,17 @@ destructSess(ptcpsess_t *pSess)
 static void
 destructSrv(ptcpsrv_t *pSrv)
 {
-	ratelimitDestruct(pSrv->ratelimiter);
-	prop.Destruct(&pSrv->pInputName);
+	if(pSrv->ratelimiter != NULL)
+		ratelimitDestruct(pSrv->ratelimiter);
+	if(pSrv->pInputName != NULL)
+		prop.Destruct(&pSrv->pInputName);
 	pthread_mutex_destroy(&pSrv->mutSessLst);
-	free(pSrv->pszInputName);
-	free(pSrv->port);
+	if(pSrv->pszInputName != NULL)
+		free(pSrv->pszInputName);
+	if(pSrv->port != NULL)
+		free(pSrv->port);
+	if(pSrv->lstnIP != NULL)
+		free(pSrv->lstnIP);
 	free(pSrv);
 }
 
@@ -498,11 +504,14 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
 	struct addrinfo hints, *res;
+	sbool bMaliciousHName = 0;
 	
 	DEFiRet;
 
-        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+	*peerName = NULL;
+	*peerIP = NULL;
 
+	error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
         if(error) {
                 DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*)szHname, "???");
@@ -525,7 +534,7 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 				/* OK, we know we have evil, so let's indicate this to our caller */
 				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
 				DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				iRet = RS_RET_MALICIOUS_HNAME;
+				bMaliciousHName = 1;
 			}
 		} else {
 			strcpy((char*)szHname, (char*)szIP);
@@ -543,6 +552,14 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	CHKiRet(prop.ConstructFinalize(*peerIP));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(*peerName != NULL)
+			prop.Destruct(peerName);
+		if(*peerIP != NULL)
+			prop.Destruct(peerIP);
+	}
+	if(bMaliciousHName)
+		iRet = RS_RET_MALICIOUS_HNAME;
 	RETiRet;
 }
 
@@ -652,6 +669,8 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	}
 	if(sockflags == -1) {
 		DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
+		prop.Destruct(peerName);
+		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -1002,10 +1021,10 @@ static rsRetVal
 addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 {
 	DEFiRet;
-	ptcplstn_t *pLstn;
+	ptcplstn_t *pLstn = NULL;
 	uchar statname[64];
 
-	CHKmalloc(pLstn = malloc(sizeof(ptcplstn_t)));
+	CHKmalloc(pLstn = calloc(1, sizeof(ptcplstn_t)));
 	pLstn->pSrv = pSrv;
 	pLstn->bSuppOctetFram = pSrv->bSuppOctetFram;
 	pLstn->sock = sock;
@@ -1029,6 +1048,8 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->rcvdDecompressed)));
 	CHKiRet(statsobj.ConstructFinalize(pLstn->stats));
 
+	CHKiRet(addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd));
+
 	/* add to start of server's listener list */
 	pLstn->prev = NULL;
 	pLstn->next = pSrv->pLstn;
@@ -1036,9 +1057,15 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 		pSrv->pLstn->prev = pLstn;
 	pSrv->pLstn = pLstn;
 
-	iRet = addEPollSock(epolld_lstn, pLstn, sock, &pLstn->epd);
-
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pLstn != NULL) {
+			if(pLstn->stats != NULL)
+				statsobj.Destruct(&(pLstn->stats));
+			free(pLstn);
+		}
+	}
+
 	RETiRet;
 }
 
@@ -1065,6 +1092,8 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->peerIP = peerIP;
 	pSess->compressionMode = pLstn->pSrv->compressionMode;
 
+	CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
+
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
 	pthread_mutex_lock(&pSrv->mutSessLst);
@@ -1074,9 +1103,15 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSrv->pSess = pSess;
 	pthread_mutex_unlock(&pSrv->mutSessLst);
 
-	iRet = addEPollSock(epolld_sess, pSess, sock, &pSess->epd);
-
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pSess != NULL) {
+			if(pSess->pMsg != NULL)
+				free(pSess->pMsg);
+			free(pSess);
+		}
+	}
+
 	RETiRet;
 }
 
@@ -1252,9 +1287,9 @@ static inline rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
-	ptcpsrv_t *pSrv;
+	ptcpsrv_t *pSrv = NULL;
 
-	CHKmalloc(pSrv = MALLOC(sizeof(ptcpsrv_t)));
+	CHKmalloc(pSrv = calloc(1, sizeof(ptcpsrv_t)));
 	pthread_mutex_init(&pSrv->mutSessLst, NULL);
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
@@ -1294,6 +1329,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		if(pSrv != NULL) {
+			destructSrv(pSrv);
+		}
 	}
 	RETiRet;
 }
@@ -1392,7 +1430,13 @@ lstnActivity(ptcplstn_t *pLstn)
 		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
 			break;
 		CHKiRet(localRet);
-		CHKiRet(addSess(pLstn, newSock, peerName, peerIP));
+		localRet = addSess(pLstn, newSock, peerName, peerIP);
+		if(localRet != RS_RET_OK) {
+			close(newSock);
+			prop.Destruct(peerName);
+			prop.Destruct(peerIP);
+			ABORT_FINALIZE(localRet);
+		}
 	}
 
 finalize_it:

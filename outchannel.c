@@ -110,7 +110,7 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 
 	*pp = p;
 	CHKiRet(cstrFinalize(pStrB));
-	CHKiRet(cstrConvSzStrAndDestruct(pStrB, pField, 0));
+	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pField, 0));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -178,7 +178,7 @@ static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 
 	*pp = p;
 	CHKiRet(cstrFinalize(pStrB));
-	CHKiRet(cstrConvSzStrAndDestruct(pStrB, pBuf, 0));
+	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pBuf, 0));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

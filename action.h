@@ -71,14 +71,14 @@ struct action_s {
 	qqueue_t *pQueue;	/* action queue */
 	pthread_mutex_t mutAction; /* primary action mutex */
 	uchar *pszName;		/* action name */
-	DEF_ATOMIC_HELPER_MUT(mutCAS);
+	DEF_ATOMIC_HELPER_MUT(mutCAS)
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
-	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
-	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
-	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend);
-	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration);
-	STATSCOUNTER_DEF(ctrResume, mutCtrResume);
+	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed)
+	STATSCOUNTER_DEF(ctrFail, mutCtrFail)
+	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend)
+	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration)
+	STATSCOUNTER_DEF(ctrResume, mutCtrResume)
 };
 
 

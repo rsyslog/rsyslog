@@ -236,7 +236,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	int iFrom;
 	int nMsgs;
 	int i;
-	ratelimit_t *ratelimit;
+	ratelimit_t *ratelimit = NULL;
 	DEFiRet;
 
 	/* we do not check errors here! */
@@ -244,7 +244,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	iFrom = atoi((char*)wordBuf);
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
 	nMsgs = atoi((char*)wordBuf);
-	ratelimitNew(&ratelimit, "imdiag", "injectmsg");
+	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 
 	for(i = 0 ; i < nMsgs ; ++i) {
 		doInjectMsg(i + iFrom, ratelimit);
@@ -252,9 +252,10 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 
 	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
 	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
-	ratelimitDestruct(ratelimit);
 
 finalize_it:
+	if(ratelimit != NULL)
+		ratelimitDestruct(ratelimit);
 	RETiRet;
 }
 
