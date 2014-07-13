@@ -475,7 +475,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 		++p;
 	}
 	CHKiRet(cstrFinalize(pStrB));
-	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
+	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pszGenerated, 0));
 
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
@@ -636,7 +636,7 @@ do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 	 * 2005-09-09 rgerhards
 	 */
 	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0));
+	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pTpe->data.constant.pConstant, 0));
 
 	*pp = p;
 
