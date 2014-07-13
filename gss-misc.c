@@ -116,6 +116,9 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
     struct timeval tv;
 #ifdef USE_UNLIMITED_SELECT
     fd_set  *pRfds = malloc(glbl.GetFdSetSize());
+
+    if (pRfds == NULL)
+	    return -1;
 #else
     fd_set  rfds;
     fd_set *pRfds = &rfds;

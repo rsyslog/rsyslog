@@ -522,15 +522,14 @@ finalize_it:
 static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {
 	DEFiRet;
-	cstr_t *pStrB;
+	cstr_t *pStrB = NULL;
 	uchar *pNewVal;
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB));
-	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
-	pStrB = NULL;
+	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pNewVal, 0));
 
 	DBGPRINTF("doGetWord: get newval '%s' (len %d), hdlr %p\n",
 		  pNewVal, (int) ustrlen(pNewVal), pSetHdlr);

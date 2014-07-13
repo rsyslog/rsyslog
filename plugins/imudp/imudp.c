@@ -287,7 +287,7 @@ addListner(instanceConf_t *inst)
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */
 		for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc) {
-			CHKmalloc(newlcnfinfo = (struct lstn_s*) MALLOC(sizeof(struct lstn_s)));
+			CHKmalloc(newlcnfinfo = (struct lstn_s*) calloc(1, sizeof(struct lstn_s)));
 			newlcnfinfo->next = NULL;
 			newlcnfinfo->sock = newSocks[iSrc];
 			newlcnfinfo->pRuleset = inst->pBindRuleset;
@@ -334,6 +334,23 @@ addListner(instanceConf_t *inst)
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(newlcnfinfo != NULL) {
+			if(newlcnfinfo->ratelimiter != NULL)
+				ratelimitDestruct(newlcnfinfo->ratelimiter);
+			if(newlcnfinfo->pInputName != NULL)
+				prop.Destruct(&newlcnfinfo->pInputName);
+			if(newlcnfinfo->stats != NULL)
+				statsobj.Destruct(&newlcnfinfo->stats);
+			free(newlcnfinfo);
+		}
+		/* close the rest of the open sockets as there's
+		   nowhere to put them */
+		for(; iSrc <= newSocks[0]; iSrc++) {
+			close(newSocks[iSrc]);
+		}
+	}
+
 	free(newSocks);
 	RETiRet;
 }
@@ -358,7 +375,7 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
 {
 	DEFiRet;
-	msg_t *pMsg;
+	msg_t *pMsg = NULL;
 
 	assert(pThrd != NULL);
 
@@ -418,6 +435,12 @@ processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *f
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pMsg != NULL) {
+			msgDestruct(&pMsg);
+		}
+	}
+
 	RETiRet;
 }
 
