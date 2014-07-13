@@ -275,7 +275,6 @@ waitMainQEmpty(tcps_sess_t *pSess)
 	int iPrint = 0;
 	DEFiRet;
 
-fprintf(stderr, "WaitMainQEmpty, initial size %d\n", iOverallQueueSize);
 	while(1) {
 		if(iOverallQueueSize == 0) {
 			/* verify that queue is still empty (else it could just be a race!) */
@@ -288,8 +287,6 @@ fprintf(stderr, "WaitMainQEmpty, initial size %d\n", iOverallQueueSize);
 			break;
 		if(iPrint++ % 500 == 0) 
 			dbgprintf("imdiag sleeping, wait queues drain, curr size %d\n", iOverallQueueSize);
-		if(iPrint++ % 500 == 0) 
-			fprintf(stderr, "imdiag sleeping, wait queues drain, curr size %d\n", iOverallQueueSize);
 		srSleep(0,200000);/* wait a little bit */
 	}
 
