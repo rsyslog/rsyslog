@@ -30,6 +30,7 @@
 
 %{
 #include "config.h"
+extern char *strdup(char*); /* somehow we do not get this from string.h... */
 %}
 
 %option noyywrap nodefault case-insensitive yylineno
