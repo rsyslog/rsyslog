@@ -551,7 +551,7 @@ finalize_it:
 static inline rsRetVal
 findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 {
-	ratelimit_t *rl;
+	ratelimit_t *rl = NULL;
 	int r;
 	pid_t *keybuf;
 	char pidbuf[256];
@@ -590,8 +590,11 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 	}
 
 	*prl = rl;
+	rl = NULL;
 
 finalize_it:
+	if(rl != NULL)
+		ratelimitDestruct(rl);
 	if(*prl == NULL)
 		*prl = pLstn->dflt_ratelimiter;
 	RETiRet;
