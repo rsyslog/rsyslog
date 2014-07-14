@@ -730,7 +730,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 static inline rsRetVal
 SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
-	msg_t *pMsg;
+	msg_t *pMsg = NULL;
 	int lenMsg;
 	int offs;
 	int i;
@@ -741,14 +741,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	struct syslogTime st;
 	time_t tt;
-	int lenProp;
 	ratelimit_t *ratelimiter = NULL;
-	uchar propBuf[1024];
-	uchar msgbuf[8192];
-	uchar *pmsgbuf;
-	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
-	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
 	if(pLstn->bDiscardOwnMsgs && cred != NULL && cred->pid == glblGetOurPid()) {
@@ -790,36 +784,60 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	}
 #endif
 
+	/* we now create our own message object and submit it to the queue */
+	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
+
 	/* created trusted properties */
 	if(cred != NULL && pLstn->bAnnotate) {
-		if((unsigned) (lenRcv + 4096) < sizeof(msgbuf)) {
-			pmsgbuf = msgbuf;
-		} else {
-			CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
-		}
+		uchar propBuf[1024];
+		int lenProp;
 
 		if (pLstn->bParseTrusted) {
-			json = json_object_new_object();
+			struct json_object *json, *jval;
+
+#define CHKjson(operation, toBeFreed)					\
+			if((operation) == NULL) {			\
+				json_object_put(toBeFreed);		\
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);	\
+			}
+
+			CHKmalloc(json = json_object_new_object());
 			/* create value string, create field, and add it */
-			jval = json_object_new_int(cred->pid);
+			CHKjson(jval = json_object_new_int(cred->pid), json);
 			json_object_object_add(json, "pid", jval);
-			jval = json_object_new_int(cred->uid);
+			CHKjson(jval = json_object_new_int(cred->uid), json);
 			json_object_object_add(json, "uid", jval);
-			jval = json_object_new_int(cred->gid);
+			CHKjson(jval = json_object_new_int(cred->gid), json);
 			json_object_object_add(json, "gid", jval);
 			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "appname", jval);
 			}
 			if(getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "exe", jval);
 			}
 			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "cmd", jval);
 			}
+#undef CHKjson
+
+			/* as per lumberjack spec, these properties need to go into
+			 * the CEE root.
+			 */
+			msgAddJSON(pMsg, (uchar*)"!", json);
+
+			MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 		} else {
+			uchar msgbuf[8192];
+			uchar *pmsgbuf = msgbuf;
+			int toffs; /* offset for trusted properties */
+
+			if((unsigned) (lenRcv + 4096) >= sizeof(msgbuf)) {
+				CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
+			}
+
 			memcpy(pmsgbuf, pRcv, lenRcv);
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
 			toffs = lenRcv + 3; /* next free location */
@@ -849,14 +867,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			pmsgbuf[toffs] = ']';
 			pmsgbuf[toffs+1] = '\0';
 
-			pRcv = pmsgbuf;
-			lenRcv = toffs + 1;
+			MsgSetRawMsg(pMsg, (char*)pmsgbuf, toffs + 1);
 		}
+	} else {
+		/* just add the unmodified message */
+		MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	}
 
-	/* we now create our own message object and submit it to the queue */
-	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
-	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	parser.SanitizeMsg(pMsg);
 	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
 	MsgSetInputName(pMsg, pInputName);
@@ -867,13 +884,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
-
-	if(json != NULL) {
-		/* as per lumberjack spec, these properties need to go into
-		 * the CEE root.
-		 */
-		msgAddJSON(pMsg, (uchar*)"!", json);
-	}
 
 	if(ts == NULL) {
 		if((pLstn->flags & IGNDATE)) {
@@ -926,6 +936,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pMsg != NULL)
+			msgDestruct(&pMsg);
+	}
 	RETiRet;
 }
 
