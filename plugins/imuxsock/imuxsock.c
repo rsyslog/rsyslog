@@ -1356,6 +1356,7 @@ BEGINrunInput
 #endif
 
 CODESTARTrunInput
+	CHKmalloc(pReadfds);
 	if(runModConf->bOmitLocalLogging && nfd == 1)
 		ABORT_FINALIZE(RS_RET_OK);
 	/* this is an endless loop - it is terminated when the thread is
