@@ -1406,7 +1406,6 @@ CODESTARTrunInput
 
 finalize_it:
 	freeFdSet(pReadfds);
-	RETiRet;
 ENDrunInput
 
 
