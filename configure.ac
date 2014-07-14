@@ -913,6 +913,9 @@ AC_ARG_ENABLE(imdiag,
          esac],
         [enable_imdiag=no]
 )
+if test "x$enable_imdiag" = "xyes"; then
+	AC_DEFINE([ENABLE_IMDIAG], [1], [Indicator that IMDIAG is present])
+fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 
 
@@ -1513,8 +1516,18 @@ if test "x$enable_usertools" = "xyes" && test "x$enable_guardtime" = "xyes"; the
     )
 fi
 
+AC_ARG_ENABLE(generate-man-pages,
+        [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) have_to_generate_man_pages="yes" ;;
+          no) have_to_generate_man_pages="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-generate-man-pages) ;;
+         esac],
+        [have_to_generate_man_pages=yes]
+)
+
 if test "x$have_to_generate_man_pages" = "xyes"; then
-    AC_MSG_RESULT([Some man pages are missing. We need rst2man to generate the missing man pages from source...])
+    AC_MSG_RESULT([Some man pages are missing or --enable-generate-man-pages given. We need rst2man to generate man pages from source...])
 else
     AC_MSG_RESULT([All required man pages found. We don't need rst2man!])
 fi
@@ -1523,7 +1536,7 @@ if test "x$have_to_generate_man_pages" = "xyes"; then
     # We need rst2man to generate our man pages
     AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [])
     if test -z "$RST2MAN"; then
-        AC_MSG_ERROR([rst2man is required to build man pages. You can use the release tarball with pregenerated man pages to avoid this depedency.])
+        AC_MSG_ERROR([rst2man is required to build man pages. You can use the release tarball with pregenerated man pages to avoid this depedency. Use the --disable-generate-man-pages configure option in that case.])
     fi
 fi
 

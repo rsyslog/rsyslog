@@ -7,10 +7,14 @@
  * -s<starting number> -e<ending number>
  * default for s is 0. -e should be given (else it is also 0)
  * -d may be specified, in which case duplicate messages are permitted.
+ * -m number of messages permitted to be missing without triggering a
+ *    failure. This is necessary for some failover tests, where it is
+ *    impossible to totally guard against messagt loss. By default, NO
+ *    message is permitted to be lost.
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -47,6 +51,7 @@ int main(int argc, char *argv[])
 	int dupsPermitted = 0;
 	int start = 0, end = 0;
 	int opt;
+	int lostok = 0; /* how many messages are OK to be lost? */
 	int nDups = 0;
 	int reachedEOF;
 	int edLen;	/* length of extra data */
@@ -54,7 +59,7 @@ int main(int argc, char *argv[])
 	static char ioBuf[sizeof(edBuf)+1024];
 	char *file = NULL;
 
-	while((opt = getopt(argc, argv, "e:f:ds:vE")) != EOF) {
+	while((opt = getopt(argc, argv, "e:f:ds:vm:E")) != EOF) {
 		switch((char)opt) {
 		case 'f':
 			file = optarg;
@@ -70,6 +75,9 @@ int main(int argc, char *argv[])
 			break;
                 case 'v':
 			++verbose;
+			break;
+                case 'm':
+			lostok = atoi(optarg);
 			break;
                 case 'E':
 			bHaveExtraData = 1;
@@ -124,6 +132,11 @@ int main(int argc, char *argv[])
 		if(!scanfOK) {
 			printf("scanf error in index i=%d\n", i);
 			exit(1);
+		}
+		while(val > i && lostok > 0) {
+			--lostok;
+			printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
+			++i;
 		}
 		if(val != i) {
 			if(val == i - 1 && dupsPermitted) {

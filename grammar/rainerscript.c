@@ -1132,7 +1132,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 {
 	struct cnfobj *o;
 
-	if((o = malloc(sizeof(struct nvlst))) != NULL) {
+	if((o = malloc(sizeof(struct cnfobj))) != NULL) {
 		nvlstChkDupes(lst);
 		o->objType = objType;
 		o->nvlst = lst;
@@ -1301,7 +1301,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 			    * step back a little not to copy it as part of the field. */
 		/* we got our end pointer, now do the copy */
 		iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(uchar)));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
@@ -1323,6 +1323,9 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 	uchar *pFld;
 	uchar *pFldEnd;
 	DEFiRet;
+
+	if (str == NULL || delim == NULL)
+		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
 
 	/* first, skip to the field in question */
 	iCurrFld = 1;
@@ -1346,7 +1349,7 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 			iLen = pFldEnd - pFld;
 		}
 		/* we got our end pointer, now do the copy */
-		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(char)));
+		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(uchar)));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
@@ -1737,6 +1740,17 @@ evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
 	cnfexprEval(expr->r, &r, usrptr); \
 	ret->datatype = 'N'; \
 	ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
+	FREE_BOTH_RET
+
+#define COMP_NUM_BINOP_DIV(x) \
+	cnfexprEval(expr->l, &l, usrptr); \
+	cnfexprEval(expr->r, &r, usrptr); \
+	ret->datatype = 'N'; \
+	if((ret->d.n = var2Number(&r, &convok_r)) == 0) { \
+		/* division by zero */ \
+	} else { \
+		ret->d.n = var2Number(&l, &convok_l) x ret->d.n; \
+	} \
 	FREE_BOTH_RET
 
 /* NOTE: array as right-hand argument MUST be handled by user */
@@ -2220,10 +2234,10 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 		COMP_NUM_BINOP(*);
 		break;
 	case '/':
-		COMP_NUM_BINOP(/);
+		COMP_NUM_BINOP_DIV(/);
 		break;
 	case '%':
-		COMP_NUM_BINOP(%);
+		COMP_NUM_BINOP_DIV(%);
 		break;
 	case 'M':
 		cnfexprEval(expr->r, &r, usrptr);
@@ -2880,7 +2894,7 @@ cnfstmtNewLegaAct(char *actline)
 		goto done;
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
-	if(localRet != RS_RET_OK && localRet != RS_RET_OK_WARN) {
+	if(localRet != RS_RET_OK) {
 		parser_errmsg("%s occured in file '%s' around line %d",
 			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
 			      cnfcurrfn, yylineno);
@@ -3165,13 +3179,23 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case '/':
 		if(getConstNumber(expr, &ln, &rn))  {
 			expr->nodetype = 'N';
-			((struct cnfnumval*)expr)->val = ln / rn;
+			if(rn == 0) {
+				/* division by zero */
+				((struct cnfnumval*)expr)->val = 0;
+			} else {
+				((struct cnfnumval*)expr)->val = ln / rn;
+			}
 		}
 		break;
 	case '%':
 		if(getConstNumber(expr, &ln, &rn))  {
 			expr->nodetype = 'N';
-			((struct cnfnumval*)expr)->val = ln % rn;
+			if(rn == 0) {
+				/* division by zero */
+				((struct cnfnumval*)expr)->val = 0;
+			} else {
+				((struct cnfnumval*)expr)->val = ln % rn;
+			}
 		}
 		break;
 	case CMP_NE:
@@ -3697,13 +3721,20 @@ cnffuncNew_prifilt(int fac)
 {
 	struct cnffunc* func;
 
+	fac >>= 3;
+	if (fac >= LOG_NFACILITIES + 1 || fac < 0)
+		return NULL;
+
 	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
+		if ((func->funcdata = calloc(1, sizeof(struct funcData_prifilt))) == NULL) {
+			free(func);
+			return NULL;
+		}
 		func->nodetype = 'F';
 		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
 		func->nParams = 0;
 		func->fID = CNFFUNC_PRIFILT;
-		func->funcdata = calloc(1, sizeof(struct funcData_prifilt));
-		((struct funcData_prifilt *)func->funcdata)->pmask[fac >> 3] = TABLE_ALLPRI;
+		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
 	return func;
 }

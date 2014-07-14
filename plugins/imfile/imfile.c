@@ -1354,7 +1354,6 @@ CODESTARTrunInput
 		iRet = do_inotify();
 
 	DBGPRINTF("imfile: terminating upon request of rsyslog core\n");
-	RETiRet;	/* use it to make sure the housekeeping is done! */
 ENDrunInput
 
 

@@ -210,7 +210,7 @@ rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
 
 /* new calling interface */
 rsRetVal cstrFinalize(cstr_t *pThis);
-rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL);
+rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */

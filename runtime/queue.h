@@ -173,14 +173,14 @@ struct queue_s {
 	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
 	void *cryprovData; /* opaque data ptr for provider use */
 	uchar 	*cryprovNameFull;/* full internal crypto provider name */
-	DEF_ATOMIC_HELPER_MUT(mutQueueSize);
-	DEF_ATOMIC_HELPER_MUT(mutLogDeq);
+	DEF_ATOMIC_HELPER_MUT(mutQueueSize)
+	DEF_ATOMIC_HELPER_MUT(mutLogDeq)
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
-	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued);
-	STATSCOUNTER_DEF(ctrFull, mutCtrFull);
-	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd);
-	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd);
+	STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued)
+	STATSCOUNTER_DEF(ctrFull, mutCtrFull)
+	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd)
+	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
 	int ctrMaxqsize; /* NOT guarded by a mutex */
 };
 
@@ -228,5 +228,9 @@ PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 #define qqueueGetID(pThis) ((unsigned long) pThis)
+
+#ifdef ENABLE_IMDIAG
+extern unsigned int iOverallQueueSize;
+#endif
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

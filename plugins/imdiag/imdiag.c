@@ -52,6 +52,7 @@
 #include "msg.h"
 #include "datetime.h"
 #include "ratelimit.h"
+#include "queue.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -236,7 +237,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	int iFrom;
 	int nMsgs;
 	int i;
-	ratelimit_t *ratelimit;
+	ratelimit_t *ratelimit = NULL;
 	DEFiRet;
 
 	/* we do not check errors here! */
@@ -244,7 +245,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	iFrom = atoi((char*)wordBuf);
 	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
 	nMsgs = atoi((char*)wordBuf);
-	ratelimitNew(&ratelimit, "imdiag", "injectmsg");
+	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 
 	for(i = 0 ; i < nMsgs ; ++i) {
 		doInjectMsg(i + iFrom, ratelimit);
@@ -252,41 +253,41 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 
 	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
 	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
-	ratelimitDestruct(ratelimit);
 
 finalize_it:
+	if(ratelimit != NULL)
+		ratelimitDestruct(ratelimit);
 	RETiRet;
 }
 
 
-/* This function waits until the main queue is drained (size = 0)
+/* This function waits until all queues are drained (size = 0)
  * To make sure it really is drained, we check three times. Otherwise we
  * may just see races.
+ * Note: until 2014--07-13, this checked just the main queue. However,
+ * the testbench was the sole user and checking all queues makes much more
+ * sense. So we change function semantics instead of carrying the old
+ * semantics over and crafting a new function. -- rgerhards
  */
 static rsRetVal
 waitMainQEmpty(tcps_sess_t *pSess)
 {
-	int iMsgQueueSize;
 	int iPrint = 0;
 	DEFiRet;
 
-	CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	while(1) {
-		if(iMsgQueueSize == 0) {
+		if(iOverallQueueSize == 0) {
 			/* verify that queue is still empty (else it could just be a race!) */
 			srSleep(0,250000);/* wait a little bit */
-			CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
-			if(iMsgQueueSize == 0) {
+			if(iOverallQueueSize == 0) {
 				srSleep(0,500000);/* wait a little bit */
-				CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 			}
 		}
-		if(iMsgQueueSize == 0)
+		if(iOverallQueueSize == 0)
 			break;
 		if(iPrint++ % 500 == 0) 
-			dbgprintf("imdiag sleeping, wait mainq drain, curr size %d\n", iMsgQueueSize);
+			dbgprintf("imdiag sleeping, wait queues drain, curr size %d\n", iOverallQueueSize);
 		srSleep(0,200000);/* wait a little bit */
-		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
@@ -302,7 +303,6 @@ finalize_it:
 static rsRetVal
 OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 {
-	int iMsgQueueSize;
 	uchar *pszMsg;
 	uchar *pToFree = NULL;
 	uchar cmdBuf[1024];
@@ -324,9 +324,8 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 
 	dbgprintf("imdiag received command '%s'\n", cmdBuf);
 	if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("getmainmsgqueuesize"))) {
-		CHKiRet(diagGetMainMsgQSize(&iMsgQueueSize));
-		CHKiRet(sendResponse(pSess, "%d\n", iMsgQueueSize));
-		DBGPRINTF("imdiag: %d messages in main queue\n", iMsgQueueSize);
+		CHKiRet(sendResponse(pSess, "%d\n", iOverallQueueSize));
+		DBGPRINTF("imdiag: %d messages in main queue\n", iOverallQueueSize);
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("waitmainqueueempty"))) {
 		CHKiRet(waitMainQEmpty(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("injectmsg"))) {

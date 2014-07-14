@@ -237,6 +237,12 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-03-??
+- add --enable-generate-man-pages configure switch (default: enabled)
+  This forces generation of man pages, even if cached ones exists. This
+  "fixes" a typical release tarball nit. While it is hackish, the
+  benefit is clear given the history of failed tarball releases since
+  we changed the cached man page handling. It was just too easy to get
+  that wrong.
 - removed obsolete --disable-fsstnd configure option
   Thanks to Thomas D. for alerting us.
   Closes: https://github.com/rsyslog/rsyslog/issues/72
@@ -268,6 +274,25 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   re-opened again.
 - bugfix: busy loop in tcp listener when running out of file descriptors
   Thanks to Susant Sahani for the patch.
+- bugfix: mishandling of input modules not supporting new input instances
+  If they did not support this, accidently the output module part of the
+  module union was written, leading to unpredictable results. Note: all
+  core modules do support this interface, but some contributed or very
+  old ones do not.
+- bugfix: double-free when ruleset() parser parameters were used
+  While unlikely, this could cause stability issues even after the
+  config phase.
+- bugfix: output modules with parameters with multiple passing modes
+  could caused strange behaviour including aborts
+  This was due to the fact that the action module only preserved and
+  processed the last set passing mode. Note that this was not a problem
+  for the plugins provided by the rsyslog git: none of them uses different
+  passing modes.
+  Thanks to Tomas Heinrich for providing a very detailled bug report.
+- various fixes after coverty scan
+  These do not address issues seen in practice but those seen by the tool.
+  Some of them may affect practical deployments.
+  Thanks to Tomas Heinrich for the patches.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process

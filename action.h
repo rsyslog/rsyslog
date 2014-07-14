@@ -62,23 +62,23 @@ struct action_s {
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
 	rsRetVal (*submitToActQ)(action_t *, wti_t*, msg_t*);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
-	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1, ACT_MSG_PASSING = 2,
-		  ACT_JSON_PASSING = 3}
-		eParamPassing;	/* mode of parameter passing to action */
+	sbool	bUsesMsgPassingMode;
+	sbool	bNeedReleaseBatch; /* do we need to release batch ressources? Depends on ParamPassig modes... */
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
 				 * in this order. */
+	paramPassing_t *peParamPassing;	/* mode of parameter passing to action for that template */
 	qqueue_t *pQueue;	/* action queue */
 	pthread_mutex_t mutAction; /* primary action mutex */
 	uchar *pszName;		/* action name */
-	DEF_ATOMIC_HELPER_MUT(mutCAS);
+	DEF_ATOMIC_HELPER_MUT(mutCAS)
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
-	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed);
-	STATSCOUNTER_DEF(ctrFail, mutCtrFail);
-	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend);
-	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration);
-	STATSCOUNTER_DEF(ctrResume, mutCtrResume);
+	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed)
+	STATSCOUNTER_DEF(ctrFail, mutCtrFail)
+	STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend)
+	STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration)
+	STATSCOUNTER_DEF(ctrResume, mutCtrResume)
 };
 
 
