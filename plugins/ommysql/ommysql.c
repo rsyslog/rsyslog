@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,6 +143,7 @@ ENDfreeInstance
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 	closeMySQL(pWrkrData);
+	mysql_thread_end();
 ENDfreeWrkrInstance
 
 
