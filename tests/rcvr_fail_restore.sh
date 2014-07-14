@@ -13,6 +13,7 @@ source $srcdir/diag.sh init
 #export RSYSLOG_DEBUGLOG="log2"
 echo starting receiver
 source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
+#export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 #valgrind="valgrind"
 echo starting sender
@@ -31,6 +32,7 @@ source $srcdir/diag.sh wait-queueempty
 # Step 2: shutdown receiver, then send some more data, which then
 # needs to go into the queue.
 #
+echo step 2
 
 source $srcdir/diag.sh shutdown-when-empty 2
 source $srcdir/diag.sh wait-shutdown 2
@@ -43,6 +45,7 @@ ls -l test-spool
 #
 # Step 3: restart receiver, wait that the sender drains its queue
 #
+echo step 3
 #export RSYSLOG_DEBUGLOG="log2"
 source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 echo waiting for sender to drain queue [may need a short while]
@@ -56,6 +59,7 @@ echo file size to expect is $OLDFILESIZE
 # Step 4: send new data. Queue files are not permitted to grow now
 # (but one file continous to exist).
 #
+echo step 4
 source $srcdir/diag.sh injectmsg  11001 10
 source $srcdir/diag.sh wait-queueempty
 
@@ -84,6 +88,7 @@ fi
 # Step 5: stop receiver again, then send some more data, which then
 # needs to go into the queue.
 #
+echo step 5
 echo "*** done primary test *** now checking if DA can be restarted"
 source $srcdir/diag.sh shutdown-when-empty 2
 source $srcdir/diag.sh wait-shutdown 2
@@ -97,6 +102,7 @@ ls -l test-spool
 #
 # Step 6: restart receiver, wait that the sender drains its queue
 #
+echo step 6
 source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 echo waiting for sender to drain queue [may need a short while]
 source $srcdir/diag.sh wait-queueempty
@@ -120,5 +126,5 @@ then
    exit 1
 fi
 # do the final check
-source $srcdir/diag.sh seq-check 1 21010
+source $srcdir/diag.sh seq-check 1 21010 -m 100
 source $srcdir/diag.sh exit
