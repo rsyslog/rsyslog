@@ -124,22 +124,6 @@ rsyslogd_usage(void)
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
-/* This is a support function for imdiag. It returns back the approximate
- * current number of messages in the main message queue
- * This number includes the messages that reside in an associated DA queue (if
- * it exists) -- rgerhards, 2009-10-14
- * Note that this is imprecise, but needed for the testbench. It should not be used
- * for any other purpose -- impstats is the right tool for all other cases.
- */
-rsRetVal
-diagGetMainMsgQSize(int *piSize)
-{
-	DEFiRet;
-	assert(piSize != NULL);
-	*piSize = (pMsgQueue->pqDA != NULL) ? pMsgQueue->pqDA->iQueueSize : 0;
-	*piSize += pMsgQueue->iQueueSize;
-	RETiRet;
-}
 
 /* print version and compile-time setting information */
 static void

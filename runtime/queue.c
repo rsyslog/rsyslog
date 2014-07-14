@@ -73,6 +73,11 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
+
+#ifdef ENABLE_IMDIAG
+unsigned int iOverallQueueSize = 0;
+#endif
+
 /* forward-definitions */
 static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
@@ -1030,6 +1035,14 @@ qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		ATOMIC_INC(&pThis->iQueueSize, &pThis->mutQueueSize);
+#		ifdef ENABLE_IMDIAG
+#			ifdef HAVE_ATOMIC_BUILTINS
+				/* mutex is never used due to conditional compilation */
+				ATOMIC_INC(&iOverallQueueSize, &NULL);
+#			else
+				++iOverallQueueSize; /* racy, but we can't wait for a mutex! */
+#			endif
+#		endif
 		DBGOPRINT((obj_t*) pThis, "qqueueAdd: entry added, size now log %d, phys %d entries\n",
 			  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	}
@@ -1491,6 +1504,14 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
 	ATOMIC_SUB(&pThis->iQueueSize, nElem, &pThis->mutQueueSize);
+#	ifdef ENABLE_IMDIAG
+#		ifdef HAVE_ATOMIC_BUILTINS
+			/* mutex is never used due to conditional compilation */
+			ATOMIC_SUB(&iOverallQueueSize, nElem, &NULL);
+#		else
+			iOverallQueueSize -= nElem; /* racy, but we can't wait for a mutex! */
+#		endif
+#	endif
 	ATOMIC_SUB(&pThis->nLogDeq, nElem, &pThis->mutLogDeq);
 	DBGPRINTF("doDeleteBatch: delete batch from store, new sizes: log %d, phys %d\n",
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
@@ -3059,6 +3080,9 @@ static rsRetVal qqueueSetProperty(qqueue_t *pThis, var_t *pProp)
 
  	if(isProp("iQueueSize")) {
 		pThis->iQueueSize = pProp->val.num;
+#		ifdef ENABLE_IMDIAG
+			iOverallQueueSize += pThis->iQueueSize;
+#		endif
  	} else if(isProp("tVars.disk.sizeOnDisk")) {
 		pThis->tVars.disk.sizeOnDisk = pProp->val.num;
  	} else if(isProp("qType")) {

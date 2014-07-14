@@ -229,4 +229,8 @@ PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 #define qqueueGetID(pThis) ((unsigned long) pThis)
 
+#ifdef ENABLE_IMDIAG
+extern unsigned int iOverallQueueSize;
+#endif
+
 #endif /* #ifndef QUEUE_H_INCLUDED */
