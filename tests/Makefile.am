@@ -81,6 +81,8 @@ TESTS +=  \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
+	mmjsonparse_simple.sh \
+	mmjsonparse_cim.sh \
 	incltest.sh \
 	incltest_dir.sh \
 	incltest_dir_wildcard.sh \
@@ -343,6 +345,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/cee_simple.conf \
 	   cee_diskqueue.sh \
 	   testsuites/cee_diskqueue.conf \
+	   mmjsonparse_simple.sh \
+	   testsuites/mmjsonparse_simple.conf \
+	   mmjsonparse_cim.sh \
+	   testsuites/mmjsonparse_cim.conf \
 	   incltest.sh \
 	   testsuites/incltest.conf \
 	   incltest_dir.sh \
