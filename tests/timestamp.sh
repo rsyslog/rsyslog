@@ -1,5 +1,6 @@
 echo \[timestamp.sh\]: various timestamp tests
 source $srcdir/diag.sh init
+source $srcdir/diag.sh generate-HOSTNAME
 source $srcdir/diag.sh nettester ts3164 udp
 source $srcdir/diag.sh nettester ts3164 tcp
 source $srcdir/diag.sh nettester ts3339 udp
