@@ -205,7 +205,7 @@ setBaseURL(instanceData *pData, es_str_t **url)
 	if(r == 0) r = es_addBuf(url, (char*)pData->server, strlen((char*)pData->server));
 	if(r == 0) r = es_addChar(url, ':');
 	if(r == 0) r = es_addBuf(url, portBuf, strlen(portBuf));
-	if(r == 0) r = es_addChar(url, '/');
+	if(r == 0) es_addChar(url, '/');
 	RETiRet;
 }
 
