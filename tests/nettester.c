@@ -66,7 +66,7 @@ static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify
 static int verbose = 0;	/* verbose output? -v option */
 static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
 static char **ourEnvp;
-static char ourHostName[1024];
+static char *ourHostName;
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -533,6 +533,23 @@ void doAtExit(void)
 	unlink(NETTEST_INPUT_CONF_FILE);
 }
 
+
+/* Note: the HOSTNAME file must have been pre-generated */
+static void
+getHostname(void)
+{
+	size_t dummy;
+	FILE *fp;
+	if((fp = fopen("HOSTNAME", "r")) == NULL) {
+		perror("HOSTNAME");
+		printf("error opening HOSTNAME configuration file\n");
+		exit(1);
+	}
+	getline(&ourHostName, &dummy, fp);
+	fclose(fp);
+}
+
+
 /* Run the test suite. This must be called with exactly one parameter, the
  * name of the test suite. For details, see file header comment at the top
  * of this file.
@@ -544,19 +561,11 @@ int main(int argc, char *argv[], char *envp[])
 	int opt;
 	int ret = 0;
 	FILE *fp;
-	struct hostent *he;
 	char buf[4096];
 	char testcases[4096];
 
 	ourEnvp = envp;
-	he = gethostbyname("localhost");
-	strcpy(ourHostName, he->h_name);
-	/* now convert to lower case as rsyslog does... */
-	char *ptr = ourHostName;
-	while(*ptr) {
-		*ptr = tolower(*ptr);
-		++ptr;
-	}
+	getHostname();
 
 	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
 		switch((char)opt) {
