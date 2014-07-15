@@ -69,7 +69,6 @@ ENDisCompatibleWithFeature
 
 BEGINparse
 	uchar *p2parse;
-	uchar *opening;
 	int lenMsg;
 #define OpeningText "Message forwarded from "
 CODESTARTparse
