@@ -365,7 +365,7 @@ setCurlURL(instanceData *pData, uchar **tpls)
 	}
 	if(parent != NULL) {
 		if(r == 0) r = es_addBuf(&url, "parent=", sizeof("parent=")-1);
-		if(r == 0) r = es_addBuf(&url, (char*)parent, ustrlen(parent));
+		if(r == 0) es_addBuf(&url, (char*)parent, ustrlen(parent));
 	}
 
 	free(pData->restURL);
