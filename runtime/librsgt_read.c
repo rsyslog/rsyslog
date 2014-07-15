@@ -611,9 +611,9 @@ rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 	fprintf(fp, "\tIV............: ");
 		outputHexBlob(fp, bs->iv, getIVLen(bs), verbose);
 		fputc('\n', fp);
-	fprintf(fp, "\tRecord Count..: %llu\n", bs->recCount);
+	fprintf(fp, "\tRecord Count..: %llu\n", (long long unsigned) bs->recCount);
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
-	fprintf(fp, "\tSignature Len.: %u\n", bs->sig.der.len);
+	fprintf(fp, "\tSignature Len.: %u\n", (unsigned) bs->sig.der.len);
 	fprintf(fp, "\tSignature.....: ");
 		outputHexBlob(fp, bs->sig.der.data, bs->sig.der.len, verbose);
 		fputc('\n', fp);

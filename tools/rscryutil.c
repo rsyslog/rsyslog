@@ -120,8 +120,8 @@ eiGetIV(FILE *eifp, char *iv, size_t leniv)
 	}
 	valueLen = strlen(value);
 	if(valueLen/2 != leniv) {
-		fprintf(stderr, "length of IV is %d, expected %d\n",
-			valueLen/2, leniv);
+		fprintf(stderr, "length of IV is %lld, expected %lld\n",
+			(long long) valueLen/2, (long long) leniv);
 		r = 1; goto done;
 	}
 
@@ -170,8 +170,8 @@ initCrypt(FILE *eifp)
 
 	blkLength = gcry_cipher_get_algo_blklen(cry_algo);
 	if(blkLength > sizeof(iv)) {
-		fprintf(stderr, "internal error[%s:%d]: block length %d too large for "
-			"iv buffer\n", __FILE__, __LINE__, blkLength);
+		fprintf(stderr, "internal error[%s:%d]: block length %lld too large for "
+			"iv buffer\n", __FILE__, __LINE__, (long long) blkLength);
 		r = 1; goto done;
 	}
 	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
@@ -179,8 +179,8 @@ initCrypt(FILE *eifp)
 	size_t keyLength = gcry_cipher_get_algo_keylen(cry_algo);
 	if(strlen(cry_key) != keyLength) {
 		fprintf(stderr, "invalid key length; key is %u characters, but "
-			"exactly %u characters are required\n", cry_keylen,
-			keyLength);
+			"exactly %llu characters are required\n", cry_keylen,
+			(long long unsigned) keyLength);
 		r = 1; goto done;
 	}
 
