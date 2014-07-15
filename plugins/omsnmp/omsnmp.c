@@ -263,7 +263,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 					"failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
-		pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid));
+		CHKmalloc(pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid)));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
 		pdu->enterprise_length = enterpriseoidlen;
 
