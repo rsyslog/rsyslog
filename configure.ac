@@ -32,7 +32,8 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3)
 PKG_CHECK_MODULES([JSON_C], [json],, [
-	PKG_CHECK_MODULES([JSON_C], [json-c])
+	PKG_CHECK_MODULES([JSON_C], [json-c],
+	       [AC_DEFINE([HAVE_JSON_TOKENER_ERROR_DESC], [1], [we have the newer JSON-C API])])
 ])
 
 # if int64 is supported, use it

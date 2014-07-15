@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 8.4.0 [v8-devel] 2014-07-??
+- bugfix: mmjsonparse did not build with json-c < 0.10
+  This was a regression introduced some time in the past in order to
+  support API changes in json-c. Now we check for the version and use
+  proper code.
+---------------------------------------------------------------------------
 Version 8.3.4 [v8-devel] 2014-07-11
 - new pmciscoios parser supporting various Cisco IOS formats
 - RFC3164 timestamp parser now accepts timezones and subsecond resolution
