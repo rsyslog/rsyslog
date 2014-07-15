@@ -363,9 +363,12 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	}
 
 	do {
+		char *p;
+
 		/* Increase bufsize and try again.*/
 		bufSize *= 2;
-		CHKmalloc(stringBuf = realloc(stringBuf, bufSize));
+		CHKmalloc(p = realloc(stringBuf, bufSize));
+		stringBuf = p;
 		err = getgrnam_r((char*)szName, &gBuf, stringBuf, bufSize, &pgBuf);
 	} while((pgBuf == NULL) && (err == ERANGE));
 
