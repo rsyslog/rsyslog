@@ -1,6 +1,7 @@
 echo ===============================================================================
 echo \[tabescape_dflt.sh\]: test for default tab escaping
-$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+source $srcdir/diag.sh init
+source $srcdir/diag.sh generate-HOSTNAME
 
 ./nettester -ttabescape_dflt -iudp
 if [ "$?" -ne "0" ]; then
