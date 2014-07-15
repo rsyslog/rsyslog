@@ -199,7 +199,7 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
  
- 	msgAddJSON(pMsg, (uchar*)"!", json);
+ 	msgAddJSON(pMsg, pWrkrData->pData->container, json);
 finalize_it:
 	RETiRet;
 }
