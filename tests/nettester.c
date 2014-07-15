@@ -12,7 +12,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -49,6 +49,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include <ctype.h>
+#include <netdb.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
@@ -65,6 +66,7 @@ static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify
 static int verbose = 0;	/* verbose output? -v option */
 static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
 static char **ourEnvp;
+static char ourHostName[1024];
 
 /* these two are quick hacks... */
 int iFailed = 0;
@@ -339,6 +341,44 @@ void unescapeTestdata(char *testdata)
 }
 
 
+/* expand variables in expected string. Here we use tilde (~) as expension
+ * character, because the more natural % is very common in syslog messages
+ * (and most importantly in the samples we currently have.
+ * Currently supported are:
+ * ~H - our hostname
+ * Note: yes, there are vulns in this code. Doesn't matter, as it is a
+ * quick and dirty test program, NOT intended to be used in any production!
+ */
+static void
+doVarsInExpected(char **pe)
+{
+	char *n, *newBase;
+	char *e = *pe;
+	n = newBase = malloc(strlen(e) + 1024); /* we simply say "sufficient" */
+	while(*e) {
+		if(*e == '~') {
+			++e;
+			if(*e == 'H') {
+				++e;
+				char *hn = ourHostName;
+				while(*hn)
+					*n++ = *hn++;
+			} else {
+				*n++ = '?';
+				++e;
+			}
+		} else if(*e == '\\') {
+			++e; /* skip */
+			*n++ = *e++;
+		} else {
+			*n++ = *e++;
+		}
+	}
+	*n = '\0';
+	free(*pe);
+	*pe = newBase;
+}
+
 /* Process a specific test case. File name is provided.
  * Needs to return 0 if all is OK, something else otherwise.
  */
@@ -391,9 +431,9 @@ processTestFile(int fd, char *pszFileName)
 		 */
 		getline(&expected, &lenLn, fp);
 		expected[strlen(expected)-1] = '\0'; /* remove \n */
+		doVarsInExpected(&expected);
 
 		/* pull response from server and then check if it meets our expectation */
-//printf("try pull pipe...\n");
 		readLine(fd, buf);
 		if(strlen(buf) == 0) {
 			printf("something went wrong - read a zero-length string from rsyslogd\n");
@@ -504,10 +544,20 @@ int main(int argc, char *argv[], char *envp[])
 	int opt;
 	int ret = 0;
 	FILE *fp;
+	struct hostent *he;
 	char buf[4096];
 	char testcases[4096];
 
 	ourEnvp = envp;
+	he = gethostbyname("localhost");
+	strcpy(ourHostName, he->h_name);
+	/* now convert to lower case as rsyslog does... */
+	char *ptr = ourHostName;
+	while(*ptr) {
+		*ptr = tolower(*ptr);
+		++ptr;
+	}
+
 	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
 		switch((char)opt) {
                 case '4':
