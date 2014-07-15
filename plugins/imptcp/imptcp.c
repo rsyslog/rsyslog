@@ -920,7 +920,7 @@ DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
 		}
 	} while (pThis->zstrm.avail_out == 0);
 
-	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len, outtotal);
+	dbgprintf("end of DataRcvCompress, sizes: in %lld, out %llu\n", (long long) len, (long long unsigned) outtotal);
 finalize_it:
 	RETiRet;
 }
