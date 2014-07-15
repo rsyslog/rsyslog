@@ -917,7 +917,7 @@ DEFFUNC_llExecFunc(unregHdlrsHeadExec)
 	int iNumElts;
 
 	/* first find element */
-	iRet = llFindAndDelete(&(pListHdr->llCmdHdlrs), pParam);
+	CHKiRet(llFindAndDelete(&(pListHdr->llCmdHdlrs), pParam));
 
 	/* now go back and check how many elements are left */
 	CHKiRet(llGetNumElts(&(pListHdr->llCmdHdlrs), &iNumElts));
