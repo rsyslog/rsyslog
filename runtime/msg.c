@@ -2635,7 +2635,8 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst)
 
 	for(i = 0 ; i < buflen ; ++i) {
 		c = pSrc[i];
-		if(   (c >= 0x23 && c <= 0x5b)
+		if(   (c >= 0x23 && c <= 0x2e)
+		   || (c >= 0x30 && c <= 0x5b)
 		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
 		   || c == 0x20 || c == 0x21) {
 			/* no need to escape */
