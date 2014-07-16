@@ -3005,8 +3005,6 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			break;
 		case PROP_CEE_ALL_JSON:
 			if(pMsg->json == NULL) {
-				if(*pbMustBeFreed == 1)
-					free(pRes);
 				pRes = (uchar*) "{}";
 				bufLen = 2;
 				*pbMustBeFreed = 0;
@@ -3021,8 +3019,6 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			pRes = (uchar*) "\xEF\xBB\xBF";
 			*pbMustBeFreed = 0;
 			break;
@@ -3039,8 +3035,6 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			{
 			struct timespec tp;
 
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
@@ -3059,8 +3053,6 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			{
 			struct sysinfo s_info;
 
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
