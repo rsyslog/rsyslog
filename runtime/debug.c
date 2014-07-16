@@ -747,7 +747,9 @@ static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bInc
 
 
 /* set a name for the current thread. The caller provided string is duplicated.
- * To avoid racyness, we "absue" the dbgprint mutex. It really doesn't hurt here...
+ * Note: we must lock the "dbgprint" mutex, because dbgprint() uses the thread
+ * name and we could get a race (and abort) in cases where both are executed in
+ * parallel and we free or incompletely-copy the string.
  */
 void dbgSetThrdName(uchar *pszName)
 {
