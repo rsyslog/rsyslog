@@ -3134,7 +3134,7 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3312,7 +3312,7 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			if(iTo > bufLen) /* iTo is very large, if no to-position is set in the template! */
 				iTo = bufLen;
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3366,7 +3366,7 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			uchar *pBStart;
 			uchar *pB;
 			uchar *pSrc;
-			pBStart = pB = MALLOC((bufLen + 1) * sizeof(char));
+			pBStart = pB = MALLOC((bufLen + 1) * sizeof(uchar));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
