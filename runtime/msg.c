@@ -3038,13 +3038,15 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
-			*pbMustBeFreed = 1;
  
 			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
+				free(pRes);
  				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
  				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
  			}
  
+			*pbMustBeFreed = 1;
+
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", tp.tv_sec);
  			}
 
@@ -3056,12 +3058,14 @@ uchar *MsgGetProp(msg_t * const pMsg, struct templateEntry *pTpe,
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
-			*pbMustBeFreed = 1;
 
 			if(sysinfo(&s_info) < 0) {
+				free(pRes);
 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
 			}
+
+			*pbMustBeFreed = 1;
 
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
 			}
