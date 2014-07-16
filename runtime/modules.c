@@ -358,7 +358,7 @@ addModToGlblList(modInfo_t *pThis)
 rsRetVal
 readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast)
 {
-	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pNew = NULL;
 	cfgmodules_etry_t *pLast;
 	DEFiRet;
 	assert(pThis != NULL);
@@ -403,6 +403,10 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	*ppLast = pLast;
 	*ppNew = pNew;
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			free(pNew);
+	}
 	RETiRet;
 }
 
