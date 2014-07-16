@@ -1134,7 +1134,6 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			 * algo over time... -- rgerhards, 2008-03-05
 			 */
 			strncat((char *) pPathBuf, ".so", lenPathBuf - strlen((char*) pPathBuf) - 1);
-			iPathLen += 3;
 		}
 
 		/* complete load path constructed, so ... GO! */
