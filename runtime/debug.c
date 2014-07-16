@@ -738,25 +738,25 @@ static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bInc
 		snprintf(pszBuf, lenBuf, "%lx", (long) thrd);
 	} else {
 		if(bIncludeNumID) {
-			snprintf(pszBuf, lenBuf, "%s (%lx)", pThrd->pszThrdName, (long) thrd);
+			snprintf(pszBuf, lenBuf, "%-15s (%lx)", pThrd->pszThrdName, (long) thrd);
 		} else {
-			snprintf(pszBuf, lenBuf, "%s", pThrd->pszThrdName);
+			snprintf(pszBuf, lenBuf, "%-15s", pThrd->pszThrdName);
 		}
 	}
-
 }
 
 
 /* set a name for the current thread. The caller provided string is duplicated.
+ * To avoid racyness, we "absue" the dbgprint mutex. It really doesn't hurt here...
  */
 void dbgSetThrdName(uchar *pszName)
 {
-return;
-
+	pthread_mutex_lock(&mutdbgprint);
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 	if(pThrd->pszThrdName != NULL)
 		free(pThrd->pszThrdName);
 	pThrd->pszThrdName = strdup((char*)pszName);
+	pthread_mutex_unlock(&mutdbgprint);
 }
 
 
