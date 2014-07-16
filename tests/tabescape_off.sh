@@ -1,6 +1,7 @@
 echo ===============================================================================
 echo \[tabescape_off.sh\]: test for tab escaping off
-$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+source $srcdir/diag.sh init
+source $srcdir/diag.sh generate-HOSTNAME
 
 ./nettester -ttabescape_off -iudp
 if [ "$?" -ne "0" ]; then

@@ -103,7 +103,7 @@ showSigblkParams(char *name)
 		++blkCnt;
 		rsgt_printBLOCK_SIG(stdout, bs, verbose);
 		printf("\t***META INFORMATION:\n");
-		printf("\tBlock Nbr in File...: %llu\n", blkCnt);
+		printf("\tBlock Nbr in File...: %llu\n", (long long unsigned) blkCnt);
 		printf("\tHas Record Hashes...: %d\n", bHasRecHashes);
 		printf("\tHas Tree Hashes.....: %d\n", bHasIntermedHashes);
 	}
@@ -266,7 +266,7 @@ verify(char *name)
 				} else {
 					if(verbose)
 						fprintf(stderr, "EOF after signature block %lld\n",
-							ectx.blkNum);
+							(long long unsigned) ectx.blkNum);
 				}
 				goto done;
 			}

@@ -58,7 +58,9 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	int dummy; /* not needed, but some compilers do not support empty structs */
+	char *cookie;
+	uchar *container;
+	int lenCookie;
 	/* REMOVE dummy when real data items are to be added! */
 } instanceData;
 
@@ -72,6 +74,19 @@ struct modConfData_s {
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "cookie", eCmdHdlrString, 0 },
+	{ "container", eCmdHdlrString, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
 
 
 BEGINbeginCnfLoad
@@ -100,6 +115,10 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	CHKmalloc(pData->container = (uchar*)strdup("!"));
+	CHKmalloc(pData->cookie = strdup("@cee:"));
+	pData->lenCookie = strlen(pData->cookie);
+finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -121,6 +140,8 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->cookie);
+	free(pData->container);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -160,7 +181,11 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 
 			err = pWrkrData->tokener->err;
 			if(err != json_tokener_continue)
-				errMsg = json_tokener_error_desc(err);
+#				if HAVE_JSON_TOKENER_ERROR_DESC
+					errMsg = json_tokener_error_desc(err);
+#				else
+					errMsg = json_tokener_errors[err];
+#				endif
 			else
 				errMsg = "Unterminated input";
 		} else if((size_t)pWrkrData->tokener->char_offset < lenBuf)
@@ -178,20 +203,20 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
  
- 	msgAddJSON(pMsg, (uchar*)"!", json);
+ 	msgAddJSON(pMsg, pWrkrData->pData->container, json);
 finalize_it:
 	RETiRet;
 }
 
-#define COOKIE "@cee:"
-#define LEN_COOKIE (sizeof(COOKIE)-1)
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
 	int bSuccess = 0;
 	struct json_object *jval;
 	struct json_object *json;
+	instanceData *pData;
 CODESTARTdoAction
+	pData = pWrkrData->pData;
 	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
 	 * requires changes to the libraries. For now, we accept message
@@ -203,11 +228,11 @@ CODESTARTdoAction
 		++buf;
 	}
 
-	if(*buf == '\0' || strncmp((char*)buf, COOKIE, LEN_COOKIE)) {
+	if(*buf == '\0' || strncmp((char*)buf, pData->cookie, pData->lenCookie)) {
 		DBGPRINTF("mmjsonparse: no JSON cookie: '%s'\n", buf);
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
-	buf += LEN_COOKIE;
+	buf += pData->lenCookie;
 	CHKiRet(processJSON(pWrkrData, pMsg, (char*) buf, strlen((char*)buf)));
 	bSuccess = 1;
 finalize_it:
@@ -216,27 +241,54 @@ finalize_it:
 		json = json_object_new_object();
 		jval = json_object_new_string((char*)buf);
 		json_object_object_add(json, "msg", jval);
-		msgAddJSON(pMsg, (uchar*)"!", json);
+		msgAddJSON(pMsg, pData->container, json);
 		iRet = RS_RET_OK;
 	}
 	MsgSetParseSuccess(pMsg, bSuccess);
 ENDdoAction
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->cookie = NULL;
+}
+
 BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
 CODESTARTnewActInst
-	/* Note: we currently do not have any parameters, so we do not need
-	 * the lst ptr. However, we will most probably need params in the 
-	 * future.
-	 */
 	DBGPRINTF("newActInst (mmjsonparse)\n");
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
-	/*setInstParamDefaults(pData);*/
+	setInstParamDefaults(pData);
 
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "cookie")) {
+			free(pData->cookie);
+			pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "container")) {
+			free(pData->container);
+			pData->container = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("mmjsonparse: program error, non-handled param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(pData->container == NULL)
+		CHKmalloc(pData->container = (uchar*) strdup("!"));
+	if(pData->cookie == NULL)
+		CHKmalloc(pData->cookie = strdup("@cee:"));
+	pData->lenCookie = strlen(pData->cookie);
 CODE_STD_FINALIZERnewActInst
-/*	cnfparamvalsDestruct(pvals, &actpblk);*/
+	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct

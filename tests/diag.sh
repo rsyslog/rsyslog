@@ -191,5 +191,12 @@ case $1 in
 		   ZCAT=zcat
 		fi
 		;;
+   'generate-HOSTNAME')   # generate the HOSTNAME file
+		source $srcdir/diag.sh startup gethostname.conf
+		source $srcdir/diag.sh tcpflood -m1 -M "<128>"
+		./msleep 100
+		source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+		source $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+		;;
    *)		echo "invalid argument" $1
 esac

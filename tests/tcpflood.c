@@ -57,6 +57,7 @@
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
+ * -j	format message in json, parameter is JSON cookie
  *
  * Part of the testbench for rsyslog.
  *
@@ -145,6 +146,7 @@ static int numThrds = 1;	/* number of threads to use */
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
+static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
@@ -258,7 +260,7 @@ int openConn(int *fd)
  */
 int openConnections(void)
 {
-	unsigned i;
+	int i;
 	char msgBuf[128];
 	size_t lenMsg;
 
@@ -308,7 +310,7 @@ int openConnections(void)
  */
 void closeConnections(void)
 {
-	unsigned i;
+	int i;
 	size_t lenMsg;
 	struct linger ling;
 	char msgBuf[128];
@@ -372,6 +374,15 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 				}
 			}
 		} while(!done); /* Attention: do..while()! */
+	} else if(jsonCookie != NULL) {
+		if(useRFC5424Format) {
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
+					     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] %s{\"msgnum\":%d}%c",
+					       msgPRI, msgNum, jsonCookie, msgNum, frameDelim);
+		} else {
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag %s{\"msgnum\":%d}%c",
+					       msgPRI, jsonCookie, msgNum, frameDelim);
+		}
 	} else if(MsgToSend == NULL) {
 		if(dynFileIDs > 0) {
 			snprintf(dynFileIDBuf, sizeof(dynFileIDBuf), "%d:", rand() % dynFileIDs);
@@ -445,7 +456,7 @@ int sendMessages(struct instdata *inst)
 		if(runMultithreaded) {
 			socknum = inst->idx;
 		} else {
-			if(i < numConnections)
+			if((int) i < numConnections)
 				socknum = i;
 			else if(i >= inst->numMsgs - numConnections) {
 				socknum = i - (inst->numMsgs - numConnections);
@@ -856,7 +867,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:j:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -879,6 +890,8 @@ int main(int argc, char *argv[])
 		case 'i':	msgNum = atoi(optarg);
 				break;
 		case 'P':	msgPRI = optarg;
+				break;
+		case 'j':	jsonCookie = optarg;
 				break;
 		case 'd':	extraDataLen = atoi(optarg);
 				if(extraDataLen > MAX_EXTRADATA_LEN) {
