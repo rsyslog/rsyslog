@@ -713,8 +713,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
 					
 					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
-						!= RS_RET_OK)
+						!= RS_RET_OK) {
+						free(allowIP.addr.NetAddr);
 						FINALIZE;
+					}
 					break;
 				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
 					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
@@ -737,8 +739,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
-							!= RS_RET_OK)
+							!= RS_RET_OK) {
+							free(allowIP.addr.NetAddr);
 							FINALIZE;
+						}
 					} else {
 						/* finally add IPv6 */
 						
@@ -751,8 +755,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
-							!= RS_RET_OK)
+							!= RS_RET_OK) {
+							free(allowIP.addr.NetAddr);
 							FINALIZE;
+						}
 					}
 					break;
 				}
