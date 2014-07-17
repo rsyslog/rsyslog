@@ -81,8 +81,6 @@ TESTS +=  \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
-	mmjsonparse_simple.sh \
-	mmjsonparse_cim.sh \
 	incltest.sh \
 	incltest_dir.sh \
 	incltest_dir_wildcard.sh \
@@ -133,6 +131,12 @@ endif
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
 	mmpstrucdata.sh
+endif
+
+if ENABLE_MMJSONPARSE
+TESTS +=  \
+	mmjsonparse_simple.sh \
+	mmjsonparse_cim.sh
 endif
 
 if ENABLE_GNUTLS
