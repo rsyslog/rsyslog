@@ -722,7 +722,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						iSignificantBits = 32;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = MALLOC(sizeof(struct sockaddr_in)))
+						if((allowIP.addr.NetAddr = (struct sockaddr *) MALLOC(sizeof(struct sockaddr_in)))
 						    == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
