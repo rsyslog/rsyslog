@@ -175,7 +175,7 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 	assert(pPeer != NULL);
 	assert(pszStr != NULL);
 
-	CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t)));
+	CHKmalloc(pNew = calloc(1, sizeof(*pNew)));
 
 	if(lenStr == 0) { /* empty domain components are permitted */
 		pNew->wildcardType = PEER_WILDCARD_EMPTY_COMPONENT;
