@@ -1155,8 +1155,11 @@ getLocalHostname(uchar **ppName)
 			buf_len = 128;        /* Initial guess */
 			CHKmalloc(buf = MALLOC(buf_len));
 		} else {
+			uchar *p;
+
 			buf_len += buf_len;
-			CHKmalloc(buf = realloc (buf, buf_len));
+			CHKmalloc(p = realloc (buf, buf_len));
+			buf = p;
 		}
 	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
 
