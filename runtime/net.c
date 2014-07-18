@@ -1090,22 +1090,18 @@ void debugListenInfo(int fd, char *type)
 {
 	char *szFamily;
 	int port;
-	struct sockaddr sa;
-	struct sockaddr_in *ipv4;
-	struct sockaddr_in6 *ipv6;
+	struct sockaddr_storage sa;
 	socklen_t saLen = sizeof(sa);
 
-	if(getsockname(fd, &sa, &saLen) == 0) {
-		switch(sa.sa_family) {
+	if(getsockname(fd, (struct sockaddr *) &sa, &saLen) == 0) {
+		switch(sa.ss_family) {
 		case PF_INET:
 			szFamily = "IPv4";
-			ipv4 = (struct sockaddr_in*)(void*) &sa;
-			port = ntohs(ipv4->sin_port);
+			port = ntohs(((struct sockaddr_in *) &sa)->sin_port);
 			break;
 		case PF_INET6:
 			szFamily = "IPv6";
-			ipv6 = (struct sockaddr_in6*)(void*) &sa;
-			port = ntohs(ipv6->sin6_port);
+			port = ntohs(((struct sockaddr_in6 *) &sa)->sin6_port);
 			break;
 		default:
 			szFamily = "other";
