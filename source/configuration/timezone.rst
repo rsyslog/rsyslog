@@ -6,7 +6,8 @@ timezone
 
 The ``timezone`` object, as its name suggests, describes timezones.
 Currently, they are used by message parser modules to interpret
-timestamp that contain timezone information. The object describes
+timestamps that contain timezone information via a timezone string
+(but not an offset, e.g. "CET" but not "-01:00"). The object describes
 an UTC offset for a given timezone ID.
 
 Each timestamp object adds the zone definition to a global table
