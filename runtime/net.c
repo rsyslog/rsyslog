@@ -893,6 +893,7 @@ rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
 					    "- terminating, nothing more will be added.", iRet);
 				rsParsDestruct(pPars);
+				free(uIP);
 				return(iRet);
 		        }
 		}
