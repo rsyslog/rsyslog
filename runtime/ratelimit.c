@@ -203,6 +203,8 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 	DEFiRet;
 	rsRetVal localRet;
 
+	*ppRepMsg = NULL;
+
 	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
 			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
@@ -210,7 +212,6 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 		}
 	}
 
-	*ppRepMsg = NULL;
 	/* Only the messages having severity level at or below the
 	 * treshold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
