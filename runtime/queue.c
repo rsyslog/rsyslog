@@ -2225,7 +2225,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 * influenced by properties which might have been set after queueConstruct ()
 	 */
 	if(pThis->pqParent == NULL) {
-		pThis->mut = (pthread_mutex_t *) MALLOC (sizeof (pthread_mutex_t));
+		CHKmalloc(pThis->mut = (pthread_mutex_t *) MALLOC (sizeof (pthread_mutex_t)));
 		pthread_mutex_init(pThis->mut, NULL);
 	} else {
 		/* child queue, we need to use parent's mutex */
@@ -2324,6 +2324,10 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->mut != NULL)
+			free(pThis->mut);
+	}
 	RETiRet;
 }
 
