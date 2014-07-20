@@ -217,8 +217,13 @@ finalize_it:
 /* return a new "active" structure for the batch. Free with freeActive(). */
 static inline sbool *newActive(batch_t *pBatch)
 {
-	return malloc(sizeof(sbool) * batchNumMsgs(pBatch));
-	
+	int n;
+
+	n = batchNumMsgs(pBatch);
+	if(n == 0)
+		return NULL;
+
+	return malloc(sizeof(sbool) * n);
 }
 static inline void freeActive(sbool *active) { free(active); }
 
