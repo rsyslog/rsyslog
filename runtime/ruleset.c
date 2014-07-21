@@ -512,16 +512,17 @@ done:
 }
 
 /* for details, see scriptExec() header comment! */
-static void
+static rsRetVal
 execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
 	sbool *thenAct;
 	sbool bRet;
 	int i;
-	thenAct = newActive(pBatch);
+	DEFiRet;
+	CHKmalloc(thenAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
-			return;
+			FINALIZE;
 		if(pBatch->eltState[i] == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
@@ -533,7 +534,10 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	}
 
 	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
-	freeActive(thenAct);
+finalize_it:
+	if(thenAct == NULL)
+		freeActive(thenAct);
+	RETiRet;
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
