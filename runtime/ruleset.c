@@ -999,9 +999,16 @@ rulesetProcessCnf(struct cnfobj *o)
 	} else if(localRet != RS_RET_NOT_FOUND) {
 		ABORT_FINALIZE(localRet);
 	}
+
 	CHKiRet(rulesetConstruct(&pRuleset));
-	CHKiRet(rulesetSetName(pRuleset, rsName));
-	CHKiRet(rulesetConstructFinalize(loadConf, pRuleset));
+	if((localRet = rulesetSetName(pRuleset, rsName)) != RS_RET_OK) {
+		rulesetDestruct(&pRuleset);
+		ABORT_FINALIZE(localRet);
+	}
+	if((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) {
+		rulesetDestruct(&pRuleset);
+		ABORT_FINALIZE(localRet);
+	}
 	addScript(pRuleset, o->script);
 
 	/* we have only two params, so we do NOT do the usual param loop */
