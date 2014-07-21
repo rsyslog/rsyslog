@@ -278,6 +278,9 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		DBGPRINTF("omprog: failed to execute binary '%s': %s\n",
 			  pWrkrData->pData->szBinary, errStr); 
+		openlog("rsyslogd", 0, LOG_SYSLOG);
+		syslog(LOG_ERR, "omprog: failed to execute binary '%s': %s\n",
+			  pWrkrData->pData->szBinary, errStr); 
 	}
 	
 	/* we should never reach this point, but if we do, we terminate */
