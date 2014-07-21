@@ -327,12 +327,12 @@ finalize_it:
 static rsRetVal
 execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	sbool *newAct;
+	sbool *newAct = NULL;
 	int i;
 	sbool bRet;
 	sbool allInactive = 1;
 	DEFiRet;
-	newAct = newActive(pBatch);
+	CHKmalloc(newAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
 			FINALIZE;
@@ -349,7 +349,6 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 
 	if(allInactive) {
 		DBGPRINTF("execIf: all batch elements are inactive, holding execution\n");
-		freeActive(newAct);
 		FINALIZE;
 	}
 
@@ -366,23 +365,25 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 			}
 		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
 	}
-	freeActive(newAct);
 finalize_it:
+	if(newAct != NULL)
+		freeActive(newAct);
 	RETiRet;
 }
 
 /* for details, see scriptExec() header comment! */
-static void
+static rsRetVal
 execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	sbool *newAct;
+	sbool *newAct = NULL;
 	msg_t *pMsg;
 	int bRet;
 	int i;
-	newAct = newActive(pBatch);
+	DEFiRet;
+	CHKmalloc(newAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
-			return;
+			FINALIZE;
 		if(pBatch->eltState[i] == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		pMsg = pBatch->pElem[i].pMsg;
@@ -405,14 +406,17 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 			if(*(pBatch->pbShutdownImmediate))
-				return;
+				FINALIZE;
 			if(pBatch->eltState[i] != BATCH_STATE_DISC
 			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
 		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
 	}
-	freeActive(newAct);
+finalize_it:
+	if(newAct != NULL)
+		freeActive(newAct);
+	RETiRet;
 }
 
 
