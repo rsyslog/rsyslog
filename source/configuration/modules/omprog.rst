@@ -28,9 +28,30 @@ programm is invoked. A single instance is **not** being re-used. There
 are arguments pro and con re-using existing binaries. For the time
 being, it simply is not done. In the future, we may add an option for
 such pooling, provided that some demand for that is voiced. You can also
-mimic the same effect by defining multiple rulesets and including them
-(at the price of some slight performance loss).
+mimic the same effect by defining multiple rulesets and including them.
 
+Note that in order to execute the given program, rsyslog needs to have
+sufficient permissions on the binary file. This is especially true if
+not running as root. Also, keep in mind that default SELinux policies
+most probably do not permit rsyslogd to execute arbitrary binaries. As
+such, permissions must be appropriately added. Note that SELinux
+restrictions also apply if rsyslogd runs under root. To check if a
+problem is SELinux-related, you can temporarily disable SELinux and
+retry. If it then works, you know for sure you have a SELinux issue.
+
+Starting with 8.4.0, rsyslogd emits an error message via the ``syslog()``
+API call when there is a problem executing the binary. This can be
+extremely valuable in troubleshooting. For those technically savy:
+when we execute a binary, we need to fork, and we do not have
+full access to rsyslog's usual error-reporting capabilities after the
+fork. As the actual execution must happen after the fork, we cannot
+use the default error logger to emit the error message. As such,
+we use ``syslog()``. In most cases, there is no real difference 
+between both methods. However, if you run multiple rsyslog instances,
+the messae shows up in that instance that processes the default
+log socket, which may be different from the one where the error occured.
+Also, if you redirected the log destination, that redirection may
+not work as expected.
  
 
 **Module Parameters**:
@@ -55,9 +76,12 @@ mimic the same effect by defining multiple rulesets and including them
 
 The following command writes all syslog messages into a file.
 
-Module (load="omprog") \*.\* action(type="omprog"
-binary="/pathto/omprog.py --parm1=\\"value 1\\" --parm2=value2"
-template="RSYSLOG\_TraditionalFileFormat")
+::
+
+  module(load="omprog")
+  action(type="omprog"
+         binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\"
+         template="RSYSLOG_TraditionalFileFormat")
 
 **Legacy Configuration Directives**:
 
