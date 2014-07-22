@@ -131,11 +131,7 @@ syntax errors are reported. Please note that the output generated is deeply
 technical and orignally targeted towards developers.
 .TP
 .B "\-d"
-Turns on debug mode.  Using this the daemon will not proceed a 
-.BR fork (2)
-to set itself in the background, but opposite to that stay in the
-foreground and write much debug information on the current tty.  See the
-DEBUGGING section for more information.
+Turns on debug mode. See the DEBUGGING section for more information.
 .TP
 .BI "\-f " "config file"
 Specify an alternative configuration file instead of
@@ -298,11 +294,17 @@ be prevented by using GSS-API authentication and encryption. Be sure
 to think about syslog network security before enabling it.
 .LP
 .SH DEBUGGING
-When debugging is turned on using
+When debugging is turned on using the
 .B "\-d"
-option then
+option,
 .B rsyslogd
-will be very verbose by writing much of what it does on stdout.
+produces debugging information according to the
+.B RSYSLOG_DEBUG
+environment variable and the signals received. When run in foreground,
+the information is written to stdout. An additional output file can be
+specified using the
+.B RSYSLOG_DEBUGLOG
+environment variable.
 .SH FILES
 .PD 0
 .TP
@@ -329,10 +331,17 @@ is specified during compilation (e.g. /usr/local).
 .SH ENVIRONMENT
 .TP
 .B RSYSLOG_DEBUG
-Controls runtime debug support.It contains an option string with the
+Controls runtime debug support. It contains an option string with the
 following options possible (all are case insensitive):
 
 .RS
+.IP Debug
+Turns on debugging and prevents forking. This is processed earlier
+in the startup than command line options (i.e. -d) and as such
+enables earlier debugging output. Mutually exclusive with DebugOnDemand.
+.IP DebugOnDemand
+Enables debugging but turns off debug output. The output can be toggled
+by sending SIGUSR1. Mutually exclusive with Debug.
 .IP LogFuncFlow
 Print out the logical flow of functions (entering and exiting them)
 .IP FileTrace
