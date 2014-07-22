@@ -13,7 +13,7 @@
  *
  * File begun on 2008-04-04 by RGerhards
  *
- * Copyright 2008-2013 Adiscon GmbH.
+ * Copyright 2008-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -51,6 +51,7 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "glbl.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -73,9 +74,11 @@ struct toRcpt_s {
 };
 
 typedef struct _instanceData {
-	int iMode;	/* 0 - smtp, 1 - sendmail */
-	int bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
-	int bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
+	uchar *tplName;	/* format template to use */
+	uchar *constSubject; /* if non-NULL, constant string to be used as subject */
+	int8_t iMode;	/* 0 - smtp, 1 - sendmail */
+	sbool bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
+	sbool bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
 	union {
 		struct {
 			uchar *pszSrv;
@@ -108,6 +111,26 @@ typedef struct configSettings_s {
 } configSettings_t;
 static configSettings_t cs;
 
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+	{ "server", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "port", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "mailfrom", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "mailto", eCmdHdlrArray, CNFPARAM_REQUIRED },
+	{ "subject.template", eCmdHdlrGetWord, 0 },
+	{ "subject.text", eCmdHdlrString, 0 },
+	{ "body.enable", eCmdHdlrBinary, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
+
+
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 	cs.lstRcpt = NULL;
@@ -139,31 +162,40 @@ static void lstRcptDestruct(toRcpt_t *pRoot)
 	}
 }
 
-/* This function is called when a new recipient email address is to be
- * added. rgerhards, 2008-08-04
+
+/* This function adds a recipient to the specified list.
+ * The recipient address storage is handed over -- the caller must NOT delete it.
  */
 static rsRetVal
-addRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
+addRcpt(toRcpt_t **ppLstRcpt, uchar *newRcpt)
 {
 	DEFiRet;
 	toRcpt_t *pNew = NULL;
 
 	CHKmalloc(pNew = calloc(1, sizeof(toRcpt_t)));
 
-	pNew->pszTo = pNewVal;
-	pNew->pNext = cs.lstRcpt;
-	cs.lstRcpt = pNew;
+	pNew->pszTo = newRcpt;
+	pNew->pNext = *ppLstRcpt;
+	*ppLstRcpt = pNew;
 
-	dbgprintf("ommail::addRcpt adds recipient %s\n", pNewVal);
+	DBGPRINTF("ommail::addRcpt adds recipient %s\n", newRcpt);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
-			free(pNew);
-		free(pNewVal); /* in any case, this is no longer needed */
+		free(pNew);
+		free(newRcpt); /* in any case, this is no longer needed */
 	}
 
 	RETiRet;
+}
+
+/* This function is called when a new recipient email address is to be
+ * added. rgerhards, 2008-08-04
+ */
+static rsRetVal
+legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	return addRcpt(&cs.lstRcpt, pNewVal);
 }
 
 
@@ -180,7 +212,7 @@ WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatu
 	assert(lenOp != 0);
 
 	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
-		dbgprintf("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
+		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
@@ -196,6 +228,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->constSubject = NULL;
 ENDcreateInstance
 
 
@@ -213,6 +246,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	free(pData->tplName);
 	if(pData->iMode == 0) {
 		free(pData->md.smtp.pszSrv);
 		free(pData->md.smtp.pszSrvPort);
@@ -323,17 +357,17 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 	hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
 	hints.ai_socktype = SOCK_STREAM;
 	if(getaddrinfo(smtpSrv, smtpPort, &hints, &res) != 0) {
-		dbgprintf("error %d in getaddrinfo\n", errno);
+		DBGPRINTF("error %d in getaddrinfo\n", errno);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	
 	if((pWrkrData->md.smtp.sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
-		dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
+		DBGPRINTF("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
 	if(connect(pWrkrData->md.smtp.sock, res->ai_addr, res->ai_addrlen) != 0) {
-		dbgprintf("create tcp connection failed, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
+		DBGPRINTF("create tcp connection failed, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -369,7 +403,7 @@ Send(int sock, char *msg, size_t len)
 		lenSend = send(sock, msg + offsBuf, len - offsBuf, 0);
 		if(lenSend == -1) {
 			if(errno != EAGAIN) {
-				dbgprintf("message not (tcp)send, errno %d", errno);
+				DBGPRINTF("message not (smtp/tcp)send, errno %d", errno);
 				ABORT_FINALIZE(RS_RET_TCP_SEND_ERROR);
 			}
 		} else if(lenSend != (ssize_t) len) {
@@ -455,7 +489,7 @@ readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn)
 			pLn[i++] = c;
 	} while(1);
 	pLn[i] = '\0';
-	dbgprintf("smtp server response: %s\n", pLn); /* do not remove, this is helpful in troubleshooting SMTP probs! */
+	DBGPRINTF("smtp server response: %s\n", pLn); /* do not remove, this is helpful in troubleshooting SMTP probs! */
 
 finalize_it:
 	RETiRet;
@@ -607,18 +641,106 @@ ENDtryResume
 
 
 BEGINdoAction
+	uchar *subject;
+	const instanceData *const __restrict__ pData = pWrkrData->pData;
 CODESTARTdoAction
-	DBGPRINTF(" Mail\n");
+	DBGPRINTF("ommail doAction()\n");
 
-	iRet = sendSMTP(pWrkrData, ppString[0],
-			 (pWrkrData->pData->bHaveSubject) ?
-			      ppString[1] : (uchar*)"message from rsyslog");
-		
+	if(pData->constSubject != NULL)
+		subject = pData->constSubject;
+	else if(pData->bHaveSubject)
+		subject = ppString[1];
+	else
+		subject = (uchar*)"message from rsyslog";
+
+	iRet = sendSMTP(pWrkrData, ppString[0], subject);
 	if(iRet != RS_RET_OK) {
 		DBGPRINTF("error sending mail, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}
 ENDdoAction
+
+
+
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+	pData->constSubject = NULL;
+}
+
+
+BEGINnewActInst
+	struct cnfparamvals *pvals;
+	uchar *tplSubject = NULL;
+	int i, j;
+CODESTARTnewActInst
+	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	CHKiRet(createInstance(&pData));
+	setInstParamDefaults(pData);
+
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(actpblk.descr[i].name, "server")) {
+			pData->md.smtp.pszSrv = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "port")) {
+			pData->md.smtp.pszSrvPort =  (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "mailfrom")) {
+			pData->md.smtp.pszFrom = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "mailto")) {
+			for(j = 0 ; j < pvals[i].val.d.ar->nmemb ; ++j) {
+				addRcpt(&(pData->md.smtp.lstRcpt),
+					(uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "subject.template")) {
+			if(pData->constSubject != NULL) {
+				parser_errmsg("ommail: only one of subject.template, subject.text "
+					      "can be set");
+				ABORT_FINALIZE(RS_RET_DUP_PARAM);
+			}
+			tplSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "subject.text")) {
+			if(tplSubject != NULL) {
+				parser_errmsg("ommail: only one of subject.template, subject.text "
+					      "can be set");
+				ABORT_FINALIZE(RS_RET_DUP_PARAM);
+			}
+			pData->constSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "body.enable")) {
+			pData->bEnableBody =  (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			DBGPRINTF("ommail: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+	}
+
+	if(tplSubject == NULL) {
+		/* if no subject is configured, we need just one template string */
+		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	} else {
+		CODE_STD_STRING_REQUESTparseSelectorAct(2)
+		pData->bHaveSubject = 1;
+		/* NOTE: tplSubject memory is *handed over* down here below - do NOT free() */
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, tplSubject, OMSR_NO_RQD_TPL_OPTS));
+	}
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup("RSYSLOG_FileFormat"),
+			OMSR_NO_RQD_TPL_OPTS));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+			(uchar*) strdup((char*) pData->tplName),
+			OMSR_NO_RQD_TPL_OPTS));
+	}
+CODE_STD_FINALIZERnewActInst
+	cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 
 BEGINparseSelectorAct
@@ -701,6 +823,7 @@ ENDmodExit
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
@@ -727,16 +850,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	dbgprintf("ommail version %s initializing\n", VERSION);
+	DBGPRINTF("ommail version %s initializing\n", VERSION);
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &cs.pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &cs.pszSrvPort, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &cs.pszFrom, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, addRcpt, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, legacyConfAddRcpt, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &cs.pszSubject, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &cs.bEnableBody, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
-/* vim:set ai:
- */
