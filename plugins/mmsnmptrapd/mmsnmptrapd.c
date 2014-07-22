@@ -277,7 +277,7 @@ buildSeverityMapping(instanceData *pData)
 	uchar pszSevCode[512];
 	int sevCode;
 	uchar *mapping;
-	struct severMap_s *node;
+	struct severMap_s *node = NULL;
 	DEFiRet;
 
 	mapping = cs.pszSeverityMapping;
@@ -310,6 +310,10 @@ buildSeverityMapping(instanceData *pData)
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(node != NULL)
+			free(node);
+	}
 	RETiRet;
 }
 

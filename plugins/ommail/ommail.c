@@ -158,8 +158,6 @@ addRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
-			free(pNew);
 		free(pNewVal); /* in any case, this is no longer needed */
 	}
 

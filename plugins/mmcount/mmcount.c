@@ -277,7 +277,7 @@ CODESTARTdoAction
 
 	if(!pData->pszKey) {
 		/* no key given for count, so we count severity */
-		if(pMsg->iSeverity <= SEVERITY_COUNT) {
+		if(pMsg->iSeverity < SEVERITY_COUNT) {
 			pData->severity[pMsg->iSeverity]++;
 			json = json_object_new_int(pData->severity[pMsg->iSeverity]);
 		}

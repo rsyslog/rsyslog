@@ -695,10 +695,11 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void)
 	pthread_mutex_lock(&mutCallStack);
 	if((pThrd = pthread_getspecific(keyCallStack)) == NULL) {
 		/* construct object */
-		pThrd = calloc(1, sizeof(dbgThrdInfo_t));
-		pThrd->thrd = pthread_self();
-		(void) pthread_setspecific(keyCallStack, pThrd);
-		DLL_Add(CallStack, pThrd);
+		if((pThrd = calloc(1, sizeof(dbgThrdInfo_t))) != NULL) {
+			pThrd->thrd = pthread_self();
+			(void) pthread_setspecific(keyCallStack, pThrd);
+			DLL_Add(CallStack, pThrd);
+		}
 	}
 	pthread_mutex_unlock(&mutCallStack);
 	return pThrd;
