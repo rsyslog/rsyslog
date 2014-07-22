@@ -2325,7 +2325,8 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->mut != NULL)
+		/* note: a child uses it's parent mutex, so do not delete it! */
+		if(pThis->pqParent == NULL && pThis->mut != NULL)
 			free(pThis->mut);
 	}
 	RETiRet;
