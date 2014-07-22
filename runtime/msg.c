@@ -2638,7 +2638,8 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 
 	for(i = 0 ; i < buflen ; ++i) {
 		c = pSrc[i];
-		if(   (c >= 0x23 && c <= 0x5b)
+		if(   (c >= 0x23 && c <= 0x2e)
+		   || (c >= 0x30 && c <= 0x5b)
 		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
 		   || c == 0x20 || c == 0x21) {
 			/* no need to escape */
@@ -3024,8 +3025,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			break;
 		case PROP_CEE_ALL_JSON:
 			if(pMsg->json == NULL) {
-				if(*pbMustBeFreed == 1)
-					free(pRes);
 				pRes = (uchar*) "{}";
 				bufLen = 2;
 				*pbMustBeFreed = 0;
@@ -3040,8 +3039,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
 			break;
 		case PROP_SYS_BOM:
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			pRes = (uchar*) "\xEF\xBB\xBF";
 			*pbMustBeFreed = 0;
 			break;
@@ -3058,18 +3055,18 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			{
 			struct timespec tp;
 
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
-			*pbMustBeFreed = 1;
  
 			if(clock_gettime(CLOCK_UPTIME, &tp) == -1) {
+				free(pRes);
  				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
  				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
  			}
  
+			*pbMustBeFreed = 1;
+
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", tp.tv_sec);
  			}
 
@@ -3078,17 +3075,17 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			{
 			struct sysinfo s_info;
 
-			if(*pbMustBeFreed == 1)
-				free(pRes);
 			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
-			*pbMustBeFreed = 1;
 
 			if(sysinfo(&s_info) < 0) {
+				free(pRes);
 				*pPropLen = sizeof("**SYSCALL FAILED**") - 1;
 				return(UCHAR_CONSTANT("**SYSCALL FAILED**"));
 			}
+
+			*pbMustBeFreed = 1;
 
 			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
 			}
@@ -3157,7 +3154,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3335,7 +3332,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			if(iTo > bufLen) /* iTo is very large, if no to-position is set in the template! */
 				iTo = bufLen;
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(char));
+			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3389,7 +3386,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			uchar *pBStart;
 			uchar *pB;
 			uchar *pSrc;
-			pBStart = pB = MALLOC((bufLen + 1) * sizeof(char));
+			pBStart = pB = MALLOC((bufLen + 1) * sizeof(uchar));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);

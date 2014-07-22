@@ -217,7 +217,8 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 
 	dbgprintf( "omsnmp_initSession: ENTER - Target = '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
 
-	putenv(strdup("POSIXLY_CORRECT=1"));
+	if (setenv("POSIXLY_CORRECT", "1", 1) == -1)
+		ABORT_FINALIZE(RS_RET_ERR);
 	
 	snmp_sess_init(&session);
 	session.version = pData->iSNMPVersion;
@@ -238,6 +239,7 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 		iRet = RS_RET_SUSPENDED;
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -277,7 +279,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 					"failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
-		pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid));
+		CHKmalloc(pdu->enterprise = (oid *) MALLOC(enterpriseoidlen * sizeof(oid)));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
 		pdu->enterprise_length = enterpriseoidlen;
 

@@ -358,7 +358,7 @@ addModToGlblList(modInfo_t *pThis)
 rsRetVal
 readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast)
 {
-	cfgmodules_etry_t *pNew;
+	cfgmodules_etry_t *pNew = NULL;
 	cfgmodules_etry_t *pLast;
 	DEFiRet;
 	assert(pThis != NULL);
@@ -403,6 +403,10 @@ readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **
 	*ppLast = pLast;
 	*ppNew = pNew;
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			free(pNew);
+	}
 	RETiRet;
 }
 
@@ -1130,7 +1134,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					free(pPathBuf);
 				/* we always alloc enough memory for everything we potentiall need to add */
 				lenPathBuf = PATHBUF_OVERHEAD;
-				CHKmalloc(pPathBuf = malloc(sizeof(char)*lenPathBuf));
+				CHKmalloc(pPathBuf = malloc(sizeof(uchar)*lenPathBuf));
 			}
 			*pPathBuf = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
@@ -1153,7 +1157,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					free(pPathBuf);
 				/* we always alloc enough memory for everything we potentiall need to add */
 				lenPathBuf = iPathLen + PATHBUF_OVERHEAD;
-				CHKmalloc(pPathBuf = malloc(sizeof(char)*lenPathBuf));
+				CHKmalloc(pPathBuf = malloc(sizeof(uchar)*lenPathBuf));
 			}
 
 			memcpy((char *) pPathBuf, (char *)pModDirCurr, iPathLen);
@@ -1177,7 +1181,6 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 			 * algo over time... -- rgerhards, 2008-03-05
 			 */
 			strncat((char *) pPathBuf, ".so", lenPathBuf - strlen((char*) pPathBuf) - 1);
-			iPathLen += 3;
 		}
 
 		/* complete load path constructed, so ... GO! */
