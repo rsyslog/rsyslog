@@ -117,7 +117,8 @@ messages are silently discarded (or, to be precise, not being forwarded
   $ModLoad ommail
   $ActionMailSMTPServer mail.example.net
   $ActionMailFrom rsyslog@example.net
-  $ActionMailTo operator@example.net $template mailSubject,"disk problem on %hostname%"
+  $ActionMailTo operator@example.net
+  $template mailSubject,"disk problem on %hostname%"
   $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
   $ActionMailSubject mailSubject
   # make sure we receive a mail only once in six
@@ -137,7 +138,8 @@ The sample below is the same, but sends mail to two recipients:
   $ActionMailFrom rsyslog@example.net
   $ActionMailTo operator@example.net
   $ActionMailTo admin@example.net
-  $template mailSubject,"disk problem on %hostname%" $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
+  $template mailSubject,"disk problem on %hostname%"
+  $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
   $ActionMailSubject mailSubject
   # make sure we receive a mail only once in six
   # hours (21,600 seconds ;))
