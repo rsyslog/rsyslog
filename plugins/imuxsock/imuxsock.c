@@ -1049,16 +1049,6 @@ activateListeners()
 	int actSocks;
 	DEFiRet;
 
-#	ifdef OS_SOLARIS
-		/* under solaris, we must NEVER process the local log socket, because
-		 * it is implemented there differently. If we used it, we would actually
-		 * delete it and render the system partly unusable. So don't do that.
-		 * rgerhards, 2010-03-26
-		 */
-		startIndexUxLocalSockets = 1;
-#	else
-		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
-#	endif
 	/* Initialize the system socket only if it's in use */
 	if(startIndexUxLocalSockets == 0) {
 		/* first apply some config settings */
@@ -1316,6 +1306,16 @@ BEGINactivateCnfPrePrivDrop
 	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
+#	endif
 	/* we first calculate the number of listeners so that we can
 	 * appropriately size the listener array. Note that we will
 	 * always allocate memory for the system log socket.
@@ -1324,7 +1324,7 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		++nLstn;
 	}
-	if(nLstn > 0) {
+	if(nLstn > 0 || startIndexUxLocalSockets == 0) {
 		DBGPRINTF("imuxsock: allocating memory for %d addtl listeners\n", nLstn);
 		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
 		for(i = 1 ; i < nLstn ; ++i) {
@@ -1334,8 +1334,8 @@ CODESTARTactivateCnfPrePrivDrop
 		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 			addListner(inst);
 		}
+		CHKiRet(activateListeners());
 	}
-	CHKiRet(activateListeners());
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -1374,8 +1374,10 @@ BEGINrunInput
 
 CODESTARTrunInput
 	CHKmalloc(pReadfds);
-	if(runModConf->bOmitLocalLogging && nfd == 1)
+	if(startIndexUxLocalSockets == 1 && nfd == 1) {
+		/* No sockets were configured, no reason to run. */
 		ABORT_FINALIZE(RS_RET_OK);
+	}
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -1556,9 +1558,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * TODO / rgerhards, 2012-04-11
 	 */
 	pLocalHostIP = glbl.GetLocalHostIP();
-
-	/* init system log socket settings */
-	CHKmalloc(listeners = malloc(sizeof(lstn_t)));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
