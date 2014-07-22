@@ -304,7 +304,8 @@ The sample below is the same, but sends mail to two recipients:
   $ActionMailFrom rsyslog@example.net
   $ActionMailTo operator@example.net
   $ActionMailTo admin@example.net
-  $template mailSubject,"disk problem on %hostname%" $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
+  $template mailSubject,"disk problem on %hostname%"
+  $template mailBody,"RSYSLOG Alert\\r\\nmsg='%msg%'"
   $ActionMailSubject mailSubject
   # make sure we receive a mail only once in six
   # hours (21,600 seconds ;))
