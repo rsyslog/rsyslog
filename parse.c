@@ -423,6 +423,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
 		if (pszTmp == NULL) {
 			free (pszIP);
+			free (*pIP);
 			ABORT_FINALIZE(RS_RET_INVALID_IP);
 		}
 		*pszTmp = '\0';
