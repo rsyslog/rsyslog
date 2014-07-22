@@ -175,7 +175,7 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 	assert(pPeer != NULL);
 	assert(pszStr != NULL);
 
-	CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t)));
+	CHKmalloc(pNew = calloc(1, sizeof(*pNew)));
 
 	if(lenStr == 0) { /* empty domain components are permitted */
 		pNew->wildcardType = PEER_WILDCARD_EMPTY_COMPONENT;
@@ -713,8 +713,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
 					
 					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
-						!= RS_RET_OK)
+						!= RS_RET_OK) {
+						free(allowIP.addr.NetAddr);
 						FINALIZE;
+					}
 					break;
 				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
 					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
@@ -722,7 +724,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						iSignificantBits = 32;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = MALLOC(sizeof(struct sockaddr_in)))
+						if((allowIP.addr.NetAddr = (struct sockaddr *) MALLOC(sizeof(struct sockaddr_in)))
 						    == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
@@ -737,8 +739,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
-							!= RS_RET_OK)
+							!= RS_RET_OK) {
+							free(allowIP.addr.NetAddr);
 							FINALIZE;
+						}
 					} else {
 						/* finally add IPv6 */
 						
@@ -751,8 +755,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
-							!= RS_RET_OK)
+							!= RS_RET_OK) {
+							free(allowIP.addr.NetAddr);
 							FINALIZE;
+						}
 					}
 					break;
 				}
@@ -887,6 +893,7 @@ rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
 					    "- terminating, nothing more will be added.", iRet);
 				rsParsDestruct(pPars);
+				free(uIP);
 				return(iRet);
 		        }
 		}
@@ -1083,22 +1090,18 @@ void debugListenInfo(int fd, char *type)
 {
 	char *szFamily;
 	int port;
-	struct sockaddr sa;
-	struct sockaddr_in *ipv4;
-	struct sockaddr_in6 *ipv6;
+	struct sockaddr_storage sa;
 	socklen_t saLen = sizeof(sa);
 
-	if(getsockname(fd, &sa, &saLen) == 0) {
-		switch(sa.sa_family) {
+	if(getsockname(fd, (struct sockaddr *) &sa, &saLen) == 0) {
+		switch(sa.ss_family) {
 		case PF_INET:
 			szFamily = "IPv4";
-			ipv4 = (struct sockaddr_in*)(void*) &sa;
-			port = ntohs(ipv4->sin_port);
+			port = ntohs(((struct sockaddr_in *) &sa)->sin_port);
 			break;
 		case PF_INET6:
 			szFamily = "IPv6";
-			ipv6 = (struct sockaddr_in6*)(void*) &sa;
-			port = ntohs(ipv6->sin6_port);
+			port = ntohs(((struct sockaddr_in6 *) &sa)->sin6_port);
 			break;
 		default:
 			szFamily = "other";
@@ -1152,8 +1155,11 @@ getLocalHostname(uchar **ppName)
 			buf_len = 128;        /* Initial guess */
 			CHKmalloc(buf = MALLOC(buf_len));
 		} else {
+			uchar *p;
+
 			buf_len += buf_len;
-			CHKmalloc(buf = realloc (buf, buf_len));
+			CHKmalloc(p = realloc (buf, buf_len));
+			buf = p;
 		}
 	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
 

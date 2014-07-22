@@ -139,15 +139,24 @@ static rsRetVal AddRef(prop_t *pThis)
 
 /* this is a "do it all in one shot" function that creates a new property,
  * assigns the provided string to it and finalizes the property. Among the
- * convenience, it is alos (very, very) slightly faster.
+ * convenience, it is also (very, very) slightly faster.
  * rgerhards, 2009-07-01
  */
 static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len)
 {
+	prop_t *pThis = NULL;
 	DEFiRet;
-	propConstruct(ppThis);
-	SetString(*ppThis, psz, len);
-	propConstructFinalize(*ppThis);
+
+	CHKiRet(propConstruct(&pThis));
+	CHKiRet(SetString(pThis, psz, len));
+	CHKiRet(propConstructFinalize(pThis));
+	*ppThis = pThis;
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis != NULL)
+			propDestruct(&pThis);
+	}
+
 	RETiRet;
 }
 
