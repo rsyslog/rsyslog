@@ -535,8 +535,7 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 
 	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
 finalize_it:
-	if(thenAct == NULL)
-		freeActive(thenAct);
+	freeActive(thenAct);
 	RETiRet;
 }
 
