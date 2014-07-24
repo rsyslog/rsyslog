@@ -112,6 +112,14 @@ readability):
 -  **pwd**
    Password for basic authentication.
 
+- errorfile <filename> (optional)
+
+  If specified, records failed in bulk mode are written to this file, including
+  their error cause. Rsyslog itself does not process the file any more, but the
+  idea behind that mechanism is that the user can create a script to periodically
+  inspect the error file and react appropriately. As the complete request is
+  included, it is possible to simply re-submit messages from that script.
+
 **Samples:**
 
 The following sample does the following:
