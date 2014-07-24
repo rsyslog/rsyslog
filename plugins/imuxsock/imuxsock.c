@@ -422,11 +422,14 @@ static rsRetVal discardLogSockets(void)
 {
 	int i;
 
-	/* Clean up rate limiting data for the system socket */
-	if(listeners[0].ht != NULL) {
-		hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+	/* Check whether the system socket is in use */
+	if(startIndexUxLocalSockets == 0) {
+		/* Clean up rate limiting data for the system socket */
+		if(listeners[0].ht != NULL) {
+			hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+		}
+		ratelimitDestruct(listeners[0].dflt_ratelimiter);
 	}
-	ratelimitDestruct(listeners[0].dflt_ratelimiter);
 
 	/* Clean up all other sockets */
         for (i = 1; i < nfd; i++) {
@@ -1046,7 +1049,6 @@ activateListeners()
 	int actSocks;
 	DEFiRet;
 
-	/* first apply some config settings */
 #	ifdef OS_SOLARIS
 		/* under solaris, we must NEVER process the local log socket, because
 		 * it is implemented there differently. If we used it, we would actually
@@ -1057,46 +1059,50 @@ activateListeners()
 #	else
 		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
 #	endif
-	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
-	if(runModConf->pLogSockName != NULL)
-		listeners[0].sockName = runModConf->pLogSockName;
-	else if(sd_booted()) {
-		struct stat st;
-		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
-			listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+	/* Initialize the system socket only if it's in use */
+	if(startIndexUxLocalSockets == 0) {
+		/* first apply some config settings */
+		listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
+		if(runModConf->pLogSockName != NULL)
+			listeners[0].sockName = runModConf->pLogSockName;
+		else if(sd_booted()) {
+			struct stat st;
+			if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
+				listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+			}
 		}
-	}
-	if(runModConf->ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-			/* in this case, we simply turn of rate-limiting */
-			errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
-				  "create hash table\n");
-			runModConf->ratelimitIntervalSysSock = 0;
+		if(runModConf->ratelimitIntervalSysSock > 0) {
+			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+				/* in this case, we simply turn of rate-limiting */
+				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
+					  "create hash table\n");
+				runModConf->ratelimitIntervalSysSock = 0;
+			}
+		} else {
+			listeners[0].ht = NULL;
 		}
-	} else {
-		listeners[0].ht = NULL;
+		listeners[0].fd = -1;
+		listeners[0].hostName = NULL;
+		listeners[0].bParseHost = 0;
+		listeners[0].bCreatePath = 0;
+		listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
+		listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
+		listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
+		listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
+		listeners[0].bWritePid = runModConf->bWritePidSysSock;
+		listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
+		listeners[0].bParseTrusted = runModConf->bParseTrusted;
+		listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
+		listeners[0].bUnlink = runModConf->bUnlink;
+		listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
+		listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
+			ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
+			listeners[0].ratelimitInterval,
+			listeners[0].ratelimitBurst);
+		ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 	}
-	listeners[0].fd = -1;
-	listeners[0].hostName = NULL;
-	listeners[0].bParseHost = 0;
-	listeners[0].bCreatePath = 0;
-	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
-	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
-	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
-	listeners[0].bWritePid = runModConf->bWritePidSysSock;
-	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
-	listeners[0].bParseTrusted = runModConf->bParseTrusted;
-	listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
-	listeners[0].bUnlink = runModConf->bUnlink;
-	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
-	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
-	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-	CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
-		ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
-		listeners[0].ratelimitInterval,
-		listeners[0].ratelimitBurst);
-	ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
