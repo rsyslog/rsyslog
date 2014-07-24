@@ -1068,6 +1068,8 @@ activateListeners()
 				  "create hash table\n");
 			runModConf->ratelimitIntervalSysSock = 0;
 		}
+	} else {
+		listeners[0].ht = NULL;
 	}
 	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
@@ -1555,13 +1557,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	listeners[0].bUnlink = 1;
 	listeners[0].bCreatePath = 0;
 	listeners[0].bUseSysTimeStamp = 1;
-	if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
-		(void(*)(void*))ratelimitDestruct)) == NULL) {
-		/* in this case, we simply turn off rate-limiting */
-		DBGPRINTF("imuxsock: turning off rate limiting for system socket "
-			  "because we could not create hash table\n");
-		listeners[0].ratelimitInterval = 0;
-	}
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
