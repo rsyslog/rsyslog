@@ -1057,6 +1057,7 @@ activateListeners()
 #	else
 		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
 #	endif
+	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
 	if(runModConf->pLogSockName != NULL)
 		listeners[0].sockName = runModConf->pLogSockName;
 	else if(sd_booted()) {
@@ -1075,6 +1076,10 @@ activateListeners()
 	} else {
 		listeners[0].ht = NULL;
 	}
+	listeners[0].fd = -1;
+	listeners[0].hostName = NULL;
+	listeners[0].bParseHost = 0;
+	listeners[0].bCreatePath = 0;
 	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
 	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
@@ -1548,19 +1553,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* init system log socket settings */
 	CHKmalloc(listeners = malloc(sizeof(lstn_t)));
-	listeners[0].flags = IGNDATE;
-	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
-	listeners[0].hostName = NULL;
-	listeners[0].flowCtl = eFLOWCTL_NO_DELAY;
-	listeners[0].fd = -1;
-	listeners[0].bParseHost = 0;
-	listeners[0].bUseCreds = 0;
-	listeners[0].bAnnotate = 0;
-	listeners[0].bParseTrusted = 0;
-	listeners[0].bDiscardOwnMsgs = 1;
-	listeners[0].bUnlink = 1;
-	listeners[0].bCreatePath = 0;
-	listeners[0].bUseSysTimeStamp = 1;
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
