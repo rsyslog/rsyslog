@@ -418,13 +418,17 @@ finalize_it:
 }
 
 
-/* discard/Destruct all log sockets except for "socket" 0. Data for it comes from
- * the constant memory pool - and if not, it is freeed via some other pointer.
- */
 static rsRetVal discardLogSockets(void)
 {
 	int i;
 
+	/* Clean up rate limiting data for the system socket */
+	if(listeners[0].ht != NULL) {
+		hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+	}
+	ratelimitDestruct(listeners[0].dflt_ratelimiter);
+
+	/* Clean up all other sockets */
         for (i = 1; i < nfd; i++) {
 		if(listeners[i].sockName != NULL) {
 			free(listeners[i].sockName);
