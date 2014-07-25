@@ -293,6 +293,10 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   These do not address issues seen in practice but those seen by the tool.
   Some of them may affect practical deployments.
   Thanks to Tomas Heinrich for the patches.
+- bugfix imuxsock: "Last message repeated..." was not emitted at shutdown
+  The "Last message repeated..." notice didn't get printed if rsyslog was
+  shut down before the repetition was broken.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: make dist failed when GUARDTIME or LIBGCRYPT feature was disabled
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
