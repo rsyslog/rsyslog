@@ -105,7 +105,7 @@ readability):
    `template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
    that will provide meaningful parent IDs for your logs.
 -  **uid**
-   If you have basic HTTP authentication deployed (eg: through the
+   If you have basic HTTP authentication deployed (eg through the
    `elasticsearch-basic
    plugin <https://github.com/Asquera/elasticsearch-http-basic>`_), you
    can specify your user-name here.
@@ -118,7 +118,17 @@ readability):
   their error cause. Rsyslog itself does not process the file any more, but the
   idea behind that mechanism is that the user can create a script to periodically
   inspect the error file and react appropriately. As the complete request is
-  included, it is possible to simply re-submit messages from that script.
+  included, it is possible to simply resubmit messages from that script.
+
+  *Please note:* when rsyslog has problems connecting to elasticsearch, a general
+  error is assumed and the submit is retried. However, if we receive negative
+  responses during batch processing, we assume an error in the data itself
+  (like a mandatory field is not filled in, a format error or something along
+  those lines). Such errors cannot be solved by simpy resubmitting the record.
+  As such, they are written to the error file so that the user (script) can
+  examine them and act appropriately. Note that e.g. after search index
+  reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
+  be succesful.
 
 **Samples:**
 
