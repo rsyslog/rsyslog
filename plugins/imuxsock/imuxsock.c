@@ -1325,7 +1325,7 @@ CODESTARTactivateCnfPrePrivDrop
 		++nLstn;
 	}
 	if(nLstn > 0 || startIndexUxLocalSockets == 0) {
-		DBGPRINTF("imuxsock: allocating memory for %d addtl listeners\n", nLstn);
+		DBGPRINTF("imuxsock: allocating memory for %d listeners\n", nLstn);
 		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
 		for(i = 1 ; i < nLstn ; ++i) {
 			listeners[i].sockName = NULL;
