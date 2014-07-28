@@ -43,6 +43,7 @@
 #include "datetime.h"
 #include "net.h"
 #include "glbl.h"
+#include "parser.h"
 #include "prop.h"
 #include "errmsg.h"
 #include "srUtils.h"
@@ -57,6 +58,7 @@ MODULE_CNFNAME("imjournal")
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(parser)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
@@ -161,6 +163,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	parser.SanitizeMsg(pMsg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
@@ -658,6 +661,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
@@ -738,6 +742,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
