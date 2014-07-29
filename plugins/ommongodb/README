@@ -16,3 +16,13 @@ changed in v7.
 If templates are used, it is suggested to use list-based templates. Constants
 can ONLY be inserted with list-based templates, as only these provide the
 capability to specify a field name (outname parameter).
+
+A very basic example is:
+
+*.*     action(type="ommongodb" db="logs" collection="syslog")
+
+Please see the script clean-mongo-syslog for an example of how to
+purge old records from MongoDB using PyMongo.  It can be run
+daily or weekly from cron.
+
+
