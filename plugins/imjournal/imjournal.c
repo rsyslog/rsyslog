@@ -140,6 +140,31 @@ static rsRetVal facilityHdlr(uchar **pp, void *pVal)
 }
 
 
+/* Currently just replaces '\0' with ' '. Not doing so would cause
+ * the value to be truncated. New space is allocated for the resulting
+ * string.
+ */
+static rsRetVal
+sanitizeValue(const char *in, size_t len, char **out)
+{
+	char *buf, *p;
+	DEFiRet;
+
+	CHKmalloc(p = buf = malloc(len + 1));
+	memcpy(buf, in, len);
+	buf[len] = '\0';
+
+	while ((p = memchr(p, '\0', len + buf - p)) != NULL) {
+		*p++ = ' ';
+	}
+
+	*out = buf;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* enqueue the the journal message into the message queue.
  * The provided msg string is not freed - thus must be done
  * by the caller.
@@ -220,7 +245,7 @@ readjournal() {
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
 		message = strdup("");
 	} else {
-		CHKmalloc(message = strndup(((const char*)get)+8, length-8));
+		CHKiRet(sanitizeValue(((const char *)get) + 8, length - 8, &message));
 	}
 
 	/* Get message severity ("priority" in journald's terminology) */
@@ -259,7 +284,7 @@ readjournal() {
 
 	/* Get message identifier, client pid and add ':' */
 	if (sd_journal_get_data(j, "SYSLOG_IDENTIFIER", &get, &length) >= 0) {
-		CHKmalloc(sys_iden = strndup(((const char*)get)+18, length-18));
+		CHKiRet(sanitizeValue(((const char *)get) + 18, length - 18, &sys_iden));
 	} else {
 		CHKmalloc(sys_iden = strdup("journal"));
 	}
@@ -267,10 +292,9 @@ readjournal() {
 	if (sd_journal_get_data(j, "SYSLOG_PID", &pidget, &pidlength) >= 0) {
 		char *sys_pid;
 
-		sys_pid = strndup(((const char*)pidget)+11, pidlength-11);
-		if (sys_pid == NULL) {
+		CHKiRet_Hdlr(sanitizeValue(((const char *)pidget) + 11, pidlength - 11, &sys_pid)) {
 			free (sys_iden);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			FINALIZE;
 		}
 		r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
 		free (sys_pid);
@@ -365,10 +389,9 @@ readjournal() {
 
 		prefixlen++; /* remove '=' */
 
-		data = strndup(((const char*)get) + prefixlen, l - prefixlen);
-		if (data == NULL) {
+		CHKiRet_Hdlr(sanitizeValue(((const char *)get) + prefixlen, l - prefixlen, &data)) {
 			free (name);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			FINALIZE;
 		}
 
 		/* and save them to json object */
