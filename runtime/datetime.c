@@ -1080,7 +1080,42 @@ int getWeekdayNbr(struct syslogTime *ts)
 	return wday;
 }
 
+/* getOrdinal - 1-366 day of the year
+ * I've given little thought to leap seconds here.
+ */
+int getOrdinal(struct syslogTime *ts)
+{
+	int yday;
+	struct syslogTime yt;
+	time_t thistime;
+	time_t previousyears;
+	time_t seconds_into_year;
 
+	thistime = syslogTime2time_t(ts);
+
+	/* initialize a timestamp from the previous years */
+	yt.year = ts->year - 1;
+	yt.month = 12;
+	yt.day = 31;
+	yt.hour = 23;
+	yt.minute = 59;
+	yt.second = 59;
+	yt.secfracPrecision = 0;
+	yt.secfrac = 0;
+	yt.OffsetMinute = ts->OffsetMinute;
+	yt.OffsetHour = ts->OffsetHour;
+	yt.OffsetMode = ts->OffsetMode;
+	yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
+
+	previousyears = syslogTime2time_t(&yt);
+
+	/* subtract seconds from previous years */
+	seconds_into_year = thistime - previousyears;
+
+	/* divide by seconds in a day and truncate to int */
+	yday = seconds_into_year / 86400;
+	return yday;
+}
 
 /* queryInterface function
  * rgerhards, 2008-03-05

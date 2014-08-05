@@ -68,5 +68,6 @@ ENDinterface(datetime)
 PROTOTYPEObj(datetime);
 void applyDfltTZ(struct syslogTime *pTime, char *tz);
 int getWeekdayNbr(struct syslogTime *ts);
+int getOrdinal(struct syslogTime *ts);
 
 #endif /* #ifndef INCLUDED_DATETIME_H */
