@@ -1116,6 +1116,43 @@ int getOrdinal(struct syslogTime *ts)
 	yday = seconds_into_year / 86400;
 	return yday;
 }
+/* getWeek - 1-52 week of the year */
+int getWeek(struct syslogTime *ts)
+{
+	int weekNum;
+	struct syslogTime yt;
+	int curDow;
+	int jan1Dow;
+	int curYearDay;
+
+	/* initialize a timestamp for january 1st of the current year */
+	yt.year = ts->year;
+	yt.month = 1;
+	yt.day = 1;
+	yt.hour = 0;
+	yt.minute = 0;
+	yt.second = 0;
+	yt.secfracPrecision = 0;
+	yt.secfrac = 0;
+	yt.OffsetMinute = ts->OffsetMinute;
+	yt.OffsetHour = ts->OffsetHour;
+	yt.OffsetMode = ts->OffsetMode;
+	yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
+
+	/* get current day in year, current day of week
+	 * and the day of week of 1/1 */
+	curYearDay = getOrdinal(ts);
+	curDow = getWeekdayNbr(ts);
+	jan1Dow = getWeekdayNbr(&yt);
+
+	/* calculate week of year for given date by pinning 1/1 as start
+	 * of year, then going back and adjusting for the actual week day. */
+	weekNum = ((curYearDay + 6) / 7);
+	if (curDow < jan1Dow) {
+		++weekNum;
+	}
+	return weekNum;
+}
 
 /* queryInterface function
  * rgerhards, 2008-03-05

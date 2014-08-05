@@ -728,6 +728,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtTZOffsDirection;
 		 } else if (!strcmp((char*)Buf, "date-ordinal")) {
 			pTpe->data.field.eDateFormat = tplFmtOrdinal;
+		 } else if (!strcmp((char*)Buf, "date-week")) {
+			pTpe->data.field.eDateFormat = tplFmtWeek;
 		 } else if(!strcmp((char*)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp((char*)Buf, "uppercase")) {
@@ -1595,6 +1597,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtTZOffsDirection;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ordinal", sizeof("ordinal")-1)) {
 				datefmt = tplFmtOrdinal;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"week", sizeof("week")-1)) {
+				datefmt = tplFmtWeek;
 			} else {
 				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
