@@ -430,12 +430,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 		memset (&hints, 0, sizeof (struct addrinfo));
 		hints.ai_family = AF_INET6;
-#		ifdef AI_ADDRCONFIG
-			hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
-#		else
-			hints.ai_flags  = AI_NUMERICHOST;
-#		endif
-		
+		hints.ai_flags  = AI_NUMERICHOST;
+
 		switch(getaddrinfo ((char*)pszIP+1, NULL, &hints, &res)) {
 		case 0: 
 			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
@@ -443,6 +439,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			freeaddrinfo (res);
 			break;
 		case EAI_NONAME:
+			/* The "address" is not an IP prefix but a wildcard */
 			F_SET((*pIP)->flags, ADDR_NAME|ADDR_PRI6);
 			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP+1);
 			break;
@@ -469,12 +466,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	} else { /* now parse IPv4 */
 		memset (&hints, 0, sizeof (struct addrinfo));
 		hints.ai_family = AF_INET;
-#		ifdef AI_ADDRCONFIG
-			hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
-#		else
-			hints.ai_flags  = AI_NUMERICHOST;
-#		endif
-		
+		hints.ai_flags  = AI_NUMERICHOST;
+
 		switch(getaddrinfo ((char*)pszIP, NULL, &hints, &res)) {
 		case 0: 
 			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
@@ -482,6 +475,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			freeaddrinfo (res);
 			break;
 		case EAI_NONAME:
+			/* The "address" is not an IP prefix but a wildcard */
 			F_SET((*pIP)->flags, ADDR_NAME);
 			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP);
 			break;
