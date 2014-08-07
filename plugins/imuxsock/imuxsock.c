@@ -279,7 +279,7 @@ static struct cnfparamblk inppblk =
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -318,7 +318,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listen socket instace shall be added to 
+/* This function is called when a new listen socket instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-12
@@ -510,9 +510,9 @@ openLogSocket(lstn_t *pLstn)
 				break;
 			}
 			/*
-			 * otherwise it either didn't matched *this* socket and
-			 * we just continue to check the next one or there were
-			 * an error and we will create a new socket bellow.
+			 * otherwise it either didn't match *this* socket and
+			 * we just continue to check the next one or there was
+			 * an error and we will create a new socket below.
 			 */
 		}
 	}
