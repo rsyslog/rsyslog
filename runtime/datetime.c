@@ -1093,28 +1093,20 @@ int getWeekdayNbr(struct syslogTime *ts)
 int getOrdinal(struct syslogTime *ts)
 {
 	int yday;
-	struct syslogTime yt;
 	time_t thistime;
 	time_t previousyears;
+	int utcOffset;
 	time_t seconds_into_year;
 
 	thistime = syslogTime2time_t(ts);
 
-	/* initialize a timestamp from the previous years */
-	yt.year = ts->year - 1;
-	yt.month = 12;
-	yt.day = 31;
-	yt.hour = 23;
-	yt.minute = 59;
-	yt.second = 59;
-	yt.secfracPrecision = 0;
-	yt.secfrac = 0;
-	yt.OffsetMinute = ts->OffsetMinute;
-	yt.OffsetHour = ts->OffsetHour;
-	yt.OffsetMode = ts->OffsetMode;
-	yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
+	previousyears = yearInSecs[ts->year - yearInSec_startYear - 1];
 
-	previousyears = syslogTime2time_t(&yt);
+	/* adjust previous years to match UTC offset */
+	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;
+	if(ts->OffsetMode == '+')
+		utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
+	previousyears += utcOffset;
 
 	/* subtract seconds from previous years */
 	seconds_into_year = thistime - previousyears;
@@ -1123,6 +1115,7 @@ int getOrdinal(struct syslogTime *ts)
 	yday = seconds_into_year / 86400;
 	return yday;
 }
+
 /* getWeek - 1-52 week of the year */
 int getWeek(struct syslogTime *ts)
 {
