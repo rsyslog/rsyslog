@@ -477,6 +477,32 @@ finalize_it:
 }
 
 
+static rsRetVal
+skipOldMessages() {
+	DEFiRet;
+
+	if (sd_journal_seek_tail(j) < 0) {
+		char errStr[256];
+
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_ERR,
+			"sd_journal_seek_tail() failed: '%s'", errStr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if (sd_journal_previous(j) < 0) {
+		char errStr[256];
+
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_ERR,
+			"sd_journal_previous() failed: '%s'", errStr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal
@@ -521,27 +547,10 @@ loadJournalState()
 			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
 					"open on state file `%s' failed\n", cs.stateFile);
 		}
-	} else {
-		/* when IgnorePrevious, seek to the end of journal */
-		if (cs.bIgnorePrevious) {
-			if (sd_journal_seek_tail(j) < 0) {
-				char errStr[256];
-
-				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_ERR,
-					"sd_journal_seek_tail() failed: '%s'", errStr);
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-
-			if (sd_journal_previous(j) < 0) {
-				char errStr[256];
-
-				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_ERR,
-					"sd_journal_previous() failed: '%s'", errStr);
-				ABORT_FINALIZE(RS_RET_ERR);
-			}
-		}
+	} else if (cs.bIgnorePrevious) {
+		/* Seek to the very end of the journal and ignore all
+		 * older messages. */
+		skipOldMessages();
 	} 
 
 finalize_it:
@@ -557,7 +566,12 @@ CODESTARTrunInput
 	ratelimitSetNoTimeCache(ratelimiter);
 
 	if (cs.stateFile) {
+		/* Load our position in the journal from the state file. */
 		CHKiRet(loadJournalState());
+	} else if (cs.bIgnorePrevious) {
+		/* Seek to the very end of the journal and ignore all
+		 * older messages. */
+		skipOldMessages();
 	}
 
 	/* this is an endless loop - it is terminated when the thread is
