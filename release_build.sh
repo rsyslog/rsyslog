@@ -4,7 +4,5 @@
 rm -rf ./build
 sphinx-build -b html source build
 rm rsyslog-doc.tar.gz
-cd build
-tar -czf ../rsyslog-doc.tar.gz *
-cd ..
+tar -czf rsyslog-doc.tar.gz build source LICENSE README.md build.sh
 cd ..
