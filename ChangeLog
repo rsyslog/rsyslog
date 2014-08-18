@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.4.0 [v8-devel] 2014-07-??
+Version 8.3.5 [v8-devel] 2014-08-05
 - mmjsonparse: support selectable cookie and target containers
   This permits to put different meanings into a json formatted syslog
   message, e.g. the "traditional" cee or cim data.
@@ -12,6 +12,7 @@ Version 8.4.0 [v8-devel] 2014-07-??
   regular error reporting functions. Previously, this meant any error
   message was lost. Now it is emitted via regular syslog (which may end up
   in a different instance, if multiple instances run...)
+- couple of patches imported from v7-stable (7.6.4)
 ---------------------------------------------------------------------------
 Version 8.3.4 [v8-devel] 2014-07-11
 - new pmciscoios parser supporting various Cisco IOS formats
