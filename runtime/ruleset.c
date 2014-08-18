@@ -217,8 +217,13 @@ finalize_it:
 /* return a new "active" structure for the batch. Free with freeActive(). */
 static inline sbool *newActive(batch_t *pBatch)
 {
-	return malloc(sizeof(sbool) * batchNumMsgs(pBatch));
-	
+	int n;
+
+	n = batchNumMsgs(pBatch);
+	if(n == 0)
+		return NULL;
+
+	return malloc(sizeof(sbool) * n);
 }
 static inline void freeActive(sbool *active) { free(active); }
 
@@ -322,12 +327,12 @@ finalize_it:
 static rsRetVal
 execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	sbool *newAct;
+	sbool *newAct = NULL;
 	int i;
 	sbool bRet;
 	sbool allInactive = 1;
 	DEFiRet;
-	newAct = newActive(pBatch);
+	CHKmalloc(newAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
 			FINALIZE;
@@ -344,7 +349,6 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 
 	if(allInactive) {
 		DBGPRINTF("execIf: all batch elements are inactive, holding execution\n");
-		freeActive(newAct);
 		FINALIZE;
 	}
 
@@ -361,23 +365,25 @@ execIf(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 			}
 		scriptExec(stmt->d.s_if.t_else, pBatch, newAct);
 	}
-	freeActive(newAct);
 finalize_it:
+	if(newAct != NULL)
+		freeActive(newAct);
 	RETiRet;
 }
 
 /* for details, see scriptExec() header comment! */
-static void
+static rsRetVal
 execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
-	sbool *newAct;
+	sbool *newAct = NULL;
 	msg_t *pMsg;
 	int bRet;
 	int i;
-	newAct = newActive(pBatch);
+	DEFiRet;
+	CHKmalloc(newAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
-			return;
+			FINALIZE;
 		if(pBatch->eltState[i] == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		pMsg = pBatch->pElem[i].pMsg;
@@ -400,14 +406,17 @@ execPRIFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	if(stmt->d.s_prifilt.t_else != NULL) {
 		for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 			if(*(pBatch->pbShutdownImmediate))
-				return;
+				FINALIZE;
 			if(pBatch->eltState[i] != BATCH_STATE_DISC
 			   && (active == NULL || active[i]))
 				newAct[i] = !newAct[i];
 			}
 		scriptExec(stmt->d.s_prifilt.t_else, pBatch, newAct);
 	}
-	freeActive(newAct);
+finalize_it:
+	if(newAct != NULL)
+		freeActive(newAct);
+	RETiRet;
 }
 
 
@@ -503,16 +512,17 @@ done:
 }
 
 /* for details, see scriptExec() header comment! */
-static void
+static rsRetVal
 execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 {
 	sbool *thenAct;
 	sbool bRet;
 	int i;
-	thenAct = newActive(pBatch);
+	DEFiRet;
+	CHKmalloc(thenAct = newActive(pBatch));
 	for(i = 0 ; i < batchNumMsgs(pBatch) ; ++i) {
 		if(*(pBatch->pbShutdownImmediate))
-			return;
+			FINALIZE;
 		if(pBatch->eltState[i] == BATCH_STATE_DISC)
 			continue; /* will be ignored in any case */
 		if(active == NULL || active[i]) {
@@ -524,7 +534,9 @@ execPROPFILT(struct cnfstmt *stmt, batch_t *pBatch, sbool *active)
 	}
 
 	scriptExec(stmt->d.s_propfilt.t_then, pBatch, thenAct);
+finalize_it:
 	freeActive(thenAct);
+	RETiRet;
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
@@ -986,9 +998,16 @@ rulesetProcessCnf(struct cnfobj *o)
 	} else if(localRet != RS_RET_NOT_FOUND) {
 		ABORT_FINALIZE(localRet);
 	}
+
 	CHKiRet(rulesetConstruct(&pRuleset));
-	CHKiRet(rulesetSetName(pRuleset, rsName));
-	CHKiRet(rulesetConstructFinalize(loadConf, pRuleset));
+	if((localRet = rulesetSetName(pRuleset, rsName)) != RS_RET_OK) {
+		rulesetDestruct(&pRuleset);
+		ABORT_FINALIZE(localRet);
+	}
+	if((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) {
+		rulesetDestruct(&pRuleset);
+		ABORT_FINALIZE(localRet);
+	}
 	addScript(pRuleset, o->script);
 
 	/* we have only two params, so we do NOT do the usual param loop */

@@ -121,14 +121,13 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
 		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-
 	}
 
 	if(fstat(fd, &stat_st) == -1) {
 		errmsg.LogError(0, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 	}
-	
+
 	/* 1MB limit */
 	if(stat_st.st_size > 1024 * 1024) {
 		errmsg.LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
@@ -142,9 +141,9 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
-	close(fd);
-
 finalize_it:
+	if(fd != -1)
+		close(fd);
 	if(iRet != RS_RET_OK) {
 		if(pBuf->data != NULL) {
 			free(pBuf->data);

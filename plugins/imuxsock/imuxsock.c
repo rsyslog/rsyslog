@@ -418,13 +418,20 @@ finalize_it:
 }
 
 
-/* discard/Destruct all log sockets except for "socket" 0. Data for it comes from
- * the constant memory pool - and if not, it is freeed via some other pointer.
- */
 static rsRetVal discardLogSockets(void)
 {
 	int i;
 
+	/* Check whether the system socket is in use */
+	if(startIndexUxLocalSockets == 0) {
+		/* Clean up rate limiting data for the system socket */
+		if(listeners[0].ht != NULL) {
+			hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
+		}
+		ratelimitDestruct(listeners[0].dflt_ratelimiter);
+	}
+
+	/* Clean up all other sockets */
         for (i = 1; i < nfd; i++) {
 		if(listeners[i].sockName != NULL) {
 			free(listeners[i].sockName);
@@ -551,7 +558,7 @@ finalize_it:
 static inline rsRetVal
 findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 {
-	ratelimit_t *rl;
+	ratelimit_t *rl = NULL;
 	int r;
 	pid_t *keybuf;
 	char pidbuf[256];
@@ -590,8 +597,11 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 	}
 
 	*prl = rl;
+	rl = NULL;
 
 finalize_it:
+	if(rl != NULL)
+		ratelimitDestruct(rl);
 	if(*prl == NULL)
 		*prl = pLstn->dflt_ratelimiter;
 	RETiRet;
@@ -727,7 +737,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 static inline rsRetVal
 SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
-	msg_t *pMsg;
+	msg_t *pMsg = NULL;
 	int lenMsg;
 	int offs;
 	int i;
@@ -738,14 +748,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	struct syslogTime st;
 	time_t tt;
-	int lenProp;
 	ratelimit_t *ratelimiter = NULL;
-	uchar propBuf[1024];
-	uchar msgbuf[8192];
-	uchar *pmsgbuf;
-	int toffs; /* offset for trusted properties */
 	struct syslogTime dummyTS;
-	struct json_object *json = NULL, *jval;
 	DEFiRet;
 
 	if(pLstn->bDiscardOwnMsgs && cred != NULL && cred->pid == glblGetOurPid()) {
@@ -787,36 +791,60 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	}
 #endif
 
+	/* we now create our own message object and submit it to the queue */
+	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
+
 	/* created trusted properties */
 	if(cred != NULL && pLstn->bAnnotate) {
-		if((unsigned) (lenRcv + 4096) < sizeof(msgbuf)) {
-			pmsgbuf = msgbuf;
-		} else {
-			CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
-		}
+		uchar propBuf[1024];
+		int lenProp;
 
 		if (pLstn->bParseTrusted) {
-			json = json_object_new_object();
+			struct json_object *json, *jval;
+
+#define CHKjson(operation, toBeFreed)					\
+			if((operation) == NULL) {			\
+				json_object_put(toBeFreed);		\
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);	\
+			}
+
+			CHKmalloc(json = json_object_new_object());
 			/* create value string, create field, and add it */
-			jval = json_object_new_int(cred->pid);
+			CHKjson(jval = json_object_new_int(cred->pid), json);
 			json_object_object_add(json, "pid", jval);
-			jval = json_object_new_int(cred->uid);
+			CHKjson(jval = json_object_new_int(cred->uid), json);
 			json_object_object_add(json, "uid", jval);
-			jval = json_object_new_int(cred->gid);
+			CHKjson(jval = json_object_new_int(cred->gid), json);
 			json_object_object_add(json, "gid", jval);
 			if(getTrustedProp(cred, "comm", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "appname", jval);
 			}
 			if(getTrustedExe(cred, propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "exe", jval);
 			}
 			if(getTrustedProp(cred, "cmdline", propBuf, sizeof(propBuf), &lenProp) == RS_RET_OK) {
-				jval = json_object_new_string((char*)propBuf);
+				CHKjson(jval = json_object_new_string((char*)propBuf), json);
 				json_object_object_add(json, "cmd", jval);
 			}
+#undef CHKjson
+
+			/* as per lumberjack spec, these properties need to go into
+			 * the CEE root.
+			 */
+			msgAddJSON(pMsg, (uchar*)"!", json);
+
+			MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 		} else {
+			uchar msgbuf[8192];
+			uchar *pmsgbuf = msgbuf;
+			int toffs; /* offset for trusted properties */
+
+			if((unsigned) (lenRcv + 4096) >= sizeof(msgbuf)) {
+				CHKmalloc(pmsgbuf = malloc(lenRcv+4096));
+			}
+
 			memcpy(pmsgbuf, pRcv, lenRcv);
 			memcpy(pmsgbuf+lenRcv, " @[", 3);
 			toffs = lenRcv + 3; /* next free location */
@@ -846,14 +874,13 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			pmsgbuf[toffs] = ']';
 			pmsgbuf[toffs+1] = '\0';
 
-			pRcv = pmsgbuf;
-			lenRcv = toffs + 1;
+			MsgSetRawMsg(pMsg, (char*)pmsgbuf, toffs + 1);
 		}
+	} else {
+		/* just add the unmodified message */
+		MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	}
 
-	/* we now create our own message object and submit it to the queue */
-	CHKiRet(msgConstructWithTime(&pMsg, &st, tt));
-	MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	parser.SanitizeMsg(pMsg);
 	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
 	MsgSetInputName(pMsg, pInputName);
@@ -864,13 +891,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
-
-	if(json != NULL) {
-		/* as per lumberjack spec, these properties need to go into
-		 * the CEE root.
-		 */
-		msgAddJSON(pMsg, (uchar*)"!", json);
-	}
 
 	if(ts == NULL) {
 		if((pLstn->flags & IGNDATE)) {
@@ -923,6 +943,10 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pMsg != NULL)
+			msgDestruct(&pMsg);
+	}
 	RETiRet;
 }
 
@@ -1025,50 +1049,50 @@ activateListeners()
 	int actSocks;
 	DEFiRet;
 
-	/* first apply some config settings */
-#	ifdef OS_SOLARIS
-		/* under solaris, we must NEVER process the local log socket, because
-		 * it is implemented there differently. If we used it, we would actually
-		 * delete it and render the system partly unusable. So don't do that.
-		 * rgerhards, 2010-03-26
-		 */
-		startIndexUxLocalSockets = 1;
-#	else
-		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
-#	endif
-	if(runModConf->pLogSockName != NULL)
-		listeners[0].sockName = runModConf->pLogSockName;
-	else if(sd_booted()) {
-		struct stat st;
-		if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
-			listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+	/* Initialize the system socket only if it's in use */
+	if(startIndexUxLocalSockets == 0) {
+		/* first apply some config settings */
+		listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
+		if(runModConf->pLogSockName != NULL)
+			listeners[0].sockName = runModConf->pLogSockName;
+		else if(sd_booted()) {
+			struct stat st;
+			if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
+				listeners[0].sockName = (uchar*) SYSTEMD_PATH_LOG;
+			}
 		}
-	}
-	if(runModConf->ratelimitIntervalSysSock > 0) {
-		if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
-			/* in this case, we simply turn of rate-limiting */
-			errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
-				  "create hash table\n");
-			runModConf->ratelimitIntervalSysSock = 0;
+		if(runModConf->ratelimitIntervalSysSock > 0) {
+			if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL)) == NULL) {
+				/* in this case, we simply turn of rate-limiting */
+				errmsg.LogError(0, NO_ERRCODE, "imuxsock: turning off rate limiting because we could not "
+					  "create hash table\n");
+				runModConf->ratelimitIntervalSysSock = 0;
+			}
+		} else {
+			listeners[0].ht = NULL;
 		}
+		listeners[0].fd = -1;
+		listeners[0].hostName = NULL;
+		listeners[0].bParseHost = 0;
+		listeners[0].bCreatePath = 0;
+		listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
+		listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
+		listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
+		listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
+		listeners[0].bWritePid = runModConf->bWritePidSysSock;
+		listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
+		listeners[0].bParseTrusted = runModConf->bParseTrusted;
+		listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
+		listeners[0].bUnlink = runModConf->bUnlink;
+		listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
+		listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+		listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
+			ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
+			listeners[0].ratelimitInterval,
+			listeners[0].ratelimitBurst);
+		ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 	}
-	listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
-	listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
-	listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-	listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
-	listeners[0].bWritePid = runModConf->bWritePidSysSock;
-	listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
-	listeners[0].bParseTrusted = runModConf->bParseTrusted;
-	listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
-	listeners[0].bUnlink = runModConf->bUnlink;
-	listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
-	listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
-	listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-	CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
-		ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
-		listeners[0].ratelimitInterval,
-		listeners[0].ratelimitBurst);
-	ratelimitSetSeverity(listeners[0].dflt_ratelimiter,listeners[0].ratelimitSev);
 
 	sd_fds = sd_listen_fds(0);
 	if(sd_fds < 0) {
@@ -1282,6 +1306,16 @@ BEGINactivateCnfPrePrivDrop
 	int i;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
+#	ifdef OS_SOLARIS
+		/* under solaris, we must NEVER process the local log socket, because
+		 * it is implemented there differently. If we used it, we would actually
+		 * delete it and render the system partly unusable. So don't do that.
+		 * rgerhards, 2010-03-26
+		 */
+		startIndexUxLocalSockets = 1;
+#	else
+		startIndexUxLocalSockets = runModConf->bOmitLocalLogging ? 1 : 0;
+#	endif
 	/* we first calculate the number of listeners so that we can
 	 * appropriately size the listener array. Note that we will
 	 * always allocate memory for the system log socket.
@@ -1290,8 +1324,8 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		++nLstn;
 	}
-	if(nLstn > 0) {
-		DBGPRINTF("imuxsock: allocating memory for %d addtl listeners\n", nLstn);
+	if(nLstn > 0 || startIndexUxLocalSockets == 0) {
+		DBGPRINTF("imuxsock: allocating memory for %d listeners\n", nLstn);
 		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
 		for(i = 1 ; i < nLstn ; ++i) {
 			listeners[i].sockName = NULL;
@@ -1300,8 +1334,8 @@ CODESTARTactivateCnfPrePrivDrop
 		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 			addListner(inst);
 		}
+		CHKiRet(activateListeners());
 	}
-	CHKiRet(activateListeners());
 finalize_it:
 ENDactivateCnfPrePrivDrop
 
@@ -1339,8 +1373,11 @@ BEGINrunInput
 #endif
 
 CODESTARTrunInput
-	if(runModConf->bOmitLocalLogging && nfd == 1)
+	CHKmalloc(pReadfds);
+	if(startIndexUxLocalSockets == 1 && nfd == 1) {
+		/* No sockets were configured, no reason to run. */
 		ABORT_FINALIZE(RS_RET_OK);
+	}
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -1388,7 +1425,6 @@ CODESTARTrunInput
 
 finalize_it:
 	freeFdSet(pReadfds);
-	RETiRet;
 ENDrunInput
 
 
@@ -1522,29 +1558,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * TODO / rgerhards, 2012-04-11
 	 */
 	pLocalHostIP = glbl.GetLocalHostIP();
-
-	/* init system log socket settings */
-	CHKmalloc(listeners = malloc(sizeof(lstn_t)));
-	listeners[0].flags = IGNDATE;
-	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
-	listeners[0].hostName = NULL;
-	listeners[0].flowCtl = eFLOWCTL_NO_DELAY;
-	listeners[0].fd = -1;
-	listeners[0].bParseHost = 0;
-	listeners[0].bUseCreds = 0;
-	listeners[0].bAnnotate = 0;
-	listeners[0].bParseTrusted = 0;
-	listeners[0].bDiscardOwnMsgs = 1;
-	listeners[0].bUnlink = 1;
-	listeners[0].bCreatePath = 0;
-	listeners[0].bUseSysTimeStamp = 1;
-	if((listeners[0].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
-		(void(*)(void*))ratelimitDestruct)) == NULL) {
-		/* in this case, we simply turn off rate-limiting */
-		DBGPRINTF("imuxsock: turning off rate limiting for system socket "
-			  "because we could not create hash table\n");
-		listeners[0].ratelimitInterval = 0;
-	}
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
