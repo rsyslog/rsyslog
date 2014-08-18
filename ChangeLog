@@ -450,6 +450,10 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   shut down before the repetition was broken.
   Thanks to Tomas Heinrich for the patch.
 - bugfix: make dist failed when GUARDTIME or LIBGCRYPT feature was disabled
+- bugfix: mmjsonparse did not build with json-c < 0.10
+  This was a regression introduced some time in the past in order to
+  support API changes in json-c. Now we check for the version and use
+  proper code.
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
