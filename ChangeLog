@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 8.4.0 [v8-stable] 2014-08-18
+- this is the new stable branch, which incorporates all enhancements of
+  rsyslog 8.3.
+---------------------------------------------------------------------------
 Version 8.3.5 [v8-devel] 2014-08-05
 - mmjsonparse: support selectable cookie and target containers
   This permits to put different meanings into a json formatted syslog
