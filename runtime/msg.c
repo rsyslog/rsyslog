@@ -4074,7 +4074,11 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 
 			err = tokener->err;
 			if(err != json_tokener_continue)
-				errMsg = json_tokener_errors[err];
+#				if HAVE_JSON_TOKENER_ERROR_DESC
+					errMsg = json_tokener_error_desc(err);
+#				else
+					errMsg = json_tokener_errors[err];
+#				endif
 			else
 				errMsg = "Unterminated input";
 		} else if(!json_object_is_type(json, json_type_object))

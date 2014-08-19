@@ -1,0 +1,10 @@
+This module was created for a custom project with a very specific use
+case. It was included into the source tree as a sample if someone
+would like to create similar work. I strongly doubt it has any
+value to the community other than serving as an example. Thus,
+I do not intend to maintain this module, except if a sponsor
+comes up that actually wants this to be done. I prefer to
+leave it in the source tree even if it is broken starting with v8.
+If that creates a problem, I would simply delete it.
+
+Rainer Gerhards
