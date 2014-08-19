@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 8.4.1 [v8-stable] 2014-08-??
+- permit at-sign in variable names
+  closes: https://github.com/rsyslog/rsyslog/issues/110
+---------------------------------------------------------------------------
 Version 8.4.0 [v8-stable] 2014-08-18
 - this is the new stable branch, which incorporates all enhancements of
   rsyslog 8.3.
