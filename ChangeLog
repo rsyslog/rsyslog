@@ -4,6 +4,8 @@ Version 8.4.1 [v8-stable] 2014-08-??
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)
   Thanks to Thomas D. for reporting this problem.
+- bugfix: omelasticsearch does not work with broken/changed ES 1.0+ API
+  closes: https://github.com/rsyslog/rsyslog/issues/104
 ---------------------------------------------------------------------------
 Version 8.4.0 [v8-stable] 2014-08-18
 - this is the new stable branch, which incorporates all enhancements of
