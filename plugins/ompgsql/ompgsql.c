@@ -235,9 +235,18 @@ writePgSQL(uchar *psz, instanceData *pData)
 
 	if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
 		/* error occured, try to re-init connection and retry */
-		closePgSQL(pData); /* close the current handle */
-		CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
-		bHadError = tryExec(psz, pData); /* retry */
+		int inTransaction = 0;
+		if(pData->f_hpgsql != NULL) {
+			PGTransactionStatusType xactStatus = PQtransactionStatus(pData->f_hpgsql);
+			if((xactStatus == PQTRANS_INTRANS) || (xactStatus == PQTRANS_ACTIVE)) {
+				inTransaction = 1;
+			}
+		}
+		if ( inTransaction == 0 ) {
+			closePgSQL(pData); /* close the current handle */
+			CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
+			bHadError = tryExec(psz, pData); /* retry */
+		}
 		if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
