@@ -65,6 +65,9 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   This was a regression introduced some time in the past in order to
   support API changes in json-c. Now we check for the version and use
   proper code.
+- bugfix: mmanon did not properly anonymize IP addresses starting with '9'
+  Thanks to defa-at-so36.net for reporting this problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=529
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
