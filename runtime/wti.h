@@ -72,7 +72,7 @@ struct wti_s {
 	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
 				      (sized for max nbr of actions in config!) */
 	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
-	DEF_ATOMIC_HELPER_MUT(mutIsRunning);
+	DEF_ATOMIC_HELPER_MUT(mutIsRunning)
 	struct {
 		uint8_t bPrevWasSuspended;
 		uint8_t bDoAutoCommit; /* do a commit after each message

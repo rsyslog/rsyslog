@@ -43,7 +43,7 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmfields")
 
 
-DEFobjCurrIf(errmsg);
+DEFobjCurrIf(errmsg)
 DEF_OMOD_STATIC_DATA
 
 /* config variables */

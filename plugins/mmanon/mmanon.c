@@ -295,7 +295,7 @@ anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 	int endpos;
 	int lenMsg = *pLenMsg;
 
-	while(i < lenMsg && (msg[i] <= '0' || msg[i] >= '9')) {
+	while(i < lenMsg && (msg[i] <= '0' || msg[i] > '9')) {
 		++i; /* skip to first number */
 	}
 	if(i >= lenMsg)

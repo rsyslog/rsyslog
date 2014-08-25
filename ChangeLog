@@ -10,6 +10,9 @@ Version 8.4.1 [v8-stable] 2014-08-??
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)
   Thanks to Thomas D. for reporting this problem.
+- bugfix: mmanon did not properly anonymize IP addresses starting with '9'
+  Thanks to defa-at-so36.net for reporting this problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=529
 ---------------------------------------------------------------------------
 Version 8.4.0 [v8-stable] 2014-08-18
 - this is the new stable branch, which incorporates all enhancements of
@@ -466,6 +469,9 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   This was a regression introduced some time in the past in order to
   support API changes in json-c. Now we check for the version and use
   proper code.
+- bugfix: mmanon did not properly anonymize IP addresses starting with '9'
+  Thanks to defa-at-so36.net for reporting this problem.
+  closes: http://bugzilla.adiscon.com/show_bug.cgi?id=529
 ---------------------------------------------------------------------------
 Version 7.6.3 [v7.6-stable] 2014-03-27
 - add capability to override GnuTLS path in build process
