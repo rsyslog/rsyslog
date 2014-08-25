@@ -16,3 +16,4 @@ White Papers
    syslog_protocol
    queues_analogy
    preserve_in_nat
+   reliable_logging.rst

@@ -3,13 +3,13 @@ How reliable should reliable logging be?
 With any logging, you need to decide what you want to do if the log cannot
 be written
 
-do you want the application to stop because it can't write a log message
+* do you want the application to stop because it can't write a log message
 
 or
 
-do you want the application to continue, but not write the log message
+* do you want the application to continue, but not write the log message
 
-note that this decision is still there even if you are not logging
+Note that this decision is still there even if you are not logging
 remotely, your local disk partition where you are writing logs can fill up,
 become read-only, or have other problems.
 
@@ -75,3 +75,7 @@ rate drops to <100 logs/sec. With a $5K PCI SSD card, you can get up to
 disk for anything else on the system (so if you do use the disk for
 anything else, performance drops from there, and pretty rapidly). This is
 why traditional syslog had a reputation for being very slow.
+
+See Also
+--------
+* http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html
