@@ -554,7 +554,6 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		if(pThis->bEmitMsgOnClose) {
 			errno = 0;
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			if ( pszPeer == NULL ) { pszPeer = "N/A"; }
 			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
 					(*ppSess)->pStrm, pszPeer);
 		}
@@ -571,7 +570,6 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			 * We are instructed to terminate the session.
 			 */
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			if ( pszPeer == NULL ) { pszPeer = "N/A"; }
 			errmsg.LogError(0, localRet, "Tearing down TCP Session from %s - see "
 					    "previous messages for reason(s)\n", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
@@ -580,7 +578,6 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	default:
 		errno = 0;
 		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-		if ( pszPeer == NULL ) { pszPeer = "N/A"; }
 		errmsg.LogError(0, iRet, "netstream session %p from %s will be closed due to error\n",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
