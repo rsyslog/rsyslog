@@ -542,6 +542,8 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	ssize_t iRcvd;
 	rsRetVal localRet;
 	DEFiRet;
+	uchar *pszPeer;
+	int lenPeer;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
@@ -550,10 +552,9 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	switch(iRet) {
 	case RS_RET_CLOSED:
 		if(pThis->bEmitMsgOnClose) {
-			uchar *pszPeer;
-			int lenPeer;
 			errno = 0;
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+			if ( pszPeer == NULL ) { pszPeer = "N/A"; }
 			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
 					(*ppSess)->pStrm, pszPeer);
 		}
@@ -569,15 +570,19 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
-			errmsg.LogError(0, localRet, "Tearing down TCP Session - see "
-					    "previous messages for reason(s)\n");
+			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+			if ( pszPeer == NULL ) { pszPeer = "N/A"; }
+			errmsg.LogError(0, localRet, "Tearing down TCP Session from %s - see "
+					    "previous messages for reason(s)\n", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
 		errno = 0;
-		errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
-				(*ppSess)->pStrm);
+		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+		if ( pszPeer == NULL ) { pszPeer = "N/A"; }
+		errmsg.LogError(0, iRet, "netstream session %p from %s will be closed due to error\n",
+				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	}
