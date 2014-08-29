@@ -83,6 +83,7 @@ struct modConfData_s {
 	statsFmtType_t statsFmt;
 	sbool bLogToSyslog;
 	sbool bResetCtrs;
+	sbool bBracketing;
 	char *logfile;
 	sbool configSetViaV2Method;
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
@@ -99,6 +100,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "interval", eCmdHdlrInt, 0 },
 	{ "facility", eCmdHdlrInt, 0 },
 	{ "severity", eCmdHdlrInt, 0 },
+	{ "bracketing", eCmdHdlrBinary, 0 },
 	{ "log.syslog", eCmdHdlrBinary, 0 },
 	{ "resetcounters", eCmdHdlrBinary, 0 },
 	{ "log.file", eCmdHdlrGetWord, 0 },
@@ -186,7 +188,7 @@ finalize_it:
 
 /* log stats message to file; limited error handling done */
 static inline void
-doLogToFile(cstr_t *cstr)
+doLogToFile(uchar *ln, size_t lenLn)
 {
 	struct iovec iov[4];
 	ssize_t nwritten;
@@ -194,7 +196,7 @@ doLogToFile(cstr_t *cstr)
 	time_t t;
 	char timebuf[32];
 
-	if(cstrLen(cstr) == 0)
+	if(lenLn == 0)
 		goto done;
 	if(runModConf->logfd == -1) {
 		runModConf->logfd = open(runModConf->logfile, O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC, S_IRUSR|S_IWUSR);
@@ -210,9 +212,9 @@ doLogToFile(cstr_t *cstr)
 	iov[1].iov_base = ": ";
 	iov[1].iov_len = 2;
 	nexpect += 2;
-	iov[2].iov_base = rsCStrGetSzStrNoNULL(cstr);
-	iov[2].iov_len = (size_t) cstrLen(cstr);
-	nexpect += cstrLen(cstr);
+	iov[2].iov_base = ln;
+	iov[2].iov_len = lenLn;
+	nexpect += lenLn;
 	iov[3].iov_base = "\n";
 	iov[3].iov_len = 1;
 	nexpect++;
@@ -226,6 +228,20 @@ done:	return;
 }
 
 
+/* submit a line to our log destinations. Line must be fully formatted as
+ * required (but may be a simple verb like "BEGIN" and "END".
+ */
+static rsRetVal
+submitLine(uchar *const ln, const size_t lenLn)
+{
+	DEFiRet;
+	if(runModConf->bLogToSyslog)
+		doSubmitMsg(ln);
+	if(runModConf->logfile != NULL)
+		doLogToFile(ln, lenLn);
+	RETiRet;
+}
+
 /* callback for statsobj
  * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
  */
@@ -233,10 +249,7 @@ static rsRetVal
 doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
 {
 	DEFiRet;
-	if(runModConf->bLogToSyslog)
-		doSubmitMsg(rsCStrGetSzStrNoNULL(cstr));
-	if(runModConf->logfile != NULL)
-		doLogToFile(cstr);
+	iRet = submitLine(rsCStrGetSzStrNoNULL(cstr), cstrLen(cstr));
 	RETiRet;
 }
 
@@ -281,6 +294,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->logfile = NULL;
 	loadModConf->pszBindRuleset = NULL;
 	loadModConf->bLogToSyslog = 1;
+	loadModConf->bBracketing = 0;
 	loadModConf->bResetCtrs = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
@@ -314,6 +328,8 @@ CODESTARTsetModCnf
 			loadModConf->iFacility = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "severity")) {
 			loadModConf->iSeverity = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "bracketing")) {
+			loadModConf->bBracketing = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "log.syslog")) {
 			loadModConf->bLogToSyslog = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "resetcounters")) {
@@ -464,7 +480,11 @@ CODESTARTrunInput
 	while(glbl.GetGlobalInputTermState() == 0) {
 		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
 		DBGPRINTF("impstats: woke up, generating messages\n");
+		if(runModConf->bBracketing)
+			submitLine((uchar*)"BEGIN", sizeof("BEGIN")-1);
 		generateStatsMsgs();
+		if(runModConf->bBracketing)
+			submitLine((uchar*)"END", sizeof("END")-1);
 	}
 ENDrunInput
 
