@@ -126,20 +126,21 @@ This module supports module parameters, only.
 .. function:: bracketing\ off/on
 
    *Default: off*
-   *Requires v8.4.1 or above)*
+
+   *Requires v8.4.1 or above*
 
    This is a utility setting for folks who postprocess impstats logs
    and would like to know the begin and end of a block of statistics.
    When "bracketing" is set to "on", impstats issues a "BEGIN" message
    before the first counter is issued, then all counter values
-   are issued, and then an "END" message follows. As such, iff messages
+   are issued, and then an "END" message follows. As such, if and only iff messages
    are kept in sequence, a block of stats countes can easily be identified
    by those BEGIN and END messages.
 
    **Note well:** in general, sequence of syslog messages is **not**
    strict and is not ordered in sequence of message generation. There
    are various occasion that can cause message reordering, some
-   example are:
+   examples are:
 
    * using multiple threads
    * using UDP forwarding
@@ -151,7 +152,7 @@ This module supports module parameters, only.
    sufficiently fine-grained timestamp) must be used.
 
    As such, BEGIN and END records may actually indicate the begin and
-   end of a block of statistics or they may not. Any order is possible
+   end of a block of statistics - or they may *not*. Any order is possible
    in theory. So the bracketing option does not in all cases work as
    expected. This is the reason why it is turned off by default.
 
@@ -161,11 +162,11 @@ This module supports module parameters, only.
    time the statistics records will come in as expected and actually
    will be bracketed by the BEGIN and END messages. Consequently, if
    an application can handle occasional out-of-order delivery (e.g. by
-   graceful degradation), bracketing may actually be a great solution
-   for many use cases. It is, however, very important to know and
+   graceful degradation), bracketing may actually be a great solution.
+   It is, however, very important to know and
    handle out of order delivery. For most real-world deployments,
-   a good way to handle out of order delivery is to ignore unexpected
-   records and use the previous value for ones missing in the current
+   a good way to handle it is to ignore unexpected
+   records and use the previous values for ones missing in the current
    block. To guard against two or more blocks being mixed, it may also
    be a good idea to never reset a value to a lower bound, except when
    that lower bound is seen consistantly (which happens due to a
