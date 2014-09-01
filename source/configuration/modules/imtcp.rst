@@ -113,6 +113,7 @@ Action Parameters
    Starts a TCP server on selected port
 
 .. function:: Name <name>
+
    Sets a name for the inputname property. If no name is set "imtcp" is
    used by default. Setting a name is not strictly necessary, but can be
    useful to apply filtering based on which input the message was
@@ -133,11 +134,13 @@ Action Parameters
    into the message stream.
 
 .. function:: RateLimit.Interval [number]
+
    Specifies the rate-limiting interval in seconds. Default value is 0, 
    which turns off rate limiting. Set it to a number of seconds (5
    recommended) to activate rate-limiting.
 
 .. function:: RateLimit.Burst [number]
+
    Specifies the rate-limiting burst in number of messages. Default is 
    10,000. 
 
@@ -147,6 +150,11 @@ Caveats/Known Bugs
 -  module always binds to all interfaces
 -  can not be loaded together with `imgssapi <imgssapi.html>`_ (which
    includes the functionality of imtcp)
+
+See also
+--------
+
+- `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_ (for legacy syntax, but you get the idea).
 
 Example
 -------
@@ -166,32 +174,59 @@ Legacy Configuration Directives
 -------------------------------
 
 .. function:: $InputTCPServerAddtlFrameDelimiter <Delimiter>
+
    equivalent to: AddtlFrameDelimiter
+
 .. function:: $InputTCPServerDisableLFDelimiter on/off
+
    equivalent to: DisableLFDelimiter
+
 .. function:: $InputTCPServerNotifyOnConnectionClose on/off
+
    equivalent to: NotifyOnConnectionClose
+
 .. function:: $InputTCPServerKeepAlive** <on/**off**>
+
    equivalent to: KeepAlive
+
 .. function:: $InputTCPServerRun <port>
+
    equivalent to: Port
+
 .. function:: $InputTCPFlowControl on/off
+
    equivalent to: FlowControl
+
 .. function:: $InputTCPMaxListeners <number>
+
    equivalent to: MaxListeners
+
 .. function:: $InputTCPMaxSessions <number>
+
    equivalent to: MaxSessions
+
 .. function:: $InputTCPServerStreamDriverMode <number>
+
    equivalent to: StreamDriver.Mode
+
 .. function:: $InputTCPServerInputName <name>
+
    equivalent to: Name
+
 .. function:: $InputTCPServerStreamDriverAuthMode <mode-string>
+
    equivalent to: StreamDriver.AuthMode
+
 .. function:: $InputTCPServerStreamDriverPermittedPeer <id-string>
+
    equivalent to: PermittedPeer.
+
 .. function:: $InputTCPServerBindRuleset <ruleset>
+
    equivalent to: Ruleset.
+
 .. function:: $InputTCPSupportOctetCountedFraming on/off
+
    equivalent to: SupportOctetCountedFraming
 
 Caveats/Known Bugs
@@ -215,4 +250,3 @@ connections:
 
 Note that the parameters (here: max sessions) need to be set **before**
 the listener is activated. Otherwise, the parameters will not apply.
-
