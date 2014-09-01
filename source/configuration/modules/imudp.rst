@@ -43,6 +43,10 @@ multiple times.
 
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
+**See also:**
+
+- `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_.
+
 **Caveats/Known Bugs:**
 
 -  currently none known
