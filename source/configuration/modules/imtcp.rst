@@ -148,6 +148,11 @@ Caveats/Known Bugs
 -  can not be loaded together with `imgssapi <imgssapi.html>`_ (which
    includes the functionality of imtcp)
 
+See also
+--------
+
+- `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_ (for legacy syntax, but you get the idea).
+
 Example
 -------
 
@@ -215,4 +220,3 @@ connections:
 
 Note that the parameters (here: max sessions) need to be set **before**
 the listener is activated. Otherwise, the parameters will not apply.
-

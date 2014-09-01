@@ -220,6 +220,7 @@ Input Parameters
 See Also
 --------
 
+- `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_.
 -  Description of `rsyslog statistic
    counters <http://www.rsyslog.com/rsyslog-statistic-counter/>`_.
    This also describes all imudp counters.
