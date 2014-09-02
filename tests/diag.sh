@@ -43,7 +43,10 @@ case $1 in
 		;;
    'es-getdata') # read data from ES to a local file so that we can process
    		# it with out regular tooling.
-		curl localhost:9200/rsyslog_testbench/_search?pretty > rsyslog.out.log
+		# Note: param 2 MUST be number of records to read (ES does
+		# not return the full set unless you tell it explicitely).
+		curl localhost:9200/rsyslog_testbench/_search?size=$2 > work
+		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
