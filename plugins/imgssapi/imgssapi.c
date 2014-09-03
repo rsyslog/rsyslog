@@ -115,6 +115,7 @@ struct modConfData_s {
 static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
+static int bKeepAlive = 0; /* use SO_KEEPALIVE? */
 
 
 /* methods */
@@ -353,6 +354,7 @@ actGSSListener(uchar *port)
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, UCHAR_CONSTANT("imgssapi")));
+                CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, bKeepAlive));
 		tcpsrv.configureTCPListen(pOurTcpsrv, port, 1);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
@@ -766,6 +768,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	}
 	bPermitPlainTcp = 0;
 	iTCPSessMax = 200;
+        bKeepAlive = 0;
 	return RS_RET_OK;
 }
 
@@ -794,6 +797,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssservermaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
+        CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverkeepalive", 0, eCmdHdlrBinary,
+				   NULL, &bKeepAlive, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
