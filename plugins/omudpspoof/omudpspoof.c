@@ -417,7 +417,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 		libnet_clear_packet(pWrkrData->libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			ntohs(pWrkrData->sourcePort),/* source port */
+			pWrkrData->sourcePort,	/* source port */
 			ntohs(tempaddr->sin_port),/* destination port */
 			pktLen+LIBNET_UDP_H,	/* packet length */
 			0,			/* checksum */
