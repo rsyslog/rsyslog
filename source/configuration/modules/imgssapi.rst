@@ -39,6 +39,14 @@ Configuration Directives
 
    Sets the maximum number of sessions supported
 
+.. function:: $InputGSSServerKeepAlive on\|off
+
+   *Requires: 8.5.0 or above*
+
+   *Default: off*
+
+   Enables or disable keep-alive handling.
+
 Caveats/Known Bugs
 ------------------
 
