@@ -167,10 +167,7 @@ tplToString(struct template *__restrict__ const pTpl,
 
 rsRetVal templateInit();
 rsRetVal tplProcessCnf(struct cnfobj *o);
-
-#ifdef MONGODB
 extern	time_t syslogTime2time_t(struct syslogTime *) ;
-#endif
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /* vim:set ai:

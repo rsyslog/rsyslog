@@ -1437,7 +1437,6 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
-	AC_DEFINE(MONGODB, 1, [Defined if mongodb specific template function has to be enabled .])
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
