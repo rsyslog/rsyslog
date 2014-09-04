@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.4.1 [v8-stable] 2014-08-??
+- bugfix: omudpspoof: source port was invalid
+  Thanks to Pavel Levshin for the patch
 - bugfix: build failure on systems which don't have json_tokener_errors
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)
