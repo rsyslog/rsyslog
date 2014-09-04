@@ -128,6 +128,11 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
+if ENABLE_ELASTICSEARCH
+TESTS +=  \
+	elasticsearch-basic.sh
+endif
+
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
 	mmpstrucdata.sh
@@ -362,6 +367,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   incltest_dir_wildcard.sh \
 	   testsuites/incltest_dir_wildcard.conf \
 	   testsuites/incltest.d/include.conf \
+	   elasticsearch-basic.sh \
+	   testsuites/elasticsearch-basic.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
