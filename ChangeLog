@@ -8,6 +8,8 @@ Version 8.5.0 [v8-stable] 2014-08-??
   Thanks to Bodik for the patch.
 ---------------------------------------------------------------------------
 Version 8.4.1 [v8-stable] 2014-08-??
+- bugfix: ompgsql: don't loose uncomitted data on retry
+  Thanks to Jared Johnson and Axel Rau for the patch.
 - bugfix: imfile: if a state file for a different file name was set,
   that different file (name) was monitored instead of the configured
   one. Now, the state file is deleted and the correct file monitored.
