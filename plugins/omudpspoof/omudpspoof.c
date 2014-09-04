@@ -383,7 +383,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 
 	if(len > 65528) {
 		DBGPRINTF("omudpspoof: msg with length %d truncated to 64k: '%.768s'\n",
-			  len, msg);
+			  (int) len, msg);
 		len = 65528;
 	}
 
@@ -417,7 +417,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 		libnet_clear_packet(pWrkrData->libnet_handle);
 		/* note: libnet does need ports in host order NOT in network byte order! -- rgerhards, 2009-11-12 */
 		udp = libnet_build_udp(
-			ntohs(pWrkrData->sourcePort),/* source port */
+			pWrkrData->sourcePort,	/* source port */
 			ntohs(tempaddr->sin_port),/* destination port */
 			pktLen+LIBNET_UDP_H,	/* packet length */
 			0,			/* checksum */
@@ -455,7 +455,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 			 * it is useful for consolidating with strace output.
 			 */
 			DBGPRINTF("omudpspoof: write error (total len %d): pktLen %d, sent %d, fd %d: %s\n",
-				  len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pWrkrData->libnet_handle->fd,
+				  (int) len, LIBNET_IPV4_H+LIBNET_UDP_H+pktLen, lsent, pWrkrData->libnet_handle->fd,
 				  libnet_geterror(pWrkrData->libnet_handle));
 			if(lsent != -1) {
 				bSendSuccess = RSTRUE;
@@ -504,7 +504,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 			lsent = libnet_write(pWrkrData->libnet_handle);
 			if(lsent != (int) (LIBNET_IPV4_H+pktLen)) {
 				DBGPRINTF("omudpspoof: fragment write error len %d, sent %d: %s\n",
-					  LIBNET_IPV4_H+LIBNET_UDP_H+len, lsent, libnet_geterror(pWrkrData->libnet_handle));
+					  (int) (LIBNET_IPV4_H+LIBNET_UDP_H+len), lsent, libnet_geterror(pWrkrData->libnet_handle));
 				bSendSuccess = RSFALSE;
 				continue;
 			}
