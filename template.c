@@ -48,7 +48,6 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
-# ifdef MONGODB
 /* small helper: get integer power of 10 */
 static inline int
 i10pow(int exp)
@@ -60,7 +59,6 @@ i10pow(int exp)
         }
         return r;
 }
-#endif
 
 /* static data */
 DEFobjCurrIf(obj)
@@ -369,7 +367,6 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
 					}
 				}
-#ifdef MONGODB /* Only if mongodb is enabled */
 		} else  if((pTpe->data.field.msgProp.id == PROP_TIMESTAMP || 
 				  pTpe->data.field.msgProp.id == PROP_TIMEGENERATED) &&
                                   pTpe->data.field.eDateFormat == tplFmtMongoDbDate) {
@@ -410,7 +407,6 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
                                         strcat ( local_fieldname , (char*)pTpe->fieldName );
                                 }
                                 json_object_object_add(json, local_fieldname , jsonf );
-#endif		
 			} else  {
 				pVal = (uchar*) MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
 							   &propLen, &bMustBeFreed, ttNow);
@@ -756,10 +752,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
-#ifdef MONGODB
 		 } else if(!strcmp((char*)Buf, "date-mongodb")) {
 			pTpe->data.field.eDateFormat = tplFmtMongoDbDate;
-#endif
 		 } else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
 			pTpe->data.field.eDateFormat = tplFmtUnixDate;
 		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
@@ -1625,10 +1619,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				datefmt = tplFmtRFC3164BuggyDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
 				datefmt = tplFmtRFC3339Date;
-#ifdef MONGODB
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"mongodb", sizeof("mongodb")-1)) {
 				datefmt = tplFmtMongoDbDate;
-#endif
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
 				datefmt = tplFmtUnixDate;
 			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
@@ -2237,11 +2229,9 @@ void tplPrintList(rsconf_t *conf)
 				case tplFmtRFC3339Date:
 					dbgprintf("[Format as RFC3339-Date] ");
 					break;
-#ifdef MONGODB
 				case tplFmtMongoDbDate:
                                         dbgprintf("[Format as MongoDB ISODate] ");
                                         break;	
-#endif
 				case tplFmtUnixDate:
 					dbgprintf("[Format as Unix timestamp] ");
 					break;
