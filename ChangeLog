@@ -8,6 +8,12 @@ Version 8.5.0 [v8-stable] 2014-08-??
   Thanks to Bodik for the patch.
 ---------------------------------------------------------------------------
 Version 8.4.1 [v8-stable] 2014-08-??
+- bugfix: imfile: if a state file for a different file name was set,
+  that different file (name) was monitored instead of the configured
+  one. Now, the state file is deleted and the correct file monitored.
+  closes: https://github.com/rsyslog/rsyslog/issues/103
+- bugfix: omudpspoof: source port was invalid
+  Thanks to Pavel Levshin for the patch
 - bugfix: build failure on systems which don't have json_tokener_errors
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)
@@ -15,6 +21,8 @@ Version 8.4.1 [v8-stable] 2014-08-??
 - bugfix: mmanon did not properly anonymize IP addresses starting with '9'
   Thanks to defa-at-so36.net for reporting this problem.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=529
+- permit at-sign in variable names
+  closes: https://github.com/rsyslog/rsyslog/issues/110
 ---------------------------------------------------------------------------
 Version 8.4.0 [v8-stable] 2014-08-18
 - this is the new stable branch, which incorporates all enhancements of
@@ -434,6 +442,10 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   * dirgroupnum
   Thanks to Karol Jurak for the patch.
 - bugfix: memory leak in TCP TLS mode
+- bugfix: imfile: if a state file for a different file name was set,
+  that different file (name) was monitored instead of the configured
+  one. Now, the state file is deleted and the correct file monitored.
+  closes: https://github.com/rsyslog/rsyslog/issues/103
 - bugfix: using UUID property could cause segfault
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.

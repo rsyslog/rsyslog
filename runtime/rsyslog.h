@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2013 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -386,6 +386,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
 	RS_RET_RESUMED = -2359,/**< status: action was resumed (used for reporting) */
 	RS_RET_RELP_NO_TLS = -2360,/**< librel does not support TLS (but TLS requested) */
+	RS_RET_STATEFILE_WRONG_FNAME  = -2361,/**< state file is for wrong file */
 
 	/* up to 2400 reserved for 7.5 & 7.6 */
 	RS_RET_INVLD_OMOD = -2400, /**< invalid output module, does not provide proper interfaces */
