@@ -35,9 +35,6 @@
 #include <ctype.h>
 #include <assert.h>
 #include <json.h>
-#ifdef MONGODB
-#include <mongo.h>
-#endif
 #include "stringbuf.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -377,7 +374,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 				  pTpe->data.field.msgProp.id == PROP_TIMEGENERATED) &&
                                   pTpe->data.field.eDateFormat == tplFmtMongoDbDate) {
 
-                                gint64 local_ts_mongodb;
+                                int64_t local_ts_mongodb;
                                 struct syslogTime local_mongodb_syslogtime ;
                                 int local_secfrac;
 
@@ -388,7 +385,7 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
                                         local_mongodb_syslogtime =  pMsg->tTIMESTAMP ;
                                 }
 
-                                local_ts_mongodb = (gint64) syslogTime2time_t(&local_mongodb_syslogtime) * 1000;
+                                local_ts_mongodb = (int64_t) syslogTime2time_t(&local_mongodb_syslogtime) * 1000;
 
                                 if(local_mongodb_syslogtime.secfracPrecision > 3) {
                                         local_secfrac = local_mongodb_syslogtime.secfrac / i10pow(local_mongodb_syslogtime.secfracPrecision - 3);
