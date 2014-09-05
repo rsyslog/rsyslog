@@ -133,7 +133,7 @@ int fileno(FILE *stream);
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
-<EXPR>\$[$!./]{0,1}[a-z][!a-z0-9\-_\.]*	{ yylval.s = strdup(yytext+1); return VAR; }
+<EXPR>\$[$!./]{0,1}[@a-z][!@a-z0-9\-_\.]*	{ yylval.s = strdup(yytext+1); return VAR; }
 <EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
