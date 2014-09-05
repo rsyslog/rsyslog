@@ -362,7 +362,6 @@ Standard Template for Writing to Files
         property(name="hostname")
         constant(value=" ")
         property(name="syslogtag")
-        constant(value=" ")
         property(name="msg" spifno1stsp="on" )
         property(name="msg" droplastlf="on" )
         constant(value="\n")
@@ -392,8 +391,8 @@ Standard Template for Forwarding to a Remote Host (RFC3164 mode)
         property(name="hostname")
         constant(value=" ")
         property(name="syslogtag" position.from="1" position.to="32")
-        constant(value=" ")
         property(name="msg" spifno1stsp="on" )
+	property(name="msg")
         }
 
 The equivalent string template looks like this:
