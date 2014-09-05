@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 8.5.0 [v8-stable] 2014-08-??
+- make gntls tcp syslog driver emit more error messages
+  Messages previously emitted only to the debug log are now emitted as
+  syslog error messages. It has shown that they contain information 
+  helpful to the user for troubleshooting config issues. Note that this
+  change is a bit experimental, as we are not sure if there are situations
+  where large amounts of error messages may be emitted.
 - bugfix: build failure on systems which don't have json_tokener_errors
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)

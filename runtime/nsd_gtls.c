@@ -78,7 +78,7 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 #define CHKgnutls(x) \
 	if((gnuRet = (x)) != 0) { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
-		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	}
@@ -600,7 +600,7 @@ gtlsGlblInit(void)
 	if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
-		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
 		free(pErr);
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
@@ -1568,8 +1568,10 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			break;
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
-			dbgprintf("unexpected GnuTLS error %d in %s:%d\n", iSent, __FILE__, __LINE__);
-			gnutls_perror(iSent); /* TODO: can we do better? */
+			uchar *pErr = gtlsStrerror(iSent);
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", iSent, __FILE__, __LINE__, pErr);
+			free(pErr);
+			gnutls_perror(iSent);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
 	}
