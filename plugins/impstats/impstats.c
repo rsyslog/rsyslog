@@ -434,6 +434,7 @@ CODESTARTactivateCnf
 	/* initialize our own counters */
 	CHKiRet(statsobj.Construct(&statsobj_resources));
 	CHKiRet(statsobj.SetName(statsobj_resources, (uchar*)"resource-usage"));
+	CHKiRet(statsobj.SetOrigin(statsobj_resources, (uchar*)"impstats"));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("utime"),
 		ctrType_IntCtr, CTR_FLAG_NONE, &st_ru_utime));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("stime"),

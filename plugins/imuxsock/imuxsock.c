@@ -1610,6 +1610,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
 	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));
+	CHKiRet(statsobj.SetOrigin(modStats, UCHAR_CONSTANT("imuxsock")));
 	STATSCOUNTER_INIT(ctrSubmit, mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmit));

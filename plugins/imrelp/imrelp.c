@@ -347,6 +347,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		 inst->pszBindPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(inst->data.stats, statname));
+	CHKiRet(statsobj.SetOrigin(inst->data.stats, (uchar*)"imrelp"));
 	STATSCOUNTER_INIT(inst->data.ctrSubmit, inst->data.mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(inst->data.stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(inst->data.ctrSubmit)));

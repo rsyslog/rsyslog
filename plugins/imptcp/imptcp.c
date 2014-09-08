@@ -1035,6 +1035,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 		isIPv6 ? "IPv6" : "IPv4");
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pLstn->stats, statname));
+	CHKiRet(statsobj.SetOrigin(pLstn->stats, (uchar*)"imptcp"));
 	STATSCOUNTER_INIT(pLstn->ctrSubmit, pLstn->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSubmit)));

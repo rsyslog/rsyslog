@@ -1,6 +1,6 @@
 /* The statsobj object.
  *
- * Copyright 2010-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -70,6 +70,7 @@ typedef struct ctr_s {
 struct statsobj_s {
 	BEGINobjInstance;		/* Data to implement generic object - MUST be the first data element! */
 	uchar *name;
+	uchar *origin;
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
 	ctr_t *ctrRoot;			/* doubly-linked list of statsobj counters */
 	ctr_t *ctrLast;
@@ -86,12 +87,13 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(statsobj_t *pThis);
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
+	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter

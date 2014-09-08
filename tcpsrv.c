@@ -153,6 +153,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
+	CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
 	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
 	ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
 	ratelimitSetThreadSafe(pEntry->ratelimiter);
@@ -978,6 +979,7 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
 	free(pThis->pszInputName);
+	free(pThis->pszOrigin);
 ENDobjDestruct(tcpsrv)
 
 
@@ -1124,6 +1126,15 @@ SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	strcpy((char*)pThis->dfltTZ, (char*)tz);
+	RETiRet;
+}
+
+static rsRetVal
+SetOrigin(tcpsrv_t *pThis, uchar *origin)
+{
+	DEFiRet;
+	free(pThis->pszOrigin);
+	pThis->pszOrigin = (origin == NULL) ? NULL : ustrdup(origin);
 	RETiRet;
 }
 
@@ -1296,6 +1307,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetKeepAlive = SetKeepAlive;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
+	pIf->SetOrigin = SetOrigin;
 	pIf->SetDfltTZ = SetDfltTZ;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
