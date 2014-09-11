@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 7.6.4 [v7.6-stable] 2014-03-??
+Version 7.6.4 [v7.6-stable] 2014-09-12
 - add --enable-generate-man-pages configure switch (default: enabled)
   This forces generation of man pages, even if cached ones exists. This
   "fixes" a typical release tarball nit. While it is hackish, the
