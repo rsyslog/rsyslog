@@ -28,6 +28,10 @@ Version 7.6.4 [v7.6-stable] 2014-03-??
   * dirgroupnum
   Thanks to Karol Jurak for the patch.
 - bugfix: memory leak in TCP TLS mode
+- bugfix: imfile: if a state file for a different file name was set,
+  that different file (name) was monitored instead of the configured
+  one. Now, the state file is deleted and the correct file monitored.
+  closes: https://github.com/rsyslog/rsyslog/issues/103
 - bugfix: using UUID property could cause segfault
 - bugfix: mmutf8fix did not detect two invalid sequences
   Thanks to Axel Rau for the patch.

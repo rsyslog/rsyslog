@@ -385,6 +385,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
 	RS_RET_RESUMED = -2359,/**< status: action was resumed (used for reporting) */
 	RS_RET_RELP_NO_TLS = -2360,/**< librel does not support TLS (but TLS requested) */
+	RS_RET_STATEFILE_WRONG_FNAME  = -2361,/**< state file is for wrong file */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
