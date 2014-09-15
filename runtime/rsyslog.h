@@ -84,7 +84,7 @@
 #undef LOG_FAC
 #define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
 #define	LOG_PRI(p)	((p) & 0x07)
-#define	LOG_FAC(p)	((p > LOG_MAXPRI) ? LOG_INVLD : (p >> 3))
+#define	LOG_FAC(p)	(((p > LOG_MAXPRI) ? LOG_INVLD : p) >> 3)
 
 #define LOG_PRI_INVLD	199	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
 
