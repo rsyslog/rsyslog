@@ -29,9 +29,6 @@
 
 #include "stringbuf.h"
 #include <sys/param.h>
-#if HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
 
 #define FALSE 0
 #define TRUE 1

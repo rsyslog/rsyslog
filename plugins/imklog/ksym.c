@@ -118,7 +118,6 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
-#include <syslog.h>
 #include "imklog.h"
 #include "ksyms.h"
 #include "module.h"
