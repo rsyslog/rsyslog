@@ -176,7 +176,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, sbool *bProcessMsg)
 			bRet = 0;
 		else
 			bRet = 1;
-		dbgprintf("testing filter, f_pmask %d, result %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility], bRet);
+		dbgprintf("tested filter, f_pmask %d, facility %d, result %d\n", pRule->f_filterData.f_pmask[pMsg->iFacility], pMsg->iFacility, bRet);
 	} else if(pRule->f_filter_type == FILTER_EXPR) {
 		CHKiRet(vm.Construct(&pVM));
 		CHKiRet(vm.ConstructFinalize(pVM));

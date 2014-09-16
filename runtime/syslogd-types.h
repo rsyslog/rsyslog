@@ -27,9 +27,6 @@
 
 #include "stringbuf.h"
 #include <sys/param.h>
-#if HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
 
 /* we use RSTRUE/FALSE to prevent name claches with other packages */
 #define RSFALSE 0

@@ -245,8 +245,8 @@ CODESTARTrunInput
 		MsgSetRawMsg(pMsg, msg);
 		MsgSetHOSTNAME(pMsg, LocalHostName);
 		MsgSetTAG(pMsg, "rsyslogd:");
-		pMsg->iFacility = LOG_FAC(pri);
-		pMsg->iSeverity = LOG_PRI(pri);
+		pMsg->iFacility = pri2fac(pri);
+		pMsg->iSeverity = pri2sev(pri);
 		flags |= INTERNAL_MSG;
 		logmsg(pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
 		 * 
