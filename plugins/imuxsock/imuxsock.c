@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -772,8 +772,8 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		++parse;
 		++offs;
 	} 
-	facil = LOG_FAC(pri);
-	sever = LOG_PRI(pri);
+	facil = pri2fac(pri);
+	sever = pri2sev(pri);
 
 	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
