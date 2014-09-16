@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2008 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -85,6 +85,14 @@
 #define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
 #define	LOG_PRI(p)	((p) & 0x07)
 #define	LOG_FAC(p)	(((p > LOG_MAXPRI) ? LOG_INVLD : p) >> 3)
+#undef LOG_FAC
+/* we need to use a function to avoid side-effects. This MUST guard
+ * against invalid facility values. rgerhards, 2014-09-16
+inline int LOG_FAC(int pri)
+{
+	int fac = pri >> 3;
+	return (fac > 23) ? 23 : fac;
+}
 
 #define LOG_PRI_INVLD	199	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
 
