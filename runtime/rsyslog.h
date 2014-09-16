@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2008 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -53,9 +53,14 @@
 #ifndef LOG_PRI
 #	define	LOG_PRI(p)	((p) & LOG_PRIMASK)
 #endif
-#ifndef LOG_FAC
-#	define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
-#endif
+#undef LOG_FAC
+/* we need to use a function to avoid side-effects. This MUST guard
+ * against invalid facility values. rgerhards, 2014-09-16
+inline int LOG_FAC(int pri)
+{
+	int fac = pri >> 3;
+	return (fac > 23) ? 23 : fac;
+}
 
 
 /* define some base data types */
