@@ -91,8 +91,8 @@ static struct cnfparamblk modpblk =
 	};
 
 #define DFLT_persiststateinterval 10
-#define DFLT_SEVERITY LOG_PRI(LOG_NOTICE)
-#define DFLT_FACILITY LOG_FAC(LOG_USER)
+#define DFLT_SEVERITY pr2fac(LOG_NOTICE)
+#define DFLT_FACILITY pri2sev(LOG_USER)
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
 
@@ -125,7 +125,7 @@ static rsRetVal facilityHdlr(uchar **pp, void *pVal)
 			/* noop */;
 		for (c = syslogFacNames; c->c_name; c++) {
 			if (!strncasecmp(p, (char *) c->c_name, len)) {
-				*((int *) pVal) = LOG_FAC(c->c_val);
+				*((int *) pVal) = pri2fac(c->c_val);
 				break;
 			}
 		}

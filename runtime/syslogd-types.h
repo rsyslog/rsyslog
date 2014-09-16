@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2014 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,12 +27,6 @@
 
 #include "stringbuf.h"
 #include <sys/param.h>
-#if HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
-/* define a macro missing on a few platforms */
-#undef LOG_FACMASK /* prevent redef warning ;) */
-#define LOG_FACMASK 191
 
 /* we use RSTRUE/FALSE to prevent name claches with other packages */
 #define RSFALSE 0
