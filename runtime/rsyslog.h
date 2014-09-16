@@ -80,21 +80,7 @@
 #define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
 #define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
 #undef LOG_MAKEPRI
-#undef LOG_PRI
-#undef LOG_FAC
-#define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
-#define	LOG_PRI(p)	((p) & 0x07)
-#define	LOG_FAC(p)	(((p > LOG_MAXPRI) ? LOG_INVLD : p) >> 3)
-#undef LOG_FAC
-/* we need to use a function to avoid side-effects. This MUST guard
- * against invalid facility values. rgerhards, 2014-09-16
-inline int LOG_FAC(int pri)
-{
-	int fac = pri >> 3;
-	return (fac > 23) ? 23 : fac;
-}
-
-#define LOG_PRI_INVLD	199	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
+#define LOG_PRI_INVLD	LOG_INVLD|LOG_DEBUG	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
 
 #define	LOG_EMERG	0	/* system is unusable */
 #define	LOG_ALERT	1	/* action must be taken immediately */
@@ -125,7 +111,21 @@ inline int LOG_FAC(int pri)
 #define	LOG_LOCAL5	(21<<3)	/* reserved for local use */
 #define	LOG_LOCAL6	(22<<3)	/* reserved for local use */
 #define	LOG_LOCAL7	(23<<3)	/* reserved for local use */
-#define	LOG_INVLD	(24<<3)	/* invalid facility/PRI code */
+#define LOG_FAC_INVLD   24
+#define	LOG_INVLD	(LOG_FAC_INVLD<<3)	/* invalid facility/PRI code */
+
+/* we need to use a function to avoid side-effects. This MUST guard
+ * against invalid facility values. rgerhards, 2014-09-16
+ */
+static inline int pri2fac(const int pri)
+{
+	int fac = pri >> 3;
+	return (fac > 23) ? LOG_FAC_INVLD : fac;
+}
+static inline int pri2sev(const int pri)
+{
+	return pri & 0x07;
+}
 
 /* the rsyslog core provides information about present feature to plugins
  * asking it. Below are feature-test macros which must be used to query 

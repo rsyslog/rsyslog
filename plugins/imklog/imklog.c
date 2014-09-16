@@ -18,7 +18,7 @@
  * Please note that this file replaces the klogd daemon that was
  * also present in pre-v3 versions of rsyslog.
  *
- * Copyright (C) 2008, 2009 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2008, 2014 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -110,8 +110,8 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
-	pMsg->iFacility = LOG_FAC(iFacility);
-	pMsg->iSeverity = LOG_PRI(iSeverity);
+	pMsg->iFacility = pri2fac(iFacility);
+	pMsg->iSeverity = pri2sev(iSeverity);
 	CHKiRet(submitMsg(pMsg));
 
 finalize_it:
@@ -174,7 +174,7 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 	va_end(ap);
 
 	iRet = enqMsg((uchar*)pLogMsg, (uchar*) ((iFacilIntMsg == LOG_KERN) ? "kernel:" : "imklog:"),
-		      iFacilIntMsg, LOG_PRI(priority));
+		      iFacilIntMsg, pri2sev(priority));
 
 	RETiRet;
 }
@@ -195,10 +195,10 @@ rsRetVal Syslog(int priority, uchar *pMsg)
 	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
-	if(bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
+	if(bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority));
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority));
 
 finalize_it:
 	RETiRet;

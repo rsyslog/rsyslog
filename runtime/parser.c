@@ -453,8 +453,8 @@ ParsePRI(msg_t *pMsg)
 			if(pri > LOG_MAXPRI)
 				pri = LOG_PRI_INVLD;
 		}
-		pMsg->iFacility = LOG_FAC(pri);
-		pMsg->iSeverity = LOG_PRI(pri);
+		pMsg->iFacility = pri2fac(pri);
+		pMsg->iSeverity = pri2sev(pri);
 		MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 	}
 	RETiRet;
