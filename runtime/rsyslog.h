@@ -56,7 +56,8 @@
 #undef LOG_FAC
 /* we need to use a function to avoid side-effects. This MUST guard
  * against invalid facility values. rgerhards, 2014-09-16
-inline int LOG_FAC(int pri)
+ */
+static inline int LOG_FAC(int pri)
 {
 	int fac = pri >> 3;
 	return (fac > 23) ? 23 : fac;
