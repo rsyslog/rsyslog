@@ -173,7 +173,7 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 	va_end(ap);
 
 	iRet = enqMsg((uchar*)pLogMsg, (uchar*) ((iFacilIntMsg == LOG_KERN) ? "kernel:" : "imklog:"),
-		      iFacilIntMsg, LOG_PRI(priority));
+		      iFacilIntMsg, pri2sev(priority));
 
 	RETiRet;
 }
@@ -194,10 +194,10 @@ rsRetVal Syslog(int priority, uchar *pMsg)
 	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
-	if(bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
+	if(bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority));
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority));
 
 finalize_it:
 	RETiRet;

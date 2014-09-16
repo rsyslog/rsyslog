@@ -118,8 +118,8 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
-	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
-	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
+	pMsg->iFacility = pri2fac(pInfo->iFacility);
+	pMsg->iSeverity = pri2sev(pInfo->iSeverity);
 	MsgSetRuleset(pMsg, pInfo->pRuleset);
 	CHKiRet(submitMsg(pMsg));
 finalize_it:

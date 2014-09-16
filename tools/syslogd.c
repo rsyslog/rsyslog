@@ -561,8 +561,8 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
+	pMsg->iFacility = pri2fac(pri);
+	pMsg->iSeverity = pri2sev(pri);
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
 
@@ -575,7 +575,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * supressor statement.
 	 */
 	if(((Debug == DEBUG_FULL || NoFork) && bErrMsgToStderr) || iConfigVerify) {
-		if(LOG_PRI(pri) == LOG_ERR)
+		if(pri2fac(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
