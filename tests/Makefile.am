@@ -8,6 +8,11 @@ if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+        fac_authpriv.sh \
+	fac_local0.sh \
+	fac_mail.sh \
+	fac_news.sh \
+	fac_uucp.sh \
 	rfc5424parser.sh \
 	arrayqueue.sh \
 	da-mainmsg-q.sh \
@@ -316,6 +321,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/stop-msgvar.conf \
 	   rfc5424parser.sh \
 	   testsuites/rfc5424parser.conf \
+	   fac_authpriv.sh \
+	   fac_authpriv.conf \
+	   fac_local0.sh \
+	   fac_local0.conf \
+	   fac_mail.sh \
+	   fac_mail.conf \
+	   fac_news.sh \
+	   fac_news.conf \
+	   fac_uucp.sh \
+	   fac_uucp.sh \
 	   rs_optimizer_pri.sh \
 	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \

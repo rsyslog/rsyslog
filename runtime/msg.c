@@ -1512,7 +1512,10 @@ uchar *getMSG(msg_t * const pM)
 /* Get PRI value as integer */
 static int getPRIi(msg_t * const pM)
 {
-	return (pM->iFacility << 3) + (pM->iSeverity);
+	int pri = (pM->iFacility << 3) + (pM->iSeverity);
+	if(pri > 191)
+		pri = 191;
+	return pri;
 }
 
 

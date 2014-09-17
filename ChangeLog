@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 7.6.5 [v7.6-stable] 2014-09-17
+- bugfix: in 7.6.4, pri-based filters did not work correctly
+  messages were distributed to the wrong bins.
+---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-09-12
 - add --enable-generate-man-pages configure switch (default: enabled)
   This forces generation of man pages, even if cached ones exists. This
