@@ -90,7 +90,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
    immediate!
 -  **queue.timeoutenqueue** number
    number is timeout in ms (1000ms is 1sec!), default 2000, 0 means
-   indefinite
+   discard immediate
 -  **queue.timeoutworkerthreadshutdown** number
    number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)
 -  **queue.workerthreadminimummessages** number
