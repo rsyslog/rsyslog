@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
-Version 7.6.4 [v7.6-stable] 2014-03-??
+Version 7.6.5 [v7.6-stable] 2014-09-17
+- bugfix: in 7.6.4, pri-based filters did not work correctly
+  messages were distributed to the wrong bins.
+- bugfix: build problems on systems without atomic instructons
+  e.g. RHEL 5; backport from v8
+---------------------------------------------------------------------------
+Version 7.6.4 [v7.6-stable] 2014-09-12
 - add --enable-generate-man-pages configure switch (default: enabled)
   This forces generation of man pages, even if cached ones exists. This
   "fixes" a typical release tarball nit. While it is hackish, the
