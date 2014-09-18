@@ -1522,7 +1522,7 @@ static int getPRIi(msg_t * const pM)
 {
 	int pri = (pM->iFacility << 3) + (pM->iSeverity);
 	if(pri > 191)
-		pri = 191;
+		pri = LOG_PRI_INVLD;
 	return pri;
 }
 
