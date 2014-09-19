@@ -410,6 +410,17 @@ Version 8.1.0 [experimental] 2013-11-15
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
 ---------------------------------------------------------------------------
+Version 7.6.6 [v7.6-stable] 2014-09-??
+- bugfix: potential segfault on startup on 64 bit systems
+  This happened immediately on startup during config processing. Once
+  rsyslog got past this stage, it could not happen.
+---------------------------------------------------------------------------
+Version 7.6.5 [v7.6-stable] 2014-09-17
+- bugfix: in 7.6.4, pri-based filters did not work correctly
+  messages were distributed to the wrong bins.
+- bugfix: build problems on systems without atomic instructons
+  e.g. RHEL 5; backport from v8
+---------------------------------------------------------------------------
 Version 7.6.4 [v7.6-stable] 2014-09-12
 - add --enable-generate-man-pages configure switch (default: enabled)
   This forces generation of man pages, even if cached ones exists. This
