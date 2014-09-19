@@ -28,6 +28,12 @@
   * limitations under the License.
   */
 
+%{
+#include "config.h"
+#include "parserif.h"
+extern char *strdup(char*); /* somehow we do not get this from string.h... */
+%}
+
 %option noyywrap nodefault case-insensitive yylineno
  /*%option noyywrap nodefault case-insensitive */
 
