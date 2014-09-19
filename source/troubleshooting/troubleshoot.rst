@@ -12,11 +12,14 @@ Useful troubleshooting ressources are:
    However, there is a version-specific doc set in each tarball. If you
    installed rsyslog from a package, there usually is a rsyslog-doc
    package, that often needs to be installed separately.
+
 -  The `rsyslog wiki <http://wiki.rsyslog.com>`_ provides user tips and
    experiences.
+
 -  Check the `rsyslog github issue tracker <https://github.com/rsyslog/rsyslog/issues>`_ and 
    `the bugzilla <http://bugzilla.adiscon.com>`_ to see if your
    problem is a known (and even fixed ;)) bug.
+   **Note:** the preferred way to create new bugs is via github.
 
 Malformed Messages and Message Properties
 -----------------------------------------
@@ -147,6 +150,22 @@ non-standard, environments (hopefully not with a stable version, but
 chances are good you'll run into troubles with the development
 versions).
 
+In order to aid the debugging process, it is useful to have debug symbols
+on the system. If you build rsyslog yourself, make sure that the ``-g``
+option is included in CFLAGS. If you use packages, the debug symbols come
+in their own package. **It is highly recommended to install that package
+as it provides tremendous extra benefit.** To do so, do:
+
+::
+
+  yum install rsyslog-debuginfo 
+
+Obviously, this is for RPM-based systems, but it's essentially the same
+with other packaging systems, just use the native commands. Note that
+the package may be named slightly different, but it should always be
+fairly easy to locate.
+
+  
 Active support from the user base is very important to help us track
 down those things. Most often, serious problems are the result of some
 memory misadressing. During development, we routinely use valgrind, a
@@ -183,17 +202,13 @@ correctly. Obviously, chances are extremely slim for this to be. So we
 would appreciate if you could extract the most important information.
 This is done as follows:
 
--  $gdb /path/to/rsyslogd
--  $core /core.1234
--  $info thread
--  you'll see a number of threads (in the range 0 to n with n being the
-   highest number). For **each** of them, do the following (let's assume
-   that i is the thread number):
+::
 
-   -  $ thread i (e.g. thread 0, thread 1, ...)
-   -  $bt
-
--  then you can quit gdb with "$q"
+   $ gdb /path/to/rsyslogd
+   $ core /core.1234
+   $ info thread
+   $ thread apply all bt full
+   $ q # quits gdb
 
 Then please send all information that gdb spit out to the development
 team. It is best to first ask on the forum or mailing list on how to do
@@ -206,4 +221,3 @@ especially with limited resources. So we are depending on cooperation
 from users. This is your chance to make a big contribution to the
 project without the need to program or do anything else except get a
 problem solved.
-
