@@ -32,13 +32,15 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3)
 PKG_CHECK_MODULES([JSON_C], [json],, [
-	PKG_CHECK_MODULES([JSON_C], [json-c],
-	       [AC_DEFINE([HAVE_JSON_TOKENER_ERROR_DESC], [1], [we have the newer JSON-C API])])
+	PKG_CHECK_MODULES([JSON_C], [json-c],,)
 ])
 
 # if int64 is supported, use it
 AC_CHECK_LIB(json-c, json_object_new_object,,)
 AC_CHECK_FUNCS(json_object_new_int64,,)
+
+# look for newer API
+AC_CHECK_FUNCS(json_tokener_error_desc,,)
 
 case "${host}" in
   *-*-linux*)
