@@ -10,6 +10,7 @@ TESTS +=  \
 	stop-msgvar.sh \
         fac_authpriv.sh \
 	fac_local0.sh \
+	fac_local7.sh \
 	fac_mail.sh \
 	fac_news.sh \
 	fac_uucp.sh \
@@ -351,6 +352,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_authpriv.conf \
 	   fac_local0.sh \
 	   testsuites/fac_local0.conf \
+	   fac_local7.sh \
+	   testsuites/fac_local7.conf \
 	   fac_mail.sh \
 	   testsuites/fac_mail.conf \
 	   fac_news.sh \
