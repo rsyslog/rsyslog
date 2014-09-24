@@ -1584,7 +1584,9 @@ finalize_it:
 static rsRetVal
 EnableKeepAlive(nsd_t *pNsd)
 {
-	return nsd_ptcp.EnableKeepAlive(pNsd);
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
 
