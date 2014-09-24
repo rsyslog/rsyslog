@@ -23,7 +23,6 @@
 #include <typedefs.h>
 #include <sys/types.h>
 #include <regex.h>
-#include "rsyslog.h"
 #include "typedefs.h"
 
 #define CNFFUNC_MAX_ARGS 32
