@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.4.1 [v8-stable] 2014-08-??
+Version 8.4.1 [v8-stable] 2014-09-30
 - permit at-sign in variable names
   closes: https://github.com/rsyslog/rsyslog/issues/110
 - bugfix: fix syntax error in anon_cc_numbers.py script
@@ -412,7 +412,7 @@ Version 8.1.0 [experimental] 2013-11-15
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
 ---------------------------------------------------------------------------
-Version 7.6.6 [v7.6-stable] 2014-09-??
+Version 7.6.6 [v7.6-stable] 2014-09-30
 - bugfix: potential segfault on startup on 64 bit systems
   This happened immediately on startup during config processing. Once
   rsyslog got past this stage, it could not happen.
