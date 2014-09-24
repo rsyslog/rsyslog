@@ -3,6 +3,8 @@ Version 7.6.6 [v7.6-stable] 2014-09-??
 - bugfix: potential segfault on startup on 64 bit systems
   This happened immediately on startup during config processing. Once
   rsyslog got past this stage, it could not happen.
+- bugfix: build problems on SuSe Linux
+  Thanks Andreas Stieger for the patch
 ---------------------------------------------------------------------------
 Version 7.6.5 [v7.6-stable] 2014-09-17
 - bugfix: in 7.6.4, pri-based filters did not work correctly
