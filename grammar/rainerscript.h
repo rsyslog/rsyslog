@@ -25,6 +25,8 @@
 #include <regex.h>
 #include "typedefs.h"
 
+#define	LOG_NFACILITIES	24+1	/* This is a dupe from rsyslog.h, but we can't include it as
+				   I don't know how to get hold of that damn off64_t data type... */
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
 	 *   others, this is used to size data structures).
