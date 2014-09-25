@@ -608,7 +608,6 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	} else {
 		status = cJSON_GetObjectItem(root, "status");
 		/* as far as we know, no "status" means all went well */
-dbgprintf("DDDDDD: status %p, val %d\n", status, (status == NULL) ? -1 : status->valueint);
 		if(status != NULL &&
 		   (status->type == cJSON_Number || status->valueint >= 0 || status->valueint <= 299)) {
 			iRet = RS_RET_DATAFAIL;
