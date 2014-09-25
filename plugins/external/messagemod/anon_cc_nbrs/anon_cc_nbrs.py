@@ -38,7 +38,8 @@ def onInit():
 	global patterns
 	patterns = {'(^|[^A-Za-z0-9.])(34|37)[0-9]{13}([^A-Za-z0-9]|$)': 'XXXX-Amex-XXXX',           # Amex
 	            '(^|[^A-Za-z0-9.])(5020|5038|6759)[0-9]{12}([^A-Za-z0-9]|$)': 'XXXX-Maes-XXXX',  # Maes
-	            '(^|[^A-Za-z0-9.])4([0-9]{12}|[0-9]{15})([^A-Za-z0-9]|$)': 'XXXX-Visa-XXXX',     # Visa
+	            '(^|[^A-Za-z0-9.])4([0-9]{12}|[0-9]{15})([^A-Za-z0-9]|$)': 'XXXX-Visa-XXXX'      # Visa
+                   }
 	rc = re.compile("("+")|(".join(patterns.keys())+")")
 
 

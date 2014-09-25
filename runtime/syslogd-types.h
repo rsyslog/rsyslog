@@ -30,6 +30,9 @@
 #if HAVE_SYSLOG_H
 #include <syslog.h>
 #endif
+/* define a macro missing on a few platforms */
+#undef LOG_FACMASK /* prevent redef warning ;) */
+#define LOG_FACMASK 0xf8
 
 /* we use RSTRUE/FALSE to prevent name claches with other packages */
 #define RSFALSE 0

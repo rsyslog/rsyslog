@@ -8,6 +8,11 @@ if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+        fac_authpriv.sh \
+	fac_local0.sh \
+	fac_mail.sh \
+	fac_news.sh \
+	fac_uucp.sh \
 	rfc5424parser.sh \
 	arrayqueue.sh \
 	global_vars.sh \
@@ -131,6 +136,7 @@ endif
 if ENABLE_ELASTICSEARCH
 TESTS +=  \
 	elasticsearch-basic.sh
+	elasticsearch-basic-bulk.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -342,6 +348,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/global_vars.conf \
 	   rfc5424parser.sh \
 	   testsuites/rfc5424parser.conf \
+	   fac_authpriv.sh \
+	   testsuites/fac_authpriv.conf \
+	   fac_local0.sh \
+	   testsuites/fac_local0.conf \
+	   fac_mail.sh \
+	   testsuites/fac_mail.conf \
+	   fac_news.sh \
+	   testsuites/fac_news.conf \
+	   fac_uucp.sh \
+	   testsuites/fac_uucp.conf \
 	   rs_optimizer_pri.sh \
 	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \
@@ -369,6 +385,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/incltest.d/include.conf \
 	   elasticsearch-basic.sh \
 	   testsuites/elasticsearch-basic.conf \
+	   elasticsearch-basic-bulk.sh \
+	   testsuites/elasticsearch-basic-bulk.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
