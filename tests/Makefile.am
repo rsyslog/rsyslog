@@ -136,6 +136,7 @@ endif
 if ENABLE_ELASTICSEARCH
 TESTS +=  \
 	elasticsearch-basic.sh
+	elasticsearch-basic-bulk.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -384,6 +385,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/incltest.d/include.conf \
 	   elasticsearch-basic.sh \
 	   testsuites/elasticsearch-basic.conf \
+	   elasticsearch-basic-bulk.sh \
+	   testsuites/elasticsearch-basic-bulk.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
