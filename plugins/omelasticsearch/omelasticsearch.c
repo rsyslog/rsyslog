@@ -594,7 +594,7 @@ static inline rsRetVal
 checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
 	cJSON *root;
-	cJSON *ok;
+	cJSON *status;
 	DEFiRet;
 
 	root = cJSON_Parse(pWrkrData->reply);
@@ -606,8 +606,11 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	if(pWrkrData->pData->bulkmode) {
 		iRet = checkResultBulkmode(pWrkrData, root);
 	} else {
-		ok = cJSON_GetObjectItem(root, "ok");
-		if(ok == NULL || ok->type != cJSON_True) {
+		status = cJSON_GetObjectItem(root, "status");
+		/* as far as we know, no "status" means all went well */
+dbgprintf("DDDDDD: status %p, val %d\n", status, (status == NULL) ? -1 : status->valueint);
+		if(status != NULL &&
+		   (status->type == cJSON_Number || status->valueint >= 0 || status->valueint <= 299)) {
 			iRet = RS_RET_DATAFAIL;
 		}
 	}
