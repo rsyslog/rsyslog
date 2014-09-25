@@ -23,4 +23,4 @@ then
     echo "error: error file does not exist!"
     exit 1
 fi
-#source $srcdir/diag.sh exit
+source $srcdir/diag.sh exit
