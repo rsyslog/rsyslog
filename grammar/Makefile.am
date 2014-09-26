@@ -11,7 +11,7 @@ libgrammar_la_SOURCES = \
 	rainerscript.h \
 	parserif.h \
 	grammar.h
-libgrammar_la_CPPFLAGS =  $(RSRT_CFLAGS)
+libgrammar_la_CPPFLAGS =  $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
 
 #testdriver_SOURCES = testdriver.c libgrammar.la
 #testdriver_CPPFLAGS =  $(RSRT_CFLAGS)
