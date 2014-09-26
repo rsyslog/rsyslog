@@ -577,10 +577,10 @@ DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 				  "cannot obtain 'create' item for #%d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
-		ok = cJSON_GetObjectItem(create, "ok");
-		if(ok == NULL || ok->type != cJSON_True) {
+		ok = cJSON_GetObjectItem(create, "status");
+		if(ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299) {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "item %d, prop ok (%p) not ok\n", i, ok);
+				  "item %d, status is %d\n", i, ok->valueint);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 	}
@@ -594,7 +594,7 @@ static inline rsRetVal
 checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
 	cJSON *root;
-	cJSON *ok;
+	cJSON *status;
 	DEFiRet;
 
 	root = cJSON_Parse(pWrkrData->reply);
@@ -606,8 +606,10 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	if(pWrkrData->pData->bulkmode) {
 		iRet = checkResultBulkmode(pWrkrData, root);
 	} else {
-		ok = cJSON_GetObjectItem(root, "ok");
-		if(ok == NULL || ok->type != cJSON_True) {
+		status = cJSON_GetObjectItem(root, "status");
+		/* as far as we know, no "status" means all went well */
+		if(status != NULL &&
+		   (status->type == cJSON_Number || status->valueint >= 0 || status->valueint <= 299)) {
 			iRet = RS_RET_DATAFAIL;
 		}
 	}

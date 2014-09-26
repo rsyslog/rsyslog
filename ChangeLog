@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.4.1 [v8-stable] 2014-09-30
+- imudp: add for bracketing mode, which makes parsing stats easier
 - permit at-sign in variable names
   closes: https://github.com/rsyslog/rsyslog/issues/110
 - bugfix: fix syntax error in anon_cc_numbers.py script
@@ -17,11 +18,16 @@ Version 8.4.1 [v8-stable] 2014-09-30
   Older versions of json-c need to use a different API (which don't exists
   on newer versions, unfortunately...)
   Thanks to Thomas D. for reporting this problem.
+- bugfix: omelasticsearch does not work with broken/changed ES 1.0+ API
+  closes: https://github.com/rsyslog/rsyslog/issues/104
 - bugfix: mmanon did not properly anonymize IP addresses starting with '9'
   Thanks to defa-at-so36.net for reporting this problem.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=529
 - bugfix: build problems on SuSe Linux
   Thanks Andreas Stieger for the patch
+- bugfix: omelasticsearch error file did not work correctly on ES 1.0+
+  due to a breaking change in the ElasticSearch API.
+  see also: https://github.com/rsyslog/rsyslog/issues/104
 ---------------------------------------------------------------------------
 Version 8.4.0 [v8-stable] 2014-08-18
 - this is the new stable branch, which incorporates all enhancements of
