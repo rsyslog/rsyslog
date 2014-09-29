@@ -52,7 +52,7 @@ in the action definition. Messages sent more frequently are simpy discarded.
 
 Configuration Parameters
 ------------------------
-Configuration parameters are supported starting with v8.3.5. Earlier
+Configuration parameters are supported starting with v8.5.0. Earlier
 v7 and v8 versions did only support legacy paramters.
 
 Action Parameters
