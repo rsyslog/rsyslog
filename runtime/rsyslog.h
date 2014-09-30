@@ -594,6 +594,16 @@ rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 
+
+/* our own support for breaking changes in json-c */
+#ifdef HAVE_JSON_OBJECT_OBJECT_GET_EX
+#	define RS_json_object_object_get_ex(obj, key, retobj) \
+		json_object_object_get_ex((obj), (key), (retobj))
+#else
+#	define RS_json_object_object_get_ex(obj, key, retobj) \
+		((*(retobj) = json_object_object_get((obj), (key))) == NULL) ? (json_bool)FALSE : (json_bool)TRUE
+#endif
+
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define
  * a dummy variable. This requires review of where in code empty structs
@@ -607,5 +617,3 @@ extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do 
 			     compile and change... -- rgerhars, 2011-04-19 */
 
 #endif /* multi-include protection */
-/* vim:set ai:
- */

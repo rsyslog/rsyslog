@@ -2744,7 +2744,8 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
-		field = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &field) == (json_bool)FALSE)
+			field = NULL;
 	}
 	if(field != NULL) {
 		*pRes = (uchar*) strdup(json_object_get_string(field));
@@ -2797,8 +2798,7 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	}
 	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 	CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
-	*pjson = json_object_object_get(parent, (char*)leaf);
-	if(*pjson == NULL) {
+	if(RS_json_object_object_get_ex(parent, (char*)leaf, pjson) == (json_bool)FALSE) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -4161,7 +4161,8 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
-		json = json_object_object_get(root, (char*)namebuf);
+		if(RS_json_object_object_get_ex(root, (char*)namebuf, &json) == (json_bool)FALSE)
+			json = NULL;
 	} else
 		json = root;
 	if(json == NULL) {
@@ -4230,7 +4231,8 @@ jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 0));
-		field = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &field) == (json_bool)FALSE)
+			field = NULL;
 	}
 	*jsonres = field;
 
@@ -4275,7 +4277,8 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 			json_object_put(json);
 			ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 		}
-		leafnode = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &leafnode) == (json_bool)FALSE)
+			leafnode = NULL;
 		if(leafnode == NULL) {
 			json_object_object_add(parent, (char*)leaf, json);
 		} else {
@@ -4350,7 +4353,8 @@ msgDelJSON(msg_t * const pM, uchar *name)
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
-		leafnode = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &leafnode) == (json_bool)FALSE)
+			leafnode = NULL;
 		if(leafnode == NULL) {
 			DBGPRINTF("unset JSON: could not find '%s'\n", name);
 			ABORT_FINALIZE(RS_RET_JNAME_NOTFOUND);
