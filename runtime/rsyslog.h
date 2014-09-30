@@ -601,7 +601,7 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 		json_object_object_get_ex((obj), (key), (retobj))
 #else
 #	define RS_json_object_object_get_ex(obj, key, retobj) \
-		((*(retobj) = json_object_object_get((obj), (key))) == NULL) ? (json_bool)FALSE : (json_bool)TRUE
+		((*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
 #endif
 
 /* this define below is (later) intended to be used to implement empty
