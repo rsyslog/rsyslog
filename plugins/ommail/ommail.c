@@ -545,7 +545,7 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
 
 	datetime.GetTime(&tCurr);
 	gmtime_r(&tCurr, &tmCurr);
-	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %2d:%02d:%02d UT\r\n", szDay[tmCurr.tm_wday], tmCurr.tm_mday,
+	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %02d:%02d:%02d +0000\r\n", szDay[tmCurr.tm_wday], tmCurr.tm_mday,
 		 szMonth[tmCurr.tm_mon], 1900 + tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
 }
 
