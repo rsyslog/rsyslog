@@ -224,6 +224,36 @@ WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatu
 finalize_it:
 	RETiRet;
 }
+
+
+/* output the recipient list in rfc2822 format
+ */
+static rsRetVal
+WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp)
+{
+	toRcpt_t *pRcpt;
+	int iState, iTos;
+	DEFiRet;
+
+	assert(lenOp != 0);
+
+	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
+	CHKiRet(Send(pWrkrData->md.smtp.sock, ": ", sizeof(": ") - 1));
+
+	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt, iTos = 0; pRcpt != NULL ; pRcpt = pRcpt->pNext, iTos++) {
+		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
+		if(iTos)
+			CHKiRet(Send(pWrkrData->md.smtp.sock, ", ", sizeof(", ") - 1));
+		CHKiRet(Send(pWrkrData->md.smtp.sock, "<", sizeof("<") - 1));
+		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
+		CHKiRet(Send(pWrkrData->md.smtp.sock, ">", sizeof(">") - 1));
+	}
+
+	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+
+finalize_it:
+	RETiRet;
+}
 /* end helpers for handling the recipient lists */
 
 BEGINcreateInstance
@@ -590,7 +620,7 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
 	CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 
-	CHKiRet(WriteRcpts(pWrkrData, (uchar*)"To", sizeof("To") - 1, -1));
+	CHKiRet(WriteTos(pWrkrData, (uchar*)"To", sizeof("To") - 1));
 
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
 	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
