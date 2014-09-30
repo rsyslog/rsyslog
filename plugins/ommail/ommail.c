@@ -596,7 +596,7 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "X-Mailer: rsyslog-immail\r\n",   sizeof("x-mailer: rsyslog-immail\r\n") - 1));
+	CHKiRet(Send(pWrkrData->md.smtp.sock, "X-Mailer: rsyslog-ommail\r\n",   sizeof("x-mailer: rsyslog-ommail\r\n") - 1));
 
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
 
