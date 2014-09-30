@@ -22,6 +22,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
+		rm -f rsyslog.errorfile
 		rm -f core.* vgcore.*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
@@ -35,6 +36,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
+		rm -f rsyslog.errorfile
 		echo  -------------------------------------------------------------------------------
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next

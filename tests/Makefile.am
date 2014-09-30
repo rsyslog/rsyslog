@@ -136,7 +136,12 @@ endif
 
 if ENABLE_ELASTICSEARCH
 TESTS +=  \
-	elasticsearch-basic.sh
+	elasticsearch-basic.sh \
+	elasticsearch-basic-bulk.sh \
+	elasticsearch-basic-errorfile-empty.sh \
+	elasticsearch-basic-errorfile-populated.sh \
+	elasticsearch-bulk-errorfile-empty.sh \
+	elasticsearch-bulk-errorfile-populated.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -387,6 +392,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/incltest.d/include.conf \
 	   elasticsearch-basic.sh \
 	   testsuites/elasticsearch-basic.conf \
+	   elasticsearch-basic-bulk.sh \
+	   testsuites/elasticsearch-basic-bulk.conf \
+	   elasticsearch-basic-errorfile-empty.sh \
+	   testsuites/elasticsearch-basic-errorfile-empty.conf \
+	   elasticsearch-basic-errorfile-populated.sh \
+	   testsuites/elasticsearch-basic-errorfile-populated.conf \
+	   elasticsearch-bulk-errorfile-empty.sh \
+	   testsuites/elasticsearch-bulk-errorfile-empty.conf \
+	   elasticsearch-bulk-errorfile-populated.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \

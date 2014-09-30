@@ -491,8 +491,8 @@ logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
+	pMsg->iFacility = pri2fac(pri);
+	pMsg->iSeverity = pri2sev(pri);
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
 
@@ -540,7 +540,7 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));
 	} else {
-		stdlog_log(stdlog_hdl, LOG_PRI(pri), "%s",
+		stdlog_log(stdlog_hdl, pri2sev(pri), "%s",
 			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
 
@@ -553,7 +553,7 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 	 * supressor statement.
 	 */
 	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
-		if(LOG_PRI(pri) == LOG_ERR)
+		if(pri2sev(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
 

@@ -144,7 +144,7 @@ rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...)
 rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp, struct json_object *json)
 {
 	DEFiRet;
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority), tp, json);
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority), tp, json);
 	RETiRet;
 }
 

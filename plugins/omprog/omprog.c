@@ -27,6 +27,7 @@
 #include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
+#include <syslog.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>

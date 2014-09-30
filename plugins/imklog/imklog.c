@@ -21,7 +21,7 @@
  * To test under Linux:
  * echo test1 > /dev/kmsg
  *
- * Copyright (C) 2008-2012 Adiscon GmbH
+ * Copyright (C) 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -247,10 +247,10 @@ rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
 	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
-	if(cs.bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
+	if(cs.bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority), tp);
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority), tp);
 
 finalize_it:
 	RETiRet;

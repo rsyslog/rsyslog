@@ -268,4 +268,8 @@ struct msgPropDescr_s {
 	int nameLen;		/* properties (JSON) */
 };
 
+/* some forward-definitions from the grammar */
+struct nvlst;
+struct cnfobj;
+
 #endif /* multi-include protection */

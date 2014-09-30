@@ -77,19 +77,58 @@
  * #                  End Config Settings                      # *
  * ############################################################# */
 
-/* portability: not all platforms have these defines, so we
- * define them here if they are missing. -- rgerhards, 2008-03-04
+/* make sure we uses consistent macros, no matter what the
+ * platform gives us.
  */
-#ifndef LOG_MAKEPRI
-#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
-#endif
-#ifndef LOG_PRI
-#	define	LOG_PRI(p)	((p) & LOG_PRIMASK)
-#endif
-#ifndef LOG_FAC
-#	define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
-#endif
+#define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
+#define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
+#undef LOG_MAKEPRI
+#define LOG_PRI_INVLD	LOG_INVLD|LOG_DEBUG	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
 
+#define	LOG_EMERG	0	/* system is unusable */
+#define	LOG_ALERT	1	/* action must be taken immediately */
+#define	LOG_CRIT	2	/* critical conditions */
+#define	LOG_ERR		3	/* error conditions */
+#define	LOG_WARNING	4	/* warning conditions */
+#define	LOG_NOTICE	5	/* normal but significant condition */
+#define	LOG_INFO	6	/* informational */
+#define	LOG_DEBUG	7	/* debug-level messages */
+
+#define	LOG_KERN	(0<<3)	/* kernel messages */
+#define	LOG_USER	(1<<3)	/* random user-level messages */
+#define	LOG_MAIL	(2<<3)	/* mail system */
+#define	LOG_DAEMON	(3<<3)	/* system daemons */
+#define	LOG_AUTH	(4<<3)	/* security/authorization messages */
+#define	LOG_SYSLOG	(5<<3)	/* messages generated internally by syslogd */
+#define	LOG_LPR		(6<<3)	/* line printer subsystem */
+#define	LOG_NEWS	(7<<3)	/* network news subsystem */
+#define	LOG_UUCP	(8<<3)	/* UUCP subsystem */
+#define	LOG_CRON	(9<<3)	/* clock daemon */
+#define	LOG_AUTHPRIV	(10<<3)	/* security/authorization messages (private) */
+#define	LOG_FTP		(11<<3)	/* ftp daemon */
+#define	LOG_LOCAL0	(16<<3)	/* reserved for local use */
+#define	LOG_LOCAL1	(17<<3)	/* reserved for local use */
+#define	LOG_LOCAL2	(18<<3)	/* reserved for local use */
+#define	LOG_LOCAL3	(19<<3)	/* reserved for local use */
+#define	LOG_LOCAL4	(20<<3)	/* reserved for local use */
+#define	LOG_LOCAL5	(21<<3)	/* reserved for local use */
+#define	LOG_LOCAL6	(22<<3)	/* reserved for local use */
+#define	LOG_LOCAL7	(23<<3)	/* reserved for local use */
+#define LOG_FAC_INVLD   24
+#define	LOG_INVLD	(LOG_FAC_INVLD<<3)	/* invalid facility/PRI code */
+
+/* we need to use a function to avoid side-effects. This MUST guard
+ * against invalid facility values. rgerhards, 2014-09-16
+ */
+static inline int pri2fac(const int pri)
+{
+	int fac = pri >> 3;
+	return (fac > 23) ? LOG_FAC_INVLD : fac;
+}
+static inline int pri2sev(const int pri)
+{
+	return pri & 0x07;
+}
 
 /* the rsyslog core provides information about present feature to plugins
  * asking it. Below are feature-test macros which must be used to query
