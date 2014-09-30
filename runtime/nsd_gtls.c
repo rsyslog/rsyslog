@@ -85,7 +85,7 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
-static gnutls_certificate_credentials xcred;
+static gnutls_certificate_credentials_t xcred;
 
 #ifdef DEBUG
 #if 0 /* uncomment, if needed some time again -- DEV Debug only */
@@ -231,9 +231,9 @@ finalize_it:
  * rgerhards, 2008-05-27
  */
 static int
-gtlsClientCertCallback(gnutls_session session,
-              __attribute__((unused)) const gnutls_datum* req_ca_rdn, int __attribute__((unused)) nreqs,
-              __attribute__((unused)) const gnutls_pk_algorithm* sign_algos, int __attribute__((unused)) sign_algos_length,
+gtlsClientCertCallback(gnutls_session_t session,
+              __attribute__((unused)) const gnutls_datum_t* req_ca_rdn, int __attribute__((unused)) nreqs,
+              __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos, int __attribute__((unused)) sign_algos_length,
               gnutls_retr_st *st)
 {
 	nsd_gtls_t *pThis;
@@ -264,9 +264,9 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	size_t szBufLen = sizeof(szBufA), tmp;
 	unsigned int algo, bits;
 	time_t expiration_time, activation_time;
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	cstr_t *pStr = NULL;
 	int gnuRet;
 	DEFiRet;
@@ -622,7 +622,7 @@ gtlsInitSession(nsd_gtls_t *pThis)
 {
 	DEFiRet;
 	int gnuRet;
-	gnutls_session session;
+	gnutls_session_t session;
 
 	gnutls_init(&session, GNUTLS_SERVER);
 	pThis->bHaveSess = 1;
@@ -677,7 +677,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
+gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 {
 	DEFiRet;
 	int gnuRet;
@@ -752,7 +752,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar fingerprint[20];
 	size_t size;
@@ -842,7 +842,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar lnBuf[256];
 	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
@@ -918,9 +918,9 @@ finalize_it:
 static rsRetVal
 gtlsChkPeerID(nsd_gtls_t *pThis)
 {
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned int list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	int bMustDeinitCert = 0;
 	int gnuRet;
 	DEFiRet;
@@ -980,9 +980,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	int gnuRet;
 	cstr_t *pStr;
 	unsigned stateCert;
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	unsigned i;
 	time_t ttCert;
 	time_t ttNow;
