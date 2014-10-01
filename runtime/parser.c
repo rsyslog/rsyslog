@@ -458,10 +458,6 @@ ParsePRI(msg_t *pMsg)
 		MsgSetAfterPRIOffs(pMsg, 0);
 	} else {
 		if(*msg == '<') {
-			/* while we process the PRI, we also fill the PRI textual representation
-			 * inside the msg object. This may not be ideal from an OOP point of view,
-			 * but it offers us performance...
-			 */
 			pri = 0;
 			while(--lenMsg > 0 && isdigit((int) *++msg)) {
 				pri = 10 * pri + (*msg - '0');
