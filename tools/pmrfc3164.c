@@ -84,6 +84,9 @@ CODESTARTparse
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
+	if(pMsg->iFacility == (LOG_INVLD>>3))
+		FINALIZE; /* don't parse out from invalid messages! */
+
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reception (which we 
@@ -199,7 +202,7 @@ CODESTARTparse
 		}
 	}
 
-	/* The rest is the actual MSG */
+finalize_it:
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 ENDparse
 
