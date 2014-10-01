@@ -459,7 +459,7 @@ ParsePRI(msg_t *pMsg)
 	} else {
 		if(*msg == '<') {
 			pri = 0;
-			while(--lenMsg > 0 && isdigit((int) *++msg)) {
+			while(--lenMsg > 0 && isdigit((int) *++msg) && pri <= LOG_MAXPRI) {
 				pri = 10 * pri + (*msg - '0');
 			}
 			if(*msg == '>') {
