@@ -82,7 +82,7 @@
 #define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
 #define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
 #undef LOG_MAKEPRI
-#define LOG_PRI_INVLD	LOG_INVLD|LOG_DEBUG	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
+#define LOG_PRI_INVLD	(LOG_INVLD|LOG_DEBUG)	/* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
 
 #define	LOG_EMERG	0	/* system is unusable */
 #define	LOG_ALERT	1	/* action must be taken immediately */

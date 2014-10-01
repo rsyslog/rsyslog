@@ -4,7 +4,7 @@
  *
  * Module begun 2008-10-09 by Rainer Gerhards (based on previous code from syslogd.c)
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -444,7 +444,7 @@ finalize_it:
 static inline rsRetVal
 ParsePRI(msg_t *pMsg)
 {
-	int pri;
+	unsigned pri;
 	uchar *msg;
 	int lenMsg;
 	DEFiRet;
@@ -466,14 +466,17 @@ ParsePRI(msg_t *pMsg)
 			while(--lenMsg > 0 && isdigit((int) *++msg)) {
 				pri = 10 * pri + (*msg - '0');
 			}
-			if(*msg == '>')
+			if(*msg == '>') {
 				++msg;
+			} else {
+				pri = LOG_PRI_INVLD;
+			}
 			if(pri > LOG_MAXPRI)
 				pri = LOG_PRI_INVLD;
 		}
 		pMsg->iFacility = pri2fac(pri);
 		pMsg->iSeverity = pri2sev(pri);
-		MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
+		MsgSetAfterPRIOffs(pMsg, (pri == LOG_PRI_INVLD) ? 0 : msg - pMsg->pszRawMsg);
 	}
 	RETiRet;
 }
