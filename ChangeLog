@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 8.4.2 [v7.6-stable] 2014-10-02
+- bugfix: the fix for CVE-2014-3634 did not handle all cases
+  This is corrected now.
+  see also: CVE-2014-3683
+- behaviour change: "msg" of messages with invalid PRI set to "rawmsg"
+  When the PRI is invalid, the rest of the header cannot be valid. So
+  we move all of it to MSG and do not try to parse it out. Note that
+  this is not directly related to the security issue but rather done
+  because it makes most sense.
+---------------------------------------------------------------------------
 Version 8.4.1 [v8-stable] 2014-09-30
 - imudp: add for bracketing mode, which makes parsing stats easier
 - permit at-sign in variable names
@@ -421,6 +431,16 @@ Version 8.1.0 [experimental] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.6.7 [v7.6-stable] 2014-10-02
+- bugfix: the fix for CVE-2014-3634 did not handle all cases
+  This is corrected now.
+  see also: CVE-2014-3683
+- behaviour change: "msg" of messages with invalid PRI set to "rawmsg"
+  When the PRI is invalid, the rest of the header cannot be valid. So
+  we move all of it to MSG and do not try to parse it out. Note that
+  this is not directly related to the security issue but rather done
+  because it makes most sense.
 ---------------------------------------------------------------------------
 Version 7.6.6 [v7.6-stable] 2014-09-30
 - bugfix: potential abort when a message with PRI > 191 was processed

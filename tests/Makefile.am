@@ -13,6 +13,10 @@ TESTS +=  \
 	fac_mail.sh \
 	fac_news.sh \
 	fac_uucp.sh \
+	fac_invld1.sh \
+	fac_invld2.sh \
+	fac_invld3.sh \
+	fac_invld4_rfc5424.sh \
 	rfc5424parser.sh \
 	arrayqueue.sh \
 	global_vars.sh \
@@ -362,6 +366,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_news.conf \
 	   fac_uucp.sh \
 	   testsuites/fac_uucp.conf \
+	   fac_invld1.sh \
+	   testsuites/fac_invld1.conf \
+	   fac_invld2.sh \
+	   testsuites/fac_invld2.conf \
+	   fac_invld3.sh \
+	   testsuites/fac_invld3.conf \
+	   fac_invld4_rfc5424.sh \
+	   testsuites/fac_invld4_rfc5424.conf \
 	   rs_optimizer_pri.sh \
 	   testsuites/rs_optimizer_pri.conf \
 	   rscript_prifilt.sh \
