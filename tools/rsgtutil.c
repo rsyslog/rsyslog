@@ -201,6 +201,7 @@ verify(char *name)
 	char oldsigfname[4096];
 	char nsigfname[4096];
 	gterrctx_t ectx;
+	int bInitDone = 0;
 	
 	if(!strcmp(name, "-")) {
 		fprintf(stderr, "%s mode cannot work on stdin\n",
@@ -232,6 +233,7 @@ verify(char *name)
 
 	rsgtInit("rsyslog rsgtutil " VERSION);
 	rsgt_errctxInit(&ectx);
+	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
@@ -336,7 +338,9 @@ done:
 	return;
 
 err:
-	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
+	if(r != 0)
+		fprintf(stderr, "error %d (%s) processing file %s\n",
+			r, RSGTE2String(r), name);
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
@@ -345,8 +349,10 @@ err:
 		fclose(nsigfp);
 		unlink(nsigfname);
 	}
-	rsgtExit();
-	rsgt_errctxExit(&ectx);
+	if(bInitDone) {
+		rsgtExit();
+		rsgt_errctxExit(&ectx);
+	}
 }
 
 static void

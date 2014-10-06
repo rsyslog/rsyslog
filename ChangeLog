@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 8.4.3 [v8-stable] 2014-10-??
+- bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
+---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
   This is corrected now.
@@ -433,6 +436,9 @@ Version 8.1.0 [experimental] 2013-11-15
   Note that it has been deprecated in v7 and been replaced by the "call"
   statement. Also, it can still be build without problems, the option must
   just explicitely be given.
+---------------------------------------------------------------------------
+Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
