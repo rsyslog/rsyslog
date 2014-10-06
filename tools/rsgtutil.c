@@ -338,7 +338,9 @@ done:
 	return;
 
 err:
-	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
+	if(r != 0)
+		fprintf(stderr, "error %d (%s) processing file %s\n",
+			r, RSGTE2String(r), name);
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
