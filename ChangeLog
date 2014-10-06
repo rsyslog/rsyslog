@@ -456,6 +456,10 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- remove zpipe (a testing tool) from --enable-diagtools
+  This tool is no longer maintained and currently not used inside the
+  testbench. We keep it in the source tree for the time being in case that
+  it may be used in the future.
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02

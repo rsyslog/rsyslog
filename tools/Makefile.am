@@ -53,10 +53,8 @@ EXTRA_DIST = $(man_MANS) \
 	recover_qi.pl
 
 if ENABLE_DIAGTOOLS
-sbin_PROGRAMS += rsyslog_diag_hostname msggen zpipe
+sbin_PROGRAMS += rsyslog_diag_hostname msggen
 rsyslog_diag_hostname_SOURCES = gethostn.c
-zpipe_SOURCES = zpipe.c
-zpipe_LDADD = -lz
 msggen_SOURCES = msggen.c
 endif
 
