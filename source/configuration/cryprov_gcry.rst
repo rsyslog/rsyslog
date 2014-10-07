@@ -1,11 +1,11 @@
 libgcrypt Log Crypto Provider (gcry)
 ====================================
 
-**Signature Provider Name:    gt**
+**Crypto Provider Name:**    gcry
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
-**Supported Since:**\ since 7.3.10
+**Supported Since:** since 7.3.10
 
 **Description**:
 
@@ -51,6 +51,7 @@ to archive both in order to prove integrity.
    is select but not available due to libgcrypt build settings. There is
    nothing rsyslog can do against this. So in order to avoid production
    downtime, always check carefully when you change the algorithm.
+
 -  **cry.mode** <Algorithm Mode>
    The encryption mode to be used. Default ist Cipher Block Chaining
    (CBC). Note that not all encryption modes can be used together with
@@ -65,18 +66,21 @@ to archive both in order to prove integrity.
    -  CTR
    -  AESWRAP
 
+
 -  **cry.key** <encryption key>
    TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
    inside rsyslog.conf. This is the actual key, and as such this mode is
    highly insecure. However, it can be useful for intial testing steps.
    This option may be removed in the future.
+
 -  **cry.keyfile** <filename>
    Reads the key from the specified file. The file must contain the
    key, only, no headers or other meta information. Keyfiles can be
    generated via the rscrytool utility.
+
 -  **cry.keyprogram** <path to program>
    If given, the key is provided by a so-called "key program". This
-   program is executed and must return the key to (as well as some meta
+   program is executed and must return the key (as well as some meta
    information) via stdout. The core idea of key programs is that using
    this interface the user can implement as complex (and secure) method
    to obtain keys as desired, all without the need to make modifications
@@ -91,14 +95,10 @@ to archive both in order to prove integrity.
 This encrypts a log file. Default parameters are used, they key is
 provided via a keyfile.
 
-action(type="omfile" file="/var/log/somelog" cry.provider="gcry"
-keyfile="/secured/path/to/keyfile") 
+::
 
-Note that the keyfile can be generated via the rscrytool utility (see its documentation for how to
-actually do that).
+    action(type="omfile" file="/var/log/somelog" cry.provider="gcry"
+           cry.keyfile="/secured/path/to/keyfile") 
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 3 or higher.
+Note that the keyfile can be generated via the rscrytool utility (see its
+documentation for how to actually do that).
