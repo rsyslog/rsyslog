@@ -38,6 +38,12 @@ both in order to prove integrity.
    default server is selected. This may not necessarily be a good one
    for your region.
 
+   *Note:* If you need to supply user credentials, you can add them to
+   the timestamper URL. If, for example, you have a user "user" with
+   password "pass", you can do so as follows:
+
+       http://user:pass@timestamper.example.net
+
 -  **sig.block.sizeLimit** <nbr-records>
    The maximum number of records inside a single signature block. By
    default, there is no size limit, so the signature is only written on
