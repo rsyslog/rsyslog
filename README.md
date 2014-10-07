@@ -24,6 +24,13 @@ Current Status -
 If you are new to rst and Sphinx, visit the Sphinx doc to get started:
 http://sphinx-doc.org/contents.html
 
+## Importing missing content
+For the time being, occasionally a page from the v7 or v8 doc branches seems to
+be missing in rsyslog-doc. To recover it, check out the respective version (v8.1.6
+is the latest v8 with html doc) and use this too to convert to rst:
+
+$ pandoc -f html -t rst <html_file> -o <output_file>
+
 ## Instructions
 
 These assume default installs of Python for Windows and Linux

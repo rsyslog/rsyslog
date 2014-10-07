@@ -394,7 +394,7 @@ selects whether a static or dynamic file (name) shall be written to.
    Selects a signature provider for log signing. By selecting a provider,
    the signature feature is turned on.
 
-   Currently, there only is one provider called "`gt <sigprov_gt.html>`_\ ". 
+   Currently, there only is one provider called ":doc:`gt <sigprov_gt>`". 
 
 .. function::  cry.provider [providerName]
 
@@ -403,7 +403,7 @@ selects whether a static or dynamic file (name) shall be written to.
    Selects a crypto provider for log encryption. By selecting a provider,
    the encryption feature is turned on.
 
-   Currently, there only is one provider called :doc:"`gcry <../cryprov_gcry>`\ ".
+   Currently, there only is one provider called ":doc:`gcry <../cryprov_gcry>`".
 
 See Also
 --------
