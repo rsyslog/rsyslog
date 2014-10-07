@@ -5,6 +5,10 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   testbench. We keep it in the source tree for the time being in case that
   it may be used in the future.
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
+- bugfix rsgtutil: deletion of logs at end of file was not reported
+  The verification function in rsgtutil tool did not report deletion of
+  whole signed blocks of lines from the end of the log file.
+  Thanks to Henri Lakk for the patch.
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
