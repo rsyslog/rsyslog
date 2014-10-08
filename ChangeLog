@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
+- bugfix imklog: pri was miscalculated
+  actually, the pri was totally off the real value for PRIs > 9
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
