@@ -5,7 +5,7 @@
  * Major change: 2008-04-09: switched to a driver interface for 
  *     several platforms
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -53,8 +53,8 @@ rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */
-rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
-rsRetVal Syslog(int priority, uchar *msg, struct timeval *tp);
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal Syslog(syslog_pri_t priority, uchar *msg, struct timeval *tp);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */

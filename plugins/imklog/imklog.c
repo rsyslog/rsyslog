@@ -125,7 +125,7 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *tp)
+enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp)
 {
 	struct syslogTime st;
 	msg_t *pMsg;
@@ -148,8 +148,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
-	pMsg->iFacility = iFacility;
-	pMsg->iSeverity = iSeverity;
+	msgSetPRI(pMsg, pri);
 	/* note: we do NOT use rate-limiting, as the kernel itself does rate-limiting */
 	CHKiRet(submitMsg2(pMsg));
 
@@ -165,10 +164,10 @@ finalize_it:
  * rgerhards, 2008-04-14
  */
 static rsRetVal
-parsePRI(uchar **ppSz, int *piPri)
+parsePRI(uchar **ppSz, syslog_pri_t *piPri)
 {
 	DEFiRet;
-	int i;
+	syslog_pri_t i;
 	uchar *pSz;
 
 	assert(ppSz != NULL);
@@ -181,11 +180,11 @@ parsePRI(uchar **ppSz, int *piPri)
 
 	++pSz;
 	i = 0;
-	while(isdigit(*pSz)) {
+	while(isdigit(*pSz) && i <= LOG_MAXPRI) {
 		i = i * 10 + *pSz++ - '0';
 	}
 
-	if(*pSz != '>')
+	if(*pSz != '>' || i > LOG_MAXPRI)
 		ABORT_FINALIZE(RS_RET_INVALID_PRI);
 
 	/* OK, we have a valid PRI */
@@ -200,7 +199,7 @@ finalize_it:
 /* log an imklog-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -210,7 +209,7 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
 	va_end(ap);
 
-	logmsgInternal(NO_ERRCODE ,priority, msgBuf, 0);
+	logmsgInternal(NO_ERRCODE, priority, msgBuf, 0);
 
 	RETiRet;
 }
@@ -220,9 +219,10 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
  * time to use.
  * rgerhards, 2008-04-14
  */
-rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
+rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
 {
-	int pri = -1;
+	syslog_pri_t pri;
+	int bPRISet = 0;
 	rsRetVal localRet;
 	DEFiRet;
 
@@ -232,14 +232,15 @@ rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
 	if(pMsg[3] == '<' || (pMsg[3] == ' ' && pMsg[4] == '<')) { /* could be a pri... */
 		uchar *pMsgTmp = pMsg + ((pMsg[3] == '<') ? 3 : 4);
 		localRet = parsePRI(&pMsgTmp, &pri);
-		if(localRet == RS_RET_OK && pri >= 8 && pri <= 192) {
+		if(localRet == RS_RET_OK && pri >= 8 && pri <= LOG_MAXPRI) {
 			/* *this* is our PRI */
 			DBGPRINTF("imklog detected secondary PRI(%d) in klog msg\n", pri);
 			pMsg = pMsgTmp;
 			priority = pri;
+			bPRISet = 1;
 		}
 	}
-	if(pri == -1) {
+	if(!bPRISet) {
 		localRet = parsePRI(&pMsg, &priority);
 		if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
 			FINALIZE;
@@ -250,7 +251,7 @@ rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp)
 	if(cs.bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority), tp);
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp);
 
 finalize_it:
 	RETiRet;

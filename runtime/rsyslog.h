@@ -120,12 +120,12 @@
 /* we need to use a function to avoid side-effects. This MUST guard
  * against invalid facility values. rgerhards, 2014-09-16
  */
-static inline int pri2fac(const int pri)
+static inline syslog_pri_t pri2fac(const syslog_pri_t pri)
 {
 	unsigned fac = pri >> 3;
 	return (fac > 23) ? LOG_FAC_INVLD : fac;
 }
-static inline int pri2sev(const int pri)
+static inline syslog_pri_t pri2sev(const syslog_pri_t pri)
 {
 	return pri & 0x07;
 }

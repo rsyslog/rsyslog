@@ -7,7 +7,7 @@
  * are very small, and so we use a single driver for both OS's with
  * a little help of conditional compilation.
  *
- * Copyright 2008-2012 Adiscon GmbH
+ * Copyright 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -70,7 +70,7 @@ static int	fklog = -1;	/* kernel log fd */
  * rgerhards, 2011-06-24
  */
 static void
-submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
 	long secs;
 	long usecs;
@@ -148,7 +148,7 @@ done:
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
-submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
 	Syslog(pri, buf, NULL);
 }

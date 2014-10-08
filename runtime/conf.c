@@ -353,7 +353,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 	register uchar *q;
 	register int i, i2;
 	uchar *bp;
-	int pri;
+	int pri; /* this MUST be int, as -1 is used to convey an error state */
 	int singlpri = 0;
 	int ignorepri = 0;
 	uchar buf[2048]; /* buffer for facility and priority names */

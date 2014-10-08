@@ -742,9 +742,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	int offs;
 	int i;
 	uchar *parse;
-	int pri;
-	int facil;
-	int sever;
+	syslog_pri_t pri;
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	struct syslogTime st;
 	time_t tt;
@@ -772,8 +770,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		++parse;
 		++offs;
 	} 
-	facil = pri2fac(pri);
-	sever = pri2sev(pri);
 
 	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
@@ -885,9 +881,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
-
-	pMsg->iFacility = facil;
-	pMsg->iSeverity = sever;
+	msgSetPRI(pMsg, pri);
 	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
