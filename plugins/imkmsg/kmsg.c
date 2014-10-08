@@ -72,7 +72,7 @@ submitSyslog(uchar *buf)
 
 	/* get priority */
 	for (; isdigit(*buf); buf++) {
-		priority += (priority * 10) + (*buf - '0');
+		priority = (priority * 10) + (*buf - '0');
 	}
 	buf++;
 

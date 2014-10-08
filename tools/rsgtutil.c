@@ -286,10 +286,23 @@ verify(char *name)
 			bInBlock = 0;
 		} else	bInBlock = 1;
 	}
-
 done:
 	if(r != RSGTE_EOF)
 		goto err;
+
+	/* Make sure we've reached the end of file in both log and signature file */
+	if (fgetc(logfp) != EOF) {
+		fprintf(stderr, "There are unsigned records in the end of log.\n");
+		fprintf(stderr, "Last signed record: %s\n", ectx.errRec);
+		r = RSGTE_END_OF_SIG;
+		goto err;
+	}
+	if (fgetc(sigfp) != EOF) {
+		fprintf(stderr, "There are records missing from the end of the log file.\n");
+		r = RSGTE_END_OF_LOG;
+		goto err;
+	}
+
 
 	fclose(logfp); logfp = NULL;
 	fclose(sigfp); sigfp = NULL;

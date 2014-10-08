@@ -178,6 +178,8 @@ struct rsgtstatefile {
 #define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
 #define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
 #define RSGTE_HASH_CREATE 20 /* error creating a hash */
+#define RSGTE_END_OF_SIG 21 /* unexpected end of signature - more log line exist */
+#define RSGTE_END_OF_LOG 22 /* unexpected end of log file - more signatures exist */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
@@ -230,6 +232,10 @@ RSGTE2String(int err)
 		return "error DER-encoding RFC3161 timestamp";
 	case RSGTE_HASH_CREATE:
 		return "error creating hash";
+	case RSGTE_END_OF_SIG:
+		return "unexpected end of signature";
+	case RSGTE_END_OF_LOG:
+		return "unexpected end of log";
 	default:
 		return "unknown error";
 	}
