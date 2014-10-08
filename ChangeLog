@@ -19,6 +19,8 @@ Version 8.5.0 [v8-stable] 2014-08-??
 ---------------------------------------------------------------------------
 Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
+- bugfix imklog: pri was miscalculated
+  actually, the pri was totally off the real value for PRIs > 9
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
@@ -460,7 +462,15 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   This tool is no longer maintained and currently not used inside the
   testbench. We keep it in the source tree for the time being in case that
   it may be used in the future.
-- bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
+- bugfix imklog: pri was miscalculated
+  actually, the pri was totally off the real value for PRIs > 9
+- bugfix rsgtutil: sometimes crashed in verify mode if file did not exist
+- bugfix rsgtutil: some errors/problems at end of file were not reported
+  * The verification function in rsgtutil tool did not report deletion of
+    whole signed blocks of lines from the end of the log file.
+  * The verification function in rsgtutil tool did not report extra
+    (unsigned) lines at the end of the log file. 
+  Thanks to Henri Lakk for the patch.
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
