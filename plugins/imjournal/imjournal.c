@@ -41,7 +41,6 @@
 #include "msg.h"
 #include "module-template.h"
 #include "datetime.h"
-#include "imjournal.h"
 #include "net.h"
 #include "glbl.h"
 #include "prop.h"
@@ -61,6 +60,9 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
+
+struct modConfData_s {
+};
 
 static struct configSettings_s {
 	char *stateFile;
