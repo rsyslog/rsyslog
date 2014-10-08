@@ -3,7 +3,7 @@
  * To test under Linux:
  * emmit log message into systemd journal
  *
- * Copyright (C) 2008-2013 Adiscon GmbH
+ * Copyright (C) 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -91,7 +91,7 @@ static struct cnfparamblk modpblk =
 	};
 
 #define DFLT_persiststateinterval 10
-#define DFLT_SEVERITY pr2fac(LOG_NOTICE)
+#define DFLT_SEVERITY pri2fac(LOG_NOTICE)
 #define DFLT_FACILITY pri2sev(LOG_USER)
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
