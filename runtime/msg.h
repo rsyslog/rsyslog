@@ -64,8 +64,8 @@ struct msg {
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
 	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
-	short	iSeverity;	/* the severity 0..7 */
-	short	iFacility;	/* Facility code 0 .. 23*/
+	unsigned short	iSeverity;/* the severity  */
+	unsigned short	iFacility;/* Facility code */
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
@@ -247,6 +247,14 @@ MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
 	pMsg->iLenRawMsg = newLen;
 }
 
+static inline void
+msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri)
+{
+	if(pri > LOG_MAXPRI)
+		pri = LOG_PRI_INVLD;
+	pMsg->iFacility = pri2fac(pri),
+	pMsg->iSeverity = pri2sev(pri);
+}
 
 /* get the ruleset that is associated with the ruleset.
  * May be NULL. -- rgerhards, 2009-10-27

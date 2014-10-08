@@ -4,7 +4,7 @@
  * For a general overview, see head comment in imkmsg.c.
  * This is heavily based on imklog bsd.c file.
  *
- * Copyright 2008-2012 Adiscon GmbH
+ * Copyright 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -63,7 +63,7 @@ submitSyslog(uchar *buf)
 	char name[1024];
 	char value[1024];
 	char msg[1024];
-	int priority = 0;
+	syslog_pri_t priority = 0;
 	long int sequnum = 0;
 	struct json_object *json = NULL, *jval;
 

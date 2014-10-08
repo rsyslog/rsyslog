@@ -1552,7 +1552,7 @@ uchar *getMSG(msg_t * const pM)
 /* Get PRI value as integer */
 static int getPRIi(msg_t * const pM)
 {
-	int pri = (pM->iFacility << 3) + (pM->iSeverity);
+	syslog_pri_t pri = (pM->iFacility << 3) + (pM->iSeverity);
 	if(pri > 191)
 		pri = LOG_PRI_INVLD;
 	return pri;
@@ -2627,22 +2627,19 @@ void MsgSetRawMsgWOSize(msg_t * const pMsg, char* pszRawMsg)
 }
 
 
-/* Decode a priority into textual information like auth.emerg.
- * The variable pRes must point to a user-supplied buffer.
- * The pointer to the buffer
- * is also returned, what makes this functiona suitable for
- * use in printf-like functions.
- * Note: a buffer size of 20 characters is always sufficient.
+/* create textual representation of facility and severity.
+ * The variable pRes must point to a user-supplied buffer of
+ * at least 20 characters.
  */
-char *textpri(char *pRes, int pri)
+static void
+textpri(const msg_t *const __restrict__ pMsg, uchar *const __restrict__ pRes)
 {
 	assert(pRes != NULL);
-	memcpy(pRes, syslog_fac_names[pri2fac(pri)], len_syslog_fac_names[pri2fac(pri)]);
-	pRes[len_syslog_fac_names[pri2fac(pri)]] = '.';
-	memcpy(pRes+len_syslog_fac_names[pri2fac(pri)]+1,
-	       syslog_severity_names[pri2sev(pri)],
-	       len_syslog_severity_names[pri2sev(pri)]+1 /* for \0! */);
-	return pRes;
+	memcpy(pRes, syslog_fac_names[pMsg->iFacility], len_syslog_fac_names[pMsg->iFacility]);
+	pRes[len_syslog_fac_names[pMsg->iFacility]] = '.';
+	memcpy(pRes+len_syslog_fac_names[pMsg->iFacility]+1,
+	       syslog_severity_names[pMsg->iSeverity],
+	       len_syslog_severity_names[pMsg->iSeverity]+1 /* for \0! */);
 }
 
 
@@ -3088,13 +3085,10 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getPRI(pMsg);
 			break;
 		case PROP_PRI_TEXT:
-			pBuf = MALLOC(20 * sizeof(uchar));
-			if(pBuf == NULL) {
+			if((pRes = MALLOC(20 * sizeof(uchar))) == NULL)
 				RET_OUT_OF_MEMORY;
-			} else {
-				*pbMustBeFreed = 1;
-				pRes = (uchar*)textpri((char*)pBuf, getPRIi(pMsg));
-			}
+			*pbMustBeFreed = 1;
+			textpri(pMsg, pRes);
 			break;
 		case PROP_IUT:
 			pRes = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */

@@ -467,7 +467,7 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  * system journal) will never see this message.
  */
 static rsRetVal
-logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
+logmsgInternalSelf(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
 	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
@@ -491,10 +491,9 @@ logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
-	pMsg->iFacility = pri2fac(pri);
-	pMsg->iSeverity = pri2sev(pri);
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
+	msgSetPRI(pMsg, pri);
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pMsg);
@@ -514,7 +513,7 @@ finalize_it:
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
+logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags)
 {
 	size_t lenMsg;
 	unsigned i;

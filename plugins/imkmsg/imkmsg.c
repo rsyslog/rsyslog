@@ -8,7 +8,7 @@
  * To test under Linux:
  * echo test1 > /dev/kmsg
  *
- * Copyright (C) 2008-2012 Adiscon GmbH
+ * Copyright (C) 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -87,7 +87,7 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json)
+enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct json_object *json)
 {
 	struct syslogTime st;
 	msg_t *pMsg;
@@ -110,8 +110,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
-	pMsg->iFacility = iFacility;
-	pMsg->iSeverity = iSeverity;
+	msgSetPRI(pMsg, pri);
 	pMsg->json = json;
 	CHKiRet(submitMsg(pMsg));
 
@@ -123,7 +122,7 @@ finalize_it:
 /* log an imkmsg-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...)
+rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -133,7 +132,7 @@ rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...)
 	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
 	va_end(ap);
 
-	logmsgInternal(NO_ERRCODE ,priority, msgBuf, 0);
+	logmsgInternal(NO_ERRCODE, priority, msgBuf, 0);
 
 	RETiRet;
 }
@@ -141,10 +140,10 @@ rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...)
 
 /* log a message from /dev/kmsg
  */
-rsRetVal Syslog(int priority, uchar *pMsg, struct timeval *tp, struct json_object *json)
+rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp, struct json_object *json)
 {
 	DEFiRet;
-	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", pri2fac(priority), pri2sev(priority), tp, json);
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp, json);
 	RETiRet;
 }
 

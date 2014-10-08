@@ -47,8 +47,8 @@ rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */
-rsRetVal imkmsgLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
-rsRetVal Syslog(int priority, uchar *msg, struct timeval *tp, struct json_object *json);
+rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal Syslog(syslog_pri_t priority, uchar *msg, struct timeval *tp, struct json_object *json);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
