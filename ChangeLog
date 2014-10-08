@@ -21,6 +21,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 - bugfix imklog: pri was miscalculated
   actually, the pri was totally off the real value for PRIs > 9
+- bugfix: imjournal did not build properly
+  The build succeeded, but the module did not load due to a type in
+  a support function name, which kept unresolved during load.
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
@@ -462,6 +465,9 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   This tool is no longer maintained and currently not used inside the
   testbench. We keep it in the source tree for the time being in case that
   it may be used in the future.
+- bugfix: imjournal did not build properly
+  The build succeeded, but the module did not load due to a type in
+  a support function name, which kept unresolved during load.
 - bugfix imklog: pri was miscalculated
   actually, the pri was totally off the real value for PRIs > 9
 - bugfix rsgtutil: sometimes crashed in verify mode if file did not exist
