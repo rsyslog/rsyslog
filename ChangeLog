@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 8.4.3 [v8-stable] 2014-10-??
+- ommail: minor bugfixes & improvements
+  * timestamps were 1 hour out when using daylight saving times when
+    viewing emails in most email clients due to incorrect date format
+  * X-Mailer header had a typo in it
+  * To: header was duplicated once per recipient (this is permitted,
+    but an address list is a better choice nowadays)
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 - bugfix imklog: pri was miscalculated
   actually, the pri was totally off the real value for PRIs > 9
