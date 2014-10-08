@@ -4,7 +4,7 @@
  * For a general overview, see head comment in imkmsg.c.
  * This is heavily based on imklog bsd.c file.
  *
- * Copyright 2008-2012 Adiscon GmbH
+ * Copyright 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -71,7 +71,7 @@ submitSyslog(uchar *buf)
 
 	/* get priority */
 	for (; isdigit(*buf); buf++) {
-		priority += (priority * 10) + (*buf - '0');
+		priority = (priority * 10) + (*buf - '0');
 	}
 	buf++;
 
