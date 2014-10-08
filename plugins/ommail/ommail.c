@@ -198,7 +198,7 @@ static rsRetVal
 WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp)
 {
 	toRcpt_t *pRcpt;
-	int iState, iTos;
+	int iTos;
 	DEFiRet;
 
 	assert(lenOp != 0);
