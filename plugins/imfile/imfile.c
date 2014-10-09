@@ -1093,7 +1093,7 @@ dirsAddFile(int i)
 
 	if(dir->currMaxFiles == dir->allocMaxFiles) {
 		newMax = 2 * allocMaxFiles;
-		newFileTab = realloc(dirs, newMax * sizeof(dirInfoFiles_t));
+		newFileTab = realloc(dirs->files, newMax * sizeof(dirInfoFiles_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to map directory '%s' file relationship "

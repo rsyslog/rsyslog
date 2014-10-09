@@ -7,6 +7,8 @@ Version 8.4.3 [v8-stable] 2014-10-??
   * To: header was duplicated once per recipient (this is permitted,
     but an address list is a better choice nowadays)
   Thanks to github user cacheus for the patches.
+- bugfix imfile: segfault on startup in "inotify" mode
+  A segfault happened when more than one file was monitored.
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 - bugfix imklog: pri was miscalculated
   actually, the pri was totally off the real value for PRIs > 9
