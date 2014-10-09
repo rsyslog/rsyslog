@@ -596,7 +596,7 @@ finalize_it:
 static inline rsRetVal
 ParsePRI(msg_t *pMsg)
 {
-	unsigned pri;
+	syslog_pri_t pri;
 	uchar *msg;
 	int lenMsg;
 	DEFiRet;
