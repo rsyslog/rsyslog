@@ -208,30 +208,27 @@ options are defined:
   timestamp)
 
 **escape-cc**
-
-replace control characters (ASCII value 127 and values less then 32)
-with an escape sequence. The sequnce is "#<charval>" where charval is
-the 3-digit decimal value of the control character. For example, a
-tabulator would be replaced by "#009".
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters (ASCII value 127 and values less then 32)
+  with an escape sequence. The sequnce is "#<charval>" where charval is
+  the 3-digit decimal value of the control character. For example, a
+  tabulator would be replaced by "#009".
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **space-cc**
-
-replace control characters by spaces
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters by spaces
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **drop-cc**
-
-drop control characters - the resulting string will neither contain
-control characters, escape sequences nor any other replacement character
-like space.
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  drop control characters - the resulting string will neither contain
+  control characters, escape sequences nor any other replacement character
+  like space.
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **sp-if-no-1st-sp**
   This option looks scary and should probably not be used by a user. For
@@ -274,8 +271,8 @@ and "drop-cc,escape-cc" will use escape-cc mode.
 Further Links
 -------------
 
--  Article on "`Recording the Priority of Syslog
-   Messages <rsyslog_recording_pri.html>`_\ " (describes use of
+-  Article on ":doc:`Recording the Priority of Syslog
+   Messages <../tutorials/recording_pri>`" (describes use of
    templates to record severity and facility of a message)
 -  `Configuration file syntax <rsyslog_conf.html>`_, this is where you
    actually use the property replacer.
@@ -284,9 +281,3 @@ Further Links
    :maxdepth: 2
 
    nomatch
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. 
-Released under the GNU GPL version 2 or higher.
