@@ -166,6 +166,28 @@ options are defined:
 **lowercase**
   convert property text to uppercase only
 
+**json**
+  encode the value so that it can be used inside a JSON field. This means
+  that several characters (according to the JSON spec) are being escaped, for 
+  example US-ASCII LF is replaced by "\\n".
+  The json option cannot be used together with either jsonf or csv options.
+
+**jsonf**
+  (available in 6.3.9+)
+  This signifies that the property should be expressed as a json <b>f</b>ield.
+  That means not only the property is written, but rather a complete json field in
+  the format
+
+  ``"fieldname"="value"``
+
+  where "filedname" is given in the *outname* property (or the property name
+  if none was assigned)
+  and value is the end result of property replacer operation. Note that value supports
+  all property replacer options, like substrings, case converson and the like.
+  Values are properly json-escaped. However, field names are (currently) not. It is
+  expected that proper field names are configured.
+  The jsonf option cannot be used together with either json or csv options.
+
 **csv**
   formats the resulting field (after all modifications) in CSV format as
   specified in `RFC 4180 <http://www.ietf.org/rfc/rfc4180.txt>`_. Rsyslog
