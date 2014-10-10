@@ -25,7 +25,9 @@ values: they are in no way consistent across applications (especially
 severity). However, they still form the basis of most filtering in
 syslog.conf. For example, the directive (aka "selector line)
 
-``mail.* /var/log/mail.log``
+::
+
+  mail.* /var/log/mail.log
 
 means that messages with the mail facility should be stored to
 /var/log/mail.log, no matter which severity indicator they have (that is
@@ -44,7 +46,9 @@ Rsyslog provides a flexible system to specify the output formats. It is
 template-based. A template with the traditional syslog format looks as
 follows:
 
-``$template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"``
+::
+
+  $template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"
 
 The part in quotes is the output formats. Things between percent-signs
 are so-called `messages properties <property_replacer.html>`_. They are
@@ -62,18 +66,24 @@ article, I assume that you run version 1.13.4 or higher.
 Recording the priority is now a simple matter of adding the respective
 field to the template. It now looks like this:
 
-``$template TraditionalFormatWithPRI,"%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"``
+::
+
+  $template TraditionalFormatWithPRI,"%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"
 
 Now we have the right template - but how to write it to a file? You
 probably have a line like this in your syslog.conf:
 
-``*.* -/var/log/messages.log``
+::
+
+  *.* -/var/log/messages.log
 
 It does not specify a template. Consequently, rsyslog uses the
 traditional format. In order to use some other format, simply specify
 the template after the semicolon:
 
-``*.* -/var/log/messages.log;TraditionalFormatWithPRI``
+::
+
+  *.* -/var/log/messages.log;TraditionalFormatWithPRI
 
 That's all you need to do. There is one common pitfall: you need to
 define the template before you use it in a selector line. Otherwise, you
@@ -106,7 +116,31 @@ Some Sample Data
 Below is some sample data created with the template specified above.
 Note the priority recording at the start of each line.
 
-``kern.info<6>: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 00:04.0 kern.info<6>: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 01:00.0 kern.warn<4>: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11 kern.warn<4>: Jun 15 18:10:38 host kernel: Socket status: 30000006 kern.warn<4>: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11 kern.warn<4>: Jun 15 18:10:38 host kernel: Socket status: 30000010 kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0c00-0x0cff: clean. kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0100-0x04ff: excluding 0x100-0x107 0x378-0x37f 0x4d0-0x4d7 kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0a00-0x0aff: clean. local7.notice<189>: Jun 15 18:17:24 host dd: 1+0 records out local7.notice<189>: Jun 15 18:17:24 host random: Saving random seed: succeeded local7.notice<189>: Jun 15 18:17:25 host portmap: portmap shutdown succeeded local7.notice<189>: Jun 15 18:17:25 host network: Shutting down interface eth1: succeeded local7.notice<189>: Jun 15 18:17:25 host network: Shutting down loopback interface: succeeded local7.notice<189>: Jun 15 18:17:25 host pcmcia: Shutting down PCMCIA services: cardmgr user.notice<13>: Jun 15 18:17:25 host /etc/hotplug/net.agent: NET unregister event not supported local7.notice<189>: Jun 15 18:17:27 host pcmcia: modules. local7.notice<189>: Jun 15 18:17:29 host rc: Stopping pcmcia: succeeded local7.notice<189>: Jun 15 18:17:30 host rc: Starting killall: succeeded syslog.info<46>: Jun 15 18:17:33 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2464"] exiting on signal 15. syslog.info<46>: Jun 18 10:55:47 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"][x-configInfo udpReception="Yes" udpPort="514" tcpReception="Yes" tcpPort="1470"] restart user.notice<13>: Jun 18 10:55:50 host rger: test syslog.info<46>: Jun 18 10:55:52 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"] exiting on signal 2.``
+::
+
+  kern.info<6>: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 00:04.0
+  kern.info<6>: Jun 15 18:10:38 host kernel: PCI: Sharing IRQ 11 with 01:00.0
+  kern.warn<4>: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11
+  kern.warn<4>: Jun 15 18:10:38 host kernel: Socket status: 30000006
+  kern.warn<4>: Jun 15 18:10:38 host kernel: Yenta IRQ list 06b8, PCI irq11
+  kern.warn<4>: Jun 15 18:10:38 host kernel: Socket status: 30000010
+  kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0c00-0x0cff: clean.
+  kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0100-0x04ff: excluding 0x100-0x107 0x378-0x37f 0x4d0-0x4d7
+  kern.info<6>: Jun 15 18:10:38 host kernel: cs: IO port probe 0x0a00-0x0aff: clean.
+  local7.notice<189>: Jun 15 18:17:24 host dd: 1+0 records out
+  local7.notice<189>: Jun 15 18:17:24 host random: Saving random seed: succeeded
+  local7.notice<189>: Jun 15 18:17:25 host portmap: portmap shutdown succeeded
+  local7.notice<189>: Jun 15 18:17:25 host network: Shutting down interface eth1: succeeded
+  local7.notice<189>: Jun 15 18:17:25 host network: Shutting down loopback interface: succeeded
+  local7.notice<189>: Jun 15 18:17:25 host pcmcia: Shutting down PCMCIA services: cardmgr
+  user.notice<13>: Jun 15 18:17:25 host /etc/hotplug/net.agent: NET unregister event not supported
+  local7.notice<189>: Jun 15 18:17:27 host pcmcia: modules.
+  local7.notice<189>: Jun 15 18:17:29 host rc: Stopping pcmcia: succeeded
+  local7.notice<189>: Jun 15 18:17:30 host rc: Starting killall: succeeded
+  syslog.info<46>: Jun 15 18:17:33 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2464"] exiting on signal 15.
+  syslog.info<46>: Jun 18 10:55:47 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"][x-configInfo udpReception="Yes" udpPort="514" tcpReception="Yes" tcpPort="1470"] restart
+  user.notice<13>: Jun 18 10:55:50 host rger: test
+  syslog.info<46>: Jun 18 10:55:52 host [origin software="rsyslogd" swVersion="1.13.3" x-pid="2367"] exiting on signal 2.``
 
 Feedback Requested
 ------------------

@@ -166,6 +166,28 @@ options are defined:
 **lowercase**
   convert property text to uppercase only
 
+**json**
+  encode the value so that it can be used inside a JSON field. This means
+  that several characters (according to the JSON spec) are being escaped, for 
+  example US-ASCII LF is replaced by "\\n".
+  The json option cannot be used together with either jsonf or csv options.
+
+**jsonf**
+  (available in 6.3.9+)
+  This signifies that the property should be expressed as a json <b>f</b>ield.
+  That means not only the property is written, but rather a complete json field in
+  the format
+
+  ``"fieldname"="value"``
+
+  where "filedname" is given in the *outname* property (or the property name
+  if none was assigned)
+  and value is the end result of property replacer operation. Note that value supports
+  all property replacer options, like substrings, case converson and the like.
+  Values are properly json-escaped. However, field names are (currently) not. It is
+  expected that proper field names are configured.
+  The jsonf option cannot be used together with either json or csv options.
+
 **csv**
   formats the resulting field (after all modifications) in CSV format as
   specified in `RFC 4180 <http://www.ietf.org/rfc/rfc4180.txt>`_. Rsyslog
@@ -248,30 +270,27 @@ options are defined:
   the timestamp.
 
 **escape-cc**
-
-replace control characters (ASCII value 127 and values less then 32)
-with an escape sequence. The sequnce is "#<charval>" where charval is
-the 3-digit decimal value of the control character. For example, a
-tabulator would be replaced by "#009".
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters (ASCII value 127 and values less then 32)
+  with an escape sequence. The sequnce is "#<charval>" where charval is
+  the 3-digit decimal value of the control character. For example, a
+  tabulator would be replaced by "#009".
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **space-cc**
-
-replace control characters by spaces
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  replace control characters by spaces
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **drop-cc**
-
-drop control characters - the resulting string will neither contain
-control characters, escape sequences nor any other replacement character
-like space.
-Note: using this option requires that
-`$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
-is set to off.
+  drop control characters - the resulting string will neither contain
+  control characters, escape sequences nor any other replacement character
+  like space.
+  Note: using this option requires that
+  `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
+  is set to off.
 
 **sp-if-no-1st-sp**
   This option looks scary and should probably not be used by a user. For
@@ -314,8 +333,8 @@ and "drop-cc,escape-cc" will use escape-cc mode.
 Further Links
 -------------
 
--  Article on "`Recording the Priority of Syslog
-   Messages <rsyslog_recording_pri.html>`_\ " (describes use of
+-  Article on ":doc:`Recording the Priority of Syslog
+   Messages <../tutorials/recording_pri>`" (describes use of
    templates to record severity and facility of a message)
 -  `Configuration file syntax <rsyslog_conf.html>`_, this is where you
    actually use the property replacer.
@@ -324,9 +343,3 @@ Further Links
    :maxdepth: 2
 
    nomatch
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2008-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. 
-Released under the GNU GPL version 2 or higher.
