@@ -181,14 +181,21 @@ Input Parameters
    single: imfile; MaxLinesAtOnce
 .. function:: MaxLinesAtOnce [number]
 
-   This is useful if multiple files need to be monitored. If set to 0,
-   each file will be fully processed and then processing switches to the
-   next file (this was the default in previous versions). If it is set,
-   a maximum of [number] lines is processed in sequence for each file,
+   This is a legacy setting that only is supported in *polling* mode.
+   In *inotify* mode, it is fixed at 0 and all attempts to configure
+   a different value will be ignored, but will generate an error
+   message.
+
+   Please note that future versions of imfile may not support this
+   parameter at all. So it is suggested to not use it.
+
+   In *polling* mode, if set to 0, each file will be fully processed and
+   then processing switches to the next file. If it is set to any other
+   value, a maximum of [number] lines is processed in sequence for each file,
    and then the file is switched. This provides a kind of mutiplexing
    the load of multiple files and probably leads to a more natural
-   distribution of events when multiple busy files are monitored. The
-   **default** is 1024.
+   distribution of events when multiple busy files are monitored. For
+   *polling* mode, the **default** is 10240.
 
 .. index:: 
    single: imfile; MaxSubmitAtOnce
@@ -290,34 +297,40 @@ Legacy Configuration Directives
    single: imfile; $InputRunFileMonitor
 .. function:: $InputRunFileMonitor
 
-   This activates the current monitor. It has no parameters. If you
+   This **activates** the current monitor. It has no parameters. If you
    forget this directive, no file monitoring will take place.
 
 .. index:: 
    single: imfile; $InputFilePollInterval
+
 .. function:: $InputFilePollInterval seconds
 
    equivalent to: "PollingInterval"
 
 .. index:: 
    single: imfile; $InputFilePersistStateInterval
+
 .. function:: $InputFilePersistStateInterval lines
 
    equivalent to: "PersistStateInterval"
 
 .. index:: 
    single: imfile; $InputFileReadMode
+
 .. function:: $InputFileReadMode mode
+
    equivalent to: "ReadMode"
 
 .. index:: 
    single: imfile; $InputFileMaxLinesAtOnce
+
 .. function:: $InputFileMaxLinesAtOnce number
 
    equivalent to: "MaxLinesAtOnce"
 
 .. index:: 
    single: imfile; $InputFileBindRuleset
+
 .. function:: $InputFileBindRuleset ruleset
 
    Equivalent to: Ruleset
