@@ -45,6 +45,7 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -64,6 +65,7 @@ typedef struct _instanceData {
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	char *pszPath;		/**< path of normalized data */
+    uchar *tmplName;     /**< name of template to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -81,7 +83,8 @@ static configSettings_t cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
 	{ "path", eCmdHdlrGetWord, 0 },
-	{ "userawmsg", eCmdHdlrBinary, 0 }
+	{ "userawmsg", eCmdHdlrBinary, 0 },
+    { "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -174,7 +177,8 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
 	ln_exitCtx(pData->ctxln);
-	free(pData->pszPath);
+    free(pData->pszPath);
+    free(pData->tmplName);
 ENDfreeInstance
 
 
@@ -186,6 +190,10 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
+    dbgprintf("\ttemplate='%s'\n", pData->tmplName);
+    dbgprintf("\trulebase='%s'\n", pData->rulebase);
+    dbgprintf("\tpath='%s'\n", pData->pszPath);
+    dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
 ENDdbgPrintInstInfo
 
 
@@ -203,7 +211,10 @@ CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
-	} else {
+	} else if (pWrkrData->pData->tmplName) {
+        buf = ppString[1];
+        len = ustrlen(buf);
+    } else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
@@ -260,6 +271,8 @@ CODESTARTnewActInst
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tmplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "path")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strlen(cstr) < 2) {
@@ -282,8 +295,20 @@ CODESTARTnewActInst
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
-	CODE_STD_STRING_REQUESTnewActInst(1)
+
+    if(pData->bUseRawMsg) {
+        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+                        "mmnormalize: 'template' param can't be used with 'useRawMsg'. "
+                        "Ignoring 'template', will use raw message.");
+        free(pData->tmplName);
+        pData->tmplName = NULL;
+    }
+
+    CODE_STD_STRING_REQUESTnewActInst(pData->tmplName ? 2 : 1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    if (pData->tmplName) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->tmplName), OMSR_NO_RQD_TPL_OPTS));
+    }
 
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
@@ -369,7 +394,7 @@ BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
-	int bMsgPassingSupported;
+    int bMsgPassingSupported;
 CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
