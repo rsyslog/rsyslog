@@ -537,7 +537,7 @@ createInstance(instanceConf_t **pinst)
 	inst->nMultiSub = NUM_MULTISUB;
 	inst->iSeverity = 5;
 	inst->iFacility = 128;
-	inst->maxLinesAtOnce = 10240;
+	inst->maxLinesAtOnce = 0;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
 	inst->escapeLF = 1;
@@ -645,7 +645,15 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->pszStateFile = (uchar*) strdup((char*) cs.pszStateFile);
 	inst->iSeverity = cs.iSeverity;
 	inst->iFacility = cs.iFacility;
-	inst->maxLinesAtOnce = cs.maxLinesAtOnce;
+	if(cs.maxLinesAtOnce) {
+		if(loadModConf->opMode == OPMODE_INOTIFY) {
+			errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+				"parameter \"maxLinesAtOnce\" not "
+				"permited in inotify mode - ignored");
+		} else {
+			inst->maxLinesAtOnce = cs.maxLinesAtOnce;
+		}
+	}
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
@@ -754,7 +762,14 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
-			inst->maxLinesAtOnce = pvals[i].val.d.n;
+			if(   loadModConf->opMode == OPMODE_INOTIFY
+			   && pvals[i].val.d.n > 0) {
+				errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+					"parameter \"maxLinesAtOnce\" not "
+					"permited in inotify mode - ignored");
+			} else {
+				inst->maxLinesAtOnce = pvals[i].val.d.n;
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
