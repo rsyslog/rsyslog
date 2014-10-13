@@ -322,6 +322,11 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 #else /* HAVE_JSON_OBJECT_NEW_INT64 */
 		i = json_object_get_int(json);
 #endif /* HAVE_JSON_OBJECT_NEW_INT64 */
+
+#ifdef MONGODB
+		if ( strncmp(name,"mongodb_",8) == 0 )
+                        return bson_append_utc_datetime(doc,name+8,i) ;
+#endif
 		if (i >= INT32_MIN && i <= INT32_MAX)
 			return bson_append_int32(doc, name, i);
 		else

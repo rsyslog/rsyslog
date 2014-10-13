@@ -35,8 +35,12 @@ PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c],,)
 ])
 
-# if int64 is supported, use it
+# if json-c int64 is supported, use it
 AC_CHECK_LIB(json-c, json_object_new_object,,)
+AC_CHECK_FUNCS(json-c_object_new_int64,,)
+
+# if json int64 is supported, use it
+AC_CHECK_LIB(json, json_object_new_object,,)
 AC_CHECK_FUNCS(json_object_new_int64,,)
 
 # look for newer API
@@ -1397,6 +1401,7 @@ AC_ARG_ENABLE(ommongodb,
 )
 if test "x$enable_ommongodb" = "xyes"; then
 	PKG_CHECK_MODULES(LIBMONGO_CLIENT, libmongo-client >= 0.1.4)
+	AC_DEFINE(MONGODB, 1, [Defined if mongodb specific template function has to be enabled .])
 fi
 AM_CONDITIONAL(ENABLE_OMMONGODB, test x$enable_ommongodb = xyes)
 # end of mongodb code
