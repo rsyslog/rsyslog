@@ -31,6 +31,8 @@ Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: rsgtutil sometimes crashed in verify mode if file did not exist
 - bugfix imklog: pri was miscalculated
   actually, the pri was totally off the real value for PRIs > 9
+- bugfix imfile:file processing in inotify mode was stalled sometimes
+  closes https://github.com/rsyslog/rsyslog/issues/134
 - bugfix: imjournal did not build properly
   The build succeeded, but the module did not load due to a type in
   a support function name, which kept unresolved during load.
