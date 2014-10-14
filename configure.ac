@@ -1060,7 +1060,7 @@ AC_ARG_ENABLE(liblogging-stdlog,
         [enable_liblogging_stdlog=yes]
 )
 if test "x$enable_liblogging_stdlog" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.1,
+        PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3,
 		AC_DEFINE(HAVE_LIBLOGGING_STDLOG, 1, [Define to 1 if liblogging-stdlog is available.])
         )
 fi

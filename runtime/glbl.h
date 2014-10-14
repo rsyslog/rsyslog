@@ -31,7 +31,9 @@
 #define GLBL_H_INCLUDED
 
 #include <sys/types.h>
+#ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
+#endif
 #include "rainerscript.h"
 #include "prop.h"
 
@@ -39,7 +41,9 @@
 
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
+#ifdef HAVE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;
+#endif
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
