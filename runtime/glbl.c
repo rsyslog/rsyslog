@@ -888,6 +888,15 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+#ifndef HAVE_LIBLOGGING_STDLOG
+			if(bProcessInternalMessages != 1) {
+				bProcessInternalMessages = 1;
+				errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+					"compiled with liblogging-stdlog support. "
+					"The 'ProcessInternalMessages' parameter "
+					"is ignored.\n");
+			}
+#endif
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
