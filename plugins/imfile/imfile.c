@@ -1208,6 +1208,8 @@ in_setupFileWatch(int i)
 	if(wd < 0) {
 		DBGPRINTF("imfile: could not create initial file for '%s'\n",
 			files[i].pszFileName);
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "imfile: configured file '%s' "
+				"does not exist - ignored\n", (char*)files[i].pszFileName);
 		goto done;
 	}
 	wdmapAdd(wd, -1, i);
