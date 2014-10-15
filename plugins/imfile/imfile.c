@@ -157,7 +157,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 static fileInfo_t *files = NULL;
-static int allocMaxActFiles;	/* max file table size currently allocated */
+static int allocMaxFiles;	/* max file table size currently allocated */
 
 #if HAVE_INOTIFY_INIT
 /* support for inotify mode */
@@ -173,6 +173,14 @@ struct dirInfoFiles_s { /* associated files */
 };
 typedef struct dirInfoFiles_s dirInfoFiles_t;
 
+/* This structure is a dynamic table to track file entries */
+struct fileTable_s {
+	dirInfoFiles_t *files;
+	int currMax;
+	int allocMax;
+};
+typedef struct fileTable_s fileTable_t;
+
 /* The dirs table (defined below) contains one entry for each directory that
  * is to be monitored. For each directory, it contains array which point to
  * the associated *active* files as well as *configured* files. Note that
@@ -181,9 +189,8 @@ typedef struct dirInfoFiles_s dirInfoFiles_t;
  */
 struct dirInfo_s {
 	uchar *dirName;
-	dirInfoFiles_t *activeFiles;	/* associated file entries */
-	int currMaxActFiles;
-	int allocMaxActFiles;
+	fileTable_t active; /* associated active files */
+	fileTable_t configured; /* associated configured files */
 };
 typedef struct dirInfo_s dirInfo_t;
 static dirInfo_t *dirs = NULL;
@@ -684,8 +691,8 @@ addListner(instanceConf_t *inst)
 	fileInfo_t *newFileTab;
 	fileInfo_t *pThis;
 
-	if(iFilPtr == allocMaxActFiles) {
-		newMax = 2 * allocMaxActFiles;
+	if(iFilPtr == allocMaxFiles) {
+		newMax = 2 * allocMaxFiles;
 		newFileTab = realloc(files, newMax * sizeof(fileInfo_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
@@ -694,8 +701,8 @@ addListner(instanceConf_t *inst)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		files = newFileTab;
-		allocMaxActFiles = newMax;
-		DBGPRINTF("imfile: increased file table to %d entries\n", allocMaxActFiles);
+		allocMaxFiles = newMax;
+		DBGPRINTF("imfile: increased file table to %d entries\n", allocMaxFiles);
 	}
 
 	/* if we reach this point, there is space in the file table for the new entry */
@@ -906,7 +913,7 @@ CODESTARTactivateCnf
 	runModConf = pModConf;
 	free(files); /* clear any previous instance */
 	CHKmalloc(files = (fileInfo_t*) malloc(sizeof(fileInfo_t) * INIT_FILE_TAB_SIZE));
-	allocMaxActFiles = INIT_FILE_TAB_SIZE;
+	allocMaxFiles = INIT_FILE_TAB_SIZE;
 	iFilPtr = 0;
 
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
@@ -989,6 +996,103 @@ doPolling(void)
 
 
 #if HAVE_INOTIFY_INIT
+static rsRetVal
+fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
+{
+	DEFiRet;
+	CHKmalloc(tab->files = malloc(sizeof(dirInfoFiles_t) * nelem));
+	tab->allocMax = nelem;
+	tab->currMax = 0;
+finalize_it:
+	RETiRet;
+}
+
+static int
+fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
+{
+	int f;
+	uchar *baseName;
+dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
+	for(f = 0 ; f < tab->currMax ; ++f) {
+		baseName = files[tab->files[f].idx].pszBaseName;
+dbgprintf("DDDD: imfile: searching '%s': '%s'\n", fn, (char*)basename);
+		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
+			break; /* found */
+	}
+	if(f == tab->currMax)
+		f = -1;
+	dbgprintf("DDDD: file '%s', found:%d\n", fn, f);
+	return f;
+}
+
+/* add file to file table */ 
+static rsRetVal
+fileTableAddFile(fileTable_t *const __restrict__ tab, const int fileIdx)
+{
+	int j;
+	int newMax;
+	dirInfoFiles_t *newFileTab;
+	DEFiRet;
+
+	for(j = 0 ; j < tab->currMax && tab->files[j].idx != fileIdx ; ++j)
+		; /* just scan */
+	if(j < tab->currMax) {
+		/* this is not important enough to send an user error, as all will
+		 * continue to work. */
+		++tab->files[j].refcnt;
+		//DBGPRINTF("imfile: file '%s' already registered in directory '%s', refcnt now %d\n",
+			//files[i].pszFileName, dir->dirName, dir->activeFiles[j].refcnt);
+		FINALIZE;
+	}
+
+	if(tab->currMax == tab->allocMax) {
+		newMax = 2 * tab->allocMax;
+		newFileTab = realloc(tab->files, newMax * sizeof(dirInfoFiles_t));
+		if(newFileTab == NULL) {
+			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+					"cannot alloc memory to map directory '%s' file relationship "
+					"'%s' - ignoring", files[fileIdx].pszFileName, "TODO"); //dir->dirName);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+		tab->files = newFileTab;
+		tab->allocMax = newMax;
+		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
+	}
+
+	tab->files[tab->currMax].idx = fileIdx;
+	tab->files[tab->currMax].refcnt = 1;
+	tab->currMax++;
+finalize_it:
+	RETiRet;
+}
+
+/* delete a file from file table */
+static rsRetVal
+fileTableDelFile(fileTable_t *const __restrict__ tab, const int fIdx)
+{
+	int j;
+	DEFiRet;
+
+	for(j = 0 ; j < tab->currMax && tab->files[j].idx != fIdx ; ++j)
+		; /* just scan */
+	if(j == tab->currMax) {
+		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
+			"found - ignoring\n", files[fIdx].pszFileName, "TODO"); //dir->dirName);
+		FINALIZE;
+	}
+	tab->files[j].refcnt--;
+	if(tab->files[j].refcnt == 0) {
+		/* we remove that entry (but we never shrink the table) */
+		if(j < tab->currMax - 1) {
+			/* entry in middle - need to move others */
+			memmove(tab->files+j, tab->files+j+1,
+				(tab->currMax -j-1) * sizeof(dirInfoFiles_t));
+		}
+		--tab->currMax;
+	}
+finalize_it:
+	RETiRet;
+}
 /* add entry to dirs array */
 static rsRetVal
 dirsAdd(uchar *dirName)
@@ -1012,9 +1116,7 @@ dirsAdd(uchar *dirName)
 
 	/* if we reach this point, there is space in the file table for the new entry */
 	dirs[currMaxDirs].dirName = dirName;
-	CHKmalloc(dirs[currMaxDirs].activeFiles= malloc(sizeof(dirInfoFiles_t) * INIT_FILE_IN_DIR_TAB_SIZE));
-	dirs[currMaxDirs].allocMaxActFiles = INIT_FILE_IN_DIR_TAB_SIZE;
-	dirs[currMaxDirs].currMaxActFiles= 0;
+	CHKiRet(fileTableInit(&dirs[currMaxDirs].active, INIT_FILE_IN_DIR_TAB_SIZE));
 
 	++currMaxDirs;
 	dbgprintf("DDDD: imfile: added to dirs table: '%s'\n", dirName);
@@ -1030,17 +1132,8 @@ static int
 dirsFindFile(int i, uchar *fn)
 {
 	int f;
-	uchar *baseName;
 
-dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", dirs[i].currMaxActFiles);
-	for(f = 0 ; f < dirs[i].currMaxActFiles ; ++f) {
-		baseName = files[dirs[i].activeFiles[f].idx].pszBaseName;
-dbgprintf("DDDD: imfile: searching '%s': '%s', '%s'\n", fn, dirs[i].dirName, (char*)basename);
-		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
-			break; /* found */
-	}
-	if(f == dirs[i].currMaxActFiles)
-		f = -1;
+	f = fileTableSearch(&dirs[i].active, fn);
 	dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
 	return f;
 }
@@ -1083,14 +1176,12 @@ finalize_it:
 
 /* add file to directory (create association)
  * i is index into file table, all other information is pulled from that table.
+ * bActive is 1 if the file is to be added to active set, else zero
  */
 static rsRetVal
-dirsAddFile(int i)
+dirsAddFile(const int i)
 {
 	int dirIdx;
-	int j;
-	int newMax;
-	dirInfoFiles_t *newFileTab;
 	dirInfo_t *dir;
 	DEFiRet;
 
@@ -1103,36 +1194,9 @@ dirsAddFile(int i)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxActFiles && dir->activeFiles[j].idx != i ; ++j)
-		; /* just scan */
-	if(j < dir->currMaxActFiles) {
-		/* this is not important enough to send an user error, as all will
-		 * continue to work. */
-		++dir->activeFiles[j].refcnt;
-		DBGPRINTF("imfile: file '%s' already registered in directory '%s', recnt now %d\n",
-			files[i].pszFileName, dir->dirName, dir->activeFiles[j].refcnt);
-		FINALIZE;
-	}
-
-	if(dir->currMaxActFiles == dir->allocMaxActFiles) {
-		newMax = 2 * allocMaxActFiles;
-		newFileTab = realloc(dirs->activeFiles, newMax * sizeof(dirInfoFiles_t));
-		if(newFileTab == NULL) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
-					"cannot alloc memory to map directory '%s' file relationship "
-					"'%s' - ignoring", files[i].pszFileName, dir->dirName);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-		dir->activeFiles = newFileTab;
-		dir->allocMaxActFiles = newMax;
-		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
-	}
-
-	dir->activeFiles[dir->currMaxActFiles].idx = i;
-	dir->activeFiles[dir->currMaxActFiles].refcnt = 1;
+	CHKiRet(fileTableAddFile(&dir->active, i));
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
 		i, files[i].pszFileName, dirIdx, dir->dirName);
-	++dir->currMaxActFiles;
 finalize_it:
 	RETiRet;
 }
@@ -1141,10 +1205,9 @@ finalize_it:
  * fIdx is index into file table, all other information is pulled from that table.
  */
 static rsRetVal
-dirsDelFile(int fIdx)
+dirsDelFile(const int fIdx)
 {
 	int dirIdx;
-	int j;
 	dirInfo_t *dir;
 	DEFiRet;
 
@@ -1156,23 +1219,7 @@ dirsDelFile(int fIdx)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxActFiles && dir->activeFiles[j].idx != fIdx ; ++j)
-		; /* just scan */
-	if(j == dir->currMaxActFiles) {
-		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
-			"found - ignoring\n", files[fIdx].pszFileName, dir->dirName);
-		FINALIZE;
-	}
-	dir->activeFiles[j].refcnt--;
-	if(dir->activeFiles[j].refcnt == 0) {
-		/* we remove that entry (but we never shrink the table) */
-		if(j < dir->currMaxActFiles - 1) {
-			/* entry in middle - need to move others */
-			memmove(dir->activeFiles+j, dir->activeFiles+j+1,
-				(dir->currMaxActFiles -j-1) * sizeof(dirInfoFiles_t));
-		}
-		--dir->currMaxActFiles;
-	}
+	CHKiRet(fileTableDelFile(&dir->active, fIdx));
 	DBGPRINTF("imfile: removed association of file '%s' to directory '%s'\n",
 		  files[fIdx].pszFileName, dir->dirName);
 
