@@ -173,9 +173,15 @@ struct dirInfoFiles_s { /* associated files */
 };
 typedef struct dirInfoFiles_s dirInfoFiles_t;
 
+/* The dirs table (defined below) contains one entry for each directory that
+ * is to be monitored. For each directory, it contains array which point to
+ * the associated *active* files as well as *configured* files. Note that
+ * the configured files may currently not exist, but will be processed
+ * when they are created.
+ */
 struct dirInfo_s {
 	uchar *dirName;
-	dirInfoFiles_t *files;	/* associated file entries */
+	dirInfoFiles_t *activeFiles;	/* associated file entries */
 	int currMaxFiles;
 	int allocMaxFiles;
 };
@@ -1006,11 +1012,12 @@ dirsAdd(uchar *dirName)
 
 	/* if we reach this point, there is space in the file table for the new entry */
 	dirs[currMaxDirs].dirName = dirName;
-	CHKmalloc(dirs[currMaxDirs].files= malloc(sizeof(dirInfoFiles_t) * INIT_FILE_IN_DIR_TAB_SIZE));
+	CHKmalloc(dirs[currMaxDirs].activeFiles= malloc(sizeof(dirInfoFiles_t) * INIT_FILE_IN_DIR_TAB_SIZE));
 	dirs[currMaxDirs].allocMaxFiles = INIT_FILE_IN_DIR_TAB_SIZE;
 	dirs[currMaxDirs].currMaxFiles= 0;
 
 	++currMaxDirs;
+	dbgprintf("DDDD: imfile: added to dirs table: '%s'\n", dirName);
 finalize_it:
 	RETiRet;
 }
@@ -1025,14 +1032,16 @@ dirsFindFile(int i, uchar *fn)
 	int f;
 	uchar *baseName;
 
+dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", dirs[i].currMaxFiles);
 	for(f = 0 ; f < dirs[i].currMaxFiles ; ++f) {
-		baseName = files[dirs[i].files[f].idx].pszBaseName;
+		baseName = files[dirs[i].activeFiles[f].idx].pszBaseName;
+dbgprintf("DDDD: imfile: searching '%s': '%s', '%s'\n", fn, dirs[i].dirName, (char*)basename);
 		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
 	if(f == dirs[i].currMaxFiles)
 		f = -1;
-	//dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
+	dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
 	return f;
 }
 
@@ -1094,33 +1103,33 @@ dirsAddFile(int i)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != i ; ++j)
+	for(j = 0 ; j < dir->currMaxFiles && dir->activeFiles[j].idx != i ; ++j)
 		; /* just scan */
 	if(j < dir->currMaxFiles) {
 		/* this is not important enough to send an user error, as all will
 		 * continue to work. */
-		++dir->files[j].refcnt;
+		++dir->activeFiles[j].refcnt;
 		DBGPRINTF("imfile: file '%s' already registered in directory '%s', recnt now %d\n",
-			files[i].pszFileName, dir->dirName, dir->files[j].refcnt);
+			files[i].pszFileName, dir->dirName, dir->activeFiles[j].refcnt);
 		FINALIZE;
 	}
 
 	if(dir->currMaxFiles == dir->allocMaxFiles) {
 		newMax = 2 * allocMaxFiles;
-		newFileTab = realloc(dirs->files, newMax * sizeof(dirInfoFiles_t));
+		newFileTab = realloc(dirs->activeFiles, newMax * sizeof(dirInfoFiles_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to map directory '%s' file relationship "
 					"'%s' - ignoring", files[i].pszFileName, dir->dirName);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
-		dir->files = newFileTab;
+		dir->activeFiles = newFileTab;
 		dir->allocMaxFiles = newMax;
 		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
 	}
 
-	dir->files[dir->currMaxFiles].idx = i;
-	dir->files[dir->currMaxFiles].refcnt = 1;
+	dir->activeFiles[dir->currMaxFiles].idx = i;
+	dir->activeFiles[dir->currMaxFiles].refcnt = 1;
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
 		i, files[i].pszFileName, dirIdx, dir->dirName);
 	++dir->currMaxFiles;
@@ -1147,19 +1156,19 @@ dirsDelFile(int fIdx)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->files[j].idx != fIdx ; ++j)
+	for(j = 0 ; j < dir->currMaxFiles && dir->activeFiles[j].idx != fIdx ; ++j)
 		; /* just scan */
 	if(j == dir->currMaxFiles) {
 		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
 			"found - ignoring\n", files[fIdx].pszFileName, dir->dirName);
 		FINALIZE;
 	}
-	dir->files[j].refcnt--;
-	if(dir->files[j].refcnt == 0) {
+	dir->activeFiles[j].refcnt--;
+	if(dir->activeFiles[j].refcnt == 0) {
 		/* we remove that entry (but we never shrink the table) */
 		if(j < dir->currMaxFiles - 1) {
 			/* entry in middle - need to move others */
-			memmove(dir->files+j, dir->files+j+1,
+			memmove(dir->activeFiles+j, dir->activeFiles+j+1,
 				(dir->currMaxFiles -j-1) * sizeof(dirInfoFiles_t));
 		}
 		--dir->currMaxFiles;
