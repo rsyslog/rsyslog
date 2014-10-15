@@ -157,7 +157,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 static fileInfo_t *files = NULL;
-static int allocMaxFiles;	/* max file table size currently allocated */
+static int allocMaxActFiles;	/* max file table size currently allocated */
 
 #if HAVE_INOTIFY_INIT
 /* support for inotify mode */
@@ -182,8 +182,8 @@ typedef struct dirInfoFiles_s dirInfoFiles_t;
 struct dirInfo_s {
 	uchar *dirName;
 	dirInfoFiles_t *activeFiles;	/* associated file entries */
-	int currMaxFiles;
-	int allocMaxFiles;
+	int currMaxActFiles;
+	int allocMaxActFiles;
 };
 typedef struct dirInfo_s dirInfo_t;
 static dirInfo_t *dirs = NULL;
@@ -684,8 +684,8 @@ addListner(instanceConf_t *inst)
 	fileInfo_t *newFileTab;
 	fileInfo_t *pThis;
 
-	if(iFilPtr == allocMaxFiles) {
-		newMax = 2 * allocMaxFiles;
+	if(iFilPtr == allocMaxActFiles) {
+		newMax = 2 * allocMaxActFiles;
 		newFileTab = realloc(files, newMax * sizeof(fileInfo_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
@@ -694,8 +694,8 @@ addListner(instanceConf_t *inst)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		files = newFileTab;
-		allocMaxFiles = newMax;
-		DBGPRINTF("imfile: increased file table to %d entries\n", allocMaxFiles);
+		allocMaxActFiles = newMax;
+		DBGPRINTF("imfile: increased file table to %d entries\n", allocMaxActFiles);
 	}
 
 	/* if we reach this point, there is space in the file table for the new entry */
@@ -906,7 +906,7 @@ CODESTARTactivateCnf
 	runModConf = pModConf;
 	free(files); /* clear any previous instance */
 	CHKmalloc(files = (fileInfo_t*) malloc(sizeof(fileInfo_t) * INIT_FILE_TAB_SIZE));
-	allocMaxFiles = INIT_FILE_TAB_SIZE;
+	allocMaxActFiles = INIT_FILE_TAB_SIZE;
 	iFilPtr = 0;
 
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
@@ -1013,8 +1013,8 @@ dirsAdd(uchar *dirName)
 	/* if we reach this point, there is space in the file table for the new entry */
 	dirs[currMaxDirs].dirName = dirName;
 	CHKmalloc(dirs[currMaxDirs].activeFiles= malloc(sizeof(dirInfoFiles_t) * INIT_FILE_IN_DIR_TAB_SIZE));
-	dirs[currMaxDirs].allocMaxFiles = INIT_FILE_IN_DIR_TAB_SIZE;
-	dirs[currMaxDirs].currMaxFiles= 0;
+	dirs[currMaxDirs].allocMaxActFiles = INIT_FILE_IN_DIR_TAB_SIZE;
+	dirs[currMaxDirs].currMaxActFiles= 0;
 
 	++currMaxDirs;
 	dbgprintf("DDDD: imfile: added to dirs table: '%s'\n", dirName);
@@ -1032,14 +1032,14 @@ dirsFindFile(int i, uchar *fn)
 	int f;
 	uchar *baseName;
 
-dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", dirs[i].currMaxFiles);
-	for(f = 0 ; f < dirs[i].currMaxFiles ; ++f) {
+dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", dirs[i].currMaxActFiles);
+	for(f = 0 ; f < dirs[i].currMaxActFiles ; ++f) {
 		baseName = files[dirs[i].activeFiles[f].idx].pszBaseName;
 dbgprintf("DDDD: imfile: searching '%s': '%s', '%s'\n", fn, dirs[i].dirName, (char*)basename);
 		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
-	if(f == dirs[i].currMaxFiles)
+	if(f == dirs[i].currMaxActFiles)
 		f = -1;
 	dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
 	return f;
@@ -1103,9 +1103,9 @@ dirsAddFile(int i)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->activeFiles[j].idx != i ; ++j)
+	for(j = 0 ; j < dir->currMaxActFiles && dir->activeFiles[j].idx != i ; ++j)
 		; /* just scan */
-	if(j < dir->currMaxFiles) {
+	if(j < dir->currMaxActFiles) {
 		/* this is not important enough to send an user error, as all will
 		 * continue to work. */
 		++dir->activeFiles[j].refcnt;
@@ -1114,8 +1114,8 @@ dirsAddFile(int i)
 		FINALIZE;
 	}
 
-	if(dir->currMaxFiles == dir->allocMaxFiles) {
-		newMax = 2 * allocMaxFiles;
+	if(dir->currMaxActFiles == dir->allocMaxActFiles) {
+		newMax = 2 * allocMaxActFiles;
 		newFileTab = realloc(dirs->activeFiles, newMax * sizeof(dirInfoFiles_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
@@ -1124,15 +1124,15 @@ dirsAddFile(int i)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		dir->activeFiles = newFileTab;
-		dir->allocMaxFiles = newMax;
+		dir->allocMaxActFiles = newMax;
 		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
 	}
 
-	dir->activeFiles[dir->currMaxFiles].idx = i;
-	dir->activeFiles[dir->currMaxFiles].refcnt = 1;
+	dir->activeFiles[dir->currMaxActFiles].idx = i;
+	dir->activeFiles[dir->currMaxActFiles].refcnt = 1;
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
 		i, files[i].pszFileName, dirIdx, dir->dirName);
-	++dir->currMaxFiles;
+	++dir->currMaxActFiles;
 finalize_it:
 	RETiRet;
 }
@@ -1156,9 +1156,9 @@ dirsDelFile(int fIdx)
 	}
 
 	dir = dirs + dirIdx;
-	for(j = 0 ; j < dir->currMaxFiles && dir->activeFiles[j].idx != fIdx ; ++j)
+	for(j = 0 ; j < dir->currMaxActFiles && dir->activeFiles[j].idx != fIdx ; ++j)
 		; /* just scan */
-	if(j == dir->currMaxFiles) {
+	if(j == dir->currMaxActFiles) {
 		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
 			"found - ignoring\n", files[fIdx].pszFileName, dir->dirName);
 		FINALIZE;
@@ -1166,12 +1166,12 @@ dirsDelFile(int fIdx)
 	dir->activeFiles[j].refcnt--;
 	if(dir->activeFiles[j].refcnt == 0) {
 		/* we remove that entry (but we never shrink the table) */
-		if(j < dir->currMaxFiles - 1) {
+		if(j < dir->currMaxActFiles - 1) {
 			/* entry in middle - need to move others */
 			memmove(dir->activeFiles+j, dir->activeFiles+j+1,
-				(dir->currMaxFiles -j-1) * sizeof(dirInfoFiles_t));
+				(dir->currMaxActFiles -j-1) * sizeof(dirInfoFiles_t));
 		}
-		--dir->currMaxFiles;
+		--dir->currMaxActFiles;
 	}
 	DBGPRINTF("imfile: removed association of file '%s' to directory '%s'\n",
 		  files[fIdx].pszFileName, dir->dirName);
