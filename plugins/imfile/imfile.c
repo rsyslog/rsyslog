@@ -196,6 +196,10 @@ typedef struct dirInfo_s dirInfo_t;
 static dirInfo_t *dirs = NULL;
 static int allocMaxDirs;
 static int currMaxDirs;
+/* the following two macros are used to select the correct file table */
+#define ACTIVE_FILE 1
+#define CONFIGURED_FILE 0
+
 
 /* We need to map watch descriptors to our actual objects. Unfortunately, the
  * inotify API does not provide us with any cookie, so a simple O(1) algorithm
@@ -1117,6 +1121,7 @@ dirsAdd(uchar *dirName)
 	/* if we reach this point, there is space in the file table for the new entry */
 	dirs[currMaxDirs].dirName = dirName;
 	CHKiRet(fileTableInit(&dirs[currMaxDirs].active, INIT_FILE_IN_DIR_TAB_SIZE));
+	CHKiRet(fileTableInit(&dirs[currMaxDirs].configured, INIT_FILE_IN_DIR_TAB_SIZE));
 
 	++currMaxDirs;
 	dbgprintf("DDDD: imfile: added to dirs table: '%s'\n", dirName);
@@ -1124,19 +1129,6 @@ finalize_it:
 	RETiRet;
 }
 
-/* checks if a file name is already inside the dirs array. Note that wildcards
- * apply. Returns either the array index or -1 if not found.
- * i is the index of the dir entry to search.
- */
-static int
-dirsFindFile(int i, uchar *fn)
-{
-	int f;
-
-	f = fileTableSearch(&dirs[i].active, fn);
-	dbgprintf("DDDD: dir '%s', file '%s', found:%d\n", dirs[i].dirName, fn, f);
-	return f;
-}
 
 /* checks if a dir name is already inside the dirs array. If so, returns
  * its index. If not present, -1 is returned.
@@ -1175,28 +1167,28 @@ finalize_it:
 }
 
 /* add file to directory (create association)
- * i is index into file table, all other information is pulled from that table.
+ * fileIdx is index into file table, all other information is pulled from that table.
  * bActive is 1 if the file is to be added to active set, else zero
  */
 static rsRetVal
-dirsAddFile(const int i)
+dirsAddFile(const int fileIdx, const int bActive)
 {
 	int dirIdx;
 	dirInfo_t *dir;
 	DEFiRet;
 
-	dirIdx = dirsFindDir(files[i].pszDirName);
+	dirIdx = dirsFindDir(files[fileIdx].pszDirName);
 	if(dirIdx == -1) {
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imfile: could not find "
 			"directory '%s' in dirs array - ignoring",
-			files[i].pszDirName);
+			files[fileIdx].pszDirName);
 		FINALIZE;
 	}
 
 	dir = dirs + dirIdx;
-	CHKiRet(fileTableAddFile(&dir->active, i));
+	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), fileIdx));
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
-		i, files[i].pszFileName, dirIdx, dir->dirName);
+		fileIdx, files[fileIdx].pszFileName, dirIdx, dir->dirName);
 finalize_it:
 	RETiRet;
 }
@@ -1248,21 +1240,21 @@ done:	return;
  * happen only for things after the watch has been activated.
  */
 static void
-in_setupFileWatch(int i)
+in_setupFileWatch(const int fileIdx)
 {
 	int wd;
-	wd = inotify_add_watch(ino_fd, (char*)files[i].pszFileName, IN_MODIFY);
+	wd = inotify_add_watch(ino_fd, (char*)files[fileIdx].pszFileName, IN_MODIFY);
 	if(wd < 0) {
-		DBGPRINTF("imfile: could not create initial file for '%s'\n",
-			files[i].pszFileName);
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "imfile: configured file '%s' "
-				"does not exist - ignored\n", (char*)files[i].pszFileName);
+		DBGPRINTF("imfile: could not create initial file for '%s' - "
+			  "moving to configured table\n",
+			  files[fileIdx].pszFileName);
+		dirsAddFile(fileIdx, CONFIGURED_FILE);
 		goto done;
 	}
-	wdmapAdd(wd, -1, i);
-	dbgprintf("DDDD: watch %d added for file %s\n", wd, files[i].pszFileName);
-	dirsAddFile(i);
-	pollFile(&files[i], NULL);
+	wdmapAdd(wd, -1, fileIdx);
+	dbgprintf("DDDD: watch %d added for file %s\n", wd, files[fileIdx].pszFileName);
+	dirsAddFile(fileIdx, ACTIVE_FILE);
+	pollFile(&files[fileIdx], NULL);
 done:	return;
 }
 
@@ -1328,11 +1320,16 @@ in_handleDirEvent(struct inotify_event *ev, int dirIdx)
 		in_dbg_showEv(ev);
 		goto done;
 	}
-	fileIdx = dirsFindFile(dirIdx, (uchar*)ev->name);
+	fileIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
 	if(fileIdx == -1) {
-		dbgprintf("imfile: file '%s' not associated with dir '%s'\n",
+		dbgprintf("imfile: file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
-		goto done;
+		fileIdx = fileTableSearch(&dirs[dirIdx].configured, (uchar*)ev->name);
+		if(fileIdx == -1) {
+			dbgprintf("imfile: file '%s' not associated with dir '%s'\n",
+				ev->name, dirs[dirIdx].dirName);
+			goto done;
+		}
 	}
 	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatch(fileIdx);
