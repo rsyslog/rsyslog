@@ -95,6 +95,9 @@ typedef struct fileInfo_s {
 	int maxLinesAtOnce;
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
+	int masterFile;		/* if dynamic file (via wildcard), this is the index of the configured
+				 * (master) entry. For master entries, this is always -1. Only
+				 * dynamic files can be purged from the "files" table. */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
@@ -686,28 +689,82 @@ finalize_it:
 }
 
 
-/* This function is called when a new listener (monitor) shall be added. */
-static inline rsRetVal
-addListner(instanceConf_t *inst)
+/* Check if space for one additional entry is inside the "files" table.
+ * If not, the table is extended. It is save to write to files[iFilPtr]
+ * after this function has been called and returned WITHOUT ERROR.
+ */
+static rsRetVal
+filesPrepareAdd(uchar *const fn)
 {
 	DEFiRet;
-	int newMax;
-	fileInfo_t *newFileTab;
-	fileInfo_t *pThis;
-
 	if(iFilPtr == allocMaxFiles) {
-		newMax = 2 * allocMaxFiles;
-		newFileTab = realloc(files, newMax * sizeof(fileInfo_t));
+		const int newMax = 2 * allocMaxFiles;
+		fileInfo_t *const newFileTab = realloc(files, newMax * sizeof(fileInfo_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to monitor file '%s' - ignoring",
-					inst->pszFileName);
+					fn);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		files = newFileTab;
 		allocMaxFiles = newMax;
 		DBGPRINTF("imfile: increased file table to %d entries\n", allocMaxFiles);
 	}
+finalize_it:
+	RETiRet;
+}
+
+/* Duplicate an existing entry. This is called when a new file is to
+ * be monitored due to wildcard detection.
+ */
+static rsRetVal
+filesDup(int *const __restrict__ fileIdx, uchar *const __restrict__ newname)
+{
+	DEFiRet;
+	const int masterfile = *fileIdx;
+	fileInfo_t *pThis;
+
+	CHKiRet(filesPrepareAdd(newname));
+
+	/* if we reach this point, there is space in the file table for the new entry */
+	pThis = &files[iFilPtr];
+	pThis->pszDirName = files[masterfile].pszDirName; /* use value from inst! */
+	pThis->pszBaseName = newname; /* use value from inst! */
+	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
+	pThis->pszTag = (uchar*) strdup((char*) files[masterfile].pszTag);
+	pThis->lenTag = ustrlen(pThis->pszTag);
+	pThis->pszStateFile = (uchar*) strdup((char*) files[masterfile].pszStateFile);
+
+	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
+	pThis->multiSub.maxElem = files[masterfile].multiSub.maxElem;
+	pThis->multiSub.nElem = 0;
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
+	pThis->iSeverity = files[masterfile].iSeverity;
+	pThis->iFacility = files[masterfile].iFacility;
+	pThis->maxLinesAtOnce = files[masterfile].maxLinesAtOnce;
+	pThis->iPersistStateInterval = files[masterfile].iPersistStateInterval;
+	pThis->readMode = files[masterfile].readMode;
+	pThis->escapeLF = files[masterfile].escapeLF;
+	pThis->pRuleset = files[masterfile].pRuleset;
+	pThis->nRecords = 0;
+	pThis->pStrm = NULL;
+
+	pThis->masterFile = masterfile;
+
+	*fileIdx = iFilPtr;
+	++iFilPtr;
+finalize_it:
+	RETiRet;
+}
+
+/* This function is called when a new listener (monitor) shall be added. */
+static inline rsRetVal
+addListner(instanceConf_t *inst)
+{
+	DEFiRet;
+	fileInfo_t *pThis;
+
+	CHKiRet(filesPrepareAdd(inst->pszFileName));
 
 	/* if we reach this point, there is space in the file table for the new entry */
 	pThis = &files[iFilPtr];
@@ -731,9 +788,8 @@ addListner(instanceConf_t *inst)
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
+	pThis->masterFile = -1; /* we *are* a master! */
 	++iFilPtr;	/* we got a new file to monitor */
-
-	resetConfigVariables(NULL, NULL); /* values are both dummies */
 finalize_it:
 	RETiRet;
 }
@@ -1019,8 +1075,8 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = files[tab->files[f].idx].pszBaseName;
-dbgprintf("DDDD: imfile: searching '%s': '%s'\n", fn, (char*)basename);
-		if(!fnmatch((char*)fn, (char*)baseName, FNM_PATHNAME | FNM_PERIOD))
+dbgprintf("DDDD: imfile: searching '%s': [%d]'%s'\n", fn, tab->files[f].idx, (char*)baseName);
+		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
 	if(f == tab->currMax)
@@ -1238,17 +1294,31 @@ done:	return;
  * Note: we need to try to read this file, as it may already contain data this
  * needs to be processed, and we won't get an event for that as notifications
  * happen only for things after the watch has been activated.
+ * Note: newFileName is NULL for configured files, and non-NULL for dynamically
+ * detected files (e.g. wildcards!)
  */
 static void
-in_setupFileWatch(const int fileIdx)
+in_setupFileWatch(int fileIdx, uchar *const __restrict__ newBaseName)
 {
 	int wd;
+dbgprintf("DDDD: imfile: masterfile '%s'\n", files[fileIdx].pszFileName);
+
+	if(newBaseName != NULL) {
+		/* we need to add the dynamic file to our file tables. */
+		if(filesDup(&fileIdx, newBaseName) != RS_RET_OK)
+			goto done;
+	}
 	wd = inotify_add_watch(ino_fd, (char*)files[fileIdx].pszFileName, IN_MODIFY);
 	if(wd < 0) {
-		DBGPRINTF("imfile: could not create initial file for '%s' - "
-			  "moving to configured table\n",
+		DBGPRINTF("imfile: could not create file table entry for '%s' - "
+			  "not processing it now\n",
 			  files[fileIdx].pszFileName);
-		dirsAddFile(fileIdx, CONFIGURED_FILE);
+		if(newBaseName == NULL) {
+			DBGPRINTF("imfile: moving file '%s' "
+				  "moving to configured table\n",
+				  files[fileIdx].pszFileName);
+			dirsAddFile(fileIdx, CONFIGURED_FILE);
+		}
 		goto done;
 	}
 	wdmapAdd(wd, -1, fileIdx);
@@ -1269,7 +1339,7 @@ in_setupInitialWatches()
 		in_setupDirWatch(i);
 	}
 	for(i = 0 ; i < iFilPtr ; ++i) {
-		in_setupFileWatch(i);
+		in_setupFileWatch(i, NULL);
 	}
 	RETiRet;
 }
@@ -1311,7 +1381,7 @@ in_dbg_showEv(struct inotify_event *ev)
 }
 
 static void
-in_handleDirEvent(struct inotify_event *ev, int dirIdx)
+in_handleDirEvent(struct inotify_event *ev, const int dirIdx)
 {
 	int fileIdx;
 	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
@@ -1332,7 +1402,7 @@ in_handleDirEvent(struct inotify_event *ev, int dirIdx)
 		}
 	}
 	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
-	in_setupFileWatch(fileIdx);
+	in_setupFileWatch(fileIdx, (uchar*)ev->name);
 done:	return;
 }
 
