@@ -1110,8 +1110,8 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, const int fileIdx)
 		newFileTab = realloc(tab->files, newMax * sizeof(dirInfoFiles_t));
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
-					"cannot alloc memory to map directory '%s' file relationship "
-					"'%s' - ignoring", files[fileIdx].pszFileName, "TODO"); //dir->dirName);
+					"cannot alloc memory to map directory/file relationship "
+					"for '%s' - ignoring", files[fileIdx].pszFileName);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		tab->files = newFileTab;
@@ -1136,8 +1136,8 @@ fileTableDelFile(fileTable_t *const __restrict__ tab, const int fIdx)
 	for(j = 0 ; j < tab->currMax && tab->files[j].idx != fIdx ; ++j)
 		; /* just scan */
 	if(j == tab->currMax) {
-		DBGPRINTF("imfile: no association for file '%s' in directory '%s' "
-			"found - ignoring\n", files[fIdx].pszFileName, "TODO"); //dir->dirName);
+		DBGPRINTF("imfile: no association for file '%s'\n",
+			  files[fIdx].pszFileName);
 		FINALIZE;
 	}
 	tab->files[j].refcnt--;
@@ -1279,7 +1279,7 @@ static void
 in_setupDirWatch(int i)
 {
 	int wd;
-	wd = inotify_add_watch(ino_fd, (char*)dirs[i].dirName, IN_CREATE);
+	wd = inotify_add_watch(ino_fd, (char*)dirs[i].dirName, IN_CREATE|IN_DELETE);
 	if(wd < 0) {
 		DBGPRINTF("imfile: could not create dir watch for '%s'\n",
 			files[i].pszFileName);
@@ -1380,16 +1380,22 @@ in_dbg_showEv(struct inotify_event *ev)
 	 }
 }
 
+/* inotify told us that a file's wd was closed. We now need to remove
+ * the file from our internal structures. Remember that a different inode
+ * with the same name may already be in processing.
+ */
 static void
-in_handleDirEvent(struct inotify_event *ev, const int dirIdx)
+in_removeFile(struct inotify_event *ev, const int fIdx)
+{
+	dbgprintf("DDDD: imfile remove file %d\n", fIdx);
+	wdmapDel(ev->wd);
+	dirsDelFile(fIdx);
+}
+
+static void
+in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 {
 	int fileIdx;
-	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
-	if(!(ev->mask & IN_CREATE)) {
-		DBGPRINTF("imfile: got non-expected inotify event:\n");
-		in_dbg_showEv(ev);
-		goto done;
-	}
 	fileIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
 	if(fileIdx == -1) {
 		dbgprintf("imfile: file '%s' not active in dir '%s'\n",
@@ -1406,20 +1412,44 @@ in_handleDirEvent(struct inotify_event *ev, const int dirIdx)
 done:	return;
 }
 
-/* inotify told us that a file's wd was closed. We now need to remove
- * the file from our internal structures. Remember that a different inode
- * with the same name may already be in processing.
+/* note: we need to care only for active files in the DELETE case.
+ * Two reasons: a) if this is a configured file, it should be active
+ * b) if not for some reason, there still is nothing we can do against
+ * it, and trying to process a *deleted* file really makes no sense
+ * (remeber we don't have it open, so it actually *is gone*).
  */
 static void
-in_removeFile(struct inotify_event *ev, int fIdx)
+in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 {
-	wdmapDel(ev->wd);
-	dirsDelFile(fIdx);
+	const int fileIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
+	if(fileIdx == -1) {
+		dbgprintf("imfile: deleted file '%s' not active in dir '%s'\n",
+			ev->name, dirs[dirIdx].dirName);
+		goto done;
+	}
+	dbgprintf("DDDD: imfile delete processing for '%s' associated with dir '%s'\n",
+	          ev->name, dirs[dirIdx].dirName);
+	in_removeFile(ev, fileIdx);
+done:	return;
+}
+
+static void
+in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
+{
+	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
+	if((ev->mask & IN_CREATE)) {
+		in_handleDirEventCREATE(ev, dirIdx);
+	} else if((ev->mask & IN_DELETE)) {
+		in_handleDirEventDELETE(ev, dirIdx);
+	} else {
+		DBGPRINTF("imfile: got non-expected inotify event:\n");
+		in_dbg_showEv(ev);
+	}
 }
 
 
 static void
-in_handleFileEvent(struct inotify_event *ev, int fIdx)
+in_handleFileEvent(struct inotify_event *ev, const int fIdx)
 {
 	if(ev->mask & IN_MODIFY) {
 		pollFile(&files[fIdx], NULL);
