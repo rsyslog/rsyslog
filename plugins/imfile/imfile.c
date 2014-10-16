@@ -213,8 +213,8 @@ static int currMaxDirs;
  */
 struct wd_map_s {
 	int wd;		/* ascending sort key */
-	int fileIdx;	/* -1, if this is a dir entry, otherwise index into files table */
-	int dirIdx;	/* index into dirs table, undefined if fileIdx != -1 */
+	int fIdx;	/* -1, if this is a dir entry, otherwise index into files table */
+	int dirIdx;	/* index into dirs table, undefined if fIdx != -1 */
 };
 typedef struct wd_map_s wd_map_t;
 static wd_map_t *wdmap = NULL;
@@ -271,7 +271,7 @@ dbg_wdmapPrint(char *msg)
 	dbgprintf("%s\n", msg);
 	for(i = 0 ; i < nWdmap ; ++i)
 		dbgprintf("wdmap[%d]: wd: %d, file %d, dir %d\n", i,
-			  wdmap[i].wd, wdmap[i].fileIdx, wdmap[i].dirIdx);
+			  wdmap[i].wd, wdmap[i].fIdx, wdmap[i].dirIdx);
 }
 #endif
 
@@ -312,7 +312,7 @@ wdmapLookup(int wd)
 
 /* note: we search backwards, as inotify tends to return increasing wd's */
 static rsRetVal
-wdmapAdd(int wd, int dirIdx, int fileIdx)
+wdmapAdd(int wd, int dirIdx, int fIdx)
 {
 	wd_map_t *newmap;
 	int newmapsize;
@@ -341,9 +341,9 @@ wdmapAdd(int wd, int dirIdx, int fileIdx)
 	}
 	wdmap[i].wd = wd;
 	wdmap[i].dirIdx = dirIdx;
-	wdmap[i].fileIdx = fileIdx;
+	wdmap[i].fIdx = fIdx;
 	++nWdmap;
-	dbgprintf("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, file %d\n",i,wd,dirIdx,fileIdx);
+	dbgprintf("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, file %d\n",i,wd,dirIdx,fIdx);
 
 finalize_it:
 	RETiRet;
@@ -718,10 +718,10 @@ finalize_it:
  * be monitored due to wildcard detection.
  */
 static rsRetVal
-filesDup(int *const __restrict__ fileIdx, uchar *const __restrict__ newname)
+filesDup(int *const __restrict__ fIdx, uchar *const __restrict__ newname)
 {
 	DEFiRet;
-	const int masterfile = *fileIdx;
+	const int masterfile = *fIdx;
 	fileInfo_t *pThis;
 
 	CHKiRet(filesPrepareAdd(newname));
@@ -751,7 +751,7 @@ filesDup(int *const __restrict__ fileIdx, uchar *const __restrict__ newname)
 
 	pThis->masterFile = masterfile;
 
-	*fileIdx = iFilPtr;
+	*fIdx = iFilPtr;
 	++iFilPtr;
 finalize_it:
 	RETiRet;
@@ -1087,14 +1087,14 @@ dbgprintf("DDDD: imfile: searching '%s': [%d]'%s'\n", fn, tab->files[f].idx, (ch
 
 /* add file to file table */ 
 static rsRetVal
-fileTableAddFile(fileTable_t *const __restrict__ tab, const int fileIdx)
+fileTableAddFile(fileTable_t *const __restrict__ tab, const int fIdx)
 {
 	int j;
 	int newMax;
 	dirInfoFiles_t *newFileTab;
 	DEFiRet;
 
-	for(j = 0 ; j < tab->currMax && tab->files[j].idx != fileIdx ; ++j)
+	for(j = 0 ; j < tab->currMax && tab->files[j].idx != fIdx ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
 		/* this is not important enough to send an user error, as all will
@@ -1111,7 +1111,7 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, const int fileIdx)
 		if(newFileTab == NULL) {
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to map directory/file relationship "
-					"for '%s' - ignoring", files[fileIdx].pszFileName);
+					"for '%s' - ignoring", files[fIdx].pszFileName);
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		tab->files = newFileTab;
@@ -1119,7 +1119,7 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, const int fileIdx)
 		DBGPRINTF("imfile: increased dir table to %d entries\n", allocMaxDirs);
 	}
 
-	tab->files[tab->currMax].idx = fileIdx;
+	tab->files[tab->currMax].idx = fIdx;
 	tab->files[tab->currMax].refcnt = 1;
 	tab->currMax++;
 finalize_it:
@@ -1223,28 +1223,28 @@ finalize_it:
 }
 
 /* add file to directory (create association)
- * fileIdx is index into file table, all other information is pulled from that table.
+ * fIdx is index into file table, all other information is pulled from that table.
  * bActive is 1 if the file is to be added to active set, else zero
  */
 static rsRetVal
-dirsAddFile(const int fileIdx, const int bActive)
+dirsAddFile(const int fIdx, const int bActive)
 {
 	int dirIdx;
 	dirInfo_t *dir;
 	DEFiRet;
 
-	dirIdx = dirsFindDir(files[fileIdx].pszDirName);
+	dirIdx = dirsFindDir(files[fIdx].pszDirName);
 	if(dirIdx == -1) {
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imfile: could not find "
 			"directory '%s' in dirs array - ignoring",
-			files[fileIdx].pszDirName);
+			files[fIdx].pszDirName);
 		FINALIZE;
 	}
 
 	dir = dirs + dirIdx;
-	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), fileIdx));
+	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), fIdx));
 	dbgprintf("DDDD: associated file %d[%s] to directory %d[%s]\n",
-		fileIdx, files[fileIdx].pszFileName, dirIdx, dir->dirName);
+		fIdx, files[fIdx].pszFileName, dirIdx, dir->dirName);
 finalize_it:
 	RETiRet;
 }
@@ -1298,33 +1298,30 @@ done:	return;
  * detected files (e.g. wildcards!)
  */
 static void
-in_setupFileWatch(int fileIdx, uchar *const __restrict__ newBaseName)
+in_setupFileWatch(int fIdx, uchar *const __restrict__ newBaseName)
 {
-	int wd;
-dbgprintf("DDDD: imfile: masterfile '%s'\n", files[fileIdx].pszFileName);
-
-	if(newBaseName != NULL) {
-		/* we need to add the dynamic file to our file tables. */
-		if(filesDup(&fileIdx, newBaseName) != RS_RET_OK)
+dbgprintf("DDDD: imfile: masterfile '%s'\n", files[fIdx].pszFileName);
+	if(newBaseName == NULL) {
+		/* all configured files need to be present in tables */
+		DBGPRINTF("imfile: adding file '%s' to configured table\n",
+			  files[fIdx].pszFileName);
+		dirsAddFile(fIdx, CONFIGURED_FILE);
+	} else {
+		/* we need to add a dynamic file to our tables --> make space */
+		if(filesDup(&fIdx, newBaseName) != RS_RET_OK)
 			goto done;
 	}
-	wd = inotify_add_watch(ino_fd, (char*)files[fileIdx].pszFileName, IN_MODIFY);
+	const int wd = inotify_add_watch(ino_fd, (char*)files[fIdx].pszFileName, IN_MODIFY);
 	if(wd < 0) {
 		DBGPRINTF("imfile: could not create file table entry for '%s' - "
 			  "not processing it now\n",
-			  files[fileIdx].pszFileName);
-		if(newBaseName == NULL) {
-			DBGPRINTF("imfile: moving file '%s' "
-				  "moving to configured table\n",
-				  files[fileIdx].pszFileName);
-			dirsAddFile(fileIdx, CONFIGURED_FILE);
-		}
+			  files[fIdx].pszFileName);
 		goto done;
 	}
-	wdmapAdd(wd, -1, fileIdx);
-	dbgprintf("DDDD: watch %d added for file %s\n", wd, files[fileIdx].pszFileName);
-	dirsAddFile(fileIdx, ACTIVE_FILE);
-	pollFile(&files[fileIdx], NULL);
+	wdmapAdd(wd, -1, fIdx);
+	dbgprintf("DDDD: watch %d added for file %s\n", wd, files[fIdx].pszFileName);
+	dirsAddFile(fIdx, ACTIVE_FILE);
+	pollFile(&files[fIdx], NULL);
 done:	return;
 }
 
@@ -1388,6 +1385,7 @@ static void
 in_removeFile(struct inotify_event *ev, const int fIdx)
 {
 	dbgprintf("DDDD: imfile remove file %d\n", fIdx);
+	pollFile(&files[fIdx], NULL); /* one final try to gather data */
 	wdmapDel(ev->wd);
 	dirsDelFile(fIdx);
 }
@@ -1395,20 +1393,20 @@ in_removeFile(struct inotify_event *ev, const int fIdx)
 static void
 in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 {
-	int fileIdx;
-	fileIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
-	if(fileIdx == -1) {
+	int fIdx;
+	fIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
+	if(fIdx == -1) {
 		dbgprintf("imfile: file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
-		fileIdx = fileTableSearch(&dirs[dirIdx].configured, (uchar*)ev->name);
-		if(fileIdx == -1) {
+		fIdx = fileTableSearch(&dirs[dirIdx].configured, (uchar*)ev->name);
+		if(fIdx == -1) {
 			dbgprintf("imfile: file '%s' not associated with dir '%s'\n",
 				ev->name, dirs[dirIdx].dirName);
 			goto done;
 		}
 	}
 	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
-	in_setupFileWatch(fileIdx, (uchar*)ev->name);
+	in_setupFileWatch(fIdx, (uchar*)ev->name);
 done:	return;
 }
 
@@ -1421,15 +1419,15 @@ done:	return;
 static void
 in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 {
-	const int fileIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
-	if(fileIdx == -1) {
+	const int fIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
+	if(fIdx == -1) {
 		dbgprintf("imfile: deleted file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
 	dbgprintf("DDDD: imfile delete processing for '%s' associated with dir '%s'\n",
 	          ev->name, dirs[dirIdx].dirName);
-	in_removeFile(ev, fileIdx);
+	in_removeFile(ev, fIdx);
 done:	return;
 }
 
@@ -1471,11 +1469,11 @@ in_processEvent(struct inotify_event *ev)
 		DBGPRINTF("imfile: could not lookup wd %d\n", ev->wd);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile: wd %d got file %d, dir %d\n", ev->wd, etry->fileIdx, etry->dirIdx);
-	if(etry->fileIdx == -1) { /* directory? */
+	dbgprintf("DDDD: imfile: wd %d got file %d, dir %d\n", ev->wd, etry->fIdx, etry->dirIdx);
+	if(etry->fIdx == -1) { /* directory? */
 		in_handleDirEvent(ev, etry->dirIdx);
 	} else {
-		in_handleFileEvent(ev, etry->fileIdx);
+		in_handleFileEvent(ev, etry->fIdx);
 	}
 done:	return;
 }
