@@ -1075,7 +1075,11 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = files[tab->files[f].idx].pszBaseName;
-dbgprintf("DDDD: imfile: searching '%s': [%d]'%s'\n", fn, tab->files[f].idx, (char*)baseName);
+dbgprintf("DDDD: imfile: table contents, f=%d '%s': [fIdx %d]'%s'\n", f, fn, tab->files[f].idx, (char*)baseName);
+}
+	for(f = 0 ; f < tab->currMax ; ++f) {
+		baseName = files[tab->files[f].idx].pszBaseName;
+dbgprintf("DDDD: imfile: searching, f=%d '%s': [fIdx %d]'%s'\n", f, fn, tab->files[f].idx, (char*)baseName);
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
@@ -1250,26 +1254,18 @@ finalize_it:
 }
 
 /* delete a file from directory (remove association) 
- * fIdx is index into file table, all other information is pulled from that table.
+ * dirIdx is index into directory table.
+ * fIdx is index into "active file table".
  */
 static rsRetVal
-dirsDelFile(const int fIdx)
+dirsDelFile(const int dirIdx, const int ftIdx)
 {
-	int dirIdx;
-	dirInfo_t *dir;
 	DEFiRet;
 
-	dirIdx = dirsFindDir(files[fIdx].pszDirName);
-	if(dirIdx == -1) {
-		DBGPRINTF("imfile: could not find directory '%s' in dirs array - ignoring",
-			files[fIdx].pszDirName);
-		FINALIZE;
-	}
-
-	dir = dirs + dirIdx;
-	CHKiRet(fileTableDelFile(&dir->active, fIdx));
-	DBGPRINTF("imfile: removed association of file '%s' to directory '%s'\n",
-		  files[fIdx].pszFileName, dir->dirName);
+	dirInfo_t *const dir = dirs + dirIdx;
+	DBGPRINTF("imfile: removing association of file '%s' to directory '%s'\n",
+		  files[dir->active.files[ftIdx].idx].pszFileName, dir->dirName);
+	CHKiRet(fileTableDelFile(&dir->active, ftIdx));
 
 finalize_it:
 	RETiRet;
@@ -1377,17 +1373,32 @@ in_dbg_showEv(struct inotify_event *ev)
 	 }
 }
 
+static void
+filesDisplay(void)
+{
+	int i;
+	for(i = 0 ; i < iFilPtr ; ++i)
+		dbgprintf("DDDD: files: [%d]: '%s'\n", i, files[i].pszFileName);
+}
+
 /* inotify told us that a file's wd was closed. We now need to remove
  * the file from our internal structures. Remember that a different inode
  * with the same name may already be in processing.
  */
 static void
-in_removeFile(struct inotify_event *ev, const int fIdx)
+in_removeFile(struct inotify_event *ev, const int dirIdx, const int ftIdx)
 {
-	dbgprintf("DDDD: imfile remove file %d\n", fIdx);
+filesDisplay();
+	const int fIdx = dirs[dirIdx].active.files[ftIdx].idx;
+	dbgprintf("DDDD: imfile remove file %d - '%s'\n", fIdx, files[fIdx].pszFileName);
 	pollFile(&files[fIdx], NULL); /* one final try to gather data */
+dbgprintf("DDDDD: end poll\n");
+	persistStrmState(&files[fIdx]);
+dbgprintf("DDDDD: end persists\n");
+	strm.Destruct(&(files[fIdx].pStrm));
+dbgprintf("DDDDD: end destruct\n");
 	wdmapDel(ev->wd);
-	dirsDelFile(fIdx);
+	dirsDelFile(dirIdx, ftIdx);
 }
 
 static void
@@ -1419,15 +1430,15 @@ done:	return;
 static void
 in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 {
-	const int fIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
-	if(fIdx == -1) {
+	const int ftIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
+	if(ftIdx == -1) {
 		dbgprintf("imfile: deleted file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile delete processing for '%s' associated with dir '%s'\n",
-	          ev->name, dirs[dirIdx].dirName);
-	in_removeFile(ev, fIdx);
+	dbgprintf("DDDD: imfile delete processing for '%s'\n",
+	          files[dirs[dirIdx].active.files[ftIdx].idx].pszFileName);
+	in_removeFile(ev, dirIdx, ftIdx);
 done:	return;
 }
 
@@ -1447,12 +1458,12 @@ in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 
 
 static void
-in_handleFileEvent(struct inotify_event *ev, const int fIdx)
+in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 {
 	if(ev->mask & IN_MODIFY) {
-		pollFile(&files[fIdx], NULL);
+		pollFile(&files[etry->fIdx], NULL);
 	} else if(ev->mask & IN_IGNORED) {
-		in_removeFile(ev, fIdx);
+		in_removeFile(ev, etry->dirIdx, etry->fIdx);
 	} else {
 		DBGPRINTF("imfile: got non-expected inotify event:\n");
 		in_dbg_showEv(ev);
@@ -1473,7 +1484,7 @@ in_processEvent(struct inotify_event *ev)
 	if(etry->fIdx == -1) { /* directory? */
 		in_handleDirEvent(ev, etry->dirIdx);
 	} else {
-		in_handleFileEvent(ev, etry->fIdx);
+		in_handleFileEvent(ev, etry);
 	}
 done:	return;
 }
