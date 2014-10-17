@@ -720,6 +720,7 @@ finalize_it:
 static void
 lstnDel(lstn_t *pLstn)
 {
+	dbgprintf("imfile: listDel called for %s\n", pLstn->pszFileName);
 	if(pLstn->pStrm != NULL) { /* stream open? */
 		persistStrmState(pLstn);
 		strm.Destruct(&(pLstn->pStrm));
@@ -752,8 +753,8 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	lstn_t *pThis;
 
 	CHKiRet(lstnAdd(&pThis));
-	pThis->pszDirName = existing->pszDirName; /* use value from inst! */
-	pThis->pszBaseName = newname; /* use value from inst! */
+	pThis->pszDirName = (uchar*)strdup((char*)existing->pszDirName);
+	pThis->pszBaseName = (uchar*)strdup((char*)newname);
 	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
 	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
@@ -1081,16 +1082,23 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+fileTableDisplay(fileTable_t *tab)
+{
+	int f;
+	uchar *baseName;
+	dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
+	for(f = 0 ; f < tab->currMax ; ++f) {
+		baseName = tab->listeners[f].pLstn->pszBaseName;
+		dbgprintf("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
+	}
+}
 static int
 fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
 	uchar *baseName;
-dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
-	for(f = 0 ; f < tab->currMax ; ++f) {
-		baseName = tab->listeners[f].pLstn->pszBaseName;
-dbgprintf("DDDD: imfile: table contents, %d->'%s'\n", f, (char*)baseName);
-}
+fileTableDisplay(tab);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 dbgprintf("DDDD: imfile: searching, f=%d '%s''\n", f, (char*)baseName);
@@ -1110,6 +1118,8 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 	int j;
 	DEFiRet;
 
+dbgprintf("DDDDD: imfile: fileTableAddFile\n");
+fileTableDisplay(tab);
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1258,27 +1268,11 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
 	dbgprintf("DDDD: associated file [%s] to directory %d[%s]\n",
 		pLstn->pszFileName, dirIdx, dir->dirName);
+fileTableDisplay(bActive ? &dir->active : &dir->configured);
 finalize_it:
 	RETiRet;
 }
 
-/* delete a file from directory (remove association) 
- * dirIdx is index into directory table.
- * fIdx is index into "active file table".
- */
-static rsRetVal
-dirsDelFile(const int dirIdx, lstn_t *const __restrict__ pLstn)
-{
-	DEFiRet;
-
-	dirInfo_t *const dir = dirs + dirIdx;
-	DBGPRINTF("imfile: removing association of file '%s' to directory '%s'\n",
-		  pLstn->pszFileName, dir->dirName);
-	CHKiRet(fileTableDelFile(&dir->active, pLstn));
-
-finalize_it:
-	RETiRet;
-}
 
 static void
 in_setupDirWatch(const int dirIdx)
@@ -1400,13 +1394,9 @@ in_removeFile(const struct inotify_event *const ev, const int dirIdx, lstn_t *co
 filesDisplay();
 	dbgprintf("DDDD: imfile remove listener %p - '%s'\n", pLstn, pLstn->pszFileName);
 	pollFile(pLstn, NULL); /* one final try to gather data */
-dbgprintf("DDDDD: end poll\n");
-	persistStrmState(pLstn); // TODO if we need to do this -- will done at destruction of pLstn, won't it?
-dbgprintf("DDDDD: end persists\n");
-	strm.Destruct(&pLstn->pStrm);
-dbgprintf("DDDDD: end destruct\n"); // TODO if we need to do this -- will done at destruction of pLstn, won't it?
+	lstnDel(pLstn);
 	wdmapDel(ev->wd);
-	dirsDelFile(dirIdx, pLstn);
+	fileTableDelFile(&dirs[dirIdx].active, pLstn);
 }
 
 static void
@@ -1415,7 +1405,9 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 	lstn_t *pLstn;
 	int ftIdx;
 	ftIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
-	if(ftIdx == -1) {
+	if(ftIdx >= 0) {
+		pLstn = dirs[dirIdx].active.listeners[ftIdx].pLstn;
+	} else {
 		dbgprintf("imfile: file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
 		ftIdx = fileTableSearch(&dirs[dirIdx].configured, (uchar*)ev->name);
@@ -1425,8 +1417,6 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 			goto done;
 		}
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
-	} else {
-		pLstn = dirs[dirIdx].active.listeners[ftIdx].pLstn;
 	}
 	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatch(pLstn, (uchar*)ev->name);
