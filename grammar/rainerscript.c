@@ -1540,9 +1540,15 @@ doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict_
 }
 
 static inline es_str_t*
-doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ const wrapperVal) {
+doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ const wrapperVal, struct var *__restrict__ const escaperVal) {
     int freeSource, freeWrapper;
-    es_str_t *sourceStr = var2String(sourceVal, &freeSource);
+    es_str_t *sourceStr;
+    if (escaperVal) {
+        sourceStr = doFuncReplace(sourceVal, wrapperVal, escaperVal);
+        freeSource = 1;
+    } else {
+        sourceStr = var2String(sourceVal, &freeSource);
+    }
     es_str_t *wrapperStr = var2String(wrapperVal, &freeWrapper);
     uchar *src = es_getBufAddr(sourceStr);
     uchar *wrapper = es_getBufAddr(wrapperStr);
@@ -1611,10 +1617,12 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
     case CNFFUNC_WRAP:
         cnfexprEval(func->expr[0], &r[0], usrptr);
         cnfexprEval(func->expr[1], &r[1], usrptr);
-        ret->d.estr = doFuncWrap(&r[0], &r[1]);
+        if (func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr);
+        ret->d.estr = doFuncWrap(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
         ret->datatype = 'S';
         varFreeMembers(&r[0]);
         varFreeMembers(&r[1]);
+        if (func->nParams > 3) varFreeMembers(&r[2]);
         break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
@@ -3649,14 +3657,17 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		return CNFFUNC_LOOKUP;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"replace", sizeof("replace") - 1)) {
 		if(nParams != 3) {
-			parser_errmsg("number of parameters for wrap() must be three (operand_string, fragment_to_find, fragment_to_replace_in_its_place) "
+			parser_errmsg("number of parameters for replace() must be three "
+                          "(operand_string, fragment_to_find, fragment_to_replace_in_its_place) "
                           "but is %d.", nParams);
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_REPLACE;
 	} else if(!es_strbufcmp(fname, (unsigned char*)"wrap", sizeof("wrap") - 1)) {
-		if(nParams != 2) {
-			parser_errmsg("number of parameters for wrap() must be two (operand_string, string_to_wrap_it_in) "
+		if(nParams < 2 || nParams > 3) {
+			parser_errmsg("number of parameters for wrap() must either be "
+                          "two (operand_string, wrapper) or"
+                          "three (operand_string, wrapper, wrapper_escape_str)"
                           "but is %d.", nParams);
 			return CNFFUNC_INVALID;
 		}
