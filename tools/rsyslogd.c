@@ -81,7 +81,7 @@ void syslogd_die(void);
 void syslogd_releaseClassPointers(void);
 void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
-rsRetVal syslogd_doGlblProcessInit(void);
+rsRetVal syslogd_doGlblProcessInit(int *);
 rsRetVal syslogd_obtainClassPointers(void);
 /* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
@@ -120,6 +120,108 @@ rsyslogd_usage(void)
 			"to run it in debug mode use \"rsyslogd -dn\"\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
+}
+
+#ifndef HAVE_SETSID
+extern void untty(void); /* in syslogd.c, GPLv3 */
+static int
+setsid(void)
+{
+	untty();
+	return 0;
+}
+#endif
+
+/* prepares the background processes (if auto-backbrounding) for
+ * operation.
+ */
+static void
+prepareBackground(void)
+{
+	int r = setsid();
+dbgprintf("setsid() returns %d\n", r);
+	r = setpgid(0, 0);
+dbgprintf("setpgid() returns %d\n", r);
+
+	if(r == -1) {
+		char err[1024];
+		char em[2048];
+		rs_strerror_r(errno, err, sizeof(err));
+		snprintf(em, sizeof(em)-1, "rsyslog: error "
+			                   "auto-backgrounding: %s\n", err);
+		dbgprintf("%s\n", em);
+		fprintf(stderr, "%s", em);
+	}
+}
+
+/* This is called when rsyslog is set to auto-background itself. If so, a child
+ * is forked and the parent waits until it is initialized.
+ * The parent never returns from this function, only this happens for the child.
+ * So if it returns, you know you are in the child.
+ * return: file descriptor to which the child needs to write an "OK" or error
+ * message.
+ */
+int
+forkRsyslog(void)
+{
+	int pipefd[2];
+	pid_t cpid;
+	char msgBuf[4096];
+
+	dbgprintf("rsyslogd: parent ready for forking\n");
+	if(pipe(pipefd) == -1) {
+		perror("error creating rsyslog \"fork pipe\" - terminating");
+		exit(1);
+	}
+
+	cpid = fork();
+	if(cpid == -1) {
+		perror("error forking rsyslogd process - terminating");
+		exit(1);
+	}
+
+	if(cpid != 0) {    
+		prepareBackground();
+		close(pipefd[0]);
+		return pipefd[1];
+	}
+
+	/* we are now in the parent. All we need to do here is wait for the
+	 * startup message, emit it (if necessary) and then terminate.
+	 */
+	close(pipefd[1]);
+	dbgprintf("DDDD: parent waiting to read startup message\n");
+	int nRead = read(pipefd[0], msgBuf, sizeof(msgBuf));
+	if(nRead > 0) {
+		msgBuf[nRead] = '\0';
+	} else {
+		char err[1024];
+		rs_strerror_r(errno, err, sizeof(err));
+		snprintf(msgBuf, sizeof(msgBuf)-1, "error reading \"fork pipe\": %s",
+		         err);
+		
+	}
+	if(strcmp(msgBuf, "OK")) {
+		dbgprintf("rsyslog parent startup failure: %s\n", msgBuf);
+		fprintf(stderr,"rsyslog startup failure: %s\n", msgBuf);
+		exit(1);
+	}
+	close(pipefd[0]);
+	dbgprintf("rsyslog parent terminates after successful child startup\n");
+	exit(0);
+}
+
+/* startup processing: this signals the waiting parent that the child is ready
+ * and the parent may terminate.
+ */
+static void
+tellChildReady(int pipefd, char *const msg)
+{
+	dbgprintf("rsyslogd: child signaling OK\n");
+	const int nWritten = write(pipefd, msg, strlen(msg));
+	dbgprintf("rsyslogd: child signalled OK, nWritten %d\n", (int) nWritten);
+	close(pipefd);
+	sleep(1);
 }
 
 /* This is a support function for imdiag. It returns back the approximate
@@ -772,6 +874,7 @@ initAll(int argc, char **argv)
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
 	char cwdbuf[128]; /* buffer to obtain/display current working directory */
+	int parentPipeFD; /* fd of pipe to parent, if auto-backgrounding */
 	DEFiRet;
 
 	/* first, parse the command line options. We do not carry out any actual work, just
@@ -1013,11 +1116,11 @@ initAll(int argc, char **argv)
 	}
 
 	if(!iConfigVerify)
-		CHKiRet(syslogd_doGlblProcessInit());
+		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
 
 	/* Send a signal to the parent so it can terminate.  */
-	if(glblGetOurPid() != ppid)
-		kill(ppid, SIGTERM);
+	if(doFork)
+		tellChildReady(parentPipeFD, "OK");
 
 	CHKiRet(rsyslogdInit());
 

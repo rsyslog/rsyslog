@@ -126,6 +126,7 @@ extern void rsyslogd_usage(void);
 extern rsRetVal rsyslogdInit(void);
 extern void rsyslogd_destructAllActions(void);
 extern void rsyslogd_sigttin_handler();
+extern int forkRsyslog(void);
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 rsRetVal rsyslogd_InitGlobalClasses(void);
 rsRetVal rsyslogd_InitStdRatelimiters(void);
@@ -227,16 +228,9 @@ char **syslogd_crunch_list(char *list)
 }
 
 
-/* also stems back to sysklogd in whole */
+#ifndef HAVE_SETSID
+/* stems back to sysklogd in whole */
 void untty(void)
-#ifdef HAVE_SETSID
-{
-	if(!Debug) {
-		setsid();
-	}
-	return;
-}
-#else
 {
 	int i;
 	pid_t pid;
@@ -290,17 +284,6 @@ syslogd_die(void)
 {
 	remove_pid(PidFile);
 }
-
-/*
- * Signal handler to terminate the parent process.
- * rgerhards, 2005-10-24: this is only called during forking of the
- * detached syslogd. I consider this method to be safe.
- */
-static void doexit()
-{
-	exit(0); /* "good" exit, only during child-creation */
-}
-
 
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
@@ -458,7 +441,7 @@ finalize_it:
  * rgerhards, 2008-07-28 (extracted from realMain())
  */
 rsRetVal
-syslogd_doGlblProcessInit(void)
+syslogd_doGlblProcessInit(int *const pParentPipeFD)
 {
 	struct sigaction sigAct;
 	int num_fds;
@@ -471,36 +454,12 @@ syslogd_doGlblProcessInit(void)
 		DBGPRINTF("Checking pidfile '%s'.\n", PidFile);
 		if (!check_pid(PidFile))
 		{
-			memset(&sigAct, 0, sizeof (sigAct));
-			sigemptyset(&sigAct.sa_mask);
-			sigAct.sa_handler = doexit;
-			sigaction(SIGTERM, &sigAct, NULL);
-
 			/* RH contribution */
 			/* stop writing debug messages to stdout (if debugging is on) */
-			stddbg = -1;
+			//stddbg = -1;
 			/* end RH contribution */
 
-			dbgprintf("ready for forking\n");
-			if (fork()) {
-				/* Parent process
-				 */
-				dbgprintf("parent process going to sleep for 60 secs\n");
-				sleep(60);
-				/* Not reached unless something major went wrong.  1
-				 * minute should be a fair amount of time to wait.
-				 * The parent should not exit before rsyslogd is 
-				 * properly initilized (at least almost) or the init
-				 * system may get a wrong impression of our readyness.
-				 * Note that we exit before being completely initialized,
-				 * but at this point it is very, very unlikely that something
-				 * bad can happen. We do this here, because otherwise we would
-				 * need to have much more code to handle priv drop (which we
-				 * don't consider worth for the init system, especially as it
-				 * is going away on the majority of distros).
-				 */
-				exit(1); /* "good" exit - after forking, not diasabling anything */
-			}
+			*pParentPipeFD = forkRsyslog();
 
 			num_fds = getdtablesize();
 			close(0);
@@ -540,10 +499,11 @@ syslogd_doGlblProcessInit(void)
 					i = SD_LISTEN_FDS_START + sd_fds;
 			}
 			for ( ; i < num_fds; i++)
-				if(i != dbgGetDbglogFd())
+				if(!((i == dbgGetDbglogFd()) ||
+				    (i == *pParentPipeFD && doFork)
+				    ) )
 					close(i);
 
-			untty();
 		} else {
 			fputs(" Already running. If you want to run multiple instances, you need "
 			      "to specify different pid files (use -i option)\n", stderr);
