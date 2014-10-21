@@ -100,6 +100,7 @@ typedef struct lstn_s {
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
+	sbool bRMStateOnDel;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -132,6 +133,7 @@ struct instanceConf_s {
 	int iPersistStateInterval;
 	int iFacility;
 	int iSeverity;
+	sbool bRMStateOnDel;
 	uint8_t readMode;
 	sbool escapeLF;
 	int maxLinesAtOnce;
@@ -239,7 +241,6 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
 	{ "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "severity", eCmdHdlrSeverity, 0 },
 	{ "facility", eCmdHdlrFacility, 0 },
@@ -248,7 +249,9 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
-	{ "persiststateinterval", eCmdHdlrInt, 0 }
+	{ "removestateondelete", eCmdHdlrBinary, 0 },
+	{ "persiststateinterval", eCmdHdlrInt, 0 },
+	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -309,6 +312,18 @@ wdmapLookup(int wd)
 	return bsearch(&wd, wdmap, nWdmap, sizeof(wd_map_t), wdmap_cmp);
 }
 
+/* returns the wd for a given lstn_t object. This is requried during
+ * remove processing, where we do not know the file WD.
+ */
+static int
+wdmapLookupWD(lstn_t *const __restrict__ pLstn)
+{
+	int i;
+	for(i = nWdmap-1 ; i >= 0 && wdmap[i].pLstn != pLstn ; --i)
+		;
+	return wdmap[i].wd;
+}
+
 /* note: we search backwards, as inotify tends to return increasing wd's */
 static rsRetVal
 wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
@@ -351,7 +366,7 @@ finalize_it:
 }
 
 static rsRetVal
-wdmapDel(int wd)
+wdmapDel(const int wd)
 {
 	int i;
 	DEFiRet;
@@ -362,6 +377,7 @@ wdmapDel(int wd)
 		DBGPRINTF("imfile: wd %d shall be deleted but not in wdmap!\n", wd);
 		FINALIZE;
 	}
+
 	if(i < nWdmap-1) {
 		/* we need to shift to delete it (see comment at wdmap definition) */
 		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i,i+1,nWdmap-i-1);
@@ -594,6 +610,7 @@ createInstance(instanceConf_t **pinst)
 	inst->maxLinesAtOnce = 0;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
+	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
 
 	/* node created, let's add to config */
@@ -707,6 +724,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
+	inst->bRMStateOnDel = 0;
 
 	CHKiRet(checkInstance(inst));
 
@@ -799,6 +817,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
 	pThis->iPersistStateInterval = existing->iPersistStateInterval;
 	pThis->readMode = existing->readMode;
+	pThis->bRMStateOnDel = existing->bRMStateOnDel;
 	pThis->escapeLF = existing->escapeLF;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
@@ -809,12 +828,30 @@ finalize_it:
 	RETiRet;
 }
 
-/* This function is called when a new listener shall be added. */
+/* This function is called when a new listener shall be added.
+ * It also does some late stage error checking on the config
+ * and reports issues it finds.
+ */
 static inline rsRetVal
 addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 	lstn_t *pThis;
+
+	if(strstr((char*)inst->pszFileBaseName, "*") != NULL) {
+		if(runModConf->opMode == OPMODE_POLLING) {
+			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
+				"imfile: warning: it looks like to-be-monitored "
+				"file \"%s\" contains wildcards. If so, this does "
+				"not work in polling mode.", inst->pszFileName);
+		} else if(inst->pszStateFile != NULL) {
+			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
+				"imfile: warning: it looks like to-be-monitored "
+				"file \"%s\" contains wildcards. This usually "
+				"does not work well with specifying a state file.",
+				inst->pszFileName);
+		}
+	}
 
 	CHKiRet(lstnAdd(&pThis));
 	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
@@ -833,6 +870,7 @@ addListner(instanceConf_t *inst)
 	pThis->maxLinesAtOnce = inst->maxLinesAtOnce;
 	pThis->iPersistStateInterval = inst->iPersistStateInterval;
 	pThis->readMode = inst->readMode;
+	pThis->bRMStateOnDel = inst->bRMStateOnDel;
 	pThis->escapeLF = inst->escapeLF;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
@@ -869,6 +907,8 @@ CODESTARTnewInpInst
 			inst->pszFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "statefile")) {
 			inst->pszStateFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "removestateondelete")) {
+			inst->bRMStateOnDel = (uint8_t) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
 			inst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -878,7 +918,7 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "facility")) {
 			inst->iFacility = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
-			inst->readMode = (uint8_t) pvals[i].val.d.n;
+			inst->readMode = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
@@ -1419,14 +1459,42 @@ filesDisplay(void)
  * with the same name may already be in processing.
  */
 static void
-in_removeFile(const struct inotify_event *const ev, const int dirIdx, lstn_t *const __restrict__ pLstn)
+in_removeFile(const struct inotify_event *const ev,
+	      const int dirIdx,
+	      lstn_t *const __restrict__ pLstn,
+	      const int bIsDel)
 {
 filesDisplay();
-	dbgprintf("DDDD: imfile remove listener %p - '%s'\n", pLstn, pLstn->pszFileName);
+	uchar statefile[MAXFNAME];
+	uchar toDel[MAXFNAME];
+	int bDoRMState;
+	uchar *statefn;
+	const int wdDel = wdmapLookupWD(pLstn);
+	dbgprintf("DDDD: imfile remove listener '%s', bIsDel: %d, wd %d, wdDel %d\n",
+	          pLstn->pszFileName, bIsDel, ev->wd, wdDel);
+	if(bIsDel && pLstn->bRMStateOnDel) {
+		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
+		snprintf((char*)toDel, sizeof(toDel) / sizeof(uchar), "%s/%s",
+				     glbl.GetWorkDir(), (char*)statefn);
+		bDoRMState = 1;
+	} else {
+		bDoRMState = 0;
+	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
+for(int j = 0 ; j < nWdmap; ++j)
+  dbgprintf("DDDD: wdmap PRE  del %d: %d->%p\n", j, wdmap[j].wd, wdmap[j].pLstn);//->pszFileName);
 	lstnDel(pLstn);
-	wdmapDel(ev->wd);
+	wdmapDel(wdDel);
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
+	if(bDoRMState) {
+		DBGPRINTF("imfile: unlinking '%s'\n", toDel);
+		if(unlink((char*)toDel) != 0) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			errmsg.LogError(0, RS_RET_ERR, "imfile: could not remove state "
+				"file \"%s\": %s", toDel, errStr);
+		}
+	}
 }
 
 static void
@@ -1470,7 +1538,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 	}
 	dbgprintf("DDDD: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
-	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
+	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn, 1);
 done:	return;
 }
 
@@ -1495,7 +1563,7 @@ in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 	if(ev->mask & IN_MODIFY) {
 		pollFile(etry->pLstn, NULL);
 	} else if(ev->mask & IN_IGNORED) {
-		in_removeFile(ev, etry->dirIdx, etry->pLstn);
+		in_removeFile(ev, etry->dirIdx, etry->pLstn, 0);
 	} else {
 		DBGPRINTF("imfile: got non-expected inotify event:\n");
 		in_dbg_showEv(ev);
@@ -1538,6 +1606,7 @@ do_inotify()
 	in_setupInitialWatches();
 
 	while(glbl.GetGlobalInputTermState() == 0) {
+dbgprintf("DDDDD: inotify: going to read ino_fd\n");
 		rd = read(ino_fd, iobuf, sizeof(iobuf));
 		if(rd < 0 && Debug) {
 			char errStr[1024];
