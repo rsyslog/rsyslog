@@ -71,7 +71,6 @@ DEFobjCurrIf(glbl)
 extern int bHadHUP;
 extern int bFinished;
 extern int doFork;
-extern pid_t ppid;
 extern char *PidFile;
 
 extern int realMain(int argc, char **argv);
@@ -139,9 +138,6 @@ static void
 prepareBackground(void)
 {
 	int r = setsid();
-dbgprintf("setsid() returns %d\n", r);
-	r = setpgid(0, 0);
-dbgprintf("setpgid() returns %d\n", r);
 
 	if(r == -1) {
 		char err[1024];
@@ -166,6 +162,7 @@ forkRsyslog(void)
 {
 	int pipefd[2];
 	pid_t cpid;
+	char err[1024];
 	char msgBuf[4096];
 
 	dbgprintf("rsyslogd: parent ready for forking\n");
@@ -180,7 +177,7 @@ forkRsyslog(void)
 		exit(1);
 	}
 
-	if(cpid != 0) {    
+	if(cpid == 0) {    
 		prepareBackground();
 		close(pipefd[0]);
 		return pipefd[1];
@@ -190,16 +187,39 @@ forkRsyslog(void)
 	 * startup message, emit it (if necessary) and then terminate.
 	 */
 	close(pipefd[1]);
-	dbgprintf("DDDD: parent waiting to read startup message\n");
+	dbgprintf("rsyslogd: parent waiting up to 60 seconds to read startup message\n");
+
+	fd_set rfds;
+	struct timeval tv;
+	int retval;
+
+	FD_ZERO(&rfds);
+	FD_SET(pipefd[0], &rfds);
+	tv.tv_sec = 60;
+	tv.tv_usec = 0;
+
+	retval = select(pipefd[0]+1, &rfds, NULL, NULL, &tv);
+	if(retval == -1)
+		rs_strerror_r(errno, err, sizeof(err));
+	else
+		strcpy(err, "OK");
+	dbgprintf("rsyslogd: select() returns %d: %s\n", retval, err);
+	if(retval == -1) {
+		fprintf(stderr,"rsyslog startup failure, select() failed: %s\n", err);
+		exit(1);
+	} else if(retval == 0) {
+		fprintf(stderr,"rsyslog startup failure, child did not "
+			"respond within startup timeout (60 seconds)\n");
+		exit(1);
+	}
+
 	int nRead = read(pipefd[0], msgBuf, sizeof(msgBuf));
 	if(nRead > 0) {
 		msgBuf[nRead] = '\0';
 	} else {
-		char err[1024];
 		rs_strerror_r(errno, err, sizeof(err));
 		snprintf(msgBuf, sizeof(msgBuf)-1, "error reading \"fork pipe\": %s",
 		         err);
-		
 	}
 	if(strcmp(msgBuf, "OK")) {
 		dbgprintf("rsyslog parent startup failure: %s\n", msgBuf);
@@ -207,7 +227,7 @@ forkRsyslog(void)
 		exit(1);
 	}
 	close(pipefd[0]);
-	dbgprintf("rsyslog parent terminates after successful child startup\n");
+	dbgprintf("rsyslogd: parent terminates after successful child startup\n");
 	exit(0);
 }
 
@@ -951,8 +971,6 @@ initAll(int argc, char **argv)
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
-	ppid = getpid();
-
 	CHKiRet(rsyslogd_InitGlobalClasses());
 	CHKiRet(syslogd_obtainClassPointers());
 
@@ -1118,10 +1136,6 @@ initAll(int argc, char **argv)
 	if(!iConfigVerify)
 		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
 
-	/* Send a signal to the parent so it can terminate.  */
-	if(doFork)
-		tellChildReady(parentPipeFD, "OK");
-
 	CHKiRet(rsyslogdInit());
 
 	if(Debug && debugging_on) {
@@ -1129,6 +1143,9 @@ initAll(int argc, char **argv)
 	}
 
 	/* END OF INTIALIZATION */
+	if(doFork)
+		tellChildReady(parentPipeFD, "OK");
+
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
 	/* close stderr and stdout if they are kept open during a fork. Note that this

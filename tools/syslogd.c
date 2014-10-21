@@ -150,7 +150,6 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
  			 * termination.
 			 */
 int iConfigVerify = 0;	/* is this just a config verify run? */
-pid_t ppid;	/* This is a quick and dirty hack used for spliting main/startup thread */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
 
