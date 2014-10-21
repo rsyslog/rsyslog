@@ -455,15 +455,18 @@ openFile(lstn_t *pLstn)
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			dbgprintf("filemon %p: clean startup, no .si file found\n", pLstn);
+			dbgprintf("imfile: clean startup, state file for '%s'\n", pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			dbgprintf("filemon %p: error %d trying to access .si file\n", pLstn, errno);
+			char errStr[1024];
+			rs_strerror_r(eno, errStr, sizeof(errStr));
+			dbgprintf("imfile: error trying to access state file for '%s':\n",
+			          p->pszFileNameLstn, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
 
-	/* If we reach this point, we have a .si file */
+	/* If we reach this point, we have a state file */
 
 	CHKiRet(strm.Construct(&psSF));
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_READ));
