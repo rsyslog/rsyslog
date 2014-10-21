@@ -1509,8 +1509,10 @@ do_inotify()
 
 	while(glbl.GetGlobalInputTermState() == 0) {
 		rd = read(ino_fd, iobuf, sizeof(iobuf));
-		if(rd < 0) {
-			perror("inotify read"); exit(1);
+		if(rd < 0 && Debug) {
+			char errStr[1024];
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			dbgprintf("imfile: error during inotify: %s\n", errStr);
 		}
 		currev = 0;
 		while(currev < rd) {
