@@ -65,7 +65,7 @@ typedef struct _instanceData {
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	char *pszPath;		/**< path of normalized data */
-    uchar *tmplName;     /**< name of template to use */
+    msgPropDescr_t *varDescr;     /**< name of variable to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -84,7 +84,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
 	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 },
-    { "template", eCmdHdlrGetWord, 0 }
+    { "variable", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -178,7 +178,8 @@ CODESTARTfreeInstance
 	free(pData->rulebase);
 	ln_exitCtx(pData->ctxln);
     free(pData->pszPath);
-    free(pData->tmplName);
+    msgPropDescrDestruct(pData->varDescr);
+    free(pData->varDescr);
 ENDfreeInstance
 
 
@@ -190,7 +191,7 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
-    dbgprintf("\ttemplate='%s'\n", pData->tmplName);
+    dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
     dbgprintf("\trulebase='%s'\n", pData->rulebase);
     dbgprintf("\tpath='%s'\n", pData->pszPath);
     dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
@@ -204,21 +205,25 @@ ENDtryResume
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
-	int len;
+    rs_size_t len;
 	int r;
 	struct json_object *json = NULL;
+    unsigned short freeBuf = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
-	} else if (pWrkrData->pData->tmplName) {
-        buf = ppString[1];
-        len = ustrlen(buf);
+	} else if (pWrkrData->pData->varDescr) {
+        buf = MsgGetProp(pMsg, NULL, pWrkrData->pData->varDescr, &len, &freeBuf, NULL);
     } else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
 	r = ln_normalize(pWrkrData->pData->ctxln, (char*)buf, len, &json);
+    if (freeBuf) {
+        free(buf);
+        buf = NULL;
+    }
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -237,15 +242,17 @@ setInstParamDefaults(instanceData *pData)
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
 	pData->pszPath = strdup("$!");
+    pData->varDescr = NULL;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int bDestructPValsOnExit;
-	char *cstr;
+    char *cstr;
+    char *varName = NULL;
 CODESTARTnewActInst
-	DBGPRINTF("newActInst (mmnormalize)\n");
+    DBGPRINTF("newActInst (mmnormalize)\n");
 
 	bDestructPValsOnExit = 0;
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -271,8 +278,8 @@ CODESTARTnewActInst
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tmplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "variable")) {
+			varName = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "path")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strlen(cstr) < 2) {
@@ -298,18 +305,17 @@ CODESTARTnewActInst
 
     if(pData->bUseRawMsg) {
         errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-                        "mmnormalize: 'template' param can't be used with 'useRawMsg'. "
-                        "Ignoring 'template', will use raw message.");
-        free(pData->tmplName);
-        pData->tmplName = NULL;
+                        "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
+                        "Ignoring 'variable', will use raw message.");
+    } else if (varName) {
+        CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+        CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
     }
+    free(varName);
+    varName = NULL;
 
-    CODE_STD_STRING_REQUESTnewActInst(pData->tmplName ? 2 : 1)
+    CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-    if (pData->tmplName) {
-        CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->tmplName), OMSR_NO_RQD_TPL_OPTS));
-    }
-
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
 	if(bDestructPValsOnExit)
