@@ -40,6 +40,41 @@ Currently, the file must have a fixed name and location (directory).
 It is planned to add support for dynamically generating file names in the
 future.
 
+State Files
+...........
+Rsyslog must keep track of which parts of the to be monitored file
+are already processed. This is done in so-called "state files".
+These files are always created in the rsyslog working directory
+(configurable via $WorkDirectory).
+
+To avoid problems with duplicate state files, rsyslog automatically
+generates state file names according to the following scheme:
+
+- the string "imfile-state:" is added before the actual file name,
+  which includes the full path
+- the full name is prepended after that string, but all occurences
+  of "/" are replaced by "-" to facilitate handling of these files
+
+As a concrete example, consider a file ``/var/log/applog`` is
+being monitored. The corresponding state file will be named
+``imfile-state:-var-log-applog``.
+
+Note that it is possible to set a fixed state file name via the
+deprecated "stateFile" parameter. It is suggested to avoid this, as
+the user must take care of name clashes. Most importantly, if
+"stateFile" is set for file monitors with wildcards, the **same**
+state file is used for all occurences of these files. In short,
+this will usually not work and cause confusion. Upon startup,
+rsyslog tries to detect these cases and emit warning messages.
+However, the detection simply checks for the presence of "*"
+and as such it will not cover more complex cases.
+
+Note that when $WorkDirectory is not set or
+set to a non-writable location, the state file **will not be generated**.
+In those cases, the file content will always completely re-sent by
+imfile, because the module does not know that it already processed
+parts of that file.
+
 Module Parameters
 -----------------
 
@@ -102,20 +137,6 @@ Input Parameters
    The tag to be used for messages that originate from this file. If
    you would like to see the colon after the tag, you need to specify it
    here (like 'tag="myTagValue:"').
-
-.. index:: 
-   single: imfile; StateFile
-.. function:: StateFile [name-of-state-file]
-
-   This is the name of this file's state file.
-   Rsyslog must keep track of which parts of the to be monitored file
-   it already processed. This is done in the state file. This file
-   always is created in the rsyslog working directory (configurable via
-   $WorkDirectory). Be careful to use unique names for different files
-   being monitored. If there are duplicates, all sorts of "interesting"
-   things may happen. Rsyslog currently does not check if a name is
-   specified multiple times. Note that when $WorkDirectory is not set or
-   set to a non-writable location, the state file will not be generated.
 
 .. index:: 
    single: imfile; Facility
@@ -214,10 +235,22 @@ Input Parameters
 
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
+.. function:: stateFile [name-of-state-file]
+
+   **Default: unset**
+
+   **This paramater is deprecated.** It still is accepted, but should
+   no longer be used for newly created configurations.
+
+   This is the name of this file's state file. This parameter should
+   usually **not** be used. Check the section on "State Files" above
+   for more details.
+
 Caveats/Known Bugs
 ------------------
 
-currently none
+* read modes other than "0" currently seem to have issues in
+  inotify mode
 
 Configuration Example
 ---------------------
@@ -237,15 +270,13 @@ defaults instead.
   input(type="imfile" 
         File="/path/to/file1" 
         Tag="tag1"
-        StateFile="statefile1" 
         Severity="error" 
         Facility="local7") 
 
   # File 2
   input(type="imfile" 
         File="/path/to/file2" 
-        Tag="tag2"
-        StateFile="statefile2") 
+        Tag="tag2")
 
   # ... and so on ... #
 
