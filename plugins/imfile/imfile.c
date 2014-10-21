@@ -826,7 +826,7 @@ addListner(instanceConf_t *inst)
 	DEFiRet;
 	lstn_t *pThis;
 
-	if(strstr((char*)inst->pszFileBaseName, "*") != NULL) {
+	if(containsGlobWildcard((char*)inst->pszFileBaseName)) {
 		if(runModConf->opMode == OPMODE_POLLING) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
 				"imfile: warning: it looks like to-be-monitored "
@@ -1591,7 +1591,6 @@ do_inotify()
 	in_setupInitialWatches();
 
 	while(glbl.GetGlobalInputTermState() == 0) {
-dbgprintf("DDDDD: inotify: going to read ino_fd\n");
 		rd = read(ino_fd, iobuf, sizeof(iobuf));
 		if(rd < 0 && Debug) {
 			char errStr[1024];
