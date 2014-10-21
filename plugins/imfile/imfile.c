@@ -312,18 +312,6 @@ wdmapLookup(int wd)
 	return bsearch(&wd, wdmap, nWdmap, sizeof(wd_map_t), wdmap_cmp);
 }
 
-/* returns the wd for a given lstn_t object. This is requried during
- * remove processing, where we do not know the file WD.
- */
-static int
-wdmapLookupWD(lstn_t *const __restrict__ pLstn)
-{
-	int i;
-	for(i = nWdmap-1 ; i >= 0 && wdmap[i].pLstn != pLstn ; --i)
-		;
-	return wdmap[i].wd;
-}
-
 /* note: we search backwards, as inotify tends to return increasing wd's */
 static rsRetVal
 wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
@@ -1461,18 +1449,16 @@ filesDisplay(void)
 static void
 in_removeFile(const struct inotify_event *const ev,
 	      const int dirIdx,
-	      lstn_t *const __restrict__ pLstn,
-	      const int bIsDel)
+	      lstn_t *const __restrict__ pLstn)
 {
 filesDisplay();
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
 	uchar *statefn;
-	const int wdDel = wdmapLookupWD(pLstn);
-	dbgprintf("DDDD: imfile remove listener '%s', bIsDel: %d, wd %d, wdDel %d\n",
-	          pLstn->pszFileName, bIsDel, ev->wd, wdDel);
-	if(bIsDel && pLstn->bRMStateOnDel) {
+	dbgprintf("DDDD: imfile remove listener '%s', wd %d\n",
+	          pLstn->pszFileName, ev->wd);
+	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 		snprintf((char*)toDel, sizeof(toDel) / sizeof(uchar), "%s/%s",
 				     glbl.GetWorkDir(), (char*)statefn);
@@ -1481,10 +1467,7 @@ filesDisplay();
 		bDoRMState = 0;
 	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
-for(int j = 0 ; j < nWdmap; ++j)
-  dbgprintf("DDDD: wdmap PRE  del %d: %d->%p\n", j, wdmap[j].wd, wdmap[j].pLstn);//->pszFileName);
 	lstnDel(pLstn);
-	wdmapDel(wdDel);
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
 	if(bDoRMState) {
 		DBGPRINTF("imfile: unlinking '%s'\n", toDel);
@@ -1538,7 +1521,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 	}
 	dbgprintf("DDDD: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
-	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn, 1);
+	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
 }
 
@@ -1562,8 +1545,6 @@ in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 {
 	if(ev->mask & IN_MODIFY) {
 		pollFile(etry->pLstn, NULL);
-	} else if(ev->mask & IN_IGNORED) {
-		in_removeFile(ev, etry->dirIdx, etry->pLstn, 0);
 	} else {
 		DBGPRINTF("imfile: got non-expected inotify event:\n");
 		in_dbg_showEv(ev);
@@ -1575,6 +1556,10 @@ in_processEvent(struct inotify_event *ev)
 {
 	wd_map_t *etry;
 
+	if(ev->mask & IN_IGNORED) {
+		wdmapDel(ev->wd);
+		goto done;
+	}
 	etry =  wdmapLookup(ev->wd);
 	if(etry == NULL) {
 		DBGPRINTF("imfile: could not lookup wd %d\n", ev->wd);
