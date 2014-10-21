@@ -71,7 +71,7 @@ and as such it will not cover more complex cases.
 
 Note that when $WorkDirectory is not set or
 set to a non-writable location, the state file **will not be generated**.
-In those cases, the file content will always completely re-sent by
+In those cases, the file content will always completely be re-sent by
 imfile, because the module does not know that it already processed
 parts of that file.
 
