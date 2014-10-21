@@ -109,6 +109,13 @@ endif
 librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
 librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
 
+# MONGODB SUPPORT
+
+if ENABLE_OMMONGODB
+librsyslog_la_CPPFLAGS += $(LIBMONGO_CLIENT_CFLAGS)
+librsyslog_la_LIBADD += $(LIBMONGO_CLIENT_LIBS)
+endif
+
 #
 # regular expression support
 # 
