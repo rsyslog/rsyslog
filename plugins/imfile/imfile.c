@@ -239,7 +239,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "statefile", eCmdHdlrString, 0 },
+	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
 	{ "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "severity", eCmdHdlrSeverity, 0 },
 	{ "facility", eCmdHdlrFacility, 0 },
@@ -459,9 +459,9 @@ openFile(lstn_t *pLstn)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
-			rs_strerror_r(eno, errStr, sizeof(errStr));
-			dbgprintf("imfile: error trying to access state file for '%s':\n",
-			          p->pszFileNameLstn, errStr);
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			dbgprintf("imfile: error trying to access state file for '%s':%s\n",
+			          pLstn->pszFileName, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
