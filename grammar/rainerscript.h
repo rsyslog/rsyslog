@@ -291,7 +291,8 @@ struct cnfparamdescr { /* first the param description */
 	unsigned flags;
 };
 /* flags for cnfparamdescr: */
-#define CNFPARAM_REQUIRED 0x0001
+#define CNFPARAM_REQUIRED	0x0001
+#define CNFPARAM_DEPRECATED	0x0002
 
 struct cnfparamblk { /* now the actual param block use in API calls */
 	unsigned short version;
