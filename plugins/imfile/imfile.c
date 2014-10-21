@@ -93,7 +93,7 @@ typedef struct lstn_s {
 	uchar *pszBaseName;
 	uchar *pszTag;
 	size_t lenTag;
-	uchar *pszStateFile; /* file in which state between runs is to be stored */
+	uchar *pszStateFile; /* file in which state between runs is to be stored (dynamic if NULL) */
 	int iFacility;
 	int iSeverity;
 	int maxLinesAtOnce;
@@ -239,7 +239,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "statefile", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "statefile", eCmdHdlrString, 0 },
 	{ "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "severity", eCmdHdlrSeverity, 0 },
 	{ "facility", eCmdHdlrFacility, 0 },
@@ -377,6 +377,33 @@ finalize_it:
 #endif /* #if HAVE_INOTIFY_INIT */
 
 
+/* this generates a state file name suitable for the current file. To avoid
+ * malloc calls, it must be passed a buffer which should be MAXFNAME large.
+ * Note: the buffer is not necessarily populated ... always ONLY use the
+ * RETURN VALUE!
+ */
+static uchar *
+getStateFileName(lstn_t *const __restrict__ pLstn,
+	 	 uchar *const __restrict__ buf,
+		 const size_t lenbuf)
+{
+	uchar *ret;
+	if(pLstn->pszStateFile == NULL) {
+		snprintf((char*)buf, lenbuf - 1, "imfile-state:%s", pLstn->pszFileName);
+		buf[lenbuf-1] = '\0'; /* be on the safe side... */
+		uchar *p = buf;
+		for( ; *p ; ++p) {
+			if(*p == '/')
+				*p = '-';
+		}
+		ret = buf;
+	} else {
+		ret = pLstn->pszStateFile;
+	}
+	return ret;
+}
+
+
 /* enqueue the read file line as a message. The provided string is
  * not freed - thuis must be done by the caller.
  */
@@ -416,10 +443,14 @@ openFile(lstn_t *pLstn)
 	uchar pszSFNam[MAXFNAME];
 	size_t lenSFNam;
 	struct stat stat_buf;
+	uchar statefile[MAXFNAME];
 
+	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
+	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
+		  pLstn->pszFileName, statefn);
 	/* Construct file name */
 	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam) / sizeof(uchar), "%s/%s",
-			     (char*) glbl.GetWorkDir(), (char*)pLstn->pszStateFile);
+			     (char*) glbl.GetWorkDir(), (char*)statefn);
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
@@ -649,10 +680,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given , file monitor can not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
-	if(cs.pszStateFile == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: not state file name given, file monitor can not be created");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
 
 	CHKiRet(createInstance(&inst));
 	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
@@ -662,7 +689,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 	inst->pszFileName = (uchar*) strdup((char*) cs.pszFileName);
 	inst->pszTag = (uchar*) strdup((char*) cs.pszFileTag);
-	inst->pszStateFile = (uchar*) strdup((char*) cs.pszStateFile);
+	inst->pszStateFile = cs.pszStateFile == NULL ? NULL : (uchar*) strdup((char*) cs.pszStateFile);
 	inst->iSeverity = cs.iSeverity;
 	inst->iFacility = cs.iFacility;
 	if(cs.maxLinesAtOnce) {
@@ -758,7 +785,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
 	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
-	pThis->pszStateFile = (uchar*) strdup((char*) existing->pszStateFile);
+	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
 	pThis->multiSub.maxElem = existing->multiSub.maxElem;
@@ -792,7 +819,7 @@ addListner(instanceConf_t *inst)
 	pThis->pszBaseName = inst->pszFileBaseName; /* use value from inst! */
 	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
-	pThis->pszStateFile = (uchar*) strdup((char*) inst->pszStateFile);
+	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
 	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
@@ -1568,8 +1595,6 @@ CODESTARTwillRun
 finalize_it:
 ENDwillRun
 
-
-
 /* This function persists information for a specific file being monitored.
  * To do so, it simply persists the stream object. We do NOT abort on error
  * iRet as that makes matters worse (at least we can try persisting the others...).
@@ -1581,14 +1606,18 @@ persistStrmState(lstn_t *pLstn)
 	DEFiRet;
 	strm_t *psSF = NULL; /* state file (stream) */
 	size_t lenDir;
+	uchar statefile[MAXFNAME];
 
+	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
+	DBGPRINTF("imfile: persisting state for '%s' to file '%s'\n",
+		  pLstn->pszFileName, statefn);
 	CHKiRet(strm.Construct(&psSF));
 	lenDir = ustrlen(glbl.GetWorkDir());
 	if(lenDir > 0)
 		CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), lenDir));
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psSF, pLstn->pszStateFile, strlen((char*) pLstn->pszStateFile)));
+	CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	CHKiRet(strm.Serialize(pLstn->pStrm, psSF));
@@ -1604,7 +1633,7 @@ finalize_it:
 		errmsg.LogError(0, iRet, "imfile: could not persist state "
 				"file %s - data may be repeated on next "
 				"startup. Is WorkDirectory set?",
-				pLstn->pszStateFile);
+				statefn);
 	}
 
 	RETiRet;
