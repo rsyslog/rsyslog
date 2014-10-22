@@ -153,8 +153,16 @@ message that they were unsupported. This error message now no
 longer appears, instead the regular usage() display happens.
 This should not have any effect to users.
 
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2013-2014 by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
-and `Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL
-version 2 or higher.
+
+Specifics for Version 8.5 and 8.6
+---------------------------------
+
+imfile changes
+~~~~~~~~~~~~~~
+
+Starting with 8.5.0, imfile supports wildcards in file names, but
+does do so only in inotify mode. In order to support wildcards, the
+handling of statefile needed to be changed. Most importantly, the
+*statefile* input parameter has been deprecated. See
+:doc:`imfile module documentation <../../configuration/modules/imfile>`
+for more details.
