@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.5.0 [v8-stable] 2014-08-??
+- imfile greatly refactored and support for wildcards added
 - PRI-handling code refactored for more clarity and robustness
 - ommail: add support for RainerScript config system [action() object]
   This finally adds support for the new config style. Also, we now permit
