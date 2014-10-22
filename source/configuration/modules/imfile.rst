@@ -230,6 +230,32 @@ Input Parameters
    indication that you should NOT modify the default.
 
 .. index:: 
+   single: imfile;  deleteStateOnFileDelete
+.. function:: deleteStateOnFileDelete [on/off] (requires v8.5.0+)
+
+   **Default: on**
+
+   This parameter controls if state files are deleted if their associated
+   main file is deleted. Usually, this is a good idea, because otherwise
+   problems would occur if a new file with the same name is created. In
+   that case, imfile would pick up reading from the last position in
+   the **deleted** file, which usually is not what you want.
+
+   However, there is one situation where not deleting associated state
+   file makes sense: this is the case if a monitored file is modified
+   with an editor (like vi or gedit). Most editors write out modifications
+   by deleting the old file and creating a new now. If the state file
+   would be deleted in that case, all of the file would be reprocessed,
+   something that's probably not intended in most case. As a side-note,
+   it is strongly suggested *not* to modify monitored files with
+   editors. In any case, in such a situation, it makes sense to
+   disable state file deletion. That also applies to similar use
+   cases.
+
+   In general, this parameter should only by set if the users
+   knows exactly why this is required.
+
+.. index:: 
    single: imfile;  Ruleset
 .. function:: Ruleset <ruleset> 
 
@@ -249,6 +275,7 @@ Input Parameters
 Caveats/Known Bugs
 ------------------
 
+* currently, wildcards are only supported in inotify mode
 * read modes other than "0" currently seem to have issues in
   inotify mode
 
