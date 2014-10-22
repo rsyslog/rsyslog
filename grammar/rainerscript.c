@@ -1050,6 +1050,10 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			}
 			continue;
 		}
+		if(param->flags & CNFPARAM_DEPRECATED) {
+			parser_errmsg("parameter '%s' deprecated but accepted, consider "
+			  "removing or replacing it", param->name);
+		}
 		if(vals[i].bUsed) {
 			parser_errmsg("parameter '%s' specified more than once - "
 			  "one instance is ignored. Fix config", param->name);

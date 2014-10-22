@@ -354,6 +354,7 @@ finalize_it:
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
 		}
 		if(pThis->fd != -1) {
+dbgprintf("DDDD: strmOpenFile closes: %d\n", pThis->fd);
 			close(pThis->fd);
 			pThis->fd = -1;
 		}
@@ -419,6 +420,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 */
 	if(pThis->fd != -1) {
 		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
+dbgprintf("DDDD: strmCloseFile: %d\n", pThis->fd);
 		close(pThis->fd);
 		pThis->fd = -1;
 		pThis->inode = 0;

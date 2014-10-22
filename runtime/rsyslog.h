@@ -433,6 +433,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PARSER_NAME_EXISTS = -2402, /**< parser name already exists */
 	RS_RET_MOD_NO_PARSER_STMT = -2403, /**< (parser) module does not support parser() statement */
 
+	/* up to 2419 reserved for 8.4.x */
+	RS_RET_IMFILE_WILDCARD = -2420, /**< imfile file name contains wildcard, which may be problematic */
+
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
 	RS_RET_FIELD_NOT_FOUND = 1002, /**< field() function did not find requested field */
