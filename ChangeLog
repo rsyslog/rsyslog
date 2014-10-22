@@ -6,6 +6,10 @@ Version 8.5.0 [v8-stable] 2014-08-??
   This finally adds support for the new config style. Also, we now permit
   to set a constant subject text without the need to create a template for
   it.
+- refactored the auto-backgrounding method
+  The code is now more robust and also offers possibilities for enhanced
+  error reporting in the future. This is also assumed to fix some races
+  where a system startup script hang due to "hanging" rsyslogd.
 - make gntls tcp syslog driver emit more error messages
   Messages previously emitted only to the debug log are now emitted as
   syslog error messages. It has shown that they contain information 
