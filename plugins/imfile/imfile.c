@@ -253,6 +253,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
+	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED }
 };
 static struct cnfparamblk inppblk =
@@ -841,7 +842,6 @@ addListner(instanceConf_t *inst)
 	sbool hasWildcard;
 
 	hasWildcard = containsGlobWildcard((char*)inst->pszFileBaseName);
-dbgprintf("DDDD: %s has wildcard: %d\n", inst->pszFileName, hasWildcard);
 	if(hasWildcard) {
 		if(runModConf->opMode == OPMODE_POLLING) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
@@ -925,6 +925,8 @@ CODESTARTnewInpInst
 			inst->iFacility = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
 			inst->readMode = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
+			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
@@ -1177,7 +1179,6 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 fileTableDisplay(tab);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
-dbgprintf("DDDD: imfile: searching, f=%d '%s''\n", f, (char*)baseName);
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
 			break; /* found */
 	}
@@ -1689,6 +1690,14 @@ finalize_it:
 	RETiRet;
 }
 
+#else /* #if HAVE_INOTIFY_INIT */
+static rsRetVal
+do_inotify()
+{
+	errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: mode set to inotify, but the "
+			"platform does not support inotify");
+	return RS_RET_NOT_IMPLEMENTED;
+}
 #endif /* #if HAVE_INOTIFY_INIT */
 
 /* This function is called by the framework to gather the input. The module stays
