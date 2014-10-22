@@ -33,6 +33,7 @@
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
 #include <sys/types.h>
 #include <unistd.h>
+#include <glob.h>
 #include <fnmatch.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
@@ -101,6 +102,7 @@ typedef struct lstn_s {
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	sbool bRMStateOnDel;
+	sbool hasWildcard;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -346,7 +348,7 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 	wdmap[i].pLstn = pLstn;
 	++nWdmap;
 	dbgprintf("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, lstn %s:%s\n",i,wd,dirIdx,
-		  (pLstn == NULL) ? "FILE" : "DIRECTORY:",
+		  (pLstn == NULL) ? "DIRECTORY" : "FILE",
 	          (pLstn == NULL) ? dirs[dirIdx].dirName : pLstn->pszFileName);
 
 finalize_it:
@@ -615,6 +617,28 @@ finalize_it:
 }
 
 
+/* the basen(ame) buffer must be of size MAXFNAME
+ * returns the index of the slash in front of basename
+ */
+static int
+getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
+{
+	int i;
+	const int lenName = ustrlen(path);
+	for(i = lenName ; i >= 0 ; --i) {
+		if(path[i] == '/') {
+			/* found basename component */
+			if(i == lenName)
+				basen[0] = '\0';
+			else {
+				memcpy(basen, path+i+1, lenName-i);
+			}
+			break;
+		}
+	}
+	return i;
+}
+
 /* this function checks instance parameters and does some required pre-processing
  * (e.g. split filename in path and actual name)
  * Note: we do NOT use dirname()/basename() as they have portability problems.
@@ -623,32 +647,18 @@ static rsRetVal
 checkInstance(instanceConf_t *inst)
 {
 	char dirn[MAXFNAME];
-	char basen[MAXFNAME];
+	uchar basen[MAXFNAME];
 	int i;
-	int lenName;
 	struct stat sb;
 	int r;
 	int eno;
 	char errStr[512];
 	DEFiRet;
 
-	lenName = ustrlen(inst->pszFileName);
-	for(i = lenName ; i >= 0 ; --i) {
-		if(inst->pszFileName[i] == '/') {
-			/* found basename component */
-			if(i == lenName)
-				basen[0] = '\0';
-			else {
-				memcpy(basen, inst->pszFileName+i+1, lenName-i);
-				/* Note \0 is copied above! */
-				//basen[(lenName-i+1)+1] = '\0';
-			}
-			break;
-		}
-	}
+	i = getBasename(basen, inst->pszFileName);
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
-	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup(basen));
+	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
 	CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
 
 	if(dirn[0] == '\0') {
@@ -675,7 +685,8 @@ finalize_it:
 
 
 /* add a new monitor */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal
+addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	instanceConf_t *inst;
 	DEFiRet;
@@ -756,7 +767,7 @@ finalize_it:
 static void
 lstnDel(lstn_t *pLstn)
 {
-	dbgprintf("imfile: listDel called for %s\n", pLstn->pszFileName);
+	dbgprintf("imfile: lstnDel called for %s\n", pLstn->pszFileName);
 	if(pLstn->pStrm != NULL) { /* stream open? */
 		persistStrmState(pLstn);
 		strm.Destruct(&(pLstn->pStrm));
@@ -779,7 +790,8 @@ lstnDel(lstn_t *pLstn)
 }
 
 /* Duplicate an existing listener. This is called when a new file is to
- * be monitored due to wildcard detection.
+ * be monitored due to wildcard detection. Returns the new pLstn in
+ * the ppExisting parameter.
  */
 static rsRetVal
 lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
@@ -806,6 +818,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->iPersistStateInterval = existing->iPersistStateInterval;
 	pThis->readMode = existing->readMode;
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
+	pThis->hasWildcard = existing->hasWildcard;
 	pThis->escapeLF = existing->escapeLF;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
@@ -825,13 +838,17 @@ addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 	lstn_t *pThis;
+	sbool hasWildcard;
 
-	if(containsGlobWildcard((char*)inst->pszFileBaseName)) {
+	hasWildcard = containsGlobWildcard((char*)inst->pszFileBaseName);
+dbgprintf("DDDD: %s has wildcard: %d\n", inst->pszFileName, hasWildcard);
+	if(hasWildcard) {
 		if(runModConf->opMode == OPMODE_POLLING) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
-				"imfile: warning: it looks like to-be-monitored "
-				"file \"%s\" contains wildcards. If so, this does "
-				"not work in polling mode.", inst->pszFileName);
+				"imfile: The to-be-monitored file \"%s\" contains "
+				"wildcards. This is not supported in "
+				"polling mode.", inst->pszFileName);
+			ABORT_FINALIZE(RS_RET_IMFILE_WILDCARD);
 		} else if(inst->pszStateFile != NULL) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
 				"imfile: warning: it looks like to-be-monitored "
@@ -842,9 +859,10 @@ addListner(instanceConf_t *inst)
 	}
 
 	CHKiRet(lstnAdd(&pThis));
+	pThis->hasWildcard = hasWildcard;
 	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
-	pThis->pszDirName = inst->pszDirName; /* use value from inst! */
-	pThis->pszBaseName = inst->pszFileBaseName; /* use value from inst! */
+	pThis->pszDirName = inst->pszDirName; /* use memory from inst! */
+	pThis->pszBaseName = inst->pszFileBaseName; /* use memory from inst! */
 	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
@@ -1347,7 +1365,8 @@ in_setupDirWatch(const int dirIdx)
 done:	return;
 }
 
-/* Setup a new file watch.
+/* Setup a new file watch for a known active file. It must already have
+ * been entered into the correct tables.
  * Note: we need to try to read this file, as it may already contain data this
  * needs to be processed, and we won't get an event for that as notifications
  * happen only for things after the watch has been activated.
@@ -1355,18 +1374,8 @@ done:	return;
  * detected files (e.g. wildcards!)
  */
 static void
-in_setupFileWatch(lstn_t *pLstn, uchar *const __restrict__ newBaseName)
+startLstnFile(lstn_t *const __restrict__ pLstn)
 {
-	if(newBaseName == NULL) {
-		/* all configured files need to be present in tables */
-		DBGPRINTF("imfile: adding file '%s' to configured table\n",
-			  pLstn->pszFileName);
-		dirsAddFile(pLstn, CONFIGURED_FILE);
-	} else {
-		/* we need to add a dynamic file to our tables --> make space */
-		if(lstnDup(&pLstn, newBaseName) != RS_RET_OK)
-			goto done;
-	}
 	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
 	if(wd < 0) {
 		char errStr[512];
@@ -1383,6 +1392,70 @@ in_setupFileWatch(lstn_t *pLstn, uchar *const __restrict__ newBaseName)
 done:	return;
 }
 
+/* Setup a new file watch for dynamically discovered files (via wildcards).
+ * Note: we need to try to read this file, as it may already contain data this
+ * needs to be processed, and we won't get an event for that as notifications
+ * happen only for things after the watch has been activated.
+ */
+static void
+in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName)
+{
+	char fullfn[MAXFNAME];
+	struct stat fileInfo;
+	snprintf(fullfn, MAXFNAME, "%s/%s", pLstn->pszDirName, newBaseName);
+	if(stat(fullfn, &fileInfo) != 0) {
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		dbgprintf("imfile: ignoring file '%s' cannot stat(): %s\n",
+			fullfn, errStr);
+		goto done;
+	}
+
+	if(S_ISDIR(fileInfo.st_mode)) {
+		DBGPRINTF("imfile: ignoring directory '%s'\n", fullfn);
+		goto done;
+	}
+
+	if(lstnDup(&pLstn, newBaseName) != RS_RET_OK)
+		goto done;
+
+	startLstnFile(pLstn);
+done:	return;
+}
+
+/* Setup a new file watch for static (configured) files.
+ * Note: we need to try to read this file, as it may already contain data this
+ * needs to be processed, and we won't get an event for that as notifications
+ * happen only for things after the watch has been activated.
+ */
+static void
+in_setupFileWatchStatic(lstn_t *const __restrict__ pLstn)
+{
+	DBGPRINTF("imfile: adding file '%s' to configured table\n",
+		  pLstn->pszFileName);
+	dirsAddFile(pLstn, CONFIGURED_FILE);
+
+	if(pLstn->hasWildcard) {
+		DBGPRINTF("imfile: file '%s' has wildcard, doing initial "
+			  "expansion\n", pLstn->pszFileName);
+		glob_t files;
+		const int ret = glob((char*)pLstn->pszFileName,
+					GLOB_MARK|GLOB_NOSORT, NULL, &files);
+		if(ret == 0) {
+			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
+				uchar basen[MAXFNAME];
+				uchar *const file = (uchar*)files.gl_pathv[i];
+				if(file[strlen((char*)file)-1] == '/')
+					continue;/* we cannot process subdirs! */
+				getBasename(basen, file);
+				in_setupFileWatchDynamic(pLstn, basen);
+			}
+		}
+	} else {
+		startLstnFile(pLstn);
+	}
+}
+
 /* setup our initial set of watches, based on user config */
 static void
 in_setupInitialWatches()
@@ -1393,8 +1466,10 @@ in_setupInitialWatches()
 	}
 	lstn_t *pLstn;
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next) {
-dbgprintf("DDDD: setup FILE watch %s\n", pLstn->pszFileName);
-		in_setupFileWatch(pLstn, NULL);
+		if(pLstn->masterLstn == NULL) {
+			/* we process only static (master) entries */
+			in_setupFileWatchStatic(pLstn);
+		}
 	}
 }
 
@@ -1451,12 +1526,12 @@ in_removeFile(const struct inotify_event *const ev,
 	      const int dirIdx,
 	      lstn_t *const __restrict__ pLstn)
 {
-filesDisplay();
+filesDisplay(); // TODO: remove after initial unstable release(s)
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
 	uchar *statefn;
-	dbgprintf("DDDD: imfile remove listener '%s', wd %d\n",
+	DBGPRINTF("imfile: remove listener '%s', wd %d\n",
 	          pLstn->pszFileName, ev->wd);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
@@ -1500,7 +1575,7 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
 	}
 	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
-	in_setupFileWatch(pLstn, (uchar*)ev->name);
+	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name);
 done:	return;
 }
 
