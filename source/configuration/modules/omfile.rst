@@ -139,15 +139,17 @@ selects whether a static or dynamic file (name) shall be written to.
    *Default: none*
 
    For each message, the file name is generated based on the given
-   template. Then, this file is opened. As with the \`\`file'' property,
+   template. Then, this file is opened. As with the *file* property,
    data is appended if the file already exists. If the file does not
-   exist, a new file is created. A cache of recent files is kept. Note
+   exist, a new file is created.
+   
+   A cache of recent files is kept. Note
    that this cache can consume quite some memory (especially if large
    buffer sizes are used). Files are kept open as long as they stay
-   inside the cache. Currently, files are only evicted from the cache
-   when there is need to do so (due to insufficient cache size). To
-   force-close (and evict) a dynafile from cache, send a HUP signal to
-   rsyslogd.
+   inside the cache.
+   Files are removed from the cache when a HUP signal is sent, the
+   *closeTimeout* occurs, or the cache runs out of space, in which case
+   the least recently used entry is evicted.
 
 .. function::  template [templateName]
 
