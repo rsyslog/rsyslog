@@ -280,7 +280,7 @@ qqueueDbgPrint(qqueue_t *pThis)
 	dbgoprint((obj_t*) pThis, "queue.saveonshutdown: %d\n", pThis->bSaveOnShutdown);
 	dbgoprint((obj_t*) pThis, "queue.dequeueslowdown: %d\n", pThis->iDeqSlowdown);
 	dbgoprint((obj_t*) pThis, "queue.dequeuetimebegin: %d\n", pThis->iDeqtWinFromHr);
-	dbgoprint((obj_t*) pThis, "queuedequeuetimend.: %d\n", pThis->iDeqtWinToHr);
+	dbgoprint((obj_t*) pThis, "queue.dequeuetimeend: %d\n", pThis->iDeqtWinToHr);
 }
 
 
@@ -3008,7 +3008,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->iDeqSlowdown = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuetimebegin")) {
 			pThis->iDeqtWinFromHr = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "queuedequeuetimend.")) {
+		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuetimeend")) {
 			pThis->iDeqtWinToHr = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("queue: program error, non-handled "
