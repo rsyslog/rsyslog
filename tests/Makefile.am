@@ -138,7 +138,7 @@ TESTS +=  \
 	imptcp_conndrop.sh 
 endif
 
-if ENABLE_ELASTICSEARCH
+if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	elasticsearch-basic.sh \
 	elasticsearch-basic-bulk.sh \
