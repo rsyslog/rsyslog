@@ -771,6 +771,20 @@ fi
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH, test x$enable_elasticsearch = xyes)
 
 
+# capability to enable elasticsearch testbench tests. This requries that an ES test
+# environment is present on the local (127.0.0.1) machine. 
+AC_ARG_ENABLE(elasticsearch_tests,
+        [AS_HELP_STRING([--enable-elasticsearch-tests],[enable MySQL specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_elasticsearch_tests="yes" ;;
+          no) enable_elasticsearch_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-elasticsearch-tests) ;;
+         esac],
+        [enable_elasticsearch_tests=no]
+)
+AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = xyes)
+
+
 # GnuTLS support
 AC_ARG_ENABLE(gnutls,
         [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
