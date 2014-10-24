@@ -77,7 +77,7 @@ Global Parameters
    setting is vital when writing messages to the Linux journal. See
    `omjournal <omjournal.html>`_ module documentation for a more
    in-depth description.
--  **SysSock.Use** (imuxsock) [on/**off**] do NOT listen for the local
+-  **SysSock.Use** (imuxsock) [**on**/off] - Listen on the local
    log socket. This is most useful if you run multiple instances of
    rsyslogd where only one shall handle the system log socket.
 -  **SysSock.Name** <name-of-socket>
@@ -290,8 +290,8 @@ to understand how to use these configuration directives.
    UseSysTimeStamp .
 -  **$SystemLogSocketIgnoreMsgTimestamp** [**on**/off]
     equivalent to: SysSock.IgnoreTimestamp.
--  **$OmitLocalLogging** (imuxsock) [on/**off**] equivalent to:
-   SysSock.Use
+-  **$OmitLocalLogging** (imuxsock) [on/**off**] - The **inverse** of
+   SysSock.Use.
 -  **$SystemLogSocketName** <name-of-socket> equivalent to: SysSock.Name
 -  **$SystemLogFlowControl** [on/**off**] - equivalent to:
    SysSock.FlowControl.
