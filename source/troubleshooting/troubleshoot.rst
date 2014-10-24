@@ -20,6 +20,8 @@ Useful troubleshooting ressources are:
    `the bugzilla <http://bugzilla.adiscon.com>`_ to see if your
    problem is a known (and even fixed ;)) bug.
    **Note:** the preferred way to create new bugs is via github.
+   The bugzilla does no longer accept new bugs. It is just kept
+   to work on old ones and as a reference source for ChangeLog entries.
 
 Malformed Messages and Message Properties
 -----------------------------------------
