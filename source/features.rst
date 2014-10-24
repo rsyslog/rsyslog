@@ -115,13 +115,7 @@ Upcoming Features
 
 The list below is something like a repository of ideas we'd like to
 implement. Features on this list are typically NOT scheduled for
-immediate inclusion. We maintain a `feature request tracker at our
-bugzilla <http://bugzilla.adiscon.com/rsyslog-feature.html>`_. This
-tracker has things typically within reach of implementation. Users are
-encouraged to submit feature requests there (or via our forums). If we
-like them but they look quite long-lived (aka "not soon to be
-implemented"), they will possibly be migrated to this list here and at
-some time moved back to the bugzilla tracker.
+immediate inclusion.
 
 **Note that we also maintain a `list of features that are looking for
 sponsors <http://www.rsyslog.com/sponsor_feature>`_. If you are
