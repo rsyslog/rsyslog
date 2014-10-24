@@ -33,6 +33,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
   * To: header was duplicated once per recipient (this is permitted,
     but an address list is a better choice nowadays)
   Thanks to github user cacheus for the patches.
+- bugfix: type in queue configuration parameter
+  made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - bugfix imfile: segfault on startup in "inotify" mode
   A segfault happened when more than one file was monitored.
 - bugfix imfile: could make rsyslog exit in inotify mode
@@ -481,6 +484,9 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix: type in queue configuration parameter
+  made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - remove zpipe (a testing tool) from --enable-diagtools
   This tool is no longer maintained and currently not used inside the
   testbench. We keep it in the source tree for the time being in case that
