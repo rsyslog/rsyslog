@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix: type in queue configuration parameter
+  made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - remove zpipe (a testing tool) from --enable-diagtools
   This tool is no longer maintained and currently not used inside the
   testbench. We keep it in the source tree for the time being in case that
