@@ -7,6 +7,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
   * To: header was duplicated once per recipient (this is permitted,
     but an address list is a better choice nowadays)
   Thanks to github user cacheus for the patches.
+- bugfix: type in queue configuration parameter
+  made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - bugfix imfile: segfault on startup in "inotify" mode
   A segfault happened when more than one file was monitored.
 - bugfix imfile: could make rsyslog exit in inotify mode
