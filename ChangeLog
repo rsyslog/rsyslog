@@ -521,6 +521,11 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   * The verification function in rsgtutil tool did not report extra
     (unsigned) lines at the end of the log file. 
   Thanks to Henri Lakk for the patch.
+- bugfix: error: json_tokener_errors undeclared when overriding PKGCONFIG
+  If PKGCONFIG settings for json-c were overriden, presence of
+  json_tokener_errors was not properly detected.
+  closes: https://github.com/rsyslog/rsyslog/issues/143
+  Thanks to Alex Fisher for alerting us and the patch.
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
