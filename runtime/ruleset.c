@@ -851,7 +851,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	/* check validity of name */
 	for(char *p = (char*)rsName ; *p != '\0' ; ++p) {
 		if(!(isdigit(*p) || isalpha(*p) || *p == '_' || *p == '!')) {
-			errmsg.LogError(0, RS_RET_RULESET_EXISTS,
+			errmsg.LogError(0,RS_RET_NAME_INVALID,
 				"error: ruleset '%s' contains forbidden "
 				"character '%c'",
 				rsName, *p);
