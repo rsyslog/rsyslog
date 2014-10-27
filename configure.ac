@@ -35,12 +35,21 @@ PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c],,)
 ])
 
+save_CFLAGS="$CFLAGS"
+save_LIBS="$LIBS"
+
+CFLAGS="$CFLAGS $JSON_C_CFLAGS"
+LIBS="$LIBS $JSON_C_LIBS"
+
 # if int64 is supported, use it
 AC_CHECK_LIB(json-c, json_object_new_object,,)
 AC_CHECK_FUNCS(json_object_new_int64,,)
 
 # look for newer API
 AC_CHECK_FUNCS(json_tokener_error_desc,,)
+
+CFLAGS="$save_CFLAGS"
+LIBS="$save_LIBS"
 
 case "${host}" in
   *-*-linux*)
