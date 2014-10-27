@@ -7,7 +7,7 @@
  * In any case, even the initial implementaton is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *
- * Copyright 2011-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2014 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -207,6 +207,7 @@ setLocalHostName(dnscache_entry_t *etry)
 
 	i = p - fqdnLower; /* length of hostname */
 	memcpy(hostbuf, fqdnLower, i);
+	hostbuf[i] = '\0';
 	/* now check if we belong to any of the domain names that were specified
 	 * in the -s command line option. If so, remove and we are done.
 	 */

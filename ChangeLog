@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix: unitialized buffer off-by-one error in hostname generation
+  The DNS cache used uninitialized memory, which could lead to
+  invalid hostname generation.
+  Thanks to Jarrod Sayers for alerting us and provinding analysis and
+  patch recommendations.
 - bugfix: type in queue configuration parameter
   made parameter unusable
   Thanks to Bojan Smojver for the patch.
