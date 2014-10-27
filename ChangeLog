@@ -8,6 +8,11 @@ Version 8.5.1 [v8-stable] 2014-10-??
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
+- bugfix: RainerScript: invalid ruleset names were accepted
+  during ruleset defintion, but could of course not be used when
+  e.g. calling a ruleset.
+  IMPORTANT: this may cause existing configurations to error out on start,
+  as they invalid names could also be used e.g. when assigning rulesets.
 ---------------------------------------------------------------------------
 Version 8.5.0 [v8-stable] 2014-10-24
 - imfile greatly refactored and support for wildcards added
