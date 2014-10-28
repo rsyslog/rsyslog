@@ -16,8 +16,9 @@ relativly performance-intense operation. As such, the performance of a
 configuration utilizing this module may be notably slower then when
 using `imuxsock <imuxsock.html>`_. The journal provides imuxsock with a
 copy of all "classical" syslog messages, however, it does not provide
-structured data. If the latter is needed, imjournal must be used.
-Otherwise, imjournal may simply be replaced by imuxsock.
+structured data. Only if that structured data is needed, imjournal must be used.
+Otherwise, imjournal may simply be replaced by imuxsock, and we highly
+suggest doing so.
 
 We suggest to check out our short presentation on `rsyslog journal
 integration <http://youtu.be/GTS7EuSdFKE>`_ to learn more details of
@@ -80,9 +81,14 @@ plugin only if there is hard need to do so.**
 
 **Caveats/Known Bugs:**
 
--  As stated above, a corrupted systemd journal database can cause major
-   problems, depending on what the corruption results in. This is beyond
-   the control of the rsyslog team.
+- As stated above, a corrupted systemd journal database can cause major
+  problems, depending on what the corruption results in. This is beyond
+  the control of the rsyslog team.
+
+- imjournal does not check if messages received actually originated
+  from rsyslog itself (via omjournal or other means). Depending on
+  configuration, this can also lead to a loop. With imuxsock, this
+  problem does not exist.
 
 **Sample:**
 
