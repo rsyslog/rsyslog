@@ -3,7 +3,7 @@ imjournal: Systemd Journal Input Module
 
 **Module Name:    imjournal**
 
-**Author:**\ Milan Bartos <mbartos@redhat.com> (This module is not
+**Author:** Milan Bartos <mbartos@redhat.com> (This module is **not**
 project-supported)
 
 **Description**:
@@ -17,7 +17,7 @@ configuration utilizing this module may be notably slower then when
 using `imuxsock <imuxsock.html>`_. The journal provides imuxsock with a
 copy of all "classical" syslog messages, however, it does not provide
 structured data. If the latter is needed, imjournal must be used.
-Otherwise, imjournal may be simply replaced by imuxsock.
+Otherwise, imjournal may simply be replaced by imuxsock.
 
 We suggest to check out our short presentation on `rsyslog journal
 integration <http://youtu.be/GTS7EuSdFKE>`_ to learn more details of
@@ -40,14 +40,19 @@ plugin only if there is hard need to do so.**
 **Module Directives**
 
 -  **PersistStateInterval** number-of-messages
+
    This is a global setting. It specifies how often should the journal
    state be persisted. The persists happens after each
    *number-of-messages*. This option is useful for rsyslog to start
    reding from the last journal message it read.
+
 -  **StateFile** /path/to/file
+
    This is a global setting. It specifies where the state file for
    persisting journal state is located.
+
 -  **ratelimit.interval** seconds (default: 600)
+
    Specifies the interval in seconds onto which rate-limiting is to be
    applied. If more than ratelimit.burst messages are read during that
    interval, further messages up to the end of the interval are
@@ -60,11 +65,15 @@ plugin only if there is hard need to do so.**
    of denial of service (we are stressing this point as multiple users
    have reported us such problems with the journal database -
    information current as of June 2013).
+
 -  **ratelimit.burst** messages (default: 20000)
+
    Specifies the maximum number of messages that can be emitted within
    the ratelimit.interval interval. For futher information, see
    description there.
+
 -  **IgnorePreviousMessages** [**off**/on]
+
    This option specifies whether imjournal should ignore messages
    currently in journal and read only new messages. This option is only
    used when there is no StateFile to avoid message loss.
@@ -92,25 +101,37 @@ plugin only if there is hard need to do so.**
 The following example shows pulling structured imjournal messages and
 saving them into /var/log/ceelog.
 
-module(load="imjournal" PersistStateInterval="100"
-StateFile="/path/to/file") #load imjournal module
-module(load="mmjsonparse") #load mmjsonparse module for structured logs
-template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME%
-%syslogtag% @cee: %$!all-json%\\n" ) #template for messages
-action(type="mmjsonparse") action(type="omfile" file="/var/log/ceelog"
-template="CEETemplate")
+::
+
+  module(load="imjournal" PersistStateInterval="100"
+         StateFile="/path/to/file") #load imjournal module
+  module(load="mmjsonparse") #load mmjsonparse module for structured logs
+
+  template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\\n" ) #template for messages
+
+  action(type="mmjsonparse")
+  action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
 
 **Legacy Configuration Directives**:
 
 -  **$imjournalPersistStateInterval**
+
    Equivalent to: PersistStateInterval
+
 -  **$imjournalStateFile**
+
    Equivalent to: StateFile
+
 -  **$imjournalRatelimitInterval**
+
    Equivalent to: ratelimit.interval
+
 -  **$imjournalRatelimitBurst**
+
    Equivalent to: ratelimit.burst
+
 -  **$ImjournalIgnorePreviousMessages**
+
    Equivalent to: ignorePreviousMessages
 -  **$ImjournalDefaultSeverity**
     Equivalent to: DefaultSeverity
