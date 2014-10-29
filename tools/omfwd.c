@@ -37,9 +37,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdint.h>
-#ifdef USE_NETZIP
 #include <zlib.h>
-#endif
 #include <pthread.h>
 #include "syslogd.h"
 #include "conf.h"
@@ -770,9 +768,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	uchar *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
-#	ifdef	USE_NETZIP
 	Bytef *out = NULL; /* for compression */
-#	endif
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	DEFiRet;
 
@@ -783,7 +779,6 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
-#	ifdef	USE_NETZIP
 	/* Check if we should compress and, if so, do it. We also
 	 * check if the message is large enough to justify compression.
 	 * The smaller the message, the less likely is a gain in compression.
@@ -820,7 +815,6 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		}
 		++destLen;
 	}
-#	endif
 
 	if(pData->protocol == FORW_UDP) {
 		/* forward via UDP */
@@ -836,9 +830,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		}
 	}
 finalize_it:
-#	ifdef USE_NETZIP
 	free(out); /* is NULL if it was never used... */
-#	endif
 	RETiRet;
 }
 
@@ -1028,7 +1020,6 @@ CODESTARTnewActInst
 			}
 			free(str);
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
-#			ifdef USE_NETZIP
 			complevel = pvals[i].val.d.n;
 			if(complevel >= 0 && complevel <= 10) {
 				pData->compressionLevel = complevel;
@@ -1038,10 +1029,6 @@ CODESTARTnewActInst
 					 "forwardig action - NOT turning on compression.",
 					 complevel);
 			}
-#			else
-			errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
-				 "with compression support - request ignored.");
-#			endif /* #ifdef USE_NETZIP */
 		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
 			pData->errsToReport = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
@@ -1140,7 +1127,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			++p; /* eat '(' or ',' (depending on when called) */
 			/* check options */
 			if(*p == 'z') { /* compression */
-#				ifdef USE_NETZIP
 				++p; /* eat */
 				if(isdigit((int) *p)) {
 					int iLevel;
@@ -1153,10 +1139,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
-#				else
-				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
-					 "with compression support - request ignored.");
-#				endif /* #ifdef USE_NETZIP */
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
 				++p; /* eat */
 				/* no further options settable */

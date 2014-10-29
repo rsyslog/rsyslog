@@ -123,13 +123,11 @@ endif
 #
 # zlib support
 # 
-if ENABLE_ZLIB
 pkglib_LTLIBRARIES += lmzlibw.la
 lmzlibw_la_SOURCES = zlibw.c zlibw.h
 lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
 lmzlibw_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmzlibw_la_LIBADD =
-endif
 
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la

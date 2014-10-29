@@ -233,25 +233,12 @@ fi
 
 
 
-# zlib compression
-AC_ARG_ENABLE(zlib,
-        [AS_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_zlib="yes" ;;
-          no) enable_zlib="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-zlib) ;;
-         esac],
-        [enable_zlib=yes]
-)
-AM_CONDITIONAL(ENABLE_ZLIB, test x$enable_zlib = xyes)
-if test "$enable_zlib" = "yes"; then
-	AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
-	if test "$zlib_header" = "yes"; then
-		AC_CHECK_LIB(z, deflate,
-                        [AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
-                         ZLIB_LIBS="-lz"
-                         AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
-	fi
+AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
+if test "$zlib_header" = "yes"; then
+	AC_CHECK_LIB(z, deflate,
+		[AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
+		 ZLIB_LIBS="-lz"
+		 AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
 fi
 
 
