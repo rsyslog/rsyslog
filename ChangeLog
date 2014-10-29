@@ -31,6 +31,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
   the new (trivial) code is broken [if there are any users, thus I did not
   invest time in testing...]
   closes https://github.com/rsyslog/rsyslog/issues/129
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
