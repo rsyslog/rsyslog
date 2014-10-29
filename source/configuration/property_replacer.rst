@@ -261,6 +261,12 @@ options are defined:
   specifies if the offsets needs to be added ("+") or subtracted ("-")
   to the timestamp in order to get UTC.
 
+**date-ordinal**
+  returns the ordinal for the given day, e.g. it is 2 for January, 2nd
+
+**date-week**
+  returns the week number
+
 **date-wday**
   just the weekday number of the timstamp. This is a single digit,
   with 0=Sunday, 1=Monday, ..., 6=Saturday.
