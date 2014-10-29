@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
+- new property date options for day ordinal and week number
+  Thanks to github user arrjay for the patch
 - bugfix: typo in queue configuration parameter
   made parameter unusable
   Thanks to Bojan Smojver for the patch.
