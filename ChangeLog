@@ -57,6 +57,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
   * To: header was duplicated once per recipient (this is permitted,
     but an address list is a better choice nowadays)
   Thanks to github user cacheus for the patches.
+- bugfix imkmsg: infinite loop on OpenVZ VMs 
+  Thanks to github user PaulSD for the patch
+  closes https://github.com/rsyslog/rsyslog/pull/138
 - bugfix: typo in queue configuration parameter made parameter unusable
   Thanks to Bojan Smojver for the patch.
 - bugfix: unitialized buffer off-by-one error in hostname generation
