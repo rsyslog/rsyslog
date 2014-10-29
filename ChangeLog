@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
