@@ -158,6 +158,7 @@ submitSyslog(uchar *buf)
 rsRetVal
 klogWillRun(modConfData_t *pModConf)
 {
+	int i;
 	char errmsg[2048];
 	DEFiRet;
 
@@ -165,6 +166,16 @@ klogWillRun(modConfData_t *pModConf)
 	if (fklog < 0) {
 		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
+	}
+
+	/* make sure the kernel log is readable */
+	/* this normally returns EINVAL - on an OpenVZ VM, we get EBADF */
+	i = read(fklog, NULL, 0);
+	if (i < 0 && errno == EBADF) {
+		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot read kernel log(%s): %s.",
+			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		fklog = -1;
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
 
