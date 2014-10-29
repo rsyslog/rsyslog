@@ -1407,7 +1407,7 @@ CODESTARTrunInput
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
-		for (i = 0; i < nfd && nfds > 0; i++) {
+		for (i = startIndexUxLocalSockets ; i < nfd && nfds > 0; i++) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM); /* terminate input! */
 			if ((fd = listeners[i].fd) != -1 && FD_ISSET(fd, pReadfds)) {

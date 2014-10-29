@@ -14,6 +14,9 @@ Version 8.5.1 [v8-stable] 2014-10-??
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
 - bugfix: RainerScript: invalid ruleset names were accepted
   during ruleset defintion, but could of course not be used when
   e.g. calling a ruleset.
@@ -77,6 +80,9 @@ Version 8.4.3 [v8-stable] 2014-10-??
   the new (trivial) code is broken [if there are any users, thus I did not
   invest time in testing...]
   closes https://github.com/rsyslog/rsyslog/issues/129
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
@@ -516,6 +522,9 @@ Version 8.1.0 [experimental] 2013-11-15
 Version 7.6.8 [v7.6-stable] 2014-10-??
 - bugfix: typo in queue configuration parameter made parameter unusable
   Thanks to Bojan Smojver for the patch.
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
