@@ -72,6 +72,11 @@ Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix: imjournal did not build properly
   The build succeeded, but the module did not load due to a type in
   a support function name, which kept unresolved during load.
+- bugfix: mmcount did no longer build
+  note that this is untested -- users of this module should file a bug if
+  the new (trivial) code is broken [if there are any users, thus I did not
+  invest time in testing...]
+  closes https://github.com/rsyslog/rsyslog/issues/129
 ---------------------------------------------------------------------------
 Version 8.4.2 [v8-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
