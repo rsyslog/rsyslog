@@ -154,7 +154,7 @@ int fileno(FILE *stream);
 <INCALL>.			{ parser_errmsg("invalid character '%s' in 'call' statement"
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }
-<INCALL>[a-zA-Z][a-zA-Z0-9_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
+<INCALL>[a-zA-Z][a-zA-Z0-9\-_\.]*	{ yylval.estr = es_newStrFromCStr(yytext, yyleng);
 				  BEGIN INITIAL;
 				  return NAME; }
 "&"				{ return '&'; }
