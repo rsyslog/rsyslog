@@ -6,6 +6,8 @@ imjournal: Systemd Journal Input Module
 **Author:** Milan Bartos <mbartos@redhat.com> (This module is **not**
 project-supported)
 
+**Available since**: 7.3.11
+
 **Description**:
 
 Provides the ability to import structured log messages from systemd
@@ -101,6 +103,10 @@ plugin only if there is hard need to do so.**
   from rsyslog itself (via omjournal or other means). Depending on
   configuration, this can also lead to a loop. With imuxsock, this
   problem does not exist.
+
+**Build Requirements:**
+
+Development headers for systemd, version >= 197.
 
 **Sample:**
 
