@@ -702,13 +702,13 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 
         CHKiRet(cstrConstruct(ppCStr));
         CHKiRet(strmReadChar(pThis, &c));
+	/* append previous message to current message if necessary */
+	if(pThis->prevLineSegment != NULL) {
+		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
+		cstrDestruct(&pThis->prevLineSegment);
+	}
 
         if(mode == 0) {
-		/* append previous message to current message if necessary */
-		if(pThis->prevLineSegment != NULL) {
-			CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
-			cstrDestruct(&pThis->prevLineSegment);
-		}
 		while(c != '\n') {
                 	CHKiRet(cstrAppendChar(*ppCStr, c));
                 	readCharRet = strmReadChar(pThis, &c);
@@ -724,7 +724,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 		while(finished == 0){
         		if(c != '\n') {
                 		CHKiRet(cstrAppendChar(*ppCStr, c));
-                		CHKiRet(strmReadChar(pThis, &c));
+                		readCharRet = strmReadChar(pThis, &c);
+				if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+					CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
+				}
+				CHKiRet(readCharRet);
 				bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
@@ -737,7 +741,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 						} else {
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
-               					CHKiRet(strmReadChar(pThis, &c));
+						readCharRet = strmReadChar(pThis, &c);
+						if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+							CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
+						}
+						CHKiRet(readCharRet);
 						bPrevWasNL = 1;
 					}
 				} else {
@@ -755,7 +763,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         			if(c != '\n') {
 				/* nothing in the buffer, and it's not a newline, add it to the buffer */
                				CHKiRet(cstrAppendChar(*ppCStr, c));
-               				CHKiRet(strmReadChar(pThis, &c));
+					readCharRet = strmReadChar(pThis, &c);
+					if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+						CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
+					}
+					CHKiRet(readCharRet);
 				} else {
 					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
 				}
@@ -763,7 +775,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 				if(bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
                					CHKiRet(cstrAppendChar(*ppCStr, c));
-               					CHKiRet(strmReadChar(pThis, &c));
+						readCharRet = strmReadChar(pThis, &c);
+						if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+							CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
+						}
+						CHKiRet(readCharRet);
 						bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
@@ -784,7 +800,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					} else {
 						CHKiRet(cstrAppendChar(*ppCStr, c));
 					}
-               				CHKiRet(strmReadChar(pThis, &c));
+					readCharRet = strmReadChar(pThis, &c);
+					if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+						CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
+					}
+					CHKiRet(readCharRet);
 				}
 			}
 		}
