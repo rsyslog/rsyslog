@@ -1604,26 +1604,26 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		}
 		ret->datatype = 'N';
 		break;
-    case CNFFUNC_REPLACE:
-        cnfexprEval(func->expr[0], &r[0], usrptr);
-        cnfexprEval(func->expr[1], &r[1], usrptr);
-        cnfexprEval(func->expr[2], &r[2], usrptr);
-        ret->d.estr = doFuncReplace(&r[0], &r[1], &r[2]);
-        ret->datatype = 'S';
-        varFreeMembers(&r[0]);
-        varFreeMembers(&r[1]);
-        varFreeMembers(&r[2]);
-        break;
-    case CNFFUNC_WRAP:
-        cnfexprEval(func->expr[0], &r[0], usrptr);
-        cnfexprEval(func->expr[1], &r[1], usrptr);
-        if (func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr);
-        ret->d.estr = doFuncWrap(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
-        ret->datatype = 'S';
-        varFreeMembers(&r[0]);
-        varFreeMembers(&r[1]);
-        if (func->nParams > 3) varFreeMembers(&r[2]);
-        break;
+	case CNFFUNC_REPLACE:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		cnfexprEval(func->expr[2], &r[2], usrptr);
+		ret->d.estr = doFuncReplace(&r[0], &r[1], &r[2]);
+		ret->datatype = 'S';
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		varFreeMembers(&r[2]);
+		break;
+	case CNFFUNC_WRAP:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		if(func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr);
+		ret->d.estr = doFuncWrap(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
+		ret->datatype = 'S';
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		if(func->nParams > 3) varFreeMembers(&r[2]);
+		break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
 		 * with a constant argument to a single string (once obtained via

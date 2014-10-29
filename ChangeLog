@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
+- add new RainerScript functions warp() and replace()
+  Thanks to Singh Janmejay for the patch.
+- mmnormalize can now also work on a variable
+  Thanks to Singh Janmejay for the patch.
 - new property date options for day ordinal and week number
   Thanks to github user arrjay for the patch
 - bugfix: typo in queue configuration parameter
