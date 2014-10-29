@@ -91,7 +91,6 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	pthread_attr_init(&pThis->attrThrd);
 	/* Set thread scheduling policy to default */
-#warning do we need this any longer? I think it was a cure for an already fixed bug..
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	pthread_attr_setschedpolicy(&pThis->attrThrd, default_thr_sched_policy);
 	pthread_attr_setschedparam(&pThis->attrThrd, &default_sched_param);
