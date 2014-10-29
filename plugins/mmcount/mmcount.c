@@ -2,6 +2,7 @@
  * count messages by priority or json property of given app-name.
  *
  * Copyright 2013 Red Hat Inc.
+ * Copyright 2014 Rainer Gerhards
  *
  * This file is part of rsyslog.
  *
@@ -285,8 +286,11 @@ CODESTARTdoAction
 	}
 
 	/* key is given, so get the property json */
-	estr = es_newStrFromBuf(pData->pszKey, strlen(pData->pszKey));
-	if(msgGetCEEPropJSON(pMsg, estr, &keyjson) != RS_RET_OK) {
+	msgPropDescr_t pProp;
+	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
+	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
+	msgPropDescrDestruct(&pProp);
+	if(localRet != RS_RET_OK) {
 		/* key not found in the message. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
 	}
