@@ -479,7 +479,7 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
-- bugfix: type in queue configuration parameter
+- bugfix: typo in queue configuration parameter
   made parameter unusable
   Thanks to Bojan Smojver for the patch.
 - remove zpipe (a testing tool) from --enable-diagtools

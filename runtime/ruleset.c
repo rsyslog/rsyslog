@@ -848,20 +848,6 @@ rulesetProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&rspblk, pvals);
 	nameIdx = cnfparamGetIdx(&rspblk, "name");
 	rsName = (uchar*)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
-	/* check validity of name */
-	for(char *p = (char*)rsName ; *p != '\0' ; ++p) {
-		if(!(isdigit(*p) || isalpha(*p) || *p == '_' || *p == '!')) {
-			errmsg.LogError(0, RS_RET_NAME_INVALID,
-				"warning: ruleset '%s' contains forbidden "
-				"character '%c' - this works with some "
-				"constructs in this rsyslog version, but "
-				"not all (namely not the call statement). "
-				"Starting with rsyslog v8.5, this is no "
-				"longer supported. So consider adjusting "
-				"the name.",
-				rsName, *p);
-		}
-	}
 	
 	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
 	if(localRet == RS_RET_OK) {
