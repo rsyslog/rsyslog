@@ -9,6 +9,15 @@ RainerScript supports a currently quite limited set of functions:
 -  tolower(str) - converts the provided string into lowercase
 -  cstr(expr) - converts expr to a string value
 -  cnum(expr) - converts expr to a number (integer)
+-  wrap(str, wrapper_str) - returns the str wrapped with wrapper_str.
+   Eg. wrap("foo bar", "##") would produce "##foo bar##"
+-  wrap(str, wrapper_str, escaper_str) - returns the str wrapped with wrapper_str.
+   But additionally, any instances of wrapper_str appearing in str would be replaced
+   by the escaper_str. 
+   Eg. wrap("foo.bar", "'", "_") would produce "'foo_bar'"
+-  replace(str, substr_to_replace, replace_with) - returns new string with
+   all instances of substr_to_replace replaced by replace_with. Eg. 
+   replace("foo bar baz", " b", ", B") would return "foo, Bar, Baz".
 -  re\_match(expr, re) - returns 1, if expr matches re, 0 otherwise
 -  re\_extract(expr, re, match, submatch, no-found) - extracts data from
    a string (property) via a regular expression match. POSIX ERE regular
