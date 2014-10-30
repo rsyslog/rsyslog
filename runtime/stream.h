@@ -41,7 +41,7 @@
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
  * 
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -151,6 +151,8 @@ typedef struct strm_s {
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	sbool	bIsTTY;		/* is this a tty file? */
 	cstr_t *prevLineSegment; /* for ReadLine, previous, unwritten part of file */
+	sbool bPrevWasNL;	/* for readmodes != 0: status flag */
+	sbool bReadFinished;	/* for readmodes != 0: status flag */
 } strm_t;
 
 
