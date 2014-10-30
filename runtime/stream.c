@@ -692,9 +692,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 	 *  This modal interface is not nearly as flexible as being able to define a regex for when a new record starts, but it's also not nearly as hard (or as slow) to implement
          */
         uchar c;
-	uchar finished;
 	rsRetVal readCharRet;
-	sbool bPrevWasNL;
         DEFiRet;
 
         ASSERT(pThis != NULL);
@@ -719,9 +717,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         	}
         	CHKiRet(cstrFinalize(*ppCStr));
 	} else if(mode == 1) {
-		finished=0;
-		bPrevWasNL = 0;
-		while(finished == 0){
+		while(pThis->bReadFinished == 0){
         		if(c != '\n') {
                 		CHKiRet(cstrAppendChar(*ppCStr, c));
                 		readCharRet = strmReadChar(pThis, &c);
@@ -729,12 +725,12 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
 				}
 				CHKiRet(readCharRet);
-				bPrevWasNL = 0;
+				pThis->bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
-					if(bPrevWasNL) {
+					if(pThis->bPrevWasNL) {
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
-						finished=1;
+						pThis->bReadFinished=1;
 					} else {
 						if(bEscapeLF) {
 							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
@@ -746,19 +742,17 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 							CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
 						}
 						CHKiRet(readCharRet);
-						bPrevWasNL = 1;
+						pThis->bPrevWasNL = 1;
 					}
 				} else {
-					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
+					pThis->bReadFinished=1;  /* this is a blank line, a \n with nothing since the last complete record */
 				}
 			}
 		}
         	CHKiRet(cstrFinalize(*ppCStr));
 	} else if(mode == 2) {
 		/* indented follow-up lines */
-		finished=0;
-		bPrevWasNL = 0;
-		while(finished == 0){
+		while(pThis->bReadFinished == 0){
 			if ((*ppCStr)->iStrLen == 0){
         			if(c != '\n') {
 				/* nothing in the buffer, and it's not a newline, add it to the buffer */
@@ -769,10 +763,10 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					}
 					CHKiRet(readCharRet);
 				} else {
-					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
+					pThis->bReadFinished=1;  /* this is a blank line, a \n with nothing since the last complete record */
 				}
 			} else {
-				if(bPrevWasNL) {
+				if(pThis->bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
                					CHKiRet(cstrAppendChar(*ppCStr, c));
 						readCharRet = strmReadChar(pThis, &c);
@@ -780,18 +774,18 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 							CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
 						}
 						CHKiRet(readCharRet);
-						bPrevWasNL = 0;
+						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
 						 * the input buffer and removing the LF character that is currently at the
 						 * end of the output string */
 						CHKiRet(strmUnreadChar(pThis, c));
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1);
-						finished=1;
+						pThis->bReadFinished=1;
 					}
 				} else { /* not the first character after a newline, add it to the buffer */
 					if(c == '\n') {
-						bPrevWasNL = 1;
+						pThis->bPrevWasNL = 1;
 						if(bEscapeLF) {
 							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
 						} else {
@@ -831,6 +825,8 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
 	pThis->prevLineSegment = NULL;
+	pThis->bPrevWasNL = 0;
+	pThis->bReadFinished = 0;
 ENDobjConstruct(strm)
 
 
@@ -1871,6 +1867,12 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 
 	objSerializePTR(pStrm, prevLineSegment, PSZ);
 
+	i = pThis->bPrevWasNL;
+	objSerializeSCALAR_VAR(pStrm, bPrevWasNL, INT, i);
+
+	i = pThis->bReadFinished;
+	objSerializeSCALAR_VAR(pStrm, bReadFinished, INT, i);
+
 	CHKiRet(obj.EndSerialize(pStrm));
 
 finalize_it:
@@ -1980,6 +1982,10 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
  	} else if(isProp("prevLineSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
+ 	} else if(isProp("bPrevWasNL")) {
+		pThis->bPrevWasNL = pProp->val.num;
+ 	} else if(isProp("bReadFinished")) {
+		pThis->bReadFinished = pProp->val.num;
 	}
 
 finalize_it:
