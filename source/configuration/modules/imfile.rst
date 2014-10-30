@@ -40,6 +40,11 @@ Currently, the file must have a fixed name and location (directory).
 It is planned to add support for dynamically generating file names in the
 future.
 
+See Also
+........
+
+* presentation on `using wildcards with imfile <http://www.slideshare.net/rainergerhards1/using-wildcards-with-rsyslogs-file-monitor-imfile>`_
+
 State Files
 ...........
 Rsyslog must keep track of which parts of the to be monitored file
