@@ -37,6 +37,7 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <netinet/tcp.h>
 
 #include "syslogd-types.h"
 #include "module-template.h"
@@ -273,6 +274,7 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal EnableKeepAlive(nsd_t *pNsd);
 
 /* accept an incoming connection request
  * rgerhards, 2008-04-22
@@ -327,6 +329,15 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	}
 
 	pNew->sock = iNewSock;
+
+	if(pThis->bKeepAlive) {
+		pNew->bKeepAlive = pThis->bKeepAlive;
+		pNew->iKeepAliveIntvl = pThis->iKeepAliveIntvl;
+		pNew->iKeepAliveProbes = pThis->iKeepAliveProbes;
+		pNew->iKeepAliveTime = pThis->iKeepAliveTime;
+		CHKiRet(EnableKeepAlive((nsd_t*) pNew));
+	}
+
 	*ppNew = (nsd_t*) pNew;
 
 finalize_it:
@@ -350,7 +361,8 @@ finalize_it:
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+	uchar *pLstnPort, uchar *pLstnIP, int iSessMax, int bKeepAlive,
+	int iKeepAliveIntvl, int iKeepAliveProbes, int iKeepAliveTime)
 {
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
@@ -485,8 +497,12 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
+		((nsd_ptcp_t *) pNewNsd)->bKeepAlive = bKeepAlive;
+		((nsd_ptcp_t *) pNewNsd)->iKeepAliveIntvl = iKeepAliveIntvl;
+		((nsd_ptcp_t *) pNewNsd)->iKeepAliveProbes = iKeepAliveProbes;
+		((nsd_ptcp_t *) pNewNsd)->iKeepAliveTime = iKeepAliveTime;
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
-		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+		pNewStrm->pDrvrData = pNewNsd;
 		pNewNsd = NULL;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
@@ -603,9 +619,48 @@ EnableKeepAlive(nsd_t *pNsd)
 	optlen = sizeof(optval);
 	ret = setsockopt(pThis->sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
 	if(ret < 0) {
-		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
+		errmsg.LogError(ret, NO_ERRCODE, "cannot enable keepalive mode");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+
+#	if defined(TCP_KEEPCNT)
+	if(pThis->iKeepAliveProbes > 0) {
+		optval = pThis->iKeepAliveProbes;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+		if(ret < 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "cannot set keepalive "
+				"probes to %d - ignored", pThis->iKeepAliveProbes);
+		}
+	}
+
+	if(pThis->iKeepAliveTime > 0) {
+		optval = pThis->iKeepAliveTime;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+		if(ret < 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "cannot set keepalive "
+				"time to %d - ignored", pThis->iKeepAliveTime);
+		}
+	}
+
+	if(pThis->iKeepAliveIntvl > 0) {
+		optval = pThis->iKeepAliveIntvl;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+		if(ret < 0) {
+			errmsg.LogError(errno, NO_ERRCODE, "cannot set keepalive "
+				"interval to %d - ignored", pThis->iKeepAliveIntvl);
+		}
+	}
+#	else
+	if(pThis->iKeepAliveIntvl > 0
+	   || pThis->iKeepAliveTime > 0
+	   || pThis->iKeepAliveProbes > 0) {
+		errmsg.LogError(0, NO_ERRCODE, "Setting keepalive parameters is "
+			"not supported");
+	}
+#	endif
 
 	dbgprintf("KEEPALIVE enabled for nsd %p\n", pThis);
 
