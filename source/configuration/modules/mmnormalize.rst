@@ -5,9 +5,9 @@ Log Message Normalization Module
 
 **Module Name:    mmnormalize**
 
-**Available since:**\ 6.1.2+
+**Available since:** 6.1.2+
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Description**:
 
@@ -73,20 +73,15 @@ None known at this time.
 
 This activates the module and applies normalization to all messages:
 
-module(load="mmnormalize") action(type="mmnormalize"
-ruleBase="/path/to/rulebase.rb")
+::
+
+  module(load="mmnormalize")
+  action(type="mmnormalize" ruleBase="/path/to/rulebase.rb")
 
 The same in legacy format:
 
-$ModLoad mmnormalize $mmnormalizeRuleBase /path/to/rulebase.rb \*.\*
-:mmnormalize:
+::
 
-[`rsyslog.conf overview <rsyslog_conf.html>`_\ ] [`manual
-index <manual.html>`_\ ] [`rsyslog site <http://www.rsyslog.com/>`_\ ]
-
-This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
-project.
-Copyright © 2010-2012 by `Rainer
-Gerhards <http://www.gerhards.net/rainer>`_ and
-`Adiscon <http://www.adiscon.com/>`_. Released under the GNU GPL version
-3 or higher.
+  $ModLoad mmnormalize
+  $mmnormalizeRuleBase /path/to/rulebase.rb
+  *.* :mmnormalize:
