@@ -43,7 +43,8 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(netstrm_t **ppThis);
 	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
 	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
-		             uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+		uchar *pLstnPort, uchar *pLstnIP, int iSessMax, int bKeepAlive,
+		int iKeepAliveIntvl, int iKeepAliveProbes, int iKeepAliveTime);
 	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew);
 	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
@@ -72,12 +73,13 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	/* v4 */
 	rsRetVal (*EnableKeepAlive)(netstrm_t *pThis);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
  * interface version 6 changed signature of GetRemoteIP() -- rgerhards, 2013-01-21
- * */
+ * interface version 7 added new parameters to LstnInit() - this should, in practice, make the EnableKeepAlive() interface obsolete
+ */
 
 /* prototypes */
 PROTOTYPEObj(netstrm);

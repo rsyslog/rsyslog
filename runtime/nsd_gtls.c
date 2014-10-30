@@ -1318,11 +1318,14 @@ Abort(nsd_t *pNsd)
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+	uchar *pLstnPort, uchar *pLstnIP, int iSessMax, int bKeepAlive,
+	int iKeepAliveIntvl, int iKeepAliveProbes, int iKeepAliveTime)
 {
 	DEFiRet;
 	CHKiRet(gtlsGlblInitLstn());
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP,
+		iSessMax, bKeepAlive, iKeepAliveIntvl, iKeepAliveProbes,
+		iKeepAliveTime);
 finalize_it:
 	RETiRet;
 }

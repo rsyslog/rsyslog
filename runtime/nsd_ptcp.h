@@ -34,6 +34,11 @@ struct nsd_ptcp_s {
 	uchar *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
 	struct sockaddr_storage remAddr; /**< remote addr as sockaddr - used for legacy ACL code */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
+	/* keep-alive packets settings, see tcp(7) */
+	int bKeepAlive;		/**< use socket layer KEEPALIVE packets? (see tcp(7)) */
+	int iKeepAliveIntvl;	/**< tcp_keepalive_intvl (see tcp(7)) */
+	int iKeepAliveProbes;	/**< tcp_keepalive_probes (see tcp(7)) */
+	int iKeepAliveTime;	/**< tcp_keepalive_time (see tcp(7)) */
 };
 
 /* interface is defined in nsd.h, we just implement it! */
