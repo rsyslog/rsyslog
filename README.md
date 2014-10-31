@@ -50,7 +50,10 @@ It is best to build these from source.
 CentOS 6
 ~~~~~~~~
 
-sudo yum install git autoconf automake flex bison python-docutils json-c-devel
+for json-c, we need
+  $ export PKG_CONFIG_PATH=/lib64/pkgconfig/
+
+sudo yum install git autoconf automake flex bison python-docutils json-c-devel libuuid-devel libgcrypt-devel zlib-devel
 
 openSUSE 13
 ~~~~~~~~~~~
