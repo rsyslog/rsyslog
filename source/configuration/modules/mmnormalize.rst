@@ -1,5 +1,5 @@
-Log Message Normalization Module
-================================
+Log Message Normalization Module (mmnormalize)
+==============================================
 
 **Module Name:    mmnormalize**
 
@@ -49,6 +49,14 @@ same message.
    placed. By default, all parsed properties are merged into root of
    message properties. You can place them under a subtree, instead. You
    can place them in local variables, also, by setting path="$.".
+-  **variable** [word] *(Available since: 8.5.1)*
+   Specifies if a variable insteed of property 'msg' should be used for
+   normalization. A varible can be property, local variable, json-path etc.
+   Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
+   is set, **variable** will be ignored and raw message will be used.
+
+   
+
 
 **Legacy Configuration Directives**:
 
