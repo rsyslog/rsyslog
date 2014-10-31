@@ -53,7 +53,9 @@ CentOS 6
 for json-c, we need
   $ export PKG_CONFIG_PATH=/lib64/pkgconfig/
 
-sudo yum install git autoconf automake flex bison python-docutils json-c-devel libuuid-devel libgcrypt-devel zlib-devel
+sudo yum install git autoconf automake flex bison python-docutils python-sphinx json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel net-snmp-devel
+
+
 
 openSUSE 13
 ~~~~~~~~~~~
