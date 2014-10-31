@@ -14,7 +14,7 @@ RainerScript supports a currently quite limited set of functions:
 -  wrap(str, wrapper_str, escaper_str) - returns the str wrapped with wrapper_str.
    But additionally, any instances of wrapper_str appearing in str would be replaced
    by the escaper_str. 
-   Eg. wrap("foo.bar", "'", "_") would produce "'foo_bar'"
+   Eg. wrap("foo'bar", "'", "_") would produce "'foo_bar'"
 -  replace(str, substr_to_replace, replace_with) - returns new string with
    all instances of substr_to_replace replaced by replace_with. Eg. 
    replace("foo bar baz", " b", ", B") would return "foo, Bar, Baz".
