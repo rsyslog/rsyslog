@@ -153,6 +153,11 @@ TESTS +=  \
 	mmpstrucdata.sh
 endif
 
+if ENABLE_MMNORMALIZE
+TESTS +=  \
+	mmnormalize_variable.sh
+endif
+
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \

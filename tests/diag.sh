@@ -178,6 +178,12 @@ case $1 in
 		fi
 		rm -f work2
 		;;
+   'content-check') 
+		cat rsyslog.out.log | grep -qF "$2"
+		if [ "$?" -ne "0" ]; then
+		    exit 1
+		fi
+		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
 		rm -f work
 		ls -l rsyslog.out.log
