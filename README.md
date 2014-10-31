@@ -37,6 +37,26 @@ Building from Source
 --------------------
 Follow the instructions at: http://www.rsyslog.com/doc/build_from_repo.html
 
+Build Environment
+.................
+
+In general, you need
+
+* libestr
+* liblogging (stdlog component)
+
+It is best to build these from source.
+
+CentOS 6
+~~~~~~~~
+
+sudo yum install git autoconf automake flex bison python-docutils json-c-devel
+
+openSUSE 13
+~~~~~~~~~~~
+
+sudo zypper install python-docutils libjson-devel uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel libnet-devel
+
 Reporting Bugs
 ==============
 
