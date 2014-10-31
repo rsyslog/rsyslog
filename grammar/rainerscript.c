@@ -1485,7 +1485,6 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	return;
 }
 
-
 static inline es_str_t*
 doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict__ const findVal, struct var *__restrict__ const replaceWithVal) {
     int freeOperand, freeFind, freeReplacement;
@@ -1497,40 +1496,44 @@ doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict_
     uint lfind = es_strlen(findStr);
     uint lReplaceWith = es_strlen(replaceWithStr);
     uint size = 0;
-    uchar* src = es_getBufAddr(str);
+    uchar* src_buff = es_getBufAddr(str);
     uint i, j;
-    for(i = j = 0; i < es_strlen(str); i++, size++) {
+    for(i = j = 0; i <= es_strlen(str); i++, size++) {
         if (j == lfind) {
             size = size - lfind + lReplaceWith;
             j = 0;
-        } else if (src[i] == find[j]) {
-            j++;
-        } else if (j > 0) {
-            j = 0;
         }
+		if (i == es_strlen(str)) break;
+		if (src_buff[i] == find[j]) {
+			j++;
+		} else if (j > 0) {
+			i -= (j - 1);
+			size -= (j - 1);
+			j = 0;
+		}
     }
     es_str_t *res = es_newStr(size);
     unsigned char* dest = es_getBufAddr(res);
     uint k, s;
-    for(i = j = k = s = 0; i < es_strlen(str); i++, s++) {
+    for(i = j = k = s = 0; i <= es_strlen(str); i++, s++) {
         if (j == lfind) {
             for (k = 0; k < lReplaceWith; k++) {
                 dest[s - j + k] = replaceWith[k];
             }
             s = s - j + lReplaceWith;
             j = 0;
-            dest[s] = src[i];
-        } else {
-            if (src[i] == find[j]) {
-                j++;
-            } else if (j > 0) {
-                j = 0;
-                for (k = 0; k < j; k++) {
-                    dest[s - j + k]  = find[k];
-                }
-            }
-            dest[s] = src[i];
         }
+		if (i == es_strlen(str)) break;
+		if (src_buff[i] == find[j]) {
+			j++;
+		} else {
+			if (j > 0) {
+				i -= j;
+				s -= j;
+				j = 0;
+			}
+			dest[s] = src_buff[i];
+		}
     }
     res->lenStr = size;
     if(freeOperand) es_deleteStr(str);
