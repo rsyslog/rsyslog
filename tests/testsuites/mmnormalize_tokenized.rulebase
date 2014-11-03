@@ -1,0 +1,4 @@
+rule=only_ips:%only_ips:tokenized:, :ipv4%
+rule=local_ips:local ips are %local_ips:tokenized:, :ipv4%
+rule=external_ips:%external_ips:tokenized:, :ipv4% are external ips
+rule=paths:for %user:char-to:@%@localhost path was %fragments:tokenized:\x3a:char-sep:\x3a%

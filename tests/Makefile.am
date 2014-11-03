@@ -179,7 +179,8 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS +=  \
-	mmnormalize_variable.sh
+	mmnormalize_variable.sh \
+        mmnormalize_tokenized.sh
 endif
 
 if ENABLE_MMJSONPARSE
