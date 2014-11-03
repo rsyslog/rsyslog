@@ -1,4 +1,5 @@
 if ENABLE_TESTBENCH
+TESTRUNS = rt_init
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
@@ -683,10 +684,10 @@ nettester_LDADD = $(SOL_LIBS)
 
 # rtinit tests disabled for the moment - also questionable if they
 # really provide value (after all, everything fails if rtinit fails...)
-#rt_init_SOURCES = rt-init.c $(test_files)
-#rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-#rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
-#rt_init_LDFLAGS = -export-dynamic
+rt_init_SOURCES = rt-init.c $(test_files)
+rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+rt_init_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(LIBLOGGING_STDLOG_LIBS)
+rt_init_LDFLAGS = -export-dynamic
 
 # same for basic rscript tests
 #rscript_SOURCES = rscript.c getline.c $(test_files)
