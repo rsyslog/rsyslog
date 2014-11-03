@@ -971,7 +971,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  */
 time_t syslogTime2time_t(struct syslogTime *ts)
 {
-	long MonthInDays, NumberOfYears, NumberOfDays, i;
+	long MonthInDays, NumberOfYears, NumberOfDays;
 	int utcOffset;
 	time_t TimeInUnixFormat;
 

@@ -6,4 +6,9 @@ welcome.
 For a simple sample, see rtinit.c, which does a simple
 init/deinit check of the runtime system.
 
-rgerhards, 2008-06-13
+Setting up MariaDB/MySQL
+to create the necessary user:
+
+echo "create user 'rsyslog'@'localhost' identified by 'testbench';" | mysql -u root
+mysql -u root < ../plugins/ommysql/createDB.sql
+echo "grant all on Syslog.* to 'rsyslog'@'localhost';" | mysql -u root

@@ -53,14 +53,18 @@ CentOS 6
 for json-c, we need
   $ export PKG_CONFIG_PATH=/lib64/pkgconfig/
 
-sudo yum install git autoconf automake flex bison python-docutils python-sphinx json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel net-snmp-devel
+sudo yum install git valgrind autoconf automake flex bison python-docutils python-sphinx json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel net-snmp-devel
 
 
 
 openSUSE 13
 ~~~~~~~~~~~
 
-sudo zypper install python-docutils libjson-devel uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel libnet-devel
+sudo zypper install gcc make autoconf automake libtool libcurl-devel flex bison valgrind python-docutils libjson-devel uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel libnet-devel postgresql-devel net-snmp-devellibuuid-devel
+
+For the testbench VMs:
+
+sudo zypper install gvim mutt
 
 Reporting Bugs
 ==============
