@@ -44,10 +44,6 @@ struct tcpLstnPortList_s {
 	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
 	ratelimit_t *ratelimiter;
 	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
-	int bKeepAlive;			/**< use socket layer KEEPALIVE packets? (see tcp(7)) */
-	int iKeepAliveIntvl;		/**< tcp_keepalive_intvl (see tcp(7)) */
-	int iKeepAliveProbes;		/**< tcp_keepalive_probes (see tcp(7)) */
-	int iKeepAliveTime;		/**< tcp_keepalive_time (see tcp(7)) */
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
@@ -57,6 +53,7 @@ struct tcpLstnPortList_s {
 /* the tcpsrv object */
 struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
+	int bUseKeepAlive;	/**< use socket layer KEEPALIVE handling? */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -73,10 +70,6 @@ struct tcpsrv_s {
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */
-	int bKeepAlive;		/**< use socket layer KEEPALIVE packets? (see tcp(7)) */
-	int iKeepAliveIntvl;	/**< tcp_keepalive_intvl (see tcp(7)) */
-	int iKeepAliveProbes;	/**< tcp_keepalive_probes (see tcp(7)) */
-	int iKeepAliveTime;	/**< tcp_keepalive_time (see tcp(7)) */
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
@@ -153,7 +146,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v10 -- rgerhards, 2011-04-01 */
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
-	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int, int, int, int);
+	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
 	/* added v13 -- rgerhards, 2012-10-15 */
 	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
 	/* added v14 -- rgerhards, 2013-07-28 */
@@ -161,13 +154,12 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v15 -- rgerhards, 2013-09-17 */
 	rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *pszName);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
  * for v12: param bSuppOctetFram added to configureTCPListen
- * for v16: added more options to SetKeepAlive()
  */
 
 

@@ -138,10 +138,6 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
-	pEntry->bKeepAlive = pThis->bKeepAlive;
-	pEntry->iKeepAliveIntvl = pThis->iKeepAliveIntvl;
-	pEntry->iKeepAliveProbes = pThis->iKeepAliveProbes;
-	pEntry->iKeepAliveTime = pThis->iKeepAliveTime;
 
 	/* we need to create a property */ 
 	CHKiRet(prop.Construct(&pEntry->pInputName));
@@ -366,10 +362,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 		TCPLstnPort = pPortEntry->pszPort;
 
 	/* TODO: add capability to specify local listen address! */
-	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn,
-		TCPLstnPort, NULL, pThis->iSessMax, pPortEntry->bKeepAlive,
-		pPortEntry->iKeepAliveIntvl, pPortEntry->iKeepAliveProbes,
-		pPortEntry->iKeepAliveTime));
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -445,6 +438,10 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		errno = 0;
 		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
+	}
+
+	if(pThis->bUseKeepAlive) {
+		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
 	}
 
 	/* we found a free spot and can construct our session object */
@@ -1079,13 +1076,11 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 }
 
 static rsRetVal
-SetKeepAlive(tcpsrv_t *pThis, int bKeepAlive, int iKeepAliveIntvl, int iKeepAliveProbes, int iKeepAliveTime)
+SetKeepAlive(tcpsrv_t *pThis, int iVal)
 {
 	DEFiRet;
-	pThis->bKeepAlive = bKeepAlive;
-	pThis->iKeepAliveIntvl = iKeepAliveIntvl;
-	pThis->iKeepAliveProbes = iKeepAliveProbes;
-	pThis->iKeepAliveTime = iKeepAliveTime;
+	DBGPRINTF("tcpsrv: keep-alive set to %d\n", iVal);
+	pThis->bUseKeepAlive = iVal;
 	RETiRet;
 }
 

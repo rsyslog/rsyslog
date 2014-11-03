@@ -141,8 +141,7 @@ finalize_it:
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	uchar *pLstnPort, uchar *pLstnIP, int iSessMax, int bKeepAlive,
-	int iKeepAliveIntvl, int iKeepAliveProbes, int iKeepAliveTime)
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
 
@@ -150,9 +149,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
 
-	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP,
-		iSessMax, bKeepAlive, iKeepAliveIntvl, iKeepAliveProbes,
-		iKeepAliveTime));
+	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 
 finalize_it:
 	RETiRet;
