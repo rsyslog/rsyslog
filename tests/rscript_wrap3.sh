@@ -9,6 +9,5 @@ echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 source $srcdir/diag.sh wait-shutdown 
-cp rsyslog.out.log /tmp/
 source $srcdir/diag.sh content-check "bcdefbcfoo says a abcESCdefb has ESCbcdefbc"
 source $srcdir/diag.sh exit

@@ -9,7 +9,6 @@ echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 source $srcdir/diag.sh wait-shutdown 
-cp rsyslog.out.log /tmp/
 source $srcdir/diag.sh content-check "try to replace rsyslog and syrsyslog with rrsyslog"
 source $srcdir/diag.sh content-check "try to replace hello_world in hello_worldlo and helhello_world with hello_world_world"
 source $srcdir/diag.sh content-check "try to FBB in FBB_quux and quux_FBB with FBB"
