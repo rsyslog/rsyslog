@@ -29,6 +29,11 @@ Version 8.5.1 [v8-stable] 2014-10-??
   callbacks like endCnfLoad() were primarily being called for input
   modules. This has been corrected. Note that this bugfix has some
   regression potential.
+- bugfix omlibdbi: connection was taken down in wrong thread
+  this could have consequences depending on the driver being used. In
+  general, it looks more like a cosmetic issue. For example, with
+  MySQL it lead to a small memory but also an annoying message about
+  a thread not properly torn down.
 ---------------------------------------------------------------------------
 Version 8.5.0 [v8-stable] 2014-10-24
 - imfile greatly refactored and support for wildcards added

@@ -183,7 +183,6 @@ ENDisCompatibleWithFeature
 static void closeConn(instanceData *pData)
 {
 	ASSERT(pData != NULL);
-
 	if(pData->conn != NULL) {	/* just to be on the safe side... */
 		dbi_conn_close(pData->conn);
 		pData->conn = NULL;
@@ -192,7 +191,6 @@ static void closeConn(instanceData *pData)
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	closeConn(pData);
 	free(pData->drvrName);
 	free(pData->host);
 	free(pData->usrName);
@@ -202,6 +200,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	closeConn(pWrkrData->pData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
@@ -449,7 +448,6 @@ BEGINendCnfLoad
 CODESTARTendCnfLoad
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
-dbgprintf("DDDDDD: in endCnfLoad\n");
 	free(cs.dbiDrvrDir);
 	free(cs.drvrName);
 	free(cs.host);
