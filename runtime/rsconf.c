@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2013 Adiscon GmbH.
+ * Copyright 2011-2014 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -581,9 +581,12 @@ tellModulesConfigLoadDone(void)
 	DBGPRINTF("telling modules that config load for %p is done\n", loadConf);
 	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
 	while(node != NULL) {
-		if(node->pMod->beginCnfLoad != NULL)
+		DBGPRINTF("beginCnfLoad(%p) for module '%s'\n", node->pMod->beginCnfLoad, node->pMod->pszName);
+		if(node->pMod->beginCnfLoad != NULL) {
+			DBGPRINTF("calling endCnfLoad() for module '%s'\n", node->pMod->pszName);
 			node->pMod->endCnfLoad(node->modCnf);
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		}
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -612,7 +615,7 @@ tellModulesCheckConfig(void)
 				node->canActivate = 0;
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -643,7 +646,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -672,7 +675,7 @@ tellModulesActivateConfig(void)
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc

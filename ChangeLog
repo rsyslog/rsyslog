@@ -25,6 +25,10 @@ Version 8.5.1 [v8-stable] 2014-10-??
   e.g. calling a ruleset.
   IMPORTANT: this may cause existing configurations to error out on start,
   as they invalid names could also be used e.g. when assigning rulesets.
+- bugfix: some module entry points were not called for all modules
+  callbacks like endCnfLoad() were primarily being called for input
+  modules. This has been corrected. Note that this bugfix has some
+  regression potential.
 ---------------------------------------------------------------------------
 Version 8.5.0 [v8-stable] 2014-10-24
 - imfile greatly refactored and support for wildcards added
