@@ -10,7 +10,7 @@
  *
  * File begun on 2008-02-14 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2008-2013 Adiscon GmbH.
+ * Copyright 2008-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -449,6 +449,19 @@ BEGINendCnfLoad
 CODESTARTendCnfLoad
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
+dbgprintf("DDDDDD: in endCnfLoad\n");
+	free(cs.dbiDrvrDir);
+	free(cs.drvrName);
+	free(cs.host);
+	free(cs.usrName);
+	free(cs.pwd);
+	free(cs.dbName);
+	cs.dbiDrvrDir = NULL;
+	cs.drvrName = NULL;
+	cs.host = NULL;
+	cs.usrName = NULL;	
+	cs.pwd = NULL;
+	cs.dbName = NULL;
 	free(pszFileDfltTplName);
 	pszFileDfltTplName = NULL;
 ENDendCnfLoad
