@@ -40,6 +40,7 @@ TESTS +=  \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	imudp_thread_hang.sh \
+	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
 	asynwr_timeout.sh \
 	asynwr_small.sh \
@@ -543,6 +544,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv_udp_nonstdpt.sh \
 	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
 	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
+	   sndrcv_udp_nonstdpt_v6.sh \
+	   testsuites/sndrcv_udp_nonstdpt_v6_sender.conf \
+	   testsuites/sndrcv_udp_nonstdpt_v6_rcvr.conf \
 	   sndrcv_omudpspoof.sh \
 	   testsuites/sndrcv_omudpspoof_sender.conf \
 	   testsuites/sndrcv_omudpspoof_rcvr.conf \
