@@ -117,16 +117,20 @@ TESTS +=  \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh
-if ENABLE_OMLIBDBI
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh 
+endif
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
 endif
 endif
 
