@@ -1122,15 +1122,23 @@ AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench) ;;
          esac],
-        [enable_testbench=yes]
+        [enable_testbench=no]
 )
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+if test "x$enable_testbench" = "xyes"; then
+	if test "x$enable_imdiag" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
+	fi
+	if test "x$enable_omstdout" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-omstdout")
+	fi
+fi
 
 
 # settings for the file input module
