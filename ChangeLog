@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
+- testbench is now by default disabled
+  To enable it, use --enable-testbench. This was done as the testbench now
+  does better checking if required modules are present and this in turn
+  would lead to configure error messages where non previously were if we
+  would leave --enable-testbench on by default. Thus we have turned it off.
+  This should not be an issue for those few testbench users.
 - add new RainerScript functions warp() and replace()
   Thanks to Singh Janmejay for the patch.
 - mmnormalize can now also work on a variable
