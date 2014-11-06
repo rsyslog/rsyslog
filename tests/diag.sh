@@ -131,7 +131,8 @@ case $1 in
 		# note: we do not wait for the actual termination!
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
-		./tcpflood $2 $3 $4 $5 $6 $7 $8 $9
+		shift 1
+		eval ./tcpflood $*
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
