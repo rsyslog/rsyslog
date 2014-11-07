@@ -12,6 +12,7 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
+TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
@@ -53,26 +54,50 @@ case $1 in
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		$valgrind ../tools/rsyslogd -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-   		$srcdir/diag.sh wait-startup $3
+   		$srcdir/diag.sh wait-startup $3 || exit $?
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-   		$srcdir/diag.sh wait-startup $3
+   		$srcdir/diag.sh wait-startup $3 || exit $?
+		echo startup-vg still running
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		i=0
 		while test ! -f rsyslog$2.pid; do
 			./msleep 100 # wait 100 milliseconds
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on startup (pid file)"
+			   exit 1
+			fi
 		done
+		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on startup ('started' file)"
+			   exit 1
+			fi
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
+		i=0
 		while test -f rsyslog$2.pid; do
 			./msleep 100 # wait 100 milliseconds
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on shutdown"
+			   echo "Instance is possibly still running and may need"
+			   echo "manual cleanup."
+			   exit 1
+			fi
 		done
 		if [ -e core.* ]
 		then
@@ -86,7 +111,7 @@ case $1 in
 		wait `cat rsyslog.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
-		if [ -e core.* ]
+		if [ -e vgcore.* ]
 		then
 		   echo "ABORT! core file exists, starting interactive shell"
 		   bash
@@ -121,7 +146,7 @@ case $1 in
 		then
 		   echo Shutting down instance 2
 		fi
-   		$srcdir/diag.sh wait-queueempty $2
+   		$srcdir/diag.sh wait-queueempty $2 || exit $?
 		./msleep 100 # wait 100 milliseconds
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
@@ -212,11 +237,11 @@ case $1 in
 		fi
 		;;
    'generate-HOSTNAME')   # generate the HOSTNAME file
-		source $srcdir/diag.sh startup gethostname.conf
-		source $srcdir/diag.sh tcpflood -m1 -M "<128>"
+		source $srcdir/diag.sh startup gethostname.conf || exit $?
+		source $srcdir/diag.sh tcpflood -m1 -M "<128>" || exit $?
 		./msleep 100
-		source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-		source $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
+		source $srcdir/diag.sh shutdown-when-empty || exit $? # shut down rsyslogd when done processing messages
+		source $srcdir/diag.sh wait-shutdown || exit $?	# we need to wait until rsyslogd is finished!
 		;;
    *)		echo "invalid argument" $1
 esac
