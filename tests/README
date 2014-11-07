@@ -21,4 +21,4 @@ openSUSE
 --------
 To configure system properties like hostname and firewall, use the
 graphical "yast2" administration tool. Note the ssh-access by default
-is disable in the firewall!
+is disabled in the firewall!
