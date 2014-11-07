@@ -67,8 +67,6 @@ TESTS +=  \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	udp-msgreduc-vg.sh \
-	udp-msgreduc-orgmsg-vg.sh \
 	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
@@ -105,6 +103,8 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	udp-msgreduc-vg.sh \
+	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_IMDIAG
