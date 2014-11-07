@@ -1135,9 +1135,6 @@ if test "x$enable_testbench" = "xyes"; then
 	if test "x$enable_imdiag" != "xyes"; then
 		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
 	fi
-	if test "x$enable_omstdout" != "xyes"; then
-		AC_MSG_ERROR("--enable-testbench requires --enable-omstdout")
-	fi
 fi
 
 
