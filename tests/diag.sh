@@ -238,7 +238,7 @@ case $1 in
 		;;
    'generate-HOSTNAME')   # generate the HOSTNAME file
 		source $srcdir/diag.sh startup gethostname.conf || exit $?
-		source $srcdir/diag.sh tcpflood -m1 -M "<128>" || exit $?
+		source $srcdir/diag.sh tcpflood -m1 -M "\"<128>\"" || exit $?
 		./msleep 100
 		source $srcdir/diag.sh shutdown-when-empty || exit $? # shut down rsyslogd when done processing messages
 		source $srcdir/diag.sh wait-shutdown || exit $?	# we need to wait until rsyslogd is finished!

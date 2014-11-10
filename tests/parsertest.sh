@@ -4,7 +4,7 @@ source $srcdir/diag.sh init
 # first we need to obtain the hostname as rsyslog sees it
 rm -f HOSTNAME
 source $srcdir/diag.sh startup gethostname.conf
-source $srcdir/diag.sh tcpflood -m1 -M "<128>"
+source $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
 ./msleep 100
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
