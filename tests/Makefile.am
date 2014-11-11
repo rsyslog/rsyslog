@@ -179,7 +179,8 @@ endif
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \
-	mmjsonparse_cim.sh
+	mmjsonparse_cim.sh \
+	json_array_subscripting.sh
 endif
 
 if ENABLE_GNUTLS
@@ -680,6 +681,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   rscript_wrap3.sh \
 	   testsuites/rscript_wrap3.conf \
 	   testsuites/wrap3_input \
+	   json_array_subscripting.sh \
+	   testsuites/json_array_subscripting.conf \
+	   testsuites/json_array_input \
 	   cfg.sh
 
 # TODO: re-enable

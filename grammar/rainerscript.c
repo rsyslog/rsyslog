@@ -2822,22 +2822,6 @@ cnfvarNew(char *name)
 	return var;
 }
 
-struct cnfvar*
-cnfvarNewIndexed(char *name, int subscript)
-{
-    char name_buff[MAX_VARIABLE_NAME_LEN];
-    int len = strlen(name);
-    memcpy(name_buff, name, len);
-    free(name);
-    name_buff[len++] = '[';
-    len += snprintf(name_buff + len, MAX_VARIABLE_NAME_LEN - len - 2, "%d", subscript); //2 is for ]\0
-    name_buff[len++] = ']';
-    name_buff[len] = '\0';
-    char *indexed_name = strdup(name_buff);
-    return indexed_name == NULL ? NULL : cnfvarNew(indexed_name);
-}
-
-
 struct cnfstmt *
 cnfstmtNew(unsigned s_type)
 {

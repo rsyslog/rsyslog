@@ -4194,7 +4194,7 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
     char *array_idx_start = strstr(key, "[");
     char *array_idx_end = NULL;
     char *array_idx_num_end_discovered = NULL;
-    struct json_object **arr = NULL;
+    struct json_object *arr = NULL;
     if (array_idx_start != NULL) {
         array_idx_end = strstr(array_idx_start, "]");
     }
@@ -4204,11 +4204,11 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
         if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
             memcpy(namebuf, key, array_idx_start - key);
             namebuf[array_idx_start - key] = '\0';
-            json_bool found_obj = RS_json_object_object_get_ex(root, namebuf, arr);
-            if (found_obj && json_object_is_type(*arr, json_type_array)) {
-                int len = json_object_array_length(*arr);
+            json_bool found_obj = RS_json_object_object_get_ex(root, namebuf, &arr);
+            if (found_obj && json_object_is_type(arr, json_type_array)) {
+                int len = json_object_array_length(arr);
                 if (len > idx) {
-                    *value = json_object_array_get_idx(*arr, idx);
+                    *value = json_object_array_get_idx(arr, idx);
                     if (*value != NULL) return TRUE;
                 }
                 return FALSE;
