@@ -149,6 +149,8 @@ struct msg {
 #define MSG_LEGACY_PROTOCOL 0
 #define MSG_RFC5424_PROTOCOL 1
 
+#define MAX_VARIABLE_NAME_LEN 1024
+
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
