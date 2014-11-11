@@ -180,7 +180,7 @@ endif
 if ENABLE_MMNORMALIZE
 TESTS +=  \
 	mmnormalize_variable.sh \
-        mmnormalize_tokenized.sh
+	mmnormalize_tokenized.sh
 endif
 
 if ENABLE_MMJSONPARSE
@@ -192,9 +192,9 @@ endif
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
-	#sndrcv_tls_anon.sh \
-	#sndrcv_tls_anon_rebind.sh \
-	#imtcp-tls-basic.sh
+#sndrcv_tls_anon.sh \
+#sndrcv_tls_anon_rebind.sh \
+imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
 	 imtcp_conndrop_tls-vg.sh \
@@ -688,9 +688,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mmpstrucdata.conf \
 	   libdbi-basic-vg.sh \
 	   mmnormalize_variable.sh \
+	   mmnormalize_tokenized.sh \
+	   testsuites/mmnormalize_variable.conf \
+	   testsuites/date_time_msg \
+	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/tokenized_input \
 	   rscript_replace.sh \
 	   testsuites/rscript_replace.conf \
-	   testsuites/date_time_msg \
 	   rscript_replace_complex.sh \
 	   testsuites/rscript_replace_complex.conf \
 	   testsuites/complex_replace_input \
