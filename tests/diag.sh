@@ -62,6 +62,15 @@ case $1 in
    		$srcdir/diag.sh wait-startup $3 || exit $?
 		echo startup-vg still running
 		;;
+   'startup-vg-noleak') # same as startup-vg, except that --leak-check is set to "none". This
+   		# is meant to be used in cases where we have to deal with libraries (and such
+		# that) we don't can influence and where we cannot provide suppressions as
+		# they are platform-dependent. In that case, we can't test for leak checks
+		# (obviously), but we can check for access violations, what still is useful.
+		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -u2 -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+   		$srcdir/diag.sh wait-startup $3 || exit $?
+		echo startup-vg still running
+		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
