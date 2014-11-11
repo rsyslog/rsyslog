@@ -9,5 +9,5 @@ echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 source $srcdir/diag.sh wait-shutdown 
-source $srcdir/diag.sh content-check "msg: def1 | important_msg | other_msg"
+source $srcdir/diag.sh content-check 'msg: def1 | ghi2 | important_msg | { "baz": "other_msg" } | other_msg'
 source $srcdir/diag.sh exit
