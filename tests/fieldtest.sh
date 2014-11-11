@@ -1,4 +1,5 @@
 echo \[fieldtest.sh\]: test fieldtest via udp
+source $srcdir/diag.sh init
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 source $srcdir/diag.sh generate-HOSTNAME
 
@@ -12,3 +13,4 @@ echo test fieldtest via tcp
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
+source $srcdir/diag.sh exit
