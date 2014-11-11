@@ -199,6 +199,7 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| NUMBER			{ $$ = (struct cnfexpr*) cnfnumvalNew($1); }
 	| STRING			{ $$ = (struct cnfexpr*) cnfstringvalNew($1); }
 	| VAR				{ $$ = (struct cnfexpr*) cnfvarNew($1); }
+	| VAR '[' NUMBER ']'		{ $$ = (struct cnfexpr*) cnfvarNewIndexed($1, $3); }
 	| array				{ $$ = (struct cnfexpr*) $1; }
 fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
