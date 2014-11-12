@@ -614,59 +614,6 @@ AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
 AC_SUBST(PGSQL_LIBS)
 
-
-# oracle (OCI) support
-AC_ARG_ENABLE(oracle,
-	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@]. (Check your ORACLE_HOME environment variable!))],
-	[case "${enableval}" in
-	 yes) enable_oracle="yes" ;;
-	 no) enable_oracle="no" ;;
-	 *) AC_MSG_ERROR(bad value ${enableval} for --enable-oracle) ;;
-	 esac],
-	[enable_oracle=no]
-)
-if test "x$enable_oracle" = "xyes"; then
-   if test -d "$ORACLE_HOME"
-   then
-       AC_CHECK_LIB([occi], [OCIEnvCreate],
-                    [ORACLE_CFLAGS=-I$ORACLE_HOME/rdbms/public]
-		    [ORACLE_LIBS=-L$ORACLE_HOME/lib -locci],
-		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle home])],
-		    [-I$ORACLE_HOME/rdbms/public/ -L$ORACLE_HOME/lib -locci -lclntsh ]
-		 )
-    elif test -d "$ORACLE_LIB_PATH" -a -d "$ORACLE_INCLUDE_PATH"
-    then
-       AC_CHECK_LIB([occi], [OCIEnvCreate],
-                    [ORACLE_CFLAGS=-I$ORACLE_INCLUDE_PATH]
-		    [ORACLE_LIBS=-L$ORACLE_LIB_PATH -locci],
-		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle directories])],
-		    [-I$ORACLE_INCLUDE_PATH -L$ORACLE_LIB_PATH -locci -lclntsh ]
-		 )
-    else
-        AC_CHECK_PROG(
-      	    [HAVE_ORACLE_CONFIG],
-            [oracle-instantclient-config],
-            [yes],,,
-            )
-        if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
-           AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
-        fi
-        AC_CHECK_LIB(
-		[occi],
-        	[OCIEnvCreate],
-        	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
-        	ORACLE_LIBS="`oracle-instantclient-config --libs`"
-        	],
-        	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
-        	[`oracle-instantclient-config --libs --cflags`]
-        	)
-    fi
-fi
-AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
-AC_SUBST(ORACLE_CFLAGS)
-AC_SUBST(ORACLE_LIBS)
-
-
 # libdbi support
 AC_ARG_ENABLE(libdbi,
         [AS_HELP_STRING([--enable-libdbi],[Enable libdbi database support @<:@default=no@:>@])],
@@ -1615,7 +1562,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
-		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/omhiredis/Makefile \
@@ -1709,7 +1655,6 @@ echo "    libdbi support enabled:                   $enable_libdbi"
 echo "    PostgreSQL support enabled:               $enable_pgsql"
 echo "    mongodb support enabled:                  $enable_ommongodb"
 echo "    hiredis support enabled:                  $enable_omhiredis"
-echo "    Oracle (OCI) support enabled:             $enable_oracle"
 echo
 echo "---{ protocol support }---"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
