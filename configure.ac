@@ -1311,24 +1311,6 @@ AC_ARG_ENABLE(omruleset,
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
 
-# building the GUI (mostly for diagnostic reasons)
-AC_ARG_ENABLE(gui,
-        [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_gui="yes" ;;
-          no) enable_gui="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gui) ;;
-         esac],
-        [enable_gui=no]
-)
-if test "x$enable_gui" = "xyes"; then
-	if test x$HAVE_JAVAC = x; then
-	   AC_MSG_ERROR([GUI components need Java, but Java development system is not installed on this system])
-	fi
-fi
-AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
-
-
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
         [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
@@ -1580,7 +1562,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
-		java/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1593,7 +1574,6 @@ echo "    Regular expressions support enabled:      $enable_regexp"
 echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
-echo "    GUI components will be built:             $enable_gui"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
