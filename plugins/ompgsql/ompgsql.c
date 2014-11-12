@@ -44,7 +44,6 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
-#include "ompgsql.h"
 #include "module-template.h"
 #include "errmsg.h"
 
