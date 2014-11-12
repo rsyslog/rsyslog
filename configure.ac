@@ -1324,20 +1324,6 @@ AC_ARG_ENABLE(omuxsock,
 AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
 
 
-# A custom strgen that also serves as a sample of how to do
-# SQL-generating strgen's
-AC_ARG_ENABLE(sm_cust_bindcdr,
-        [AS_HELP_STRING([--enable-sm_cust_bindcdr],[Compiles sm_cust_bindcdr module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_sm_cust_bindcdr="yes" ;;
-          no) enable_sm_cust_bindcdr="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-sm_cust_bindcdr) ;;
-         esac],
-        [enable_sm_cust_bindcdr=no]
-)
-AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_sm_cust_bindcdr = xyes)
-
-
 # settings for mmsnmptrapd message modification module
 AC_ARG_ENABLE(mmsnmptrapd,
         [AS_HELP_STRING([--enable-mmsnmptrapd],[Compiles mmsnmptrapd module @<:@default=no@:>@])],
@@ -1560,7 +1546,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/mmrfc5424addhmac/Makefile \
 		plugins/omelasticsearch/Makefile \
-		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		tests/Makefile])
 AC_OUTPUT
@@ -1625,9 +1610,6 @@ echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
-echo
-echo "---{ strgen modules }---"
-echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
