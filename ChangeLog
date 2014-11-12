@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 8.4.3 [v8-stable] 2014-10-??
+Version 8.4.2.ad1 [v8-stable] 2014-11-12
 - ommail: minor bugfixes & improvements
   * timestamps were 1 hour out when using daylight saving times when
     viewing emails in most email clients due to incorrect date format
@@ -15,7 +15,7 @@ Version 8.4.3 [v8-stable] 2014-10-??
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
-- bugfix: type in queue configuration parameter
+- bugfix: typo in queue configuration parameter
   made parameter unusable
   Thanks to Bojan Smojver for the patch.
 - bugfix imfile: segfault on startup in "inotify" mode
