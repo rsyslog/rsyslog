@@ -208,10 +208,6 @@ if ENABLE_IMPTCP
 SUBDIRS += plugins/imptcp
 endif
 
-if ENABLE_IMTTCP
-SUBDIRS += plugins/imttcp
-endif
-
 if ENABLE_IMDIAG
 SUBDIRS += plugins/imdiag
 endif

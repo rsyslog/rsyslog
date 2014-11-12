@@ -1123,19 +1123,6 @@ AC_ARG_ENABLE(imptcp,
 AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
 
 
-# settings for the ttcp input module
-AC_ARG_ENABLE(imttcp,
-        [AS_HELP_STRING([--enable-imttcp],[threaded plain tcp input module enabled @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_imttcp="yes" ;;
-          no) enable_imttcp="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imttcp) ;;
-         esac],
-        [enable_imttcp=no]
-)
-AM_CONDITIONAL(ENABLE_IMTTCP, test x$enable_imttcp = xyes)
-
-
 # settings for the pstats input module
 AC_ARG_ENABLE(impstats,
         [AS_HELP_STRING([--enable-impstats],[periodic statistics module enabled @<:@default=no@:>@])],
@@ -1517,7 +1504,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
-		plugins/imttcp/Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -1572,7 +1558,6 @@ echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
 echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
 echo "    plain tcp input module enabled:           $enable_imptcp"
-echo "    threaded plain tcp input module enabled:  $enable_imttcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
