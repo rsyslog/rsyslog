@@ -1474,17 +1474,13 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imjournal/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
-		plugins/imkmsg/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/omjournal/Makefile \
-		plugins/pmlastmsg/Makefile \
 		plugins/pmcisconames/Makefile \
 		plugins/pmciscoios/Makefile \
-		plugins/pmsnare/Makefile \
-		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
@@ -1493,7 +1489,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
-		plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1504,21 +1499,26 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omsnmp/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
-		plugins/omhiredis/Makefile \
-		plugins/omzmq3/Makefile \
-		plugins/omrabbitmq/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmutf8fix/Makefile \
-		plugins/mmcount/Makefile \
-		plugins/mmsequence/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
-		plugins/mmrfc5424addhmac/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/mmsnmptrapd/Makefile \
+		contrib/pmlastmsg/Makefile \
+		contrib/pmsnare/Makefile \
+		contrib/pmaixforwardedfrom/Makefile \
+		contrib/omhiredis/Makefile \
+		contrib/omrabbitmq/Makefile \
+		contrib/imkmsg/Makefile \
+		contrib/mmcount/Makefile \
+		contrib/omzmq3/Makefile \
+		contrib/imzmq3/Makefile \
+		contrib/mmsequence/Makefile \
+		contrib/mmrfc5424addhmac/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 

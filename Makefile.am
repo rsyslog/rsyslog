@@ -85,7 +85,7 @@ SUBDIRS += plugins/imklog
 endif
 
 if ENABLE_IMKMSG
-SUBDIRS += plugins/imkmsg
+SUBDIRS += contrib/imkmsg
 endif
 
 if ENABLE_IMPSTATS
@@ -133,15 +133,15 @@ SUBDIRS += plugins/pmciscoios
 endif
 
 if ENABLE_PMAIXFORWARDEDFROM
-SUBDIRS += plugins/pmaixforwardedfrom
+SUBDIRS += contrib/pmaixforwardedfrom
 endif
 
 if ENABLE_PMSNARE
-SUBDIRS += plugins/pmsnare
+SUBDIRS += contrib/pmsnare
 endif
 
 if ENABLE_PMLASTMSG
-SUBDIRS += plugins/pmlastmsg
+SUBDIRS += contrib/pmlastmsg
 endif
 
 if ENABLE_OMRULESET
@@ -157,19 +157,19 @@ SUBDIRS += plugins/ommongodb
 endif
 
 if ENABLE_OMHIREDIS
-SUBDIRS += plugins/omhiredis
+SUBDIRS += contrib/omhiredis
 endif
 
 if ENABLE_OMZMQ3
-SUBDIRS += plugins/omzmq3
+SUBDIRS += contrib/omzmq3
 endif
 
 if ENABLE_OMRABBITMQ
-SUBDIRS += plugins/omrabbitmq
+SUBDIRS += contrib/omrabbitmq
 endif
 
 if ENABLE_IMZMQ3
-SUBDIRS += plugins/imzmq3
+SUBDIRS += contrib/imzmq3
 endif
 
 if ENABLE_OMUXSOCK
@@ -241,11 +241,11 @@ SUBDIRS += plugins/mmutf8fix
 endif
 
 if ENABLE_MMCOUNT
-SUBDIRS += plugins/mmcount
+SUBDIRS += contrib/mmcount
 endif
 
 if ENABLE_MMSEQUENCE
-SUBDIRS += plugins/mmsequence
+SUBDIRS += contrib/mmsequence
 endif
 
 if ENABLE_MMFIELDS
@@ -257,7 +257,7 @@ SUBDIRS += plugins/mmpstrucdata
 endif
 
 if ENABLE_MMRFC5424ADDHMAC
-SUBDIRS += plugins/mmrfc5424addhmac
+SUBDIRS += contrib/mmrfc5424addhmac
 endif
 
 # tests are added as last element, because tests may need different
