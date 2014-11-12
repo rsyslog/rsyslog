@@ -67,8 +67,6 @@ TESTS +=  \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	udp-msgreduc-vg.sh \
-	udp-msgreduc-orgmsg-vg.sh \
 	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
@@ -88,10 +86,6 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
-        rscript_replace.sh \
-        rscript_replace_complex.sh \
-	rscript_wrap2.sh \
-	rscript_wrap3.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -109,6 +103,8 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	udp-msgreduc-vg.sh \
+	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_IMDIAG
@@ -139,11 +135,17 @@ endif
 endif
 
 if ENABLE_IMPTCP
+# note that some tests simply USE imptcp, but they also
+# need to be disabled if we do not have this module
 TESTS +=  \
 	manyptcp.sh \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
-	imptcp_conndrop.sh 
+	imptcp_conndrop.sh \
+        rscript_replace.sh \
+        rscript_replace_complex.sh \
+	rscript_wrap2.sh \
+	rscript_wrap3.sh
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
@@ -200,16 +202,19 @@ endif
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
-	 proprepltest.sh \
-	 parsertest.sh \
-	 timestamp.sh \
-	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
-	 badqi.sh \
+	 badqi.sh
+if ENABLE_IMPTCP
+TESTS += \
 	 tabescape_dflt.sh \
 	 tabescape_off.sh \
+	 timestamp.sh \
+	 inputname.sh \
+	 proprepltest.sh \
+	 parsertest.sh \
 	 fieldtest.sh
+endif
 endif
 
 if ENABLE_OMRULESET

@@ -14,18 +14,18 @@ source $srcdir/diag.sh init
 source $srcdir/diag.sh startup dynfile_invalid2.conf
 # we send handcrafted message. We have a dynafile cache of 4, and now send one message
 # each to fill up the cache.
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.0.log:0"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.1.log:1"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.2.log:2"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.3.log:3"
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.0.log:0\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.1.log:1\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.2.log:2\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.3.log:3\""
 # the next one has caused a segfault in practice
 # note that /proc/rsyslog.error.file must not be creatable
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom"
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom\""
 # some more writes
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.0.log:4"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.1.log:5"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.2.log:6"
-./tcpflood -m1 -M "<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.3.log:7"
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.0.log:4\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.1.log:5\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.2.log:6\""
+source $srcdir/diag.sh tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:rsyslog.out.3.log:7\""
 # done message generation
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate

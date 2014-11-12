@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[mmjsonparse_simple.sh\]: basic test for mmjsonparse module with defaults
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup mmjsonparse_simple.conf
-./tcpflood -m 5000 -j "@cee: "
+source $srcdir/diag.sh tcpflood -m 5000 -j "@cee: "
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown

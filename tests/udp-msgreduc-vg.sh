@@ -6,8 +6,8 @@ echo \[udp-msgreduc-vg.sh\]: testing imtcp multiple listeners
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup-vg udp-msgreduc-vg.conf
 source $srcdir/diag.sh wait-startup
-./tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "<133>2011-03-01T11:22:12Z host tag msgh ..."
-./tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "<133>2011-03-01T11:22:12Z host tag msgh ...x"
+source $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 4 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...\""
+source $srcdir/diag.sh tcpflood -t 127.0.0.1 -m 1 -r -Tudp -M "\"<133>2011-03-01T11:22:12Z host tag msgh ...x\""
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 source $srcdir/diag.sh wait-shutdown-vg
 if [ "$RSYSLOGD_EXIT" -eq "10" ]
