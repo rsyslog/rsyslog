@@ -125,7 +125,7 @@ SUBDIRS += plugins/omstdout
 endif
 
 if ENABLE_PMCISCONAMES
-SUBDIRS += plugins/pmcisconames
+SUBDIRS += contrib/pmcisconames
 endif
 
 if ENABLE_PMCISCOIOS

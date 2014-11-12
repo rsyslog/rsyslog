@@ -1479,7 +1479,6 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/omjournal/Makefile \
-		plugins/pmcisconames/Makefile \
 		plugins/pmciscoios/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
@@ -1519,6 +1518,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imzmq3/Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
+		contrib/pmcisconames/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
