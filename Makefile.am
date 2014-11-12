@@ -141,7 +141,7 @@ SUBDIRS += contrib/pmsnare
 endif
 
 if ENABLE_PMLASTMSG
-SUBDIRS += contrib/pmlastmsg
+SUBDIRS += plugins/pmlastmsg
 endif
 
 if ENABLE_OMRULESET

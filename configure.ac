@@ -1508,7 +1508,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmpstrucdata/Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/mmsnmptrapd/Makefile \
-		contrib/pmlastmsg/Makefile \
+		plugins/pmlastmsg/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
