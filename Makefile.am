@@ -144,10 +144,6 @@ if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
 endif
 
-if ENABLE_PMRFC3164SD
-SUBDIRS += plugins/pmrfc3164sd
-endif
-
 if ENABLE_OMRULESET
 SUBDIRS += plugins/omruleset
 endif
