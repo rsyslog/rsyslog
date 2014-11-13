@@ -73,12 +73,10 @@ DEFobjCurrIf(glbl)
 extern int bHadHUP;
 extern int bFinished;
 extern int doFork;
-extern char *PidFile;
 
 extern int realMain(int argc, char **argv);
 extern rsRetVal queryLocalHostname(void);
 void syslogdInit(void);
-void syslogd_die(void);
 void syslogd_releaseClassPointers(void);
 void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
@@ -92,7 +90,12 @@ extern int yydebug; /* interface to flex */
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
 
 
+#ifndef PATH_PIDFILE
+#	define PATH_PIDFILE "/var/run/rsyslogd.pid"
+#endif
+
 /* global data items */
+uchar *PidFile = (uchar*) PATH_PIDFILE;
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
@@ -985,7 +988,7 @@ initAll(int argc, char **argv)
 			ConfFile = (uchar*) arg;
 			break;
 		case 'i':		/* pid file name */
-			PidFile = arg;
+			PidFile = (uchar*)arg;
 			break;
 		case 'l':
 			if(glbl.GetLocalHosts() != NULL) {
@@ -1081,8 +1084,13 @@ initAll(int argc, char **argv)
 					    "more and cast your vote if you want us to keep this feature.");
 	}
 
-	if(!iConfigVerify)
+	if(!iConfigVerify) {
+		thrdInit();
+		glblSetOurPid(getpid());
+		CHKiRet(checkStartupOK());
 		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
+		CHKiRet(writePidFile());
+	}
 
 	CHKiRet(rsyslogdInit());
 
@@ -1421,7 +1429,59 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	syslogd_die();
+	unlink((char*)PidFile);
+}
+
+rsRetVal writePidFile(void)
+{
+	FILE *fp;
+	DEFiRet;
+	
+	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "w")) == NULL) {
+		fprintf(stderr, "rsyslogd: error writing pid file\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	fprintf(fp, "%d", (int) glblGetOurPid());
+	fclose(fp);
+finalize_it:
+	RETiRet;
+}
+
+/* duplicate startup protection: check, based on pid file, if our instance
+ * is already running. This MUST be called before we write our own pid file.
+ */
+rsRetVal checkStartupOK(void)
+{
+	FILE *fp = NULL;
+	DEFiRet;
+
+printf("checkStartupOK\n");
+	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "r")) == NULL)
+		FINALIZE; /* all well, no pid file yet */
+
+	int pf_pid;
+	if(fscanf(fp, "%d", &pf_pid) != 1) {
+		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	
+	/* ok, we got a pid, let's check if the process is running */
+	const pid_t pid = (pid_t) pf_pid;
+	if(kill(pid, 0) == 0 || errno != ESRCH) {
+		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n"
+			"If you want to run multiple instances of rsyslog, you need "
+			"to specify\n"
+			"different pid files for them (-i option).\n",
+			PidFile, getpid());
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	if(fp != NULL)
+		fclose(fp);
+	RETiRet;
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own

@@ -35,8 +35,6 @@ rsyslogd_SOURCES = \
 	smtradfwd.h \
 	iminternal.c \
 	iminternal.h \
-	pidfile.c \
-	pidfile.h \
 	\
 	../dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS) -DSD_EXPORT_SYMBOLS

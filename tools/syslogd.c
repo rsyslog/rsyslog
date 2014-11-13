@@ -91,7 +91,6 @@
 
 #include <netdb.h>
 
-#include "pidfile.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -133,16 +132,14 @@ rsRetVal rsyslogd_InitStdRatelimiters(void);
 rsRetVal rsyslogdInit(void);
 void rsyslogdDebugSwitch();
 void rsyslogdDoDie(int sig);
+rsRetVal writePidFile(void);
+rsRetVal checkStartupOK(void);
 
-
-#ifndef _PATH_LOGPID
-#	define _PATH_LOGPID "/var/run/rsyslogd.pid"
-#endif
 
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
-char	*PidFile = _PATH_LOGPID; /* read-only after startup */
+extern uchar *PidFile;
 
 int bHadHUP = 0; 	/* did we have a HUP? */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
@@ -275,14 +272,6 @@ reapchild()
 	errno = saved_errno;
 }
 
-
-
-/* GPL code - maybe check BSD sources? */
-void
-syslogd_die(void)
-{
-	remove_pid(PidFile);
-}
 
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
@@ -446,86 +435,58 @@ syslogd_doGlblProcessInit(int *const pParentPipeFD)
 	int i;
 	DEFiRet;
 
-	thrdInit();
-
 	if(doFork) {
-		DBGPRINTF("Checking pidfile '%s'.\n", PidFile);
-		if (!check_pid(PidFile))
-		{
-			/* RH contribution */
-			/* stop writing debug messages to stdout (if debugging is on) */
-			//stddbg = -1;
-			/* end RH contribution */
+		/* RH contribution */
+		/* stop writing debug messages to stdout (if debugging is on) */
+		//stddbg = -1;
+		/* end RH contribution */
 
-			*pParentPipeFD = forkRsyslog();
+		*pParentPipeFD = forkRsyslog();
 
-			num_fds = getdtablesize();
-			close(0);
-			/* we keep stdout and stderr open in case we have to emit something */
-			i = 3;
-			dbgprintf("in child, finalizing initialization\n");
+		num_fds = getdtablesize();
+		close(0);
+		/* we keep stdout and stderr open in case we have to emit something */
+		i = 3;
+		dbgprintf("in child, finalizing initialization\n");
 
-			/* if (sd_booted()) */ {
-				const char *e;
-				char buf[24] = { '\0' };
-				char *p = NULL;
-				unsigned long l;
-				int sd_fds;
+		/* if (sd_booted()) */ {
+			const char *e;
+			char buf[24] = { '\0' };
+			char *p = NULL;
+			unsigned long l;
+			int sd_fds;
 
-				/* fork & systemd socket activation:
-				 * fetch listen pid and update to ours,
-				 * when it is set to pid of our parent.
-				 */
-				if ( (e = getenv("LISTEN_PID"))) {
-					errno = 0;
-					l = strtoul(e, &p, 10);
-					if (errno ==  0 && l > 0 && (!p || !*p)) {
-						if (getppid() == (pid_t)l) {
-							snprintf(buf, sizeof(buf), "%d",
-								 getpid());
-							setenv("LISTEN_PID", buf, 1);
-						}
+			/* fork & systemd socket activation:
+			 * fetch listen pid and update to ours,
+			 * when it is set to pid of our parent.
+			 */
+			if ( (e = getenv("LISTEN_PID"))) {
+				errno = 0;
+				l = strtoul(e, &p, 10);
+				if (errno ==  0 && l > 0 && (!p || !*p)) {
+					if (getppid() == (pid_t)l) {
+						snprintf(buf, sizeof(buf), "%d",
+							 getpid());
+						setenv("LISTEN_PID", buf, 1);
 					}
 				}
-
-				/*
-				 * close only all further fds, except
-				 * of the fds provided by systemd.
-				 */
-				sd_fds = sd_listen_fds(0);
-				if (sd_fds > 0)
-					i = SD_LISTEN_FDS_START + sd_fds;
 			}
-			for ( ; i < num_fds; i++)
-				if(!((i == dbgGetDbglogFd()) ||
-				    (i == *pParentPipeFD && doFork)
-				    ) )
-					close(i);
 
-		} else {
-			fputs(" Already running. If you want to run multiple instances, you need "
-			      "to specify different pid files (use -i option)\n", stderr);
-			exit(1); /* "good" exit, done if syslogd is already running */
+			/*
+			 * close only all further fds, except
+			 * of the fds provided by systemd.
+			 */
+			sd_fds = sd_listen_fds(0);
+			if (sd_fds > 0)
+				i = SD_LISTEN_FDS_START + sd_fds;
 		}
-	}
+		for ( ; i < num_fds; i++)
+			if(!((i == dbgGetDbglogFd()) ||
+			    (i == *pParentPipeFD && doFork)
+			    ) )
+				close(i);
 
-	/* tuck my process id away */
-	DBGPRINTF("Writing pidfile '%s'.\n", PidFile);
-	if (!check_pid(PidFile))
-	{
-		if (!write_pid(PidFile))
-		{
-			fputs("Can't write pid.\n", stderr);
-			exit(1); /* exit during startup - questionable */
-		}
 	}
-	else
-	{
-		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n",
-			PidFile, getpid());
-		exit(1); /* exit during startup - questionable */
-	}
-	glblSetOurPid(getpid());
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
