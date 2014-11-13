@@ -43,6 +43,7 @@
 #include "datetime.h"
 #include "net.h"
 #include "glbl.h"
+#include "parser.h"
 #include "prop.h"
 #include "errmsg.h"
 #include "srUtils.h"
@@ -57,6 +58,7 @@ MODULE_CNFNAME("imjournal")
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(parser)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
@@ -161,6 +163,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	parser.SanitizeMsg(pMsg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
@@ -194,10 +197,9 @@ readjournal() {
 	int r;
 
 	/* Information from messages */
-	char *message;
-	char *sys_pid;
+	char *message = NULL;
 	char *sys_iden;
-	char *sys_iden_help;
+	char *sys_iden_help = NULL;
 
 	const void *get;
 	const void *pidget;
@@ -207,8 +209,6 @@ readjournal() {
 
 	const void *equal_sign;
 	struct json_object *jval;
-	char *data;
-	char *name;
 	size_t l;
 
 	long prefixlen = 0;
@@ -220,11 +220,7 @@ readjournal() {
 	if (sd_journal_get_data(j, "MESSAGE", &get, &length) < 0) {
 		message = strdup("");
 	} else {
-		message = strndup(((const char*)get)+8, length-8);
-		if (message == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
-			goto ret;
-		}
+		CHKmalloc(message = strndup(((const char*)get)+8, length-8));
 	}
 
 	/* Get message severity ("priority" in journald's terminology) */
@@ -263,43 +259,37 @@ readjournal() {
 
 	/* Get message identifier, client pid and add ':' */
 	if (sd_journal_get_data(j, "SYSLOG_IDENTIFIER", &get, &length) >= 0) {
-		sys_iden = strndup(((const char*)get)+18, length-18);
+		CHKmalloc(sys_iden = strndup(((const char*)get)+18, length-18));
 	} else {
-		sys_iden = strdup("journal");
-	}
-	if (sys_iden == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto free_message;
+		CHKmalloc(sys_iden = strdup("journal"));
 	}
 
 	if (sd_journal_get_data(j, "SYSLOG_PID", &pidget, &pidlength) >= 0) {
+		char *sys_pid;
+
 		sys_pid = strndup(((const char*)pidget)+11, pidlength-11);
 		if (sys_pid == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
 			free (sys_iden);
-			goto free_message;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
-	} else {
-		sys_pid = NULL;
-	}
-
-	if (sys_pid) {
 		r = asprintf(&sys_iden_help, "%s[%s]:", sys_iden, sys_pid);
+		free (sys_pid);
 	} else {
 		r = asprintf(&sys_iden_help, "%s:", sys_iden);
 	}
 
 	free (sys_iden);
-	free (sys_pid);
 
 	if (-1 == r) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
 	json = json_object_new_object();
 
 	SD_JOURNAL_FOREACH_DATA(j, get, l) {
+		char *data;
+		char *name;
+
 		/* locate equal sign, this is always present */
 		equal_sign = memchr(get, '=', l);
 
@@ -371,18 +361,14 @@ readjournal() {
 			break;
 		}
 
-		if (name == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
-			goto ret;
-		}
+		CHKmalloc(name);
 
 		prefixlen++; /* remove '=' */
 
 		data = strndup(((const char*)get) + prefixlen, l - prefixlen);
 		if (data == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
 			free (name);
-			goto ret;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 
 		/* and save them to json object */
@@ -402,10 +388,10 @@ readjournal() {
 	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json);
 
 finalize_it:
-	free(sys_iden_help);
-free_message:
-	free(message);
-ret:
+	if (sys_iden_help != NULL)
+		free(sys_iden_help);
+	if (message != NULL)
+		free(message);
 	RETiRet;
 }
 
@@ -675,6 +661,7 @@ CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
@@ -755,6 +742,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
