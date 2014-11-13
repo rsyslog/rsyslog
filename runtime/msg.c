@@ -4353,32 +4353,15 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 		}
 		if(jsonVarExtract(parent, (char*)leaf, &leafnode) == FALSE)
 			leafnode = NULL;
-		if(leafnode == NULL) {
-			json_object_object_add(parent, (char*)leaf, json);
-		} else {
-			if(json_object_get_type(json) == json_type_object) {
-				CHKiRet(jsonMerge(*pjroot, json));
-			} else {
-				/* TODO: improve the code below, however, the current
-				 *       state is not really bad */
-				if(json_object_get_type(leafnode) == json_type_object) {
-					DBGPRINTF("msgAddJSON: trying to update a container "
-						  "node with a leaf, name is '%s' - "
-						  "forbidden\n", name);
-					json_object_put(json);
-					ABORT_FINALIZE(RS_RET_INVLD_SETOP);
-				}
-				/* json-c code indicates we can simply replace a
-				 * json type. Unfortunaltely, this is not documented
-				 * as part of the interface spec. We still use it,
-				 * because it speeds up processing. If it does not work
-				 * at some point, use
-				 * json_object_object_del(parent, (char*)leaf);
-				 * before adding. rgerhards, 2012-09-17
-				 */
-				json_object_object_add(parent, (char*)leaf, json);
-			}
-		}
+		json_object_object_add(parent, (char*)leaf, json);
+		/* json-c code indicates we can simply replace a
+		 * json type. Unfortunaltely, this is not documented
+		 * as part of the interface spec. We still use it,
+		 * because it speeds up processing. If it does not work
+		 * at some point, use
+		 * json_object_object_del(parent, (char*)leaf);
+		 * before adding. rgerhards, 2012-09-17
+		 */
 	}
 
 finalize_it:

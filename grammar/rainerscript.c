@@ -2476,6 +2476,14 @@ cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ cons
 	return var2Number(&ret, &convok);
 }
 
+struct json_object*
+cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
+{
+	struct var ret;
+	cnfexprEval(expr, &ret, usrptr);
+	return ret.d.json;
+}
+
 inline static void
 doIndent(int indent)
 {
@@ -2681,6 +2689,16 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 			doIndent(indent); dbgprintf("END IF\n");
 		}
 		break;
+	case S_FOREACH:
+		doIndent(indent); dbgprintf("FOREACH %s IN\n",
+									stmt->d.s_foreach.iter->var);
+		cnfexprPrint(stmt->d.s_foreach.iter->collection, indent+1);
+		if(subtree) {
+			doIndent(indent); dbgprintf("DO\n");
+			cnfstmtPrint(stmt->d.s_foreach.body, indent+1);
+			doIndent(indent); dbgprintf("END FOREACH\n");
+		}
+		break;
 	case S_SET:
 		doIndent(indent); dbgprintf("SET %s =\n",
 				  stmt->d.s_set.varname);
@@ -2837,6 +2855,8 @@ cnfstmtNew(unsigned s_type)
 
 void cnfstmtDestructLst(struct cnfstmt *root);
 
+static void cnfIteratorDestruct(struct cnfitr *itr);
+
 /* delete a single stmt */
 static void
 cnfstmtDestruct(struct cnfstmt *stmt)
@@ -2859,6 +2879,10 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		if(stmt->d.s_if.t_else != NULL) {
 			cnfstmtDestructLst(stmt->d.s_if.t_else);
 		}
+		break;
+	case S_FOREACH:
+		cnfIteratorDestruct(stmt->d.s_foreach.iter);
+		cnfstmtDestructLst(stmt->d.s_foreach.body);
 		break;
 	case S_SET:
 		free(stmt->d.s_set.varname);
@@ -2898,6 +2922,26 @@ cnfstmtDestructLst(struct cnfstmt *root)
 		stmt = stmt->next;
 		cnfstmtDestruct(todel);
 	}
+}
+
+struct cnfitr *
+cnfNewIterator(char *var, struct cnfexpr *collection)
+{
+	struct cnfitr* itr;
+	if ((itr = malloc(sizeof(struct cnfitr))) != NULL) {
+		itr->var = var;
+		itr->collection = collection;
+	}
+	return itr;
+}
+
+static void
+cnfIteratorDestruct(struct cnfitr *itr)
+{
+	if (itr->var != NULL) free(itr->var);
+	itr->var = NULL;
+	if (itr->collection != NULL) cnfexprDestruct(itr->collection);
+	itr->collection = NULL;
 }
 
 struct cnfstmt *
