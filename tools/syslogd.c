@@ -149,11 +149,6 @@ int iConfigVerify = 0;	/* is this just a config verify run? */
 int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
 
-/* up to the next comment, prototypes that should be removed by reordering */
-/* Function prototypes. */
-static void reapchild();
-
-
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
@@ -254,41 +249,6 @@ void untty(void)
 	}
 }
 #endif
-
-/* function stems back to sysklogd */
-static void
-reapchild()
-{
-	int saved_errno = errno;
-	struct sigaction sigAct;
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = reapchild;
-	sigaction(SIGCHLD, &sigAct, NULL);  /* reset signal handler -ASP */
-
-	while(waitpid(-1, NULL, WNOHANG) > 0);
-	errno = saved_errno;
-}
-
-
-/*
- * The following function is resposible for handling a SIGHUP signal.  Since
- * we are now doing mallocs/free as part of init we had better not being
- * doing this during a signal handler.  Instead this function simply sets
- * a flag variable which will tells the main loop to do "the right thing".
- */
-void syslogd_sighup_handler()
-{
-	struct sigaction sigAct;
-
-	bHadHUP = 1;
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = syslogd_sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
-}
 
 /* obtain ptrs to all clases we need.  */
 rsRetVal
@@ -422,41 +382,6 @@ queryLocalHostname(void)
 finalize_it:
 	RETiRet;
 }
-
-/* global initialization, to be done only once and before the mainloop is started.
- * rgerhards, 2008-07-28 (extracted from realMain())
- */
-rsRetVal
-syslogd_doGlblProcessInit()
-{
-	struct sigaction sigAct;
-	DEFiRet;
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGSEGV, &sigAct, NULL);
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGABRT, &sigAct, NULL);
-	sigAct.sa_handler = rsyslogdDoDie;
-	sigaction(SIGTERM, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? rsyslogdDoDie : SIG_IGN;
-	sigaction(SIGINT, &sigAct, NULL);
-	sigaction(SIGQUIT, &sigAct, NULL);
-	sigAct.sa_handler = reapchild;
-	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? rsyslogdDebugSwitch : SIG_IGN;
-	sigaction(SIGUSR1, &sigAct, NULL);
-	sigAct.sa_handler = rsyslogd_sigttin_handler;
-	sigaction(SIGTTIN, &sigAct, NULL); /* (ab)used to interrupt input threads */
-	sigAct.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &sigAct, NULL);
-	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
-
-	RETiRet;
-}
-
 
 void
 syslogdInit(void)

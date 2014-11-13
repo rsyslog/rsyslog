@@ -25,6 +25,7 @@
 #include "rsyslog.h"
 
 #include <signal.h>
+#include <sys/wait.h>
 #include <liblogging/stdlog.h>
 #ifdef OS_SOLARIS
 #	include <errno.h>
@@ -80,7 +81,6 @@ void syslogdInit(void);
 void syslogd_releaseClassPointers(void);
 void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
-rsRetVal syslogd_doGlblProcessInit(int *);
 rsRetVal syslogd_obtainClassPointers(void);
 /* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
@@ -88,6 +88,7 @@ extern int yydebug; /* interface to flex */
 
 /* forward definitions */
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
+void rsyslogdDoDie(int sig);
 
 
 #ifndef PATH_PIDFILE
@@ -95,6 +96,7 @@ void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 #endif
 
 /* global data items */
+static int bChildDied;
 uchar *PidFile = (uchar*) PATH_PIDFILE;
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -385,17 +387,6 @@ printVersion(void)
 	printf("\tNumber of Bits in RainerScript integers: 32 (due to too-old json-c lib)\n");
 #endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
-}
-
-
-
-void
-rsyslogd_sigttin_handler()
-{
-	/* this is just a dummy to care for our sigttin input
-	 * module cancel interface. The important point is that
-	 * it actually does *nothing*.
-	 */
 }
 
 rsRetVal
@@ -920,31 +911,62 @@ finalize_it:
 }
 
 
-rsRetVal
-rsyslogdInit(void)
+static void
+hdlr_sigttin()
 {
-	char bufStartUpMsg[512];
-	struct sigaction sigAct;
-	DEFiRet;
+	/* this is just a dummy to care for our sigttin input
+	 * module cancel interface. The important point is that
+	 * it actually does *NOTHING*.
+	 */
+}
 
+static void
+hdlr_enable(int signal, void (*hdlr)())
+{
+	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = syslogd_sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
+	sigAct.sa_handler = hdlr;
+	sigaction(signal, &sigAct, NULL);
+}
 
-	CHKiRet(rsconf.Activate(ourConf));
-	DBGPRINTF(" started.\n");
+static void
+hdlr_sighup()
+{
+	bHadHUP = 1;
+}
 
-	if(ourConf->globals.bLogStatusMsgs) {
-               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) glblGetOurPid());
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+static void
+hdlr_sigchld()
+{
+	bChildDied = 1;
+}
+
+void
+rsyslogdDebugSwitch()
+{
+	time_t tTime;
+	struct tm tp;
+
+	datetime.GetTime(&tTime);
+	localtime_r(&tTime, &tp);
+	if(debugging_on == 0) {
+		debugging_on = 1;
+		dbgprintf("\n");
+		dbgprintf("\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+	} else {
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
+		debugging_on = 0;
 	}
-
-finalize_it:
-	RETiRet;
 }
 
 
@@ -1174,15 +1196,38 @@ initAll(int argc, char **argv)
 		parentPipeFD = forkRsyslog();
 	}
 	glblSetOurPid(getpid());
-	CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
+
+	hdlr_enable(SIGPIPE, SIG_IGN);
+	hdlr_enable(SIGXFSZ, SIG_IGN);
+	if(Debug) {
+		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
+		hdlr_enable(SIGINT,  rsyslogdDoDie);
+		hdlr_enable(SIGQUIT, rsyslogdDoDie);
+	} else {
+		hdlr_enable(SIGUSR1, SIG_IGN);
+		hdlr_enable(SIGINT,  SIG_IGN);
+		hdlr_enable(SIGQUIT, SIG_IGN);
+	}
+	hdlr_enable(SIGTERM, rsyslogdDoDie);
+	hdlr_enable(SIGTTIN, hdlr_sigttin);
+	hdlr_enable(SIGCHLD, hdlr_sigchld);
+	hdlr_enable(SIGHUP, hdlr_sighup);
+
+	CHKiRet(rsconf.Activate(ourConf));
+
+	if(ourConf->globals.bLogStatusMsgs) {
+		char bufStartUpMsg[512];
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
+			 (int) glblGetOurPid());
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
+
 	CHKiRet(writePidFile());
 
-	CHKiRet(rsyslogdInit());
-
-	DBGPRINTF("Debugging enabled, send SIGUSR1 to turn off debugging.\n");
-
 	/* END OF INTIALIZATION */
-	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
+	DBGPRINTF("rsyslogd: initialization completed, transitioning to regular run mode\n");
 
 	if(doFork) {
 		tellChildReady(parentPipeFD, "OK");
@@ -1203,39 +1248,6 @@ finalize_it:
 	}
 
 	ENDfunc
-}
-
-void
-rsyslogdDebugSwitch()
-{
-	time_t tTime;
-	struct tm tp;
-	struct sigaction sigAct;
-
-	datetime.GetTime(&tTime);
-	localtime_r(&tTime, &tp);
-	if(debugging_on == 0) {
-		debugging_on = 1;
-		dbgprintf("\n");
-		dbgprintf("\n");
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-	} else {
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("\n");
-		dbgprintf("\n");
-		debugging_on = 0;
-	}
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = rsyslogdDebugSwitch;
-	sigaction(SIGUSR1, &sigAct, NULL);
 }
 
 
@@ -1395,6 +1407,16 @@ mainloop(void)
 		tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+
+		if(bChildDied) {
+			int child;
+			do {
+				child = waitpid(-1, NULL, WNOHANG);
+				DBGPRINTF("rsyslogd: child %d has terminated\n", child);
+			} while(child > 0);
+			bChildDied = 0;
+		}
+
 		if(bFinished)
 			break;	/* exit as quickly as possible */
 
@@ -1403,8 +1425,8 @@ mainloop(void)
 		if(bHadHUP) {
 			doHUP();
 			bHadHUP = 0;
-			continue;
 		}
+
 	}
 	ENDfunc
 }
