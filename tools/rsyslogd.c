@@ -950,6 +950,13 @@ finalize_it:
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
+ *
+ * NOTE on stderr and stdout: they are kept open during a fork. Note that this
+ * may introduce subtle security issues: if we are in a jail, one may break out of
+ * it via these descriptors. But if I close them earlier, error messages will (once
+ * again) not be emitted to the user that starts the daemon. Given that the risk
+ * of a break-in is very low in the startup phase, we decide it is more important
+ * to emit error messages.
  */
 void
 initAll(int argc, char **argv)
@@ -1125,6 +1132,7 @@ initAll(int argc, char **argv)
 		FINALIZE;
 
 	if(iConfigVerify) {
+		doFork = 0;
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
@@ -1156,37 +1164,29 @@ initAll(int argc, char **argv)
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 	}
 
-	if(!iConfigVerify) {
-		thrdInit();
-		CHKiRet(checkStartupOK());
-		if(doFork) {
-			parentPipeFD = forkRsyslog();
-		}
-		glblSetOurPid(getpid());
-		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
-		CHKiRet(writePidFile());
+	if(iConfigVerify)
+		FINALIZE;
+	/* after this point, we are in a "real" startup */
+
+	thrdInit();
+	CHKiRet(checkStartupOK());
+	if(doFork) {
+		parentPipeFD = forkRsyslog();
 	}
+	glblSetOurPid(getpid());
+	CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
+	CHKiRet(writePidFile());
 
 	CHKiRet(rsyslogdInit());
 
-	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-	}
+	DBGPRINTF("Debugging enabled, send SIGUSR1 to turn off debugging.\n");
 
 	/* END OF INTIALIZATION */
-	if(doFork)
-		tellChildReady(parentPipeFD, "OK");
-
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
-	/* close stderr and stdout if they are kept open during a fork. Note that this
-	 * may introduce subtle security issues: if we are in a jail, one may break out of
-	 * it via these descriptors. But if I close them earlier, error messages will (once
-	 * again) not be emitted to the user that starts the daemon. As root jail support
-	 * is still in its infancy (and not really done), we currently accept this issue.
-	 * rgerhards, 2009-06-29
-	 */
 	if(doFork) {
+		tellChildReady(parentPipeFD, "OK");
+		stddbg = -1; /* turn off writing to fd 1 */
 		close(1);
 		close(2);
 		ourConf->globals.bErrMsgToStderr = 0;
