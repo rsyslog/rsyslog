@@ -105,7 +105,9 @@ int fileno(FILE *stream);
 
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
+"foreach"			{ BEGIN EXPR; return FOREACH; }
 <EXPR>"then"			{ BEGIN INITIAL; return THEN; }
+<EXPR>"do"			{ BEGIN INITIAL; return DO; }
 <EXPR>";"			{ BEGIN INITIAL; return ';'; }
 <EXPR>"or"			{ return OR; }
 <EXPR>"and"			{ return AND; }
@@ -130,6 +132,7 @@ int fileno(FILE *stream);
 <EXPR>"<"			{ return CMP_LT; }
 <EXPR>">"			{ return CMP_GT; }
 <EXPR>"contains"		{ return CMP_CONTAINS; }
+<EXPR>"in"		        { return ITERATOR_ASSIGNMENT; }
 <EXPR>"contains_i"		{ return CMP_CONTAINSI; }
 <EXPR>"startswith"		{ return CMP_STARTSWITH; }
 <EXPR>"startswith_i"		{ return CMP_STARTSWITHI; }

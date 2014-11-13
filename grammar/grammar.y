@@ -53,6 +53,7 @@ extern int yyerror(char*);
 	struct cnfarray *arr;
 	struct cnffunc *func;
 	struct cnffparamlst *fparams;
+	struct cnfitr *itr;
 }
 
 %token <estr> NAME
@@ -78,6 +79,9 @@ extern int yyerror(char*);
 %token IF
 %token THEN
 %token ELSE
+%token FOREACH
+%token ITERATOR_ASSIGNMENT
+%token DO
 %token OR
 %token AND
 %token NOT
@@ -100,6 +104,7 @@ extern int yyerror(char*);
 %type <objlst> propconst
 %type <expr> expr
 %type <stmt> stmt s_act actlst block script
+%type <itr> iterator_decl
 %type <fparams> fparams
 %type <arr> array arrayelt
 
@@ -159,6 +164,9 @@ stmt:	  actlst			{ $$ = $1; }
 					  $$->d.s_if.expr = $2;
 					  $$->d.s_if.t_then = $4;
 					  $$->d.s_if.t_else = $6; }
+	| FOREACH iterator_decl DO block { $$ = cnfstmtNew(S_FOREACH);
+					  $$->d.s_foreach.iter = $2;
+					  $$->d.s_foreach.body = $4;}
 	| SET VAR '=' expr ';'		{ $$ = cnfstmtNewSet($2, $4); }
 	| UNSET VAR ';'			{ $$ = cnfstmtNewUnset($2); }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
@@ -203,6 +211,7 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 fparams:  expr				{ $$ = cnffparamlstNew($1, NULL); }
 	| expr ',' fparams		{ $$ = cnffparamlstNew($1, $3); }
 array:	 '[' arrayelt ']'		{ $$ = $2; }
+iterator_decl:  '(' VAR ITERATOR_ASSIGNMENT expr ')'	{ $$ = cnfNewIterator($2, $4); }
 arrayelt: STRING			{ $$ = cnfarrayNew($1); }
 	| arrayelt ',' STRING		{ $$ = cnfarrayAdd($1, $3); }
 

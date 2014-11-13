@@ -152,6 +152,7 @@ struct nvlst {
 #define S_SET 4006
 #define S_UNSET 4007
 #define S_CALL 4008
+#define S_FOREACH 4009
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -208,6 +209,10 @@ struct cnfstmt {
 			struct cnfstmt *t_else;
 		} s_propfilt;
 		struct action_s *act;
+        struct {
+			struct cnfitr *iter;
+			struct cnfstmt *body;
+		} s_foreach;
 	} d;
 };
 
@@ -215,6 +220,11 @@ struct cnfexpr {
 	unsigned nodetype;
 	struct cnfexpr *l;
 	struct cnfexpr *r;
+};
+
+struct cnfitr {
+    char* var;
+    struct cnfexpr* collection;
 };
 
 struct cnfnumval {
@@ -336,6 +346,7 @@ struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr 
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
+struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
@@ -351,6 +362,7 @@ int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
+struct cnfitr * cnfNewIterator(char *var, struct cnfexpr *collection);
 void cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
