@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
+- rsyslogd -e option has finally been removed
+  It is deprectated since many years.
 - testbench is now by default disabled
   To enable it, use --enable-testbench. This was done as the testbench now
   does better checking if required modules are present and this in turn

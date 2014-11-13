@@ -958,7 +958,6 @@ initAll(int argc, char **argv)
 	int ch;
 	extern int optind;
 	extern char *optarg;
-	int bEOptionWasGiven = 0;
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
@@ -1004,9 +1003,6 @@ initAll(int argc, char **argv)
 			break;
 		case 'D': /* BISON debug */
 			yydebug = 1;
-			break;
-		case 'e':		/* log every message (no repeat message supression) */
-			bEOptionWasGiven = 1;
 			break;
 		case 'M': /* default module load path -- this MUST be carried out immediately! */
 			glblModPath = (uchar*) optarg;
@@ -1158,14 +1154,6 @@ initAll(int argc, char **argv)
 	if(bChDirRoot) {
 		if(chdir("/") != 0)
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-	}
-
-	/* process compatibility mode settings */
-	if(bEOptionWasGiven) {
-		errmsg.LogError(0, NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
-					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
-					    "http://www.rsyslog.com/rptdmsgreduction to learn "
-					    "more and cast your vote if you want us to keep this feature.");
 	}
 
 	if(!iConfigVerify) {
