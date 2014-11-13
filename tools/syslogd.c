@@ -139,7 +139,6 @@ rsRetVal checkStartupOK(void);
 #ifndef _PATH_TTY
 #	define _PATH_TTY	"/dev/tty"
 #endif
-extern uchar *PidFile;
 
 int bHadHUP = 0; 	/* did we have a HUP? */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
@@ -428,65 +427,10 @@ finalize_it:
  * rgerhards, 2008-07-28 (extracted from realMain())
  */
 rsRetVal
-syslogd_doGlblProcessInit(int *const pParentPipeFD)
+syslogd_doGlblProcessInit()
 {
 	struct sigaction sigAct;
-	int num_fds;
-	int i;
 	DEFiRet;
-
-	if(doFork) {
-		/* RH contribution */
-		/* stop writing debug messages to stdout (if debugging is on) */
-		//stddbg = -1;
-		/* end RH contribution */
-
-		*pParentPipeFD = forkRsyslog();
-
-		num_fds = getdtablesize();
-		close(0);
-		/* we keep stdout and stderr open in case we have to emit something */
-		i = 3;
-		dbgprintf("in child, finalizing initialization\n");
-
-		/* if (sd_booted()) */ {
-			const char *e;
-			char buf[24] = { '\0' };
-			char *p = NULL;
-			unsigned long l;
-			int sd_fds;
-
-			/* fork & systemd socket activation:
-			 * fetch listen pid and update to ours,
-			 * when it is set to pid of our parent.
-			 */
-			if ( (e = getenv("LISTEN_PID"))) {
-				errno = 0;
-				l = strtoul(e, &p, 10);
-				if (errno ==  0 && l > 0 && (!p || !*p)) {
-					if (getppid() == (pid_t)l) {
-						snprintf(buf, sizeof(buf), "%d",
-							 getpid());
-						setenv("LISTEN_PID", buf, 1);
-					}
-				}
-			}
-
-			/*
-			 * close only all further fds, except
-			 * of the fds provided by systemd.
-			 */
-			sd_fds = sd_listen_fds(0);
-			if (sd_fds > 0)
-				i = SD_LISTEN_FDS_START + sd_fds;
-		}
-		for ( ; i < num_fds; i++)
-			if(!((i == dbgGetDbglogFd()) ||
-			    (i == *pParentPipeFD && doFork)
-			    ) )
-				close(i);
-
-	}
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);

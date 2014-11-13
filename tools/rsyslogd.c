@@ -136,14 +136,66 @@ setsid(void)
 }
 #endif
 
+rsRetVal writePidFile(void)
+{
+	FILE *fp;
+	DEFiRet;
+	
+	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "w")) == NULL) {
+		fprintf(stderr, "rsyslogd: error writing pid file\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	fprintf(fp, "%d", (int) glblGetOurPid());
+	fclose(fp);
+finalize_it:
+	RETiRet;
+}
+
+/* duplicate startup protection: check, based on pid file, if our instance
+ * is already running. This MUST be called before we write our own pid file.
+ */
+rsRetVal checkStartupOK(void)
+{
+	FILE *fp = NULL;
+	DEFiRet;
+
+	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "r")) == NULL)
+		FINALIZE; /* all well, no pid file yet */
+
+	int pf_pid;
+	if(fscanf(fp, "%d", &pf_pid) != 1) {
+		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	
+	/* ok, we got a pid, let's check if the process is running */
+	const pid_t pid = (pid_t) pf_pid;
+	if(kill(pid, 0) == 0 || errno != ESRCH) {
+		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n"
+			"If you want to run multiple instances of rsyslog, you need "
+			"to specify\n"
+			"different pid files for them (-i option).\n",
+			PidFile, getpid());
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	if(fp != NULL)
+		fclose(fp);
+	RETiRet;
+}
+
 /* prepares the background processes (if auto-backbrounding) for
  * operation.
  */
 static void
-prepareBackground(void)
+prepareBackground(const int parentPipeFD)
 {
-	int r = setsid();
+	DBGPRINTF("rsyslogd: in child, finalizing initialization\n");
 
+	int r = setsid();
 	if(r == -1) {
 		char err[1024];
 		char em[2048];
@@ -152,6 +204,38 @@ prepareBackground(void)
 			                   "auto-backgrounding: %s\n", err);
 		dbgprintf("%s\n", em);
 		fprintf(stderr, "%s", em);
+	}
+
+	int beginClose = 3;
+
+	/* running under systemd? Then we must make sure we "forward" any
+	 * fds passed by it (adjust the pid).
+	 */
+	if(sd_booted()) {
+		const char *lstnPid = getenv("LISTEN_PID");
+		if(lstnPid != NULL) {
+			char szBuf[64];
+			const int lstnPidI = atoi(lstnPid);
+			snprintf(szBuf, sizeof(szBuf), "%d", lstnPidI);
+			if(!strcmp(szBuf, lstnPid) && lstnPidI == getppid()) {
+				snprintf(szBuf, sizeof(szBuf), "%d", getpid());
+				setenv("LISTEN_PID", szBuf, 1);
+				/* ensure we do not close what systemd provided */
+				const int nFds = sd_listen_fds(0);
+				if(nFds > 0) {
+					beginClose = SD_LISTEN_FDS_START + nFds;
+				}
+			}
+		}
+	}
+
+	/* close unnecessary open files */
+	const int endClose = getdtablesize();
+	close(0);
+	for(int i = beginClose ; i <= endClose ; ++i) {
+		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+			close(i);
+		}
 	}
 }
 
@@ -183,7 +267,7 @@ forkRsyslog(void)
 	}
 
 	if(cpid == 0) {    
-		prepareBackground();
+		prepareBackground(pipefd[1]);
 		close(pipefd[0]);
 		return pipefd[1];
 	}
@@ -1086,8 +1170,11 @@ initAll(int argc, char **argv)
 
 	if(!iConfigVerify) {
 		thrdInit();
-		glblSetOurPid(getpid());
 		CHKiRet(checkStartupOK());
+		if(doFork) {
+			parentPipeFD = forkRsyslog();
+		}
+		glblSetOurPid(getpid());
 		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
 		CHKiRet(writePidFile());
 	}
@@ -1430,58 +1517,6 @@ deinitAll(void)
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
 	unlink((char*)PidFile);
-}
-
-rsRetVal writePidFile(void)
-{
-	FILE *fp;
-	DEFiRet;
-	
-	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
-	if((fp = fopen((char*) PidFile, "w")) == NULL) {
-		fprintf(stderr, "rsyslogd: error writing pid file\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	fprintf(fp, "%d", (int) glblGetOurPid());
-	fclose(fp);
-finalize_it:
-	RETiRet;
-}
-
-/* duplicate startup protection: check, based on pid file, if our instance
- * is already running. This MUST be called before we write our own pid file.
- */
-rsRetVal checkStartupOK(void)
-{
-	FILE *fp = NULL;
-	DEFiRet;
-
-printf("checkStartupOK\n");
-	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
-	if((fp = fopen((char*) PidFile, "r")) == NULL)
-		FINALIZE; /* all well, no pid file yet */
-
-	int pf_pid;
-	if(fscanf(fp, "%d", &pf_pid) != 1) {
-		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	
-	/* ok, we got a pid, let's check if the process is running */
-	const pid_t pid = (pid_t) pf_pid;
-	if(kill(pid, 0) == 0 || errno != ESRCH) {
-		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n"
-			"If you want to run multiple instances of rsyslog, you need "
-			"to specify\n"
-			"different pid files for them (-i option).\n",
-			PidFile, getpid());
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-finalize_it:
-	if(fp != NULL)
-		fclose(fp);
-	RETiRet;
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own
