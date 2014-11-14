@@ -1128,9 +1128,12 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
 /* get the name of the local host. A pointer to a character pointer is passed
  * in, which on exit points to the local hostname. This buffer is dynamically
  * allocated and must be free()ed by the caller. If the functions returns an
- * error, the pointer is NULL. This function is based on GNU/Hurd's localhostname
- * function.
- * rgerhards, 20080-04-10
+ * error, the pointer is NULL.
+ * This function always tries to return a FQDN, even so be quering DNS. So it
+ * is safe to assume for the caller that when the function does not return
+ * a FQDN, it simply is not available. The domain part of that string is
+ * normalized to lower case. The hostname is kept in mixed case for historic
+ * reasons.
  */
 static rsRetVal
 getLocalHostname(uchar **ppName)
@@ -1138,30 +1141,46 @@ getLocalHostname(uchar **ppName)
 	DEFiRet;
 	uchar *buf = NULL;
 	size_t buf_len = 0;
+	char hnbuf[8192];
+	uchar *fqdn;
 
-	assert(ppName != NULL);
-
-	do {
-		if(buf == NULL) {
-			buf_len = 128;        /* Initial guess */
-			CHKmalloc(buf = MALLOC(buf_len));
-		} else {
-			uchar *p;
-
-			buf_len += buf_len;
-			CHKmalloc(p = realloc (buf, buf_len));
-			buf = p;
-		}
-	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
-
-	*ppName = buf;
-	buf = NULL;
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(buf != NULL)
-			free(buf);
+	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
+		strcpy(hnbuf, "localhost");
+	} else {
+		hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
 	}
+	char *dot = strstr(hnbuf, ".");
+	if(dot == NULL) {
+		/* we need to (try) to find the real name via resolver */
+		struct hostent *hent = gethostbyname((char*)hnbuf);
+		if(hent) {
+			int i = 0;
+			if(hent->h_aliases) {
+				const size_t hnlen = strlen(hnbuf);
+				for(i = 0; hent->h_aliases[i]; i++) {
+					if(!strncmp(hent->h_aliases[i], hnbuf, hnlen)
+					   && hent->h_aliases[i][hnlen] == '.') {
+						break; /* match! */
+					}
+				}
+			}
+			if(hent->h_aliases && hent->h_aliases[i]) {
+				CHKmalloc(fqdn = (uchar*)strdup(hent->h_aliases[i]));
+			} else {
+				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
+			}
+			dot = strstr(fqdn, ".");
+		}
+	} else { /* gethostname() obtained a FQDN */
+		CHKmalloc(fqdn = (uchar*) strdup(hnbuf));
+	}
+
+	if(dot != NULL)
+		for(uchar *p = dot+1 ; *p ; ++p)
+			*p = tolower(*p);
+
+	*ppName = fqdn;
+finalize_it:
 	RETiRet;
 }
 

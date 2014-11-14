@@ -89,8 +89,6 @@
 #include <paths.h>
 #endif
 
-#include <netdb.h>
-
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -103,21 +101,12 @@
 #include "threads.h"
 #include "parser.h"
 #include "unicode-helper.h"
-#include "net.h"
 #include "dnscache.h"
 #include "sd-daemon.h"
 #include "ratelimit.h"
 
-/* definitions for objects we access */
-DEFobjCurrIf(obj)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(net) /* TODO: make go away! */
-
-
-/* forward definitions */
-rsRetVal queryLocalHostname(void);
-
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
+extern rsRetVal queryLocalHostname(void);
 extern ratelimit_t *internalMsg_ratelimiter;
 extern uchar *ConfFile;
 extern ratelimit_t *dflt_ratelimiter;
@@ -132,21 +121,6 @@ rsRetVal rsyslogd_InitStdRatelimiters(void);
 rsRetVal rsyslogdInit(void);
 void rsyslogdDebugSwitch();
 void rsyslogdDoDie(int sig);
-rsRetVal writePidFile(void);
-rsRetVal checkStartupOK(void);
-
-
-#ifndef _PATH_TTY
-#	define _PATH_TTY	"/dev/tty"
-#endif
-
-int bHadHUP = 0; 	/* did we have a HUP? */
-int bFinished = 0;	/* used by termination signal handler, read-only except there
-			 * is either 0 or the number of the signal that requested the
- 			 * termination.
-			 */
-int iConfigVerify = 0;	/* is this just a config verify run? */
-int	doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
@@ -249,144 +223,3 @@ void untty(void)
 	}
 }
 #endif
-
-/* obtain ptrs to all clases we need.  */
-rsRetVal
-syslogd_obtainClassPointers(void)
-{
-	DEFiRet;
-	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
-
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-
-	/* Now tell the system which classes we need ourselfs */
-	pErrObj = "glbl";
-	CHKiRet(objUse(glbl,     CORE_COMPONENT));
-
-	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	pErrObj = "net";
-	CHKiRet(objUse(net, LM_NET_FILENAME));
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		/* we know we are inside the init sequence, so we can safely emit
-		 * messages to stderr. -- rgerhards, 2008-04-02
-		 */
-		fprintf(stderr, "Error obtaining object '%s' - failing...\n", pErrObj);
-	}
-
-	RETiRet;
-}
-
-
-void
-syslogd_releaseClassPointers(void)
-{
-	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-}
-
-
-/* query our host and domain names - we need to do this early as we may emit
- * rgerhards, 2012-04-11
- */
-rsRetVal
-queryLocalHostname(void)
-{
-	uchar *LocalHostName;
-	uchar *LocalDomain;
-	uchar *LocalFQDNName;
-	uchar *p;
-	struct hostent *hent;
-	DEFiRet;
-
-	net.getLocalHostname(&LocalFQDNName);
-	CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
-	glbl.SetLocalFQDNName(LocalFQDNName); /* set the FQDN before we modify it */
-	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
-		*p++ = '\0';
-		LocalDomain = p;
-	} else {
-		LocalDomain = (uchar*)"";
-
-		/* It's not clearly defined whether gethostname()
-		 * should return the simple hostname or the fqdn. A
-		 * good piece of software should be aware of both and
-		 * we want to distribute good software.  Joey
-		 *
-		 * Good software also always checks its return values...
-		 * If syslogd starts up before DNS is up & /etc/hosts
-		 * doesn't have LocalHostName listed, gethostbyname will
-                * return NULL.
-		 */
-		/* TODO: gethostbyname() is not thread-safe, but replacing it is
-		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
-		 */
-		hent = gethostbyname((char*)LocalHostName);
-		if(hent) {
-			int i = 0;
-
-			if(hent->h_aliases) {
-				size_t hnlen;
-
-				hnlen = strlen((char *) LocalHostName);
-
-				for (i = 0; hent->h_aliases[i]; i++) {
-					if (!strncmp(hent->h_aliases[i], (char *) LocalHostName, hnlen)
-					    && hent->h_aliases[i][hnlen] == '.') {
-						/* found a matching hostname */
-						break;
-					}
-				}
-			}
-
-			free(LocalHostName);
-			if(hent->h_aliases && hent->h_aliases[i]) {
-				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_aliases[i]));
-			} else {
-				CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
-			}
-
-			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
-			{
-				*p++ = '\0';
-				LocalDomain = p;
-			}
-		}
-	}
-
-	/* Marius Tomaschewski <mt@suse.com> contribution */
-	/* LocalDomain is "" or part of LocalHostName, allocate a new string */
-	CHKmalloc(LocalDomain = (uchar*)strdup((char*)LocalDomain));
-	/* Marius Tomaschewski <mt@suse.com> contribution */
-
-	/* Convert to lower case to recognize the correct domain laterly */
-	for(p = LocalDomain ; *p ; p++)
-		*p = (char)tolower((int)*p);
-
-	/* we now have our hostname and can set it inside the global vars.
-	 * TODO: think if all of this would better be a runtime function
-	 * rgerhards, 2008-04-17
-	 */
-	glbl.SetLocalHostName(LocalHostName);
-	glbl.SetLocalDomain(LocalDomain);
-
-	/* Canonical contribution - ASL 2.0 fine (email exchange 2014-05-27) */
-	if ( strlen((char*)LocalDomain) )  {
-		CHKmalloc(LocalFQDNName = (uchar*)malloc(strlen((char*)LocalDomain)+strlen((char*)LocalHostName)+2));/* one for dot, one for NUL! */
-		if ( sprintf((char*)LocalFQDNName,"%s.%s",(char*)LocalHostName,(char*)LocalDomain) )
-			glbl.SetLocalFQDNName(LocalFQDNName);
-		}
-	/* end canonical contrib */
-
-	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
-finalize_it:
-	RETiRet;
-}
-
-void
-syslogdInit(void)
-{
-	/* oxpa <iippolitov@gmail.com> contribution, need to check ASL 2.0 */
-	queryLocalHostname();	/* need to re-query to pick up a changed hostname due to config */
-	/* end oxpa */
-}

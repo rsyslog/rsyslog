@@ -71,17 +71,9 @@ DEFobjCurrIf(glbl)
 /* imports from syslogd.c, these should go away over time (as we
  * migrate/replace more and more code to ASL 2.0).
  */
-extern int bHadHUP;
-extern int bFinished;
-extern int doFork;
-
 extern int realMain(int argc, char **argv);
-extern rsRetVal queryLocalHostname(void);
 void syslogdInit(void);
-void syslogd_releaseClassPointers(void);
-void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
-rsRetVal syslogd_obtainClassPointers(void);
 /* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
 
@@ -97,7 +89,14 @@ void rsyslogdDoDie(int sig);
 
 /* global data items */
 static int bChildDied;
+static int bHadHUP;
+static int doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
+int bFinished = 0;	/* used by termination signal handler, read-only except there
+			 * is either 0 or the number of the signal that requested the
+ 			 * termination.
+			 */
 uchar *PidFile = (uchar*) PATH_PIDFILE;
+int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
@@ -137,6 +136,35 @@ setsid(void)
 	return 0;
 }
 #endif
+
+
+rsRetVal // TODO: make static
+queryLocalHostname(void)
+{
+	uchar *LocalHostName;
+	uchar *LocalDomain;
+	uchar *LocalFQDNName;
+	DEFiRet;
+
+	CHKiRet(net.getLocalHostname(&LocalFQDNName));
+	uchar *dot = (uchar*) strstr((char*)LocalFQDNName, ".");
+	if(dot == NULL) {
+		CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
+		CHKmalloc(LocalDomain = (uchar*)strdup(""));
+	} else {
+		const size_t lenhn = dot - LocalFQDNName;
+		CHKmalloc(LocalHostName = (uchar*) strndup((char*) LocalFQDNName, lenhn));
+		CHKmalloc(LocalDomain = (uchar*) strdup((char*) dot+1));
+	}
+
+	glbl.SetLocalFQDNName(LocalFQDNName);
+	glbl.SetLocalHostName(LocalHostName);
+	glbl.SetLocalDomain(LocalDomain);
+	glbl.GenerateLocalHostNameProperty();
+
+finalize_it:
+	RETiRet;
+}
 
 rsRetVal writePidFile(void)
 {
@@ -1055,7 +1083,6 @@ initAll(int argc, char **argv)
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
 	CHKiRet(rsyslogd_InitGlobalClasses());
-	CHKiRet(syslogd_obtainClassPointers());
 
 	/* doing some core initializations */
 
@@ -1160,8 +1187,6 @@ initAll(int argc, char **argv)
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
-
-	syslogdInit();
 
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
@@ -1507,8 +1532,6 @@ deinitAll(void)
 	unregCfSysLineHdlrs();
 
 	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
-
-	syslogd_releaseClassPointers();
 
 	parserClassExit();
 	rsconfClassExit();
