@@ -319,7 +319,7 @@ multiple times.
 Legacy Sample
 ^^^^^^^^^^^^^
 
-This sets up an UPD server on port 514:
+This sets up an UDP server on port 514:
 
 ::
 
