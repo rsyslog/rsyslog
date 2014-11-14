@@ -103,6 +103,7 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	imptcp_conndrop-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
@@ -457,6 +458,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imptcp_large.conf \
 	   imptcp_addtlframedelim.sh \
 	   testsuites/imptcp_addtlframedelim.conf \
+	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
 	   imtcp_conndrop.sh \
