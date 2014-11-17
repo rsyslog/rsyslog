@@ -185,6 +185,7 @@ struct cnfstmt {
 		struct {
 			uchar *varname;
 			struct cnfexpr *expr;
+			int force_reset;
 		} s_set;
 		struct {
 			uchar *varname;
@@ -372,7 +373,7 @@ struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
 struct cnfstmt * cnfstmtNewLegaAct(char *actline);
-struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
+struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
 struct cnfstmt * cnfstmtNewUnset(char *var);
 struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 struct cnfstmt * cnfstmtNewContinue(void);

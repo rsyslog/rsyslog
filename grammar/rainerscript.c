@@ -2945,12 +2945,13 @@ cnfIteratorDestruct(struct cnfitr *itr)
 }
 
 struct cnfstmt *
-cnfstmtNewSet(char *var, struct cnfexpr *expr)
+cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset)
 {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_SET)) != NULL) {
 		cnfstmt->d.s_set.varname = (uchar*) var;
 		cnfstmt->d.s_set.expr = expr;
+		cnfstmt->d.s_set.force_reset = force_reset;
 	}
 	return cnfstmt;
 }

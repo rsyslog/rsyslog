@@ -4017,7 +4017,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pProp->val.pStr),
 					     cstrLen(pProp->val.pStr));
 		json_tokener_free(tokener);
-		msgAddJSON(pThis, (uchar*)"!", json);
+		msgAddJSON(pThis, (uchar*)"!", json, 0);
 	} else {
 		dbgprintf("unknown supported property '%s' silently ignored\n",
 			  rsCStrGetSzStrNoNULL(pProp->pcsName));
@@ -4088,7 +4088,7 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 		psz = json_object_get_string(json);
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
-		msgAddJSON(pMsg, (uchar*)"!", json);
+		msgAddJSON(pMsg, (uchar*)"!", json, 0);
 	} else {
 		/* we ignore unknown properties */
 		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
@@ -4315,7 +4315,7 @@ finalize_it:
 }
 
 rsRetVal
-msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
+msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_reset)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
 	struct json_object **pjroot;
@@ -4353,7 +4353,6 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 		}
 		if(jsonVarExtract(parent, (char*)leaf, &leafnode) == FALSE)
 			leafnode = NULL;
-		json_object_object_add(parent, (char*)leaf, json);
 		/* json-c code indicates we can simply replace a
 		 * json type. Unfortunaltely, this is not documented
 		 * as part of the interface spec. We still use it,
@@ -4362,6 +4361,24 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 		 * json_object_object_del(parent, (char*)leaf);
 		 * before adding. rgerhards, 2012-09-17
 		 */
+		if (force_reset || (leafnode == NULL)) {
+			json_object_object_add(parent, (char*)leaf, json);
+		} else {
+			if(json_object_get_type(json) == json_type_object) {
+				CHKiRet(jsonMerge(*pjroot, json));
+			} else {
+				/* TODO: improve the code below, however, the current
+				 *       state is not really bad */
+				if(json_object_get_type(leafnode) == json_type_object) {
+					DBGPRINTF("msgAddJSON: trying to update a container "
+							  "node with a leaf, name is %s - "
+							  "forbidden", name);
+					json_object_put(json);
+					ABORT_FINALIZE(RS_RET_INVLD_SETOP);
+				}
+				json_object_object_add(parent, (char*)leaf, json);
+			}
+		}
 	}
 
 finalize_it:
@@ -4482,7 +4499,7 @@ done:	return dst;
 
 
 rsRetVal
-msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v)
+msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v, int force_reset)
 {
 	struct json_object *json = NULL;
 	char *cstr;
@@ -4508,7 +4525,7 @@ msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	msgAddJSON(pMsg, varname, json);
+	msgAddJSON(pMsg, varname, json, force_reset);
 finalize_it:
 	RETiRet;
 }

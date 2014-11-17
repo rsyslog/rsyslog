@@ -231,7 +231,7 @@ CODESTARTdoAction
 		MsgSetParseSuccess(pMsg, 1);
 	}
 
- 	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
+	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json, 0);
 
 ENDdoAction
 

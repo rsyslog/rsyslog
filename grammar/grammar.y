@@ -67,6 +67,7 @@ extern int yyerror(char*);
 %token BEGIN_RULESET
 %token STOP
 %token SET
+%token RESET
 %token UNSET
 %token CONTINUE
 %token <cnfstmt> CALL
@@ -167,7 +168,8 @@ stmt:	  actlst			{ $$ = $1; }
 	| FOREACH iterator_decl DO block { $$ = cnfstmtNew(S_FOREACH);
 					  $$->d.s_foreach.iter = $2;
 					  $$->d.s_foreach.body = $4;}
-	| SET VAR '=' expr ';'		{ $$ = cnfstmtNewSet($2, $4); }
+	| RESET VAR '=' expr ';'	{ $$ = cnfstmtNewSet($2, $4, 1); }
+	| SET VAR '=' expr ';'		{ $$ = cnfstmtNewSet($2, $4, 0); }
 	| UNSET VAR ';'			{ $$ = cnfstmtNewUnset($2); }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
