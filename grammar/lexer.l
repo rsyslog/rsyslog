@@ -28,10 +28,12 @@
   * limitations under the License.
   */
 
-%{
+%top{
 #include "config.h"
+}
+
+%{
 #include "parserif.h"
-extern char *strdup(__const char*); /* somehow we may not get this from string.h... */
 %}
 
 %option noyywrap nodefault case-insensitive yylineno
@@ -67,6 +69,7 @@ extern char *strdup(__const char*); /* somehow we may not get this from string.h
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <libestr.h>
 #include "rainerscript.h"
