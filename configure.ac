@@ -11,7 +11,7 @@ AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 
 # check if valgrind is present
 AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
