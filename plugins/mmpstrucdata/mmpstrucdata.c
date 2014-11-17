@@ -352,7 +352,7 @@ dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	json_object_object_add(jroot, "rfc5424-sd", json);
- 	msgAddJSON(pMsg, pData->jsonRoot, jroot);
+ 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0);
 finalize_it:
 	RETiRet;
 }

@@ -211,7 +211,7 @@ execSet(struct cnfstmt *stmt, msg_t *pMsg)
 	struct var result;
 	DEFiRet;
 	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
-	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result);
+	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result, stmt->d.s_set.force_reset);
 	varDelete(&result);
 	RETiRet;
 }
@@ -280,7 +280,7 @@ execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 		struct var v;
 		v.d.json = curr;
 		v.datatype = 'J';
-		CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v));
+		CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
 		CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
 	}
 	CHKiRet(msgDelJSON(pMsg, stmt->d.s_foreach.iter->var));
