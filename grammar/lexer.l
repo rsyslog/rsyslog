@@ -170,6 +170,7 @@ int fileno(FILE *stream);
 "else"				{ return ELSE; }
 "call"				{ BEGIN INCALL; return CALL; }
 "set"				{ BEGIN EXPR; return SET; }
+"reset"				{ BEGIN EXPR; return RESET; }
 "unset"				{ BEGIN EXPR; return UNSET; }
 "continue"			{ return CONTINUE; }
  /* line number support because the "preprocessor" combines lines and so needs
