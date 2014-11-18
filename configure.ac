@@ -1378,6 +1378,24 @@ AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
 # END ZMQ3 SUPPORT
 
+# BEGIN CZMQ OUTPUT SUPPORT
+AC_ARG_ENABLE(omczmq,
+        [AS_HELP_STRING([--enable-omczmq],[Compiles omczmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omczmq="yes" ;;
+          no) enable_omczmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
+         esac],
+        [enable_omczmq=no]
+)
+if test "x$enable_omczmq" = "xyes"; then
+   PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+fi
+AM_CONDITIONAL(ENABLE_OMCZMQ, test x$enable_omczmq = xyes)
+
+# END CZMQ SUPPORT
+
+
 # BEGIN RABBITMQ OUTPUT SUPPORT
 
 AC_ARG_ENABLE(omrabbitmq,
@@ -1515,6 +1533,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
+		plugins/omczmq/Makefile \
 		contrib/imzmq3/Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
@@ -1562,6 +1581,7 @@ echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
+echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo
 echo "---{ parser modules }---"

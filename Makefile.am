@@ -164,6 +164,10 @@ if ENABLE_OMZMQ3
 SUBDIRS += contrib/omzmq3
 endif
 
+if ENABLE_OMCZMQ
+SUBDIRS += plugins/omczmq
+endif
+
 if ENABLE_OMRABBITMQ
 SUBDIRS += contrib/omrabbitmq
 endif

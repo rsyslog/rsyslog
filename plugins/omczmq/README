@@ -1,0 +1,18 @@
+CZMQ Output Plugin
+
+Building this plugin:
+#FIXME: Write this :)
+
+-------------------------------------------------------------------------------
+module(load="omczmq")
+
+action(
+	name="curve_server_socket"
+	type="omczmq"
+	endpoints=">127.0.0.1:24445"
+	socktype="PUSH"
+	authtype="CURVESERVER"
+	curveclientcert="/etc/curve.d/"
+	curveservercert="/etc/curve.d/server_cert"
+)
+-------------------------------------------------------------------------------
