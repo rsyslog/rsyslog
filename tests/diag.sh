@@ -219,6 +219,12 @@ case $1 in
 		    exit 1
 		fi
 		;;
+   'assert-content-missing') 
+		cat rsyslog.out.log | grep -qF "$2"
+		if [ "$?" -eq "0" ]; then
+		    exit 1
+		fi
+		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
 		rm -f work
 		ls -l rsyslog.out.log
