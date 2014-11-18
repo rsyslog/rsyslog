@@ -180,7 +180,10 @@ endif
 if ENABLE_MMNORMALIZE
 TESTS +=  \
 	mmnormalize_variable.sh \
-	mmnormalize_tokenized.sh
+	mmnormalize_tokenized.sh \
+	mmnormalize_regex.sh \
+	mmnormalize_regex_disabled.sh \
+	mmnormalize_regex_defaulted.sh
 endif
 
 if ENABLE_MMJSONPARSE
@@ -712,6 +715,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/json_array_input \
 	   json_array_looping.sh \
 	   testsuites/json_array_looping.conf \
+	   mmnormalize_regex.sh \
+	   testsuites/mmnormalize_regex.conf \
+	   testsuites/regex_input \
+	   mmnormalize_regex_disabled.sh \
+	   testsuites/mmnormalize_regex_disabled.conf \
+	   mmnormalize_regex_defaulted.sh \
+	   testsuites/mmnormalize_regex_defaulted.conf \
 	   cfg.sh
 
 # TODO: re-enable
