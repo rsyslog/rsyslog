@@ -170,7 +170,7 @@ such, it retained stock syslogd's default of syncing every file write if
 not specified otherwise (by placing a dash in front of the output file
 name). While this was a useful feature in past days where hardware was
 much less reliable and UPS seldom, this no longer is useful in today's
-worl. Instead, the syncing is a high performace hit. With it, rsyslogd
+world. Instead, the syncing is a high performace hit. With it, rsyslogd
 writes files around 50 **times** slower than without it. It also affects
 overall system performance due to the high IO activity. In rsyslog v3,
 syncing has been turned off by default. This is done via a specific
