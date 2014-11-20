@@ -1361,6 +1361,23 @@ AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
 
 # END ZMQ3 INPUT SUPPORT
 
+# BEGIN CZMQ INPUT SUPPORT
+AC_ARG_ENABLE(imczmq,
+        [AS_HELP_STRING([--enable-imczmq],[Compiles imczmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imczmq="yes" ;;
+          no) enable_imczmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imczmq) ;;
+         esac],
+        [enable_imczmq=no]
+)
+if test "x$enable_imczmq" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+fi
+AM_CONDITIONAL(ENABLE_IMCZMQ, test x$enable_imczmq = xyes)
+
+# END CZMQ INPUT
+
 # BEGIN ZMQ3 OUTPUT SUPPORT
 AC_ARG_ENABLE(omzmq3,
         [AS_HELP_STRING([--enable-omzmq3],[Compiles omzmq3 output module @<:@default=no@:>@])],
@@ -1535,6 +1552,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omzmq3/Makefile \
 		plugins/omczmq/Makefile \
 		contrib/imzmq3/Makefile \
+		plugins/imczmq/Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
@@ -1568,6 +1586,7 @@ echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imzmq3 input module enabled:              $enable_imzmq3"
+echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"

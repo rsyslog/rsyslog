@@ -35,13 +35,11 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
-
 #include <czmq.h>
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omczmq")
-
 
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
@@ -53,12 +51,12 @@ typedef struct _instanceData {
 	zsock_t		*sock;				/* the zeromq socket */
 	zcert_t		*clientCert;		/* curve client cert */
 	zcert_t 	*serverCert;		/* curve server cert */
-	uchar*		sockEndpoints;		/* comma seperated list of socket endpoints */
+	char		*sockEndpoints;		/* comma seperated list of socket endpoints */
 	int			sockType;			/* zeromq socket type */
-	char*		authType;			/* currently implemented: "CURVE" */
-	char*		clientCertPath;		/* path to client curve certificate */
-	char*		serverCertPath;		/* path to server curve certificate */
-	uchar*		tplName;			/* template (defaults to RSYSLOG_ForwardFormat) */
+	char		*authType;			/* currently implemented: "CURVE" */
+	char		*clientCertPath;	/* path to client curve certificate */
+	char		*serverCertPath;	/* path to server curve certificate */
+	uchar		*tplName;			/* template (defaults to RSYSLOG_ForwardFormat) */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -80,20 +78,6 @@ static struct cnfparamblk actpblk = {
 	actpdescr
 };
 
-static void closeCZMQ(instanceData* pData) {
-	errmsg.LogError(0, NO_ERRCODE, "closeCZMQ called");
-
-	/* close and destroy the zeromq socket */
-	zsock_destroy(&pData->sock);
-
-	/* shut down and clean up the auth actor  */
-	zactor_destroy(&pData->authActor);
-
-	/* clean up our certs */
-	zcert_destroy(&pData->serverCert);
-	zcert_destroy(&pData->clientCert);
-}
-
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
 
@@ -112,7 +96,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	DBGPRINTF("omczmq: creating zeromq socket...\n");
 	pData->sock = zsock_new(pData->sockType);
 	if (!pData->sock) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "omczmq: new socket failed for endpoints %s",
+		errmsg.LogError(0, RS_RET_NO_ERRCODE, "omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
@@ -248,8 +232,15 @@ ENDdbgPrintInstInfo
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	closeCZMQ(pData);
+	zsock_destroy(&pData->sock);
+	zactor_destroy(&pData->authActor);
+	zcert_destroy(&pData->serverCert);
+	zcert_destroy(&pData->clientCert);
+
 	free(pData->sockEndpoints);
+	free(pData->authType);
+	free(pData->clientCertPath);
+	free(pData->serverCertPath);
 	free(pData->tplName);
 ENDfreeInstance
 
@@ -277,6 +268,7 @@ CODESTARTdoAction
 	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
+
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
@@ -296,7 +288,7 @@ CODESTARTnewActInst
 
 		/* get the socket endpoints to use */
 		if (!strcmp(actpblk.descr[i].name, "endpoints")) {
-			pData->sockEndpoints = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} 
 
 		/* get the output template to use */

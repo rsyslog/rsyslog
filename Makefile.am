@@ -176,6 +176,10 @@ if ENABLE_IMZMQ3
 SUBDIRS += contrib/imzmq3
 endif
 
+if ENABLE_IMCZMQ
+SUBDIRS += plugins/imczmq
+endif
+
 if ENABLE_OMUXSOCK
 SUBDIRS += plugins/omuxsock
 endif
