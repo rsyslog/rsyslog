@@ -43,20 +43,45 @@ Configuration Problems
 ----------------------
 
 Rsyslog has support for
-configuration checking. It offers a special command line switch (-N1)
+configuration checking. It offers a special command line switch (-N<*value*>)
 that puts it into "config verfication mode". In that mode, it interprets
 and checks the configuration file, but does not startup. This mode can be
 used in parallel to a running instance of rsyslogd.
 
-To enable it, run rsyslog interactively as follows:
+The *value* is a set of binary values. Currently, there only is
+
+======= ======================================
+value   meaning
+1       turn on config checking
+2       permit checking of include files
+======= ======================================
+
+Where 2 automatically turns on config checking mode, if not given. In that
+sense ``-N2`` and ``-N3`` are equivalent.
+
+When set to check include files, some conditions are relaxed. For example,
+rsyslog usually requires that at least one action is defined somewhere in
+the configuration. For obvious reasons, it would not make much sense to run
+an instance without any action. However, when an include file is checked,
+it may happen that it contains no actions as all. As such, the requirement
+to include one action has been lifted in include file checking.
+
+To check a full rsyslog configuration, run rsyslog interactively as follows:
 
 ::
 
  $ /path/to/rsyslogd -f/path/to/config-file -N1
 
-You should also specify other options you usually give (like -c5 and
-whatever else). Any problems experienced are reported to stderr [aka
+You should also specify other options you usually give.
+Any problems experienced are reported to stderr [aka
 "your screen" (if not redirected)].
+
+If you would like to check just an include file, instead use:
+
+::
+
+ $ /path/to/rsyslogd -f/path/to/config-file -N3
+
 
 Asking for Help
 ---------------
