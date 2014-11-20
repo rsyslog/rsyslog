@@ -37,7 +37,8 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 rsRetVal startMainQueue(qqueue_t *pQueue);
 
 extern int MarkInterval;
-extern qqueue_t *pMsgQueue;				/* the main message queue */
-extern int iConfigVerify;				/* is this just a config verify run? */
+extern qqueue_t *pMsgQueue;			/* the main message queue */
+#define CONF_VERIFY_PARTIAL_CONF 0x02		/* bit: partial configuration to be checked */
+extern int iConfigVerify;			/* is this just a config verify run? */
 extern int bHaveMainQueue;
 #endif /* #ifndef DIRTY_H_INCLUDED */

@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
 - empty rulesets have been permitted. They no longer raise a syntax error.
+- add parameter -N3 to enable config check of partial config file
+  Use for config include files. Disables checking if any action exists at
+  all.
 - rsyslogd -e option has finally been removed
   It is deprectated since many years.
 - testbench is now by default disabled

@@ -1287,7 +1287,8 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 				"CONFIG ERROR: could not interpret master "
 				"config file '%s'.", confFile);
 		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
-	} else if(iNbrActions == 0) {
+	} else if(iNbrActions == 0 &&
+		!(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
 		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
 				"active actions configured. Inputs will "
 			 	"run, but no output whatsoever is created.");
