@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 8.5.1 [v8-stable] 2014-10-??
+- empty rulesets have been permitted. They no longer raise a syntax error.
 - rsyslogd -e option has finally been removed
   It is deprectated since many years.
 - testbench is now by default disabled

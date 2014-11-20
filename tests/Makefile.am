@@ -23,6 +23,7 @@ TESTS +=  \
 	global_vars.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
+	empty-ruleset.sh \
 	imtcp-multiport.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
@@ -439,6 +440,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
+	   empty-ruleset.sh \
+	   testsuites/empty-ruleset.conf \
 	   imtcp-tls-basic.sh \
 	   imtcp-tls-basic-vg.sh \
 	   testsuites/imtcp-tls-basic.conf \
