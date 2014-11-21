@@ -436,6 +436,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 
 	/* up to 2419 reserved for 8.4.x */
 	RS_RET_IMFILE_WILDCARD = -2420, /**< imfile file name contains wildcard, which may be problematic */
+	RS_RET_RELP_NO_TLS_AUTH = -2421,/**< librel does not support TLS authentication (but was requested) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
