@@ -609,6 +609,10 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 		((*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
 #endif
 
+#ifndef HAVE_JSON_BOOL
+typedef int json_bool;
+#endif
+
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define
  * a dummy variable. This requires review of where in code empty structs
