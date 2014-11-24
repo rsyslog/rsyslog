@@ -33,6 +33,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <signal.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -1198,6 +1199,9 @@ CODESTARTrunInput
 	wrkrInfo[i].id = i;
 	wrkr(&wrkrInfo[i]);
 
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
+		pthread_kill(wrkrInfo[i].tid, SIGTTIN);
+	}
 	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
 		pthread_join(wrkrInfo[i].tid, NULL);
 	}

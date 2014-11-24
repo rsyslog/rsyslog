@@ -21,6 +21,8 @@ Version 8.5.1 [v8-stable] 2014-10-??
 - remove --enable-zlib configure option, we always require it
   It's hard to envision a system without zlib, so we turn this off
   closes https://github.com/rsyslog/rsyslog/issues/76
+- bugfix: imudp makes rsyslog hang on shutdown when more than 1 thread used
+  closes https://github.com/rsyslog/rsyslog/issues/126
 - bugfix: not all files closed on auto-backgrounding startup
   This could happen when not running under systemd. Some low-numbered
   fds were not closed in that case.
