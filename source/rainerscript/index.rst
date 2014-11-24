@@ -18,6 +18,7 @@ The first full implementation is available since rsyslog v6.
    data_types
    expressions
    functions
+   control_structures
    configuration_objects
    constant_strings
    variable_property_types

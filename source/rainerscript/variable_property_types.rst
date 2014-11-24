@@ -8,7 +8,7 @@ variables are local to the current message, but are NOT message
 properties (e.g. the "$!" all JSON property does not contain them).
 
 Only message json (CEE/Lumberjack) properties can be modified by the
-"set" and "unset" statements, not any other message property. Obviously,
+**set**, **unset** and **reset** statements, not any other message property. Obviously,
 local variables are also modifieable.
 
 Message JSON property names start with "$!" where the bang character
@@ -24,4 +24,66 @@ message property where as the very similar looking
 "$.path1!path2!varname" specifies a three-level deep local variable. The
 bang or dot character immediately following the dollar sign is used by
 rsyslog to separate the different types.
+
+Check the following usage examples to understand how these statements behave:
+
+**set**
+-------
+sets the value of a local-variable or json property, but the addressed
+variable already contains a value its behaviour differs as follows:
+
+**merges** the value if both existing and new value are objects, 
+but merges the new value to *root* rather than with value of the given key. Eg. 
+::
+   set $.x!one = "val_1";
+   # results in $. = { "x": { "one": "val_1" } }
+   set $.y!two = "val_2";
+   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" } }
+
+   set $.z!var = $.x;
+   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } } }
+
+   set $.z!var = $.y;
+   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } }, "two": "val_2" }
+   # note that the key *two* is at root level and not  under *$.z!var*.
+
+**ignores** the new value if old value was an object, but new value is a not an object (Eg. string, number etc). Eg:
+::
+   set $.x!one = "val_1";
+   set $.x = "quux";
+   # results in $. = { "x": { "one": "val_1" } }
+   # note that "quux" was ignored
+
+**resets** variable, if old value was not an object.
+::
+   set $.x!val = "val_1";
+   set $.x!val = "quux";
+   # results in $. = { "x": { "val": "quux" } }
+
+**unset**
+---------
+removes the key. Eg:
+::
+   set $.x!val = "val_1";
+   unset $.x!val;
+   # results in $. = { "x": { } }
+
+**reset**
+---------
+force sets the new value regardless of what the variable
+originally contained or if it was even set. Eg.
+::
+   # to contrast with the set example above, here is how results would look with reset
+   set $.x!one = "val_1";
+   set $.y!two = "val_2";
+   set $.z!var = $.x;
+   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } } }
+   # 'set' or 'reset' can be used interchangably above(3 lines), they both have the same behaviour, as variable doesn't have an existing value
+
+   reset $.z!var = $.y;
+   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "two": "val_2" } } }
+   # note how the value of $.z!var was replaced
+
+   reset $.x = "quux";
+   # results in $. = { "x": "quux", "y": { "two": "val_2" }, "z": { "var": { "two": "val_2" } } }
 
