@@ -87,6 +87,8 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
+	rscript_set_modify.sh \
+	rscript_unaffected_reset.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -369,6 +371,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_ne.conf \
 	   rscript_eq.sh \
 	   testsuites/rscript_eq.conf \
+	   rscript_set_modify.sh \
+	   testsuites/rscript_set_modify.conf \
+	   testsuites/rscript_unaffected_reset.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
 	   stop-msgvar.sh \
