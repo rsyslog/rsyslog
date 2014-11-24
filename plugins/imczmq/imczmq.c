@@ -65,7 +65,6 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;
 	ruleset_t *pBindRuleset;
 	struct instanceConf_s *next;
-	
 };
 
 struct modConfData_s {
@@ -74,6 +73,7 @@ struct modConfData_s {
 	instanceConf_t *tail;
 	int io_threads;
 };
+
 struct lstn_s {
 	zsock_t *sock;
 	zcert_t *clientCert;
@@ -90,7 +90,7 @@ static zloop_t *zloopHandle = NULL;
 static zactor_t *authActor = NULL;
 
 static struct cnfparamdescr modpdescr[] = {
-	{ "ioThreads", eCmdHdlrInt,	 0 },
+	{ "ioThreads", eCmdHdlrInt, 0 },
 };
 
 static struct cnfparamblk modpblk = {
@@ -113,7 +113,7 @@ static struct cnfparamdescr inppdescr[] = {
 
 static struct cnfparamblk inppblk = {
 	CNFPARAMBLK_VERSION,
-	sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+	sizeof(inppdescr) / sizeof(struct cnfparamdescr),
 	inppdescr
 };
 
@@ -183,7 +183,8 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 			}
 
 			else {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imczmq: invalid sockType");
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"imczmq: invalid sockType");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
@@ -191,7 +192,8 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 		/* get the subscription topics */
 		else if(!strcmp(inppblk.descr[i].name, "topics")) {
 			if (inst->sockType != ZMQ_SUB) {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR, "topics is invalid unless socktype is SUB");
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"topics is invalid unless socktype is SUB");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 
@@ -207,7 +209,8 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 					strcmp("CURVESERVER", inst->authType) &&
 					strcmp("CURVECLIENT", inst->authType)) {
 
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imczmq: %s is not a valid authType",
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"imczmq: %s is not a valid authType",
 						inst->authType);
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
@@ -225,8 +228,9 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 
 		/* the config has a bad option */
 		else {
-			errmsg.LogError(0, NO_ERRCODE, "imczmq: program error, non-handled "
-							"param '%s'\n", inppblk.descr[i].name);
+			errmsg.LogError(0, NO_ERRCODE,
+					"imczmq: program error, non-handled "
+					"param '%s'\n", inppblk.descr[i].name);
 		}
 	
 	}
@@ -245,7 +249,8 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	/* create our zeromq socket */
 	pData->sock = zsock_new(iconf->sockType);
    	if (!pData->sock) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "imczmq: new socket failed for endpoints: %s",
+		errmsg.LogError(0, RS_RET_NO_ERRCODE,
+				"imczmq: new socket failed for endpoints: %s",
 				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
@@ -321,7 +326,8 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			}
 
 			if (delimiter - iconf->topicList > 255) {
-				errmsg.LogError(0, NO_ERRCODE, "iconf->topicList must be under 256 characters");
+				errmsg.LogError(0, NO_ERRCODE,
+						"iconf->topicList must be under 256 characters");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		
@@ -338,10 +344,11 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		}
 	}
 
-	/* we default to CONNECT unless told otherwise */
+	/* FIXME: currently hard coded to bind */
 	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints, true);
 	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed (is_server: %i", iconf->sockEndpoints, is_server);
+		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s",
+				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -397,7 +404,8 @@ static rsRetVal rcvData(thrdInfo_t* pThrd){
 	DBGPRINTF("imczmq: starting auth actor...\n");
 	authActor = zactor_new(zauth, NULL);
 	if (!authActor) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "imczmq: could not create auth service");
+		errmsg.LogError(0, RS_RET_NO_ERRCODE,
+				"imczmq: could not create auth service");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 
@@ -533,9 +541,9 @@ CODESTARTsetModCnf
 
 		else {
 			errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
-						   "imczmq: config error, unknown "
-						   "param %s in setModCnf\n", 
-						   modpblk.descr[i].name);
+						"imczmq: config error, unknown "
+						"param %s in setModCnf\n", 
+						modpblk.descr[i].name);
 		}   
 	}
  

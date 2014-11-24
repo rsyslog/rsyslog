@@ -47,34 +47,34 @@ DEFobjCurrIf(errmsg)
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _instanceData {
-	zactor_t	*authActor;			/* actor for authentication */
-	zsock_t		*sock;				/* the zeromq socket */
-	zcert_t		*clientCert;		/* curve client cert */
-	zcert_t 	*serverCert;		/* curve server cert */
-	char		*sockEndpoints;		/* comma seperated list of socket endpoints */
-	int			sockType;			/* zeromq socket type */
-	char		*authType;			/* currently implemented: "CURVE" */
-	char		*clientCertPath;	/* path to client curve certificate */
-	char		*serverCertPath;	/* path to server curve certificate */
-	uchar		*tplName;			/* template (defaults to RSYSLOG_ForwardFormat) */
+	zactor_t *authActor;
+	zsock_t *sock;
+	zcert_t *clientCert;
+	zcert_t *serverCert;
+	char *sockEndpoints;
+	int sockType;
+	char *authType;
+	char *clientCertPath;
+	char *serverCertPath;
+	uchar *tplName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData	*pData;
+	instanceData *pData;
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
-	{ "endpoints",			eCmdHdlrGetWord, 1 },
-	{ "socktype",			eCmdHdlrGetWord, 1 },
-	{ "authtype",			eCmdHdlrGetWord, 0 },
-	{ "clientcertpath",		eCmdHdlrGetWord, 0 },
-	{ "servercertpath",		eCmdHdlrGetWord, 0 },
-	{ "template",			eCmdHdlrGetWord, 0 }
+	{ "endpoints", eCmdHdlrGetWord, 1 },
+	{ "socktype", eCmdHdlrGetWord, 1 },
+	{ "authtype", eCmdHdlrGetWord, 0 },
+	{ "clientcertpath", eCmdHdlrGetWord, 0 },
+	{ "servercertpath", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 
 static struct cnfparamblk actpblk = {
 	CNFPARAMBLK_VERSION,
-	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
 	actpdescr
 };
 
@@ -82,21 +82,23 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
 
 	/* tell czmq to not use it's own signal handler */
-	putenv("ZSYS_SIGHANDLER=false");
+	putenv ("ZSYS_SIGHANDLER=false");
 
 	/* create new auth actor */
-	DBGPRINTF("omczmq: starting auth actor...\n");
-	pData->authActor = zactor_new(zauth, NULL);
+	DBGPRINTF ("omczmq: starting auth actor...\n");
+	pData->authActor = zactor_new (zauth, NULL);
 	if (!pData->authActor) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "omczmq: could not create auth service");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+		errmsg.LogError (0, RS_RET_NO_ERRCODE,
+				"omczmq: could not create auth service");
+		ABORT_FINALIZE (RS_RET_NO_ERRCODE);
 	}
 
 	/* create our zeromq socket */
-	DBGPRINTF("omczmq: creating zeromq socket...\n");
-	pData->sock = zsock_new(pData->sockType);
+	DBGPRINTF ("omczmq: creating zeromq socket...\n");
+	pData->sock = zsock_new (pData->sockType);
 	if (!pData->sock) {
-		errmsg.LogError(0, RS_RET_NO_ERRCODE, "omczmq: new socket failed for endpoints: %s",
+		errmsg.LogError (0, RS_RET_NO_ERRCODE,
+				"omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
@@ -164,7 +166,8 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	/* we default to CONNECT unless told otherwise */
 	int rc = zsock_attach(pData->sock, (const char*)pData->sockEndpoints, is_server);
 	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed", pData->sockEndpoints);
+		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
+				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -185,7 +188,8 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 
 	/* something is very wrong */
 	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s", msg, zmq_strerror(errno));
+		errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
+				msg, zmq_strerror(errno));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 finalize_it:
@@ -194,16 +198,16 @@ finalize_it:
 
 static inline void
 setInstParamDefaults(instanceData* pData) {
-	pData->sockEndpoints	= NULL;
-	pData->sock				= NULL;
-	pData->clientCert		= NULL;
-	pData->serverCert		= NULL;
-	pData->tplName			= NULL;
-	pData->sockType			= -1;
-	pData->authActor		= NULL;
-	pData->authType			= NULL;
-	pData->clientCertPath	= NULL;
-	pData->serverCertPath	= NULL;
+	pData->sockEndpoints = NULL;
+	pData->sock = NULL;
+	pData->clientCert = NULL;
+	pData->serverCert = NULL;
+	pData->tplName = NULL;
+	pData->sockType = -1;
+	pData->authActor = NULL;
+	pData->authType = NULL;
+	pData->clientCertPath = NULL;
+	pData->serverCertPath = NULL;
 }
 
 
@@ -309,7 +313,8 @@ CODESTARTnewActInst
 			}
 
 			else {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omczmq: invalid socktype");
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"omczmq: invalid socktype");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
@@ -321,9 +326,11 @@ CODESTARTnewActInst
 			/* make sure defined type is supported */
 			if ((pData->authType != NULL) && 
 					strcmp("CURVESERVER", pData->authType) &&
-					strcmp("CURVECLIENT", pData->authType)) {
+					strcmp("CURVECLIENT", pData->authType))
+			{
 
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omczmq: %s is not a valid authType",
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"omczmq: %s is not a valid authType",
 						pData->authType);
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
@@ -347,9 +354,11 @@ CODESTARTnewActInst
 		}
 	}
 
-	/* if we don't have a template name, use the default RSYSLOG_ForwardFormat template */
+	/* if we don't have a template name, 
+	 * use the default RSYSLOG_ForwardFormat template */
 	if (pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"), OMSR_NO_RQD_TPL_OPTS));
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
+					OMSR_NO_RQD_TPL_OPTS));
 	} 
 
 	/* use the requested template */

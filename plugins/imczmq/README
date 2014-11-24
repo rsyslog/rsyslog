@@ -1,4 +1,4 @@
-CZMQ Output Plugin
+CZMQ Input Plugin
 
 REQUIREMENTS:
 
@@ -7,15 +7,16 @@ REQUIREMENTS:
 * czmq 3.x ( http://czmq.zeromq.org/ )
 
 -------------------------------------------------------------------------------
-module(load="omczmq")
+module(load="imczmq")
 
-action(
+input(
 	name="curve_server_socket"
-	type="omczmq"
-	endpoints="tcp://some.server.com:24445"
-	socktype="PUSH"
-	authtype="CURVECLIENT"
-	curveclientcert="/etc/curve.d/example_curve_client_cert"
+	type="imczmq"
+	endpoints="tcp://*:24555"
+	topics="topic1,topic2,topic3"
+	socktype="PULL"
+	authtype="CURVESERVER"
+	curveclientcert="/etc/curve.d/"
 	curveservercert="/etc/curve.d/example_curve_server_cert"
 )
 -------------------------------------------------------------------------------
@@ -23,9 +24,9 @@ action(
 Explanation of Options:
 
 name: name of this action
-type: type of action (omczmq for this plugin)
+type: type of action (imczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
-socktype: zeromq socket type (currently supports PUSH and PUB)
+socktype: zeromq socket type (currently supports PULL and SUB)
 authtype: CURVECLIENT or CURVESERVER
 curveclientcert: 
 	if CURVECLIENT, this client's cert
