@@ -31,6 +31,14 @@ Note that mmnormalize should only be called once on each message.
 Behaviour is undefined if multiple calls to mmnormalize happen for the
 same message.
 
+**Module Parameters**
+
+-  **allow_regex** [boolean] defaults to "off"
+   Specifies if regex field-type should be allowed. Regex field-type has
+   significantly higher computational overhead compared to other fields, 
+   so it should be avoided when another field-type can achieve the desired 
+   effect. Needs to be "on" for regex field-type to work.
+
 **Action Parameters**:
 
 -  **ruleBase** [word]
