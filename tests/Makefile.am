@@ -107,7 +107,6 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
-	imptcp_conndrop-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
@@ -151,6 +150,10 @@ TESTS +=  \
         rscript_replace_complex.sh \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imptcp_conndrop-vg.sh
+endif
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
