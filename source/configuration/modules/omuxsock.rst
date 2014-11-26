@@ -36,7 +36,7 @@ socket.
 
 ::
   
-  $ModLoad omucsock
+  $ModLoad omuxsock
   $OMUxSockSocket /tmp/socksample
   *.* :omuxsock:
 
