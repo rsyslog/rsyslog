@@ -4,7 +4,6 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
-if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
@@ -107,12 +106,10 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
-	imptcp_conndrop-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
 endif # HAVE_VALGRIND
-endif # ENABLE_IMDIAG
 
 
 if ENABLE_MYSQL_TESTS
@@ -151,6 +148,10 @@ TESTS +=  \
         rscript_replace_complex.sh \
 	rscript_wrap2.sh \
 	rscript_wrap3.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imptcp_conndrop-vg.sh
+endif
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
@@ -223,10 +224,8 @@ endif
 endif
 
 if ENABLE_OMRULESET
-if ENABLE_IMDIAG
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
-endif
 endif
 
 if ENABLE_EXTENDED_TESTS
@@ -317,7 +316,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/date3.parse1 \
 	   testsuites/date4.parse1 \
 	   testsuites/date5.parse1 \
-   	   testsuites/rfc3164.parse1 \
+	   testsuites/rfc3164.parse1 \
 	   testsuites/rfc5424-1.parse1 \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
