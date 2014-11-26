@@ -166,3 +166,17 @@ handling of statefile needed to be changed. Most importantly, the
 *statefile* input parameter has been deprecated. See
 :doc:`imfile module documentation <../../configuration/modules/imfile>`
 for more details.
+
+Command Line Options
+~~~~~~~~~~~~~~~~~~~~
+There is a small set of configuration command line options available dating back
+to the dark ages of syslog technology. Setting command-line options is
+distro specific and a hassle for most users. As such, we are phasing out
+these options, and will do so rather quickly.
+
+Some of them (most notably -l, -s) will completely be removed, as
+feedback so far indicated they are no longer in use. Others will be
+replaced by proper configuration objects.
+
+**Expect future rsyslog versions to no longer accept those configuration
+command line options.**
