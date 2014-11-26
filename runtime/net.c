@@ -12,7 +12,7 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1139,8 +1139,6 @@ static rsRetVal
 getLocalHostname(uchar **ppName)
 {
 	DEFiRet;
-	uchar *buf = NULL;
-	size_t buf_len = 0;
 	char hnbuf[8192];
 	uchar *fqdn;
 
@@ -1169,14 +1167,14 @@ getLocalHostname(uchar **ppName)
 			} else {
 				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
 			}
-			dot = strstr(fqdn, ".");
+			dot = strstr((char*)fqdn, ".");
 		}
 	} else { /* gethostname() obtained a FQDN */
 		CHKmalloc(fqdn = (uchar*) strdup(hnbuf));
 	}
 
 	if(dot != NULL)
-		for(uchar *p = dot+1 ; *p ; ++p)
+		for(char *p = dot+1 ; *p ; ++p)
 			*p = tolower(*p);
 
 	*ppName = fqdn;
