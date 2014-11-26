@@ -10,7 +10,7 @@
  *
  * File begun on 2010-07-13 by RGerhards
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2014-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -47,7 +47,6 @@
 
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("pmlastmsg")
 PARSER_NAME("rsyslog.lastline")
 
 /* internal structures
