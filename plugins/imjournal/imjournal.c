@@ -296,10 +296,6 @@ readjournal() {
 		int val_ofs;
 
 		val_ofs = strlen(pid_field_name) + 1; /* name + '=' */
-		if (sys_pid == NULL) {
-			free (sys_iden);
-			FINALIZE;
-		}
 		CHKiRet_Hdlr(sanitizeValue(((const char *)pidget) + val_ofs, pidlength - val_ofs, &sys_pid)) {
 			free (sys_iden);
 			FINALIZE;
