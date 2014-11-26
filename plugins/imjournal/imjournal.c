@@ -261,7 +261,7 @@ readjournal() {
 			}
 		} else {
 			dbgprintf("The value of the 'PRIORITY' field has an "
-				"unexpected length: %d\n", length);
+				"unexpected length: %zu\n", length);
 		}
 	}
 
@@ -280,7 +280,7 @@ readjournal() {
 			}
 		} else {
 			dbgprintf("The value of the 'FACILITY' field has an "
-				"unexpected length: %d\n", length);
+				"unexpected length: %zu\n", length);
 		}
 	}
 
