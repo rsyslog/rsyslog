@@ -1127,6 +1127,9 @@ initAll(int argc, char **argv)
 			PidFile = (uchar*)arg;
 			break;
 		case 'l':
+			fprintf (stderr, "rsyslogd: the -l command line option will go away "
+				 "soon.\n Make yourself heard on the rsyslog mailing "
+				 "list if you need it any longer.\n");
 			if(glbl.GetLocalHosts() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
 			} else {
@@ -1146,6 +1149,9 @@ initAll(int argc, char **argv)
 		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 's':
+			fprintf (stderr, "rsyslogd: the -s command line option will go away "
+				 "soon.\n Make yourself heard on the rsyslog mailing "
+				 "list if you need it any longer.\n");
 			if(glbl.GetStripDomains() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
