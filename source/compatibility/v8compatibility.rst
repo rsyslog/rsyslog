@@ -180,3 +180,15 @@ replaced by proper configuration objects.
 
 **Expect future rsyslog versions to no longer accept those configuration
 command line options.**
+
+Please see this table to see what to use as a replacement for the
+current options:
+
+==========  ===========================================================================
+**Option**  **replacement**
+-l          dropped, currently no replacement
+-s          dropped, currently no replacement
+-4          global(net.ipprotocol="ipv4-only")
+-6          global(net.ipprotocol="ipv6-only")
+==========  ===========================================================================
+

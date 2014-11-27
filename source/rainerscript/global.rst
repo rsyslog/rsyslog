@@ -93,3 +93,13 @@ The following paramters can be set:
   This is used to specify the debug log file name. It is used for all
   debug output. Please note that the RSYSLOG\_DEBUGLOG environment
   variable always **overrides** the value of debug.logFile.
+
+- **net.ipprotocol** available in 8.6.0+
+
+  This permits to instruct rsyslog to use IPv4 or IPv6 only. Possible
+  values are "unspecified", in which case both protocols are used,
+  "ipv4-only", and "ipv6-only", which restrict usage to the specified
+  protocol. The default is "unspecified".
+
+  Note: this replaces the former *-4* and *-6* rsyslogd command line
+  options.
