@@ -11,7 +11,7 @@ The following paramters can be set:
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 
    If enabled ("on") action will log message under *syslog.\** when an
-   action suspends or resume itself. This usually happens when there are
+   action suspends or resumes itself. This usually happens when there are
    problems connecting to backend systems. If disabled ("off"), these
    messages are not generated. These messages can be useful in detecting
    problems with backend systems. Most importantly, frequent suspension
