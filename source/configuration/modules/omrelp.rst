@@ -104,6 +104,9 @@ used.
    manual <http://gnutls.org/manual/html_node/Priority-Strings.html>`__.
    **Note: this is an expert parameter.** Do not use if you do not
    exactly know what you are doing.
+-  **localclientip** ip_address (not mandatory, string)
+   omrelp uses ip_address as local client address while connecting
+   to remote logserver.
 
 **Sample:**
 

@@ -188,8 +188,9 @@ current options:
 **Option**  **replacement**
 -4          global(net.ipprotocol="ipv4-only")
 -6          global(net.ipprotocol="ipv6-only")
--A          omfwd input parameter udp.sendToAll
+-A          omfwd input parameter "udp.sendToAll"
 -l          dropped, currently no replacement
 -s          dropped, currently no replacement
+-S          omrelp action parameter "localclientip"
 ==========  ===========================================================================
 
