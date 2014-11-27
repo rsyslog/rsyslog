@@ -144,6 +144,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
+	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
+	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -984,6 +986,10 @@ glblDoneLoadCnf(void)
 					"parameter '%s' -- ignored", proto);
 			}
 			free(proto);
+		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
+		        *(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
+		        *(net.pACLDontResolve) = !((int) cnfparamvals[i].val.d.n);
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);

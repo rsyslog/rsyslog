@@ -1155,9 +1155,15 @@ initAll(int argc, char **argv)
 			iConfigVerify = atoi(arg);
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
+			fprintf (stderr, "rsyslogd: the -q command line option will go away "
+				 "soon.\nPlease use the global(net.aclAddHostnameOnFail=\"on\") "
+				 "configuration parameter instead.\n");
 		        *(net.pACLAddHostnameOnFail) = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
+			fprintf (stderr, "rsyslogd: the -Q command line option will go away "
+				 "soon.\nPlease use the global(net.aclResolveHostname=\"off\") "
+				 "configuration parameter instead.\n");
 		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 's':

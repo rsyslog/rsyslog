@@ -135,15 +135,6 @@ verbosity (this is a forward-compatibility option).
 is started and controlled by
 .BR init (8).
 .TP
-.BI "\-q " "add hostname if DNS fails during ACL processing"
-During ACL processing, hostnames are resolved to IP addresses for
-performance reasons. If DNS fails during that process, the hostname
-is added as wildcard text, which results in proper, but somewhat
-slower operation once DNS is up again.
-.TP
-.BI "\-Q " "do not resolve hostnames during ACL processing"
-Do not resolve hostnames to IP addresses during ACL processing.
-.TP
 .BI "\-s " "domainlist"
 Specify a domainname that should be stripped off before
 logging.  Multiple domains may be specified using the colon (``:'')
