@@ -295,6 +295,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 				--enable-pmsnare \
 				--enable-elasticsearch \
 				--enable-valgrind \
+				--enable-testbench \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-mmsnmptrapd \
