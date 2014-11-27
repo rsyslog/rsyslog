@@ -25,4 +25,21 @@ Please see the script clean-mongo-syslog for an example of how to
 purge old records from MongoDB using PyMongo.  It can be run
 daily or weekly from cron.
 
+You may also wish to index some or all of the columns in MongoDB.
+The following statements may help to create the indexes:
+
+To see the existing indexes:
+
+  db.syslog.getIndexes()
+
+To create them:
+
+  db.syslog.ensureIndex( { sys : 1 } )
+  db.syslog.ensureIndex( { time : 1 } )
+  db.syslog.ensureIndex( { syslog_fac : 1 } )
+  db.syslog.ensureIndex( { syslog_sever : 1 } )
+  db.syslog.ensureIndex( { syslog_tag : 1 } )
+  db.syslog.ensureIndex( { procid : 1 } )
+  db.syslog.ensureIndex( { pid : 1 } )
+
 
