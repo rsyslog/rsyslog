@@ -200,6 +200,21 @@ Action Parameters
    to the follow-up posting). In order to prevent these problems,
    we recommend the use of :doc:`omrelp <omrelp>`.
 
+-  **udp.sendToAll** Boolean [on/off]
+
+   **Default:** off
+
+   When sending UDP messages, there are potentially multiple paths to
+   the target destination. By default, rsyslogd
+   only sends to the first target it can successfully send to. If this
+   option is set to "on", messages are sent to all targets. This may improve
+   reliability, but may also cause message duplication. This option
+   should be enabled only if it is fully understood.
+
+   Note: this option replaces the former -A command line option. In
+   contrast to the -A option, this option must be set once per
+   input() definition.
+
 See Also
 --------
 
