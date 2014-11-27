@@ -6,7 +6,6 @@
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
 .B rsyslogd
-.RB [ " \-A " ]
 .RB [ " \-d " ]
 .RB [ " \-D " ]
 .RB [ " \-f "
@@ -16,19 +15,11 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-i "
 .I pid file
 ]
-.RB [ " \-l "
-.I hostlist
-]
 .RB [ " \-n " ]
 .RB [ " \-N "
 .I level
 ]
 .br
-.RB [ " \-q " ]
-.RB [ " \-Q " ]
-.RB [ " \-s "
-.I domainlist
-]
 .RB [ " \-u "
 .I userlevel
 ]
@@ -48,7 +39,7 @@ This is provided in the ./doc subdirectory and probably
 in a separate package if you installed rsyslog via a packaging system.
 To use rsyslog's advanced features, you
 .B need
-to look at the html documentation, because the man pages only cover
+to look at the html documentation, because the man pages only covers
 basic aspects of operation.
 .B For details and configuration examples, see the rsyslog.conf (5)
 .B man page and the online documentation at http://www.rsyslog.com/doc
@@ -111,11 +102,6 @@ Specify an alternative pid file instead of the default one.
 This option must be used if multiple instances of rsyslogd should
 run on a single machine.
 .TP
-.BI "\-l " "hostlist"
-Specify a hostname that should be logged only with its simple hostname
-and not the fqdn.  Multiple hosts may be specified using the colon
-(``:'') separator.
-.TP
 .B "\-n"
 Avoid auto-backgrounding.  This is needed especially if the
 .B rsyslogd
@@ -134,17 +120,6 @@ verbosity (this is a forward-compatibility option).
 .B rsyslogd
 is started and controlled by
 .BR init (8).
-.TP
-.BI "\-s " "domainlist"
-Specify a domainname that should be stripped off before
-logging.  Multiple domains may be specified using the colon (``:'')
-separator.
-Please be advised that no sub-domains may be specified but only entire
-domains.  For example if
-.B "\-s north.de"
-is specified and the host logging resolves to satu.infodrom.north.de
-no domain would be cut, you will have to specify two domains like:
-.BR "\-s north.de:infodrom.north.de" .
 .TP
 .BI "\-u " "userlevel"
 This is a "catch all" option for some very seldomly-used user settings.
