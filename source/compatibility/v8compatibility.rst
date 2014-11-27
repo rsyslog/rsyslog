@@ -194,5 +194,7 @@ current options:
 -Q          global(net.aclResolveHostname="off")
 -s          dropped, currently no replacement
 -S          omrelp action parameter "localclientip"
+-w          global(net.permitACLWarning="off")
+-x          global(net.enableDNS="off")
 ==========  ===========================================================================
 

@@ -118,3 +118,16 @@ The following paramters can be set:
   If "off", do not resolve hostnames to IP addresses during ACL processing.
   
   The default is "on".
+
+- **net.enableDNS** [on/off] available in 8.6.0+
+
+  **Default:** on
+
+  Can be used to turn DNS name resolution on or off.
+  
+- **net.permitACLWarning** [on/off] available in 8.6.0+
+
+  **Default:** on
+
+  If "off", suppress warnings issued when messages are received
+  from non-authorized machines (those, that are in no AllowedSender list).
