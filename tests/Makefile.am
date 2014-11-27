@@ -188,7 +188,7 @@ if ENABLE_GNUTLS
 	#imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
-	 imtcp_conndrop_tls-vg.sh 
+	 imtcp_conndrop_tls-vg.sh \
 	 manytcp-too-few-tls-vg.sh 
 endif
 endif
@@ -538,7 +538,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/sndrcv_udp_sender.conf \
 	   testsuites/sndrcv_udp_rcvr.conf \
 	   imudp_thread_hang.sh \
-	   testsuites/imudp_thread_hang.conf
+	   testsuites/imudp_thread_hang.conf \
 	   sndrcv_udp_nonstdpt.sh \
 	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
 	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
