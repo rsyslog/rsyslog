@@ -93,15 +93,6 @@ the error element is ignored. It is tried to parse the rest of the line.
 .LP
 .SH OPTIONS
 .TP
-.BI "\-A"
-When sending UDP messages, there are potentially multiple paths to
-the target destination. By default,
-.B rsyslogd
-only sends to the first target it can successfully send to. If -A 
-is given, messages are sent to all targets. This may improve
-reliability, but may also cause message duplication. This option
-should be enabled only if it is fully understood.
-.TP
 .B "\-D"
 Runs the Bison config parser in debug mode. This may help when hard to find
 syntax errors are reported. Please note that the output generated is deeply

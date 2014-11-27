@@ -1117,6 +1117,9 @@ initAll(int argc, char **argv)
                         glbl.SetDefPFFamily(PF_INET6);
                         break;
                 case 'A':
+			fprintf (stderr, "rsyslogd: the -A command line option will go away "
+				 "soon.\n"
+				 "Please use the omfwd paramter \"upd.sendToAll\" instead.\n");
                         send_to_all++;
                         break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */

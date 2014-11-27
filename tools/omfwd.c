@@ -88,6 +88,8 @@ typedef struct _instanceData {
 	int iRebindInterval;	/* rebind interval */
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
+	/* following fields for UDP-based delivery */
+	int bSendToAll;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
@@ -156,6 +158,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
+	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
@@ -435,7 +438,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
 				}
 			}
-			if (lsent == len && !send_to_all)
+			if (lsent == len && !pWrkrData->pData->bSendToAll)
 			       break;
 		}
 		/* finished looping */
@@ -911,6 +914,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iStrmDrvrMode = 0;
 	pData->iRebindInterval = 0;
 	pData->bResendLastOnRecon = 0; 
+	pData->bSendToAll = -1;  /* unspecified */
 	pData->pPermPeers = NULL;
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
@@ -1033,6 +1037,8 @@ CODESTARTnewActInst
 			pData->errsToReport = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
+			pData->bSendToAll = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
@@ -1073,6 +1079,14 @@ CODESTARTnewActInst
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
+	if(pData->bSendToAll == -1) {
+		pData->bSendToAll = send_to_all;
+	} else {
+		if(pData->protocol == FORW_TCP) {
+			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: paramter udp.sendToAll "
+					"cannot be used with tcp transport -- ignored");
+		}
+	}
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
