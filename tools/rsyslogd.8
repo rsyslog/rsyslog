@@ -1,13 +1,11 @@
-.\" Copyright 2004-2008 Rainer Gerhards and Adiscon for the rsyslog modifications
+.\" Copyright 2004-2014 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "27 May 2014" "Version 8.3.3" "Linux System Administration"
+.TH RSYSLOGD 8 "02 Dec 2014" "Version 8.6.0" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
 .B rsyslogd
-.RB [ " \-4 " ]
-.RB [ " \-6 " ]
 .RB [ " \-A " ]
 .RB [ " \-d " ]
 .RB [ " \-D " ]
@@ -103,22 +101,6 @@ only sends to the first target it can successfully send to. If -A
 is given, messages are sent to all targets. This may improve
 reliability, but may also cause message duplication. This option
 should be enabled only if it is fully understood.
-.TP
-.BI "\-4"
-Causes
-.B rsyslogd
-to listen to IPv4 addresses only.
-If neither -4 nor -6 is given,
-.B rsyslogd
-listens to all configured addresses of the system.
-.TP
-.BI "\-6"
-Causes
-.B rsyslogd
-to listen to IPv6 addresses only.
-If neither -4 nor -6 is given,
-.B rsyslogd
-listens to all configured addresses of the system.
 .TP
 .BI "\-c " "version"
 This option has been obsoleted and has no function any longer. It is still

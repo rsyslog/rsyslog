@@ -1105,9 +1105,15 @@ initAll(int argc, char **argv)
 		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
+			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
+				 "soon.\nPlease use the global(net.ipproto=\"ipv4-only\") "
+				 "configuration parameter instead.\n");
 	                glbl.SetDefPFFamily(PF_INET);
                         break;
                 case '6':
+			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
+				 "soon.\nPlease use the global(net.ipproto=\"ipv6-only\") "
+				 "configuration parameter instead.\n");
                         glbl.SetDefPFFamily(PF_INET6);
                         break;
                 case 'A':

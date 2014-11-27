@@ -143,6 +143,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
+	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -191,7 +192,6 @@ SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(MaxLine, iMaxLine, int)
-SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
 SIMP_PROP(DisableDNS, bDisableDNS, int)
@@ -350,7 +350,6 @@ setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	RETiRet;
 }
 
-
 static rsRetVal
 setDebugLevel(void __attribute__((unused)) *pVal, int level)
 {
@@ -361,6 +360,20 @@ setDebugLevel(void __attribute__((unused)) *pVal, int level)
 	RETiRet;
 }
 
+
+static rsRetVal
+setDefPFFamily(int level)
+{
+	DEFiRet;
+	iDefPFFamily = level;
+	RETiRet;
+}
+
+static int
+getDefPFFamily(void)
+{
+	return iDefPFFamily;
+}
 
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
@@ -612,6 +625,8 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
+	pIf->SetDefPFFamily = setDefPFFamily;
+	pIf->GetDefPFFamily = getDefPFFamily;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -619,7 +634,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(OptimizeUniProc);
 	SIMP_PROP(ParseHOSTNAMEandTAG);
 	SIMP_PROP(PreserveFQDN);
-	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(Option_DisallowWarning);
 	SIMP_PROP(DisableDNS);
@@ -957,6 +971,19 @@ glblDoneLoadCnf(void)
 			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
 			janitorInterval = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
+			char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			if(!strcmp(proto, "unspecified")) {
+				iDefPFFamily = PF_UNSPEC;
+			} else if(!strcmp(proto, "ipv4-only")) {
+				iDefPFFamily = PF_INET;
+			} else if(!strcmp(proto, "ipv6-only")) {
+				iDefPFFamily = PF_INET6;
+			} else{
+				errmsg.LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
+					"parameter '%s' -- ignored", proto);
+			}
+			free(proto);
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
