@@ -146,6 +146,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
+	{ "net.enabledns", eCmdHdlrBinary, 0 },
+	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -195,8 +197,6 @@ SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
-SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
-SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
@@ -362,6 +362,33 @@ setDebugLevel(void __attribute__((unused)) *pVal, int level)
 	RETiRet;
 }
 
+static rsRetVal
+setDisableDNS(int val)
+{
+	DEFiRet;
+	bDisableDNS = val;
+	RETiRet;
+}
+
+static int
+getDisableDNS(void)
+{
+	return bDisableDNS;
+}
+
+static rsRetVal
+setOption_DisallowWarning(int val)
+{
+	DEFiRet;
+	option_DisallowWarning = val;
+	RETiRet;
+}
+
+static int
+getOption_DisallowWarning(void)
+{
+	return option_DisallowWarning;
+}
 
 static rsRetVal
 setDefPFFamily(int level)
@@ -629,6 +656,10 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetDefPFFamily = setDefPFFamily;
 	pIf->GetDefPFFamily = getDefPFFamily;
+	pIf->SetDisableDNS = setDisableDNS;
+	pIf->GetDisableDNS = getDisableDNS;
+	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
+	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -637,8 +668,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(ParseHOSTNAMEandTAG);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DropMalPTRMsgs);
-	SIMP_PROP(Option_DisallowWarning);
-	SIMP_PROP(DisableDNS);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
@@ -990,6 +1019,10 @@ glblDoneLoadCnf(void)
 		        *(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
 		        *(net.pACLDontResolve) = !((int) cnfparamvals[i].val.d.n);
+		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
+		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
+		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);

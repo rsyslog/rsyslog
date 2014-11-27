@@ -24,8 +24,6 @@ rsyslogd \- reliable and extended syslogd
 .I userlevel
 ]
 .RB [ " \-v " ]
-.RB [ " \-w " ]
-.RB [ " \-x " ]
 .LP
 .SH DESCRIPTION
 .B Rsyslogd
@@ -135,13 +133,6 @@ an -u option, make sure you really understand what you do and why you do it.
 .TP
 .B "\-v"
 Print version and exit.
-.TP
-.B "\-w"
-Suppress warnings issued when messages are received from non-authorized
-machines (those, that are in no AllowedSender list).
-.TP
-.B "\-x"
-Disable DNS for remote messages.
 .LP
 .SH SIGNALS
 .B Rsyslogd

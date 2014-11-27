@@ -1190,9 +1190,15 @@ initAll(int argc, char **argv)
 				bChDirRoot = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
+			fprintf (stderr, "rsyslogd: the -w command line option will go away "
+				 "soon.\nPlease use the global(net.permitACLWarning=\"off\") "
+				 "configuration parameter instead.\n");
 			glbl.SetOption_DisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
+			fprintf (stderr, "rsyslogd: the -x command line option will go away "
+				 "soon.\nPlease use the global(net.enableDNS=\"off\") "
+				 "configuration parameter instead.\n");
 			glbl.SetDisableDNS(1);
 			break;
                case '?':
