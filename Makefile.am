@@ -287,7 +287,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 				--enable-omprog \
 				--enable-imdiag \
 				--enable-imptcp \
-				--enable-imttcp \
 				--enable-omuxsock \
 				--enable-impstats \
 				--enable-memcheck \
