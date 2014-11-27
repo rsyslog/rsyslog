@@ -660,6 +660,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mysql-actq-mt.conf \
 	   mmpstrucdata.sh \
 	   testsuites/mmpstrucdata.conf \
+	   libdbi-basic-vg.sh \
+	   mmnormalize_variable.sh \
+	   rscript_replace.sh \
+	   rscript_replace_complex.sh \
+	   rscript_unaffected_reset.sh \
+	   rscript_wrap2.sh \
+	   rscript_wrap3.sh \
 	   cfg.sh
 
 # TODO: re-enable
