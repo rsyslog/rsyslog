@@ -1123,6 +1123,9 @@ initAll(int argc, char **argv)
                         send_to_all++;
                         break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
+			fprintf (stderr, "rsyslogd: the -S command line option will go away "
+				 "soon.\n"
+				 "Please use the omrelp paramter \"localClientIP\" instead.\n");
 			if(glbl.GetSourceIPofLocalClient() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
 			} else {
