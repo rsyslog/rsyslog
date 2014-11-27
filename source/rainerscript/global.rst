@@ -103,3 +103,18 @@ The following paramters can be set:
 
   Note: this replaces the former *-4* and *-6* rsyslogd command line
   options.
+
+- **net.aclAddHostnameOnFail** available in 8.6.0+
+
+  If "on", during ACL processing, hostnames are resolved to IP addresses for
+  performance reasons. If DNS fails during that process, the hostname
+  is added as wildcard text, which results in proper, but somewhat
+  slower operation once DNS is up again.
+  
+  The default is "off".
+
+- **net.aclResolveHostname** available in 8.6.0+
+  
+  If "off", do not resolve hostnames to IP addresses during ACL processing.
+  
+  The default is "on".

@@ -190,6 +190,8 @@ current options:
 -6          global(net.ipprotocol="ipv6-only")
 -A          omfwd input parameter "udp.sendToAll"
 -l          dropped, currently no replacement
+-q          global(net.aclAddHostnameOnFail="on")
+-Q          global(net.aclResolveHostname="off")
 -s          dropped, currently no replacement
 -S          omrelp action parameter "localclientip"
 ==========  ===========================================================================
