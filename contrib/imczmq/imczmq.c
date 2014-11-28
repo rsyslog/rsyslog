@@ -1,4 +1,4 @@
-/* omczmq.c
+/* imczmq.c
  * Copyright (C) 2014 Brian Knox
  * Copyright (C) 2014 Rainer Gerhards
  *
@@ -303,7 +303,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		zcert_apply(pData->clientCert, pData->sock);
 
 		/* get the server cert */
-		DBGPRINTF("omczmq: server cert is %s...\n", iconf->serverCertPath);
+		DBGPRINTF("imczmq: server cert is %s...\n", iconf->serverCertPath);
 		pData->serverCert = zcert_load(iconf->serverCertPath);
 		if (!pData->serverCert) {
 			errmsg.LogError(0, NO_ERRCODE, "could not load server cert");
@@ -312,7 +312,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 		/* get the server public key and set it for the socket */
 		char *server_key = zcert_public_txt(pData->serverCert);
-		DBGPRINTF("omczmq: server public key is %s...\n", server_key);
+		DBGPRINTF("imczmq: server public key is %s...\n", server_key);
 		zsock_set_curve_serverkey (pData->sock, server_key);
 	}
 
