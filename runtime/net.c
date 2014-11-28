@@ -1140,7 +1140,7 @@ getLocalHostname(uchar **ppName)
 {
 	DEFiRet;
 	char hnbuf[8192];
-	uchar *fqdn;
+	uchar *fqdn = NULL;
 
 	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
 		strcpy(hnbuf, "localhost");
@@ -1169,7 +1169,10 @@ getLocalHostname(uchar **ppName)
 			}
 			dot = strstr((char*)fqdn, ".");
 		}
-	} else { /* gethostname() obtained a FQDN */
+	}
+
+	if(fqdn == NULL) {
+		/* already was FQDN or we could not obtain a better one */
 		CHKmalloc(fqdn = (uchar*) strdup(hnbuf));
 	}
 
