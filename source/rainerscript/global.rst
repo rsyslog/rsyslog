@@ -131,3 +131,15 @@ The following paramters can be set:
 
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
+
+- **parser.parseHostnameAndTag [on/off] available in 8.6.0+
+
+  **Default:** on
+
+  This controls wheter the parsers try to parse HOSTNAME and TAG fields
+  from messages. The default is "on", in which case parsing occurs. If
+  set to "off", the fields are not parsed. Note that this usually is
+  **not** what you want to have.
+
+  It is highly suggested to change this setting to "off" only if you
+  know exactly why you are doing this.
