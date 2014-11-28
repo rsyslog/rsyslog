@@ -1050,6 +1050,7 @@ initAll(int argc, char **argv)
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
+		case 'r':
 		case 'x': /* disable dns for remote messages */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
@@ -1184,14 +1185,26 @@ initAll(int argc, char **argv)
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);
-			if(iHelperUOpt & 0x01)
+			if(iHelperUOpt & 0x01) {
+				fprintf (stderr, "rsyslogd: the -u command line option will go away "
+					 "soon.\n"
+					 "For the 0x01 bit, please use the "
+					 "global(net.parseHostnamdAndTag=\"off\") "
+					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
+			}
 			if(iHelperUOpt & 0x02)
+				fprintf (stderr, "rsyslogd: the -u command line option will go away "
+					 "soon.\n"
+					 "For the 0x02 bit, please use the -C option instead.");
 				bChDirRoot = 0;
+			break;
+		case 'C':
+			bChDirRoot = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
 			fprintf (stderr, "rsyslogd: the -w command line option will go away "
-				 "soon.\nPlease use the global(net.permitACLWarning=\"off\") "
+				 "soon.\nPlease use the global(net.permitWarning=\"off\") "
 				 "configuration parameter instead.\n");
 			glbl.SetOption_DisallowWarning(0);
 			break;

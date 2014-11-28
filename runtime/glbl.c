@@ -141,6 +141,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escape8bitcharactersonreceive", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
+	{ "parser.parsehostnameandtag", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
@@ -191,7 +192,6 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-SIMP_PROP(ParseHOSTNAMEandTAG, bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
@@ -365,9 +365,8 @@ setDebugLevel(void __attribute__((unused)) *pVal, int level)
 static rsRetVal
 setDisableDNS(int val)
 {
-	DEFiRet;
 	bDisableDNS = val;
-	RETiRet;
+	return RS_RET_OK;
 }
 
 static int
@@ -379,15 +378,27 @@ getDisableDNS(void)
 static rsRetVal
 setOption_DisallowWarning(int val)
 {
-	DEFiRet;
 	option_DisallowWarning = val;
-	RETiRet;
+	return RS_RET_OK;
 }
 
 static int
 getOption_DisallowWarning(void)
 {
 	return option_DisallowWarning;
+}
+
+static rsRetVal
+setParseHOSTNAMEandTAG(int val)
+{
+	bParseHOSTNAMEandTAG = val;
+	return RS_RET_OK;
+}
+
+static int
+getParseHOSTNAMEandTAG(void)
+{
+	return bParseHOSTNAMEandTAG;
 }
 
 static rsRetVal
@@ -660,12 +671,13 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDisableDNS = getDisableDNS;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
+	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
+	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP(MaxLine);
 	SIMP_PROP(OptimizeUniProc);
-	SIMP_PROP(ParseHOSTNAMEandTAG);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
@@ -992,6 +1004,8 @@ glblDoneLoadCnf(void)
 			bEscapeTab = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
 			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.parsehostnameandtag")) {
+			bParseHOSTNAMEandTAG = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);

@@ -11,7 +11,6 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-f "
 .I config file
 ]
-.br
 .RB [ " \-i "
 .I pid file
 ]
@@ -19,10 +18,7 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-N "
 .I level
 ]
-.br
-.RB [ " \-u "
-.I userlevel
-]
+.RB [ " \-C " ]
 .RB [ " \-v " ]
 .LP
 .SH DESCRIPTION
@@ -119,17 +115,10 @@ verbosity (this is a forward-compatibility option).
 is started and controlled by
 .BR init (8).
 .TP
-.BI "\-u " "userlevel"
-This is a "catch all" option for some very seldomly-used user settings.
-The "userlevel" variable selects multiple things. Add the specific values
-to get the combined effect of them.
-A value of 1 prevents rsyslogd from parsing hostnames and tags inside
-messages.
-A value of 2 prevents rsyslogd from changing to the root directory. This
+.BI "\-C"
+This prevents rsyslogd from changing to the root directory. This
 is almost never a good idea in production use. This option was introduced
 in support of the internal testbed.
-To combine these two features, use a userlevel of 3 (1+2). Whenever you use
-an -u option, make sure you really understand what you do and why you do it.
 .TP
 .B "\-v"
 Print version and exit.
