@@ -1550,9 +1550,9 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
-		plugins/omczmq/Makefile \
+		contrib/omczmq/Makefile \
 		contrib/imzmq3/Makefile \
-		plugins/imczmq/Makefile \
+		contrib/imczmq/Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
