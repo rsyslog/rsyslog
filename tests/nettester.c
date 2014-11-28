@@ -269,7 +269,10 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 
 	if(cpid == 0) {    /* Child reads from pipe */
 		fclose(stdout);
-		dup(pipefd[1]);
+		if(dup(pipefd[1]) == -1) {
+			perror("dup");
+			exit(1);
+		}
 		close(pipefd[1]);
 		close(pipefd[0]);
 		fclose(stdin);
@@ -341,6 +344,17 @@ void unescapeTestdata(char *testdata)
 }
 
 
+/* A version of getline() that aborts on error. Primarily introduced
+ * to make the compiler happy.
+ */
+static void
+getline_abort(char **lineptr, size_t *const n, FILE *stream)
+{
+	if(getline(lineptr, n, stream) == -1) {
+		perror("getline");
+		exit(1);
+	}
+}
 /* expand variables in expected string. Here we use tilde (~) as expension
  * character, because the more natural % is very common in syslog messages
  * (and most importantly in the samples we currently have.
@@ -400,10 +414,10 @@ processTestFile(int fd, char *pszFileName)
 	/* skip comments at start of file */
 
 	while(!feof(fp)) {
-		getline(&testdata, &lenLn, fp);
+		getline_abort(&testdata, &lenLn, fp);
 		while(!feof(fp)) {
 			if(*testdata == '#')
-				getline(&testdata, &lenLn, fp);
+				getline_abort(&testdata, &lenLn, fp);
 			else
 				break; /* first non-comment */
 		}
@@ -429,7 +443,7 @@ processTestFile(int fd, char *pszFileName)
 		 * we do not care about EOF here, this will lead to a failure and thus
 		 * draw enough attention. -- rgerhards, 2009-03-31
 		 */
-		getline(&expected, &lenLn, fp);
+		getline_abort(&expected, &lenLn, fp);
 		expected[strlen(expected)-1] = '\0'; /* remove \n */
 		doVarsInExpected(&expected);
 
@@ -545,7 +559,7 @@ getHostname(void)
 		printf("error opening HOSTNAME configuration file\n");
 		exit(1);
 	}
-	getline(&ourHostName, &dummy, fp);
+	getline_abort(&ourHostName, &dummy, fp);
 	fclose(fp);
 }
 
