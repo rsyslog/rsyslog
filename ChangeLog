@@ -1,5 +1,9 @@
----------------------------------------------------------------------------
-Version 8.5.1 [v8-stable] 2014-10-??
+------------------------------------------------------------------------------
+Version 8.6.0 [v8-stable] 2014-12-02
+- configuration-setting rsyslogd command line options deprecated
+  For most of them, there are now proper configuration objects. Some few
+  will be completely dropped if nobody insists on them.  Additional info at
+  http://blog.gerhards.net/2014/11/phasing-out-legacy-command-line-options.html
 - empty rulesets have been permitted. They no longer raise a syntax error.
 - add parameter -N3 to enable config check of partial config file
   Use for config include files. Disables checking if any action exists at
