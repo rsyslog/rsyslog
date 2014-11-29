@@ -132,7 +132,7 @@ The following paramters can be set:
   If "off", suppress warnings issued when messages are received
   from non-authorized machines (those, that are in no AllowedSender list).
 
-- **parser.parseHostnameAndTag [on/off] available in 8.6.0+
+- **parser.parseHostnameAndTag** [on/off] available in 8.6.0+
 
   **Default:** on
 
