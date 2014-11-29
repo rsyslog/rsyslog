@@ -13,7 +13,7 @@ Quick overview of message flow and objects
 Messages enter rsyslog with the help of input modules. Then, they are
 passed to ruleset, where rules are conditionally applied. When a rule
 matches, the message is transferred to an action, which then does 
-something to the message, e.g. write it to a file or database or
+something to the message, e.g. write it to a file, database or
 forward it to a remote host.
 
 Processing Principles
@@ -46,9 +46,9 @@ Processing Principles
 
 - all rules are **always** fully evaluated, no matter if a filter matches
   or not (so we do **not** stop at the first match). If message processing
-  shall stop, the "discard" action (represented by the tilde character) must
-  explicitely be executed. If discard is executed, message processing 
-  immediately stops, without eveluating any further rules.
+  shall stop, the "discard" action (represented by the tilde character or the
+  stop command) must explicitely be executed. If discard is executed, 
+  message processing immediately stops, without eveluating any further rules.
 
 - an action list constains one or many actions
 
