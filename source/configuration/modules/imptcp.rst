@@ -41,6 +41,7 @@ These parameters can be used with the "input()" statement. They apply to
 the input they are specified with.
 
 .. function:: AddtlFrameDelimiter <Delimiter>
+
    This directive permits to specify an additional frame delimiter for
    plain tcp syslog. The industry-standard specifies using the LF
    character as frame delimiter. Some vendors, notable Juniper in their
