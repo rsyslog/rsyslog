@@ -59,7 +59,7 @@ struct instanceConf_s {
 	int sockType;
 	char *sockEndpoints;
 	char *topicList;
-	char *authType;
+	char *connType;
 	char *clientCertPath;
 	char *serverCertPath;
 	uchar *pszBindRuleset;
@@ -102,7 +102,7 @@ static struct cnfparamblk modpblk = {
 static struct cnfparamdescr inppdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
-	{ "authtype", eCmdHdlrGetWord, 0 },
+	{ "conntype", eCmdHdlrGetWord, 0 },
 	{ "topics", eCmdHdlrGetWord, 0 },
 	{ "clientcertpath", eCmdHdlrGetWord, 0 },
 	{ "servercertpath", eCmdHdlrGetWord, 0 },
@@ -121,7 +121,7 @@ static void setDefaults(instanceConf_t* iconf) {
 	iconf->sockType = -1;
 	iconf->sockEndpoints = NULL;
 	iconf->topicList = NULL;
-	iconf->authType = NULL;
+	iconf->connType = NULL;
 	iconf->clientCertPath = NULL;
 	iconf->serverCertPath = NULL;
 	iconf->pszBindRuleset = NULL;
@@ -182,6 +182,10 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 				inst->sockType = ZMQ_PULL;
 			}
 
+			else if (!strcmp("ROUTER", stringType)) {
+				inst->sockType = ZMQ_ROUTER;
+			}
+
 			else {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"imczmq: invalid sockType");
@@ -201,17 +205,19 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 		} 
 	
 		/* get the authentication type to use */
-		else if(!strcmp(inppblk.descr[i].name, "authtype")) {
-			inst->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
+		else if(!strcmp(inppblk.descr[i].name, "conntype")) {
+			inst->connType = es_str2cstr(pvals[i].val.d.estr, NULL);
 
 			/* make sure defined type is supported */
-			if ((inst->authType != NULL) && 
-					strcmp("CURVESERVER", inst->authType) &&
-					strcmp("CURVECLIENT", inst->authType)) {
-
+			if ((inst->connType != NULL) && 
+					strcmp("CURVESERVER", inst->connType) &&
+					strcmp("CURVECLIENT", inst->connType) &&
+					strcmp("CLIENT", inst->connType) &&
+					strcmp("SERVER", inst->connType))
+			{
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-						"imczmq: %s is not a valid authType",
-						inst->authType);
+						"imczmq: %s is not a valid connType",
+						inst->connType);
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
@@ -257,17 +263,21 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 	bool is_server = false;
 
-	DBGPRINTF("imczmq: authtype is: %s\n", iconf->authType);
+	DBGPRINTF("imczmq: conntype is: %s\n", iconf->connType);
 
-	/* if we are a CURVE server */
-	if (!strcmp(iconf->authType, "CURVESERVER")) {
-
+	if (!strcmp(iconf->connType, "CURVESERVER") || 
+			!stcmp(iconf->connType, "SERVER"))
+	{
 		is_server = true;
-
+		
 		/* set global auth domain */
 		zsock_set_zap_domain(pData->sock, "global");
+	}
 
-		/* set that we are a curve server */
+	/* if we are a CURVE server */
+	if (!strcmp(iconf->connType, "CURVESERVER")) {
+
+				/* set that we are a curve server */
 		zsock_set_curve_server(pData->sock, 1);
 
 		/* get and set our server cert */
@@ -287,7 +297,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(iconf->authType, "CURVECLIENT")) {
+	if (!strcmp(iconf->connType, "CURVECLIENT")) {
 		DBGPRINTF("imczmq: we are a curve client...\n");
 
 		is_server = false;
@@ -609,7 +619,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindRuleset);
 		free(inst->sockEndpoints);
 		free(inst->topicList);
-		free(inst->authType);
+		free(inst->connType);
 		free(inst->clientCertPath);
 		free(inst->serverCertPath);
 		inst_r = inst;

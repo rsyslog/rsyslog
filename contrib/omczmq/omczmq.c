@@ -53,7 +53,7 @@ typedef struct _instanceData {
 	zcert_t *serverCert;
 	char *sockEndpoints;
 	int sockType;
-	char *authType;
+	char *connType;
 	char *clientCertPath;
 	char *serverCertPath;
 	uchar *tplName;
@@ -66,7 +66,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
-	{ "authtype", eCmdHdlrGetWord, 0 },
+	{ "conntype", eCmdHdlrGetWord, 0 },
 	{ "clientcertpath", eCmdHdlrGetWord, 0 },
 	{ "servercertpath", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
@@ -106,7 +106,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	bool is_server = false;
 
 	/* if we are a CURVE server */
-	if (!strcmp(pData->authType, "CURVESERVER")) {
+	if (!strcmp(pData->connType, "CURVESERVER")) {
 		DBGPRINTF("omczmq: we are a curve server...\n");
 		
 		is_server = true;
@@ -134,7 +134,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(pData->authType, "CURVECLIENT")) {
+	if (!strcmp(pData->connType, "CURVECLIENT")) {
 		DBGPRINTF("omczmq: we are a curve client...\n");
 
 		is_server = false;
@@ -205,7 +205,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->tplName = NULL;
 	pData->sockType = -1;
 	pData->authActor = NULL;
-	pData->authType = NULL;
+	pData->connType = NULL;
 	pData->clientCertPath = NULL;
 	pData->serverCertPath = NULL;
 }
@@ -242,7 +242,7 @@ CODESTARTfreeInstance
 	zcert_destroy(&pData->clientCert);
 
 	free(pData->sockEndpoints);
-	free(pData->authType);
+	free(pData->connType);
 	free(pData->clientCertPath);
 	free(pData->serverCertPath);
 	free(pData->tplName);
@@ -312,6 +312,10 @@ CODESTARTnewActInst
 				pData->sockType = ZMQ_PUSH;
 			}
 
+			else if (!strcmp("DEALER", stringType)) {
+				pData->sockType = ZMQ_DEALER;
+			}
+
 			else {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"omczmq: invalid socktype");
@@ -320,18 +324,19 @@ CODESTARTnewActInst
 		} 
 
 		/* get the authentication type to use */
-		else if (!strcmp(actpblk.descr[i].name, "authtype")) {
-			pData->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
+		else if (!strcmp(actpblk.descr[i].name, "conntype")) {
+			pData->connType = es_str2cstr(pvals[i].val.d.estr, NULL);
 
 			/* make sure defined type is supported */
-			if ((pData->authType != NULL) && 
-					strcmp("CURVESERVER", pData->authType) &&
-					strcmp("CURVECLIENT", pData->authType))
+			if ((inst->connType != NULL) && 
+					strcmp("CURVESERVER", inst->connType) &&
+					strcmp("CURVECLIENT", inst->connType) &&
+					strcmp("CLIENT", inst->connType) &&
+					strcmp("SERVER", inst->connType))
 			{
-
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-						"omczmq: %s is not a valid authType",
-						pData->authType);
+						"omczmq: %s is not a valid connType",
+						pData->connType);
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
