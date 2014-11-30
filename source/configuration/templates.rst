@@ -7,7 +7,7 @@ Every output in rsyslog uses templates - this holds true for files, user
 messages and so on. The database writer expects its template to be a
 proper SQL statement - so this is highly customizable too. You might ask
 how does all of this work when no templates at all are specified. Good
-question ;) The answer is simple, though. Templates compatible with the
+question ;). The answer is simple, though. Templates compatible with the
 stock syslogd formats are hardcoded into rsyslogd. So if no template is
 specified, we use one of these hardcoded templates. Search for
 "template\_" in syslogd.c and you will find the hardcoded ones.
