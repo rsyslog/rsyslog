@@ -31,6 +31,7 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -456,7 +457,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/udp-msgreduc-orgmsg-vg.conf \
 	   udp-msgreduc-vg.sh \
 	   testsuites/udp-msgreduc-vg.conf \
-	   manytcp-too-few-tls.sh \
+	   manytcp-too-few-tls-vg.sh \
 	   testsuites/manytcp-too-few-tls.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
