@@ -1,9 +1,9 @@
 IP Address Anonimization Module (mmanon)
 ========================================
 
-**Module Name:    mmanon**
+**Module Name**: mmanon
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Available since**: 7.3.7
 
