@@ -214,7 +214,7 @@ doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
 			relpCltAddPermittedPeer(pWrkrData->pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
 	}
-	if(pData->localClientIP == NULL) {
+	if(pData->localClientIP != NULL) {
 		if(relpCltSetClientIP(pWrkrData->pRelpClt, pData->localClientIP) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
@@ -283,7 +283,10 @@ setInstParamDefaults(instanceData *pData)
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
 	pData->authmode = NULL;
-	pData->localClientIP = (uchar*)strdup((char*)glbl.GetSourceIPofLocalClient());
+	if(glbl.GetSourceIPofLocalClient() == NULL)
+		pData->localClientIP = NULL;
+	else
+		pData->localClientIP = (uchar*)strdup((char*)glbl.GetSourceIPofLocalClient());
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
