@@ -14,7 +14,7 @@ input(
 	endpoints="tcp://*:24555"
 	topics="topic1,topic2,topic3"
 	socktype="SUB"
-	authtype="CURVESERVER"
+	conntype="CURVESERVER"
 	curveclientcert="/etc/curve.d/"
 	curveservercert="/etc/curve.d/example_curve_server_cert"
 )

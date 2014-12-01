@@ -14,7 +14,7 @@ action(
 	type="omczmq"
 	endpoints="tcp://some.server.com:24445"
 	socktype="PUB"
-	authtype="CURVECLIENT"
+	conntype="CURVECLIENT"
 	curveclientcert="/etc/curve.d/example_curve_client_cert"
 	curveservercert="/etc/curve.d/example_curve_server_cert"
 )
