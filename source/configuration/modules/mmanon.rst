@@ -1,9 +1,9 @@
 IP Address Anonimization Module (mmanon)
 ========================================
 
-**Module Name:    mmanon**
+**Module Name**: mmanon
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Available since**: 7.3.7
 
@@ -31,6 +31,7 @@ Currently none.
 **Action Confguration Parameters**:
 
 -  **mode** - default "rewrite"
+
    There exists the "simple" and "rewrite" mode. In simple mode, only
    octets as whole can be anonymized and the length of the message is
    never changed. This means that when the last three octets of the
@@ -43,7 +44,9 @@ Currently none.
    of bits and it will also normlize the address, so that no information
    about the original IP address is available. So in the above example,
    10.1.12.123 would be anonymized to 10.0.0.0.
--  **ipv4.bits** - default 16
+
+-  **ipv4.bits** - default "16"
+
    This set the number of bits that should be anonymized (bits are from
    the right, so lower bits are anonymized first). This setting permits
    to save network information while still anonymizing user-specific
@@ -59,6 +62,7 @@ Currently none.
    value of 12 will become 16 in simple mode (an error message is also
    emitted).
 -  **replacementChar** - default "x"
+
    In simple mode, this sets the character that the to-be-anonymized
    part of the IP address is to be overwritten with. In rewrite mode,
    this parameter is **not permitted**, as in this case we need not
@@ -82,8 +86,12 @@ with the message anonymized. Note that once mmanon has run, access to
 the original message is no longer possible (execept if stored in user
 variables before anonymization).
 
-module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
-action(type="mmanon") action(type="omfile" file="/path/to/anon.log")
+::
+
+  module(load="mmanon") 
+  action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon") 
+  action(type="omfile" file="/path/to/anon.log")
 
 This next snippet is almost identical to the first one, but here we
 anonymize the full IPv4 address. Note that by modifying the number of
@@ -94,9 +102,11 @@ this example the replacement is done via asterisks instead of lower-case
 "x"-letters. Also keep in mind that "replacementChar" can only be set in
 simple mode.
 
-module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
-action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="\*")
-action(type="omfile" file="/path/to/anon.log")
+::
+
+  module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="\*")
+  action(type="omfile" file="/path/to/anon.log")
 
 The next snippet is also based on the first one, but anonimzes an "odd"
 number of bits, 12. The value of 12 is used by some folks as a
@@ -104,9 +114,11 @@ compromise between keeping privacy and still permiting to gain some more
 in-depth insight from log files. Note that anonymizing 12 bits may be
 insufficient to fulfill legal requirements (if such exist).
 
-module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
-action(type="mmanon" ipv4.bits="12") action(type="omfile"
-file="/path/to/anon.log")
+::
+
+  module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon" ipv4.bits="12") action(type="omfile"
+  file="/path/to/anon.log")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
