@@ -537,13 +537,6 @@ dropPrivileges(rsconf_t *cnf)
 {
 	DEFiRet;
 
-	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
-	 * because outputs are already running at this time. However, we can implement
-	 * dropping of privileges rather quickly and it will work in many cases. While it is not
-	 * the ultimate solution, the current one is still much better than not being able to
-	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
-	 * we should do over time. TODO -- rgerhards, 2008-11-19
-	 */
 	if(cnf->globals.gidDropPriv != 0) {
 		doDropPrivGid(ourConf->globals.gidDropPriv);
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
