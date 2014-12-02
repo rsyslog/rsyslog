@@ -72,18 +72,33 @@ Currently none.
 This is a very simple use case where each message is parsed. The default
 separator character of comma is being used.
 
-module(load="mmfields") template(name="ftpl" type=string
-string="%$!%\\n") action(type="omfields") action(type="omfile"
-file="/path/to/logfile" template="ftpl")
+:: 
+
+  module(load="mmfields")
+  template(name="ftpl"
+           type=string
+           string="%$!%\\n")
+  action(type="omfields")
+  action(type="omfile"
+         file="/path/to/logfile"
+         template="ftpl")
 
 The following sample is similar to the previous one, but this time the
 colon is used as separator and data is written into the "$!mmfields"
 json path.
 
-module(load="mmfields") template(name="ftpl" type=string
-string="%$!%\\n") action(type="omfields" separator=":"
-jsonRoot="!mmfields") action(type="omfile" file="/path/to/logfile"
-template="ftpl")
+::
+
+  module(load="mmfields")
+  template(name="ftpl"
+           type=string
+           string="%$!%\\n")
+  action(type="omfields"
+         separator=":"
+         jsonRoot="!mmfields")
+         action(type="omfile"
+         file="/path/to/logfile"
+         template="ftpl")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
