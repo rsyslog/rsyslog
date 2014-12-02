@@ -1,9 +1,9 @@
 Fix invalid UTF-8 Sequences (mmutf8fix)
 =======================================
 
-**Module Name:    mmutf8fix**
+**Module Name:** mmutf8fix
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Available since**: 7.5.4
 
@@ -54,6 +54,7 @@ Currently none.
 **Action Confguration Parameters**:
 
 -  **mode** - **utf-8**/controlcharacters
+
    This sets the basic detection mode.
    In **utf-8** mode (the default), proper UTF-8 encoding is checked and
    bytes which are not proper UTF-8 sequences are acted on. If a proper
@@ -70,6 +71,7 @@ Currently none.
    useful if it is known that no characters outside of the US-ASCII
    alphabet need to be processed.
 -  **replacementChar** - default " " (space), a single character
+
    This is the character that invalid sequences are replaced by.
    Currently, it MUST be a **printable** US-ASCII character.
 
@@ -84,6 +86,7 @@ with the message fixed. Note that once mmutf8fix has run, access to the
 original message is no longer possible.
 
 ::
+
   module(load="mmutf8fix") action(type="omfile"
   file="/path/to/non-fixed.log") action(type="mmutf8fix")
   action(type="omfile" file="/path/to/fixed.log")
