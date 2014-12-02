@@ -1050,6 +1050,10 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 			}
 			continue;
 		}
+		if(param->flags & CNFPARAM_DEPRECATED) {
+			parser_errmsg("parameter '%s' deprecated but accepted, consider "
+			  "removing or replacing it", param->name);
+		}
 		if(vals[i].bUsed) {
 			parser_errmsg("parameter '%s' specified more than once - "
 			  "one instance is ignored. Fix config", param->name);
@@ -1481,6 +1485,90 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	return;
 }
 
+static inline es_str_t*
+doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict__ const findVal, struct var *__restrict__ const replaceWithVal) {
+    int freeOperand, freeFind, freeReplacement;
+    es_str_t *str = var2String(operandVal, &freeOperand);
+    es_str_t *findStr = var2String(findVal, &freeFind);
+    es_str_t *replaceWithStr = var2String(replaceWithVal, &freeReplacement);
+    uchar *find = es_getBufAddr(findStr);
+    uchar *replaceWith = es_getBufAddr(replaceWithStr);
+    uint lfind = es_strlen(findStr);
+    uint lReplaceWith = es_strlen(replaceWithStr);
+    uint size = 0;
+    uchar* src_buff = es_getBufAddr(str);
+    uint i, j;
+    for(i = j = 0; i <= es_strlen(str); i++, size++) {
+        if (j == lfind) {
+            size = size - lfind + lReplaceWith;
+            j = 0;
+        }
+		if (i == es_strlen(str)) break;
+		if (src_buff[i] == find[j]) {
+			j++;
+		} else if (j > 0) {
+			i -= (j - 1);
+			size -= (j - 1);
+			j = 0;
+		}
+    }
+    es_str_t *res = es_newStr(size);
+    unsigned char* dest = es_getBufAddr(res);
+    uint k, s;
+    for(i = j = k = s = 0; i <= es_strlen(str); i++, s++) {
+        if (j == lfind) {
+            for (k = 0; k < lReplaceWith; k++) {
+                dest[s - j + k] = replaceWith[k];
+            }
+            s = s - j + lReplaceWith;
+            j = 0;
+        }
+		if (i == es_strlen(str)) break;
+		if (src_buff[i] == find[j]) {
+			j++;
+		} else {
+			if (j > 0) {
+				i -= j;
+				s -= j;
+				j = 0;
+			}
+			dest[s] = src_buff[i];
+		}
+    }
+    res->lenStr = size;
+    if(freeOperand) es_deleteStr(str);
+    if(freeFind) es_deleteStr(findStr);
+    if(freeReplacement) es_deleteStr(replaceWithStr);
+    return res;
+}
+
+static inline es_str_t*
+doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ const wrapperVal, struct var *__restrict__ const escaperVal) {
+    int freeSource, freeWrapper;
+    es_str_t *sourceStr;
+    if (escaperVal) {
+        sourceStr = doFuncReplace(sourceVal, wrapperVal, escaperVal);
+        freeSource = 1;
+    } else {
+        sourceStr = var2String(sourceVal, &freeSource);
+    }
+    es_str_t *wrapperStr = var2String(wrapperVal, &freeWrapper);
+    uchar *src = es_getBufAddr(sourceStr);
+    uchar *wrapper = es_getBufAddr(wrapperStr);
+    uint lWrapper = es_strlen(wrapperStr);
+    uint lSrc = es_strlen(sourceStr);
+    uint totalLen = lSrc + 2 * lWrapper;
+    es_str_t *res = es_newStr(totalLen);
+    uchar* resBuf = es_getBufAddr(res);
+    memcpy(resBuf, wrapper, lWrapper);
+    memcpy(resBuf + lWrapper, src, lSrc);
+    memcpy(resBuf + lSrc + lWrapper, wrapper, lWrapper);
+    res->lenStr = totalLen;
+    if (freeSource) es_deleteStr(sourceStr);
+    if (freeWrapper) es_deleteStr(wrapperStr);
+    return res;
+}
+
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -1518,6 +1606,26 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
 		}
 		ret->datatype = 'N';
+		break;
+	case CNFFUNC_REPLACE:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		cnfexprEval(func->expr[2], &r[2], usrptr);
+		ret->d.estr = doFuncReplace(&r[0], &r[1], &r[2]);
+		ret->datatype = 'S';
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		varFreeMembers(&r[2]);
+		break;
+	case CNFFUNC_WRAP:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		if(func->nParams == 3) cnfexprEval(func->expr[2], &r[2], usrptr);
+		ret->d.estr = doFuncWrap(&r[0], &r[1], func->nParams > 2 ? &r[2] : NULL);
+		ret->datatype = 'S';
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+		if(func->nParams > 3) varFreeMembers(&r[2]);
 		break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
@@ -3550,6 +3658,23 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			return CNFFUNC_INVALID;
 		}
 		return CNFFUNC_LOOKUP;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"replace", sizeof("replace") - 1)) {
+		if(nParams != 3) {
+			parser_errmsg("number of parameters for replace() must be three "
+                          "(operand_string, fragment_to_find, fragment_to_replace_in_its_place) "
+                          "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_REPLACE;
+	} else if(!es_strbufcmp(fname, (unsigned char*)"wrap", sizeof("wrap") - 1)) {
+		if(nParams < 2 || nParams > 3) {
+			parser_errmsg("number of parameters for wrap() must either be "
+                          "two (operand_string, wrapper) or"
+                          "three (operand_string, wrapper, wrapper_escape_str)"
+                          "but is %d.", nParams);
+			return CNFFUNC_INVALID;
+		}
+		return CNFFUNC_WRAP;
 	} else {
 		return CNFFUNC_INVALID;
 	}

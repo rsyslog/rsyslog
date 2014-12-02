@@ -49,6 +49,40 @@ DEFobjCurrIf(errmsg)
 /* the following table of ten powers saves us some computation */
 static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 
+/* the following table saves us from computing an additional date to get
+ * the ordinal day of the year - at least from 1967-2099 */
+static const int yearInSec_startYear = 1967;
+/* for x in $(seq 1967 2099) ; do
+ *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)
+ * done |fold -w 70 -s */
+static const time_t yearInSecs[] = {
+	-63158401, -31536001, -1, 31535999, 63071999, 94694399, 126230399,
+	157766399, 189302399, 220924799, 252460799, 283996799, 315532799,
+	347155199, 378691199, 410227199, 441763199, 473385599, 504921599,
+	536457599, 567993599, 599615999, 631151999, 662687999, 694223999,
+	725846399, 757382399, 788918399, 820454399, 852076799, 883612799,
+	915148799, 946684799, 978307199, 1009843199, 1041379199, 1072915199,
+	1104537599, 1136073599, 1167609599, 1199145599, 1230767999,
+	1262303999, 1293839999, 1325375999, 1356998399, 1388534399,
+	1420070399, 1451606399, 1483228799, 1514764799, 1546300799,
+	1577836799, 1609459199, 1640995199, 1672531199, 1704067199,
+	1735689599, 1767225599, 1798761599, 1830297599, 1861919999,
+	1893455999, 1924991999, 1956527999, 1988150399, 2019686399,
+	2051222399, 2082758399, 2114380799, 2145916799, 2177452799,
+	2208988799, 2240611199, 2272147199, 2303683199, 2335219199,
+	2366841599, 2398377599, 2429913599, 2461449599, 2493071999,
+	2524607999, 2556143999, 2587679999, 2619302399, 2650838399,
+	2682374399, 2713910399, 2745532799, 2777068799, 2808604799,
+	2840140799, 2871763199, 2903299199, 2934835199, 2966371199,
+	2997993599, 3029529599, 3061065599, 3092601599, 3124223999,
+	3155759999, 3187295999, 3218831999, 3250454399, 3281990399,
+	3313526399, 3345062399, 3376684799, 3408220799, 3439756799,
+	3471292799, 3502915199, 3534451199, 3565987199, 3597523199,
+	3629145599, 3660681599, 3692217599, 3723753599, 3755375999,
+	3786911999, 3818447999, 3849983999, 3881606399, 3913142399,
+	3944678399, 3976214399, 4007836799, 4039372799, 4070908799,
+	4102444799};
+
 /* ------------------------------ methods ------------------------------ */
 
 
@@ -937,7 +971,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  */
 time_t syslogTime2time_t(struct syslogTime *ts)
 {
-	long MonthInDays, NumberOfYears, NumberOfDays, i;
+	long MonthInDays, NumberOfYears, NumberOfDays;
 	int utcOffset;
 	time_t TimeInUnixFormat;
 
@@ -996,36 +1030,9 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 			it should be until last day
 		3) Calculating this period (NumberOfDays) in seconds*/
 
-	NumberOfYears = ts->year - 1970;										
+	NumberOfYears = ts->year - yearInSec_startYear - 1;
 	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = NumberOfYears * 31536000 + NumberOfDays * 86400;
-
-	/* Now we need to adjust the number of years for leap
-	 * year processing. If we are in Jan or Feb, this year
-	 * will never be considered - because we haven't arrived
-	 * at then end of Feb right now. [Feb, 29th in a leap year
-	 * is handled correctly, because the day (29) is correctly
-	 * added to the date serial]
-	 */
-	if(ts->month < 3)
-		NumberOfYears--;
-
-	/*...AND ADDING ONE DAY FOR EACH YEAR WITH 366 DAYS
-	 * note that we do not handle 2000 any special, as it was a
-	 * leap year. The current code works OK until 2100, when it will
-	 * break. As we do not process future dates, we accept that fate...
-	 * the whole thing could be refactored by a table-based approach.
-	 */
-	for(i = 1;i <= NumberOfYears; i++)
-	{
-	/*	If i = 2 we have 1972, which was a Year with 366 Days
-		and if (i + 2) Mod (4) = 0 we have a Year after 1972
-		which is also a Year with 366 Days (repeated every 4 Years) */
-		if ((i == 2) || (((i + 2) % 4) == 0))
-		{	/*Year with 366 Days!!!*/
-			TimeInUnixFormat += 86400;
-		}	
-	}
+	TimeInUnixFormat = yearInSecs[NumberOfYears] + NumberOfDays * 86400;
 
 	/*Add Hours, minutes and seconds */
 	TimeInUnixFormat += ts->hour*60*60;
@@ -1080,7 +1087,72 @@ int getWeekdayNbr(struct syslogTime *ts)
 	return wday;
 }
 
+/* getOrdinal - 1-366 day of the year
+ * I've given little thought to leap seconds here.
+ */
+int getOrdinal(struct syslogTime *ts)
+{
+	int yday;
+	time_t thistime;
+	time_t previousyears;
+	int utcOffset;
+	time_t seconds_into_year;
 
+	thistime = syslogTime2time_t(ts);
+
+	previousyears = yearInSecs[ts->year - yearInSec_startYear - 1];
+
+	/* adjust previous years to match UTC offset */
+	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;
+	if(ts->OffsetMode == '+')
+		utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
+	previousyears += utcOffset;
+
+	/* subtract seconds from previous years */
+	seconds_into_year = thistime - previousyears;
+
+	/* divide by seconds in a day and truncate to int */
+	yday = seconds_into_year / 86400;
+	return yday;
+}
+
+/* getWeek - 1-52 week of the year */
+int getWeek(struct syslogTime *ts)
+{
+	int weekNum;
+	struct syslogTime yt;
+	int curDow;
+	int jan1Dow;
+	int curYearDay;
+
+	/* initialize a timestamp for january 1st of the current year */
+	yt.year = ts->year;
+	yt.month = 1;
+	yt.day = 1;
+	yt.hour = 0;
+	yt.minute = 0;
+	yt.second = 0;
+	yt.secfracPrecision = 0;
+	yt.secfrac = 0;
+	yt.OffsetMinute = ts->OffsetMinute;
+	yt.OffsetHour = ts->OffsetHour;
+	yt.OffsetMode = ts->OffsetMode;
+	yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
+
+	/* get current day in year, current day of week
+	 * and the day of week of 1/1 */
+	curYearDay = getOrdinal(ts);
+	curDow = getWeekdayNbr(ts);
+	jan1Dow = getWeekdayNbr(&yt);
+
+	/* calculate week of year for given date by pinning 1/1 as start
+	 * of year, then going back and adjusting for the actual week day. */
+	weekNum = ((curYearDay + 6) / 7);
+	if (curDow < jan1Dow) {
+		++weekNum;
+	}
+	return weekNum;
+}
 
 /* queryInterface function
  * rgerhards, 2008-03-05

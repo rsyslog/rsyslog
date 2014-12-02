@@ -33,6 +33,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <signal.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -317,6 +318,7 @@ addListner(instanceConf_t *inst)
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
+			CHKiRet(statsobj.SetOrigin(newlcnfinfo->stats, (uchar*)"imudp"));
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrSubmit)));
@@ -1158,6 +1160,7 @@ wrkr(void *myself)
 	/* support statistics gathering */
 	statsobj.Construct(&(pWrkr->stats));
 	statsobj.SetName(pWrkr->stats, thrdName);
+	statsobj.SetOrigin(pWrkr->stats, (uchar*)"imudp");
 	STATSCOUNTER_INIT(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
 	statsobj.AddCounter(pWrkr->stats, UCHAR_CONSTANT("called.recvmmsg"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkr->ctrCall_recvmmsg));
@@ -1196,6 +1199,9 @@ CODESTARTrunInput
 	wrkrInfo[i].id = i;
 	wrkr(&wrkrInfo[i]);
 
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
+		pthread_kill(wrkrInfo[i].tid, SIGTTIN);
+	}
 	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
 		pthread_join(wrkrInfo[i].tid, NULL);
 	}

@@ -57,9 +57,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef USE_NETZIP
-#include <zlib.h>
-#endif
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

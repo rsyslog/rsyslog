@@ -39,13 +39,13 @@ typedef unsigned char uintTiny;	/* 0..255! */
 
 /* define some base data types */
 
+typedef uint16_t syslog_pri_t; /* to be used for syslog PRI values */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
 typedef struct ruleset_s ruleset_t;
 typedef struct rule_s rule_t;
-//typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;

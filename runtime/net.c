@@ -12,32 +12,23 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007-2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
- * rgerhards, 2008-04-16: I changed this code to LGPL today. I carefully analyzed
- * that it does not borrow code from the original sysklogd and that I have 
- * permission to do so from all other contributors. My analysis found that all
- * code from sysklogd has been superseeded by our own functionality, so it 
- * is OK to move this file to LGPL. Some variable sysklogd variable names
- * remain, but even this will change as the net object evolves.
+ * This file is part of rsyslog.
  *
- * This file is part of the rsyslog runtime library.
- *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include "config.h"
 
@@ -1137,40 +1128,60 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
 /* get the name of the local host. A pointer to a character pointer is passed
  * in, which on exit points to the local hostname. This buffer is dynamically
  * allocated and must be free()ed by the caller. If the functions returns an
- * error, the pointer is NULL. This function is based on GNU/Hurd's localhostname
- * function.
- * rgerhards, 20080-04-10
+ * error, the pointer is NULL.
+ * This function always tries to return a FQDN, even so be quering DNS. So it
+ * is safe to assume for the caller that when the function does not return
+ * a FQDN, it simply is not available. The domain part of that string is
+ * normalized to lower case. The hostname is kept in mixed case for historic
+ * reasons.
  */
 static rsRetVal
 getLocalHostname(uchar **ppName)
 {
 	DEFiRet;
-	uchar *buf = NULL;
-	size_t buf_len = 0;
+	char hnbuf[8192];
+	uchar *fqdn = NULL;
 
-	assert(ppName != NULL);
-
-	do {
-		if(buf == NULL) {
-			buf_len = 128;        /* Initial guess */
-			CHKmalloc(buf = MALLOC(buf_len));
-		} else {
-			uchar *p;
-
-			buf_len += buf_len;
-			CHKmalloc(p = realloc (buf, buf_len));
-			buf = p;
-		}
-	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
-
-	*ppName = buf;
-	buf = NULL;
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(buf != NULL)
-			free(buf);
+	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
+		strcpy(hnbuf, "localhost");
+	} else {
+		hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
 	}
+	char *dot = strstr(hnbuf, ".");
+	if(dot == NULL) {
+		/* we need to (try) to find the real name via resolver */
+		struct hostent *hent = gethostbyname((char*)hnbuf);
+		if(hent) {
+			int i = 0;
+			if(hent->h_aliases) {
+				const size_t hnlen = strlen(hnbuf);
+				for(i = 0; hent->h_aliases[i]; i++) {
+					if(!strncmp(hent->h_aliases[i], hnbuf, hnlen)
+					   && hent->h_aliases[i][hnlen] == '.') {
+						break; /* match! */
+					}
+				}
+			}
+			if(hent->h_aliases && hent->h_aliases[i]) {
+				CHKmalloc(fqdn = (uchar*)strdup(hent->h_aliases[i]));
+			} else {
+				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
+			}
+			dot = strstr((char*)fqdn, ".");
+		}
+	}
+
+	if(fqdn == NULL) {
+		/* already was FQDN or we could not obtain a better one */
+		CHKmalloc(fqdn = (uchar*) strdup(hnbuf));
+	}
+
+	if(dot != NULL)
+		for(char *p = dot+1 ; *p ; ++p)
+			*p = tolower(*p);
+
+	*ppName = fqdn;
+finalize_it:
 	RETiRet;
 }
 

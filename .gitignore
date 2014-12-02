@@ -54,5 +54,6 @@ checklog
 *.log
 logfile*
 *.conf
+!tests/testsuites/*.conf
 log
 /target

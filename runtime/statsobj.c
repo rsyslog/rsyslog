@@ -3,7 +3,7 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2012 Adiscon GmbH.
+ * Copyright 2010-2014 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -121,6 +121,20 @@ statsobjConstructFinalize(statsobj_t *pThis)
 }
 
 
+/* set origin (module name, etc).
+ * Note that we make our own copy of the memory, caller is
+ * responsible to free up name it passes in (if required).
+ */
+static rsRetVal
+setOrigin(statsobj_t *pThis, uchar *origin)
+{
+	DEFiRet;
+	CHKmalloc(pThis->origin = ustrdup(origin));
+finalize_it:
+	RETiRet;
+}
+
+
 /* set name. Note that we make our own copy of the memory, caller is
  * responsible to free up name it passes in (if required).
  */
@@ -197,6 +211,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
@@ -204,6 +219,16 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	rsCStrAppendStr(pcstr, pThis->name);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
+
+	if(pThis->origin != NULL) {
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("origin"), 6);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		rsCStrAppendStr(pcstr, pThis->origin);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
+	}
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
@@ -248,6 +273,12 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 	CHKiRet(cstrConstruct(&pcstr));
 	rsCStrAppendStr(pcstr, pThis->name);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(": "), 2);
+
+	if(pThis->origin != NULL) {
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("origin="), 7);
+		rsCStrAppendStr(pcstr, pThis->origin);
+		cstrAppendChar(pcstr, ' ');
+	}
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
@@ -337,6 +368,7 @@ CODESTARTobjDestruct(statsobj)
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
+	free(pThis->origin);
 ENDobjDestruct(statsobj)
 
 
@@ -365,6 +397,7 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->Destruct = statsobjDestruct;
 	pIf->DebugPrint = statsobjDebugPrint;
 	pIf->SetName = setName;
+	pIf->SetOrigin = setOrigin;
 	//pIf->GetStatsLine = getStatsLine;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;

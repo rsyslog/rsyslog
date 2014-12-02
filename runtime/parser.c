@@ -29,9 +29,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
-#ifdef USE_NETZIP
 #include <zlib.h>
-#endif
 
 #include "rsyslog.h"
 #include "dirty.h"
@@ -324,7 +322,6 @@ ENDobjDestruct(parser)
 static inline rsRetVal uncompressMessage(msg_t *pMsg)
 {
 	DEFiRet;
-#	ifdef USE_NETZIP
 	uchar *deflateBuf = NULL;
 	uLongf iLenDefBuf;
 	uchar *pszMsg;
@@ -370,20 +367,6 @@ static inline rsRetVal uncompressMessage(msg_t *pMsg)
 finalize_it:
 	if(deflateBuf != NULL)
 		free(deflateBuf);
-
-#	else /* ifdef USE_NETZIP */
-
-	/* in this case, we still need to check if the message is compressed. If so, we must
-	 * tell the user we can not accept it.
-	 */
-	if(pMsg->iLenRawMsg > 0 && *pMsg->pszRawMsg == 'z') {
-		errmsg.LogError(0, NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
-		         "support enabled. The message will be ignored.");
-		ABORT_FINALIZE(RS_RET_NO_ZIP);
-	}	
-
-finalize_it:
-#	endif /* ifdef USE_NETZIP */
 
 	RETiRet;
 }
@@ -596,7 +579,7 @@ finalize_it:
 static inline rsRetVal
 ParsePRI(msg_t *pMsg)
 {
-	unsigned pri;
+	syslog_pri_t pri;
 	uchar *msg;
 	int lenMsg;
 	DEFiRet;
@@ -622,8 +605,7 @@ ParsePRI(msg_t *pMsg)
 			if(pri > LOG_MAXPRI)
 				pri = LOG_PRI_INVLD;
 		}
-		pMsg->iFacility = pri2fac(pri);
-		pMsg->iSeverity = pri2sev(pri);
+		msgSetPRI(pMsg, pri);
 		MsgSetAfterPRIOffs(pMsg, (pri == LOG_PRI_INVLD) ? 0 : msg - pMsg->pszRawMsg);
 	}
 	RETiRet;
@@ -649,9 +631,7 @@ ParseMsg(msg_t *pMsg)
 	if(pMsg->iLenRawMsg == 0)
 		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
-#	ifdef USE_NETZIP
 	CHKiRet(uncompressMessage(pMsg));
-#	endif
 
 	/* we take the risk to print a non-sanitized string, because this is the best we can get
 	 * (and that functionality is too important for debugging to drop it...).

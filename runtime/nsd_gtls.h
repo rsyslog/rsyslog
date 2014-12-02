@@ -49,15 +49,15 @@ struct nsd_gtls_s {
 	} authMode;
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
-	gnutls_session sess;
+	gnutls_session_t sess;
 	int bHaveSess;		/* as we don't know exactly which gnutls_session values are invalid, we use this one
 				   to flag whether or not we are in a session (same as -1 for a socket meaning no sess) */
 	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
-	gnutls_x509_crt ourCert;	/**< our certificate, if in client mode (unused in server mode) */
-	gnutls_x509_privkey ourKey;	/**< our private key, if in client mode (unused in server mode) */
+	gnutls_x509_crt_t ourCert;	/**< our certificate, if in client mode (unused in server mode) */
+	gnutls_x509_privkey_t ourKey;	/**< our private key, if in client mode (unused in server mode) */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 	char *pszRcvBuf;

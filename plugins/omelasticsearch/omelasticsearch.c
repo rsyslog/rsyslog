@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1039,6 +1039,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&indexStats));
 	CHKiRet(statsobj.SetName(indexStats, (uchar *)"omelasticsearch"));
+	CHKiRet(statsobj.SetOrigin(indexStats, (uchar *)"omelasticsearch"));
 	STATSCOUNTER_INIT(indexSubmit, mutIndexSubmit);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexSubmit));

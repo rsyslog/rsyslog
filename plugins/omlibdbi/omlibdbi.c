@@ -10,7 +10,7 @@
  *
  * File begun on 2008-02-14 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2008-2013 Adiscon GmbH.
+ * Copyright 2008-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -183,7 +183,6 @@ ENDisCompatibleWithFeature
 static void closeConn(instanceData *pData)
 {
 	ASSERT(pData != NULL);
-
 	if(pData->conn != NULL) {	/* just to be on the safe side... */
 		dbi_conn_close(pData->conn);
 		pData->conn = NULL;
@@ -192,7 +191,6 @@ static void closeConn(instanceData *pData)
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	closeConn(pData);
 	free(pData->drvrName);
 	free(pData->host);
 	free(pData->usrName);
@@ -202,6 +200,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	closeConn(pWrkrData->pData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
@@ -449,6 +448,18 @@ BEGINendCnfLoad
 CODESTARTendCnfLoad
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
+	free(cs.dbiDrvrDir);
+	free(cs.drvrName);
+	free(cs.host);
+	free(cs.usrName);
+	free(cs.pwd);
+	free(cs.dbName);
+	cs.dbiDrvrDir = NULL;
+	cs.drvrName = NULL;
+	cs.host = NULL;
+	cs.usrName = NULL;	
+	cs.pwd = NULL;
+	cs.dbName = NULL;
 	free(pszFileDfltTplName);
 	pszFileDfltTplName = NULL;
 ENDendCnfLoad

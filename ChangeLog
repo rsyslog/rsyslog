@@ -1,3 +1,95 @@
+------------------------------------------------------------------------------
+Version 8.6.0 [v8-stable] 2014-12-02
+NOTE: This version also incorporates all changes and enhancements made for
+v8.5.0, but in a stable release. For details see immediately below.
+- configuration-setting rsyslogd command line options deprecated
+  For most of them, there are now proper configuration objects. Some few
+  will be completely dropped if nobody insists on them.  Additional info at
+  http://blog.gerhards.net/2014/11/phasing-out-legacy-command-line-options.html
+- new and enhanced plugins for 0mq. These are currently experimantal.
+  Thanks to Brian Knox who contributed the modules and is their author.
+- empty rulesets have been permitted. They no longer raise a syntax error.
+- add parameter -N3 to enable config check of partial config file
+  Use for config include files. Disables checking if any action exists at
+  all.
+- rsyslogd -e option has finally been removed
+  It is deprectated since many years.
+- testbench improvements
+  Testbench is now more robust and has additional tests.
+- testbench is now by default disabled
+  To enable it, use --enable-testbench. This was done as the testbench now
+  does better checking if required modules are present and this in turn
+  would lead to configure error messages where non previously were if we
+  would leave --enable-testbench on by default. Thus we have turned it off.
+  This should not be an issue for those few testbench users.
+- add new RainerScript functions warp() and replace()
+  Thanks to Singh Janmejay for the patch.
+- mmnormalize can now also work on a variable
+  Thanks to Singh Janmejay for the patch.
+- new property date options for day ordinal and week number
+  Thanks to github user arrjay for the patch
+- remove --enable-zlib configure option, we always require it
+  It's hard to envision a system without zlib, so we turn this off
+  closes https://github.com/rsyslog/rsyslog/issues/76
+- slight source-tree restructuring: contributed modules are now in their
+  own ./contrib directory. The idea is to make it clearer to the end user
+  which plugins are supported by the rsyslog project (those in ./plugins).
+- bugfix: imudp makes rsyslog hang on shutdown when more than 1 thread used
+  closes https://github.com/rsyslog/rsyslog/issues/126
+- bugfix: not all files closed on auto-backgrounding startup
+  This could happen when not running under systemd. Some low-numbered
+  fds were not closed in that case.
+- bugfix: typo in queue configuration parameter
+  made parameter unusable
+  Thanks to Bojan Smojver for the patch.
+- bugfix: unitialized buffer off-by-one error in hostname generation
+  The DNS cache used uninitialized memory, which could lead to
+  invalid hostname generation.
+  Thanks to Jarrod Sayers for alerting us and provinding analysis and
+  patch recommendations.
+- bugfix imuxsock: possible segfault when SysSock.Use="off"
+  Thanks to alexjfisher for reporting this issue.
+  closes https://github.com/rsyslog/rsyslog/issues/140
+- bugfix: RainerScript: invalid ruleset names were accepted
+  during ruleset defintion, but could of course not be used when
+  e.g. calling a ruleset.
+  IMPORTANT: this may cause existing configurations to error out on start,
+  as they invalid names could also be used e.g. when assigning rulesets.
+- bugfix: some module entry points were not called for all modules
+  callbacks like endCnfLoad() were primarily being called for input
+  modules. This has been corrected. Note that this bugfix has some
+  regression potential.
+- bugfix omlibdbi: connection was taken down in wrong thread
+  this could have consequences depending on the driver being used. In
+  general, it looks more like a cosmetic issue. For example, with
+  MySQL it lead to a small memory but also an annoying message about
+  a thread not properly torn down.
+---------------------------------------------------------------------------
+Version 8.5.0 [v8-stable] 2014-10-24
+- imfile greatly refactored and support for wildcards added
+- PRI-handling code refactored for more clarity and robustness
+- ommail: add support for RainerScript config system [action() object]
+  This finally adds support for the new config style. Also, we now permit
+  to set a constant subject text without the need to create a template for
+  it.
+- refactored the auto-backgrounding method
+  The code is now more robust and also offers possibilities for enhanced
+  error reporting in the future. This is also assumed to fix some races
+  where a system startup script hang due to "hanging" rsyslogd.
+- make gntls tcp syslog driver emit more error messages
+  Messages previously emitted only to the debug log are now emitted as
+  syslog error messages. It has shown that they contain information 
+  helpful to the user for troubleshooting config issues. Note that this
+  change is a bit experimental, as we are not sure if there are situations
+  where large amounts of error messages may be emitted.
+- bugfix: imfile did not complain if configured file did not exist
+  closes https://github.com/rsyslog/rsyslog/issues/137
+- bugfix: build failure on systems which don't have json_tokener_errors
+  Older versions of json-c need to use a different API (which don't exists
+  on newer versions, unfortunately...)
+  Thanks to Thomas D. for reporting this problem.
+- imgssapi: log remote peer address in some error messages
+  Thanks to Bodik for the patch.
 ---------------------------------------------------------------------------
 Version 8.4.3 [v8-stable] 2014-10-??
 - ommail: minor bugfixes & improvements
@@ -10,14 +102,13 @@ Version 8.4.3 [v8-stable] 2014-10-??
 - bugfix imkmsg: infinite loop on OpenVZ VMs 
   Thanks to github user PaulSD for the patch
   closes https://github.com/rsyslog/rsyslog/pull/138
+- bugfix: typo in queue configuration parameter made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - bugfix: unitialized buffer off-by-one error in hostname generation
   The DNS cache used uninitialized memory, which could lead to
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
-- bugfix: type in queue configuration parameter
-  made parameter unusable
-  Thanks to Bojan Smojver for the patch.
 - bugfix imfile: segfault on startup in "inotify" mode
   A segfault happened when more than one file was monitored.
 - bugfix imfile: could make rsyslog exit in inotify mode
@@ -474,6 +565,8 @@ Version 8.1.0 [experimental] 2013-11-15
   just explicitely be given.
 ---------------------------------------------------------------------------
 Version 7.6.8 [v7.6-stable] 2014-10-??
+- bugfix: typo in queue configuration parameter made parameter unusable
+  Thanks to Bojan Smojver for the patch.
 - bugfix imuxsock: possible segfault when SysSock.Use="off"
   Thanks to alexjfisher for reporting this issue.
   closes https://github.com/rsyslog/rsyslog/issues/140
@@ -482,9 +575,6 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   invalid hostname generation.
   Thanks to Jarrod Sayers for alerting us and provinding analysis and
   patch recommendations.
-- bugfix: typo in queue configuration parameter
-  made parameter unusable
-  Thanks to Bojan Smojver for the patch.
 - remove zpipe (a testing tool) from --enable-diagtools
   This tool is no longer maintained and currently not used inside the
   testbench. We keep it in the source tree for the time being in case that

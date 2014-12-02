@@ -45,6 +45,7 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -64,6 +65,7 @@ typedef struct _instanceData {
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	char *pszPath;		/**< path of normalized data */
+    msgPropDescr_t *varDescr;     /**< name of variable to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -81,7 +83,8 @@ static configSettings_t cs;
 static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
 	{ "path", eCmdHdlrGetWord, 0 },
-	{ "userawmsg", eCmdHdlrBinary, 0 }
+	{ "userawmsg", eCmdHdlrBinary, 0 },
+    { "variable", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -174,7 +177,9 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
 	ln_exitCtx(pData->ctxln);
-	free(pData->pszPath);
+    free(pData->pszPath);
+    msgPropDescrDestruct(pData->varDescr);
+    free(pData->varDescr);
 ENDfreeInstance
 
 
@@ -186,6 +191,10 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
+    dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
+    dbgprintf("\trulebase='%s'\n", pData->rulebase);
+    dbgprintf("\tpath='%s'\n", pData->pszPath);
+    dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
 ENDdbgPrintInstInfo
 
 
@@ -196,18 +205,25 @@ ENDtryResume
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
-	int len;
+    rs_size_t len;
 	int r;
 	struct json_object *json = NULL;
+    unsigned short freeBuf = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
-	} else {
+	} else if (pWrkrData->pData->varDescr) {
+        buf = MsgGetProp(pMsg, NULL, pWrkrData->pData->varDescr, &len, &freeBuf, NULL);
+    } else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
 	r = ln_normalize(pWrkrData->pData->ctxln, (char*)buf, len, &json);
+    if (freeBuf) {
+        free(buf);
+        buf = NULL;
+    }
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -226,15 +242,17 @@ setInstParamDefaults(instanceData *pData)
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
 	pData->pszPath = strdup("$!");
+    pData->varDescr = NULL;
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int bDestructPValsOnExit;
-	char *cstr;
+    char *cstr;
+    char *varName = NULL;
 CODESTARTnewActInst
-	DBGPRINTF("newActInst (mmnormalize)\n");
+    DBGPRINTF("newActInst (mmnormalize)\n");
 
 	bDestructPValsOnExit = 0;
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -260,6 +278,8 @@ CODESTARTnewActInst
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "variable")) {
+			varName = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "path")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (strlen(cstr) < 2) {
@@ -282,9 +302,20 @@ CODESTARTnewActInst
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 
+    if(pData->bUseRawMsg) {
+        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+                        "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
+                        "Ignoring 'variable', will use raw message.");
+    } else if (varName) {
+        CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+        CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
+    }
+    free(varName);
+    varName = NULL;
+
+    CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
 	if(bDestructPValsOnExit)
@@ -369,7 +400,7 @@ BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
-	int bMsgPassingSupported;
+    int bMsgPassingSupported;
 CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;

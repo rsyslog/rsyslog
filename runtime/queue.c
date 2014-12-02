@@ -2315,6 +2315,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	qName = obj.GetName((obj_t*)pThis);
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
 	CHKiRet(statsobj.SetName(pThis->statsobj, qName));
+	CHKiRet(statsobj.SetOrigin(pThis->statsobj, (uchar*)"core.queue"));
 	/* we need to save the queue size, as the stats module initializes it to 0! */
 	/* iQueueSize is a dual-use counter: no init, no mutex! */
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("size"),

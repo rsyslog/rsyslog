@@ -98,6 +98,46 @@ static char *two_digits[100] = {
 
 static char *wdayNames[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 
+/* Table of days in a year, needed for getYearDay */
+static char *daysInYear[366] = {
+	       "001", "002", "003", "004", "005", "006", "007", "008", "009",
+	"010", "011", "012", "013", "014", "015", "016", "017", "018", "019",
+	"020", "021", "022", "023", "024", "025", "026", "027", "028", "029",
+	"030", "031", "032", "033", "034", "035", "036", "037", "038", "039",
+	"040", "041", "042", "043", "044", "045", "046", "047", "048", "049",
+	"050", "051", "052", "053", "054", "055", "056", "057", "058", "059",
+	"060", "061", "062", "063", "064", "065", "066", "067", "068", "069",
+	"070", "071", "072", "073", "074", "075", "076", "077", "078", "079",
+	"080", "081", "082", "083", "084", "085", "086", "087", "088", "089",
+	"090", "091", "092", "093", "094", "095", "096", "097", "098", "099",
+	"100", "101", "102", "103", "104", "105", "106", "107", "108", "109",
+	"110", "111", "112", "113", "114", "115", "116", "117", "118", "119",
+	"120", "121", "122", "123", "124", "125", "126", "127", "128", "129",
+	"130", "131", "132", "133", "134", "135", "136", "137", "138", "139",
+	"140", "141", "142", "143", "144", "145", "146", "147", "148", "149",
+	"150", "151", "152", "153", "154", "155", "156", "157", "158", "159",
+	"160", "161", "162", "163", "164", "165", "166", "167", "168", "169",
+	"170", "171", "172", "173", "174", "175", "176", "177", "178", "179",
+	"180", "181", "182", "183", "184", "185", "186", "187", "188", "189",
+	"190", "191", "192", "193", "194", "195", "196", "197", "198", "199",
+	"200", "201", "202", "203", "204", "205", "206", "207", "208", "209",
+	"210", "211", "212", "213", "214", "215", "216", "217", "218", "219",
+	"220", "221", "222", "223", "224", "225", "226", "227", "228", "229",
+	"230", "231", "232", "233", "234", "235", "236", "237", "238", "239",
+	"240", "241", "242", "243", "244", "245", "246", "247", "248", "249",
+	"250", "251", "252", "253", "254", "255", "256", "257", "258", "259",
+	"260", "261", "262", "263", "264", "265", "266", "267", "268", "269",
+	"270", "271", "272", "273", "274", "275", "276", "277", "278", "279",
+	"280", "281", "282", "283", "284", "285", "286", "287", "288", "289",
+	"290", "291", "292", "293", "294", "295", "296", "297", "298", "299",
+	"300", "301", "302", "303", "304", "305", "306", "307", "308", "309",
+	"310", "311", "312", "313", "314", "315", "316", "317", "318", "319",
+	"320", "321", "322", "323", "324", "325", "326", "327", "328", "329",
+	"330", "331", "332", "333", "334", "335", "336", "337", "338", "339",
+	"340", "341", "342", "343", "344", "345", "346", "347", "348", "349",
+	"350", "351", "352", "353", "354", "355", "356", "357", "358", "359",
+	"360", "361", "362", "363", "364", "365", "366"};
+
 /* The following is a table of supported years. This permits us
  * to avoid dynamic memory allocation. Note that the time-based
  * algos need to be upgraded after the year 2099 in any case.
@@ -1552,7 +1592,7 @@ uchar *getMSG(msg_t * const pM)
 /* Get PRI value as integer */
 static int getPRIi(msg_t * const pM)
 {
-	int pri = (pM->iFacility << 3) + (pM->iSeverity);
+	syslog_pri_t pri = (pM->iFacility << 3) + (pM->iSeverity);
 	if(pri > 191)
 		pri = LOG_PRI_INVLD;
 	return pri;
@@ -1668,6 +1708,10 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 		return two_digits[(int)pM->tTIMESTAMP.OffsetMinute];
 	case tplFmtTZOffsDirection:
 		return (pM->tTIMESTAMP.OffsetMode == '+')? "+" : "-";
+	case tplFmtOrdinal:
+		return daysInYear[getOrdinal(&pM->tTIMESTAMP)];
+	case tplFmtWeek:
+		return two_digits[getWeek(&pM->tTIMESTAMP)];
 	}
 	ENDfunc
 	return "INVALID eFmt OPTION!";
@@ -1779,6 +1823,10 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 		return two_digits[(int)pM->tRcvdAt.OffsetMinute];
 	case tplFmtTZOffsDirection:
 		return (pM->tRcvdAt.OffsetMode == '+')? "+" : "-";
+	case tplFmtOrdinal:
+		return daysInYear[getOrdinal(&pM->tRcvdAt)];
+	case tplFmtWeek:
+		return two_digits[getWeek(&pM->tRcvdAt)];
 	}
 	ENDfunc
 	return "INVALID eFmt OPTION!";
@@ -2627,22 +2675,19 @@ void MsgSetRawMsgWOSize(msg_t * const pMsg, char* pszRawMsg)
 }
 
 
-/* Decode a priority into textual information like auth.emerg.
- * The variable pRes must point to a user-supplied buffer.
- * The pointer to the buffer
- * is also returned, what makes this functiona suitable for
- * use in printf-like functions.
- * Note: a buffer size of 20 characters is always sufficient.
+/* create textual representation of facility and severity.
+ * The variable pRes must point to a user-supplied buffer of
+ * at least 20 characters.
  */
-char *textpri(char *pRes, int pri)
+static void
+textpri(const msg_t *const __restrict__ pMsg, uchar *const __restrict__ pRes)
 {
 	assert(pRes != NULL);
-	memcpy(pRes, syslog_fac_names[pri2fac(pri)], len_syslog_fac_names[pri2fac(pri)]);
-	pRes[len_syslog_fac_names[pri2fac(pri)]] = '.';
-	memcpy(pRes+len_syslog_fac_names[pri2fac(pri)]+1,
-	       syslog_severity_names[pri2sev(pri)],
-	       len_syslog_severity_names[pri2sev(pri)]+1 /* for \0! */);
-	return pRes;
+	memcpy(pRes, syslog_fac_names[pMsg->iFacility], len_syslog_fac_names[pMsg->iFacility]);
+	pRes[len_syslog_fac_names[pMsg->iFacility]] = '.';
+	memcpy(pRes+len_syslog_fac_names[pMsg->iFacility]+1,
+	       syslog_severity_names[pMsg->iSeverity],
+	       len_syslog_severity_names[pMsg->iSeverity]+1 /* for \0! */);
 }
 
 
@@ -2744,7 +2789,8 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
-		field = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &field) == FALSE)
+			field = NULL;
 	}
 	if(field != NULL) {
 		*pRes = (uchar*) strdup(json_object_get_string(field));
@@ -2797,8 +2843,7 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	}
 	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 	CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
-	*pjson = json_object_object_get(parent, (char*)leaf);
-	if(*pjson == NULL) {
+	if(RS_json_object_object_get_ex(parent, (char*)leaf, pjson) == FALSE) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -3088,13 +3133,10 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getPRI(pMsg);
 			break;
 		case PROP_PRI_TEXT:
-			pBuf = MALLOC(20 * sizeof(uchar));
-			if(pBuf == NULL) {
+			if((pRes = MALLOC(20 * sizeof(uchar))) == NULL)
 				RET_OUT_OF_MEMORY;
-			} else {
-				*pbMustBeFreed = 1;
-				pRes = (uchar*)textpri((char*)pBuf, getPRIi(pMsg));
-			}
+			*pbMustBeFreed = 1;
+			textpri(pMsg, pRes);
 			break;
 		case PROP_IUT:
 			pRes = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */
@@ -4161,7 +4203,8 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';
-		json = json_object_object_get(root, (char*)namebuf);
+		if(RS_json_object_object_get_ex(root, (char*)namebuf, &json) == FALSE)
+			json = NULL;
 	} else
 		json = root;
 	if(json == NULL) {
@@ -4230,7 +4273,8 @@ jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **
 	} else {
 		leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
 		CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 0));
-		field = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &field) == FALSE)
+			field = NULL;
 	}
 	*jsonres = field;
 
@@ -4275,7 +4319,8 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json)
 			json_object_put(json);
 			ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 		}
-		leafnode = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &leafnode) == FALSE)
+			leafnode = NULL;
 		if(leafnode == NULL) {
 			json_object_object_add(parent, (char*)leaf, json);
 		} else {
@@ -4350,7 +4395,8 @@ msgDelJSON(msg_t * const pM, uchar *name)
 		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
-		leafnode = json_object_object_get(parent, (char*)leaf);
+		if(RS_json_object_object_get_ex(parent, (char*)leaf, &leafnode) == FALSE)
+			leafnode = NULL;
 		if(leafnode == NULL) {
 			DBGPRINTF("unset JSON: could not find '%s'\n", name);
 			ABORT_FINALIZE(RS_RET_JNAME_NOTFOUND);

@@ -110,7 +110,7 @@ void readLine(int fd, char *ln)
 	*ln = '\0';
 
 	if(lenRead < 0) {
-		printf("read from rsyslogd returned with error '%s' - aborting test\n", strerror(errno));
+		fprintf(stderr, "read from rsyslogd returned with error '%s' - aborting test\n", strerror(errno));
 		exit(1);
 	}
 
@@ -245,7 +245,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 {
 	int pipefd[2];
 	pid_t cpid;
-	char *newargv[] = {"../tools/rsyslogd", "dummy", "-u2", "-n", "-irsyslog.pid",
+	char *newargv[] = {"../tools/rsyslogd", "dummy", "-C", "-n", "-irsyslog.pid",
 			   "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
 
@@ -258,18 +258,24 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 
 	if (pipe(pipefd) == -1) {
 		perror("pipe");
+		fprintf(stderr, "error pipe\n");
 		exit(EXIT_FAILURE);
 	}
 
 	cpid = fork();
 	if (cpid == -1) {
 		perror("fork");
+		fprintf(stderr, "error fork\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if(cpid == 0) {    /* Child reads from pipe */
 		fclose(stdout);
-		dup(pipefd[1]);
+		if(dup(pipefd[1]) == -1) {
+			perror("dup");
+			fprintf(stderr, "error dup\n");
+			exit(1);
+		}
 		close(pipefd[1]);
 		close(pipefd[0]);
 		fclose(stdin);
@@ -341,6 +347,21 @@ void unescapeTestdata(char *testdata)
 }
 
 
+/* A version of getline() that aborts on error. Primarily introduced
+ * to make the compiler happy.
+ */
+static void
+getline_abort(char **lineptr, size_t *const n, FILE *stream)
+{
+	if(getline(lineptr, n, stream) == -1) {
+		int e = errno;
+		if(!feof(stream)) {
+			perror("getline");
+			fprintf(stderr, "error %d getline\n", e);
+			exit(1);
+		}
+	}
+}
 /* expand variables in expected string. Here we use tilde (~) as expension
  * character, because the more natural % is very common in syslog messages
  * (and most importantly in the samples we currently have.
@@ -400,10 +421,10 @@ processTestFile(int fd, char *pszFileName)
 	/* skip comments at start of file */
 
 	while(!feof(fp)) {
-		getline(&testdata, &lenLn, fp);
+		getline_abort(&testdata, &lenLn, fp);
 		while(!feof(fp)) {
 			if(*testdata == '#')
-				getline(&testdata, &lenLn, fp);
+				getline_abort(&testdata, &lenLn, fp);
 			else
 				break; /* first non-comment */
 		}
@@ -429,19 +450,19 @@ processTestFile(int fd, char *pszFileName)
 		 * we do not care about EOF here, this will lead to a failure and thus
 		 * draw enough attention. -- rgerhards, 2009-03-31
 		 */
-		getline(&expected, &lenLn, fp);
+		getline_abort(&expected, &lenLn, fp);
 		expected[strlen(expected)-1] = '\0'; /* remove \n */
 		doVarsInExpected(&expected);
 
 		/* pull response from server and then check if it meets our expectation */
 		readLine(fd, buf);
 		if(strlen(buf) == 0) {
-			printf("something went wrong - read a zero-length string from rsyslogd\n");
+			fprintf(stderr, "something went wrong - read a zero-length string from rsyslogd\n");
 			exit(1);
 		}
 		if(strcmp(expected, buf)) {
 			++iFailed;
-			printf("\nFile %s:\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
+			fprintf(stderr, "\nFile %s:\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
 				pszFileName, expected, buf);
 				ret = 1;
 		}
@@ -483,24 +504,24 @@ doTests(int fd, char *files)
 
 		/* all regular files are run through the test logic. Symlinks don't work. */
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
-			if(verbose) printf("processing test case '%s' ... ", testFile);
+			if(verbose) fprintf(stderr, "processing test case '%s' ... ", testFile);
 			ret = processTestFile(fd, testFile);
 			if(ret == 0) {
-				if(verbose) printf("successfully completed\n");
+				if(verbose) fprintf(stderr, "successfully completed\n");
 			} else {
 				if(!verbose)
-					printf("test '%s' ", testFile);
-				printf("failed!\n");
+					fprintf(stderr, "test '%s' ", testFile);
+				fprintf(stderr, "failed!\n");
 			}
 		}
 	}
 	globfree(&testFiles);
 
 	if(iTests == 0) {
-		printf("Error: no test cases found, no tests executed.\n");
+		fprintf(stderr, "Error: no test cases found, no tests executed.\n");
 		iFailed = 1;
 	} else {
-		printf("Number of tests run: %3d, number of failures: %d, test: %s/%s\n",
+		fprintf(stderr, "Number of tests run: %3d, number of failures: %d, test: %s/%s\n",
 		       iTests, iFailed, testSuite, inputMode2Str(inputMode));
 	}
 
@@ -512,7 +533,7 @@ doTests(int fd, char *files)
  */
 void childDied(__attribute__((unused)) int sig)
 {
-	printf("ERROR: child died unexpectedly (maybe a segfault?)!\n");
+	fprintf(stderr, "ERROR: child died unexpectedly (maybe a segfault?)!\n");
 	exit(1);
 }
 
@@ -542,10 +563,10 @@ getHostname(void)
 	FILE *fp;
 	if((fp = fopen("HOSTNAME", "r")) == NULL) {
 		perror("HOSTNAME");
-		printf("error opening HOSTNAME configuration file\n");
+		fprintf(stderr, "error opening HOSTNAME configuration file\n");
 		exit(1);
 	}
-	getline(&ourHostName, &dummy, fp);
+	getline_abort(&ourHostName, &dummy, fp);
 	fclose(fp);
 }
 
@@ -581,7 +602,7 @@ int main(int argc, char *argv[], char *envp[])
 			else if(!strcmp(optarg, "tcp"))
 				inputMode = inputTCP;
 			else {
-				printf("error: unsupported input mode '%s'\n", optarg);
+				fprintf(stderr, "error: unsupported input mode '%s'\n", optarg);
 				exit(1);
 			}
 			break;
@@ -594,14 +615,14 @@ int main(int argc, char *argv[], char *envp[])
                 case 'v':
 			verbose = 1;
 			break;
-		default:printf("Invalid call of nettester, invalid option '%c'.\n", opt);
-			printf("Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
+		default:fprintf(stderr, "Invalid call of nettester, invalid option '%c'.\n", opt);
+			fprintf(stderr, "Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
 			exit(1);
 		}
 	}
 	
 	if(testSuite == NULL) {
-		printf("error: no testsuite given, need to specify -t testsuite!\n");
+		fprintf(stderr, "error: no testsuite given, need to specify -t testsuite!\n");
 		exit(1);
 	}
 
@@ -610,13 +631,13 @@ int main(int argc, char *argv[], char *envp[])
 	if((srcdir = getenv("srcdir")) == NULL)
 		srcdir = ".";
 
-	if(verbose) printf("Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
+	if(verbose) fprintf(stderr, "Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
 		srcdir, testSuite, inputMode2Str(inputMode), iPort);
 
 	/* create input config file */
 	if((fp = fopen(NETTEST_INPUT_CONF_FILE, "w")) == NULL) {
 		perror(NETTEST_INPUT_CONF_FILE);
-		printf("error opening input configuration file\n");
+		fprintf(stderr, "error opening input configuration file\n");
 		exit(1);
 	}
 	if(inputMode == inputUDP) {
@@ -645,7 +666,7 @@ int main(int argc, char *argv[], char *envp[])
 	if(doTests(fd, testcases) != 0)
 		ret = 1;
 
-	if(verbose) printf("End of nettester run (%d).\n", ret);
+	if(verbose) fprintf(stderr, "End of nettester run (%d).\n", ret);
 
 	exit(ret);
 }

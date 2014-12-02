@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.4.2],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.6.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -11,7 +11,7 @@ AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 
 # check if valgrind is present
 AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
@@ -47,6 +47,7 @@ AC_CHECK_FUNCS(json_object_new_int64,,)
 
 # look for newer API
 AC_CHECK_FUNCS(json_tokener_error_desc,,)
+AC_CHECK_FUNCS(json_object_object_get_ex,,)
 
 CFLAGS="$save_CFLAGS"
 LIBS="$save_LIBS"
@@ -232,25 +233,12 @@ fi
 
 
 
-# zlib compression
-AC_ARG_ENABLE(zlib,
-        [AS_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_zlib="yes" ;;
-          no) enable_zlib="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-zlib) ;;
-         esac],
-        [enable_zlib=yes]
-)
-AM_CONDITIONAL(ENABLE_ZLIB, test x$enable_zlib = xyes)
-if test "$enable_zlib" = "yes"; then
-	AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
-	if test "$zlib_header" = "yes"; then
-		AC_CHECK_LIB(z, deflate,
-                        [AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
-                         ZLIB_LIBS="-lz"
-                         AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
-	fi
+AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
+if test "$zlib_header" = "yes"; then
+	AC_CHECK_LIB(z, deflate,
+		[AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
+		 ZLIB_LIBS="-lz"
+		 AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
 fi
 
 
@@ -626,59 +614,6 @@ AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
 AC_SUBST(PGSQL_LIBS)
 
-
-# oracle (OCI) support
-AC_ARG_ENABLE(oracle,
-	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@]. (Check your ORACLE_HOME environment variable!))],
-	[case "${enableval}" in
-	 yes) enable_oracle="yes" ;;
-	 no) enable_oracle="no" ;;
-	 *) AC_MSG_ERROR(bad value ${enableval} for --enable-oracle) ;;
-	 esac],
-	[enable_oracle=no]
-)
-if test "x$enable_oracle" = "xyes"; then
-   if test -d "$ORACLE_HOME"
-   then
-       AC_CHECK_LIB([occi], [OCIEnvCreate],
-                    [ORACLE_CFLAGS=-I$ORACLE_HOME/rdbms/public]
-		    [ORACLE_LIBS=-L$ORACLE_HOME/lib -locci],
-		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle home])],
-		    [-I$ORACLE_HOME/rdbms/public/ -L$ORACLE_HOME/lib -locci -lclntsh ]
-		 )
-    elif test -d "$ORACLE_LIB_PATH" -a -d "$ORACLE_INCLUDE_PATH"
-    then
-       AC_CHECK_LIB([occi], [OCIEnvCreate],
-                    [ORACLE_CFLAGS=-I$ORACLE_INCLUDE_PATH]
-		    [ORACLE_LIBS=-L$ORACLE_LIB_PATH -locci],
-		    [AC_MSG_FAILURE([Oracle (OCI) library is missing: wrong oracle directories])],
-		    [-I$ORACLE_INCLUDE_PATH -L$ORACLE_LIB_PATH -locci -lclntsh ]
-		 )
-    else
-        AC_CHECK_PROG(
-      	    [HAVE_ORACLE_CONFIG],
-            [oracle-instantclient-config],
-            [yes],,,
-            )
-        if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
-           AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
-        fi
-        AC_CHECK_LIB(
-		[occi],
-        	[OCIEnvCreate],
-        	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
-        	ORACLE_LIBS="`oracle-instantclient-config --libs`"
-        	],
-        	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
-        	[`oracle-instantclient-config --libs --cflags`]
-        	)
-    fi
-fi
-AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
-AC_SUBST(ORACLE_CFLAGS)
-AC_SUBST(ORACLE_LIBS)
-
-
 # libdbi support
 AC_ARG_ENABLE(libdbi,
         [AS_HELP_STRING([--enable-libdbi],[Enable libdbi database support @<:@default=no@:>@])],
@@ -858,7 +793,7 @@ fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 if test "$GCC" = "yes"
-then RSRT_CFLAGS="$RSRT_CFLAGS -W -std=c99 -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+then RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Werror=implicit-function-declaration -g"
 fi
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
@@ -1134,15 +1069,20 @@ AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
 # enable/disable the testbench (e.g. because some important parts
 # are missing)
 AC_ARG_ENABLE(testbench,
-        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-testbench],[testbench enabled @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_testbench="yes" ;;
           no) enable_testbench="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench) ;;
          esac],
-        [enable_testbench=yes]
+        [enable_testbench=no]
 )
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+if test "x$enable_testbench" = "xyes"; then
+	if test "x$enable_imdiag" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
+	fi
+fi
 
 
 # settings for the file input module
@@ -1181,19 +1121,6 @@ AC_ARG_ENABLE(imptcp,
         [enable_imptcp=no]
 )
 AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
-
-
-# settings for the ttcp input module
-AC_ARG_ENABLE(imttcp,
-        [AS_HELP_STRING([--enable-imttcp],[threaded plain tcp input module enabled @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_imttcp="yes" ;;
-          no) enable_imttcp="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imttcp) ;;
-         esac],
-        [enable_imttcp=no]
-)
-AM_CONDITIONAL(ENABLE_IMTTCP, test x$enable_imttcp = xyes)
 
 
 # settings for the pstats input module
@@ -1345,19 +1272,6 @@ AC_ARG_ENABLE(pmsnare,
 AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
 
 
-# settings for pmrfc3164sd
-AC_ARG_ENABLE(pmrfc3164sd,
-        [AS_HELP_STRING([--enable-pmrfc3164sd],[Compiles rfc3164sd parser module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_pmrfc3164sd="yes" ;;
-          no) enable_pmrfc3164sd="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmrfc3164sd) ;;
-         esac],
-        [enable_pmrfc3164sd=no]
-)
-AM_CONDITIONAL(ENABLE_PMRFC3164SD, test x$enable_pmrfc3164sd = xyes)
-
-
 # settings for omruleset
 AC_ARG_ENABLE(omruleset,
         [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=no@:>@])],
@@ -1371,24 +1285,6 @@ AC_ARG_ENABLE(omruleset,
 AM_CONDITIONAL(ENABLE_OMRULESET, test x$enable_omruleset = xyes)
 
 
-# building the GUI (mostly for diagnostic reasons)
-AC_ARG_ENABLE(gui,
-        [AS_HELP_STRING([--enable-gui],[Enable GUI programs @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_gui="yes" ;;
-          no) enable_gui="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gui) ;;
-         esac],
-        [enable_gui=no]
-)
-if test "x$enable_gui" = "xyes"; then
-	if test x$HAVE_JAVAC = x; then
-	   AC_MSG_ERROR([GUI components need Java, but Java development system is not installed on this system])
-	fi
-fi
-AM_CONDITIONAL(ENABLE_GUI, test x$enable_gui = xyes)
-
-
 # settings for omuxsock
 AC_ARG_ENABLE(omuxsock,
         [AS_HELP_STRING([--enable-omuxsock],[Compiles omuxsock module @<:@default=no@:>@])],
@@ -1400,20 +1296,6 @@ AC_ARG_ENABLE(omuxsock,
         [enable_omuxsock=no]
 )
 AM_CONDITIONAL(ENABLE_OMUXSOCK, test x$enable_omuxsock = xyes)
-
-
-# A custom strgen that also serves as a sample of how to do
-# SQL-generating strgen's
-AC_ARG_ENABLE(sm_cust_bindcdr,
-        [AS_HELP_STRING([--enable-sm_cust_bindcdr],[Compiles sm_cust_bindcdr module @<:@default=no@:>@])],
-        [case "${enableval}" in
-         yes) enable_sm_cust_bindcdr="yes" ;;
-          no) enable_sm_cust_bindcdr="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-sm_cust_bindcdr) ;;
-         esac],
-        [enable_sm_cust_bindcdr=no]
-)
-AM_CONDITIONAL(ENABLE_SMCUSTBINDCDR, test x$enable_sm_cust_bindcdr = xyes)
 
 
 # settings for mmsnmptrapd message modification module
@@ -1479,6 +1361,23 @@ AM_CONDITIONAL(ENABLE_IMZMQ3, test x$enable_imzmq3 = xyes)
 
 # END ZMQ3 INPUT SUPPORT
 
+# BEGIN CZMQ INPUT SUPPORT
+AC_ARG_ENABLE(imczmq,
+        [AS_HELP_STRING([--enable-imczmq],[Compiles imczmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imczmq="yes" ;;
+          no) enable_imczmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imczmq) ;;
+         esac],
+        [enable_imczmq=no]
+)
+if test "x$enable_imczmq" = "xyes"; then
+	PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+fi
+AM_CONDITIONAL(ENABLE_IMCZMQ, test x$enable_imczmq = xyes)
+
+# END CZMQ INPUT
+
 # BEGIN ZMQ3 OUTPUT SUPPORT
 AC_ARG_ENABLE(omzmq3,
         [AS_HELP_STRING([--enable-omzmq3],[Compiles omzmq3 output module @<:@default=no@:>@])],
@@ -1495,6 +1394,24 @@ fi
 AM_CONDITIONAL(ENABLE_OMZMQ3, test x$enable_omzmq3 = xyes)
 
 # END ZMQ3 SUPPORT
+
+# BEGIN CZMQ OUTPUT SUPPORT
+AC_ARG_ENABLE(omczmq,
+        [AS_HELP_STRING([--enable-omczmq],[Compiles omczmq output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omczmq="yes" ;;
+          no) enable_omczmq="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omzmq3) ;;
+         esac],
+        [enable_omczmq=no]
+)
+if test "x$enable_omczmq" = "xyes"; then
+   PKG_CHECK_MODULES(CZMQ, libczmq >= 3.0.0)
+fi
+AM_CONDITIONAL(ENABLE_OMCZMQ, test x$enable_omczmq = xyes)
+
+# END CZMQ SUPPORT
+
 
 # BEGIN RABBITMQ OUTPUT SUPPORT
 
@@ -1592,28 +1509,20 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imjournal/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
-		plugins/imkmsg/Makefile \
 		plugins/omhdfs/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/omjournal/Makefile \
-		plugins/pmrfc3164sd/Makefile \
-		plugins/pmlastmsg/Makefile \
-		plugins/pmcisconames/Makefile \
 		plugins/pmciscoios/Makefile \
-		plugins/pmsnare/Makefile \
-		plugins/pmaixforwardedfrom/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imsolaris/Makefile \
 		plugins/imptcp/Makefile \
-		plugins/imttcp/Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
-		plugins/imzmq3/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -1622,26 +1531,31 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
-		plugins/omoracle/Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
-		plugins/omhiredis/Makefile \
-		plugins/omzmq3/Makefile \
-		plugins/omrabbitmq/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmutf8fix/Makefile \
-		plugins/mmcount/Makefile \
-		plugins/mmsequence/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
-		plugins/mmrfc5424addhmac/Makefile \
 		plugins/omelasticsearch/Makefile \
-		plugins/sm_cust_bindcdr/Makefile \
 		plugins/mmsnmptrapd/Makefile \
-		java/Makefile \
+		plugins/pmlastmsg/Makefile \
+		contrib/pmsnare/Makefile \
+		contrib/pmaixforwardedfrom/Makefile \
+		contrib/omhiredis/Makefile \
+		contrib/omrabbitmq/Makefile \
+		contrib/imkmsg/Makefile \
+		contrib/mmcount/Makefile \
+		contrib/omzmq3/Makefile \
+		contrib/omczmq/Makefile \
+		contrib/imzmq3/Makefile \
+		contrib/imczmq/Makefile \
+		contrib/mmsequence/Makefile \
+		contrib/mmrfc5424addhmac/Makefile \
+		contrib/pmcisconames/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1654,7 +1568,6 @@ echo "    Regular expressions support enabled:      $enable_regexp"
 echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
-echo "    GUI components will be built:             $enable_gui"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
@@ -1668,12 +1581,12 @@ echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
 echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
 echo "    plain tcp input module enabled:           $enable_imptcp"
-echo "    threaded plain tcp input module enabled:  $enable_imttcp"
 echo "    imdiag enabled:                           $enable_imdiag"
 echo "    file input module enabled:                $enable_imfile"
 echo "    Solaris input module enabled:             $enable_imsolaris"
 echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imzmq3 input module enabled:              $enable_imzmq3"
+echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
@@ -1687,10 +1600,10 @@ echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
+echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo
 echo "---{ parser modules }---"
-echo "    pmrfc3164sd module will be compiled:      $enable_pmrfc3164sd"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
@@ -1707,16 +1620,12 @@ echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
 echo
-echo "---{ strgen modules }---"
-echo "    sm_cust_bindcdr module will be compiled:  $enable_sm_cust_bindcdr"
-echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
 echo "    libdbi support enabled:                   $enable_libdbi"
 echo "    PostgreSQL support enabled:               $enable_pgsql"
 echo "    mongodb support enabled:                  $enable_ommongodb"
 echo "    hiredis support enabled:                  $enable_omhiredis"
-echo "    Oracle (OCI) support enabled:             $enable_oracle"
 echo
 echo "---{ protocol support }---"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"

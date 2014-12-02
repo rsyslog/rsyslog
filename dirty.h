@@ -5,24 +5,23 @@
  * yet a runtime library, because it depends on some functionality
  * residing somewhere else.
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Rsyslog is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #ifndef	DIRTY_H_INCLUDED
 #define	DIRTY_H_INCLUDED 1
@@ -32,13 +31,14 @@ rsRetVal multiSubmitMsg2(multi_submit_t *pMultiSub); /* friends only! */
 rsRetVal submitMsg2(msg_t *pMsg);
 rsRetVal __attribute__((deprecated)) submitMsg(msg_t *pMsg);
 rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);
-rsRetVal logmsgInternal(const int iErr, const int pri, const uchar *const msg, int flags);
+rsRetVal logmsgInternal(const int iErr, const syslog_pri_t pri, const uchar *const msg, int flags);
 rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
 rsRetVal startMainQueue(qqueue_t *pQueue);
 
 extern int MarkInterval;
-extern qqueue_t *pMsgQueue;				/* the main message queue */
-extern int iConfigVerify;				/* is this just a config verify run? */
+extern qqueue_t *pMsgQueue;			/* the main message queue */
+#define CONF_VERIFY_PARTIAL_CONF 0x02		/* bit: partial configuration to be checked */
+extern int iConfigVerify;			/* is this just a config verify run? */
 extern int bHaveMainQueue;
 #endif /* #ifndef DIRTY_H_INCLUDED */

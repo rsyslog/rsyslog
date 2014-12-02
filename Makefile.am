@@ -14,8 +14,8 @@ lmtcpsrv_la_SOURCES = \
 	tcps_sess.h \
 	tcpsrv.c \
 	tcpsrv.h
-lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmtcpsrv_la_LDFLAGS = -module -avoid-version
+lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmtcpsrv_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmtcpsrv_la_LIBADD = 
 
 #
@@ -24,8 +24,8 @@ lmtcpsrv_la_LIBADD =
 lmtcpclt_la_SOURCES = \
 	tcpclt.c \
 	tcpclt.h
-lmtcpclt_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmtcpclt_la_LDFLAGS = -module -avoid-version
+lmtcpclt_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmtcpclt_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmtcpclt_la_LIBADD = 
 
 endif # if ENABLE_INET
@@ -85,7 +85,7 @@ SUBDIRS += plugins/imklog
 endif
 
 if ENABLE_IMKMSG
-SUBDIRS += plugins/imkmsg
+SUBDIRS += contrib/imkmsg
 endif
 
 if ENABLE_IMPSTATS
@@ -120,16 +120,12 @@ if ENABLE_SNMP
 SUBDIRS += plugins/omsnmp
 endif
 
-if ENABLE_SMCUSTBINDCDR
-SUBDIRS += plugins/sm_cust_bindcdr
-endif
-
 if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
 
 if ENABLE_PMCISCONAMES
-SUBDIRS += plugins/pmcisconames
+SUBDIRS += contrib/pmcisconames
 endif
 
 if ENABLE_PMCISCOIOS
@@ -137,19 +133,15 @@ SUBDIRS += plugins/pmciscoios
 endif
 
 if ENABLE_PMAIXFORWARDEDFROM
-SUBDIRS += plugins/pmaixforwardedfrom
+SUBDIRS += contrib/pmaixforwardedfrom
 endif
 
 if ENABLE_PMSNARE
-SUBDIRS += plugins/pmsnare
+SUBDIRS += contrib/pmsnare
 endif
 
 if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
-endif
-
-if ENABLE_PMRFC3164SD
-SUBDIRS += plugins/pmrfc3164sd
 endif
 
 if ENABLE_OMRULESET
@@ -165,19 +157,27 @@ SUBDIRS += plugins/ommongodb
 endif
 
 if ENABLE_OMHIREDIS
-SUBDIRS += plugins/omhiredis
+SUBDIRS += contrib/omhiredis
 endif
 
 if ENABLE_OMZMQ3
-SUBDIRS += plugins/omzmq3
+SUBDIRS += contrib/omzmq3
+endif
+
+if ENABLE_OMCZMQ
+SUBDIRS += contrib/omczmq
 endif
 
 if ENABLE_OMRABBITMQ
-SUBDIRS += plugins/omrabbitmq
+SUBDIRS += contrib/omrabbitmq
 endif
 
 if ENABLE_IMZMQ3
-SUBDIRS += plugins/imzmq3
+SUBDIRS += contrib/imzmq3
+endif
+
+if ENABLE_IMCZMQ
+SUBDIRS += contrib/imczmq
 endif
 
 if ENABLE_OMUXSOCK
@@ -210,10 +210,6 @@ endif
 
 if ENABLE_IMPTCP
 SUBDIRS += plugins/imptcp
-endif
-
-if ENABLE_IMTTCP
-SUBDIRS += plugins/imttcp
 endif
 
 if ENABLE_IMDIAG
@@ -253,11 +249,11 @@ SUBDIRS += plugins/mmutf8fix
 endif
 
 if ENABLE_MMCOUNT
-SUBDIRS += plugins/mmcount
+SUBDIRS += contrib/mmcount
 endif
 
 if ENABLE_MMSEQUENCE
-SUBDIRS += plugins/mmsequence
+SUBDIRS += contrib/mmsequence
 endif
 
 if ENABLE_MMFIELDS
@@ -269,15 +265,7 @@ SUBDIRS += plugins/mmpstrucdata
 endif
 
 if ENABLE_MMRFC5424ADDHMAC
-SUBDIRS += plugins/mmrfc5424addhmac
-endif
-
-if ENABLE_ORACLE
-SUBDIRS += plugins/omoracle
-endif
-
-if ENABLE_GUI
-SUBDIRS += java
+SUBDIRS += contrib/mmrfc5424addhmac
 endif
 
 # tests are added as last element, because tests may need different
@@ -307,7 +295,6 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 				--enable-omprog \
 				--enable-imdiag \
 				--enable-imptcp \
-				--enable-imttcp \
 				--enable-omuxsock \
 				--enable-impstats \
 				--enable-memcheck \
@@ -316,6 +303,7 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 				--enable-pmsnare \
 				--enable-elasticsearch \
 				--enable-valgrind \
+				--enable-testbench \
 				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-mmsnmptrapd \

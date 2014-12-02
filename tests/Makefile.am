@@ -4,12 +4,12 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
-if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
         fac_authpriv.sh \
 	fac_local0.sh \
+	fac_local7.sh \
 	fac_mail.sh \
 	fac_news.sh \
 	fac_uucp.sh \
@@ -22,6 +22,7 @@ TESTS +=  \
 	global_vars.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
+	empty-ruleset.sh \
 	imtcp-multiport.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
@@ -30,6 +31,7 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	sndrcv.sh \
@@ -38,6 +40,7 @@ TESTS +=  \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
+	imudp_thread_hang.sh \
 	asynwr_simple.sh \
 	asynwr_timeout.sh \
 	asynwr_small.sh \
@@ -67,8 +70,6 @@ TESTS +=  \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	udp-msgreduc-vg.sh \
-	udp-msgreduc-orgmsg-vg.sh \
 	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
@@ -88,6 +89,8 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
+	rscript_set_modify.sh \
+	rscript_unaffected_reset.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -105,9 +108,10 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	udp-msgreduc-vg.sh \
+	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
 endif # HAVE_VALGRIND
-endif # ENABLE_IMDIAG
 
 
 if ENABLE_MYSQL_TESTS
@@ -117,25 +121,39 @@ TESTS +=  \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh
-if ENABLE_OMLIBDBI
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh 
 endif
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
+endif
 endif
 
 if ENABLE_IMPTCP
+# note that some tests simply USE imptcp, but they also
+# need to be disabled if we do not have this module
 TESTS +=  \
 	manyptcp.sh \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
-	imptcp_conndrop.sh 
+	imptcp_conndrop.sh \
+        rscript_replace.sh \
+        rscript_replace_complex.sh \
+	rscript_wrap2.sh \
+	rscript_wrap3.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imptcp_conndrop-vg.sh
+endif
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
@@ -153,6 +171,11 @@ TESTS +=  \
 	mmpstrucdata.sh
 endif
 
+if ENABLE_MMNORMALIZE
+TESTS +=  \
+	mmnormalize_variable.sh
+endif
+
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \
@@ -167,7 +190,7 @@ if ENABLE_GNUTLS
 	#imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
-	 imtcp_conndrop_tls-vg.sh 
+	 imtcp_conndrop_tls-vg.sh \
 	 manytcp-too-few-tls-vg.sh 
 endif
 endif
@@ -187,23 +210,24 @@ endif
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
-	 proprepltest.sh \
-	 parsertest.sh \
-	 timestamp.sh \
-	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
-	 badqi.sh \
+	 badqi.sh
+if ENABLE_IMPTCP
+TESTS += \
 	 tabescape_dflt.sh \
 	 tabescape_off.sh \
+	 timestamp.sh \
+	 inputname.sh \
+	 proprepltest.sh \
+	 parsertest.sh \
 	 fieldtest.sh
+endif
 endif
 
 if ENABLE_OMRULESET
-if ENABLE_IMDIAG
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
-endif
 endif
 
 if ENABLE_EXTENDED_TESTS
@@ -294,7 +318,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/date3.parse1 \
 	   testsuites/date4.parse1 \
 	   testsuites/date5.parse1 \
-   	   testsuites/rfc3164.parse1 \
+	   testsuites/rfc3164.parse1 \
 	   testsuites/rfc5424-1.parse1 \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
@@ -349,6 +373,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_ne.conf \
 	   rscript_eq.sh \
 	   testsuites/rscript_eq.conf \
+	   rscript_set_modify.sh \
+	   testsuites/rscript_set_modify.conf \
+	   testsuites/rscript_unaffected_reset.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
 	   stop-msgvar.sh \
@@ -361,6 +388,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_authpriv.conf \
 	   fac_local0.sh \
 	   testsuites/fac_local0.conf \
+	   fac_local7.sh \
+	   testsuites/fac_local7.conf \
 	   fac_mail.sh \
 	   testsuites/fac_mail.conf \
 	   fac_news.sh \
@@ -418,6 +447,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
+	   empty-ruleset.sh \
+	   testsuites/empty-ruleset.conf \
 	   imtcp-tls-basic.sh \
 	   imtcp-tls-basic-vg.sh \
 	   testsuites/imtcp-tls-basic.conf \
@@ -427,7 +458,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/udp-msgreduc-orgmsg-vg.conf \
 	   udp-msgreduc-vg.sh \
 	   testsuites/udp-msgreduc-vg.conf \
-	   manytcp-too-few-tls.sh \
+	   manytcp-too-few-tls-vg.sh \
 	   testsuites/manytcp-too-few-tls.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
@@ -437,6 +468,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imptcp_large.conf \
 	   imptcp_addtlframedelim.sh \
 	   testsuites/imptcp_addtlframedelim.conf \
+	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
 	   imtcp_conndrop.sh \
@@ -507,6 +539,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv_udp.sh \
 	   testsuites/sndrcv_udp_sender.conf \
 	   testsuites/sndrcv_udp_rcvr.conf \
+	   imudp_thread_hang.sh \
+	   testsuites/imudp_thread_hang.conf \
 	   sndrcv_udp_nonstdpt.sh \
 	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
 	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
@@ -631,6 +665,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mysql-actq-mt.conf \
 	   mmpstrucdata.sh \
 	   testsuites/mmpstrucdata.conf \
+	   libdbi-basic-vg.sh \
+	   mmnormalize_variable.sh \
+	   rscript_replace.sh \
+	   rscript_replace_complex.sh \
+	   rscript_unaffected_reset.sh \
+	   rscript_wrap2.sh \
+	   rscript_wrap3.sh \
 	   cfg.sh
 
 # TODO: re-enable

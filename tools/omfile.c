@@ -1110,6 +1110,7 @@ setupInstStatsCtrs(instanceData *__restrict__ const pData)
 	ctrName[sizeof(ctrName)-1] = '\0'; /* be on the save side */
 	CHKiRet(statsobj.Construct(&(pData->stats)));
 	CHKiRet(statsobj.SetName(pData->stats, ctrName));
+	CHKiRet(statsobj.SetOrigin(pData->stats, (uchar*)"omfile"));
 	STATSCOUNTER_INIT(pData->ctrRequests, pData->mutCtrRequests);
 	CHKiRet(statsobj.AddCounter(pData->stats, UCHAR_CONSTANT("requests"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrRequests)));

@@ -141,8 +141,14 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escape8bitcharactersonreceive", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
+	{ "parser.parsehostnameandtag", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
+	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
+	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
+	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
+	{ "net.enabledns", eCmdHdlrBinary, 0 },
+	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -186,15 +192,11 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
-SIMP_PROP(ParseHOSTNAMEandTAG, bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
 SIMP_PROP(MaxLine, iMaxLine, int)
-SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
-SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
-SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 SIMP_PROP(ParserControlCharacterEscapePrefix, cCCEscapeChar, uchar)
@@ -350,7 +352,6 @@ setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	RETiRet;
 }
 
-
 static rsRetVal
 setDebugLevel(void __attribute__((unused)) *pVal, int level)
 {
@@ -361,6 +362,58 @@ setDebugLevel(void __attribute__((unused)) *pVal, int level)
 	RETiRet;
 }
 
+static rsRetVal
+setDisableDNS(int val)
+{
+	bDisableDNS = val;
+	return RS_RET_OK;
+}
+
+static int
+getDisableDNS(void)
+{
+	return bDisableDNS;
+}
+
+static rsRetVal
+setOption_DisallowWarning(int val)
+{
+	option_DisallowWarning = val;
+	return RS_RET_OK;
+}
+
+static int
+getOption_DisallowWarning(void)
+{
+	return option_DisallowWarning;
+}
+
+static rsRetVal
+setParseHOSTNAMEandTAG(int val)
+{
+	bParseHOSTNAMEandTAG = val;
+	return RS_RET_OK;
+}
+
+static int
+getParseHOSTNAMEandTAG(void)
+{
+	return bParseHOSTNAMEandTAG;
+}
+
+static rsRetVal
+setDefPFFamily(int level)
+{
+	DEFiRet;
+	iDefPFFamily = level;
+	RETiRet;
+}
+
+static int
+getDefPFFamily(void)
+{
+	return iDefPFFamily;
+}
 
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
@@ -612,17 +665,21 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
+	pIf->SetDefPFFamily = setDefPFFamily;
+	pIf->GetDefPFFamily = getDefPFFamily;
+	pIf->SetDisableDNS = setDisableDNS;
+	pIf->GetDisableDNS = getDisableDNS;
+	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
+	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
+	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
+	pIf->GetParseHOSTNAMEandTAG = getParseHOSTNAMEandTAG;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP(MaxLine);
 	SIMP_PROP(OptimizeUniProc);
-	SIMP_PROP(ParseHOSTNAMEandTAG);
 	SIMP_PROP(PreserveFQDN);
-	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);
-	SIMP_PROP(Option_DisallowWarning);
-	SIMP_PROP(DisableDNS);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
@@ -947,6 +1004,8 @@ glblDoneLoadCnf(void)
 			bEscapeTab = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharacterscstyle")) {
 			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.parsehostnameandtag")) {
+			bParseHOSTNAMEandTAG = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
@@ -957,6 +1016,27 @@ glblDoneLoadCnf(void)
 			errmsg.LogError(0, RS_RET_OK, "debug log file is '%s', fd %d", pszAltDbgFileName, altdbg);
 		} else if(!strcmp(paramblk.descr[i].name, "janitor.interval")) {
 			janitorInterval = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "net.ipprotocol")) {
+			char *proto = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			if(!strcmp(proto, "unspecified")) {
+				iDefPFFamily = PF_UNSPEC;
+			} else if(!strcmp(proto, "ipv4-only")) {
+				iDefPFFamily = PF_INET;
+			} else if(!strcmp(proto, "ipv6-only")) {
+				iDefPFFamily = PF_INET6;
+			} else{
+				errmsg.LogError(0, RS_RET_ERR, "invalid net.ipprotocol "
+					"parameter '%s' -- ignored", proto);
+			}
+			free(proto);
+		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
+		        *(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
+		        *(net.pACLDontResolve) = !((int) cnfparamvals[i].val.d.n);
+		} else if(!strcmp(paramblk.descr[i].name, "net.enabledns")) {
+		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
+		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);

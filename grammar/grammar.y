@@ -134,6 +134,10 @@ obj:	  BEGINOBJ nvlst ENDOBJ 	{ $$ = cnfobjNew($1, $2); }
 					{ $$ = cnfobjNew(CNFOBJ_RULESET, $2);
 					  $$->script = $5;
 					}
+        | BEGIN_RULESET nvlst ENDOBJ '{' '}'
+					{ $$ = cnfobjNew(CNFOBJ_RULESET, $2);
+					  $$->script = NULL;
+					}
 propconst:				{ $$ = NULL; }
 	| propconst property		{ $$ = objlstAdd($1, $2); }
 	| propconst constant		{ $$ = objlstAdd($1, $2); }

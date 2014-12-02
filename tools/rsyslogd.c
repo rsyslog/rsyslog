@@ -25,6 +25,7 @@
 #include "rsyslog.h"
 
 #include <signal.h>
+#include <sys/wait.h>
 #include <liblogging/stdlog.h>
 #ifdef OS_SOLARIS
 #	include <errno.h>
@@ -70,29 +71,32 @@ DEFobjCurrIf(glbl)
 /* imports from syslogd.c, these should go away over time (as we
  * migrate/replace more and more code to ASL 2.0).
  */
-extern int bHadHUP;
-extern int bFinished;
-extern int doFork;
-extern char *PidFile;
-
 extern int realMain(int argc, char **argv);
-extern rsRetVal queryLocalHostname(void);
 void syslogdInit(void);
-void syslogd_die(void);
-void syslogd_releaseClassPointers(void);
-void syslogd_sighup_handler();
 char **syslogd_crunch_list(char *list);
-rsRetVal syslogd_doGlblProcessInit(int *);
-rsRetVal syslogd_obtainClassPointers(void);
 /* end syslogd.c imports */
 extern int yydebug; /* interface to flex */
 
 
 /* forward definitions */
 void rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg);
+void rsyslogdDoDie(int sig);
 
+
+#ifndef PATH_PIDFILE
+#	define PATH_PIDFILE "/var/run/rsyslogd.pid"
+#endif
 
 /* global data items */
+static int bChildDied;
+static int bHadHUP;
+static int doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
+int bFinished = 0;	/* used by termination signal handler, read-only except there
+			 * is either 0 or the number of the signal that requested the
+ 			 * termination.
+			 */
+uchar *PidFile = (uchar*) PATH_PIDFILE;
+int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 ratelimit_t *dflt_ratelimiter = NULL; /* ratelimiter for submits without explicit one */
@@ -133,14 +137,95 @@ setsid(void)
 }
 #endif
 
+
+rsRetVal // TODO: make static
+queryLocalHostname(void)
+{
+	uchar *LocalHostName;
+	uchar *LocalDomain;
+	uchar *LocalFQDNName;
+	DEFiRet;
+
+	CHKiRet(net.getLocalHostname(&LocalFQDNName));
+	uchar *dot = (uchar*) strstr((char*)LocalFQDNName, ".");
+	if(dot == NULL) {
+		CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
+		CHKmalloc(LocalDomain = (uchar*)strdup(""));
+	} else {
+		const size_t lenhn = dot - LocalFQDNName;
+		CHKmalloc(LocalHostName = (uchar*) strndup((char*) LocalFQDNName, lenhn));
+		CHKmalloc(LocalDomain = (uchar*) strdup((char*) dot+1));
+	}
+
+	glbl.SetLocalFQDNName(LocalFQDNName);
+	glbl.SetLocalHostName(LocalHostName);
+	glbl.SetLocalDomain(LocalDomain);
+	glbl.GenerateLocalHostNameProperty();
+
+finalize_it:
+	RETiRet;
+}
+
+rsRetVal writePidFile(void)
+{
+	FILE *fp;
+	DEFiRet;
+	
+	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "w")) == NULL) {
+		fprintf(stderr, "rsyslogd: error writing pid file\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	fprintf(fp, "%d", (int) glblGetOurPid());
+	fclose(fp);
+finalize_it:
+	RETiRet;
+}
+
+/* duplicate startup protection: check, based on pid file, if our instance
+ * is already running. This MUST be called before we write our own pid file.
+ */
+rsRetVal checkStartupOK(void)
+{
+	FILE *fp = NULL;
+	DEFiRet;
+
+	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
+	if((fp = fopen((char*) PidFile, "r")) == NULL)
+		FINALIZE; /* all well, no pid file yet */
+
+	int pf_pid;
+	if(fscanf(fp, "%d", &pf_pid) != 1) {
+		fprintf(stderr, "rsyslogd: error reading pid file, cannot start up\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	
+	/* ok, we got a pid, let's check if the process is running */
+	const pid_t pid = (pid_t) pf_pid;
+	if(kill(pid, 0) == 0 || errno != ESRCH) {
+		fprintf(stderr, "rsyslogd: pidfile '%s' and pid %d already exist.\n"
+			"If you want to run multiple instances of rsyslog, you need "
+			"to specify\n"
+			"different pid files for them (-i option).\n",
+			PidFile, getpid());
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	if(fp != NULL)
+		fclose(fp);
+	RETiRet;
+}
+
 /* prepares the background processes (if auto-backbrounding) for
  * operation.
  */
 static void
-prepareBackground(void)
+prepareBackground(const int parentPipeFD)
 {
-	int r = setsid();
+	DBGPRINTF("rsyslogd: in child, finalizing initialization\n");
 
+	int r = setsid();
 	if(r == -1) {
 		char err[1024];
 		char em[2048];
@@ -149,6 +234,38 @@ prepareBackground(void)
 			                   "auto-backgrounding: %s\n", err);
 		dbgprintf("%s\n", em);
 		fprintf(stderr, "%s", em);
+	}
+
+	int beginClose = 3;
+
+	/* running under systemd? Then we must make sure we "forward" any
+	 * fds passed by it (adjust the pid).
+	 */
+	if(sd_booted()) {
+		const char *lstnPid = getenv("LISTEN_PID");
+		if(lstnPid != NULL) {
+			char szBuf[64];
+			const int lstnPidI = atoi(lstnPid);
+			snprintf(szBuf, sizeof(szBuf), "%d", lstnPidI);
+			if(!strcmp(szBuf, lstnPid) && lstnPidI == getppid()) {
+				snprintf(szBuf, sizeof(szBuf), "%d", getpid());
+				setenv("LISTEN_PID", szBuf, 1);
+				/* ensure we do not close what systemd provided */
+				const int nFds = sd_listen_fds(0);
+				if(nFds > 0) {
+					beginClose = SD_LISTEN_FDS_START + nFds;
+				}
+			}
+		}
+	}
+
+	/* close unnecessary open files */
+	const int endClose = getdtablesize();
+	close(0);
+	for(int i = beginClose ; i <= endClose ; ++i) {
+		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+			close(i);
+		}
 	}
 }
 
@@ -180,7 +297,7 @@ forkRsyslog(void)
 	}
 
 	if(cpid == 0) {    
-		prepareBackground();
+		prepareBackground(pipefd[1]);
 		close(pipefd[0]);
 		return pipefd[1];
 	}
@@ -298,17 +415,6 @@ printVersion(void)
 	printf("\tNumber of Bits in RainerScript integers: 32 (due to too-old json-c lib)\n");
 #endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
-}
-
-
-
-void
-rsyslogd_sigttin_handler()
-{
-	/* this is just a dummy to care for our sigttin input
-	 * module cancel interface. The important point is that
-	 * it actually does *nothing*.
-	 */
 }
 
 rsRetVal
@@ -588,7 +694,7 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  * system journal) will never see this message.
  */
 static rsRetVal
-logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
+logmsgInternalSelf(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
 	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
@@ -612,10 +718,9 @@ logmsgInternalSelf(const int iErr, const int pri, const size_t lenMsg,
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
-	pMsg->iFacility = pri2fac(pri);
-	pMsg->iSeverity = pri2sev(pri);
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
+	msgSetPRI(pMsg, pri);
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pMsg);
@@ -635,7 +740,7 @@ finalize_it:
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
+logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags)
 {
 	size_t lenMsg;
 	unsigned i;
@@ -834,36 +939,74 @@ finalize_it:
 }
 
 
-rsRetVal
-rsyslogdInit(void)
+static void
+hdlr_sigttin()
 {
-	char bufStartUpMsg[512];
-	struct sigaction sigAct;
-	DEFiRet;
+	/* this is just a dummy to care for our sigttin input
+	 * module cancel interface. The important point is that
+	 * it actually does *NOTHING*.
+	 */
+}
 
+static void
+hdlr_enable(int signal, void (*hdlr)())
+{
+	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = syslogd_sighup_handler;
-	sigaction(SIGHUP, &sigAct, NULL);
+	sigAct.sa_handler = hdlr;
+	sigaction(signal, &sigAct, NULL);
+}
 
-	CHKiRet(rsconf.Activate(ourConf));
-	DBGPRINTF(" started.\n");
+static void
+hdlr_sighup()
+{
+	bHadHUP = 1;
+}
 
-	if(ourConf->globals.bLogStatusMsgs) {
-               snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
-			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
-			 (int) glblGetOurPid());
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+static void
+hdlr_sigchld()
+{
+	bChildDied = 1;
+}
+
+void
+rsyslogdDebugSwitch()
+{
+	time_t tTime;
+	struct tm tp;
+
+	datetime.GetTime(&tTime);
+	localtime_r(&tTime, &tp);
+	if(debugging_on == 0) {
+		debugging_on = 1;
+		dbgprintf("\n");
+		dbgprintf("\n");
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+	} else {
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
+			  tp.tm_hour, tp.tm_min, tp.tm_sec);
+		dbgprintf("********************************************************************************\n");
+		dbgprintf("\n");
+		dbgprintf("\n");
+		debugging_on = 0;
 	}
-
-finalize_it:
-	RETiRet;
 }
 
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
+ *
+ * NOTE on stderr and stdout: they are kept open during a fork. Note that this
+ * may introduce subtle security issues: if we are in a jail, one may break out of
+ * it via these descriptors. But if I close them earlier, error messages will (once
+ * again) not be emitted to the user that starts the daemon. Given that the risk
+ * of a break-in is very low in the startup phase, we decide it is more important
+ * to emit error messages.
  */
 void
 initAll(int argc, char **argv)
@@ -872,7 +1015,6 @@ initAll(int argc, char **argv)
 	int ch;
 	extern int optind;
 	extern char *optarg;
-	int bEOptionWasGiven = 0;
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
@@ -891,7 +1033,7 @@ initAll(int argc, char **argv)
 	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:Cvwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -908,6 +1050,7 @@ initAll(int argc, char **argv)
 		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
+		case 'C':
 		case 'x': /* disable dns for remote messages */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
@@ -918,9 +1061,6 @@ initAll(int argc, char **argv)
 			break;
 		case 'D': /* BISON debug */
 			yydebug = 1;
-			break;
-		case 'e':		/* log every message (no repeat message supression) */
-			bEOptionWasGiven = 1;
 			break;
 		case 'M': /* default module load path -- this MUST be carried out immediately! */
 			glblModPath = (uchar*) optarg;
@@ -944,7 +1084,6 @@ initAll(int argc, char **argv)
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
 	CHKiRet(rsyslogd_InitGlobalClasses());
-	CHKiRet(syslogd_obtainClassPointers());
 
 	/* doing some core initializations */
 
@@ -967,15 +1106,27 @@ initAll(int argc, char **argv)
 		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
+			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
+				 "soon.\nPlease use the global(net.ipproto=\"ipv4-only\") "
+				 "configuration parameter instead.\n");
 	                glbl.SetDefPFFamily(PF_INET);
                         break;
                 case '6':
+			fprintf (stderr, "rsyslogd: the -4 command line option will go away "
+				 "soon.\nPlease use the global(net.ipproto=\"ipv6-only\") "
+				 "configuration parameter instead.\n");
                         glbl.SetDefPFFamily(PF_INET6);
                         break;
                 case 'A':
+			fprintf (stderr, "rsyslogd: the -A command line option will go away "
+				 "soon.\n"
+				 "Please use the omfwd paramter \"upd.sendToAll\" instead.\n");
                         send_to_all++;
                         break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
+			fprintf (stderr, "rsyslogd: the -S command line option will go away "
+				 "soon.\n"
+				 "Please use the omrelp paramter \"localClientIP\" instead.\n");
 			if(glbl.GetSourceIPofLocalClient() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
 			} else {
@@ -986,9 +1137,12 @@ initAll(int argc, char **argv)
 			ConfFile = (uchar*) arg;
 			break;
 		case 'i':		/* pid file name */
-			PidFile = arg;
+			PidFile = (uchar*)arg;
 			break;
 		case 'l':
+			fprintf (stderr, "rsyslogd: the -l command line option will go away "
+				 "soon.\n Make yourself heard on the rsyslog mailing "
+				 "list if you need it any longer.\n");
 			if(glbl.GetLocalHosts() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
 			} else {
@@ -1002,12 +1156,21 @@ initAll(int argc, char **argv)
 			iConfigVerify = atoi(arg);
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
+			fprintf (stderr, "rsyslogd: the -q command line option will go away "
+				 "soon.\nPlease use the global(net.aclAddHostnameOnFail=\"on\") "
+				 "configuration parameter instead.\n");
 		        *(net.pACLAddHostnameOnFail) = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
+			fprintf (stderr, "rsyslogd: the -Q command line option will go away "
+				 "soon.\nPlease use the global(net.aclResolveHostname=\"off\") "
+				 "configuration parameter instead.\n");
 		        *(net.pACLDontResolve) = 1;
 		        break;
 		case 's':
+			fprintf (stderr, "rsyslogd: the -s command line option will go away "
+				 "soon.\n Make yourself heard on the rsyslog mailing "
+				 "list if you need it any longer.\n");
 			if(glbl.GetStripDomains() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
@@ -1022,15 +1185,33 @@ initAll(int argc, char **argv)
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);
-			if(iHelperUOpt & 0x01)
+			if(iHelperUOpt & 0x01) {
+				fprintf (stderr, "rsyslogd: the -u command line option will go away "
+					 "soon.\n"
+					 "For the 0x01 bit, please use the "
+					 "global(net.parseHostnamdAndTag=\"off\") "
+					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
+			}
 			if(iHelperUOpt & 0x02)
+				fprintf (stderr, "rsyslogd: the -u command line option will go away "
+					 "soon.\n"
+					 "For the 0x02 bit, please use the -C option instead.");
 				bChDirRoot = 0;
 			break;
+		case 'C':
+			bChDirRoot = 0;
+			break;
 		case 'w':		/* disable disallowed host warnigs */
+			fprintf (stderr, "rsyslogd: the -w command line option will go away "
+				 "soon.\nPlease use the global(net.permitWarning=\"off\") "
+				 "configuration parameter instead.\n");
 			glbl.SetOption_DisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
+			fprintf (stderr, "rsyslogd: the -x command line option will go away "
+				 "soon.\nPlease use the global(net.enableDNS=\"off\") "
+				 "configuration parameter instead.\n");
 			glbl.SetDisableDNS(1);
 			break;
                case '?':
@@ -1043,13 +1224,12 @@ initAll(int argc, char **argv)
 		FINALIZE;
 
 	if(iConfigVerify) {
+		doFork = 0;
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
-
-	syslogdInit();
 
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
@@ -1074,37 +1254,59 @@ initAll(int argc, char **argv)
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 	}
 
-	/* process compatibility mode settings */
-	if(bEOptionWasGiven) {
-		errmsg.LogError(0, NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
-					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
-					    "http://www.rsyslog.com/rptdmsgreduction to learn "
-					    "more and cast your vote if you want us to keep this feature.");
+	if(iConfigVerify)
+		FINALIZE;
+	/* after this point, we are in a "real" startup */
+
+	thrdInit();
+	CHKiRet(checkStartupOK());
+	if(doFork) {
+		parentPipeFD = forkRsyslog();
+	}
+	glblSetOurPid(getpid());
+
+	hdlr_enable(SIGPIPE, SIG_IGN);
+	hdlr_enable(SIGXFSZ, SIG_IGN);
+	if(Debug) {
+		hdlr_enable(SIGUSR1, rsyslogdDebugSwitch);
+		hdlr_enable(SIGINT,  rsyslogdDoDie);
+		hdlr_enable(SIGQUIT, rsyslogdDoDie);
+	} else {
+		hdlr_enable(SIGUSR1, SIG_IGN);
+		hdlr_enable(SIGINT,  SIG_IGN);
+		hdlr_enable(SIGQUIT, SIG_IGN);
+	}
+	hdlr_enable(SIGTERM, rsyslogdDoDie);
+	hdlr_enable(SIGTTIN, hdlr_sigttin);
+	hdlr_enable(SIGCHLD, hdlr_sigchld);
+	hdlr_enable(SIGHUP, hdlr_sighup);
+
+	if(rsconfNeedDropPriv(ourConf)) {
+		/* need to write pid file early as we may loose permissions */
+		CHKiRet(writePidFile());
 	}
 
-	if(!iConfigVerify)
-		CHKiRet(syslogd_doGlblProcessInit(&parentPipeFD));
+	CHKiRet(rsconf.Activate(ourConf));
 
-	CHKiRet(rsyslogdInit());
+	if(ourConf->globals.bLogStatusMsgs) {
+		char bufStartUpMsg[512];
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
+			 (int) glblGetOurPid());
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
+	}
 
-	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+	if(!rsconfNeedDropPriv(ourConf)) {
+		CHKiRet(writePidFile());
 	}
 
 	/* END OF INTIALIZATION */
-	if(doFork)
-		tellChildReady(parentPipeFD, "OK");
+	DBGPRINTF("rsyslogd: initialization completed, transitioning to regular run mode\n");
 
-	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
-
-	/* close stderr and stdout if they are kept open during a fork. Note that this
-	 * may introduce subtle security issues: if we are in a jail, one may break out of
-	 * it via these descriptors. But if I close them earlier, error messages will (once
-	 * again) not be emitted to the user that starts the daemon. As root jail support
-	 * is still in its infancy (and not really done), we currently accept this issue.
-	 * rgerhards, 2009-06-29
-	 */
 	if(doFork) {
+		tellChildReady(parentPipeFD, "OK");
+		stddbg = -1; /* turn off writing to fd 1 */
 		close(1);
 		close(2);
 		ourConf->globals.bErrMsgToStderr = 0;
@@ -1121,39 +1323,6 @@ finalize_it:
 	}
 
 	ENDfunc
-}
-
-void
-rsyslogdDebugSwitch()
-{
-	time_t tTime;
-	struct tm tp;
-	struct sigaction sigAct;
-
-	datetime.GetTime(&tTime);
-	localtime_r(&tTime, &tp);
-	if(debugging_on == 0) {
-		debugging_on = 1;
-		dbgprintf("\n");
-		dbgprintf("\n");
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to true at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-	} else {
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("Switching debugging_on to false at %2.2d:%2.2d:%2.2d\n",
-			  tp.tm_hour, tp.tm_min, tp.tm_sec);
-		dbgprintf("********************************************************************************\n");
-		dbgprintf("\n");
-		dbgprintf("\n");
-		debugging_on = 0;
-	}
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = rsyslogdDebugSwitch;
-	sigaction(SIGUSR1, &sigAct, NULL);
 }
 
 
@@ -1313,6 +1482,16 @@ mainloop(void)
 		tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+
+		if(bChildDied) {
+			int child;
+			do {
+				child = waitpid(-1, NULL, WNOHANG);
+				DBGPRINTF("rsyslogd: child %d has terminated\n", child);
+			} while(child > 0);
+			bChildDied = 0;
+		}
+
 		if(bFinished)
 			break;	/* exit as quickly as possible */
 
@@ -1321,8 +1500,8 @@ mainloop(void)
 		if(bHadHUP) {
 			doHUP();
 			bHadHUP = 0;
-			continue;
 		}
+
 	}
 	ENDfunc
 }
@@ -1404,8 +1583,6 @@ deinitAll(void)
 
 	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
 
-	syslogd_releaseClassPointers();
-
 	parserClassExit();
 	rsconfClassExit();
 	strExit();
@@ -1422,7 +1599,7 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	syslogd_die();
+	unlink((char*)PidFile);
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own

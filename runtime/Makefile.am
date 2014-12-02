@@ -106,8 +106,8 @@ else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS)
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
 
 #
 # regular expression support
@@ -115,21 +115,19 @@ librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS)
 if ENABLE_REGEXP
 pkglib_LTLIBRARIES += lmregexp.la
 lmregexp_la_SOURCES = regexp.c regexp.h
-lmregexp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmregexp_la_LDFLAGS = -module -avoid-version
+lmregexp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmregexp_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmregexp_la_LIBADD =
 endif
 
 #
 # zlib support
 # 
-if ENABLE_ZLIB
 pkglib_LTLIBRARIES += lmzlibw.la
 lmzlibw_la_SOURCES = zlibw.c zlibw.h
-lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmzlibw_la_LDFLAGS = -module -avoid-version
+lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmzlibw_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmzlibw_la_LIBADD =
-endif
 
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
@@ -137,8 +135,8 @@ pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 # network support
 # 
 lmnet_la_SOURCES = net.c net.h
-lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
+lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo $(LIBLOGGING_STDLOG_LIBS)
 lmnet_la_LIBADD =
 
 # network stream master class and stream factory
@@ -146,15 +144,15 @@ lmnetstrms_la_SOURCES = netstrms.c netstrms.h \
 			netstrm.c netstrm.h \
 			nssel.c nssel.h \
 			nspoll.c nspoll.h
-lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnetstrms_la_LDFLAGS = -module -avoid-version
+lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmnetstrms_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmnetstrms_la_LIBADD =
 
 # generic stream server framework
 pkglib_LTLIBRARIES += lmstrmsrv.la
 lmstrmsrv_la_SOURCES = strmsrv.c strmsrv.h strms_sess.c strms_sess.h
-lmstrmsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmstrmsrv_la_LDFLAGS = -module -avoid-version
+lmstrmsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmstrmsrv_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmstrmsrv_la_LIBADD =
 
 # netstream drivers
@@ -164,8 +162,8 @@ pkglib_LTLIBRARIES += lmnsd_ptcp.la
 lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h \
 		  	nsdsel_ptcp.c nsdsel_ptcp.h \
 			nsdpoll_ptcp.c nsdpoll_ptcp.h
-lmnsd_ptcp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
+lmnsd_ptcp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmnsd_ptcp_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmnsd_ptcp_la_LIBADD =
 endif # if ENABLE_INET
 

@@ -1,42 +1,25 @@
-.\" Copyright 2004-2008 Rainer Gerhards and Adiscon for the rsyslog modifications
+.\" Copyright 2004-2014 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "27 May 2014" "Version 8.3.3" "Linux System Administration"
+.TH RSYSLOGD 8 "02 Dec 2014" "Version 8.6.0" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
 .B rsyslogd
-.RB [ " \-4 " ]
-.RB [ " \-6 " ]
-.RB [ " \-A " ]
 .RB [ " \-d " ]
 .RB [ " \-D " ]
 .RB [ " \-f "
 .I config file
 ]
-.br
 .RB [ " \-i "
 .I pid file
-]
-.RB [ " \-l "
-.I hostlist
 ]
 .RB [ " \-n " ]
 .RB [ " \-N "
 .I level
 ]
-.br
-.RB [ " \-q " ]
-.RB [ " \-Q " ]
-.RB [ " \-s "
-.I domainlist
-]
-.RB [ " \-u "
-.I userlevel
-]
+.RB [ " \-C " ]
 .RB [ " \-v " ]
-.RB [ " \-w " ]
-.RB [ " \-x " ]
 .LP
 .SH DESCRIPTION
 .B Rsyslogd
@@ -50,7 +33,7 @@ This is provided in the ./doc subdirectory and probably
 in a separate package if you installed rsyslog via a packaging system.
 To use rsyslog's advanced features, you
 .B need
-to look at the html documentation, because the man pages only cover
+to look at the html documentation, because the man pages only covers
 basic aspects of operation.
 .B For details and configuration examples, see the rsyslog.conf (5)
 .B man page and the online documentation at http://www.rsyslog.com/doc
@@ -95,47 +78,13 @@ the error element is ignored. It is tried to parse the rest of the line.
 .LP
 .SH OPTIONS
 .TP
-.BI "\-A"
-When sending UDP messages, there are potentially multiple paths to
-the target destination. By default,
-.B rsyslogd
-only sends to the first target it can successfully send to. If -A 
-is given, messages are sent to all targets. This may improve
-reliability, but may also cause message duplication. This option
-should be enabled only if it is fully understood.
-.TP
-.BI "\-4"
-Causes
-.B rsyslogd
-to listen to IPv4 addresses only.
-If neither -4 nor -6 is given,
-.B rsyslogd
-listens to all configured addresses of the system.
-.TP
-.BI "\-6"
-Causes
-.B rsyslogd
-to listen to IPv6 addresses only.
-If neither -4 nor -6 is given,
-.B rsyslogd
-listens to all configured addresses of the system.
-.TP
-.BI "\-c " "version"
-This option has been obsoleted and has no function any longer. It is still
-accepted in order not to break existing scripts. However, future versions
-may not support it.
-.TP
 .B "\-D"
 Runs the Bison config parser in debug mode. This may help when hard to find
 syntax errors are reported. Please note that the output generated is deeply
 technical and orignally targeted towards developers.
 .TP
 .B "\-d"
-Turns on debug mode.  Using this the daemon will not proceed a 
-.BR fork (2)
-to set itself in the background, but opposite to that stay in the
-foreground and write much debug information on the current tty.  See the
-DEBUGGING section for more information.
+Turns on debug mode. See the DEBUGGING section for more information.
 .TP
 .BI "\-f " "config file"
 Specify an alternative configuration file instead of
@@ -146,11 +95,6 @@ which is the default.
 Specify an alternative pid file instead of the default one.
 This option must be used if multiple instances of rsyslogd should
 run on a single machine.
-.TP
-.BI "\-l " "hostlist"
-Specify a hostname that should be logged only with its simple hostname
-and not the fqdn.  Multiple hosts may be specified using the colon
-(``:'') separator.
 .TP
 .B "\-n"
 Avoid auto-backgrounding.  This is needed especially if the
@@ -171,51 +115,13 @@ verbosity (this is a forward-compatibility option).
 is started and controlled by
 .BR init (8).
 .TP
-.BI "\-q " "add hostname if DNS fails during ACL processing"
-During ACL processing, hostnames are resolved to IP addresses for
-performance reasons. If DNS fails during that process, the hostname
-is added as wildcard text, which results in proper, but somewhat
-slower operation once DNS is up again.
-.TP
-.BI "\-Q " "do not resolve hostnames during ACL processing"
-Do not resolve hostnames to IP addresses during ACL processing.
-.TP
-.BI "\-s " "domainlist"
-Specify a domainname that should be stripped off before
-logging.  Multiple domains may be specified using the colon (``:'')
-separator.
-Please be advised that no sub-domains may be specified but only entire
-domains.  For example if
-.B "\-s north.de"
-is specified and the host logging resolves to satu.infodrom.north.de
-no domain would be cut, you will have to specify two domains like:
-.BR "\-s north.de:infodrom.north.de" .
-.TP
-.BI "\-S ip_address" "local client source IP"
-rsyslogd uses ip_address as local client address while connecting
-to remote logserver. Currently used by omrelp only and only with tcp.
-.TP
-.BI "\-u " "userlevel"
-This is a "catch all" option for some very seldomly-used user settings.
-The "userlevel" variable selects multiple things. Add the specific values
-to get the combined effect of them.
-A value of 1 prevents rsyslogd from parsing hostnames and tags inside
-messages.
-A value of 2 prevents rsyslogd from changing to the root directory. This
+.BI "\-C"
+This prevents rsyslogd from changing to the root directory. This
 is almost never a good idea in production use. This option was introduced
 in support of the internal testbed.
-To combine these two features, use a userlevel of 3 (1+2). Whenever you use
-an -u option, make sure you really understand what you do and why you do it.
 .TP
 .B "\-v"
 Print version and exit.
-.TP
-.B "\-w"
-Suppress warnings issued when messages are received from non-authorized
-machines (those, that are in no AllowedSender list).
-.TP
-.B "\-x"
-Disable DNS for remote messages.
 .LP
 .SH SIGNALS
 .B Rsyslogd
@@ -288,11 +194,17 @@ be prevented by using GSS-API authentication and encryption. Be sure
 to think about syslog network security before enabling it.
 .LP
 .SH DEBUGGING
-When debugging is turned on using
+When debugging is turned on using the
 .B "\-d"
-option then
+option,
 .B rsyslogd
-will be very verbose by writing much of what it does on stdout.
+produces debugging information according to the
+.B RSYSLOG_DEBUG
+environment variable and the signals received. When run in foreground,
+the information is written to stdout. An additional output file can be
+specified using the
+.B RSYSLOG_DEBUGLOG
+environment variable.
 .SH FILES
 .PD 0
 .TP
@@ -319,10 +231,17 @@ is specified during compilation (e.g. /usr/local).
 .SH ENVIRONMENT
 .TP
 .B RSYSLOG_DEBUG
-Controls runtime debug support.It contains an option string with the
+Controls runtime debug support. It contains an option string with the
 following options possible (all are case insensitive):
 
 .RS
+.IP Debug
+Turns on debugging and prevents forking. This is processed earlier
+in the startup than command line options (i.e. -d) and as such
+enables earlier debugging output. Mutually exclusive with DebugOnDemand.
+.IP DebugOnDemand
+Enables debugging but turns off debug output. The output can be toggled
+by sending SIGUSR1. Mutually exclusive with Debug.
 .IP LogFuncFlow
 Print out the logical flow of functions (entering and exiting them)
 .IP FileTrace

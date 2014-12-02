@@ -59,6 +59,7 @@ struct tcpsrv_s {
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
+	uchar *pszOrigin;		/**< module to be used as "origin" (e.g. for pstats) */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
@@ -153,8 +154,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
 	/* added v15 -- rgerhards, 2013-09-17 */
 	rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *pszName);
+	/* added v16 -- rgerhards, 2014-09-08 */
+	rsRetVal (*SetOrigin)(tcpsrv_t*, uchar*);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
