@@ -1281,6 +1281,11 @@ initAll(int argc, char **argv)
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
+	if(rsconfNeedDropPriv(ourConf)) {
+		/* need to write pid file early as we may loose permissions */
+		CHKiRet(writePidFile());
+	}
+
 	CHKiRet(rsconf.Activate(ourConf));
 
 	if(ourConf->globals.bLogStatusMsgs) {
@@ -1292,7 +1297,9 @@ initAll(int argc, char **argv)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 	}
 
-	CHKiRet(writePidFile());
+	if(!rsconfNeedDropPriv(ourConf)) {
+		CHKiRet(writePidFile());
+	}
 
 	/* END OF INTIALIZATION */
 	DBGPRINTF("rsyslogd: initialization completed, transitioning to regular run mode\n");
