@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
+- BSD "ntp" facility (value 12) is now also supported in filter
+  Thanks to Douglas K. Rand of Iteris, Inc. for the patch.
+  Note: this patch was released under ASL 2.0 (see email-conversation).
 ------------------------------------------------------------------------------
 Version 8.6.0 [v8-stable] 2014-12-02
 NOTE: This version also incorporates all changes and enhancements made for
