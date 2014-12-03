@@ -67,7 +67,9 @@ DEFobjCurrIf(net)
  * class...
  */
 int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
+#ifdef HAVE_LIBLOGGING_STDLOG
 stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
+#endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal messages?
@@ -75,7 +77,9 @@ int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal mess
 					 * 0 - send them to libstdlog (e.g. to push to journal)
 					 */
 static uchar *pszWorkDir = NULL;
+#ifdef HAVE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
+#endif
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
@@ -888,11 +892,27 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+#ifndef HAVE_LIBLOGGING_STDLOG
+			if(bProcessInternalMessages != 1) {
+				bProcessInternalMessages = 1;
+				errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+					"compiled with liblogging-stdlog support. "
+					"The 'ProcessInternalMessages' parameter "
+					"is ignored.\n");
+			}
+#endif
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
+#ifndef HAVE_LIBLOGGING_STDLOG
+			errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with liblogging-stdlog support. "
+				"The 'stdlog.channelspec' parameter "
+				"is ignored.\n");
+#else
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
 					(char*) stdlog_chanspec);
+#endif
 		}
 	}
 }

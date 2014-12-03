@@ -59,7 +59,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
+#endif
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -137,8 +139,10 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 
 	if(iRefCount == 0) {
 		/* init runtime only if not yet done */
+#ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_init(0);
 		stdlog_hdl = NULL;
+#endif
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	    	CHKiRet(pthread_getschedparam(pthread_self(),
 			    		      &default_thr_sched_policy,

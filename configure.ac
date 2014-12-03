@@ -30,7 +30,6 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
-PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3)
 PKG_CHECK_MODULES([JSON_C], [json],, [
 	PKG_CHECK_MODULES([JSON_C], [json-c],,)
 ])
@@ -1050,6 +1049,24 @@ fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
 
+# liblogging-stdlog support
+AC_ARG_ENABLE(liblogging-stdlog,
+        [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_liblogging_stdlog="yes" ;;
+          no) enable_liblogging_stdlog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-liblogging-stdlog) ;;
+         esac],
+        [enable_liblogging_stdlog=yes]
+)
+if test "x$enable_liblogging_stdlog" = "xyes"; then
+        PKG_CHECK_MODULES(LIBLOGGING_STDLOG, liblogging-stdlog >= 1.0.3,
+		AC_DEFINE(HAVE_LIBLOGGING_STDLOG, 1, [Define to 1 if liblogging-stdlog is available.])
+        )
+fi
+AM_CONDITIONAL(ENABLE_LIBLOGGING_STDLOG, test x$enable_liblogging_stdlog = xyes)
+
+
 # RFC 3195 support
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
@@ -1576,6 +1593,7 @@ echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    mmfields enabled:                         $enable_mmfields"
+echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
