@@ -25,7 +25,9 @@
 #include "rsyslog.h"
 
 #include <signal.h>
+#ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
+#endif
 #ifdef OS_SOLARIS
 #	include <errno.h>
 #else
@@ -555,9 +557,11 @@ logmsgInternal(int iErr, int pri, const uchar *const msg, int flags)
 		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));
+#ifdef HAVE_LIBLOGGING_STDLOG
 	} else {
 		stdlog_log(NULL, pri2sev(pri), "%s",
 			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+#endif
 	}
 
 	/* we now check if we should print internal messages out to stderr. This was
