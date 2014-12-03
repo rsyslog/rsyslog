@@ -8,6 +8,15 @@ Number generator and counter module (mmsequence)
 **Status:**\ Non project-supported module - contact author or rsyslog
 mailing list for questions
 
+**This module is deprecated** in v8 and solely provided for backward
+compatibility reasons. It was written as a work-around for missing
+global variable support in v7. Global variables are available in v8,
+and at some point in time this module will entirely be removed.
+
+**Do not use this module for newly crafted config files.**
+Use global variables instead.
+
+
 **Available since**: 7.5.6
 
 **Description**:
