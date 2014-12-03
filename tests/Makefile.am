@@ -13,6 +13,7 @@ TESTS +=  \
 	fac_mail.sh \
 	fac_news.sh \
 	fac_ftp.sh \
+	fac_ntp.sh \
 	fac_uucp.sh \
 	fac_invld1.sh \
 	fac_invld2.sh \
@@ -397,6 +398,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_news.conf \
 	   fac_ftp.sh \
 	   testsuites/fac_ftp.conf \
+	   fac_ntp.sh \
+	   testsuites/fac_ntp.conf \
 	   fac_uucp.sh \
 	   testsuites/fac_uucp.conf \
 	   fac_invld1.sh \
