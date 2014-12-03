@@ -321,7 +321,7 @@ finalize_it:
 	}
 
 	if(json) {
-		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json);
+		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json, 0);
 	}
 ENDdoAction
 

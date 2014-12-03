@@ -149,6 +149,8 @@ struct msg {
 #define MSG_LEGACY_PROTOCOL 0
 #define MSG_RFC5424_PROTOCOL 1
 
+#define MAX_VARIABLE_NAME_LEN 1024
+
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
@@ -190,7 +192,7 @@ void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
-rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
+rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
@@ -212,7 +214,7 @@ rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
 rsRetVal getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
-rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
+rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var, int force_reset);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
 
