@@ -659,6 +659,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   imuxsock_hostname.sh \
+	   testsuites/imuxsock_hostname.conf \
+	   resultdata/imuxsock_hostname.log \
 	   testsuites/mysql-truncate.sql \
 	   testsuites/mysql-select-msg.sql \
 	   libdbi-basic.sh \

@@ -1234,6 +1234,7 @@ initAll(int argc, char **argv)
 	}
 
 	localRet = rsconf.Load(&ourConf, ConfFile);
+	glbl.GenerateLocalHostNameProperty();
 
 	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
