@@ -69,6 +69,10 @@ TESTS +=  \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	imuxsock_logger.sh \
+	imuxsock_logger_err.sh \
+	imuxsock_traillf.sh \
+	imuxsock_ccmiddle.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
@@ -642,12 +646,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
+	   imuxsock_logger.sh \
+	   imuxsock_logger_err.sh \
 	   imuxsock_logger_root.sh \
 	   testsuites/imuxsock_logger_root.conf \
 	   resultdata/imuxsock_logger.log \
+	   imuxsock_traillf.sh \
 	   imuxsock_traillf_root.sh \
 	   testsuites/imuxsock_traillf_root.conf \
 	   resultdata/imuxsock_traillf.log \
+	   imuxsock_ccmiddle.sh \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
@@ -707,7 +715,7 @@ minitcpsrv_SOURCES = minitcpsrvr.c
 minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
-syslog_caller_LDADD = $(SOL_LIBS)
+syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
 
 syslog_inject_SOURCES = syslog_inject.c
 syslog_inject_LDADD = $(SOL_LIBS)
