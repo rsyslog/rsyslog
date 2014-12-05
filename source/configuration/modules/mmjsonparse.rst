@@ -1,5 +1,5 @@
-Log Message Normalization Module
-================================
+Log Message Parsing Module (mmjsonparse)
+========================================
 
 **Module Name:    mmjsonparse**
 
