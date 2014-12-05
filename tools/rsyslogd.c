@@ -178,7 +178,11 @@ rsRetVal writePidFile(void)
 		fprintf(stderr, "rsyslogd: error writing pid file\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	fprintf(fp, "%d", (int) glblGetOurPid());
+	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
+		char err[1024];
+		rs_strerror_r(errno, err, sizeof(err));
+		errmsg.LogError(0, iRet, "rsyslog: error writing pid file: %s", err);
+	}
 	fclose(fp);
 finalize_it:
 	RETiRet;
