@@ -30,6 +30,8 @@
 
 %top{
 #include "config.h"
+#include "rsyslog.h"
+#include "srUtils.h"
 }
 
 %{
@@ -291,7 +293,9 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 done:	return r;
 }
 
-/* set a new buffers. Returns 0 on success, something else otherwise. */
+/* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
+ * note: in case of error, errno must be kept valid!
+ */
 int
 cnfSetLexFile(char *fname)
 {
@@ -304,7 +308,7 @@ cnfSetLexFile(char *fname)
 		fp = stdin;
 	} else {
 		if((fp = fopen(fname, "r")) == NULL) {
-			r = 1;
+			r = 2;
 			goto done;
 		}
 	}
