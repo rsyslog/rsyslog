@@ -436,6 +436,9 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	}
 
 	if(pThis->bUseKeepAlive) {
+		CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
+		CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, pThis->iKeepAliveTime));
+		CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, pThis->iKeepAliveIntvl));
 		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
 	}
 
@@ -774,6 +777,33 @@ SetKeepAlive(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
+SetKeepAliveIntvl(strmsrv_t *pThis, int iVal)
+{
+	DEFiRet;
+	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
+	pThis->iKeepAliveIntvl = iVal;
+	RETiRet;
+}
+
+static rsRetVal
+SetKeepAliveProbes(strmsrv_t *pThis, int iVal)
+{
+	DEFiRet;
+	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
+	pThis->iKeepAliveProbes = iVal;
+	RETiRet;
+}
+
+static rsRetVal
+SetKeepAliveTime(strmsrv_t *pThis, int iVal)
+{
+	DEFiRet;
+	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
+	pThis->iKeepAliveTime = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
 {
 	DEFiRet;
@@ -876,12 +906,13 @@ CODESTARTobjQueryInterface(strmsrv)
 	pIf->Construct = strmsrvConstruct;
 	pIf->ConstructFinalize = strmsrvConstructFinalize;
 	pIf->Destruct = strmsrvDestruct;
-
 	pIf->configureSTRMListen = configureSTRMListen;
 	pIf->create_strm_socket = create_strm_socket;
 	pIf->Run = Run;
-
 	pIf->SetKeepAlive = SetKeepAlive;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetSessMax = SetSessMax;

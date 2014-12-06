@@ -54,6 +54,9 @@ struct tcpLstnPortList_s {
 struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
 	int bUseKeepAlive;	/**< use socket layer KEEPALIVE handling? */
+	int iKeepAliveIntvl;	/**< socket layer KEEPALIVE interval */
+	int iKeepAliveProbes;	/**< socket layer KEEPALIVE probes */
+	int iKeepAliveTime;	/**< socket layer KEEPALIVE timeout */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -148,6 +151,9 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
+	rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t*, int);
+	rsRetVal (*SetKeepAliveProbes)(tcpsrv_t*, int);
+	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
 	/* added v13 -- rgerhards, 2012-10-15 */
 	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
 	/* added v14 -- rgerhards, 2013-07-28 */
