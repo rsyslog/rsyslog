@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[rscript_wrap3.sh\]: a test for wrap\(3\) script-function
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup rscript_wrap3.conf
-source $srcdir/diag.sh tcpflood -m 1 -I testsuites/wrap3_input
+source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/wrap3_input
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
