@@ -79,6 +79,9 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 */
 	/* v5 */
 	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
+	rsRetVal (*SetKeepAliveIntvl)(nsd_t *pThis, int keepAliveIntvl);
+	rsRetVal (*SetKeepAliveProbes)(nsd_t *pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
