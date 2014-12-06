@@ -647,15 +647,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
 	   imuxsock_logger.sh \
+	   testsuites/imuxsock_logger.conf \
 	   imuxsock_logger_err.sh \
 	   imuxsock_logger_root.sh \
 	   testsuites/imuxsock_logger_root.conf \
 	   resultdata/imuxsock_logger.log \
 	   imuxsock_traillf.sh \
+	   testsuites/imuxsock_traillf.conf \
 	   imuxsock_traillf_root.sh \
 	   testsuites/imuxsock_traillf_root.conf \
 	   resultdata/imuxsock_traillf.log \
 	   imuxsock_ccmiddle.sh \
+	   testsuites/imuxsock_ccmiddle.conf \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
@@ -685,10 +688,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   libdbi-basic-vg.sh \
 	   mmnormalize_variable.sh \
 	   rscript_replace.sh \
+	   testsuites/rscript_replace.conf \
+	   testsuites/date_time_msg \
 	   rscript_replace_complex.sh \
+	   testsuites/rscript_replace_complex.conf \
+	   testsuites/complex_replace_input \
 	   rscript_unaffected_reset.sh \
 	   rscript_wrap2.sh \
+	   testsuites/rscript_wrap2.conf \
 	   rscript_wrap3.sh \
+	   testsuites/rscript_wrap3.conf \
+	   testsuites/wrap3_input\
+	   testsuites/gethostname.conf \
 	   cfg.sh
 
 # TODO: re-enable
