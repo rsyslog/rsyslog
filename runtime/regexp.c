@@ -75,12 +75,16 @@ BEGINAbstractObjClassInit(regexp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version *
 	/* set our own handlers */
 ENDObjClassInit(regexp)
 
+BEGINObjClassExit(regexp, OBJ_IS_LOADABLE_MODULE)
+CODESTARTObjClassExit(regexp)
+ENDObjClassExit(regexp)
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
 
 
 BEGINmodExit
 CODESTARTmodExit
+regexpClassExit();
 ENDmodExit
 
 
