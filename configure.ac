@@ -233,12 +233,12 @@ fi
 
 
 
-AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
+AC_CHECK_HEADER(zlib.h, [zlib_header="yes" enable_zlib="yes"], [zlib_header="no" enable_zlib="no"])
 if test "$zlib_header" = "yes"; then
 	AC_CHECK_LIB(z, deflate,
 		[AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
 		 ZLIB_LIBS="-lz"
-		 AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
+		 AC_SUBST(ZLIB_LIBS) enable_zlib="yes"], enable_zlib="no")
 fi
 
 
