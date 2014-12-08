@@ -826,8 +826,8 @@ AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 AC_ARG_ENABLE(extended_tests,
         [AS_HELP_STRING([--enable-extended-tests],[extended testbench @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_rsyslogd="yes" ;;
-          no) enable_rsyslogd="no" ;;
+         yes) enable_extended_tests="yes" ;;
+          no) enable_extended_tests="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-extended-tests) ;;
          esac],
         [enable_extended_tests=no]
