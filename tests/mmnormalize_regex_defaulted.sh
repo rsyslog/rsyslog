@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[mmnormalize_regex_defaulted.sh\]: test for mmnormalize regex field_type, with allow_regex defaulted
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup mmnormalize_regex_defaulted.conf
-source $srcdir/diag.sh tcpflood -m 1 -I testsuites/regex_input
+source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/regex_input
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown

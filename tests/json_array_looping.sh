@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[json_array_looping.sh\]: basic test for looping over json array
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup json_array_looping.conf
-source $srcdir/diag.sh tcpflood -m 1 -I testsuites/json_array_input
+source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
