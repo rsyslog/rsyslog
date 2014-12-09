@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[mmnormalize_tokenized.sh\]: test for mmnormalize tokenized field_type
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup mmnormalize_tokenized.conf
-source $srcdir/diag.sh tcpflood -m 1 -I testsuites/tokenized_input
+source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/tokenized_input
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
