@@ -141,7 +141,9 @@ selects whether a static or dynamic file (name) shall be written to.
    For each message, the file name is generated based on the given
    template. Then, this file is opened. As with the *file* property,
    data is appended if the file already exists. If the file does not
-   exist, a new file is created.
+   exist, a new file is created. The template given in "templateName"
+   is just a regular :doc:`rsyslog template <../templates>`, so all
+   you have full control over how to format the file name.
    
    A cache of recent files is kept. Note
    that this cache can consume quite some memory (especially if large
