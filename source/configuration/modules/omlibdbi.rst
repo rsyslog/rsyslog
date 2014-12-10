@@ -1,9 +1,9 @@
 omlibdbi: Generic Database Output Module
 ========================================
 
-**Module Name:    omlibdbi**
+**Module Name:** omlibdbi
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Description**:
 
@@ -55,28 +55,35 @@ system.
 
 **Configuration Directives**:
 
--  $ActionLibdbiDriverDirectory /path/to/dbd/drivers
+-  **$ActionLibdbiDriverDirectory** /path/to/dbd/drivers
+
    This is a global setting. It points libdbi to its driver directory.
    Usually, you do not need to set it. If you installed libdbi-driver's
    at a non-standard location, you may need to specify the directory
    here. If you are unsure, do not use this configuration directive.
    Usually, everything works just fine.\ 
--  $ActionLibdbiDriver drivername
+-  **$ActionLibdbiDriver** drivername
+
    Name of the dbidriver to use, see libdbi-drivers documentation. As a
    quick excerpt, at least those were available at the time of this
    writiting "mysql" (suggest to use ommysql instead), "firebird"
    (Firbird and InterBase), "ingres", "msql", "Oracle", "sqlite",
    "sqlite3", "freetds" (for Microsoft SQL and Sybase) and "pgsql"
    (suggest to use ompgsql instead).
--  $ActionLibdbiHost hostname
+-  **$ActionLibdbiHost** hostname
+
    The host to connect to.
--  $ActionLibdbiUserName user
+-  **$ActionLibdbiUserName** user
+
    The user used to connect to the database.
--  $ActionlibdbiPassword
+-  **$ActionlibdbiPassword**
+
    That user's password.
--  $ActionlibdbiDBName db
+-  **$ActionlibdbiDBName** db
+
    The database that shall be written to.
--  selector line: :omlibdbi:;template
+-  **selector line:** :omlibdbi:;template
+
    executes the recently configured omlibdbi action. The ;template part
    is optional. If no template is provided, a default template is used
    (which is currently optimized for MySQL - sorry, folks...)
@@ -111,9 +118,11 @@ The following sample writes all syslog messages to the database
 accessed under the account of "user" with password "pwd" (if you have
 empty passwords, just remove the $ActionLibdbiPassword line).
 
-$ModLoad omlibdbi $ActionLibdbiDriver mysql $ActionLibdbiHost
-mysqlserver.example.com $ActionLibdbiUserName user $ActionLibdbiPassword
-pwd $ActionLibdbiDBName syslog\_db \*.\* :omlibdbi:
+::
+
+  $ModLoad omlibdbi $ActionLibdbiDriver mysql $ActionLibdbiHost
+  mysqlserver.example.com $ActionLibdbiUserName user $ActionLibdbiPassword
+  pwd $ActionLibdbiDBName syslog\_db \*.\* :omlibdbi:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
