@@ -357,7 +357,9 @@ AC_ARG_ENABLE(imjournal,
         [enable_imjournal="no"]
 )
 if test "x$enable_imjournal" = "xyes"; then
-	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] ,, [
+	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	])
 fi
 AM_CONDITIONAL(ENABLE_IMJOURNAL, test x$enable_imjournal = xyes)
 
@@ -1219,7 +1221,9 @@ AC_ARG_ENABLE(omjournal,
         [enable_omjournal=no]
 )
 if test "x$enable_omjournal" = "xyes"; then
-	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] ,, [
+	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
+	])
 fi
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
