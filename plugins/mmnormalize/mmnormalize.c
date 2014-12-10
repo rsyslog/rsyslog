@@ -61,7 +61,7 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 static struct cnfparamdescr modpdescr[] = {
-	{ "allow_regex", eCmdHdlrBinary, 0 }
+	{ "allowregex", eCmdHdlrBinary, 0 }
 };
 
 static struct cnfparamblk modpblk = {
@@ -276,7 +276,7 @@ CODESTARTsetModCnf
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(modpblk.descr[i].name, "allow_regex")) {
+		if(!strcmp(modpblk.descr[i].name, "allowregex")) {
 			loadModConf->allow_regex = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmnormalize: program error, non-handled "
