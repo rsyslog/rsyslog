@@ -751,6 +751,7 @@ minitcpsrv_SOURCES = minitcpsrvr.c
 minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
+syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
 syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
