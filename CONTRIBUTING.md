@@ -21,5 +21,9 @@ These are many ways to contribute to the project:
 
 This list is not conclusive. There for sure are many more ways to contribute and if you find one, just let us know. We are very open to new suggestions and like to try out new things.
 
+Note to developers
+------------------
+please adress pull requests against master-candidate branch. This enables the developers to first test contributions via the automated testbench. If the test succeeds, your changes will automaticly get migrated into the master branch. This might take a short while, so don't worry if you do not see your contribution immediatly after your pull request is merged.
+
 More information is available at:
     http://www.rsyslog.com/how-to-contribute-to-rsyslog/
