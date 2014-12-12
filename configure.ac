@@ -892,10 +892,21 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.0.0)
-fi
-AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.0.2)
 
+	save_CFLAGS="$CFLAGS"
+	save_LIBS="$LIBS"
+
+	CFLAGS="$CFLAGS $LIBLOGNORM_CFLAGS"
+	LIBS="$LIBS $LIBLOGNORM_LIBS"
+
+	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_REGEX_SUPPORTED,[lognorm_regex_supported="yes"],)
+
+	CFLAGS="$save_CFLAGS"
+	LIBS="$save_LIBS"
+fi
+AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
+AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 
 # mmnjsonparse
 AC_ARG_ENABLE(mmjsonparse,
@@ -908,7 +919,6 @@ AC_ARG_ENABLE(mmjsonparse,
         [enable_mmjsonparse=no]
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
-
 
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
