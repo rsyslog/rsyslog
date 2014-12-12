@@ -235,6 +235,10 @@ Caveats/Known Bugs
 -  module always binds to all interfaces
 -  can not be loaded together with `imgssapi <imgssapi.html>`_ (which
    includes the functionality of imtcp)
+-  increasing MaxSessions and MaxListeners doesn't change MaxOpenFiles,
+   consider increasing this global configuration parameter too (on Linux
+   check the actual value for running process by in /proc/PID/limits; default
+   limit on Linux is 1024)
 
 Example
 -------
