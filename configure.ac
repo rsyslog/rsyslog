@@ -1584,7 +1584,6 @@ echo
 echo "    Large file support enabled:               $enable_largefile"
 echo "    Networking support enabled:               $enable_inet"
 echo "    Regular expressions support enabled:      $enable_regexp"
-echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
