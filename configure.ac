@@ -1581,11 +1581,11 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omelasticsearch/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
+		plugins/omhttpfs/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
-		contrib/omhttpfs/Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
