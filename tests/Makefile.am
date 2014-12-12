@@ -181,9 +181,13 @@ if ENABLE_MMNORMALIZE
 TESTS +=  \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
-	mmnormalize_regex.sh \
-	mmnormalize_regex_disabled.sh \
-	mmnormalize_regex_defaulted.sh
+	mmnormalize_regex_defaulted.sh \
+	mmnormalize_regex_disabled.sh
+
+if LOGNORM_REGEX_SUPPORTED
+TESTS += \
+	mmnormalize_regex.sh
+endif
 endif
 
 if ENABLE_MMJSONPARSE
