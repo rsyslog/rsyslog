@@ -1,14 +1,7 @@
 /* omhttpfs.c
- * send all output to httpfs - this is primarily a test driver (but may
- * be used for weired use cases). Not tested for robustness!
+ * Send all output to HDFS via httpfs 
  *
- * NOTE: read comments in module-template.h for more specifics!
- *
- * File begun on 2009-03-19 by RGerhards
- *
- * Copyright 2009-2013 Adiscon GmbH.
- *
- * This file is part of rsyslog.
+ * Author: sskaje (sskaje@gmail.com, http://sskaje.me/)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,16 +40,8 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "datetime.h"
-#include "netstrms.h"
-#include "netstrm.h"
-#include "net.h"
-#include "tcpclt.h"
 #include "statsobj.h"
 #include "unicode-helper.h"
-
-
-
-
 
 // output module
 MODULE_TYPE_OUTPUT
@@ -71,10 +56,6 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
-DEFobjCurrIf(net)
-DEFobjCurrIf(netstrms)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(tcpclt)
 
 
 /* local definitions */
@@ -96,44 +77,17 @@ DEFobjCurrIf(tcpclt)
 #define HTTPFS_URL_BUFFER_LENGTH 2048
 
 
-
 /*
-template (name="filetpl" type="string" string="/var/log/remote/dhcp/dhcp-%$DAY%-%$MONTH%-%$YEAR%.log")
+Examples: 
 
-
-action(
-    type="omhttpfs"
-    host="127.0.0.1"
-    ip="172.16.3.20"
-    port=14000
-
-    user="hdfs"
-
-    file="filetpl"         ＃ 静态文件名
-    isDynFile="1"
-
-    https="0"
-)
-
+module(load="omhttpfs")
+template(name="hdfs_tmp_file" type="string" string="/tmp/%$YEAR%/test.log")
+template(name="hdfs_tmp_filecontent" type="string" string="%$YEAR%-%$MONTH%-%$DAY% %MSG% ==\n")
+local4.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on")
+local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on" template="hdfs_tmp_filecontent")
 */
 
-#define DPP(x) printf("%d %s(): %s\n", __LINE__, __FUNCTION__, x)
-
-
-typedef struct _HTTPFS {
-    sbool https;
-    uchar* host;
-    uchar* ip;
-    int  port;
-    uchar* user;
-    CURL* curl;
-} HTTPFS;
-
-
-typedef struct _HTTPFS_CURL_RESULT {
-    char *buf;
-    size_t size;
-} httpfs_curl_result;
+#define DPP(x) DBGPRINTF("OMHTTPFS: %s:%d %s(): %s\n", __FILE__, __LINE__, __FUNCTION__, x)
 
 typedef struct _HTTPFS_JSON_REMOTE_EXCEPTION {
     char message[1024];
@@ -154,12 +108,11 @@ typedef struct _instanceData {
     sbool isDynFile;
 
     uchar* tplName;
-    uint8_t iNumTpls;	/* number of tpls we use */
 } instanceData;
 
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 
     CURL* curl;
 
@@ -179,10 +132,10 @@ static struct cnfparamdescr actpdescr[] = {
     { "user", eCmdHdlrGetWord, 0 },
     //{ "ip", eCmdHdlrGetWord, 0 },
     { "https", eCmdHdlrBinary, 0 },
-   //{ "timeout", eCmdHdlrInt, 0 },
-
-    { "file", eCmdHdlrGetWord, 0 },
+    //{ "timeout", eCmdHdlrInt, 0 },
+    { "file", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
     { "isdynfile", eCmdHdlrBinary, 0 },
+    { "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk = {
     CNFPARAMBLK_VERSION,
@@ -192,9 +145,9 @@ static struct cnfparamblk actpblk = {
 
 
 /**
-* Reset config variables
-*
-*/
+ * Reset config variables
+ * 
+ */
 static rsRetVal resetConfig(instanceData* pData)
 {
     DEFiRet;
@@ -210,10 +163,12 @@ static rsRetVal resetConfig(instanceData* pData)
 
 
 /**
-* 初始化Curl
-*
-* @return CURL*
-*/
+ * curl init
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param instanceData *pData
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
@@ -226,9 +181,11 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-        // for ssl
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        if (pData->https) {
+            // for ssl
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+            curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        }
     } else {
         // TODO: return
         return RS_RET_FALSE;
@@ -236,11 +193,18 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
     curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTPFS_USER_AGENT);
 
-
+    pWrkrData->curl = curl;
     return RS_RET_OK;
 }
 
-
+/**
+ * Build HTTPFS URL
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param char* op
+ * @param es_str_t** url_buf
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
 {
@@ -285,16 +249,29 @@ httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
     return RS_RET_OK;
 }
 
-void httpfs_set_url(wrkrInstanceData_t *pWrkrData,  char* op)
+/**
+ * curl set URL
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param char* op
+ * @return void
+ */
+void httpfs_set_url(wrkrInstanceData_t *pWrkrData, char* op)
 {
     es_str_t* url;
     char* url_cstr;
     httpfs_build_url(pWrkrData, op, &url);
     url_cstr = es_str2cstr(url, NULL);
+DPP(url_cstr)
     curl_easy_setopt(pWrkrData->curl, CURLOPT_URL, url_cstr);
     free(url_cstr);
 }
-
+/**
+ * Set http method to PUT
+ *
+ * @param CURL* curl
+ * @return void
+ */
 void httpfs_curl_set_put(CURL* curl)
 {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
@@ -305,7 +282,12 @@ void httpfs_curl_set_put(CURL* curl)
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 }
-
+/**
+ * Set http method to GET
+ *
+ * @param CURL* curl
+ * @return void
+ */
 void httpfs_curl_set_get(CURL* curl)
 {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
@@ -316,7 +298,12 @@ void httpfs_curl_set_get(CURL* curl)
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
 }
-
+/**
+ * Set http method to POST
+ *
+ * @param CURL* curl
+ * @return void
+ */
 void httpfs_curl_set_post(CURL* curl)
 {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
@@ -328,6 +315,14 @@ void httpfs_curl_set_post(CURL* curl)
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
 }
 
+/**
+ * Build curl slist
+ * 
+ * @param struct curl_slist* headers
+ * @param int hdr_count
+ * @param ...
+ * @return struct curl_slist* 
+ */
 struct curl_slist* httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 {
     const char* hdr;
@@ -355,8 +350,15 @@ struct curl_slist* httpfs_curl_add_header(struct curl_slist* headers, int hdr_co
     return headers;
 }
 
-
-
+/**
+ * Callback function for CURLOPT_WRITEFUNCTION
+ *
+ * @param void* contents
+ * @param size_t size
+ * @param size_t nmemb
+ * @param void *userp
+ * @return size_t
+ */
 static size_t
 httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -378,9 +380,9 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
 }
 
 /**
-* Variables declaration
-* used in httpfs related operation
-*/
+ * Variables declaration
+ * used in httpfs related operation
+ */
 #define HTTPFS_CURL_VARS_INIT \
     struct curl_slist* headers = NULL; \
     long response_code; \
@@ -389,16 +391,16 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     int is_json = 0;
 
 /**
-* Resource release
-* used in httpfs related operation
-*/
+ * Resource release
+ * used in httpfs related operation
+ */
 #define HTTPFS_CURL_VARS_RELEASE \
     curl_slist_free_all(headers);
 
 /**
-* Curl execution
-* used in httpfs related operation
-*/
+ * Curl execution
+ * used in httpfs related operation
+ */
 #define HTTPFS_CURL_EXEC \
     pWrkrData->reply = NULL; \
     pWrkrData->replyLen = 0; \
@@ -411,7 +413,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
             is_json = 1; \
         } \
         curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code); \
-        if (pWrkrData != NULL) { \
+        if (pWrkrData->reply != NULL) { \
             pWrkrData->reply[pWrkrData->replyLen] = '\0'; \
         } \
     } else { \
@@ -419,26 +421,25 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     }
 
 /**
-* convert integer permission to string
-*
-*
-* @param int     permission
-* @param char*   perm_string
-* @return int
-*/
+ * convert integer permission to string
+ *
+ * @param int     permission
+ * @param char*   perm_string
+ * @return int
+ */
 int httpfs_permission_to_string(int permission, char* perm_string)
 {
     return sprintf(perm_string, "%04o", permission);
 }
 
 /**
-* Parse remote exception json string
-*
-* @param char* buf
-* @param int   length
-* @param httpfs_json_remote_exception* jre
-* @return int
-*/
+ * Parse remote exception json string
+ *
+ * @param char* buf
+ * @param int   length
+ * @param httpfs_json_remote_exception* jre
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
 {
@@ -460,35 +461,35 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
         return RS_RET_FALSE;
     }
 
-    struct json_object *obj;
+    struct json_object *jobj;
 
     memset(jre, 0, sizeof(*jre));
 
-    json_object_object_get_ex(json, "javaClassName", &obj);
-    strncpy(jre->class, (char*) json_object_get_string(obj), json_object_get_string_len(obj));
+    json_object_object_get_ex(json, "javaClassName", &jobj);
+    strncpy(jre->class, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
-    json_object_object_get_ex(json, "exception", &obj);
-    strncpy(jre->exception, (char*) json_object_get_string(obj), json_object_get_string_len(obj));
+    json_object_object_get_ex(json, "exception", &jobj);
+    strncpy(jre->exception, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
-    json_object_object_get_ex(json, "message", &obj);
-    strncpy(jre->message, (char*) json_object_get_string(obj), json_object_get_string_len(obj));
+    json_object_object_get_ex(json, "message", &jobj);
+    strncpy(jre->message, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
     return RS_RET_OK;
 }
 
 /**
-* make a new directory
-* op=MKDIR
-*
-* @param HTTPFS* cfg
-* @param char*   path
-* @param httpfs_curl_result* result
-* @return int
-*/
+ * Make a new directory
+ * op=MKDIR
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_mkdir(wrkrInstanceData_t *pWrkrData)
 {
-    // curl -b /tmp/c.tmp -c /tmp/c.tmp 'http://172.16.3.20:14000/webhdfs/v1/tmp/a/a/a/a?user.name=hdfs&recursive=true&op=mkdirs' -X PUT
+    /* 
+    curl -b /tmp/c.tmp -c /tmp/c.tmp 'http://172.16.3.20:14000/webhdfs/v1/tmp/a/a/a/a?user.name=hdfs&recursive=true&op=mkdirs' -X PUT
+    */
     httpfs_curl_set_put(pWrkrData->curl);
 HTTPFS_CURL_VARS_INIT
 
@@ -515,25 +516,23 @@ HTTPFS_CURL_VARS_RELEASE
 }
 
 /**
-* create a file
-* op=CREATE
-* overwrite is turned off
-*
-* @param HTTPFS* cfg
-* @param char*   path
-* @param char*   buf
-* @param int     length
-* @param httpfs_curl_result* result
-* @return int
-*/
+ * Create a file
+ * op=CREATE
+ * overwrite is turned off
+ * 
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param char*   buf
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
 {
     // httpfs.create automatically create folders, no mkdirs needed.
 
-    // curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' -X PUT \
-    //       'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=create&data=true'
-
+    /* 
+    curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' -X PUT \
+           'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=create&data=true'
+    */
 HTTPFS_CURL_VARS_INIT
     httpfs_curl_set_put(pWrkrData->curl);
 
@@ -568,21 +567,20 @@ HTTPFS_CURL_VARS_RELEASE
 }
 
 /**
-* append to file
-* op=APPEND
-*
-* @param HTTPFS* cfg
-* @param char*   path
-* @param char*   buf
-* @param int     length
-* @param httpfs_curl_result* result
-* @return int
-*/
+ * Append to file
+ * op=APPEND
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param char*   buf
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_append_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
 {
-    // curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' \
-    //       'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=append&data=true'
+    /*
+    curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' \
+           'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=append&data=true'
+    */
 HTTPFS_CURL_VARS_INIT
     httpfs_curl_set_post(pWrkrData->curl);
     httpfs_set_url(pWrkrData, "&op=append&data=true");
@@ -612,14 +610,12 @@ HTTPFS_CURL_VARS_RELEASE
 }
 
 /**
-* get file content
-* op=OPEN
-*
-* @param HTTPFS* cfg
-* @param char*   path
-* @param httpfs_curl_result* result
-* @return int
-*/
+ * Get file content
+ * op=OPEN
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_get_file(wrkrInstanceData_t *pWrkrData)
 {
@@ -652,7 +648,13 @@ HTTPFS_CURL_VARS_RELEASE
     }
 }
 
-
+/**
+ * httpfs log 
+ *
+ * @param wrkrInstanceData_t *pWrkrData
+ * @param uchar* buf
+ * @return rsRetVal
+ */
 static rsRetVal
 httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 {
@@ -663,24 +665,29 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 
 
     */
-    int r;
+    DEFiRet;
+
     int response_code;
     httpfs_json_remote_exception jre;
 
-    r = httpfs_append_file(pWrkrData, buf);
-    if (r) {
+    iRet = httpfs_append_file(pWrkrData, buf);
+    DPP("Checking result of httpfs_append_file()")
+    DBGPRINTF("iRet=%d\n", iRet);
+    if (iRet == RS_RET_OK) {
+    DPP("File Appending Success")
         return RS_RET_OK;
     }
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
+    DBGPRINTF("Response Code = %d\n", response_code);
     if (response_code != 404) {
         // todo: log error
-
+    DBGPRINTF("Not 404, exit\n");
         return RS_RET_FALSE;
     }
 
-    r = httpfs_create_file(pWrkrData, buf);
-    if (r) {
+    iRet = httpfs_create_file(pWrkrData, buf);
+    if (iRet == RS_RET_OK) {
         return RS_RET_OK;
     }
 
@@ -695,8 +702,9 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
         if (!strncmp(jre.exception, HTTPFS_FILEALREADYEXISTSEXCEPTION, strlen(HTTPFS_FILEALREADYEXISTSEXCEPTION))) {
             // file exists, go to append
 
-            r = httpfs_append_file(pWrkrData, buf);
-            if (r) {
+            iRet = httpfs_append_file(pWrkrData, buf);
+            if (iRet == RS_RET_OK) {
+        //free(&jre);
                 return RS_RET_OK;
             } else {
                 // error
@@ -711,57 +719,28 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 }
 
 
-/**
-* 初始化配置
-*/
 BEGINinitConfVars
     CODESTARTinitConfVars
 ENDinitConfVars
 
 
-/**
-* 创建实例
-*
-*/
 BEGINcreateInstance
-    // 初始化curl?
-
 CODESTARTcreateInstance
     DBGPRINTF("omhttpfs: createInstance\n");
-    // 链接？
-
-
 ENDcreateInstance
 
-/**
-* 创建工作实例
-*
-*/
+
 BEGINcreateWrkrInstance
-    //
 CODESTARTcreateWrkrInstance
     DBGPRINTF("omhttpfs: createWrkrInstance\n");
     // init worker resource
-
     pWrkrData->curl = NULL;
-
     CHKiRet(httpfs_init_curl(pWrkrData, pWrkrData->pData));
-
-    if (pData->isDynFile) {
-        // TODO
-        // Parse pData->file
-        // copy to pWrkData->file
-    } else {
-        pWrkrData->file = (uchar* ) strdup((char*)pData->file);
-    }
-
 finalize_it:
     DBGPRINTF("DDDD: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
-/**
-* 检查兼容性
-*/
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
     if(eFeat == sFEATURERepeatedMsgReduction)
@@ -769,53 +748,34 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/**
-* 释放实例
-*/
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
 
 
-/**
-* 释放工作实例
-*/
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
-/**
-* 打调试信息
-*/
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
     DBGPRINTF("OmHTTPFS\n");
     DBGPRINTF("Version: %s\n", OMHTTPFS_VERSION);
     DBGPRINTF("\tHost: %s\n", pData->host);
     DBGPRINTF("\tFile: %s\n", pData->file);
-
 ENDdbgPrintInstInfo
 
 
-/**
-* Resume?
-*/
 BEGINtryResume
 CODESTARTtryResume
     DBGPRINTF("omhttpfs: tryResume called\n");
-    //iRet = checkConn(pWrkrData);
-
 ENDtryResume
 
-/**
-* Begin Transaction
-*/
+
 BEGINbeginTransaction
     CODESTARTbeginTransaction
-
     DBGPRINTF("omhttpfs: beginTransaction, pWrkrData %p, pData %p\n", pWrkrData, pWrkrData->pData);
-
 finalize_it:
 ENDbeginTransaction
 
@@ -825,6 +785,7 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
     DBGPRINTF("OmHttpFS: Action");
+DPP("PING")
     // dynamic file name
     if (pWrkrData->pData->isDynFile) {
         pWrkrData->file = ustrdup(ppString[1]);
@@ -839,7 +800,6 @@ CODESTARTdoAction
         DBGPRINTF("error writing httpfs, suspending\n");
         iRet = RS_RET_SUSPENDED;
     }
-
 ENDdoAction
 
 
@@ -852,14 +812,18 @@ CODESTARTendTransaction
     dbgprintf("omhttpfs: endTransaction init\n");
     /* End Transaction only if batch data is not empty */
 
-
     finalize_it:
     free(cstr);
     dbgprintf("omhttpfs: endTransaction done with %d\n", iRet);
 ENDendTransaction
 
 
-
+/**
+ * Set default parameters
+ *
+ * @param instanceData *pData
+ * @return void
+ */
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
@@ -872,13 +836,14 @@ setInstParamDefaults(instanceData *pData)
     pData->isDynFile = 0;
 }
 
-// 初始化
+
 BEGINnewActInst
     struct cnfparamvals *pvals;
     int i;
     uchar *tplToUse;
 
 CODESTARTnewActInst
+DPP("PING")
     if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
@@ -923,12 +888,10 @@ CODESTARTnewActInst
 
     // register template for file name
     if (pData->isDynFile) {
-        pData->iNumTpls = 2;
         CODE_STD_STRING_REQUESTparseSelectorAct(2)
 
         CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->file), OMSR_NO_RQD_TPL_OPTS));
     } else {
-        pData->iNumTpls = 1;
         CODE_STD_STRING_REQUESTparseSelectorAct(1)
     }
 
@@ -944,6 +907,7 @@ ENDnewActInst
 BEGINparseSelectorAct
     int iTplOpts;
 CODESTARTparseSelectorAct
+DPP("PING")
     // this is for the legacy configuration format
     // forget it
 
@@ -956,7 +920,8 @@ ENDparseSelectorAct
 * SIGHUP
 */
 BEGINdoHUP
-    CODESTARTdoHUP
+CODESTARTdoHUP
+DPP("PING")
 ENDdoHUP
 
 
@@ -965,6 +930,7 @@ ENDdoHUP
 */
 BEGINmodExit
 CODESTARTmodExit
+DPP("PING")
 
     /*  */
     curl_global_cleanup();
@@ -979,13 +945,13 @@ ENDmodExit
 * Query Entry Point
 */
 BEGINqueryEtryPt
-
 CODESTARTqueryEtryPt
+DPP("PING")
     CODEqueryEtryPt_STD_OMOD_QUERIES
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
     CODEqueryEtryPt_STD_OMOD8_QUERIES
-    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 ENDqueryEtryPt
-
 
 
 /**
@@ -996,9 +962,9 @@ BEGINmodInit()
 CODESTARTmodInit
 
 INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-
+DPP("PING")
     /* tell which objects we need */
     CHKiRet(objUse(errmsg, CORE_COMPONENT));
     CHKiRet(objUse(glbl, CORE_COMPONENT));
@@ -1014,7 +980,3 @@ ENDmodInit
 
 
 
-
-
-/* vi:set ai:
- */

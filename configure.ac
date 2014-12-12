@@ -1481,9 +1481,13 @@ AC_ARG_ENABLE(omhttpfs,
          esac],
         [enable_omhttpfs=no]
 )
-#
+
+
 if test "x$enable_omhttpfs" = "xyes"; then
 	AC_CHECK_HEADERS([curl/curl.h])
+	PKG_CHECK_MODULES([CURL], [libcurl])
+	PKG_CHECK_MODULES([JSON_C], [json-c])
+	LT_LIB_M
 	#PKG_CHECK_MODULES(HTTPFS, curl >= 7.0.0)
 fi
 AM_CONDITIONAL(ENABLE_OMHTTPFS, test x$enable_omhttpfs = xyes)
