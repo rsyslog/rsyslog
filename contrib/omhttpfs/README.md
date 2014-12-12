@@ -31,4 +31,6 @@ local4.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" fi
 local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on" template="hdfs_tmp_filecontent")
 ```
 
+Tested with CDH 5.2.0 + Rsyslog 8.6.0 on CentOS 7
+
 \# EOF
