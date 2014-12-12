@@ -1470,6 +1470,27 @@ AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 # END HIREDIS SUPPORT
 
 
+# HTTPFS SUPPORT
+
+AC_ARG_ENABLE(omhttpfs,
+        [AS_HELP_STRING([--enable-omhttpfs],[Compiles omhttpfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhttpfs="yes" ;;
+          no) enable_omhttpfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhttpfs) ;;
+         esac],
+        [enable_omhttpfs=no]
+)
+#
+if test "x$enable_omhttpfs" = "xyes"; then
+	AC_CHECK_HEADERS([curl/curl.h])
+	#PKG_CHECK_MODULES(HTTPFS, curl >= 7.0.0)
+fi
+AM_CONDITIONAL(ENABLE_OMHTTPFS, test x$enable_omhttpfs = xyes)
+
+# END HTTPFS SUPPORT
+
+
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
 
@@ -1564,6 +1585,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
+		contrib/omhttpfs/Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
@@ -1613,6 +1635,7 @@ echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
+echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"

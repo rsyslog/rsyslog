@@ -272,6 +272,12 @@ endif
 # modules that need to be generated first
 SUBDIRS += tests
 
+# omhttpfs
+if ENABLE_OMHTTPFS
+SUBDIRS += plugins/omhttpfs
+endif
+
+
 
 # make sure "make distcheck" tries to build all modules. This means that
 # a developer must always have an environment where every supporting library
