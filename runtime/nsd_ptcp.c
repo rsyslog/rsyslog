@@ -225,7 +225,6 @@ SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
-	assert(sock >= 0);
 
 	pThis->iKeepAliveIntvl = keepAliveIntvl;
 
@@ -241,7 +240,6 @@ SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
-	assert(sock >= 0);
 
 	pThis->iKeepAliveProbes = keepAliveProbes;
 
@@ -257,7 +255,6 @@ SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
-	assert(sock >= 0);
 
 	pThis->iKeepAliveTime = keepAliveTime;
 
