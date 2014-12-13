@@ -247,7 +247,38 @@ EnableKeepAlive(netstrm_t *pThis)
 	RETiRet;
 }
 
+/* Keep-Alive options
+ */
+static rsRetVal
+SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetKeepAliveProbes(pThis->pDrvrData, keepAliveProbes);
+	RETiRet;
+}
 
+/* Keep-Alive options
+ */
+static rsRetVal
+SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetKeepAliveTime(pThis->pDrvrData, keepAliveTime);
+	RETiRet;
+}
+
+/* Keep-Alive options
+ */
+static rsRetVal
+SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
+	RETiRet;
+}
 
 /* check connection - slim wrapper for NSD driver function */
 static rsRetVal
@@ -353,6 +384,9 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetSock = GetSock;
 	pIf->EnableKeepAlive = EnableKeepAlive;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

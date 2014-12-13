@@ -442,6 +442,9 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	}
 
 	if(pThis->bUseKeepAlive) {
+	        CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
+	        CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, pThis->iKeepAliveTime));
+	        CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, pThis->iKeepAliveIntvl));
 		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
 	}
 
@@ -1087,6 +1090,33 @@ SetKeepAlive(tcpsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
+SetKeepAliveIntvl(tcpsrv_t *pThis, int iVal)
+{
+       DEFiRet;
+       DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
+       pThis->iKeepAliveIntvl = iVal;
+       RETiRet;
+}
+
+static rsRetVal
+SetKeepAliveProbes(tcpsrv_t *pThis, int iVal)
+{
+       DEFiRet;
+       DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
+       pThis->iKeepAliveProbes = iVal;
+       RETiRet;
+}
+
+static rsRetVal
+SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
+{
+       DEFiRet;
+       DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
+       pThis->iKeepAliveTime = iVal;
+       RETiRet;
+}
+
+static rsRetVal
 SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
 {
 	DEFiRet;
@@ -1305,6 +1335,9 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->Run = Run;
 
 	pIf->SetKeepAlive = SetKeepAlive;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetOrigin = SetOrigin;
