@@ -151,9 +151,6 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
-	rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t*, int);
-	rsRetVal (*SetKeepAliveProbes)(tcpsrv_t*, int);
-	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
 	/* added v13 -- rgerhards, 2012-10-15 */
 	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
 	/* added v14 -- rgerhards, 2013-07-28 */
@@ -162,6 +159,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *pszName);
 	/* added v16 -- rgerhards, 2014-09-08 */
 	rsRetVal (*SetOrigin)(tcpsrv_t*, uchar*);
+	/* added v17 */
+	rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t*, int);
+	rsRetVal (*SetKeepAliveProbes)(tcpsrv_t*, int);
+	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* change for v4:

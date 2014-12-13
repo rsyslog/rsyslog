@@ -83,9 +83,6 @@ BEGINinterface(strmsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetAddtlFrameDelim)(strmsrv_t*, int);
 	rsRetVal (*SetInputName)(strmsrv_t*, uchar*);
 	rsRetVal (*SetKeepAlive)(strmsrv_t*, int);
-	rsRetVal (*SetKeepAliveProbes)(strmsrv_t *pThis, int keepAliveProbes);
-	rsRetVal (*SetKeepAliveTime)(strmsrv_t *pThis, int keepAliveTime);
-	rsRetVal (*SetKeepAliveIntvl)(strmsrv_t *pThis, int keepAliveIntvl);
 	rsRetVal (*SetUsrP)(strmsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(strmsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(strmsrv_t *, rsRetVal (*)(strmsrv_t*));
@@ -101,9 +98,13 @@ BEGINinterface(strmsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessConstructFinalize)(strmsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetSessMax)(strmsrv_t *pThis, int iMaxSess);
 	rsRetVal (*SetOnCharRcvd)(strmsrv_t *pThis, rsRetVal (*OnMsgCharRcvd)(strms_sess_t*, uchar));
+	/* v2 */
+	rsRetVal (*SetKeepAliveProbes)(strmsrv_t *pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(strmsrv_t *pThis, int keepAliveTime);
+	rsRetVal (*SetKeepAliveIntvl)(strmsrv_t *pThis, int keepAliveIntvl);
 ENDinterface(strmsrv)
-#define strmsrvCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-/* change for v?:
+#define strmsrvCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* interface version 2 added keep alive parameter set functions
  */
 
 
