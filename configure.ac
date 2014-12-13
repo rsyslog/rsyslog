@@ -231,14 +231,16 @@ if test "$enable_regexp" = "yes"; then
 fi
 
 
-
-AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
-if test "$zlib_header" = "yes"; then
-	AC_CHECK_LIB(z, deflate,
-		[AC_DEFINE(USE_NETZIP, 1, [Define if you want to enable zlib support]) 
-		 ZLIB_LIBS="-lz"
-		 AC_SUBST(ZLIB_LIBS)], enable_zlib="false")
-fi
+# zlib support
+PKG_CHECK_MODULES([ZLIB], [zlib], [found_zlib=yes], [found_zlib=no])
+AS_IF([test "x$found_zlib" = "xno"], [
+        AC_SEARCH_LIBS([inflate], [z], [AC_CHECK_HEADER([zlib.h], [found_zlib=yes])])
+        if test "x$found_zlib" = "xno" ; then
+                AC_MSG_ERROR([zlib library and headers not found])
+        fi
+        ZLIB_LIBS="-lz"
+        AC_SUBST(ZLIB_LIBS)
+])
 
 
 #gssapi
@@ -1586,7 +1588,6 @@ echo
 echo "    Large file support enabled:               $enable_largefile"
 echo "    Networking support enabled:               $enable_inet"
 echo "    Regular expressions support enabled:      $enable_regexp"
-echo "    Zlib compression support enabled:         $enable_zlib"
 echo "    rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
