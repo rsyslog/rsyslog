@@ -1,6 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
 - imptcp: make stats counter names consistent with what imudp, imtcp uses
+- added new module "omkafka" to support writing to Apache Kafka
 - omfwd: add new "udp.senddelay" parameter
 - mmnormalize enhancements
   Thanks to Janmejay Singh for the patch.
