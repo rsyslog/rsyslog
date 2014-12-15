@@ -1334,7 +1334,7 @@ AM_CONDITIONAL(ENABLE_MMSNMPTRAPD, test x$enable_mmsnmptrapd = xyes)
 
 # settings for the omhdfs;
 AC_ARG_ENABLE(omhdfs,
-        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omhdfs="yes" ;;
           no) enable_omhdfs="no" ;;
@@ -1348,10 +1348,27 @@ fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
 
+# support for omkafka
+AC_ARG_ENABLE(omkafka,
+        [AS_HELP_STRING([--enable-omkafka],[Compiles omkafka module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omkafka="yes" ;;
+          no) enable_omkafka="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omkafka) ;;
+         esac],
+        [enable_omkafka=no]
+)
+if test "x$enable_omkafka"; then
+	#PKG_CHECK_MODULES(LIBRDKAFKA, librdkafka)
+	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+fi
+AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
+
+
 #MONGODB SUPPORT
 
 AC_ARG_ENABLE(ommongodb,
-        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb template module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_ommongodb="yes" ;;
           no) enable_ommongodb="no" ;;
@@ -1531,6 +1548,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/omhdfs/Makefile \
+		plugins/omkafka/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
@@ -1613,6 +1631,7 @@ echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
+echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"

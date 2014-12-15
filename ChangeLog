@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
+- added new module "omkafka" to support writing to Apache Kafka
 - omfwd: add new "udp.senddelay" parameter
 - add support for systemd >= 209 library names
 - BSD "ntp" facility (value 12) is now also supported in filter
