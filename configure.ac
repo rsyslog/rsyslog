@@ -47,7 +47,7 @@ AC_CHECK_FUNCS(json_object_new_int64,,)
 # look for newer API
 AC_CHECK_FUNCS(json_tokener_error_desc,,)
 AC_CHECK_FUNCS(json_object_object_get_ex,,)
-AC_CHECK_TYPE(json_bool,,,)
+AC_CHECK_TYPES([json_bool],,,[[#include <json_object.h>]])
 
 CFLAGS="$save_CFLAGS"
 LIBS="$save_LIBS"
