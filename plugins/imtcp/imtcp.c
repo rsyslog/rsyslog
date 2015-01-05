@@ -91,6 +91,9 @@ static struct configSettings_s {
 	int bSuppOctetFram;
 	int iStrmDrvrMode;
 	int bKeepAlive;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
 	int bDisableLFDelim;
@@ -124,6 +127,9 @@ struct modConfData_s {
 	sbool bDisableLFDelim; /* disable standard LF delimiter */
 	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
 	sbool bKeepAlive;
+	int iKeepAliveIntvl;
+	int iKeepAliveProbes;
+	int iKeepAliveTime;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
@@ -148,7 +154,10 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
-	{ "keepalive", eCmdHdlrBinary, 0 }
+	{ "keepalive", eCmdHdlrBinary, 0 },
+	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
+	{ "keepalive.time", eCmdHdlrPositiveInt, 0 },
+	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -325,6 +334,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		/* params */
 		CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, modConf->bKeepAlive));
+		CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, modConf->iKeepAliveIntvl));
+		CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, modConf->iKeepAliveProbes));
+		CHKiRet(tcpsrv.SetKeepAliveTime(pOurTcpsrv, modConf->iKeepAliveTime));
 		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, modConf->iTCPSessMax));
 		CHKiRet(tcpsrv.SetLstnMax(pOurTcpsrv, modConf->iTCPLstnMax));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
@@ -422,6 +434,9 @@ CODESTARTbeginCnfLoad
 	loadModConf->iStrmDrvrMode = 0;
 	loadModConf->bUseFlowControl = 1;
 	loadModConf->bKeepAlive = 0;
+	loadModConf->iKeepAliveIntvl = 0;
+	loadModConf->iKeepAliveProbes = 0;
+	loadModConf->iKeepAliveTime = 0;
 	loadModConf->bEmitMsgOnClose = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	loadModConf->bDisableLFDelim = 0;
@@ -472,6 +487,12 @@ CODESTARTsetModCnf
 			loadModConf->iTCPLstnMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive")) {
 			loadModConf->bKeepAlive = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
+			loadModConf->iKeepAliveProbes = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepalive.time")) {
+			loadModConf->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
+			loadModConf->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
@@ -511,6 +532,9 @@ CODESTARTendCnfLoad
 		pModConf->bDisableLFDelim = cs.bDisableLFDelim;
 		pModConf->bUseFlowControl = cs.bUseFlowControl;
 		pModConf->bKeepAlive = cs.bKeepAlive;
+		pModConf->iKeepAliveProbes = cs.iKeepAliveProbes;
+		pModConf->iKeepAliveIntvl = cs.iKeepAliveIntvl;
+		pModConf->iKeepAliveTime = cs.iKeepAliveTime;
 		if((cs.pszStrmDrvrAuthMode == NULL) || (cs.pszStrmDrvrAuthMode[0] == '\0')) {
 			loadModConf->pszStrmDrvrAuthMode = NULL;
 		} else {
@@ -650,6 +674,9 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iStrmDrvrMode = 0;
 	cs.bUseFlowControl = 1;
 	cs.bKeepAlive = 0;
+	cs.iKeepAliveProbes = 0;
+	cs.iKeepAliveTime = 0;
+	cs.iKeepAliveIntvl = 0;
 	cs.bEmitMsgOnClose = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	cs.bDisableLFDelim = 0;
@@ -702,6 +729,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 			   NULL, &cs.pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive"), 0, eCmdHdlrBinary,
 			   NULL, &cs.bKeepAlive, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive_probes"), 0, eCmdHdlrInt,
+			   NULL, &cs.iKeepAliveProbes, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive_intvl"), 0, eCmdHdlrInt,
+			   NULL, &cs.iKeepAliveTime, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverkeepalive_time"), 0, eCmdHdlrInt,
+			   NULL, &cs.iKeepAliveIntvl, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpflowcontrol"), 0, eCmdHdlrBinary,
 			   NULL, &cs.bUseFlowControl, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2(UCHAR_CONSTANT("inputtcpserverdisablelfdelimiter"), 0, eCmdHdlrBinary,

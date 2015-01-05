@@ -34,6 +34,7 @@
 #else
 #	include <sys/errno.h>
 #endif
+#include <unistd.h>
 #include "sd-daemon.h"
 
 #include "wti.h"

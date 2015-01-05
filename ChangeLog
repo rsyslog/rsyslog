@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
+- omfwd: add new "udp.senddelay" parameter
+- add support for systemd >= 209 library names
 - BSD "ntp" facility (value 12) is now also supported in filter
   Thanks to Douglas K. Rand of Iteris, Inc. for the patch.
   Note: this patch was released under ASL 2.0 (see email-conversation).

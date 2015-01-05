@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2014 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -90,6 +90,7 @@ typedef struct _instanceData {
 #	define	FORW_TCP 1
 	/* following fields for UDP-based delivery */
 	int bSendToAll;
+	int iUDPSendDelay;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
@@ -159,6 +160,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
+	{ "udp.senddelay", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
@@ -442,7 +444,12 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 			       break;
 		}
 		/* finished looping */
-		if(bSendSuccess == RSFALSE) {
+		if(bSendSuccess == RSTRUE) {
+			if(pWrkrData->pData->iUDPSendDelay > 0) {
+				srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
+				        pWrkrData->pData->iUDPSendDelay % 1000000);
+				}
+		} else {
 			dbgprintf("error forwarding via udp, suspending\n");
 			if(pWrkrData->errsToReport > 0) {
 				rs_strerror_r(lasterrno, errStr, sizeof(errStr));
@@ -839,6 +846,7 @@ finalize_it:
 
 BEGINcommitTransaction
 	unsigned i;
+int nsent = 0;
 CODESTARTcommitTransaction
 	CHKiRet(doTryResume(pWrkrData));
 
@@ -847,6 +855,7 @@ CODESTARTcommitTransaction
 
 	for(i = 0 ; i < nParams ; ++i) {
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
+++nsent;
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
 			FINALIZE;
 	}
@@ -915,6 +924,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iRebindInterval = 0;
 	pData->bResendLastOnRecon = 0; 
 	pData->bSendToAll = -1;  /* unspecified */
+	pData->iUDPSendDelay = 0;
 	pData->pPermPeers = NULL;
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
@@ -1039,6 +1049,8 @@ CODESTARTnewActInst
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
 			pData->bSendToAll = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.senddelay")) {
+			pData->iUDPSendDelay = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {

@@ -1290,6 +1290,57 @@ SetSock(nsd_t *pNsd, int sock)
 }
 
 
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveIntvl >= 0);
+
+	nsd_ptcp.SetKeepAliveIntvl(pThis->pTcp, keepAliveIntvl);
+
+	RETiRet;
+}
+
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveProbes >= 0);
+
+	nsd_ptcp.SetKeepAliveProbes(pThis->pTcp, keepAliveProbes);
+
+	RETiRet;
+}
+
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveTime >= 0);
+
+	nsd_ptcp.SetKeepAliveTime(pThis->pTcp, keepAliveTime);
+
+	RETiRet;
+}
+
+
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
@@ -1591,8 +1642,6 @@ EnableKeepAlive(nsd_t *pNsd)
 	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
-
-
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
@@ -1702,6 +1751,9 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->GetRemAddr = GetRemAddr;
 	pIf->EnableKeepAlive = EnableKeepAlive;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 
