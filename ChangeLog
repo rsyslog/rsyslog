@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
+- bugfix: impstats emitted invalid JSON format (if JSON was selected)
 - omfwd: add new "udp.senddelay" parameter
 - mmnormalize enhancements
   Thanks to Janmejay Singh for the patch.
