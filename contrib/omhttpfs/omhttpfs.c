@@ -89,6 +89,10 @@ local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" fi
 
 #define DPP(x) DBGPRINTF("OMHTTPFS: %s:%d %s(): %s\n", __FILE__, __LINE__, __FUNCTION__, x)
 
+/**
+ * Exception object
+ *
+ */
 typedef struct _HTTPFS_JSON_REMOTE_EXCEPTION {
     char message[1024];
     char exception[256];
@@ -120,7 +124,6 @@ typedef struct wrkrInstanceData {
 
     int replyLen;
     char* reply;
-
 } wrkrInstanceData_t;
 
 
@@ -142,25 +145,6 @@ static struct cnfparamblk actpblk = {
     sizeof(actpdescr)/sizeof(struct cnfparamdescr),
     actpdescr
 };
-
-
-/**
- * Reset config variables
- * 
- */
-static rsRetVal resetConfig(instanceData* pData)
-{
-    DEFiRet;
-
-    free(pData->host);
-    pData->host = NULL;
-
-    pData->port = OMHTTPFS_DEFAULT_PORT;
-
-
-    RETiRet;
-}
-
 
 /**
  * curl init
@@ -244,8 +228,6 @@ httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
     // extra parameters
     es_addBuf(url_buf, op, strlen(op));
 
-    // append \0
-    //*(*url_buf + pos) = 0;
     return RS_RET_OK;
 }
 
@@ -262,7 +244,7 @@ void httpfs_set_url(wrkrInstanceData_t *pWrkrData, char* op)
     char* url_cstr;
     httpfs_build_url(pWrkrData, op, &url);
     url_cstr = es_str2cstr(url, NULL);
-DPP(url_cstr)
+
     curl_easy_setopt(pWrkrData->curl, CURLOPT_URL, url_cstr);
     free(url_cstr);
 }
@@ -323,7 +305,8 @@ void httpfs_curl_set_post(CURL* curl)
  * @param ...
  * @return struct curl_slist* 
  */
-struct curl_slist* httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
+struct curl_slist* 
+httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 {
     const char* hdr;
 
@@ -667,22 +650,17 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
     */
     DEFiRet;
 
-    int response_code;
+    long response_code;
     httpfs_json_remote_exception jre;
 
     iRet = httpfs_append_file(pWrkrData, buf);
-    DPP("Checking result of httpfs_append_file()")
-    DBGPRINTF("iRet=%d\n", iRet);
     if (iRet == RS_RET_OK) {
-    DPP("File Appending Success")
         return RS_RET_OK;
     }
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
-    DBGPRINTF("Response Code = %d\n", response_code);
     if (response_code != 404) {
         // todo: log error
-    DBGPRINTF("Not 404, exit\n");
         return RS_RET_FALSE;
     }
 
@@ -737,7 +715,7 @@ CODESTARTcreateWrkrInstance
     pWrkrData->curl = NULL;
     CHKiRet(httpfs_init_curl(pWrkrData, pWrkrData->pData));
 finalize_it:
-    DBGPRINTF("DDDD: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
+    DBGPRINTF("omhttpfs: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 
@@ -763,6 +741,8 @@ CODESTARTdbgPrintInstInfo
     DBGPRINTF("OmHTTPFS\n");
     DBGPRINTF("Version: %s\n", OMHTTPFS_VERSION);
     DBGPRINTF("\tHost: %s\n", pData->host);
+    DBGPRINTF("\tPort: %d\n", pData->port);
+    DBGPRINTF("\tUser: %s\n", pData->user);
     DBGPRINTF("\tFile: %s\n", pData->file);
 ENDdbgPrintInstInfo
 
@@ -772,20 +752,12 @@ CODESTARTtryResume
     DBGPRINTF("omhttpfs: tryResume called\n");
 ENDtryResume
 
-
-BEGINbeginTransaction
-    CODESTARTbeginTransaction
-    DBGPRINTF("omhttpfs: beginTransaction, pWrkrData %p, pData %p\n", pWrkrData, pWrkrData->pData);
-finalize_it:
-ENDbeginTransaction
-
 /**
 * Do Action
 */
 BEGINdoAction
 CODESTARTdoAction
-    DBGPRINTF("OmHttpFS: Action");
-DPP("PING")
+    DBGPRINTF("omhttpfs: doAction");
     // dynamic file name
     if (pWrkrData->pData->isDynFile) {
         pWrkrData->file = ustrdup(ppString[1]);
@@ -797,25 +769,11 @@ DPP("PING")
     iRet = httpfs_log(pWrkrData, ppString[0]);
 
     if(iRet != RS_RET_OK) {
-        DBGPRINTF("error writing httpfs, suspending\n");
+        DBGPRINTF("omhttpfs: error writing httpfs, suspending\n");
         iRet = RS_RET_SUSPENDED;
     }
 ENDdoAction
 
-
-/**
-* End transaction
-*/
-BEGINendTransaction
-    char *cstr = NULL;
-CODESTARTendTransaction
-    dbgprintf("omhttpfs: endTransaction init\n");
-    /* End Transaction only if batch data is not empty */
-
-    finalize_it:
-    free(cstr);
-    dbgprintf("omhttpfs: endTransaction done with %d\n", iRet);
-ENDendTransaction
 
 
 /**
@@ -841,9 +799,7 @@ BEGINnewActInst
     struct cnfparamvals *pvals;
     int i;
     uchar *tplToUse;
-
 CODESTARTnewActInst
-DPP("PING")
     if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
@@ -873,7 +829,7 @@ DPP("PING")
         } else if(!strcmp(actpblk.descr[i].name, "template")) {
             pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
-            dbgprintf("omhttpfs: program error, non-handled "
+            DBGPRINTF("omhttpfs: program error, non-handled "
                     "param '%s'\n", actpblk.descr[i].name);
         }
     }
@@ -905,24 +861,12 @@ ENDnewActInst
 
 
 BEGINparseSelectorAct
-    int iTplOpts;
 CODESTARTparseSelectorAct
-DPP("PING")
     // this is for the legacy configuration format
     // forget it
-
     ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
-
-/**
-* SIGHUP
-*/
-BEGINdoHUP
-CODESTARTdoHUP
-DPP("PING")
-ENDdoHUP
 
 
 /**
@@ -930,11 +874,8 @@ ENDdoHUP
 */
 BEGINmodExit
 CODESTARTmodExit
-DPP("PING")
-
     /*  */
     curl_global_cleanup();
-
     /* release what we no longer need */
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
@@ -946,7 +887,6 @@ ENDmodExit
 */
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-DPP("PING")
     CODEqueryEtryPt_STD_OMOD_QUERIES
     CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
     CODEqueryEtryPt_STD_OMOD8_QUERIES
@@ -958,13 +898,10 @@ ENDqueryEtryPt
 * Module Init
 */
 BEGINmodInit()
-
 CODESTARTmodInit
-
 INITLegCnfVars
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-DPP("PING")
     /* tell which objects we need */
     CHKiRet(objUse(errmsg, CORE_COMPONENT));
     CHKiRet(objUse(glbl, CORE_COMPONENT));
