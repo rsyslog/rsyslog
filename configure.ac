@@ -1487,9 +1487,12 @@ AC_ARG_ENABLE(omhttpfs,
          esac],
         [enable_omhttpfs=no]
 )
-#
+
 if test "x$enable_omhttpfs" = "xyes"; then
 	AC_CHECK_HEADERS([curl/curl.h])
+	PKG_CHECK_MODULES([CURL], [libcurl])
+	PKG_CHECK_MODULES([JSON_C], [json-c])
+	LT_LIB_M
 	#PKG_CHECK_MODULES(HTTPFS, curl >= 7.0.0)
 fi
 AM_CONDITIONAL(ENABLE_OMHTTPFS, test x$enable_omhttpfs = xyes)
@@ -1591,7 +1594,6 @@ AC_CONFIG_FILES([Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
-		contrib/omhttpfs/Makefile \
 		contrib/imkmsg/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
@@ -1601,6 +1603,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
+		contrib/omhttpfs/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1640,7 +1643,6 @@ echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
-echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
@@ -1648,6 +1650,7 @@ echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
+echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

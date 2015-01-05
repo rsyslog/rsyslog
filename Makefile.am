@@ -268,14 +268,14 @@ if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += contrib/mmrfc5424addhmac
 endif
 
+# omhttpfs
+if ENABLE_OMHTTPFS
+SUBDIRS += contrib/omhttpfs
+endif
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
-
-# omhttpfs
-if ENABLE_OMHTTPFS
-SUBDIRS += plugins/omhttpfs
-endif
 
 
 
