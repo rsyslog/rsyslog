@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
-- bugfix: impstats emitted invalid JSON format (if JSON was selected)
+- imptcp: make stats counter names consistent with what imudp, imtcp uses
 - omfwd: add new "udp.senddelay" parameter
 - mmnormalize enhancements
   Thanks to Janmejay Singh for the patch.
@@ -14,6 +14,7 @@ Version 8.7.0 [v8-stable] 2015-01-13
 - bugfix: global(localHostName="xxx") was not respected in all modules
 - bugfix: emit correct error message on config-file-not-found
   closes https://github.com/rsyslog/rsyslog/issues/173
+- bugfix: impstats emitted invalid JSON format (if JSON was selected)
 ------------------------------------------------------------------------------
 Version 8.6.0 [v8-stable] 2014-12-02
 NOTE: This version also incorporates all changes and enhancements made for
