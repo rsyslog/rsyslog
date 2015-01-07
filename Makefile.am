@@ -270,6 +270,11 @@ endif
 
 if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += contrib/mmrfc5424addhmac
+
+if ENABLE_PMDUMMY
+SUBDIRS += contrib/pmdummy
+endif
+
 endif
 
 # tests are added as last element, because tests may need different

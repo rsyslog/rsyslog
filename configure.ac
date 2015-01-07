@@ -1241,6 +1241,19 @@ fi
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
 
+# settings for pmdummy
+AC_ARG_ENABLE(pmdummy,
+        [AS_HELP_STRING([--enable-pmdummy],[Compiles dummy parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmdummy="yes" ;;
+          no) enable_pmdummy="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmdummy) ;;
+         esac],
+        [enable_pmdummy=no]
+)
+AM_CONDITIONAL(ENABLE_PMDUMMY, test x$enable_pmdummy = xyes)
+
+
 # settings for pmlastmsg
 AC_ARG_ENABLE(pmlastmsg,
         [AS_HELP_STRING([--enable-pmlastmsg],[Compiles lastmsg parser module @<:@default=no@:>@])],
@@ -1608,6 +1621,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
+		contrib/pmdummy/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1662,6 +1676,7 @@ echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo "    pmdummy module will be compiled:          $enable_pmdummy"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
