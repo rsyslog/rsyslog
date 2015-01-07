@@ -36,10 +36,6 @@ last processed location and continues to work from there upon restart.
 So no data is lost during a restart (except, as noted above, if the file
 is rotated just in this very moment).
 
-Currently, the file must have a fixed name and location (directory).
-It is planned to add support for dynamically generating file names in the
-future.
-
 See Also
 ........
 
