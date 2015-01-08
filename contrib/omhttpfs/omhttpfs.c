@@ -57,7 +57,6 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
-
 /* local definitions */
 #define OMHTTPFS_VERSION "1.0"
 #define OMHTTPFS_DEFAULT_PORT 14000
@@ -161,7 +160,7 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
     curl = curl_easy_init();
 
     if (curl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
 
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
@@ -517,6 +516,7 @@ httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
            'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=create&data=true'
     */
 HTTPFS_CURL_VARS_INIT
+    DBGPRINTF("%s(): file=%s\n", __FUNCTION__, pWrkrData->file);
     httpfs_curl_set_put(pWrkrData->curl);
 
     /*
@@ -528,6 +528,8 @@ replication - required block replication for the file.
 
     curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDS, (char*)buf);
     curl_easy_setopt(pWrkrData->curl, CURLOPT_POSTFIELDSIZE, strlen((char*) buf));
+
+    DBGPRINTF("%s(): msg=%s\n", __FUNCTION__, buf);
 
     headers = httpfs_curl_add_header(headers, 1, HTTPFS_CONTENT_TYPE);
     curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);
@@ -565,6 +567,7 @@ httpfs_append_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
            'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=append&data=true'
     */
 HTTPFS_CURL_VARS_INIT
+    DBGPRINTF("%s(): file=%s\n", __FUNCTION__, pWrkrData->file);
     httpfs_curl_set_post(pWrkrData->curl);
     httpfs_set_url(pWrkrData, "&op=append&data=true");
 
@@ -573,6 +576,7 @@ HTTPFS_CURL_VARS_INIT
 
     headers = httpfs_curl_add_header(headers, 1, HTTPFS_CONTENT_TYPE);
     curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);
+    DBGPRINTF("%s(): msg=%s\n", __FUNCTION__, buf);
 
 HTTPFS_CURL_EXEC
 
@@ -655,41 +659,53 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 
     iRet = httpfs_append_file(pWrkrData, buf);
     if (iRet == RS_RET_OK) {
+        DBGPRINTF("omhttpfs: Append success: %s\n", pWrkrData->file);
         return RS_RET_OK;
     }
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code != 404) {
         // todo: log error
+        DBGPRINTF("omhttpfs: Append fail HTTP %ld: %s\n", response_code, pWrkrData->file);
         return RS_RET_FALSE;
     }
 
     iRet = httpfs_create_file(pWrkrData, buf);
     if (iRet == RS_RET_OK) {
+        DBGPRINTF("omhttpfs: Create file success: %s\n", pWrkrData->file);
         return RS_RET_OK;
     }
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code == 201) {
+        DBGPRINTF("omhttpfs: Create file success HTTP 201: %s\n", pWrkrData->file);
         return RS_RET_OK;
     }
 
     if (response_code == 500) {
+        DBGPRINTF("omhttpfs: Create file failed HTTP %ld: %s\n", response_code, pWrkrData->file);
         // retry
         httpfs_parse_exception(pWrkrData->reply, pWrkrData->replyLen, &jre);
         if (!strncmp(jre.exception, HTTPFS_FILEALREADYEXISTSEXCEPTION, strlen(HTTPFS_FILEALREADYEXISTSEXCEPTION))) {
             // file exists, go to append
+            DBGPRINTF("omhttpfs: File already exists, append again: %s\n", pWrkrData->file);
 
             iRet = httpfs_append_file(pWrkrData, buf);
             if (iRet == RS_RET_OK) {
+                DBGPRINTF("omhttpfs: Re-Append success: %s\n", pWrkrData->file);
         //free(&jre);
                 return RS_RET_OK;
             } else {
+                DBGPRINTF("omhttpfs: Re-Append failed: %s\n", pWrkrData->file);
                 // error
                 // exit
             }
 
+        } else {
+            DBGPRINTF("omhttpfs: Create file failed: %s %s\n", pWrkrData->file, pWrkrData->reply);
         }
+    } else {
+        DBGPRINTF("omhttpfs: Create file failed: %s %s\n", pWrkrData->file, pWrkrData->reply);
     }
 
     // TODO: ...
@@ -728,11 +744,21 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+    free(pData->file);
+    free(pData->tplName);
+    free(pData->host);
+    free(pData->user);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-    CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+    free(pWrkrData->file);
+
+    if(pWrkrData->curl) {
+        curl_easy_cleanup(pWrkrData->curl);
+        pWrkrData->curl = NULL;
+    }
 ENDfreeWrkrInstance
 
 
@@ -750,6 +776,8 @@ ENDdbgPrintInstInfo
 BEGINtryResume
 CODESTARTtryResume
     DBGPRINTF("omhttpfs: tryResume called\n");
+    // TODO: test networking
+    iRet = RS_RET_OK;
 ENDtryResume
 
 /**
@@ -757,7 +785,7 @@ ENDtryResume
 */
 BEGINdoAction
 CODESTARTdoAction
-    DBGPRINTF("omhttpfs: doAction");
+    DBGPRINTF("omhttpfs: doAction\n");
     // dynamic file name
     if (pWrkrData->pData->isDynFile) {
         pWrkrData->file = ustrdup(ppString[1]);
@@ -792,6 +820,7 @@ setInstParamDefaults(instanceData *pData)
 
     pData->file = NULL;
     pData->isDynFile = 0;
+    pData->tplName = NULL;
 }
 
 
@@ -829,8 +858,7 @@ CODESTARTnewActInst
         } else if(!strcmp(actpblk.descr[i].name, "template")) {
             pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
-            DBGPRINTF("omhttpfs: program error, non-handled "
-                    "param '%s'\n", actpblk.descr[i].name);
+            DBGPRINTF("omhttpfs: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }
     }
     // empty user
@@ -876,10 +904,12 @@ BEGINmodExit
 CODESTARTmodExit
     /*  */
     curl_global_cleanup();
+
     /* release what we no longer need */
     objRelease(datetime, CORE_COMPONENT);
     objRelease(glbl, CORE_COMPONENT);
     objRelease(errmsg, CORE_COMPONENT);
+
 ENDmodExit
 
 /**
@@ -913,7 +943,7 @@ CODEmodInit_QueryRegCFSLineHdlr
     }
 
     DBGPRINTF("omhttpfs version %s is initializing\n", OMHTTPFS_VERSION);
-ENDmodInit
 
+ENDmodInit
 
 
