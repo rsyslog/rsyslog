@@ -163,7 +163,7 @@ klogWillRunPrePrivDrop(modConfData_t *pModConf)
 
 	fklog = open(_PATH_KLOG, O_RDONLY, 0);
 	if (fklog < 0) {
-		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
+		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -185,7 +185,7 @@ klogWillRunPostPrivDrop(modConfData_t *pModConf)
 	/* on an OpenVZ VM, we get EPERM */
 	r = read(fklog, NULL, 0);
 	if (r < 0 && errno != EINVAL) {
-		imkmsgLogIntMsg(RS_RET_ERR_OPEN_KLOG, "imkmsg: cannot open kernel log(%s): %s.",
+		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		fklog = -1;
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
