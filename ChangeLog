@@ -16,6 +16,8 @@ Version 8.7.0 [v8-stable] 2015-01-13
 - bugfix: emit correct error message on config-file-not-found
   closes https://github.com/rsyslog/rsyslog/issues/173
 - bugfix: impstats emitted invalid JSON format (if JSON was selected)
+- bugfix: (small) memory leak in omfile's outchannel code
+  Thanks to Koral Ilgun for reporting this issue.
 ------------------------------------------------------------------------------
 Version 8.6.0 [v8-stable] 2014-12-02
 NOTE: This version also incorporates all changes and enhancements made for
