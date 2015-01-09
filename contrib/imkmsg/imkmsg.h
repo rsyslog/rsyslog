@@ -42,7 +42,8 @@ struct modConfData_s {
  * rgerhards, 2008-04-09
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf);
-rsRetVal klogWillRun(modConfData_t *pModConf);
+rsRetVal klogWillRunPrePrivDrop(modConfData_t *pModConf);
+rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf);
 rsRetVal klogAfterRun(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
