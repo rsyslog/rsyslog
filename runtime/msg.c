@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -4446,6 +4446,32 @@ finalize_it:
 	MsgUnlock(pM);
 	RETiRet;
 }
+
+/* add Metadata to the message. This is stored in a special JSON
+ * container. Note that only string types are currently supported,
+ * what should pose absolutely no problem with the string-ish nature
+ * of rsyslog metadata.
+ * added 2015-01-09 rgerhards
+ */
+rsRetVal
+msgAddMetadata(msg_t *const __restrict__ pMsg,
+	       uchar *const __restrict__ metaname,
+	       uchar *const __restrict__ metaval)
+{
+	DEFiRet;
+	struct json_object *const json = json_object_new_object();
+	CHKmalloc(json);
+	struct json_object *const jval = json_object_new_string((char*)metaval);
+	if(jval == NULL) {
+		json_object_put(json);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+	json_object_object_add(json, metaname, jval);
+	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0);
+finalize_it:
+	RETiRet;
+}
+
 
 static struct json_object *
 jsonDeepCopy(struct json_object *src)

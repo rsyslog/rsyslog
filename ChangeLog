@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
+- add message metadata "system" to msg object
+  this permits to store metadata alongside the message
+- imfile: add support for "filename" metadata
+  this is useful in cases where wildcards are used
 - imptcp: make stats counter names consistent with what imudp, imtcp uses
 - added new module "omkafka" to support writing to Apache Kafka
 - omfwd: add new "udp.senddelay" parameter

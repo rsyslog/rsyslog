@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2014 Adiscon GmbH.
+ * Copyright 2008-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -414,7 +414,8 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
 /* enqueue the read file line as a message. The provided string is
  * not freed - thuis must be done by the caller.
  */
-static rsRetVal enqLine(lstn_t *pLstn, cstr_t *cstrLine)
+static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
+                        cstr_t *const __restrict__ cstrLine)
 {
 	DEFiRet;
 	msg_t *pMsg;
@@ -433,6 +434,7 @@ static rsRetVal enqLine(lstn_t *pLstn, cstr_t *cstrLine)
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
+	msgAddMetadata(pMsg, "filename", pLstn->pszFileName);
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;

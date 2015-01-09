@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -193,6 +193,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset);
+rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
@@ -236,6 +237,12 @@ MsgHasStructuredData(msg_t *pM)
 
 /* ------------------------------ some inline functions ------------------------------ */
 
+/* add Metadata to the message. This is stored in a special JSON
+ * container. Note that only string types are currently supported,
+ * what should pose absolutely no problem with the string-ish nature
+ * of rsyslog metadata.
+ * added 2015-01-09 rgerhards
+ */
 /* set raw message size. This is needed in some cases where a trunctation is necessary
  * but the raw message must not be newly set. The most important (and currently only)
  * use case is if we remove trailing LF or NUL characters. Note that the size can NOT
