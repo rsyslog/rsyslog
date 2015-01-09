@@ -1,5 +1,5 @@
 /* imfile.c
- * 
+ *
  * This is the input module for reading text file data. A text file is a
  * non-binary file who's lines are delemited by the \n character.
  *
@@ -81,6 +81,8 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 #define INIT_FILE_IN_DIR_TAB_SIZE 1 /* initial size for "associated files tab" in directory table */
 #define INIT_WDMAP_TAB_SIZE 1 /* default wdMap table size - is extended as needed, use 2^x value */
 
+#define ADD_METADATA_UNSPECIFIED -1
+
 /* this structure is used in pure polling mode as well one of the support
  * structures for inotify.
  */
@@ -105,6 +107,7 @@ typedef struct lstn_s {
 	sbool hasWildcard;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
+	sbool addMetadata;
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
@@ -138,6 +141,7 @@ struct instanceConf_s {
 	sbool bRMStateOnDel;
 	uint8_t readMode;
 	sbool escapeLF;
+	sbool addMetadata;
 	int maxLinesAtOnce;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
@@ -254,6 +258,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
+	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED }
 };
 static struct cnfparamblk inppblk =
@@ -434,7 +439,8 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	msgAddMetadata(pMsg, "filename", pLstn->pszFileName);
+	if(pLstn->addMetadata)
+		msgAddMetadata(pMsg, (uchar*)"filename", pLstn->pszFileName);
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -605,6 +611,7 @@ createInstance(instanceConf_t **pinst)
 	inst->readMode = 0;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
+	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -726,6 +733,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
+	inst->addMetadata = 0;
 	inst->bRMStateOnDel = 0;
 
 	CHKiRet(checkInstance(inst));
@@ -823,6 +831,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
 	pThis->hasWildcard = existing->hasWildcard;
 	pThis->escapeLF = existing->escapeLF;
+	pThis->addMetadata = existing->addMetadata;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -880,6 +889,8 @@ addListner(instanceConf_t *inst)
 	pThis->readMode = inst->readMode;
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;
 	pThis->escapeLF = inst->escapeLF;
+	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
+			       hasWildcard : inst->addMetadata;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -929,6 +940,8 @@ CODESTARTnewInpInst
 			inst->readMode = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
+			inst->addMetadata = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
