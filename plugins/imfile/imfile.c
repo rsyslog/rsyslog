@@ -706,7 +706,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	if(cs.pszFileTag == NULL) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given , file monitor can not be created");
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given, file monitor can not be created");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
