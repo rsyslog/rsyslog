@@ -34,7 +34,9 @@ variable already contains a value its behaviour differs as follows:
 
 **merges** the value if both existing and new value are objects, 
 but merges the new value to *root* rather than with value of the given key. Eg. 
+
 ::
+
    set $.x!one = "val_1";
    # results in $. = { "x": { "one": "val_1" } }
    set $.y!two = "val_2";
@@ -48,14 +50,18 @@ but merges the new value to *root* rather than with value of the given key. Eg.
    # note that the key *two* is at root level and not  under *$.z!var*.
 
 **ignores** the new value if old value was an object, but new value is a not an object (Eg. string, number etc). Eg:
+
 ::
+
    set $.x!one = "val_1";
    set $.x = "quux";
    # results in $. = { "x": { "one": "val_1" } }
    # note that "quux" was ignored
 
 **resets** variable, if old value was not an object.
+
 ::
+
    set $.x!val = "val_1";
    set $.x!val = "quux";
    # results in $. = { "x": { "val": "quux" } }
@@ -63,7 +69,9 @@ but merges the new value to *root* rather than with value of the given key. Eg.
 **unset**
 ---------
 removes the key. Eg:
+
 ::
+
    set $.x!val = "val_1";
    unset $.x!val;
    # results in $. = { "x": { } }
@@ -72,7 +80,9 @@ removes the key. Eg:
 ---------
 force sets the new value regardless of what the variable
 originally contained or if it was even set. Eg.
+
 ::
+
    # to contrast with the set example above, here is how results would look with reset
    set $.x!one = "val_1";
    set $.y!two = "val_2";

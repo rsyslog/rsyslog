@@ -12,14 +12,18 @@ detailed semantics documentation.
 RainerScript supports following control structures:
 
 **if**:
+
 ::
+
    if ($msg contains "important") then {
       if ( $. foo != "" ) then set $.foo = $.bar & $.baz;
       action(type="omfile" file="/var/log/important.log" template="outfmt")
    }
 
 **if/else-if/else**:
+
 ::
+
    if ($msg contains "important") then {
       set $.foo = $.bar & $.baz;
       action(type="omfile" file="/var/log/important.log" template="outfmt")
@@ -31,7 +35,9 @@ RainerScript supports following control structures:
    }
 
 **foreach**:
+
 ::
+
    foreach ($.quux in $!foo) do {
       action(type="omfile" file="./rsyslog.out.log" template="quux")
       foreach ($.corge in $.quux!bar) do {
