@@ -348,16 +348,18 @@ CODESTARTnewActInst
 		}
 	}
 
-    if(pData->bUseRawMsg) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-                        "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
-                        "Ignoring 'variable', will use raw message.");
-    } else if (varName) {
-        CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
-        CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
-    }
-    free(varName);
-    varName = NULL;
+	if (varName) {
+		if(pData->bUseRawMsg) {
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			                "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
+			                "Ignoring 'variable', will use raw message.");
+		} else {
+			CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+			CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
+		}
+		free(varName);
+		varName = NULL;
+	}
 
     CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
