@@ -1,3 +1,10 @@
+- bugfix: invalid data size for iMaxLine global property
+  It was defined as int, but inside the config system it was declared as
+  size type, which uses int64_t. With legacy config statements, this could
+  lead to misadressing, which usually meant the another config variable was
+  overwritten (depending on memory layout).
+  closes https://github.com/rsyslog/rsyslog/issues/205
+- bugfix: negative values for maxMessageSize global parameter were permitted
 ------------------------------------------------------------------------------
 Version 8.7.0 [v8-stable] 2015-01-13
 - add message metadata "system" to msg object
