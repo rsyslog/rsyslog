@@ -547,21 +547,22 @@ AC_ARG_ENABLE(mysql,
 )
 if test "x$enable_mysql" = "xyes"; then
   AC_CHECK_PROG(
-    [HAVE_MYSQL_CONFIG],
+    [MYSQL_CONFIG],
     [mysql_config],
-    [yes],,,
+    [mysql_config],
+    [no],,
   )
-  if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([mysql_config not found in PATH - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
+  if test "x${MYSQL_CONFIG}" = "xno"; then
+    AC_MSG_FAILURE([mysql_config not found - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
   fi
   AC_CHECK_LIB(
     [mysqlclient],
     [mysql_init],
-    [MYSQL_CFLAGS=`mysql_config --cflags`
-     MYSQL_LIBS=`mysql_config --libs`
+    [MYSQL_CFLAGS=`$MYSQL_CONFIG --cflags`
+     MYSQL_LIBS=`$MYSQL_CONFIG --libs`
     ],
     [AC_MSG_FAILURE([MySQL library is missing])],
-    [`mysql_config --libs`]
+    [`$MYSQL_CONFIG --libs`]
   )
   AC_MSG_CHECKING(if we have mysql_library_init)
   save_CFLAGS="$CFLAGS"
