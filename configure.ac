@@ -547,21 +547,22 @@ AC_ARG_ENABLE(mysql,
 )
 if test "x$enable_mysql" = "xyes"; then
   AC_CHECK_PROG(
-    [HAVE_MYSQL_CONFIG],
+    [MYSQL_CONFIG],
     [mysql_config],
-    [yes],,,
+    [mysql_config],
+    [no],,
   )
-  if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([mysql_config not found in PATH - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
+  if test "x${MYSQL_CONFIG}" = "xno"; then
+    AC_MSG_FAILURE([mysql_config not found - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
   fi
   AC_CHECK_LIB(
     [mysqlclient],
     [mysql_init],
-    [MYSQL_CFLAGS=`mysql_config --cflags`
-     MYSQL_LIBS=`mysql_config --libs`
+    [MYSQL_CFLAGS=`$MYSQL_CONFIG --cflags`
+     MYSQL_LIBS=`$MYSQL_CONFIG --libs`
     ],
     [AC_MSG_FAILURE([MySQL library is missing])],
-    [`mysql_config --libs`]
+    [`$MYSQL_CONFIG --libs`]
   )
   AC_MSG_CHECKING(if we have mysql_library_init)
   save_CFLAGS="$CFLAGS"
@@ -597,21 +598,22 @@ AC_ARG_ENABLE(pgsql,
 )
 if test "x$enable_pgsql" = "xyes"; then
   AC_CHECK_PROG(
-    [HAVE_PGSQL_CONFIG],
+    [PG_CONFIG],
     [pg_config],
-    [yes],,,
+    [pg_config],
+    [no],,,
   )
-  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([pg_config not found in PATH])
+  if test "x${PG_CONFIG}" = "xno"; then
+    AC_MSG_FAILURE([pg_config not found])
   fi
   AC_CHECK_LIB(
     [pq],
     [PQconnectdb],
-    [PGSQL_CFLAGS="-I`pg_config --includedir`"
-     PGSQL_LIBS="-L`pg_config --libdir` -lpq"
+    [PGSQL_CFLAGS="-I`$PG_CONFIG --includedir`"
+     PGSQL_LIBS="-L`$PG_CONFIG --libdir` -lpq"
     ],
     [AC_MSG_FAILURE([PgSQL library is missing])],
-    [-L`pg_config --libdir`]
+    [-L`$PG_CONFIG --libdir`]
   )
 fi
 AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
