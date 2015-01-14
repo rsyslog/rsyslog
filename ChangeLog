@@ -1,3 +1,5 @@
+------------------------------------------------------------------------------
+Version 8.8.0 [v8-stable] 2015-02-24
 - bugfix: invalid data size for iMaxLine global property
   It was defined as int, but inside the config system it was declared as
   size type, which uses int64_t. With legacy config statements, this could
