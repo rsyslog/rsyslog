@@ -1374,8 +1374,12 @@ AC_ARG_ENABLE(omkafka,
         [enable_omkafka=no]
 )
 if test "x$enable_omkafka"; then
-	#PKG_CHECK_MODULES(LIBRDKAFKA, librdkafka)
-	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka], [], [
+		AC_CHECK_HEADERS([librdkafka/rdkafka.h],
+			[],
+			AC_MSG_ERROR([librdkafka not found])
+		)
+	])
 fi
 AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
 
