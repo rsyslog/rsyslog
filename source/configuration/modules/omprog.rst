@@ -19,13 +19,13 @@ program.
 Executes the configured program and feeds log messages to that binary
 via stdin. The binary is free to do whatever it wants with the supplied
 data. If the program terminates, it is re-started. If rsyslog
-terminates, the program's stdin will see EOF. The program must than
+terminates, the program's stdin will see EOF. The program must then
 terminate. The message format passed to the program can, as usual, be
 modified by defining rsyslog templates.
 
 Note that each time an omprog action is defined, the corresponding
-programm is invoked. A single instance is **not** being re-used. There
-are arguments pro and con re-using existing binaries. For the time
+program is invoked. A single instance is **not** being re-used. There
+are arguments pro and con for re-using existing binaries. For the time
 being, it simply is not done. In the future, we may add an option for
 such pooling, provided that some demand for that is voiced. You can also
 mimic the same effect by defining multiple rulesets and including them.
