@@ -100,7 +100,7 @@ and contribution. We base our work on standards and try to solve all real-world
 needs (of course, we occasionally fail tackeling actually all needs ;)). While
 the project is primarily sponsored by Adiscon, technical development is 
 independent from company goals and most decisions are solely based on mailing
-list discussion results. There is an active commuity around rsyslog.
+list discussion results. There is an active community around rsyslog.
 
 There is no such thing like being an official member of the rsyslog team. The
 closest to that is being subscribed to the mailing list:
