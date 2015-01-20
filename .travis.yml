@@ -6,10 +6,13 @@ before_install:
   - travis_retry sudo apt-get update -qq
 
 install:
-  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev
+  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind
   - travis_retry sudo apt-get install -qq libestr-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex
 
 script:
   - autoreconf --force --verbose --install
   - ./configure --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --disable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --disable-libdbi --disable-ommongodb --disable-mysql --disable-pgsql --disable-omhiredis --disable-debug --disable-diagtools --disable-memcheck --disable-rtinst --disable-valgrind --disable-elasticsearch --enable-libgcrypt --disable-jemalloc --disable-omkafka --disable-gssapi-krb5 --disable-mmnormalize --disable-omudpspoof --disable-omrabbitmq --disable-relp --disable-rfc3195 --disable-mmrfc5424addhmac --disable-snmp --disable-mmsnmptrapd --disable-gnutls --disable-imjournal --disable-omjournal --disable-usertools --disable-imzmq3 --disable-omzmq3
   - make && make dist && make check && sudo make install
+  #- env TESTS="json_array_looping.sh" make -e check
+  # only for newer autoconf tools you need to add:
+  # - cat tests/test-suite.log

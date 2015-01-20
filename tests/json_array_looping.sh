@@ -2,7 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[json_array_looping.sh\]: basic test for looping over json array
-source $srcdir/diag.sh init
+source $srcdir/diag.sh init json_array_looping.sh
 source $srcdir/diag.sh startup json_array_looping.conf
 source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/json_array_input
 echo doing shutdown
