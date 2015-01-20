@@ -609,7 +609,7 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 		json_object_object_get_ex((obj), (key), (retobj))
 #else
 #	define RS_json_object_object_get_ex(obj, key, retobj) \
-		(json_object_is_type(obj, json_type_object) && \
+		(!json_object_is_type(obj, json_type_object) || \
 				(*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
 #endif
 
