@@ -16,10 +16,10 @@ CURRENT_TEST=
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-   		echo $2 > CURRENT_TEST # save test name for auto-debugging
+   		basename $0 > CURRENT_TEST # save test name for auto-debugging
 		if [ "x$2" != "x" ]; then
 			echo "------------------------------------------------------------"
-			echo "Test: $2"
+			echo "Test: $0"
 			echo "------------------------------------------------------------"
 		fi
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
