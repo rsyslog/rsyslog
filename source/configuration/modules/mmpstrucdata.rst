@@ -1,9 +1,9 @@
 RFC5424 structured data parsing module (mmpstrucdata)
 =====================================================
 
-**Module Name:    mmpstrucdata**
+**Module Name:** mmpstrucdata
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 **Available since**: 7.5.4
 
@@ -48,9 +48,12 @@ file with the message anonymized. Note that once mmpstrucdata has run,
 access to the original message is no longer possible (execept if stored
 in user variables before anonymization).
 
-module(load="mmpstrucdata") action(type="mmpstrucdata")
-template(name="jsondump" type="string" string="%msg%: %$!%\\n")
-action(type="omfile" file="/path/to/log" template="jsondump")
+::
+
+  module(load="mmpstrucdata") action(type="mmpstrucdata")
+  template(name="jsondump" type="string" string="%msg%: %$!%\\n")
+  action(type="omfile" file="/path/to/log" template="jsondump")
+
 
 **A more practical one:**
 
@@ -60,11 +63,15 @@ Take this example message (inspired by RFC5424 sample;)):
 
 We apply this configuration:
 
-module(load="mmpstrucdata") action(type="mmpstrucdata")
-template(name="sample2" type="string" string="ALL: %$!%\\nSD:
-%$!RFC5424-SD%\\nIUT:%$!rfc5424-sd!exampleSDID@32473!iut%\\nRAWMSG:
-%rawmsg%\\n\\n") action(type="omfile" file="/path/to/log"
-template="sample2")
+::
+
+  module(load="mmpstrucdata") action(type="mmpstrucdata")
+  template(name="sample2" type="string" string="ALL: %$!%\\nSD:
+  %$!RFC5424-SD%\\nIUT:%$!rfc5424-sd!exampleSDID@32473!iut%\\nRAWMSG:
+  %rawmsg%\\n\\n") action(type="omfile" file="/path/to/log"
+  template="sample2")
+
+
 
 This will output:
 
