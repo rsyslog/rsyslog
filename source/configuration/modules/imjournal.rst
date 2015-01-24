@@ -1,7 +1,7 @@
 imjournal: Systemd Journal Input Module
 =======================================
 
-**Module Name:    imjournal**
+**Module Name:** imjournal
 
 **Author:** Milan Bartos <mbartos@redhat.com> (This module is **not**
 project-supported)
@@ -80,12 +80,16 @@ plugin only if there is hard need to do so.**
    This option specifies whether imjournal should ignore messages
    currently in journal and read only new messages. This option is only
    used when there is no StateFile to avoid message loss.
+
 -  **DefaultSeverity** <severity>
+
    Some messages comming from journald don't have the SYSLOG_PRIORITY
    field. These are typically the messages logged through journald's
    native API. This option specifies the default severity for these
    messages. Can be given either as a name or a number. Defaults to 'notice'.
+
 -  **DefaultFacility** <facility>
+
    Some messages comming from journald don't have the SYSLOG_FACILITY
    field. These are typically the messages logged through journald's
    native API. This option specifies the default facility for these
