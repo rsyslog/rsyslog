@@ -44,6 +44,7 @@ TESTS +=  \
 	imudp_thread_hang.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
+	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
@@ -584,6 +585,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
+	   asynwr_simple_2.sh \
+	   testsuites/asynwr_simple_2.conf \
 	   asynwr_timeout.sh \
 	   testsuites/asynwr_timeout.conf \
 	   asynwr_small.sh \
