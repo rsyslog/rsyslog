@@ -46,6 +46,7 @@ TESTS +=  \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
+	asynwr_timeout_2.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
 	wr_large_async.sh \
@@ -589,6 +590,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/asynwr_simple_2.conf \
 	   asynwr_timeout.sh \
 	   testsuites/asynwr_timeout.conf \
+	   asynwr_timeout_2.sh \
+	   testsuites/asynwr_timeout_2.conf \
 	   asynwr_small.sh \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
