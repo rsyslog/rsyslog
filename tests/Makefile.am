@@ -52,6 +52,7 @@ TESTS +=  \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	asynwr_deadlock.sh \
+	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	gzipwr_large.sh \
@@ -602,6 +603,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock_2.sh \
+	   testsuites/asynwr_deadlock_2.conf \
 	   asynwr_deadlock2.sh \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
