@@ -41,6 +41,15 @@ The following paramters can be set:
 
   Machine public key (certificate)
 
+- **debug.gnutls** (0-10; default:0)
+
+  Any other parameter than 0 enables the debug messages of GnuTLS. the
+  amount of messages given depends on the height of the parameter, 0
+  being nothing and 10 being very much. Caution! higher parameters may
+  give out way more information than needed. We advise you to first use
+  small parameters to prevent that from happening.
+  **This parameter only has an effect if general debugging is enabled.**
+
 - **processInternalMessages** binary (on/off)
 
   This tell rsyslog if it shall process internal messages itself. This is
