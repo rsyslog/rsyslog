@@ -52,6 +52,11 @@ AC_CHECK_TYPES([json_bool],,,[[#include <json_object.h>]])
 CFLAGS="$save_CFLAGS"
 LIBS="$save_LIBS"
 
+AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
+# we don't mind if we don't have the lsb_release utility. But if we have, it's
+# nice to have the extra information.
+AC_DEFINE_UNQUOTED([PLATFORM_ID_LSB], ["`lsb_release -d`"], [platform id for display purposes])
+
 case "${host}" in
   *-*-linux*)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
