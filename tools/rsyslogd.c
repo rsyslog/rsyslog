@@ -376,6 +376,8 @@ printVersion(void)
 {
 	printf("rsyslogd %s, ", VERSION);
 	printf("compiled with:\n");
+	printf("\tPLATFORM:\t\t\t\t%s\n", PLATFORM_ID);
+	printf("\tPLATFORM (lsb_release -d):\t\t%s\n", PLATFORM_ID_LSB);
 #ifdef FEATURE_REGEXP
 	printf("\tFEATURE_REGEXP:\t\t\t\tYes\n");
 #else
