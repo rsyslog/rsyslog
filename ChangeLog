@@ -2,6 +2,7 @@
   version number is now contained in error message and build platform in
   version output. This helps to gets rid of the usual "which version"
   question on mailing list, support forums, etc...
+- bugfix imtcp: octet-counted framing cannot be turned off
 ------------------------------------------------------------------------------
 Version 8.8.0 [v8-stable] 2015-02-24
 - bugfix: invalid data size for iMaxLine global property
