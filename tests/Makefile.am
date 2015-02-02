@@ -175,7 +175,11 @@ TESTS +=  \
 	elasticsearch-basic-errorfile-empty.sh \
 	elasticsearch-basic-errorfile-populated.sh \
 	elasticsearch-bulk-errorfile-empty.sh \
-	elasticsearch-bulk-errorfile-populated.sh
+	elasticsearch-bulk-errorfile-populated.sh \
+	elasticsearch-bulk-errorfile-populated-default-format.sh \
+	elasticsearch-bulk-errorfile-populated-erroronly.sh \
+	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
+	elasticsearch-bulk-errorfile-populated-default-interleaved.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -467,6 +471,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/elasticsearch-bulk-errorfile-empty.conf \
 	   elasticsearch-bulk-errorfile-populated.sh \
 	   testsuites/elasticsearch-bulk-errorfile-populated.conf \
+	   elasticsearch-bulk-errorfile-populated-default-format.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
+	   elasticsearch-bulk-errorfile-populated-erroronly.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
+	   elasticsearch-bulk-errorfile-populated-erroronly-interleaved \
+	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
+	   elasticsearch-bulk-errorfile-populated-default-interleaved \
+	   testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \

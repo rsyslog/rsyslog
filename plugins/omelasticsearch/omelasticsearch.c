@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <memory.h>
 #include <string.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
@@ -81,6 +82,8 @@ typedef struct _instanceData {
 	uchar *timeout;
 	uchar *bulkId;
 	uchar *errorFile;
+	sbool errorOnly;
+	sbool interleaved;
 	sbool dynSrchIdx;
 	sbool dynSrchType;
 	sbool dynParent;
@@ -105,7 +108,6 @@ typedef struct wrkrInstanceData {
 	} batch;
 } wrkrInstanceData_t;
 
-
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
@@ -124,6 +126,8 @@ static struct cnfparamdescr actpdescr[] = {
         { "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
+	{ "erroronly", eCmdHdlrBinary, 0 },
+	{ "interleaved", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
@@ -216,6 +220,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
+	dbgprintf("\terroronly=%d\n", pData->errorOnly);
+	dbgprintf("\tinterleaved=%d\n", pData->interleaved);
 	dbgprintf("\tdynbulkid=%d\n", pData->dynBulkId);
 	dbgprintf("\tbulkid='%s'\n", pData->bulkId);
 ENDdbgPrintInstInfo
@@ -265,7 +271,7 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	}
 	/* Bodypart of request not needed, so set curl opt to nobody and httpget, otherwise lib-curl could sigsegv */
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
-	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE); 
+	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE);
 	/* Only enable for debugging 
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
 
@@ -478,6 +484,355 @@ finalize_it:
 	RETiRet;
 }
 
+/*
+ * Dumps entire bulk request and response in error log
+ */
+static inline rsRetVal
+getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,char **rendered)
+{
+	DEFiRet;
+	cJSON *req=0;
+	cJSON *errRoot=0;
+	cJSON *replyRoot = *pReplyRoot;
+
+	if((req=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	cJSON_AddItemToObject(req, "url", cJSON_CreateString((char*)pWrkrData->restURL));
+	cJSON_AddItemToObject(req, "postdata", cJSON_CreateString((char*)reqmsg));
+
+	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	cJSON_AddItemToObject(errRoot, "request", req);
+	cJSON_AddItemToObject(errRoot, "reply", replyRoot);
+	*rendered = cJSON_Print(errRoot);
+
+	req=0;
+	cJSON_Delete(errRoot);
+
+	*pReplyRoot = NULL; /* tell caller not to delete once again! */
+
+	finalize_it:
+		cJSON_Delete(req);
+		RETiRet;
+}
+
+/*
+ * Sets bulkRequestNextSectionStart pointer to next sections start in the buffer pointed by bulkRequest.
+ * Sections are marked by { and }
+ */
+static inline rsRetVal
+getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
+{
+		DEFiRet;
+		char* index =0;
+		if( (index = strchr(bulkRequest,'\n')) != 0)//intermediate section
+		{
+			*bulkRequestNextSectionStart = ++index;
+		}
+		else
+		{
+			*bulkRequestNextSectionStart=0;
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+	     finalize_it:
+	     	  RETiRet;
+}
+
+/*
+ * Sets the new string in singleRequest for one request in bulkRequest
+ * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
+ */
+static inline rsRetVal
+getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocation)
+{
+	DEFiRet;
+	char *req = bulkRequest;
+	char *start = bulkRequest;
+	if (getSection(req,&req)!=RS_RET_OK)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	if (getSection(req,&req)!=RS_RET_OK)
+			ABORT_FINALIZE(RS_RET_ERR);
+
+    *singleRequest = (char*) calloc (req - start+ 1 + 1,sizeof(char));// (req - start+ 1 == length of data + 1 for terminal char)
+    if (*singleRequest==NULL) ABORT_FINALIZE(RS_RET_ERR);
+    memcpy(*singleRequest,start,req - start);
+    *lastLocation=req;
+
+	finalize_it:
+			RETiRet;
+}
+
+/*
+ * check the status of response from ES
+ */
+int checkReplyStatus(cJSON* ok) {
+	return (ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299);
+}
+
+//Context object for error file content creation or status check
+typedef struct exeContext{
+	int statusCheckOnly;
+	cJSON *errRoot;
+	rsRetVal (*prepareErrorFileContent)(struct exeContext *ctx,int itemStatus,char *request,char *response);
+
+
+} context;
+
+//get content to be written in error file using context passed
+static inline rsRetVal
+parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx)
+{
+	DEFiRet;
+	cJSON *replyRoot = *pReplyRoot;
+	int i;
+	int numitems;
+	cJSON *items=0;
+
+
+	//iterate over items
+	items = cJSON_GetObjectItem(replyRoot, "items");
+	if(items == NULL || items->type != cJSON_Array) {
+		DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+			  "bulkmode insert does not return array, reply is: %s\n",
+			  pWrkrData->reply);
+		ABORT_FINALIZE(RS_RET_DATAFAIL);
+	}
+
+	numitems = cJSON_GetArraySize(items);
+
+	DBGPRINTF("omelasticsearch: Entire request %s\n",reqmsg);
+	char *lastReqRead= (char*)reqmsg;
+
+	DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
+	for(i = 0 ; i < numitems ; ++i) {
+
+		cJSON *item=0;
+		cJSON *create=0;
+		cJSON *ok=0;
+		int itemStatus=0;
+		item = cJSON_GetArrayItem(items, i);
+		if(item == NULL)  {
+			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+				  "cannot obtain reply array item %d\n", i);
+			ABORT_FINALIZE(RS_RET_DATAFAIL);
+		}
+		create = cJSON_GetObjectItem(item, "create");
+		if(create == NULL || create->type != cJSON_Object) {
+			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+				  "cannot obtain 'create' item for #%d\n", i);
+			ABORT_FINALIZE(RS_RET_DATAFAIL);
+		}
+
+		ok = cJSON_GetObjectItem(create, "status");
+		itemStatus = checkReplyStatus(ok);
+
+		char *request =0;
+		char *response =0;
+		if(ctx->statusCheckOnly)
+		{
+			if(itemStatus) {
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, ok->valueint);
+				DBGPRINTF("omelasticsearch: status check found error.\n");
+				ABORT_FINALIZE(RS_RET_DATAFAIL);
+			}
+
+		}
+		else
+		{
+			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK)
+			{
+				DBGPRINTF("omelasticsearch: Couldn't get post request\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			response = cJSON_PrintUnformatted(create);
+
+			if(*response==NULL)
+			{
+				free(request);//as its has been assigned.
+				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			//call the context
+			rsRetVal ret = ctx->prepareErrorFileContent(ctx, itemStatus, request,response);
+
+			//free memory in any case
+			free(request);
+			free(response);
+
+			if(ret != RS_RET_OK)
+			{
+				DBGPRINTF("omelasticsearch: Error in preparing errorfileContent. Cannot continue\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+		}
+
+	}
+
+	finalize_it:
+		RETiRet;
+}
+
+/*
+ * Dumps only failed requests of bulk insert
+ */
+static inline rsRetVal
+getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
+{
+	DEFiRet;
+	if(itemStatus)
+	{
+		cJSON *onlyErrorResponses =0;
+		cJSON *onlyErrorRequests=0;
+
+		if((onlyErrorResponses=cJSON_GetObjectItem(ctx->errRoot, "reply")) == NULL)
+		{
+			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot continue\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		cJSON_AddItemToArray(onlyErrorResponses, cJSON_CreateString(response));
+
+		if((onlyErrorRequests=cJSON_GetObjectItem(ctx->errRoot, "request")) == NULL)
+		{
+			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot continue\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		cJSON_AddItemToArray(onlyErrorRequests, cJSON_CreateString(request));
+
+	}
+
+	finalize_it:
+		RETiRet;
+}
+
+/*
+ * Dumps all requests of bulk insert interleaved with request and response
+ */
+
+static inline rsRetVal
+getDataInterleaved(context *ctx,int itemStatus,char *request,char *response)
+{
+	DEFiRet;
+	cJSON *interleaved =0;
+	if((interleaved=cJSON_GetObjectItem(ctx->errRoot, "response")) == NULL)
+	{
+		DBGPRINTF("omelasticsearch: Failed to get response json array. Invalid context. Cannot continue\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	cJSON *interleavedNode=0;
+	//create interleaved node that has req and response json data
+	if((interleavedNode=cJSON_CreateObject()) == NULL)
+	{
+		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	cJSON_AddItemToObject(interleavedNode,"request", cJSON_CreateString(request));
+	cJSON_AddItemToObject(interleavedNode,"reply", cJSON_CreateString(response));
+
+	cJSON_AddItemToArray(interleaved, interleavedNode);
+
+
+
+	finalize_it:
+		RETiRet;
+}
+
+
+/*
+ * Dumps only failed requests of bulk insert interleaved with request and response
+ */
+
+static inline rsRetVal
+getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *response)
+{
+	DEFiRet;
+	if (itemStatus) {
+		if(getDataInterleaved(ctx, itemStatus,request,response)!= RS_RET_OK) {
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+	finalize_it:
+		RETiRet;
+}
+
+//get erroronly context
+static inline rsRetVal
+initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+	DEFiRet;
+	ctx->statusCheckOnly=0;
+	cJSON *errRoot=0;
+	cJSON *onlyErrorResponses =0;
+	cJSON *onlyErrorRequests=0;
+	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+
+	if((onlyErrorResponses=cJSON_CreateArray()) == NULL) {
+		cJSON_Delete(errRoot);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if((onlyErrorRequests=cJSON_CreateArray()) == NULL) {
+		cJSON_Delete(errRoot);
+		cJSON_Delete(onlyErrorResponses);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
+	cJSON_AddItemToObject(errRoot,"request",onlyErrorRequests);
+	cJSON_AddItemToObject(errRoot, "reply", onlyErrorResponses);
+	ctx->errRoot = errRoot;
+	ctx->prepareErrorFileContent= &getDataErrorOnly;
+	finalize_it:
+		RETiRet;
+}
+
+//get interleaved context
+static inline rsRetVal
+initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+	DEFiRet;
+	ctx->statusCheckOnly=0;
+	cJSON *errRoot=0;
+	cJSON *interleaved =0;
+	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	if((interleaved=cJSON_CreateArray()) == NULL) {
+		cJSON_Delete(errRoot);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+
+	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
+	cJSON_AddItemToObject(errRoot,"response",interleaved);
+	ctx->errRoot = errRoot;
+	ctx->prepareErrorFileContent= &getDataInterleaved;
+	finalize_it:
+		RETiRet;
+}
+
+//get interleaved context
+static inline rsRetVal
+initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+	DEFiRet;
+	ctx->statusCheckOnly=0;
+	cJSON *errRoot=0;
+	cJSON *interleaved =0;
+	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	if((interleaved=cJSON_CreateArray()) == NULL) {
+		cJSON_Delete(errRoot);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+
+	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
+	cJSON_AddItemToObject(errRoot,"response",interleaved);
+	ctx->errRoot = errRoot;
+	ctx->prepareErrorFileContent= &getDataErrorOnlyInterleaved;
+	finalize_it:
+		RETiRet;
+}
+
 
 /* write data error request/replies to separate error file
  * Note: we open the file but never close it before exit. If it
@@ -487,9 +842,6 @@ static inline rsRetVal
 writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 {
 	char *rendered = NULL;
-	cJSON *errRoot;
-	cJSON *req;
-	cJSON *replyRoot = *pReplyRoot;
 	size_t toWrite;
 	ssize_t wrRet;
 	sbool bMutLocked = 0;
@@ -505,6 +857,58 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	pthread_mutex_lock(&pData->mutErrFile);
 	bMutLocked = 1;
 
+	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly , pData->interleaved);
+
+	context ctx;
+	ctx.errRoot=0;
+	if(pData->interleaved ==0 && pData->errorOnly ==0)//default write
+	{
+		if(getDataErrorDefault(pWrkrData,pReplyRoot,reqmsg,&rendered) != RS_RET_OK) {
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+	else
+	{
+		//get correct context.
+		if(pData->interleaved && pData->errorOnly)
+		{
+			if(initializeErrorInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+		}
+		else if(pData->errorOnly)
+		{
+
+			if(initializeErrorOnlyConext(pWrkrData,&ctx) != RS_RET_OK) {
+
+				DBGPRINTF("omelasticsearch: error initializing error only context.\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		}
+		else if(pData->interleaved)
+		{
+			if(initializeInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
+				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		}
+		else
+		{
+			DBGPRINTF("omelasticsearch: None of the modes match file write. No data to write.\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		//execute context
+		if(parseRequestAndResponseForContext(pWrkrData,pReplyRoot,reqmsg,&ctx)!= RS_RET_OK) {
+			DBGPRINTF("omelasticsearch: error creating file content.\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+		rendered = cJSON_Print(ctx.errRoot);
+	}
+
+
 	if(pData->fdErrFile == -1) {
 		pData->fdErrFile = open((char*)pData->errorFile,
 					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
@@ -515,14 +919,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
-	if((req=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	cJSON_AddItemToObject(req, "url", cJSON_CreateString((char*)pWrkrData->restURL));
-	cJSON_AddItemToObject(req, "postdata", cJSON_CreateString((char*)reqmsg));
 
-	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	cJSON_AddItemToObject(errRoot, "request", req);
-	cJSON_AddItemToObject(errRoot, "reply", replyRoot);
-	rendered = cJSON_Print(errRoot);
 	/* we do not do real error-handling on the err file, as this finally complicates
 	 * things way to much.
 	 */
@@ -533,12 +930,12 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 		DBGPRINTF("omelasticsearch: error %d writing error file, write returns %lld\n",
 			  errno, (long long) wrRet);
 	}
-	cJSON_Delete(errRoot);
-	*pReplyRoot = NULL; /* tell caller not to delete once again! */
+
 
 finalize_it:
 	if(bMutLocked)
 		pthread_mutex_unlock(&pData->mutErrFile);
+	cJSON_Delete(ctx.errRoot);
 	free(rendered);
 	RETiRet;
 }
@@ -547,46 +944,18 @@ finalize_it:
 static inline rsRetVal
 checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
 {
-	int i;
-	int numitems;
-	cJSON *items;
-	cJSON *item;
-	cJSON *create;
-	cJSON *ok;
 	DEFiRet;
-
-	items = cJSON_GetObjectItem(root, "items");
-	if(items == NULL || items->type != cJSON_Array) {
-		DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-			  "bulkmode insert does not return array, reply is: %s\n",
-			  pWrkrData->reply);
+	context ctx;
+	ctx.statusCheckOnly=1;
+	ctx.errRoot = 0;
+	if(parseRequestAndResponseForContext(pWrkrData,&root,0,&ctx)!= RS_RET_OK)
+	{
+		DBGPRINTF("omelasticsearch: error found in elasticsearch reply\n");
 		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	}
-	numitems = cJSON_GetArraySize(items);
-DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
-	for(i = 0 ; i < numitems ; ++i) {
-		item = cJSON_GetArrayItem(items, i);
-		if(item == NULL)  {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain reply array item %d\n", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
-		}
-		create = cJSON_GetObjectItem(item, "create");
-		if(create == NULL || create->type != cJSON_Object) {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'create' item for #%d\n", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
-		}
-		ok = cJSON_GetObjectItem(create, "status");
-		if(ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299) {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "item %d, status is %d\n", i, ok->valueint);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
-		}
-	}
 
-finalize_it:
-	RETiRet;
+	finalize_it:
+		RETiRet;
 }
 
 
@@ -796,6 +1165,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->bulkmode = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
+	pData->errorOnly=0;
+	pData->interleaved=0;
 	pData->dynBulkId= 0;
 	pData->bulkId = NULL;
 }
@@ -819,6 +1190,10 @@ CODESTARTnewActInst
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		}else if(!strcmp(actpblk.descr[i].name, "erroronly")) {
+			pData->errorOnly = pvals[i].val.d.n;
+		}else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
+			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->port = (int) pvals[i].val.d.n, NULL;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
