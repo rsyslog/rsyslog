@@ -652,7 +652,7 @@ EnableKeepAlive(nsd_t *pNsd)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-#	if defined(TCP_KEEPCNT)
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveProbes > 0) {
 		optval = pThis->iKeepAliveProbes;
 		optlen = sizeof(optval);
@@ -667,7 +667,7 @@ EnableKeepAlive(nsd_t *pNsd)
 		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
-#	if defined(TCP_KEEPCNT)
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveTime > 0) {
 		optval = pThis->iKeepAliveTime;
 		optlen = sizeof(optval);
@@ -682,7 +682,7 @@ EnableKeepAlive(nsd_t *pNsd)
 		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
 	}
 
-#	if defined(TCP_KEEPCNT)
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
 	if(pThis->iKeepAliveIntvl > 0) {
 		optval = pThis->iKeepAliveIntvl;
 		optlen = sizeof(optval);
