@@ -75,6 +75,7 @@ case "${host}" in
     os_type="solaris"
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
+    AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
