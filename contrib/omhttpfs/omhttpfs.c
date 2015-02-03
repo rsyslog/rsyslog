@@ -84,6 +84,7 @@ template(name="hdfs_tmp_file" type="string" string="/tmp/%$YEAR%/test.log")
 template(name="hdfs_tmp_filecontent" type="string" string="%$YEAR%-%$MONTH%-%$DAY% %MSG% ==\n")
 local4.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on")
 local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on" template="hdfs_tmp_filecontent")
+
 */
 
 #define DPP(x) DBGPRINTF("OMHTTPFS: %s:%d %s(): %s\n", __FILE__, __LINE__, __FUNCTION__, x)
@@ -165,13 +166,16 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
         if (pData->https) {
+            DBGPRINTF("%s(): Enable HTTPS\n", __FUNCTION__);
             // for ssl
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         }
     } else {
-        // TODO: return
-        return RS_RET_FALSE;
+	    // LOG
+        errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
+
+        return RS_RET_OBJ_CREATION_FAILED;
     }
 
     curl_easy_setopt(curl, CURLOPT_USERAGENT, HTTPFS_USER_AGENT);
@@ -399,6 +403,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
             pWrkrData->reply[pWrkrData->replyLen] = '\0'; \
         } \
     } else { \
+	errmsg.LogError(0, RS_RET_ERR, "CURL request fail, code=%d, error string=%s\n", res, curl_easy_strerror(res)); \
         return -1; \
     }
 
@@ -426,7 +431,7 @@ static rsRetVal
 httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
 {
     if (!length) {
-        return RS_RET_FALSE;
+        return RS_RET_JSON_PARSE_ERR;
     }
 
     struct json_tokener* jt = json_tokener_new();
@@ -436,11 +441,11 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     json = json_tokener_parse_ex(jt, buf, length);
     if (!json_object_is_type(json, json_type_object)) {
         // not an object ?
-        return RS_RET_FALSE;
+        return RS_RET_JSON_PARSE_ERR;
     }
 
     if (!json_object_object_get_ex(json, "RemoteException", &json)) {
-        return RS_RET_FALSE;
+        return RS_RET_JSON_PARSE_ERR;
     }
 
     struct json_object *jobj;
@@ -586,7 +591,7 @@ HTTPFS_CURL_EXEC
         success = 1;
     } else if (response_code == 404) {
         // TODO: 404 ?
-
+        
     }
 HTTPFS_CURL_VARS_RELEASE
     if (success) {
