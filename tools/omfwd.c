@@ -452,9 +452,9 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		} else {
 			dbgprintf("error forwarding via udp, suspending\n");
 			if(pWrkrData->errsToReport > 0) {
-				rs_strerror_r(lasterrno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_ERR_UDPSEND, "omfwd: error sending "
-						"via udp: %s", errStr);
+				errmsg.LogError(lasterrno, RS_RET_ERR_UDPSEND,
+						"omfwd: error %d sending "
+						"via udp", lasterrno);
 				if(pWrkrData->errsToReport == 1) {
 					errmsg.LogError(0, RS_RET_LAST_ERRREPORT, "omfwd: "
 							"max number of error message emitted "
