@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -829,7 +829,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			/* as per lumberjack spec, these properties need to go into
 			 * the CEE root.
 			 */
-			msgAddJSON(pMsg, (uchar*)"!", json);
+			msgAddJSON(pMsg, (uchar*)"!", json, 0);
 
 			MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 		} else {
@@ -959,7 +959,6 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
-	struct cmsghdr *cm;
 	struct ucred *cred;
 	struct timeval *ts;
 	uchar bufRcv[4096+1];
@@ -993,7 +992,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 		msgh.msg_controllen = sizeof(aux);
 	}
 #	endif
-	msgiov.iov_base = pRcv;
+	msgiov.iov_base = (char*)pRcv;
 	msgiov.iov_len = iMaxLine;
 	msgh.msg_iov = &msgiov;
 	msgh.msg_iovlen = 1;
@@ -1003,7 +1002,9 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	if(iRcvd > 0) {
 		cred = NULL;
 		ts = NULL;
+#		if defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP)
 		if(pLstn->bUseCreds) {
+			struct cmsghdr *cm;
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				if HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
@@ -1019,6 +1020,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
 		}
+#		endif /* defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP) */
 		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];

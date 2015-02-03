@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2014 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -846,7 +846,6 @@ finalize_it:
 
 BEGINcommitTransaction
 	unsigned i;
-int nsent = 0;
 CODESTARTcommitTransaction
 	CHKiRet(doTryResume(pWrkrData));
 
@@ -855,7 +854,6 @@ CODESTARTcommitTransaction
 
 	for(i = 0 ; i < nParams ; ++i) {
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
-++nsent;
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
 			FINALIZE;
 	}

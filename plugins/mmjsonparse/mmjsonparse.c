@@ -203,7 +203,7 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 		ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
 	}
  
- 	msgAddJSON(pMsg, pWrkrData->pData->container, json);
+ 	msgAddJSON(pMsg, pWrkrData->pData->container, json, 0);
 finalize_it:
 	RETiRet;
 }
@@ -241,7 +241,7 @@ finalize_it:
 		json = json_object_new_object();
 		jval = json_object_new_string((char*)buf);
 		json_object_object_add(json, "msg", jval);
-		msgAddJSON(pMsg, pData->container, json);
+		msgAddJSON(pMsg, pData->container, json, 0);
 		iRet = RS_RET_OK;
 	}
 	MsgSetParseSuccess(pMsg, bSuccess);

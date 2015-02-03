@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -87,8 +87,6 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
 static gnutls_certificate_credentials_t xcred;
 
-#ifdef DEBUG
-#if 0 /* uncomment, if needed some time again -- DEV Debug only */
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -97,8 +95,7 @@ static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
-#endif
-#endif /* #ifdef DEBUG */
+
 
 
 /* read in the whole content of a file. The caller is responsible for
@@ -605,13 +602,11 @@ gtlsGlblInit(void)
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
 
-#	ifdef DEBUG
-#if 	0 /* do this in special cases only. WARNING: if active, it may reveal sensitive information! */
-	/* intialize log function - set a level only for hard-to-find bugs */
-	gnutls_global_set_log_function(logFunction);
-	gnutls_global_set_log_level(10); /* 0 (no) to 9 (most), 10 everything */
-#	endif
-#	endif
+	if(GetGnuTLSLoglevel() > 0){
+		gnutls_global_set_log_function(logFunction);
+		gnutls_global_set_log_level(GetGnuTLSLoglevel()); 
+		/* 0 (no) to 9 (most), 10 everything */
+	}
 
 finalize_it:
 	RETiRet;

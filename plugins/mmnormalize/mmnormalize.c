@@ -60,6 +60,16 @@ DEFobjCurrIf(errmsg);
  */
 DEF_OMOD_STATIC_DATA
 
+static struct cnfparamdescr modpdescr[] = {
+	{ "allowregex", eCmdHdlrBinary, 0 }
+};
+
+static struct cnfparamblk modpblk = {
+	CNFPARAMBLK_VERSION,
+	sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	modpdescr
+};
+
 typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 	uchar 	*rulebase;	/**< name of rulebase to use */
@@ -94,6 +104,7 @@ static struct cnfparamblk actpblk =
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
+	int allow_regex;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -112,6 +123,7 @@ buildInstance(instanceData *pData)
 				"liblognorm ctx, cannot activate action");
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
+	ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
 	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
 		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 				"could not be loaded cannot activate action", pData->rulebase);
@@ -231,7 +243,7 @@ CODESTARTdoAction
 		MsgSetParseSuccess(pMsg, 1);
 	}
 
- 	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
+	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json, 0);
 
 ENDdoAction
 
@@ -244,6 +256,39 @@ setInstParamDefaults(instanceData *pData)
 	pData->pszPath = strdup("$!");
     pData->varDescr = NULL;
 }
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error processing module "
+						"config parameters missing [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+	
+	if(Debug) {
+		dbgprintf("module (global) param blk for mmnormalize:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+	
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "allowregex")) {
+			loadModConf->allow_regex = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("mmnormalize: program error, non-handled "
+					  "param '%s' in setModCnf\n", modpblk.descr[i].name);
+		}
+	}
+	
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
@@ -303,16 +348,18 @@ CODESTARTnewActInst
 		}
 	}
 
-    if(pData->bUseRawMsg) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-                        "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
-                        "Ignoring 'variable', will use raw message.");
-    } else if (varName) {
-        CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
-        CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
-    }
-    free(varName);
-    varName = NULL;
+	if (varName) {
+		if(pData->bUseRawMsg) {
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			                "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
+			                "Ignoring 'variable', will use raw message.");
+		} else {
+			CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+			CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
+		}
+		free(varName);
+		varName = NULL;
+	}
 
     CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
@@ -371,6 +418,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 

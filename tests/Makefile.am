@@ -36,6 +36,7 @@ TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
+	imtcp_no_octet_counted.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -44,12 +45,15 @@ TESTS +=  \
 	imudp_thread_hang.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
+	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
+	asynwr_timeout_2.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	asynwr_deadlock.sh \
+	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	gzipwr_large.sh \
@@ -152,6 +156,7 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
+	imptcp_no_octet_counted.sh \
         rscript_replace.sh \
         rscript_replace_complex.sh \
 	rscript_wrap2.sh \
@@ -179,21 +184,31 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS +=  \
-	mmnormalize_variable.sh
+	mmnormalize_variable.sh \
+	mmnormalize_tokenized.sh \
+	mmnormalize_regex_defaulted.sh \
+	mmnormalize_regex_disabled.sh
+
+if LOGNORM_REGEX_SUPPORTED
+TESTS += \
+	mmnormalize_regex.sh
+endif
 endif
 
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \
-	mmjsonparse_cim.sh
+	mmjsonparse_cim.sh \
+	json_array_subscripting.sh \
+	json_array_looping.sh
 endif
 
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
-	#sndrcv_tls_anon.sh \
-	#sndrcv_tls_anon_rebind.sh \
-	#imtcp-tls-basic.sh
+#sndrcv_tls_anon.sh \
+#sndrcv_tls_anon_rebind.sh \
+imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
 	 imtcp_conndrop_tls-vg.sh \
@@ -481,6 +496,11 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
+	   imptcp_no_octet_counted.sh \
+	   testsuites/imptcp_no_octet_counted.conf \
+	   testsuites/no_octet_counted.testdata \
+	   imtcp_no_octet_counted.sh \
+	   testsuites/imtcp_no_octet_counted.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_conndrop_tls.sh \
@@ -574,8 +594,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
+	   asynwr_simple_2.sh \
+	   testsuites/asynwr_simple_2.conf \
 	   asynwr_timeout.sh \
 	   testsuites/asynwr_timeout.conf \
+	   asynwr_timeout_2.sh \
+	   testsuites/asynwr_timeout_2.conf \
 	   asynwr_small.sh \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
@@ -586,6 +610,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock_2.sh \
+	   testsuites/asynwr_deadlock_2.conf \
 	   asynwr_deadlock2.sh \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
@@ -687,9 +713,13 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mmpstrucdata.conf \
 	   libdbi-basic-vg.sh \
 	   mmnormalize_variable.sh \
+	   mmnormalize_tokenized.sh \
+	   testsuites/mmnormalize_variable.conf \
+	   testsuites/date_time_msg \
+	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/tokenized_input \
 	   rscript_replace.sh \
 	   testsuites/rscript_replace.conf \
-	   testsuites/date_time_msg \
 	   rscript_replace_complex.sh \
 	   testsuites/rscript_replace_complex.conf \
 	   testsuites/complex_replace_input \
@@ -700,6 +730,18 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_wrap3.conf \
 	   testsuites/wrap3_input\
 	   testsuites/gethostname.conf \
+	   json_array_subscripting.sh \
+	   testsuites/json_array_subscripting.conf \
+	   testsuites/json_array_input \
+	   json_array_looping.sh \
+	   testsuites/json_array_looping.conf \
+	   mmnormalize_regex.sh \
+	   testsuites/mmnormalize_regex.conf \
+	   testsuites/regex_input \
+	   mmnormalize_regex_disabled.sh \
+	   testsuites/mmnormalize_regex_disabled.conf \
+	   mmnormalize_regex_defaulted.sh \
+	   testsuites/mmnormalize_regex_defaulted.conf \
 	   cfg.sh
 
 # TODO: re-enable

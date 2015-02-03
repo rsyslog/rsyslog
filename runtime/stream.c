@@ -810,6 +810,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
+	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 ENDobjConstruct(strm)
 
@@ -941,6 +942,7 @@ CODESTARTobjDestruct(strm)
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
 	free(pThis->pszFName);
+	free(pThis->pszSizeLimitCmd);
 	pThis->bStopWriter = 2; /* RG: use as flag for destruction */
 ENDobjDestruct(strm)
 

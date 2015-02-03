@@ -211,7 +211,6 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
@@ -221,6 +220,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
 
 	if(pThis->origin != NULL) {
+		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("origin"), 6);
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);

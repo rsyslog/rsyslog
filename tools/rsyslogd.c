@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2014 Rainer Gerhards and Adiscon
+ * Copyright 2004-2015 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -376,6 +376,8 @@ printVersion(void)
 {
 	printf("rsyslogd %s, ", VERSION);
 	printf("compiled with:\n");
+	printf("\tPLATFORM:\t\t\t\t%s\n", PLATFORM_ID);
+	printf("\tPLATFORM (lsb_release -d):\t\t%s\n", PLATFORM_ID_LSB);
 #ifdef FEATURE_REGEXP
 	printf("\tFEATURE_REGEXP:\t\t\t\tYes\n");
 #else
@@ -1028,7 +1030,7 @@ initAll(int argc, char **argv)
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
 	char cwdbuf[128]; /* buffer to obtain/display current working directory */
-	int parentPipeFD; /* fd of pipe to parent, if auto-backgrounding */
+	int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
 	DEFiRet;
 
 	/* first, parse the command line options. We do not carry out any actual work, just

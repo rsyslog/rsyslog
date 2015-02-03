@@ -23,7 +23,7 @@ This list is not conclusive. There for sure are many more ways to contribute and
 
 Note to developers
 ------------------
-please adress pull requests against master-candidate branch. This enables the developers to first test contributions via the automated testbench. If the test succeeds, your changes will automaticly get migrated into the master branch. This might take a short while, so don't worry if you do not see your contribution immediatly after your pull request is merged.
+Please adress pull requests against the master branch. The changes will at first be merged into another branch (master-candidate). There, the changes will be tested and merged into the master branch, should the test succeed.
 
 More information is available at:
     http://www.rsyslog.com/how-to-contribute-to-rsyslog/

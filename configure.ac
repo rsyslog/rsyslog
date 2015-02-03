@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.7.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.8.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -47,9 +47,15 @@ AC_CHECK_FUNCS(json_object_new_int64,,)
 # look for newer API
 AC_CHECK_FUNCS(json_tokener_error_desc,,)
 AC_CHECK_FUNCS(json_object_object_get_ex,,)
+AC_CHECK_TYPES([json_bool],,,[[#include <json_object.h>]])
 
 CFLAGS="$save_CFLAGS"
 LIBS="$save_LIBS"
+
+AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
+# we don't mind if we don't have the lsb_release utility. But if we have, it's
+# nice to have the extra information.
+AC_DEFINE_UNQUOTED([PLATFORM_ID_LSB], ["`lsb_release -d`"], [platform id for display purposes])
 
 case "${host}" in
   *-*-linux*)
@@ -69,6 +75,7 @@ case "${host}" in
     os_type="solaris"
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
+    AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
@@ -546,21 +553,22 @@ AC_ARG_ENABLE(mysql,
 )
 if test "x$enable_mysql" = "xyes"; then
   AC_CHECK_PROG(
-    [HAVE_MYSQL_CONFIG],
+    [MYSQL_CONFIG],
     [mysql_config],
-    [yes],,,
+    [mysql_config],
+    [no],,
   )
-  if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([mysql_config not found in PATH - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
+  if test "x${MYSQL_CONFIG}" = "xno"; then
+    AC_MSG_FAILURE([mysql_config not found - usually a package named mysql-dev, libmysql-dev or similar, is missing - install it to fix this issue])
   fi
   AC_CHECK_LIB(
     [mysqlclient],
     [mysql_init],
-    [MYSQL_CFLAGS=`mysql_config --cflags`
-     MYSQL_LIBS=`mysql_config --libs`
+    [MYSQL_CFLAGS=`$MYSQL_CONFIG --cflags`
+     MYSQL_LIBS=`$MYSQL_CONFIG --libs`
     ],
     [AC_MSG_FAILURE([MySQL library is missing])],
-    [`mysql_config --libs`]
+    [`$MYSQL_CONFIG --libs`]
   )
   AC_MSG_CHECKING(if we have mysql_library_init)
   save_CFLAGS="$CFLAGS"
@@ -596,21 +604,22 @@ AC_ARG_ENABLE(pgsql,
 )
 if test "x$enable_pgsql" = "xyes"; then
   AC_CHECK_PROG(
-    [HAVE_PGSQL_CONFIG],
+    [PG_CONFIG],
     [pg_config],
-    [yes],,,
+    [pg_config],
+    [no],,,
   )
-  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([pg_config not found in PATH])
+  if test "x${PG_CONFIG}" = "xno"; then
+    AC_MSG_FAILURE([pg_config not found])
   fi
   AC_CHECK_LIB(
     [pq],
     [PQconnectdb],
-    [PGSQL_CFLAGS="-I`pg_config --includedir`"
-     PGSQL_LIBS="-L`pg_config --libdir` -lpq"
+    [PGSQL_CFLAGS="-I`$PG_CONFIG --includedir`"
+     PGSQL_LIBS="-L`$PG_CONFIG --libdir` -lpq"
     ],
     [AC_MSG_FAILURE([PgSQL library is missing])],
-    [-L`pg_config --libdir`]
+    [-L`$PG_CONFIG --libdir`]
   )
 fi
 AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
@@ -894,10 +903,21 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.0.0)
-fi
-AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.0.2)
 
+	save_CFLAGS="$CFLAGS"
+	save_LIBS="$LIBS"
+
+	CFLAGS="$CFLAGS $LIBLOGNORM_CFLAGS"
+	LIBS="$LIBS $LIBLOGNORM_LIBS"
+
+	AX_CHECK_DEFINED([[#include <lognorm-features.h>]],LOGNORM_REGEX_SUPPORTED,[lognorm_regex_supported="yes"],)
+
+	CFLAGS="$save_CFLAGS"
+	LIBS="$save_LIBS"
+fi
+AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
+AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 
 # mmnjsonparse
 AC_ARG_ENABLE(mmjsonparse,
@@ -910,7 +930,6 @@ AC_ARG_ENABLE(mmjsonparse,
         [enable_mmjsonparse=no]
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
-
 
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
@@ -1336,7 +1355,7 @@ AM_CONDITIONAL(ENABLE_MMSNMPTRAPD, test x$enable_mmsnmptrapd = xyes)
 
 # settings for the omhdfs;
 AC_ARG_ENABLE(omhdfs,
-        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs template module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omhdfs],[Compiles omhdfs module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omhdfs="yes" ;;
           no) enable_omhdfs="no" ;;
@@ -1350,10 +1369,27 @@ fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
 
+# support for omkafka
+AC_ARG_ENABLE(omkafka,
+        [AS_HELP_STRING([--enable-omkafka],[Compiles omkafka module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omkafka="yes" ;;
+          no) enable_omkafka="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omkafka) ;;
+         esac],
+        [enable_omkafka=no]
+)
+if test "x$enable_omkafka"; then
+	#PKG_CHECK_MODULES(LIBRDKAFKA, librdkafka)
+	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+fi
+AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
+
+
 #MONGODB SUPPORT
 
 AC_ARG_ENABLE(ommongodb,
-        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb template module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-ommongodb],[Compiles ommongodb module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_ommongodb="yes" ;;
           no) enable_ommongodb="no" ;;
@@ -1557,6 +1593,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/omhdfs/Makefile \
+		plugins/omkafka/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
@@ -1639,6 +1676,7 @@ echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
+echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"

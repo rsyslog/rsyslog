@@ -200,7 +200,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	pMsg->iSeverity = iSeverity;
 
 	if(json != NULL) {
-		msgAddJSON(pMsg, (uchar*)"!", json);
+		msgAddJSON(pMsg, (uchar*)"!", json, 0);
 	}
 
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));

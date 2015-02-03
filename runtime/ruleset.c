@@ -211,7 +211,7 @@ execSet(struct cnfstmt *stmt, msg_t *pMsg)
 	struct var result;
 	DEFiRet;
 	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
-	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result);
+	msgSetJSONFromVar(pMsg, stmt->d.s_set.varname, &result, stmt->d.s_set.force_reset);
 	varDelete(&result);
 	RETiRet;
 }
@@ -259,6 +259,31 @@ execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 		if(stmt->d.s_if.t_else != NULL)
 			CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
 	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
+{
+	json_object *arr;
+	DEFiRet;
+	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
+	if (arr == NULL) {
+		DBGPRINTF("foreach loop skipped, as collection is empty\n");
+		FINALIZE;
+	}
+	int len = json_object_array_length(arr);
+	json_object *curr;
+	for (int i = 0; i < len; i++) {
+		curr = json_object_array_get_idx(arr, i);
+		struct var v;
+		v.d.json = curr;
+		v.datatype = 'J';
+		CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
+		CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
+	}
+	CHKiRet(msgDelJSON(pMsg, stmt->d.s_foreach.iter->var));
 finalize_it:
 	RETiRet;
 }
@@ -434,6 +459,9 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 			break;
 		case S_IF:
 			CHKiRet(execIf(stmt, pMsg, pWti));
+			break;
+		case S_FOREACH:
+			CHKiRet(execForeach(stmt, pMsg, pWti));
 			break;
 		case S_PRIFILT:
 			CHKiRet(execPRIFILT(stmt, pMsg, pWti));

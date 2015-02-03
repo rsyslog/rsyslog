@@ -67,15 +67,15 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	if(iErrno != 0) {
 		rs_strerror_r(iErrno, errStr, sizeof(errStr));
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s: %s", msg, errStr);
+			snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s: %s [try http://www.rsyslog.com/e/%d ]", msg, errStr, iErrCode * -1);
+			snprintf(buf, sizeof(buf), "%s: %s [v%s try http://www.rsyslog.com/e/%d ]", msg, errStr, VERSION, iErrCode * -1);
 		}
 	} else {
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s", msg);
+			snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s [try http://www.rsyslog.com/e/%d ]", msg, iErrCode * -1);
+			snprintf(buf, sizeof(buf), "%s [v%s try http://www.rsyslog.com/e/%d ]", msg, VERSION, iErrCode * -1);
 		}
 	}
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */

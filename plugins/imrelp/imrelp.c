@@ -364,7 +364,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 					"does not support it (most probably GnuTLS lib "
 					"is too old)!");
 			ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
-		} else if(relpRet == RELP_RET_ERR_NO_TLS) {
+		} else if(relpRet == RELP_RET_ERR_NO_TLS_AUTH) {
 			errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
 					"imrelp: could not activate relp TLS with "
 					"authentication, librelp does not support it "
