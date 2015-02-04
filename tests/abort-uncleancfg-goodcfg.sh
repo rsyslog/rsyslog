@@ -12,5 +12,6 @@ source $srcdir/diag.sh wait-shutdown
 if [ ! -e rsyslog.out.log ]
 then
         echo "error: expected file does not exist"
+	source ./diag.sh error-exit 1
 fi
 source $srcdir/diag.sh exit
