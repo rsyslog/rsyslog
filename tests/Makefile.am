@@ -54,6 +54,7 @@ TESTS +=  \
 	asynwr_deadlock.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
+	abort-uncleancfg-goodcfg.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -606,6 +607,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
 	   testsuites/asynwr_deadlock4.conf \
+	   abort-uncleancfg-goodcfg.sh \
+	   testsuites/abort-uncleancfg-goodcfg.conf \
 	   gzipwr_large.sh \
 	   testsuites/gzipwr_large.conf \
 	   gzipwr_large_dynfile.sh \
