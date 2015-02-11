@@ -83,6 +83,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static permittedPeers_t *pPermPeersRoot = NULL;
 
+#define FRAMING_UNSET -1
 
 /* config settings */
 static struct configSettings_s {
@@ -171,7 +172,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "name", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
-	{ "supportOctetCountedFraming", eCmdHdlrBinary, 0 },
+	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
@@ -269,7 +270,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->dfltTZ = NULL;
-	inst->bSuppOctetFram = 1;
+	inst->bSuppOctetFram = -1; /* unset */
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
 
@@ -406,7 +407,7 @@ CODESTARTnewInpInst
 			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "supportOctetCountedFraming")) {
+		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
@@ -563,6 +564,8 @@ BEGINcheckCnf
 CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
+		if(inst->bSuppOctetFram == FRAMING_UNSET)
+			inst->bSuppOctetFram = pModConf->bSuppOctetFram;
 	}
 	if(pModConf->root == NULL) {
 		errmsg.LogError(0, RS_RET_NO_LISTNERS , "imtcp: module loaded, but "

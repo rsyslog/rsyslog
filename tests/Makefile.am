@@ -36,6 +36,7 @@ TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
+	imtcp_no_octet_counted.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -52,6 +53,7 @@ TESTS +=  \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	asynwr_deadlock.sh \
+	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	abort-uncleancfg-goodcfg.sh \
@@ -155,6 +157,7 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
+	imptcp_no_octet_counted.sh \
         rscript_replace.sh \
         rscript_replace_complex.sh \
 	rscript_wrap2.sh \
@@ -494,6 +497,11 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
+	   imptcp_no_octet_counted.sh \
+	   testsuites/imptcp_no_octet_counted.conf \
+	   testsuites/no_octet_counted.testdata \
+	   imtcp_no_octet_counted.sh \
+	   testsuites/imtcp_no_octet_counted.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_conndrop_tls.sh \
@@ -603,6 +611,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock_2.sh \
+	   testsuites/asynwr_deadlock_2.conf \
 	   asynwr_deadlock2.sh \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
