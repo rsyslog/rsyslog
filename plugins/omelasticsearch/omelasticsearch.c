@@ -198,6 +198,7 @@ CODESTARTfreeWrkrInstance
 		pWrkrData->curlHandle = NULL;
 	}
 	free(pWrkrData->restURL);
+	es_deleteStr(pWrkrData->batch.data);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
