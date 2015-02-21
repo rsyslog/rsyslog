@@ -61,6 +61,7 @@ typedef struct _instanceData {
 	char *topic;
 	uchar *tplName;		/* assigned output template */
 	char *brokers;
+	sbool autoPartition;
 	int fixedPartition;
 	int nPartitions;
 	int32_t currPartition;
@@ -86,6 +87,7 @@ typedef struct wrkrInstanceData {
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "topic", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "partitions.auto", eCmdHdlrBinary, 0 }, /* use librdkafka's automatic partitioning function */
 	{ "partitions.number", eCmdHdlrPositiveInt, 0 },
 	{ "partitions.usefixed", eCmdHdlrNonNegInt, 0 }, /* expert parameter, "nails" partition */
 	{ "broker", eCmdHdlrArray, 0 },
@@ -107,10 +109,14 @@ ENDinitConfVars
 static inline int
 getPartition(instanceData *const __restrict__ pData)
 {
-	return (pData->fixedPartition == NO_FIXED_PARTITION) ?
-	          ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
-		      &pData->mutCurrPartition) % pData->nPartitions
-		:  pData->fixedPartition;
+	if (pData->autoPartition) {
+		return RD_KAFKA_PARTITION_UA;
+	} else {
+		return (pData->fixedPartition == NO_FIXED_PARTITION) ?
+		          ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
+			      &pData->mutCurrPartition) % pData->nPartitions
+			:  pData->fixedPartition;
+	}
 }
 
 BEGINdoHUP
@@ -474,6 +480,7 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->topic = NULL;
 	pData->brokers = NULL;
+	pData->autoPartition = 0;
 	pData->fixedPartition = NO_FIXED_PARTITION;
 	pData->nPartitions = 1;
 	pData->nConfParams = 0;
@@ -520,6 +527,8 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "topic")) {
 			pData->topic = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "partitions.auto")) {
+			pData->autoPartition = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.number")) {
 			pData->nPartitions = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.usefixed")) {
