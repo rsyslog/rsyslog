@@ -37,6 +37,7 @@ TESTS +=  \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
+	imtcp_spframingfix.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -502,6 +503,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/no_octet_counted.testdata \
 	   imtcp_no_octet_counted.sh \
 	   testsuites/imtcp_no_octet_counted.conf \
+	   testsuites/spframingfix.testdata \
+	   imtcp_spframingfix.sh \
+	   testsuites/imtcp_spframingfix.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_conndrop_tls.sh \
