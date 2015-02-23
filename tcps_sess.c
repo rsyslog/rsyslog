@@ -363,6 +363,13 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
+		} else if(c == ' ') {
+			/* Cisco very occasionally sends a SP after a LF, which
+			 * thrashes framing if not taken special care of. Here,
+			 * we permit space *in front of the next frame* and
+			 * ignore it.
+			 */
+			 FINALIZE;
 		} else {
 			pThis->inputState = eInMsg;
 			pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
@@ -433,6 +440,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 		}
 	}
 
+finalize_it:
 	RETiRet;
 }
 
