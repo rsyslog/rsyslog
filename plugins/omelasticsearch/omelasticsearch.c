@@ -524,7 +524,7 @@ getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
 		char* index =0;
-		if( (index = strchr(bulkRequest,'\n')) != 0)//intermediate section
+		if( (index = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
 		{
 			*bulkRequestNextSectionStart = ++index;
 		}
@@ -554,7 +554,7 @@ getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocat
 	if (getSection(req,&req)!=RS_RET_OK)
 			ABORT_FINALIZE(RS_RET_ERR);
 
-    *singleRequest = (char*) calloc (req - start+ 1 + 1,sizeof(char));// (req - start+ 1 == length of data + 1 for terminal char)
+    *singleRequest = (char*) calloc (req - start+ 1 + 1,sizeof(char));/* (req - start+ 1 == length of data + 1 for terminal char)*/
     if (*singleRequest==NULL) ABORT_FINALIZE(RS_RET_ERR);
     memcpy(*singleRequest,start,req - start);
     *lastLocation=req;
@@ -570,7 +570,9 @@ int checkReplyStatus(cJSON* ok) {
 	return (ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299);
 }
 
-//Context object for error file content creation or status check
+/*
+ * Context object for error file content creation or status check
+ */
 typedef struct exeContext{
 	int statusCheckOnly;
 	cJSON *errRoot;
@@ -579,7 +581,9 @@ typedef struct exeContext{
 
 } context;
 
-//get content to be written in error file using context passed
+/*
+ * get content to be written in error file using context passed
+ */
 static inline rsRetVal
 parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx)
 {
@@ -590,7 +594,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	cJSON *items=0;
 
 
-	//iterate over items
+	/*iterate over items*/
 	items = cJSON_GetObjectItem(replyRoot, "items");
 	if(items == NULL || items->type != cJSON_Array) {
 		DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
@@ -650,15 +654,15 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 
 			if(*response==NULL)
 			{
-				free(request);//as its has been assigned.
+				free(request);/*as its has been assigned.*/
 				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-			//call the context
+			/*call the context*/
 			rsRetVal ret = ctx->prepareErrorFileContent(ctx, itemStatus, request,response);
 
-			//free memory in any case
+			/*free memory in any case*/
 			free(request);
 			free(response);
 
@@ -725,7 +729,7 @@ getDataInterleaved(context *ctx,int itemStatus,char *request,char *response)
 	}
 
 	cJSON *interleavedNode=0;
-	//create interleaved node that has req and response json data
+	/*create interleaved node that has req and response json data*/
 	if((interleavedNode=cJSON_CreateObject()) == NULL)
 	{
 		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
@@ -761,7 +765,9 @@ getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *resp
 		RETiRet;
 }
 
-//get erroronly context
+/*
+ * get erroronly context
+ */
 static inline rsRetVal
 initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
@@ -790,7 +796,9 @@ initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 		RETiRet;
 }
 
-//get interleaved context
+/*
+ * get interleaved context
+ */
 static inline rsRetVal
 initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
@@ -812,7 +820,7 @@ initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 		RETiRet;
 }
 
-//get interleaved context
+/*get interleaved context*/
 static inline rsRetVal
 initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
@@ -862,7 +870,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 
 	context ctx;
 	ctx.errRoot=0;
-	if(pData->interleaved ==0 && pData->errorOnly ==0)//default write
+	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
 	{
 		if(getDataErrorDefault(pWrkrData,pReplyRoot,reqmsg,&rendered) != RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
@@ -870,7 +878,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	}
 	else
 	{
-		//get correct context.
+		/*get correct context.*/
 		if(pData->interleaved && pData->errorOnly)
 		{
 			if(initializeErrorInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
@@ -901,7 +909,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
-		//execute context
+		/*execute context*/
 		if(parseRequestAndResponseForContext(pWrkrData,pReplyRoot,reqmsg,&ctx)!= RS_RET_OK) {
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);

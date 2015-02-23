@@ -475,9 +475,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
 	   elasticsearch-bulk-errorfile-populated-erroronly.sh \
 	   testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
-	   elasticsearch-bulk-errorfile-populated-erroronly-interleaved \
+	   elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
 	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
-	   elasticsearch-bulk-errorfile-populated-default-interleaved \
+	   elasticsearch-bulk-errorfile-populated-default-interleaved.sh \
 	   testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
