@@ -58,6 +58,7 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
+	sbool bUseRawMsg;     /**< use %rawmsg% instead of %msg% */
 	char *cookie;
 	uchar *container;
 	int lenCookie;
@@ -79,7 +80,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "cookie", eCmdHdlrString, 0 },
-	{ "container", eCmdHdlrString, 0 }
+	{ "container", eCmdHdlrString, 0 },
+	{ "userawmsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -211,6 +213,7 @@ finalize_it:
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
+	rs_size_t len;
 	int bSuccess = 0;
 	struct json_object *jval;
 	struct json_object *json;
@@ -222,7 +225,10 @@ CODESTARTdoAction
 	 * requires changes to the libraries. For now, we accept message
 	 * duplication. -- rgerhards, 2010-12-01
 	 */
-	buf = getMSG(pMsg);
+	if(pWrkrData->pData->bUseRawMsg)
+		getRawMsg(pMsg, &buf, &len);
+	else
+		buf = getMSG(pMsg);
 
 	while(*buf && isspace(*buf)) {
 		++buf;
@@ -251,6 +257,7 @@ static inline void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->cookie = NULL;
+	pData->bUseRawMsg = 0;
 }
 
 BEGINnewActInst
@@ -277,6 +284,8 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "container")) {
 			free(pData->container);
 			pData->container = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
+            pData->bUseRawMsg = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("mmjsonparse: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
