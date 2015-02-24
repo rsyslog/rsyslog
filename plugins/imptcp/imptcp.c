@@ -123,6 +123,7 @@ struct instanceConf_s {
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;
 	int bSuppOctetFram;		/* support octet-counted framing? */
+	int bSPFramingFix;
 	int iAddtlFrameDelim;
 	uint8_t compressionMode;
 	uchar *pszBindPort;		/* port to bind to */
@@ -165,6 +166,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
+	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
@@ -213,6 +215,7 @@ struct ptcpsrv_s {
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEmitMsgOnClose;
 	sbool bSuppOctetFram;
+	sbool bSPFramingFix;
 	ratelimit_t *ratelimiter;
 };
 
@@ -231,6 +234,7 @@ struct ptcpsess_s {
 	int iMsg;		 /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
 	sbool bSuppOctetFram;	/**< copy from listener, to speed up access */
+	sbool bSPFramingFix;
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,
@@ -252,6 +256,7 @@ struct ptcplstn_s {
 	ptcplstn_t *prev, *next;
 	int sock;
 	sbool bSuppOctetFram;
+	sbool bSPFramingFix;
 	epolld_t *epd;
 	statsobj_t *stats;	/* listener stats */
 	intctr_t rcvdBytes;
@@ -752,6 +757,13 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
+		} else if(pThis->bSPFramingFix && c == ' ') {
+			/* Cisco very occasionally sends a SP after a LF, which
+			 * thrashes framing if not taken special care of. Here,
+			 * we permit space *in front of the next frame* and
+			 * ignore it.
+			 */
+			 FINALIZE;
 		} else {
 			pThis->inputState = eInMsg;
 			pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
@@ -823,6 +835,7 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		}
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1027,6 +1040,7 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	CHKmalloc(pLstn = calloc(1, sizeof(ptcplstn_t)));
 	pLstn->pSrv = pSrv;
 	pLstn->bSuppOctetFram = pSrv->bSuppOctetFram;
+	pLstn->bSPFramingFix = pSrv->bSPFramingFix;
 	pLstn->sock = sock;
 	/* support statistics gathering */
 	uchar *inputname;
@@ -1091,6 +1105,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->pLstn = pLstn;
 	pSess->sock = sock;
 	pSess->bSuppOctetFram = pLstn->bSuppOctetFram;
+	pSess->bSPFramingFix = pLstn->bSPFramingFix;
 	pSess->inputState = eAtStrtFram;
 	pSess->iMsg = 0;
 	pSess->bzInitDone = 0;
@@ -1216,6 +1231,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
+	inst->bSPFramingFix = 0;
 	inst->bKeepAlive = 0;
 	inst->iKeepAliveIntvl = 0;
 	inst->iKeepAliveProbes = 0;
@@ -1301,6 +1317,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->pSess = NULL;
 	pSrv->pLstn = NULL;
 	pSrv->bSuppOctetFram = inst->bSuppOctetFram;
+	pSrv->bSPFramingFix = inst->bSPFramingFix;
 	pSrv->bKeepAlive = inst->bKeepAlive;
 	pSrv->iKeepAliveIntvl = inst->iKeepAliveTime;
 	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
@@ -1640,6 +1657,8 @@ CODESTARTnewInpInst
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->bSuppOctetFram = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
+			inst->bSPFramingFix = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "compression.mode")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcasecmp(cstr, "stream:always")) {

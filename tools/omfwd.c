@@ -284,10 +284,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTsetModCnf
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
-	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
-				"config parameters [module(...)]");
+	if((pvals = nvlstGetParams(lst, &modpblk, NULL))) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -456,7 +453,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 						"omfwd: error %d sending "
 						"via udp", lasterrno);
 				if(pWrkrData->errsToReport == 1) {
-					errmsg.LogError(0, RS_RET_LAST_ERRREPORT, "omfwd: "
+					errmsg.LogMsg(0, RS_RET_LAST_ERRREPORT, LOG_WARNING, "omfwd: "
 							"max number of error message emitted "
 							"- further messages will be "
 							"suppressed");

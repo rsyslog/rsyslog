@@ -1,6 +1,6 @@
 /* Definitions for tcpsrv class.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -44,6 +44,7 @@ struct tcpLstnPortList_s {
 	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
 	ratelimit_t *ratelimiter;
 	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
+	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
@@ -68,6 +69,7 @@ struct tcpsrv_s {
 	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
 	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
 	sbool bUseFlowControl;	/**< use flow control (make light delayable) */
+	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
@@ -163,8 +165,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t*, int);
 	rsRetVal (*SetKeepAliveProbes)(tcpsrv_t*, int);
 	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
+	/* added v18 */
+	rsRetVal (*SetbSPFramingFix)(tcpsrv_t*, sbool);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

@@ -1724,7 +1724,6 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			int iOptions;
 			iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
 			if(regexp.regcomp(&(pTpe->data.field.re), (char*) re_expr, iOptions) != 0) {
-				dbgprintf("error: can not compile regex: '%s'\n", re_expr);
 				errmsg.LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
 				pTpe->data.field.has_regex = 2;
 				ABORT_FINALIZE(RS_RET_ERR);
