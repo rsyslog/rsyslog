@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.9.0 [v8-stable] 2015-04-07
+------------------------------------------------------------------------------
 Version 8.8.0 [v8-stable] 2015-02-24
 - omkafka: add support for dynamic topics and auto partitioning
   Thanks to Tait Clarridge for the patches.
