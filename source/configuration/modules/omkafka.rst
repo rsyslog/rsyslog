@@ -61,6 +61,20 @@ comma-delimited list of values as shown here:
 
    Specifies the topic to produce to.
 
+.. function::  dynatopic [boolean]
+
+   *Default: off*
+
+   If set, the topic parameter becomes a template for which topic to
+   produce messages to. The cache is cleared on HUP.
+
+.. function::  dynatopic.cachesize [positiveInteger]
+
+   *Default: 50*
+
+   If set, defines the number of topics that will be kept in the dynatopic
+   cache.
+
 .. function::  partitions.auto [boolean]
 
    *Default: off*
@@ -73,6 +87,8 @@ comma-delimited list of values as shown here:
    number of partitions on the producer side, where it would be easier
    to change the kafka configuration on the cluster for number of
    partitions/topic vs on every machine talking to Kafka via rsyslog.
+
+   If set, it will override any other partitioning scheme configured.
 
 .. function::  partitions.number [positiveInteger]
 
