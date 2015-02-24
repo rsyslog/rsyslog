@@ -8,10 +8,10 @@ imfile: Text File Input Module
 **Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
-This modul provides the ability to convert any standard text file
+This module provides the ability to convert any standard text file
 into a syslog
 message. A standard text file is a file consisting of printable
-characters with lines being delimited by LF.
+characters with lines being delimited by LF.
 
 The file is read line-by-line and any line read is passed to rsyslog's
 rule engine. The rule engine applies filter conditions and selects which
@@ -54,7 +54,7 @@ data items
 
 Meta data is only present if enabled. By default it is enabled for
 input() statements that contain wildcards. For all others, it is
-disabled by default. It can explicitely be turned on or off via the
+disabled by default. It can explicitly be turned on or off via the
 *addMetadata* input() parameter, which always overrides the default.
 
 State Files
@@ -69,7 +69,7 @@ generates state file names according to the following scheme:
 
 - the string "imfile-state:" is added before the actual file name,
   which includes the full path
-- the full name is prepended after that string, but all occurences
+- the full name is prepended after that string, but all occurrences
   of "/" are replaced by "-" to facilitate handling of these files
 
 As a concrete example, consider a file ``/var/log/applog`` is
@@ -80,7 +80,7 @@ Note that it is possible to set a fixed state file name via the
 deprecated "stateFile" parameter. It is suggested to avoid this, as
 the user must take care of name clashes. Most importantly, if
 "stateFile" is set for file monitors with wildcards, the **same**
-state file is used for all occurences of these files. In short,
+state file is used for all occurrences of these files. In short,
 this will usually not work and cause confusion. Upon startup,
 rsyslog tries to detect these cases and emit warning messages.
 However, the detection simply checks for the presence of "*"
@@ -133,7 +133,7 @@ Module Parameters
    long as there is any data in them. So a "polling sleep" will only
    happen when nothing is left to be processed.
 
-   **We recomend to use inotify mode.**
+   **We recommend to use inotify mode.**
 
 Input Parameters
 ----------------
@@ -423,7 +423,7 @@ Legacy Example
 
 The following sample monitors two files. If you need just one, remove
 the second one. If you need more, add them according to the sample ;).
-Note that only non-default parametrs actually needed
+Note that only non-default parameters actually needed
 need to be specified. The second file uses less directives and uses
 defaults instead.
 
