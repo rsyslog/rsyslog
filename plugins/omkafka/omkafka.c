@@ -121,7 +121,6 @@ typedef struct _instanceData {
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	int bReportErrs;
 } wrkrInstanceData_t;
 
 
@@ -388,7 +387,7 @@ finalize_it:
  * needs to be closed, HUP must be sent.
  */
 static rsRetVal
-writeDataError(wrkrInstanceData_t *const pWrkrData,
+writeDataError(instanceData *const pData,
 	const char *const __restrict__ data,
 	const size_t lenData,
 	const int kafkaErr)
@@ -397,7 +396,6 @@ writeDataError(wrkrInstanceData_t *const pWrkrData,
 	struct json_object *json = NULL;
 	DEFiRet;
 
-	instanceData *const pData = pWrkrData->pData;
 	if(pData->errorFile == NULL) {
 		FINALIZE;
 	}
@@ -458,9 +456,9 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	   int error_code,
 	   void *opaque, void __attribute__((unused)) *msg_opaque)
 {
-	wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *) opaque;
+	instanceData *const pData = (instanceData *) opaque;
 	if(error_code != 0)
-		writeDataError(pWrkrData, (char*) payload, len, error_code);
+		writeDataError(pData, (char*) payload, len, error_code);
 }
 
 static void
@@ -472,25 +470,25 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 }
 
 static inline void
-do_rd_kafka_destroy(wrkrInstanceData_t *const __restrict pWrkrData)
+do_rd_kafka_destroy(instanceData *const __restrict pData)
 {
 	DBGPRINTF("omkafka: closing - items left in outqueue: %d\n",
-		  rd_kafka_outq_len(pWrkrData->pData->rk));
-	while (rd_kafka_outq_len(pWrkrData->pData->rk) > 0)
-		rd_kafka_poll(pWrkrData->pData->rk, 10);
-	rd_kafka_destroy(pWrkrData->pData->rk);
-	pWrkrData->pData->rk = NULL;
+		  rd_kafka_outq_len(pData->rk));
+	while (rd_kafka_outq_len(pData->rk) > 0)
+		rd_kafka_poll(pData->rk, 10);
+	rd_kafka_destroy(pData->rk);
+	pData->rk = NULL;
 }
 
 
 static rsRetVal
-closeKafka(wrkrInstanceData_t *const __restrict__ pWrkrData)
+closeKafka(instanceData *const __restrict__ pData)
 {
 	DEFiRet;
-	if(!pWrkrData->pData->bIsOpen)
+	if(!pData->bIsOpen)
 		FINALIZE;
-	do_rd_kafka_destroy(pWrkrData);
-	pWrkrData->pData->bIsOpen = 0;
+	do_rd_kafka_destroy(pData);
+	pData->bIsOpen = 0;
 finalize_it:
 	RETiRet;
 }
@@ -513,7 +511,7 @@ static int
 getConfiguredPartitions()
 {
 	struct rd_kafka_metadata *pMetadata;
-	if(rd_kafka_metadata(pWrkrData->rk, 0, rkt, &pMetadata, 8)
+	if(rd_kafka_metadata(pData->rk, 0, rkt, &pMetadata, 8)
 		== RD_KAFKA_RESP_ERR_NO_ERROR) {
 		dbgprintf("omkafka: topic '%s' has %d partitions\n",
 			  pData->topic, pMetadata->topics[0]->partition_cnt);
@@ -527,14 +525,13 @@ getConfiguredPartitions()
 #endif
 
 static rsRetVal
-openKafka(wrkrInstanceData_t *const __restrict__ pWrkrData)
+openKafka(instanceData *const __restrict__ pData)
 {
 	char errstr[MAX_ERRMSG];
-	const instanceData *const pData = pWrkrData->pData;
 	int nBrokers = 0;
 	DEFiRet;
 
-	if(pWrkrData->pData->bIsOpen)
+	if(pData->bIsOpen)
 		FINALIZE;
 
 	/* main conf */
@@ -551,7 +548,7 @@ openKafka(wrkrInstanceData_t *const __restrict__ pWrkrData)
 				     pData->confParams[i].val, 
 				     errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
-			if(pWrkrData->bReportErrs) {
+			if(pData->bReportErrs) {
 				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
 						"parameter '%s=%s': %s", 
 						pData->confParams[i].name, 
@@ -560,33 +557,33 @@ openKafka(wrkrInstanceData_t *const __restrict__ pWrkrData)
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	} 
-	rd_kafka_conf_set_opaque(conf, (void *) pWrkrData);
+	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
 
 	char kafkaErrMsg[1024];
-	pWrkrData->pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf,
+	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf,
 				     kafkaErrMsg, sizeof(kafkaErrMsg));
-	if(pWrkrData->pData->rk == NULL) {
+	if(pData->rk == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
-	rd_kafka_set_logger(pWrkrData->pData->rk, kafkaLogger);
-	if((nBrokers = rd_kafka_brokers_add(pWrkrData->pData->rk, (char*)pData->brokers)) == 0) {
+	rd_kafka_set_logger(pData->rk, kafkaLogger);
+	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);
 	}
 
-	pWrkrData->pData->bIsOpen = 1;
+	pData->bIsOpen = 1;
 finalize_it:
 	if(iRet == RS_RET_OK) {
-		pWrkrData->bReportErrs = 1;
+		pData->bReportErrs = 1;
 	} else {
-		pWrkrData->bReportErrs = 0;
-		if(pWrkrData->pData->rk != NULL) {
-			do_rd_kafka_destroy(pWrkrData);
+		pData->bReportErrs = 0;
+		if(pData->rk != NULL) {
+			do_rd_kafka_destroy(pData);
 		}
 	}
 	RETiRet;
@@ -620,7 +617,6 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-	pWrkrData->bReportErrs = 1;
 ENDcreateWrkrInstance
 
 
@@ -635,6 +631,7 @@ CODESTARTfreeInstance
 	free(pData->topic);
 	free(pData->brokers);
 	free(pData->tplName);
+	closeKafka(pData);
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
@@ -655,7 +652,6 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	closeKafka(pWrkrData);
 ENDfreeWrkrInstance
 
 
@@ -680,52 +676,52 @@ CODESTARTtryResume
 	 * of the Kafka subsystem), please let us know on the rsyslog
 	 * mailing list. -- rgerhards, 2014-12-14
 	 */
-	iRet = openKafka(pWrkrData);
+	iRet = openKafka(pWrkrData->pData);
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
 
 
 static rsRetVal
-writeKafka(wrkrInstanceData_t *pWrkrData, uchar *msg, uchar *topic)
+writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 {
 	DEFiRet;
-	const int partition = getPartition(pWrkrData->pData);
+	const int partition = getPartition(pData);
 
 	DBGPRINTF("omkafka: trying to send: '%s'\n", msg);
-	CHKiRet(openKafka(pWrkrData));
+	CHKiRet(openKafka(pData));
 
 	/* check if we are using dynamic topic names */
-	if(pWrkrData->pData->dynaTopic) {
+	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
-		CHKiRet(prepareDynTopic(pWrkrData->pData, topic));
+		CHKiRet(prepareDynTopic(pData, topic));
 	} else {
-		if(pWrkrData->pData->pTopic == NULL) {
-			CHKiRet(prepareTopic(pWrkrData->pData, topic));
-			if(pWrkrData->pData->pTopic == NULL) {
+		if(pData->pTopic == NULL) {
+			CHKiRet(prepareTopic(pData, topic));
+			if(pData->pTopic == NULL) {
 				errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 					"Could not open topic '%s'", topic);
 			}
 		}
 	}
-	if(rd_kafka_produce(pWrkrData->pData->pTopic, partition, RD_KAFKA_MSG_F_COPY,
+	if(rd_kafka_produce(pData->pTopic, partition, RD_KAFKA_MSG_F_COPY,
 	                    msg, strlen((char*)msg), NULL, 0, NULL) == -1) {
 		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' "
 			"partition %d: %s\n",
-			rd_kafka_topic_name(pWrkrData->pData->pTopic), partition,
+			rd_kafka_topic_name(pData->pTopic), partition,
 			rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
 		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
 	}
-	const int callbacksCalled = rd_kafka_poll(pWrkrData->pData->rk, 0); /* call callbacks */
+	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
 
 	DBGPRINTF("omkafka: kafka outqueue length: %d, callbacks called %d\n",
-		  rd_kafka_outq_len(pWrkrData->pData->rk), callbacksCalled);
+		  rd_kafka_outq_len(pData->rk), callbacksCalled);
 
 finalize_it:
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
 	if(iRet != RS_RET_OK) {
-		closeKafka(pWrkrData);
+		closeKafka(pData);
 		iRet = RS_RET_SUSPENDED;
 	}
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
@@ -735,11 +731,12 @@ finalize_it:
 
 BEGINdoAction
 CODESTARTdoAction
+	instanceData *const pData = pWrkrData->pData;
 	/* support dynamic topic */
-	if (pWrkrData->pData->dynaTopic)
-		iRet = writeKafka(pWrkrData, ppString[0], ppString[1]);
+	if(pData->dynaTopic)
+		iRet = writeKafka(pData, ppString[0], ppString[1]);
 	else
-		iRet = writeKafka(pWrkrData, ppString[0], pWrkrData->pData->topic);
+		iRet = writeKafka(pData, ppString[0], pData->topic);
 ENDdoAction
 
 
