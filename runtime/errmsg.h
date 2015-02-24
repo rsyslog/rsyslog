@@ -42,5 +42,7 @@ ENDinterface(errmsg)
 
 /* prototypes */
 PROTOTYPEObj(errmsg);
+void resetErrMsgsFlag(void);
+int hadErrMsgs(void);
 
 #endif /* #ifndef INCLUDED_ERRMSG_H */
