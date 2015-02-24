@@ -13,9 +13,14 @@ specified, we use one of these hardcoded templates. Search for
 "template\_" in syslogd.c and you will find the hardcoded ones.
 
 Templates are specified by template() statements. They can also be
-specified via $template legacy statements. Note that these are scheduled
+specified via $template legacy statements. Note that the legacy
+statements are scheduled
 for removal in later versions of rsyslog, so it is probably a good idea
 to avoid them for new uses.
+
+**Note: key elements of templates are rsyslog properties.** See the
+:doc:`rsyslog properties reference <properties>` for a list of which
+are available.
 
 The template() statement
 ------------------------

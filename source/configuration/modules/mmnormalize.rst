@@ -1,5 +1,5 @@
-Log Message Normalization Module
-================================
+Log Message Normalization Module (mmnormalize)
+==============================================
 
 **Module Name:    mmnormalize**
 
@@ -31,6 +31,14 @@ Note that mmnormalize should only be called once on each message.
 Behaviour is undefined if multiple calls to mmnormalize happen for the
 same message.
 
+**Module Parameters**
+
+-  **allow_regex** [boolean] defaults to "off"
+   Specifies if regex field-type should be allowed. Regex field-type has
+   significantly higher computational overhead compared to other fields, 
+   so it should be avoided when another field-type can achieve the desired 
+   effect. Needs to be "on" for regex field-type to work.
+
 **Action Parameters**:
 
 -  **ruleBase** [word]
@@ -49,6 +57,14 @@ same message.
    placed. By default, all parsed properties are merged into root of
    message properties. You can place them under a subtree, instead. You
    can place them in local variables, also, by setting path="$.".
+-  **variable** [word] *(Available since: 8.5.1)*
+   Specifies if a variable insteed of property 'msg' should be used for
+   normalization. A varible can be property, local variable, json-path etc.
+   Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
+   is set, **variable** will be ignored and raw message will be used.
+
+   
+
 
 **Legacy Configuration Directives**:
 

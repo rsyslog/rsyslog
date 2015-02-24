@@ -36,14 +36,26 @@ last processed location and continues to work from there upon restart.
 So no data is lost during a restart (except, as noted above, if the file
 is rotated just in this very moment).
 
-Currently, the file must have a fixed name and location (directory).
-It is planned to add support for dynamically generating file names in the
-future.
-
 See Also
 ........
 
 * presentation on `using wildcards with imfile <http://www.slideshare.net/rainergerhards1/using-wildcards-with-rsyslogs-file-monitor-imfile>`_
+
+Meta Data
+.........
+The imfile module supports message metadata. It supports the following
+data items
+
+- filename 
+
+  Name of the file where the message originated from. This is most
+  useful when using wildcards inside file monitors, because it then
+  is the only way to know which file the message originated from.
+
+Meta data is only present if enabled. By default it is enabled for
+input() statements that contain wildcards. For all others, it is
+disabled by default. It can explicitely be turned on or off via the
+*addMetadata* input() parameter, which always overrides the default.
 
 State Files
 ...........
@@ -132,7 +144,8 @@ Input Parameters
 
    **(Required Parameter)**
    The file being monitored. So far, this must be an absolute name (no
-   macros or templates)
+   macros or templates). Note that wildcards are supported at the file
+   name level (see "Wildcards" above for more details).
 
 .. index:: 
    single: imfile; Tag
@@ -265,6 +278,13 @@ Input Parameters
 .. function:: Ruleset <ruleset> 
 
    Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
+
+.. function:: addMetadata [on/off]
+
+   **Default: see intro section on Metadata**
+
+   This is used to turn on or off the addition of metadata to the
+   message object.
 
 .. function:: stateFile [name-of-state-file]
 

@@ -215,6 +215,23 @@ Action Parameters
    contrast to the -A option, this option must be set once per
    input() definition.
 
+-  **udp.sendDelay Integer**
+
+   **Default:** 0
+
+   **Available since:** 8.7.0
+
+   This is an **expert option**, do only use it if you know very well
+   why you are using it!
+
+   This options permits to introduce a small delay after *each* send
+   operation. The integer specifies the delay in microseconds. This
+   option can be used in cases where too-quick sending of UDP messages
+   causes message loss (UDP is permitted to drop packets if e.g. a device
+   runs out of buffers). Usually, you do not want this delay. The parameter
+   was introduced in order to support some testbench tests. Be sure
+   to think twice before you use it in producetion.
+
 See Also
 --------
 

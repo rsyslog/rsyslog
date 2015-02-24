@@ -269,8 +269,8 @@ the OS until the user is sufficiently privileged.
 
 ::
 
-    module(load="imudp") # needs to be done just once input
-    (type="imudp" port="514" rcvbufSize="1m")
+    module(load="imudp") # needs to be done just once
+    input(type="imudp" port="514" rcvbufSize="1m")
 
 In the next example, we set up three listeners at ports 10514, 10515 and
 10516 and assign a listner name of "udp" to it, followed by the port

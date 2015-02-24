@@ -1,5 +1,5 @@
-Log Message Normalization Module
-================================
+JSON/CEE Structured Content Extraction Module (mmjsonparse)
+===========================================================
 
 **Module Name:    mmjsonparse**
 

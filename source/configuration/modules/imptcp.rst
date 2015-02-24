@@ -10,7 +10,7 @@ provide TLS services. Encryption can be provided by using
 This module has no limit on the number of listeners and sessions that
 can be used.
 
-**Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
+**Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
 Configuration Directives
 ------------------------
@@ -25,7 +25,8 @@ Module Parameters
 These paramters can be used with the "module()" statement. They apply
 globaly to all inputs defined by the module.
 
--  Threads <number>
+.. function:: Threads <number>
+
    Number of helper worker threads to process incoming messages. These
    threads are utilized to pull data off the network. On a busy system,
    additional helper threads (but not more than there are CPUs/Cores)
@@ -39,6 +40,31 @@ Input Parameters
 
 These parameters can be used with the "input()" statement. They apply to
 the input they are specified with.
+
+.. function:: port <number>
+
+   *Mandatory*
+
+   Select a port to listen on.
+
+.. function:: name <name>
+
+   Sets a name for the inputname property. If no name is set "imptcp"
+   is used by default. Setting a name is not strictly necessary, but can
+   be useful to apply filtering based on which input the message was
+   received from. Note that the name also shows up in
+   :doc:`impstats <impstats>` logs.
+
+.. function:: ruleset <name>
+
+   Binds specified ruleset to next server defined.
+
+.. function:: address <name>
+
+   *Default: all interfaces*
+
+   On multi-homed machines, specifies to which local address the
+   listerner should be bound.
 
 .. function:: AddtlFrameDelimiter <Delimiter>
 
@@ -116,26 +142,6 @@ the input they are specified with.
    This has only effect if keep-alive is enabled. The functionality may
    not be available on all platforms.
 
-.. function:: Port <number>
-
-   Select a port to listen on
-
-.. function:: Name <name>
-
-   Sets a name for the inputname property. If no name is set "imptcp"
-   is used by default. Setting a name is not strictly necessary, but can
-   be useful to apply filtering based on which input the message was
-   received from.
-
-.. function:: Ruleset <name>
-
-   Binds specified ruleset to next server defined.
-
-.. function:: Address <name>
-
-   On multi-homed machines, specifies to which local address the
-   listerner should be bound.
-
 .. function:: RateLimit.Interval [number]
 
    *Default is 0, which turns off rate limiting*
@@ -163,6 +169,14 @@ This sets up a TCP server on port 514:
 
   module(load="imptcp") # needs to be done just once 
   input(type="imptcp" port="514")
+
+This creates a listener that listens on the local loopback
+interface, only.
+
+::
+
+  module(load="imptcp") # needs to be done just once 
+  input(type="imptcp" port="514" address="127.0.0.1")
 
 Legacy Configuration Directives
 -------------------------------

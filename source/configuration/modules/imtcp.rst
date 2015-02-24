@@ -52,6 +52,31 @@ Global Parameters
    enable of disable keep-alive packets at the tcp socket layer. The
    default is to disable them.
 
+.. function:: KeepAlive.Probes <number>
+
+   The number of unacknowledged probes to send before considering the
+   connection dead and notifying the application layer. The default, 0,
+   means that the operating system defaults are used. This has only
+   effect if keep-alive is enabled. The functionality may not be
+   available on all platforms.
+
+.. function:: KeepAlive.Interval <number>
+
+   The interval between subsequential keepalive probes, regardless of
+   what the connection has exchanged in the meantime. The default, 0,
+   means that the operating system defaults are used. This has only
+   effect if keep-alive is enabled. The functionality may not be
+   available on all platforms.
+
+.. function:: KeepAlive.Time <number>
+
+   The interval between the last data packet sent (simple ACKs are not
+   considered data) and the first keepalive probe; after the connection
+   is marked to need keepalive, this counter is not used any further.
+   The default, 0, means that the operating system defaults are used.
+   This has only effect if keep-alive is enabled. The functionality may
+   not be available on all platforms.
+
 .. function:: FlowControl on/off
 
    *Default is on*
@@ -189,6 +214,18 @@ Legacy Configuration Directives
 
    equivalent to: KeepAlive
 
+.. function:: $InputTCPServerKeepAlive\_probes <number>
+
+   Equivalent to: KeepAlive.Probes
+
+.. function:: $InputTCPServerKeepAlive\_intvl <number>
+
+   Equivalent to: KeepAlive.Interval
+
+.. function:: $InputTCPServerKeepAlive\_time <number>
+
+   Equivalent to: KeepAlive.Time
+
 .. function:: $InputTCPServerRun <port>
 
    equivalent to: Port
@@ -235,6 +272,10 @@ Caveats/Known Bugs
 -  module always binds to all interfaces
 -  can not be loaded together with `imgssapi <imgssapi.html>`_ (which
    includes the functionality of imtcp)
+-  increasing MaxSessions and MaxListeners doesn't change MaxOpenFiles,
+   consider increasing this global configuration parameter too (on Linux
+   check the actual value for running process by in /proc/PID/limits; default
+   limit on Linux is 1024)
 
 Example
 -------
