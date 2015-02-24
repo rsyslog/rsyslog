@@ -61,6 +61,19 @@ comma-delimited list of values as shown here:
 
    Specifies the topic to produce to.
 
+.. function::  partitions.auto [boolean]
+
+   *Default: off*
+
+   librdkafka provides an automatic partitioning function that will
+   evenly split the produced messages into all partitions configured
+   for that topic.
+
+   To use, set partitions.auto="on". This is instead of specifying the
+   number of partitions on the producer side, where it would be easier
+   to change the kafka configuration on the cluster for number of
+   partitions/topic vs on every machine talking to Kafka via rsyslog.
+
 .. function::  partitions.number [positiveInteger]
 
    *Default: none*
