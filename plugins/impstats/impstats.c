@@ -28,6 +28,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/uio.h>
 #if defined(__FreeBSD__)
 #include <sys/stat.h>

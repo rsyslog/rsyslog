@@ -63,7 +63,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -724,7 +724,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
 			if(pThis->bReportSuspension) {
-				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+				errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
 			}

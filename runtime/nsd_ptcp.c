@@ -37,6 +37,7 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <netinet/tcp.h>
 
 #include "syslogd-types.h"
 #include "module-template.h"
@@ -215,6 +216,50 @@ SetSock(nsd_t *pNsd, int sock)
 	RETiRet;
 }
 
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+
+	pThis->iKeepAliveIntvl = keepAliveIntvl;
+
+	RETiRet;
+}
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+
+	pThis->iKeepAliveProbes = keepAliveProbes;
+
+	RETiRet;
+}
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+
+	pThis->iKeepAliveTime = keepAliveTime;
+
+	RETiRet;
+}
 
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
@@ -607,10 +652,56 @@ EnableKeepAlive(nsd_t *pNsd)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	dbgprintf("KEEPALIVE enabled for nsd %p\n", pThis);
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if(pThis->iKeepAliveProbes > 0) {
+		optval = pThis->iKeepAliveProbes;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+	}
+
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if(pThis->iKeepAliveTime > 0) {
+		optval = pThis->iKeepAliveTime;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
+	}
+
+#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if(pThis->iKeepAliveIntvl > 0) {
+		optval = pThis->iKeepAliveIntvl;
+		optlen = sizeof(optval);
+		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
+	} else {
+		ret = 0;
+	}
+#	else
+	ret = -1;
+#	endif
+	if(ret < 0) {
+		errmsg.LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
+	}
+
+	dbgprintf("KEEPALIVE enabled for socket %d\n", pThis->sock);
 
 finalize_it:
 	RETiRet;
+
 }
 
 
@@ -754,6 +845,9 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->CheckConnection = CheckConnection;
 	pIf->EnableKeepAlive = EnableKeepAlive;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

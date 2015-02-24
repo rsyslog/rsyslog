@@ -30,6 +30,8 @@
 
 %top{
 #include "config.h"
+#include "rsyslog.h"
+#include "srUtils.h"
 }
 
 %{
@@ -105,7 +107,9 @@ int fileno(FILE *stream);
 
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
+"foreach"			{ BEGIN EXPR; return FOREACH; }
 <EXPR>"then"			{ BEGIN INITIAL; return THEN; }
+<EXPR>"do"			{ BEGIN INITIAL; return DO; }
 <EXPR>";"			{ BEGIN INITIAL; return ';'; }
 <EXPR>"or"			{ return OR; }
 <EXPR>"and"			{ return AND; }
@@ -130,13 +134,14 @@ int fileno(FILE *stream);
 <EXPR>"<"			{ return CMP_LT; }
 <EXPR>">"			{ return CMP_GT; }
 <EXPR>"contains"		{ return CMP_CONTAINS; }
+<EXPR>"in"		        { return ITERATOR_ASSIGNMENT; }
 <EXPR>"contains_i"		{ return CMP_CONTAINSI; }
 <EXPR>"startswith"		{ return CMP_STARTSWITH; }
 <EXPR>"startswith_i"		{ return CMP_STARTSWITHI; }
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-7a-f] |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }
-<EXPR>\$[$!./]{0,1}[@a-z][!@a-z0-9\-_\.]*	{ yylval.s = strdup(yytext+1); return VAR; }
+<EXPR>\$[$!./]{0,1}[@a-z][!@a-z0-9\-_\.\[\]]*	{ yylval.s = strdup(yytext+1); return VAR; }
 <EXPR>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
 				   yytext[yyleng-1] = '\0';
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
@@ -167,6 +172,7 @@ int fileno(FILE *stream);
 "else"				{ return ELSE; }
 "call"				{ BEGIN INCALL; return CALL; }
 "set"				{ BEGIN EXPR; return SET; }
+"reset"				{ BEGIN EXPR; return RESET; }
 "unset"				{ BEGIN EXPR; return UNSET; }
 "continue"			{ return CONTINUE; }
  /* line number support because the "preprocessor" combines lines and so needs
@@ -291,7 +297,9 @@ cnfParseBuffer(char *buf, unsigned lenBuf)
 done:	return r;
 }
 
-/* set a new buffers. Returns 0 on success, something else otherwise. */
+/* set a new buffers. Returns 0 on success, 1 on error, 2 on file not exists.
+ * note: in case of error, errno must be kept valid!
+ */
 int
 cnfSetLexFile(char *fname)
 {
@@ -304,7 +312,7 @@ cnfSetLexFile(char *fname)
 		fp = stdin;
 	} else {
 		if((fp = fopen(fname, "r")) == NULL) {
-			r = 1;
+			r = 2;
 			goto done;
 		}
 	}

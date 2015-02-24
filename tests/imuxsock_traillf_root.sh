@@ -8,7 +8,7 @@ fi
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imuxsock_traillf_root.conf
 # send a message with trailing LF
-./syslog_inject -l
+./syslog_caller -fsyslog_inject-l -m1
 # the sleep below is needed to prevent too-early termination of rsyslogd
 ./msleep 100
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages

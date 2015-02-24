@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -67,7 +67,9 @@ DEFobjCurrIf(net)
  * class...
  */
 int glblDebugOnShutdown = 0;	/* start debug log when we are shut down */
+#ifdef HAVE_LIBLOGGING_STDLOG
 stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
+#endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
 int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal messages?
@@ -75,11 +77,14 @@ int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal mess
 					 * 0 - send them to libstdlog (e.g. to push to journal)
 					 */
 static uchar *pszWorkDir = NULL;
+#ifdef HAVE_LIBLOGGING_STDLOG
 static uchar *stdlog_chanspec = NULL;
+#endif
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bParseHOSTNAMEandTAG = 1;	/* parser modification (based on startup params!) */
 static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 8096;		/* maximum length of a syslog message */
+static int iGnuTLSLoglevel = 0;		
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -127,6 +132,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "preservefqdn", eCmdHdlrBinary, 0 },
 	{ "debug.onshutdown", eCmdHdlrBinary, 0 },
 	{ "debug.logfile", eCmdHdlrString, 0 },
+	{ "debug.gnutls", eCmdHdlrPositiveInt, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
         { "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
@@ -173,6 +179,18 @@ static struct cnfparamvals *cnfparamvals = NULL;
  * each time a new config load begins (TODO: create interface?)
  */
 
+static int
+GetMaxLine(void)
+{
+	return(iMaxLine);
+}
+
+int
+GetGnuTLSLoglevel(void)
+{
+	return(iGnuTLSLoglevel);
+}
+
 /* define a macro for the simple properties' set and get functions
  * (which are always the same). This is only suitable for pretty
  * simple cases which require neither checks nor memory allocation.
@@ -195,7 +213,6 @@ static dataType Get##nameFunc(void) \
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
 SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(mainqCnfObj, mainqCnfObj, struct cnfobj *)
-SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
@@ -342,6 +359,32 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* This function is used both by legacy and RainerScript conf. It is a real setter. */
+static rsRetVal
+setMaxLine(const int64_t iNew)
+{
+	if(iNew < 128) {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
+				"to %lld, but cannot be less than 128 - set to 128 "
+				"instead", (long long) iNew);
+		iMaxLine = 128;
+	} else if(iNew > (int64_t) INT_MAX) {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize larger than "
+				"INT_MAX (%d) - reduced to INT_MAX", INT_MAX);
+		iMaxLine = INT_MAX;
+	} else {
+		iMaxLine = (int) iNew;
+	}
+}
+
+static rsRetVal
+legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
+{
+	DEFiRet;
+	iRet = setMaxLine(iNew);
+	RETiRet;
+}
 
 static rsRetVal
 setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
@@ -669,6 +712,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDefPFFamily = getDefPFFamily;
 	pIf->SetDisableDNS = setDisableDNS;
 	pIf->GetDisableDNS = getDisableDNS;
+	pIf->GetMaxLine = GetMaxLine;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
@@ -676,7 +720,6 @@ CODESTARTobjQueryInterface(glbl)
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
-	SIMP_PROP(MaxLine);
 	SIMP_PROP(OptimizeUniProc);
 	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(DropMalPTRMsgs);
@@ -703,7 +746,6 @@ CODESTARTobjQueryInterface(glbl)
 #undef	SIMP_PROP
 finalize_it:
 ENDobjQueryInterface(glbl)
-
 
 /* Reset config variables to default values.
  * rgerhards, 2008-04-17
@@ -888,11 +930,27 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
+#ifndef HAVE_LIBLOGGING_STDLOG
+			if(bProcessInternalMessages != 1) {
+				bProcessInternalMessages = 1;
+				errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+					"compiled with liblogging-stdlog support. "
+					"The 'ProcessInternalMessages' parameter "
+					"is ignored.\n");
+			}
+#endif
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
+#ifndef HAVE_LIBLOGGING_STDLOG
+			errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with liblogging-stdlog support. "
+				"The 'stdlog.channelspec' parameter "
+				"is ignored.\n");
+#else
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
 					(char*) stdlog_chanspec);
+#endif
 		}
 	}
 }
@@ -986,10 +1044,12 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "action.reportsuspensioncontinuation")) {
 			bActionReportSuspensionCont = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
-			iMaxLine = (int) cnfparamvals[i].val.d.n;
+			setMaxLine(cnfparamvals[i].val.d.n);
 		} else if(!strcmp(paramblk.descr[i].name, "debug.onshutdown")) {
 			glblDebugOnShutdown = (int) cnfparamvals[i].val.d.n;
 			errmsg.LogError(0, RS_RET_OK, "debug: onShutdown set to %d", glblDebugOnShutdown);
+		} else if(!strcmp(paramblk.descr[i].name, "debug.gnutls")) {
+			iGnuTLSLoglevel = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
@@ -1074,7 +1134,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, NULL, &iMaxLine, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));

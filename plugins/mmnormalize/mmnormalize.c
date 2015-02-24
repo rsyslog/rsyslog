@@ -60,12 +60,22 @@ DEFobjCurrIf(errmsg);
  */
 DEF_OMOD_STATIC_DATA
 
+static struct cnfparamdescr modpdescr[] = {
+	{ "allowregex", eCmdHdlrBinary, 0 }
+};
+
+static struct cnfparamblk modpblk = {
+	CNFPARAMBLK_VERSION,
+	sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	modpdescr
+};
+
 typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	char *pszPath;		/**< path of normalized data */
-    msgPropDescr_t *varDescr;     /**< name of variable to use */
+	msgPropDescr_t *varDescr;/**< name of variable to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -84,7 +94,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 1 },
 	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 },
-    { "variable", eCmdHdlrGetWord, 0 }
+	{ "variable", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -94,6 +104,7 @@ static struct cnfparamblk actpblk =
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
+	int allow_regex;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -112,6 +123,7 @@ buildInstance(instanceData *pData)
 				"liblognorm ctx, cannot activate action");
 		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
 	}
+	ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
 	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
 		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
 				"could not be loaded cannot activate action", pData->rulebase);
@@ -177,9 +189,9 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
 	ln_exitCtx(pData->ctxln);
-    free(pData->pszPath);
-    msgPropDescrDestruct(pData->varDescr);
-    free(pData->varDescr);
+	free(pData->pszPath);
+	msgPropDescrDestruct(pData->varDescr);
+	free(pData->varDescr);
 ENDfreeInstance
 
 
@@ -191,10 +203,10 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
-    dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
-    dbgprintf("\trulebase='%s'\n", pData->rulebase);
-    dbgprintf("\tpath='%s'\n", pData->pszPath);
-    dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
+	dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
+	dbgprintf("\trulebase='%s'\n", pData->rulebase);
+	dbgprintf("\tpath='%s'\n", pData->pszPath);
+	dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
 ENDdbgPrintInstInfo
 
 
@@ -205,25 +217,25 @@ ENDtryResume
 BEGINdoAction
 	msg_t *pMsg;
 	uchar *buf;
-    rs_size_t len;
+	rs_size_t len;
 	int r;
 	struct json_object *json = NULL;
-    unsigned short freeBuf = 0;
+	unsigned short freeBuf = 0;
 CODESTARTdoAction
 	pMsg = (msg_t*) ppString[0];
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else if (pWrkrData->pData->varDescr) {
-        buf = MsgGetProp(pMsg, NULL, pWrkrData->pData->varDescr, &len, &freeBuf, NULL);
-    } else {
+		buf = MsgGetProp(pMsg, NULL, pWrkrData->pData->varDescr, &len, &freeBuf, NULL);
+	} else {
 		buf = getMSG(pMsg);
 		len = getMSGLen(pMsg);
 	}
 	r = ln_normalize(pWrkrData->pData->ctxln, (char*)buf, len, &json);
-    if (freeBuf) {
-        free(buf);
-        buf = NULL;
-    }
+	if (freeBuf) {
+		free(buf);
+		buf = NULL;
+	}
 	if(r != 0) {
 		DBGPRINTF("error %d during ln_normalize\n", r);
 		MsgSetParseSuccess(pMsg, 0);
@@ -231,7 +243,7 @@ CODESTARTdoAction
 		MsgSetParseSuccess(pMsg, 1);
 	}
 
- 	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json);
+	msgAddJSON(pMsg, (uchar*)pWrkrData->pData->pszPath + 1, json, 0);
 
 ENDdoAction
 
@@ -242,17 +254,50 @@ setInstParamDefaults(instanceData *pData)
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
 	pData->pszPath = strdup("$!");
-    pData->varDescr = NULL;
+	pData->varDescr = NULL;
 }
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error processing module "
+						"config parameters missing [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+	
+	if(Debug) {
+		dbgprintf("module (global) param blk for mmnormalize:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+	
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "allowregex")) {
+			loadModConf->allow_regex = (int) pvals[i].val.d.n;
+		} else {
+			dbgprintf("mmnormalize: program error, non-handled "
+					  "param '%s' in setModCnf\n", modpblk.descr[i].name);
+		}
+	}
+	
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int bDestructPValsOnExit;
-    char *cstr;
-    char *varName = NULL;
+	char *cstr;
+	char *varName = NULL;
 CODESTARTnewActInst
-    DBGPRINTF("newActInst (mmnormalize)\n");
+	DBGPRINTF("newActInst (mmnormalize)\n");
 
 	bDestructPValsOnExit = 0;
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -303,18 +348,20 @@ CODESTARTnewActInst
 		}
 	}
 
-    if(pData->bUseRawMsg) {
-        errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-                        "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
-                        "Ignoring 'variable', will use raw message.");
-    } else if (varName) {
-        CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
-        CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
-    }
-    free(varName);
-    varName = NULL;
+	if (varName) {
+		if(pData->bUseRawMsg) {
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+			                "mmnormalize: 'variable' param can't be used with 'useRawMsg'. "
+			                "Ignoring 'variable', will use raw message.");
+		} else {
+			CHKmalloc(pData->varDescr = MALLOC(sizeof(msgPropDescr_t)));
+			CHKiRet(msgPropDescrFill(pData->varDescr, (uchar*) varName, strlen(varName)));
+		}
+		free(varName);
+		varName = NULL;
+	}
 
-    CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
@@ -371,6 +418,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
@@ -400,7 +448,7 @@ BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
-    int bMsgPassingSupported;
+	int bMsgPassingSupported;
 CODESTARTmodInit
 INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;

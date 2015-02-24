@@ -41,7 +41,7 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAG
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS) $(LIBLOGGING_STDLOG_LIBS)
+rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS)
 rsyslogd_LDFLAGS = -export-dynamic \
 	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
 
@@ -49,6 +49,10 @@ EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
 	rscryutil.rst \
 	recover_qi.pl
+
+if ENABLE_LIBLOGGING_STDLOG
+rsyslogd_LDADD += $(LIBLOGGING_STDLOG_LIBS)
+endif
 
 if ENABLE_DIAGTOOLS
 sbin_PROGRAMS += rsyslog_diag_hostname msggen

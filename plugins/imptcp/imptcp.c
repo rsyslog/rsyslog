@@ -10,7 +10,7 @@
  *
  * File begun on 2010-08-10 by RGerhards
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1029,8 +1029,14 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	pLstn->bSuppOctetFram = pSrv->bSuppOctetFram;
 	pLstn->sock = sock;
 	/* support statistics gathering */
+	uchar *inputname;
+	if(pSrv->pszInputName == NULL) {
+		inputname = (uchar*)"imptcp";
+	} else {
+		inputname = pSrv->pszInputName;
+	}
 	CHKiRet(statsobj.Construct(&(pLstn->stats)));
-	snprintf((char*)statname, sizeof(statname), "imptcp(%s/%s/%s)",
+	snprintf((char*)statname, sizeof(statname), "%s(%s/%s/%s)", inputname,
 		(pSrv->lstnIP == NULL) ? "*" : (char*)pSrv->lstnIP, pSrv->port,
 		isIPv6 ? "IPv6" : "IPv4");
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */

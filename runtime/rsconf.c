@@ -374,9 +374,14 @@ parser_errmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
-			"error during parsing file %s, on or before line %d: %s",
-			cnfcurrfn, yylineno, errBuf);
+	if(cnfcurrfn == NULL) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"error during config processing: %s", errBuf);
+	} else {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"error during parsing file %s, on or before line %d: %s",
+				cnfcurrfn, yylineno, errBuf);
+	}
 	va_end(ap);
 }
 
@@ -1280,6 +1285,13 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 				"CONFIG ERROR: could not interpret master "
 				"config file '%s'.", confFile);
 		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
+	} else if(r == 2) { /* file not found? */
+		char err[1024];
+		rs_strerror_r(errno, err, sizeof(err));
+		errmsg.LogError(0, RS_RET_CONF_FILE_NOT_FOUND,
+			        "could not open config file '%s': %s",
+			        confFile, err);
+		ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
 	} else if(iNbrActions == 0 &&
 		!(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
 		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "

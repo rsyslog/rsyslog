@@ -5,7 +5,7 @@
  * Major change: 2008-04-09: switched to a driver interface for 
  *     several platforms
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -48,8 +48,9 @@ struct modConfData_s {
  * rgerhards, 2008-04-09
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf);
-rsRetVal klogWillRun(modConfData_t *pModConf);
 rsRetVal klogAfterRun(modConfData_t *pModConf);
+rsRetVal klogWillRunPrePrivDrop(modConfData_t *pModConf);
+rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf);
 int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */

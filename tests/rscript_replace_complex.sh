@@ -4,7 +4,7 @@ echo ===========================================================================
 echo \[rscript_replace_complex.sh\]: a more complex test for replace script-function
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup rscript_replace_complex.conf
-source $srcdir/diag.sh tcpflood -m 1 -I testsuites/complex_replace_input
+source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/complex_replace_input
 echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown

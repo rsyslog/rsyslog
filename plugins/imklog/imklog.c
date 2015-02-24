@@ -383,7 +383,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-        iRet = klogWillRun(runModConf);
+        iRet = klogWillRunPrePrivDrop(runModConf);
 ENDactivateCnfPrePrivDrop
 
 
@@ -399,6 +399,7 @@ ENDfreeCnf
 
 BEGINwillRun
 CODESTARTwillRun
+        iRet = klogWillRunPostPrivDrop(runModConf);
 ENDwillRun
 
 

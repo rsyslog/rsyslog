@@ -408,9 +408,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 		} else {
 			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
-			   "action '%s' treated as ':omusrmsg:%s' - please "
-			   "change syntax, '%s' will not be supported in the future",
-			   p, p, p);
+				"action '%s' treated as ':omusrmsg:%s' - please "
+				"use ':omusrmsg:%s' syntax instead, '%s' will "
+				"not be supported in the future",
+				p, p, p, p);
 			bHadWarning = 1;
 		}
 	}

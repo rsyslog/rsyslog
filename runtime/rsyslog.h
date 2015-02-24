@@ -437,6 +437,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	/* up to 2419 reserved for 8.4.x */
 	RS_RET_IMFILE_WILDCARD = -2420, /**< imfile file name contains wildcard, which may be problematic */
 	RS_RET_RELP_NO_TLS_AUTH = -2421,/**< librel does not support TLS authentication (but was requested) */
+	RS_RET_KAFKA_ERROR = -2422,/**< error reported by Apache Kafka subsystem. See message for details. */
+	RS_RET_KAFKA_NO_VALID_BROKERS = -2423,/**< no valid Kafka brokers configured/available */
+	RS_RET_KAFKA_PRODUCE_ERR = -2424,/**< error during Kafka produce function */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -606,7 +609,12 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 		json_object_object_get_ex((obj), (key), (retobj))
 #else
 #	define RS_json_object_object_get_ex(obj, key, retobj) \
-		((*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
+		(!json_object_is_type(obj, json_type_object) || \
+				(*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
+#endif
+
+#ifndef HAVE_JSON_BOOL
+typedef int json_bool;
 #endif
 
 /* this define below is (later) intended to be used to implement empty

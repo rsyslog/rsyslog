@@ -164,7 +164,7 @@ static uchar *GetPath(modConfData_t *pModConf)
  * entry point. -- rgerhards, 2008-04-09
  */
 rsRetVal
-klogWillRun(modConfData_t *pModConf)
+klogWillRunPrePrivDrop(modConfData_t *pModConf)
 {
 	char errmsg[2048];
 	int r;
@@ -172,7 +172,7 @@ klogWillRun(modConfData_t *pModConf)
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
-		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log(%s): %s.",
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
 			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -189,6 +189,29 @@ klogWillRun(modConfData_t *pModConf)
 		}
 	}
 #	endif	/* #ifdef OS_LINUX */
+
+finalize_it:
+	RETiRet;
+}
+
+/* make sure the kernel log is readable after dropping privileges
+ */
+rsRetVal
+klogWillRunPostPrivDrop(modConfData_t *pModConf)
+{
+	char errmsg[2048];
+	int r;
+	DEFiRet;
+
+	/* this normally returns EINVAL */
+	/* on an OpenVZ VM, we get EPERM */
+	r = read(fklog, NULL, 0);
+	if (r < 0 && errno != EINVAL) {
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
+			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		fklog = -1;
+		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
+	}
 
 finalize_it:
 	RETiRet;

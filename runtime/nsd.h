@@ -79,12 +79,17 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 */
 	/* v5 */
 	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
+	/* v8 */
+	rsRetVal (*SetKeepAliveIntvl)(nsd_t *pThis, int keepAliveIntvl);
+	rsRetVal (*SetKeepAliveProbes)(nsd_t *pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
  * interface version 7 changed signature ofGetRempoteIP() -- rgerhards, 2013-01-21
+ * interface version 8 added keep alive parameter set functions
  */
 
 /* interface  for the select call */

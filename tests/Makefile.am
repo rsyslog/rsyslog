@@ -1,6 +1,6 @@
 if ENABLE_TESTBENCH
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen minitcpsrv
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -12,6 +12,8 @@ TESTS +=  \
 	fac_local7.sh \
 	fac_mail.sh \
 	fac_news.sh \
+	fac_ftp.sh \
+	fac_ntp.sh \
 	fac_uucp.sh \
 	fac_invld1.sh \
 	fac_invld2.sh \
@@ -34,6 +36,7 @@ TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
+	imtcp_no_octet_counted.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -41,15 +44,20 @@ TESTS +=  \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
+	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
+	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
+	asynwr_timeout_2.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	asynwr_deadlock.sh \
+	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
+	abort-uncleancfg-goodcfg.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -67,6 +75,10 @@ TESTS +=  \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	imuxsock_logger.sh \
+	imuxsock_logger_err.sh \
+	imuxsock_traillf.sh \
+	imuxsock_ccmiddle.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
@@ -146,6 +158,7 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
+	imptcp_no_octet_counted.sh \
         rscript_replace.sh \
         rscript_replace_complex.sh \
 	rscript_wrap2.sh \
@@ -173,21 +186,31 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS +=  \
-	mmnormalize_variable.sh
+	mmnormalize_variable.sh \
+	mmnormalize_tokenized.sh \
+	mmnormalize_regex_defaulted.sh \
+	mmnormalize_regex_disabled.sh
+
+if LOGNORM_REGEX_SUPPORTED
+TESTS += \
+	mmnormalize_regex.sh
+endif
 endif
 
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \
-	mmjsonparse_cim.sh
+	mmjsonparse_cim.sh \
+	json_array_subscripting.sh \
+	json_array_looping.sh
 endif
 
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
-	#sndrcv_tls_anon.sh \
-	#sndrcv_tls_anon_rebind.sh \
-	#imtcp-tls-basic.sh
+#sndrcv_tls_anon.sh \
+#sndrcv_tls_anon_rebind.sh \
+imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
 	 imtcp_conndrop_tls-vg.sh \
@@ -394,6 +417,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_mail.conf \
 	   fac_news.sh \
 	   testsuites/fac_news.conf \
+	   fac_ftp.sh \
+	   testsuites/fac_ftp.conf \
+	   fac_ntp.sh \
+	   testsuites/fac_ntp.conf \
 	   fac_uucp.sh \
 	   testsuites/fac_uucp.conf \
 	   fac_invld1.sh \
@@ -471,6 +498,11 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
+	   imptcp_no_octet_counted.sh \
+	   testsuites/imptcp_no_octet_counted.conf \
+	   testsuites/no_octet_counted.testdata \
+	   imtcp_no_octet_counted.sh \
+	   testsuites/imtcp_no_octet_counted.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_conndrop_tls.sh \
@@ -564,8 +596,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
+	   asynwr_simple_2.sh \
+	   testsuites/asynwr_simple_2.conf \
 	   asynwr_timeout.sh \
 	   testsuites/asynwr_timeout.conf \
+	   asynwr_timeout_2.sh \
+	   testsuites/asynwr_timeout_2.conf \
 	   asynwr_small.sh \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
@@ -576,10 +612,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock_2.sh \
+	   testsuites/asynwr_deadlock_2.conf \
 	   asynwr_deadlock2.sh \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
 	   testsuites/asynwr_deadlock4.conf \
+	   abort-uncleancfg-goodcfg.sh \
+	   testsuites/abort-uncleancfg-goodcfg.conf \
 	   gzipwr_large.sh \
 	   testsuites/gzipwr_large.conf \
 	   gzipwr_large_dynfile.sh \
@@ -636,15 +676,25 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
+	   imuxsock_logger.sh \
+	   testsuites/imuxsock_logger.conf \
+	   imuxsock_logger_err.sh \
 	   imuxsock_logger_root.sh \
 	   testsuites/imuxsock_logger_root.conf \
 	   resultdata/imuxsock_logger.log \
+	   imuxsock_traillf.sh \
+	   testsuites/imuxsock_traillf.conf \
 	   imuxsock_traillf_root.sh \
 	   testsuites/imuxsock_traillf_root.conf \
 	   resultdata/imuxsock_traillf.log \
+	   imuxsock_ccmiddle.sh \
+	   testsuites/imuxsock_ccmiddle.conf \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   imuxsock_hostname.sh \
+	   testsuites/imuxsock_hostname.conf \
+	   resultdata/imuxsock_hostname.log \
 	   testsuites/mysql-truncate.sql \
 	   testsuites/mysql-select-msg.sql \
 	   libdbi-basic.sh \
@@ -667,11 +717,35 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mmpstrucdata.conf \
 	   libdbi-basic-vg.sh \
 	   mmnormalize_variable.sh \
+	   mmnormalize_tokenized.sh \
+	   testsuites/mmnormalize_variable.conf \
+	   testsuites/date_time_msg \
+	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/tokenized_input \
 	   rscript_replace.sh \
+	   testsuites/rscript_replace.conf \
 	   rscript_replace_complex.sh \
+	   testsuites/rscript_replace_complex.conf \
+	   testsuites/complex_replace_input \
 	   rscript_unaffected_reset.sh \
 	   rscript_wrap2.sh \
+	   testsuites/rscript_wrap2.conf \
 	   rscript_wrap3.sh \
+	   testsuites/rscript_wrap3.conf \
+	   testsuites/wrap3_input\
+	   testsuites/gethostname.conf \
+	   json_array_subscripting.sh \
+	   testsuites/json_array_subscripting.conf \
+	   testsuites/json_array_input \
+	   json_array_looping.sh \
+	   testsuites/json_array_looping.conf \
+	   mmnormalize_regex.sh \
+	   testsuites/mmnormalize_regex.conf \
+	   testsuites/regex_input \
+	   mmnormalize_regex_disabled.sh \
+	   testsuites/mmnormalize_regex_disabled.conf \
+	   mmnormalize_regex_defaulted.sh \
+	   testsuites/mmnormalize_regex_defaulted.conf \
 	   cfg.sh
 
 # TODO: re-enable
@@ -701,10 +775,8 @@ minitcpsrv_SOURCES = minitcpsrvr.c
 minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
-syslog_caller_LDADD = $(SOL_LIBS)
-
-syslog_inject_SOURCES = syslog_inject.c
-syslog_inject_LDADD = $(SOL_LIBS)
+syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
+syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)
