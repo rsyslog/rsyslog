@@ -182,7 +182,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":omruleset:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	errmsg.LogError(0, RS_RET_DEPRECATED, "warning: omruleset is deprecated, consider "
+	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+			"warning: omruleset is deprecated, consider "
 			"using the 'call' statement instead");
 
 	/* check if a non-standard template is to be applied */
@@ -259,7 +260,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	errmsg.LogError(0, RS_RET_DEPRECATED, "warning: omruleset is deprecated, consider "
+	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+			"warning: omruleset is deprecated, consider "
 			"using the 'call' statement instead");
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomrulesetrulesetname", 0, eCmdHdlrGetWord,

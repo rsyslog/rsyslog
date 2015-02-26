@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2014 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -370,20 +370,17 @@ finalize_it:
 rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-	uchar errMsg[128];	/* for dynamic error messages */
 
 	if(iNewVal < 1) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		errno = 0;
-		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE,
+		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
 	} else if(iNewVal > 1000) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize maximum is 1,000 (%d given), changed to 1,000.", iNewVal);
 		errno = 0;
-		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE,
+		         "DynaFileCacheSize maximum is 1,000 (%d given), changed to 1,000.", iNewVal);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1000;
 	}
@@ -423,23 +420,17 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	pOch = ochFind(szBuf, i);
 
 	if(pOch == NULL) {
-		char errMsg[128];
-		errno = 0;
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+		errmsg.LogError(0, RS_RET_NOT_FOUND, 
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	/* check if there is a file name in the outchannel... */
 	if(pOch->pszFileTemplate == NULL) {
-		char errMsg[128];
-		errno = 0;
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+		errmsg.LogError(0, RS_RET_ERR,
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
-		errmsg.LogError(0, RS_RET_ERR, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

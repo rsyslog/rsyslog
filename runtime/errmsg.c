@@ -42,9 +42,27 @@
 /* static data */
 DEFobjStaticHelpers
 
+static int bHadErrMsgs; /* indicates if we had error messages since reset of this flag
+                         * This is used to abort a run if the config is unclean.
+			 */
+
 
 /* ------------------------------ methods ------------------------------ */
 
+/* Resets the error message flag. Must be done before processing config
+ * files.
+ */
+void
+resetErrMsgsFlag(void)
+{
+	bHadErrMsgs = 0;
+}
+
+int
+hadErrMsgs(void)
+{
+	return bHadErrMsgs;
+}
 
 /* We now receive three parameters: one is the internal error code
  * which will also become the error message number, the second is
@@ -82,6 +100,9 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	errno = 0;
 	
 	glblErrLogger(severity, iErrCode, (uchar*)buf);
+
+	if(severity == LOG_ERR)
+		bHadErrMsgs = 1;
 }
 
 /* We now receive three parameters: one is the internal error code

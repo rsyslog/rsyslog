@@ -1,7 +1,7 @@
 /* Definitions for tcps_sess class. This implements a session of the
  * plain TCP server.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -37,6 +37,7 @@ struct tcps_sess_s {
 	int iMsg;		 /* index of next char to store in msg */
 	sbool bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
 	sbool bSuppOctetFram;	/**< copy from listener, to speed up access */
+	sbool bSPFramingFix;
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,

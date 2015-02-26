@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -110,6 +110,7 @@ struct instanceConf_s {
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	uchar *dfltTZ;
+	sbool bSPFramingFix;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int bSuppOctetFram;
@@ -174,6 +175,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -271,6 +273,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszInputName = NULL;
 	inst->dfltTZ = NULL;
 	inst->bSuppOctetFram = -1; /* unset */
+	inst->bSPFramingFix = 0;
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
 
@@ -364,6 +367,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imtcp"));
 	CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar*)"" : inst->dfltTZ));
+	CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
 	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram);
 
@@ -405,6 +409,8 @@ CODESTARTnewInpInst
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
 			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
+			inst->bSPFramingFix = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {

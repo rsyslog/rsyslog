@@ -50,7 +50,6 @@
 #include "prop.h"
 #include "unicode-helper.h"
 #include "net.h"
-#include "errmsg.h"
 #include "glbl.h"
 #include "debug.h"
 #include "srUtils.h"
@@ -180,9 +179,7 @@ rsRetVal writePidFile(void)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
-		char err[1024];
-		rs_strerror_r(errno, err, sizeof(err));
-		errmsg.LogError(0, iRet, "rsyslog: error writing pid file: %s", err);
+		errmsg.LogError(errno, iRet, "rsyslog: error writing pid file");
 	}
 	fclose(fp);
 finalize_it:
@@ -1240,10 +1237,11 @@ initAll(int argc, char **argv)
 			VERSION, iConfigVerify, ConfFile);
 	}
 
+	resetErrMsgsFlag();
 	localRet = rsconf.Load(&ourConf, ConfFile);
 	glbl.GenerateLocalHostNameProperty();
 
-	if(localRet == RS_RET_NONFATAL_CONFIG_ERR) {
+	if(hadErrMsgs()) {
 		if(loadConf->globals.bAbortOnUncleanConfig) {
 			fprintf(stderr, "rsyslogd: $AbortOnUncleanConfig is set, and config is not clean.\n"
 					"Check error log for details, fix errors and restart. As a last\n"

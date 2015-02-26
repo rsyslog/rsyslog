@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2014 Adiscon GmbH.
+ * Copyright 2011-2015 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -359,7 +359,7 @@ parser_warnmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-	errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING,
+	errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
 			"warning during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
 	va_end(ap);

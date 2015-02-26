@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -157,10 +157,8 @@ preparePipe(instanceData *pData)
 	if(pData->fd < 0 ) {
 		pData->fd = -1;
 		if(!pData->bHadError) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s': %s",
-				        pData->pipe, errStr);
+			errmsg.LogError(errno, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s':",
+				        pData->pipe);
 			pData->bHadError = 1;
 		}
 		DBGPRINTF("Error opening log pipe: %s\n", pData->pipe);
@@ -190,11 +188,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 	/* create the message based on format specified */
 	iLenWritten = write(pData->fd, ppString[0], strlen((char*)ppString[0]));
 	if(iLenWritten < 0) {
-		int e = errno;
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("pipe (%d) write error %d: %s\n", pData->fd, e, errStr);
-
+		const int e = errno;
 		/* If a named pipe is full, we suspend this action for a while */
 		if(e == EAGAIN)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -202,8 +196,7 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 		close(pData->fd);
 		pData->fd = -1; /* tell that fd is no longer open! */
 		iRet = RS_RET_SUSPENDED;
-		errno = e;
-		errmsg.LogError(0, NO_ERRCODE, "%s", pData->pipe);
+		errmsg.LogError(e, NO_ERRCODE, "write error on pipe %s", pData->pipe);
 	}
 
 finalize_it:

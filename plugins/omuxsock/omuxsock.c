@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2010-2013 Adiscon GmbH.
+ * Copyright 2010-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -187,7 +187,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.tplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omuxsock: warning: default template "
+				errmsg.LogError(0, RS_RET_DUP_PARAM, "omuxsock: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}

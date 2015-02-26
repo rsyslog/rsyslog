@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -135,6 +135,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
 	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
 	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
+	pEntry->bSPFramingFix = pThis->bSPFramingFix;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
@@ -926,6 +927,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
 	pThis->dfltTZ[0] = '\0';
+	pThis->bSPFramingFix = 0;
 	pThis->ratelimitInterval = 0;
 	pThis->ratelimitBurst = 10000;
 	pThis->bUseFlowControl = 1;
@@ -1159,6 +1161,16 @@ SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
 	RETiRet;
 }
 
+
+static rsRetVal
+SetbSPFramingFix(tcpsrv_t *pThis, const sbool val)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->bSPFramingFix = val;
+	RETiRet;
+}
+
 static rsRetVal
 SetOrigin(tcpsrv_t *pThis, uchar *origin)
 {
@@ -1342,6 +1354,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetInputName = SetInputName;
 	pIf->SetOrigin = SetOrigin;
 	pIf->SetDfltTZ = SetDfltTZ;
+	pIf->SetbSPFramingFix = SetbSPFramingFix;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
 	pIf->SetSessMax = SetSessMax;

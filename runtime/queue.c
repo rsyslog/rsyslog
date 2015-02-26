@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -2139,7 +2139,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	if(pThis->iMaxQueueSize < 100
 	   && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY)) {
-		errmsg.LogError(0, RS_RET_OK_WARN, "Note: queue.size=\"%d\" is very "
+		errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "Note: queue.size=\"%d\" is very "
 			"low and can lead to unpredictable results. See also "
 			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
 			pThis->iMaxQueueSize);
@@ -2150,7 +2150,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 */
 	goodval = (pThis->iMaxQueueSize / 100) * 60;
 	if(pThis->iHighWtrMrk != -1 && pThis->iHighWtrMrk < goodval) {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": high water mark "
+		errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": high water mark "
 				"is set quite low at %d. You should only set it below "
 				"60%% (%d) if you have a good reason for this.",
 				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk, goodval);
@@ -2159,7 +2159,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	if(pThis->iNumWorkerThreads > 1) {
 		goodval = (pThis->iMaxQueueSize / 100) * 10;
 		if(pThis->iMinMsgsPerWrkr != -1 && pThis->iMinMsgsPerWrkr < goodval) {
-			errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": "
+			errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": "
 					"queue.workerThreadMinimumMessage "
 					"is set quite low at %d. You should only set it below "
 					"10%% (%d) if you have a good reason for this.",
@@ -2168,14 +2168,15 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	}
 
 	if(pThis->iDiscardMrk > pThis->iMaxQueueSize) {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": "
+		errmsg.LogError(0, RS_RET_PARAM_ERROR, "error: queue \"%s\": "
 				"queue.discardMark %d is set larger than queue.size",
 				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk);
 	}
 
 	goodval = (pThis->iMaxQueueSize / 100) * 80;
 	if(pThis->iDiscardMrk != -1 && pThis->iDiscardMrk < goodval) {
-		errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING, "queue \"%s\": queue.discardMark "
+		errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
+				"queue \"%s\": queue.discardMark "
 				"is set quite low at %d. You should only set it below "
 				"80%% (%d) if you have a good reason for this.",
 				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk, goodval);
@@ -2183,7 +2184,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	if(pThis->pszFilePrefix != NULL) { /* This means we have a potential DA queue */
 		if(pThis->iFullDlyMrk != -1 && pThis->iFullDlyMrk < pThis->iHighWtrMrk) {
-			errmsg.LogError(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR,
+			errmsg.LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
 					"queue \"%s\": queue.fullDelayMark "
 					"is set below high water mark. This will result in DA mode "
 					" NOT being activated for full delayable messages",
