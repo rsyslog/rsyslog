@@ -173,7 +173,7 @@ reportMongoError(instanceData *pData)
 
 
 /* The following function is responsible for initializing a
- * MySQL connection.
+ * MongoDB connection.
  * Initially added 2004-10-28 mmeckelein
  */
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
