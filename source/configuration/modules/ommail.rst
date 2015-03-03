@@ -17,11 +17,6 @@ heavily spammed. The ommail plugin is primarily meant for alerting
 users. As such, it is assumed that mails will only be sent in an
 extremely limited number of cases.
 
-Please note that ommail is especially well-suited to work in tandem with
-:doc:`imfile <imfile>` to watch files for the occurence of specific
-things to be alerted on. So its scope is far broader than forwarding
-syslog messages to mail recipients.
-
 Ommail uses up to two templates, one for the mail body and optionally
 one for the subject line. Note that the subject line can also be set to
 a constant text.
