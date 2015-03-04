@@ -146,6 +146,7 @@ typedef struct lstn_s {
 	sbool bDiscardOwnMsgs;	/* discard messages that originated from ourselves */
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
+	sbool bUseSpecialParser;/* use "canned" log socket parser instead of parser chain? */
 } lstn_t;
 static lstn_t *listeners;
 
@@ -204,6 +205,7 @@ struct instanceConf_s {
 	int bParseTrusted;		/* parse trusted properties */
 	sbool bDiscardOwnMsgs;		/* discard messages that originated from our own pid? */
 	sbool bUnlink;
+	sbool bUseSpecialParser;
 	struct instanceConf_s *next;
 };
 
@@ -262,6 +264,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "annotate", eCmdHdlrBinary, 0 },
+	{ "usespecialparser", eCmdHdlrBinary, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
@@ -294,6 +297,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
 	inst->bUseFlowCtl = 0;
+	inst->bUseSpecialParser = 1;
 	inst->bIgnoreTimestamp = 1;
 	inst->bCreatePath = DFLT_bCreatePath;
 	inst->bUseSysTimeStamp = 1;
@@ -405,6 +409,7 @@ addListner(instanceConf_t *inst)
 	listeners[nfd].bUnlink = inst->bUnlink;
 	listeners[nfd].bWritePid = inst->bWritePid;
 	listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
+	listeners[nfd].bUseSpecialParser = inst->bUseSpecialParser;
 	CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
 	ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
 			      listeners[nfd].ratelimitInterval,
@@ -877,63 +882,72 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 	}
 
-	parser.SanitizeMsg(pMsg);
-	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
-	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
-	msgSetPRI(pMsg, pri);
-	MsgSetAfterPRIOffs(pMsg, offs);
-
-	parse++; lenMsg--; /* '>' */
-
-	if(ts == NULL) {
-		if((pLstn->flags & IGNDATE)) {
-			/* in this case, we still need to find out if we have a valid
-			 * datestamp or not .. and advance the parse pointer accordingly.
-			 */
-			if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
-  				datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING);
-			}
-		} else {
-			if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
-			   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg, NO_PARSE3164_TZSTRING) != RS_RET_OK) {
-				DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
-			}
-		}
-	} else { /* if we pulled the time from the system, we need to update the message text */
-		uchar *tmpParse = parse; /* just to check correctness of TS */
-		if(datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-		   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING) == RS_RET_OK) {
-			/* We modify the message only if it contained a valid timestamp,
-			 * otherwise we do not touch it at all. */
-			datetime.formatTimestamp3164(&st, (char*)parse, 0);
-			parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
-			/* update "counters" to reflect processed timestamp */
-			parse += 16;
-		}
-	}
-
-	/* pull tag */
-
-	i = 0;
-	while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE - 1) {
-		bufParseTAG[i++] = *parse++;
-		--lenMsg;
-	}
-	bufParseTAG[i] = '\0';	/* terminate string */
-	if(pLstn->bWritePid)
-		fixPID(bufParseTAG, &i, cred);
-	MsgSetTAG(pMsg, bufParseTAG, i);
-	MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
-
+	MsgSetInputName(pMsg, pInputName);
 	if(pLstn->bParseHost) {
 		pMsg->msgFlags  = pLstn->flags | PARSE_HOSTNAME;
 	} else {
 		pMsg->msgFlags  = pLstn->flags;
 	}
 
+	if(pLstn->bUseSpecialParser) {
+		/* this is the legacy "log socket" parser which was written on the assumption
+		 * that the log socket format would be fixed. While many folks said so, it
+		 * seems to be different in practice, and this is why we now have choices...
+		 * rgerhards, 2015-03-03
+		 */
+		parser.SanitizeMsg(pMsg);
+		lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
+		msgSetPRI(pMsg, pri);
+		MsgSetAfterPRIOffs(pMsg, offs);
+
+		parse++; lenMsg--; /* '>' */
+		if(ts == NULL) {
+			if((pLstn->flags & IGNDATE)) {
+				/* in this case, we still need to find out if we have a valid
+				 * datestamp or not .. and advance the parse pointer accordingly.
+				 */
+				if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
+					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING);
+				}
+			} else {
+				if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
+				   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg, NO_PARSE3164_TZSTRING) != RS_RET_OK) {
+					DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
+				}
+			}
+		} else { /* if we pulled the time from the system, we need to update the message text */
+			uchar *tmpParse = parse; /* just to check correctness of TS */
+			if(datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
+			   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING) == RS_RET_OK) {
+				/* We modify the message only if it contained a valid timestamp,
+				 * otherwise we do not touch it at all. */
+				datetime.formatTimestamp3164(&st, (char*)parse, 0);
+				parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
+				/* update "counters" to reflect processed timestamp */
+				parse += 16;
+			}
+		}
+
+		/* pull tag */
+
+		i = 0;
+		while(lenMsg > 0 && *parse != ' ' && i < CONF_TAG_MAXSIZE - 1) {
+			bufParseTAG[i++] = *parse++;
+			--lenMsg;
+		}
+		bufParseTAG[i] = '\0';	/* terminate string */
+		if(pLstn->bWritePid)
+			fixPID(bufParseTAG, &i, cred);
+		MsgSetTAG(pMsg, bufParseTAG, i);
+		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
+	} else { /* we are configured to use regular parser chain */
+		pMsg->msgFlags  |= NEEDS_PARSING;
+	}
+
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
+dbgprintf("DDDDDD: bUseSpecialParser %d, flags %x, NEEDS_PARSING %2.2x\n", pLstn->bUseSpecialParser, pMsg->msgFlags, NEEDS_PARSING);
 	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
@@ -1248,6 +1262,8 @@ CODESTARTnewInpInst
 			inst->bAnnotate = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "usepidfromsystem")) {
 			inst->bWritePid = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "usespecialparser")) {
+			inst->bUseSpecialParser  = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
