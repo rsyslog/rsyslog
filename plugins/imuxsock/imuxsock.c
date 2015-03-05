@@ -75,6 +75,7 @@ MODULE_CNFNAME("imuxsock")
 #ifndef SYSTEMD_PATH_LOG
 #define SYSTEMD_PATH_LOG SYSTEMD_JOURNAL "/syslog"
 #endif
+#define UNSET -1 /* to indicate a value has not been configured */
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -206,6 +207,7 @@ struct instanceConf_s {
 	sbool bDiscardOwnMsgs;		/* discard messages that originated from our own pid? */
 	sbool bUnlink;
 	sbool bUseSpecialParser;
+	sbool bParseHost;
 	struct instanceConf_s *next;
 };
 
@@ -218,6 +220,8 @@ struct modConfData_s {
 	int ratelimitSeveritySysSock;
 	int bAnnotateSysSock;
 	int bParseTrusted;
+	int bUseSpecialParser;
+	int bParseHost;
 	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
 	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	sbool bOmitLocalLogging;
@@ -241,6 +245,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.annotate", eCmdHdlrBinary, 0 },
 	{ "syssock.parsetrusted", eCmdHdlrBinary, 0 },
+	{ "syssock.usespecialparser", eCmdHdlrBinary, 0 },
+	{ "syssock.parsehostname", eCmdHdlrBinary, 0 },
 	{ "syssock.usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "syssock.ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "syssock.ratelimit.burst", eCmdHdlrInt, 0 },
@@ -265,6 +271,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "annotate", eCmdHdlrBinary, 0 },
 	{ "usespecialparser", eCmdHdlrBinary, 0 },
+	{ "parsehostname", eCmdHdlrBinary, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
@@ -298,6 +305,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
 	inst->bUseFlowCtl = 0;
 	inst->bUseSpecialParser = 1;
+	inst->bParseHost = UNSET;
 	inst->bIgnoreTimestamp = 1;
 	inst->bCreatePath = DFLT_bCreatePath;
 	inst->bUseSysTimeStamp = 1;
@@ -353,6 +361,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bWritePid = cs.bWritePid;
 	inst->bAnnotate = cs.bAnnotate;
 	inst->bParseTrusted = cs.bParseTrusted;
+	inst->bParseHost = UNSET;
 	inst->next = NULL;
 
 	/* some legacy conf processing */
@@ -372,10 +381,14 @@ addListner(instanceConf_t *inst)
 {
 	DEFiRet;
 
-	if(*inst->sockName == ':') {
-		listeners[nfd].bParseHost = 1;
+	if(inst->bParseHost == UNSET) {
+		if(*inst->sockName == ':') {
+			listeners[nfd].bParseHost = 1;
+		} else {
+			listeners[nfd].bParseHost = 0;
+		}
 	} else {
-		listeners[nfd].bParseHost = 0;
+		listeners[nfd].bParseHost = inst->bParseHost;
 	}
 	if(inst->pLogHostName == NULL) {
 		listeners[nfd].hostName = NULL;
@@ -947,7 +960,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
-dbgprintf("DDDDDD: bUseSpecialParser %d, flags %x, NEEDS_PARSING %2.2x\n", pLstn->bUseSpecialParser, pMsg->msgFlags, NEEDS_PARSING);
 	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
@@ -1092,6 +1104,8 @@ activateListeners()
 		listeners[0].bWritePid = runModConf->bWritePidSysSock;
 		listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 		listeners[0].bParseTrusted = runModConf->bParseTrusted;
+		listeners[0].bParseHost = runModConf->bParseHost;
+		listeners[0].bUseSpecialParser = runModConf->bUseSpecialParser;
 		listeners[0].bDiscardOwnMsgs = runModConf->bDiscardOwnMsgs;
 		listeners[0].bUnlink = runModConf->bUnlink;
 		listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
@@ -1144,6 +1158,8 @@ CODESTARTbeginCnfLoad
 	pModConf->bWritePidSysSock = 0;
 	pModConf->bAnnotateSysSock = 0;
 	pModConf->bParseTrusted = 0;
+	pModConf->bParseHost = UNSET;
+	pModConf->bUseSpecialParser = 1;
 	pModConf->bDiscardOwnMsgs = 1;
 	pModConf->bUnlink = 1;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
@@ -1192,6 +1208,10 @@ CODESTARTsetModCnf
 			loadModConf->bAnnotateSysSock = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.parsetrusted")) {
 			loadModConf->bParseTrusted = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.parsehostname")) {
+			loadModConf->bParseHost = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.usespecialparser")) {
+			loadModConf->bUseSpecialParser = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usepidfromsystem")) {
 			loadModConf->bWritePidSysSock = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.ratelimit.interval")) {
@@ -1262,6 +1282,8 @@ CODESTARTnewInpInst
 			inst->bAnnotate = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "usepidfromsystem")) {
 			inst->bWritePid = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "parsehostname")) {
+			inst->bParseHost  = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "usespecialparser")) {
 			inst->bUseSpecialParser  = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
