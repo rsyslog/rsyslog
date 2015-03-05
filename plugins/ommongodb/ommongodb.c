@@ -11,11 +11,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -173,7 +173,7 @@ reportMongoError(instanceData *pData)
 
 
 /* The following function is responsible for initializing a
- * MySQL connection.
+ * MongoDB connection.
  * Initially added 2004-10-28 mmeckelein
  */
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
@@ -183,7 +183,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 
 	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
 	DBGPRINTF("ommongodb: trying connect to '%s' at port %d\n", server, pData->port);
-        
+
 	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
 	if(pData->conn == NULL) {
 		if(!bSilent) {
@@ -208,7 +208,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	    }
 
 	    /* no point in continuing with an unauthenticated connection */
-	    closeMongoDB(pData);	 
+	    closeMongoDB(pData);
 	    ABORT_FINALIZE(RS_RET_SUSPENDED);
 	  }
 	  else {
@@ -221,7 +221,7 @@ finalize_it:
 }
 
 
-/* map syslog severity to lumberjack level 
+/* map syslog severity to lumberjack level
  * TODO: consider moving this to msg.c - make some dirty "friend" references...
  * rgerhards, 2012-03-19
  */

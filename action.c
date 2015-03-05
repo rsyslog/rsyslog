@@ -1183,7 +1183,6 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
@@ -1235,6 +1234,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		}
 	} while(!bDone);
 finalize_it:
+	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
