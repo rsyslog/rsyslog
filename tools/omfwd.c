@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -37,9 +37,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdint.h>
-#ifdef USE_NETZIP
 #include <zlib.h>
-#endif
 #include <pthread.h>
 #include "syslogd.h"
 #include "conf.h"
@@ -90,6 +88,9 @@ typedef struct _instanceData {
 	int iRebindInterval;	/* rebind interval */
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
+	/* following fields for UDP-based delivery */
+	int bSendToAll;
+	int iUDPSendDelay;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
@@ -158,6 +159,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
+	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
+	{ "udp.senddelay", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk actpblk =
@@ -281,10 +284,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTsetModCnf
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
-	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
-				"config parameters [module(...)]");
+	if((pvals = nvlstGetParams(lst, &modpblk, NULL))) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -437,18 +437,23 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
 				}
 			}
-			if (lsent == len && !send_to_all)
+			if (lsent == len && !pWrkrData->pData->bSendToAll)
 			       break;
 		}
 		/* finished looping */
-		if(bSendSuccess == RSFALSE) {
+		if(bSendSuccess == RSTRUE) {
+			if(pWrkrData->pData->iUDPSendDelay > 0) {
+				srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
+				        pWrkrData->pData->iUDPSendDelay % 1000000);
+				}
+		} else {
 			dbgprintf("error forwarding via udp, suspending\n");
 			if(pWrkrData->errsToReport > 0) {
-				rs_strerror_r(lasterrno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_ERR_UDPSEND, "omfwd: error sending "
-						"via udp: %s", errStr);
+				errmsg.LogError(lasterrno, RS_RET_ERR_UDPSEND,
+						"omfwd: error %d sending "
+						"via udp", lasterrno);
 				if(pWrkrData->errsToReport == 1) {
-					errmsg.LogError(0, RS_RET_LAST_ERRREPORT, "omfwd: "
+					errmsg.LogMsg(0, RS_RET_LAST_ERRREPORT, LOG_WARNING, "omfwd: "
 							"max number of error message emitted "
 							"- further messages will be "
 							"suppressed");
@@ -770,9 +775,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	uchar *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
-#	ifdef	USE_NETZIP
 	Bytef *out = NULL; /* for compression */
-#	endif
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	DEFiRet;
 
@@ -783,7 +786,6 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	if((int) l > iMaxLine)
 		l = iMaxLine;
 
-#	ifdef	USE_NETZIP
 	/* Check if we should compress and, if so, do it. We also
 	 * check if the message is large enough to justify compression.
 	 * The smaller the message, the less likely is a gain in compression.
@@ -820,7 +822,6 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		}
 		++destLen;
 	}
-#	endif
 
 	if(pData->protocol == FORW_UDP) {
 		/* forward via UDP */
@@ -836,9 +837,7 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		}
 	}
 finalize_it:
-#	ifdef USE_NETZIP
 	free(out); /* is NULL if it was never used... */
-#	endif
 	RETiRet;
 }
 
@@ -919,6 +918,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->iStrmDrvrMode = 0;
 	pData->iRebindInterval = 0;
 	pData->bResendLastOnRecon = 0; 
+	pData->bSendToAll = -1;  /* unspecified */
+	pData->iUDPSendDelay = 0;
 	pData->pPermPeers = NULL;
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
@@ -1028,7 +1029,6 @@ CODESTARTnewActInst
 			}
 			free(str);
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
-#			ifdef USE_NETZIP
 			complevel = pvals[i].val.d.n;
 			if(complevel >= 0 && complevel <= 10) {
 				pData->compressionLevel = complevel;
@@ -1038,14 +1038,14 @@ CODESTARTnewActInst
 					 "forwardig action - NOT turning on compression.",
 					 complevel);
 			}
-#			else
-			errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
-				 "with compression support - request ignored.");
-#			endif /* #ifdef USE_NETZIP */
 		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
 			pData->errsToReport = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
+			pData->bSendToAll = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.senddelay")) {
+			pData->iUDPSendDelay = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
@@ -1086,6 +1086,14 @@ CODESTARTnewActInst
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
+	if(pData->bSendToAll == -1) {
+		pData->bSendToAll = send_to_all;
+	} else {
+		if(pData->protocol == FORW_TCP) {
+			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: paramter udp.sendToAll "
+					"cannot be used with tcp transport -- ignored");
+		}
+	}
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -1140,7 +1148,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			++p; /* eat '(' or ',' (depending on when called) */
 			/* check options */
 			if(*p == 'z') { /* compression */
-#				ifdef USE_NETZIP
 				++p; /* eat */
 				if(isdigit((int) *p)) {
 					int iLevel;
@@ -1153,10 +1160,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
-#				else
-				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
-					 "with compression support - request ignored.");
-#				endif /* #ifdef USE_NETZIP */
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
 				++p; /* eat */
 				/* no further options settable */

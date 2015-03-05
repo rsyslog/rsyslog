@@ -381,6 +381,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	/* initialized, now add socket */
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
 						UCHAR_CONSTANT("imdiag") : pszInputName));
+	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imdiag"));
 	/* we support octect-cuunted frame (constant 1 below) */
 	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1);
 

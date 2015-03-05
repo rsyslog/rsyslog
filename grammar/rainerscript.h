@@ -152,6 +152,7 @@ struct nvlst {
 #define S_SET 4006
 #define S_UNSET 4007
 #define S_CALL 4008
+#define S_FOREACH 4009
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -184,6 +185,7 @@ struct cnfstmt {
 		struct {
 			uchar *varname;
 			struct cnfexpr *expr;
+			int force_reset;
 		} s_set;
 		struct {
 			uchar *varname;
@@ -208,6 +210,10 @@ struct cnfstmt {
 			struct cnfstmt *t_else;
 		} s_propfilt;
 		struct action_s *act;
+        struct {
+			struct cnfitr *iter;
+			struct cnfstmt *body;
+		} s_foreach;
 	} d;
 };
 
@@ -215,6 +221,11 @@ struct cnfexpr {
 	unsigned nodetype;
 	struct cnfexpr *l;
 	struct cnfexpr *r;
+};
+
+struct cnfitr {
+    char* var;
+    struct cnfexpr* collection;
 };
 
 struct cnfnumval {
@@ -258,7 +269,9 @@ enum cnffuncid {
 	CNFFUNC_FIELD,
 	CNFFUNC_PRIFILT,
 	CNFFUNC_LOOKUP,
-	CNFFUNC_EXEC_TEMPLATE
+	CNFFUNC_EXEC_TEMPLATE,
+	CNFFUNC_REPLACE,
+	CNFFUNC_WRAP
 };
 
 struct cnffunc {
@@ -291,7 +304,8 @@ struct cnfparamdescr { /* first the param description */
 	unsigned flags;
 };
 /* flags for cnfparamdescr: */
-#define CNFPARAM_REQUIRED 0x0001
+#define CNFPARAM_REQUIRED	0x0001
+#define CNFPARAM_DEPRECATED	0x0002
 
 struct cnfparamblk { /* now the actual param block use in API calls */
 	unsigned short version;
@@ -333,6 +347,7 @@ struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr 
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
+struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
 struct cnfnumval* cnfnumvalNew(long long val);
 struct cnfstringval* cnfstringvalNew(es_str_t *estr);
@@ -348,6 +363,7 @@ int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(struct var *v);
 void cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
+struct cnfitr * cnfNewIterator(char *var, struct cnfexpr *collection);
 void cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
 struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
@@ -357,7 +373,7 @@ struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
 struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
 struct cnfstmt * cnfstmtNewLegaAct(char *actline);
-struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr);
+struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
 struct cnfstmt * cnfstmtNewUnset(char *var);
 struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 struct cnfstmt * cnfstmtNewContinue(void);

@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -31,7 +31,9 @@
 #define GLBL_H_INCLUDED
 
 #include <sys/types.h>
+#ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
+#endif
 #include "rainerscript.h"
 #include "prop.h"
 
@@ -39,15 +41,17 @@
 
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
+#ifdef HAVE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;
+#endif
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(void);
+	int (*GetMaxLine)(void);
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
-	SIMP_PROP(MaxLine, int)
 	SIMP_PROP(OptimizeUniProc, int)
 	SIMP_PROP(PreserveFQDN, int)
 	SIMP_PROP(DefPFFamily, int)
@@ -95,9 +99,10 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	prop_t* (*GetLocalHostIP)(void);
 	uchar* (*GetSourceIPofLocalClient)(void);		/* [ar] */
 	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
+	/* v9 - 2015-01-12  SetMaxLine method removed */
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */
@@ -117,5 +122,6 @@ void glblDestructMainqCnfObj();
 void glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(void);
 tzinfo_t* glblFindTimezoneInfo(char *id);
+int GetGnuTLSLoglevel(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

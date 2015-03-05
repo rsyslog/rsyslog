@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -64,8 +64,8 @@ struct msg {
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
 	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
-	short	iSeverity;	/* the severity 0..7 */
-	short	iFacility;	/* Facility code 0 .. 23*/
+	unsigned short	iSeverity;/* the severity  */
+	unsigned short	iFacility;/* Facility code */
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
@@ -149,6 +149,8 @@ struct msg {
 #define MSG_LEGACY_PROTOCOL 0
 #define MSG_RFC5424_PROTOCOL 1
 
+#define MAX_VARIABLE_NAME_LEN 1024
+
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
@@ -190,7 +192,8 @@ void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
-rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json);
+rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset);
+rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
@@ -212,7 +215,7 @@ rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
 rsRetVal getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
-rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var);
+rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var, int force_reset);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
 
@@ -234,6 +237,12 @@ MsgHasStructuredData(msg_t *pM)
 
 /* ------------------------------ some inline functions ------------------------------ */
 
+/* add Metadata to the message. This is stored in a special JSON
+ * container. Note that only string types are currently supported,
+ * what should pose absolutely no problem with the string-ish nature
+ * of rsyslog metadata.
+ * added 2015-01-09 rgerhards
+ */
 /* set raw message size. This is needed in some cases where a trunctation is necessary
  * but the raw message must not be newly set. The most important (and currently only)
  * use case is if we remove trailing LF or NUL characters. Note that the size can NOT
@@ -247,6 +256,14 @@ MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
 	pMsg->iLenRawMsg = newLen;
 }
 
+static inline void
+msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri)
+{
+	if(pri > LOG_MAXPRI)
+		pri = LOG_PRI_INVLD;
+	pMsg->iFacility = pri2fac(pri),
+	pMsg->iSeverity = pri2sev(pri);
+}
 
 /* get the ruleset that is associated with the ruleset.
  * May be NULL. -- rgerhards, 2009-10-27

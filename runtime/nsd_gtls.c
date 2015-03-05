@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -78,17 +78,15 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 #define CHKgnutls(x) \
 	if((gnuRet = (x)) != 0) { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
-		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	}
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
-static gnutls_certificate_credentials xcred;
+static gnutls_certificate_credentials_t xcred;
 
-#ifdef DEBUG
-#if 0 /* uncomment, if needed some time again -- DEV Debug only */
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -97,8 +95,7 @@ static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
-#endif
-#endif /* #ifdef DEBUG */
+
 
 
 /* read in the whole content of a file. The caller is responsible for
@@ -231,9 +228,9 @@ finalize_it:
  * rgerhards, 2008-05-27
  */
 static int
-gtlsClientCertCallback(gnutls_session session,
-              __attribute__((unused)) const gnutls_datum* req_ca_rdn, int __attribute__((unused)) nreqs,
-              __attribute__((unused)) const gnutls_pk_algorithm* sign_algos, int __attribute__((unused)) sign_algos_length,
+gtlsClientCertCallback(gnutls_session_t session,
+              __attribute__((unused)) const gnutls_datum_t* req_ca_rdn, int __attribute__((unused)) nreqs,
+              __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos, int __attribute__((unused)) sign_algos_length,
               gnutls_retr_st *st)
 {
 	nsd_gtls_t *pThis;
@@ -264,9 +261,9 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	size_t szBufLen = sizeof(szBufA), tmp;
 	unsigned int algo, bits;
 	time_t expiration_time, activation_time;
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	cstr_t *pStr = NULL;
 	int gnuRet;
 	DEFiRet;
@@ -600,18 +597,16 @@ gtlsGlblInit(void)
 	if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
-		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
 		free(pErr);
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
 
-#	ifdef DEBUG
-#if 	0 /* do this in special cases only. WARNING: if active, it may reveal sensitive information! */
-	/* intialize log function - set a level only for hard-to-find bugs */
-	gnutls_global_set_log_function(logFunction);
-	gnutls_global_set_log_level(10); /* 0 (no) to 9 (most), 10 everything */
-#	endif
-#	endif
+	if(GetGnuTLSLoglevel() > 0){
+		gnutls_global_set_log_function(logFunction);
+		gnutls_global_set_log_level(GetGnuTLSLoglevel()); 
+		/* 0 (no) to 9 (most), 10 everything */
+	}
 
 finalize_it:
 	RETiRet;
@@ -622,7 +617,7 @@ gtlsInitSession(nsd_gtls_t *pThis)
 {
 	DEFiRet;
 	int gnuRet;
-	gnutls_session session;
+	gnutls_session_t session;
 
 	gnutls_init(&session, GNUTLS_SERVER);
 	pThis->bHaveSess = 1;
@@ -677,7 +672,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
+gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 {
 	DEFiRet;
 	int gnuRet;
@@ -752,7 +747,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar fingerprint[20];
 	size_t size;
@@ -842,7 +837,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar lnBuf[256];
 	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
@@ -918,9 +913,9 @@ finalize_it:
 static rsRetVal
 gtlsChkPeerID(nsd_gtls_t *pThis)
 {
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned int list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	int bMustDeinitCert = 0;
 	int gnuRet;
 	DEFiRet;
@@ -980,9 +975,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	int gnuRet;
 	cstr_t *pStr;
 	unsigned stateCert;
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	unsigned i;
 	time_t ttCert;
 	time_t ttNow;
@@ -1290,6 +1285,57 @@ SetSock(nsd_t *pNsd, int sock)
 }
 
 
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveIntvl >= 0);
+
+	nsd_ptcp.SetKeepAliveIntvl(pThis->pTcp, keepAliveIntvl);
+
+	RETiRet;
+}
+
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveProbes >= 0);
+
+	nsd_ptcp.SetKeepAliveProbes(pThis->pTcp, keepAliveProbes);
+
+	RETiRet;
+}
+
+
+/* Keep Alive Options
+ */
+static rsRetVal
+SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(keepAliveTime >= 0);
+
+	nsd_ptcp.SetKeepAliveTime(pThis->pTcp, keepAliveTime);
+
+	RETiRet;
+}
+
+
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
@@ -1568,8 +1614,10 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			break;
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
-			dbgprintf("unexpected GnuTLS error %d in %s:%d\n", iSent, __FILE__, __LINE__);
-			gnutls_perror(iSent); /* TODO: can we do better? */
+			uchar *pErr = gtlsStrerror(iSent);
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", iSent, __FILE__, __LINE__, pErr);
+			free(pErr);
+			gnutls_perror(iSent);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
 	}
@@ -1588,8 +1636,6 @@ EnableKeepAlive(nsd_t *pNsd)
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
-
-
 
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
@@ -1700,6 +1746,9 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->GetRemAddr = GetRemAddr;
 	pIf->EnableKeepAlive = EnableKeepAlive;
+	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+	pIf->SetKeepAliveTime = SetKeepAliveTime;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

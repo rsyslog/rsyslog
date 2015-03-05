@@ -7,7 +7,7 @@
  * are very small, and so we use a single driver for both OS's with
  * a little help of conditional compilation.
  *
- * Copyright 2008-2012 Adiscon GmbH
+ * Copyright 2008-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -70,7 +70,7 @@ static int	fklog = -1;	/* kernel log fd */
  * rgerhards, 2011-06-24
  */
 static void
-submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
 	long secs;
 	long usecs;
@@ -148,7 +148,7 @@ done:
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
-submitSyslog(modConfData_t *pModConf, int pri, uchar *buf)
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
 	Syslog(pri, buf, NULL);
 }
@@ -164,7 +164,7 @@ static uchar *GetPath(modConfData_t *pModConf)
  * entry point. -- rgerhards, 2008-04-09
  */
 rsRetVal
-klogWillRun(modConfData_t *pModConf)
+klogWillRunPrePrivDrop(modConfData_t *pModConf)
 {
 	char errmsg[2048];
 	int r;
@@ -172,7 +172,7 @@ klogWillRun(modConfData_t *pModConf)
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
-		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log(%s): %s.",
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
 			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -189,6 +189,29 @@ klogWillRun(modConfData_t *pModConf)
 		}
 	}
 #	endif	/* #ifdef OS_LINUX */
+
+finalize_it:
+	RETiRet;
+}
+
+/* make sure the kernel log is readable after dropping privileges
+ */
+rsRetVal
+klogWillRunPostPrivDrop(modConfData_t *pModConf)
+{
+	char errmsg[2048];
+	int r;
+	DEFiRet;
+
+	/* this normally returns EINVAL */
+	/* on an OpenVZ VM, we get EPERM */
+	r = read(fklog, NULL, 0);
+	if (r < 0 && errno != EINVAL) {
+		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
+			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		fklog = -1;
+		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
+	}
 
 finalize_it:
 	RETiRet;

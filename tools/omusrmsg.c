@@ -8,7 +8,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2013 Adiscon GmbH.
+ * Copyright 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -168,7 +168,7 @@ void setutent(void)
 {
 	assert(BSD_uf == NULL);
 	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "%s", _PATH_UTMP);
+		errmsg.LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
 		return;
 	}
 }
@@ -407,10 +407,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
 			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 		} else {
-			errmsg.LogError(0, RS_RET_OUTDATED_STMT,
-			   "action '%s' treated as ':omusrmsg:%s' - please "
-			   "change syntax, '%s' will not be supported in the future",
-			   p, p, p);
+			errmsg.LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
+				"action '%s' treated as ':omusrmsg:%s' - please "
+				"use ':omusrmsg:%s' syntax instead, '%s' will "
+				"not be supported in the future",
+				p, p, p, p);
 			bHadWarning = 1;
 		}
 	}

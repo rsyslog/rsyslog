@@ -63,7 +63,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -409,6 +409,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
 	CHKiRet(statsobj.SetName(pThis->statsobj, pThis->pszName));
+	CHKiRet(statsobj.SetOrigin(pThis->statsobj, (uchar*)"core.action"));
 
 	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
@@ -723,7 +724,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
 				  pThis->pszName, iRet);
 			if(pThis->bReportSuspension) {
-				errmsg.LogMsg(0, RS_RET_OK, LOG_INFO, "action '%s' "
+				errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
 			}
@@ -1705,8 +1706,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		   	if((pAction->ppTpl[i] =
 				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
 				snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-					 " Could not find template '%s' - action disabled",
-					 pTplName);
+					 " Could not find template %d '%s' - action disabled",
+					 i, pTplName);
 				errno = 0;
 				errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
 				ABORT_FINALIZE(RS_RET_NOT_FOUND);

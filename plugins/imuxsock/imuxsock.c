@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -279,7 +279,7 @@ static struct cnfparamblk inppblk =
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -318,7 +318,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listen socket instace shall be added to 
+/* This function is called when a new listen socket instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-12
@@ -510,9 +510,9 @@ openLogSocket(lstn_t *pLstn)
 				break;
 			}
 			/*
-			 * otherwise it either didn't matched *this* socket and
-			 * we just continue to check the next one or there were
-			 * an error and we will create a new socket bellow.
+			 * otherwise it either didn't match *this* socket and
+			 * we just continue to check the next one or there was
+			 * an error and we will create a new socket below.
 			 */
 		}
 	}
@@ -742,9 +742,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	int offs;
 	int i;
 	uchar *parse;
-	int pri;
-	int facil;
-	int sever;
+	syslog_pri_t pri;
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	struct syslogTime st;
 	time_t tt;
@@ -772,8 +770,6 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 		++parse;
 		++offs;
 	} 
-	facil = pri2fac(pri);
-	sever = pri2sev(pri);
 
 	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
@@ -833,7 +829,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			/* as per lumberjack spec, these properties need to go into
 			 * the CEE root.
 			 */
-			msgAddJSON(pMsg, (uchar*)"!", json);
+			msgAddJSON(pMsg, (uchar*)"!", json, 0);
 
 			MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 		} else {
@@ -885,9 +881,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	lenMsg = pMsg->iLenRawMsg - offs; /* SanitizeMsg() may have changed the size */
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetFlowControlType(pMsg, pLstn->flowCtl);
-
-	pMsg->iFacility = facil;
-	pMsg->iSeverity = sever;
+	msgSetPRI(pMsg, pri);
 	MsgSetAfterPRIOffs(pMsg, offs);
 
 	parse++; lenMsg--; /* '>' */
@@ -965,7 +959,6 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	int iMaxLine;
 	struct msghdr msgh;
 	struct iovec msgiov;
-	struct cmsghdr *cm;
 	struct ucred *cred;
 	struct timeval *ts;
 	uchar bufRcv[4096+1];
@@ -999,7 +992,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 		msgh.msg_controllen = sizeof(aux);
 	}
 #	endif
-	msgiov.iov_base = pRcv;
+	msgiov.iov_base = (char*)pRcv;
 	msgiov.iov_len = iMaxLine;
 	msgh.msg_iov = &msgiov;
 	msgh.msg_iovlen = 1;
@@ -1009,7 +1002,9 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	if(iRcvd > 0) {
 		cred = NULL;
 		ts = NULL;
+#		if defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP)
 		if(pLstn->bUseCreds) {
+			struct cmsghdr *cm;
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				if HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
@@ -1025,6 +1020,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #				endif /* HAVE_SO_TIMESTAMP */
 			}
 		}
+#		endif /* defined(HAVE_SCM_CREDENTIALS) || defined(HAVE_SO_TIMESTAMP) */
 		CHKiRet(SubmitMsg(pRcv, iRcvd, pLstn, cred, ts));
 	} else if(iRcvd < 0 && errno != EINTR && errno != EAGAIN) {
 		char errStr[1024];
@@ -1616,6 +1612,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&modStats));
 	CHKiRet(statsobj.SetName(modStats, UCHAR_CONSTANT("imuxsock")));
+	CHKiRet(statsobj.SetOrigin(modStats, UCHAR_CONSTANT("imuxsock")));
 	STATSCOUNTER_INIT(ctrSubmit, mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmit));

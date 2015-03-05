@@ -354,6 +354,7 @@ finalize_it:
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
 		}
 		if(pThis->fd != -1) {
+dbgprintf("DDDD: strmOpenFile closes: %d\n", pThis->fd);
 			close(pThis->fd);
 			pThis->fd = -1;
 		}
@@ -419,6 +420,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 */
 	if(pThis->fd != -1) {
 		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
+dbgprintf("DDDD: strmCloseFile: %d\n", pThis->fd);
 		close(pThis->fd);
 		pThis->fd = -1;
 		pThis->inode = 0;
@@ -808,6 +810,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
+	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 ENDobjConstruct(strm)
 
@@ -939,6 +942,7 @@ CODESTARTobjDestruct(strm)
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
 	free(pThis->pszFName);
+	free(pThis->pszSizeLimitCmd);
 	pThis->bStopWriter = 2; /* RG: use as flag for destruction */
 ENDobjDestruct(strm)
 

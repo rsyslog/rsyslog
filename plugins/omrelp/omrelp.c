@@ -84,6 +84,7 @@ typedef struct _instanceData {
 	uchar *myCertFile;
 	uchar *myPrivKeyFile;
 	uchar *tplName;
+	uchar *localClientIP;
 	struct {
 		int nmemb;
 		uchar **name;
@@ -121,6 +122,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "windowsize", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
+	{ "localclientip", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -212,8 +214,8 @@ doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
 			relpCltAddPermittedPeer(pWrkrData->pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
 	}
-	if(glbl.GetSourceIPofLocalClient() == NULL) {	/* ar Do we have a client IP set? */
-		if(relpCltSetClientIP(pWrkrData->pRelpClt, glbl.GetSourceIPofLocalClient()) != RELP_RET_OK)
+	if(pData->localClientIP != NULL) {
+		if(relpCltSetClientIP(pWrkrData->pRelpClt, pData->localClientIP) != RELP_RET_OK)
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
 	pWrkrData->bInitialConnect = 1;
@@ -232,6 +234,7 @@ CODESTARTcreateInstance
 	pData->bHadAuthFail = 0;
 	pData->pristring = NULL;
 	pData->authmode = NULL;
+	pData->localClientIP = NULL;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -252,6 +255,7 @@ CODESTARTfreeInstance
 	free(pData->tplName);
 	free(pData->pristring);
 	free(pData->authmode);
+	free(pData->localClientIP);
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
@@ -279,6 +283,10 @@ setInstParamDefaults(instanceData *pData)
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
 	pData->authmode = NULL;
+	if(glbl.GetSourceIPofLocalClient() == NULL)
+		pData->localClientIP = NULL;
+	else
+		pData->localClientIP = (uchar*)strdup((char*)glbl.GetSourceIPofLocalClient());
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -306,6 +314,8 @@ CODESTARTnewActInst
 			pData->port = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "localclientip")) {
+			pData->localClientIP = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
@@ -392,6 +402,13 @@ static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
 				"does not support TLS (most probably GnuTLS lib "
 				"is too old)!");
 		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
+	} else if(iRet == RELP_RET_ERR_NO_TLS) {
+		errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
+				"imrelp: could not activate relp TLS with "
+				"authentication, librelp does not support it "
+				"(most probably GnuTLS lib is too old)! "
+				"Note: anonymous TLS is probably supported.");
+		ABORT_FINALIZE(RS_RET_RELP_NO_TLS_AUTH);
 	} else {
 		pWrkrData->bIsConnected = 0;
 		iRet = RS_RET_SUSPENDED;

@@ -33,6 +33,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <signal.h>
 #if HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
@@ -317,6 +318,7 @@ addListner(instanceConf_t *inst)
 			/* support statistics gathering */
 			CHKiRet(statsobj.Construct(&(newlcnfinfo->stats)));
 			CHKiRet(statsobj.SetName(newlcnfinfo->stats, dispname));
+			CHKiRet(statsobj.SetOrigin(newlcnfinfo->stats, (uchar*)"imudp"));
 			STATSCOUNTER_INIT(newlcnfinfo->ctrSubmit, newlcnfinfo->mutCtrSubmit);
 			CHKiRet(statsobj.AddCounter(newlcnfinfo->stats, UCHAR_CONSTANT("submitted"),
 				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(newlcnfinfo->ctrSubmit)));
@@ -372,14 +374,12 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
  * in cases where recvmmsg() is available and not.
  */
 static inline rsRetVal
-processPacket(thrdInfo_t *pThrd, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
+processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	uchar *rcvBuf, ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime,
 	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
 {
 	DEFiRet;
 	msg_t *pMsg = NULL;
-
-	assert(pThrd != NULL);
 
 	if(lenRcvBuf == 0)
 		FINALIZE; /* this looks a bit strange, but practice shows it happens... */
@@ -512,7 +512,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 
 		pWrkr->ctrMsgsRcvd += nelem;
 		for(i = 0 ; i < nelem ; ++i) {
-			processPacket(pWrkr->pThrd, lstn, frominetPrev, pbIsPermitted, pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
+			processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->recvmsg_mmh[i].msg_hdr.msg_iov->iov_base,
 				      pWrkr->recvmsg_mmh[i].msg_len, &stTime, ttGenTime, &(pWrkr->frominet[i]),
 				      pWrkr->recvmsg_mmh[i].msg_hdr.msg_namelen, &multiSub);
 		}
@@ -583,7 +583,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 			datetime.getCurrTime(&stTime, &ttGenTime);
 		}
 
-		CHKiRet(processPacket(pWrkr->pThrd, lstn, frominetPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime,
+		CHKiRet(processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime,
 			ttGenTime, &frominet, mh.msg_namelen, &multiSub));
 	}
 
@@ -792,6 +792,8 @@ rsRetVal rcvMainLoop(struct wrkrInfo_s *pWrkr)
 		for(i = 0 ; i < nfds ; ++i) {
 			processSocket(pWrkr, currEvt[i].data.ptr, &frominetPrev, &bIsPermitted);
 		}
+		if(pWrkr->pThrd->bShallStop == RSTRUE)
+			break; /* terminate input! */
 	}
 
 finalize_it:
@@ -1158,6 +1160,7 @@ wrkr(void *myself)
 	/* support statistics gathering */
 	statsobj.Construct(&(pWrkr->stats));
 	statsobj.SetName(pWrkr->stats, thrdName);
+	statsobj.SetOrigin(pWrkr->stats, (uchar*)"imudp");
 	STATSCOUNTER_INIT(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
 	statsobj.AddCounter(pWrkr->stats, UCHAR_CONSTANT("called.recvmmsg"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pWrkr->ctrCall_recvmmsg));
@@ -1196,6 +1199,9 @@ CODESTARTrunInput
 	wrkrInfo[i].id = i;
 	wrkr(&wrkrInfo[i]);
 
+	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
+		pthread_kill(wrkrInfo[i].tid, SIGTTIN);
+	}
 	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
 		pthread_join(wrkrInfo[i].tid, NULL);
 	}

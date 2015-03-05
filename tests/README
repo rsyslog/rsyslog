@@ -6,4 +6,19 @@ welcome.
 For a simple sample, see rtinit.c, which does a simple
 init/deinit check of the runtime system.
 
-rgerhards, 2008-06-13
+Setting up Test Environments
+============================
+
+Setting up MariaDB/MySQL
+------------------------
+to create the necessary user:
+
+echo "create user 'rsyslog'@'localhost' identified by 'testbench';" | mysql -u root
+mysql -u root < ../plugins/ommysql/createDB.sql
+echo "grant all on Syslog.* to 'rsyslog'@'localhost';" | mysql -u root
+
+openSUSE
+--------
+To configure system properties like hostname and firewall, use the
+graphical "yast2" administration tool. Note the ssh-access by default
+is disable in the firewall!

@@ -178,6 +178,10 @@ extern rsconf_t *runConf;/* the currently running config */
 extern rsconf_t *loadConf;/* the config currently being loaded (no concurrent config load supported!) */
 
 
+static inline int rsconfNeedDropPriv(rsconf_t *const cnf) {
+	return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
+}
+
 /* some defaults (to be removed?) */
 #define DFLT_bLogStatusMsgs 1
 

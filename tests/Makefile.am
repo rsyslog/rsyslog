@@ -1,17 +1,19 @@
 if ENABLE_TESTBENCH
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller syslog_inject inputfilegen minitcpsrv
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
-if ENABLE_IMDIAG
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
         fac_authpriv.sh \
 	fac_local0.sh \
+	fac_local7.sh \
 	fac_mail.sh \
 	fac_news.sh \
+	fac_ftp.sh \
+	fac_ntp.sh \
 	fac_uucp.sh \
 	fac_invld1.sh \
 	fac_invld2.sh \
@@ -22,6 +24,7 @@ TESTS +=  \
 	global_vars.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
+	empty-ruleset.sh \
 	imtcp-multiport.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
@@ -30,23 +33,33 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
+	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
+	imtcp_no_octet_counted.sh \
+	imtcp_spframingfix.sh \
+	imptcp_spframingfix.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
+	imudp_thread_hang.sh \
+	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
+	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
+	asynwr_timeout_2.sh \
 	asynwr_small.sh \
 	asynwr_tinybuf.sh \
 	wr_large_async.sh \
 	wr_large_sync.sh \
 	asynwr_deadlock.sh \
+	asynwr_deadlock_2.sh \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
+	abort-uncleancfg-goodcfg.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -64,11 +77,13 @@ TESTS +=  \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
+	imuxsock_logger.sh \
+	imuxsock_logger_err.sh \
+	imuxsock_traillf.sh \
+	imuxsock_ccmiddle.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	udp-msgreduc-vg.sh \
-	udp-msgreduc-orgmsg-vg.sh \
 	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
@@ -88,6 +103,8 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
+	rscript_set_modify.sh \
+	rscript_unaffected_reset.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -105,9 +122,10 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	udp-msgreduc-vg.sh \
+	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh
 endif # HAVE_VALGRIND
-endif # ENABLE_IMDIAG
 
 
 if ENABLE_MYSQL_TESTS
@@ -117,25 +135,40 @@ TESTS +=  \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh
-if ENABLE_OMLIBDBI
-TESTS +=  \
-	libdbi-basic.sh \
-	libdbi-asyn.sh
-endif
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
 	mysql-asyn-vg.sh \
 	mysql-actq-mt-withpause-vg.sh 
 endif
+if ENABLE_OMLIBDBI
+TESTS +=  \
+	libdbi-basic.sh \
+	libdbi-asyn.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	libdbi-basic-vg.sh
+endif
+endif
 endif
 
 if ENABLE_IMPTCP
+# note that some tests simply USE imptcp, but they also
+# need to be disabled if we do not have this module
 TESTS +=  \
 	manyptcp.sh \
 	imptcp_large.sh \
 	imptcp_addtlframedelim.sh \
-	imptcp_conndrop.sh 
+	imptcp_conndrop.sh \
+	imptcp_no_octet_counted.sh \
+        rscript_replace.sh \
+        rscript_replace_complex.sh \
+	rscript_wrap2.sh \
+	rscript_wrap3.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	imptcp_conndrop-vg.sh
+endif
 endif
 
 if ENABLE_ELASTICSEARCH_TESTS
@@ -153,21 +186,36 @@ TESTS +=  \
 	mmpstrucdata.sh
 endif
 
+if ENABLE_MMNORMALIZE
+TESTS +=  \
+	mmnormalize_variable.sh \
+	mmnormalize_tokenized.sh \
+	mmnormalize_regex_defaulted.sh \
+	mmnormalize_regex_disabled.sh
+
+if LOGNORM_REGEX_SUPPORTED
+TESTS += \
+	mmnormalize_regex.sh
+endif
+endif
+
 if ENABLE_MMJSONPARSE
 TESTS +=  \
 	mmjsonparse_simple.sh \
-	mmjsonparse_cim.sh
+	mmjsonparse_cim.sh \
+	json_array_subscripting.sh \
+	json_array_looping.sh
 endif
 
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 #TESTS +=  \
-	#sndrcv_tls_anon.sh \
-	#sndrcv_tls_anon_rebind.sh \
-	#imtcp-tls-basic.sh
+#sndrcv_tls_anon.sh \
+#sndrcv_tls_anon_rebind.sh \
+imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += imtcp-tls-basic-vg.sh \
-	 imtcp_conndrop_tls-vg.sh 
+	 imtcp_conndrop_tls-vg.sh \
 	 manytcp-too-few-tls-vg.sh 
 endif
 endif
@@ -187,23 +235,24 @@ endif
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh \
-	 proprepltest.sh \
-	 parsertest.sh \
-	 timestamp.sh \
-	 inputname.sh \
 	 threadingmq.sh \
 	 threadingmqaq.sh \
-	 badqi.sh \
+	 badqi.sh
+if ENABLE_IMPTCP
+TESTS += \
 	 tabescape_dflt.sh \
 	 tabescape_off.sh \
+	 timestamp.sh \
+	 inputname.sh \
+	 proprepltest.sh \
+	 parsertest.sh \
 	 fieldtest.sh
+endif
 endif
 
 if ENABLE_OMRULESET
-if ENABLE_IMDIAG
 TESTS += omruleset.sh \
 	 omruleset-queue.sh
-endif
 endif
 
 if ENABLE_EXTENDED_TESTS
@@ -294,7 +343,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/date3.parse1 \
 	   testsuites/date4.parse1 \
 	   testsuites/date5.parse1 \
-   	   testsuites/rfc3164.parse1 \
+	   testsuites/rfc3164.parse1 \
 	   testsuites/rfc5424-1.parse1 \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
@@ -349,6 +398,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rscript_ne.conf \
 	   rscript_eq.sh \
 	   testsuites/rscript_eq.conf \
+	   rscript_set_modify.sh \
+	   testsuites/rscript_set_modify.conf \
+	   testsuites/rscript_unaffected_reset.conf \
 	   stop-localvar.sh \
 	   testsuites/stop-localvar.conf \
 	   stop-msgvar.sh \
@@ -361,10 +413,16 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/fac_authpriv.conf \
 	   fac_local0.sh \
 	   testsuites/fac_local0.conf \
+	   fac_local7.sh \
+	   testsuites/fac_local7.conf \
 	   fac_mail.sh \
 	   testsuites/fac_mail.conf \
 	   fac_news.sh \
 	   testsuites/fac_news.conf \
+	   fac_ftp.sh \
+	   testsuites/fac_ftp.conf \
+	   fac_ntp.sh \
+	   testsuites/fac_ntp.conf \
 	   fac_uucp.sh \
 	   testsuites/fac_uucp.conf \
 	   fac_invld1.sh \
@@ -418,6 +476,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/da-mainmsg-q.conf \
 	   diskqueue-fsync.sh \
 	   testsuites/diskqueue-fsync.conf \
+	   empty-ruleset.sh \
+	   testsuites/empty-ruleset.conf \
 	   imtcp-tls-basic.sh \
 	   imtcp-tls-basic-vg.sh \
 	   testsuites/imtcp-tls-basic.conf \
@@ -427,7 +487,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/udp-msgreduc-orgmsg-vg.conf \
 	   udp-msgreduc-vg.sh \
 	   testsuites/udp-msgreduc-vg.conf \
-	   manytcp-too-few-tls.sh \
+	   manytcp-too-few-tls-vg.sh \
 	   testsuites/manytcp-too-few-tls.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
@@ -437,8 +497,19 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/imptcp_large.conf \
 	   imptcp_addtlframedelim.sh \
 	   testsuites/imptcp_addtlframedelim.conf \
+	   imptcp_conndrop-vg.sh \
 	   imptcp_conndrop.sh \
 	   testsuites/imptcp_conndrop.conf \
+	   imptcp_no_octet_counted.sh \
+	   testsuites/imptcp_no_octet_counted.conf \
+	   testsuites/no_octet_counted.testdata \
+	   imtcp_no_octet_counted.sh \
+	   testsuites/imtcp_no_octet_counted.conf \
+	   testsuites/spframingfix.testdata \
+	   imtcp_spframingfix.sh \
+	   testsuites/imtcp_spframingfix.conf \
+	   imptcp_spframingfix.sh \
+	   testsuites/imptcp_spframingfix.conf \
 	   imtcp_conndrop.sh \
 	   testsuites/imtcp_conndrop.conf \
 	   imtcp_conndrop_tls.sh \
@@ -507,6 +578,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   sndrcv_udp.sh \
 	   testsuites/sndrcv_udp_sender.conf \
 	   testsuites/sndrcv_udp_rcvr.conf \
+	   imudp_thread_hang.sh \
+	   testsuites/imudp_thread_hang.conf \
 	   sndrcv_udp_nonstdpt.sh \
 	   testsuites/sndrcv_udp_nonstdpt_sender.conf \
 	   testsuites/sndrcv_udp_nonstdpt_rcvr.conf \
@@ -530,8 +603,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/uxsock_simple.conf \
 	   asynwr_simple.sh \
 	   testsuites/asynwr_simple.conf \
+	   asynwr_simple_2.sh \
+	   testsuites/asynwr_simple_2.conf \
 	   asynwr_timeout.sh \
 	   testsuites/asynwr_timeout.conf \
+	   asynwr_timeout_2.sh \
+	   testsuites/asynwr_timeout_2.conf \
 	   asynwr_small.sh \
 	   testsuites/asynwr_small.conf \
 	   asynwr_tinybuf.sh \
@@ -542,10 +619,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/wr_large.conf \
 	   asynwr_deadlock.sh \
 	   testsuites/asynwr_deadlock.conf \
+	   asynwr_deadlock_2.sh \
+	   testsuites/asynwr_deadlock_2.conf \
 	   asynwr_deadlock2.sh \
 	   testsuites/asynwr_deadlock2.conf \
 	   asynwr_deadlock4.sh \
 	   testsuites/asynwr_deadlock4.conf \
+	   abort-uncleancfg-goodcfg.sh \
+	   testsuites/abort-uncleancfg-goodcfg.conf \
 	   gzipwr_large.sh \
 	   testsuites/gzipwr_large.conf \
 	   gzipwr_large_dynfile.sh \
@@ -602,15 +683,25 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
+	   imuxsock_logger.sh \
+	   testsuites/imuxsock_logger.conf \
+	   imuxsock_logger_err.sh \
 	   imuxsock_logger_root.sh \
 	   testsuites/imuxsock_logger_root.conf \
 	   resultdata/imuxsock_logger.log \
+	   imuxsock_traillf.sh \
+	   testsuites/imuxsock_traillf.conf \
 	   imuxsock_traillf_root.sh \
 	   testsuites/imuxsock_traillf_root.conf \
 	   resultdata/imuxsock_traillf.log \
+	   imuxsock_ccmiddle.sh \
+	   testsuites/imuxsock_ccmiddle.conf \
 	   imuxsock_ccmiddle_root.sh \
 	   testsuites/imuxsock_ccmiddle_root.conf \
 	   resultdata/imuxsock_ccmiddle.log \
+	   imuxsock_hostname.sh \
+	   testsuites/imuxsock_hostname.conf \
+	   resultdata/imuxsock_hostname.log \
 	   testsuites/mysql-truncate.sql \
 	   testsuites/mysql-select-msg.sql \
 	   libdbi-basic.sh \
@@ -631,6 +722,37 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mysql-actq-mt.conf \
 	   mmpstrucdata.sh \
 	   testsuites/mmpstrucdata.conf \
+	   libdbi-basic-vg.sh \
+	   mmnormalize_variable.sh \
+	   mmnormalize_tokenized.sh \
+	   testsuites/mmnormalize_variable.conf \
+	   testsuites/date_time_msg \
+	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/tokenized_input \
+	   rscript_replace.sh \
+	   testsuites/rscript_replace.conf \
+	   rscript_replace_complex.sh \
+	   testsuites/rscript_replace_complex.conf \
+	   testsuites/complex_replace_input \
+	   rscript_unaffected_reset.sh \
+	   rscript_wrap2.sh \
+	   testsuites/rscript_wrap2.conf \
+	   rscript_wrap3.sh \
+	   testsuites/rscript_wrap3.conf \
+	   testsuites/wrap3_input\
+	   testsuites/gethostname.conf \
+	   json_array_subscripting.sh \
+	   testsuites/json_array_subscripting.conf \
+	   testsuites/json_array_input \
+	   json_array_looping.sh \
+	   testsuites/json_array_looping.conf \
+	   mmnormalize_regex.sh \
+	   testsuites/mmnormalize_regex.conf \
+	   testsuites/regex_input \
+	   mmnormalize_regex_disabled.sh \
+	   testsuites/mmnormalize_regex_disabled.conf \
+	   mmnormalize_regex_defaulted.sh \
+	   testsuites/mmnormalize_regex_defaulted.conf \
 	   cfg.sh
 
 # TODO: re-enable
@@ -660,10 +782,8 @@ minitcpsrv_SOURCES = minitcpsrvr.c
 minitcpsrv_LDADD = $(SOL_LIBS)
 
 syslog_caller_SOURCES = syslog_caller.c
-syslog_caller_LDADD = $(SOL_LIBS)
-
-syslog_inject_SOURCES = syslog_inject.c
-syslog_inject_LDADD = $(SOL_LIBS)
+syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
+syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)

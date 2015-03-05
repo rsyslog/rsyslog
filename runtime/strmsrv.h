@@ -37,6 +37,9 @@ struct strmLstnPortList_s {
 struct strmsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
 	int bUseKeepAlive;	/**< use socket layer KEEPALIVE handling? */
+	int iKeepAliveIntvl;	/**< socket layer KEEPALIVE interval */
+	int iKeepAliveProbes;	/**< socket layer KEEPALIVE probes */
+	int iKeepAliveTime;	/**< socket layer KEEPALIVE timeout */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -95,9 +98,13 @@ BEGINinterface(strmsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessConstructFinalize)(strmsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetSessMax)(strmsrv_t *pThis, int iMaxSess);
 	rsRetVal (*SetOnCharRcvd)(strmsrv_t *pThis, rsRetVal (*OnMsgCharRcvd)(strms_sess_t*, uchar));
+	/* v2 */
+	rsRetVal (*SetKeepAliveProbes)(strmsrv_t *pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(strmsrv_t *pThis, int keepAliveTime);
+	rsRetVal (*SetKeepAliveIntvl)(strmsrv_t *pThis, int keepAliveIntvl);
 ENDinterface(strmsrv)
-#define strmsrvCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-/* change for v?:
+#define strmsrvCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* interface version 2 added keep alive parameter set functions
  */
 
 

@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2013 Adiscon GmbH.
+ * Copyright 2011-2015 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -359,7 +359,7 @@ parser_warnmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-	errmsg.LogError(0, RS_RET_CONF_PARSE_WARNING,
+	errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
 			"warning during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
 	va_end(ap);
@@ -374,9 +374,14 @@ parser_errmsg(char *fmt, ...)
 	va_start(ap, fmt);
 	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
 		errBuf[sizeof(errBuf)-1] = '\0';
-	errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
-			"error during parsing file %s, on or before line %d: %s",
-			cnfcurrfn, yylineno, errBuf);
+	if(cnfcurrfn == NULL) {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"error during config processing: %s", errBuf);
+	} else {
+		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"error during parsing file %s, on or before line %d: %s",
+				cnfcurrfn, yylineno, errBuf);
+	}
 	va_end(ap);
 }
 
@@ -537,13 +542,6 @@ dropPrivileges(rsconf_t *cnf)
 {
 	DEFiRet;
 
-	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
-	 * because outputs are already running at this time. However, we can implement
-	 * dropping of privileges rather quickly and it will work in many cases. While it is not
-	 * the ultimate solution, the current one is still much better than not being able to
-	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
-	 * we should do over time. TODO -- rgerhards, 2008-11-19
-	 */
 	if(cnf->globals.gidDropPriv != 0) {
 		doDropPrivGid(ourConf->globals.gidDropPriv);
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
@@ -581,9 +579,12 @@ tellModulesConfigLoadDone(void)
 	DBGPRINTF("telling modules that config load for %p is done\n", loadConf);
 	node = module.GetNxtCnfType(loadConf, NULL, eMOD_ANY);
 	while(node != NULL) {
-		if(node->pMod->beginCnfLoad != NULL)
+		DBGPRINTF("beginCnfLoad(%p) for module '%s'\n", node->pMod->beginCnfLoad, node->pMod->pszName);
+		if(node->pMod->beginCnfLoad != NULL) {
+			DBGPRINTF("calling endCnfLoad() for module '%s'\n", node->pMod->pszName);
 			node->pMod->endCnfLoad(node->modCnf);
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		}
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -612,7 +613,7 @@ tellModulesCheckConfig(void)
 				node->canActivate = 0;
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -643,7 +644,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -672,7 +673,7 @@ tellModulesActivateConfig(void)
 			node->canActivate = 0; /* in a sense, could not activate... */
 			}
 		}
-		node = module.GetNxtCnfType(runConf, node, eMOD_IN);
+		node = module.GetNxtCnfType(runConf, node, eMOD_ANY);
 	}
 
 	ENDfunc
@@ -1284,7 +1285,15 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 				"CONFIG ERROR: could not interpret master "
 				"config file '%s'.", confFile);
 		ABORT_FINALIZE(RS_RET_CONF_PARSE_ERROR);
-	} else if(iNbrActions == 0) {
+	} else if(r == 2) { /* file not found? */
+		char err[1024];
+		rs_strerror_r(errno, err, sizeof(err));
+		errmsg.LogError(0, RS_RET_CONF_FILE_NOT_FOUND,
+			        "could not open config file '%s': %s",
+			        confFile, err);
+		ABORT_FINALIZE(RS_RET_CONF_FILE_NOT_FOUND);
+	} else if(iNbrActions == 0 &&
+		!(iConfigVerify & CONF_VERIFY_PARTIAL_CONF)) {
 		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no "
 				"active actions configured. Inputs will "
 			 	"run, but no output whatsoever is created.");

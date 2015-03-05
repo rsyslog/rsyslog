@@ -42,9 +42,27 @@
 /* static data */
 DEFobjStaticHelpers
 
+static int bHadErrMsgs; /* indicates if we had error messages since reset of this flag
+                         * This is used to abort a run if the config is unclean.
+			 */
+
 
 /* ------------------------------ methods ------------------------------ */
 
+/* Resets the error message flag. Must be done before processing config
+ * files.
+ */
+void
+resetErrMsgsFlag(void)
+{
+	bHadErrMsgs = 0;
+}
+
+int
+hadErrMsgs(void)
+{
+	return bHadErrMsgs;
+}
 
 /* We now receive three parameters: one is the internal error code
  * which will also become the error message number, the second is
@@ -67,21 +85,24 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	if(iErrno != 0) {
 		rs_strerror_r(iErrno, errStr, sizeof(errStr));
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s: %s", msg, errStr);
+			snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s: %s [try http://www.rsyslog.com/e/%d ]", msg, errStr, iErrCode * -1);
+			snprintf(buf, sizeof(buf), "%s: %s [v%s try http://www.rsyslog.com/e/%d ]", msg, errStr, VERSION, iErrCode * -1);
 		}
 	} else {
 		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s", msg);
+			snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
 		} else {
-			snprintf(buf, sizeof(buf), "%s [try http://www.rsyslog.com/e/%d ]", msg, iErrCode * -1);
+			snprintf(buf, sizeof(buf), "%s [v%s try http://www.rsyslog.com/e/%d ]", msg, VERSION, iErrCode * -1);
 		}
 	}
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	
 	glblErrLogger(severity, iErrCode, (uchar*)buf);
+
+	if(severity == LOG_ERR)
+		bHadErrMsgs = 1;
 }
 
 /* We now receive three parameters: one is the internal error code

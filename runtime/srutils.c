@@ -85,6 +85,7 @@ syslogName_t	syslogFacNames[] = {
 	{"mail",         LOG_MAIL},
 	{"mark",         LOG_MARK},		/* INTERNAL */
 	{"news",         LOG_NEWS},
+	{"ntp",          (12<<3) },             /* NTP, perhaps BSD-specific? */
 	{"security",     LOG_AUTH},		/* DEPRECATED */
 	{"bsd_security", (13<<3) },		/* BSD-specific, unfortunatly with duplicate name... */
 	{"syslog",       LOG_SYSLOG},

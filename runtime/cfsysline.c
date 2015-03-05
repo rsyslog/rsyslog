@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-30 by RGerhards
  *
- * Copyright (C) 2007-2012 Adiscon GmbH.
+ * Copyright (C) 2007-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -224,9 +224,8 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	CHKiRet(doGetSize(pp, NULL,&i));
 	p = *pp;
 	if(i > 2147483648ll) { /*2^31*/
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, 
 		         "value %lld too large for integer argument.", i);
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -278,10 +277,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
 	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
 	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "value must be octal (e.g 0644).");
-		errno = 0;
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "value must be octal (e.g 0644).");
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -374,11 +370,10 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 
 	if(pgBuf == NULL) {
 		if (err != 0) {
-			rs_strerror_r(err, stringBuf, bufSize);
-			errmsg.LogError(0, RS_RET_NOT_FOUND, "Query for group '%s' resulted in an error: %s\n",
-				(char*)szName, stringBuf);
+			errmsg.LogError(err, RS_RET_NOT_FOUND, "Query for group '%s' resulted in an error",
+				szName);
 		} else {
-			errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", (char*)szName);
+			errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found", szName);
 		}
 		iRet = RS_RET_NOT_FOUND;
 	} else {

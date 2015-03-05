@@ -37,6 +37,35 @@ Building from Source
 --------------------
 Follow the instructions at: http://www.rsyslog.com/doc/build_from_repo.html
 
+Build Environment
+.................
+
+In general, you need
+
+* libestr
+* liblogging (stdlog component)
+
+It is best to build these from source.
+
+CentOS 6
+~~~~~~~~
+
+for json-c, we need
+  $ export PKG_CONFIG_PATH=/lib64/pkgconfig/
+
+sudo yum install git valgrind autoconf automake flex bison python-docutils python-sphinx json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel net-snmp-devel
+
+
+
+openSUSE 13
+~~~~~~~~~~~
+
+sudo zypper install gcc make autoconf automake libtool libcurl-devel flex bison valgrind python-docutils libjson-devel uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel libnet-devel postgresql-devel net-snmp-devellibuuid-devel libdbi-drivers-dbd-mysql
+
+For the testbench VMs:
+
+sudo zypper install gvim mutt
+
 Reporting Bugs
 ==============
 
@@ -71,7 +100,7 @@ and contribution. We base our work on standards and try to solve all real-world
 needs (of course, we occasionally fail tackeling actually all needs ;)). While
 the project is primarily sponsored by Adiscon, technical development is 
 independent from company goals and most decisions are solely based on mailing
-list discussion results. There is an active commuity around rsyslog.
+list discussion results. There is an active community around rsyslog.
 
 There is no such thing like being an official member of the rsyslog team. The
 closest to that is being subscribed to the mailing list:

@@ -109,9 +109,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 
 	if(*p == '~') {
 		dbgprintf("discard\n");
-		errmsg.LogError(0, RS_RET_DEPRECATED, "warning: ~ action "
-			"is deprecated, consider using the 'stop' "
-			"statement instead");
+		errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+			"warning: ~ action is deprecated, consider "
+			"using the 'stop' statement instead");
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
