@@ -78,6 +78,7 @@ TESTS +=  \
 	dircreate_off.sh \
 	imuxsock_logger.sh \
 	imuxsock_logger_err.sh \
+	imuxsock_logger_parserchain.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_root.sh \
@@ -682,6 +683,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
+	   imuxsock_logger_parserchain.sh \
+	   testsuites/imuxsock_logger_parserchain.conf \
 	   imuxsock_logger.sh \
 	   testsuites/imuxsock_logger.conf \
 	   imuxsock_logger_err.sh \
