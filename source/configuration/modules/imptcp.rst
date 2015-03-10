@@ -155,6 +155,14 @@ the input they are specified with.
 
    Specifies the rate-limiting burst in number of messages.
 
+.. function:: compression.mode [mode]
+
+   *Default is none*
+
+   This is the counterpart to the compression modes set in
+   :doc:`omfwd <omfwd>`.
+   Please see it's documentation for details.
+
 Caveats/Known Bugs
 ------------------
 
