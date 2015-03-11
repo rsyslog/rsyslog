@@ -728,8 +728,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mmnormalize_variable.sh \
 	   mmnormalize_tokenized.sh \
 	   testsuites/mmnormalize_variable.conf \
+	   testsuites/mmnormalize_variable.rulebase \
 	   testsuites/date_time_msg \
 	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/mmnormalize_tokenized.rulebase \
 	   testsuites/tokenized_input \
 	   rscript_replace.sh \
 	   testsuites/rscript_replace.conf \
@@ -750,6 +752,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/json_array_looping.conf \
 	   mmnormalize_regex.sh \
 	   testsuites/mmnormalize_regex.conf \
+	   testsuites/mmnormalize_regex.rulebase \
 	   testsuites/regex_input \
 	   mmnormalize_regex_disabled.sh \
 	   testsuites/mmnormalize_regex_disabled.conf \
