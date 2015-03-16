@@ -185,7 +185,7 @@ getDfltTpl(void)
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
 		return loadModConf->tplName;
 	else if(cs.tplName == NULL)
-		return (uchar*)"RSYSLOG_FileFormat";
+		return (uchar*)"RSYSLOG_TraditionalForwardFormat";
 	else
 		return cs.tplName;
 }

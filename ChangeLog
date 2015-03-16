@@ -9,6 +9,10 @@ Version 8.9.0 [v8-stable] 2015-04-07
   - parseHostname input parameter
 - bugfix: potential large memory consumption with failed actions
   see also https://github.com/rsyslog/rsyslog/issues/253
+- bugfix: omudpspoof: invalid default send template in RainerScript format
+  The file format template was used, which obviously does not work for
+  forwarding. Thanks to Christopher Racky for alerting us.
+  closes https://github.com/rsyslog/rsyslog/issues/268
 - rsyslogd: fix misleading typos in error messages
   Thanks to Ansgar Püster for the fixes.
 ------------------------------------------------------------------------------
