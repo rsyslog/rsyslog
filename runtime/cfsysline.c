@@ -161,7 +161,7 @@ finalize_it:
  * param value must be int64!
  * rgerhards, 2008-01-09
  */
-static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *pVal)
 {
 	DEFiRet;
 	int64 i;
