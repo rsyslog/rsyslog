@@ -84,7 +84,6 @@ TESTS +=  \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
