@@ -216,7 +216,6 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	uchar *p;
 	DEFiRet;
 	int64 i;	
-	uchar errMsg[256];	/* for dynamic error messages */
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -260,7 +259,6 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 {
 	uchar *p;
 	DEFiRet;
-	uchar errMsg[128];	/* for dynamic error messages */
 	int iVal;	
 
 	assert(pp != NULL);
