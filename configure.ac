@@ -13,10 +13,6 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 
-# check if valgrind is present
-AC_CHECK_PROG(have_valgrind, [valgrind], [yes])
-AM_CONDITIONAL(HAVE_VALGRIND, test x$have_valgrind = xyes)
-
 # Checks for programs.
 AC_PROG_LEX
 AC_PROG_YACC
@@ -1123,6 +1119,29 @@ if test "x$enable_testbench" = "xyes"; then
 		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
 	fi
 fi
+
+
+# valgrind-testbench
+AC_ARG_WITH([valgrind_testbench],
+        [AS_HELP_STRING([--without-valgrind-testbench], [Don't use valgrind in testbench])]
+)
+
+if test "x$with_valgrind_testbench" != "xno"; then
+        AC_CHECK_PROG(VALGRIND, [valgrind], [valgrind], [no])
+
+        if test "x$enable_testbench" = "xyes" && test "x$VALGRIND" = "xno"; then
+                if test "x$with_valgrind_testbench" = "xyes"; then
+                        AC_MSG_ERROR([valgrind is missing but forced with --with-valgrind-testbench. Either install valgrind or remove the option!])
+                else
+                        AC_MSG_WARN([valgrind is missing -- testbench won't use valgrind!])
+                fi
+        else
+                AC_MSG_NOTICE([testbench will use valgrind])
+        fi
+else
+	AC_MSG_NOTICE([testbench won't use valgrind due to set --without-valgrind-testbench option])
+fi
+AM_CONDITIONAL([HAVE_VALGRIND], [test "x$with_valgrind_testbench" != "xno" && test "x$VALGRIND" != "xno"])
 
 
 # settings for the file input module
