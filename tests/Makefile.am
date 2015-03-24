@@ -261,7 +261,10 @@ if ENABLE_EXTENDED_TESTS
 endif
 
 if ENABLE_IMFILE
-TESTS += imfile-basic.sh
+TESTS += imfile-basic.sh \
+	imfile-readmode2.sh \
+	imfile-readmode2-with-persists-data-during-stop.sh \
+	imfile-readmode2-with-persists.sh \
 if HAVE_VALGRIND
 TESTS += imfile-basic-vg.sh
 endif
@@ -634,6 +637,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/complex1.conf \
 	   random.sh \
 	   testsuites/random.conf \
+           imfile-readmode2.sh \
+           imfile-readmode2-with-persists-data-during-stop.sh \
+           imfile-readmode2-with-persists.sh \
+           testsuites/imfile-readmode2.conf \
+           testsuites/imfile-readmode2-with-persists.conf \
+           testsuites/imfile-readmode2-with-persists-data-during-stop.conf \
 	   imfile-basic.sh \
 	   imfile-basic-vg.sh \
 	   testsuites/imfile-basic.conf \

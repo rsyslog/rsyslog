@@ -636,7 +636,7 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	ASSERT(pThis != NULL);
 	ASSERT(pC != NULL);
 
-	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
+	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr, pThis->iBufPtrMax); */
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		++pThis->iCurrOffs; /* one more octet read */
@@ -699,10 +699,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
 
+dbgprintf("DDDDD: readLine: enter, bPrevWasNL %d\n", pThis->bPrevWasNL);
         CHKiRet(cstrConstruct(ppCStr));
         CHKiRet(strmReadChar(pThis, &c));
 
-dbgprintf("DDDDD: readLine: enter, bPrevWasNL %d\n", pThis->bPrevWasNL);
+dbgprintf("DDDDD: readLine: pre-check, bPrevWasNL %d\n", pThis->bPrevWasNL);
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
 		dbgprintf("DDDDD: readLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
@@ -795,8 +796,10 @@ dbgprintf("DDDDD: readLine: enter, bPrevWasNL %d\n", pThis->bPrevWasNL);
 finalize_it:
 dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCStrGetSzStr(*ppCStr), *ppCStr);
         if(iRet != RS_RET_OK && *ppCStr != NULL) {
-		dbgprintf("DDDDD: readLine saves segment '%s'\n", rsCStrGetSzStr(*ppCStr));
-		rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+		if(cstrLen(*ppCStr) > 0) { /* we may have an empty string in an unsuccsfull poll or after restart! */
+			dbgprintf("DDDDD: readLine saves segment '%s'\n", rsCStrGetSzStr(*ppCStr));
+			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+		}
                 cstrDestruct(ppCStr);
 	}
 
@@ -1859,7 +1862,8 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->inode;
 	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
 
-	objSerializePTR(pStrm, prevLineSegment, PSZ);
+	cstrFinalize(pThis->prevLineSegment);
+	objSerializePTR(pStrm, prevLineSegment, CSTR);
 
 	i = pThis->bPrevWasNL;
 	objSerializeSCALAR_VAR(pStrm, bPrevWasNL, INT, i);
