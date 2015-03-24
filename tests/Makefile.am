@@ -264,7 +264,7 @@ if ENABLE_IMFILE
 TESTS += imfile-basic.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
-	imfile-readmode2-with-persists.sh \
+	imfile-readmode2-with-persists.sh
 if HAVE_VALGRIND
 TESTS += imfile-basic-vg.sh
 endif
