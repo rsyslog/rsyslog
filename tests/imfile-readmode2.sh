@@ -1,4 +1,5 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
+echo ======================================================================
 echo [imfile-readmode2.sh]
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imfile-readmode2.conf
