@@ -72,6 +72,10 @@ struct action_s {
 	pthread_mutex_t mutAction; /* primary action mutex */
 	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS)
+	/* for per-worker HUP processing */
+	void **wrkrDataTable;
+	int wrkrDataTableSize;
+	int nWrkr;
 	/* for statistics subsystem */
 	statsobj_t *statsobj;
 	STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed)

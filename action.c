@@ -308,6 +308,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
 	d_free(pThis->peParamPassing);
+	d_free(pThis->wrkrDataTable);
 
 finalize_it:
 	d_free(pThis);
@@ -772,6 +773,24 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 						               pThis->pModData));
 		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
 		setActionState(pWti, pThis, ACT_STATE_RDY); /* action is enabled */
+		
+		/* maintain worker data table -- only needed if wrkrHUP is requested! */
+
+		int freeSpot;
+		for(freeSpot = 0 ; freeSpot < pThis->wrkrDataTableSize ; ++freeSpot)
+			if(pThis->wrkrDataTable[freeSpot] == NULL)
+				break;
+		if(pThis->nWrkr == pThis->wrkrDataTableSize) {
+			// TODO: check realloc, fall back to old table if it fails. Better than nothing...
+			pThis->wrkrDataTable = realloc(pThis->wrkrDataTable,
+				(pThis->wrkrDataTableSize + 1) * sizeof(void*));
+			pThis->wrkrDataTableSize++;
+		}
+dbgprintf("DDDD: writing data to table spot %d\n", freeSpot);
+		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
+		pThis->nWrkr++;
+		DBGPRINTF("wti %p: created action worker instance %d for "
+			  "action %d\n", pWti, pThis->nWrkr, pThis->iActionNbr);
 	}
 finalize_it:
 	RETiRet;

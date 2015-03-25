@@ -6,7 +6,7 @@
  *
  * File begun on 2009-04-01 by RGerhards
  *
- * Copyright 2009-2014 Adiscon GmbH.
+ * Copyright 2009-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -636,6 +636,11 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
+BEGINdoHUP
+CODESTARTdoHUP
+ENDdoHUP
+
+
 BEGINmodExit
 CODESTARTmodExit
 	free(cs.szBinary);
@@ -651,6 +656,7 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
