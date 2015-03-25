@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -658,6 +658,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 
 			/* try load optional interfaces */
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
+
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUPWrkr", &pNew->doHUPWrkr);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
 

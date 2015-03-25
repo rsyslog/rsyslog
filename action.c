@@ -1357,10 +1357,22 @@ actionCallHUPHdlr(action_t * const pAction)
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
-	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
+	DBGPRINTF("Action %p checks HUP hdlr, act level: %p, wrkr level %p\n",
+		pAction, pAction->pMod->doHUP, pAction->pMod->doHUPWrkr);
 
 	if(pAction->pMod->doHUP != NULL) {
 		CHKiRet(pAction->pMod->doHUP(pAction->pModData));
+	}
+
+	if(pAction->pMod->doHUPWrkr != NULL) {
+		for(int i = 0 ; i < pAction->wrkrDataTableSize ; ++i) {
+			dbgprintf("HUP: table entry %d: %p %s\n", i,
+				pAction->wrkrDataTable[i],
+				pAction->wrkrDataTable[i] == NULL ? "[unused]" : "");
+			if(pAction->wrkrDataTable[i] != NULL) {
+				CHKiRet(pAction->pMod->doHUPWrkr(pAction->wrkrDataTable[i]));
+			}
+		}
 	}
 
 finalize_it:
