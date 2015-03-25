@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -283,7 +283,7 @@ execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 		CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
 		CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
 	}
-	CHKiRet(msgDelJSON(pMsg, stmt->d.s_foreach.iter->var));
+	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
 finalize_it:
 	RETiRet;
 }

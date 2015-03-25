@@ -4466,7 +4466,7 @@ msgAddMetadata(msg_t *const __restrict__ pMsg,
 		json_object_put(json);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	json_object_object_add(json, metaname, jval);
+	json_object_object_add(json, (const char *const)metaname, jval);
 	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0);
 finalize_it:
 	RETiRet;
