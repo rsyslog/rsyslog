@@ -487,7 +487,7 @@ fi
 
 # valgrind
 AC_ARG_ENABLE(valgrind,
-        [AS_HELP_STRING([--enable-valgrind],[Enable valgrind support settings @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-valgrind],[Enable somes special code that rsyslog core developers consider useful for testing. Do NOT use if you don't exactly know what you are doing, except if told so by rsyslog developers. NOT to be used by distro maintainers for building regular packages. @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_valgrind="yes" ;;
           no) enable_valgrind="no" ;;
