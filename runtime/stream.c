@@ -1862,8 +1862,10 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->inode;
 	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
 
-	cstrFinalize(pThis->prevLineSegment);
-	objSerializePTR(pStrm, prevLineSegment, CSTR);
+	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
+		objSerializePTR(pStrm, prevLineSegment, CSTR);
+	}
 
 	i = pThis->bPrevWasNL;
 	objSerializeSCALAR_VAR(pStrm, bPrevWasNL, INT, i);
