@@ -61,6 +61,7 @@ typedef struct _instanceData {
 	uchar *tplName;		/* assigned output template */
 	int iParams;		/* Holds the count of parameters if set*/
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
+	int bHUPForward;	/* forward HUP to spawned processes? */
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
@@ -86,6 +87,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "output", eCmdHdlrString, 0 },
 	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
+	{ "hup.forward", eCmdHdlrBinary, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -196,14 +198,11 @@ checkProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData)
 	char buf[4096];
 	ssize_t r;
 
-dbgprintf("omprog: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 	if(pWrkrData->fdPipeIn == -1)
 		goto done;
 
 	do {
-memset(buf, 0, sizeof(buf));
 		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf));
-dbgprintf("omprog: read state %lld, data '%s'\n", (long long) r, buf);
 		if(r > 0)
 			writeProgramOutput(pWrkrData, buf, r);
 	} while(r > 0);
@@ -427,7 +426,6 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 
 	do {
 		checkProgramOutput(pWrkrData);
-dbgprintf("omprog: writing to prog (fd %d): %s\n", pWrkrData->fdPipeOut, szMsg);
 		lenWritten = write(pWrkrData->fdPipeOut, ((char*)szMsg)+writeOffset, lenWrite);
 		if(lenWritten == -1) {
 			switch(errno) {
@@ -458,7 +456,6 @@ finalize_it:
 BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
-dbgprintf("DDDD:omprog processing message\n");
 	pData = pWrkrData->pData;
 	if(pData->bForceSingleInst)
 		pthread_mutex_lock(&pData->mut);
@@ -483,6 +480,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->outputFileName = NULL;
 	pData->iParams = 0;
 	pData->bForceSingleInst = 0;
+	pData->bHUPForward = 0;
 }
 
 BEGINnewActInst
@@ -588,6 +586,8 @@ CODESTARTnewActInst
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "hup.forward")) {
+			pData->bHUPForward = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -636,9 +636,13 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
-BEGINdoHUP
-CODESTARTdoHUP
-ENDdoHUP
+BEGINdoHUPWrkr
+CODESTARTdoHUPWrkr
+	DBGPRINTF("omprog: processing HUP for work instance %p, pid %d, forward: %d\n",
+		pWrkrData, (int) pWrkrData->pid, pWrkrData->pData->bHUPForward);
+	if(pWrkrData->pData->bHUPForward)
+		kill(pWrkrData->pid, SIGHUP);
+ENDdoHUPWrkr
 
 
 BEGINmodExit
@@ -656,7 +660,7 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_doHUP
+CODEqueryEtryPt_doHUPWrkr
 ENDqueryEtryPt
 
 
