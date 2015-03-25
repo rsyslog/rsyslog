@@ -108,7 +108,7 @@ This module supports module parameters, only.
 
 .. function:: log.file\ [file name]
 
-   If specified, statistics data is written the specified file. For
+   If specified, statistics data is written to the specified file. For
    robustness, this should be a local file. The file format cannot be
    customized, it consists of a date header, followed by a colon,
    followed by the actual statistics record, all on one line. Only very

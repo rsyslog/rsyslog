@@ -3,8 +3,8 @@ Basic Structure
 
 This section describes how rsyslog configuration basically works. Think
 of rsyslog as a big logging and event processing toolset. It can be considered
-as a framework with some basic processing that is fixed in the way data flows,
-but is highly custumizable in the details of this message flow. During
+a framework with some basic processing that is fixed in the way data flows,
+but is highly customizable in the details of this message flow. During
 configuration, this customization is done by defining and customizing
 the rsyslog objects.
 
@@ -13,8 +13,8 @@ Quick overview of message flow and objects
 Messages enter rsyslog with the help of input modules. Then, they are
 passed to ruleset, where rules are conditionally applied. When a rule
 matches, the message is transferred to an action, which then does 
-something to the message, e.g. write it to a file, database or
-forward it to a remote host.
+something to the message, e.g. writes it to a file, database or
+forwards it to a remote host.
 
 Processing Principles
 ---------------------
@@ -47,10 +47,10 @@ Processing Principles
 - all rules are **always** fully evaluated, no matter if a filter matches
   or not (so we do **not** stop at the first match). If message processing
   shall stop, the "discard" action (represented by the tilde character or the
-  stop command) must explicitely be executed. If discard is executed, 
-  message processing immediately stops, without eveluating any further rules.
+  stop command) must explicitly be executed. If discard is executed, 
+  message processing immediately stops, without evaluating any further rules.
 
-- an action list constains one or many actions
+- an action list contains one or many actions
 
 - inside an action list no further filters are possible
 
@@ -84,14 +84,14 @@ config files.
 
 A different "root" configuration file can be specified via the ``-f <file>``
 rsyslogd command line option. This is usually done within some init
-script or similiar facility.
+script or similar facility.
 
 Statement Types
 ---------------
 Rsyslog supports three different types of configuration statements
 concurrently:
 
--  **sysklogd** - this is the plain old format, thaught everywhere and
+-  **sysklogd** - this is the plain old format, taught everywhere and
    still pretty useful for simple use cases. Note that some very few
    constructs are no longer supported because they are incompatible with
    newer features. These are mentioned in the compatibility docs.
@@ -100,7 +100,7 @@ concurrently:
    actions operate. This is the only format supported in pre-v6 versions
    of rsyslog. It is still fully supported in v6 and above. Note that
    some plugins and features may still only be available through legacy
-   format (because plugins need to be explicitely upgraded to use the
+   format (because plugins need to be explicitly upgraded to use the
    new style format, and this hasn't happened to all plugins).
 -  **RainerScript** - the new style format. This is the best and most
    precise format to be used for more complex cases. The rest of this
@@ -130,7 +130,7 @@ In sysklogd, this looks like:
    mail.info /var/log/mail.log
    mail.err @server.example.net
 
-This is hard to beat in simplicity, still being thaught in courses
+This is hard to beat in simplicity, still being taught in courses
 and a lot of people know this syntax. It is perfectly fine to use
 these constructs even in newly written config files.
 
@@ -143,7 +143,7 @@ when**
   actions must be nested under the same condition)
 
 It is usually **not** recommended to use rsyslog legacy config format
-(those directives starting with a dollar sign). However, some few
+(those directives starting with a dollar sign). However, a few
 settings and modules have not yet been converted to RainerScript. In
 those cases, the legacy syntax must be used.
 
@@ -156,14 +156,14 @@ There are two types of comments:
    line
 -  **C-style Comments** - start with /\* and end with \*/, just like in
    the C programming language. They can be used to comment out multiple
-   lines at one. Comment nesting is not supported, but #-Comments can be
+   lines at once. Comment nesting is not supported, but #-Comments can be
    contained inside a C-style comment.
 
 Processing Order
 ----------------
 
 Directives are processed from the top of rsyslog.conf to the bottom.
-Sequence matters. For example, if you stop processing of a message,
+Order matters. For example, if you stop processing of a message,
 obviously all statements after the stop statement are never evaluated.
 
 Flow Control Statements
@@ -202,7 +202,7 @@ rsyslog.conf), others must be loaded just like inputs.
 
 An action is invoked via the **action(type="type" ...)** object. Type is
 mandatory and must contain the name of the plugin to be called (e.g.
-"omfile" or "ommongodb"). Other paramters may be present. Their type and
+"omfile" or "ommongodb"). Other parameters may be present. Their type and
 use depends on the output plugin in question.
 
 Rulesets and Rules
@@ -220,7 +220,7 @@ input. In the analogy, this means that when a message comes in via that
 input, the "program" (ruleset) bound to it will be executed (but not any
 other!).
 
-There is detail documentation available for
+There is detailed documentation available for
 :doc:`rsyslog rulesets <../concepts/multi_ruleset>`.
 
 For quick reference, rulesets are defined as follows:
