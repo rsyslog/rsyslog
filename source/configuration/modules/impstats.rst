@@ -222,7 +222,7 @@ file instead.
          interval="600"
          severity="7"
          log.syslog="off"
-         /\* need to turn log stream logging off! \*/
+         /* need to turn log stream logging off! */
          log.file="/path/to/local/stats.log")
 
 And finally, we log to both the regular syslog log stream as well as a
