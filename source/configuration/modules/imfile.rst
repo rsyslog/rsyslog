@@ -20,11 +20,11 @@ they would result in empty syslog records. They are simply ignored.
 
 As new lines are written they are taken from the file and processed.
 Depending on the selected mode, this happens via inotify or based on
-a polling interval. Especially in polling mode, reading the file is
-not immediately. But there are also slight delays (due to process
+a polling interval. Especially in polling mode, file reading doesn't
+happen immediately. But there are also slight delays (due to process
 scheduling and internal processing) in inotify mode.
 
-The file monitor support file rotation. To fully work,
+The file monitor supports file rotation. To fully work,
 rsyslogd must run while the file is rotated. Then, any remaining lines
 from the old file are read and processed and when done with that, the
 new file is being processed from the beginning. If rsyslogd is stopped
@@ -41,8 +41,8 @@ See Also
 
 * presentation on `using wildcards with imfile <http://www.slideshare.net/rainergerhards1/using-wildcards-with-rsyslogs-file-monitor-imfile>`_
 
-Meta Data
-.........
+Metadata
+........
 The imfile module supports message metadata. It supports the following
 data items
 
@@ -52,14 +52,14 @@ data items
   useful when using wildcards inside file monitors, because it then
   is the only way to know which file the message originated from.
 
-Meta data is only present if enabled. By default it is enabled for
+Metadata is only present if enabled. By default it is enabled for
 input() statements that contain wildcards. For all others, it is
 disabled by default. It can explicitly be turned on or off via the
 *addMetadata* input() parameter, which always overrides the default.
 
 State Files
 ...........
-Rsyslog must keep track of which parts of the to be monitored file
+Rsyslog must keep track of which parts of the monitored file
 are already processed. This is done in so-called "state files".
 These files are always created in the rsyslog working directory
 (configurable via $WorkDirectory).
@@ -72,7 +72,7 @@ generates state file names according to the following scheme:
 - the full name is prepended after that string, but all occurrences
   of "/" are replaced by "-" to facilitate handling of these files
 
-As a concrete example, consider a file ``/var/log/applog`` is
+As a concrete example, consider file ``/var/log/applog`` is
 being monitored. The corresponding state file will be named
 ``imfile-state:-var-log-applog``.
 
@@ -88,7 +88,7 @@ and as such it will not cover more complex cases.
 
 Note that when $WorkDirectory is not set or
 set to a non-writable location, the state file **will not be generated**.
-In those cases, the file content will always completely be re-sent by
+In those cases, the file content will always be completely re-sent by
 imfile, because the module does not know that it already processed
 parts of that file.
 
@@ -107,9 +107,9 @@ Module Parameters
   ("polling") mode. Traditionally, imfile used polling mode, which is
   much more resource-intense (and slower) than inotify mode. It is
   suggested that users turn on "polling" mode only if they experience
-  strange problems in inotify mode. In theory, there never should be a
+  strange problems in inotify mode. In theory, there should never be a
   reason to enable "polling" mode and later versions will most probably
-  remove that mode. 
+  remove it. 
 
 .. index:: 
    single: imfile; PollingInterval
@@ -190,7 +190,7 @@ Input Parameters
    single: imfile; ReadMode
 .. function:: ReadMode [mode]
 
-   This mode should defined when having multiline messages. The value
+   This mode should be defined when having multiline messages. The value
    can range from 0-2 and determines the multiline detection method.
 
    0 - (**default**) line based (each line is a new message)

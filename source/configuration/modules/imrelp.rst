@@ -15,7 +15,7 @@ relp client and relp server breaks after the client could successfully
 send some messages but the server could not acknowledge them. The window
 of opportunity is very slim, but in theory this is possible. Future
 versions of RELP will prevent this. Please also note that rsyslogd may
-lose a few messages if rsyslog is shutdown while a network conneciton to
+lose a few messages if rsyslog is shutdown while a network connection to
 the server is broken and could not yet be recovered. Future version of
 RELP support in rsyslog will prevent that. Please note that both
 scenarios also exists with plain tcp syslog. RELP, even with the small
