@@ -13,6 +13,9 @@ Version 8.9.0 [v8-stable] 2015-04-07
   The file format template was used, which obviously does not work for
   forwarding. Thanks to Christopher Racky for alerting us.
   closes https://github.com/rsyslog/rsyslog/issues/268
+- bugfix: size-based legacy config statements did not work properly
+  on some platforms, they were incorrectly handled, resulting in all
+  sorts of "interesting" effects (up to segfault on startup)
 - build system: added option --without-valgrind-testbench
   ... which provides the capability to either enforce or turn off
   valgrind use inside the testbench. Thanks to whissi for the patch.
