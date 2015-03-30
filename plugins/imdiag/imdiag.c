@@ -383,7 +383,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 						UCHAR_CONSTANT("imdiag") : pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imdiag"));
 	/* we support octect-cuunted frame (constant 1 below) */
-	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1);
+	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal, 1, NULL);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
