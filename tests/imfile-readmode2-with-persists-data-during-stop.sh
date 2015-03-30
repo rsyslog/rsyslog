@@ -72,5 +72,4 @@ done
 
 ## if we got here, all is good :)
 
-exit 1
 source $srcdir/diag.sh exit
