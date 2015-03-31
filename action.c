@@ -1347,6 +1347,23 @@ processBatchMain(void *__restrict__ const pVoid,
 }
 
 
+/* remove an action worker instance from our table of
+ * workers. To be called from worker handler (wti).
+ */
+void
+actionRemoveWorker(action_t *const __restrict__ pAction,
+	void *const __restrict__ actWrkrData)
+{
+	pAction->nWrkr--;
+	for(int w = 0 ; w < pAction->wrkrDataTableSize ; ++w) {
+		if(pAction->wrkrDataTable[w] == actWrkrData) {
+			pAction->wrkrDataTable[w] = NULL;
+			break; /* done */
+		}
+	}
+}
+
+
 /* call the HUP handler for a given action, if such a handler is defined.
  * Note that the action must be able to service HUP requests concurrently
  * to any current doAction() processing.

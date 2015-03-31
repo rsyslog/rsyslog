@@ -356,19 +356,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
 		if(wrkrInfo->actWrkrData != NULL) {
 			pAction = wrkrInfo->pAction;
-
-			// TODO: move this to action.c/h
-			pAction->nWrkr--;
-			for(int w = 0 ; w < pAction->wrkrDataTableSize ; ++w) {
-				if(pAction->wrkrDataTable[w] == wrkrInfo->actWrkrData) {
-					pAction->wrkrDataTable[w] = NULL;
-					break; /* done */
-				}
-			}
-			DBGPRINTF("wti %p: action %d now has %d workers\n",
-				  pThis, pAction->iActionNbr, pAction->nWrkr);
-			// end TODO
-
+			actionRemoveWorker(pAction, wrkrInfo->actWrkrData);
 			pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
 			if(pAction->isTransactional) {
 				/* free iparam "cache" - we need to go through to max! */
