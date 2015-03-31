@@ -55,13 +55,14 @@ MODULE_CNFNAME("omprog")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
+#define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
 	uchar *tplName;		/* assigned output template */
 	int iParams;		/* Holds the count of parameters if set*/
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
-	int bHUPForward;	/* forward HUP to spawned processes? */
+	int iHUPForward;	/* signal to forward on HUP (or NO_HUP_FORWARD) */
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
@@ -87,7 +88,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "output", eCmdHdlrString, 0 },
 	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
-	{ "hup.forward", eCmdHdlrBinary, 0 },
+	{ "hup.signal", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -480,7 +481,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->outputFileName = NULL;
 	pData->iParams = 0;
 	pData->bForceSingleInst = 0;
-	pData->bHUPForward = 0;
+	pData->iHUPForward = NO_HUP_FORWARD;
 }
 
 BEGINnewActInst
@@ -586,8 +587,25 @@ CODESTARTnewActInst
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "hup.forward")) {
-			pData->bHUPForward = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "hup.signal")) {
+			const char *const signal = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(signal, "HUP"))
+				pData->iHUPForward = SIGHUP;
+			else if(!strcmp(signal, "USR1"))
+				pData->iHUPForward = SIGUSR1;
+			else if(!strcmp(signal, "USR2"))
+				pData->iHUPForward = SIGUSR2;
+			else if(!strcmp(signal, "INT"))
+				pData->iHUPForward = SIGINT;
+			else if(!strcmp(signal, "TERM"))
+				pData->iHUPForward = SIGTERM;
+			else {
+				errmsg.LogError(0, RS_RET_CONF_PARAM_INVLD,
+					"omprog: hup.signal '%s' in hup.signal parameter",
+					signal);
+				ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+			}
+			free((void*)signal);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -639,9 +657,9 @@ ENDparseSelectorAct
 BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
 	DBGPRINTF("omprog: processing HUP for work instance %p, pid %d, forward: %d\n",
-		pWrkrData, (int) pWrkrData->pid, pWrkrData->pData->bHUPForward);
-	if(pWrkrData->pData->bHUPForward)
-		kill(pWrkrData->pid, SIGHUP);
+		pWrkrData, (int) pWrkrData->pid, pWrkrData->pData->iHUPForward);
+	if(pWrkrData->pData->iHUPForward != NO_HUP_FORWARD)
+		kill(pWrkrData->pid, pWrkrData->pData->iHUPForward);
 ENDdoHUPWrkr
 
 
