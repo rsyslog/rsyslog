@@ -11,6 +11,9 @@ Version 8.9.0 [v8-stable] 2015-04-07
   - sysSock.parseHostname module parameter
   - useSpecialParser input parameter
   - parseHostname input parameter
+- 0mq: improvements in input and output modules
+  See module READMEs, part is to be considered experimental.
+  Thanks to Brian Knox for the contribution.
 - imtcp: add support for ip based bind for imtcp -> param "address"
   Thanks to github user crackytsi for the patch.
 - bugfix: MsgDeserialize out of sync with MsgSerialize for StrucData
