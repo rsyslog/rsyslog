@@ -73,7 +73,7 @@ Global Parameters
    received via the system log socket.
 -  **SysSock.IgnoreOwnMessages** [**on**/off] (available since 7.3.7)
    Ignores messages that originated from the same instance of rsyslogd.
-   There usually is no reason to receive messages from ourselfs. This
+   There usually is no reason to receive messages from ourselves. This
    setting is vital when writing messages to the Linux journal. See
    `omjournal <omjournal.html>`_ module documentation for a more
    in-depth description.
@@ -193,7 +193,7 @@ Input Parameters
    special parser is used that parses the format that is usually
    used on the system log socket (the one syslog(3) creates).
    If set to "off", the regular parser chain is used, in which case
-   the format on the log socket can be abitrary.
+   the format on the log socket can be arbitrary.
    Note that when the special parser is used, rsyslog is able to
    inject a more precise timestamp into the message (it is obtained
    from the log socket). If the regular parser chain is used, this
