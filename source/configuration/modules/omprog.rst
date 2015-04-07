@@ -68,6 +68,11 @@ not work as expected.
    the binary name only. In legacy config, it is **not possible** to
    specify command line parameters.
 
+-  **hup.signal** [v8.9.0+]
+   Specifies which signal, if any, is to be forwarded to the executed program.
+   Currently, HUP, USR1, USR2, INT, and TERM are supported. If unset, no signal
+   is sent on HUP. This is the default and what pre 8.9.0 versions did.
+
 **Caveats/Known Bugs:**
 
 -  None.

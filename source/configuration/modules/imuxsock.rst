@@ -109,6 +109,12 @@ Global Parameters
    when opened and also unlinked when finally closed. Note that this
    setting has no effect when running under systemd control (because
    systemd handles the socket).
+-  **sysSock.useSpecialParser** (available since 8.9.0)
+   The equivalent of the "useSpecialParser" input parameter for the
+   system socket.
+-  **sysSock.parseHostname** (available since 8.9.0)
+   The equivalent of the "parseHostname" input parameter for the
+   system socket.
 
 Input Parameters
 ^^^^^^^^^^^^^^^^
@@ -182,6 +188,23 @@ Input Parameters
    handle socket creation yourself. Note that handling socket creation
    oneself has the advantage that a limited amount of messages may be
    queued by the OS if rsyslog is not running.
+-  **useSpecialParser** <**on**/off> (available since 8.9.0)
+   If turned on (the default and the way it was up until 8.8.0) a
+   special parser is used that parses the format that is usually
+   used on the system log socket (the one syslog(3) creates).
+   If set to "off", the regular parser chain is used, in which case
+   the format on the log socket can be abitrary.
+   Note that when the special parser is used, rsyslog is able to
+   inject a more precise timestamp into the message (it is obtained
+   from the log socket). If the regular parser chain is used, this
+   is not possible.
+-  **parseHostname** <on/**off**> (available since 8.9.0)
+   Normally, the local log sockets do *not* contain hostnames. With
+   this directive, the parser chain can be instructed to not
+   expect them (setting "off", the default). If set to on, parsers
+   will expect hostnames just like in regular formats.
+   Note: this option only has an effect if *useSpecialParsers* is
+   set to "off".
 
 See Also
 --------
