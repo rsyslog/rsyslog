@@ -13,8 +13,8 @@ input(
 	type="imczmq"
 	endpoints="tcp://*:24555"
 	topics="topic1,topic2,topic3"
-	socktype="SUB"
-	conntype="CURVESERVER"
+	socktype="PULL"
+	authtype="CURVESERVER"
 	curveclientcert="/etc/curve.d/"
 	curveservercert="/etc/curve.d/example_curve_server_cert"
 )
@@ -26,11 +26,7 @@ name: name of this action
 type: type of action (imczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
 socktype: zeromq socket type (currently supports PULL and SUB)
-conntype:
-	CLIENT - zeromq connect
-	SERVER - zeromq bind
-	CURVECLIENT - zeromq connect with curve encryption
-	CURVESERVER - zeromq bind with curve encryption
+authtype: CURVECLIENT or CURVESERVER
 curveclientcert: 
 	if CURVECLIENT, this client's cert
 	if CURVESERVER, "*" for all, or a directory of allowed public certs
