@@ -287,7 +287,7 @@ rsRetVal
 wtiWorker(wti_t *__restrict__ const pThis)
 {
 	wtp_t *__restrict__ const pWtp = pThis->pWtp; /* our worker thread pool -- shortcut */
-	const action_t *__restrict__ pAction;
+	action_t *__restrict__ pAction;
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
 	rsRetVal terminateRet;
@@ -356,6 +356,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
 		if(wrkrInfo->actWrkrData != NULL) {
 			pAction = wrkrInfo->pAction;
+			actionRemoveWorker(pAction, wrkrInfo->actWrkrData);
 			pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
 			if(pAction->isTransactional) {
 				/* free iparam "cache" - we need to go through to max! */
