@@ -361,7 +361,7 @@ finalize_it:
 
 
 /* This function is used both by legacy and RainerScript conf. It is a real setter. */
-static rsRetVal
+static void
 setMaxLine(const int64_t iNew)
 {
 	if(iNew < 128) {
@@ -381,9 +381,8 @@ setMaxLine(const int64_t iNew)
 static rsRetVal
 legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
 {
-	DEFiRet;
-	iRet = setMaxLine(iNew);
-	RETiRet;
+	setMaxLine(iNew);
+	return RS_RET_OK;
 }
 
 static rsRetVal

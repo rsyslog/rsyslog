@@ -308,6 +308,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
 	d_free(pThis->peParamPassing);
+	d_free(pThis->wrkrDataTable);
 
 finalize_it:
 	d_free(pThis);
@@ -772,6 +773,24 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 						               pThis->pModData));
 		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
 		setActionState(pWti, pThis, ACT_STATE_RDY); /* action is enabled */
+		
+		/* maintain worker data table -- only needed if wrkrHUP is requested! */
+
+		int freeSpot;
+		for(freeSpot = 0 ; freeSpot < pThis->wrkrDataTableSize ; ++freeSpot)
+			if(pThis->wrkrDataTable[freeSpot] == NULL)
+				break;
+		if(pThis->nWrkr == pThis->wrkrDataTableSize) {
+			// TODO: check realloc, fall back to old table if it fails. Better than nothing...
+			pThis->wrkrDataTable = realloc(pThis->wrkrDataTable,
+				(pThis->wrkrDataTableSize + 1) * sizeof(void*));
+			pThis->wrkrDataTableSize++;
+		}
+dbgprintf("DDDD: writing data to table spot %d\n", freeSpot);
+		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
+		pThis->nWrkr++;
+		DBGPRINTF("wti %p: created action worker instance %d for "
+			  "action %d\n", pWti, pThis->nWrkr, pThis->iActionNbr);
 	}
 finalize_it:
 	RETiRet;
@@ -1183,7 +1202,6 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
@@ -1235,6 +1253,7 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		}
 	} while(!bDone);
 finalize_it:
+	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
@@ -1328,6 +1347,23 @@ processBatchMain(void *__restrict__ const pVoid,
 }
 
 
+/* remove an action worker instance from our table of
+ * workers. To be called from worker handler (wti).
+ */
+void
+actionRemoveWorker(action_t *const __restrict__ pAction,
+	void *const __restrict__ actWrkrData)
+{
+	pAction->nWrkr--;
+	for(int w = 0 ; w < pAction->wrkrDataTableSize ; ++w) {
+		if(pAction->wrkrDataTable[w] == actWrkrData) {
+			pAction->wrkrDataTable[w] = NULL;
+			break; /* done */
+		}
+	}
+}
+
+
 /* call the HUP handler for a given action, if such a handler is defined.
  * Note that the action must be able to service HUP requests concurrently
  * to any current doAction() processing.
@@ -1338,10 +1374,22 @@ actionCallHUPHdlr(action_t * const pAction)
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
-	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
+	DBGPRINTF("Action %p checks HUP hdlr, act level: %p, wrkr level %p\n",
+		pAction, pAction->pMod->doHUP, pAction->pMod->doHUPWrkr);
 
 	if(pAction->pMod->doHUP != NULL) {
 		CHKiRet(pAction->pMod->doHUP(pAction->pModData));
+	}
+
+	if(pAction->pMod->doHUPWrkr != NULL) {
+		for(int i = 0 ; i < pAction->wrkrDataTableSize ; ++i) {
+			dbgprintf("HUP: table entry %d: %p %s\n", i,
+				pAction->wrkrDataTable[i],
+				pAction->wrkrDataTable[i] == NULL ? "[unused]" : "");
+			if(pAction->wrkrDataTable[i] != NULL) {
+				CHKiRet(pAction->pMod->doHUPWrkr(pAction->wrkrDataTable[i]));
+			}
+		}
 	}
 
 finalize_it:

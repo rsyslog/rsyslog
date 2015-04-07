@@ -1139,7 +1139,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	psz = getRcvFromIP(pThis); 
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvFromIP"), PROPTYPE_PSZ, (void*) psz));
 	psz = pThis->pszStrucData; 
-	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRcvStrucData"), PROPTYPE_PSZ, (void*) psz));
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void*) psz));
 	if(pThis->json != NULL) {
 		psz = (uchar*) json_object_get_string(pThis->json);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void*) psz));
@@ -4466,7 +4466,7 @@ msgAddMetadata(msg_t *const __restrict__ pMsg,
 		json_object_put(json);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	json_object_object_add(json, metaname, jval);
+	json_object_object_add(json, (const char *const)metaname, jval);
 	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0);
 finalize_it:
 	RETiRet;

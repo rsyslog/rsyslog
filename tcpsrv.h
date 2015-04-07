@@ -37,6 +37,7 @@ typedef enum ETCPsyslogFramingAnomaly {
 /* list of tcp listen ports */
 struct tcpLstnPortList_s {
 	uchar *pszPort;			/**< the ports the listener shall listen on */
+	uchar *pszAddr;                 /**< the addrs the listener shall listen on */
 	prop_t *pInputName;
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
 	ruleset_t *pRuleset;		/**< associated ruleset */
@@ -118,7 +119,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(tcpsrv_t **ppThis);
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
-	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort, int bSuppOctetFram);
+	rsRetVal (*configureTCPListen)(tcpsrv_t*, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */

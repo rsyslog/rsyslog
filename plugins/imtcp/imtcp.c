@@ -102,10 +102,12 @@ static struct configSettings_s {
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszInputName;
 	uchar *pszBindRuleset;
+	uchar *lstnIP;			/* which IP we should listen on? */
 } cs;
 
 struct instanceConf_s {
 	uchar *pszBindPort;		/* port to bind to */
+	uchar *pszBindAddr;             /* IP to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -170,6 +172,7 @@ static struct cnfparamblk modpblk =
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "address", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
@@ -271,6 +274,7 @@ createInstance(instanceConf_t **pinst)
 	inst->next = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
+	inst->pszBindAddr = NULL;
 	inst->dfltTZ = NULL;
 	inst->bSuppOctetFram = -1; /* unset */
 	inst->bSPFramingFix = 0;
@@ -310,6 +314,12 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszBindRuleset = ustrdup(cs.pszBindRuleset));
 	}
+        if((cs.lstnIP == NULL) || (cs.lstnIP[0] == '\0')) {
+                inst->pszBindAddr = NULL;
+        } else {
+                CHKmalloc(inst->pszBindAddr = ustrdup(cs.lstnIP));
+        }
+
 	if((cs.pszInputName == NULL) || (cs.pszInputName[0] == '\0')) {
 		inst->pszInputName = NULL;
 	} else {
@@ -369,7 +379,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar*)"" : inst->dfltTZ));
 	CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
 	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
-	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram);
+	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram, inst->pszBindAddr);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -405,6 +415,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+                } else if(!strcmp(inppblk.descr[i].name, "address")) {
+                        inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
@@ -619,6 +631,7 @@ CODESTARTfreeCnf
 	}
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		free(inst->pszBindAddr);
 		free(inst->pszInputName);
 		free(inst->dfltTZ);
 		del = inst;
