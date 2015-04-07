@@ -22,7 +22,7 @@ subset of the parameters are supported.
 Module Parameters
 ^^^^^^^^^^^^^^^^^
 
-These paramters can be used with the "module()" statement. They apply
+These parameters can be used with the "module()" statement. They apply
 globaly to all inputs defined by the module.
 
 .. function:: Threads <number>

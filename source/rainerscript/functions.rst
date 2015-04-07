@@ -18,7 +18,7 @@ RainerScript supports a currently quite limited set of functions:
 -  replace(str, substr_to_replace, replace_with) - returns new string with
    all instances of substr_to_replace replaced by replace_with. Eg. 
    replace("foo bar baz", " b", ", B") would return "foo, Bar, Baz".
--  re\_match(expr, re) - returns 1, if expr matches re, 0 otherwise
+-  re\_match(expr, re) - returns 1, if expr matches re, 0 otherwise. Uses POSIX ERE.
 -  re\_extract(expr, re, match, submatch, no-found) - extracts data from
    a string (property) via a regular expression match. POSIX ERE regular
    expressions are used. The variable "match" contains the number of the

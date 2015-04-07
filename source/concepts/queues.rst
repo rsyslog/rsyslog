@@ -265,7 +265,7 @@ too low will cause disk-assistance to be turned on more often than
 actually needed.
 
 The water marks can be set via the "*$<object>QueueHighWatermark*\ "
-and  "*$<object>QueueHighWatermark*\ " configuration file directives.
+and  "*$<object>QueueLowWatermark*\ " configuration file directives.
 Note that these are actual numbers, not precentages. Be sure they make
 sense (also in respect to "*$<object>QueueSize*\ "), as rsyslodg does
 currently not perform any checks on the numbers provided. It is easy to

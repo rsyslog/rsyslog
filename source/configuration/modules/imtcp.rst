@@ -137,6 +137,13 @@ Action Parameters
 
    Starts a TCP server on selected port
 
+.. function:: address <name>
+
+   *Default: all interfaces*
+
+   On multi-homed machines, specifies to which local address the
+   listerner should be bound.
+
 .. function:: Name <name>
 
    Sets a name for the inputname property. If no name is set "imtcp" is

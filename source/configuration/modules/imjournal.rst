@@ -28,7 +28,7 @@ anticipated use cases.
 
 **Warning:** Some versions of systemd journal have problems with
 database corruption, which leads to the journal to return the same data
-endlessly in a thight loop. This results in massive message duplication
+endlessly in a tight loop. This results in massive message duplication
 inside rsyslog probably resulting in a denial-of-service when the system
 ressouces get exhausted. This can be somewhat mitigated by using proper
 rate-limiters, but even then there are spikes of old data which are
