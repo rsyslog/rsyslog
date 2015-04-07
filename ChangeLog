@@ -11,6 +11,9 @@ Version 8.9.0 [v8-stable] 2015-04-07
   - sysSock.parseHostname module parameter
   - useSpecialParser input parameter
   - parseHostname input parameter
+- bugfix: MsgDeserialize out of sync with MsgSerialize for StrucData
+  This lead to failure of disk queue processing when structured data was
+  present. Thanks to github user adrush for the fix.
 - bugfix imfile: partial data loss, especially in readMode != 0
   closes https://github.com/rsyslog/rsyslog/issues/144
 - bugfix: potential large memory consumption with failed actions
