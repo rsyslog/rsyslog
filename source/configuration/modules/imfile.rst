@@ -51,6 +51,7 @@ data items
   Name of the file where the message originated from. This is most
   useful when using wildcards inside file monitors, because it then
   is the only way to know which file the message originated from.
+  The value can be accessed using the %$!metadata!filename% property.
 
 Metadata is only present if enabled. By default it is enabled for
 input() statements that contain wildcards. For all others, it is
