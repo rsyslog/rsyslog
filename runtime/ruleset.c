@@ -269,8 +269,8 @@ execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 	json_object *arr;
 	DEFiRet;
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
-	if (arr == NULL) {
-		DBGPRINTF("foreach loop skipped, as collection is empty\n");
+	if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
+		DBGPRINTF("foreach loop skipped, as object to iterate upon is either empty or not an array\n");
 		FINALIZE;
 	}
 	int len = json_object_array_length(arr);
