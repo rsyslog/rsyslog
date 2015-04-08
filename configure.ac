@@ -800,8 +800,13 @@ if test "x$enable_rsyslogrt" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
-if test "$GCC" = "yes"
-then RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Werror=implicit-function-declaration -g"
+if test "$GCC" = "yes"; then
+  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+  if $CC -Werror=implicit-function-declaration -c /dev/null 2>/dev/null; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
+  elif $CC -Werror-implicit-function-declaration -c /dev/null 2>/dev/null; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
+  fi
 fi
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
