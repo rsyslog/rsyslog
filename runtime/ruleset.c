@@ -108,6 +108,11 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 				scriptIterateAllActions(stmt->d.s_if.t_else,
 							pFunc, pParam);
 			break;
+        case S_FOREACH:
+			if(stmt->d.s_foreach.body != NULL)
+				scriptIterateAllActions(stmt->d.s_foreach.body,
+                                        pFunc, pParam);
+			break;
 		case S_PRIFILT:
 			if(stmt->d.s_prifilt.t_then != NULL)
 				scriptIterateAllActions(stmt->d.s_prifilt.t_then,

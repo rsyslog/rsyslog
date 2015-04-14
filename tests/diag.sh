@@ -231,6 +231,13 @@ case $1 in
 		    source ./diag.sh error-exit 1
 		fi
 		;;
+   'custom-content-check') 
+		cat $3 | grep -qF "$2"
+		if [ "$?" -ne "0" ]; then
+		    echo content-check failed to find "'$2'" inside "'$3'"
+		    source ./diag.sh error-exit 1
+		fi
+		;;
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
