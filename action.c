@@ -188,7 +188,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
-	{ "action.resumeinterval", eCmdHdlrInt, 0 }
+	{ "action.resumeinterval", eCmdHdlrInt, 0 },
+	{ "action.copymsg", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -355,6 +356,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->isTransactional = 0;
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
 	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
+	pThis->bCopyMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -1448,7 +1450,7 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 	} else {/* in this case, we do single submits to the queue. 
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */
-		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
+		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
 	}
 
 	RETiRet;
@@ -1676,6 +1678,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bReportSuspension = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
 			pAction->bReportSuspensionCont = (int) pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.copymsg")) {
+			pAction->bCopyMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {
