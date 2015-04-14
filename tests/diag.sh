@@ -292,7 +292,7 @@ case $1 in
 				echo "core $CORE" >>gdb.in
 				echo "info thread" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
-				echo "q" >> gdb.in" >> gdb.in" >> gdb.in" >> gdb.in" >> gdb.in
+				echo "q" >> gdb.in
 				gdb ../tools/rsyslogd < gdb.in
 				CORE=
 				rm gdb.in
