@@ -117,7 +117,7 @@ General Action Parameters
   also automatically set to "on".
   The default for this setting is the equally-named global
   parameter.
--  **action.copyMsg** on/*off*
+- **action.copyMsg** on/*off*
   Configures action to *copy* the message if *on*. Defaults to
   *off* (which is how actions have worked traditionally), which
   causes queue to refer to the original message object, with
