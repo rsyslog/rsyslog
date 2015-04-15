@@ -129,7 +129,7 @@ In the example, we created a rsyslog certificate authority (CA). Guard
 the CA's files. You need them whenever you need to create a new machine
 certificate. We also saw how to generate the machine certificates
 themselfs and distribute them to the individual machines. Also, you have
-found some configuration samples for a sever, a client and a syslog
+found some configuration samples for a server, a client and a syslog
 relay. Hopefully, this will enable you to set up a similar system in
 many environments.
 
