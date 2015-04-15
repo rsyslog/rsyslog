@@ -130,7 +130,7 @@ just as you use 
 
 ::
 
-  *.*  @@<sever>:<port>;<template>
+  *.*  @@<server>:<port>;<template>
 
 to forward a message via plain tcp syslog.
 
