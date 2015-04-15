@@ -855,6 +855,8 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	ssize_t wrRet;
 	sbool bMutLocked = 0;
 	char errStr[1024];
+	context ctx;
+	ctx.errRoot=0;
 	DEFiRet;
 
 	if(pData->errorFile == NULL) {
@@ -868,8 +870,6 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 
 	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly , pData->interleaved);
 
-	context ctx;
-	ctx.errRoot=0;
 	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
 	{
 		if(getDataErrorDefault(pWrkrData,pReplyRoot,reqmsg,&rendered) != RS_RET_OK) {
