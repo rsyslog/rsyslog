@@ -124,13 +124,13 @@ be specified. To send a message via RELP, use
 
 ::
 
-  *.*  :omrelp:<sever>:<port>;<template>
+  *.*  :omrelp:<server>:<port>;<template>
 
 just as you use 
 
 ::
 
-  *.*  @@<sever>:<port>;<template>
+  *.*  @@<server>:<port>;<template>
 
 to forward a message via plain tcp syslog.
 
