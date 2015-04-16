@@ -89,7 +89,7 @@ the server. In short, the setup is as follows:
 **Client**
 
 -  forwards messages via plain tcp syslog using gtls netstream driver to
-   central sever on port 10514
+   central server on port 10514
 
 **Server**
 

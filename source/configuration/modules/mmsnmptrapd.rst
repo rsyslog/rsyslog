@@ -65,7 +65,7 @@ output modules are also available to mmsnmptrapd.
    this tag when it comes to matching incoming messages. It MUST not be
    given, except if two slashes are required for whatever reasons (so
    "tag/" results in a check for "tag//" at the start of the tag field).
--  **$mmsnmptrapdSeverityMapping** [severtiymap]
+-  **$mmsnmptrapdSeverityMapping** [severitymap]
    This specifies the severity mapping table. It needs to be specified
    as a list. Note that due to the current config system **no
    whitespace** is supported inside the list, so be sure not to use any
