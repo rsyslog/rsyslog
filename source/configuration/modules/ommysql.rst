@@ -69,7 +69,7 @@ creating your own custom template.
 **Sample:**
 
 The following sample writes all syslog messages to the database
-"syslog\_db" on mysqlsever.example.com. The server is being accessed
+"syslog\_db" on mysqlserver.example.com. The server is being accessed
 under the account of "user" with password "pwd".
 
 ::

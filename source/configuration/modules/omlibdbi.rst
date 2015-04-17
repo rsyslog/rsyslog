@@ -114,7 +114,7 @@ sure the let us know at
 **Sample:**
 
 The following sample writes all syslog messages to the database
-"syslog\_db" on mysqlsever.example.com. The server is MySQL and being
+"syslog\_db" on mysqlserver.example.com. The server is MySQL and being
 accessed under the account of "user" with password "pwd" (if you have
 empty passwords, just remove the $ActionLibdbiPassword line).
 

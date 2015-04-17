@@ -37,7 +37,7 @@ are deployed and it is sufficient proof of authenticy when their
 certificates are signed by the CA the server trusts. This is better than
 anon authentication, but still not recommended. **Known Problems**
 
-Even in x509/fingerprint mode, both the client and sever certificate
+Even in x509/fingerprint mode, both the client and server certificate
 currently must be signed by the same root CA. This is an artifact of the
 underlying GnuTLS library and the way we use it. It is expected that we
 can resolve this issue in the future.
