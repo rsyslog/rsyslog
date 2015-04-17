@@ -36,7 +36,7 @@ used. This template is:
 template(name="BSON" type="string" string="\\"sys\\" : \\"%hostname%\\",
 \\"time\\" : \\"%timereported:::rfc3339%\\", \\"time\_rcvd\\" :
 \\"%timegenerated:::rfc3339%\\", \\"msg\\" : \\"%msg%\\",
-\\"syslog\_fac\\" : \\"%syslogfacility%\\", \\"syslog\_sever\\" :
+\\"syslog\_fac\\" : \\"%syslogfacility%\\", \\"syslog\_server\\" :
 \\"%syslogseverity%\\", \\"syslog\_tag\\" : \\"%syslogtag%\\",
 \\"procid\\" : \\"%programname%\\", \\"pid\\" : \\"%procid%\\",
 \\"level\\" : \\"%syslogpriority-text%\\"")
@@ -56,7 +56,7 @@ field "level" contains the rsyslog property "syslogpriority-text".
 **Sample:**
 
 The following sample writes all syslog messages to the database "syslog"
-and into the collection "log" on mongosever.example.com. The server is
+and into the collection "log" on mongoserver.example.com. The server is
 being accessed under the account of "user" with password "pwd".
 
 ::
