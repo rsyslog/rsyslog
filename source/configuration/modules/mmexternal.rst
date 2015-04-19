@@ -10,7 +10,10 @@ Support module for external message modification modules
 **Description**:
 
 This module permits to integrate external message modification plugins
-into rswyslog.
+into rsyslog.
+
+For details on the interface specification, see rsyslog's source in the
+./plugins/external/INTERFACE.md.
  
 
 **Action Parameters**:
