@@ -5,7 +5,7 @@
  * in a useful manner. It is still undecided if all functions will continue
  * to stay here or some will be moved into parser modules (once we have them).
  *
- * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -399,7 +399,7 @@ finalize_it:
  * the length is kept unmodified. -- rgerhards, 2009-09-23
  *
  * We support this format:
- * [yyyy] Mon mm [yyyy] hh:mm:ss[.subsec][ TZSTRING:]
+ * [yyyy] Mon mm [yyyy] hh:mm:ss[.subsec][ [yyyy ]/[TZSTRING:]]
  * Note that [yyyy] and [.subsec] are non-standard but frequently occur.
  * Also [yyyy] can only occur once -- if it occurs twice, we flag the
  * timestamp as invalid. if bParseTZ is true, we try to obtain a
@@ -407,9 +407,16 @@ finalize_it:
  * (Cisco format). This option is a bit dangerous, as it could already
  * by the tag. So it MUST only be enabled in specialised parsers.
  * subsec, [yyyy] in front, TZSTRING was added in 2014-07-08 rgerhards
+ * Similarly, we try to detect a year after the timestamp if
+ * bDetectYearAfterTime is set. This is mutally exclusive with bParseTZ.
+ * Note: bDetectYearAfterTime will misdetect hostnames in the range
+ * 2000..2100 as years, so this option should explicitly be turned on
+ * and is not meant for general consumption.
  */
 static rsRetVal
-ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const int bParseTZ)
+ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
+	const int bParseTZ,
+	const int bDetectYearAfterTime)
 {
 	/* variables to temporarily hold time information while we parse */
 	int month;
@@ -684,6 +691,22 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr, const
 				OffsetHour = tzinfo->offsHour;
 				OffsetMinute = tzinfo->offsMin;
 			}
+		}
+	}
+	if(bDetectYearAfterTime && year == 0 && lenStr > 5 && *pszTS == ' ') {
+		int j;
+		int y = 0;
+		for(j = 1 ; j < 5 ; ++j) {
+			if(pszTS[j] < '0' || pszTS[j] > '9')
+				break;
+			y = 10 * y + pszTS[j] - '0';
+		}
+		if(lenStr > 6 && pszTS[5] != ' ')
+			y = 0; /* no year! */
+		if(2000 <= y && y < 2100) {
+			year = y;
+			pszTS += 5; /* we need to preserve the SP, checked below */
+			lenStr -= 5;
 		}
 	}
 
