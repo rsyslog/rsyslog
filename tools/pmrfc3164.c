@@ -63,7 +63,8 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-	{ "detect.yearaftertimestamp", eCmdHdlrBinary, 0 }
+	{ "detect.yearaftertimestamp", eCmdHdlrBinary, 0 },
+	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -73,6 +74,7 @@ static struct cnfparamblk parserpblk =
 
 struct instanceConf_s {
 	int bDetectYearAfterTimestamp; /* is ORIGIN field present? */
+	int bPermitSquareBracketsInHostname; /* is ORIGIN field present? */
 };
 
 
@@ -95,6 +97,7 @@ createInstance(instanceConf_t **pinst)
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->bDetectYearAfterTimestamp = 0;
+	inst->bPermitSquareBracketsInHostname = 0;
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -125,6 +128,8 @@ CODESTARTnewParserInst
 			continue;
 		if(!strcmp(parserpblk.descr[i].name, "detect.yearaftertimestamp")) {
 			inst->bDetectYearAfterTimestamp = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "permit.squarebracketsinhostname")) {
+			inst->bPermitSquareBracketsInHostname = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
@@ -213,13 +218,30 @@ CODESTARTparse
 		 * the fields. I think this logic shall work with any type of syslog message.
 		 * rgerhards, 2009-06-23: and I now have extended this logic to every character
 		 * that is not a valid hostname.
+		 * A "hostname" can validly include "[]" at the beginning and end. This sometimes
+		 * happens with IP address (e.g. "[192.168.0.1]"). This must be turned on via
+		 * an option as it may interfere with non-hostnames in some message formats.
+		 * rgerhards, 2015-04-20
 		 */
 		if(lenMsg > 0 && pMsg->msgFlags & PARSE_HOSTNAME) {
 			i = 0;
-			while(i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.'
-				|| p2parse[i] == '_' || p2parse[i] == '-') && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
+			int bHadSBracket = 0;
+			if(pInst->bPermitSquareBracketsInHostname) {
+				if(i < lenMsg && p2parse[i] == '[') {
+					bHadSBracket = 1;
+					bufParseHOSTNAME[0] = '[';
+					++i;
+				}
+			}
+			while(i < lenMsg
+			        && (isalnum(p2parse[i]) || p2parse[i] == '.'
+					|| p2parse[i] == '_' || p2parse[i] == '-'
+					|| (p2parse[i] == ']' && bHadSBracket) )
+				&& i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
+				if(p2parse[i] == ']')
+					break;	/* must be closing bracket */
 			}
 
 			if(i == lenMsg) {
@@ -230,12 +252,31 @@ CODESTARTparse
 				lenMsg -= i;
 				bufParseHOSTNAME[i] = '\0';
 				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
-			} else if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
-				/* we got a hostname! */
-				p2parse += i + 1; /* "eat" it (including SP delimiter) */
-				lenMsg -= i + 1;
-				bufParseHOSTNAME[i] = '\0';
-				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+			} else {
+				int isHostName = 0;
+				if(i > 0) {
+					if(bHadSBracket) {
+						if(p2parse[i] == ']') {
+							bufParseHOSTNAME[i] = ']';
+							++i;
+							isHostName = 1;
+						}
+					} else {
+						if(isalnum(p2parse[i-1])) {
+							isHostName = 1;
+						}
+					}
+					if(p2parse[i] != ' ')
+						isHostName = 0;
+				}
+
+				if(isHostName) {
+					/* we got a hostname! */
+					p2parse += i + 1; /* "eat" it (including SP delimiter) */
+					lenMsg -= i + 1;
+					bufParseHOSTNAME[i] = '\0';
+					MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+				}
 			}
 		}
 
