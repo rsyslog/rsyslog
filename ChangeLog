@@ -1,5 +1,13 @@
 ------------------------------------------------------------------------------
 Version 8.10.0 [v8-stable] 2015-05-19
+- pmrfc3164: add new parameters
+  * "detect.yearAfterTimestamp"
+    This supports timestamps as generated e.g. by some Aruba Networks
+    equipment.
+  * "permit.squareBracesInHostname"
+    Permits to use "hostnames" in the form of "[127.0.0.1]"; also seen in
+    Aruba Networks equipment, but we strongly assume this can also happen
+    in other cases, especially with IPv6.
 ------------------------------------------------------------------------------
 Version 8.9.0 [v8-stable] 2015-04-07
 - omprog: add option "hup.forward" to forwards HUP to external plugins
