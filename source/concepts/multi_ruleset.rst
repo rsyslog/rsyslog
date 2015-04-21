@@ -8,7 +8,7 @@ reception of remote messages to a set of specific rules. Note that the
 input module must support binding to non-standard rulesets, so the
 functionality may not be available with all inputs.
 
-In this document, I am using `imtcp <imtcp.html>`_, an input module that
+In this document, I am using `imtcp <../configuration/modules/imtcp.html>`_, an input module that
 supports binding to non-standard rulesets since rsyslog started to
 support them.
 
@@ -101,7 +101,7 @@ multiple rulesets can be a very useful way to handle devices sending
 messages in different malformed formats in a consistent way.
 Unfortunately, this is not uncommon in the syslog world. An in-depth
 explanation with configuration sample can be found at the
-`$RulesetParser <rsconf1_rulesetparser.html>`_ configuration directive.
+`$RulesetParser <../configuration/ruleset/rsconf1_rulesetparser.html>`_ configuration directive.
 
 Can I use a different Ruleset as the default?
 ---------------------------------------------
@@ -126,7 +126,7 @@ By default, rulesets do not have their own queue. It must be activated
 via the $RulesetCreateMainQueue directive, or if using rainerscript
 format, by specifying queue parameters on the ruleset directive, e.g.
 ruleset(name="whatever" queue.type="fixedArray" queue. ...) See
-`http://www.rsyslog.com/doc/queue\_parameters.html <http://www.rsyslog.com/doc/queue_parameters.html>`_
+`http://www.ryslog.com/doc/master/rainerscript/queue\_parameters.html <http://www.rsyslog.com/doc/master/rainerscript/queue_parameters.html>`_
 for more details.
 
 Examples
@@ -287,7 +287,7 @@ ruleset, with a dedicated queue for each of the inputs.
 
 By default, rulesets do **not** have their own queue. It must be
 activated via the
-`$RulesetCreateMainQueue <rsconf1_rulesetcreatemainqueue.html>`_
+`$RulesetCreateMainQueue <../configuration/ruleset/rsconf1_rulesetcreatemainqueue.html>`_
 directive.
 
 See Also
