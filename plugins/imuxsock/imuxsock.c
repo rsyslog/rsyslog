@@ -364,7 +364,8 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bParseHost = UNSET;
 	inst->next = NULL;
 
-	/* reset hostname for next socket */
+	/* some legacy conf processing */
+	free(cs.pLogHostName); /* reset hostname for next socket */
 	cs.pLogHostName = NULL;
 
 finalize_it:
