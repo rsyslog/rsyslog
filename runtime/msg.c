@@ -3277,11 +3277,11 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				*pbMustBeFreed = 0;
 			} else {
 				if(pProp->id == PROP_CEE_ALL_JSON) {
-					pRes = (uchar*)strdup(json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
+					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
 				} else if(pProp->id == PROP_CEE_ALL_JSON_PLAIN) {
-					pRes = (uchar*)strdup(json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
+					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
 				} else if(pProp->id == PROP_CEE_ALL_JSON_PRETTY) {
-					pRes = (uchar*)strdup(json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PRETTY));
+					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PRETTY));
 				}
 				*pbMustBeFreed = 1;
 			}

@@ -617,6 +617,14 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 typedef int json_bool;
 #endif
 
+#ifdef HAVE_JSON_OBJECT_TO_JSON_STRING_EXT
+#	define RS_json_object_to_json_string_ext(obj, flags) \
+		json_object_to_json_string_ext((obj), (flags))
+#else
+#	define RS_json_object_to_json_string_ext(obj, flags) \
+		json_object_to_json_string((obj))
+#endif
+
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define
  * a dummy variable. This requires review of where in code empty structs
