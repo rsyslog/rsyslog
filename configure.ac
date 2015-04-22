@@ -1536,48 +1536,50 @@ AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 # END HIREDIS SUPPORT
 
 
-AC_CHECKING([if required man pages already exist])
+# man pages
 have_to_generate_man_pages="no"
-
-# man pages for libgcrypt module
-if test "x$enable_usertools" = "xyes" && test "x$enable_libgcrypt" = "xyes"; then
-    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
-        [],
-        [have_to_generate_man_pages="yes"]
-    )
-fi
-
-# man pages for GuardTime module
-if test "x$enable_usertools" = "xyes" && test "x$enable_guardtime" = "xyes"; then
-    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
-        [],
-        [have_to_generate_man_pages="yes"]
-    )
-fi
-
 AC_ARG_ENABLE(generate-man-pages,
-        [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) have_to_generate_man_pages="yes" ;;
           no) have_to_generate_man_pages="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-generate-man-pages) ;;
          esac],
-        [have_to_generate_man_pages=yes]
+        [have_to_generate_man_pages=no]
 )
 
-if test "x$have_to_generate_man_pages" = "xyes"; then
-    AC_MSG_RESULT([Some man pages are missing or --enable-generate-man-pages given. We need rst2man to generate man pages from source...])
+
+# Running from git source?
+in_git_src=no
+AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
+
+if test "x$in_git_src" = "xyes"; then
+        AC_MSG_NOTICE([Running from git source])
+
+        have_to_generate_man_pages=yes
+
+        if test "x$LEX" != "xflex"; then
+                AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
+        fi
+
+        if test "x$YACC" = "xyacc"; then
+                # AC_PROG_YACC only checks for yacc replacements, not for yacc itself
+                AC_CHECK_PROG([YACC_FOUND], [yacc], [yes], [no])
+                if test "x$YACC_FOUND" = "xno"; then
+                        AC_MSG_ERROR([A yacc program is needed to build rsyslog, please install bison.])
+                fi
+        fi
 else
-    AC_MSG_RESULT([All required man pages found. We don't need rst2man!])
+        AC_MSG_NOTICE([Not running from git source])
 fi
 
-if test "x$have_to_generate_man_pages" = "xyes"; then
-    # We need rst2man to generate our man pages
-    AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [])
-    if test -z "$RST2MAN"; then
-        AC_MSG_ERROR([rst2man is required to build man pages. You can use the release tarball with pregenerated man pages to avoid this depedency. Use the --disable-generate-man-pages configure option in that case.])
-    fi
+
+# rst2man
+AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [false])
+if test "x$have_to_generate_man_pages" = "xyes" && test "x$RST2MAN" = "xfalse"; then
+        AC_MSG_ERROR([rst2man is required when building from git source or --enable-generate-man-pages option was set, please install python-docutils.])
 fi
+
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
