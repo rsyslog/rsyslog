@@ -161,7 +161,7 @@ finalize_it:
  * param value must be int64!
  * rgerhards, 2008-01-09
  */
-static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *pVal)
 {
 	DEFiRet;
 	int64 i;
@@ -216,7 +216,6 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	uchar *p;
 	DEFiRet;
 	int64 i;	
-	uchar errMsg[256];	/* for dynamic error messages */
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -260,7 +259,6 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 {
 	uchar *p;
 	DEFiRet;
-	uchar errMsg[128];	/* for dynamic error messages */
 	int iVal;	
 
 	assert(pp != NULL);

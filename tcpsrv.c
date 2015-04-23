@@ -123,7 +123,7 @@ static int wrkrRunning;
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
+addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr)
 {
 	tcpLstnPortList_t *pEntry;
 	uchar statname[64];
@@ -134,6 +134,11 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	/* create entry */
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
 	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
+
+        pEntry->pszAddr = NULL; // Initalize address to null
+        /* only if a bind adress is defined copy it in struct */
+        if (pszAddr != NULL) CHKmalloc(pEntry->pszAddr = ustrdup(pszAddr));
+
 	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
 	pEntry->bSPFramingFix = pThis->bSPFramingFix;
 	pEntry->pSrv = pThis;
@@ -173,10 +178,11 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 static rsRetVal
-configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
+configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr)
 {
 	int i;
 	uchar *pPort = pszPort;
+	uchar *pAddr = pszAddr;
 	DEFiRet;
 
 	assert(pszPort != NULL);
@@ -189,7 +195,7 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram)
 	}
 
 	if(i >= 0 && i <= 65535) {
-		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram));
+		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram, pszAddr));
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
 	}
@@ -348,6 +354,7 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 {
 	DEFiRet;
 	uchar *TCPLstnPort;
+	uchar *TCPLstnAddr;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pPortEntry != NULL);
@@ -363,8 +370,8 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 	else
 		TCPLstnPort = pPortEntry->pszPort;
 
-	/* TODO: add capability to specify local listen address! */
-	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
+	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
+        CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort, pPortEntry->pszAddr, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -386,7 +393,7 @@ create_tcp_socket(tcpsrv_t *pThis)
 	while(pEntry != NULL) {
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port %s.", pEntry->pszPort);
+			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port %s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}

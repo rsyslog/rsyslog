@@ -112,7 +112,8 @@ struct modInfo_s {
 	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
-	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
+	rsRetVal (*doHUP)(void *);		/* HUP handler, action level */
+	rsRetVal (*doHUPWrkr)(void *);		/* HUP handler, wrkr instance level */
 	/* v2 config system specific */
 	rsRetVal (*beginCnfLoad)(void*newCnf, rsconf_t *pConf);
 	rsRetVal (*setModCnf)(struct nvlst *lst);
