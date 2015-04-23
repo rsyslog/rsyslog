@@ -1,4 +1,55 @@
 ------------------------------------------------------------------------------
+Version 8.10.0 [v8-stable] 2015-05-19
+- pmrfc3164: add new parameters
+  * "detect.yearAfterTimestamp"
+    This supports timestamps as generated e.g. by some Aruba Networks
+    equipment.
+  * "permit.squareBracesInHostname"
+    Permits to use "hostnames" in the form of "[127.0.0.1]"; also seen in
+    Aruba Networks equipment, but we strongly assume this can also happen
+    in other cases, especially with IPv6.
+- bugfix imuxsock: fix a crash when setting a hostname
+  Setting a hostname via the legacy directive would lead to a crash
+  during shutdown caused by a double-free.
+  Thanks to Tomas Heinrich for the patch.
+------------------------------------------------------------------------------
+Version 8.9.0 [v8-stable] 2015-04-07
+- omprog: add option "hup.forward" to forwards HUP to external plugins
+  This was suggested by David Lang so that external plugins (and other
+  programs) can also do HUP-specific processing. The default is not
+  to forward HUP, so no change of behavior by default.
+- imuxsock: added capability to use regular parser chain
+  Previously, this was a fixed format, that was known to be spoken on
+  the system log socket. This also adds new parameters:
+  - sysSock.useSpecialParser module parameter
+  - sysSock.parseHostname module parameter
+  - useSpecialParser input parameter
+  - parseHostname input parameter
+- 0mq: improvements in input and output modules
+  See module READMEs, part is to be considered experimental.
+  Thanks to Brian Knox for the contribution.
+- imtcp: add support for ip based bind for imtcp -> param "address"
+  Thanks to github user crackytsi for the patch.
+- bugfix: MsgDeserialize out of sync with MsgSerialize for StrucData
+  This lead to failure of disk queue processing when structured data was
+  present. Thanks to github user adrush for the fix.
+- bugfix imfile: partial data loss, especially in readMode != 0
+  closes https://github.com/rsyslog/rsyslog/issues/144
+- bugfix: potential large memory consumption with failed actions
+  see also https://github.com/rsyslog/rsyslog/issues/253
+- bugfix: omudpspoof: invalid default send template in RainerScript format
+  The file format template was used, which obviously does not work for
+  forwarding. Thanks to Christopher Racky for alerting us.
+  closes https://github.com/rsyslog/rsyslog/issues/268
+- bugfix: size-based legacy config statements did not work properly
+  on some platforms, they were incorrectly handled, resulting in all
+  sorts of "interesting" effects (up to segfault on startup)
+- build system: added option --without-valgrind-testbench
+  ... which provides the capability to either enforce or turn off
+  valgrind use inside the testbench. Thanks to whissi for the patch.
+- rsyslogd: fix misleading typos in error messages
+  Thanks to Ansgar Püster for the fixes.
+------------------------------------------------------------------------------
 Version 8.8.0 [v8-stable] 2015-02-24
 - omkafka: add support for dynamic topics and auto partitioning
   Thanks to Tait Clarridge for the patches.

@@ -10,6 +10,8 @@ source $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finishe
 cmp rsyslog.out.log $srcdir/resultdata/imuxsock_logger.log
 if [ ! $? -eq 0 ]; then
   echo "imuxsock_logger.sh failed"
+  echo contents of rsyslog.out.log:
+  echo \"`cat rsyslog.out.log`\"
   exit 1
 fi;
 source $srcdir/diag.sh exit

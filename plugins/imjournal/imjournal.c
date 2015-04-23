@@ -97,8 +97,8 @@ static struct cnfparamblk modpblk =
 	};
 
 #define DFLT_persiststateinterval 10
-#define DFLT_SEVERITY pri2fac(LOG_NOTICE)
-#define DFLT_FACILITY pri2sev(LOG_USER)
+#define DFLT_SEVERITY pri2sev(LOG_NOTICE)
+#define DFLT_FACILITY pri2fac(LOG_USER)
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
 

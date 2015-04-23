@@ -636,7 +636,7 @@ static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	ASSERT(pThis != NULL);
 	ASSERT(pC != NULL);
 
-	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
+	/* DEV debug only: DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd\n", pThis->iBufPtr, pThis->iBufPtrMax); */
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		++pThis->iCurrOffs; /* one more octet read */
@@ -694,21 +694,23 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         uchar c;
 	uchar finished;
 	rsRetVal readCharRet;
-	sbool bPrevWasNL;
         DEFiRet;
 
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
 
+dbgprintf("DDDDD: readLine: enter, bPrevWasNL %d\n", pThis->bPrevWasNL);
         CHKiRet(cstrConstruct(ppCStr));
         CHKiRet(strmReadChar(pThis, &c));
 
+dbgprintf("DDDDD: readLine: pre-check, bPrevWasNL %d\n", pThis->bPrevWasNL);
+	/* append previous message to current message if necessary */
+	if(pThis->prevLineSegment != NULL) {
+		dbgprintf("DDDDD: readLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
+		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
+		cstrDestruct(&pThis->prevLineSegment);
+	}
         if(mode == 0) {
-		/* append previous message to current message if necessary */
-		if(pThis->prevLineSegment != NULL) {
-			CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
-			cstrDestruct(&pThis->prevLineSegment);
-		}
 		while(c != '\n') {
                 	CHKiRet(cstrAppendChar(*ppCStr, c));
                 	readCharRet = strmReadChar(pThis, &c);
@@ -720,15 +722,14 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         	CHKiRet(cstrFinalize(*ppCStr));
 	} else if(mode == 1) {
 		finished=0;
-		bPrevWasNL = 0;
 		while(finished == 0){
         		if(c != '\n') {
                 		CHKiRet(cstrAppendChar(*ppCStr, c));
                 		CHKiRet(strmReadChar(pThis, &c));
-				bPrevWasNL = 0;
+				pThis->bPrevWasNL = 0;
 			} else {
 				if ((((*ppCStr)->iStrLen) > 0) ){
-					if(bPrevWasNL) {
+					if(pThis->bPrevWasNL) {
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
 						finished=1;
 					} else {
@@ -738,7 +739,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 							CHKiRet(cstrAppendChar(*ppCStr, c));
 						}
                					CHKiRet(strmReadChar(pThis, &c));
-						bPrevWasNL = 1;
+						pThis->bPrevWasNL = 1;
 					}
 				} else {
 					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
@@ -746,10 +747,10 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 			}
 		}
         	CHKiRet(cstrFinalize(*ppCStr));
+		pThis->bPrevWasNL = 0;
 	} else if(mode == 2) {
 		/* indented follow-up lines */
 		finished=0;
-		bPrevWasNL = 0;
 		while(finished == 0){
 			if ((*ppCStr)->iStrLen == 0){
         			if(c != '\n') {
@@ -760,11 +761,11 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					finished=1;  /* this is a blank line, a \n with nothing since the last complete record */
 				}
 			} else {
-				if(bPrevWasNL) {
+				if(pThis->bPrevWasNL) {
 					if ((c == ' ') || (c == '\t')){
                					CHKiRet(cstrAppendChar(*ppCStr, c));
                					CHKiRet(strmReadChar(pThis, &c));
-						bPrevWasNL = 0;
+						pThis->bPrevWasNL = 0;
 					} else {
 						/* clean things up by putting the character we just read back into
 						 * the input buffer and removing the LF character that is currently at the
@@ -775,7 +776,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 					}
 				} else { /* not the first character after a newline, add it to the buffer */
 					if(c == '\n') {
-						bPrevWasNL = 1;
+						pThis->bPrevWasNL = 1;
 						if(bEscapeLF) {
 							CHKiRet(rsCStrAppendStrWithLen(*ppCStr, (uchar*)"#012", sizeof("#012")-1));
 						} else {
@@ -789,11 +790,18 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 			}
 		}
        		CHKiRet(cstrFinalize(*ppCStr));
+		pThis->bPrevWasNL = 0;
 	}
 
 finalize_it:
-        if(iRet != RS_RET_OK && *ppCStr != NULL)
+dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCStrGetSzStr(*ppCStr), *ppCStr);
+        if(iRet != RS_RET_OK && *ppCStr != NULL) {
+		if(cstrLen(*ppCStr) > 0) { /* we may have an empty string in an unsuccsfull poll or after restart! */
+			dbgprintf("DDDDD: readLine saves segment '%s'\n", rsCStrGetSzStr(*ppCStr));
+			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+		}
                 cstrDestruct(ppCStr);
+	}
 
         RETiRet;
 }
@@ -812,6 +820,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->tOpenMode = 0600;
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
+	pThis->bPrevWasNL = 0;
 ENDobjConstruct(strm)
 
 
@@ -938,6 +947,8 @@ CODESTARTobjDestruct(strm)
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
+	if(pThis->prevLineSegment)
+		cstrDestruct(&pThis->prevLineSegment);
 	free(pThis->pszDir);
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
@@ -1851,7 +1862,13 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->inode;
 	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
 
-	objSerializePTR(pStrm, prevLineSegment, PSZ);
+	if(pThis->prevLineSegment != NULL) {
+		cstrFinalize(pThis->prevLineSegment);
+		objSerializePTR(pStrm, prevLineSegment, CSTR);
+	}
+
+	i = pThis->bPrevWasNL;
+	objSerializeSCALAR_VAR(pStrm, bPrevWasNL, INT, i);
 
 	CHKiRet(obj.EndSerialize(pStrm));
 
@@ -1962,6 +1979,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
  	} else if(isProp("prevLineSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
+ 	} else if(isProp("bPrevWasNL")) {
+		pThis->bPrevWasNL = (sbool) pProp->val.num;
 	}
 
 finalize_it:

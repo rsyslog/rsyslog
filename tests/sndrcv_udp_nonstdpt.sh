@@ -7,4 +7,4 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[sndrcv_udp_nonstdpt.sh\]: testing sending and receiving via udp
-source $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt 50
+source $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt 500

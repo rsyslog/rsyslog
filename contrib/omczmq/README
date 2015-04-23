@@ -13,10 +13,10 @@ action(
 	name="curve_server_socket"
 	type="omczmq"
 	endpoints="tcp://some.server.com:24445"
-	socktype="PUB"
-	conntype="CURVECLIENT"
-	curveclientcert="/etc/curve.d/example_curve_client_cert"
-	curveservercert="/etc/curve.d/example_curve_server_cert"
+	socktype="PUSH"
+	authtype="CURVECLIENT"
+	clientcertpath="/etc/curve.d/example_curve_client_cert"
+	servercertpath="/etc/curve.d/example_curve_server_cert"
 )
 -------------------------------------------------------------------------------
 
@@ -26,14 +26,10 @@ name: name of this action
 type: type of action (omczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
 socktype: zeromq socket type (currently supports PUSH and PUB)
-conntype:
-	CLIENT - zeromq connect
-	SERVER - zeromq bind
-	CURVECLIENT - zeromq connect with curve encryption
-	CURVESERVER - zeromq bind with curve encryption
-curveclientcert: 
+authtype: CURVECLIENT or CURVESERVER
+clientcertpath: 
 	if CURVECLIENT, this client's cert
 	if CURVESERVER, "*" for all, or a directory of allowed public certs
-curveservercert: 
+servercertpath: 
 	if CURVECLIENT, the servers public cert you wish to connect to
 	if CURVESERVER, this servers cert

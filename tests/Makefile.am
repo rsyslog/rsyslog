@@ -44,6 +44,7 @@ TESTS +=  \
 	sndrcv_gzip.sh \
 	sndrcv_udp.sh \
 	sndrcv_udp_nonstdpt.sh \
+	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
@@ -78,12 +79,12 @@ TESTS +=  \
 	dircreate_off.sh \
 	imuxsock_logger.sh \
 	imuxsock_logger_err.sh \
+	imuxsock_logger_parserchain.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
-	queue-persist.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -177,7 +178,11 @@ TESTS +=  \
 	elasticsearch-basic-errorfile-empty.sh \
 	elasticsearch-basic-errorfile-populated.sh \
 	elasticsearch-bulk-errorfile-empty.sh \
-	elasticsearch-bulk-errorfile-populated.sh
+	elasticsearch-bulk-errorfile-populated.sh \
+	elasticsearch-bulk-errorfile-populated-default-format.sh \
+	elasticsearch-bulk-errorfile-populated-erroronly.sh \
+	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
+	elasticsearch-bulk-errorfile-populated-default-interleaved.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -261,7 +266,10 @@ if ENABLE_EXTENDED_TESTS
 endif
 
 if ENABLE_IMFILE
-TESTS += imfile-basic.sh
+TESTS += imfile-basic.sh \
+	imfile-readmode2.sh \
+	imfile-readmode2-with-persists-data-during-stop.sh \
+	imfile-readmode2-with-persists.sh
 if HAVE_VALGRIND
 TESTS += imfile-basic-vg.sh
 endif
@@ -469,6 +477,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/elasticsearch-bulk-errorfile-empty.conf \
 	   elasticsearch-bulk-errorfile-populated.sh \
 	   testsuites/elasticsearch-bulk-errorfile-populated.conf \
+	   elasticsearch-bulk-errorfile-populated-default-format.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
+	   elasticsearch-bulk-errorfile-populated-erroronly.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
+	   elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
+	   elasticsearch-bulk-errorfile-populated-default-interleaved.sh \
+	   testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
 	   linkedlistqueue.sh \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
@@ -634,6 +650,12 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/complex1.conf \
 	   random.sh \
 	   testsuites/random.conf \
+           imfile-readmode2.sh \
+           imfile-readmode2-with-persists-data-during-stop.sh \
+           imfile-readmode2-with-persists.sh \
+           testsuites/imfile-readmode2.conf \
+           testsuites/imfile-readmode2-with-persists.conf \
+           testsuites/imfile-readmode2-with-persists-data-during-stop.conf \
 	   imfile-basic.sh \
 	   imfile-basic-vg.sh \
 	   testsuites/imfile-basic.conf \
@@ -682,6 +704,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/dircreate_dflt.conf \
 	   dircreate_off.sh \
 	   testsuites/dircreate_off.conf \
+	   imuxsock_logger_parserchain.sh \
+	   testsuites/imuxsock_logger_parserchain.conf \
 	   imuxsock_logger.sh \
 	   testsuites/imuxsock_logger.conf \
 	   imuxsock_logger_err.sh \
@@ -725,8 +749,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   mmnormalize_variable.sh \
 	   mmnormalize_tokenized.sh \
 	   testsuites/mmnormalize_variable.conf \
+	   testsuites/mmnormalize_variable.rulebase \
 	   testsuites/date_time_msg \
 	   testsuites/mmnormalize_tokenized.conf \
+	   testsuites/mmnormalize_tokenized.rulebase \
 	   testsuites/tokenized_input \
 	   rscript_replace.sh \
 	   testsuites/rscript_replace.conf \
@@ -747,6 +773,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/json_array_looping.conf \
 	   mmnormalize_regex.sh \
 	   testsuites/mmnormalize_regex.conf \
+	   testsuites/mmnormalize_regex.rulebase \
 	   testsuites/regex_input \
 	   mmnormalize_regex_disabled.sh \
 	   testsuites/mmnormalize_regex_disabled.conf \
