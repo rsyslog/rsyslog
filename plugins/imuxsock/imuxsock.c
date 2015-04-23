@@ -364,8 +364,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->bParseHost = UNSET;
 	inst->next = NULL;
 
-	/* some legacy conf processing */
-	free(cs.pLogHostName); /* reset hostname for next socket */
+	/* reset hostname for next socket */
 	cs.pLogHostName = NULL;
 
 finalize_it:
@@ -921,18 +920,18 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 				 * datestamp or not .. and advance the parse pointer accordingly.
 				 */
 				if (datetime.ParseTIMESTAMP3339(&dummyTS, &parse, &lenMsg) != RS_RET_OK) {
-					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING);
+					datetime.ParseTIMESTAMP3164(&dummyTS, &parse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME);
 				}
 			} else {
 				if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
-				   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg, NO_PARSE3164_TZSTRING) != RS_RET_OK) {
+				   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) != RS_RET_OK) {
 					DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
 				}
 			}
 		} else { /* if we pulled the time from the system, we need to update the message text */
 			uchar *tmpParse = parse; /* just to check correctness of TS */
 			if(datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-			   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING) == RS_RET_OK) {
+			   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
 				/* We modify the message only if it contained a valid timestamp,
 				 * otherwise we do not touch it at all. */
 				datetime.formatTimestamp3164(&st, (char*)parse, 0);

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.9.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.10.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -800,8 +800,13 @@ if test "x$enable_rsyslogrt" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
-if test "$GCC" = "yes"
-then RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Werror=implicit-function-declaration -g"
+if test "$GCC" = "yes"; then
+  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+  if $CC -Werror=implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
+  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
+  fi
 fi
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
