@@ -1,6 +1,14 @@
 /* This module implements the relp sess object.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 by Rainer Gerhards and Adiscon GmbH.
+ *
+ * To clarify on session handling: There is no upper limit of the number
+ * of sessions, except for system ressources. Some left-over comment
+ * suggest there has been a session limit at least in planning, but
+ * none exists. Sessions objects are allocated off the heap and kept in
+ * a linked list. Note, however, that performance may become worse if
+ * a very large number of sessions exists, due to the current O(n)
+ * algo for polling the sessions for activity.
  *
  * This file is part of librelp.
  *
@@ -189,8 +197,6 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 
 	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, RELP_SRV_CONN, pSrv));
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pSrv));
-
-	/* TODO: check against max# sessions */
 
 	*ppThis = pThis;
 
