@@ -1599,6 +1599,7 @@ deinitAll(void)
 	ratelimitModExit();
 	dnscacheDeinit();
 	thrdExit();
+	objRelease(net, LM_NET_FILENAME);
 
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
