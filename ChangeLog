@@ -17,6 +17,11 @@ Version 8.10.0 [v8-stable] 2015-05-19
   Setting a hostname via the legacy directive would lead to a crash
   during shutdown caused by a double-free.
   Thanks to Tomas Heinrich for the patch.
+- When building from git source we now require rst2man and yacc (or a
+  replacement like bison).
+  That isn't any new requirement, we only added missing configure checks.
+- Configure option "--enable-generate-man-pages" is now disabled for non git
+  source builds per default but enforced when building from git source.
 ------------------------------------------------------------------------------
 Version 8.9.0 [v8-stable] 2015-04-07
 - omprog: add option "hup.forward" to forwards HUP to external plugins

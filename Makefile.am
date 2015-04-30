@@ -314,4 +314,8 @@ DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
 #				--enable-gssapi_krb5 \
 #				--enable-extended-tests \
 #				--enable-pgsql 
+
+dist-hook:
+	$(AM_V_GEN)echo $(VERSION) > $(distdir)/.tarball-version
+
 ACLOCAL_AMFLAGS = -I m4
