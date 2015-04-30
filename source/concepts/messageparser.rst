@@ -248,7 +248,7 @@ not be possible in the future. In any case, if we decide to add it,
 input modules need to support it, so this functionality would require
 some time to implement.
 
-The coockbook recipe for using different parsers for different devices
+The cookbook recipe for using different parsers for different devices
 is given as an actual in-depth example in the
 `$RulesetParser` configuration directive
 doc page. In short, it is acomplished by defining specific rulesets for
