@@ -269,7 +269,7 @@ parseSD_ELEMENT(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx, str
 {
 	int i;
 	uchar sd_id[33];
-	struct json_object *json;
+	struct json_object *json = NULL;
 	DEFiRet;
 dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 	
@@ -307,6 +307,8 @@ dbgprintf("DDDD: SD_ELEMENT: json: '%s'\n", json_object_get_string(json));
 dbgprintf("DDDD: SD_ELEMENT: jroot '%s'\n", json_object_get_string(json));
 finalize_it:
 dbgprintf("DDDD: parseSD_ELEMENT iRet:%d, i:%d, *curridx:%d\n", iRet, i, *curridx);
+	if(iRet != RS_RET_OK && json != NULL)
+		json_object_put(json);
 	RETiRet;
 }
 
@@ -354,6 +356,8 @@ dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
 	json_object_object_add(jroot, "rfc5424-sd", json);
  	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0);
 finalize_it:
+	if(iRet != RS_RET_OK && json != NULL)
+		json_object_put(json);
 	RETiRet;
 }
 
