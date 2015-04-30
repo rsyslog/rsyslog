@@ -189,7 +189,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
 	{ "action.resumeinterval", eCmdHdlrInt, 0 },
-	{ "action.copymsg", eCmdHdlrBinary, 0 },
+	{ "action.copymsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
