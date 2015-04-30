@@ -216,7 +216,8 @@ TESTS +=  \
 	mmjsonparse_simple.sh \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
-	json_array_looping.sh
+	json_array_looping.sh \
+	json_nonarray_looping.sh
 endif
 
 if ENABLE_GNUTLS
@@ -783,7 +784,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   json_array_subscripting.sh \
 	   testsuites/json_array_subscripting.conf \
 	   testsuites/json_array_input \
+	   testsuites/json_nonarray_input \
 	   json_array_looping.sh \
+	   json_nonarray_looping.sh \
 	   testsuites/json_array_looping.conf \
 	   mmnormalize_regex.sh \
 	   testsuites/mmnormalize_regex.conf \

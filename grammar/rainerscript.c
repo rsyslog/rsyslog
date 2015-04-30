@@ -3439,6 +3439,14 @@ removeNOPs(struct cnfstmt *root)
 done:	return newRoot;
 }
 
+static inline void
+cnfstmtOptimizeForeach(struct cnfstmt *stmt)
+{
+	stmt->d.s_foreach.iter->collection = cnfexprOptimize(stmt->d.s_foreach.iter->collection);
+	stmt->d.s_foreach.body = removeNOPs(stmt->d.s_foreach.body);
+	cnfstmtOptimize(stmt->d.s_foreach.body);
+}
+
 
 static inline void
 cnfstmtOptimizeIf(struct cnfstmt *stmt)
@@ -3573,6 +3581,9 @@ cnfstmtOptimize(struct cnfstmt *root)
 		switch(stmt->nodetype) {
 		case S_IF:
 			cnfstmtOptimizeIf(stmt);
+			break;
+		case S_FOREACH:
+			cnfstmtOptimizeForeach(stmt);
 			break;
 		case S_PRIFILT:
 			cnfstmtOptimizePRIFilt(stmt);
