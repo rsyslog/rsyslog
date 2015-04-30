@@ -60,6 +60,7 @@ TESTS +=  \
 	asynwr_deadlock2.sh \
 	asynwr_deadlock4.sh \
 	abort-uncleancfg-goodcfg.sh \
+	abort-uncleancfg-goodcfg-check.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	gzipwr_large.sh \
@@ -643,6 +644,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   asynwr_deadlock4.sh \
 	   testsuites/asynwr_deadlock4.conf \
 	   abort-uncleancfg-goodcfg.sh \
+	   testsuites/abort-uncleancfg-goodcfg.conf \
+	   abort-uncleancfg-goodcfg-check.sh \
 	   testsuites/abort-uncleancfg-goodcfg.conf \
 	   abort-uncleancfg-badcfg-check.sh \
            testsuites/abort-uncleancfg-badcfg.conf 
