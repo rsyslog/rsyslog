@@ -169,21 +169,18 @@ obviously all statements after the stop statement are never evaluated.
 Flow Control Statements
 ~~~~~~~~~~~~~~~~~~~~~~~
 
--  **if expr then ... else ...** - conditional execution
--  **stop** - stops processing the current message
--  :doc:`call <../rainerscript/rainerscript_call>` - calls a ruleset
-   (just like a subroutine call)
--  **continue** - a NOP, useful e.g. inside the then part of an if
+Flow control is provided by:
 
-Flow control is also provided by :doc:`filter conditions <filters>`.
+- :doc:`Control Structures <../rainerscript/control_structures>`
+  
+- :doc:`Filter Conditions <filters>`
+  
 
 Data Manipulation Statements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  **set** -
-   `sets <http://www.rsyslog.com/how-to-set-variables-in-rsyslog-v7/>`_
-   a user variable
--  **unset** - deletes a previously set user variable
+Data manipulation is achieved by **set**, **unset** and **reset** statements
+which are :doc:`documented here in detail <../rainerscript/variable_property_types>`.
 
 Inputs
 ------
