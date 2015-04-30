@@ -8,6 +8,8 @@ Version 8.10.0 [v8-stable] 2015-05-19
     Permits to use "hostnames" in the form of "[127.0.0.1]"; also seen in
     Aruba Networks equipment, but we strongly assume this can also happen
     in other cases, especially with IPv6.
+- imfile: added brace glob expansion to wildcard
+  Thanks to Zach Lisinski for the patch.
 - bugfix imuxsock: fix a crash when setting a hostname
   Setting a hostname via the legacy directive would lead to a crash
   during shutdown caused by a double-free.
