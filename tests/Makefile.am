@@ -188,6 +188,11 @@ endif
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
 	mmpstrucdata.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	mmpstrucdata-vg.sh \
+	mmpstrucdata-invalid-vg.sh
+endif
 endif
 
 if ENABLE_MMNORMALIZE
