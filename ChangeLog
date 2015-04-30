@@ -32,6 +32,8 @@ Version 7.6.8 [v7.6-stable] 2014-10-??
   json_tokener_errors was not properly detected.
   closes: https://github.com/rsyslog/rsyslog/issues/143
   Thanks to Alex Fisher for alerting us and the patch.
+- bugfix: memory leak in mmpstrucdata
+  backported from v8.10.0 (cc885deb42a6899245593f61ac4ff89d28123254)
 ---------------------------------------------------------------------------
 Version 7.6.7 [v7.6-stable] 2014-10-02
 - bugfix: the fix for CVE-2014-3634 did not handle all cases
