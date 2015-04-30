@@ -614,8 +614,6 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_CEE_ALL_JSON;
 	} else if(!strcmp((char*) pName, "$!all-json-plain")) {
 		*pPropID = PROP_CEE_ALL_JSON_PLAIN;
-	} else if(!strcmp((char*) pName, "$!all-json-pretty")) {
-		*pPropID = PROP_CEE_ALL_JSON_PRETTY;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
@@ -714,8 +712,6 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$!all-json");
 		case PROP_CEE_ALL_JSON_PLAIN:
 			return UCHAR_CONSTANT("$!all-json-plain");
-		case PROP_CEE_ALL_JSON_PRETTY:
-			return UCHAR_CONSTANT("$!all-json-pretty");
 		case PROP_SYS_BOM:
 			return UCHAR_CONSTANT("$BOM");
 		case PROP_UUID:
@@ -3270,7 +3266,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			break;
 		case PROP_CEE_ALL_JSON:
 		case PROP_CEE_ALL_JSON_PLAIN:
-		case PROP_CEE_ALL_JSON_PRETTY:
 			if(pMsg->json == NULL) {
 				pRes = (uchar*) "{}";
 				bufLen = 2;
@@ -3280,8 +3275,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
 				} else if(pProp->id == PROP_CEE_ALL_JSON_PLAIN) {
 					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
-				} else if(pProp->id == PROP_CEE_ALL_JSON_PRETTY) {
-					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PRETTY));
 				}
 				*pbMustBeFreed = 1;
 			}
