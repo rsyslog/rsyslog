@@ -645,11 +645,11 @@ containsGlobWildcard(char *str)
 		return 0;
 	}
 	/* From Linux Programmer's Guide:
-	 * "A string is a wildcard pattern if it contains one of the characters '?', '*' or '['"
-	 * "One can remove the special meaning of '?', '*' and '[' by preceding them by a backslash"
+	 * "A string is a wildcard pattern if it contains one of the characters '?', '*', '{' or '['"
+	 * "One can remove the special meaning of '?', '*', '{' and '[' by preceding them by a backslash"
 	 */
 	for(p = str; *p != '\0'; p++) {
-		if((*p == '?' || *p == '*' || *p == '[') &&
+		if((*p == '?' || *p == '*' || *p == '[' || *p == '{') &&
 				(p == str || *(p-1) != '\\')) {
 			return 1;
 		}

@@ -1456,7 +1456,7 @@ in_setupFileWatchStatic(lstn_t *const __restrict__ pLstn)
 			  "expansion\n", pLstn->pszFileName);
 		glob_t files;
 		const int ret = glob((char*)pLstn->pszFileName,
-					GLOB_MARK|GLOB_NOSORT, NULL, &files);
+					GLOB_MARK|GLOB_NOSORT|GLOB_BRACE, NULL, &files);
 		if(ret == 0) {
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
