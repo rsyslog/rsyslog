@@ -450,6 +450,18 @@ if test "$enable_debug" = "no"; then
 fi
 
 
+# debug-symbols
+AC_ARG_ENABLE(debug_symbols,
+        [AS_HELP_STRING([--disable-debug-symbols],[Disable debugging symbols @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_debug_symbols="yes" ;;
+          no) enable_debug_symbols="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --disable-debug-symbols) ;;
+         esac],
+        [enable_debug_symbols="yes"]
+)
+
+
 # runtime instrumentation
 AC_ARG_ENABLE(rtinst,
         [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
@@ -801,11 +813,15 @@ fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 if test "$GCC" = "yes"; then
-  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
   if $CC -Werror=implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
   elif $CC -Werror-implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
+  fi
+
+  if test "x$enable_debug_symbols" = "xyes"; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -g"
   fi
 fi
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
