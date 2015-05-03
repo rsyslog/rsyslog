@@ -13,20 +13,20 @@ Version 8.10.0 [v8-stable] 2015-05-19
   Thanks to Zach Lisinski for the patch.
 - imfile: added brace glob expansion to wildcard
   Thanks to Zach Lisinski for the patch.
-- bugfix imuxsock: fix a crash when setting a hostname
-  Setting a hostname via the legacy directive would lead to a crash
-  during shutdown caused by a double-free.
-  Thanks to Tomas Heinrich for the patch.
 - When building from git source we now require rst2man and yacc (or a
   replacement like bison).
   That isn't any new requirement, we only added missing configure checks.
 - Configure option "--enable-generate-man-pages" is now disabled for non git
   source builds per default but enforced when building from git source.
+- mmpstrucdata: some code cleanup
+  removed lots of early development debug outputs
+- bugfix imuxsock: fix a crash when setting a hostname
+  Setting a hostname via the legacy directive would lead to a crash
+  during shutdown caused by a double-free.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: memory leak in mmpstrucdata
   Thanks to Grégoire Seux for reporting this issue.
   closes https://github.com/rsyslog/rsyslog/issues/310
-- mmpstrucdata: some code cleanup
-  removed lots of early development debug outputs
 ------------------------------------------------------------------------------
 Version 8.9.0 [v8-stable] 2015-04-07
 - omprog: add option "hup.forward" to forwards HUP to external plugins
