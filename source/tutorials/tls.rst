@@ -34,7 +34,7 @@ ways to encrypt syslog communication. 
 
 The traditional approach involves `running a wrapper like stunnel around
 the syslog session <rsyslog_stunnel.html>`_. This works quite well and
-is in widespread use. However, it is not thightly coupled with the main
+is in widespread use. However, it is not tightly coupled with the main
 syslogd and some, even severe, problems can result from this (follow a
 mailing list thread that describes `total loss of syslog messages due to
 stunnel
