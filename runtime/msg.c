@@ -612,6 +612,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_MYHOSTNAME;
 	} else if(!strcmp((char*) pName, "$!all-json")) {
 		*pPropID = PROP_CEE_ALL_JSON;
+	} else if(!strcmp((char*) pName, "$!all-json-plain")) {
+		*pPropID = PROP_CEE_ALL_JSON_PLAIN;
 	} else if(!strcmp((char*) pName, "$bom")) {
 		*pPropID = PROP_SYS_BOM;
 	} else if(!strcmp((char*) pName, "$uptime")) {
@@ -708,6 +710,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("*LOCAL_VARIABLE*");
 		case PROP_CEE_ALL_JSON:
 			return UCHAR_CONSTANT("$!all-json");
+		case PROP_CEE_ALL_JSON_PLAIN:
+			return UCHAR_CONSTANT("$!all-json-plain");
 		case PROP_SYS_BOM:
 			return UCHAR_CONSTANT("$BOM");
 		case PROP_UUID:
@@ -3261,12 +3265,17 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = glbl.GetLocalHostName();
 			break;
 		case PROP_CEE_ALL_JSON:
+		case PROP_CEE_ALL_JSON_PLAIN:
 			if(pMsg->json == NULL) {
 				pRes = (uchar*) "{}";
 				bufLen = 2;
 				*pbMustBeFreed = 0;
 			} else {
-				pRes = (uchar*)strdup(json_object_get_string(pMsg->json));
+				if(pProp->id == PROP_CEE_ALL_JSON) {
+					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
+				} else if(pProp->id == PROP_CEE_ALL_JSON_PLAIN) {
+					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
+				}
 				*pbMustBeFreed = 1;
 			}
 			break;
