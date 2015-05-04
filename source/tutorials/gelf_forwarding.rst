@@ -1,5 +1,5 @@
-Log rotation with rsyslog
-=========================
+GELF forwarding in rsyslog
+==========================
 
 *Written by Florian Riedl*
 
