@@ -75,14 +75,16 @@ a disk queue and then configure your action. There is nothing else to
 do. With the following simple config file, you log anything you receive
 to a MySQL database and have buffering applied automatically.
 
-$ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
-$ModLoad imudp # network reception $UDPServerRun 514 # start a udp
-server at port 514 $ModLoad imuxsock # local message reception
-$WorkDirectory /rsyslog/work # default location for work (spool) files
-$MainMsgQueueFileName mainq # set file name, also enables disk mode
-$ActionResumeRetryCount -1 # infinite retries on insert failure # for
-PostgreSQL replace :ommysql: by :ompgsql: below: \*.\*
-:ommysql:hostname,dbname,userid,password;
+::
+
+    $ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
+    $ModLoad imudp # network reception 
+    $UDPServerRun 514 # start a udp server at port 514 
+    $ModLoad imuxsock # local message reception
+    $WorkDirectory /rsyslog/work # default location for work (spool) files
+    $MainMsgQueueFileName mainq # set file name, also enables disk mode
+    $ActionResumeRetryCount -1 # infinite retries on insert failure 
+    #for PostgreSQL replace :ommysql: by :ompgsql: below: *.* :ommysql:hostname,dbname,userid,password;
 
 The simple setup above has one drawback: the write database action is
 executed together with all other actions. Typically, local files are
@@ -104,15 +106,17 @@ queues, de-coupling their processing speeds.
 The configuration for the de-coupled database write involves just a few
 more commands:
 
-$ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
-$ModLoad imudp # network reception $UDPServerRun 514 # start a udp
-server at port 514 $ModLoad imuxsock # local message reception
-$WorkDirectory /rsyslog/work # default location for work (spool) files
-$ActionQueueType LinkedList # use asynchronous processing
-$ActionQueueFileName dbq # set file name, also enables disk mode
-$ActionResumeRetryCount -1 # infinite retries on insert failure # for
-PostgreSQL replace :ommysql: by :ompgsql: below: \*.\*
-:ommysql:hostname,dbname,userid,password;
+::
+
+    $ModLoad ommysql # load the output driver (use ompgsql for PostgreSQL)
+    $ModLoad imudp # network reception 
+    $UDPServerRun 514 # start a udp server at port 514 
+    $ModLoad imuxsock # local message reception
+    $WorkDirectory /rsyslog/work # default location for work (spool) files
+    $ActionQueueType LinkedList # use asynchronous processing
+    $ActionQueueFileName dbq # set file name, also enables disk mode
+    $ActionResumeRetryCount -1 # infinite retries on insert failure 
+    # for PostgreSQL replace :ommysql: by :ompgsql: below: *.* :ommysql:hostname,dbname,userid,password;
 
 **This is the recommended configuration for this use case.** It requires
 rsyslog 3.11.0 or above.

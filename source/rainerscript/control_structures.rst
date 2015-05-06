@@ -49,6 +49,21 @@ RainerScript supports following control structures:
       }
    }
 
+Please note that asynchronous-action calls in foreach-statement body should
+almost always set *action.copyMsg* to *on*. This is because action calls within foreach
+usually want to work with the variable loop populates(in the above example, $.quux and $.corge)
+which causes message-mutation and async-action must see message as it was in
+a certain invocation of loop-body, so they must make a copy to keep it safe
+from further modification as iteration continues. For instance, an async-action
+invocation with linked-list based queue would look like:
+
+::
+
+   foreach ($.quux in $!foo) do {
+      action(type="omfile" file="./rsyslog.out.log" template="quux" queue.type="linkedlist" action.copyMsg="on")
+   }
+
+
 **call**: :doc:`rainerscript_call`
    
-
+**continue**: a NOP, useful e.g. inside the then part of an if
