@@ -66,6 +66,18 @@ For the testbench VMs:
 
 sudo zypper install gvim mutt
 
+
+
+SUSE LINUX Enterprise Server 11
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Available Packages:
+zypper install gcc make autoconf libtool flex bison
+
+Missing Packages:
+libcurl-devel valgrind python-docutils uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel postgresql-devel net-snmp-devel libdbi-drivers-dbd-mysql json-c zlib-dev libdbi
+
+
+
 Reporting Bugs
 ==============
 
