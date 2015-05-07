@@ -98,8 +98,8 @@ General Action Parameters
    3,600 if you need hours (not recommended). When an action is
    suspended (e.g. destination can not be connected), the action is
    resumed for the configured interval. Thereafter, it is retried. If
-   multiple retires fail, the interval is automatically extended. This
-   is to prevent excessive ressource use for retires. After each 10
+   multiple retries fail, the interval is automatically extended. This
+   is to prevent excessive resource use for retries. After each 10
    retries, the interval is extended by itself. To be precise, the
    actual interval is (numRetries / 10 + 1) \* Action.ResumeInterval. so
    after the 10th try, it by default is 60 and after the 100th try it is
