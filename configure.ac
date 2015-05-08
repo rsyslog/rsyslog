@@ -719,6 +719,23 @@ fi
 AM_CONDITIONAL(ENABLE_UUID, test x$enable_uuid = xyes)
 
 
+# sha1 support
+AC_ARG_ENABLE(sha1,
+        [AS_HELP_STRING([--enable-sha1],[Enable support for sha1 @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_sha1="yes" ;;
+          no) enable_sha1="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-sha1) ;;
+         esac],
+        [enable_sha1=yes]
+)
+if test "x$enable_sha1" = "xyes"; then
+	PKG_CHECK_MODULES([LIBOPENSSL], [openssl])
+	AC_DEFINE(USE_SHA1, 1, [Define if you want to enable sha1 support])
+fi
+AM_CONDITIONAL(ENABLE_SHA1, test x$enable_sha1 = xyes)
+
+
 # elasticsearch support
 AC_ARG_ENABLE(elasticsearch,
         [AS_HELP_STRING([--enable-elasticsearch],[Enable elasticsearch output module @<:@default=no@:>@])],
@@ -1714,6 +1731,7 @@ echo "    rsyslogd will be built:                   $enable_rsyslogd"
 echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
+echo "    sha1 support enabled:                     $enable_sha1"
 echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"

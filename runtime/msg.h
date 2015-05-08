@@ -129,6 +129,7 @@ struct msg {
 	char pszRcvdAt_Unix[12];
 	char dfltTZ[8];	    /* 7 chars max, less overhead than ptr! */
 	uchar *pszUUID; /* The message's UUID */
+	uchar *pszSHA1; /* The message's SHA1 */
 };
 
 

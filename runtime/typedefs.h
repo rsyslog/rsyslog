@@ -206,6 +206,7 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_BOM			159
 #define PROP_SYS_UPTIME			160
 #define PROP_UUID			161
+#define PROP_SHA1			162
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202

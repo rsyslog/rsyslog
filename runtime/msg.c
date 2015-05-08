@@ -50,6 +50,9 @@
 #ifdef USE_LIBUUID
   #include <uuid/uuid.h>
 #endif
+#ifdef USE_SHA1
+  #include <openssl/sha.h>
+#endif
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -591,6 +594,10 @@ propNameToID(uchar *pName, propid_t *pPropID)
 	} else if(!strcmp((char*) pName, "uuid")) {
 		*pPropID = PROP_UUID;
 #endif
+#ifdef USE_SHA1
+	} else if(!strcmp((char*) pName, "sha1")) {
+		*pPropID = PROP_SHA1;
+#endif
 	/* here start system properties (those, that do not relate to the message itself */
 	} else if(!strcmp((char*) pName, "$now")) {
 		*pPropID = PROP_SYS_NOW;
@@ -716,6 +723,8 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$BOM");
 		case PROP_UUID:
 			return UCHAR_CONSTANT("uuid");
+		case PROP_SHA1:
+			return UCHAR_CONSTANT("sha1");
 		default:
 			return UCHAR_CONSTANT("*invalid property id*");
 	}
@@ -796,6 +805,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszTIMESTAMP_Unix[0] = '\0';
 	pM->pszRcvdAt_Unix[0] = '\0';
 	pM->pszUUID = NULL;
+	pM->pszSHA1 = NULL;
 	pthread_mutex_init(&pM->mut, NULL);
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
@@ -934,6 +944,8 @@ CODESTARTobjDestruct(msg)
 			json_object_put(pThis->localvars);
 		if(pThis->pszUUID != NULL)
 			free(pThis->pszUUID);
+		if(pThis->pszSHA1 != NULL)
+			free(pThis->pszSHA1);
 #	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
 # 	endif
@@ -1546,6 +1558,40 @@ void getUUID(msg_t * const pM, uchar **pBuf, int *piLen)
 		*piLen = sizeof(uuid_t) * 2;
 	}
 	dbgprintf("[getUUID] END\n");
+}
+#endif
+
+#ifdef USE_SHA1
+void getSHA1(msg_t * const pM, uchar **pBuf, int *piLen)
+{
+	dbgprintf("[getSHA1] START\n");
+	if(pM == NULL) {
+		dbgprintf("[getSHA1] pM is NULL\n");
+		*pBuf=	UCHAR_CONSTANT("");
+		*piLen = 0;
+	} else {
+		if(pM->pszSHA1 == NULL) {
+			dbgprintf("[getSHA1] pM->pszSHA1 is NULL\n");
+			MsgLock(pM);
+			/* re-query, things may have changed in the mean time... */
+			if((pM->pszSHA1 = (uchar*) MALLOC(SHA_DIGEST_LENGTH * 2 + 1)) == NULL) {
+				pM->pszSHA1 = (uchar *)"";
+			} else {
+				unsigned char hash[SHA_DIGEST_LENGTH];
+				unsigned int i;
+				SHA1(pM->pszRawMsg, pM->iLenRawMsg, hash);
+				for(i = 0; i < SHA_DIGEST_LENGTH; i++) {
+					snprintf(pM->pszSHA1+i*2, 3, "%02x", hash[i]);
+				}
+			}
+			MsgUnlock(pM);
+		} else { /* SHA1 already there we reuse it */
+			dbgprintf("[getSHA1] pM->pszSHA1 already exists\n");
+		}
+		*pBuf = pM->pszSHA1;
+		*piLen = SHA_DIGEST_LENGTH * 2;
+	}
+	dbgprintf("[getSHA1] END\n");
 }
 #endif
 
@@ -3200,6 +3246,11 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 #ifdef USE_LIBUUID
 		case PROP_UUID:
 			getUUID(pMsg, &pRes, &bufLen);
+			break;
+#endif
+#ifdef USE_SHA1
+		case PROP_SHA1:
+			getSHA1(pMsg, &pRes, &bufLen);
 			break;
 #endif
 		case PROP_PARSESUCCESS:

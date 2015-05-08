@@ -415,6 +415,11 @@ printVersion(void)
 #else
 	printf("\tuuid support:\t\t\t\tNo\n");
 #endif
+#ifdef	USE_SHA1
+	printf("\tsha1 support:\t\t\t\tYes\n");
+#else
+	printf("\tsha1 support:\t\t\t\tNo\n");
+#endif
 #ifdef HAVE_JSON_OBJECT_NEW_INT64
 	printf("\tNumber of Bits in RainerScript integers: 64\n");
 #else
