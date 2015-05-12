@@ -682,15 +682,20 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * The termination LF characters are read, but are
  * not returned in the buffer (it is discared). The caller is responsible for
  * destruction of the returned CStr object! -- dlang 2010-12-13
+ *
+ * Parameter mode controls legcy multi-line processing:
+ * mode = 0 single line mode (equivalent to ReadLine)
+ * mode = 1 LFLF mode (paragraph, blank line between entries)
+ * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
+ * a line, but following lines that are indented are part of the same log entry
+ *
+ * Parameter endRegex permits to specify a Posix ERE regex which is used to
+ * detect multi-line message termination. If it is non-NULL, parameter mode
+ * is silently **ignored**.
  */
 static rsRetVal
 strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 {
-	/* mode = 0 single line mode (equivalent to ReadLine)
-         * mode = 1 LFLF mode (paragraph, blank line between entries)
-         * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of a line, but following lines that are indented are part of the same log entry
-	 *  This modal interface is not nearly as flexible as being able to define a regex for when a new record starts, but it's also not nearly as hard (or as slow) to implement
-         */
         uchar c;
 	uchar finished;
 	rsRetVal readCharRet;
@@ -806,6 +811,72 @@ dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCSt
         RETiRet;
 }
 
+/* read a multi-line message from a strm file.
+ * The multi-line message is terminated based on the user-provided
+ * endRegex (Posix ERE). For performance reasons, the regex
+ * must already have been compiled by the user.
+ * added 2015-05-12 rgerhards
+ */
+rsRetVal
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF)
+{
+        uchar c;
+	uchar finished = 0;
+	cstr_t *thisLine = NULL;
+	rsRetVal readCharRet;
+        DEFiRet;
+
+        ASSERT(pThis != NULL);
+        ASSERT(ppCStr != NULL);
+
+	do {
+		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
+		CHKiRet(cstrConstruct(&thisLine));
+		/* append previous message to current message if necessary */
+		if(pThis->prevLineSegment != NULL) {
+			dbgprintf("DDDDD: readMultiLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
+			CHKiRet(cstrAppendCStr(thisLine, pThis->prevLineSegment));
+			cstrDestruct(&pThis->prevLineSegment);
+		}
+
+		while(c != '\n') {
+			CHKiRet(cstrAppendChar(thisLine, c));
+			readCharRet = strmReadChar(pThis, &c);
+			if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, thisLine));
+			}
+			CHKiRet(readCharRet);
+		}
+		CHKiRet(cstrFinalize(thisLine));
+
+		/* we have a line, now let's assemble the message */
+		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStr(thisLine), 0, NULL, 0);
+dbgprintf("DDDD: readMultiLine: match %d, line '%s'\n", isMatch, rsCStrGetSzStr(thisLine));
+
+		if(isMatch) {
+			/* in this case, the *previous* message is complete and we are
+			 * at the start of a new one.
+			 */
+			if(pThis->prevMsgSegment != NULL) {
+				/* may be NULL in initial poll! */
+				finished = 1;
+				*ppCStr = pThis->prevMsgSegment;
+dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
+			}
+			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+			
+		} else {
+			CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+			rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			/* we could do this faster, but for now keep it simple */
+		}
+		cstrDestruct(&thisLine);
+	} while(finished == 0);
+
+finalize_it:
+dbgprintf("DDDDD: readMultiLine returns[%d]: [*ppCStr %p]\n", iRet,  *ppCStr);
+        RETiRet;
+}
 
 /* Standard-Constructor for the strm object
  */
@@ -820,6 +891,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->tOpenMode = 0600;
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
+	pThis->prevMsgSegment = NULL;
 	pThis->bPrevWasNL = 0;
 ENDobjConstruct(strm)
 
@@ -949,6 +1021,8 @@ CODESTARTobjDestruct(strm)
 	 */
 	if(pThis->prevLineSegment)
 		cstrDestruct(&pThis->prevLineSegment);
+	if(pThis->prevMsgSegment)
+		cstrDestruct(&pThis->prevMsgSegment);
 	free(pThis->pszDir);
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
@@ -1867,6 +1941,11 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 		objSerializePTR(pStrm, prevLineSegment, CSTR);
 	}
 
+	if(pThis->prevMsgSegment != NULL) {
+		cstrFinalize(pThis->prevMsgSegment);
+		objSerializePTR(pStrm, prevMsgSegment, CSTR);
+	}
+
 	i = pThis->bPrevWasNL;
 	objSerializeSCALAR_VAR(pStrm, bPrevWasNL, INT, i);
 
@@ -1979,6 +2058,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
  	} else if(isProp("prevLineSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
+ 	} else if(isProp("prevMsgSegment")) {
+		CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, pProp->val.pStr));
  	} else if(isProp("bPrevWasNL")) {
 		pThis->bPrevWasNL = (sbool) pProp->val.num;
 	}
