@@ -108,8 +108,8 @@ typedef struct lstn_s {
 	sbool bRMStateOnDel;
 	sbool hasWildcard;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
-	uchar *endRegex;	/* regex that signifies end of message (NULL if unset) */
-	regex_t end_preg;	/* compiled version of endRegex */
+	uchar *startRegex;	/* regex that signifies end of message (NULL if unset) */
+	regex_t end_preg;	/* compiled version of startRegex */
 	uchar *prevLineSegment;	/* previous line segment (in regex mode) */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
 	sbool addMetadata;
@@ -145,7 +145,7 @@ struct instanceConf_s {
 	int iSeverity;
 	sbool bRMStateOnDel;
 	uint8_t readMode;
-	uchar *endRegex;
+	uchar *startRegex;
 	sbool escapeLF;
 	sbool addMetadata;
 	int maxLinesAtOnce;
@@ -258,7 +258,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "facility", eCmdHdlrFacility, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "readmode", eCmdHdlrInt, 0 },
-	{ "endmsg.regex", eCmdHdlrString, 0 },
+	{ "startmsg.regex", eCmdHdlrString, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
@@ -570,7 +570,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
-		if(pLstn->endRegex == NULL) {
+		if(pLstn->startRegex == NULL) {
 			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF));
 		} else {
 			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF));
@@ -621,7 +621,7 @@ createInstance(instanceConf_t **pinst)
 	inst->maxLinesAtOnce = 0;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
-	inst->endRegex = NULL;
+	inst->startRegex = NULL;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
@@ -802,7 +802,7 @@ lstnDel(lstn_t *pLstn)
 	free(pLstn->pszTag);
 	free(pLstn->pszStateFile);
 	free(pLstn->pszBaseName);
-	if(pLstn->endRegex != NULL)
+	if(pLstn->startRegex != NULL)
 		regfree(&pLstn->end_preg);
 
 	if(pLstn == runModConf->pRootLstn)
@@ -844,9 +844,9 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
 	pThis->iPersistStateInterval = existing->iPersistStateInterval;
 	pThis->readMode = existing->readMode;
-	pThis->endRegex = existing->endRegex; /* no strdup, as it is read-only */
-	if(pThis->endRegex != NULL) // TODO: make this a single function with better error handling
-		if(regcomp(&pThis->end_preg, (char*)pThis->endRegex, REG_EXTENDED)) {
+	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
+	if(pThis->startRegex != NULL) // TODO: make this a single function with better error handling
+		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
 			dbgprintf("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -910,9 +910,9 @@ addListner(instanceConf_t *inst)
 	pThis->maxLinesAtOnce = inst->maxLinesAtOnce;
 	pThis->iPersistStateInterval = inst->iPersistStateInterval;
 	pThis->readMode = inst->readMode;
-	pThis->endRegex = inst->endRegex; /* no strdup, as it is read-only */
-	if(pThis->endRegex != NULL)
-		if(regcomp(&pThis->end_preg, (char*)pThis->endRegex, REG_EXTENDED)) {
+	pThis->startRegex = inst->startRegex; /* no strdup, as it is read-only */
+	if(pThis->startRegex != NULL)
+		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
 			dbgprintf("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -968,8 +968,8 @@ CODESTARTnewInpInst
 			inst->iFacility = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
 			inst->readMode = (sbool) pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "endmsg.regex")) {
-			inst->endRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
+			inst->startRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
@@ -994,9 +994,9 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
-	if(inst->readMode != 0 &&  inst->endRegex != NULL) {
+	if(inst->readMode != 0 &&  inst->startRegex != NULL) {
 		errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
-			"readMode and endmsg.regex cannot be set "
+			"readMode and startmsg.regex cannot be set "
 			"at the same time --- remove one of them");
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
 	}
@@ -1147,7 +1147,7 @@ CODESTARTfreeCnf
 		free(inst->pszFileBaseName);
 		free(inst->pszTag);
 		free(inst->pszStateFile);
-		free(inst->endRegex);
+		free(inst->startRegex);
 		del = inst;
 		inst = inst->next;
 		free(del);

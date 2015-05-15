@@ -689,7 +689,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
  * a line, but following lines that are indented are part of the same log entry
  *
- * Parameter endRegex permits to specify a Posix ERE regex which is used to
+ * Parameter startRegex permits to specify a Posix ERE regex which is used to
  * detect multi-line message termination. If it is non-NULL, parameter mode
  * is silently **ignored**.
  */
@@ -813,7 +813,7 @@ dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCSt
 
 /* read a multi-line message from a strm file.
  * The multi-line message is terminated based on the user-provided
- * endRegex (Posix ERE). For performance reasons, the regex
+ * startRegex (Posix ERE). For performance reasons, the regex
  * must already have been compiled by the user.
  * added 2015-05-12 rgerhards
  */
