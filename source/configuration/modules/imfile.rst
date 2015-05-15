@@ -188,11 +188,31 @@ Input Parameters
    is very time consuming.
 
 .. index:: 
-   single: imfile; ReadMode
-.. function:: ReadMode [mode]
+   single: imfile; startmsg.regex
+.. function:: startmsg.regex [POSIX ERE regex]
 
-   This mode should be defined when having multiline messages. The value
-   can range from 0-2 and determines the multiline detection method.
+   This permits the processing of multi-line messages. When set, a
+   messages is terminated when the next one begins, and
+   ``startmsg.regex`` contains the regex that identifies the start
+   of a message. As this parameter is using regular expressions, it
+   is more flexible than ``readMode`` but at the cost of lower
+   performance.
+   Note that ``readMode`` and ``startmsg.regex`` cannot both be
+   defined for the same input.
+
+   This parameter is available since rsyslog v8.10.0.
+
+.. index:: 
+   single: imfile; readMode
+.. function:: readMode [mode]
+
+   This provides support for processing some standard types of multiline
+   messages. It is less flexible than ``startmsg.regex`` but offers higher
+   performance than regex processing. Note that ``readMode`` and
+   ``startmsg.regex`` cannot both be defined for the same input.
+
+   The value can range from 0-2 and determines the multiline
+   detection method.
 
    0 - (**default**) line based (each line is a new message)
 
