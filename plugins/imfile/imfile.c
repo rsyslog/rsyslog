@@ -801,6 +801,7 @@ lstnDel(lstn_t *pLstn)
 	free(pLstn->pszFileName);
 	free(pLstn->pszTag);
 	free(pLstn->pszStateFile);
+	free(pLstn->pszBaseName);
 	if(pLstn->endRegex != NULL)
 		regfree(&pLstn->end_preg);
 
@@ -827,7 +828,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	lstn_t *pThis;
 
 	CHKiRet(lstnAdd(&pThis));
-	pThis->pszDirName = (uchar*)strdup((char*)existing->pszDirName);
+	pThis->pszDirName = existing->pszDirName; /* read-only */
 	pThis->pszBaseName = (uchar*)strdup((char*)newname);
 	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
 	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
@@ -895,7 +896,7 @@ addListner(instanceConf_t *inst)
 	pThis->hasWildcard = hasWildcard;
 	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
 	pThis->pszDirName = inst->pszDirName; /* use memory from inst! */
-	pThis->pszBaseName = inst->pszFileBaseName; /* use memory from inst! */
+	pThis->pszBaseName = (uchar*)strdup((char*)inst->pszFileBaseName); /* be consistent with expanded wildcards! */
 	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
