@@ -279,6 +279,7 @@ TESTS += imfile-basic.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
+	imfile-endregex-vg.sh \
 	imfile-endregex.sh
 if HAVE_VALGRIND
 TESTS += imfile-basic-vg.sh
@@ -673,6 +674,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
            testsuites/imfile-readmode2-with-persists.conf \
            testsuites/imfile-readmode2-with-persists-data-during-stop.conf \
            imfile-endregex.sh \
+           imfile-endregex-vg.sh \
            testsuites/imfile-endregex.conf \
 	   imfile-basic.sh \
 	   imfile-basic-vg.sh \
