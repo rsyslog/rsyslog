@@ -354,7 +354,6 @@ finalize_it:
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
 		}
 		if(pThis->fd != -1) {
-dbgprintf("DDDD: strmOpenFile closes: %d\n", pThis->fd);
 			close(pThis->fd);
 			pThis->fd = -1;
 		}
@@ -420,7 +419,6 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	 */
 	if(pThis->fd != -1) {
 		currOffs = lseek64(pThis->fd, 0, SEEK_CUR);
-dbgprintf("DDDD: strmCloseFile: %d\n", pThis->fd);
 		close(pThis->fd);
 		pThis->fd = -1;
 		pThis->inode = 0;
@@ -688,10 +686,6 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * mode = 1 LFLF mode (paragraph, blank line between entries)
  * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
  * a line, but following lines that are indented are part of the same log entry
- *
- * Parameter startRegex permits to specify a Posix ERE regex which is used to
- * detect multi-line message termination. If it is non-NULL, parameter mode
- * is silently **ignored**.
  */
 static rsRetVal
 strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
@@ -704,11 +698,9 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
 
-dbgprintf("DDDDD: readLine: enter, bPrevWasNL %d\n", pThis->bPrevWasNL);
         CHKiRet(cstrConstruct(ppCStr));
         CHKiRet(strmReadChar(pThis, &c));
 
-dbgprintf("DDDDD: readLine: pre-check, bPrevWasNL %d\n", pThis->bPrevWasNL);
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
 		dbgprintf("DDDDD: readLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
