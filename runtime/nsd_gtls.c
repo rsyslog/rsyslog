@@ -229,15 +229,26 @@ finalize_it:
  */
 static int
 gtlsClientCertCallback(gnutls_session_t session,
-              __attribute__((unused)) const gnutls_datum_t* req_ca_rdn, int __attribute__((unused)) nreqs,
-              __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos, int __attribute__((unused)) sign_algos_length,
-              gnutls_retr_st *st)
+        __attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
+	int __attribute__((unused)) nreqs,
+        __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
+	int __attribute__((unused)) sign_algos_length,
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+	gnutls_retr2_st* st
+#else
+        gnutls_retr_st *st
+#endif
+	)
 {
 	nsd_gtls_t *pThis;
 
 	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
 
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+	st->cert_type = GNUTLS_CRT_X509;
+#else
 	st->type = GNUTLS_CRT_X509;
+#endif
 	st->ncerts = 1;
 	st->cert.x509 = &pThis->ourCert;
 	st->key.x509 = pThis->ourKey;
@@ -1673,7 +1684,11 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
 	if(iRet == RS_RET_OK) {
+#		if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
+#		else
 		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
+#	endif
 	} else if(iRet != RS_RET_CERTLESS) {
 		FINALIZE; /* we have an error case! */
 	}
