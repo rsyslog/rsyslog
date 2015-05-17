@@ -478,12 +478,16 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 static inline void
 do_rd_kafka_destroy(instanceData *const __restrict pData)
 {
-	DBGPRINTF("omkafka: closing - items left in outqueue: %d\n",
-		  rd_kafka_outq_len(pData->rk));
-	while (rd_kafka_outq_len(pData->rk) > 0)
-		rd_kafka_poll(pData->rk, 10);
-	rd_kafka_destroy(pData->rk);
-	pData->rk = NULL;
+	if (pData->rk == NULL) {
+		DBGPRINTF("omkafka: can't close, handle wasn't open\n");
+	} else {
+		DBGPRINTF("omkafka: closing - items left in outqueue: %d\n",
+				  rd_kafka_outq_len(pData->rk));
+		while (rd_kafka_outq_len(pData->rk) > 0)
+			rd_kafka_poll(pData->rk, 10);
+		rd_kafka_destroy(pData->rk);
+		pData->rk = NULL;
+	}
 }
 
 
