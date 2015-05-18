@@ -279,10 +279,11 @@ TESTS += imfile-basic.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
-	imfile-endregex-vg.sh \
 	imfile-endregex.sh
 if HAVE_VALGRIND
-TESTS += imfile-basic-vg.sh
+TESTS += imfile-basic-vg.sh \
+	imfile-endregex-vg.sh \
+	imfile-readmode2-vg.sh
 endif
 endif
 
