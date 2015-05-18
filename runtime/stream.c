@@ -681,7 +681,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * not returned in the buffer (it is discared). The caller is responsible for
  * destruction of the returned CStr object! -- dlang 2010-12-13
  *
- * Parameter mode controls legcy multi-line processing:
+ * Parameter mode controls legacy multi-line processing:
  * mode = 0 single line mode (equivalent to ReadLine)
  * mode = 1 LFLF mode (paragraph, blank line between entries)
  * mode = 2 LF <not whitespace> mode, a log line starts at the beginning of
