@@ -104,7 +104,7 @@ finalize_it:
 }
 
 BEGINnewParserInst
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTnewParserInst
 	DBGPRINTF("newParserInst (pmrfc3164)\n");
