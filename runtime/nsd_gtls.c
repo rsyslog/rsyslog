@@ -1658,8 +1658,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-	/* TODO: later? static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };*/
+#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
+#	endif
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1688,14 +1689,27 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
 #		else
 		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
-#	endif
+#		endif
 	} else if(iRet != RS_RET_CERTLESS) {
 		FINALIZE; /* we have an error case! */
 	}
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
+#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+	/* The gnutls_certificate_type_set_priority function is deprecated
+	 * and not available in recent GnuTLS versions. However, there is no
+	 * doc how to properly replace it with gnutls_priority_set_direct.
+	 * A lot of folks have simply removed it, when they also called
+	 * gnutls_set_default_priority. This is what we now also do. If
+	 * this causes problems or someone has an idea of how to replace
+	 * the deprecated function in a better way, please let us know!
+	 * In any case, we use it as long as it is available and let
+	 * not insult us by the deprecation warnings.
+	 * 2015-05-18 rgerhards
+	 */
 	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
+#	endif
 
 	/* put the x509 credentials to the current session */
 	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, xcred));

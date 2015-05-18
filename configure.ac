@@ -765,6 +765,7 @@ if test "x$enable_gnutls" = "xyes"; then
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
         AC_CHECK_LIB(gnutls, gnutls_global_init)
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
+	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
