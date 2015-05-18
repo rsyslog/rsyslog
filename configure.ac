@@ -1556,7 +1556,31 @@ AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 # END HIREDIS SUPPORT
 
 
+# HTTPFS SUPPORT
+
+AC_ARG_ENABLE(omhttpfs,
+        [AS_HELP_STRING([--enable-omhttpfs],[Compiles omhttpfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhttpfs="yes" ;;
+          no) enable_omhttpfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhttpfs) ;;
+         esac],
+        [enable_omhttpfs=no]
+)
+
+if test "x$enable_omhttpfs" = "xyes"; then
+	AC_CHECK_HEADERS([curl/curl.h])
+	PKG_CHECK_MODULES([CURL], [libcurl])
+	PKG_CHECK_MODULES([JSON_C], [json-c])
+	LT_LIB_M
+	#PKG_CHECK_MODULES(HTTPFS, curl >= 7.0.0)
+fi
+AM_CONDITIONAL(ENABLE_OMHTTPFS, test x$enable_omhttpfs = xyes)
+
+# END HTTPFS SUPPORT
+
 # man pages
+AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
 AC_ARG_ENABLE(generate-man-pages,
         [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=no@:>@])],
@@ -1662,6 +1686,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
+		contrib/omhttpfs/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1709,6 +1734,7 @@ echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
+echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
