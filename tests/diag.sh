@@ -6,6 +6,10 @@
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+
+# **** use the line below for very hard to find leaks! *****
+#valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
+
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"

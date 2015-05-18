@@ -1869,6 +1869,12 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
+	if(dirs != NULL) {
+		free(dirs->active.listeners);
+		free(dirs->configured.listeners);
+		free(dirs);
+	}
+	free(wdmap);
 ENDmodExit
 
 
