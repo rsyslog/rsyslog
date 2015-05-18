@@ -1846,7 +1846,7 @@ static inline char *getSeverity(msg_t * const pM)
 	if(pM == NULL)
 		return "";
 
-	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+	if(pM->iSeverity > 7) {
 		name = "invld";
 	} else {
 		name = syslog_number_names[pM->iSeverity];
@@ -1863,7 +1863,7 @@ static inline char *getSeverityStr(msg_t * const pM)
 	if(pM == NULL)
 		return "";
 
-	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+	if(pM->iSeverity > 7) {
 		name = "invld";
 	} else {
 		name = syslog_severity_names[pM->iSeverity];
@@ -1879,7 +1879,7 @@ static inline char *getFacility(msg_t * const pM)
 	if(pM == NULL)
 		return "";
 
-	if(pM->iFacility < 0 || pM->iFacility > 23) {
+	if(pM->iFacility > 23) {
 		name = "invld";
 	} else {
 		name = syslog_number_names[pM->iFacility];
@@ -1895,7 +1895,7 @@ static inline char *getFacilityStr(msg_t * const pM)
         if(pM == NULL)
                 return "";
 
-	if(pM->iFacility < 0 || pM->iFacility > 23) {
+	if(pM->iFacility > 23) {
 		name = "invld";
 	} else {
 		name = syslog_fac_names[pM->iFacility];

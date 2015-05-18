@@ -532,7 +532,7 @@ static void doDropPrivUid(int iUid)
 		res = initgroups(pw->pw_name, gid);
 		DBGPRINTF("initgroups(%s, %d): %d\n", pw->pw_name, gid, res);
 	} else {
-		rs_strerror_r(errno, szBuf, sizeof(szBuf));
+		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
 		errmsg.LogError(0, NO_ERRCODE,
 				"could not get username for userid %d: %s",
 				iUid, szBuf);
