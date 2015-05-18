@@ -275,7 +275,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	/* if a beacon is set start it */
-	if((iconf->beacon != NULL) && (iconf->beaconPort <= 0)) {
+	if((iconf->beacon != NULL) && (iconf->beaconPort > 0)) {
 		DBGPRINTF ("imczmq: starting beacon actor...\n");
 
 		/* create the beacon actor, if it fails abort */	

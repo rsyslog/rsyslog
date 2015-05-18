@@ -111,7 +111,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	bool is_server = false;
 
 	/* if a beacon is set start it */
-	if((pData->beacon != NULL) && (pData->beaconport <= 0)) {
+	if((pData->beacon != NULL) && (pData->beaconport > 0)) {
 		DBGPRINTF ("omczmq: starting beacon actor...\n");
 
 		/* create the beacon actor, if it fails abort */	
