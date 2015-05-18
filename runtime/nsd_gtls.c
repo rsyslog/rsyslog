@@ -683,7 +683,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
+gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 {
 	DEFiRet;
 	int gnuRet;
@@ -694,7 +694,6 @@ gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
 	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	assert(pCert != NULL);
 	assert(ppstrCN != NULL);
 	assert(*ppstrCN == NULL);
@@ -885,7 +884,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 
 	if(!bFoundPositiveMatch) {
 		/* if we did not succeed so far, we try the CN part of the DN... */
-		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
+		CHKiRet(gtlsGetCN(pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
 			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStr(pstrCN));
 			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStr(pstrCN));
