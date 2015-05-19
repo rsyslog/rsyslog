@@ -35,6 +35,9 @@ Version 8.10.0 [v8-stable] 2015-05-19
 - bugfix: memory leak in mmpstrucdata
   Thanks to Grégoire Seux for reporting this issue.
   closes https://github.com/rsyslog/rsyslog/issues/310
+- bugfix (minor): default action name: assigned number was one off
+  see also https://github.com/rsyslog/rsyslog/pull/340
+  Thanks to Tomas Heinrich for the patch.
 ------------------------------------------------------------------------------
 Version 8.9.0 [v8-stable] 2015-04-07
 - omprog: add option "hup.forward" to forwards HUP to external plugins
