@@ -373,8 +373,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     struct curl_slist* headers = NULL; \
     long response_code; \
     CURLcode res; \
-    char* content_type; \
-    int is_json = 0;
+    char* content_type;
 
 /**
  * Resource release
@@ -396,7 +395,6 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     if (res == CURLE_OK) { \
         curl_easy_getinfo(pWrkrData->curl, CURLINFO_CONTENT_TYPE, &content_type); \
         if (strncmp(content_type, HTTPFS_CONTENT_TYPE_JSON, strlen(HTTPFS_CONTENT_TYPE_JSON))) { \
-            is_json = 1; \
         } \
         curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code); \
         if (pWrkrData->reply != NULL) { \
@@ -464,6 +462,7 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     return RS_RET_OK;
 }
 
+#if 0
 /**
  * Make a new directory
  * op=MKDIR
@@ -501,6 +500,7 @@ HTTPFS_CURL_VARS_RELEASE
         return RS_RET_FALSE;
     }
 }
+#endif
 
 /**
  * Create a file
@@ -601,6 +601,7 @@ HTTPFS_CURL_VARS_RELEASE
     }
 }
 
+#if 0
 /**
  * Get file content
  * op=OPEN
@@ -639,6 +640,7 @@ HTTPFS_CURL_VARS_RELEASE
         return RS_RET_FALSE;
     }
 }
+#endif
 
 /**
  * httpfs log 
