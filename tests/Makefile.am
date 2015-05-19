@@ -182,10 +182,10 @@ TESTS +=  \
 	elasticsearch-basic-errorfile-populated.sh \
 	elasticsearch-bulk-errorfile-empty.sh \
 	elasticsearch-bulk-errorfile-populated.sh \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -496,14 +496,14 @@ EXTRA_DIST= \
 	testsuites/elasticsearch-bulk-errorfile-empty.conf \
 	elasticsearch-bulk-errorfile-populated.sh \
 	testsuites/elasticsearch-bulk-errorfile-populated.conf \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
+	es-bulk-errfile-popul-def-format.sh \
+	testsuites/es-bulk-errfile-popul-def-format.conf \
+	es-bulk-errfile-popul-erronly.sh \
+	testsuites/es-bulk-errfile-popul-erronly.conf \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
+	es-bulk-errfile-popul-def-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
