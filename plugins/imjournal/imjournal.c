@@ -677,6 +677,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	free(cs.stateFile);
 ENDfreeCnf
 
 /* open journal */
