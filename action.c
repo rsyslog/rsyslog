@@ -385,7 +385,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	}
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", pThis->iActionNbr);
 		pThis->pszName = ustrdup(pszAName);
 	}
 
