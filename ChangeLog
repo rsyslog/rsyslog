@@ -19,6 +19,8 @@ Version 8.10.0 [v8-stable] 2015-05-19
 - zmq: add the ability for zeromq input and outputs to advertise their
   presence on UDP via the zbeacon API.
   Thanks to Brian Knox for the contribution.
+- added omhttpfs: contributed module for writing to HDFS via HTTP
+  Thanks to sskaje for the contribution.
 - When building from git source we now require rst2man and yacc (or a
   replacement like bison).
   That isn't any new requirement, we only added missing configure checks.
