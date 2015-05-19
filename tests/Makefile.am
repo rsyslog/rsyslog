@@ -657,7 +657,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   abort-uncleancfg-goodcfg-check.sh \
 	   testsuites/abort-uncleancfg-goodcfg.conf \
 	   abort-uncleancfg-badcfg-check.sh \
-           testsuites/abort-uncleancfg-badcfg.conf 
+           testsuites/abort-uncleancfg-badcfg.conf \
 	   abort-uncleancfg-badcfg-check_1.sh \
 	   testsuites/abort-uncleancfg-badcfg_1.conf \
 	   gzipwr_large.sh \
