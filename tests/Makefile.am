@@ -676,6 +676,7 @@ EXTRA_DIST= \
 	random.sh \
 	testsuites/random.conf \
 	imfile-readmode2.sh \
+	imfile-readmode2-vg.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
 	testsuites/imfile-readmode2.conf \
