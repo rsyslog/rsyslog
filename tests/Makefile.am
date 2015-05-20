@@ -229,8 +229,10 @@ imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
-	imtcp_conndrop_tls-vg.sh \
+	imtcp_conndrop_tls-vg.sh
+if !ENABLE_DISTCHECK_WORKAROUND
 	manytcp-too-few-tls-vg.sh
+endif
 endif
 endif
 

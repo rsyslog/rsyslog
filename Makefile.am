@@ -294,8 +294,7 @@ DISTCHECK_CONFIGURE_FLAGS= \
 	--enable-imdiag \
 	--enable-testbench \
 	--disable-silent-rules \
-	--enable-imfile
-#intentionally broken here to speed up tests ... TODO: re-enable
+	--enable-imfile \
 	--enable-snmp \
 	--enable-libdbi \
 	--enable-mysql \
