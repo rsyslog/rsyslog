@@ -32,8 +32,8 @@ echo DONE PROCESSING
 pwd
 echo  srcdir: $srcdir
 ls -l *rsyslog*
-echo AND A FULL LIST
-ls
+echo rsyslog.out.log contents:
+cat ./rsyslog.out.log
 
 ## check if we have the correct number of messages
 
@@ -54,7 +54,7 @@ fi
 ## check if all the data we expect to get in the file is there
 
 for i in {1..4}; do
-  grep msgnum:$i $srcdir/rsyslog.out.log > /dev/null 2>&1
+  grep msgnum:$i ./rsyslog.out.log > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
     source $srcdir/diag.sh exit
