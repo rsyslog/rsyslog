@@ -6,7 +6,7 @@ before_install:
   - travis_retry sudo apt-get update -qq
 
 install:
-  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev
+  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex python-docutils
 
 script:
