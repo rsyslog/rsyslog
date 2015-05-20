@@ -181,11 +181,14 @@ TESTS +=  \
 	elasticsearch-basic-errorfile-empty.sh \
 	elasticsearch-basic-errorfile-populated.sh \
 	elasticsearch-bulk-errorfile-empty.sh \
-	elasticsearch-bulk-errorfile-populated.sh \
+	elasticsearch-bulk-errorfile-populated.sh
+if ENABLE_IMFILE
+TESTS +=  \
 	es-bulk-errfile-popul-def-format.sh \
 	es-bulk-errfile-popul-erronly.sh \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh
+endif
 endif
 
 if ENABLE_MMPSTRUCDATA
