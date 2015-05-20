@@ -57,6 +57,15 @@ sudo yum install git valgrind autoconf automake flex bison python-docutils pytho
 
 
 
+Ubuntu
+~~~~~~
+
+Note: this list is (obviously) incomplete. We intend to complete it as we 
+have more information and install additional systems.
+
+sudo apt-get install libdbi-dev
+
+
 openSUSE 13
 ~~~~~~~~~~~
 
