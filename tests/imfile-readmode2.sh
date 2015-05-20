@@ -8,6 +8,8 @@ source $srcdir/diag.sh startup imfile-readmode2.conf
 echo 'msgnum:0
  msgnum:1' > rsyslog.input
 echo 'msgnum:2' >> rsyslog.input
+pwd
+ls
 
 # sleep a little to give rsyslog a chance to begin processing
 sleep 1
@@ -26,9 +28,16 @@ source $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is fini
 # give it time to write the output file
 sleep 1
 
+echo DONE PROCESSING
+pwd
+echo  srcdir: $srcdir
+ls -l *rsyslog*
+echo AND A FULL LIST
+ls
+
 ## check if we have the correct number of messages
 
-NUMLINES=$(grep -c HEADER $srcdir/rsyslog.out.log 2>/dev/null)
+NUMLINES=$(grep -c HEADER ./rsyslog.out.log 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"

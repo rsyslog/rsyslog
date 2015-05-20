@@ -290,7 +290,11 @@ SUBDIRS += tests
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS= \
-	--disable-silent-rules \
+	--enable-distcheck-workaround \
+	--enable-imdiag \
+	--enable-testbench \
+	--disable-silent-rules 
+#intentionally broken here to speed up tests ... TODO: re-enable
 	--enable-imfile \
 	--enable-snmp \
 	--enable-libdbi \
@@ -305,7 +309,6 @@ DISTCHECK_CONFIGURE_FLAGS= \
 	--enable-pmlastmsg \
 	--enable-omruleset \
 	--enable-omprog \
-	--enable-imdiag \
 	--enable-imptcp \
 	--enable-omuxsock \
 	--enable-impstats \
@@ -315,7 +318,6 @@ DISTCHECK_CONFIGURE_FLAGS= \
 	--enable-pmsnare \
 	--enable-elasticsearch \
 	--enable-valgrind \
-	--enable-testbench \
 	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-mmsnmptrapd \
