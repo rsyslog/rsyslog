@@ -207,6 +207,20 @@ if ENABLE_GUARDTIME
 endif
 
 
+#
+# support library for guardtime KSI
+#
+if ENABLE_GUARDTIME
+   noinst_LTLIBRARIES +=  librsksi.la
+   librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h
+   pkglib_LTLIBRARIES += lmsig_ksi.la
+   lmsig_ksi_la_SOURCES = lmsig_ksi.c lmsig_ksi.h
+   lmsig_ksi_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
+   lmsig_ksi_la_LDFLAGS = -module -avoid-version
+   lmsig_ksi_la_LIBADD = librsksi.la $(GT_KSI_LIBS)
+endif
+
+
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/systemd/sd-daemon.h > sd-daemon.h

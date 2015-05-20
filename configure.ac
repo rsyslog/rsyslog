@@ -1093,6 +1093,22 @@ fi
 AM_CONDITIONAL(ENABLE_GUARDTIME, test x$enable_guardtime = xyes)
 
 
+# GuardTime KSI support
+AC_ARG_ENABLE(gt-ksi,
+        [AS_HELP_STRING([--enable-gt-ksi],[Enable log file signing support via GuardTime KSI @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_gt_ksi="yes" ;;
+          no) enable_gt_ksi="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gt-ksi) ;;
+         esac],
+        [enable_gt_ksi=no]
+)
+if test "x$enable_gt_ksi" = "xyes"; then
+	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.2.2.0)
+fi
+AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
+
+
 # liblogging-stdlog support
 AC_ARG_ENABLE(liblogging-stdlog,
         [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=yes@:>@])],
@@ -1701,6 +1717,7 @@ echo "    have to generate man pages:               $have_to_generate_man_pages"
 echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
+echo "    Log file signing support via KSI:         $enable_gt_ksi"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
