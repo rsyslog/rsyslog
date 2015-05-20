@@ -1592,6 +1592,20 @@ AC_ARG_ENABLE(generate-man-pages,
 )
 
 
+# This provides a work-around to use "make distcheck" by disabling
+# some tests that do have problems with the distcheck environment.
+AC_ARG_ENABLE(distcheck-workaround,
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck by disabling some tests that do not support the distcheck environment @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_distcheck_workaround="yes" ;;
+          no) enable_distcheck_workaround="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-distcheck_workaround) ;;
+         esac],
+        [enable_distcheck_workaround="no"]
+)
+AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
+
+
 # Running from git source?
 in_git_src=no
 AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
