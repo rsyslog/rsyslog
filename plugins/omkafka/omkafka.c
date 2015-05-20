@@ -117,7 +117,9 @@ typedef struct _instanceData {
 	int fdErrFile;		/* error file fd or -1 if not open */
 	pthread_mutex_t mutErrFile;
 	int bIsOpen;
+	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
+	int closeTimeout;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -138,7 +140,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "confparam", eCmdHdlrArray, 0 },
 	{ "topicconfparam", eCmdHdlrArray, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "closeTimeout", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -164,12 +167,14 @@ getPartition(instanceData *const __restrict__ pData)
 }
 
 /* destroy topic item */
+/* must be called with write(rkLock) */
 static rsRetVal
 closeTopic(instanceData *__restrict__ const pData)
 {
 	DEFiRet;
 	DBGPRINTF("omkafka: closing topic %s\n", rd_kafka_topic_name(pData->pTopic));
 	rd_kafka_topic_destroy(pData->pTopic);
+	pData->pTopic = NULL;
 	RETiRet;
 
 }
@@ -235,6 +240,7 @@ static void dynaTopicFreeCache(instanceData *__restrict__ const pData)
 }
 
 /* create the topic object */
+/* must be called with write(rkLock) */
 static rsRetVal
 prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
 {
@@ -481,26 +487,43 @@ do_rd_kafka_destroy(instanceData *const __restrict pData)
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: can't close, handle wasn't open\n");
 	} else {
-		DBGPRINTF("omkafka: closing - items left in outqueue: %d\n",
-				  rd_kafka_outq_len(pData->rk));
-		while (rd_kafka_outq_len(pData->rk) > 0)
-			rd_kafka_poll(pData->rk, 10);
+		int queuedCount = rd_kafka_outq_len(pData->rk);
+		DBGPRINTF("omkafka: closing - items left in outqueue: %d\n", queuedCount);
+
+		struct timespec tOut;
+		timeoutComp(&tOut, pData->closeTimeout);
+		
+		while (timeoutVal(&tOut) > 0) {
+			queuedCount = rd_kafka_outq_len(pData->rk);
+			if (queuedCount > 0) {
+				rd_kafka_poll(pData->rk, 10);
+			} else {
+				break;
+			}
+		}
+		if (queuedCount > 0) {
+			DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
+					 "items left in outqueue: %d\n",
+					 rd_kafka_outq_len(pData->rk));
+		}
+		if (pData->dynaTopic) {
+			/*TBD*/
+		} else {
+			closeTopic(pData);
+		}
 		rd_kafka_destroy(pData->rk);
 		pData->rk = NULL;
 	}
 }
 
-
-static rsRetVal
+/* should be called with write(rkLock) */
+static void
 closeKafka(instanceData *const __restrict__ pData)
 {
-	DEFiRet;
-	if(!pData->bIsOpen)
-		FINALIZE;
-	do_rd_kafka_destroy(pData);
-	pData->bIsOpen = 0;
-finalize_it:
-	RETiRet;
+	if(pData->bIsOpen) {
+		do_rd_kafka_destroy(pData);
+		pData->bIsOpen = 0;
+	}
 }
 
 static void
@@ -534,6 +557,7 @@ getConfiguredPartitions()
 }
 #endif
 
+/* should be called with write(rkLock) */
 static rsRetVal
 openKafka(instanceData *const __restrict__ pData)
 {
@@ -543,6 +567,8 @@ openKafka(instanceData *const __restrict__ pData)
 
 	if(pData->bIsOpen)
 		FINALIZE;
+
+	pData->pTopic = NULL;
 
 	/* main conf */
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
@@ -599,6 +625,34 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+setupKafkaHandle(instanceData *const __restrict__ pData, int recreate)
+{
+	DEFiRet;
+	pthread_rwlock_wrlock(&pData->rkLock);
+	if (recreate) {
+		if (pData->dynaTopic) {
+			/*TBD*/
+		}
+		closeKafka(pData);
+	}
+	CHKiRet(openKafka(pData));
+	if (! pData->dynaTopic) {
+		if( pData->pTopic == NULL)
+			CHKiRet(prepareTopic(pData, pData->topic));
+	} else {
+		/*TBD*/ /*dynaTopicFreeCacheEntries(pData);?*/
+	}
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (pData->rk != NULL) {
+			closeKafka(pData);
+		}
+	}
+	pthread_rwlock_unlock(&pData->rkLock);
+	RETiRet;
+}
+
 BEGINdoHUP
 CODESTARTdoHUP
 	pthread_mutex_lock(&pData->mutErrFile);
@@ -606,12 +660,9 @@ CODESTARTdoHUP
 		close(pData->fdErrFile);
 		pData->fdErrFile = -1;
 	}
-	if(pData->dynaTopic) {
-		dynaTopicFreeCacheEntries(pData);
-	} else {
-		closeTopic(pData);
-	}
 	pthread_mutex_unlock(&pData->mutErrFile);
+	CHKiRet(setupKafkaHandle(pData, 1));
+finalize_it:
 ENDdoHUP
 
 BEGINcreateInstance
@@ -621,7 +672,9 @@ CODESTARTcreateInstance
 	pData->fdErrFile = -1;
 	pData->pTopic = NULL;
 	pData->bReportErrs = 1;
-	pthread_mutex_init(&pData->mutErrFile, NULL);
+	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
+	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
+finalize_it:
 ENDcreateInstance
 
 
@@ -641,7 +694,6 @@ CODESTARTfreeInstance
 	free(pData->topic);
 	free(pData->brokers);
 	free(pData->tplName);
-	closeKafka(pData);
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
@@ -652,11 +704,13 @@ CODESTARTfreeInstance
 	}
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
+	pthread_rwlock_wrlock(&pData->rkLock);
 	if(pData->dynaTopic) {
 		dynaTopicFreeCache(pData);
-	} else if(pData->pTopic != NULL) {
-		closeTopic(pData);
 	}
+	closeKafka(pData);
+	pthread_rwlock_unlock(&pData->rkLock);
+	pthread_rwlock_destroy(&pData->rkLock);
 	pthread_mutex_destroy(&pData->mutErrFile);
 ENDfreeInstance
 
@@ -679,41 +733,39 @@ CODESTARTtryResume
 	 * problem is shared with other modules, and the rsyslog core engine
 	 * has some mitigation against these kinds of problems. On the plus
 	 * side, we can at least detect if something goes wrong during
-	 * openKafka(), and we save ourself any hassle in those cases.
+	 * setupKafkaHandle(), and we save ourself any hassle in those cases.
 	 * The current way is not ideal, but currently the best we can
 	 * think of. If someone knows how to do a produce call without
 	 * actually producing something (or otherwise check the health
 	 * of the Kafka subsystem), please let us know on the rsyslog
 	 * mailing list. -- rgerhards, 2014-12-14
 	 */
-	iRet = openKafka(pWrkrData->pData);
+	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
+	
+finalize_it:
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
 
 
+/* must be called with read(rkLock) */
 static rsRetVal
 writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 {
 	DEFiRet;
 	const int partition = getPartition(pData);
+	rd_kafka_topic_t *rkt = NULL;
 
 	DBGPRINTF("omkafka: trying to send: '%s'\n", msg);
-	CHKiRet(openKafka(pData));
 
 	/* check if we are using dynamic topic names */
 	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
 		CHKiRet(prepareDynTopic(pData, topic));
+		/*TBD*/
 	} else {
-		if(pData->pTopic == NULL) {
-			CHKiRet(prepareTopic(pData, topic));
-			if(pData->pTopic == NULL) {
-				errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-					"Could not open topic '%s'", topic);
-			}
-		}
+		rkt = pData->pTopic;
 	}
-	if(rd_kafka_produce(pData->pTopic, partition, RD_KAFKA_MSG_F_COPY,
+	if(rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
 	                    msg, strlen((char*)msg), NULL, 0, NULL) == -1) {
 		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' "
@@ -731,7 +783,6 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 finalize_it:
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
 	if(iRet != RS_RET_OK) {
-		closeKafka(pData);
 		iRet = RS_RET_SUSPENDED;
 	}
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
@@ -742,11 +793,19 @@ finalize_it:
 BEGINdoAction
 CODESTARTdoAction
 	instanceData *const pData = pWrkrData->pData;
+	if (! pData->bIsOpen)
+		CHKiRet(setupKafkaHandle(pData, 0));
+
+	pthread_rwlock_rdlock(&pData->rkLock);
+
 	/* support dynamic topic */
 	if(pData->dynaTopic)
 		iRet = writeKafka(pData, ppString[0], ppString[1]);
 	else
 		iRet = writeKafka(pData, ppString[0], pData->topic);
+		
+	pthread_rwlock_unlock(&pData->rkLock);
+finalize_it:
 ENDdoAction
 
 
@@ -765,6 +824,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->nTopicConfParams = 0;
 	pData->topicConfParams = NULL;
 	pData->errorFile = NULL;
+	pData->closeTimeout = 2000;
 }
 
 static rsRetVal
@@ -808,6 +868,8 @@ CODESTARTnewActInst
 			pData->dynaTopic = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynatopic.cachesize")) {
 			pData->iDynaTopicCacheSize = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "closeTimeout")) {
+			pData->closeTimeout = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.auto")) {
 			pData->autoPartition = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.number")) {
@@ -877,6 +939,7 @@ CODESTARTnewActInst
 			calloc(pData->iDynaTopicCacheSize, sizeof(dynaTopicCacheEntry*)));
         pData->iCurrElt = -1;
 	}
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
