@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2015 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -636,5 +636,15 @@ typedef int json_bool;
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
 			     yet receive a copy, so that we can incrementially
 			     compile and change... -- rgerhars, 2011-04-19 */
+
+
+/* here we add some stuff from the compatibility layer. A separate include
+ * would be cleaner, but would potentially require changes all over the
+ * place. So doing it here is better. The respective replacement
+ * functions should usually be found under ./compat -- rgerhards, 2015-05-20
+ */
+#ifndef HAVE_STRNDUP
+char * strndup(const char *s, size_t n);
+#endif
 
 #endif /* multi-include protection */
