@@ -289,32 +289,34 @@ SUBDIRS += tests
 # temporarily be removed below. The intent behind forcing everthing to compile
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
-DISTCHECK_CONFIGURE_FLAGS=	--enable-imfile \
-				--enable-snmp \
-				--enable-libdbi \
-				--enable-mysql \
-				--enable-relp \
-				--enable-rsyslogd \
-				--enable-mail \
-				--enable-klog \
-				--enable-diagtools \
-				--enable-gnutls \
-				--enable-omstdout \
-				--enable-pmlastmsg \
-				--enable-omruleset \
-				--enable-omprog \
-				--enable-imdiag \
-				--enable-imptcp \
-				--enable-omuxsock \
-				--enable-impstats \
-				--enable-memcheck \
-				--enable-pmaixforwardedfrom \
-				--enable-pmcisconames \
-				--enable-pmsnare \
-				--enable-elasticsearch \
-				--enable-valgrind \
-				--enable-testbench \
-				--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
+DISTCHECK_CONFIGURE_FLAGS= \
+	--disable-silent-rules \
+	--enable-imfile \
+	--enable-snmp \
+	--enable-libdbi \
+	--enable-mysql \
+	--enable-relp \
+	--enable-rsyslogd \
+	--enable-mail \
+	--enable-klog \
+	--enable-diagtools \
+	--enable-gnutls \
+	--enable-omstdout \
+	--enable-pmlastmsg \
+	--enable-omruleset \
+	--enable-omprog \
+	--enable-imdiag \
+	--enable-imptcp \
+	--enable-omuxsock \
+	--enable-impstats \
+	--enable-memcheck \
+	--enable-pmaixforwardedfrom \
+	--enable-pmcisconames \
+	--enable-pmsnare \
+	--enable-elasticsearch \
+	--enable-valgrind \
+	--enable-testbench \
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 # temporarily disable these checks for make distcheck 2012-09-06 rgerhards
 #				--enable-mmsnmptrapd \
 #				--enable-gssapi_krb5 \
