@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- bugfix: build problem on Solaris
+  Thanks to Dagobert Michelsen for reporting this and getting us up to
+  speed on the openCWS build farm.
 - bugfix: build system strndup was used even if not present
   now added compatibility function. This came up on Solaris builds.
   Thanks to Dagobert Michelsen for reporting the problem.
