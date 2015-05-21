@@ -86,6 +86,9 @@ getClockTopicAccess(void)
 #endif
 }
 
+static int closeTimeout = 1000;
+static pthread_mutex_t closeTimeoutMut = PTHREAD_MUTEX_INITIALIZER;
+
 /* dynamic topic cache */
 struct s_dynaTopicCacheEntry {
 	uchar *pName;
@@ -969,6 +972,11 @@ CODESTARTnewActInst
 			calloc(pData->iDynaTopicCacheSize, sizeof(dynaTopicCacheEntry*)));
         pData->iCurrElt = -1;
 	}
+	pthread_mutex_lock(&closeTimeoutMut);
+	if (closeTimeout < pData->closeTimeout) {
+		closeTimeout = pData->closeTimeout;
+	}
+	pthread_mutex_unlock(&closeTimeoutMut);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -995,7 +1003,14 @@ CODESTARTmodExit
 	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
 	CHKiRet(objRelease(statsobj, CORE_COMPONENT));
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
-	rd_kafka_wait_destroyed(5000);
+
+	pthread_mutex_lock(&closeTimeoutMut);
+	int timeout = closeTimeout;
+	pthread_mutex_unlock(&closeTimeoutMut);
+	pthread_mutex_destroy(&closeTimeoutMut);
+	if (rd_kafka_wait_destroyed(timeout) != 0) {
+		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n", rd_kafka_thread_cnt());
+	}
 finalize_it:
 ENDmodExit
 
