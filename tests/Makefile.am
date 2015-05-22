@@ -176,16 +176,19 @@ endif
 
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
-	elasticsearch-basic.sh \
-	elasticsearch-basic-bulk.sh \
-	elasticsearch-basic-errorfile-empty.sh \
-	elasticsearch-basic-errorfile-populated.sh \
-	elasticsearch-bulk-errorfile-empty.sh \
-	elasticsearch-bulk-errorfile-populated.sh \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh
+	es-basic.sh \
+	es-basic-bulk.sh \
+	es-basic-errfile-empty.sh \
+	es-basic-errfile-popul.sh \
+	es-bulk-errfile-empty.sh \
+	es-bulk-errfile-popul.sh 
+if ENABLE_IMFILE
+TESTS +=  \
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
+endif
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -229,8 +232,10 @@ imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
-	imtcp_conndrop_tls-vg.sh \
+	imtcp_conndrop_tls-vg.sh
+if !ENABLE_DISTCHECK_WORKAROUND
 	manytcp-too-few-tls-vg.sh
+endif
 endif
 endif
 
@@ -484,26 +489,26 @@ EXTRA_DIST= \
 	incltest_dir_wildcard.sh \
 	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
-	elasticsearch-basic.sh \
-	testsuites/elasticsearch-basic.conf \
-	elasticsearch-basic-bulk.sh \
-	testsuites/elasticsearch-basic-bulk.conf \
-	elasticsearch-basic-errorfile-empty.sh \
-	testsuites/elasticsearch-basic-errorfile-empty.conf \
-	elasticsearch-basic-errorfile-populated.sh \
-	testsuites/elasticsearch-basic-errorfile-populated.conf \
-	elasticsearch-bulk-errorfile-empty.sh \
-	testsuites/elasticsearch-bulk-errorfile-empty.conf \
-	elasticsearch-bulk-errorfile-populated.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated.conf \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
+	es-basic.sh \
+	testsuites/es-basic.conf \
+	es-basic-bulk.sh \
+	testsuites/es-basic-bulk.conf \
+	es-basic-errfile-empty.sh \
+	testsuites/es-basic-errfile-empty.conf \
+	es-basic-errfile-popul.sh \
+	testsuites/es-basic-errfile-popul.conf \
+	es-bulk-errfile-empty.sh \
+	testsuites/es-bulk-errfile-empty.conf \
+	es-bulk-errfile-popul.sh \
+	testsuites/es-bulk-errfile-popul.conf \
+	es-bulk-errfile-popul-def-format.sh \
+	testsuites/es-bulk-errfile-popul-def-format.conf \
+	es-bulk-errfile-popul-erronly.sh \
+	testsuites/es-bulk-errfile-popul-erronly.conf \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
+	es-bulk-errfile-popul-def-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \

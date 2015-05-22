@@ -818,9 +818,9 @@ AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 if test "$GCC" = "yes"; then
   RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-  if $CC -Werror=implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  if $CC -Werror=implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
-  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
   fi
 
@@ -1590,6 +1590,20 @@ AC_ARG_ENABLE(generate-man-pages,
          esac],
         [have_to_generate_man_pages=no]
 )
+
+
+# This provides a work-around to use "make distcheck" by disabling
+# some tests that do have problems with the distcheck environment.
+AC_ARG_ENABLE(distcheck-workaround,
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck by disabling some tests that do not support the distcheck environment @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_distcheck_workaround="yes" ;;
+          no) enable_distcheck_workaround="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-distcheck_workaround) ;;
+         esac],
+        [enable_distcheck_workaround="no"]
+)
+AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
 
 
 # Running from git source?

@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- build system: re-enable use of "make distcheck"
 - bugfix: build problem on Solaris
   Thanks to Dagobert Michelsen for reporting this and getting us up to
   speed on the openCWS build farm.

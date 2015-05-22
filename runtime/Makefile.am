@@ -206,6 +206,42 @@ if ENABLE_GUARDTIME
    lmsig_gt_la_LIBADD = librsgt.la $(GUARDTIME_LIBS)
 endif
 
+#
+# gssapi support
+# 
+if ENABLE_GSSAPI
+pkglib_LTLIBRARIES += lmgssutil.la
+lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
+lmgssutil_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmgssutil_la_LDFLAGS = -module -avoid-version
+lmgssutil_la_LIBADD = $(GSS_LIBS)
+endif
+
+pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
+#
+#
+# TCP (stream) server support
+#
+lmtcpsrv_la_SOURCES = \
+	tcps_sess.c \
+	tcps_sess.h \
+	tcpsrv.c \
+	tcpsrv.h
+lmtcpsrv_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmtcpsrv_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
+lmtcpsrv_la_LIBADD = 
+
+#
+# TCP (stream) client support
+#
+lmtcpclt_la_SOURCES = \
+	tcpclt.c \
+	tcpclt.h
+lmtcpclt_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS)
+lmtcpclt_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
+lmtcpclt_la_LIBADD = 
+
+
 
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c
