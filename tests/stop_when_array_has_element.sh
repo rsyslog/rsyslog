@@ -1,7 +1,7 @@
 # added 2015-05-22 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
-echo \[json_array_looping.sh\]: loop detecting presense of an element and stopping ruleset execution
+echo \[stop_when_array_has_element.sh\]: loop detecting presense of an element and stopping ruleset execution
 source $srcdir/diag.sh init stop_when_array_has_element.sh
 source $srcdir/diag.sh startup stop_when_array_has_element.conf
 source $srcdir/diag.sh tcpflood -m 1 -I $srcdir/testsuites/stop_when_array_has_elem_input
