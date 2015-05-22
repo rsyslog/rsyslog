@@ -290,10 +290,12 @@ SUBDIRS += tests
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS= \
+	--disable-silent-rules \
+	--disable-testbench
+# intentionally broken here
 	--enable-distcheck-workaround \
 	--enable-imdiag \
 	--enable-testbench \
-	--disable-silent-rules \
 	--enable-imfile \
 	--enable-snmp \
 	--enable-libdbi \
