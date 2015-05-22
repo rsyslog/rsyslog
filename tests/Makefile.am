@@ -217,7 +217,8 @@ TESTS +=  \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
-	json_nonarray_looping.sh
+	json_nonarray_looping.sh \
+	stop_when_array_has_element.sh
 endif
 
 if ENABLE_GNUTLS
@@ -802,7 +803,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/mmnormalize_regex_disabled.conf \
 	   mmnormalize_regex_defaulted.sh \
 	   testsuites/mmnormalize_regex_defaulted.conf \
-	   cfg.sh
+	   cfg.sh \
+	   stop_when_array_has_element.sh \
+	   testsuites/stop_when_array_has_elem_input \
+	   testsuites/stop_when_array_has_element.conf
 
 # TODO: re-enable
 #sndrcv_tls_anon_rebind.sh \
