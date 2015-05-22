@@ -818,9 +818,9 @@ AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 if test "$GCC" = "yes"; then
   RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-  if $CC -Werror=implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  if $CC -Werror=implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
-  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
   fi
 

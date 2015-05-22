@@ -53,6 +53,7 @@ case $1 in
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
 		rm -f rsyslog.errorfile
+		rm -f CURRENT_TEST HOSTNAME imfile-state:.-rsyslog.input
 		echo  -------------------------------------------------------------------------------
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
