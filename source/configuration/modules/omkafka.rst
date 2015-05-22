@@ -152,6 +152,18 @@ comma-delimited list of values as shown here:
 
    Sets the template to be used for this action.
 
+.. function::  closeTimeout [positiveInteger]
+
+   *Default: 2000*
+
+   Sets the time to wait in ms (milliseconds) for draining messages submitted to kafka-handle
+   (provided by librdkafka) before closing it.
+
+   The maximum value of closeTimeout used across all omkafka action instances
+   is used as librdkafka unload-timeout while unloading the module
+   (for shutdown, for instance).
+
+
 Caveats/Known Bugs
 ------------------
 
