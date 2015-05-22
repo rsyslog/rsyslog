@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- build system: re-enable use of "make distcheck"
 ------------------------------------------------------------------------------
 Version 8.10.0 [v8-stable] 2015-05-19
 - imfile: add capability to process multi-line messages based on regex
