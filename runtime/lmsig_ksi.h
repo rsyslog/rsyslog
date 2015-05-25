@@ -1,6 +1,6 @@
-/* An implementation of the sigprov interface for GuardTime.
+/* An implementation of the sigprov interface for KSI.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2015 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -18,23 +18,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INCLUDED_LMSIG_GT_H
-#define INCLUDED_LMSIG_GT_H
+#ifndef INCLUDED_LMSIG_KSI_H
+#define INCLUDED_LMSIG_KSI_H
 #include "sigprov.h"
-#include "librsgt.h"
+#include "librsksi.h"
 
 /* interface is defined in sigprov.h, we just implement it! */
-#define lmsig_gtCURR_IF_VERSION sigprovCURR_IF_VERSION
-typedef sigprov_if_t lmsig_gt_if_t;
+#define lmsig_ksiCURR_IF_VERSION sigprovCURR_IF_VERSION
+typedef sigprov_if_t lmsig_ksi_if_t;
 
-/* the lmsig_gt object */
-struct lmsig_gt_s {
+/* the lmsig_ksi object */
+struct lmsig_ksi_s {
 	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
-	gtctx ctx;	/* librsgt context - contains all we need */
+	rsksictx ctx;	/* librsksi context - contains all we need */
 };
-typedef struct lmsig_gt_s lmsig_gt_t;
+typedef struct lmsig_ksi_s lmsig_ksi_t;
 
 /* prototypes */
-PROTOTYPEObj(lmsig_gt);
+PROTOTYPEObj(lmsig_ksi);
 
-#endif /* #ifndef INCLUDED_LMSIG_GT_H */
+#endif /* #ifndef INCLUDED_LMSIG_KSI_H */

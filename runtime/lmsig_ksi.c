@@ -1,8 +1,8 @@
-/* lmsig_gt.c
+/* lmsig_ksi.c
  *
- * An implementation of the sigprov interface for GuardTime.
+ * An implementation of the sigprov interface for KSI.
  * 
- * Copyright 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2013-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -31,7 +31,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "sigprov.h"
-#include "lmsig_gt.h"
+#include "lmsig_ksi.h"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -44,7 +44,9 @@ DEFobjCurrIf(glbl)
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
-	{ "sig.timestampservice", eCmdHdlrGetWord, 0 },
+	{ "sig.aggregator.uri", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "sig.aggregator.loginid", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
 	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
 	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 }
@@ -59,23 +61,23 @@ static struct cnfparamblk pblk =
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "Signature Provider"
+	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
 		"Error: %s - disabling signatures", emsg);
 }
 
 /* Standard-Constructor
  */
-BEGINobjConstruct(lmsig_gt)
-	pThis->ctx = rsgtCtxNew();
-	rsgtsetErrFunc(pThis->ctx, errfunc, NULL);
-ENDobjConstruct(lmsig_gt)
+BEGINobjConstruct(lmsig_ksi)
+	pThis->ctx = rsksiCtxNew();
+	rsksisetErrFunc(pThis->ctx, errfunc, NULL);
+ENDobjConstruct(lmsig_ksi)
 
 
-/* destructor for the lmsig_gt object */
-BEGINobjDestruct(lmsig_gt) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmsig_gt)
-	rsgtCtxDel(pThis->ctx);
-ENDobjDestruct(lmsig_gt)
+/* destructor for the lmsig_ksi object */
+BEGINobjDestruct(lmsig_ksi) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(lmsig_ksi)
+	rsksiCtxDel(pThis->ctx);
+ENDobjDestruct(lmsig_ksi)
 
 
 /* apply all params from param block to us. This must be called
@@ -85,7 +87,8 @@ ENDobjDestruct(lmsig_gt)
 rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;
+	lmsig_ksi_t *pThis = (lmsig_ksi_t*) pT;
 	int i;
 	uchar *cstr;
 	struct cnfparamvals *pvals;
@@ -95,7 +98,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	if(Debug) {
-		dbgprintf("sig param blk in lmsig_gt:\n");
+		dbgprintf("sig param blk in lmsig_ksi:\n");
 		cnfparamsPrint(&pblk, pvals);
 	}
 
@@ -104,26 +107,35 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(rsgtSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
+			if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
 				errmsg.LogError(0, RS_RET_ERR, "Hash function "
 					"'%s' unknown - using default", cstr);
 			}
 			free(cstr);
-		} else if(!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
-			cstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsgtSetTimestamper(pThis->ctx, (char*) cstr);
-			free(cstr);
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.uri")) {
+			ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.loginid")) {
+			ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
+			ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
-			rsgtSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
+			rsksiSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
 		} else if(!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
-			rsgtSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
+			rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
 		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
-			rsgtSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
+			rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
 		} else {
-			DBGPRINTF("lmsig_gt: program error, non-handled "
+			DBGPRINTF("lmsig_ksi: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
 		}
 	}
+
+	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)
+		ABORT_FINALIZE(RS_RET_KSI_ERR);
+
+	free(ag_uri);
+	free(ag_loginid);
+	free(ag_key);
 finalize_it:
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
@@ -134,12 +146,12 @@ finalize_it:
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
-	gtfile *pgf = (gtfile*) pGF;
+	lmsig_ksi_t *pThis = (lmsig_ksi_t*) pT;
+	ksifile *pgf = (ksifile*) pGF;
 	DEFiRet;
-	DBGPRINTF("lmsig_gt: onFileOpen: %s\n", fn);
+	DBGPRINTF("lmsig_ksi: onFileOpen: %s\n", fn);
 	/* note: if *pgf is set to NULL, this auto-disables GT functions */
-	*pgf = rsgtCtxOpenFile(pThis->ctx, fn);
+	*pgf = rsksiCtxOpenFile(pThis->ctx, fn);
 	sigblkInit(*pgf);
 	RETiRet;
 }
@@ -156,7 +168,7 @@ static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
-	DBGPRINTF("lmsig_gt: onRecordWrite (%d): %s\n", lenRec-1, rec);
+	DBGPRINTF("lmsig_ksi: onRecordWrite (%d): %s\n", lenRec-1, rec);
 	sigblkAddRecord(pF, rec, lenRec-1);
 
 	RETiRet;
@@ -166,48 +178,40 @@ static rsRetVal
 OnFileClose(void *pF)
 {
 	DEFiRet;
-	DBGPRINTF("lmsig_gt: onFileClose\n");
-	rsgtfileDestruct(pF);
+	DBGPRINTF("lmsig_ksi: onFileClose\n");
+	rsksifileDestruct(pF);
 
 	RETiRet;
 }
 
-BEGINobjQueryInterface(lmsig_gt)
-CODESTARTobjQueryInterface(lmsig_gt)
+BEGINobjQueryInterface(lmsig_ksi)
+CODESTARTobjQueryInterface(lmsig_ksi)
 	 if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmsig_gtConstruct;
+	pIf->Construct = (rsRetVal(*)(void*)) lmsig_ksiConstruct;
 	pIf->SetCnfParam = SetCnfParam;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_gtDestruct;
+	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_ksiDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->OnRecordWrite = OnRecordWrite;
 	pIf->OnFileClose = OnFileClose;
 finalize_it:
-ENDobjQueryInterface(lmsig_gt)
+ENDobjQueryInterface(lmsig_ksi)
 
 
-BEGINObjClassExit(lmsig_gt, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmsig_gt)
+BEGINObjClassExit(lmsig_ksi, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(lmsig_ksi)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-
-	rsgtExit();
-ENDObjClassExit(lmsig_gt)
+ENDObjClassExit(lmsig_ksi)
 
 
-BEGINObjClassInit(lmsig_gt, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+BEGINObjClassInit(lmsig_ksi, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-
-	if(rsgtInit("rsyslogd " VERSION) != 0) {
-		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "error initializing "
-			"signature provider - cannot sign");
-		ABORT_FINALIZE(RS_RET_SIGPROV_ERR);
-	}
-ENDObjClassInit(lmsig_gt)
+ENDObjClassInit(lmsig_ksi)
 
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
@@ -215,7 +219,7 @@ ENDObjClassInit(lmsig_gt)
 
 BEGINmodExit
 CODESTARTmodExit
-	lmsig_gtClassExit();
+	lmsig_ksiClassExit();
 ENDmodExit
 
 
@@ -227,7 +231,6 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(lmsig_gtClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+	CHKiRet(lmsig_ksiClassInit(pModInfo));
 ENDmodInit

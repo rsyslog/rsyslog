@@ -1,6 +1,6 @@
-/* librsgt.h - rsyslog's guardtime support library
+/* librsksi.h - rsyslog's KSI support library
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -18,9 +18,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INCLUDED_LIBRSGT_H
-#define INCLUDED_LIBRSGT_H
-#include <gt_base.h>
+#ifndef INCLUDED_LIBRSKSI_H
+#define INCLUDED_LIBRSKSI_H
+#include <ksi/ksi.h>
+typedef enum KSI_HashAlgorithm_en KSI_HashAlgorithm;
 
 /* Max number of roots inside the forest. This permits blocks of up to
  * 2^MAX_ROOTS records. We assume that 64 is sufficient for all use
@@ -31,10 +32,11 @@
 #define LOGSIGHDR "LOGSIG10"
 
 /* context for gt calls. This primarily serves as a container for the
- * config settings. The actual file-specific data is kept in gtfile.
+ * config settings. The actual file-specific data is kept in ksifile.
  */
-struct gtctx_s {
-	enum GTHashAlgorithm hashAlg;
+struct rsksictx_s {
+	KSI_CTX *ksi_ctx;	/* libksi's context object */
+	KSI_HashAlgorithm hashAlg;
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	uint64_t blockSizeLimit;
@@ -42,19 +44,19 @@ struct gtctx_s {
 	void (*errFunc)(void *, unsigned char*);
 	void *usrptr; /* for error function */
 };
-typedef struct gtctx_s *gtctx;
-typedef struct gtfile_s *gtfile;
+typedef struct rsksictx_s *rsksictx;
+typedef struct ksifile_s *ksifile;
 typedef struct gterrctx_s gterrctx_t;
 typedef struct imprint_s imprint_t;
 typedef struct block_sig_s block_sig_t;
 typedef struct tlvrecord_s tlvrecord_t;
 
-/* this describes a file, as far as librsgt is concerned */
-struct gtfile_s {
-	/* the following data items are mirrored from gtctx to
+/* this describes a file, as far as librsksi is concerned */
+struct ksifile_s {
+	/* the following data items are mirrored from rsksictx to
 	 * increase cache hit ratio (they are frequently accesed).
 	 */
-	enum GTHashAlgorithm hashAlg;
+	KSI_HashAlgorithm hashAlg;
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	/* end mirrored properties */
@@ -74,11 +76,11 @@ struct gtfile_s {
 	 * in order to improve cache hits.
 	 */
 	int8_t roots_valid[MAX_ROOTS];
-	GTDataHash *roots_hash[MAX_ROOTS];
+	KSI_DataHash *roots_hash[MAX_ROOTS];
 	/* data members for the associated TLV file */
 	char	tlvBuf[4096];
 	int	tlvIdx; /* current index into tlvBuf */
-	gtctx ctx;
+	rsksictx ctx;
 };
 
 struct tlvrecord_s {
@@ -93,7 +95,7 @@ struct tlvrecord_s {
  * for verification and similiar reader functions. While verifying,
  * we need some information (like filenames or block numbers) that
  * is not readily available from the other objects (or not even known
- * to librsgt). In order to provide meaningful error messages, this
+ * to librsksi). In order to provide meaningful error messages, this
  * information must be passed in from the external callers. In order
  * to centralize information (and make it more manageable), we use
  * ths error context here, which contains everything needed to
@@ -110,8 +112,8 @@ struct gterrctx_s {
 	uint64_t recNum;
 	uint64_t blkNum;
 	uint8_t treeLevel;
-	GTDataHash *computedHash;
-	GTDataHash *lefthash, *righthash; /* hashes to display if tree hash fails */
+	KSI_DataHash *computedHash;
+	KSI_DataHash *lefthash, *righthash; /* hashes to display if tree hash fails */
 	imprint_t *fileHash;
 	int gtstate;	/* status from last relevant GT.*() function call */
 	char *errRec;
@@ -143,7 +145,7 @@ struct block_sig_s {
 /* the following defines the gtstate file record. Currently, this record
  * is fixed, we may change that over time.
  */
-struct rsgtstatefile {
+struct rsksistatefile {
 	char hdr[8];	/* must be "GTSTAT10" */
 	uint8_t hashID;
 	uint8_t lenHash;
@@ -246,37 +248,37 @@ static inline uint16_t
 hashOutputLengthOctets(uint8_t hashID)
 {
 	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+	case KSI_HASHALG_SHA1:	/* paper: SHA1 */
 		return 20;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+	case KSI_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
 		return 20;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+	case KSI_HASHALG_SHA2_224:	/* paper: SHA2-224 */
 		return 28;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+	case KSI_HASHALG_SHA2_256: /* paper: SHA2-256 */
 		return 32;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+	case KSI_HASHALG_SHA2_384: /* paper: SHA2-384 */
 		return 48;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+	case KSI_HASHALG_SHA2_512:	/* paper: SHA2-512 */
 		return 64;
 	default:return 32;
 	}
 }
 
 static inline uint8_t
-hashIdentifier(enum GTHashAlgorithm hashID)
+hashIdentifier(KSI_HashAlgorithm hashID)
 {
 	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
+	case KSI_HASHALG_SHA1:	/* paper: SHA1 */
 		return 0x00;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
+	case KSI_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
 		return 0x02;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
+	case KSI_HASHALG_SHA2_224:	/* paper: SHA2-224 */
 		return 0x03;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
+	case KSI_HASHALG_SHA2_256: /* paper: SHA2-256 */
 		return 0x01;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
+	case KSI_HASHALG_SHA2_384: /* paper: SHA2-384 */
 		return 0x04;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
+	case KSI_HASHALG_SHA2_512:	/* paper: SHA2-512 */
 		return 0x05;
 	default:return 0xff;
 	}
@@ -285,37 +287,37 @@ static inline char *
 hashAlgName(uint8_t hashID)
 {
 	switch(hashID) {
-	case GT_HASHALG_SHA1:
+	case KSI_HASHALG_SHA1:
 		return "SHA1";
-	case GT_HASHALG_RIPEMD160:
+	case KSI_HASHALG_RIPEMD160:
 		return "RIPEMD-160";
-	case GT_HASHALG_SHA224:
+	case KSI_HASHALG_SHA2_224:
 		return "SHA2-224";
-	case GT_HASHALG_SHA256:
+	case KSI_HASHALG_SHA2_256:
 		return "SHA2-256";
-	case GT_HASHALG_SHA384:
+	case KSI_HASHALG_SHA2_384:
 		return "SHA2-384";
-	case GT_HASHALG_SHA512:
+	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
 	default:return "[unknown]";
 	}
 }
-static inline enum GTHashAlgorithm
+static inline KSI_HashAlgorithm
 hashID2Alg(uint8_t hashID)
 {
 	switch(hashID) {
 	case 0x00:
-		return GT_HASHALG_SHA1;
+		return KSI_HASHALG_SHA1;
 	case 0x02:
-		return GT_HASHALG_RIPEMD160;
+		return KSI_HASHALG_RIPEMD160;
 	case 0x03:
-		return GT_HASHALG_SHA224;
+		return KSI_HASHALG_SHA2_224;
 	case 0x01:
-		return GT_HASHALG_SHA256;
+		return KSI_HASHALG_SHA2_256;
 	case 0x04:
-		return GT_HASHALG_SHA384;
+		return KSI_HASHALG_SHA2_384;
 	case 0x05:
-		return GT_HASHALG_SHA512;
+		return KSI_HASHALG_SHA2_512;
 	default:
 		return 0xff;
 	}
@@ -335,63 +337,58 @@ getIVLen(block_sig_t *bs)
 	return hashOutputLengthOctets(bs->hashID);
 }
 static inline void
-rsgtSetTimestamper(gtctx ctx, char *timestamper)
-{
-	free(ctx->timestamper);
-	ctx->timestamper = strdup(timestamper);
-}
-static inline void
-rsgtSetBlockSizeLimit(gtctx ctx, uint64_t limit)
+rsksiSetBlockSizeLimit(rsksictx ctx, uint64_t limit)
 {
 	ctx->blockSizeLimit = limit;
 }
 static inline void
-rsgtSetKeepRecordHashes(gtctx ctx, int val)
+rsksiSetKeepRecordHashes(rsksictx ctx, int val)
 {
 	ctx->bKeepRecordHashes = val;
 }
 static inline void
-rsgtSetKeepTreeHashes(gtctx ctx, int val)
+rsksiSetKeepTreeHashes(rsksictx ctx, int val)
 {
 	ctx->bKeepTreeHashes = val;
 }
 
-int rsgtSetHashFunction(gtctx ctx, char *algName);
-int rsgtInit(char *usragent);
-void rsgtExit(void);
-gtctx rsgtCtxNew(void);
-void rsgtsetErrFunc(gtctx ctx, void (*func)(void*, unsigned char *), void *usrptr);
-gtfile rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
-int rsgtfileDestruct(gtfile gf);
-void rsgtCtxDel(gtctx ctx);
-void sigblkInit(gtfile gf);
-int sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
-int sigblkFinish(gtfile gf);
-imprint_t * rsgtImprintFromGTDataHash(GTDataHash *hash);
-void rsgtimprintDel(imprint_t *imp);
+int rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key);
+int rsksiSetHashFunction(rsksictx ctx, char *algName);
+int rsksiInit(char *usragent);
+void rsksiExit(void);
+rsksictx rsksiCtxNew(void);
+void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
+ksifile rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn);
+int rsksifileDestruct(ksifile gf);
+void rsksiCtxDel(rsksictx ctx);
+void sigblkInit(ksifile gf);
+int sigblkAddRecord(ksifile gf, const unsigned char *rec, const size_t len);
+int sigblkFinish(ksifile gf);
+imprint_t * rsksiImprintFromKSI_DataHash(KSI_DataHash *hash);
+void rsksiimprintDel(imprint_t *imp);
 /* reader functions */
-int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
-int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
-void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
-void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
-int rsgt_chkFileHdr(FILE *fp, char *expect);
-gtfile rsgt_vrfyConstruct_gf(void);
-void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
-void rsgt_errctxInit(gterrctx_t *ectx);
-void rsgt_errctxExit(gterrctx_t *ectx);
-void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
-void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
-void rsgt_objfree(uint16_t tlvtype, void *obj);
+int rsksi_tlvrdHeader(FILE *fp, unsigned char *hdr);
+int rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
+void rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
+int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsksi_chkFileHdr(FILE *fp, char *expect);
+ksifile rsksi_vrfyConstruct_gf(void);
+void rsksi_vrfyBlkInit(ksifile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+int rsksi_vrfy_nextRec(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
+void rsksi_errctxInit(gterrctx_t *ectx);
+void rsksi_errctxExit(gterrctx_t *ectx);
+void rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec);
+void rsksi_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
+void rsksi_objfree(uint16_t tlvtype, void *obj);
 
 
 /* TODO: replace these? */
-int hash_m(gtfile gf, GTDataHash **m);
-int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
-int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
-extern char *rsgt_read_puburl; /**< url of publication server */
-extern uint8_t rsgt_read_showVerified;
+int hash_m(ksifile gf, KSI_DataHash **m);
+int hash_r(ksifile gf, KSI_DataHash **r, const unsigned char *rec, const size_t len);
+int hash_node(ksifile gf, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
+extern char *rsksi_read_puburl; /**< url of publication server */
+extern uint8_t rsksi_read_showVerified;
 
-#endif  /* #ifndef INCLUDED_LIBRSGT_H */
+#endif  /* #ifndef INCLUDED_LIBRSKSI_H */
