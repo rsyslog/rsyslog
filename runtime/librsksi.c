@@ -1,4 +1,4 @@
-/* librsgt.c - rsyslog's guardtime support library
+/* librsksi.c - rsyslog's KSI support library
  *
  * Regarding the online algorithm for Merkle tree signing. Expected 
  * calling sequence is:
@@ -17,7 +17,7 @@
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,9 +50,9 @@
 #include <fcntl.h>
 #define MAXFNAME 1024
 
-#include <gt_http.h>
+#include <ksi/ksi.h>
 
-#include "librsgt.h"
+#include "librsksi.h"
 
 typedef unsigned char uchar;
 #ifndef VERSION
@@ -61,7 +61,7 @@ typedef unsigned char uchar;
 
 
 static void
-reportErr(gtctx ctx, char *errmsg)
+reportErr(rsksictx ctx, char *errmsg)
 {
 	if(ctx->errFunc == NULL)
 		goto done;
@@ -70,42 +70,46 @@ done:	return;
 }
 
 static void
-reportGTAPIErr(gtctx ctx, gtfile gf, char *apiname, int ecode)
+reportKSIAPIErr(rsksictx ctx, ksifile gf, char *apiname, int ecode)
 {
 	char errbuf[4096];
 	snprintf(errbuf, sizeof(errbuf), "%s[%s:%d]: %s",
 		 (gf == NULL) ? (uchar*)"" : gf->sigfilename,
-		 apiname, ecode, GTHTTP_getErrorString(ecode));
+		 apiname, ecode, KSI_getErrorString(ecode));
 	errbuf[sizeof(errbuf)-1] = '\0';
 	reportErr(ctx, errbuf);
 }
 
 void
-rsgtsetErrFunc(gtctx ctx, void (*func)(void*, uchar *), void *usrptr)
+rsksisetErrFunc(rsksictx ctx, void (*func)(void*, uchar *), void *usrptr)
 {
 	ctx->usrptr = usrptr;
 	ctx->errFunc = func;
 }
 
 imprint_t *
-rsgtImprintFromGTDataHash(GTDataHash *hash)
+rsksiImprintFromKSI_DataHash(KSI_DataHash *hash)
 {
 	imprint_t *imp;
+	const unsigned char *digest;
+	unsigned digest_len;
 
 	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
 		goto done;
 	}
-	imp->hashID = hashIdentifier(hash->algorithm),
-	imp->len = hash->digest_length;
+	int hashID;
+	KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); // TODO: error check
+	imp->hashID = hashID;
+	imp->len = digest_len;
 	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {
 		free(imp); imp = NULL; goto done;
 	}
-	memcpy(imp->data, hash->digest, imp->len);
+	memcpy(imp->data, digest, digest_len);
 done:	return imp;
 }
 
 void
-rsgtimprintDel(imprint_t *imp)
+rsksiimprintDel(imprint_t *imp)
 {
 	if(imp != NULL) {
 		free(imp->data),
@@ -113,38 +117,11 @@ rsgtimprintDel(imprint_t *imp)
 	}
 }
 
-int
-rsgtInit(char *usragent)
+static inline ksifile
+rsksifileConstruct(rsksictx ctx)
 {
-	int r = 0;
-	int ret = GT_OK;
-
-	ret = GT_init();
-	if(ret != GT_OK) {
-		r = 1;
-		goto done;
-	}
-	ret = GTHTTP_init(usragent, 1);
-	if(ret != GT_OK) {
-		r = 1;
-		goto done;
-	}
-done:	return r;
-}
-
-void
-rsgtExit(void)
-{
-	GTHTTP_finalize();
-	GT_finalize();
-}
-
-
-static inline gtfile
-rsgtfileConstruct(gtctx ctx)
-{
-	gtfile gf;
-	if((gf = calloc(1, sizeof(struct gtfile_s))) == NULL)
+	ksifile gf;
+	if((gf = calloc(1, sizeof(struct ksifile_s))) == NULL)
 		goto done;
 	gf->ctx = ctx;
 	gf->hashAlg = ctx->hashAlg;
@@ -157,7 +134,7 @@ done:	return gf;
 }
 
 static inline int
-tlvbufPhysWrite(gtfile gf)
+tlvbufPhysWrite(ksifile gf)
 {
 	ssize_t lenBuf;
 	ssize_t iTotalWritten;
@@ -192,7 +169,7 @@ finalize_it:
 }
 
 static inline int
-tlvbufChkWrite(gtfile gf)
+tlvbufChkWrite(ksifile gf)
 {
 	if(gf->tlvIdx == sizeof(gf->tlvBuf)) {
 		return tlvbufPhysWrite(gf);
@@ -205,7 +182,7 @@ tlvbufChkWrite(gtfile gf)
  * output is written only on flush or close.
  */
 static inline int
-tlvbufAddOctet(gtfile gf, int8_t octet)
+tlvbufAddOctet(ksifile gf, int8_t octet)
 {
 	int r;
 	r = tlvbufChkWrite(gf);
@@ -214,7 +191,7 @@ tlvbufAddOctet(gtfile gf, int8_t octet)
 done:	return r;
 }
 static inline int
-tlvbufAddOctetString(gtfile gf, uint8_t *octet, int size)
+tlvbufAddOctetString(ksifile gf, uint8_t *octet, int size)
 {
 	int i, r = 0;
 	for(i = 0 ; i < size ; ++i) {
@@ -244,7 +221,7 @@ tlvbufGetInt64OctetSize(uint64_t val)
 	return 1;
 }
 static inline int
-tlvbufAddInt64(gtfile gf, uint64_t val)
+tlvbufAddInt64(ksifile gf, uint64_t val)
 {
 	uint8_t doWrite = 0;
 	int r;
@@ -282,7 +259,7 @@ done:	return r;
 
 
 int
-tlv8Write(gtfile gf, int flags, int tlvtype, int len)
+tlv8Write(ksifile gf, int flags, int tlvtype, int len)
 {
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
@@ -294,7 +271,7 @@ done:	return r;
 } 
 
 int
-tlv16Write(gtfile gf, int flags, int tlvtype, uint16_t len)
+tlv16Write(ksifile gf, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	int r;
@@ -312,27 +289,28 @@ done:	return r;
 } 
 
 int
-tlvFlush(gtfile gf)
+tlvFlush(ksifile gf)
 {
 	return (gf->tlvIdx == 0) ? 0 : tlvbufPhysWrite(gf);
 }
 
 int
-tlvWriteHash(gtfile gf, uint16_t tlvtype, GTDataHash *rec)
+tlvWriteHash(ksifile gf, uint16_t tlvtype, KSI_DataHash *rec)
 {
 	unsigned tlvlen;
 	int r;
-	tlvlen = 1 + rec->digest_length;
+	const unsigned char *digest;
+	unsigned digest_len;
+	KSI_DataHash_extract(rec, NULL, &digest, &digest_len); // TODO: error check
+	tlvlen = digest_len;
 	r = tlv16Write(gf, 0x00, tlvtype, tlvlen);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, rec->digest, rec->digest_length);
+	r = tlvbufAddOctetString(gf, (unsigned char*)digest, digest_len);
 done:	return r;
 }
 
 int
-tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
+tlvWriteBlockSig(ksifile gf, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
 	uint8_t tlvlenRecords;
@@ -388,10 +366,10 @@ done:	return r;
  * The context is initialized accordingly.
  */
 static void
-readStateFile(gtfile gf)
+readStateFile(ksifile gf)
 {
 	int fd;
-	struct rsgtstatefile sf;
+	struct rsksistatefile sf;
 
 	fd = open((char*)gf->statefilename, O_RDONLY|O_NOCTTY|O_CLOEXEC, 0600);
 	if(fd == -1) goto err;
@@ -418,10 +396,10 @@ err:
  * to a log signature file.
  */
 static void
-writeStateFile(gtfile gf)
+writeStateFile(ksifile gf)
 {
 	int fd;
-	struct rsgtstatefile sf;
+	struct rsksistatefile sf;
 
 	fd = open((char*)gf->statefilename,
 		       O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, 0600);
@@ -442,7 +420,7 @@ done:	return;
 
 
 int
-tlvClose(gtfile gf)
+tlvClose(ksifile gf)
 {
 	int r;
 	r = tlvFlush(gf);
@@ -457,7 +435,7 @@ tlvClose(gtfile gf)
  * be read from file.
  */
 int
-tlvOpen(gtfile gf, char *hdr, unsigned lenHdr)
+tlvOpen(ksifile gf, char *hdr, unsigned lenHdr)
 {
 	int r = 0;
 	gf->fd = open((char*)gf->sigfilename,
@@ -491,7 +469,7 @@ done:	return r;
  * reproduce). -- rgerhards, 2013-03-04
  */
 void
-seedIV(gtfile gf)
+seedIV(ksifile gf)
 {
 	int hashlen;
 	int fd;
@@ -511,12 +489,13 @@ seedIV(gtfile gf)
 	}
 }
 
-gtctx
-rsgtCtxNew(void)
+rsksictx
+rsksiCtxNew(void)
 {
-	gtctx ctx;
-	ctx = calloc(1, sizeof(struct gtctx_s));
-	ctx->hashAlg = GT_HASHALG_SHA256;
+	rsksictx ctx;
+	ctx = calloc(1, sizeof(struct rsksictx_s));
+	KSI_CTX_new(&ctx->ksi_ctx); // TODO: error check (probably via a generic macro?)
+	ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	ctx->errFunc = NULL;
 	ctx->usrptr = NULL;
 	ctx->timestamper = strdup(
@@ -524,14 +503,14 @@ rsgtCtxNew(void)
 	return ctx;
 }
 
-/* either returns gtfile object or NULL if something went wrong */
-gtfile
-rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn)
+/* either returns ksifile object or NULL if something went wrong */
+ksifile
+rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 {
-	gtfile gf;
+	ksifile gf;
 	char fn[MAXFNAME+1];
 
-	if((gf = rsgtfileConstruct(ctx)) == NULL)
+	if((gf = rsksifileConstruct(ctx)) == NULL)
 		goto done;
 
 	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
@@ -550,28 +529,28 @@ done:	return gf;
 
 /* returns 0 on succes, 1 if algo is unknown */
 int
-rsgtSetHashFunction(gtctx ctx, char *algName)
+rsksiSetHashFunction(rsksictx ctx, char *algName)
 {
 	int r = 0;
 	if(!strcmp(algName, "SHA2-256"))
-		ctx->hashAlg = GT_HASHALG_SHA256;
+		ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	else if(!strcmp(algName, "SHA2-384"))
-		ctx->hashAlg = GT_HASHALG_SHA384;
+		ctx->hashAlg = KSI_HASHALG_SHA2_384;
 	else if(!strcmp(algName, "SHA2-512"))
-		ctx->hashAlg = GT_HASHALG_SHA512;
+		ctx->hashAlg = KSI_HASHALG_SHA2_512;
 	else if(!strcmp(algName, "SHA1"))
-		ctx->hashAlg = GT_HASHALG_SHA1;
+		ctx->hashAlg = KSI_HASHALG_SHA1;
 	else if(!strcmp(algName, "RIPEMD-160"))
-		ctx->hashAlg = GT_HASHALG_RIPEMD160;
+		ctx->hashAlg = KSI_HASHALG_RIPEMD160;
 	else if(!strcmp(algName, "SHA2-224"))
-		ctx->hashAlg = GT_HASHALG_SHA224;
+		ctx->hashAlg = KSI_HASHALG_SHA2_224;
 	else
 		r = 1;
 	return r;
 }
 
 int
-rsgtfileDestruct(gtfile gf)
+rsksifileDestruct(ksifile gf)
 {
 	int r = 0;
 	if(gf == NULL)
@@ -587,23 +566,24 @@ rsgtfileDestruct(gtfile gf)
 	free(gf->statefilename);
 	free(gf->IV);
 	free(gf->blkStrtHash);
-	rsgtimprintDel(gf->x_prev);
+	rsksiimprintDel(gf->x_prev);
 	free(gf);
 done:	return r;
 }
 
 void
-rsgtCtxDel(gtctx ctx)
+rsksiCtxDel(rsksictx ctx)
 {
 	if(ctx != NULL) {
 		free(ctx->timestamper);
+		KSI_CTX_free(ctx->ksi_ctx);
 		free(ctx);
 	}
 }
 
 /* new sigblk is initialized, but maybe in existing ctx */
 void
-sigblkInit(gtfile gf)
+sigblkInit(ksifile gf)
 {
 	if(gf == NULL) goto done;
 	seedIV(gf);
@@ -617,7 +597,7 @@ done:	return;
 
 /* concat: add IV to buffer */
 static inline void
-bufAddIV(gtfile gf, uchar *buf, size_t *len)
+bufAddIV(ksifile gf, uchar *buf, size_t *len)
 {
 	memcpy(buf+*len, gf->IV, hashOutputLengthOctets(gf->hashAlg));
 	*len += sizeof(gf->IV);
@@ -626,7 +606,7 @@ bufAddIV(gtfile gf, uchar *buf, size_t *len)
 
 /* concat: add imprint to buffer */
 static inline void
-bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
+bufAddImprint(ksifile gf, uchar *buf, size_t *len, imprint_t *imp)
 {
 	if(imp == NULL) {
 	/* TODO: how to get the REAL HASH ID? --> add field? */
@@ -643,12 +623,15 @@ bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
 }
 /* concat: add hash to buffer */
 static inline void
-bufAddHash(gtfile gf, uchar *buf, size_t *len, GTDataHash *hash)
+bufAddHash(ksifile gf, uchar *buf, size_t *len, KSI_DataHash *hash)
 {
+	const unsigned char *digest;
+	unsigned digest_len;
+	KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
 	buf[*len] = hashIdentifier(gf->hashAlg);
 	++(*len);
-	memcpy(buf+*len, hash->digest, hash->digest_length);
-	*len += hash->digest_length;
+	memcpy(buf+*len, digest, digest_len);
+	*len += digest_len;
 }
 /* concat: add tree level to buffer */
 static inline void
@@ -660,7 +643,7 @@ bufAddLevel(uchar *buf, size_t *len, uint8_t level)
 
 
 int
-hash_m(gtfile gf, GTDataHash **m)
+hash_m(ksifile gf, KSI_DataHash **m)
 {
 	int rgt;
 	uchar concatBuf[16*1024];
@@ -669,9 +652,9 @@ hash_m(gtfile gf, GTDataHash **m)
 
 	bufAddImprint(gf, concatBuf, &len, gf->x_prev);
 	bufAddIV(gf, concatBuf, &len);
-	rgt = GTDataHash_create(gf->hashAlg, concatBuf, len, m);
-	if(rgt != GT_OK) {
-		reportGTAPIErr(gf->ctx, gf, "GTDataHash_create", rgt);
+	rgt = KSI_DataHash_create(gf->ctx->ksi_ctx, concatBuf, len, gf->hashAlg, m);
+	if(rgt != KSI_OK) {
+		reportKSIAPIErr(gf->ctx, gf, "KSI_DataHash_create", rgt);
 		r = RSGTE_HASH_CREATE;
 		goto done;
 	}
@@ -679,12 +662,12 @@ done:	return r;
 }
 
 int
-hash_r(gtfile gf, GTDataHash **r, const uchar *rec, const size_t len)
+hash_r(ksifile gf, KSI_DataHash **r, const uchar *rec, const size_t len)
 {
 	int ret = 0, rgt;
-	rgt = GTDataHash_create(gf->hashAlg, rec, len, r);
-	if(rgt != GT_OK) {
-		reportGTAPIErr(gf->ctx, gf, "GTDataHash_create", rgt);
+	rgt = KSI_DataHash_create(gf->ctx->ksi_ctx, rec, len, gf->hashAlg, r);
+	if(rgt != KSI_OK) {
+		reportKSIAPIErr(gf->ctx, gf, "KSI_DataHash_create", rgt);
 		ret = RSGTE_HASH_CREATE;
 		goto done;
 	}
@@ -693,7 +676,7 @@ done:	return ret;
 
 
 int
-hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *rec,
+hash_node(ksifile gf, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *rec,
           uint8_t level)
 {
 	int r = 0, rgt;
@@ -703,9 +686,9 @@ hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *rec,
 	bufAddHash(gf, concatBuf, &len, m);
 	bufAddHash(gf, concatBuf, &len, rec);
 	bufAddLevel(concatBuf, &len, level);
-	rgt = GTDataHash_create(gf->hashAlg, concatBuf, len, node);
-	if(rgt != GT_OK) {
-		reportGTAPIErr(gf->ctx, gf, "GTDataHash_create", rgt);
+	rgt = KSI_DataHash_create(gf->ctx->ksi_ctx, concatBuf, len, gf->hashAlg, node);
+	if(rgt != KSI_OK) {
+		reportKSIAPIErr(gf->ctx, gf, "KSI_DataHash_create", rgt);
 		r = RSGTE_HASH_CREATE;
 		goto done;
 	}
@@ -714,10 +697,10 @@ done:	return r;
 
 
 int
-sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
+sigblkAddRecord(ksifile gf, const uchar *rec, const size_t len)
 {
-	GTDataHash *x; /* current hash */
-	GTDataHash *m, *r, *t, *t_del;
+	KSI_DataHash *x; /* current hash */
+	KSI_DataHash *m, *r, *t, *t_del;
 	uint8_t j;
 	int ret = 0;
 
@@ -730,8 +713,8 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 	/* persists x here if Merkle tree needs to be persisted! */
 	if(gf->bKeepTreeHashes)
 		tlvWriteHash(gf, 0x0901, x);
-	rsgtimprintDel(gf->x_prev);
-	gf->x_prev = rsgtImprintFromGTDataHash(x);
+	rsksiimprintDel(gf->x_prev);
+	gf->x_prev = rsksiImprintFromKSI_DataHash(x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
 	for(j = 0 ; j < gf->nRoots ; ++j) {
@@ -745,8 +728,8 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 			t_del = t;
 			ret = hash_node(gf, &t, gf->roots_hash[j], t_del, j+2);
 			gf->roots_valid[j] = 0;
-			GTDataHash_free(gf->roots_hash[j]);
-			GTDataHash_free(t_del);
+			KSI_DataHash_free(gf->roots_hash[j]);
+			KSI_DataHash_free(t_del);
 			if(ret != 0) goto done;
 			if(gf->bKeepTreeHashes)
 				tlvWriteHash(gf, 0x0901, t);
@@ -763,8 +746,8 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 	++gf->nRecords;
 
 	/* cleanup (x is cleared as part of the roots array) */
-	GTDataHash_free(m);
-	GTDataHash_free(r);
+	KSI_DataHash_free(m);
+	KSI_DataHash_free(r);
 
 	if(gf->nRecords == gf->blockSizeLimit) {
 		ret = sigblkFinish(gf);
@@ -779,27 +762,26 @@ done:
 }
 
 static int
-timestampIt(gtfile gf, GTDataHash *hash)
+timestampIt(ksifile gf, KSI_DataHash *hash)
 {
 	unsigned char *der = NULL;
-	size_t lenDer;
-	int r = GT_OK;
+	unsigned lenDer;
+	int r = KSI_OK;
 	int ret = 0;
-	GTTimestamp *timestamp = NULL;
+	KSI_Signature *sig = NULL;
 
 	/* Get the timestamp. */
-	r = GTHTTP_createTimestampHash(hash, gf->ctx->timestamper, &timestamp);
-
-	if(r != GT_OK) {
-		reportGTAPIErr(gf->ctx, gf, "GTHTTP_createTimestampHash", r);
+	r = KSI_createSignature(gf->ctx->ksi_ctx, hash, &sig);
+	if(r != KSI_OK) {
+		reportKSIAPIErr(gf->ctx, gf, "KSI_createSignature", r);
 		ret = 1;
 		goto done;
 	}
 
 	/* Encode timestamp. */
-	r = GTTimestamp_getDEREncoded(timestamp, &der, &lenDer);
-	if(r != GT_OK) {
-		reportGTAPIErr(gf->ctx, gf, "GTTimestamp_getDEREncoded", r);
+	r = KSI_Signature_serialize(sig, &der, &lenDer);
+	if(r != KSI_OK) {
+		reportKSIAPIErr(gf->ctx, gf, "KSI_Signature_serialize", r);
 		ret = 1;
 		goto done;
 	}
@@ -807,16 +789,15 @@ timestampIt(gtfile gf, GTDataHash *hash)
 	tlvWriteBlockSig(gf, der, lenDer);
 
 done:
-	GT_free(der);
-	GTTimestamp_free(timestamp);
+	KSI_free(der);
 	return ret;
 }
 
 
 int
-sigblkFinish(gtfile gf)
+sigblkFinish(ksifile gf)
 {
-	GTDataHash *root, *rootDel;
+	KSI_DataHash *root, *rootDel;
 	int8_t j;
 	int ret = 0;
 
@@ -832,14 +813,14 @@ sigblkFinish(gtfile gf)
 			rootDel = root;
 			ret = hash_node(gf, &root, gf->roots_hash[j], rootDel, j+2);
 			gf->roots_valid[j] = 0;
-			GTDataHash_free(gf->roots_hash[j]);
-			GTDataHash_free(rootDel);
+			KSI_DataHash_free(gf->roots_hash[j]);
+			KSI_DataHash_free(rootDel);
 			if(ret != 0) goto done; /* checks hash_node() result! */
 		}
 	}
 	if((ret = timestampIt(gf, root)) != 0) goto done;
 
-	GTDataHash_free(root);
+	KSI_DataHash_free(root);
 	free(gf->blkStrtHash);
 	gf->lenBlkStrtHash = gf->x_prev->len;
 	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
@@ -847,4 +828,15 @@ sigblkFinish(gtfile gf)
 done:
 	gf->bInBlk = 0;
 	return ret;
+}
+
+int
+rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key)
+{
+	int r;
+	r = KSI_CTX_setAggregator(ctx->ksi_ctx, uri, loginid, key);
+	if(r != KSI_OK) {
+		reportKSIAPIErr(ctx, NULL, "KSI_CTX_setAggregator", r);
+	}
+	return r;
 }
