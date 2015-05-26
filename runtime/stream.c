@@ -842,7 +842,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 		CHKiRet(cstrFinalize(thisLine));
 
 		/* we have a line, now let's assemble the message */
-		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStr(thisLine), 0, NULL, 0);
+		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0);
 dbgprintf("DDDD: readMultiLine: match %d, line '%s'\n", isMatch, rsCStrGetSzStr(thisLine));
 
 		if(isMatch) {
