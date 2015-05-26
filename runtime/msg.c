@@ -3737,6 +3737,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			 */
 			int iNumCC = 0;
 			int iLenBuf = 0;
+			uchar *pSrc;
 			uchar *pB;
 
 			for(pB = pRes ; *pB ; ++pB) {
@@ -3758,15 +3759,14 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 						free(pRes);
 					RET_OUT_OF_MEMORY;
 				}
-				while(*pRes) {
-					if(iscntrl((int) *pRes)) {
-						snprintf((char*)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(iscntrl((int) *pSrc)) {
+						snprintf((char*)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
 						for(i = 0 ; i < 4 ; ++i)
 							*pB++ = szCCEsc[i];
 					} else {
-						*pB++ = *pRes;
+						*pB++ = *pSrc;
 					}
-					++pRes;
 				}
 				*pB = '\0';
 				if(*pbMustBeFreed == 1)
