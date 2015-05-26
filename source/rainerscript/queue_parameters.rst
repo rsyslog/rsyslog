@@ -42,7 +42,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
 -  **queue.highwatermark** number
    This applies to disk-assisted queues, only. When the queue fills up
    to this number of messages, the queue begins to spool messages to
-   disk. Please note that this should note happen as part of usual
+   disk. Please note that this should not happen as part of usual
    processing, because disk queue mode is very considerably slower than
    in-memory queue mode. Going to disk should be reserved for cases
    where an output action destination is offline for some period.
@@ -61,7 +61,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
    disk mode for delayable inputs. So this is probably not what you want.
 -  **queue.lightdelaymark** number
 -  **queue.discardmark** number
-   default 9750]
+   default 9750
 -  **queue.discardseverity** number
    \*numerical\* severity! default 8 (nothing discarded)
 -  **queue.checkpointinterval** number

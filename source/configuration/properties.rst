@@ -40,7 +40,7 @@ The following message properties exist:
   possible or DNS resolution has been disabled.
 
 **fromhost-ip**
-  The same as fromhost, but alsways as an IP address. Local inputs (like
+  The same as fromhost, but always as an IP address. Local inputs (like
   imklog) use 127.0.0.1 in this property.
 
 **syslogtag**

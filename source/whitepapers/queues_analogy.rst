@@ -160,7 +160,7 @@ most, but not all cases.
 
 **Now let's dig a bit into the mathematical properties of turning
 lanes.** We assume that cars all have the same length. So, units of
-cars, the length is alsways one (which is nice, as we don't need to care
+cars, the length is always one (which is nice, as we don't need to care
 about that factor any longer ;)). A turning lane has finite capacity of
 *n* cars. As long as the number of cars wanting to take a turn is less
 than or eqal to *n*, "straigth traffic" is not blocked (or the other way

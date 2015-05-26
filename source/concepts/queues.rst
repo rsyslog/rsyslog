@@ -101,7 +101,7 @@ Disk Queues
 ~~~~~~~~~~~
 
 Disk queues use disk drives for buffering. The important fact is that
-the always use the disk and do not buffer anything in memory. Thus, the
+they always use the disk and do not buffer anything in memory. Thus, the
 queue is ultra-reliable, but by far the slowest mode. For regular use
 cases, this queue mode is not recommended. It is useful if log data is
 so important that it must not be lost, even in extreme cases.
@@ -325,7 +325,7 @@ Similarily, a third worker will be started when there are at least 300
 messages, a forth when reaching 400 and so on.
 
 It, however, does not make sense to have too many worker threads running
-in parall. Thus, the upper limit ca be set via
+in parallel. Thus, the upper limit can be set via
 "*$<object>QueueWorkerThreads*\ ". If it, for example, is set to four,
 no more than four workers will ever be started, no matter how many
 elements are enqueued.
@@ -345,7 +345,7 @@ Discarding Messages
 If the queue reaches the so called "discard watermark" (a number of
 queued elements), less important messages can automatically be
 discarded. This is in an effort to save queue space for more important
-messages, which you even less like to loose. Please note that whenever
+messages, which you even less like to lose. Please note that whenever
 there are more than "discard watermark" messages, both newly incoming as
 well as already enqueued low-priority messages are discarded. The
 algorithm discards messages newly coming in and those at the front of
