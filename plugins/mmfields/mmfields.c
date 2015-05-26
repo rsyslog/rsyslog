@@ -230,7 +230,7 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 		json_object_object_add(json, (char*)fieldname, jval);
 		field++;
 	}
- 	msgAddJSON(pMsg, pData->jsonRoot, json, 0);
+ 	msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
 finalize_it:
 	RETiRet;
 }

@@ -172,7 +172,7 @@ finalize_it:
  * by the caller.
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json)
+enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
 {
 	struct syslogTime st;
 	msg_t *pMsg;
@@ -200,7 +200,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	pMsg->iSeverity = iSeverity;
 
 	if(json != NULL) {
-		msgAddJSON(pMsg, (uchar*)"!", json, 0);
+		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedJsonProperties);
 	}
 
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
@@ -412,7 +412,7 @@ readjournal() {
 	}
 
 	/* submit message */
-	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json);
+	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json, 0);
 
 finalize_it:
 	if (sys_iden_help != NULL)

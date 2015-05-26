@@ -325,7 +325,7 @@ parse_sd(instanceData *pData, msg_t *pMsg)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	json_object_object_add(jroot, "rfc5424-sd", json);
- 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0);
+ 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
 finalize_it:
 	if(iRet != RS_RET_OK && json != NULL)
 		json_object_put(json);

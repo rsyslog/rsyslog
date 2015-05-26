@@ -192,7 +192,7 @@ void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
-rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset);
+rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);
 rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
