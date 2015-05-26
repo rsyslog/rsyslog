@@ -15,7 +15,7 @@ journal to syslog.
 
 Note that this module reads the journal database, what is considered a
 relativly performance-intense operation. As such, the performance of a
-configuration utilizing this module may be notably slower then when
+configuration utilizing this module may be notably slower than when
 using `imuxsock <imuxsock.html>`_. The journal provides imuxsock with a
 copy of all "classical" syslog messages, however, it does not provide
 structured data. Only if that structured data is needed, imjournal must be used.
