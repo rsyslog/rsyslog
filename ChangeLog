@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- bugfix imfile: segfault when using startmsg.regex because of empty log line
+  closes https://github.com/rsyslog/rsyslog/issues/357
+  Thanks to Ciprian Hacman for the patch.
 - build system: re-enable use of "make distcheck"
 - bugfix: build problem on Solaris
   Thanks to Dagobert Michelsen for reporting this and getting us up to
