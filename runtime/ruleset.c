@@ -271,7 +271,7 @@ finalize_it:
 static rsRetVal
 execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
-	json_object *arr;
+	json_object *arr = NULL;
 	DEFiRet;
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
 	if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
@@ -290,6 +290,7 @@ execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 	}
 	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
 finalize_it:
+	if (arr != NULL) json_object_put(arr);
 	RETiRet;
 }
 

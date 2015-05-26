@@ -2854,8 +2854,14 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	}
 
 finalize_it:
-	if(pProp->id == PROP_GLOBAL_VAR)
+	if(pProp->id == PROP_GLOBAL_VAR) {
+		if (*pjson != NULL)
+			*pjson = jsonDeepCopy(*pjson);
 		pthread_rwlock_unlock(&glblVars_rwlock);
+	} else {
+		if (*pjson != NULL)
+			json_object_get(*pjson);
+	}
 	RETiRet;
 }
 
