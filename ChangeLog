@@ -1,9 +1,17 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- build system: re-enable use of "make distcheck"
+- bugfix omkafka: fixed several concurrency issues, most of them related
+  to dynamic topics.
+  Thanks to Janmejay Singh for the patch.
+- bugfix core engine: ensured global variable atomicity
+  This could lead to problems in RainerScript, as well as probably in other
+  areas where global variables are used inside rsyslog. I wouldn't outrule
+  it could lead to segfaults.
+  Thanks to Janmejay Singh for the patch.
 - bugfix imfile: segfault when using startmsg.regex because of empty log line
   closes https://github.com/rsyslog/rsyslog/issues/357
   Thanks to Ciprian Hacman for the patch.
-- build system: re-enable use of "make distcheck"
 - bugfix: build problem on Solaris
   Thanks to Dagobert Michelsen for reporting this and getting us up to
   speed on the openCWS build farm.
