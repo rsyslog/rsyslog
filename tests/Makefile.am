@@ -78,6 +78,7 @@ TESTS +=  \
 	execonlywhenprevsuspended4.sh \
 	execonlywhenprevsuspended_multiwrkr.sh \
 	execonlywhenprevsuspended-queue.sh \
+	execonlywhenprevsuspended-nonsusp.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -732,6 +733,8 @@ EXTRA_DIST= \
 	testsuites/execonlywhenprevsuspended_multiwrkr.conf \
 	execonlywhenprevsuspended-queue.sh \
 	testsuites/execonlywhenprevsuspended-queue.conf \
+	execonlywhenprevsuspended-nonsusp.sh \
+	testsuites/execonlywhenprevsuspended-nonsusp.conf \
 	tabescape_dflt.sh \
 	testsuites/tabescape_dflt.conf \
 	testsuites/1.tabescape_dflt \
