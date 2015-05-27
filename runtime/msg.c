@@ -2825,6 +2825,8 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	struct json_object *parent;
 	DEFiRet;
 
+	*pjson = NULL;
+
 	if(pProp->id == PROP_CEE) {
 		jroot = pMsg->json;
 	} else if(pProp->id == PROP_LOCAL_VAR) {

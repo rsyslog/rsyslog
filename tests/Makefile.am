@@ -115,7 +115,8 @@ TESTS +=  \
 	incltest_dir.sh \
 	incltest_dir_wildcard.sh \
 	incltest_dir_empty_wildcard.sh \
-	linkedlistqueue.sh
+	linkedlistqueue.sh \
+	key_dereference_on_uninitialized_variable_space.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -810,6 +811,8 @@ EXTRA_DIST= \
 	testsuites/mmnormalize_regex_disabled.conf \
 	mmnormalize_regex_defaulted.sh \
 	testsuites/mmnormalize_regex_defaulted.conf \
+	key_dereference_on_uninitialized_variable_space.sh \
+	testsuites/key_dereference_on_uninitialized_variable_space.conf \
 	cfg.sh
 
 # TODO: re-enable
