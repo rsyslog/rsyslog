@@ -1,6 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
 - build system: re-enable use of "make distcheck"
+- bugfix imfile: regex multiline mode ignored escapeLF option
+  Thanks to Ciprian Hacman for reporting the problem
+  closes https://github.com/rsyslog/rsyslog/issues/370
 - bugfix omkafka: fixed several concurrency issues, most of them related
   to dynamic topics.
   Thanks to Janmejay Singh for the patch.

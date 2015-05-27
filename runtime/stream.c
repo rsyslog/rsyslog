@@ -859,7 +859,11 @@ dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
 			
 		} else {
 			CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-			rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			if(bEscapeLF) {
+				rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			} else {
+				cstrAppendChar(pThis->prevMsgSegment, '\n');
+			}
 			/* we could do this faster, but for now keep it simple */
 		}
 		cstrDestruct(&thisLine);
