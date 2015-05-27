@@ -4,6 +4,9 @@ Version 8.11.0 [v8-stable] 2015-06-30
 - bugfix omkafka: fixed several concurrency issues, most of them related
   to dynamic topics.
   Thanks to Janmejay Singh for the patch.
+- bugfix: execonlywhenpreviousissuspended did not work correctly
+  This especially caused problems when an action with this attribute was
+  configured with an action queue.
 - bugfix core engine: ensured global variable atomicity
   This could lead to problems in RainerScript, as well as probably in other
   areas where global variables are used inside rsyslog. I wouldn't outrule
