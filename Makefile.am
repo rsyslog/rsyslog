@@ -253,6 +253,9 @@ SUBDIRS += tests
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS= \
 	--disable-silent-rules \
+	--disable-testbench
+
+THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-distcheck-workaround \
 	--enable-testbench \
 	--enable-imdiag \
