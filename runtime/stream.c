@@ -1063,7 +1063,11 @@ tryTTYRecover(strm_t *pThis, int err)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
+#ifndef __FreeBSD__
 	if(err == ERR_TTYHUP) {
+#else
+	if(err == ERR_TTYHUP || err == ENXIO) {
+#endif /* __FreeBSD__ */
 		close(pThis->fd);
 		CHKiRet(doPhysOpen(pThis));
 	}
