@@ -1816,7 +1816,8 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
  * and it was generally 5 to 10 times SLOWER than what we do here...
  */
 static int
-evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
+evalStrArrayCmp(es_str_t *const estr_l,
+		const struct cnfarray *__restrict__ const ar,
 		const int cmpop)
 {
 	int i;
