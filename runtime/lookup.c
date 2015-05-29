@@ -261,7 +261,7 @@ lookupReadFile(lookup_t *pThis)
 {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json = NULL;
-	int eno = errno;
+	int eno;
 	char errStr[1024];
 	char *iobuf = NULL;
 	int fd;
