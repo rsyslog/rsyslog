@@ -3422,8 +3422,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				free(pRes);
 			pRes = pBufStart;
 			*pbMustBeFreed = 1;
-			if(*(pFldEnd+1) != '\0')
-				++pFldEnd; /* OK, skip again over delimiter char */
 		} else {
 			/* field not found, return error */
 			if(*pbMustBeFreed == 1)
