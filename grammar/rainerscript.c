@@ -3757,6 +3757,12 @@ initFunc_re_match(struct cnffunc *func)
 	regex_t *re;
 	DEFiRet;
 
+	if(func->expr[0] == NULL) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	func->funcdata = NULL;
 	if(func->expr[1]->nodetype != 'S') {
 		parser_errmsg("param 2 of re_match/extract() must be a constant string");
@@ -3790,6 +3796,12 @@ initFunc_exec_template(struct cnffunc *func)
 	char *tplName = NULL;
 	DEFiRet;
 
+	if(func->expr[0] == NULL) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	if(func->expr[0]->nodetype != 'S') {
 		parser_errmsg("exec_template(): param 1 must be a constant string");
 		FINALIZE;
@@ -3816,6 +3828,12 @@ initFunc_prifilt(struct cnffunc *func)
 	uchar *cstr;
 	DEFiRet;
 
+	if(func->expr[0] == NULL) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	func->funcdata = NULL;
 	if(func->expr[0]->nodetype != 'S') {
 		parser_errmsg("param 1 of prifilt() must be a constant string");
@@ -3839,6 +3857,12 @@ initFunc_lookup(struct cnffunc *func)
 	DEFiRet;
 
 	func->funcdata = NULL;
+	if(func->expr[0] == NULL) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	if(func->expr[0]->nodetype != 'S') {
 		parser_errmsg("table name (param 1) of lookup() must be a constant string");
 		FINALIZE;
