@@ -266,7 +266,7 @@ static rsRetVal queryCoreFeatureSupport(int *pBool, unsigned uFeat)
 {
 	DEFiRet;
 
-	if((pBool == NULL))
+	if(pBool == NULL)
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
 	*pBool = (uFeat & CORE_FEATURE_BATCHING) ? 1 : 0;
