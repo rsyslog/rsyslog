@@ -27,6 +27,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <pwd.h>
 #include <grp.h>
 #include <stdarg.h>
 #include <sys/resource.h>
@@ -519,6 +520,23 @@ static void doDropPrivUid(int iUid)
 {
 	int res;
 	uchar szBuf[1024];
+	struct passwd *pw;
+	gid_t gid;
+
+	/* Try to set appropriate supplementary groups for this user.
+	 * Failure is not fatal.
+	 */
+	pw = getpwuid(iUid);
+	if (pw) {
+		gid = getgid();
+		res = initgroups(pw->pw_name, gid);
+		DBGPRINTF("initgroups(%s, %d): %d\n", pw->pw_name, gid, res);
+	} else {
+		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
+		errmsg.LogError(0, NO_ERRCODE,
+				"could not get username for userid %d: %s",
+				iUid, szBuf);
+	}
 
 	res = setuid(iUid);
 	if(res) {

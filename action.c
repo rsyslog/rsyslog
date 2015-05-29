@@ -188,7 +188,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
 	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
 	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
-	{ "action.resumeinterval", eCmdHdlrInt, 0 }
+	{ "action.resumeinterval", eCmdHdlrInt, 0 },
+	{ "action.copymsg", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -355,6 +356,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->isTransactional = 0;
 	pThis->bReportSuspension = -1; /* indicate "not yet set" */
 	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
+	pThis->bCopyMsg = 0;
 	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
@@ -383,7 +385,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	}
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", iActionNbr);
+		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", pThis->iActionNbr);
 		pThis->pszName = ustrdup(pszAName);
 	}
 
@@ -1289,17 +1291,11 @@ processMsgMain(action_t *__restrict__ const pAction,
 {
 	DEFiRet;
 
-	if(pAction->bExecWhenPrevSusp && !pWti->execState.bPrevWasSuspended) {
-		DBGPRINTF("action %d: NOT executing, as previous action was "
-			  "not suspended\n", pAction->iActionNbr);
-		FINALIZE;
-	}
-
 	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
 
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
-		DBGPRINTF("action %d is transactional - executing in commit phase\n", pAction->iActionNbr);
+		DBGPRINTF("action '%s': is transactional - executing in commit phase\n", pAction->pszName);
 		actionPrepare(pAction, pWti);
 		iRet = getReturnCode(pAction, pWti);
 		FINALIZE;
@@ -1315,7 +1311,6 @@ finalize_it:
 		if(pWti->execState.bDoAutoCommit)
 			iRet = actionCommit(pAction, pWti);
 	}
-	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 	RETiRet;
 }
 
@@ -1439,7 +1434,17 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
 
-	DBGPRINTF("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
+	DBGPRINTF("action '%s': called, logging to %s (susp %d/%d, direct q %d)\n",
+		pAction->pszName, module.GetStateName(pAction->pMod),
+		pAction->bExecWhenPrevSusp, pWti->execState.bPrevWasSuspended,
+		pAction->pQueue->qType == QUEUETYPE_DIRECT);
+
+	if(   pAction->bExecWhenPrevSusp
+	   && !pWti->execState.bPrevWasSuspended) {
+		DBGPRINTF("action '%s': NOT executing, as previous action was "
+			  "not suspended\n", pAction->pszName);
+		FINALIZE;
+	}
 
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
 	if(pAction->pQueue->qType == QUEUETYPE_DIRECT) {
@@ -1448,9 +1453,15 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 	} else {/* in this case, we do single submits to the queue. 
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */
-		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
+		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY,
+			pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
 	}
+	pWti->execState.bPrevWasSuspended
+		= (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+	DBGPRINTF("action '%s': set suspended state to %d\n",
+		pAction->pszName, pWti->execState.bPrevWasSuspended);
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1676,6 +1687,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bReportSuspension = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
 			pAction->bReportSuspensionCont = (int) pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "action.copymsg")) {
+			pAction->bCopyMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {

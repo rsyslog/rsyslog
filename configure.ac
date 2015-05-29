@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.9.0.ad1],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.10.0.ad1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -43,6 +43,7 @@ AC_CHECK_FUNCS(json_object_new_int64,,)
 # look for newer API
 AC_CHECK_FUNCS(json_tokener_error_desc,,)
 AC_CHECK_FUNCS(json_object_object_get_ex,,)
+AC_CHECK_FUNCS(json_object_to_json_string_ext,,)
 AC_CHECK_TYPES([json_bool],,,[[#include <json_object.h>]])
 
 CFLAGS="$save_CFLAGS"
@@ -450,6 +451,18 @@ if test "$enable_debug" = "no"; then
 fi
 
 
+# debug-symbols
+AC_ARG_ENABLE(debug_symbols,
+        [AS_HELP_STRING([--disable-debug-symbols],[Disable debugging symbols @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_debug_symbols="yes" ;;
+          no) enable_debug_symbols="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --disable-debug-symbols) ;;
+         esac],
+        [enable_debug_symbols="yes"]
+)
+
+
 # runtime instrumentation
 AC_ARG_ENABLE(rtinst,
         [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
@@ -750,6 +763,9 @@ AC_ARG_ENABLE(gnutls,
 if test "x$enable_gnutls" = "xyes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
+        AC_CHECK_LIB(gnutls, gnutls_global_init)
+	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
+	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
@@ -801,11 +817,15 @@ fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
 RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
 if test "$GCC" = "yes"; then
-  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-  if $CC -Werror=implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+  if $CC -Werror=implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror=implicit-function-declaration"
-  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null 2>/dev/null; then
+  elif $CC -Werror-implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
     RSRT_CFLAGS="$RSRT_CFLAGS -Werror-implicit-function-declaration"
+  fi
+
+  if test "x$enable_debug_symbols" = "xyes"; then
+    RSRT_CFLAGS="$RSRT_CFLAGS -g"
   fi
 fi
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
@@ -1536,48 +1556,87 @@ AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 # END HIREDIS SUPPORT
 
 
+# HTTPFS SUPPORT
+
+AC_ARG_ENABLE(omhttpfs,
+        [AS_HELP_STRING([--enable-omhttpfs],[Compiles omhttpfs template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omhttpfs="yes" ;;
+          no) enable_omhttpfs="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omhttpfs) ;;
+         esac],
+        [enable_omhttpfs=no]
+)
+
+if test "x$enable_omhttpfs" = "xyes"; then
+	AC_CHECK_HEADERS([curl/curl.h])
+	PKG_CHECK_MODULES([CURL], [libcurl])
+	LT_LIB_M
+	#PKG_CHECK_MODULES(HTTPFS, curl >= 7.0.0)
+fi
+AM_CONDITIONAL(ENABLE_OMHTTPFS, test x$enable_omhttpfs = xyes)
+
+# END HTTPFS SUPPORT
+
+# man pages
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
-
-# man pages for libgcrypt module
-if test "x$enable_usertools" = "xyes" && test "x$enable_libgcrypt" = "xyes"; then
-    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
-        [],
-        [have_to_generate_man_pages="yes"]
-    )
-fi
-
-# man pages for GuardTime module
-if test "x$enable_usertools" = "xyes" && test "x$enable_guardtime" = "xyes"; then
-    AC_CHECK_FILES(["tools/rscryutil.1" "tools/rsgtutil.1"],
-        [],
-        [have_to_generate_man_pages="yes"]
-    )
-fi
-
 AC_ARG_ENABLE(generate-man-pages,
-        [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) have_to_generate_man_pages="yes" ;;
           no) have_to_generate_man_pages="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-generate-man-pages) ;;
          esac],
-        [have_to_generate_man_pages=yes]
+        [have_to_generate_man_pages=no]
 )
 
-if test "x$have_to_generate_man_pages" = "xyes"; then
-    AC_MSG_RESULT([Some man pages are missing or --enable-generate-man-pages given. We need rst2man to generate man pages from source...])
+
+# This provides a work-around to use "make distcheck" by disabling
+# some tests that do have problems with the distcheck environment.
+AC_ARG_ENABLE(distcheck-workaround,
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck by disabling some tests that do not support the distcheck environment @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_distcheck_workaround="yes" ;;
+          no) enable_distcheck_workaround="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-distcheck_workaround) ;;
+         esac],
+        [enable_distcheck_workaround="no"]
+)
+AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
+
+
+# Running from git source?
+in_git_src=no
+AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
+
+if test "x$in_git_src" = "xyes"; then
+        AC_MSG_NOTICE([Running from git source])
+
+        have_to_generate_man_pages=yes
+
+        if test "x$LEX" != "xflex"; then
+                AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
+        fi
+
+        if test "x$YACC" = "xyacc"; then
+                # AC_PROG_YACC only checks for yacc replacements, not for yacc itself
+                AC_CHECK_PROG([YACC_FOUND], [yacc], [yes], [no])
+                if test "x$YACC_FOUND" = "xno"; then
+                        AC_MSG_ERROR([A yacc program is needed to build rsyslog, please install bison.])
+                fi
+        fi
 else
-    AC_MSG_RESULT([All required man pages found. We don't need rst2man!])
+        AC_MSG_NOTICE([Not running from git source])
 fi
 
-if test "x$have_to_generate_man_pages" = "xyes"; then
-    # We need rst2man to generate our man pages
-    AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [])
-    if test -z "$RST2MAN"; then
-        AC_MSG_ERROR([rst2man is required to build man pages. You can use the release tarball with pregenerated man pages to avoid this depedency. Use the --disable-generate-man-pages configure option in that case.])
-    fi
+
+# rst2man
+AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [false])
+if test "x$have_to_generate_man_pages" = "xyes" && test "x$RST2MAN" = "xfalse"; then
+        AC_MSG_ERROR([rst2man is required when building from git source or --enable-generate-man-pages option was set, please install python-docutils.])
 fi
+
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
@@ -1640,6 +1699,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
+		contrib/omhttpfs/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1687,6 +1747,7 @@ echo "    omuxsock module will be compiled:         $enable_omuxsock"
 echo "    omzmq3 module will be compiled:           $enable_omzmq3"
 echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
+echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

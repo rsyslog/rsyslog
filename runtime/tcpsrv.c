@@ -182,7 +182,6 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *p
 {
 	int i;
 	uchar *pPort = pszPort;
-	uchar *pAddr = pszAddr;
 	DEFiRet;
 
 	assert(pszPort != NULL);
@@ -354,7 +353,6 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 {
 	DEFiRet;
 	uchar *TCPLstnPort;
-	uchar *TCPLstnAddr;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pPortEntry != NULL);

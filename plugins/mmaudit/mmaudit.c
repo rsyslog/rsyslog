@@ -275,7 +275,7 @@ dbgprintf("mmaudit: msg is '%s'\n", buf);
 	jval = json_object_new_int(typeID);
 	json_object_object_add(json, "type", jval);
 
-	msgAddJSON(pMsg, (uchar*)"!audit", jsonRoot, 0);
+	msgAddJSON(pMsg, (uchar*)"!audit", jsonRoot, 0, 0);
 	bSuccess = 1;
 
 finalize_it:

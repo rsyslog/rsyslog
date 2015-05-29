@@ -57,6 +57,15 @@ sudo yum install git valgrind autoconf automake flex bison python-docutils pytho
 
 
 
+Ubuntu
+~~~~~~
+
+Note: this list is (obviously) incomplete. We intend to complete it as we 
+have more information and install additional systems.
+
+sudo apt-get install libdbi-dev
+
+
 openSUSE 13
 ~~~~~~~~~~~
 
@@ -65,6 +74,18 @@ sudo zypper install gcc make autoconf automake libtool libcurl-devel flex bison 
 For the testbench VMs:
 
 sudo zypper install gvim mutt
+
+
+
+SUSE LINUX Enterprise Server 11
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Available Packages:
+zypper install gcc make autoconf libtool flex bison
+
+Missing Packages:
+libcurl-devel valgrind python-docutils uuid-devel libgcrypt-devel libgnutls-devel libmysqlclient-devel libdbi-devel postgresql-devel net-snmp-devel libdbi-drivers-dbd-mysql json-c zlib-dev libdbi
+
+
 
 Reporting Bugs
 ==============

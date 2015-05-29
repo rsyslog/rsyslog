@@ -1,7 +1,7 @@
-/* This is a tool for dumpoing the content of GuardTime TLV
+/* This is a tool for dumping the content of GuardTime TLV
  * files in a (somewhat) human-readable manner.
  * 
- * Copyright 2013 Adiscon GmbH
+ * Copyright 2013-2014 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *

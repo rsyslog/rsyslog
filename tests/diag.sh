@@ -5,7 +5,18 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
+#
+# This file can be customized to environment specifics via environment
+# variables:
+# RS_SORTCMD    Sort command to use (must support -g option). If unset,
+#		"sort" is used. E.g. Solaris needs "gsort"
+#
+
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+
+# **** use the line below for very hard to find leaks! *****
+#valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
+
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
@@ -16,10 +27,13 @@ CURRENT_TEST=
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-   		echo $2 > CURRENT_TEST # save test name for auto-debugging
+   		basename $0 > CURRENT_TEST # save test name for auto-debugging
+		if [ -z $RS_SORTCMD ]; then
+			RS_SORTCMD=sort
+		fi  
 		if [ "x$2" != "x" ]; then
 			echo "------------------------------------------------------------"
-			echo "Test: $2"
+			echo "Test: $0"
 			echo "------------------------------------------------------------"
 		fi
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
@@ -49,6 +63,7 @@ case $1 in
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
 		rm -f rsyslog.errorfile
+		rm -f CURRENT_TEST HOSTNAME imfile-state:.-rsyslog.input
 		echo  -------------------------------------------------------------------------------
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
@@ -201,7 +216,7 @@ case $1 in
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		cp rsyslog.out.log work-presort
-		sort -g < rsyslog.out.log > work
+		$RS_SORTCMD -g < rsyslog.out.log > work
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
@@ -214,7 +229,7 @@ case $1 in
    		# a duplicateof seq-check, but we could not change its calling conventions without
 		# breaking a lot of exitings test cases, so we preferred to duplicate the code here.
 		rm -f work2
-		sort -g < rsyslog2.out.log > work2
+		$RS_SORTCMD -g < rsyslog2.out.log > work2
 		# $4... are just to have the abilit to pass in more options...
 		# add -v to chkseq if you need more verbose output
 		./chkseq -fwork2 -s$2 -e$3 $4 $5 $6 $7
@@ -231,6 +246,13 @@ case $1 in
 		    source ./diag.sh error-exit 1
 		fi
 		;;
+   'custom-content-check') 
+		cat $3 | grep -qF "$2"
+		if [ "$?" -ne "0" ]; then
+		    echo content-check failed to find "'$2'" inside "'$3'"
+		    source ./diag.sh error-exit 1
+		fi
+		;;
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
@@ -240,7 +262,7 @@ case $1 in
    'gzip-seq-check') # do the usual sequence check, but for gzip files
 		rm -f work
 		ls -l rsyslog.out.log
-		gunzip < rsyslog.out.log | sort -g > work
+		gunzip < rsyslog.out.log | $RS_SORTCMD -g > work
 		ls -l work
 		# $4... are just to have the abilit to pass in more options...
 		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
@@ -285,7 +307,7 @@ case $1 in
 				echo "core $CORE" >>gdb.in
 				echo "info thread" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
-				echo "q" >> gdb.in" >> gdb.in" >> gdb.in" >> gdb.in" >> gdb.in
+				echo "q" >> gdb.in
 				gdb ../tools/rsyslogd < gdb.in
 				CORE=
 				rm gdb.in
