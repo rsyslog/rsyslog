@@ -7,7 +7,7 @@ echo \[tcp_forwarding_tpl.sh\]: test for tcp forwarding with assigned template
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 source $srcdir/diag.sh init
-./minitcpsrvr 127.0.0.1 13514 rsyslog.out.log &
+./minitcpsrv 127.0.0.1 13514 rsyslog.out.log &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 
