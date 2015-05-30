@@ -283,7 +283,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	int i;
 CODESTARTsetModCnf
-	struct cnfparamvals *const __restrict__ pvals = nvlstGetParams(lst, &modpblk, NULL);
+	const struct cnfparamvals *const __restrict__ pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}

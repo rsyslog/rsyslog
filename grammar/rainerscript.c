@@ -1100,7 +1100,7 @@ cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
 
 
 void
-cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals)
+cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals)
 {
 	int i;
 	char *cstr;
@@ -1265,7 +1265,7 @@ int SKIP_STRING = 0x1;
 int SKIP_JSON = 0x2;
 
 static void
-varFreeMembersSelectively(struct var *r, int skipMask)
+varFreeMembersSelectively(const struct var *r, const int skipMask)
 {
 	int kill_string = ! (skipMask & SKIP_STRING);
 	if(kill_string && (r->datatype == 'S')) es_deleteStr(r->d.estr);
@@ -1274,7 +1274,7 @@ varFreeMembersSelectively(struct var *r, int skipMask)
 }
 
 static void
-varFreeMembers(struct var *r)
+varFreeMembers(const struct var *r)
 {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
 }
@@ -4039,7 +4039,7 @@ cnfDoInclude(char *name)
 }
 
 void
-varDelete(struct var *v)
+varDelete(const struct var *v)
 {
 	switch(v->datatype) {
 	case 'S':
@@ -4055,7 +4055,7 @@ varDelete(struct var *v)
 }
 
 void
-cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
+cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk)
 {
 	int i;
 	if(paramvals == NULL)
@@ -4065,7 +4065,7 @@ cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
 			varDelete(&paramvals[i].val);
 		}
 	}
-	free(paramvals);
+	free((void*)paramvals);
 }
 
 /* find the index (or -1!) for a config param by name. This is used to 
