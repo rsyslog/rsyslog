@@ -1431,7 +1431,7 @@ done:	return;
 static void
 startLstnFile(lstn_t *const __restrict__ pLstn)
 {
-	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
+	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY|IN_MOVE_SELF);
 	if(wd < 0) {
 		char errStr[512];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1669,12 +1669,22 @@ in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 	}
 }
 
+static void
+in_handleFileEventMOVE(struct inotify_event *const ev, lstn_t *pLstn)
+{
+	int dirIdx;
+	dirIdx = dirsFindDir(pLstn->pszDirName);
+	if(dirIdx >= 0)
+		in_handleDirEventDELETE(ev, dirIdx);
+}
 
 static void
 in_handleFileEvent(struct inotify_event *ev, const wd_map_t *const etry)
 {
 	if(ev->mask & IN_MODIFY) {
 		pollFile(etry->pLstn, NULL);
+	} else if(ev->mask & IN_MOVE_SELF) {
+		in_handleFileEventMOVE(ev, etry->pLstn);
 	} else {
 		DBGPRINTF("imfile: got non-expected inotify event:\n");
 		in_dbg_showEv(ev);
