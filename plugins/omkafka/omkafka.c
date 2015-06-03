@@ -119,6 +119,7 @@ typedef struct _instanceData {
 	int nTopicConfParams;
 	struct kafka_params *topicConfParams;
 	uchar *errorFile;
+	uchar *key;
 	int fdErrFile;		/* error file fd or -1 if not open */
 	pthread_mutex_t mutErrFile;
 	int bIsOpen;
@@ -145,6 +146,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "confparam", eCmdHdlrArray, 0 },
 	{ "topicconfparam", eCmdHdlrArray, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
+	{ "key", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "closeTimeout", eCmdHdlrPositiveInt, 0 }
 };
@@ -787,7 +789,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 	rd_kafka_topic_t *rkt = NULL;
 	pthread_rwlock_t *dynTopicLock = NULL;
 
-	DBGPRINTF("omkafka: trying to send: '%s'\n", msg);
+	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s'\n", pData->key, msg);
 
 	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
@@ -796,7 +798,9 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 		rkt = pData->pTopic;
 	}
 	if(rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
-	                    msg, strlen((char*)msg), NULL, 0, NULL) == -1) {
+	                    msg, strlen((char*)msg), pData->key,
+	                    pData->key == NULL ? 0 : strlen((char*)pData->key),
+	                    NULL) == -1) {
 		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' "
 			"partition %d: %s\n",
@@ -857,6 +861,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->nTopicConfParams = 0;
 	pData->topicConfParams = NULL;
 	pData->errorFile = NULL;
+	pData->key = NULL;
 	pData->closeTimeout = 2000;
 }
 
@@ -942,6 +947,8 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "key")) {
+			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
