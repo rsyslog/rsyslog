@@ -254,6 +254,7 @@ MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
 {
 	assert(newLen <= (size_t) pMsg->iLenRawMsg);
 	pMsg->iLenRawMsg = newLen;
+	pMsg->pszRawMsg[newLen] = '\0';
 }
 
 static inline void
