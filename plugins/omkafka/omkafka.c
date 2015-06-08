@@ -917,8 +917,6 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "broker")) {
 			es_str_t *es = es_newStr(128);
 			int bNeedComma = 0;
-			CHKmalloc(pData->brokers = malloc(sizeof(char*) *
-			                                  pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
 				if(bNeedComma)
 					es_addChar(&es, ',');
