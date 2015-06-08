@@ -211,7 +211,7 @@ rsRetVal checkStartupOK(void)
 			"If you want to run multiple instances of rsyslog, you need "
 			"to specify\n"
 			"different pid files for them (-i option).\n",
-			PidFile, getpid());
+			PidFile, (int) getpid());
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -252,7 +252,7 @@ prepareBackground(const int parentPipeFD)
 			const int lstnPidI = atoi(lstnPid);
 			snprintf(szBuf, sizeof(szBuf), "%d", lstnPidI);
 			if(!strcmp(szBuf, lstnPid) && lstnPidI == getppid()) {
-				snprintf(szBuf, sizeof(szBuf), "%d", getpid());
+				snprintf(szBuf, sizeof(szBuf), "%d", (int) getpid());
 				setenv("LISTEN_PID", szBuf, 1);
 				/* ensure we do not close what systemd provided */
 				const int nFds = sd_listen_fds(0);
