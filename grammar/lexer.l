@@ -330,7 +330,9 @@ cnfSetLexFile(char *fname)
 		currbs->lineno = yylineno;
 	bs->prev = currbs;
 	bs->fn = strdup(fname == NULL ? "stdin" : fname);
-	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), es_strlen(str));
+	yy_size_t lll = es_strlen(str);
+	//bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), (yy_size_t) es_strlen(str));
+	bs->bs = yy_scan_buffer((char*)es_getBufAddr(str), lll);
 	bs->estr = str; /* needed so we can free it later */
 	currbs = bs;
 	cnfcurrfn = bs->fn;

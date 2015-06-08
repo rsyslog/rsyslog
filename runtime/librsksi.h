@@ -375,7 +375,7 @@ int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *b
 int rsksi_chkFileHdr(FILE *fp, char *expect);
 ksifile rsksi_vrfyConstruct_gf(void);
 void rsksi_vrfyBlkInit(ksifile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsksi_vrfy_nextRec(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int rsksi_vrfy_nextRec(ksifile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
 int verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsksi_errctxInit(gterrctx_t *ectx);
 void rsksi_errctxExit(gterrctx_t *ectx);
