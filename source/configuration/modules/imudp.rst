@@ -311,7 +311,7 @@ $UDPServerRun <port>                   Port
 $InputUDPServerBindRuleset <ruleset>   Ruleset              5.3.2+
 ====================================== ==================== =======================
 
-Note: module parameters are given in *italics*. All others are input paramters.
+Note: module parameters are given in *italics*. All others are input parameters.
 
 Multiple receivers may be configured by specifying $UDPServerRun
 multiple times.

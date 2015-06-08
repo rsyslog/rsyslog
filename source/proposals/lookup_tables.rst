@@ -52,7 +52,7 @@ a header and a table part.
 Header
 ~~~~~~
 
-The header is the top-level json. It has paramters "version", "nomatch",
+The header is the top-level json. It has parameters "version", "nomatch",
 and "type". The version parameter must be given and must always be one
 for this version of rsyslog. The nomatch parameter is optional. If
 specified, it contains the value to be used if lookup() is provided an
