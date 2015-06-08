@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -747,6 +747,13 @@ rsRetVal rcvMainLoop(struct wrkrInfo_s *pWrkr)
 	nLstn = 0;
 	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next)
 		++nLstn;
+
+	if(nLstn == 0) {
+		errmsg.LogError(errno, RS_RET_ERR,
+			"imudp error: we have 0 listeners, terminating"
+			"worker thread");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	CHKmalloc(udpEPollEvt = calloc(nLstn, sizeof(struct epoll_event)));
 
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
