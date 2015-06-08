@@ -674,7 +674,7 @@ rsgt_objfree(uint16_t tlvtype, void *obj)
 /**
  * Read block parameters. This detects if the block contains the
  * individual log hashes, the intermediate hashes and the overall
- * block paramters (from the signature block). As we do not have any
+ * block parameters (from the signature block). As we do not have any
  * begin of block record, we do not know e.g. the hash algorithm or IV
  * until reading the block signature record. And because the file is
  * purely sequential and variable size, we need to read all records up to
