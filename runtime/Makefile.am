@@ -210,7 +210,7 @@ endif
 #
 # support library for guardtime KSI
 #
-if ENABLE_GUARDTIME
+if ENABLE_GT_KSI
    noinst_LTLIBRARIES +=  librsksi.la
    librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h
    pkglib_LTLIBRARIES += lmsig_ksi.la
