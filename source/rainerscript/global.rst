@@ -6,7 +6,7 @@ that each parameter can only be set once and cannot be re-set
 thereafter. If a parameter is set multiple times, the behaviour is
 unpredictable.
 
-The following paramters can be set:
+The following parameters can be set:
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 

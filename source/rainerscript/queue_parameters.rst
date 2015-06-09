@@ -18,7 +18,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
 -  **queue.filename** name
    File name to be used for the queue files. Please note that this is
    actually just the file name. A directory can NOT be specified in this
-   paramter. If the files shall be created in a specific directory,
+   parameter. If the files shall be created in a specific directory,
    specify queue.spoolDirectory for this. The filename is used to build
    to complete path for queue files.
 -  **queue.spoolDirectory** name
