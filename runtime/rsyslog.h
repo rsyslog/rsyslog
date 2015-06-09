@@ -541,7 +541,7 @@ extern int default_thr_sched_policy;
  * absolutely necessary - all output plugins need to be changed!
  *
  * If a change is "just" for internal working, consider adding a
- * separate paramter outside of this structure. Of course, it is
+ * separate parameter outside of this structure. Of course, it is
  * best to avoid this as well ;-)
  * rgerhards, 2013-12-04
  */

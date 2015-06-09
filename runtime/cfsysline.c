@@ -837,7 +837,7 @@ finalize_it:
  * Parameter permitted has been added to support the v2 config system. With it,
  * we can tell the legacy system (us here!) to check if a config directive is
  * still permitted. For example, the v2 system will disable module global
- * paramters if the are supplied via the native v2 callbacks. In order not
+ * parameters if the are supplied via the native v2 callbacks. In order not
  * to break exisiting modules, we have renamed the rgCfSysLinHdlr routine to
  * version 2 and added a new one with the original name. It just calls the
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
