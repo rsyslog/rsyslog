@@ -512,10 +512,10 @@ rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 	if((ksi = rsksifileConstruct(ctx)) == NULL)
 		goto done;
 
-	snprintf(fn, sizeof(fn), "%s.gtsig", logfn);
+	snprintf(fn, sizeof(fn), "%s.ksisig", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ksi->sigfilename = (uchar*) strdup(fn);
-	snprintf(fn, sizeof(fn), "%s.gtstate", logfn);
+	snprintf(fn, sizeof(fn), "%s.ksistate", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ksi->statefilename = (uchar*) strdup(fn);
 	if(tlvOpen(ksi, LOGSIGHDR, sizeof(LOGSIGHDR)-1) != 0) {

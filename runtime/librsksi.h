@@ -142,7 +142,7 @@ struct block_sig_s {
 };
 
 
-/* the following defines the gtstate file record. Currently, this record
+/* the following defines the ksistate file record. Currently, this record
  * is fixed, we may change that over time.
  */
 struct rsksistatefile {
