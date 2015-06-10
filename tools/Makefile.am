@@ -82,7 +82,7 @@ if ENABLE_GT_KSI
 bin_PROGRAMS += rsksiutil
 rsksiutil = rsksiutil.c
 rsksiutil_CPPFLAGS =  $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
-rsksiutil_LDADD = ../runtime/libksigt.la $(GT_KSI_LIBS)
+rsksiutil_LDADD = ../runtime/librsksi.la $(GT_KSI_LIBS)
 rsksiutil.1: rsksiutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
 man1_MANS += rsksiutil.1

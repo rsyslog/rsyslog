@@ -231,7 +231,7 @@ verify(char *name)
 		}
 	}
 
-	rsksiInit("rsyslog rsksiutil " VERSION);
+/* OLDCODE 	rsksiInit("rsyslog rsksiutil " VERSION); */
 	rsksi_errctxInit(&ectx);
 	bInitDone = 1;
 	ectx.verbose = verbose;
@@ -346,7 +346,7 @@ done:
 			goto err;
 		}
 	}
-	rsksiExit();
+	/* OLDCODE rsksiExit();*/
 	rsksi_errctxExit(&ectx);
 	return;
 
@@ -363,7 +363,7 @@ err:
 		unlink(nsigfname);
 	}
 	if(bInitDone) {
-		rsksiExit();
+		/* OLDCODE rsksiExit();*/
 		rsksi_errctxExit(&ectx);
 	}
 }
