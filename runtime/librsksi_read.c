@@ -108,7 +108,7 @@ rsksi_errctxInit(gterrctx_t *ectx)
 	ectx->fp = NULL;
 	ectx->filename = NULL;
 	ectx->recNum = 0;
-	ectx->gtstate = 0;
+	ectx->ksistate = 0;
 	ectx->recNumInFile = 0;
 	ectx->blkNum = 0;
 	ectx->verbose = 0;
@@ -173,21 +173,21 @@ reportError(const int errcode, gterrctx_t *ectx)
 			outputKSIHash(ectx->fp, "\tTree Right Hash....: ", ectx->righthash,
 				ectx->verbose);
 		}
-		if(errcode == RSGTE_INVLD_TIMESTAMP ||
-		   errcode == RSGTE_TS_DERDECODE) {
+		if(errcode == RSGTE_INVLD_SIGNATURE ||
+		   errcode == RSGTE_TS_CREATEHASH) {
 			fprintf(ectx->fp, "\tPublication Server.: %s\n", rsksi_read_puburl);
-			fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
-				ectx->gtstate, KSI_getErrorString(ectx->gtstate));
+			fprintf(ectx->fp, "\tKSI Verify Signature: [%u]%s\n",
+				ectx->ksistate, KSI_getErrorString(ectx->ksistate));
 		}
-		if(errcode == RSGTE_TS_EXTEND ||
-		   errcode == RSGTE_TS_DERDECODE) {
+		if(errcode == RSGTE_SIG_EXTEND ||
+		   errcode == RSGTE_TS_CREATEHASH) {
 			fprintf(ectx->fp, "\tExtending Server...: %s\n", rsksi_extend_puburl);
-			fprintf(ectx->fp, "\tGT Extend Timestamp: [%u]%s\n",
-				ectx->gtstate, KSI_getErrorString(ectx->gtstate));
+			fprintf(ectx->fp, "\tKSI Extend Signature: [%u]%s\n",
+				ectx->ksistate, KSI_getErrorString(ectx->ksistate));
 		}
 		if(errcode == RSGTE_TS_DERENCODE) {
 			fprintf(ectx->fp, "\tAPI return state...: [%u]%s\n",
-				ectx->gtstate, KSI_getErrorString(ectx->gtstate));
+				ectx->ksistate, KSI_getErrorString(ectx->ksistate));
 		}
 	}
 }
@@ -195,8 +195,9 @@ reportError(const int errcode, gterrctx_t *ectx)
 /* obviously, this is not an error-reporting function. We still use
  * ectx, as it has most information we need.
  */
+
 static void
-reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
+reportVerifySuccess(gterrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)*/
 {
 	if(ectx->fp != NULL) {
 		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: block signature successfully verified\n",
@@ -208,8 +209,8 @@ reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 		if(ectx->errRec != NULL)
 			fprintf(ectx->fp, "\tBlock End Record...: '%s'\n", ectx->errRec);
 		fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
-			ectx->gtstate, KSI_getErrorString(ectx->gtstate));
-		GTVerificationInfo_print(ectx->fp, 0, vrfyInf);
+			ectx->ksistate, KSI_getErrorString(ectx->ksistate));
+		/* OLDCODE: NOT NEEDED ANYMORE GTVerificationInfo_print(ectx->fp, 0, vrfyInf);*/
 	}
 }
 
@@ -786,31 +787,31 @@ done:
 ksifile
 rsksi_vrfyConstruct_gf(void)
 {
-	ksifile gf;
-	if((gf = calloc(1, sizeof(struct ksifile_s))) == NULL)
+	ksifile ksi;
+	if((ksi = calloc(1, sizeof(struct ksifile_s))) == NULL)
 		goto done;
-	gf->x_prev = NULL;
+	ksi->x_prev = NULL;
 
-done:	return gf;
+done:	return ksi;
 }
 
 void
-rsksi_vrfyBlkInit(ksifile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
+rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
 {
-	gf->hashAlg = hashID2Alg(bs->hashID);
-	gf->bKeepRecordHashes = bHasRecHashes;
-	gf->bKeepTreeHashes = bHasIntermedHashes;
-	free(gf->IV);
-	gf->IV = malloc(getIVLen(bs));
-	memcpy(gf->IV, bs->iv, getIVLen(bs));
-	free(gf->blkStrtHash);
-	gf->lenBlkStrtHash = bs->lastHash.len;
-	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	memcpy(gf->blkStrtHash, bs->lastHash.data, gf->lenBlkStrtHash);
+	ksi->hashAlg = hashID2Alg(bs->hashID);
+	ksi->bKeepRecordHashes = bHasRecHashes;
+	ksi->bKeepTreeHashes = bHasIntermedHashes;
+	free(ksi->IV);
+	ksi->IV = malloc(getIVLen(bs));
+	memcpy(ksi->IV, bs->iv, getIVLen(bs));
+	free(ksi->blkStrtHash);
+	ksi->lenBlkStrtHash = bs->lastHash.len;
+	ksi->blkStrtHash = malloc(ksi->lenBlkStrtHash);
+	memcpy(ksi->blkStrtHash, bs->lastHash.data, ksi->lenBlkStrtHash);
 }
 
 static int
-rsksi_vrfy_chkRecHash(ksifile gf, FILE *sigfp, FILE *nsigfp, 
+rsksi_vrfy_chkRecHash(ksifile ksi, FILE *sigfp, FILE *nsigfp, 
 		     KSI_DataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
@@ -822,7 +823,7 @@ rsksi_vrfy_chkRecHash(ksifile gf, FILE *sigfp, FILE *nsigfp,
 	if((r = rsksi_tlvrdRecHash(sigfp, nsigfp, &imp)) != 0)
 		reportError(r, ectx);
 		goto done;
-	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
+	if(imp->hashID != hashIdentifier(ksi->hashAlg)) {
 		reportError(r, ectx);
 		r = RSGTE_INVLD_REC_HASHID;
 		goto done;
@@ -844,7 +845,7 @@ done:
 }
 
 static int
-rsksi_vrfy_chkTreeHash(ksifile gf, FILE *sigfp, FILE *nsigfp,
+rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
                       KSI_DataHash *hash, gterrctx_t *ectx)
 {
 	int r = 0;
@@ -857,7 +858,7 @@ rsksi_vrfy_chkTreeHash(ksifile gf, FILE *sigfp, FILE *nsigfp,
 		reportError(r, ectx);
 		goto done;
 	}
-	if(imp->hashID != hashIdentifier(gf->hashAlg)) {
+	if(imp->hashID != hashIdentifier(ksi->hashAlg)) {
 		reportError(r, ectx);
 		r = RSGTE_INVLD_TREE_HASHID;
 		goto done;
@@ -879,7 +880,7 @@ done:
 }
 
 int
-rsksi_vrfy_nextRec(ksifile gf, FILE *sigfp, FILE *nsigfp,
+rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	          unsigned char *rec, size_t len, gterrctx_t *ectx)
 {
 	int r = 0;
@@ -887,28 +888,28 @@ rsksi_vrfy_nextRec(ksifile gf, FILE *sigfp, FILE *nsigfp,
 	KSI_DataHash *m, *recHash = NULL, *t, *t_del;
 	uint8_t j;
 
-	hash_m(gf, &m);
-	hash_r(gf, &recHash, rec, len);
-	if(gf->bKeepRecordHashes) {
-		r = rsksi_vrfy_chkRecHash(gf, sigfp, nsigfp, recHash, ectx);
+	hash_m(ksi, &m);
+	hash_r(ksi, &recHash, rec, len);
+	if(ksi->bKeepRecordHashes) {
+		r = rsksi_vrfy_chkRecHash(ksi, sigfp, nsigfp, recHash, ectx);
 		if(r != 0) goto done;
 	}
-	hash_node(gf, &x, m, recHash, 1); /* hash leaf */
-	if(gf->bKeepTreeHashes) {
+	hash_node(ksi, &x, m, recHash, 1); /* hash leaf */
+	if(ksi->bKeepTreeHashes) {
 		ectx->treeLevel = 0;
 		ectx->lefthash = m;
 		ectx->righthash = recHash;
-		r = rsksi_vrfy_chkTreeHash(gf, sigfp, nsigfp, x, ectx);
+		r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
-	rsksiimprintDel(gf->x_prev);
-	gf->x_prev = rsksiImprintFromKSI_DataHash(x);
+	rsksiimprintDel(ksi->x_prev);
+	ksi->x_prev = rsksiImprintFromKSI_DataHash(x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
-	for(j = 0 ; j < gf->nRoots ; ++j) {
-		if(gf->roots_valid[j] == 0) {
-			gf->roots_hash[j] = t;
-			gf->roots_valid[j] = 1;
+	for(j = 0 ; j < ksi->nRoots ; ++j) {
+		if(ksi->roots_valid[j] == 0) {
+			ksi->roots_hash[j] = t;
+			ksi->roots_valid[j] = 1;
 			t = NULL;
 			break;
 		} else if(t != NULL) {
@@ -916,26 +917,26 @@ rsksi_vrfy_nextRec(ksifile gf, FILE *sigfp, FILE *nsigfp,
 			ectx->treeLevel = j+1;
 			ectx->righthash = t;
 			t_del = t;
-			hash_node(gf, &t, gf->roots_hash[j], t_del, j+2);
-			gf->roots_valid[j] = 0;
-			if(gf->bKeepTreeHashes) {
-				ectx->lefthash = gf->roots_hash[j];
-				r = rsksi_vrfy_chkTreeHash(gf, sigfp, nsigfp, t, ectx);
+			hash_node(ksi, &t, ksi->roots_hash[j], t_del, j+2);
+			ksi->roots_valid[j] = 0;
+			if(ksi->bKeepTreeHashes) {
+				ectx->lefthash = ksi->roots_hash[j];
+				r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, t, ectx);
 				if(r != 0) goto done; /* mem leak ok, we terminate! */
 			}
-			KSI_DataHash_free(gf->roots_hash[j]);
+			KSI_DataHash_free(ksi->roots_hash[j]);
 			KSI_DataHash_free(t_del);
 		}
 	}
 	if(t != NULL) {
 		/* new level, append "at the top" */
-		gf->roots_hash[gf->nRoots] = t;
-		gf->roots_valid[gf->nRoots] = 1;
-		++gf->nRoots;
-		assert(gf->nRoots < MAX_ROOTS);
+		ksi->roots_hash[ksi->nRoots] = t;
+		ksi->roots_valid[ksi->nRoots] = 1;
+		++ksi->nRoots;
+		assert(ksi->nRoots < MAX_ROOTS);
 		t = NULL;
 	}
-	++gf->nRecords;
+	++ksi->nRecords;
 
 	/* cleanup */
 	KSI_DataHash_free(m);
@@ -950,37 +951,36 @@ done:
  * same applies to the other computation algos.
  */
 static int
-verifySigblkFinish(ksifile gf, KSI_DataHash **pRoot)
+verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 {
 	KSI_DataHash *root, *rootDel;
 	int8_t j;
 	int r;
 
-	if(gf->nRecords == 0)
+	if(ksi->nRecords == 0)
 		goto done;
 
 	root = NULL;
-	for(j = 0 ; j < gf->nRoots ; ++j) {
+	for(j = 0 ; j < ksi->nRoots ; ++j) {
 		if(root == NULL) {
-			root = gf->roots_valid[j] ? gf->roots_hash[j] : NULL;
-			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
-		} else if(gf->roots_valid[j]) {
+			root = ksi->roots_valid[j] ? ksi->roots_hash[j] : NULL;
+			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+		} else if(ksi->roots_valid[j]) {
 			rootDel = root;
-			hash_node(gf, &root, gf->roots_hash[j], root, j+2);
-			gf->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+			hash_node(ksi, &root, ksi->roots_hash[j], root, j+2);
+			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 			KSI_DataHash_free(rootDel);
 		}
 	}
 
-	free(gf->blkStrtHash);
-	gf->blkStrtHash = NULL;
+	free(ksi->blkStrtHash);
+	ksi->blkStrtHash = NULL;
 	*pRoot = root;
 	r = 0;
 done:
-	gf->bInBlk = 0;
+	ksi->bInBlk = 0;
 	return r;
 }
-
 
 /* helper for rsksi_extendSig: */
 #define COPY_SUBREC_TO_NEWREC \
@@ -988,16 +988,26 @@ done:
 	iWr += subrec.lenHdr; \
 	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
 	iWr += subrec.tlvlen;
+
 static inline int
-rsksi_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
+rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, gterrctx_t *ectx)
 {
-	GTTimestamp *out_timestamp;
+	KSI_Signature *extended = NULL;
+	/*OLDCODE GTTimestamp *out_timestamp;*/
 	uint8_t *der;
 	size_t lenDer;
 	int r, rgt;
 	tlvrecord_t newrec, subrec;
 	uint16_t iRd, iWr;
 
+	/* Extend Signature now using KSI API*/
+	rgt = KSI_extendSignature(ksi->ctx->ksi_ctx, sig, &extended);
+	if (rgt != KSI_OK) {
+		ectx->ksistate = rgt;
+		r = RSGTE_SIG_EXTEND;
+		goto done;
+	}
+	/*OLD CODE 
 	rgt = GTHTTP_extendTimestamp(timestamp, rsksi_extend_puburl, &out_timestamp);
 	if(rgt != KSI_OK) {
 		ectx->gtstate = rgt;
@@ -1010,6 +1020,8 @@ rsksi_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 		ectx->gtstate = rgt;
 		goto done;
 	}
+	*/
+
 	/* update block_sig tlv record with new extended timestamp */
 	/* we now need to copy all tlv records before the actual der
 	 * encoded part.
@@ -1047,6 +1059,8 @@ rsksi_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 	memcpy(rec, &newrec, sizeof(newrec)-sizeof(newrec.data)+newrec.tlvlen+4);
 	r = 0;
 done:
+	if(extended != NULL)
+		KSI_Signature_free(extended);
 	return r;
 }
 
@@ -1055,18 +1069,17 @@ done:
  * Merkle tree root for the current block.
  */
 int
-verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp,
+verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
                 uint8_t bExtend, gterrctx_t *ectx)
 {
 	int r;
-	int gtstate;
+	int ksistate;
 	block_sig_t *file_bs = NULL;
-	GTTimestamp *timestamp = NULL;
-	GTVerificationInfo *vrfyInf;
-	KSI_DataHash *root = NULL;
+	KSI_Signature *sig = NULL;
+	KSI_DataHash *ksiHash = NULL;
 	tlvrecord_t rec;
 	
-	if((r = verifySigblkFinish(gf, &root)) != 0)
+	if((r = verifySigblkFinish(ksi, &ksiHash)) != 0)
 		goto done;
 	if((r = rsksi_tlvrdVrfyBlockSig(sigfp, &file_bs, &rec)) != 0)
 		goto done;
@@ -1075,6 +1088,14 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	}
 
+	ksistate = KSI_DataHash_create( ksi->ctx->ksi_ctx, file_bs->sig.der.data, 
+									file_bs->sig.der.len, hashIdentifier(ksi->hashAlg), &ksiHash);
+	if(ksistate != KSI_OK) {
+		r = RSGTE_TS_CREATEHASH;
+		ectx->ksistate = ksistate;
+		goto done;
+	}
+/* OLDCODE
 	gtstate = GTTimestamp_DERDecode(file_bs->sig.der.data,
 					file_bs->sig.der.len, &timestamp);
 	if(gtstate != KSI_OK) {
@@ -1082,7 +1103,15 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp,
 		ectx->gtstate = gtstate;
 		goto done;
 	}
-
+*/
+	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
+	if (ksistate != KSI_OK) {
+		r = RSGTE_INVLD_SIGNATURE;
+		ectx->ksistate = ksistate;
+		goto done;
+		/* TODO proberly additional verify with KSI_Signature_verify*/
+	}
+/* OLD CODE
 	gtstate = GTHTTP_verifyTimestampHash(timestamp, root, NULL,
 			NULL, NULL, rsksi_read_puburl, 0, &vrfyInf);
 	if(! (gtstate == KSI_OK
@@ -1091,11 +1120,11 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp,
 		ectx->gtstate = gtstate;
 		goto done;
 	}
-
+*/
 	if(rsksi_read_showVerified)
-		reportVerifySuccess(ectx, vrfyInf);
+		reportVerifySuccess(ectx); /*OLDCODE, vrfyInf);*/
 	if(bExtend)
-		if((r = rsksi_extendSig(timestamp, &rec, ectx)) != 0) goto done;
+		if((r = rsksi_extendSig(sig, ksi, &rec, ectx)) != 0) goto done;
 		
 	if(nsigfp != NULL)
 		if((r = rsksi_tlvwrite(nsigfp, &rec)) != 0) goto done;
@@ -1105,7 +1134,9 @@ done:
 		rsksi_objfree(0x0902, file_bs);
 	if(r != 0)
 		reportError(r, ectx);
-	if(timestamp != NULL)
-		GTTimestamp_free(timestamp);
+	if(ksiHash != NULL)
+		KSI_DataHash_free(ksiHash);
+	if(sig != NULL)
+		KSI_Signature_free(sig);
 	return r;
 }

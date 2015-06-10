@@ -115,7 +115,7 @@ struct gterrctx_s {
 	KSI_DataHash *computedHash;
 	KSI_DataHash *lefthash, *righthash; /* hashes to display if tree hash fails */
 	imprint_t *fileHash;
-	int gtstate;	/* status from last relevant GT.*() function call */
+	int ksistate;	/* status from last relevant GT.*() function call */
 	char *errRec;
 	char *frstRecInBlk; /* This holds the first message seen inside the current block */
 };
@@ -164,7 +164,7 @@ struct rsksistatefile {
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
 #define RSGTE_OOM 4	/* ran out of memory */
 #define RSGTE_LEN 5	/* error related to length records */
-#define RSGTE_TS_EXTEND 6/* error extending timestamp */
+#define RSGTE_SIG_EXTEND 6/* error extending signature */
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
                                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
@@ -176,8 +176,8 @@ struct rsksistatefile {
 #define RSGTE_INVLD_REC_HASHID 14 /* invalid record hash ID (failed verification) */
 #define RSGTE_INVLD_TREE_HASHID 15 /* invalid tree hash ID (failed verification) */
 #define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
-#define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
-#define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
+#define RSGTE_INVLD_SIGNATURE 17 /* Signature is invalid (KSI_Signature_verifyDataHash)*/
+#define RSGTE_TS_CREATEHASH 18 /* error creating HASH (KSI_DataHash_create) */
 #define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
 #define RSGTE_HASH_CREATE 20 /* error creating a hash */
 #define RSGTE_END_OF_SIG 21 /* unexpected end of signature - more log line exist */
@@ -204,8 +204,8 @@ RSGTE2String(int err)
 		return "out of memory";
 	case RSGTE_LEN:
 		return "length record problem";
-	case RSGTE_TS_EXTEND:
-		return "error extending timestamp";
+	case RSGTE_SIG_EXTEND:
+		return "error extending signature";
 	case RSGTE_INVLD_RECCNT:
 		return "mismatch between actual record count and number in block signature record";
 	case RSGTE_INVLHDR:
@@ -226,10 +226,10 @@ RSGTE2String(int err)
 		return "invalid tree hash ID";
 	case RSGTE_MISS_BLOCKSIG:
 		return "missing block signature record";
-	case RSGTE_INVLD_TIMESTAMP:
-		return "RFC3161 timestamp invalid";
-	case RSGTE_TS_DERDECODE:
-		return "error DER-decoding RFC3161 timestamp";
+	case RSGTE_INVLD_SIGNATURE:
+		return "Signature invalid";
+	case RSGTE_TS_CREATEHASH:
+		return "error creating HASH";
 	case RSGTE_TS_DERENCODE:
 		return "error DER-encoding RFC3161 timestamp";
 	case RSGTE_HASH_CREATE:
@@ -359,11 +359,11 @@ void rsksiExit(void);
 rsksictx rsksiCtxNew(void);
 void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
 ksifile rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn);
-int rsksifileDestruct(ksifile gf);
+int rsksifileDestruct(ksifile ksi);
 void rsksiCtxDel(rsksictx ctx);
-void sigblkInit(ksifile gf);
+void sigblkInit(ksifile ksi);
 int sigblkAddRecord(ksifile gf, const unsigned char *rec, const size_t len);
-int sigblkFinish(ksifile gf);
+int sigblkFinish(ksifile ksi);
 imprint_t * rsksiImprintFromKSI_DataHash(KSI_DataHash *hash);
 void rsksiimprintDel(imprint_t *imp);
 /* reader functions */
@@ -374,9 +374,9 @@ void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
 int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsksi_chkFileHdr(FILE *fp, char *expect);
 ksifile rsksi_vrfyConstruct_gf(void);
-void rsksi_vrfyBlkInit(ksifile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsksi_vrfy_nextRec(ksifile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, ksifile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
+void rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsksi_errctxInit(gterrctx_t *ectx);
 void rsksi_errctxExit(gterrctx_t *ectx);
 void rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec);
@@ -385,9 +385,9 @@ void rsksi_objfree(uint16_t tlvtype, void *obj);
 
 
 /* TODO: replace these? */
-int hash_m(ksifile gf, KSI_DataHash **m);
-int hash_r(ksifile gf, KSI_DataHash **r, const unsigned char *rec, const size_t len);
-int hash_node(ksifile gf, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
+int hash_m(ksifile ksi, KSI_DataHash **m);
+int hash_r(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
+int hash_node(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
 extern char *rsksi_read_puburl; /**< url of publication server */
 extern uint8_t rsksi_read_showVerified;
 
