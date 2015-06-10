@@ -306,7 +306,11 @@ tlvWriteHash(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 	int r;
 	const unsigned char *digest;
 	unsigned digest_len;
-	KSI_DataHash_extract(rec, NULL, &digest, &digest_len); // TODO: error check
+	r = KSI_DataHash_extract(rec, NULL, &digest, &digest_len); 
+	if (r != KSI_OK){
+		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
+		goto done;
+	}
 	tlvlen = digest_len;
 	r = tlv16Write(ksi, 0x00, tlvtype, tlvlen);
 	if(r != 0) goto done;
@@ -630,13 +634,19 @@ bufAddImprint(ksifile ksi, uchar *buf, size_t *len, imprint_t *imp)
 static inline void
 bufAddHash(ksifile ksi, uchar *buf, size_t *len, KSI_DataHash *hash)
 {
+	int r; 
 	const unsigned char *digest;
 	unsigned digest_len;
-	KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
+	r = KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
+	if (r != KSI_OK){
+		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
+		goto done;
+	}
 	buf[*len] = hashIdentifier(ksi->hashAlg);
 	++(*len);
 	memcpy(buf+*len, digest, digest_len);
 	*len += digest_len;
+done:	return;
 }
 /* concat: add tree level to buffer */
 static inline void
@@ -767,7 +777,7 @@ done:
 }
 
 static int
-timestampIt(ksifile ksi, KSI_DataHash *hash)
+signIt(ksifile ksi, KSI_DataHash *hash)
 {
 	unsigned char *der = NULL;
 	unsigned lenDer;
@@ -775,7 +785,7 @@ timestampIt(ksifile ksi, KSI_DataHash *hash)
 	int ret = 0;
 	KSI_Signature *sig = NULL;
 
-	/* Get the timestamp. */
+	/* Sign the hash. */
 	r = KSI_createSignature(ksi->ctx->ksi_ctx, hash, &sig);
 	if(r != KSI_OK) {
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_createSignature", r);
@@ -783,7 +793,7 @@ timestampIt(ksifile ksi, KSI_DataHash *hash)
 		goto done;
 	}
 
-	/* Encode timestamp. */
+	/* Serialize Signature. */
 	r = KSI_Signature_serialize(sig, &der, &lenDer);
 	if(r != KSI_OK) {
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_Signature_serialize", r);
@@ -792,9 +802,11 @@ timestampIt(ksifile ksi, KSI_DataHash *hash)
 	}
 
 	tlvWriteBlockSig(ksi, der, lenDer);
-
 done:
-	KSI_free(der);
+	if (sig != NULL)
+		KSI_Signature_free(sig);
+	if (der != NULL)
+		KSI_free(der);
 	return ret;
 }
 
@@ -823,7 +835,7 @@ sigblkFinish(ksifile ksi)
 			if(ret != 0) goto done; /* checks hash_node() result! */
 		}
 	}
-	if((ret = timestampIt(ksi, root)) != 0) goto done;
+	if((ret = signIt(ksi, root)) != 0) goto done;
 
 	KSI_DataHash_free(root);
 	free(ksi->blkStrtHash);
