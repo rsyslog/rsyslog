@@ -150,7 +150,7 @@ err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), n
 
 static inline int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
-	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
+		/*block_sig_t *bs, */ ksifile ksi, gterrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
@@ -178,7 +178,7 @@ doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	if(bInBlock == 0)
 		rsksi_errctxFrstRecInBlk(ectx, line);
 
-	r = rsksi_vrfy_nextRec(bs, gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
+	r = rsksi_vrfy_nextRec(ksi, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
 	return r;
 }
@@ -193,7 +193,7 @@ verify(char *name)
 {
 	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
-	gtfile gf;
+	ksifile ksi;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
@@ -246,8 +246,8 @@ verify(char *name)
 			goto done;
 		}
 	}
-	gf = rsksi_vrfyConstruct_gf();
-	if(gf == NULL) {
+	ksi = rsksi_vrfyConstruct_gf();
+	if(ksi == NULL) {
 		fprintf(stderr, "error initializing signature file structure\n");
 		goto done;
 	}
@@ -272,15 +272,15 @@ verify(char *name)
 				}
 				goto done;
 			}
-			rsksi_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
+			rsksi_vrfyBlkInit(ksi, bs, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
-		if((r = doVerifyRec(logfp, sigfp, nsigfp, bs, gf, &ectx, bInBlock)) != 0)
+		if((r = doVerifyRec(logfp, sigfp, nsigfp, /*bs,*/ ksi, &ectx, bInBlock)) != 0)
 			goto done;
 		if(ectx.recNum == bs->recCount) {
-			if((r = verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
+			if((r = verifyBLOCK_SIG(bs, ksi, sigfp, nsigfp, 
 			    (mode == MD_EXTEND) ? 1 : 0, &ectx)) != 0)
 				goto done;
 			bInBlock = 0;
