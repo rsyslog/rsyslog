@@ -45,8 +45,8 @@ DEFobjCurrIf(glbl)
 static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
 	{ "sig.aggregator.uri", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "sig.aggregator.loginid", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "sig.aggregator.user", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "sig.aggregator.mac", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
 	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
 	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 }
@@ -114,9 +114,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			free(cstr);
 		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.uri")) {
 			ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.loginid")) {
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
 			ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
+		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.mac")) {
 			ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
 			rsksiSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
