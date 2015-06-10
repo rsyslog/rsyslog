@@ -27,8 +27,6 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <gt_base.h>
-#include <gt_http.h>
 #include <getopt.h>
 
 #include "librsksi.h"
@@ -263,8 +261,8 @@ verify(char *name)
 			if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0) {
 				if(ectx.blkNum == 0) {
-					fprintf(stderr, "EOF before finding any signature block - "
-						"is the file still open and being written to?\n");
+					fprintf(stderr, "Error %d before finding any signature block - "
+						"is the file still open and being written to?\n", r);
 				} else {
 					if(verbose)
 						fprintf(stderr, "EOF after signature block %lld\n",
