@@ -364,7 +364,7 @@ void rsksiCtxDel(rsksictx ctx);
 void sigblkInit(ksifile ksi);
 int sigblkAddRecord(ksifile gf, const unsigned char *rec, const size_t len);
 int sigblkFinish(ksifile ksi);
-imprint_t * rsksiImprintFromKSI_DataHash(KSI_DataHash *hash);
+imprint_t * rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash);
 void rsksiimprintDel(imprint_t *imp);
 /* reader functions */
 int rsksi_tlvrdHeader(FILE *fp, unsigned char *hdr);

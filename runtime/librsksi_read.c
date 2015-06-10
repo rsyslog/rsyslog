@@ -903,7 +903,7 @@ rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		if(r != 0) goto done;
 	}
 	rsksiimprintDel(ksi->x_prev);
-	ksi->x_prev = rsksiImprintFromKSI_DataHash(x);
+	ksi->x_prev = rsksiImprintFromKSI_DataHash(ksi, x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
 	for(j = 0 ; j < ksi->nRoots ; ++j) {

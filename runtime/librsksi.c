@@ -87,8 +87,9 @@ rsksisetErrFunc(rsksictx ctx, void (*func)(void*, uchar *), void *usrptr)
 }
 
 imprint_t *
-rsksiImprintFromKSI_DataHash(KSI_DataHash *hash)
+rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
 {
+	int r;
 	imprint_t *imp;
 	const unsigned char *digest;
 	unsigned digest_len;
@@ -97,7 +98,12 @@ rsksiImprintFromKSI_DataHash(KSI_DataHash *hash)
 		goto done;
 	}
 	int hashID;
-	KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); // TODO: error check
+	r = KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); 
+	if (r != KSI_OK){
+		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
+		free(imp); imp = NULL; goto done;
+	}
+
 	imp->hashID = hashID;
 	imp->len = digest_len;
 	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {
@@ -713,7 +719,7 @@ sigblkAddRecord(ksifile ksi, const uchar *rec, const size_t len)
 	if(ksi->bKeepTreeHashes)
 		tlvWriteHash(ksi, 0x0901, x);
 	rsksiimprintDel(ksi->x_prev);
-	ksi->x_prev = rsksiImprintFromKSI_DataHash(x);
+	ksi->x_prev = rsksiImprintFromKSI_DataHash(ksi, x);
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
 	for(j = 0 ; j < ksi->nRoots ; ++j) {
