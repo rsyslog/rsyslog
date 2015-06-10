@@ -208,7 +208,7 @@ verify(char *name)
 			mode == MD_VERIFY ? "verify" : "extend");
 		goto err;
 	} else {
-		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
+		snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
 		sigfname[sizeof(sigfname)-1] = '\0';
 		if((logfp = fopen(name, "r")) == NULL) {
 			perror(name);
@@ -219,14 +219,14 @@ verify(char *name)
 			goto err;
 		}
 		if(mode == MD_EXTEND) {
-			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
+			snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
 			nsigfname[sizeof(nsigfname)-1] = '\0';
 			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
 				perror(nsigfname);
 				goto err;
 			}
 			snprintf(oldsigfname, sizeof(oldsigfname),
-			         "%s.gtsig.old", name);
+			         "%s.ksisig.old", name);
 			oldsigfname[sizeof(oldsigfname)-1] = '\0';
 		}
 	}
