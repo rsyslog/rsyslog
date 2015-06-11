@@ -384,7 +384,7 @@ readStateFile(ksifile ksi)
 	if(fd == -1) goto err;
 
 	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
-	if(strncmp(sf.hdr, "GTSTAT10", 8)) goto err;
+	if(strncmp(sf.hdr, "KSISTAT10", 9)) goto err;
 
 	ksi->lenBlkStrtHash = sf.lenHash;
 	ksi->blkStrtHash = calloc(1, ksi->lenBlkStrtHash);
@@ -415,7 +415,7 @@ writeStateFile(ksifile ksi)
 	if(fd == -1)
 		goto done;
 
-	memcpy(sf.hdr, "GTSTAT10", 8);
+	memcpy(sf.hdr, "KSISTAT10", 9);
 	sf.hashID = hashIdentifier(ksi->hashAlg);
 	sf.lenHash = ksi->x_prev->len;
 	/* if the write fails, we cannot do anything against that. We check
@@ -785,13 +785,22 @@ signIt(ksifile ksi, KSI_DataHash *hash)
 	int ret = 0;
 	KSI_Signature *sig = NULL;
 
+	/* Sign the root hash. */
+	r = KSI_Signature_createAggregated(ksi->ctx->ksi_ctx, hash, 0, &sig);
+	if(r != KSI_OK) {
+		reportKSIAPIErr(ksi->ctx, ksi, "KSI_Signature_createAggregated", r);
+		ret = 1;
+		goto done;
+	}
+
 	/* Sign the hash. */
-	r = KSI_createSignature(ksi->ctx->ksi_ctx, hash, &sig);
+/*	r = KSI_createSignature(ksi->ctx->ksi_ctx, hash, &sig);
 	if(r != KSI_OK) {
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_createSignature", r);
 		ret = 1;
 		goto done;
 	}
+*/
 
 	/* Serialize Signature. */
 	r = KSI_Signature_serialize(sig, &der, &lenDer);
