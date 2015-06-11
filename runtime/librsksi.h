@@ -248,18 +248,30 @@ static inline uint16_t
 hashOutputLengthOctets(uint8_t hashID)
 {
 	switch(hashID) {
-	case KSI_HASHALG_SHA1:	/* paper: SHA1 */
+	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
 		return 20;
-	case KSI_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 20;
-	case KSI_HASHALG_SHA2_224:	/* paper: SHA2-224 */
-		return 28;
-	case KSI_HASHALG_SHA2_256: /* paper: SHA2-256 */
+	case KSI_HASHALG_SHA2_256: /** The SHA-256 algorithm. */
 		return 32;
-	case KSI_HASHALG_SHA2_384: /* paper: SHA2-384 */
+	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
+		return 20;
+	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
+		return 28;
+	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
 		return 48;
-	case KSI_HASHALG_SHA2_512:	/* paper: SHA2-512 */
+	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 64;
+	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
+		return 32;
+	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
+		return 28;
+	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
+		return 32;
+	case KSI_HASHALG_SHA3_384: /** The SHA3-384 algorithm. */
+		return 48;
+	case KSI_HASHALG_SHA3_512: /** The SHA3-512 algorithm */
+		return 64;
+	case KSI_HASHALG_SM3: /** The SM3 algorithm.*/
+		return 32;
 	default:return 32;
 	}
 }
@@ -268,18 +280,30 @@ static inline uint8_t
 hashIdentifier(KSI_HashAlgorithm hashID)
 {
 	switch(hashID) {
-	case KSI_HASHALG_SHA1:	/* paper: SHA1 */
+	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
 		return 0x00;
-	case KSI_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 0x02;
-	case KSI_HASHALG_SHA2_224:	/* paper: SHA2-224 */
-		return 0x03;
-	case KSI_HASHALG_SHA2_256: /* paper: SHA2-256 */
+	case KSI_HASHALG_SHA2_256: /** The SHA-256 algorithm. */
 		return 0x01;
-	case KSI_HASHALG_SHA2_384: /* paper: SHA2-384 */
+	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
+		return 0x02;
+	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
+		return 0x03;
+	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
 		return 0x04;
-	case KSI_HASHALG_SHA2_512:	/* paper: SHA2-512 */
+	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 0x05;
+	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
+		return 0x06;
+	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
+		return 0x07;
+	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
+		return 0x08;
+	case KSI_HASHALG_SHA3_384: /** The SHA3-384 algorithm. */
+		return 0x09;
+	case KSI_HASHALG_SHA3_512: /** The SHA3-512 algorithm */
+		return 0x0a;
+	case KSI_HASHALG_SM3: /** The SM3 algorithm.*/
+		return 0x0b;
 	default:return 0xff;
 	}
 }
@@ -289,16 +313,28 @@ hashAlgName(uint8_t hashID)
 	switch(hashID) {
 	case KSI_HASHALG_SHA1:
 		return "SHA1";
+	case KSI_HASHALG_SHA2_256:
+		return "SHA2-256";
 	case KSI_HASHALG_RIPEMD160:
 		return "RIPEMD-160";
 	case KSI_HASHALG_SHA2_224:
 		return "SHA2-224";
-	case KSI_HASHALG_SHA2_256:
-		return "SHA2-256";
 	case KSI_HASHALG_SHA2_384:
 		return "SHA2-384";
 	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
+	case KSI_HASHALG_RIPEMD_256:
+		return "RIPEMD-256";
+	case KSI_HASHALG_SHA3_244:
+		return "SHA3-224";
+	case KSI_HASHALG_SHA3_256:
+		return "SHA3-256";
+	case KSI_HASHALG_SHA3_384:
+		return "SHA3-384";
+	case KSI_HASHALG_SHA3_512:
+		return "SHA3-512";
+	case KSI_HASHALG_SM3:
+		return "SM3";
 	default:return "[unknown]";
 	}
 }
@@ -308,16 +344,28 @@ hashID2Alg(uint8_t hashID)
 	switch(hashID) {
 	case 0x00:
 		return KSI_HASHALG_SHA1;
+	case 0x01:
+		return KSI_HASHALG_SHA2_256;
 	case 0x02:
 		return KSI_HASHALG_RIPEMD160;
 	case 0x03:
 		return KSI_HASHALG_SHA2_224;
-	case 0x01:
-		return KSI_HASHALG_SHA2_256;
 	case 0x04:
 		return KSI_HASHALG_SHA2_384;
 	case 0x05:
 		return KSI_HASHALG_SHA2_512;
+	case 0x06:
+		return KSI_HASHALG_RIPEMD_256;
+	case 0x07:
+		return KSI_HASHALG_SHA3_244;
+	case 0x08:
+		return KSI_HASHALG_SHA3_256;
+	case 0x09:
+		return KSI_HASHALG_SHA3_384;
+	case 0x0a:
+		return KSI_HASHALG_SHA3_512;
+	case 0x0b:
+		return KSI_HASHALG_SM3;
 	default:
 		return 0xff;
 	}
