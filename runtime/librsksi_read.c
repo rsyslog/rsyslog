@@ -49,7 +49,7 @@ typedef unsigned char uchar;
 #endif
 #define MAXFNAME 1024
 
-static int rsksi_read_debug = 1;
+static int rsksi_read_debug = 0;
 char *rsksi_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
 char *rsksi_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
 uint8_t rsksi_read_showVerified = 0;
@@ -1144,4 +1144,10 @@ done:
 	if(sig != NULL)
 		KSI_Signature_free(sig);
 	return r;
+}
+
+/* Helper function to enable debug */
+void rsksi_set_debug(int iDebug)
+{
+	rsksi_read_debug = iDebug; 
 }
