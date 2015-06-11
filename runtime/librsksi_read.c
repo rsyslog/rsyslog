@@ -49,7 +49,7 @@ typedef unsigned char uchar;
 #endif
 #define MAXFNAME 1024
 
-static int rsksi_read_debug = 0;
+static int rsksi_read_debug = 1;
 char *rsksi_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
 char *rsksi_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
 uint8_t rsksi_read_showVerified = 0;
@@ -350,7 +350,7 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	}
 
 	imp->hashID = rec->data[0];
-	if(rec->tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+	if(rec->tlvlen != /*1 + */ hashOutputLengthOctets(imp->hashID)) {
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -359,7 +359,10 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	memcpy(imp->data, rec->data+1, imp->len);
 	*imprint = imp;
 	r = 0;
-done:	return r;
+done:	
+	if(rsksi_read_debug)
+		printf("read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+	return r;
 }
 
 static int
@@ -485,6 +488,8 @@ rsksi_tlvRecDecode(tlvrecord_t *rec, void *obj)
 			break;
 	}
 done:
+	if(rsksi_read_debug)
+		printf("read tlvRecDecode returned %d \n", r);
 	return r;
 }
 
