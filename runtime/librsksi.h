@@ -146,7 +146,7 @@ struct block_sig_s {
  * is fixed, we may change that over time.
  */
 struct rsksistatefile {
-	char hdr[8];	/* must be "GTSTAT10" */
+	char hdr[9];	/* must be "KSISTAT10" */
 	uint8_t hashID;
 	uint8_t lenHash;
 	/* after that, the hash value is contained within the file */
