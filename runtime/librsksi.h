@@ -430,6 +430,7 @@ void rsksi_errctxExit(gterrctx_t *ectx);
 void rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsksi_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
+void rsksi_set_debug(int iDebug); 
 
 
 /* TODO: replace these? */

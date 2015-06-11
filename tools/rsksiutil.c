@@ -37,6 +37,7 @@ static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static int verbose = 0;
+static int debug = 0; 
 
 static void
 dumpFile(char *name)
@@ -391,6 +392,7 @@ static struct option long_options[] =
 { 
 	{"dump", no_argument, NULL, 'D'},
 	{"verbose", no_argument, NULL, 'v'},
+	{"debug", no_argument, NULL, 'd'},
 	{"version", no_argument, NULL, 'V'},
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
@@ -408,12 +410,16 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "DvVTBtPs", long_options, NULL);
+		opt = getopt_long(argc, argv, "dDvVTBtPs", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
 		case 'v':
 			verbose = 1;
+			break;
+		case 'd':
+			debug = 1;
+			rsksi_set_debug(debug); 
 			break;
 		case 's':
 			rsksi_read_showVerified = 1;
