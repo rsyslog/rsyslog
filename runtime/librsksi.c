@@ -311,8 +311,10 @@ tlvWriteHash(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
 		goto done;
 	}
-	tlvlen = digest_len;
+	tlvlen = 1 + digest_len;
 	r = tlv16Write(ksi, 0x00, tlvtype, tlvlen);
+	if(r != 0) goto done;
+	r = tlvbufAddOctet(ksi, hashIdentifier(ksi->hashAlg));
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, (unsigned char*)digest, digest_len);
 done:	return r;

@@ -350,7 +350,7 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	}
 
 	imp->hashID = rec->data[0];
-	if(rec->tlvlen != /*1 + */ hashOutputLengthOctets(imp->hashID)) {
+	if(rec->tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
 		r = RSGTE_LEN;
 		goto done;
 	}
