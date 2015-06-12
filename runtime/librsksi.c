@@ -541,18 +541,30 @@ int
 rsksiSetHashFunction(rsksictx ctx, char *algName)
 {
 	int r = 0;
-	if(!strcmp(algName, "SHA2-256"))
-		ctx->hashAlg = KSI_HASHALG_SHA2_256;
-	else if(!strcmp(algName, "SHA2-384"))
-		ctx->hashAlg = KSI_HASHALG_SHA2_384;
-	else if(!strcmp(algName, "SHA2-512"))
-		ctx->hashAlg = KSI_HASHALG_SHA2_512;
-	else if(!strcmp(algName, "SHA1"))
+	if(!strcmp(algName, "SHA1"))
 		ctx->hashAlg = KSI_HASHALG_SHA1;
+	else if(!strcmp(algName, "SHA2-256"))
+		ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	else if(!strcmp(algName, "RIPEMD-160"))
 		ctx->hashAlg = KSI_HASHALG_RIPEMD160;
 	else if(!strcmp(algName, "SHA2-224"))
 		ctx->hashAlg = KSI_HASHALG_SHA2_224;
+	else if(!strcmp(algName, "SHA2-384"))
+		ctx->hashAlg = KSI_HASHALG_SHA2_384;
+	else if(!strcmp(algName, "SHA2-512"))
+		ctx->hashAlg = KSI_HASHALG_SHA2_512;
+	else if(!strcmp(algName, "RIPEMD-256"))
+		ctx->hashAlg = KSI_HASHALG_RIPEMD_256;
+	else if(!strcmp(algName, "SHA3-244"))
+		ctx->hashAlg = KSI_HASHALG_SHA3_244;
+	else if(!strcmp(algName, "SHA3-256"))
+		ctx->hashAlg = KSI_HASHALG_SHA3_256;
+	else if(!strcmp(algName, "SHA3-384"))
+		ctx->hashAlg = KSI_HASHALG_SHA3_384;
+	else if(!strcmp(algName, "SHA3-512"))
+		ctx->hashAlg = KSI_HASHALG_SHA3_512;
+	else if(!strcmp(algName, "SM3"))
+		ctx->hashAlg = KSI_HASHALG_SM3;
 	else
 		r = 1;
 	return r;
