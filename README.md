@@ -63,7 +63,7 @@ Ubuntu
 Note: this list is (obviously) incomplete. We intend to complete it as we 
 have more information and install additional systems.
 
-sudo apt-get install libdbi-dev
+sudo apt-get install valgrind pkg-config autoconf libtool make libdbi-dev gcc flex bison libz-dev uuid-dev libjson-c-dev python-docutils libgnutls-dev libgcrypt-dev libsnmp-dev libmysqlclient-dev libnet-dev libcurl4-gnutls-dev libmongo-client-dev
 
 
 openSUSE 13
