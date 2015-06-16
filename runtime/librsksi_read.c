@@ -50,8 +50,11 @@ typedef unsigned char uchar;
 #define MAXFNAME 1024
 
 static int rsksi_read_debug = 0;
-char *rsksi_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
-char *rsksi_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
+char *rsksi_read_puburl = ""; /* old default http://verify.guardtime.com/gt-controlpublications.bin";*/
+char *rsksi_extend_puburl = ""; /* old default "http://verifier.guardtime.net/gt-extendingservice";*/
+char *rsksi_userid = "";
+char *rsksi_userkey = "";
+
 uint8_t rsksi_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
@@ -208,7 +211,7 @@ reportVerifySuccess(gterrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)*
 			fprintf(ectx->fp, "\tBlock Start Record.: '%s'\n", ectx->frstRecInBlk);
 		if(ectx->errRec != NULL)
 			fprintf(ectx->fp, "\tBlock End Record...: '%s'\n", ectx->errRec);
-		fprintf(ectx->fp, "\tGT Verify Timestamp: [%u]%s\n",
+		fprintf(ectx->fp, "\tKSI Verify Signature: [%u]%s\n",
 			ectx->ksistate, KSI_getErrorString(ectx->ksistate));
 		/* OLDCODE: NOT NEEDED ANYMORE GTVerificationInfo_print(ectx->fp, 0, vrfyInf);*/
 	}
@@ -286,7 +289,7 @@ rsksi_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 	}
 
 	if(rsksi_read_debug)
-		printf("read tlvtype %4.4x, len %u\n", (unsigned) rec->tlvtype,
+		printf("debug: read tlvtype %4.4x, len %u\n", (unsigned) rec->tlvtype,
 			(unsigned) rec->tlvlen);
 	r = 0;
 done:	return r;
@@ -330,7 +333,7 @@ rsksi_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 	*stridx += newrec->tlvlen;
 
 	if(rsksi_read_debug)
-		printf("read sub-tlv: tlvtype %4.4x, len %u\n",
+		printf("debug: read sub-tlv: tlvtype %4.4x, len %u\n",
 			(unsigned) newrec->tlvtype,
 			(unsigned) newrec->tlvlen);
 	r = 0;
@@ -361,7 +364,7 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	r = 0;
 done:	
 	if(rsksi_read_debug)
-		printf("read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+		printf("debug: read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
 	return r;
 }
 
@@ -489,7 +492,7 @@ rsksi_tlvRecDecode(tlvrecord_t *rec, void *obj)
 	}
 done:
 	if(rsksi_read_debug)
-		printf("read tlvRecDecode returned %d \n", r);
+		printf("debug: read tlvRecDecode returned %d \n", r);
 	return r;
 }
 
@@ -792,10 +795,22 @@ done:
 ksifile
 rsksi_vrfyConstruct_gf(void)
 {
+	int ksistate;
 	ksifile ksi;
 	if((ksi = calloc(1, sizeof(struct ksifile_s))) == NULL)
 		goto done;
 	ksi->x_prev = NULL;
+
+	/* Create new KSI Context! */
+	rsksictx ctx = rsksiCtxNew();
+	ksi->ctx = ctx; /* assign context to ksifile */
+
+	/* Setting KSI Extender! */ 
+	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_read_puburl, rsksi_userid, rsksi_userkey);
+	if(ksistate != KSI_OK) {
+		fprintf(stderr, "Error %d setting KSI Extender: \n", ksistate);
+		return NULL; 
+	}
 
 done:	return ksi;
 }
@@ -1083,7 +1098,7 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	KSI_Signature *sig = NULL;
 	KSI_DataHash *ksiHash = NULL;
 	tlvrecord_t rec;
-	
+
 	if((r = verifySigblkFinish(ksi, &ksiHash)) != 0)
 		goto done;
 	if((r = rsksi_tlvrdVrfyBlockSig(sigfp, &file_bs, &rec)) != 0)
@@ -1093,13 +1108,16 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	}
 
-	ksistate = KSI_DataHash_create( ksi->ctx->ksi_ctx, file_bs->sig.der.data, 
-									file_bs->sig.der.len, hashIdentifier(ksi->hashAlg), &ksiHash);
+	/* Parse KSI Signature */
+	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
-		r = RSGTE_TS_CREATEHASH;
+		if(rsksi_read_debug)
+			printf("debug: KSI_Signature_parse faile with error %d\n", ksistate); 
+		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
 	}
+
 /* OLDCODE
 	gtstate = GTTimestamp_DERDecode(file_bs->sig.der.data,
 					file_bs->sig.der.len, &timestamp);
@@ -1111,6 +1129,8 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 */
 	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
 	if (ksistate != KSI_OK) {
+		if(rsksi_read_debug)
+			printf("debug: KSI_Signature_verifyDataHash faile with error %d\n", ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
@@ -1126,6 +1146,8 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	}
 */
+	if(rsksi_read_debug)
+		printf("debug: verifyBLOCK_SIG processed without error's\n"); 
 	if(rsksi_read_showVerified)
 		reportVerifySuccess(ectx); /*OLDCODE, vrfyInf);*/
 	if(bExtend)

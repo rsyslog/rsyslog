@@ -122,6 +122,34 @@ rsksiimprintDel(imprint_t *imp)
 	}
 }
 
+int
+rsksiInit(char *usragent)
+{
+	int r = 0;
+	int ret = KSI_OK;
+
+/*
+	ret = GT_init();
+	if(ret != KSI_OK) {
+		r = 1;
+		goto done;
+	}
+	ret = GTHTTP_init(usragent, 1);
+	if(ret != KSI_OK) {
+		r = 1;
+		goto done;
+	}
+*/
+
+done:	return r;
+}
+
+void
+rsksiExit(void)
+{
+	return; 
+}
+
 static inline ksifile
 rsksifileConstruct(rsksictx ctx)
 {
