@@ -230,14 +230,16 @@ verify(char *name)
 		}
 	}
 
-/* OLDCODE 	rsksiInit("rsyslog rsksiutil " VERSION); */
+	rsksiInit("rsyslog rsksiutil " VERSION);
 	rsksi_errctxInit(&ectx);
 	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
-
-	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto done;
+	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG10")) != 0) {
+		fprintf(stderr, "error %d: rsksi_chkFileHdr", r); 
+		goto done;
+	}
 	if(mode == MD_EXTEND) {
 		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
 			perror(nsigfname);
@@ -398,7 +400,7 @@ static struct option long_options[] =
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
 	{"extend", no_argument, NULL, 'e'},
-	{"publications-server", optional_argument, NULL, 'P'},
+	{"publications-server", required_argument, NULL, 'P'},
 	{"show-verified", no_argument, NULL, 's'},
 	{NULL, 0, NULL, 0} 
 }; 
@@ -410,7 +412,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "dDvVTBtPs", long_options, NULL);
+		opt = getopt_long(argc, argv, "dDvVTBPtes", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
