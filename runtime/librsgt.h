@@ -27,8 +27,9 @@
  * cases ;) [and 64 is not really a waste of memory, so we do not even
  * try to work with reallocs and such...]
  */
-#define MAX_ROOTS 64
+/*#define MAX_ROOTS 64
 #define LOGSIGHDR "LOGSIG10"
+*/
 
 /* context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in gtfile.
@@ -45,9 +46,6 @@ struct gtctx_s {
 typedef struct gtctx_s *gtctx;
 typedef struct gtfile_s *gtfile;
 typedef struct gterrctx_s gterrctx_t;
-typedef struct imprint_s imprint_t;
-typedef struct block_sig_s block_sig_t;
-typedef struct tlvrecord_s tlvrecord_t;
 
 /* this describes a file, as far as librsgt is concerned */
 struct gtfile_s {
@@ -81,14 +79,6 @@ struct gtfile_s {
 	gtctx ctx;
 };
 
-struct tlvrecord_s {
-	uint16_t tlvtype;
-	uint16_t tlvlen;
-	uint8_t hdr[4]; /* the raw header (as persisted to file) */
-	uint8_t lenHdr; /* length of raw header */
-	uint8_t data[64*1024];	/* the actual data part (of length tlvlen) */
-};
-
 /* The following structure describes the "error context" to be used
  * for verification and similiar reader functions. While verifying,
  * we need some information (like filenames or block numbers) that
@@ -117,28 +107,6 @@ struct gterrctx_s {
 	char *errRec;
 	char *frstRecInBlk; /* This holds the first message seen inside the current block */
 };
-
-struct imprint_s {
-	uint8_t hashID;
-	int	len;
-	uint8_t *data;
-};
-
-#define SIGID_RFC3161 0
-struct block_sig_s {
-	uint8_t hashID;
-	uint8_t sigID; /* what type of *signature*? */
-	uint8_t *iv;
-	imprint_t lastHash;
-	uint64_t recCount;
-	struct {
-		struct {
-			uint8_t *data;
-			size_t len; /* must be size_t due to GT API! */
-		} der;
-	} sig;
-};
-
 
 /* the following defines the gtstate file record. Currently, this record
  * is fixed, we may change that over time.

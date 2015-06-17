@@ -46,10 +46,7 @@ struct rsksictx_s {
 };
 typedef struct rsksictx_s *rsksictx;
 typedef struct ksifile_s *ksifile;
-typedef struct gterrctx_s gterrctx_t;
-typedef struct imprint_s imprint_t;
-typedef struct block_sig_s block_sig_t;
-typedef struct tlvrecord_s tlvrecord_t;
+typedef struct ksierrctx_s ksierrctx_t;
 
 /* this describes a file, as far as librsksi is concerned */
 struct ksifile_s {
@@ -83,14 +80,6 @@ struct ksifile_s {
 	rsksictx ctx;
 };
 
-struct tlvrecord_s {
-	uint16_t tlvtype;
-	uint16_t tlvlen;
-	uint8_t hdr[4]; /* the raw header (as persisted to file) */
-	uint8_t lenHdr; /* length of raw header */
-	uint8_t data[64*1024];	/* the actual data part (of length tlvlen) */
-};
-
 /* The following structure describes the "error context" to be used
  * for verification and similiar reader functions. While verifying,
  * we need some information (like filenames or block numbers) that
@@ -104,7 +93,7 @@ struct tlvrecord_s {
  * the library itself. Who does what simply depends on who has
  * the relevant information.
  */
-struct gterrctx_s {
+struct ksierrctx_s {
 	FILE *fp;	/**< file for error messages */
 	char *filename;
 	uint8_t verbose;
@@ -119,28 +108,6 @@ struct gterrctx_s {
 	char *errRec;
 	char *frstRecInBlk; /* This holds the first message seen inside the current block */
 };
-
-struct imprint_s {
-	uint8_t hashID;
-	int	len;
-	uint8_t *data;
-};
-
-#define SIGID_RFC3161 0
-struct block_sig_s {
-	uint8_t hashID;
-	uint8_t sigID; /* what type of *signature*? */
-	uint8_t *iv;
-	imprint_t lastHash;
-	uint64_t recCount;
-	struct {
-		struct {
-			uint8_t *data;
-			size_t len; /* must be size_t due to GT API! */
-		} der;
-	} sig;
-};
-
 
 /* the following defines the ksistate file record. Currently, this record
  * is fixed, we may change that over time.
@@ -423,12 +390,12 @@ int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *b
 int rsksi_chkFileHdr(FILE *fp, char *expect);
 ksifile rsksi_vrfyConstruct_gf(void);
 void rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
-void rsksi_errctxInit(gterrctx_t *ectx);
-void rsksi_errctxExit(gterrctx_t *ectx);
-void rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec);
-void rsksi_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
+int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
+int verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, ksierrctx_t *ectx);
+void rsksi_errctxInit(ksierrctx_t *ectx);
+void rsksi_errctxExit(ksierrctx_t *ectx);
+void rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec);
+void rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
 void rsksi_set_debug(int iDebug); 
 

@@ -52,6 +52,7 @@
 
 #include <gt_http.h>
 
+#include "librsgt_common.h"
 #include "librsgt.h"
 
 typedef unsigned char uchar;
