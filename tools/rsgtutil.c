@@ -1,7 +1,7 @@
 /* This is a tool for dumpoing the content of GuardTime TLV
  * files in a (somewhat) human-readable manner.
  * 
- * Copyright 2013 Adiscon GmbH
+ * Copyright 2013-2015 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -27,11 +27,18 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
-#include <gt_base.h>
-#include <gt_http.h>
 #include <getopt.h>
 
-#include "librsgt.h"
+#ifdef ENABLEGT
+	/* Guardtime Includes */
+	#include <gt_base.h>
+	#include <gt_http.h>
+	#include "librsgt.h"
+#endif
+#ifdef ENABLEKSI
+	/* KSI Includes */
+	#include "librsksi.h"
+#endif
 
 typedef unsigned char uchar;
 
