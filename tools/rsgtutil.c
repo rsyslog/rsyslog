@@ -33,10 +33,12 @@
 	/* Guardtime Includes */
 	#include <gt_base.h>
 	#include <gt_http.h>
+	#include "librsgt_common.h"
 	#include "librsgt.h"
 #endif
 #ifdef ENABLEKSI
 	/* KSI Includes */
+	#include "librsgt_common.h"
 	#include "librsksi.h"
 #endif
 

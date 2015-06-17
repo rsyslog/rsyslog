@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #include <ksi/ksi.h>
 
+#include "librsgt_common.h"
 #include "librsksi.h"
 
 typedef unsigned char uchar;
@@ -106,7 +107,7 @@ outputHash(FILE *fp, const char *hdr, const uint8_t *data,
 }
 
 void
-rsksi_errctxInit(gterrctx_t *ectx)
+rsksi_errctxInit(ksierrctx_t *ectx)
 {
 	ectx->fp = NULL;
 	ectx->filename = NULL;
@@ -121,7 +122,7 @@ rsksi_errctxInit(gterrctx_t *ectx)
 	ectx->lefthash = ectx->righthash = ectx->computedHash = NULL;
 }
 void
-rsksi_errctxExit(gterrctx_t *ectx)
+rsksi_errctxExit(ksierrctx_t *ectx)
 {
 	free(ectx->filename);
 	free(ectx->frstRecInBlk);
@@ -133,7 +134,7 @@ rsksi_errctxExit(gterrctx_t *ectx)
  * with rec==NULL.
  */
 void
-rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec)
+rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec)
 {
 	ectx->errRec = strdup(rec);
 }
@@ -141,14 +142,14 @@ rsksi_errctxSetErrRec(gterrctx_t *ectx, char *rec)
  * as the caller will usually not preserve it long enough.
  */
 void
-rsksi_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec)
+rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec)
 {
 	free(ectx->frstRecInBlk);
 	ectx->frstRecInBlk = strdup(rec);
 }
 
 static void
-reportError(const int errcode, gterrctx_t *ectx)
+reportError(const int errcode, ksierrctx_t *ectx)
 {
 	if(ectx->fp != NULL) {
 		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: error[%u]: %s\n",
@@ -200,7 +201,7 @@ reportError(const int errcode, gterrctx_t *ectx)
  */
 
 static void
-reportVerifySuccess(gterrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)*/
+reportVerifySuccess(ksierrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)*/
 {
 	if(ectx->fp != NULL) {
 		fprintf(ectx->fp, "%s[%llu:%llu:%llu]: block signature successfully verified\n",
@@ -832,7 +833,7 @@ rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t b
 
 static int
 rsksi_vrfy_chkRecHash(ksifile ksi, FILE *sigfp, FILE *nsigfp, 
-		     KSI_DataHash *hash, gterrctx_t *ectx)
+		     KSI_DataHash *hash, ksierrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp = NULL;
@@ -866,7 +867,7 @@ done:
 
 static int
 rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
-                      KSI_DataHash *hash, gterrctx_t *ectx)
+                      KSI_DataHash *hash, ksierrctx_t *ectx)
 {
 	int r = 0;
 	imprint_t *imp = NULL;
@@ -901,7 +902,7 @@ done:
 
 int
 rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp,
-	          unsigned char *rec, size_t len, gterrctx_t *ectx)
+	          unsigned char *rec, size_t len, ksierrctx_t *ectx)
 {
 	int r = 0;
 	KSI_DataHash *x; /* current hash */
@@ -1010,7 +1011,7 @@ done:
 	iWr += subrec.tlvlen;
 
 static inline int
-rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, gterrctx_t *ectx)
+rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *ectx)
 {
 	KSI_Signature *extended = NULL;
 	/*OLDCODE GTTimestamp *out_timestamp;*/
@@ -1090,7 +1091,7 @@ done:
  */
 int
 verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
-                uint8_t bExtend, gterrctx_t *ectx)
+                uint8_t bExtend, ksierrctx_t *ectx)
 {
 	int r;
 	int ksistate;

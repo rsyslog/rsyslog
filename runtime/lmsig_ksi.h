@@ -21,6 +21,7 @@
 #ifndef INCLUDED_LMSIG_KSI_H
 #define INCLUDED_LMSIG_KSI_H
 #include "sigprov.h"
+#include "librsgt_common.h"
 #include "librsksi.h"
 
 /* interface is defined in sigprov.h, we just implement it! */

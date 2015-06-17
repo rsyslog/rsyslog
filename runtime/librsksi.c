@@ -51,6 +51,7 @@
 #define MAXFNAME 1024
 
 #include <ksi/ksi.h>
+#include "librsgt_common.h"
 #include "librsksi.h"
 
 typedef unsigned char uchar;
