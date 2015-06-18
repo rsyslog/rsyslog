@@ -47,9 +47,11 @@ typedef unsigned char uchar;
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
+static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
 static int debug = 0; 
 
+#ifdef ENABLEGT
 static void
 dumpFile(char *name)
 {
@@ -86,6 +88,46 @@ dumpFile(char *name)
 	return;
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
+#endif
+
+#ifdef ENABLEKSI
+static void
+dumpFileKSI(char *name)
+{
+	FILE *fp;
+	uchar hdr[9];
+	void *obj;
+	tlvrecord_t rec;
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		printf("Processing file %s:\n", name);
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsksi_tlvrdHeader(fp, hdr)) != 0) goto err;
+	printf("File Header: '%s'\n", hdr);
+	while(1) { /* we will err out on EOF */
+		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) {
+			if(feof(fp))
+				break;
+			else
+				goto err;
+		}
+		rsksi_tlvprint(stdout, rec.tlvtype, obj, verbose);
+		rsksi_objfree(rec.tlvtype, obj);
+	}
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+}
+#endif
 
 static void
 showSigblkParams(char *name)
@@ -200,8 +242,8 @@ done:
  *
  * note: here we need to have the LOG file name, not signature!
  */
-static void
-verify(char *name)
+static int
+verify(char *name, char *errbuf)
 {
 	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
@@ -360,12 +402,15 @@ done:
 	}
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
-	return;
+	return 1;
 
 err:
 	if(r != 0)
-		fprintf(stderr, "error %d (%s) processing file %s\n",
+		sprintf(errbuf, "error %d (%s) processing file %s\n",
 			r, RSGTE2String(r), name);
+	else
+		errbuf[0] = '\0';
+
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
@@ -378,6 +423,7 @@ err:
 		rsgtExit();
 		rsgt_errctxExit(&ectx);
 	}
+	return 0;
 }
 #endif
 
@@ -423,8 +469,8 @@ done:
  *
  * note: here we need to have the LOG file name, not signature!
  */
-static void
-verifyKSI(char *name)
+static int
+verifyKSI(char *name, char *errbuf)
 {
 	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
@@ -585,12 +631,14 @@ done:
 	}
 	/* OLDCODE rsksiExit();*/
 	rsksi_errctxExit(&ectx);
-	return;
+	return 1;
 
 err:
 	if(r != 0)
-		fprintf(stderr, "error %d (%s) processing file %s\n",
+		sprintf(errbuf, "error %d (%s) processing file %s\n",
 			r, RSKSIE2String(r), name);
+	else
+		errbuf[0] = '\0';
 	if(logfp != NULL)
 		fclose(logfp);
 	if(sigfp != NULL)
@@ -603,12 +651,15 @@ err:
 		/* OLDCODE rsksiExit();*/
 		rsksi_errctxExit(&ectx);
 	}
+	return 0; 
 }
 #endif
 
 static void
 processFile(char *name)
 {
+	char errbuf[4096];
+
 	switch(mode) {
 	case MD_DETECT_FILE_TYPE:
 		if(verbose)
@@ -618,7 +669,19 @@ processFile(char *name)
 	case MD_DUMP:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
-		dumpFile(name);
+
+		if (apimode == API_GT)
+#ifdef ENABLEGT
+			dumpFile(name);
+#else
+			fprintf(stderr, "ERROR, unable to perform dump using GuardTime Api, rsyslog need to be configured with --enable-guardtime.\n"); 
+#endif
+		if (apimode == API_KSI)
+#ifdef ENABLEKSI
+			dumpFileKSI(name);
+#else
+			fprintf(stderr, "ERROR, unable to perform dump using GuardTime KSI Api, rsyslog need to be configured with --enable-gt-ksi.\n"); 
+#endif
 		break;
 	case MD_SHOW_SIGBLK_PARAMS:
 		if(verbose)
@@ -629,12 +692,17 @@ processFile(char *name)
 	case MD_EXTEND:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Verify/Extend\n"); 
+		int iSuccess = 0; 
 #ifdef ENABLEGT
-		verify(name);
+		iSuccess = verify(name, errbuf);
 #endif
 #ifdef ENABLEKSI
-		verifyKSI(name);
+		/* Try KSI next if GT Verify failed before */
+		if (iSuccess == 0)
+			iSuccess = verifyKSI(name, errbuf);
 #endif
+		if (iSuccess == 0)
+			fputs(errbuf, stderr); 
 		break;
 	}
 }
@@ -651,8 +719,9 @@ static struct option long_options[] =
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
 	{"extend", no_argument, NULL, 'e'},
-	{"publications-server", optional_argument, NULL, 'P'},
 	{"show-verified", no_argument, NULL, 's'},
+	{"publications-server", required_argument, NULL, 'P'},
+	{"api", required_argument, NULL, 'a'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -665,6 +734,10 @@ rsgtutil_usage(void)
 			"\t-h, --help \t\t Show this help\n"
 			"\t-D, --dump \t\t dump operations mode\n"
 			"\t-t, --verify \t\t Verify operations mode\n"
+			"\t\tOptional parameters\n"
+			"\t-a <GT|KSI>, --api  <GT|KSI> \t\t Set which API to use.\n"
+			"\t\t\tGT = Guardtime Client Library\n"
+			"\t\t\tKSI = Guardtime KSI Library\n"
 			);
 }
 
@@ -675,12 +748,25 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "HdDvVTBPtes", long_options, NULL);
+		opt = getopt_long(argc, argv, "aBdDeHTPstvV", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
 		case 'v':
 			verbose = 1;
+			break;
+		case 'a':
+#ifdef ENABLEGT
+			if (optarg != NULL && strncasecmp("gt", optarg, 2) == 0)
+				apimode = API_GT; 
+#endif
+#ifdef ENABLEKSI
+			if (optarg != NULL && strncasecmp("ksi", optarg, 2) == 0)
+				apimode = API_KSI; 
+#endif
+			if(verbose)
+				fprintf(stdout, "Setting Apimode: %s (%d)\n", optarg, apimode); 
+			exit(0); 
 			break;
 		case 'd':
 			debug = 1;
