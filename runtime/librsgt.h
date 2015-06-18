@@ -288,15 +288,7 @@ hashID2Alg(uint8_t hashID)
 		return 0xff;
 	}
 }
-static inline char *
-sigTypeName(uint8_t sigID)
-{
-	switch(sigID) {
-	case SIGID_RFC3161:
-		return "RFC3161";
-	default:return "[unknown]";
-	}
-}
+
 static inline uint16_t
 getIVLen(block_sig_t *bs)
 {
@@ -353,6 +345,7 @@ void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
+void rsgt_set_debug(int iDebug); 
 
 
 /* TODO: replace these? */

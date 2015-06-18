@@ -55,7 +55,6 @@ char *rsksi_read_puburl = ""; /* old default http://verify.guardtime.com/gt-cont
 char *rsksi_extend_puburl = ""; /* old default "http://verifier.guardtime.net/gt-extendingservice";*/
 char *rsksi_userid = "";
 char *rsksi_userkey = "";
-
 uint8_t rsksi_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
@@ -156,7 +155,7 @@ reportError(const int errcode, ksierrctx_t *ectx)
 			ectx->filename,
 			(long long unsigned) ectx->blkNum, (long long unsigned) ectx->recNum,
 			(long long unsigned) ectx->recNumInFile,
-			errcode, RSGTE2String(errcode));
+			errcode, RSKSIE2String(errcode));
 		if(ectx->frstRecInBlk != NULL)
 			fprintf(ectx->fp, "\tBlock Start Record.: '%s'\n", ectx->frstRecInBlk);
 		if(ectx->errRec != NULL)
@@ -354,7 +353,7 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	}
 
 	imp->hashID = rec->data[0];
-	if(rec->tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+	if(rec->tlvlen != 1 + hashOutputLengthOctetsKSI(imp->hashID)) {
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -409,7 +408,7 @@ rsksi_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
 	if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
 	imp->hashID = subrec.data[0];
-	if(subrec.tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
+	if(subrec.tlvlen != 1 + hashOutputLengthOctetsKSI(imp->hashID)) {
 		r = RSGTE_LEN;
 		goto done;
 	}
@@ -624,15 +623,15 @@ rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 {
 	fprintf(fp, "[0x0902]Block Signature Record:\n");
 	fprintf(fp, "\tPrevious Block Hash:\n");
-	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgName(bs->lastHash.hashID));
+	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgNameKSI(bs->lastHash.hashID));
 	fprintf(fp, "\t   Hash.......: ");
 		outputHexBlob(fp, bs->lastHash.data, bs->lastHash.len, verbose);
 		fputc('\n', fp);
 	if(blobIsZero(bs->lastHash.data, bs->lastHash.len))
 		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
-	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgName(bs->hashID));
+	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgNameKSI(bs->hashID));
 	fprintf(fp, "\tIV............: ");
-		outputHexBlob(fp, bs->iv, getIVLen(bs), verbose);
+		outputHexBlob(fp, bs->iv, getIVLenKSI(bs), verbose);
 		fputc('\n', fp);
 	fprintf(fp, "\tRecord Count..: %llu\n", (long long unsigned) bs->recCount);
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
@@ -819,12 +818,12 @@ done:	return ksi;
 void
 rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
 {
-	ksi->hashAlg = hashID2Alg(bs->hashID);
+	ksi->hashAlg = hashID2AlgKSI(bs->hashID);
 	ksi->bKeepRecordHashes = bHasRecHashes;
 	ksi->bKeepTreeHashes = bHasIntermedHashes;
 	free(ksi->IV);
-	ksi->IV = malloc(getIVLen(bs));
-	memcpy(ksi->IV, bs->iv, getIVLen(bs));
+	ksi->IV = malloc(getIVLenKSI(bs));
+	memcpy(ksi->IV, bs->iv, getIVLenKSI(bs));
 	free(ksi->blkStrtHash);
 	ksi->lenBlkStrtHash = bs->lastHash.len;
 	ksi->blkStrtHash = malloc(ksi->lenBlkStrtHash);
@@ -844,13 +843,13 @@ rsksi_vrfy_chkRecHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	if((r = rsksi_tlvrdRecHash(sigfp, nsigfp, &imp)) != 0)
 		reportError(r, ectx);
 		goto done;
-	if(imp->hashID != hashIdentifier(ksi->hashAlg)) {
+	if(imp->hashID != hashIdentifierKSI(ksi->hashAlg)) {
 		reportError(r, ectx);
 		r = RSGTE_INVLD_REC_HASHID;
 		goto done;
 	}
 	if(memcmp(imp->data, digest,
-		  hashOutputLengthOctets(imp->hashID))) {
+		  hashOutputLengthOctetsKSI(imp->hashID))) {
 		r = RSGTE_INVLD_REC_HASH;
 		ectx->computedHash = hash;
 		ectx->fileHash = imp;
@@ -879,13 +878,13 @@ rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		reportError(r, ectx);
 		goto done;
 	}
-	if(imp->hashID != hashIdentifier(ksi->hashAlg)) {
+	if(imp->hashID != hashIdentifierKSI(ksi->hashAlg)) {
 		reportError(r, ectx);
 		r = RSGTE_INVLD_TREE_HASHID;
 		goto done;
 	}
 	if(memcmp(imp->data, digest,
-		  hashOutputLengthOctets(imp->hashID))) {
+		  hashOutputLengthOctetsKSI(imp->hashID))) {
 		r = RSGTE_INVLD_TREE_HASH;
 		ectx->computedHash = hash;
 		ectx->fileHash = imp;
@@ -909,13 +908,13 @@ rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	KSI_DataHash *m, *recHash = NULL, *t, *t_del;
 	uint8_t j;
 
-	hash_m(ksi, &m);
-	hash_r(ksi, &recHash, rec, len);
+	hash_m_ksi(ksi, &m);
+	hash_r_ksi(ksi, &recHash, rec, len);
 	if(ksi->bKeepRecordHashes) {
 		r = rsksi_vrfy_chkRecHash(ksi, sigfp, nsigfp, recHash, ectx);
 		if(r != 0) goto done;
 	}
-	hash_node(ksi, &x, m, recHash, 1); /* hash leaf */
+	hash_node_ksi(ksi, &x, m, recHash, 1); /* hash leaf */
 	if(ksi->bKeepTreeHashes) {
 		ectx->treeLevel = 0;
 		ectx->lefthash = m;
@@ -938,7 +937,7 @@ rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 			ectx->treeLevel = j+1;
 			ectx->righthash = t;
 			t_del = t;
-			hash_node(ksi, &t, ksi->roots_hash[j], t_del, j+2);
+			hash_node_ksi(ksi, &t, ksi->roots_hash[j], t_del, j+2);
 			ksi->roots_valid[j] = 0;
 			if(ksi->bKeepTreeHashes) {
 				ectx->lefthash = ksi->roots_hash[j];
@@ -988,7 +987,7 @@ verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 		} else if(ksi->roots_valid[j]) {
 			rootDel = root;
-			hash_node(ksi, &root, ksi->roots_hash[j], root, j+2);
+			hash_node_ksi(ksi, &root, ksi->roots_hash[j], root, j+2);
 			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
 			KSI_DataHash_free(rootDel);
 		}
@@ -1090,7 +1089,7 @@ done:
  * Merkle tree root for the current block.
  */
 int
-verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
+verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
                 uint8_t bExtend, ksierrctx_t *ectx)
 {
 	int r;
@@ -1148,7 +1147,7 @@ verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	}
 */
 	if(rsksi_read_debug)
-		printf("debug: verifyBLOCK_SIG processed without error's\n"); 
+		printf("debug: verifyBLOCK_SIGKSI processed without error's\n"); 
 	if(rsksi_read_showVerified)
 		reportVerifySuccess(ectx); /*OLDCODE, vrfyInf);*/
 	if(bExtend)
