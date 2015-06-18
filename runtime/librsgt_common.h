@@ -65,4 +65,14 @@ struct block_sig_s {
 	} sig;
 };
 
+static inline char *
+sigTypeName(uint8_t sigID)
+{
+	switch(sigID) {
+	case SIGID_RFC3161:
+		return "RFC3161";
+	default:return "[unknown]";
+	}
+}
+
 #endif  /* #ifndef INCLUDED_LIBRSGTCM_H */

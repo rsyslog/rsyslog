@@ -156,7 +156,7 @@ struct rsksistatefile {
  * into constant memory pool.
  */
 static inline char *
-RSGTE2String(int err)
+RSKSIE2String(int err)
 {
 	switch(err) {
 	case 0:
@@ -212,7 +212,7 @@ RSGTE2String(int err)
 
 
 static inline uint16_t
-hashOutputLengthOctets(uint8_t hashID)
+hashOutputLengthOctetsKSI(uint8_t hashID)
 {
 	switch(hashID) {
 	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
@@ -244,7 +244,7 @@ hashOutputLengthOctets(uint8_t hashID)
 }
 
 static inline uint8_t
-hashIdentifier(KSI_HashAlgorithm hashID)
+hashIdentifierKSI(KSI_HashAlgorithm hashID)
 {
 	switch(hashID) {
 	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
@@ -275,7 +275,7 @@ hashIdentifier(KSI_HashAlgorithm hashID)
 	}
 }
 static inline char *
-hashAlgName(uint8_t hashID)
+hashAlgNameKSI(uint8_t hashID)
 {
 	switch(hashID) {
 	case KSI_HASHALG_SHA1:
@@ -306,7 +306,7 @@ hashAlgName(uint8_t hashID)
 	}
 }
 static inline KSI_HashAlgorithm
-hashID2Alg(uint8_t hashID)
+hashID2AlgKSI(uint8_t hashID)
 {
 	switch(hashID) {
 	case 0x00:
@@ -337,19 +337,10 @@ hashID2Alg(uint8_t hashID)
 		return 0xff;
 	}
 }
-static inline char *
-sigTypeName(uint8_t sigID)
-{
-	switch(sigID) {
-	case SIGID_RFC3161:
-		return "RFC3161";
-	default:return "[unknown]";
-	}
-}
 static inline uint16_t
-getIVLen(block_sig_t *bs)
+getIVLenKSI(block_sig_t *bs)
 {
-	return hashOutputLengthOctets(bs->hashID);
+	return hashOutputLengthOctetsKSI(bs->hashID);
 }
 static inline void
 rsksiSetBlockSizeLimit(rsksictx ctx, uint64_t limit)
@@ -376,9 +367,9 @@ void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *u
 ksifile rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn);
 int rsksifileDestruct(ksifile ksi);
 void rsksiCtxDel(rsksictx ctx);
-void sigblkInit(ksifile ksi);
-int sigblkAddRecord(ksifile gf, const unsigned char *rec, const size_t len);
-int sigblkFinish(ksifile ksi);
+void sigblkInitKSI(ksifile ksi);
+int sigblkAddRecordKSI(ksifile ksi, const unsigned char *rec, const size_t len);
+int sigblkFinishKSI(ksifile ksi);
 imprint_t * rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash);
 void rsksiimprintDel(imprint_t *imp);
 /* reader functions */
@@ -391,7 +382,7 @@ int rsksi_chkFileHdr(FILE *fp, char *expect);
 ksifile rsksi_vrfyConstruct_gf(void);
 void rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
-int verifyBLOCK_SIG(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, ksierrctx_t *ectx);
+int verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, ksierrctx_t *ectx);
 void rsksi_errctxInit(ksierrctx_t *ectx);
 void rsksi_errctxExit(ksierrctx_t *ectx);
 void rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec);
@@ -399,11 +390,9 @@ void rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
 void rsksi_set_debug(int iDebug); 
 
-
-/* TODO: replace these? */
-int hash_m(ksifile ksi, KSI_DataHash **m);
-int hash_r(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
-int hash_node(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
+int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
+int hash_r_ksi(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
+int hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
 extern char *rsksi_read_puburl; /**< url of publication server */
 extern uint8_t rsksi_read_showVerified;
 

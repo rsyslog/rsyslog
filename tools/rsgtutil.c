@@ -48,6 +48,7 @@ static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static int verbose = 0;
+static int debug = 0; 
 
 static void
 dumpFile(char *name)
@@ -192,7 +193,9 @@ done:
 	return r;
 }
 
-/* We handle both verify and extend with the same function as they
+#ifdef ENABLEGT
+/* VERIFY Function using GT API 
+ * We handle both verify and extend with the same function as they
  * are very similiar.
  *
  * note: here we need to have the LOG file name, not signature!
@@ -376,23 +379,262 @@ err:
 		rsgt_errctxExit(&ectx);
 	}
 }
+#endif
+
+#ifdef ENABLEKSI
+static inline int
+doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
+		/*block_sig_t *bs, */ ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
+{
+	int r;
+	size_t lenRec;
+	char line[128*1024];
+
+	if(fgets(line, sizeof(line), logfp) == NULL) {
+		if(feof(logfp)) {
+			r = RSGTE_EOF;
+		} else {
+			perror("log file input");
+			r = RSGTE_IO;
+		}
+		goto done;
+	}
+	lenRec = strlen(line);
+	if(line[lenRec-1] == '\n') {
+		line[lenRec-1] = '\0';
+		--lenRec;
+		rsksi_errctxSetErrRec(ectx, line);
+	}
+
+	/* we need to preserve the first line (record) of each block for
+	 * error-reporting purposes (bInBlock==0 meanst start of block)
+	 */
+	if(bInBlock == 0)
+		rsksi_errctxFrstRecInBlk(ectx, line);
+
+	r = rsksi_vrfy_nextRec(ksi, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
+done:
+	return r;
+}
+
+/* VERIFY Function using KSI API 
+ * We handle both verify and extend with the same function as they
+ * are very similiar.
+ *
+ * note: here we need to have the LOG file name, not signature!
+ */
+static void
+verifyKSI(char *name)
+{
+	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
+	block_sig_t *bs = NULL;
+	ksifile ksi;
+	uint8_t bHasRecHashes, bHasIntermedHashes;
+	uint8_t bInBlock;
+	int r = 0;
+	char sigfname[4096];
+	char oldsigfname[4096];
+	char nsigfname[4096];
+	ksierrctx_t ectx;
+	int bInitDone = 0;
+	
+	if(!strcmp(name, "-")) {
+		fprintf(stderr, "%s mode cannot work on stdin\n",
+			mode == MD_VERIFY ? "verify" : "extend");
+		goto err;
+	} else {
+		snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
+		if((logfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+		if((sigfp = fopen(sigfname, "r")) == NULL) {
+			perror(sigfname);
+			goto err;
+		}
+		if(mode == MD_EXTEND) {
+			snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
+			nsigfname[sizeof(nsigfname)-1] = '\0';
+			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+				perror(nsigfname);
+				goto err;
+			}
+			snprintf(oldsigfname, sizeof(oldsigfname),
+			         "%s.ksisig.old", name);
+			oldsigfname[sizeof(oldsigfname)-1] = '\0';
+		}
+	}
+
+	rsksiInit("rsyslog rsksiutil " VERSION);
+	rsksi_errctxInit(&ectx);
+	bInitDone = 1;
+	ectx.verbose = verbose;
+	ectx.fp = stderr;
+	ectx.filename = strdup(sigfname);
+	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG10")) != 0) {
+		fprintf(stderr, "error %d: rsksi_chkFileHdr", r); 
+		goto done;
+	}
+	if(mode == MD_EXTEND) {
+		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
+			perror(nsigfname);
+			r = RSGTE_IO;
+			goto done;
+		}
+	}
+	ksi = rsksi_vrfyConstruct_gf();
+	if(ksi == NULL) {
+		fprintf(stderr, "error initializing signature file structure\n");
+		goto done;
+	}
+
+	bInBlock = 0;
+	ectx.blkNum = 0;
+	ectx.recNumInFile = 0;
+
+	while(!feof(logfp)) {
+		if(bInBlock == 0) {
+			if(bs != NULL)
+				rsksi_objfree(0x0902, bs);
+			if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
+							&bHasIntermedHashes)) != 0) {
+				if(ectx.blkNum == 0) {
+					fprintf(stderr, "Error %d before finding any signature block - "
+						"is the file still open and being written to?\n", r);
+				} else {
+					if(verbose)
+						fprintf(stderr, "EOF after signature block %lld\n",
+							(long long unsigned) ectx.blkNum);
+				}
+				goto done;
+			}
+			rsksi_vrfyBlkInit(ksi, bs, bHasRecHashes, bHasIntermedHashes);
+			ectx.recNum = 0;
+			++ectx.blkNum;
+		}
+		++ectx.recNum, ++ectx.recNumInFile;
+		if((r = doVerifyRecKSI(logfp, sigfp, nsigfp, /*bs,*/ ksi, &ectx, bInBlock)) != 0)
+			goto done;
+		if(ectx.recNum == bs->recCount) {
+			if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, 
+			    (mode == MD_EXTEND) ? 1 : 0, &ectx)) != 0)
+				goto done;
+			bInBlock = 0;
+		} else	bInBlock = 1;
+	}
+done:
+	if(r != RSGTE_EOF)
+		goto err;
+
+	/* Make sure we've reached the end of file in both log and signature file */
+	if (fgetc(logfp) != EOF) {
+		fprintf(stderr, "There are unsigned records in the end of log.\n");
+		fprintf(stderr, "Last signed record: %s\n", ectx.errRec);
+		r = RSGTE_END_OF_SIG;
+		goto err;
+	}
+	if (fgetc(sigfp) != EOF) {
+		fprintf(stderr, "There are records missing from the end of the log file.\n");
+		r = RSGTE_END_OF_LOG;
+		goto err;
+	}
+
+
+	fclose(logfp); logfp = NULL;
+	fclose(sigfp); sigfp = NULL;
+	if(nsigfp != NULL) {
+		fclose(nsigfp); nsigfp = NULL;
+	}
+
+	/* everything went fine, so we rename files if we updated them */
+	if(mode == MD_EXTEND) {
+		if(unlink(oldsigfname) != 0) {
+			if(errno != ENOENT) {
+				perror("unlink oldsig");
+				r = RSGTE_IO;
+				goto err;
+			}
+		}
+		if(link(sigfname, oldsigfname) != 0) {
+			perror("link oldsig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(sigfname) != 0) {
+			perror("unlink cursig");
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(link(nsigfname, sigfname) != 0) {
+			perror("link  newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+		if(unlink(nsigfname) != 0) {
+			perror("unlink newsig");
+			fprintf(stderr, "WARNING: current sig file has been "
+			        "renamed to %s - you need to manually recover "
+				"it.\n", oldsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+	}
+	/* OLDCODE rsksiExit();*/
+	rsksi_errctxExit(&ectx);
+	return;
+
+err:
+	if(r != 0)
+		fprintf(stderr, "error %d (%s) processing file %s\n",
+			r, RSKSIE2String(r), name);
+	if(logfp != NULL)
+		fclose(logfp);
+	if(sigfp != NULL)
+		fclose(sigfp);
+	if(nsigfp != NULL) {
+		fclose(nsigfp);
+		unlink(nsigfname);
+	}
+	if(bInitDone) {
+		/* OLDCODE rsksiExit();*/
+		rsksi_errctxExit(&ectx);
+	}
+}
+#endif
 
 static void
 processFile(char *name)
 {
 	switch(mode) {
 	case MD_DETECT_FILE_TYPE:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Detect Filetype\n"); 
 		detectFileType(name);
 		break;
 	case MD_DUMP:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
 		dumpFile(name);
 		break;
 	case MD_SHOW_SIGBLK_PARAMS:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Show SigBlk Params\n"); 
 		showSigblkParams(name);
 		break;
 	case MD_VERIFY:
 	case MD_EXTEND:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Verify/Extend\n"); 
+#ifdef ENABLEGT
 		verify(name);
+#endif
+#ifdef ENABLEKSI
+		verifyKSI(name);
+#endif
 		break;
 	}
 }
@@ -400,8 +642,10 @@ processFile(char *name)
 
 static struct option long_options[] = 
 { 
+	{"help", no_argument, NULL, 'h'},
 	{"dump", no_argument, NULL, 'D'},
 	{"verbose", no_argument, NULL, 'v'},
+	{"debug", no_argument, NULL, 'd'},
 	{"version", no_argument, NULL, 'V'},
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
@@ -412,6 +656,18 @@ static struct option long_options[] =
 	{NULL, 0, NULL, 0} 
 }; 
 
+/* Helper function to show some HELP */
+void 
+rsgtutil_usage(void)
+{
+	fprintf(stderr, "usage: rsgtutil [options]\n"
+			"Use \"man rsgtutil\" for more details.\n\n"
+			"\t-h, --help \t\t Show this help\n"
+			"\t-D, --dump \t\t dump operations mode\n"
+			"\t-t, --verify \t\t Verify operations mode\n"
+			);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -419,15 +675,29 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "DvVTBtPs", long_options, NULL);
+		opt = getopt_long(argc, argv, "HdDvVTBPtes", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
 		case 'v':
 			verbose = 1;
 			break;
+		case 'd':
+			debug = 1;
+#ifdef ENABLEGT
+			rsgt_set_debug(debug); 
+#endif
+#ifdef ENABLEKSI
+			rsksi_set_debug(debug); 
+#endif
+			break;
 		case 's':
+#ifdef ENABLEGT
 			rsgt_read_showVerified = 1;
+#endif
+#ifdef ENABLEKSI
+			rsksi_read_showVerified = 1;
+#endif
 			break;
 		case 'V':
 			fprintf(stderr, "rsgtutil " VERSION "\n");
@@ -439,7 +709,12 @@ main(int argc, char *argv[])
 			mode = MD_SHOW_SIGBLK_PARAMS;
 			break;
 		case 'P':
+#ifdef ENABLEGT
 			rsgt_read_puburl = optarg;
+#endif
+#ifdef ENABLEKSI
+			rsksi_read_puburl = optarg;
+#endif
 			break;
 		case 'T':
 			mode = MD_DETECT_FILE_TYPE;
@@ -450,9 +725,12 @@ main(int argc, char *argv[])
 		case 'e':
 			mode = MD_EXTEND;
 			break;
+		case 'h':
 		case '?':
-			break;
-		default:fprintf(stderr, "getopt_long() returns unknown value %d\n", opt);
+			rsgtutil_usage();
+			return 0;
+		default:
+			fprintf(stderr, "getopt_long() returns unknown value %d\n", opt);
 			return 1;
 		}
 	}
@@ -466,3 +744,4 @@ main(int argc, char *argv[])
 
 	return 0;
 }
+

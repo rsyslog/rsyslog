@@ -1091,3 +1091,9 @@ done:
 		GTTimestamp_free(timestamp);
 	return r;
 }
+
+/* Helper function to enable debug */
+void rsgt_set_debug(int iDebug)
+{
+	rsgt_read_debug = iDebug; 
+}

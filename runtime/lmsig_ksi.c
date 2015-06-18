@@ -152,7 +152,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
 	DBGPRINTF("lmsig_ksi: onFileOpen: %s\n", fn);
 	/* note: if *pgf is set to NULL, this auto-disables GT functions */
 	*pgf = rsksiCtxOpenFile(pThis->ctx, fn);
-	sigblkInit(*pgf);
+	sigblkInitKSI(*pgf);
 	RETiRet;
 }
 
@@ -169,7 +169,7 @@ OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
 	DBGPRINTF("lmsig_ksi: onRecordWrite (%d): %s\n", lenRec-1, rec);
-	sigblkAddRecord(pF, rec, lenRec-1);
+	sigblkAddRecordKSI(pF, rec, lenRec-1);
 
 	RETiRet;
 }

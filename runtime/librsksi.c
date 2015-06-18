@@ -5,14 +5,14 @@
  *
  * sigblkConstruct
  * for each signature block:
- *    sigblkInit
+ *    sigblkInitKSI
  *    for each record:
- *       sigblkAddRecord
- *    sigblkFinish
+ *       sigblkAddRecordKSI
+ *    sigblkFinishKSI
  * sigblkDestruct
  *
  * Obviously, the next call after sigblkFinsh must either be to 
- * sigblkInit or sigblkDestruct (if no more signature blocks are
+ * sigblkInitKSI or sigblkDestruct (if no more signature blocks are
  * to be emitted, e.g. on file close). sigblkDestruct saves state
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
@@ -293,7 +293,7 @@ done:	return r;
 
 
 int
-tlv8Write(ksifile ksi, int flags, int tlvtype, int len)
+tlv8WriteKSI(ksifile ksi, int flags, int tlvtype, int len)
 {
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
@@ -305,7 +305,7 @@ done:	return r;
 } 
 
 int
-tlv16Write(ksifile ksi, int flags, int tlvtype, uint16_t len)
+tlv16WriteKSI(ksifile ksi, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	int r;
@@ -323,13 +323,13 @@ done:	return r;
 } 
 
 int
-tlvFlush(ksifile ksi)
+tlvFlushKSI(ksifile ksi)
 {
 	return (ksi->tlvIdx == 0) ? 0 : tlvbufPhysWrite(ksi);
 }
 
 int
-tlvWriteHash(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
+tlvWriteHashKSI(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 {
 	unsigned tlvlen;
 	int r;
@@ -341,16 +341,16 @@ tlvWriteHash(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 		goto done;
 	}
 	tlvlen = 1 + digest_len;
-	r = tlv16Write(ksi, 0x00, tlvtype, tlvlen);
+	r = tlv16WriteKSI(ksi, 0x00, tlvtype, tlvlen);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, hashIdentifier(ksi->hashAlg));
+	r = tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg));
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, (unsigned char*)digest, digest_len);
 done:	return r;
 }
 
 int
-tlvWriteBlockSig(ksifile ksi, uchar *der, uint16_t lenDer)
+tlvWriteBlockSigKSI(ksifile ksi, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
 	uint8_t tlvlenRecords;
@@ -358,39 +358,39 @@ tlvWriteBlockSig(ksifile ksi, uchar *der, uint16_t lenDer)
 
 	tlvlenRecords = tlvbufGetInt64OctetSize(ksi->nRecords);
 	tlvlen  = 2 + 1 /* hash algo TLV */ +
-	 	  2 + hashOutputLengthOctets(ksi->hashAlg) /* iv */ +
+	 	  2 + hashOutputLengthOctetsKSI(ksi->hashAlg) /* iv */ +
 		  2 + 1 + ksi->lenBlkStrtHash /* last hash */ +
 		  2 + tlvlenRecords /* rec-count */ +
 		  4 + lenDer /* rfc-3161 */;
 	/* write top-level TLV object (block-sig */
-	r = tlv16Write(ksi, 0x00, 0x0902, tlvlen);
+	r = tlv16WriteKSI(ksi, 0x00, 0x0902, tlvlen);
 	if(r != 0) goto done;
 	/* and now write the children */
 	//FIXME: flags???
 	/* hash-algo */
-	r = tlv8Write(ksi, 0x00, 0x00, 1);
+	r = tlv8WriteKSI(ksi, 0x00, 0x00, 1);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, hashIdentifier(ksi->hashAlg));
+	r = tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg));
 	if(r != 0) goto done;
 	/* block-iv */
-	r = tlv8Write(ksi, 0x00, 0x01, hashOutputLengthOctets(ksi->hashAlg));
+	r = tlv8WriteKSI(ksi, 0x00, 0x01, hashOutputLengthOctetsKSI(ksi->hashAlg));
 	if(r != 0) goto done;
-	r = tlvbufAddOctetString(ksi, ksi->IV, hashOutputLengthOctets(ksi->hashAlg));
+	r = tlvbufAddOctetString(ksi, ksi->IV, hashOutputLengthOctetsKSI(ksi->hashAlg));
 	if(r != 0) goto done;
 	/* last-hash */
-	r = tlv8Write(ksi, 0x00, 0x02, ksi->lenBlkStrtHash+1);
+	r = tlv8WriteKSI(ksi, 0x00, 0x02, ksi->lenBlkStrtHash+1);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, hashIdentifier(ksi->hashAlg));
+	r = tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg));
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, ksi->blkStrtHash, ksi->lenBlkStrtHash);
 	if(r != 0) goto done;
 	/* rec-count */
-	r = tlv8Write(ksi, 0x00, 0x03, tlvlenRecords);
+	r = tlv8WriteKSI(ksi, 0x00, 0x03, tlvlenRecords);
 	if(r != 0) goto done;
 	r = tlvbufAddInt64(ksi, ksi->nRecords);
 	if(r != 0) goto done;
 	/* rfc-3161 */
-	r = tlv16Write(ksi, 0x00, 0x906, lenDer);
+	r = tlv16WriteKSI(ksi, 0x00, 0x906, lenDer);
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, der, lenDer);
 done:	return r;
@@ -428,7 +428,7 @@ readStateFile(ksifile ksi)
 return;
 
 err:
-	ksi->lenBlkStrtHash = hashOutputLengthOctets(ksi->hashAlg);
+	ksi->lenBlkStrtHash = hashOutputLengthOctetsKSI(ksi->hashAlg);
 	ksi->blkStrtHash = calloc(1, ksi->lenBlkStrtHash);
 }
 
@@ -447,7 +447,7 @@ writeStateFile(ksifile ksi)
 		goto done;
 
 	memcpy(sf.hdr, "KSISTAT10", 9);
-	sf.hashID = hashIdentifier(ksi->hashAlg);
+	sf.hashID = hashIdentifierKSI(ksi->hashAlg);
 	sf.lenHash = ksi->x_prev->len;
 	/* if the write fails, we cannot do anything against that. We check
 	 * the condition just to keep the compiler happy.
@@ -460,10 +460,10 @@ done:	return;
 
 
 int
-tlvClose(ksifile ksi)
+tlvCloseKSI(ksifile ksi)
 {
 	int r;
-	r = tlvFlush(ksi);
+	r = tlvFlushKSI(ksi);
 	close(ksi->fd);
 	ksi->fd = -1;
 	writeStateFile(ksi);
@@ -475,7 +475,7 @@ tlvClose(ksifile ksi)
  * be read from file.
  */
 int
-tlvOpen(ksifile ksi, char *hdr, unsigned lenHdr)
+tlvOpenKSI(ksifile ksi, char *hdr, unsigned lenHdr)
 {
 	int r = 0;
 	ksi->fd = open((char*)ksi->sigfilename,
@@ -509,12 +509,12 @@ done:	return r;
  * reproduce). -- rgerhards, 2013-03-04
  */
 void
-seedIV(ksifile ksi)
+seedIVKSI(ksifile ksi)
 {
 	int hashlen;
 	int fd;
 
-	hashlen = hashOutputLengthOctets(ksi->hashAlg);
+	hashlen = hashOutputLengthOctetsKSI(ksi->hashAlg);
 	ksi->IV = malloc(hashlen); /* do NOT zero-out! */
 	/* if we cannot obtain data from /dev/urandom, we use whatever
 	 * is present at the current memory location as random data. Of
@@ -559,7 +559,7 @@ rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 	snprintf(fn, sizeof(fn), "%s.ksistate", logfn);
 	fn[MAXFNAME] = '\0'; /* be on save side */
 	ksi->statefilename = (uchar*) strdup(fn);
-	if(tlvOpen(ksi, LOGSIGHDR, sizeof(LOGSIGHDR)-1) != 0) {
+	if(tlvOpenKSI(ksi, LOGSIGHDR, sizeof(LOGSIGHDR)-1) != 0) {
 		reportErr(ctx, "signature file open failed");
 		ksi = NULL;
 	}
@@ -609,11 +609,11 @@ rsksifileDestruct(ksifile ksi)
 		goto done;
 
 	if(!ksi->disabled && ksi->bInBlk) {
-		r = sigblkFinish(ksi);
+		r = sigblkFinishKSI(ksi);
 		if(r != 0) ksi->disabled = 1;
 	}
 	if(!ksi->disabled)
-		r = tlvClose(ksi);
+		r = tlvCloseKSI(ksi);
 	free(ksi->sigfilename);
 	free(ksi->statefilename);
 	free(ksi->IV);
@@ -635,10 +635,10 @@ rsksiCtxDel(rsksictx ctx)
 
 /* new sigblk is initialized, but maybe in existing ctx */
 void
-sigblkInit(ksifile ksi)
+sigblkInitKSI(ksifile ksi)
 {
 	if(ksi == NULL) goto done;
-	seedIV(ksi);
+	seedIVKSI(ksi);
 	memset(ksi->roots_valid, 0, sizeof(ksi->roots_valid)/sizeof(char));
 	ksi->nRoots = 0;
 	ksi->nRecords = 0;
@@ -651,7 +651,7 @@ done:	return;
 static inline void
 bufAddIV(ksifile ksi, uchar *buf, size_t *len)
 {
-	memcpy(buf+*len, ksi->IV, hashOutputLengthOctets(ksi->hashAlg));
+	memcpy(buf+*len, ksi->IV, hashOutputLengthOctetsKSI(ksi->hashAlg));
 	*len += sizeof(ksi->IV);
 }
 
@@ -662,7 +662,7 @@ bufAddImprint(ksifile ksi, uchar *buf, size_t *len, imprint_t *imp)
 {
 	if(imp == NULL) {
 	/* TODO: how to get the REAL HASH ID? --> add field? */
-		buf[*len] = hashIdentifier(ksi->hashAlg);
+		buf[*len] = hashIdentifierKSI(ksi->hashAlg);
 		++(*len);
 		memcpy(buf+*len, ksi->blkStrtHash, ksi->lenBlkStrtHash);
 		*len += ksi->lenBlkStrtHash;
@@ -685,7 +685,7 @@ bufAddHash(ksifile ksi, uchar *buf, size_t *len, KSI_DataHash *hash)
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
 		goto done;
 	}
-	buf[*len] = hashIdentifier(ksi->hashAlg);
+	buf[*len] = hashIdentifierKSI(ksi->hashAlg);
 	++(*len);
 	memcpy(buf+*len, digest, digest_len);
 	*len += digest_len;
@@ -701,7 +701,7 @@ bufAddLevel(uchar *buf, size_t *len, uint8_t level)
 
 
 int
-hash_m(ksifile ksi, KSI_DataHash **m)
+hash_m_ksi(ksifile ksi, KSI_DataHash **m)
 {
 	int rgt;
 	uchar concatBuf[16*1024];
@@ -720,7 +720,7 @@ done:	return r;
 }
 
 int
-hash_r(ksifile ksi, KSI_DataHash **r, const uchar *rec, const size_t len)
+hash_r_ksi(ksifile ksi, KSI_DataHash **r, const uchar *rec, const size_t len)
 {
 	int ret = 0, rgt;
 	rgt = KSI_DataHash_create(ksi->ctx->ksi_ctx, rec, len, ksi->hashAlg, r);
@@ -734,7 +734,7 @@ done:	return ret;
 
 
 int
-hash_node(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *rec,
+hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *rec,
           uint8_t level)
 {
 	int r = 0, rgt;
@@ -755,7 +755,7 @@ done:	return r;
 
 
 int
-sigblkAddRecord(ksifile ksi, const uchar *rec, const size_t len)
+sigblkAddRecordKSI(ksifile ksi, const uchar *rec, const size_t len)
 {
 	KSI_DataHash *x; /* current hash */
 	KSI_DataHash *m, *r, *t, *t_del;
@@ -763,14 +763,14 @@ sigblkAddRecord(ksifile ksi, const uchar *rec, const size_t len)
 	int ret = 0;
 
 	if(ksi == NULL || ksi->disabled) goto done;
-	if((ret = hash_m(ksi, &m)) != 0) goto done;
-	if((ret = hash_r(ksi, &r, rec, len)) != 0) goto done;
+	if((ret = hash_m_ksi(ksi, &m)) != 0) goto done;
+	if((ret = hash_r_ksi(ksi, &r, rec, len)) != 0) goto done;
 	if(ksi->bKeepRecordHashes)
-		tlvWriteHash(ksi, 0x0900, r);
-	if((ret = hash_node(ksi, &x, m, r, 1)) != 0) goto done; /* hash leaf */
+		tlvWriteHashKSI(ksi, 0x0900, r);
+	if((ret = hash_node_ksi(ksi, &x, m, r, 1)) != 0) goto done; /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
 	if(ksi->bKeepTreeHashes)
-		tlvWriteHash(ksi, 0x0901, x);
+		tlvWriteHashKSI(ksi, 0x0901, x);
 	rsksiimprintDel(ksi->x_prev);
 	ksi->x_prev = rsksiImprintFromKSI_DataHash(ksi, x);
 	/* add x to the forest as new leaf, update roots list */
@@ -784,13 +784,13 @@ sigblkAddRecord(ksifile ksi, const uchar *rec, const size_t len)
 		} else if(t != NULL) {
 			/* hash interim node */
 			t_del = t;
-			ret = hash_node(ksi, &t, ksi->roots_hash[j], t_del, j+2);
+			ret = hash_node_ksi(ksi, &t, ksi->roots_hash[j], t_del, j+2);
 			ksi->roots_valid[j] = 0;
 			KSI_DataHash_free(ksi->roots_hash[j]);
 			KSI_DataHash_free(t_del);
 			if(ret != 0) goto done;
 			if(ksi->bKeepTreeHashes)
-				tlvWriteHash(ksi, 0x0901, t);
+				tlvWriteHashKSI(ksi, 0x0901, t);
 		}
 	}
 	if(t != NULL) {
@@ -808,9 +808,9 @@ sigblkAddRecord(ksifile ksi, const uchar *rec, const size_t len)
 	KSI_DataHash_free(r);
 
 	if(ksi->nRecords == ksi->blockSizeLimit) {
-		ret = sigblkFinish(ksi);
+		ret = sigblkFinishKSI(ksi);
 		if(ret != 0) goto done;
-		sigblkInit(ksi);
+		sigblkInitKSI(ksi);
 	}
 done:	
 	if(ret != 0) {
@@ -853,7 +853,7 @@ signIt(ksifile ksi, KSI_DataHash *hash)
 		goto done;
 	}
 
-	tlvWriteBlockSig(ksi, der, lenDer);
+	tlvWriteBlockSigKSI(ksi, der, lenDer);
 done:
 	if (sig != NULL)
 		KSI_Signature_free(sig);
@@ -864,7 +864,7 @@ done:
 
 
 int
-sigblkFinish(ksifile ksi)
+sigblkFinishKSI(ksifile ksi)
 {
 	KSI_DataHash *root, *rootDel;
 	int8_t j;
@@ -880,11 +880,11 @@ sigblkFinish(ksifile ksi)
 			ksi->roots_valid[j] = 0;
 		} else if(ksi->roots_valid[j]) {
 			rootDel = root;
-			ret = hash_node(ksi, &root, ksi->roots_hash[j], rootDel, j+2);
+			ret = hash_node_ksi(ksi, &root, ksi->roots_hash[j], rootDel, j+2);
 			ksi->roots_valid[j] = 0;
 			KSI_DataHash_free(ksi->roots_hash[j]);
 			KSI_DataHash_free(rootDel);
-			if(ret != 0) goto done; /* checks hash_node() result! */
+			if(ret != 0) goto done; /* checks hash_node_ksi() result! */
 		}
 	}
 	if((ret = signIt(ksi, root)) != 0) goto done;
