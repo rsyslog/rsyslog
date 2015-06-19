@@ -168,6 +168,47 @@ err:
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
+#ifdef ENABLEKSI
+static void
+showSigblkParamsKSI(char *name)
+{
+	FILE *fp;
+	block_sig_t *bs;
+	uint8_t bHasRecHashes, bHasIntermedHashes;
+	uint64_t blkCnt = 0;
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsksi_chkFileHdr(fp, "LOGSIG10")) != 0) goto err;
+
+	while(1) { /* we will err out on EOF */
+		if((r = rsksi_getBlockParams(fp, 0, &bs, &bHasRecHashes,
+				        &bHasIntermedHashes)) != 0)
+			goto err;
+		++blkCnt;
+		rsksi_printBLOCK_SIG(stdout, bs, verbose);
+		printf("\t***META INFORMATION:\n");
+		printf("\tBlock Nbr in File...: %llu\n", (long long unsigned) blkCnt);
+		printf("\tHas Record Hashes...: %d\n", bHasRecHashes);
+		printf("\tHas Tree Hashes.....: %d\n", bHasIntermedHashes);
+	}
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:
+	if(r != RSGTE_EOF)
+		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+}
+#endif
+
 static void
 detectFileType(char *name)
 {
@@ -686,7 +727,14 @@ processFile(char *name)
 	case MD_SHOW_SIGBLK_PARAMS:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Show SigBlk Params\n"); 
-		showSigblkParams(name);
+#ifdef ENABLEGT
+		if (apimode == API_GT)
+			showSigblkParams(name);
+#endif
+#ifdef ENABLEKSI
+		if (apimode == API_KSI)
+			showSigblkParamsKSI(name);
+#endif
 		break;
 	case MD_VERIFY:
 	case MD_EXTEND:
@@ -701,6 +749,7 @@ processFile(char *name)
 		if (iSuccess == 0)
 			iSuccess = verifyKSI(name, errbuf);
 #endif
+		/* Output error if return was 0*/
 		if (iSuccess == 0)
 			fputs(errbuf, stderr); 
 		break;
@@ -766,7 +815,6 @@ main(int argc, char *argv[])
 #endif
 			if(verbose)
 				fprintf(stdout, "Setting Apimode: %s (%d)\n", optarg, apimode); 
-			exit(0); 
 			break;
 		case 'd':
 			debug = 1;

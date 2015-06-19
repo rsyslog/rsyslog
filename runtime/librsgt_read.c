@@ -346,7 +346,10 @@ rsgt_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	memcpy(imp->data, rec->data+1, imp->len);
 	*imprint = imp;
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+	return r;
 }
 
 static int
@@ -855,6 +858,8 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
 	}
 	r = 0;
 done:
+	if(rsgt_read_debug)
+		printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
 	if(imp != NULL)
 		rsgt_objfree(0x0901, imp);
 	return r;
