@@ -71,6 +71,22 @@ OPTIONS
   default server is used. The default server is not necessarily optimal
   in regard to performance and reliability.
 
+-h, --help
+  Shows short help for the utility.
+
+-d, --debug
+  Enables additional debug output useful for developers. 
+  
+-a <GT|KSI>, --api <GT|KSI>
+  Specifies the API used by the utility. This parameter overwrites the Libary 
+  used by this utility. It is possible to verify .gtsig signatures with the 
+  new Guardtime KSI Libary, but not .ksisig signatures with the old 
+  Guardtime Client Libary. Available options: 
+  GT = Guardtime Client Library
+  KSI = Guardtime KSI Library
+
+
+
 
 OPERATION MODES
 ===============
