@@ -1,4 +1,9 @@
 if ENABLE_TESTBENCH
+CLEANFILES = \
+	IN_AUTO_DEBUG
+# IN_AUTO_DEBUG should be deleted each time make check is run, but
+# there exists no such hook. Se we at least delete it on make clean.
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
