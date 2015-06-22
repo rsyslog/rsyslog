@@ -44,7 +44,7 @@
 
 typedef unsigned char uchar;
 
-static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
+static enum { MD_DUMP, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static enum { API_GT, API_KSI } apimode = API_GT;
@@ -208,38 +208,6 @@ err:
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
 }
 #endif
-
-static void
-detectFileType(char *name)
-{
-	FILE *fp;
-	char *typeName;
-	char hdr[9];
-	int r = -1;
-	
-	if(!strcmp(name, "-"))
-		fp = stdin;
-	else {
-		if((fp = fopen(name, "r")) == NULL) {
-			perror(name);
-			goto err;
-		}
-	}
-	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
-	if(!strcmp(hdr, "LOGSIG10"))
-		typeName = "Log Signature File, Version 10";
-	else if(!strcmp(hdr, "GTSTAT10"))
-		typeName = "rsyslog GuardTime Signature State File, Version 10";
-	else
-		typeName = "unknown";
-
-	printf("%s: %s [%s]\n", name, hdr, typeName);
-
-	if(fp != stdin)
-		fclose(fp);
-	return;
-err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
-}
 
 static inline int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
@@ -741,11 +709,6 @@ processFile(char *name)
 	char errbuf[4096];
 
 	switch(mode) {
-	case MD_DETECT_FILE_TYPE:
-		if(verbose)
-			fprintf(stdout, "ProcessMode: Detect Filetype\n"); 
-		detectFileType(name);
-		break;
 	case MD_DUMP:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
@@ -792,7 +755,6 @@ static struct option long_options[] =
 	{"verbose", no_argument, NULL, 'v'},
 	{"debug", no_argument, NULL, 'd'},
 	{"version", no_argument, NULL, 'V'},
-	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
 	{"extend", no_argument, NULL, 'e'},
@@ -808,13 +770,20 @@ rsgtutil_usage(void)
 {
 	fprintf(stderr, "usage: rsgtutil [options]\n"
 			"Use \"man rsgtutil\" for more details.\n\n"
-			"\t-h, --help \t\t Show this help\n"
-			"\t-D, --dump \t\t dump operations mode\n"
-			"\t-t, --verify \t\t Verify operations mode\n"
+			"\t-h, --help \t\t\t Show this help.\n"
+			"\t-D, --dump \t\t\t dump operations mode.\n"
+			"\t-t, --verify \t\t\t Verify operations mode.\n"
+			"\t-e, --extend \t\t\t Extends the RFC3161 signatures.\n"
+			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
+			"\t-V, --Version \t\t\t Print utility version\n"
 			"\t\tOptional parameters\n"
-			"\t-a <GT|KSI>, --api  <GT|KSI> \t\t Set which API to use.\n"
-			"\t\t\tGT = Guardtime Client Library\n"
-			"\t\t\tKSI = Guardtime KSI Library\n"
+			"\t-a <GT|KSI>, --api  <GT|KSI> \t Set which API to use.\n"
+			"\t\tGT = Guardtime Client Library\n"
+			"\t\tKSI = Guardtime KSI Library\n"
+			"\t-s, --show-verified \t\t Also show correctly verified blocks.\n"
+			"\t-P <URL>, --publications-server <URL> \t Sets the publications server.\n"
+			"\t-v, --verbose \t\t\t Verbose output.\n"
+			"\t-d, --debug \t\t\t Debug (developer) output.\n"
 			);
 }
 
@@ -877,9 +846,6 @@ main(int argc, char *argv[])
 #ifdef ENABLEKSI
 			rsksi_read_puburl = optarg;
 #endif
-			break;
-		case 'T':
-			mode = MD_DETECT_FILE_TYPE;
 			break;
 		case 't':
 			mode = MD_VERIFY;
