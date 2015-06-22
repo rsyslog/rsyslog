@@ -129,6 +129,7 @@ static struct configSettings_s {
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
 	int maxLinesAtOnce;	/* how many lines to process in a row? */
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 } cs;
 
 struct instanceConf_s {
@@ -1024,6 +1025,7 @@ CODESTARTbeginCnfLoad
 	cs.iSeverity = 5;
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
+	cs.pBindRuleset = NULL;
 ENDbeginCnfLoad
 
 
@@ -1910,6 +1912,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
+	cs.pBindRuleset = NULL;
 
 	RETiRet;
 }
