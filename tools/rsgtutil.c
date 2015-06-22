@@ -284,47 +284,15 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verify(char *name, char *errbuf)
+verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
-	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
 	gtfile gf;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
-	char sigfname[4096];
-	char oldsigfname[4096];
-	char nsigfname[4096];
-	gterrctx_t ectx;
 	int bInitDone = 0;
-	
-	if(!strcmp(name, "-")) {
-		fprintf(stderr, "%s mode cannot work on stdin\n",
-			mode == MD_VERIFY ? "verify" : "extend");
-		goto err;
-	} else {
-		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
-		sigfname[sizeof(sigfname)-1] = '\0';
-		if((logfp = fopen(name, "r")) == NULL) {
-			perror(name);
-			goto err;
-		}
-		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(sigfname);
-			goto err;
-		}
-		if(mode == MD_EXTEND) {
-			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
-			nsigfname[sizeof(nsigfname)-1] = '\0';
-			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
-				perror(nsigfname);
-				goto err;
-			}
-			snprintf(oldsigfname, sizeof(oldsigfname),
-			         "%s.gtsig.old", name);
-			oldsigfname[sizeof(oldsigfname)-1] = '\0';
-		}
-	}
+	gterrctx_t ectx;
 
 	rsgtInit("rsyslog rsgtutil " VERSION);
 	rsgt_errctxInit(&ectx);
@@ -398,7 +366,6 @@ done:
 		goto err;
 	}
 
-
 	fclose(logfp); logfp = NULL;
 	fclose(sigfp); sigfp = NULL;
 	if(nsigfp != NULL) {
@@ -441,6 +408,7 @@ done:
 			goto err;
 		}
 	}
+
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
 	return 1;
@@ -511,47 +479,15 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyKSI(char *name, char *errbuf)
+verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
-	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	block_sig_t *bs = NULL;
 	ksifile ksi;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
-	char sigfname[4096];
-	char oldsigfname[4096];
-	char nsigfname[4096];
-	ksierrctx_t ectx;
 	int bInitDone = 0;
-	
-	if(!strcmp(name, "-")) {
-		fprintf(stderr, "%s mode cannot work on stdin\n",
-			mode == MD_VERIFY ? "verify" : "extend");
-		goto err;
-	} else {
-		snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
-		sigfname[sizeof(sigfname)-1] = '\0';
-		if((logfp = fopen(name, "r")) == NULL) {
-			perror(name);
-			goto err;
-		}
-		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(sigfname);
-			goto err;
-		}
-		if(mode == MD_EXTEND) {
-			snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
-			nsigfname[sizeof(nsigfname)-1] = '\0';
-			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
-				perror(nsigfname);
-				goto err;
-			}
-			snprintf(oldsigfname, sizeof(oldsigfname),
-			         "%s.ksisig.old", name);
-			oldsigfname[sizeof(oldsigfname)-1] = '\0';
-		}
-	}
+	ksierrctx_t ectx;
 
 	rsksiInit("rsyslog rsksiutil " VERSION);
 	rsksi_errctxInit(&ectx);
@@ -696,6 +632,109 @@ err:
 }
 #endif
 
+/* VERIFY if logfile has a Guardtime Signfile 
+*/
+static void
+verify(char *name, char *errbuf)
+{
+	int iSuccess = 0; 
+	char sigfname[4096];
+	char oldsigfname[4096];
+	char nsigfname[4096];
+	int r = 0;
+	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
+	
+	if(!strcmp(name, "-")) {
+		fprintf(stderr, "%s mode cannot work on stdin\n",
+			mode == MD_VERIFY ? "verify" : "extend");
+		goto err;
+	} else {
+		/* First check for GTSIG file */
+		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
+		if((logfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto checkKSI;
+		}
+		if((sigfp = fopen(sigfname, "r")) == NULL) {
+			perror(sigfname);
+			goto checkKSI;
+		}
+		if(mode == MD_EXTEND) {
+			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
+			nsigfname[sizeof(nsigfname)-1] = '\0';
+			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+				perror(nsigfname);
+				goto checkKSI;
+			}
+			snprintf(oldsigfname, sizeof(oldsigfname),
+			         "%s.gtsig.old", name);
+			oldsigfname[sizeof(oldsigfname)-1] = '\0';
+		}
+		goto verifyGT;
+checkKSI:
+		/* check for KSISIG file now */
+		snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
+		if((logfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+		if((sigfp = fopen(sigfname, "r")) == NULL) {
+			perror(sigfname);
+			goto err;
+		}
+		if(mode == MD_EXTEND) {
+			snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
+			nsigfname[sizeof(nsigfname)-1] = '\0';
+			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+				perror(nsigfname);
+				goto err;
+			}
+			snprintf(oldsigfname, sizeof(oldsigfname),
+			         "%s.ksisig.old", name);
+			oldsigfname[sizeof(oldsigfname)-1] = '\0';
+		}
+		goto verifyKSI;
+	}
+
+verifyGT:
+	if (apimode == API_GT)
+#ifdef ENABLEGT
+		iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
+#else
+		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime API, rsyslog need to be configured with --enable-guardtime.\n"); 
+#endif
+	else if (apimode == API_KSI)
+#ifdef ENABLEKSI
+		iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
+#else
+		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-ksi.\n"); 
+#endif
+	goto done; 
+
+verifyKSI:
+#ifdef ENABLEKSI
+	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
+#else
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-ksi.\n"); 
+#endif
+	goto done; 
+
+done:
+	/* Output error if return was 0*/
+	if (iSuccess == 0)
+		fputs(errbuf, stderr); 
+	return;
+err:
+	if(r != 0){
+		sprintf(errbuf, "error %d (%s) processing file %s\n",
+			r, RSGTE2String(r), name);
+		fputs(errbuf, stderr); 
+	}
+	return;
+}
+
 static void
 processFile(char *name)
 {
@@ -740,18 +779,7 @@ processFile(char *name)
 	case MD_EXTEND:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Verify/Extend\n"); 
-		int iSuccess = 0; 
-#ifdef ENABLEGT
-		iSuccess = verify(name, errbuf);
-#endif
-#ifdef ENABLEKSI
-		/* Try KSI next if GT Verify failed before */
-		if (iSuccess == 0)
-			iSuccess = verifyKSI(name, errbuf);
-#endif
-		/* Output error if return was 0*/
-		if (iSuccess == 0)
-			fputs(errbuf, stderr); 
+		verify(name, errbuf);
 		break;
 	}
 }
