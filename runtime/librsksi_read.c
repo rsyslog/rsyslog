@@ -1112,7 +1112,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
 		if(rsksi_read_debug)
-			printf("debug: KSI_Signature_parse faile with error %d\n", ksistate); 
+			printf("debug: KSI_Signature_parse failed with error %d\n", ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
