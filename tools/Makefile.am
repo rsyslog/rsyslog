@@ -72,15 +72,27 @@ bin_PROGRAMS += rsgtutil
 rsgtutil = rsgtutil.c
 rsgtutil_CPPFLAGS = $(RSRT_CFLAGS) $(GUARDTIME_CFLAGS) -DENABLEGT
 rsgtutil_LDADD = ../runtime/librsgt.la $(GUARDTIME_LIBS)
-if ENABLE_GT_KSI
-rsgtutil_CPPFLAGS += $(GT_KSI_CFLAGS) -DENABLEKSI
-rsgtutil_LDADD += ../runtime/librsksi.la $(GT_KSI_LIBS)
-endif
 rsgtutil.1: rsgtutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
 man1_MANS += rsgtutil.1
 CLEANFILES += rsgtutil.1
 EXTRA_DIST+= rsgtutil.1
+if ENABLE_GT_KSI
+rsgtutil_CPPFLAGS += $(GT_KSI_CFLAGS) -DENABLEKSI
+rsgtutil_LDADD += ../runtime/librsksi.la $(GT_KSI_LIBS)
+endif
+else
+if ENABLE_GT_KSI
+bin_PROGRAMS += rsgtutil
+rsgtutil = rsgtutil.c
+rsgtutil_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS) -DENABLEKSI
+rsgtutil_LDADD = ../runtime/librsksi.la $(GT_KSI_LIBS)
+rsgtutil.1: rsgtutil.rst
+	$(AM_V_GEN) $(RST2MAN) $< $@
+man1_MANS += rsgtutil.1
+CLEANFILES += rsgtutil.1
+EXTRA_DIST+= rsgtutil.1
+endif
 endif
 if ENABLE_LIBGCRYPT
 bin_PROGRAMS += rscryutil
