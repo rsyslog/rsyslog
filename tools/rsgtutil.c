@@ -617,53 +617,56 @@ verify(char *name, char *errbuf)
 			mode == MD_VERIFY ? "verify" : "extend");
 		goto err;
 	} else {
-		/* First check for GTSIG file */
-		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
-		sigfname[sizeof(sigfname)-1] = '\0';
+		/* First check for the logfile itself */
 		if((logfp = fopen(name, "r")) == NULL) {
 			perror(name);
-			goto checkKSI;
+			goto err;
 		}
+
+		/* Check for .gtsig file */
+		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
 		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(sigfname);
-			goto checkKSI;
+			/* Use errbuf to output error later */
+			sprintf(errbuf, "%s: No such file or directory\n", sigfname);
+
+			/* Check for .ksisig file */
+			snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
+			sigfname[sizeof(sigfname)-1] = '\0';
+			if((sigfp = fopen(sigfname, "r")) == NULL) {
+				/* Output old error first*/
+				fputs(errbuf, stderr); 
+
+				sprintf(errbuf, "%s: No such file or directory\n", sigfname);
+				fputs(errbuf, stderr); 
+				/*perror(sigfname);*/
+				goto err;
+			}
+			if(mode == MD_EXTEND) {
+				snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
+				nsigfname[sizeof(nsigfname)-1] = '\0';
+				if((nsigfp = fopen(nsigfname, "w")) == NULL) {
+					perror(nsigfname);
+					goto err;
+				}
+				snprintf(oldsigfname, sizeof(oldsigfname),
+						 "%s.ksisig.old", name);
+				oldsigfname[sizeof(oldsigfname)-1] = '\0';
+			}
+			goto verifyKSI;
 		}
 		if(mode == MD_EXTEND) {
 			snprintf(nsigfname, sizeof(nsigfname), "%s.gtsig.new", name);
 			nsigfname[sizeof(nsigfname)-1] = '\0';
 			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
 				perror(nsigfname);
-				goto checkKSI;
+				goto err;
 			}
 			snprintf(oldsigfname, sizeof(oldsigfname),
 			         "%s.gtsig.old", name);
 			oldsigfname[sizeof(oldsigfname)-1] = '\0';
 		}
 		goto verifyGT;
-checkKSI:
-		/* check for KSISIG file now */
-		snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
-		sigfname[sizeof(sigfname)-1] = '\0';
-		if((logfp = fopen(name, "r")) == NULL) {
-			perror(name);
-			goto err;
-		}
-		if((sigfp = fopen(sigfname, "r")) == NULL) {
-			perror(sigfname);
-			goto err;
-		}
-		if(mode == MD_EXTEND) {
-			snprintf(nsigfname, sizeof(nsigfname), "%s.ksisig.new", name);
-			nsigfname[sizeof(nsigfname)-1] = '\0';
-			if((nsigfp = fopen(nsigfname, "w")) == NULL) {
-				perror(nsigfname);
-				goto err;
-			}
-			snprintf(oldsigfname, sizeof(oldsigfname),
-			         "%s.ksisig.old", name);
-			oldsigfname[sizeof(oldsigfname)-1] = '\0';
-		}
-		goto verifyKSI;
 	}
 
 verifyGT:
@@ -677,7 +680,7 @@ verifyGT:
 #ifdef ENABLEKSI
 		iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
-		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-ksi.\n"); 
+		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
 	goto done; 
 
@@ -685,7 +688,7 @@ verifyKSI:
 #ifdef ENABLEKSI
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
-	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-ksi.\n"); 
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
 	goto done; 
 
