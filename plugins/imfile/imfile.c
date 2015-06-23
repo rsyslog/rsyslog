@@ -128,7 +128,7 @@ static struct configSettings_s {
 	int iFacility; /* local0 */
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
-	int maxLinesAtOnce;	/* how many lines to process in a row? */
+	int64 maxLinesAtOnce;	/* how many lines to process in a row? */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 } cs;
 
