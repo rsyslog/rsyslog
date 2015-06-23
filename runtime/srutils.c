@@ -657,5 +657,16 @@ containsGlobWildcard(char *str)
 	return 0;
 }
 
+void seedRandomNumber() {
+	struct timespec t;
+	timeoutComp(&t, 0);
+	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
+	srandom((unsigned int) x);
+}
+
+long int randomNumber() {
+	return random();
+}
+
 /* vim:set ai:
  */

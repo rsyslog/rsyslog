@@ -81,6 +81,7 @@
 #include "strgen.h"
 #include "statsobj.h"
 #include "atomic.h"
+#include "srUtils.h"
 
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 struct sched_param default_sched_param;
@@ -138,6 +139,7 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 	DEFiRet;
 
 	if(iRefCount == 0) {
+		seedRandomNumber();
 		/* init runtime only if not yet done */
 #ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_init(0);
