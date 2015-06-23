@@ -9,6 +9,5 @@ echo doing shutdown
 source $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 source $srcdir/diag.sh wait-shutdown 
-source $srcdir/diag.sh content-pattern-check  "^[0-9]$"
-cat rsyslog.out.log
+source $srcdir/diag.sh content-pattern-check "^[0-9]$"
 source $srcdir/diag.sh exit
