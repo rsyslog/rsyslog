@@ -38,6 +38,7 @@
 #endif
 #ifdef ENABLEKSI
 	/* KSI Includes */
+	#include <stdint.h>
 	#include "librsgt_common.h"
 	#include "librsksi.h"
 #endif
@@ -88,46 +89,6 @@ dumpFile(char *name)
 	return;
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
-#endif
-
-#ifdef ENABLEKSI
-static void
-dumpFileKSI(char *name)
-{
-	FILE *fp;
-	uchar hdr[9];
-	void *obj;
-	tlvrecord_t rec;
-	int r = -1;
-	
-	if(!strcmp(name, "-"))
-		fp = stdin;
-	else {
-		printf("Processing file %s:\n", name);
-		if((fp = fopen(name, "r")) == NULL) {
-			perror(name);
-			goto err;
-		}
-	}
-	if((r = rsksi_tlvrdHeader(fp, hdr)) != 0) goto err;
-	printf("File Header: '%s'\n", hdr);
-	while(1) { /* we will err out on EOF */
-		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) {
-			if(feof(fp))
-				break;
-			else
-				goto err;
-		}
-		rsksi_tlvprint(stdout, rec.tlvtype, obj, verbose);
-		rsksi_objfree(rec.tlvtype, obj);
-	}
-
-	if(fp != stdin)
-		fclose(fp);
-	return;
-err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
-}
-#endif
 
 static void
 showSigblkParams(char *name)
@@ -167,8 +128,46 @@ err:
 	if(r != RSGTE_EOF)
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
+#endif
 
 #ifdef ENABLEKSI
+static void
+dumpFileKSI(char *name)
+{
+	FILE *fp;
+	uchar hdr[9];
+	void *obj;
+	tlvrecord_t rec;
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		printf("Processing file %s:\n", name);
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsksi_tlvrdHeader(fp, hdr)) != 0) goto err;
+	printf("File Header: '%s'\n", hdr);
+	while(1) { /* we will err out on EOF */
+		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) {
+			if(feof(fp))
+				break;
+			else
+				goto err;
+		}
+		rsksi_tlvprint(stdout, rec.tlvtype, obj, verbose);
+		rsksi_objfree(rec.tlvtype, obj);
+	}
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+}
+
 static void
 showSigblkParamsKSI(char *name)
 {
@@ -209,6 +208,7 @@ err:
 }
 #endif
 
+#ifdef ENABLEGT
 static inline int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
@@ -244,7 +244,6 @@ done:
 	return r;
 }
 
-#ifdef ENABLEGT
 /* VERIFY Function using GT API 
  * We handle both verify and extend with the same function as they
  * are very similiar.
@@ -605,11 +604,10 @@ err:
 static void
 verify(char *name, char *errbuf)
 {
-	int iSuccess = 0; 
+	int iSuccess = 1; 
 	char sigfname[4096];
 	char oldsigfname[4096];
 	char nsigfname[4096];
-	int r = 0;
 	FILE *logfp = NULL, *sigfp = NULL, *nsigfp = NULL;
 	
 	if(!strcmp(name, "-")) {
@@ -670,39 +668,37 @@ verify(char *name, char *errbuf)
 	}
 
 verifyGT:
-	if (apimode == API_GT)
+	if (apimode == API_GT) {
 #ifdef ENABLEGT
 		iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
+		iSuccess = 0; 
 		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime API, rsyslog need to be configured with --enable-guardtime.\n"); 
 #endif
-	else if (apimode == API_KSI)
+	} else if (apimode == API_KSI) {
 #ifdef ENABLEKSI
 		iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
+		iSuccess = 0; 
 		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
+	}
 	goto done; 
 
 verifyKSI:
 #ifdef ENABLEKSI
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
+	iSuccess = 0; 
 	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
 	goto done; 
 
+err:
 done:
 	/* Output error if return was 0*/
 	if (iSuccess == 0)
 		fputs(errbuf, stderr); 
-	return;
-err:
-	if(r != 0){
-		sprintf(errbuf, "error %d (%s) processing file %s\n",
-			r, RSGTE2String(r), name);
-		fputs(errbuf, stderr); 
-	}
 	return;
 }
 
