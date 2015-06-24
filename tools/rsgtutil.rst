@@ -79,9 +79,11 @@ OPTIONS
   
 -a <GT|KSI>, --api <GT|KSI>
   Specifies the API used by the utility. This parameter overwrites the Libary 
-  used by this utility. It is possible to verify .gtsig signatures with the 
-  new Guardtime KSI Libary, but not .ksisig signatures with the old 
-  Guardtime Client Libary. Available options: 
+  used by this utility. However it is only possible to verify .gtsig signatures 
+  with the old Guardtime library and .ksisig signatures only with the new 
+  Guardtime KSI Libary. So the parameter won't have any affect when 
+  verifying signatures. 
+  Available options: 
   GT = Guardtime Client Library
   KSI = Guardtime KSI Library
 
