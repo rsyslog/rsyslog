@@ -333,6 +333,36 @@ done:	return r;
 }
 
 int
+tlvWriteBlockHdr(gtfile gf) {
+	unsigned tlvlen;
+	int r;
+	tlvlen  = 2 + 1 /* hash algo TLV */ +
+	 	  2 + hashOutputLengthOctets(gf->hashAlg) /* iv */ +
+		  2 + 1 + gf->lenBlkStrtHash /* last hash */;
+	/* write top-level TLV object block-hdr */
+	r = tlv16Write(gf, 0x00, 0x0901, tlvlen);
+	/* and now write the children */
+	/* hash-algo */
+	r = tlv8Write(gf, 0x00, 0x01, 1);
+	if(r != 0) goto done;
+	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
+	if(r != 0) goto done;
+	/* block-iv */
+	r = tlv8Write(gf, 0x00, 0x02, hashOutputLengthOctets(gf->hashAlg));
+	if(r != 0) goto done;
+	r = tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg));
+	if(r != 0) goto done;
+	/* last-hash */
+	r = tlv8Write(gf, 0x00, 0x03, gf->lenBlkStrtHash+1);
+	if(r != 0) goto done;
+	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
+	if(r != 0) goto done;
+	r = tlvbufAddOctetString(gf, gf->blkStrtHash, gf->lenBlkStrtHash);
+	if(r != 0) goto done;
+done:	return r;
+}
+
+int
 tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
@@ -340,35 +370,15 @@ tlvWriteBlockSig(gtfile gf, uchar *der, uint16_t lenDer)
 	int r;
 
 	tlvlenRecords = tlvbufGetInt64OctetSize(gf->nRecords);
-	tlvlen  = 2 + 1 /* hash algo TLV */ +
-	 	  2 + hashOutputLengthOctets(gf->hashAlg) /* iv */ +
-		  2 + 1 + gf->lenBlkStrtHash /* last hash */ +
-		  2 + tlvlenRecords /* rec-count */ +
+	tlvlen  = 2 + tlvlenRecords /* rec-count */ +
 		  4 + lenDer /* rfc-3161 */;
 	/* write top-level TLV object (block-sig */
-	r = tlv16Write(gf, 0x00, 0x0902, tlvlen);
+	r = tlv16Write(gf, 0x00, 0x0904, tlvlen);
 	if(r != 0) goto done;
 	/* and now write the children */
 	//FIXME: flags???
-	/* hash-algo */
-	r = tlv8Write(gf, 0x00, 0x00, 1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
-	if(r != 0) goto done;
-	/* block-iv */
-	r = tlv8Write(gf, 0x00, 0x01, hashOutputLengthOctets(gf->hashAlg));
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg));
-	if(r != 0) goto done;
-	/* last-hash */
-	r = tlv8Write(gf, 0x00, 0x02, gf->lenBlkStrtHash+1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, gf->blkStrtHash, gf->lenBlkStrtHash);
-	if(r != 0) goto done;
 	/* rec-count */
-	r = tlv8Write(gf, 0x00, 0x03, tlvlenRecords);
+	r = tlv8Write(gf, 0x00, 0x01, tlvlenRecords);
 	if(r != 0) goto done;
 	r = tlvbufAddInt64(gf, gf->nRecords);
 	if(r != 0) goto done;
@@ -620,8 +630,12 @@ done:	return;
 static inline void
 bufAddIV(gtfile gf, uchar *buf, size_t *len)
 {
-	memcpy(buf+*len, gf->IV, hashOutputLengthOctets(gf->hashAlg));
-	*len += sizeof(gf->IV);
+	int hashlen;
+
+	hashlen = hashOutputLengthOctets(gf->hashAlg);
+
+	memcpy(buf+*len, gf->IV, hashlen);
+	*len += hashlen;
 }
 
 
@@ -725,12 +739,14 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 	if(gf == NULL || gf->disabled) goto done;
 	if((ret = hash_m(gf, &m)) != 0) goto done;
 	if((ret = hash_r(gf, &r, rec, len)) != 0) goto done;
+	if(gf->nRecords == 0) 
+		tlvWriteBlockHdr(gf);
 	if(gf->bKeepRecordHashes)
-		tlvWriteHash(gf, 0x0900, r);
+		tlvWriteHash(gf, 0x0902, r);
 	if((ret = hash_node(gf, &x, m, r, 1)) != 0) goto done; /* hash leaf */
 	/* persists x here if Merkle tree needs to be persisted! */
 	if(gf->bKeepTreeHashes)
-		tlvWriteHash(gf, 0x0901, x);
+		tlvWriteHash(gf, 0x0903, x);
 	rsgtimprintDel(gf->x_prev);
 	gf->x_prev = rsgtImprintFromGTDataHash(x);
 	/* add x to the forest as new leaf, update roots list */
@@ -750,7 +766,7 @@ sigblkAddRecord(gtfile gf, const uchar *rec, const size_t len)
 			GTDataHash_free(t_del);
 			if(ret != 0) goto done;
 			if(gf->bKeepTreeHashes)
-				tlvWriteHash(gf, 0x0901, t);
+				tlvWriteHash(gf, 0x0903, t);
 		}
 	}
 	if(t != NULL) {

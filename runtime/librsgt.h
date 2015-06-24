@@ -118,12 +118,6 @@ struct rsgtstatefile {
 	/* after that, the hash value is contained within the file */
 };
 
-/* Flags and record types for TLV handling */
-#define RSGT_FLAG_NONCRIT 0x80
-#define RSGT_FLAG_FORWARD 0x40
-#define RSGT_FLAG_TLV16 0x20
-#define RSGT_TYPE_MASK 0x1f
-
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */
 #define RSGTE_FMT 2	/* data fromat error */
@@ -290,10 +284,11 @@ hashID2Alg(uint8_t hashID)
 }
 
 static inline uint16_t
-getIVLen(block_sig_t *bs)
+getIVLen(block_hdr_t *bh)
 {
-	return hashOutputLengthOctets(bs->hashID);
+	return hashOutputLengthOctets(bh->hashID);
 }
+
 static inline void
 rsgtSetTimestamper(gtctx ctx, char *timestamper)
 {
@@ -333,12 +328,14 @@ void rsgtimprintDel(imprint_t *imp);
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+void rsgt_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
-void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+void rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_HDR(FILE *sigfp, FILE *nsigfp);
 int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsgt_errctxInit(gterrctx_t *ectx);
 void rsgt_errctxExit(gterrctx_t *ectx);

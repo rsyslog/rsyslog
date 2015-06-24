@@ -375,7 +375,7 @@ rsksi_tlvDecodeHASH_ALGO(tlvrecord_t *rec, uint16_t *strtidx, uint8_t *hashAlg)
 	tlvrecord_t subrec;
 
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x00 && subrec.tlvlen == 1)) {
+	if(!(subrec.tlvtype == 0x01 && subrec.tlvlen == 1)) {
 		r = RSGTE_FMT;
 		goto done;
 	}
@@ -390,7 +390,7 @@ rsksi_tlvDecodeBLOCK_IV(tlvrecord_t *rec, uint16_t *strtidx, uint8_t **iv)
 	tlvrecord_t subrec;
 
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x01)) {
+	if(!(subrec.tlvtype == 0x02)) {
 		r = RSGTE_INVLTYP;
 		goto done;
 	}
@@ -406,7 +406,7 @@ rsksi_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
 	tlvrecord_t subrec;
 
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
+	if(!(subrec.tlvtype == 0x03)) { r = RSGTE_INVLTYP; goto done; }
 	imp->hashID = subrec.data[0];
 	if(subrec.tlvlen != 1 + hashOutputLengthOctetsKSI(imp->hashID)) {
 		r = RSGTE_LEN;
@@ -427,7 +427,7 @@ rsksi_tlvDecodeREC_COUNT(tlvrecord_t *rec, uint16_t *strtidx, uint64_t *cnt)
 	tlvrecord_t subrec;
 
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
+	if(!(subrec.tlvtype == 0x01 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
 	val = 0;
 	for(i = 0 ; i < subrec.tlvlen ; ++i) {
 		val = (val << 8) + subrec.data[i];
@@ -453,6 +453,28 @@ done:	return r;
 }
 
 static int
+rsksi_tlvDecodeBLOCK_HDR(tlvrecord_t *rec, block_hdr_t **blockhdr)
+{
+	int r = 1;
+	uint16_t strtidx = 0;
+	block_hdr_t *bh;
+	if((bh = calloc(1, sizeof(block_hdr_t))) == NULL) {
+		r = RSGTE_OOM;
+		goto done;
+	}
+	CHKr(rsksi_tlvDecodeHASH_ALGO(rec, &strtidx, &(bh->hashID)));
+	CHKr(rsksi_tlvDecodeBLOCK_IV(rec, &strtidx, &(bh->iv)));
+	CHKr(rsksi_tlvDecodeLAST_HASH(rec, &strtidx, &(bh->lastHash)));
+	if(strtidx != rec->tlvlen) {
+		r = RSGTE_LEN;
+		goto done;
+	}
+	*blockhdr = bh;
+	r = 0;
+done:	return r;
+}
+
+static int
 rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 {
 	int r = 1;
@@ -462,9 +484,6 @@ rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 		r = RSGTE_OOM;
 		goto done;
 	}
-	CHKr(rsksi_tlvDecodeHASH_ALGO(rec, &strtidx, &(bs->hashID)));
-	CHKr(rsksi_tlvDecodeBLOCK_IV(rec, &strtidx, &(bs->iv)));
-	CHKr(rsksi_tlvDecodeLAST_HASH(rec, &strtidx, &(bs->lastHash)));
 	CHKr(rsksi_tlvDecodeREC_COUNT(rec, &strtidx, &(bs->recCount)));
 	CHKr(rsksi_tlvDecodeSIG(rec, &strtidx, bs));
 	if(strtidx != rec->tlvlen) {
@@ -480,12 +499,16 @@ rsksi_tlvRecDecode(tlvrecord_t *rec, void *obj)
 {
 	int r = 1;
 	switch(rec->tlvtype) {
-		case 0x0900:
 		case 0x0901:
-			r = rsksi_tlvDecodeIMPRINT(rec, obj);
+			r = rsksi_tlvDecodeBLOCK_HDR(rec, obj);
 			if(r != 0) goto done;
 			break;
 		case 0x0902:
+		case 0x0903:
+			r = rsksi_tlvDecodeIMPRINT(rec, obj);
+			if(r != 0) goto done;
+			break;
+		case 0x0904:
 			r = rsksi_tlvDecodeBLOCK_SIG(rec, obj);
 			if(r != 0) goto done;
 			break;
@@ -503,7 +526,7 @@ rsksi_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	tlvrecord_t rec;
 
 	if((r = rsksi_tlvrd(fp, &rec, imp)) != 0) goto done;
-	if(rec.tlvtype != 0x0900) {
+	if(rec.tlvtype != 0x0902) {
 		r = RSGTE_MISS_REC_HASH;
 		rsksi_objfree(rec.tlvtype, *imp);
 		goto done;
@@ -521,7 +544,7 @@ rsksi_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	tlvrecord_t rec;
 
 	if((r = rsksi_tlvrd(fp, &rec, imp)) != 0) goto done;
-	if(rec.tlvtype != 0x0901) {
+	if(rec.tlvtype != 0x0903) {
 		r = RSGTE_MISS_TREE_HASH;
 		rsksi_objfree(rec.tlvtype, *imp);
 		goto done;
@@ -539,7 +562,7 @@ rsksi_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs, tlvrecord_t *rec)
 	int r;
 
 	if((r = rsksi_tlvrd(fp, rec, bs)) != 0) goto done;
-	if(rec->tlvtype != 0x0902) {
+	if(rec->tlvtype != 0x0904) {
 		r = RSGTE_MISS_BLOCKSIG;
 		rsksi_objfree(rec->tlvtype, *bs);
 		goto done;
@@ -598,16 +621,43 @@ rsksi_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
 static void
 rsksi_printREC_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsksi_printIMPRINT(fp, "[0x0900]Record hash: ",
+	rsksi_printIMPRINT(fp, "[0x0902]Record hash: ",
 		imp, verbose);
 }
 
 static void
 rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsksi_printIMPRINT(fp, "[0x0901]Tree hash..: ",
+	rsksi_printIMPRINT(fp, "[0x0903]Tree hash..: ",
 		imp, verbose);
 }
+
+/**
+ * Output a human-readable representation of a block_hdr_t
+ * to proviced file pointer. This function is mainly inteded for
+ * debugging purposes or dumping tlv files.
+ *
+ * @param[in] fp file pointer to send output to
+ * @param[in] bsig ponter to block_hdr_t to output
+ * @param[in] verbose if 0, abbreviate blob hexdump, else complete
+ */
+void
+rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose)
+ {
+	fprintf(fp, "[0x0901]Block Header Record:\n");
+ 	fprintf(fp, "\tPrevious Block Hash:\n");
+	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgNameKSI(bh->lastHash.hashID));
+ 	fprintf(fp, "\t   Hash.......: ");
+		outputHexBlob(fp, bh->lastHash.data, bh->lastHash.len, verbose);
+ 		fputc('\n', fp);
+	if(blobIsZero(bh->lastHash.data, bh->lastHash.len))
+ 		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
+	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgNameKSI(bh->hashID));
+ 	fprintf(fp, "\tIV............: ");
+		outputHexBlob(fp, bh->iv, getIVLenKSI(bh), verbose);
+ 		fputc('\n', fp);
+}
+
 
 /**
  * Output a human-readable representation of a block_sig_t
@@ -621,18 +671,7 @@ rsksi_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 void
 rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 {
-	fprintf(fp, "[0x0902]Block Signature Record:\n");
-	fprintf(fp, "\tPrevious Block Hash:\n");
-	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgNameKSI(bs->lastHash.hashID));
-	fprintf(fp, "\t   Hash.......: ");
-		outputHexBlob(fp, bs->lastHash.data, bs->lastHash.len, verbose);
-		fputc('\n', fp);
-	if(blobIsZero(bs->lastHash.data, bs->lastHash.len))
-		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
-	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgNameKSI(bs->hashID));
-	fprintf(fp, "\tIV............: ");
-		outputHexBlob(fp, bs->iv, getIVLenKSI(bs), verbose);
-		fputc('\n', fp);
+	fprintf(fp, "[0x0904]Block Signature Record:\n");
 	fprintf(fp, "\tRecord Count..: %llu\n", (long long unsigned) bs->recCount);
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
 	fprintf(fp, "\tSignature Len.: %u\n", (unsigned) bs->sig.der.len);
@@ -653,13 +692,16 @@ void
 rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 {
 	switch(tlvtype) {
-	case 0x0900:
-		rsksi_printREC_HASH(fp, obj, verbose);
-		break;
 	case 0x0901:
-		rsksi_printINT_HASH(fp, obj, verbose);
+		rsksi_printBLOCK_HDR(fp, obj, verbose);
 		break;
 	case 0x0902:
+		rsksi_printREC_HASH(fp, obj, verbose);
+		break;
+	case 0x0903:
+		rsksi_printINT_HASH(fp, obj, verbose);
+		break;
+	case 0x0904:
 		rsksi_printBLOCK_SIG(fp, obj, verbose);
 		break;
 	default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
@@ -677,13 +719,15 @@ void
 rsksi_objfree(uint16_t tlvtype, void *obj)
 {
 	switch(tlvtype) {
-	case 0x0900:
 	case 0x0901:
-		free(((imprint_t*)obj)->data);
+		free(((block_hdr_t*)obj)->iv);
+		free(((block_hdr_t*)obj)->lastHash.data);
 		break;
 	case 0x0902:
-		free(((block_sig_t*)obj)->iv);
-		free(((block_sig_t*)obj)->lastHash.data);
+	case 0x0903:
+		free(((imprint_t*)obj)->data);
+		break;
+	case 0x0904:
 		free(((block_sig_t*)obj)->sig.der.data);
 		break;
 	default:fprintf(stderr, "rsksi_objfree: unknown tlv record %4.4x\n",
@@ -717,12 +761,13 @@ rsksi_objfree(uint16_t tlvtype, void *obj)
  * @returns 0 if ok, something else otherwise
  */
 int
-rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
+rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh,
                     uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes)
 {
 	int r;
 	uint64_t nRecs = 0;
 	uint8_t bDone = 0;
+	uint8_t bHdr = 0;
 	off_t rewindPos = 0;
 	void *obj;
 	tlvrecord_t rec;
@@ -732,25 +777,31 @@ rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 	*bHasRecHashes = 0;
 	*bHasIntermedHashes = 0;
 	*bs = NULL;
+	*bh = NULL;
 
 	while(!bDone) { /* we will err out on EOF */
 		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) goto done;
+		bHdr = 0;
 		switch(rec.tlvtype) {
-		case 0x0900:
+		case 0x0901:
+			*bh = (block_hdr_t*) obj;
+			bHdr = 1;
+			break;
+		case 0x0902:
 			++nRecs;
 			*bHasRecHashes = 1;
 			break;
-		case 0x0901:
+		case 0x0903:
 			*bHasIntermedHashes = 1;
 			break;
-		case 0x0902:
+		case 0x0904:
 			*bs = (block_sig_t*) obj;
 			bDone = 1;
 			break;
 		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
 		}
-		if(!bDone)
+		if(!bDone && !bHdr)
 			rsksi_objfree(rec.tlvtype, obj);
 	}
 
@@ -816,18 +867,18 @@ done:	return ksi;
 }
 
 void
-rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
+rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
 {
-	ksi->hashAlg = hashID2AlgKSI(bs->hashID);
+	ksi->hashAlg = hashID2AlgKSI(bh->hashID);
 	ksi->bKeepRecordHashes = bHasRecHashes;
 	ksi->bKeepTreeHashes = bHasIntermedHashes;
 	free(ksi->IV);
-	ksi->IV = malloc(getIVLenKSI(bs));
-	memcpy(ksi->IV, bs->iv, getIVLenKSI(bs));
+	ksi->IV = malloc(getIVLenKSI(bh));
+	memcpy(ksi->IV, bh->iv, getIVLenKSI(bh));
 	free(ksi->blkStrtHash);
-	ksi->lenBlkStrtHash = bs->lastHash.len;
+	ksi->lenBlkStrtHash = bh->lastHash.len;
 	ksi->blkStrtHash = malloc(ksi->lenBlkStrtHash);
-	memcpy(ksi->blkStrtHash, bs->lastHash.data, ksi->lenBlkStrtHash);
+	memcpy(ksi->blkStrtHash, bh->lastHash.data, ksi->lenBlkStrtHash);
 }
 
 static int
@@ -860,7 +911,7 @@ rsksi_vrfy_chkRecHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(imp != NULL)
-		rsksi_objfree(0x0900, imp);
+		rsksi_objfree(0x0902, imp);
 	return r;
 }
 
@@ -895,7 +946,7 @@ rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(imp != NULL)
-		rsksi_objfree(0x0901, imp);
+		rsksi_objfree(0x0903, imp);
 	return r;
 }
 
@@ -1084,6 +1135,24 @@ done:
 	return r;
 }
 
+/* Verify the existance of the header. 
+ */
+int
+verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp)
+{
+	int r;
+	tlvrecord_t rec;
+	block_hdr_t *bh = NULL;
+	if ((r = rsksi_tlvrd(sigfp, &rec, &bh)) != 0) goto done;
+	if (rec.tlvtype != 0x0901) {
+		r = RSGTE_MISS_BLOCKSIG;
+		goto done;
+	}
+	if (nsigfp != NULL)
+		if ((r = rsksi_tlvwrite(nsigfp, &rec)) != 0) goto done; 
+done:	rsksi_objfree(rec.tlvtype, bh);
+	return r;
+}
 
 /* verify the root hash. This also means we need to compute the
  * Merkle tree root for the current block.
@@ -1158,7 +1227,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(file_bs != NULL)
-		rsksi_objfree(0x0902, file_bs);
+		rsksi_objfree(0x0904, file_bs);
 	if(r != 0)
 		reportError(r, ectx);
 	if(ksiHash != NULL)

@@ -28,8 +28,9 @@ typedef enum KSI_HashAlgorithm_en KSI_HashAlgorithm;
  * cases ;) [and 64 is not really a waste of memory, so we do not even
  * try to work with reallocs and such...]
  */
-#define MAX_ROOTS 64
+/*#define MAX_ROOTS 64
 #define LOGSIGHDR "LOGSIG10"
+*/ 
 
 /* context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in ksifile.
@@ -118,12 +119,6 @@ struct rsksistatefile {
 	uint8_t lenHash;
 	/* after that, the hash value is contained within the file */
 };
-
-/* Flags and record types for TLV handling */
-#define RSGT_FLAG_NONCRIT 0x80
-#define RSGT_FLAG_FORWARD 0x40
-#define RSGT_FLAG_TLV16 0x20
-#define RSGT_TYPE_MASK 0x1f
 
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */
@@ -338,9 +333,9 @@ hashID2AlgKSI(uint8_t hashID)
 	}
 }
 static inline uint16_t
-getIVLenKSI(block_sig_t *bs)
+getIVLenKSI(block_hdr_t *bh)
 {
-	return hashOutputLengthOctetsKSI(bs->hashID);
+	return hashOutputLengthOctetsKSI(bh->hashID);
 }
 static inline void
 rsksiSetBlockSizeLimit(rsksictx ctx, uint64_t limit)
@@ -376,12 +371,14 @@ void rsksiimprintDel(imprint_t *imp);
 int rsksi_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+void rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsksi_chkFileHdr(FILE *fp, char *expect);
 ksifile rsksi_vrfyConstruct_gf(void);
-void rsksi_vrfyBlkInit(ksifile ksi, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+void rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
+int verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp);
 int verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, ksierrctx_t *ectx);
 void rsksi_errctxInit(ksierrctx_t *ectx);
 void rsksi_errctxExit(ksierrctx_t *ectx);

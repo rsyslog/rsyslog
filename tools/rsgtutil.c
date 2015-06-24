@@ -45,7 +45,7 @@
 
 typedef unsigned char uchar;
 
-static enum { MD_DUMP, MD_SHOW_SIGBLK_PARAMS,
+static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND
 } mode = MD_DUMP;
 static enum { API_GT, API_KSI } apimode = API_GT;
@@ -95,6 +95,7 @@ showSigblkParams(char *name)
 {
 	FILE *fp;
 	block_sig_t *bs;
+	block_hdr_t *bh;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint64_t blkCnt = 0;
 	int r = -1;
@@ -107,13 +108,14 @@ showSigblkParams(char *name)
 			goto err;
 		}
 	}
-	if((r = rsgt_chkFileHdr(fp, "LOGSIG10")) != 0) goto err;
+	if((r = rsgt_chkFileHdr(fp, "LOGSIG11")) != 0) goto err;
 
 	while(1) { /* we will err out on EOF */
-		if((r = rsgt_getBlockParams(fp, 0, &bs, &bHasRecHashes,
+		if((r = rsgt_getBlockParams(fp, 0, &bs, &bh, &bHasRecHashes,
 				        &bHasIntermedHashes)) != 0)
 			goto err;
 		++blkCnt;
+		rsgt_printBLOCK_HDR(stdout, bh, verbose);
 		rsgt_printBLOCK_SIG(stdout, bs, verbose);
 		printf("\t***META INFORMATION:\n");
 		printf("\tBlock Nbr in File...: %llu\n", (long long unsigned) blkCnt);
@@ -173,6 +175,7 @@ showSigblkParamsKSI(char *name)
 {
 	FILE *fp;
 	block_sig_t *bs;
+	block_hdr_t *bh;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint64_t blkCnt = 0;
 	int r = -1;
@@ -185,13 +188,14 @@ showSigblkParamsKSI(char *name)
 			goto err;
 		}
 	}
-	if((r = rsksi_chkFileHdr(fp, "LOGSIG10")) != 0) goto err;
+	if((r = rsksi_chkFileHdr(fp, "LOGSIG11")) != 0) goto err;
 
 	while(1) { /* we will err out on EOF */
-		if((r = rsksi_getBlockParams(fp, 0, &bs, &bHasRecHashes,
+		if((r = rsksi_getBlockParams(fp, 0, &bs, &bh, &bHasRecHashes,
 				        &bHasIntermedHashes)) != 0)
 			goto err;
 		++blkCnt;
+		rsksi_printBLOCK_HDR(stdout, bh, verbose);
 		rsksi_printBLOCK_SIG(stdout, bs, verbose);
 		printf("\t***META INFORMATION:\n");
 		printf("\tBlock Nbr in File...: %llu\n", (long long unsigned) blkCnt);
@@ -209,6 +213,40 @@ err:
 #endif
 
 #ifdef ENABLEGT
+static void
+detectFileType(char *name)
+{
+	FILE *fp;
+	char *typeName;
+	char hdr[9];
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10"))
+		typeName = "Log Signature File, Version 10 (deprecated)";
+	else if(!strcmp(hdr, "LOGSIG11"))
+		typeName = "Log Signature File, Version 11";
+	else if(!strcmp(hdr, "GTSTAT10"))
+		typeName = "rsyslog GuardTime Signature State File, Version 10";
+	else
+		typeName = "unknown";
+
+	printf("%s: %s [%s]\n", name, hdr, typeName);
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
+}
+
 static inline int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
@@ -254,6 +292,7 @@ static int
 verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	block_sig_t *bs = NULL;
+	block_hdr_t *bh = NULL;
 	gtfile gf;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
@@ -268,9 +307,13 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
 
-	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG10")) != 0) goto done;
+	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG11")) != 0) {
+		if (debug)
+			fprintf(stderr, "error %d in rsgt_chkFileHdr\n", r); 
+		goto done;
+	}
 	if(mode == MD_EXTEND) {
-		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
+		if(fwrite("LOGSIG11", 8, 1, nsigfp) != 1) {
 			perror(nsigfname);
 			r = RSGTE_IO;
 			goto done;
@@ -289,8 +332,10 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
 			if(bs != NULL)
-				rsgt_objfree(0x0902, bs);
-			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
+				rsgt_objfree(0x0904, bs);
+			if (bh != NULL)
+				rsgt_objfree(0x0901, bh);
+			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0) {
 				if(ectx.blkNum == 0) {
 					fprintf(stderr, "EOF before finding any signature block - "
@@ -302,7 +347,10 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 				}
 				goto done;
 			}
-			rsgt_vrfyBlkInit(gf, bs, bHasRecHashes, bHasIntermedHashes);
+			/* Copy block header */
+			if ((r = verifyBLOCK_HDR(sigfp, nsigfp)) != 0) goto done;
+
+			rsgt_vrfyBlkInit(gf, bh, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;
 		}
@@ -404,6 +452,40 @@ err:
 #endif
 
 #ifdef ENABLEKSI
+static void
+detectFileTypeKSI(char *name)
+{
+	FILE *fp;
+	char *typeName;
+	char hdr[9];
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10"))
+		typeName = "Log Signature File, Version 10 (deprecated)";
+	else if(!strcmp(hdr, "LOGSIG11"))
+		typeName = "Log Signature File, Version 11";
+	else if(!strcmp(hdr, "GTSTAT10"))
+		typeName = "rsyslog GuardTime Signature State File, Version 10";
+	else
+		typeName = "unknown";
+
+	printf("%s: %s [%s]\n", name, hdr, typeName);
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+}
+
 static inline int
 doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 		/*block_sig_t *bs, */ ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
@@ -449,6 +531,7 @@ static int
 verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	block_sig_t *bs = NULL;
+	block_hdr_t *bh = NULL;
 	ksifile ksi;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
@@ -462,12 +545,14 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
-	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG10")) != 0) {
-		fprintf(stderr, "error %d: rsksi_chkFileHdr", r); 
+
+	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11")) != 0) {
+		if (debug)
+			fprintf(stderr, "error %d in rsksi_chkFileHdr\n", r); 
 		goto done;
 	}
 	if(mode == MD_EXTEND) {
-		if(fwrite("LOGSIG10", 8, 1, nsigfp) != 1) {
+		if(fwrite("LOGSIG11", 8, 1, nsigfp) != 1) {
 			perror(nsigfname);
 			r = RSGTE_IO;
 			goto done;
@@ -486,8 +571,10 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
 			if(bs != NULL)
-				rsksi_objfree(0x0902, bs);
-			if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bHasRecHashes,
+				rsksi_objfree(0x0904, bs);
+			if (bh != NULL)
+				rsksi_objfree(0x0901, bh);
+			if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0) {
 				if(ectx.blkNum == 0) {
 					fprintf(stderr, "Error %d before finding any signature block - "
@@ -499,7 +586,10 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 				}
 				goto done;
 			}
-			rsksi_vrfyBlkInit(ksi, bs, bHasRecHashes, bHasIntermedHashes);
+			/* Copy block header */
+			if ((r = verifyBLOCK_HDRKSI(sigfp, nsigfp)) != 0) goto done;
+
+			rsksi_vrfyBlkInit(ksi, bh, bHasRecHashes, bHasIntermedHashes);
 			ectx.recNum = 0;
 			++ectx.blkNum;
 		}
@@ -699,6 +789,18 @@ processFile(char *name)
 	char errbuf[4096];
 
 	switch(mode) {
+	case MD_DETECT_FILE_TYPE:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Detect Filetype\n"); 
+#ifdef ENABLEGT
+		if (apimode == API_GT)
+			detectFileType(name);
+#endif
+#ifdef ENABLEKSI
+		if (apimode == API_KSI)
+			detectFileTypeKSI(name);
+#endif
+		break;
 	case MD_DUMP:
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
@@ -745,6 +847,7 @@ static struct option long_options[] =
 	{"verbose", no_argument, NULL, 'v'},
 	{"debug", no_argument, NULL, 'd'},
 	{"version", no_argument, NULL, 'V'},
+	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
 	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
 	{"extend", no_argument, NULL, 'e'},
@@ -765,6 +868,7 @@ rsgtutil_usage(void)
 			"\t-t, --verify \t\t\t Verify operations mode.\n"
 			"\t-e, --extend \t\t\t Extends the RFC3161 signatures.\n"
 			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
+			"\t-T, --detect-file-type \t Show Type of signature file.\n"
 			"\t-V, --Version \t\t\t Print utility version\n"
 			"\t\tOptional parameters\n"
 			"\t-a <GT|KSI>, --api  <GT|KSI> \t Set which API to use.\n"
@@ -784,7 +888,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "aBdDeHTPstvV", long_options, NULL);
+		opt = getopt_long(argc, argv, "aBdDeHPstTvV", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -836,6 +940,9 @@ main(int argc, char *argv[])
 #ifdef ENABLEKSI
 			rsksi_read_puburl = optarg;
 #endif
+			break;
+		case 'T':
+			mode = MD_DETECT_FILE_TYPE;
 			break;
 		case 't':
 			mode = MD_VERIFY;
