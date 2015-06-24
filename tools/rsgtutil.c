@@ -668,21 +668,12 @@ verify(char *name, char *errbuf)
 	}
 
 verifyGT:
-	if (apimode == API_GT) {
 #ifdef ENABLEGT
-		iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
+	iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
-		iSuccess = 0; 
-		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime API, rsyslog need to be configured with --enable-guardtime.\n"); 
+	iSuccess = 0; 
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime library, rsyslog need to be configured with --enable-guardtime.\n"); 
 #endif
-	} else if (apimode == API_KSI) {
-#ifdef ENABLEKSI
-		iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
-#else
-		iSuccess = 0; 
-		sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
-#endif
-	}
 	goto done; 
 
 verifyKSI:
@@ -690,7 +681,7 @@ verifyKSI:
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
 	iSuccess = 0; 
-	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI API, rsyslog need to be configured with --enable-gt-ksi.\n"); 
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
 	goto done; 
 
