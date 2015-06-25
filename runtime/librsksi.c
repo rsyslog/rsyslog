@@ -355,7 +355,7 @@ tlvWriteBlockHdrKSI(ksifile ksi) {
 	int r;
 	tlvlen  = 2 + 1 /* hash algo TLV */ +
 	 	  2 + hashOutputLengthOctetsKSI(ksi->hashAlg) /* iv */ +
-		  2 + 1 + ksi->lenBlkStrtHash /* last hash */;
+		  2 + 1 + ksi->x_prev->len /* last hash */;
 	/* write top-level TLV object block-hdr */
 	r = tlv16WriteKSI(ksi, 0x00, 0x0901, tlvlen);
 	/* and now write the children */
@@ -370,11 +370,11 @@ tlvWriteBlockHdrKSI(ksifile ksi) {
 	r = tlvbufAddOctetString(ksi, ksi->IV, hashOutputLengthOctetsKSI(ksi->hashAlg));
 	if(r != 0) goto done;
 	/* last-hash */
-	r = tlv8WriteKSI(ksi, 0x00, 0x03, ksi->lenBlkStrtHash+1);
+	r = tlv8WriteKSI(ksi, 0x00, 0x03, ksi->x_prev->len + 1);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg));
+	r = tlvbufAddOctet(ksi, ksi->x_prev->hashID);
 	if(r != 0) goto done;
-	r = tlvbufAddOctetString(ksi, ksi->blkStrtHash, ksi->lenBlkStrtHash);
+	r = tlvbufAddOctetString(ksi, ksi->x_prev->data, ksi->x_prev->len);
 	if(r != 0) goto done;
 done:	return r;
 }
@@ -429,19 +429,31 @@ readStateFile(ksifile ksi)
 	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
 	if(strncmp(sf.hdr, "KSISTAT10", 9)) goto err;
 
-	ksi->lenBlkStrtHash = sf.lenHash;
-	ksi->blkStrtHash = calloc(1, ksi->lenBlkStrtHash);
-	if(read(fd, ksi->blkStrtHash, ksi->lenBlkStrtHash)
-		!= ksi->lenBlkStrtHash) {
-		free(ksi->blkStrtHash);
+	ksi->x_prev = malloc(sizeof(imprint_t));
+	if (ksi->x_prev == NULL) goto err;
+	ksi->x_prev->len = sf.lenHash;
+	ksi->x_prev->hashID = sf.hashID;
+	ksi->x_prev->data = calloc(1, ksi->x_prev->len);
+	if (ksi->x_prev->data == NULL) {
+		free(ksi->x_prev);
+		ksi->x_prev = NULL;
+	}
+
+	if(read(fd, ksi->x_prev->data, ksi->x_prev->len)
+		!= ksi->x_prev->len) {
+		rsksiimprintDel(ksi->x_prev);
+		ksi->x_prev = NULL;
 		goto err;
 	}
 	close(fd);
 return;
 
 err:
-	ksi->lenBlkStrtHash = hashOutputLengthOctetsKSI(ksi->hashAlg);
-	ksi->blkStrtHash = calloc(1, ksi->lenBlkStrtHash);
+
+	ksi->x_prev = malloc(sizeof(imprint_t));
+	ksi->x_prev->hashID = hashIdentifierKSI(ksi->hashAlg);
+	ksi->x_prev->len = hashOutputLengthOctetsKSI(ksi->hashAlg);
+	ksi->x_prev->data = calloc(1, ksi->x_prev->len);
 }
 
 /* persist all information that we need to re-open and append
@@ -629,7 +641,6 @@ rsksifileDestruct(ksifile ksi)
 	free(ksi->sigfilename);
 	free(ksi->statefilename);
 	free(ksi->IV);
-	free(ksi->blkStrtHash);
 	rsksiimprintDel(ksi->x_prev);
 	free(ksi);
 done:	return r;
@@ -676,19 +687,12 @@ bufAddIV(ksifile ksi, uchar *buf, size_t *len)
 static inline void
 bufAddImprint(ksifile ksi, uchar *buf, size_t *len, imprint_t *imp)
 {
-	if(imp == NULL) {
-	/* TODO: how to get the REAL HASH ID? --> add field? */
-		buf[*len] = hashIdentifierKSI(ksi->hashAlg);
-		++(*len);
-		memcpy(buf+*len, ksi->blkStrtHash, ksi->lenBlkStrtHash);
-		*len += ksi->lenBlkStrtHash;
-	} else {
-		buf[*len] = imp->hashID;
-		++(*len);
-		memcpy(buf+*len, imp->data, imp->len);
-		*len += imp->len;
-	}
+	buf[*len] = imp->hashID;
+	++(*len);
+	memcpy(buf+*len, imp->data, imp->len);
+	*len += imp->len;
 }
+
 /* concat: add hash to buffer */
 static inline void
 bufAddHash(ksifile ksi, uchar *buf, size_t *len, KSI_DataHash *hash)
@@ -908,10 +912,6 @@ sigblkFinishKSI(ksifile ksi)
 	if((ret = signIt(ksi, root)) != 0) goto done;
 
 	KSI_DataHash_free(root);
-	free(ksi->blkStrtHash);
-	ksi->lenBlkStrtHash = ksi->x_prev->len;
-	ksi->blkStrtHash = malloc(ksi->lenBlkStrtHash);
-	memcpy(ksi->blkStrtHash, ksi->x_prev->data, ksi->x_prev->len);
 done:
 	ksi->bInBlk = 0;
 	return ret;

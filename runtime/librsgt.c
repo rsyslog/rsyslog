@@ -338,7 +338,7 @@ tlvWriteBlockHdr(gtfile gf) {
 	int r;
 	tlvlen  = 2 + 1 /* hash algo TLV */ +
 	 	  2 + hashOutputLengthOctets(gf->hashAlg) /* iv */ +
-		  2 + 1 + gf->lenBlkStrtHash /* last hash */;
+		  2 + 1 + gf->x_prev->len /* last hash */;
 	/* write top-level TLV object block-hdr */
 	r = tlv16Write(gf, 0x00, 0x0901, tlvlen);
 	/* and now write the children */
@@ -353,11 +353,11 @@ tlvWriteBlockHdr(gtfile gf) {
 	r = tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg));
 	if(r != 0) goto done;
 	/* last-hash */
-	r = tlv8Write(gf, 0x00, 0x03, gf->lenBlkStrtHash+1);
+	r = tlv8Write(gf, 0x00, 0x03, gf->x_prev->len + 1);
 	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
+	r = tlvbufAddOctet(gf, gf->x_prev->hashID);
 	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, gf->blkStrtHash, gf->lenBlkStrtHash);
+	r = tlvbufAddOctetString(gf, gf->x_prev->data, gf->x_prev->len);
 	if(r != 0) goto done;
 done:	return r;
 }
@@ -410,19 +410,31 @@ readStateFile(gtfile gf)
 	if(read(fd, &sf, sizeof(sf)) != sizeof(sf)) goto err;
 	if(strncmp(sf.hdr, "GTSTAT10", 8)) goto err;
 
-	gf->lenBlkStrtHash = sf.lenHash;
-	gf->blkStrtHash = calloc(1, gf->lenBlkStrtHash);
-	if(read(fd, gf->blkStrtHash, gf->lenBlkStrtHash)
-		!= gf->lenBlkStrtHash) {
-		free(gf->blkStrtHash);
+	gf->x_prev = malloc(sizeof(imprint_t));
+	if (gf->x_prev == NULL) goto err;
+	gf->x_prev->len = sf.lenHash;
+	gf->x_prev->hashID = sf.hashID;
+	gf->x_prev->data = calloc(1, gf->x_prev->len);
+	if (gf->x_prev->data == NULL) {
+		free(gf->x_prev);
+		gf->x_prev = NULL;
+	}
+
+	if(read(fd, gf->x_prev->data, gf->x_prev->len)
+		!= gf->x_prev->len) {
+		rsgtimprintDel(gf->x_prev);
+		gf->x_prev = NULL;
 		goto err;
 	}
 	close(fd);
 return;
 
 err:
-	gf->lenBlkStrtHash = hashOutputLengthOctets(gf->hashAlg);
-	gf->blkStrtHash = calloc(1, gf->lenBlkStrtHash);
+
+	gf->x_prev = malloc(sizeof(imprint_t));
+	gf->x_prev->hashID = hashIdentifier(gf->hashAlg);
+	gf->x_prev->len = hashOutputLengthOctets(gf->hashAlg);
+	gf->x_prev->data = calloc(1, gf->x_prev->len);
 }
 
 /* persist all information that we need to re-open and append
@@ -597,7 +609,6 @@ rsgtfileDestruct(gtfile gf)
 	free(gf->sigfilename);
 	free(gf->statefilename);
 	free(gf->IV);
-	free(gf->blkStrtHash);
 	rsgtimprintDel(gf->x_prev);
 	free(gf);
 done:	return r;
@@ -643,19 +654,12 @@ bufAddIV(gtfile gf, uchar *buf, size_t *len)
 static inline void
 bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
 {
-	if(imp == NULL) {
-	/* TODO: how to get the REAL HASH ID? --> add field? */
-		buf[*len] = hashIdentifier(gf->hashAlg);
-		++(*len);
-		memcpy(buf+*len, gf->blkStrtHash, gf->lenBlkStrtHash);
-		*len += gf->lenBlkStrtHash;
-	} else {
-		buf[*len] = imp->hashID;
-		++(*len);
-		memcpy(buf+*len, imp->data, imp->len);
-		*len += imp->len;
-	}
+	buf[*len] = imp->hashID;
+	++(*len);
+	memcpy(buf+*len, imp->data, imp->len);
+	*len += imp->len;
 }
+
 /* concat: add hash to buffer */
 static inline void
 bufAddHash(gtfile gf, uchar *buf, size_t *len, GTDataHash *hash)
@@ -857,10 +861,6 @@ sigblkFinish(gtfile gf)
 	if((ret = timestampIt(gf, root)) != 0) goto done;
 
 	GTDataHash_free(root);
-	free(gf->blkStrtHash);
-	gf->lenBlkStrtHash = gf->x_prev->len;
-	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	memcpy(gf->blkStrtHash, gf->x_prev->data, gf->x_prev->len);
 done:
 	gf->bInBlk = 0;
 	return ret;

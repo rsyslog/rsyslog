@@ -63,8 +63,6 @@ struct gtfile_s {
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
-	unsigned char *blkStrtHash; /* last hash from previous block */
-	uint16_t lenBlkStrtHash;
 	uint64_t nRecords;  /* current number of records in current block */
 	uint64_t bInBlk;    /* are we currently inside a blk --> need to finish on close */
 	int8_t nRoots;

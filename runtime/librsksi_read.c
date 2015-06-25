@@ -875,10 +875,11 @@ rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t b
 	free(ksi->IV);
 	ksi->IV = malloc(getIVLenKSI(bh));
 	memcpy(ksi->IV, bh->iv, getIVLenKSI(bh));
-	free(ksi->blkStrtHash);
-	ksi->lenBlkStrtHash = bh->lastHash.len;
-	ksi->blkStrtHash = malloc(ksi->lenBlkStrtHash);
-	memcpy(ksi->blkStrtHash, bh->lastHash.data, ksi->lenBlkStrtHash);
+	ksi->x_prev = malloc(sizeof(imprint_t));
+	ksi->x_prev->len=bh->lastHash.len;
+	ksi->x_prev->hashID = bh->lastHash.hashID;
+	ksi->x_prev->data = malloc(ksi->x_prev->len);
+	memcpy(ksi->x_prev->data, bh->lastHash.data, ksi->x_prev->len);
 }
 
 static int
@@ -1044,8 +1045,6 @@ verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 		}
 	}
 
-	free(ksi->blkStrtHash);
-	ksi->blkStrtHash = NULL;
 	*pRoot = root;
 	r = 0;
 done:

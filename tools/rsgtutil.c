@@ -299,9 +299,9 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 	int r = 0;
 	int bInitDone = 0;
 	gterrctx_t ectx;
+	rsgt_errctxInit(&ectx);
 
 	rsgtInit("rsyslog rsgtutil " VERSION);
-	rsgt_errctxInit(&ectx);
 	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
@@ -538,9 +538,9 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	int r = 0;
 	int bInitDone = 0;
 	ksierrctx_t ectx;
+	rsksi_errctxInit(&ectx);
 
 	rsksiInit("rsyslog rsksiutil " VERSION);
-	rsksi_errctxInit(&ectx);
 	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;

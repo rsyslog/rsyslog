@@ -875,10 +875,11 @@ rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHas
 	free(gf->IV);
 	gf->IV = malloc(getIVLen(bh));
 	memcpy(gf->IV, bh->iv, getIVLen(bh));
-	free(gf->blkStrtHash);
-	gf->lenBlkStrtHash = bh->lastHash.len;
-	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	memcpy(gf->blkStrtHash, bh->lastHash.data, gf->lenBlkStrtHash);
+	gf->x_prev = malloc(sizeof(imprint_t));
+	gf->x_prev->len=bh->lastHash.len;
+	gf->x_prev->hashID = bh->lastHash.hashID;
+	gf->x_prev->data = malloc(gf->x_prev->len);
+	memcpy(gf->x_prev->data, bh->lastHash.data, gf->x_prev->len);
 }
 
 static int
@@ -1040,8 +1041,6 @@ verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 		}
 	}
 
-	free(gf->blkStrtHash);
-	gf->blkStrtHash = NULL;
 	*pRoot = root;
 	r = 0;
 done:
