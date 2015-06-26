@@ -1,6 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
 - build system: re-enable use of "make distcheck"
+- add new signature provider for Kesless Signature Infrastructure (KSI)
+  This has also been added to existing tooling; KSI is kind of v2 of
+  the Guardtime functionality and has been added in the appropriate
+  places.
 - bugfix imfile: regex multiline mode ignored escapeLF option
   Thanks to Ciprian Hacman for reporting the problem
   closes https://github.com/rsyslog/rsyslog/issues/370
