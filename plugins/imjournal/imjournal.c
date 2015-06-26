@@ -176,6 +176,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 {
 	struct syslogTime st;
 	msg_t *pMsg;
+	size_t len;
 	DEFiRet;
 
 	assert(msg != NULL);
@@ -189,8 +190,10 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
-	parser.SanitizeMsg(pMsg);
+	len = strlen((char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg, len);
+	if(len > 0)
+		parser.SanitizeMsg(pMsg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
