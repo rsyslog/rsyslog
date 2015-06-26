@@ -60,6 +60,8 @@ typedef unsigned char uchar;
 #define VERSION "no-version"
 #endif
 
+int RSGT_FLAG_TLV16_RUNTIME = RSGT_FLAG_TLV16;
+int RSGT_FLAG_NONCRIT_RUNTIME = RSGT_FLAG_NONCRIT; 
 
 static void
 reportErr(gtctx ctx, char *errmsg)
@@ -282,26 +284,26 @@ done:	return r;
 }
 
 
-int
+static int
 tlv8Write(gtfile gf, int flags, int tlvtype, int len)
 {
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
 	assert((tlvtype & RSGT_TYPE_MASK) == tlvtype);
-	r = tlvbufAddOctet(gf, (flags & ~RSGT_FLAG_TLV16) | tlvtype);
+	r = tlvbufAddOctet(gf, (flags & ~RSGT_FLAG_TLV16_RUNTIME) | tlvtype);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(gf, len & 0xff);
 done:	return r;
 } 
 
-int
+static int
 tlv16Write(gtfile gf, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
 	assert((tlvtype >> 8 & RSGT_TYPE_MASK) == (tlvtype >> 8));
-	typ = ((flags | RSGT_FLAG_TLV16) << 8) | tlvtype;
+	typ = ((flags | RSGT_FLAG_TLV16_RUNTIME) << 8) | tlvtype;
 	r = tlvbufAddOctet(gf, typ >> 8);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(gf, typ & 0xff);

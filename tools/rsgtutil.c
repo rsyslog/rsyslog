@@ -46,7 +46,7 @@
 typedef unsigned char uchar;
 
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
-              MD_VERIFY, MD_EXTEND
+              MD_VERIFY, MD_EXTEND, MD_CONVERT
 } mode = MD_DUMP;
 static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
@@ -57,7 +57,7 @@ static void
 dumpFile(char *name)
 {
 	FILE *fp;
-	uchar hdr[9];
+	char hdr[9];
 	void *obj;
 	tlvrecord_t rec;
 	int r = -1;
@@ -71,8 +71,14 @@ dumpFile(char *name)
 			goto err;
 		}
 	}
-	if((r = rsgt_tlvrdHeader(fp, hdr)) != 0) goto err;
-	printf("File Header: '%s'\n", hdr);
+	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10"))
+		printf("File Header: Version 10 (deprecated) - conversion needed.\n");
+	else if(!strcmp(hdr, "LOGSIG11"))
+		printf("File Header: Version 11\n");
+	else
+		printf("File Header: '%s'\n", hdr);
+
 	while(1) { /* we will err out on EOF */
 		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) {
 			if(feof(fp))
@@ -87,7 +93,8 @@ dumpFile(char *name)
 	if(fp != stdin)
 		fclose(fp);
 	return;
-err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
+err:	
+	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static void
@@ -130,6 +137,97 @@ err:
 	if(r != RSGTE_EOF)
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
+
+static void
+convertFile(char *name)
+{
+	FILE *oldsigfp = NULL, *newsigfp = NULL;
+	char hdr[9];
+	int r = -1;
+	char newsigfname[4096];
+	char oldsigfname[4096];
+	
+	if(!strcmp(name, "-"))
+		oldsigfp = stdin;
+	else {
+		printf("Processing file %s:\n", name);
+		if((oldsigfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsgt_tlvrdHeader(oldsigfp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10")) {
+		printf("Found Signature File with Version 10 - starting conversion.\n");
+		snprintf(newsigfname, sizeof(newsigfname), "%s.LOGSIG11", name);
+		snprintf(oldsigfname, sizeof(oldsigfname), "%s.LOGSIG10", name);
+		if((newsigfp = fopen(newsigfname, "w")) == NULL) {
+			perror(newsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+		else {
+			/* Write FileHeader first */
+			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
+		}
+
+		if ((r = rsgt_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
+			goto err;
+		else {
+			/* Delete OLDFILE if there is one*/
+			if(unlink(oldsigfname) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing old file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			/* Copy main sigfile to oldfile */
+			if(link(name, oldsigfname) != 0) {
+				perror("Error moving old file");
+				r = RSGTE_IO;
+				goto err;
+			}
+
+			/* Delete current sigfile*/
+			if(unlink(name) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing old file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			/* Copy new sigfile to main sigfile */
+			if(link(newsigfname, name) != 0) {
+				perror("Error moving new file");
+				r = RSGTE_IO;
+				goto err;
+			}
+
+			/* Delete temporary new sigfile*/
+			if(unlink(newsigfname) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing new file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			
+			printf("File %s was converted to Version 11.\n", name);
+		}
+	}
+	else
+		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
+
+	if(oldsigfp != stdin)
+		fclose(oldsigfp);
+	if (newsigfp != NULL)	
+		fclose(newsigfp); 
+	return;
+err:	
+	fprintf(stderr, "error %d (%s) converting file %s\n", r, RSGTE2String(r), name);
+}
+
 #endif
 
 #ifdef ENABLEKSI
@@ -137,7 +235,7 @@ static void
 dumpFileKSI(char *name)
 {
 	FILE *fp;
-	uchar hdr[9];
+	char hdr[9];
 	void *obj;
 	tlvrecord_t rec;
 	int r = -1;
@@ -151,8 +249,13 @@ dumpFileKSI(char *name)
 			goto err;
 		}
 	}
-	if((r = rsksi_tlvrdHeader(fp, hdr)) != 0) goto err;
-	printf("File Header: '%s'\n", hdr);
+	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10"))
+		printf("File Header: Version 10 (deprecated) - conversion needed.\n");
+	else if(!strcmp(hdr, "LOGSIG11"))
+		printf("File Header: Version 11\n");
+	else
+		printf("File Header: '%s'\n", hdr);
 	while(1) { /* we will err out on EOF */
 		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) {
 			if(feof(fp))
@@ -210,6 +313,38 @@ err:
 	if(r != RSGTE_EOF)
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
 }
+
+static void
+convertFileKSI(char *name)
+{
+	FILE *fp;
+	char hdr[9];
+	int r = -1;
+	
+	if(!strcmp(name, "-"))
+		fp = stdin;
+	else {
+		printf("Processing file %s:\n", name);
+		if((fp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+	}
+	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if(!strcmp(hdr, "LOGSIG10")) {
+		printf("Found Signature File with Version 10 - starting conversion.\n");
+		/* TODO CONVERT FILE!!!!! */
+	}
+	else
+		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
+
+	if(fp != stdin)
+		fclose(fp);
+	return;
+err:	
+	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+}
+
 #endif
 
 #ifdef ENABLEGT
@@ -312,6 +447,7 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 			fprintf(stderr, "error %d in rsgt_chkFileHdr\n", r); 
 		goto done;
 	}
+
 	if(mode == MD_EXTEND) {
 		if(fwrite("LOGSIG11", 8, 1, nsigfp) != 1) {
 			perror(nsigfname);
@@ -830,6 +966,16 @@ processFile(char *name)
 			showSigblkParamsKSI(name);
 #endif
 		break;
+	case MD_CONVERT:
+#ifdef ENABLEGT
+		if (apimode == API_GT)
+			convertFile(name);
+#endif
+#ifdef ENABLEKSI
+		if (apimode == API_KSI)
+			convertFileKSI(name);
+#endif
+		break;
 	case MD_VERIFY:
 	case MD_EXTEND:
 		if(verbose)
@@ -843,6 +989,7 @@ processFile(char *name)
 static struct option long_options[] = 
 { 
 	{"help", no_argument, NULL, 'h'},
+	{"convert", no_argument, NULL, 'c'},
 	{"dump", no_argument, NULL, 'D'},
 	{"verbose", no_argument, NULL, 'v'},
 	{"debug", no_argument, NULL, 'd'},
@@ -869,6 +1016,7 @@ rsgtutil_usage(void)
 			"\t-e, --extend \t\t\t Extends the RFC3161 signatures.\n"
 			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
 			"\t-T, --detect-file-type \t Show Type of signature file.\n"
+			"\t-c, --convert \t\t\t Convert Signature Format Version 10 to 11.\n"
 			"\t-V, --Version \t\t\t Print utility version\n"
 			"\t\tOptional parameters\n"
 			"\t-a <GT|KSI>, --api  <GT|KSI> \t Set which API to use.\n"
@@ -888,7 +1036,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "aBdDeHPstTvV", long_options, NULL);
+		opt = getopt_long(argc, argv, "aBcdDeHPstTvV", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -949,6 +1097,9 @@ main(int argc, char *argv[])
 			break;
 		case 'e':
 			mode = MD_EXTEND;
+			break;
+		case 'c':
+			mode = MD_CONVERT;
 			break;
 		case 'h':
 		case '?':

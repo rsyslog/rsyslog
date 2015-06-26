@@ -342,6 +342,14 @@ void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
 void rsgt_set_debug(int iDebug); 
 
+int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
+// int tlvbufAddOctet(gtfile gf, int8_t octet); 
+// int tlvbufAddOctetString(gtfile gf, uint8_t *octet, int size); 
+// int tlvbufAddInt64(gtfile gf, uint64_t val); 
+// uint8_t tlvbufGetInt64OctetSize(uint64_t val); 
+// int tlvbufPhysWrite(gtfile gf); 
+
+
 
 /* TODO: replace these? */
 int hash_m(gtfile gf, GTDataHash **m);
@@ -349,5 +357,7 @@ int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len
 int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
 extern char *rsgt_read_puburl; /**< url of publication server */
 extern uint8_t rsgt_read_showVerified;
+extern int RSGT_FLAG_TLV16_RUNTIME;
+extern int RSGT_FLAG_NONCRIT_RUNTIME; 
 
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */

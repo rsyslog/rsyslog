@@ -59,6 +59,8 @@ typedef unsigned char uchar;
 #define VERSION "no-version"
 #endif
 
+int RSKSI_FLAG_TLV16_RUNTIME = RSGT_FLAG_TLV16;
+int RSKSI_FLAG_NONCRIT_RUNTIME = RSGT_FLAG_NONCRIT; 
 
 static void
 reportErr(rsksictx ctx, char *errmsg)
@@ -298,7 +300,7 @@ tlv8WriteKSI(ksifile ksi, int flags, int tlvtype, int len)
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
 	assert((tlvtype & RSGT_TYPE_MASK) == tlvtype);
-	r = tlvbufAddOctet(ksi, (flags & ~RSGT_FLAG_TLV16) | tlvtype);
+	r = tlvbufAddOctet(ksi, (flags & ~RSKSI_FLAG_TLV16_RUNTIME) | tlvtype);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(ksi, len & 0xff);
 done:	return r;
@@ -311,7 +313,7 @@ tlv16WriteKSI(ksifile ksi, int flags, int tlvtype, uint16_t len)
 	int r;
 	assert((flags & RSGT_TYPE_MASK) == 0);
 	assert((tlvtype >> 8 & RSGT_TYPE_MASK) == (tlvtype >> 8));
-	typ = ((flags | RSGT_FLAG_TLV16) << 8) | tlvtype;
+	typ = ((flags | RSKSI_FLAG_TLV16_RUNTIME) << 8) | tlvtype;
 	r = tlvbufAddOctet(ksi, typ >> 8);
 	if(r != 0) goto done;
 	r = tlvbufAddOctet(ksi, typ & 0xff);

@@ -82,7 +82,7 @@ sigTypeName(uint8_t sigID)
 /* Flags and record types for TLV handling */
 #define RSGT_FLAG_NONCRIT 0x20
 #define RSGT_FLAG_FORWARD 0x40
-#define RSGT_FLAG_TLV16 0x80
 #define RSGT_TYPE_MASK 0x1f
+#define RSGT_FLAG_TLV16 0x80
 
 #endif  /* #ifndef INCLUDED_LIBRSGTCM_H */

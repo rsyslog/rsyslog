@@ -266,7 +266,7 @@ rsksi_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 	NEXTC;
 	rec->hdr[0] = c;
 	rec->tlvtype = c & 0x1f;
-	if(c & RSGT_FLAG_TLV16) { /* tlv16? */
+	if(c & RSKSI_FLAG_TLV16_RUNTIME) { /* tlv16? */
 		rec->lenHdr = 4;
 		NEXTC;
 		rec->hdr[1] = c;
@@ -307,7 +307,7 @@ rsksi_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 	c = rec->data[(*stridx)++];
 	newrec->hdr[0] = c;
 	newrec->tlvtype = c & 0x1f;
-	if(c & RSGT_FLAG_TLV16) { /* tlv16? */
+	if(c & RSKSI_FLAG_TLV16_RUNTIME) { /* tlv16? */
 		newrec->lenHdr = 4;
 		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
 		c = rec->data[(*stridx)++];
@@ -1112,7 +1112,7 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 	COPY_SUBREC_TO_NEWREC
 	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
 	/* actual sig! */
-	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16;
+	newrec.data[iWr++] = 0x09 | RSKSI_FLAG_TLV16_RUNTIME;
 	newrec.data[iWr++] = 0x06;
 	newrec.data[iWr++] = (lenDer >> 8) & 0xff;
 	newrec.data[iWr++] = lenDer & 0xff;
