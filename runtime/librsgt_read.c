@@ -208,8 +208,7 @@ reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 }
 
 /* return the actual length in to-be-written octets of an integer */
-static inline uint8_t
-rsgt_tlvGetInt64OctetSize(uint64_t val)
+static inline uint8_t rsgt_tlvGetInt64OctetSize(uint64_t val)
 {
 	if(val >> 56)
 		return 8;

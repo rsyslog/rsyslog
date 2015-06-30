@@ -341,15 +341,7 @@ void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
 void rsgt_set_debug(int iDebug); 
-
 int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
-// int tlvbufAddOctet(gtfile gf, int8_t octet); 
-// int tlvbufAddOctetString(gtfile gf, uint8_t *octet, int size); 
-// int tlvbufAddInt64(gtfile gf, uint64_t val); 
-// uint8_t tlvbufGetInt64OctetSize(uint64_t val); 
-// int tlvbufPhysWrite(gtfile gf); 
-
-
 
 /* TODO: replace these? */
 int hash_m(gtfile gf, GTDataHash **m);

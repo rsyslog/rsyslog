@@ -217,6 +217,109 @@ reportVerifySuccess(ksierrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)
 	}
 }
 
+/* return the actual length in to-be-written octets of an integer */
+static inline uint8_t rsksi_tlvGetInt64OctetSize(uint64_t val)
+{
+	if(val >> 56)
+		return 8;
+	if((val >> 48) & 0xff)
+		return 7;
+	if((val >> 40) & 0xff)
+		return 6;
+	if((val >> 32) & 0xff)
+		return 5;
+	if((val >> 24) & 0xff)
+		return 4;
+	if((val >> 16) & 0xff)
+		return 3;
+	if((val >> 8) & 0xff)
+		return 2;
+	return 1;
+}
+
+static inline int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
+{
+	/* Directory write into file */
+	int r = 0;
+	if ( fputc(octet, newsigfp) == EOF ) 
+		r = RSGTE_IO; 
+done:	return r;
+}
+static inline int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
+{
+	int i, r = 0;
+	for(i = 0 ; i < size ; ++i) {
+		r = rsksi_tlvfileAddOctet(newsigfp, octet[i]);
+		if(r != 0) goto done;
+	}
+done:	return r;
+}
+static inline int rsksi_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
+{
+	uint8_t doWrite = 0;
+	int r;
+	if(val >> 56) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 56) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 48) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 48) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 40) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 40) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 32) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 32) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 24) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 24) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 16) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >> 16) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 8) & 0xff)) {
+		r = rsksi_tlvfileAddOctet(newsigfp, (val >>  8) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	r = rsksi_tlvfileAddOctet(newsigfp, val & 0xff);
+done:	return r;
+}
+
+static int
+rsksi_tlv8Write(FILE *newsigfp, int flags, int tlvtype, int len)
+{
+	int r;
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype & RSGT_TYPE_MASK) == tlvtype);
+	r = rsksi_tlvfileAddOctet(newsigfp, (flags & ~RSKSI_FLAG_TLV16_RUNTIME) | tlvtype);
+	if(r != 0) goto done;
+	r = rsksi_tlvfileAddOctet(newsigfp, len & 0xff);
+done:	return r;
+} 
+
+static int
+rsksi_tlv16Write(FILE *newsigfp, int flags, int tlvtype, uint16_t len)
+{
+	uint16_t typ;
+	int r;
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype >> 8 & RSGT_TYPE_MASK) == (tlvtype >> 8));
+	typ = ((flags | RSKSI_FLAG_TLV16_RUNTIME) << 8) | tlvtype;
+	r = rsksi_tlvfileAddOctet(newsigfp, typ >> 8);
+	if(r != 0) goto done;
+	r = rsksi_tlvfileAddOctet(newsigfp, typ & 0xff);
+	if(r != 0) goto done;
+	r = rsksi_tlvfileAddOctet(newsigfp, (len >> 8) & 0xff);
+	if(r != 0) goto done;
+	r = rsksi_tlvfileAddOctet(newsigfp, len & 0xff);
+done:	return r;
+} 
+
 /**
  * Write the provided record to the current file position.
  *
@@ -1240,4 +1343,215 @@ done:
 void rsksi_set_debug(int iDebug)
 {
 	rsksi_read_debug = iDebug; 
+}
+
+/* Helper function to convert an old V10 signature file into V11 */
+int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
+{
+	int r = 0, rRead = 0;
+	imprint_t *imp = NULL;
+	tlvrecord_t rec;
+	tlvrecord_t subrec;
+	
+	/* For signature convert*/
+	int i;
+	uint16_t strtidx = 0; 
+	block_hdr_t *bh = NULL;
+	block_sig_t *bs = NULL;
+	uint16_t typconv;
+	unsigned tlvlen;
+	uint8_t tlvlenRecords;
+
+	/* Temporary change flags back to old default */
+	RSKSI_FLAG_TLV16_RUNTIME = 0x20; 
+
+	/* Start reading Sigblocks from old FILE */
+	while(1) { /* we will err out on EOF */
+		rRead = rsksi_tlvRecRead(oldsigfp, &rec); 
+		if(rRead == 0 /*|| rRead == RSGTE_EOF*/) {
+			switch(rec.tlvtype) {
+				case 0x0900:
+				case 0x0901:
+					/* Convert tlvrecord Header */
+					if (rec.tlvtype == 0x0900) {
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSKSI_FLAG_TLV16_RUNTIME*/) << 8) | 0x0902;
+						rec.hdr[0] = typconv >> 8; 
+						rec.hdr[1] = typconv & 0xff; 
+					} else if (rec.tlvtype == 0x0901) {
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSKSI_FLAG_TLV16_RUNTIME*/) << 8) | 0x0903;
+						rec.hdr[0] = typconv >> 8; 
+						rec.hdr[1] = typconv & 0xff; 
+					}
+
+					/* Debug verification output */
+					r = rsksi_tlvDecodeIMPRINT(&rec, &imp);
+					if(r != 0) goto donedecode;
+					rsksi_printREC_HASH(stdout, imp, verbose);
+
+					/* Output into new FILE */
+					if((r = rsksi_tlvwrite(newsigfp, &rec)) != 0) goto done;
+
+					/* Free mem*/
+					free(imp->data);
+					free(imp);
+					break;
+				case 0x0902:
+					/* Split Data into HEADER and BLOCK */
+					strtidx = 0;
+
+					/* Create BH and BS*/
+					if((bh = calloc(1, sizeof(block_hdr_t))) == NULL) {
+						r = RSGTE_OOM;
+						goto donedecode;
+					}
+					if((bs = calloc(1, sizeof(block_sig_t))) == NULL) {
+						r = RSGTE_OOM;
+						goto donedecode;
+					}
+
+					/* Check OLD encoded HASH ALGO */
+					CHKr(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x00 && subrec.tlvlen == 1)) {
+						r = RSGTE_FMT;
+						goto donedecode;
+					}
+					bh->hashID = subrec.data[0];
+
+					/* Check OLD encoded BLOCK_IV */
+					CHKr(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x01)) {
+						r = RSGTE_INVLTYP;
+						goto donedecode;
+					}
+					if((bh->iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bh->iv, subrec.data, subrec.tlvlen);
+
+					/* Check OLD encoded LAST HASH */
+					CHKr(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bh->lastHash.hashID = subrec.data[0];
+					if(subrec.tlvlen != 1 + hashOutputLengthOctetsKSI(bh->lastHash.hashID)) {
+						r = RSGTE_LEN;
+						goto donedecode;
+					}
+					bh->lastHash.len = subrec.tlvlen - 1;
+					if((bh->lastHash.data = (uint8_t*)malloc(bh->lastHash.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bh->lastHash.data, subrec.data+1, subrec.tlvlen-1);
+
+					/* Debug verification output */
+					rsksi_printBLOCK_HDR(stdout, bh, verbose);
+
+					/* Check OLD encoded COUNT */
+					CHKr(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bs->recCount = 0;
+					for(i = 0 ; i < subrec.tlvlen ; ++i) {
+						bs->recCount = (bs->recCount << 8) + subrec.data[i];
+					}
+
+					/* Check OLD encoded SIG */
+					CHKr(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bs->sig.der.len = subrec.tlvlen;
+					bs->sigID = SIGID_RFC3161;
+					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
+					r = 0;
+
+					/* Debug output */
+					rsksi_printBLOCK_SIG(stdout, bs, verbose);
+
+					if(strtidx != rec.tlvlen) {
+						r = RSGTE_LEN;
+						goto donedecode;
+					}
+
+					/* Set back to NEW default */
+					RSKSI_FLAG_TLV16_RUNTIME = 0x80; 
+
+					/* Create Block Header */
+					tlvlen  = 2 + 1 /* hash algo TLV */ +
+						  2 + hashOutputLengthOctetsKSI(bh->hashID) /* iv */ +
+						  2 + 1 + bh->lastHash.len /* last hash */;
+					/* write top-level TLV object block-hdr */
+					r = rsksi_tlv16Write(newsigfp, 0x00, 0x0901, tlvlen);
+					/* and now write the children */
+					/* hash-algo */
+					r = rsksi_tlv8Write(newsigfp, 0x00, 0x01, 1);
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddOctet(newsigfp, hashIdentifierKSI(bh->hashID));
+					if(r != 0) goto done;
+					/* block-iv */
+					r = rsksi_tlv8Write(newsigfp, 0x00, 0x02, hashOutputLengthOctetsKSI(bh->hashID));
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddOctetString(newsigfp, bh->iv, hashOutputLengthOctetsKSI(bh->hashID));
+					if(r != 0) goto done;
+					/* last-hash */
+					r = rsksi_tlv8Write(newsigfp, 0x00, 0x03, bh->lastHash.len + 1);
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddOctet(newsigfp, bh->lastHash.hashID);
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddOctetString(newsigfp, bh->lastHash.data, bh->lastHash.len);
+					if(r != 0) goto done;
+
+					/* Create Block Signature */
+					tlvlenRecords = rsksi_tlvGetInt64OctetSize(bs->recCount);
+					tlvlen  = 2 + tlvlenRecords /* rec-count */ +
+						  4 + bs->sig.der.len /* rfc-3161 */;
+					/* write top-level TLV object (block-sig */
+					r = rsksi_tlv16Write(newsigfp, 0x00, 0x0904, tlvlen);
+					if(r != 0) goto done;
+					/* and now write the children */
+					/* rec-count */
+					r = rsksi_tlv8Write(newsigfp, 0x00, 0x01, tlvlenRecords);
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddInt64(newsigfp, bs->recCount);
+					if(r != 0) goto done;
+					/* rfc-3161 */
+					r = rsksi_tlv16Write(newsigfp, 0x00, 0x906, bs->sig.der.len);
+					if(r != 0) goto done;
+					r = rsksi_tlvfileAddOctetString(newsigfp, bs->sig.der.data, bs->sig.der.len);
+
+					/* Set back to OLD default */
+					RSKSI_FLAG_TLV16_RUNTIME = 0x20; 
+
+donedecode:
+					/* Free mem*/
+					if (bh != NULL) {
+						free(bh->iv);
+						free(bh->lastHash.data);
+						free(bh);
+						bh = NULL; 
+					}
+					if (bs != NULL) {
+						free(bs->sig.der.data);
+						free(bs);
+						bs = NULL; 
+					}
+					if(r != 0) goto done;
+					break;
+				default:
+					fprintf(stdout, "unknown tlv record %4.4x\n", rec.tlvtype);
+					break;
+			}
+		} else {
+			/*if(feof(oldsigfp))
+				break;
+			else*/
+			r = rRead; 
+			if(r == RSGTE_EOF) 
+				r = 0; /* Successfully finished file */
+			else if(rsksi_read_debug)
+				printf("debug: rsksi_ConvertSigFile failed to read with error %d\n", r);
+			goto done;
+		}
+
+		/* Abort further processing if EOF */
+		if (rRead == RSGTE_EOF)
+			goto done;
+	}
+done:
+	if(rsksi_read_debug)
+		printf("debug: rsksi_ConvertSigFile returned %d\n", r);
+	return r;
 }

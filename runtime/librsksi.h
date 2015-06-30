@@ -384,7 +384,9 @@ void rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec);
 void rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
 void rsksi_set_debug(int iDebug); 
+int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
 
+/* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
 int hash_r_ksi(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
 int hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);

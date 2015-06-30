@@ -174,6 +174,12 @@ convertFile(char *name)
 		if ((r = rsgt_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
 			goto err;
 		else {
+			/* Close FILES */
+			if(oldsigfp != stdin)
+				fclose(oldsigfp);
+			if (newsigfp != NULL)	
+				fclose(newsigfp); 
+
 			/* Delete OLDFILE if there is one*/
 			if(unlink(oldsigfname) != 0) {
 				if(errno != ENOENT) {
@@ -218,11 +224,6 @@ convertFile(char *name)
 	}
 	else
 		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
-
-	if(oldsigfp != stdin)
-		fclose(oldsigfp);
-	if (newsigfp != NULL)	
-		fclose(newsigfp); 
 	return;
 err:	
 	fprintf(stderr, "error %d (%s) converting file %s\n", r, RSGTE2String(r), name);
@@ -317,32 +318,92 @@ err:
 static void
 convertFileKSI(char *name)
 {
-	FILE *fp;
+	FILE *oldsigfp = NULL, *newsigfp = NULL;
 	char hdr[9];
 	int r = -1;
+	char newsigfname[4096];
+	char oldsigfname[4096];
 	
 	if(!strcmp(name, "-"))
-		fp = stdin;
+		oldsigfp = stdin;
 	else {
 		printf("Processing file %s:\n", name);
-		if((fp = fopen(name, "r")) == NULL) {
+		if((oldsigfp = fopen(name, "r")) == NULL) {
 			perror(name);
 			goto err;
 		}
 	}
-	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
+	if((r = rsksi_tlvrdHeader(oldsigfp, (uchar*)hdr)) != 0) goto err;
 	if(!strcmp(hdr, "LOGSIG10")) {
 		printf("Found Signature File with Version 10 - starting conversion.\n");
-		/* TODO CONVERT FILE!!!!! */
+		snprintf(newsigfname, sizeof(newsigfname), "%s.LOGSIG11", name);
+		snprintf(oldsigfname, sizeof(oldsigfname), "%s.LOGSIG10", name);
+		if((newsigfp = fopen(newsigfname, "w")) == NULL) {
+			perror(newsigfname);
+			r = RSGTE_IO;
+			goto err;
+		}
+		else {
+			/* Write FileHeader first */
+			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
+		}
+
+		if ((r = rsksi_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
+			goto err;
+		else {
+			/* Close FILES */
+			if(oldsigfp != stdin)
+				fclose(oldsigfp);
+			if (newsigfp != NULL)	
+				fclose(newsigfp); 
+
+			/* Delete OLDFILE if there is one*/
+			if(unlink(oldsigfname) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing old file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			/* Copy main sigfile to oldfile */
+			if(link(name, oldsigfname) != 0) {
+				perror("Error moving old file");
+				r = RSGTE_IO;
+				goto err;
+			}
+
+			/* Delete current sigfile*/
+			if(unlink(name) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing old file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			/* Copy new sigfile to main sigfile */
+			if(link(newsigfname, name) != 0) {
+				perror("Error moving new file");
+				r = RSGTE_IO;
+				goto err;
+			}
+
+			/* Delete temporary new sigfile*/
+			if(unlink(newsigfname) != 0) {
+				if(errno != ENOENT) {
+					perror("Error removing new file");
+					r = RSGTE_IO;
+					goto err;
+				}
+			}
+			
+			printf("File %s was converted to Version 11.\n", name);
+		}
 	}
 	else
 		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
-
-	if(fp != stdin)
-		fclose(fp);
 	return;
 err:	
-	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+	fprintf(stderr, "error %d (%s) converting file %s\n", r, RSKSIE2String(r), name);
 }
 
 #endif
