@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
+- new signature provider for Keyless Signature Infrastructure (KSI) added
 - build system: re-enable use of "make distcheck"
 - bugfix imfile: regex multiline mode ignored escapeLF option
   Thanks to Ciprian Hacman for reporting the problem
