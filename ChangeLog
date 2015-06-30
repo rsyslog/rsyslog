@@ -384,9 +384,9 @@ Version 8.3.4 [v8-devel] 2014-07-11
 ---------------------------------------------------------------------------
 Version 8.3.3 [v8-devel] 2014-06-26
 - unify input object naming
-  imudp now supports "name" paramter, as other inputs do. "inputname" has
+  imudp now supports "name" parameter, as other inputs do. "inputname" has
   been deprecated, but can still be used. Same applies to "appendport"
-  subparamter". Thanks to "Nick Syslog" for the suggestion.
+  subparameter". Thanks to "Nick Syslog" for the suggestion.
 - made the missing (contributed) modules build under v8 [import from 8.2.2]
   Modules:
   * mmrfc5424addhmac
@@ -967,7 +967,7 @@ This starts a new stable branch based on 7.5.8 plus the following changes:
 ---------------------------------------------------------------------------
 Version 7.5.8 [v7-release candidate] 2014-01-09
 - add exec_template() RainerScript function
-- add debug.onShutdown and debug.logFile global paramters
+- add debug.onShutdown and debug.logFile global parameters
   These enebale the new "debug on shutdown" mode, which can be used to
   track hard to find problems that occur during system shutdown.
 - Add directives for numerically specifying GIDs/UIDs
@@ -1154,7 +1154,7 @@ Version 7.5.3 [devel] 2013-09-11
 - imudp: add ability to specify SO_RCVBUF size (rcvbufSize parameter)
 - imudp: use inputname for statistics, if configured
 - impstats: add process resource usage counters [via getrusage()]
-- impstats: add paramter "resetCounters" to report delta values
+- impstats: add parameter "resetCounters" to report delta values
   possible for most, but not all, counters. See doc for details.
 - librelp 1.2.0 is now required
 - make use of new librelp generic error reporting facility
@@ -1821,7 +1821,7 @@ Version 7.3.0  [devel] 2012-10-09
   * support for config load phases & module() parameters
   * support for default templates
   * driverdirectory is now cleanly a global parameter, but can no longer
-    be specified as an action paramter. Note that in previous versions
+    be specified as an action parameter. Note that in previous versions
     this parameter was ignored in all but the first action definition
 - improved omfile zip writer to increase compression
   This was achieved by somewhat reducing the robustness of the zip archive.
@@ -1874,7 +1874,7 @@ Version 7.2.7  [v7-stable] 2013-04-17
 - bugfix: using group resolution could lead to endless loop
   Thanks to Tomas Heinrich for the patch.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=310
-- bugfix: $mmnormalizeuseramsg paramter was specified with wrong type
+- bugfix: $mmnormalizeuseramsg parameter was specified with wrong type
   Thank to Renzhong Zhang for alerting us of the problem.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=420
 - bugfix: RainerScript getenv() function caused segfault when var was

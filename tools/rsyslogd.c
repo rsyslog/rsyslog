@@ -1128,13 +1128,13 @@ initAll(int argc, char **argv)
                 case 'A':
 			fprintf (stderr, "rsyslogd: the -A command line option will go away "
 				 "soon.\n"
-				 "Please use the omfwd paramter \"upd.sendToAll\" instead.\n");
+				 "Please use the omfwd parameter \"upd.sendToAll\" instead.\n");
                         send_to_all++;
                         break;
 		case 'S':		/* Source IP for local client to be used on multihomed host */
 			fprintf (stderr, "rsyslogd: the -S command line option will go away "
 				 "soon.\n"
-				 "Please use the omrelp paramter \"localClientIP\" instead.\n");
+				 "Please use the omrelp parameter \"localClientIP\" instead.\n");
 			if(glbl.GetSourceIPofLocalClient() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -S argument allowed, the first one is taken.\n");
 			} else {
