@@ -88,7 +88,7 @@ creation of a disk file as a couple of hundered messages can be held in
 memory by default. [These parameters can be fine-tuned. However, then
 you need to either fully understand how the queue works (`read elaborate
 doc <http://www.rsyslog.com/doc-queues.html>`_) or use `professional
-services <http://www.rsyslog.com/doc-professional_support.html>`_ to
+services <http://www.rsyslog.com/professional-services/>`_ to
 have it done based on your specs ;) - what that means is that
 fine-tuning queue parameters is far from being trivial...]
 
