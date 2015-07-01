@@ -57,14 +57,19 @@ OPTIONS
   Prints out information about correctly verified blocks (by default, only
   errors are printed).
 
--v, --verbose
-  Select verbose mode. Most importantly, hashes and signatures are printed
-  in full length (can be **very** lengthy) rather than the usual abbreviation.
-
 -e, --extend
   Select extend mode. This extends the RFC3161 signatures. Note that this
   mode also implies a full verification. If there are verify errors, extending
   will also fail.
+
+-c, --convert
+  Select "conversion" mode. This converts signature files from 
+  Version 10 to 11. The original file will automatically be backed up.
+
+-v, --verbose
+  Select verbose mode. Most importantly, hashes and signatures are printed
+  in full length (can be **very** lengthy) rather than the usual abbreviation.
+
 
 -P <URL>, --publications-server <URL>
   Sets the publications server. If not set but required by the operation a
