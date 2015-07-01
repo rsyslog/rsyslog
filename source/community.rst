@@ -9,7 +9,6 @@ You can also browse the following online resources:
 -  `rsyslog discussion forum - use this for technical
    support <http://kb.monitorware.com/rsyslog-f40.html>`_
 -  `rsyslog video tutorials <http://www.rsyslog.com/Topic8.phtml>`_
--  `rsyslog change log <http://www.rsyslog.com/Topic4.phtml>`_
 -  `rsyslog FAQ <http://www.rsyslog.com/Topic3.phtml>`_
 -  `syslog device configuration
    guide <http://www.monitorware.com/en/syslog-enabled-products/>`_
