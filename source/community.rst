@@ -35,4 +35,4 @@ Feedback is always welcome, but if you have a support question, please
 do not mail Rainer directly (`why not? <free_support.html>`_) - use the
 `rsyslog mailing
 list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_ or `rsyslog
-formum <http://kb.monitorware.com/rsyslog-f40.html>`_ instead.
+forum <http://kb.monitorware.com/rsyslog-f40.html>`_ instead.
