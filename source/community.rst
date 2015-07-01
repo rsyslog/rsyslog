@@ -6,8 +6,6 @@ You can also browse the following online resources:
 -  the `rsyslog wiki <http://wiki.rsyslog.com/>`_, a community resource
    which includes `rsyslog configuration
    examples <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_
--  `rsyslog online documentation (most current version
-   only) <http://www.rsyslog.com/module-Static_Docs-view-f-manual.html.phtml>`_
 -  `rsyslog discussion forum - use this for technical
    support <http://kb.monitorware.com/rsyslog-f40.html>`_
 -  `rsyslog video tutorials <http://www.rsyslog.com/Topic8.phtml>`_
