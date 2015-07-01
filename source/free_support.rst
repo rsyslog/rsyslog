@@ -41,7 +41,7 @@ excellent advise.
 
 **Don't like to post your question in a public place?** Well, then you
 should consider purchasing `rsyslog professional
-support <professional_support.html>`_. The fees are very low and help
+support <http://www.rsyslog.com/professional-services/>`_. The fees are very low and help
 fund the project. If you use rsyslog seriously inside a corporate
 environment, there is no excuse for not getting one of the support
 packages ;)
