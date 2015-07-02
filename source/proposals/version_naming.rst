@@ -26,7 +26,7 @@ infrequently, maybe around once a year. A major version increment has
 important implications from the support side: without support contracts,
 the current major version's last stable release and the last stable
 release of the version immediately below it are supported (Adiscon, the
-rsyslog sponsor, offers `support contracts <professional_support.html>`_
+rsyslog sponsor, offers `support contracts <http://www.rsyslog.com/professional-services/>`_
 covering all other versions).
 
 The minor version is incremented whenever a non-trivial new feature is

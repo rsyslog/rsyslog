@@ -158,7 +158,7 @@ sensitive that you do not want the outside to be known. While Rainer so
 far made effort no to leak any sensitive information, there is no
 guarantee that doesn't happen. If you need a guarantee, you are probably
 a candidate for a `commercial support
-contract <professional_support.html>`_. Free support comes without any
+contract <http://www.rsyslog.com/professional-services/>`_. Free support comes without any
 guarantees, include no guarantee on confidentiality [aka "we don't want
 to be sued for work were are not even paid for ;)]. **So if you submit
 debug logs, do so at your sole risk**. By submitting them, you accept
