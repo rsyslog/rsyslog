@@ -1458,6 +1458,10 @@ doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 	}
 	pWti->execState.bPrevWasSuspended
 		= (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+
+	if (iRet == RS_RET_ACTION_FAILED)	/* Increment failed counter */
+		STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
+
 	DBGPRINTF("action '%s': set suspended state to %d\n",
 		pAction->pszName, pWti->execState.bPrevWasSuspended);
 
