@@ -12,6 +12,10 @@
 #		"sort" is used. E.g. Solaris needs "gsort"
 #
 
+# environment variables:
+# USE_AUTO_DEBUG "on" --> enables automatic debugging, anything else
+#                turns it off
+
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 # **** use the line below for very hard to find leaks! *****
@@ -52,6 +56,9 @@ case $1 in
 		# though.
 		mkdir test-spool
 		ulimit -c 4000000000
+		if [ "$USE_AUTO_DEBUG" != 'on' ] ; then
+			rm -f IN_AUTO_DEBUG
+                fi
 		if [ -e IN_AUTO_DEBUG ]; then
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
@@ -296,7 +303,7 @@ case $1 in
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
 		# our $2 is the to-be-used exit code.
-		if [ ! -e IN_AUTO_DEBUG ]; then
+		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
 			touch IN_AUTO_DEBUG
 			if [ -e core* ]
 			then
