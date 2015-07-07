@@ -26,6 +26,7 @@ EXTRA_DIST = \
 	platform/slackware/rc.rsyslogd \
 	platform/redhat/rsyslog.conf \
 	contrib/README \
+	CONTRIBUTING.md \
 	COPYING \
 	COPYING.LESSER \
 	COPYING.ASL20 \
