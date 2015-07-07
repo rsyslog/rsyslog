@@ -48,9 +48,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
-#ifdef OS_SOLARIS
-#	include <fcntl.h>
-#endif
+#include <fcntl.h>
 #ifdef HAVE_ATOMIC_BUILTINS
 #	include <pthread.h>
 #endif
