@@ -43,7 +43,6 @@ TESTS +=  \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
 	imtcp_spframingfix.sh \
-	imptcp_spframingfix.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -126,6 +125,7 @@ TESTS +=  \
 	linkedlistqueue.sh \
 	key_dereference_on_uninitialized_variable_space.sh
 
+
 if HAVE_VALGRIND
 TESTS +=  \
 	discard-rptdmsg-vg.sh \
@@ -173,6 +173,7 @@ TESTS +=  \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
+	imptcp_spframingfix.sh \
 	rscript_replace.sh \
 	rscript_replace_complex.sh \
 	rscript_wrap2.sh \
