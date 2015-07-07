@@ -17,7 +17,7 @@ while [ $RUN -le $MAXRUN ]; do
      	 let FAIL+=1
 	 echo "FAIL!"
 	 #vi work
-         exit 1
+         #exit 1
      else
      	let SUCCESS+=1
      fi

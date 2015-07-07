@@ -16,6 +16,13 @@
 # USE_AUTO_DEBUG "on" --> enables automatic debugging, anything else
 #                turns it off
 
+# diag system internal environment variables
+# these variables are for use by test scripts - they CANNOT be
+# overriden by the user
+# TCPFLOOD_EXTRA_OPTS   enables to set extra options for tcpflood, usually
+#                       used in tests that have a common driver where it
+#                       is too hard to set these options otherwise
+
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 # **** use the line below for very hard to find leaks! *****
@@ -56,6 +63,12 @@ case $1 in
 		# though.
 		mkdir test-spool
 		ulimit -c 4000000000
+		# note: TCPFLOOD_EXTRA_OPTS MUST NOT be unset in init, because
+		# some tests need to set it BEFORE calling init to accomodate
+		# their generic test drivers.
+		if [ "$TCPFLOOD_EXTRA_OPTS" != '' ] ; then
+		        echo TCPFLOOD_EXTRA_OPTS set: $TCPFLOOD_EXTRA_OPTS
+                fi
 		if [ "$USE_AUTO_DEBUG" != 'on' ] ; then
 			rm -f IN_AUTO_DEBUG
                 fi
@@ -71,6 +84,7 @@ case $1 in
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
 		rm -f rsyslog.errorfile
 		rm -f CURRENT_TEST HOSTNAME imfile-state:.-rsyslog.input
+		unset TCPFLOOD_EXTRA_OPTS
 		echo  -------------------------------------------------------------------------------
 		;;
    'es-init')   # initialize local Elasticsearch *testbench* instance for the next
@@ -199,7 +213,7 @@ case $1 in
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
-		eval ./tcpflood $*
+		eval ./tcpflood $* $TCPFLOOD_EXTRA_OPTS
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save

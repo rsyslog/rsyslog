@@ -11,4 +11,5 @@ echo This test must be run as root [raw socket access required]
 if [ "$EUID" -ne 0 ]; then
     exit 77 # Not root, skip this test
 fi
+export TCPFLOOD_EXTRA_OPTS="-b1 -W1"
 source $srcdir/sndrcv_drvr.sh sndrcv_omudpspoof 50
