@@ -1090,7 +1090,7 @@ CODESTARTnewActInst
 		pData->bSendToAll = send_to_all;
 	} else {
 		if(pData->protocol == FORW_TCP) {
-			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: paramter udp.sendToAll "
+			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
 					"cannot be used with tcp transport -- ignored");
 		}
 	}

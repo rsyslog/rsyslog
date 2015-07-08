@@ -397,7 +397,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 			if(pThis->peParamPassing[i] != ACT_STRING_PASSING) {
 				errmsg.LogError(0, RS_RET_INVLD_OMOD, "action '%s'(%d) is transactional but "
 						"parameter %d "
-						"uses invalid paramter passing mode -- disabling "
+						"uses invalid parameter passing mode -- disabling "
 						"action. This is probably caused by a pre-v7 "
 						"output module that needs upgrade.",
 						pThis->pszName, pThis->iActionNbr, i);
