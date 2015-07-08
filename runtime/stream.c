@@ -842,7 +842,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 		CHKiRet(cstrFinalize(thisLine));
 
 		/* we have a line, now let's assemble the message */
-		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStr(thisLine), 0, NULL, 0);
+		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0);
 dbgprintf("DDDD: readMultiLine: match %d, line '%s'\n", isMatch, rsCStrGetSzStr(thisLine));
 
 		if(isMatch) {
@@ -859,7 +859,11 @@ dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
 			
 		} else {
 			CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-			rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			if(bEscapeLF) {
+				rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			} else {
+				cstrAppendChar(pThis->prevMsgSegment, '\n');
+			}
 			/* we could do this faster, but for now keep it simple */
 		}
 		cstrDestruct(&thisLine);
@@ -1063,7 +1067,11 @@ tryTTYRecover(strm_t *pThis, int err)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
+#ifndef __FreeBSD__
 	if(err == ERR_TTYHUP) {
+#else
+	if(err == ERR_TTYHUP || err == ENXIO) {
+#endif /* __FreeBSD__ */
 		close(pThis->fd);
 		CHKiRet(doPhysOpen(pThis));
 	}

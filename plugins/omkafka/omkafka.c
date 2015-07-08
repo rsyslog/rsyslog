@@ -86,11 +86,15 @@ getClockTopicAccess(void)
 #endif
 }
 
+static int closeTimeout = 1000;
+static pthread_mutex_t closeTimeoutMut = PTHREAD_MUTEX_INITIALIZER;
+
 /* dynamic topic cache */
 struct s_dynaTopicCacheEntry {
 	uchar *pName;
 	rd_kafka_topic_t *pTopic;
 	uint64 clkTickAccessed;
+	pthread_rwlock_t lock;
 };
 typedef struct s_dynaTopicCacheEntry dynaTopicCacheEntry;
 
@@ -98,6 +102,7 @@ typedef struct _instanceData {
 	uchar *topic;
 	sbool dynaTopic;
 	dynaTopicCacheEntry **dynCache;
+	pthread_mutex_t mutDynCache;
 	rd_kafka_topic_t *pTopic;
 	int iCurrElt;
 	int iCurrCacheSize;
@@ -114,10 +119,13 @@ typedef struct _instanceData {
 	int nTopicConfParams;
 	struct kafka_params *topicConfParams;
 	uchar *errorFile;
+	uchar *key;
 	int fdErrFile;		/* error file fd or -1 if not open */
 	pthread_mutex_t mutErrFile;
 	int bIsOpen;
+	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
+	int closeTimeout;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -138,7 +146,9 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "confparam", eCmdHdlrArray, 0 },
 	{ "topicconfparam", eCmdHdlrArray, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "key", eCmdHdlrGetWord, 0 },
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "closeTimeout", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -163,15 +173,23 @@ getPartition(instanceData *const __restrict__ pData)
 	}
 }
 
+/* must always be called with appropriate locks taken */
+static void
+d_free_topic(rd_kafka_topic_t **topic)
+{
+	if (*topic != NULL) {
+		DBGPRINTF("omkafka: closing topic %s\n", rd_kafka_topic_name(*topic));
+		rd_kafka_topic_destroy(*topic);
+		*topic = NULL;
+	}
+}
+
 /* destroy topic item */
-static rsRetVal
+/* must be called with write(rkLock) */
+static void
 closeTopic(instanceData *__restrict__ const pData)
 {
-	DEFiRet;
-	DBGPRINTF("omkafka: closing topic %s\n", rd_kafka_topic_name(pData->pTopic));
-	rd_kafka_topic_destroy(pData->pTopic);
-	RETiRet;
-
+	d_free_topic(&pData->pTopic);
 }
 
 /* these dynaTopic* functions are only slightly modified versions of those found in omfile.c.
@@ -180,6 +198,7 @@ closeTopic(instanceData *__restrict__ const pData)
  */
 
 /* delete a cache entry from the dynamic topic cache */
+/* must be called with lock(mutDynCache) */
 static rsRetVal
 dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry)
 {
@@ -189,6 +208,7 @@ dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry,
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
+	pthread_rwlock_wrlock(&pCache[iEntry]->lock);
 
 	DBGPRINTF("Removing entry %d for topic '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
@@ -198,7 +218,10 @@ dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry,
 		pCache[iEntry]->pName = NULL;
 	}
 
+	pthread_rwlock_unlock(&pCache[iEntry]->lock);
+
 	if(bFreeEntry) {
+		pthread_rwlock_destroy(&pCache[iEntry]->lock);
 		d_free(pCache[iEntry]);
 		pCache[iEntry] = NULL;
 	}
@@ -215,54 +238,44 @@ dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
 	ASSERT(pData != NULL);
 
 	BEGINfunc;
+	pthread_mutex_lock(&pData->mutDynCache);
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		dynaTopicDelCacheEntry(pData, i, 1);
 	}
 	pData->iCurrElt = -1; /* invalidate current element */
-	ENDfunc;
-}
-
-/* free the entire cache and free dynCache from instanceData*/
-static void dynaTopicFreeCache(instanceData *__restrict__ const pData)
-{
-	ASSERT(pData != NULL);
-
-	BEGINfunc;
-	dynaTopicFreeCacheEntries(pData);
-	if(pData->dynCache != NULL)
-		d_free(pData->dynCache);
+	pthread_mutex_unlock(&pData->mutDynCache);
 	ENDfunc;
 }
 
 /* create the topic object */
+/* must be called with _atleast_ read(rkLock) */
 static rsRetVal
-prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
-{
-	/* Get a new topic conf */
+createTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName, rd_kafka_topic_t** topic) {
+/* Get a new topic conf */
 	rd_kafka_topic_conf_t *const topicconf = rd_kafka_topic_conf_new();
 	char errstr[MAX_ERRMSG];
 	rd_kafka_topic_t *rkt = NULL;
 	DEFiRet;
 
-	pData->pTopic = NULL;
+	*topic = NULL;
 
 	if(topicconf == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: error creating kafka topic conf obj: %s\n",
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+						"omkafka: error creating kafka topic conf obj: %s\n",
+						rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	for(int i = 0 ; i < pData->nTopicConfParams ; ++i) {
 		if(rd_kafka_topic_conf_set(topicconf,
-				     pData->topicConfParams[i].name,
-				     pData->topicConfParams[i].val,
-				     errstr, sizeof(errstr))
-		!= RD_KAFKA_CONF_OK) {
+								   pData->topicConfParams[i].name,
+								   pData->topicConfParams[i].val,
+								   errstr, sizeof(errstr))
+		   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
 				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
-						"topic conf parameter '%s=%s': %s",
-						pData->topicConfParams[i].name,
-						pData->topicConfParams[i].val, errstr);
+								"topic conf parameter '%s=%s': %s",
+								pData->topicConfParams[i].name,
+								pData->topicConfParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
@@ -270,12 +283,22 @@ prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ c
 	rkt = rd_kafka_topic_new(pData->rk, (char *)newTopicName, topicconf);
 	if(rkt == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: error creating kafka topic: %s\n", 
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+						"omkafka: error creating kafka topic: %s\n", 
+						rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
-	pData->pTopic = rkt;
+	*topic = rkt;
+finalize_it:
+	RETiRet;
+}
 
+/* create the topic object */
+/* must be called with write(rkLock) */
+static rsRetVal
+prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
+{
+	DEFiRet;
+	CHKiRet(createTopic(pData, newTopicName, &pData->pTopic));
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pData->pTopic != NULL) {
@@ -288,9 +311,14 @@ finalize_it:
 /* check dynamic topic cache for existence of the already created topic.
  * if it does not exist, create a new one, or if we are currently using it
  * as of the last message, keep using it.
+ *
+ * important: topic is returned read-locked, user must unlock it after using it.
+ *
+ * must be called with read(rkLock)
  */
 static inline rsRetVal
-prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
+prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
+				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
 {
 	uint64 ctOldest;
 	int iOldest;
@@ -298,9 +326,13 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	int iFirstFree;
 	rsRetVal localRet;
 	dynaTopicCacheEntry **pCache;
+	dynaTopicCacheEntry *entry = NULL;
+	rd_kafka_topic_t *tmpTopic = NULL;
 	DEFiRet;
 	ASSERT(pData != NULL);
 	ASSERT(newTopicName != NULL);
+
+	pthread_mutex_lock(&pData->mutDynCache);
 
 	pCache = pData->dynCache;
 	/* first check, if we still have the current topic */
@@ -308,6 +340,7 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 		&& !ustrcmp(newTopicName, pCache[pData->iCurrElt]->pName)) {
 			/* great, we are all set */
 			pCache[pData->iCurrElt]->clkTickAccessed = getClockTopicAccess();
+			entry = pCache[pData->iCurrElt];
 			STATSCOUNTER_INC(ctrCacheSkip, mutCtrCacheSkip);
 			FINALIZE;
 	}
@@ -326,7 +359,7 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 		} else { /*got an element, let's see if it matches */
 			if(!ustrcmp(newTopicName, pCache[i]->pName)) {
 				/* we found our element! */
-				pData->pTopic = pCache[i]->pTopic;
+				entry = pCache[i];
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockTopicAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
@@ -346,12 +379,6 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
 	 */
 	pData->iCurrElt = -1;
-	/* similarly, we need to set the current pTopic to NULL, because otherwise, if prepareTopic() fails,
-	 * we may end up using an old topic. This bug depends on how exactly prepareTopic fails,
-	 * but it could be triggered in the common case of a failed open() system call.
-	 * rgerhards, 2010-03-22
-	 */
-	pData->pTopic = NULL;
 
 	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaTopicCacheSize)) {
 		/* there is space left, so set it to that index */
@@ -365,10 +392,11 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	} else {
 		/* we need to allocate memory for the cache structure */
 		CHKmalloc(pCache[iFirstFree] = (dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
+		CHKiRet(pthread_rwlock_init(&pCache[iFirstFree]->lock, NULL));
 	}
 
 	/* Ok, we finally can open the topic */
-	localRet = prepareTopic(pData, newTopicName);
+	localRet = createTopic(pData, newTopicName, &tmpTopic);
 
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' [state %d] - discarding message", newTopicName, localRet);
@@ -376,15 +404,27 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	}
 
 	if((pCache[iFirstFree]->pName = ustrdup(newTopicName)) == NULL) {
-		closeTopic(pData);
+		d_free_topic(&tmpTopic);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	pCache[iFirstFree]->pTopic = pData->pTopic;
+	pCache[iFirstFree]->pTopic = tmpTopic;
 	pCache[iFirstFree]->clkTickAccessed = getClockTopicAccess();
+	entry = pCache[iFirstFree];
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for topic cache, topic '%s'.\n", iFirstFree, newTopicName);
 
 finalize_it:
+	if (iRet == RS_RET_OK && entry != NULL) {
+		pthread_rwlock_rdlock(&entry->lock);
+	}
+	pthread_mutex_unlock(&pData->mutDynCache);
+	if (iRet == RS_RET_OK && entry != NULL) {
+		*topic = entry->pTopic;
+		*lock = &entry->lock;
+	} else {
+		*topic = NULL;
+		*lock = NULL;
+	}
 	RETiRet;
 }
 
@@ -475,28 +515,50 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 		  level, fac, buf);
 }
 
+/* should be called with write(rkLock) */
 static inline void
 do_rd_kafka_destroy(instanceData *const __restrict pData)
 {
-	DBGPRINTF("omkafka: closing - items left in outqueue: %d\n",
-		  rd_kafka_outq_len(pData->rk));
-	while (rd_kafka_outq_len(pData->rk) > 0)
-		rd_kafka_poll(pData->rk, 10);
-	rd_kafka_destroy(pData->rk);
-	pData->rk = NULL;
+	if (pData->rk == NULL) {
+		DBGPRINTF("omkafka: can't close, handle wasn't open\n");
+	} else {
+		int queuedCount = rd_kafka_outq_len(pData->rk);
+		DBGPRINTF("omkafka: closing - items left in outqueue: %d\n", queuedCount);
+
+		struct timespec tOut;
+		timeoutComp(&tOut, pData->closeTimeout);
+		
+		while (timeoutVal(&tOut) > 0) {
+			queuedCount = rd_kafka_outq_len(pData->rk);
+			if (queuedCount > 0) {
+				rd_kafka_poll(pData->rk, 10);
+			} else {
+				break;
+			}
+		}
+		if (queuedCount > 0) {
+			DBGPRINTF("omkafka: queue-drain for close timed-out took too long, "
+					 "items left in outqueue: %d\n",
+					 rd_kafka_outq_len(pData->rk));
+		}
+		if (pData->dynaTopic) {
+			dynaTopicFreeCacheEntries(pData);
+		} else {
+			closeTopic(pData);
+		}
+		rd_kafka_destroy(pData->rk);
+		pData->rk = NULL;
+	}
 }
 
-
-static rsRetVal
+/* should be called with write(rkLock) */
+static void
 closeKafka(instanceData *const __restrict__ pData)
 {
-	DEFiRet;
-	if(!pData->bIsOpen)
-		FINALIZE;
-	do_rd_kafka_destroy(pData);
-	pData->bIsOpen = 0;
-finalize_it:
-	RETiRet;
+	if(pData->bIsOpen) {
+		do_rd_kafka_destroy(pData);
+		pData->bIsOpen = 0;
+	}
 }
 
 static void
@@ -530,6 +592,7 @@ getConfiguredPartitions()
 }
 #endif
 
+/* should be called with write(rkLock) */
 static rsRetVal
 openKafka(instanceData *const __restrict__ pData)
 {
@@ -539,6 +602,8 @@ openKafka(instanceData *const __restrict__ pData)
 
 	if(pData->bIsOpen)
 		FINALIZE;
+
+	pData->pTopic = NULL;
 
 	/* main conf */
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
@@ -595,6 +660,29 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+setupKafkaHandle(instanceData *const __restrict__ pData, int recreate)
+{
+	DEFiRet;
+	pthread_rwlock_wrlock(&pData->rkLock);
+	if (recreate) {
+		closeKafka(pData);
+	}
+	CHKiRet(openKafka(pData));
+	if (! pData->dynaTopic) {
+		if( pData->pTopic == NULL)
+			CHKiRet(prepareTopic(pData, pData->topic));
+	}
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (pData->rk != NULL) {
+			closeKafka(pData);
+		}
+	}
+	pthread_rwlock_unlock(&pData->rkLock);
+	RETiRet;
+}
+
 BEGINdoHUP
 CODESTARTdoHUP
 	pthread_mutex_lock(&pData->mutErrFile);
@@ -602,12 +690,9 @@ CODESTARTdoHUP
 		close(pData->fdErrFile);
 		pData->fdErrFile = -1;
 	}
-	if(pData->dynaTopic) {
-		dynaTopicFreeCacheEntries(pData);
-	} else {
-		closeTopic(pData);
-	}
 	pthread_mutex_unlock(&pData->mutErrFile);
+	CHKiRet(setupKafkaHandle(pData, 1));
+finalize_it:
 ENDdoHUP
 
 BEGINcreateInstance
@@ -617,7 +702,10 @@ CODESTARTcreateInstance
 	pData->fdErrFile = -1;
 	pData->pTopic = NULL;
 	pData->bReportErrs = 1;
-	pthread_mutex_init(&pData->mutErrFile, NULL);
+	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
+	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
+	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
+finalize_it:
 ENDcreateInstance
 
 
@@ -637,7 +725,6 @@ CODESTARTfreeInstance
 	free(pData->topic);
 	free(pData->brokers);
 	free(pData->tplName);
-	closeKafka(pData);
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		free((void*) pData->confParams[i].name);
 		free((void*) pData->confParams[i].val);
@@ -648,12 +735,16 @@ CODESTARTfreeInstance
 	}
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
-	if(pData->dynaTopic) {
-		dynaTopicFreeCache(pData);
-	} else if(pData->pTopic != NULL) {
-		closeTopic(pData);
+	pthread_rwlock_wrlock(&pData->rkLock);
+	closeKafka(pData);
+	if(pData->dynaTopic && pData->dynCache != NULL) {
+		d_free(pData->dynCache);
+		pData->dynCache = NULL;
 	}
+	pthread_rwlock_unlock(&pData->rkLock);
+	pthread_rwlock_destroy(&pData->rkLock);
 	pthread_mutex_destroy(&pData->mutErrFile);
+	pthread_mutex_destroy(&pData->mutDynCache);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -675,51 +766,53 @@ CODESTARTtryResume
 	 * problem is shared with other modules, and the rsyslog core engine
 	 * has some mitigation against these kinds of problems. On the plus
 	 * side, we can at least detect if something goes wrong during
-	 * openKafka(), and we save ourself any hassle in those cases.
+	 * setupKafkaHandle(), and we save ourself any hassle in those cases.
 	 * The current way is not ideal, but currently the best we can
 	 * think of. If someone knows how to do a produce call without
 	 * actually producing something (or otherwise check the health
 	 * of the Kafka subsystem), please let us know on the rsyslog
 	 * mailing list. -- rgerhards, 2014-12-14
 	 */
-	iRet = openKafka(pWrkrData->pData);
+	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
+	
+finalize_it:
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
 
 
+/* must be called with read(rkLock) */
 static rsRetVal
 writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 {
 	DEFiRet;
 	const int partition = getPartition(pData);
+	rd_kafka_topic_t *rkt = NULL;
+	pthread_rwlock_t *dynTopicLock = NULL;
 
-	DBGPRINTF("omkafka: trying to send: '%s'\n", msg);
-	CHKiRet(openKafka(pData));
+	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s'\n", pData->key, msg);
 
-	/* check if we are using dynamic topic names */
 	if(pData->dynaTopic) {
 		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
-		CHKiRet(prepareDynTopic(pData, topic));
+		CHKiRet(prepareDynTopic(pData, topic, &rkt, &dynTopicLock));
 	} else {
-		if(pData->pTopic == NULL) {
-			CHKiRet(prepareTopic(pData, topic));
-			if(pData->pTopic == NULL) {
-				errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-					"Could not open topic '%s'", topic);
-			}
-		}
+		rkt = pData->pTopic;
 	}
-	if(rd_kafka_produce(pData->pTopic, partition, RD_KAFKA_MSG_F_COPY,
-	                    msg, strlen((char*)msg), NULL, 0, NULL) == -1) {
+	if(rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
+	                    msg, strlen((char*)msg), pData->key,
+	                    pData->key == NULL ? 0 : strlen((char*)pData->key),
+	                    NULL) == -1) {
 		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' "
 			"partition %d: %s\n",
-			rd_kafka_topic_name(pData->pTopic), partition,
+			rd_kafka_topic_name(rkt), partition,
 			rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
 		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
 	}
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+	if (pData->dynaTopic) {
+		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
+	}
 
 	DBGPRINTF("omkafka: kafka outqueue length: %d, callbacks called %d\n",
 		  rd_kafka_outq_len(pData->rk), callbacksCalled);
@@ -727,7 +820,6 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 finalize_it:
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
 	if(iRet != RS_RET_OK) {
-		closeKafka(pData);
 		iRet = RS_RET_SUSPENDED;
 	}
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
@@ -738,11 +830,19 @@ finalize_it:
 BEGINdoAction
 CODESTARTdoAction
 	instanceData *const pData = pWrkrData->pData;
+	if (! pData->bIsOpen)
+		CHKiRet(setupKafkaHandle(pData, 0));
+
+	pthread_rwlock_rdlock(&pData->rkLock);
+
 	/* support dynamic topic */
 	if(pData->dynaTopic)
 		iRet = writeKafka(pData, ppString[0], ppString[1]);
 	else
 		iRet = writeKafka(pData, ppString[0], pData->topic);
+		
+	pthread_rwlock_unlock(&pData->rkLock);
+finalize_it:
 ENDdoAction
 
 
@@ -761,6 +861,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->nTopicConfParams = 0;
 	pData->topicConfParams = NULL;
 	pData->errorFile = NULL;
+	pData->key = NULL;
+	pData->closeTimeout = 2000;
 }
 
 static rsRetVal
@@ -804,6 +906,8 @@ CODESTARTnewActInst
 			pData->dynaTopic = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "dynatopic.cachesize")) {
 			pData->iDynaTopicCacheSize = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "closeTimeout")) {
+			pData->closeTimeout = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.auto")) {
 			pData->autoPartition = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "partitions.number")) {
@@ -843,6 +947,8 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "key")) {
+			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -873,6 +979,12 @@ CODESTARTnewActInst
 			calloc(pData->iDynaTopicCacheSize, sizeof(dynaTopicCacheEntry*)));
         pData->iCurrElt = -1;
 	}
+	pthread_mutex_lock(&closeTimeoutMut);
+	if (closeTimeout < pData->closeTimeout) {
+		closeTimeout = pData->closeTimeout;
+	}
+	pthread_mutex_unlock(&closeTimeoutMut);
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -898,6 +1010,14 @@ CODESTARTmodExit
 	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
 	CHKiRet(objRelease(statsobj, CORE_COMPONENT));
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
+
+	pthread_mutex_lock(&closeTimeoutMut);
+	int timeout = closeTimeout;
+	pthread_mutex_unlock(&closeTimeoutMut);
+	pthread_mutex_destroy(&closeTimeoutMut);
+	if (rd_kafka_wait_destroyed(timeout) != 0) {
+		DBGPRINTF("omkafka: couldn't close all resources gracefully. %d threads still remain.\n", rd_kafka_thread_cnt());
+	}
 finalize_it:
 ENDmodExit
 

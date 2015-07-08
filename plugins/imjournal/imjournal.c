@@ -172,10 +172,11 @@ finalize_it:
  * by the caller.
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json)
+enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
 {
 	struct syslogTime st;
 	msg_t *pMsg;
+	size_t len;
 	DEFiRet;
 
 	assert(msg != NULL);
@@ -189,8 +190,10 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsgWOSize(pMsg, (char*)msg);
-	parser.SanitizeMsg(pMsg);
+	len = strlen((char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg, len);
+	if(len > 0)
+		parser.SanitizeMsg(pMsg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
@@ -200,7 +203,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	pMsg->iSeverity = iSeverity;
 
 	if(json != NULL) {
-		msgAddJSON(pMsg, (uchar*)"!", json, 0);
+		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedJsonProperties);
 	}
 
 	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
@@ -412,7 +415,7 @@ readjournal() {
 	}
 
 	/* submit message */
-	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json);
+	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json, 0);
 
 finalize_it:
 	if (sys_iden_help != NULL)
@@ -677,6 +680,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	free(cs.stateFile);
 ENDfreeCnf
 
 /* open journal */

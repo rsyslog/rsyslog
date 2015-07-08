@@ -1259,18 +1259,26 @@ var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
  * it usually is allocated on the stack. Callers why dynamically allocate
  * struct var need to free the struct themselfes!
  */
+
+int SKIP_NOTHING = 0x0;
+int SKIP_STRING = 0x1;
+int SKIP_JSON = 0x2;
+
+static void
+varFreeMembersSelectively(struct var *r, int skipMask)
+{
+	int kill_string = ! (skipMask & SKIP_STRING);
+	if(kill_string && (r->datatype == 'S')) es_deleteStr(r->d.estr);
+	int kill_json = ! (skipMask & SKIP_JSON);
+	if(kill_json && (r->datatype == 'J')) json_object_put(r->d.json);
+}
+
 static void
 varFreeMembers(struct var *r)
 {
-	/* Note: we do NOT need to free JSON objects, as we use 
-	 * json_object_object_get() to obtain the values, which does not
-	 * increment the reference count. So json_object_put() [free] is
-	 * neither required nor permitted (would free the original object!).
-	 * So for the time being the string data type is the only one that
-	 * we currently need to free.
-	 */
-	if(r->datatype == 'S') es_deleteStr(r->d.estr);
+	varFreeMembersSelectively(r, SKIP_NOTHING);
 }
+
 
 static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
@@ -1449,6 +1457,7 @@ finalize_it:
 	if(bHadNoMatch) {
 		cnfexprEval(func->expr[4], &r[4], usrptr);
 		estr = var2String(&r[4], &bMustFree);
+		varFreeMembersSelectively(&r[4], SKIP_STRING);
 		/* Note that we do NOT free the string that was returned/created
 		 * for r[4]. We pass it to the caller, which in turn frees it.
 		 * This saves us doing one unnecessary memory alloc & write.
@@ -1604,7 +1613,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			estr = var2String(&r[0], &bMustFree);
 			ret->d.n = es_strlen(estr);
 			if(bMustFree) es_deleteStr(estr);
-			if(r[0].datatype == 'S') es_deleteStr(r[0].d.estr);
+			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
 		break;
@@ -1626,7 +1635,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		ret->datatype = 'S';
 		varFreeMembers(&r[0]);
 		varFreeMembers(&r[1]);
-		if(func->nParams > 3) varFreeMembers(&r[2]);
+		if(func->nParams == 3) varFreeMembers(&r[2]);
 		break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
@@ -1755,7 +1764,7 @@ dbgprintf("DDDD: executing lookup\n");
 		str = (char*) var2CString(&r[1], &bMustFree);
 		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
 		if(bMustFree) free(str);
-		if(r[1].datatype == 'S') es_deleteStr(r[1].d.estr);
+		varFreeMembers(&r[1]);
 		break;
 	default:
 		if(Debug) {
@@ -2473,7 +2482,9 @@ cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ cons
 	int convok;
 	struct var ret;
 	cnfexprEval(expr, &ret, usrptr);
-	return var2Number(&ret, &convok);
+	int retVal = var2Number(&ret, &convok);
+	varFreeMembers(&ret);
+	return retVal;
 }
 
 struct json_object*
@@ -2481,7 +2492,7 @@ cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict_
 {
 	struct var ret;
 	cnfexprEval(expr, &ret, usrptr);
-	return ret.d.json;
+	return ret.d.json;/*caller is supposed to free the returned json-object*/
 }
 
 inline static void
@@ -4007,7 +4018,8 @@ varDelete(struct var *v)
 {
 	switch(v->datatype) {
 	case 'S':
-		es_deleteStr(v->d.estr);
+	case 'J':
+		varFreeMembers(v);
 		break;
 	case 'A':
 		cnfarrayContentDestruct(v->d.ar);

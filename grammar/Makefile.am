@@ -1,5 +1,5 @@
 BUILT_SOURCES = grammar.h
-CLEANFILES = grammar.h grammar.c
+CLEANFILES = grammar.h grammar.c lexer.c
 AM_YFLAGS = -d
 noinst_LTLIBRARIES = libgrammar.la
 #bin_PROGRAMS = testdriver # TODO: make this conditional

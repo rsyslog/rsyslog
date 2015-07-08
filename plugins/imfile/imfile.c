@@ -599,7 +599,7 @@ finalize_it:
 #pragma GCC diagnostic warning "-Wempty-body"
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -1911,8 +1911,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iFacility = 128; /* local0 */
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
-	cs.pBindRuleset = NULL;
 	cs.maxLinesAtOnce = 10240;
+	cs.pBindRuleset = NULL;
 
 	RETiRet;
 }

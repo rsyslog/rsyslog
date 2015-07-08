@@ -846,7 +846,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			/* as per lumberjack spec, these properties need to go into
 			 * the CEE root.
 			 */
-			msgAddJSON(pMsg, (uchar*)"!", json, 0);
+			msgAddJSON(pMsg, (uchar*)"!", json, 0, 0);
 
 			MsgSetRawMsg(pMsg, (char*)pRcv, lenRcv);
 		} else {

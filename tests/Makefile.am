@@ -1,4 +1,9 @@
 if ENABLE_TESTBENCH
+CLEANFILES = \
+	IN_AUTO_DEBUG
+# IN_AUTO_DEBUG should be deleted each time make check is run, but
+# there exists no such hook. Se we at least delete it on make clean.
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv
 TESTS = $(TESTRUNS) 
@@ -77,6 +82,9 @@ TESTS +=  \
 	execonlywhenprevsuspended3.sh \
 	execonlywhenprevsuspended4.sh \
 	execonlywhenprevsuspended_multiwrkr.sh \
+	execonlywhenprevsuspended-queue.sh \
+	execonlywhenprevsuspended-nonsusp.sh \
+	execonlywhenprevsuspended-nonsusp-queue.sh \
 	pipe_noreader.sh \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
@@ -115,7 +123,8 @@ TESTS +=  \
 	incltest_dir.sh \
 	incltest_dir_wildcard.sh \
 	incltest_dir_empty_wildcard.sh \
-	linkedlistqueue.sh
+	linkedlistqueue.sh \
+	key_dereference_on_uninitialized_variable_space.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -176,16 +185,19 @@ endif
 
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
-	elasticsearch-basic.sh \
-	elasticsearch-basic-bulk.sh \
-	elasticsearch-basic-errorfile-empty.sh \
-	elasticsearch-basic-errorfile-populated.sh \
-	elasticsearch-bulk-errorfile-empty.sh \
-	elasticsearch-bulk-errorfile-populated.sh \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh
+	es-basic.sh \
+	es-basic-bulk.sh \
+	es-basic-errfile-empty.sh \
+	es-basic-errfile-popul.sh \
+	es-bulk-errfile-empty.sh \
+	es-bulk-errfile-popul.sh 
+if ENABLE_IMFILE
+TESTS +=  \
+	es-bulk-errfile-popul-def-format.sh \
+	es-bulk-errfile-popul-erronly.sh \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	es-bulk-errfile-popul-def-interleaved.sh
+endif
 endif
 
 if ENABLE_MMPSTRUCDATA
@@ -217,7 +229,8 @@ TESTS +=  \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
-	json_nonarray_looping.sh
+	json_nonarray_looping.sh \
+	stop_when_array_has_element.sh
 endif
 
 if ENABLE_GNUTLS
@@ -229,8 +242,10 @@ imtcp-tls-basic.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
-	imtcp_conndrop_tls-vg.sh \
+	imtcp_conndrop_tls-vg.sh
+if !ENABLE_DISTCHECK_WORKAROUND
 	manytcp-too-few-tls-vg.sh
+endif
 endif
 endif
 
@@ -484,26 +499,26 @@ EXTRA_DIST= \
 	incltest_dir_wildcard.sh \
 	testsuites/incltest_dir_wildcard.conf \
 	testsuites/incltest.d/include.conf \
-	elasticsearch-basic.sh \
-	testsuites/elasticsearch-basic.conf \
-	elasticsearch-basic-bulk.sh \
-	testsuites/elasticsearch-basic-bulk.conf \
-	elasticsearch-basic-errorfile-empty.sh \
-	testsuites/elasticsearch-basic-errorfile-empty.conf \
-	elasticsearch-basic-errorfile-populated.sh \
-	testsuites/elasticsearch-basic-errorfile-populated.conf \
-	elasticsearch-bulk-errorfile-empty.sh \
-	testsuites/elasticsearch-bulk-errorfile-empty.conf \
-	elasticsearch-bulk-errorfile-populated.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated.conf \
-	elasticsearch-bulk-errorfile-populated-default-format.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-format.conf \
-	elasticsearch-bulk-errorfile-populated-erroronly-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-erroronly-interleaved.conf \
-	elasticsearch-bulk-errorfile-populated-default-interleaved.sh \
-	testsuites/elasticsearch-bulk-errorfile-populated-default-interleaved.conf \
+	es-basic.sh \
+	testsuites/es-basic.conf \
+	es-basic-bulk.sh \
+	testsuites/es-basic-bulk.conf \
+	es-basic-errfile-empty.sh \
+	testsuites/es-basic-errfile-empty.conf \
+	es-basic-errfile-popul.sh \
+	testsuites/es-basic-errfile-popul.conf \
+	es-bulk-errfile-empty.sh \
+	testsuites/es-bulk-errfile-empty.conf \
+	es-bulk-errfile-popul.sh \
+	testsuites/es-bulk-errfile-popul.conf \
+	es-bulk-errfile-popul-def-format.sh \
+	testsuites/es-bulk-errfile-popul-def-format.conf \
+	es-bulk-errfile-popul-erronly.sh \
+	testsuites/es-bulk-errfile-popul-erronly.conf \
+	es-bulk-errfile-popul-erronly-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
+	es-bulk-errfile-popul-def-interleaved.sh \
+	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \
@@ -723,6 +738,12 @@ EXTRA_DIST= \
 	testsuites/execonlywhenprevsuspended4.conf \
 	execonlywhenprevsuspended_multiwrkr.sh \
 	testsuites/execonlywhenprevsuspended_multiwrkr.conf \
+	execonlywhenprevsuspended-queue.sh \
+	testsuites/execonlywhenprevsuspended-queue.conf \
+	execonlywhenprevsuspended-nonsusp.sh \
+	testsuites/execonlywhenprevsuspended-nonsusp.conf \
+	execonlywhenprevsuspended-nonsusp-queue.sh \
+	testsuites/execonlywhenprevsuspended-nonsusp-queue.conf \
 	tabescape_dflt.sh \
 	testsuites/tabescape_dflt.conf \
 	testsuites/1.tabescape_dflt \
@@ -810,6 +831,11 @@ EXTRA_DIST= \
 	testsuites/mmnormalize_regex_disabled.conf \
 	mmnormalize_regex_defaulted.sh \
 	testsuites/mmnormalize_regex_defaulted.conf \
+	stop_when_array_has_element.sh \
+	testsuites/stop_when_array_has_elem_input \
+	testsuites/stop_when_array_has_element.conf \
+	key_dereference_on_uninitialized_variable_space.sh \
+	testsuites/key_dereference_on_uninitialized_variable_space.conf \
 	cfg.sh
 
 # TODO: re-enable

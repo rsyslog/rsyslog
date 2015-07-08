@@ -1,4 +1,4 @@
-/* This is a tool for dumpoing the content of GuardTime TLV
+/* This is a tool for dumping the content of GuardTime TLV
  * files in a (somewhat) human-readable manner.
  * 
  * Copyright 2013-2015 Adiscon GmbH

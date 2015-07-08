@@ -2825,6 +2825,8 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	struct json_object *parent;
 	DEFiRet;
 
+	*pjson = NULL;
+
 	if(pProp->id == PROP_CEE) {
 		jroot = pMsg->json;
 	} else if(pProp->id == PROP_LOCAL_VAR) {
@@ -2854,8 +2856,14 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	}
 
 finalize_it:
-	if(pProp->id == PROP_GLOBAL_VAR)
+	if(pProp->id == PROP_GLOBAL_VAR) {
+		if (*pjson != NULL)
+			*pjson = jsonDeepCopy(*pjson);
 		pthread_rwlock_unlock(&glblVars_rwlock);
+	} else {
+		if (*pjson != NULL)
+			json_object_get(*pjson);
+	}
 	RETiRet;
 }
 
@@ -3737,6 +3745,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			 */
 			int iNumCC = 0;
 			int iLenBuf = 0;
+			uchar *pSrc;
 			uchar *pB;
 
 			for(pB = pRes ; *pB ; ++pB) {
@@ -3758,15 +3767,14 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 						free(pRes);
 					RET_OUT_OF_MEMORY;
 				}
-				while(*pRes) {
-					if(iscntrl((int) *pRes)) {
-						snprintf((char*)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(iscntrl((int) *pSrc)) {
+						snprintf((char*)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
 						for(i = 0 ; i < 4 ; ++i)
 							*pB++ = szCCEsc[i];
 					} else {
-						*pB++ = *pRes;
+						*pB++ = *pSrc;
 					}
-					++pRes;
 				}
 				*pB = '\0';
 				if(*pbMustBeFreed == 1)
@@ -3952,97 +3960,11 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 	return(pRes);
 }
 
-
-/* This function can be used as a generic way to set properties.
- * We have to handle a lot of legacy, so our return value is not always
- * 100% correct (called functions do not always provide one, should
- * change over time).
- * rgerhards, 2008-01-07
- */
-#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
-rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
-{
-	prop_t *myProp;
-	prop_t *propRcvFrom = NULL;
-	prop_t *propRcvFromIP = NULL;
-	struct json_tokener *tokener;
-	struct json_object *json;
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, msg);
-	assert(pProp != NULL);
-
- 	if(isProp("iProtocolVersion")) {
-		setProtocolVersion(pThis, pProp->val.num);
- 	} else if(isProp("iSeverity")) {
-		pThis->iSeverity = pProp->val.num;
- 	} else if(isProp("iFacility")) {
-		pThis->iFacility = pProp->val.num;
- 	} else if(isProp("msgFlags")) {
-		pThis->msgFlags = pProp->val.num;
- 	} else if(isProp("offMSG")) {
-		MsgSetMSGoffs(pThis, pProp->val.num);
-	} else if(isProp("pszRawMsg")) {
-		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
-	} else if(isProp("pszUxTradMsg")) {
-		/*IGNORE*/; /* this *was* a property, but does no longer exist */
-	} else if(isProp("pszTAG")) {
-		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
-	} else if(isProp("pszInputName")) {
-		/* we need to create a property */ 
-		CHKiRet(prop.Construct(&myProp));
-		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
-		CHKiRet(prop.ConstructFinalize(myProp));
-		MsgSetInputName(pThis, myProp);
-		prop.Destruct(&myProp);
-	} else if(isProp("pszRcvFromIP")) {
-		MsgSetRcvFromIPStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFromIP);
-		prop.Destruct(&propRcvFromIP);
-	} else if(isProp("pszRcvFrom")) {
-		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr), &propRcvFrom);
-		prop.Destruct(&propRcvFrom);
-	} else if(isProp("pszHOSTNAME")) {
-		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
-	} else if(isProp("pszStrucData")) {
-		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
-	} else if(isProp("pCSAPPNAME")) {
-		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
-	} else if(isProp("pCSPROCID")) {
-		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
-	} else if(isProp("pCSMSGID")) {
-		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
- 	} else if(isProp("ttGenTime")) {
-		pThis->ttGenTime = pProp->val.num;
-	} else if(isProp("tRcvdAt")) {
-		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
-	} else if(isProp("tTIMESTAMP")) {
-		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
-	} else if(isProp("pszRuleset")) {
-		MsgSetRulesetByName(pThis, pProp->val.pStr);
-	} else if(isProp("pszMSG")) {
-		dbgprintf("no longer supported property pszMSG silently ignored\n");
-	} else if(isProp("json")) {
-		tokener = json_tokener_new();
-		json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pProp->val.pStr),
-					     cstrLen(pProp->val.pStr));
-		json_tokener_free(tokener);
-		msgAddJSON(pThis, (uchar*)"!", json, 0);
-	} else {
-		dbgprintf("unknown supported property '%s' silently ignored\n",
-			  rsCStrGetSzStrNoNULL(pProp->pcsName));
-	}
-
-finalize_it:
-	RETiRet;
-}
-#undef	isProp
-
-
 /* Set a single property based on the JSON object provided. The
  * property name is extracted from the JSON object.
  */
 static rsRetVal
-msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json)
+msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_object *json, int sharedReference)
 {
 	const char *psz;
 	int val;
@@ -4097,7 +4019,7 @@ msgSetPropViaJSON(msg_t *__restrict__ const pMsg, const char *name, struct json_
 		psz = json_object_get_string(json);
 		MsgSetRcvFromIPStr(pMsg, (const uchar*)psz, strlen(psz), &propRcvFromIP);
 	} else if(!strcmp(name, "$!")) {
-		msgAddJSON(pMsg, (uchar*)"!", json, 0);
+		msgAddJSON(pMsg, (uchar*)"!", json, 0, sharedReference);
 	} else {
 		/* we ignore unknown properties */
 		DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n",
@@ -4157,7 +4079,7 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 	}
  
 	json_object_object_foreach(json, name, val) {
-		msgSetPropViaJSON(pMsg, name, val);
+		msgSetPropViaJSON(pMsg, name, val, 0);
 	}
 	json_object_put(json);
 
@@ -4324,11 +4246,12 @@ finalize_it:
 }
 
 rsRetVal
-msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_reset)
+msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_reset, int sharedReference)
 {
 	/* TODO: error checks! This is a quick&dirty PoC! */
 	struct json_object **pjroot;
 	struct json_object *parent, *leafnode;
+	struct json_object *given = NULL;
 	uchar *leaf;
 	DEFiRet;
 
@@ -4337,9 +4260,17 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_re
 		pjroot = &pM->json;
 	} else if(name[0] == '.') {
 		pjroot = &pM->localvars;
-	} else { /* globl var */
+	} else if (name[0] == '/') { /* globl var */
 		pthread_rwlock_wrlock(&glblVars_rwlock);
 		pjroot = &global_var_root;
+		if (sharedReference) {
+			given = json;
+			json = jsonDeepCopy(json);
+			json_object_put(given);
+		}
+	} else {
+		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, Local or Global variable).", name);
+		ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 	}
 
 	if(name[1] == '\0') { /* full tree? */
@@ -4412,9 +4343,12 @@ msgDelJSON(msg_t * const pM, uchar *name)
 		jroot = &pM->json;
 	} else if(name[0] == '.') {
 		jroot = &pM->localvars;
-	} else { /* globl var */
+	} else if (name[0] == '/') { /* globl var */
 		pthread_rwlock_wrlock(&glblVars_rwlock);
 		jroot = &global_var_root;
+	} else {
+		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, Local or Global variable).", name);
+		ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 	}
 	if(jroot == NULL) {
 		DBGPRINTF("msgDelJSONVar; jroot empty in unset for property %s\n",
@@ -4476,7 +4410,7 @@ msgAddMetadata(msg_t *const __restrict__ pMsg,
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	json_object_object_add(json, (const char *const)metaname, jval);
-	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0);
+	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0, 0);
 finalize_it:
 	RETiRet;
 }
@@ -4560,7 +4494,7 @@ msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v, int force_r
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	msgAddJSON(pMsg, varname, json, force_reset);
+	msgAddJSON(pMsg, varname, json, force_reset, 0);
 finalize_it:
 	RETiRet;
 }
