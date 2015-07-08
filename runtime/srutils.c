@@ -214,6 +214,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
+			iTry = 0;
 again:
                         if(access((char*)pszWork, F_OK)) {
                                 if((err = mkdir((char*)pszWork, mode)) == 0) {
