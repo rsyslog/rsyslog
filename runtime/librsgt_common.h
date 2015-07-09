@@ -27,12 +27,13 @@
  * try to work with reallocs and such...]
  */
 #define MAX_ROOTS 64
-#define LOGSIGHDR "LOGSIG10"
+#define LOGSIGHDR "LOGSIG11"
 
 /* Context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in gtfile.
  */
 typedef struct imprint_s imprint_t;
+typedef struct block_hdr_s block_hdr_t;
 typedef struct block_sig_s block_sig_t;
 typedef struct tlvrecord_s tlvrecord_t;
 
@@ -51,11 +52,14 @@ struct imprint_s {
 };
 
 #define SIGID_RFC3161 0
+struct block_hdr_s {
+ 	uint8_t hashID;
+ 	uint8_t *iv;
+ 	imprint_t lastHash;
+};
+
 struct block_sig_s {
-	uint8_t hashID;
 	uint8_t sigID; /* what type of *signature*? */
-	uint8_t *iv;
-	imprint_t lastHash;
 	uint64_t recCount;
 	struct {
 		struct {
@@ -74,5 +78,11 @@ sigTypeName(uint8_t sigID)
 	default:return "[unknown]";
 	}
 }
+
+/* Flags and record types for TLV handling */
+#define RSGT_FLAG_NONCRIT 0x20
+#define RSGT_FLAG_FORWARD 0x40
+#define RSGT_TYPE_MASK 0x1f
+#define RSGT_FLAG_TLV16 0x80
 
 #endif  /* #ifndef INCLUDED_LIBRSGTCM_H */
