@@ -122,9 +122,10 @@ static struct cnfparamblk parserpblk =
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
-/* Standard-Constructor
- */
-BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
+void cnfSetDefaults(rsconf_t *pThis)
+{
+	pThis->globals.bAbortOnUncleanConfig = 0;
+	pThis->globals.bReduceRepeatMsgs = 0;
 	pThis->globals.bDebugPrintTemplateList = 1;
 	pThis->globals.bDebugPrintModuleList = 0;
 	pThis->globals.bDebugPrintCfSysLineHandlerList = 0;
@@ -135,9 +136,6 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
 	pThis->actions.nbrActions = 0;
-	lookupInitCnf(&pThis->lu_tabs);
-	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
-			rulesetKeyDestruct, strcasecmp));
 	/* queue params */
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
@@ -161,7 +159,16 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
-	/* end queue params */
+}
+
+
+/* Standard-Constructor
+ */
+BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
+	cnfSetDefaults(pThis);
+	lookupInitCnf(&pThis->lu_tabs);
+	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
+			rulesetKeyDestruct, strcasecmp));
 finalize_it:
 ENDobjConstruct(rsconf)
 
@@ -967,33 +974,9 @@ finalize_it:
 /* legacy config system: reset config variables to default values.  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	loadConf->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
-	loadConf->globals.bDebugPrintTemplateList = 1;
-	loadConf->globals.bDebugPrintCfSysLineHandlerList = 1;
-	loadConf->globals.bDebugPrintModuleList = 1;
-	loadConf->globals.bAbortOnUncleanConfig = 0;
-	loadConf->globals.bReduceRepeatMsgs = 0;
 	free(loadConf->globals.mainQ.pszMainMsgQFName);
-	loadConf->globals.mainQ.pszMainMsgQFName = NULL;
-	loadConf->globals.mainQ.iMainMsgQueueSize = 10000;
-	loadConf->globals.mainQ.iMainMsgQHighWtrMark = 8000;
-	loadConf->globals.mainQ.iMainMsgQLowWtrMark = 2000;
-	loadConf->globals.mainQ.iMainMsgQDiscardMark = 9800;
-	loadConf->globals.mainQ.iMainMsgQDiscardSeverity = 8;
-	loadConf->globals.mainQ.iMainMsgQueMaxFileSize = 1024 * 1024;
-	loadConf->globals.mainQ.iMainMsgQueueNumWorkers = 1;
-	loadConf->globals.mainQ.iMainMsgQPersistUpdCnt = 0;
-	loadConf->globals.mainQ.bMainMsgQSyncQeueFiles = 0;
-	loadConf->globals.mainQ.iMainMsgQtoQShutdown = 1500;
-	loadConf->globals.mainQ.iMainMsgQtoActShutdown = 1000;
-	loadConf->globals.mainQ.iMainMsgQtoEnq = 2000;
-	loadConf->globals.mainQ.iMainMsgQtoWrkShutdown = 60000;
-	loadConf->globals.mainQ.iMainMsgQWrkMinMsgs = 100;
-	loadConf->globals.mainQ.iMainMsgQDeqSlowdown = 0;
-	loadConf->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
-	loadConf->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
-	loadConf->globals.mainQ.iMainMsgQueMaxDiskSpace = 0;
-	loadConf->globals.mainQ.iMainMsgQueDeqBatchSize = 32;
+
+	cnfSetDefaults(loadConf);
 
 	return RS_RET_OK;
 }
