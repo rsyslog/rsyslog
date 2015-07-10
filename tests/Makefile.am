@@ -25,6 +25,8 @@ TESTS +=  \
 	fac_invld3.sh \
 	fac_invld4_rfc5424.sh \
 	rfc5424parser.sh \
+	tcp_forwarding_tpl.sh \
+	tcp_forwarding_dflt_tpl.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	da-mainmsg-q.sh \
@@ -409,6 +411,10 @@ EXTRA_DIST= \
 	testsuites/omod-if-array.conf \
 	testsuites/1.omod-if-array \
 	testsuites/1.field1 \
+	tcp_forwarding_tpl.sh \
+	testsuites/tcp_forwarding_tpl.conf \
+	tcp_forwarding_dflt_tpl.sh \
+	testsuites/tcp_forwarding_dflt_tpl.conf \
 	killrsyslog.sh \
 	parsertest.sh \
 	fieldtest.sh \

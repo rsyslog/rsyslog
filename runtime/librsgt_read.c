@@ -1144,7 +1144,7 @@ verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 {
 	GTDataHash *root, *rootDel;
 	int8_t j;
-	int r;
+	int r = 0;
 
 	if(gf->nRecords == 0)
 		goto done;

@@ -2444,7 +2444,7 @@ finalize_it:
  * nUpdates is the number of updates since the last call to this function.
  * It may be > 1 due to batches. -- rgerhards, 2009-05-12
  */
-static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates)
+static rsRetVal qqueueChkPersist(qqueue_t *const pThis, const int nUpdates)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, qqueue);
@@ -2848,10 +2848,11 @@ qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 {
 	DEFiRet;
 	int iCancelStateSave;
-
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
-	if(pThis->qType != QUEUETYPE_DIRECT) {
+	const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
+
+	if(isNonDirectQ) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		d_pthread_mutex_lock(pThis->mut);
 	}
@@ -2861,7 +2862,7 @@ qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	qqueueChkPersist(pThis, 1);
 
 finalize_it:
-	if(pThis->qType != QUEUETYPE_DIRECT) {
+	if(isNonDirectQ) {
 		/* make sure at least one worker is running. */
 		qqueueAdviseMaxWorkers(pThis);
 		/* and release the mutex */

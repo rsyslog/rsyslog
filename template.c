@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2014 Rainer Gerhards and Adiscon
+ * Copyright 2004-2015 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -205,6 +205,11 @@ tplToString(struct template *__restrict__ const pTpl,
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
 			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
+		} else {
+			DBGPRINTF("TplToString: invalid entry type %d\n", pTpe->eEntryType);
+			pVal = (uchar*) "*LOGIC ERROR*";
+			iLenVal = sizeof("*LOGIC ERROR*") - 1;
+			bMustBeFreed = 0;
 		}
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */

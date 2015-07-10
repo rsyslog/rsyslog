@@ -1100,7 +1100,7 @@ cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
 
 
 void
-cnfparamsPrint(struct cnfparamblk *params, struct cnfparamvals *vals)
+cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals)
 {
 	int i;
 	char *cstr;
@@ -1265,7 +1265,7 @@ int SKIP_STRING = 0x1;
 int SKIP_JSON = 0x2;
 
 static void
-varFreeMembersSelectively(struct var *r, int skipMask)
+varFreeMembersSelectively(const struct var *r, const int skipMask)
 {
 	int kill_string = ! (skipMask & SKIP_STRING);
 	if(kill_string && (r->datatype == 'S')) es_deleteStr(r->d.estr);
@@ -1274,7 +1274,7 @@ varFreeMembersSelectively(struct var *r, int skipMask)
 }
 
 static void
-varFreeMembers(struct var *r)
+varFreeMembers(const struct var *r)
 {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
 }
@@ -1816,7 +1816,8 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
  * and it was generally 5 to 10 times SLOWER than what we do here...
  */
 static int
-evalStrArrayCmp(es_str_t *const estr_l, struct cnfarray *__restrict__ const ar,
+evalStrArrayCmp(es_str_t *const estr_l,
+		const struct cnfarray *__restrict__ const ar,
 		const int cmpop)
 {
 	int i;
@@ -3757,6 +3758,12 @@ initFunc_re_match(struct cnffunc *func)
 	regex_t *re;
 	DEFiRet;
 
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	func->funcdata = NULL;
 	if(func->expr[1]->nodetype != 'S') {
 		parser_errmsg("param 2 of re_match/extract() must be a constant string");
@@ -3790,6 +3797,12 @@ initFunc_exec_template(struct cnffunc *func)
 	char *tplName = NULL;
 	DEFiRet;
 
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	if(func->expr[0]->nodetype != 'S') {
 		parser_errmsg("exec_template(): param 1 must be a constant string");
 		FINALIZE;
@@ -3816,6 +3829,12 @@ initFunc_prifilt(struct cnffunc *func)
 	uchar *cstr;
 	DEFiRet;
 
+	if(func->nParams != 1) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
+
 	func->funcdata = NULL;
 	if(func->expr[0]->nodetype != 'S') {
 		parser_errmsg("param 1 of prifilt() must be a constant string");
@@ -3837,6 +3856,12 @@ initFunc_lookup(struct cnffunc *func)
 {
 	uchar *cstr = NULL;
 	DEFiRet;
+
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+			__LINE__, __FILE__);
+		FINALIZE;
+	}
 
 	func->funcdata = NULL;
 	if(func->expr[0]->nodetype != 'S') {
@@ -4014,7 +4039,7 @@ cnfDoInclude(char *name)
 }
 
 void
-varDelete(struct var *v)
+varDelete(const struct var *v)
 {
 	switch(v->datatype) {
 	case 'S':
@@ -4030,7 +4055,7 @@ varDelete(struct var *v)
 }
 
 void
-cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
+cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk)
 {
 	int i;
 	if(paramvals == NULL)
@@ -4040,7 +4065,7 @@ cnfparamvalsDestruct(struct cnfparamvals *paramvals, struct cnfparamblk *blk)
 			varDelete(&paramvals[i].val);
 		}
 	}
-	free(paramvals);
+	free((void*)paramvals);
 }
 
 /* find the index (or -1!) for a config param by name. This is used to 
