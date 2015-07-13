@@ -1105,6 +1105,7 @@ AC_ARG_ENABLE(gt-ksi,
 )
 if test "x$enable_gt_ksi" = "xyes"; then
 	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.2.2.0)
+	PKG_CHECK_MODULES(GT_KSI, libksi < 3.3.0.0)
 fi
 AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
 
