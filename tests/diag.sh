@@ -274,6 +274,13 @@ case $1 in
 		    source ./diag.sh error-exit 1
 		fi
 		;;
+   'content-pattern-check') 
+		cat rsyslog.out.log | grep -q "$2"
+		if [ "$?" -ne "0" ]; then
+		    echo content-check failed, not every line matched pattern "'$2'"
+		    source ./diag.sh error-exit 1
+		fi
+		;;
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then

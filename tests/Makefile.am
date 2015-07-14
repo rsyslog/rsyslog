@@ -176,6 +176,7 @@ TESTS +=  \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
 	imptcp_spframingfix.sh \
+	rscript_random.sh \
 	rscript_replace.sh \
 	rscript_replace_complex.sh \
 	rscript_wrap2.sh \
@@ -811,6 +812,8 @@ EXTRA_DIST= \
 	testsuites/mmnormalize_tokenized.conf \
 	testsuites/mmnormalize_tokenized.rulebase \
 	testsuites/tokenized_input \
+	rscript_random.sh \
+	testsuites/rscript_random.conf \
 	rscript_replace.sh \
 	testsuites/rscript_replace.conf \
 	rscript_replace_complex.sh \
