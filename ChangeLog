@@ -7,6 +7,14 @@ Version 8.12.0 [v8-stable] 2015-08-11
   The file format is incompatible to previous format, but tools have been
   upgraded to handle both and also an option been added to convert from
   old to new format.
+- bugfix omfile: Fix race-condition detection in path-creation code
+  The affected code is used to detect a race condition in between
+  testing for the existence of a directory and creating it if it didn't
+  exist.  The variable tracking the number of attempts wasn't reset for
+  subsequent elements in the path, thus limiting the number of
+  reattempts to one per the whole path, instead of one per each path
+  element.
+  This solution was provided by Martin Poole.
 - bugfix ompgsql: transaction were improperly handled
   now transaction support is solidly disabled until we have enough requests
   to implement it again. Module still works fine in single insert mode.
