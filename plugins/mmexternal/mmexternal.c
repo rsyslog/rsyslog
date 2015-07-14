@@ -31,7 +31,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#if defined(__FreeBSD__)
+#include <sys/wait.h>
+#else
 #include <wait.h>
+#endif
 #include <sys/uio.h>
 #include "conf.h"
 #include "syslogd-types.h"

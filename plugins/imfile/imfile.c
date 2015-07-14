@@ -175,7 +175,7 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
-#if HAVE_INOTIFY_INIT
+#if HAVE_INOTIFY_INIT 
 /* support for inotify mode */
 
 /* we need to track directories */
@@ -1869,12 +1869,15 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
+#if HAVE_INOTIFY_INIT
+	/* we use these vars only in inotify mode */
 	if(dirs != NULL) {
 		free(dirs->active.listeners);
 		free(dirs->configured.listeners);
 		free(dirs);
 	}
 	free(wdmap);
+#endif
 ENDmodExit
 
 
