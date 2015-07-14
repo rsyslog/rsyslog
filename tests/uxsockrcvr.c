@@ -36,6 +36,9 @@
 #include <getopt.h>
 #include <sys/un.h>
 #include <netdb.h>
+#if defined(__FreeBSD__)
+#include <sys/socket.h>
+#endif
  
 char *sockName = NULL;
 int sock;
