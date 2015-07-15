@@ -2,4 +2,4 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 echo ===============================================================================
 echo \[sndrcv_udp_nonstdpt_v6.sh\]: testing sending and receiving via udp
-source $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt_v6 500
+. $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt_v6 500

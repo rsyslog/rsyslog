@@ -2,10 +2,10 @@
 echo =====================================================================================
 echo \[execonlywhenprevsuspended-queue.sh\]: test execonly...suspended functionality with action on its own queue
 
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup execonlywhenprevsuspended-queue.conf
-source $srcdir/diag.sh injectmsg 0 1000
-source $srcdir/diag.sh shutdown-when-empty
-source $srcdir/diag.sh wait-shutdown
-source $srcdir/diag.sh seq-check 1 999
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup execonlywhenprevsuspended-queue.conf
+. $srcdir/diag.sh injectmsg 0 1000
+. $srcdir/diag.sh shutdown-when-empty
+. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh seq-check 1 999
+. $srcdir/diag.sh exit

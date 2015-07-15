@@ -1,3 +1,4 @@
+#!/bin/bash
 # this is a small helper script used to run testbench tests
 # repetetively. It is meant for manual use and not included
 # in any testbench functionality.

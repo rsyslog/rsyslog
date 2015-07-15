@@ -1,8 +1,8 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
 echo [imfile-readmode2-with-persists-data-during-stop.sh]
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup imfile-readmode2-with-persists-data-during-stop.conf
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup imfile-readmode2-with-persists-data-during-stop.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -16,8 +16,8 @@ sleep 1
 # persisted and read again on startup. Results should still be
 # correct ;)
 echo stopping rsyslog
-source $srcdir/diag.sh shutdown-when-empty
-source $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh shutdown-when-empty
+. $srcdir/diag.sh wait-shutdown
 
 # write some more lines - we want to check here if the initial
 # polling loop properly picks up that data. Note that even in
@@ -28,7 +28,7 @@ echo 'msgnum:3
  msgnum:4' >> rsyslog.input
 
 echo restarting rsyslog
-source $srcdir/diag.sh startup imfile-readmode2-with-persists.conf
+. $srcdir/diag.sh startup imfile-readmode2-with-persists.conf
 echo restarted rsyslog, continuing with test
 
 echo ' msgnum:5' >> rsyslog.input
@@ -40,8 +40,8 @@ msgnum:8' >> rsyslog.input
 # give it time to finish
 sleep 1
 
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -75,4 +75,4 @@ done
 
 ## if we got here, all is good :)
 
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh exit

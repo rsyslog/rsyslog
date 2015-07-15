@@ -1,8 +1,8 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
 echo [imfile-readmode2.sh]
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup imfile-readmode2-polling.conf
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup imfile-readmode2-polling.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -20,8 +20,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to finish
 sleep 1
 
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -32,12 +32,12 @@ NUMLINES=$(grep -c HEADER $srcdir/rsyslog.out.log 2>/dev/null)
 
 if [ -z $NUMLINES ]; then
   echo "ERROR: expecting at least a match for HEADER, maybe rsyslog.out.log wasn't even written?"
-  source $srcdir/diag.sh exit
+  . $srcdir/diag.sh exit
   exit 1
 else
   if [ ! $NUMLINES -eq 3 ]; then
     echo "ERROR: expecting 3 headers, got $NUMLINES"
-    source $srcdir/diag.sh exit
+    . $srcdir/diag.sh exit
     exit 1
   fi
 fi
@@ -48,11 +48,11 @@ for i in {1..4}; do
   grep msgnum:$i $srcdir/rsyslog.out.log > /dev/null 2>&1
   if [ ! $? -eq 0 ]; then
     echo "ERROR: expecting the string 'msgnum:$i', it's not there"
-    source $srcdir/diag.sh exit
+    . $srcdir/diag.sh exit
     exit 1
   fi
 done
 
 ## if we got here, all is good :)
 
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh exit

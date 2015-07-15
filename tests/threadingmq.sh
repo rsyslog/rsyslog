@@ -7,13 +7,13 @@
 # should be covered by this test here.
 # rgerhards, 2009-06-26
 echo \[threadingmq.sh\]: main queue concurrency
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup threadingmq.conf
-source $srcdir/diag.sh injectmsg 0 100000
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup threadingmq.conf
+. $srcdir/diag.sh injectmsg 0 100000
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 # we give an extra seconds for things to settle, especially
 # important on slower test machines
 ./msleep 5000
-source $srcdir/diag.sh wait-shutdown
-source $srcdir/diag.sh seq-check 0 99999
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh seq-check 0 99999
+. $srcdir/diag.sh exit

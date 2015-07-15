@@ -8,4 +8,4 @@
 echo ===============================================================================
 echo \[sndrcv_udp_nonstdpt.sh\]: testing sending and receiving via udp
 export TCPFLOOD_EXTRA_OPTS="-b1 -W1"
-source $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt 500
+. $srcdir/sndrcv_drvr.sh sndrcv_udp_nonstdpt 500

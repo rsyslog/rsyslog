@@ -6,11 +6,11 @@
 # uncomment for debugging support:
 echo ===============================================================================
 echo \[badqi.sh\]: test startup with invalid .qi file
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup badqi.conf
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup badqi.conf
 # we just inject a handful of messages so that we have something to wait for...
-source $srcdir/diag.sh tcpflood -m20
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown  # wait for process to terminate
-source $srcdir/diag.sh seq-check 0 19
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh tcpflood -m20
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown  # wait for process to terminate
+. $srcdir/diag.sh seq-check 0 19
+. $srcdir/diag.sh exit

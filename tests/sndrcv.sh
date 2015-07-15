@@ -6,4 +6,4 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[sndrcv.sh\]: testing sending and receiving via tcp
-source $srcdir/sndrcv_drvr.sh sndrcv 50000
+. $srcdir/sndrcv_drvr.sh sndrcv 50000

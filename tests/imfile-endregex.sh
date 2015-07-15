@@ -3,8 +3,8 @@
 # endmsg.regex. It's kind of a base test for the regex functionality.
 echo ======================================================================
 echo [imfile-endregex.sh]
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup imfile-endregex.conf
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup imfile-endregex.conf
 
 # write the beginning of the file
 echo 'msgnum:0
@@ -22,8 +22,8 @@ echo 'msgnum:5' >> rsyslog.input # this one shouldn't be written to the output f
 # give it time to finish
 sleep 1
 
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown    # we need to wait until rsyslogd is finished!
 
 # give it time to write the output file
 sleep 1
@@ -57,4 +57,4 @@ done
 
 ## if we got here, all is good :)
 
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh exit
