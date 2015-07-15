@@ -33,7 +33,9 @@
 #include <getopt.h>
 #include <errno.h>
 #include <string.h>
+#ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
+#endif
 
 static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C
 	} fmt = FMT_NATIVE;
@@ -69,11 +71,15 @@ int main(int argc, char *argv[])
 	int bRollingSev = 0;
 	int sev = 6;
 	int msgs = 500;
+#ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_channel_t logchan = NULL;
+#endif
 	const char *chandesc = "syslog:";
 	char msgbuf[4096];
 
+#ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_init(STDLOG_USE_DFLT_OPTS);
+#endif
 	while((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
 		switch (opt) {
 		case 's':	if(*optarg == 'r') {
@@ -99,19 +105,29 @@ int main(int argc, char *argv[])
 		}
 	}
 
+#ifdef HAVE_LIBLOGGING_STDLOG
 	if((logchan = stdlog_open(argv[0], 0, STDLOG_LOCAL1, chandesc)) == NULL) {
 		fprintf(stderr, "error opening logchannel '%s': %s\n",
 			chandesc, strerror(errno));
 		exit(1);
 	}
+#endif
 	for(i = 0 ; i < msgs ; ++i) {
+#ifdef HAVE_LIBLOGGING_STDLOG
 		genMsg(msgbuf, sev, i);
 		if(stdlog_log(logchan, sev, "%s", msgbuf) != 0) {
 			perror("error writing log record");
 			exit(1);
 		}
+#else
+		syslog(sev % 8, "test message nbr %d, severity=%d", i, sev % 8);
+#endif
 		if(bRollingSev)
+#ifdef HAVE_LIBLOGGING_STDLOG
 			sev = (sev + 1) % 8;
+#else
+		sev++;
+#endif
 	}
 	return(0);
 }
