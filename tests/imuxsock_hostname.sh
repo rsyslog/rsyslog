@@ -1,4 +1,10 @@
 echo \[imuxsock_hostname.sh\]: test set hostname
+./syslog_caller -fsyslog_inject-l -m0 > /dev/null 2>&1
+no_liblogging_stdlog=$?
+if [ $no_liblogging_stdlog ];then
+  echo "liblogging-stdlog not available - skipping test"
+  exit 77
+fi
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup imuxsock_hostname.conf
 # the message itself is irrelevant. The only important thing is
