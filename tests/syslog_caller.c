@@ -5,8 +5,6 @@
  *
  * -s severity (0..7 accoding to syslog spec, r "rolling", default 6)
  * -m number of messages to generate (default 500)
- * -C liblognorm-stdlog channel description
- * -f message format to use
  *
  * Part of the testbench for rsyslog.
  *
@@ -47,6 +45,7 @@ static void usage(void)
 }
 
 
+#ifdef HAVE_LIBLOGGING_STDLOG
 /* buffer must be large "enough" [4K?] */
 static void
 genMsg(char *buf, const int sev, const int iRun)
@@ -63,6 +62,7 @@ genMsg(char *buf, const int sev, const int iRun)
 		break;
 	}
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -73,23 +73,29 @@ int main(int argc, char *argv[])
 	int msgs = 500;
 #ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_channel_t logchan = NULL;
-#endif
 	const char *chandesc = "syslog:";
 	char msgbuf[4096];
+#endif
 
 #ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_init(STDLOG_USE_DFLT_OPTS);
-#endif
 	while((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
+#endif
+	while((opt = getopt(argc, argv, "m:s:")) != -1) {
 		switch (opt) {
 		case 's':	if(*optarg == 'r') {
 					bRollingSev = 1;
 					sev = 0;
 				} else
+#ifdef HAVE_LIBLOGGING_STDLOG
 					sev = atoi(optarg) % 8;
+#else
+					sev = atoi(optarg);
+#endif
 				break;
 		case 'm':	msgs = atoi(optarg);
 				break;
+#ifdef HAVE_LIBLOGGING_STDLOG
 		case 'C':	chandesc = optarg;
 				break;
 		case 'f':	if(!strcmp(optarg, "syslog_inject-l"))
@@ -99,8 +105,11 @@ int main(int argc, char *argv[])
 				else
 					usage();
 				break;
+#endif
 		default:	usage();
+#ifdef HAVE_LIBLOGGING_STDLOG
 				exit(1);
+#endif
 				break;
 		}
 	}
