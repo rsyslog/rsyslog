@@ -100,7 +100,7 @@ rscryutil = rscryutil.c
 rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
 rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
 rscryutil_LDFLAGS = \
-	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+	-Wl,--whole-archive,--no-whole-archive
 rscryutil.1: rscryutil.rst
 	$(AM_V_GEN) $(RST2MAN) $< $@
 man1_MANS += rscryutil.1
