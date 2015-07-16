@@ -5,6 +5,8 @@
  *
  * -s severity (0..7 accoding to syslog spec, r "rolling", default 6)
  * -m number of messages to generate (default 500)
+ * -C liblognorm-stdlog channel description
+ * -f message format to use
  *
  * Part of the testbench for rsyslog.
  *
