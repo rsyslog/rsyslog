@@ -28,6 +28,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -82,8 +83,9 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_init(STDLOG_USE_DFLT_OPTS);
 	while((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
-#endif
+#else
 	while((opt = getopt(argc, argv, "m:s:")) != -1) {
+#endif
 		switch (opt) {
 		case 's':	if(*optarg == 'r') {
 					bRollingSev = 1;
