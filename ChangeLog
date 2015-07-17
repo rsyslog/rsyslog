@@ -15,6 +15,9 @@ Version 8.12.0 [v8-stable] 2015-08-11
   reattempts to one per the whole path, instead of one per each path
   element.
   This solution was provided by Martin Poole.
+- bugfix imfile: file table was corrupted when on file deletion
+  This could happen when a file that was statically configured (not via an
+  wildcard) was deleted.
 - bugfix ompgsql: transaction were improperly handled
   now transaction support is solidly disabled until we have enough requests
   to implement it again. Module still works fine in single insert mode.
