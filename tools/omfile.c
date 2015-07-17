@@ -768,7 +768,8 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
 finalize_it:
-	pCache[pData->iCurrElt]->nInactive = 0;
+	if(iRet == RS_RET_OK)
+		pCache[pData->iCurrElt]->nInactive = 0;
 	RETiRet;
 }
 
