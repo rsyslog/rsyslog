@@ -1397,8 +1397,8 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 
 	dir = dirs + dirIdx;
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
-	dbgprintf("DDDD: associated file [%s] to directory %d[%s]\n",
-		pLstn->pszFileName, dirIdx, dir->dirName);
+	dbgprintf("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
+		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
 fileTableDisplay(bActive ? &dir->active : &dir->configured);
 finalize_it:
 	RETiRet;
@@ -1416,7 +1416,7 @@ in_setupDirWatch(const int dirIdx)
 		goto done;
 	}
 	wdmapAdd(wd, dirIdx, NULL);
-	dbgprintf("DDDD: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
 done:	return;
 }
 
@@ -1441,7 +1441,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 		goto done;
 	}
 	wdmapAdd(wd, -1, pLstn);
-	dbgprintf("DDDD: watch %d added for file %s\n", wd, pLstn->pszFileName);
+	dbgprintf("DDDD: imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
 done:	return;
@@ -1569,7 +1569,7 @@ filesDisplay(void)
 {
 	lstn_t *pLstn;
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next)
-		dbgprintf("DDDD: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
+		dbgprintf("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -1585,6 +1585,7 @@ filesDisplay(); // TODO: remove after initial unstable release(s)
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
+	int ftIdx;
 	uchar *statefn;
 	DBGPRINTF("imfile: remove listener '%s', wd %d\n",
 	          pLstn->pszFileName, ev->wd);
@@ -1597,7 +1598,15 @@ filesDisplay(); // TODO: remove after initial unstable release(s)
 		bDoRMState = 0;
 	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
-	lstnDel(pLstn);
+	/*	do NOT delete listener data if the object is also linked to the 
+	*	configured table */
+	ftIdx = fileTableSearch(&dirs[dirIdx].configured, pLstn->pszBaseName);
+	if(ftIdx == -1) {
+		DBGPRINTF("imfile: DELETING listener data for '%s'\n", pLstn->pszFileName);
+		lstnDel(pLstn);
+	} else {
+		DBGPRINTF("imfile: NOT DELETING listener data for '%s'\n", pLstn->pszFileName);
+	}
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
 	if(bDoRMState) {
 		DBGPRINTF("imfile: unlinking '%s'\n", toDel);
@@ -1629,7 +1638,7 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 		}
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
 	}
-	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name);
 done:	return;
 }
@@ -1649,7 +1658,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile delete processing for '%s'\n",
+	dbgprintf("DDDD: imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
 	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
@@ -1658,7 +1667,7 @@ done:	return;
 static void
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
-	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
 	if((ev->mask & IN_CREATE)) {
 		in_handleDirEventCREATE(ev, dirIdx);
 	} else if((ev->mask & IN_DELETE)) {
