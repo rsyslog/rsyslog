@@ -1229,7 +1229,7 @@ static int
 fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
-	uchar *baseName;
+	uchar *baseName = NULL;
 fileTableDisplay(tab);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
@@ -1238,7 +1238,24 @@ fileTableDisplay(tab);
 	}
 	if(f == tab->currMax)
 		f = -1;
-	dbgprintf("DDDD: file '%s', found:%d\n", fn, f);
+	dbgprintf("DDDD: imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
+	return f;
+}
+
+static int
+fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
+{
+	int f;
+	uchar *baseName = NULL;
+fileTableDisplay(tab);
+	for(f = 0 ; f < tab->currMax ; ++f) {
+		baseName = tab->listeners[f].pLstn->pszBaseName;
+		if (strcmp((const char*)baseName, (const char*)fn) == 0)
+			break; /* found */
+	}
+	if(f == tab->currMax)
+		f = -1;
+	dbgprintf("DDDD: imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1600,12 +1617,12 @@ filesDisplay(); // TODO: remove after initial unstable release(s)
 	pollFile(pLstn, NULL); /* one final try to gather data */
 	/*	do NOT delete listener data if the object is also linked to the 
 	*	configured table */
-	ftIdx = fileTableSearch(&dirs[dirIdx].configured, pLstn->pszBaseName);
+	ftIdx = fileTableSearchNoWildcard(&dirs[dirIdx].configured, pLstn->pszBaseName);
 	if(ftIdx == -1) {
-		DBGPRINTF("imfile: DELETING listener data for '%s'\n", pLstn->pszFileName);
+		DBGPRINTF("imfile: DELETING listener data for '%s' - '%s'\n", pLstn->pszBaseName, pLstn->pszFileName);
 		lstnDel(pLstn);
 	} else {
-		DBGPRINTF("imfile: NOT DELETING listener data for '%s'\n", pLstn->pszFileName);
+		DBGPRINTF("imfile: NOT DELETING listener data for '%s' - '%s' - ftIdx = '%d' \n", pLstn->pszBaseName, pLstn->pszFileName, ftIdx);
 	}
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
 	if(bDoRMState) {
@@ -1694,7 +1711,6 @@ static void
 in_processEvent(struct inotify_event *ev)
 {
 	wd_map_t *etry;
-
 	if(ev->mask & IN_IGNORED) {
 		wdmapDel(ev->wd);
 		goto done;
