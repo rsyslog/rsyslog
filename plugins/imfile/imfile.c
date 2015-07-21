@@ -304,6 +304,22 @@ finalize_it:
 	RETiRet;
 }
 
+/* looks up a wdmap entry by dirIdx and returns it's index if found
+ * or -1 if not found.
+ */
+static int 
+wdmapLookupListner(lstn_t* pLstn)
+{
+	int i = 0; 
+	int wd = -1; 
+	/* Loop through */
+	for(i = 0 ; i < nWdmap; ++i) {
+		if (wdmap[i].pLstn == pLstn)
+			wd = wdmap[i].wd; 
+	}
+
+	return wd; 
+}
 
 /* compare function for bsearch() */
 static int
@@ -1213,7 +1229,7 @@ fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
 finalize_it:
 	RETiRet;
 }
-
+/* uncomment if needed
 static void
 fileTableDisplay(fileTable_t *tab)
 {
@@ -1225,12 +1241,14 @@ fileTableDisplay(fileTable_t *tab)
 		dbgprintf("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
 	}
 }
+*/
+
 static int
 fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
 	uchar *baseName = NULL;
-fileTableDisplay(tab);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
@@ -1247,7 +1265,7 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 {
 	int f;
 	uchar *baseName = NULL;
-fileTableDisplay(tab);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if (strcmp((const char*)baseName, (const char*)fn) == 0)
@@ -1265,9 +1283,8 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 {
 	int j;
 	DEFiRet;
-
 dbgprintf("DDDDD: imfile: fileTableAddFile\n");
-fileTableDisplay(tab);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1416,7 +1433,7 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
 	dbgprintf("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
 		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
-fileTableDisplay(bActive ? &dir->active : &dir->configured);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
 finalize_it:
 	RETiRet;
 }
@@ -1426,7 +1443,7 @@ static void
 in_setupDirWatch(const int dirIdx)
 {
 	int wd;
-	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE);
+	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 	if(wd < 0) {
 		DBGPRINTF("imfile: could not create dir watch for '%s'\n",
 			dirs[dirIdx].dirName);
@@ -1711,8 +1728,45 @@ static void
 in_processEvent(struct inotify_event *ev)
 {
 	wd_map_t *etry;
-	if(ev->mask & IN_IGNORED) {
+	lstn_t *pLstn;
+	int iRet;
+	struct inotify_event evFileHelper; 
+	int ftIdx;
+	int wd; 
+
+	DBGPRINTF("DDDD: imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
+	if			(ev->mask & IN_IGNORED) {
 		wdmapDel(ev->wd);
+		goto done;
+	} else if	(ev->mask & IN_MOVED_FROM) {
+		/* Find wd entry and remove it */
+		etry =  wdmapLookup(ev->wd);
+		if(etry != NULL) {
+			ftIdx = fileTableSearchNoWildcard(&dirs[etry->dirIdx].active, (uchar*)ev->name);
+			DBGPRINTF("DDDD: imfile: IN_MOVED_FROM Event (ftIdx=%d, name=%s)\n", ftIdx, ev->name);
+			if(ftIdx >= 0) {
+				/* Find listener and wd table index*/
+				pLstn = dirs[etry->dirIdx].active.listeners[ftIdx].pLstn; 
+				wd = wdmapLookupListner(pLstn); 
+
+				/* Remove file from inotify watch */
+				iRet = inotify_rm_watch(ino_fd, wd); /* Note this will TRIGGER IN_IGNORED Event! */
+				if (iRet != 0) {
+					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n", errno, ftIdx, wd, ev->name);
+				} else {
+					DBGPRINTF("DDDD: imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
+				}
+
+				/* Create Event to remove file*/
+				evFileHelper.wd = wd; 
+				evFileHelper.mask = IN_DELETE; 
+				evFileHelper.cookie = 0; 
+				evFileHelper.len = ev->len; 
+				evFileHelper.name[0] = ev->name[0]; 
+				in_removeFile(&evFileHelper, etry->dirIdx, pLstn);
+				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
+			}
+		}
 		goto done;
 	}
 	etry =  wdmapLookup(ev->wd);
