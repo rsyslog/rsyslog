@@ -763,7 +763,15 @@ AC_ARG_ENABLE(gnutls,
 if test "x$enable_gnutls" = "xyes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
-        AC_CHECK_LIB(gnutls, gnutls_global_init)
+	AC_CHECK_LIB(
+	    [gnutls],
+	    [gnutls_global_init],
+	    [
+	     AC_DEFINE(HAVE_LIB_GNUTLS, 1, [gnutls is available])
+	    ],
+	    [AC_MSG_FAILURE([gnutls library is missing])],
+	    []
+	)
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
 	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
 fi

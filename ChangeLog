@@ -7,6 +7,15 @@ Version 8.12.0 [v8-stable] 2015-08-11
   The file format is incompatible to previous format, but tools have been
   upgraded to handle both and also an option been added to convert from
   old to new format.
+- bugfix: ommysql did not work when gnutls was enabled
+  as it turned out, this was due to a check for GnuTLS functions
+  with the side-effect that
+  AC_CHECK_LIB, by default, adds the lib to LIBS, if there is no
+  explicit action, what was the case here. So everything was now
+  linked against GnuTLS, which in turn made ommysql fail.
+  Thanks to Thomas D. (whissi) for the analysis of the ommysql/gnutls
+  problem and Thomas Heinrich for pointing out that AC_CHECK_LIB might
+  be the culprit.
 - bugfix omfile: Fix race-condition detection in path-creation code
   The affected code is used to detect a race condition in between
   testing for the existence of a directory and creating it if it didn't
