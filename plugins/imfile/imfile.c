@@ -1922,7 +1922,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
-	cs.pBindRuleset = NULL;
 
 	RETiRet;
 }
