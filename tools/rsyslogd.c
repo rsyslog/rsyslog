@@ -1453,11 +1453,11 @@ rsyslogdDoDie(int sig)
 	static int iRetries = 0; /* debug aid */
 	dbgprintf(MSG1);
 	if(Debug == DEBUG_FULL) {
-		if(write(1, MSG1, sizeof(MSG1) - 1)) {}
+		printf(MSG1);
 	}
 	if(iRetries++ == 4) {
 		if(Debug == DEBUG_FULL) {
-			if(write(1, MSG2, sizeof(MSG2) - 1)) {}
+			printf(MSG2);
 		}
 		abort();
 	}
