@@ -826,7 +826,6 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 		CHKiRet(cstrConstruct(&thisLine));
 		/* append previous message to current message if necessary */
 		if(pThis->prevLineSegment != NULL) {
-			dbgprintf("DDDDD: readMultiLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
 			CHKiRet(cstrAppendCStr(thisLine, pThis->prevLineSegment));
 			cstrDestruct(&pThis->prevLineSegment);
 		}
@@ -843,7 +842,6 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 
 		/* we have a line, now let's assemble the message */
 		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0);
-dbgprintf("DDDD: readMultiLine: match %d, line '%s'\n", isMatch, rsCStrGetSzStr(thisLine));
 
 		if(isMatch) {
 			/* in this case, the *previous* message is complete and we are
@@ -853,7 +851,6 @@ dbgprintf("DDDD: readMultiLine: match %d, line '%s'\n", isMatch, rsCStrGetSzStr(
 				/* may be NULL in initial poll! */
 				finished = 1;
 				*ppCStr = pThis->prevMsgSegment;
-dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
 			}
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 			
@@ -868,15 +865,12 @@ dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
 				}
 				/* we could do this faster, but for now keep it simple */
 
-			} else {
-dbgprintf("DDDD: readMultiLine: ignoring initial unmatched line '%s'\n", rsCStrGetSzStr(thisLine));
 			}
 		}
 		cstrDestruct(&thisLine);
 	} while(finished == 0);
 
 finalize_it:
-dbgprintf("DDDDD: readMultiLine returns[%d]: [*ppCStr %p]\n", iRet,  *ppCStr);
         RETiRet;
 }
 
