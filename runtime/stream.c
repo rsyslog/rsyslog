@@ -858,13 +858,19 @@ dbgprintf("DDDD: readMultiLine: have match and msg %p\n", *ppCStr);
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 			
 		} else {
-			CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-			if(bEscapeLF) {
-				rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			if(pThis->prevMsgSegment != NULL) {
+				/* may be NULL in initial poll! */
+				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+				if(bEscapeLF) {
+					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+				} else {
+					cstrAppendChar(pThis->prevMsgSegment, '\n');
+				}
+				/* we could do this faster, but for now keep it simple */
+
 			} else {
-				cstrAppendChar(pThis->prevMsgSegment, '\n');
+dbgprintf("DDDD: readMultiLine: ignoring initial unmatched line '%s'\n", rsCStrGetSzStr(thisLine));
 			}
-			/* we could do this faster, but for now keep it simple */
 		}
 		cstrDestruct(&thisLine);
 	} while(finished == 0);
