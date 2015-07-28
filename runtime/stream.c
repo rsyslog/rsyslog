@@ -448,13 +448,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 			DBGPRINTF("error %d unlinking '%s' - ignored: %s\n",
 				   errno, pThis->pszCurrFName, errStr);
 		}
-		free(pThis->pszCurrFName);
-		pThis->pszCurrFName = NULL;
 	}
 
 	pThis->iCurrOffs = 0;	/* we are back at begin of file */
 
 finalize_it:
+	free(pThis->pszCurrFName);
+	pThis->pszCurrFName = NULL;
 	RETiRet;
 }
 
