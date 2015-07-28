@@ -441,6 +441,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_KAFKA_PRODUCE_ERR = -2424,/**< error during Kafka produce function */
 	RS_RET_CONF_PARAM_INVLD = -2425,/**< config parameter is invalid */
 	RS_RET_KSI_ERR = -2426,/**< error in KSI subsystem */
+	RS_RET_ERR_LIBLOGNORM = -2427,/**< cannot obtain liblognorm ctx */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
