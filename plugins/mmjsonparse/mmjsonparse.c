@@ -202,7 +202,7 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 	if(json == NULL
 	   || ((size_t)pWrkrData->tokener->char_offset < lenBuf)
 	   || (!json_object_is_type(json, json_type_object))) {
-		//Release json object as we are not going to add it to pMsg
+		/* Release json object as we are not going to add it to pMsg */
 		if(json != NULL) {
 			json_object_put(json);
 		}
