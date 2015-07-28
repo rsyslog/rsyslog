@@ -1615,6 +1615,7 @@ AC_ARG_ENABLE(generate-man-pages,
          esac],
         [have_to_generate_man_pages=no]
 )
+AM_CONDITIONAL(ENABLE_GENERATE_MAN_PAGES, test x$have_to_generate_man_pages = xyes)
 
 
 # This provides a work-around to use "make distcheck" by disabling
