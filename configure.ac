@@ -769,7 +769,7 @@ if test "x$enable_gnutls" = "xyes"; then
 	    [
 	     AC_DEFINE(HAVE_LIB_GNUTLS, 1, [gnutls is available])
 	    ],
-	    [AC_MSG_FAILURE([gnutls library is missing])],
+	    [AC_MSG_WARN([gnutls_global_init function missing or not detected])],
 	    []
 	)
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
