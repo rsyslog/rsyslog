@@ -199,7 +199,6 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
         uchar *p;
         uchar *pszWork;
         size_t len;
-	int err;
 	int iTry = 0;
 	int bErr = 0;
 
@@ -217,7 +216,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 			iTry = 0;
 again:
                         if(access((char*)pszWork, F_OK)) {
-                                if((err = mkdir((char*)pszWork, mode)) == 0) {
+                                if(mkdir((char*)pszWork, mode) == 0) {
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(chown((char*)pszWork, uid, gid) != 0)
@@ -228,7 +227,7 @@ again:
 							 */
 					}
 				} else {
-					if(err == EEXIST && iTry == 0) {
+					if(errno == EEXIST && iTry == 0) {
 						iTry = 1;
 						goto again;
 						}
