@@ -1,3 +1,4 @@
+#!/bin/bash
 # This test tests tcp forwarding with assigned default template.
 # added 2015-05-30 by rgerhards. Released under ASL 2.0
 echo ======================================================================================

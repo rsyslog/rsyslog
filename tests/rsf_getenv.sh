@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for the getenv() rainerscript function
 # this is a quick test, but it gurantees that the code path is
 # at least progressed (but we do not check for unset envvars!)

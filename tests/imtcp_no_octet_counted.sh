@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[imtcp_no_octet_counted.sh\]: test imtcp with octet counted framing disabled

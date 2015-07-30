@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests proper processing of the authpriv facility.
 # added 2014-09-16 by Rgerhards
 

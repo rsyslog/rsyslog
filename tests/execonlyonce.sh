@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for the $ActionExecOnlyOnceEveryInterval directive.
 # We inject a couple of messages quickly during the interval,
 # then wait until the interval expires, then quickly inject

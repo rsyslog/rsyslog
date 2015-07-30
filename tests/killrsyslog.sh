@@ -1,3 +1,4 @@
+#!/bin/bash
 #check if rsyslog instance exists and, if so, kill it
 if [ -e "rsyslog.pid" ]
 then

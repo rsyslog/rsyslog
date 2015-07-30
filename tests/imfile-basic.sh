@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
 echo [imfile-basic.sh]
 . $srcdir/diag.sh init

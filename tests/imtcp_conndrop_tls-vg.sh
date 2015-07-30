@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test imtcp/TLS with many dropping connections
 # added 2011-06-09 by Rgerhards
 #

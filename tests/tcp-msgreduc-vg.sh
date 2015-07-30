@@ -1,3 +1,4 @@
+#!/bin/bash
 # check if valgrind violations occur. Correct output is not checked.
 # added 2011-03-01 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3

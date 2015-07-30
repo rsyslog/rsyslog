@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[discard-rptdmsg.sh\]: testing discard-rptdmsg functionality

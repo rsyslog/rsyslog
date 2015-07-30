@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for automatic creation of dynafile directories
 # note that we use the "test-spool" directory, because it is handled by diag.sh
 # in any case, so we do not need to add any extra new test dir.

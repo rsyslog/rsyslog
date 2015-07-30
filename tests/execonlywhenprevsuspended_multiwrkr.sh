@@ -1,3 +1,4 @@
+#!/bin/bash
 # rgerhards, 2013-12-05
 echo =====================================================================================
 echo \[execonlywhenprevsuspended_multiwrkr.sh\]: test execonly...suspended functionality multiworker case

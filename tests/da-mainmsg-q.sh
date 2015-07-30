@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for DA mode on the main message queue
 # This test checks if DA mode operates correctly. To do so,
 # it uses a small in-memory queue size, so that DA mode is initiated

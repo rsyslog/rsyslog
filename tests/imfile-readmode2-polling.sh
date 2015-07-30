@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
 echo [imfile-readmode2.sh]

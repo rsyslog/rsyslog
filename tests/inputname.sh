@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[inputname.sh\]: testing $InputTCPServerInputName directive
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 . $srcdir/diag.sh generate-HOSTNAME

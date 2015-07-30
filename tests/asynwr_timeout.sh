@@ -1,3 +1,4 @@
+#!/bin/bash
 # This test writes to the output buffers, let's the output
 # write timeout (and write data) and then continue. The conf file
 # has a 2 second timeout, so we wait 4 seconds to be on the save side.

@@ -1,3 +1,4 @@
+#!/bin/bash
 # test many concurrent tcp connections
 # we send 100,000 messages in the hopes that his puts at least a little bit
 # of pressure on the threading subsystem. To really prove it, we would need to

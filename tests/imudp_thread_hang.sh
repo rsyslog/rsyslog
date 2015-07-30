@@ -1,3 +1,4 @@
+#!/bin/bash
 # the whole point of this test is just to check that imudp
 # does not block rsyslog termination. This test was introduced
 # after we had a regression where imudp's worker threads were

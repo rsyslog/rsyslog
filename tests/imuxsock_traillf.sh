@@ -1,3 +1,4 @@
+#!/bin/bash
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_traillf.conf
 # send a message with trailing LF

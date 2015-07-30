@@ -1,3 +1,4 @@
+#!/bin/bash
 # test many concurrent tcp connections
 echo ====================================================================================
 echo TEST: \[manyptcp.sh\]: test imptcp with large connection count

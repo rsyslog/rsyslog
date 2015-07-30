@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock on shutdown. I have added it to the test suite to automatically
 # detect such things in the future.

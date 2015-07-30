@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for the pipe output action.
 # will create a fifo in the current directory, write to it and
 # then do the usual sequence checks.

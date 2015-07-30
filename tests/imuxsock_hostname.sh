@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[imuxsock_hostname.sh\]: test set hostname
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_hostname.conf

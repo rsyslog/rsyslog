@@ -1,3 +1,4 @@
+#!/bin/bash
 # This test checks if an empty includeConfig directory causes problems. It
 # should not, as this is a valid situation that by default exists on many
 # distros.

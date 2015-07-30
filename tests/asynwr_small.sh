@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests async writing with only a small set of data. That
 # shall result in data staying in buffers until shutdown, what
 # then will trigger some somewhat complex logic in the stream

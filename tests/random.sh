@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test if rsyslog survives sending truely random data to it...
 #
 # added 2010-04-01 by Rgerhards

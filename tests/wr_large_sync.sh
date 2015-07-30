@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests async writing large data records. We use up to 10K
 # record size.
 

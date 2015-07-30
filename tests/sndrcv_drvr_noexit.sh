@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test driver for testing two rsyslog instances. It can be
 # utilized by any test that just needs two instances with different
 # config files, where messages are injected in instance TWO and 

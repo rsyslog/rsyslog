@@ -1,3 +1,4 @@
+#!/bin/bash
 # the goal here is to detect memleaks when structured data is not
 # correctly parsed.
 # This file is part of the rsyslog project, released  under ASL 2.0

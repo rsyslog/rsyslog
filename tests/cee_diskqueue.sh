@@ -1,3 +1,4 @@
+#!/bin/bash
 # check if CEE properties are properly saved & restored to/from disk queue
 # added 2012-09-19 by rgerhards
 # This file is part of the rsyslog project, released under ASL 2.0

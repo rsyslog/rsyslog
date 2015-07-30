@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[elasticsearch-bulk-errorfile-populated\]: basic test for elasticsearch functionality
