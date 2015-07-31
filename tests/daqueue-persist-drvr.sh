@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for queue data persisting at shutdown. The
 # plan is to start an instance, emit some data, do a relatively
 # fast shutdown and then re-start the engine to process the 

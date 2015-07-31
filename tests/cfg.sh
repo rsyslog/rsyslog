@@ -1,4 +1,4 @@
-# /bin/bash
+#!/bin/bash
 # This is a simple shell script that carries out some checks against
 # configurations we expect from some provided config files. We use
 # rsyslogd's verifcation function. Note that modifications to the

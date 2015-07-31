@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released under GPLv3
 echo ===============================================================================
 echo \[libdbi-asyn.sh\]: asyn test for libdbi functionality

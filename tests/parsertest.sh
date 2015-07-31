@@ -1,3 +1,4 @@
+#!/bin/bash
 echo TEST: \[parsertest.sh\]: various parser tests
 . $srcdir/diag.sh init
 

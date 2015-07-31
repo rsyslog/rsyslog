@@ -1,3 +1,4 @@
+#!/bin/bash
 # This runs sends and receives messages via UDP to the non-standard port 2514
 # Note that with UDP we can always have message loss. While this is
 # less likely in a local environment, we strongly limit the amount of data

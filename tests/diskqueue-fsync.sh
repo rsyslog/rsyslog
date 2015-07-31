@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for disk-only queue mode (with fsync for queue files)
 # This test checks if queue files can be correctly written
 # and read back, but it does not test the transition from

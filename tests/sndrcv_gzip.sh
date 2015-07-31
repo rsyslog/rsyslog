@@ -1,3 +1,4 @@
+#!/bin/bash
 # This test is similar to tcpsndrcv, but it forwards messages in
 # zlib-compressed format (our own syslog extension).
 # rgerhards, 2009-11-11

@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for disk-only queue mode with v6+ config
 # This tests defines three rulesets, each one with its own queue. Then, it
 # sends data to them and checks the outcome. Note that we do need to

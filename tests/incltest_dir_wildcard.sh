@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[incltest_dir_wildcard.sh\]: test $IncludeConfig for directories with wildcards
 

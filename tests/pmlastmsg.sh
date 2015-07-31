@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ==============================================================================
 echo \[pmlastmsg.sh\]: tests for pmlastmsg
 . $srcdir/diag.sh init

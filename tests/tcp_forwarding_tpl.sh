@@ -1,3 +1,4 @@
+#!/bin/bash
 # This test tests tcp forwarding with assigned template. To do so, a simple
 # tcp listener service is started.
 # added 2012-10-30 by Rgerhards. Released under GNU GPLv3+

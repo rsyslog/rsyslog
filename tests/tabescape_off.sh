@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[tabescape_off.sh\]: test for tab escaping off
 . $srcdir/diag.sh init

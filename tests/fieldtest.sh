@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[fieldtest.sh\]: test fieldtest via udp
 . $srcdir/diag.sh init
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason

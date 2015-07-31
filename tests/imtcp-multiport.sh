@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for multiple ports in imtcp
 # This test checks if multiple tcp listener ports are correctly
 # handled by imtcp

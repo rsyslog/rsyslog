@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[incltest_dir.sh\]: test $IncludeConfig for directories
 

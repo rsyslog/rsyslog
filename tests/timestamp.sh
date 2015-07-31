@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[timestamp.sh\]: various timestamp tests
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-HOSTNAME

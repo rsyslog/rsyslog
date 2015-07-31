@@ -1,3 +1,4 @@
+#!/bin/bash
 # check if execonly...suspended works when the first action is *not*
 # suspended --> file1 must be created, file 2 not
 # rgerhards, 2015-05-27

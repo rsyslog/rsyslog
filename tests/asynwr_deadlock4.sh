@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock during processing.
 # We added this as a standard test in the hopes that iw will help

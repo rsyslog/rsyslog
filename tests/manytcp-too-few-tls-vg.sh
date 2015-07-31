@@ -1,3 +1,4 @@
+#!/bin/bash
 # test many concurrent tcp connections
 echo \[manytcp-too-few-tls.sh\]: test concurrent tcp connections
 . $srcdir/diag.sh init

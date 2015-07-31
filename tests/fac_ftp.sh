@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup fac_ftp.conf

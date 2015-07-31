@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[tabescape_dflt.sh\]: test for default tab escaping
 . $srcdir/diag.sh init

@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for global variables
 # added 2013-11-18 by rgerhards
 # This file is part of the rsyslog project, released  under ASL 2.0

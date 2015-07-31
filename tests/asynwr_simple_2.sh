@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test driver for testing asynchronous file output.
 #
 # added 2010-03-09 by Rgerhards

@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 # Copyright (C) 2014 Rainer Gerhards -- 2014-11-14
 echo ====================================================================================

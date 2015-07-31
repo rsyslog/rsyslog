@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests writing large data records in gzip mode. We also write it to
 # 5 different dynafiles, with a dynafile cache size set to 4. So this stresses
 # both the input side, as well as zip writing, async writing and the dynafile

@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[imuxsock_ccmiddle.sh\]: test trailing LF handling in imuxsock
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_ccmiddle.conf

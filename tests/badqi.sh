@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for a startup with a bad qi file. This tests simply tests
 # if the rsyslog engine survives (we had segfaults in this situation
 # in the past).

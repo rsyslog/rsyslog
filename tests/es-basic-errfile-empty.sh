@@ -1,3 +1,4 @@
+#!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[es-basic-errfile-empty\]: basic test for elasticsearch functionality

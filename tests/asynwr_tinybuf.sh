@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests async writing with a very small output buffer (1 byte!),
 # so it stresses output buffer handling. This also means operations will
 # be somewhat slow, so we send only a small amounts of data.

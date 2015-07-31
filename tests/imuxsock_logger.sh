@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[imuxsock_logger.sh\]: test imuxsock
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_logger.conf

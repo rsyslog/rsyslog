@@ -1,3 +1,4 @@
+#!/bin/bash
 # added 2015-05-22 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================

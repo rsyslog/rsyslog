@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2015-01-29 by Tim Eifler
 # This file is part of the rsyslog project, released  under ASL 2.0
 # The configuration test should fail because of the invalid config file.

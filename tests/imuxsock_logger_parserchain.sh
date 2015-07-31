@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (C) 2015-03-04 by rainer gerhards, released under ASL 2.0
 echo ======================================================================
 echo \[imuxsock_logger_parserchain.sh\]: test imuxsock

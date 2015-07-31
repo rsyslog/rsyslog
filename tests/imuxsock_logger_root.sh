@@ -1,3 +1,4 @@
+#!/bin/bash
 # note: we must be root and no other syslogd running in order to
 # carry out this test.
 echo \[imuxsock_logger_root.sh\]: test trailing LF handling in imuxsock

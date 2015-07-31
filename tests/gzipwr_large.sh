@@ -1,3 +1,4 @@
+#!/bin/bash
 # This tests writing large data records in gzip mode. We use up to 10K
 # record size.
 #

@@ -1,3 +1,4 @@
+#!/bin/bash
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================

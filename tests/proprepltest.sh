@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[proprepltest.sh\]: various tests for the property replacer
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-HOSTNAME

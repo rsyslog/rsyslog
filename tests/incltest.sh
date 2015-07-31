@@ -1,3 +1,4 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[incltest.sh\]: test $IncludeConfig for specific file
 

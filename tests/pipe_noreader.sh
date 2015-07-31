@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test driver for a pipe that has no reader. This mimics a usual
 # real-world scenario, the /dev/xconsole pipe. Some versions of rsyslog
 # were known to hang or loop on this pipe, thus we added this scenario

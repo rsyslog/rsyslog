@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock during processing (when the a stream was purged from the
 # dynafile cache).

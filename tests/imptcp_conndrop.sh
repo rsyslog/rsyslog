@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test imptcp with many dropping connections
 # added 2010-08-10 by Rgerhards
 #

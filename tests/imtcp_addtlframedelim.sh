@@ -1,3 +1,4 @@
+#!/bin/bash
 # added 2010-08-11 by Rgerhards
 #
 # This file is part of the rsyslog project, released  under GPLv3

@@ -1,3 +1,4 @@
+#!/bin/bash
 # check if the configuration test run detects invalid config files.
 #
 # Part of the testbench for rsyslog.

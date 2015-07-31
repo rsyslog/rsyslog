@@ -1,4 +1,5 @@
 #!/bin/bash
+#!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[mysql-act-mt.sh\]: test for mysql with multithread actionq

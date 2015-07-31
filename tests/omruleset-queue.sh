@@ -1,3 +1,4 @@
+#!/bin/bash
 # test for omruleset. What we do is have the main queue forward 
 # all messages to a secondary ruleset via omruleset, which then does
 # the actual file write. We check if all messages arrive at the file, 
