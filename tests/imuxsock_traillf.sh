@@ -1,4 +1,10 @@
 #!/bin/bash
+./syslog_caller -fsyslog_inject-l -m0 > /dev/null 2>&1
+no_liblogging_stdlog=$?
+if [ $no_liblogging_stdlog -ne 0 ];then
+  echo "liblogging-stdlog not available - skipping test"
+  exit 77
+fi
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_traillf.conf
 # send a message with trailing LF
