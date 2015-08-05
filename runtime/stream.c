@@ -920,7 +920,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 	}
 
 	/* if we are set to sync, we must obtain a file handle to the directory for fsync() purposes */
-	if(pThis->bSync && !pThis->bIsTTY) {
+	if(pThis->bSync && !pThis->bIsTTY && pThis->pszDir != NULL) {
 		pThis->fdDir = open((char*)pThis->pszDir, O_RDONLY | O_CLOEXEC | O_NOCTTY);
 		if(pThis->fdDir == -1) {
 			char errStr[1024];

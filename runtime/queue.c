@@ -743,6 +743,7 @@ qqueueLoadPersStrmInfoFixup(strm_t *pStrm, qqueue_t __attribute__((unused)) *pTh
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	CHKiRet(strm.SetDir(pStrm, pThis->pszSpoolDir, pThis->lenSpoolDir));
+	CHKiRet(strm.SetbSync(pStrm, pThis->bSyncQueueFiles));
 finalize_it:
 	RETiRet;
 }
