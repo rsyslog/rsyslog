@@ -54,6 +54,10 @@ Version 8.12.0 [v8-stable] 2015-08-11
   Thanks to Louis Bouchard for the patch
 - bugfix rscryutil.1: Added fix checking for generate_man_pages condition
   Thanks to Radovan Sroka for the patch
+- bugfix freebsd console: \n (NL) is prepended with \r (CR) in console
+  output on freebsd only. For more details see here: 
+  https://github.com/rsyslog/rsyslog/issues/372
+  Thanks to AlexandreFenyo for the patch
 ------------------------------------------------------------------------------
 Version 8.11.0 [v8-stable] 2015-06-30
 - new signature provider for Keyless Signature Infrastructure (KSI) added
