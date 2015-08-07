@@ -59,6 +59,8 @@ DEFobjCurrIf(glbl)
 typedef struct _instanceData {
 	permittedPeers_t *pPermPeers;
 	uchar *sockName;
+	uchar *sockType;
+	int type;
 	int sock;
 	struct sockaddr_un addr;
 } instanceData;
@@ -72,6 +74,7 @@ typedef struct wrkrInstanceData {
 typedef struct configSettings_s {
 	uchar *tplName; /* name of the default template to use */
 	uchar *sockName; /* name of the default template to use */
+	uchar *sockType; /*type datagram or stream, datagram is default */
 } configSettings_t;
 static configSettings_t cs;
 
@@ -100,6 +103,7 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 	cs.tplName = NULL;
 	cs.sockName = NULL;
+	cs.sockType = NULL;
 ENDinitConfVars
 
 
@@ -245,6 +249,7 @@ CODESTARTfreeInstance
 	/* final cleanup */
 	closeSocket(pData);
 	free(pData->sockName);
+	free(pData->sockType);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -255,12 +260,11 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	DBGPRINTF("%s", pData->sockName);
+	DBGPRINTF("%s", pData->sockType);
 ENDdbgPrintInstInfo
 
 
-/* Send a message via UDP
- * rgehards, 2007-12-20
- */
+/* Send a message */
 static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 {
 	DEFiRet;
@@ -278,6 +282,7 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 		 * call fails. Then, lsent has the error status, even though
 		 * the sendto() succeeded. -- rgerhards, 2007-06-22
 		 */
+	if(pData->type == SOCK_DGRAM) {
 		lenSent = sendto(pData->sock, msg, len, 0, &pData->addr, sizeof(pData->addr));
 		if(lenSent == len) {
 			int eno = errno;
@@ -285,8 +290,24 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 			DBGPRINTF("omuxsock suspending: sendto(), socket %d, error: %d = %s.\n",
 				pData->sock, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 		}
+	} else {
+		while(lenSent < len) {
+			int sent = send(pData->sock, msg + lenSent, len - lenSent, 0);
+			lenSent += sent;
+			if(sent == -1) {
+				int eno = errno;
+ 				char errStr[1024];
+				DBGPRINTF("omuxsock suspending: send(), socket %d, error: %d = %s.\n",
+					pData->sock, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+				closeSocket(pData);
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
+				break;
+			}
+		}
+		/*"flush"*/
+		send(pData->sock, "\n", strlen("\n"), 0);
+		}
 	}
-
 finalize_it:
 	RETiRet;
 }
@@ -299,22 +320,36 @@ openSocket(instanceData *pData)
 {
 	DEFiRet;
 	assert(pData->sock == INVLD_SOCK);
+	pData->type = SOCK_DGRAM;
+	if(pData->sockType && !strcmp((char*)pData->sockType,"stream")) {
+		pData->type = SOCK_STREAM;
+	}
 
-	if((pData->sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+	if((pData->sock = socket(AF_UNIX, pData->type, 0)) < 0) {
 		char errStr[1024];
 		int eno = errno;
-		DBGPRINTF("error %d creating AF_UNIX/SOCK_DGRAM: %s.\n",
-			eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
+		DBGPRINTF("error %d creating AF_UNIX type: %d : %s.\n",
+			eno, pData->type, rs_strerror_r(eno, errStr, sizeof(errStr)));
 		pData->sock = INVLD_SOCK;
 		ABORT_FINALIZE(RS_RET_NO_SOCKET);
-		
 	}
 
 	/* set up server address structure */
 	memset(&pData->addr, 0, sizeof(pData->addr));
-        pData->addr.sun_family = AF_UNIX;
-        strcpy(pData->addr.sun_path, (char*)pData->sockName);
+	pData->addr.sun_family = AF_UNIX;
+	strcpy(pData->addr.sun_path, (char*)pData->sockName);
 
+	if(pData->type == SOCK_STREAM) {
+		int len = strlen(pData->addr.sun_path) + sizeof(pData->addr.sun_family);
+		if(connect(pData->sock, (struct sockaddr *)&pData->addr, len) == -1) {
+			char errStr[1024];
+			int eno = errno;
+			DBGPRINTF("error %d connecting AF_UNIX type: %d : %s.\n",
+				eno, pData->type, rs_strerror_r(eno, errStr, sizeof(errStr)));
+			pData->sock = INVLD_SOCK;
+			ABORT_FINALIZE(RS_RET_NO_SOCKET);
+		}
+	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		closeSocket(pData);
@@ -331,11 +366,12 @@ static rsRetVal doTryResume(instanceData *pData)
 	DEFiRet;
 
 	DBGPRINTF("omuxsock trying to resume\n");
-	closeSocket(pData);
-	iRet = openSocket(pData);
-
-	if(iRet != RS_RET_OK) {
-		iRet = RS_RET_SUSPENDED;
+	if(pData->sock == INVLD_SOCK || pData->type == SOCK_DGRAM) {
+		closeSocket(pData);
+		iRet = openSocket(pData);
+		if(iRet != RS_RET_OK) {
+	      	    iRet = RS_RET_SUSPENDED;
+		}
 	}
 
 	RETiRet;
@@ -388,14 +424,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*(p-1) == ';')
 		--p;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, getDfltTpl()));
-	
+
 	if(cs.sockName == NULL) {
 		errmsg.LogError(0, RS_RET_NO_SOCK_CONFIGURED, "No output socket configured for omuxsock\n");
 		ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);
 	}
 
 	pData->sockName = cs.sockName;
+	pData->sockType = cs.sockType;
 	cs.sockName = NULL; /* pData is now owner and will fee it */
+	cs.sockType = NULL; /* pData is now owner and will fee it */
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -411,6 +449,8 @@ freeConfigVars(void)
 	cs.tplName = NULL;
 	free(cs.sockName);
 	cs.sockName = NULL;
+	free(cs.sockType);
+	cs.sockType = NULL;
 }
 
 
@@ -453,6 +493,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsockdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsocksocket", 0, eCmdHdlrGetWord, NULL, &cs.sockName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"omuxsocktype", 0, eCmdHdlrGetWord, NULL, &cs.sockType, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
