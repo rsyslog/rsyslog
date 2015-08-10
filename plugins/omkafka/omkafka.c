@@ -788,6 +788,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 	const int partition = getPartition(pData);
 	rd_kafka_topic_t *rkt = NULL;
 	pthread_rwlock_t *dynTopicLock = NULL;
+	int msg_enqueue_status = 0;
 
 	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s'\n", pData->key, msg);
 
@@ -797,25 +798,32 @@ writeKafka(instanceData *pData, uchar *msg, uchar *topic)
 	} else {
 		rkt = pData->pTopic;
 	}
-	if(rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
-	                    msg, strlen((char*)msg), pData->key,
-	                    pData->key == NULL ? 0 : strlen((char*)pData->key),
-	                    NULL) == -1) {
+
+	msg_enqueue_status = rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
+										  msg, strlen((char*)msg), pData->key,
+										  pData->key == NULL ? 0 : strlen((char*)pData->key),
+										  NULL);
+	if(msg_enqueue_status == -1) {
 		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' "
 			"partition %d: %s\n",
 			rd_kafka_topic_name(rkt), partition,
 			rd_kafka_err2str(rd_kafka_errno2err(errno)));
-		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
-		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
 	}
 	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
 	if (pData->dynaTopic) {
 		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
 	}
-
 	DBGPRINTF("omkafka: kafka outqueue length: %d, callbacks called %d\n",
-		  rd_kafka_outq_len(pData->rk), callbacksCalled);
+			  rd_kafka_outq_len(pData->rk), callbacksCalled);
+
+	if (msg_enqueue_status == -1) {
+		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
+		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
+		/* ABORT_FINALIZE isn't absolutely necessary as of now,
+		   because this is the last line anyway, but its useful to ensure
+		   correctness in case we add more stuff below this line at some point*/
+	}
 
 finalize_it:
 	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
