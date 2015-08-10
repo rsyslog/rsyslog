@@ -61,6 +61,12 @@ comma-delimited list of values as shown here:
 
    Specifies the topic to produce to.
 
+.. function::  key [key]
+
+   *Default: none*
+
+   Kafka key to be used for all messages.
+
 .. function::  dynatopic [boolean]
 
    *Default: off*
