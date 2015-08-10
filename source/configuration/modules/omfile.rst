@@ -398,7 +398,7 @@ selects whether a static or dynamic file (name) shall be written to.
    Selects a signature provider for log signing. By selecting a provider,
    the signature feature is turned on.
 
-   Currently, there only is one provider called ":doc:`gt <sigprov_gt>`". 
+   Currently, there are two providers available ":doc:`gt <sigprov_gt>`" and ":doc:`ksi <sigprov_ksi>`". 
 
 .. function::  cry.provider [providerName]
 
