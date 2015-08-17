@@ -277,12 +277,22 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 	off64_t blkEnd;
 	off64_t currOffs = 0;
 	int r;
+	int fd;
+        struct stat buf;
 
 	while(1) {
 		/* process block */
 		if(initCrypt(eifp) != 0)
 			goto done;
-		if((r = eiGetEND(eifp, &blkEnd)) != 0) goto done;
+		/* set blkEnd to size of logfp and proceed. */
+                if((fd = fileno(logfp)) == -1) {
+                        r = -1;
+                        goto done;
+                }
+                if((r = fstat(fd, &buf)) != 0) goto done;
+                blkEnd = buf.st_size;
+                r = eiGetEND(eifp, &blkEnd);
+                if(r != 0 && r != 1) goto done;
 		decryptBlock(logfp, outfp, blkEnd, &currOffs);
 		gcry_cipher_close(gcry_chd);
 	}
