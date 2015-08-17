@@ -802,7 +802,10 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
 	mmpstrucdata.sh \
+        mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
+	mmpstrucdata-invalid-vg.sh \
+	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \

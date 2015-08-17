@@ -6,6 +6,8 @@ Version 8.13.0 [v8-stable] 2015-09-22
 - bugfix: Parallel build issue "cannot find ../runtime/.libs/librsyslog.a:
   No such file or directory" (#479) fixed.
   Thanks to Thomas D. (Whissi) for the patch.
+- bugfix: Added missing mmpstructdata testfiles into makefile.
+  see also: https://github.com/rsyslog/rsyslog/issues/484
 ------------------------------------------------------------------------------
 Version 8.12.0 [v8-stable] 2015-08-11
 - Harmonize resetConfigVariables values and defaults
