@@ -8,6 +8,8 @@ Version 8.13.0 [v8-stable] 2015-09-22
   Thanks to Thomas D. (Whissi) for the patch.
 - bugfix: Added missing mmpstructdata testfiles into makefile.
   see also: https://github.com/rsyslog/rsyslog/issues/484
+- rscryutil: Added support to decrypt a not closed log file.
+  Thanks to wizard1024 for the patch.
 ------------------------------------------------------------------------------
 Version 8.12.0 [v8-stable] 2015-08-11
 - Harmonize resetConfigVariables values and defaults
