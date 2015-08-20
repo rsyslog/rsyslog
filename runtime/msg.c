@@ -3279,11 +3279,13 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				bufLen = 2;
 				*pbMustBeFreed = 0;
 			} else {
+				MsgLock(pMsg);
 				if(pProp->id == PROP_CEE_ALL_JSON) {
 					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
 				} else if(pProp->id == PROP_CEE_ALL_JSON_PLAIN) {
 					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
 				}
+				MsgUnlock(pMsg);
 				*pbMustBeFreed = 1;
 			}
 			break;
