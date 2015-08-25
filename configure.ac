@@ -763,18 +763,13 @@ AC_ARG_ENABLE(gnutls,
 if test "x$enable_gnutls" = "xyes"; then
 	PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
-	AC_CHECK_LIB(
-	    [gnutls],
-	    [gnutls_global_init],
-	    [
-	     AC_DEFINE(HAVE_LIB_GNUTLS, 1, [gnutls is available])
-	    ],
-	    [AC_MSG_WARN([gnutls_global_init function missing or not detected])],
-	    []
-	)
+	save_libs=$LIBS
+	LIBS="$LIBS $GNUTLS_LIBS"
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
 	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
+	LIBS=$save_libs
 fi
+
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 
 # libgcrypt support
@@ -1654,7 +1649,6 @@ if test "x$in_git_src" = "xyes"; then
 else
         AC_MSG_NOTICE([Not running from git source])
 fi
-
 
 AM_CONDITIONAL(ENABLE_GENERATE_MAN_PAGES, test x$have_to_generate_man_pages = xyes)
 
