@@ -2,7 +2,7 @@ language: c
 
 before_install:
   - travis_retry sudo apt-get install -qq python-software-properties
-  - travis_retry sudo add-apt-repository ppa:adiscon/v8-stable -y
+  - travis_retry sudo add-apt-repository ppa:adiscon/v8-devel -y
   - travis_retry sudo apt-get update -qq
 
 install:
