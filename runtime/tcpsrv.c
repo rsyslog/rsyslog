@@ -333,8 +333,10 @@ addTcpLstn(void *pUsr, netstrm_t *pLstn)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnCurr >= pThis->iLstnMax)
+	if(pThis->iLstnCurr >= pThis->iLstnMax) {
+		errmsg.LogError(0, RS_RET_MAX_LSTN_REACHED, "MaxListeners limit (%d) reached. No more Listeners can be added.", pThis->iLstnMax);
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
+	}
 
 	pThis->ppLstn[pThis->iLstnCurr] = pLstn;
 	pThis->ppLstnPort[pThis->iLstnCurr] = pPortList;
