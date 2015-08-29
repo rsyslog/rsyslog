@@ -1443,7 +1443,7 @@ AC_ARG_ENABLE(omkafka,
          esac],
         [enable_omkafka=no]
 )
-if test "x$enable_omkafka"; then
+if test "x$enable_omkafka" = "xyes"; then
 	PKG_CHECK_MODULES(LIBRDKAFKA, librdkafka)
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 fi
