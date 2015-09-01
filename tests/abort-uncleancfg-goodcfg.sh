@@ -13,6 +13,6 @@ echo "testing a good Configuration verification run"
 if [ ! -e rsyslog.out.log ]
 then
         echo "error: expected file does not exist"
-	. ./diag.sh error-exit 1
+	. $srcdir/diag.sh error-exit 1
 fi
 . $srcdir/diag.sh exit
