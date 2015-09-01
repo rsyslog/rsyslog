@@ -159,8 +159,7 @@ case $1 in
 		done
 		if [ -e core.* ]
 		then
-		   echo "ABORT! core file exists, starting interactive shell"
-		   bash
+		   echo "ABORT! core file exists"
 		   . $srcdir/diag.sh error-exit  1
 		fi
 		;;
@@ -171,8 +170,7 @@ case $1 in
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
 		if [ -e vgcore.* ]
 		then
-		   echo "ABORT! core file exists, starting interactive shell"
-		   bash
+		   echo "ABORT! core file exists"
 		   . $srcdir/diag.sh error-exit 1
 		fi
 		;;
