@@ -128,7 +128,7 @@ case $1 in
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   echo "ABORT! Timeout waiting on startup (pid file)"
-			   . ./diag.sh error-exit 1
+			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
 		i=0
@@ -138,7 +138,7 @@ case $1 in
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
 			   echo "ABORT! Timeout waiting on startup ('started' file)"
-			   . ./diag.sh error-exit 1
+			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
 		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
@@ -161,7 +161,7 @@ case $1 in
 		then
 		   echo "ABORT! core file exists, starting interactive shell"
 		   bash
-		   . ./diag.sh error-exit  1
+		   . $srcdir/diag.sh error-exit  1
 		fi
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
@@ -173,7 +173,7 @@ case $1 in
 		then
 		   echo "ABORT! core file exists, starting interactive shell"
 		   bash
-		   . ./diag.sh error-exit 1
+		   . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'check-exit-vg') # wait for main message queue to be empty. $2 is the instance.
@@ -186,17 +186,17 @@ case $1 in
    'get-mainqueuesize') # show the current main queue size
 		if [ "$2" == "2" ]
 		then
-			echo getmainmsgqueuesize | ./diagtalker -p13501 || . ./diag.sh error-exit  $?
+			echo getmainmsgqueuesize | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
 		else
-			echo getmainmsgqueuesize | ./diagtalker || . ./diag.sh error-exit  $?
+			echo getmainmsgqueuesize | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
    'wait-queueempty') # wait for main message queue to be empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
-			echo WaitMainQueueEmpty | ./diagtalker -p13501 || . ./diag.sh error-exit  $?
+			echo WaitMainQueueEmpty | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
 		else
-			echo WaitMainQueueEmpty | ./diagtalker || . ./diag.sh error-exit  $?
+			echo WaitMainQueueEmpty | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
@@ -219,12 +219,12 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'injectmsg') # inject messages via our inject interface (imdiag)
 		echo injecting $3 messages
-		echo injectmsg $2 $3 $4 $5 | ./diagtalker || . ./diag.sh error-exit  $?
+		echo injectmsg $2 $3 $4 $5 | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
@@ -233,7 +233,7 @@ case $1 in
 		if test ! -f test-spool/mainq.qi; then
 		  echo "error: mainq.qi does not exist where expected to do so!"
 		  ls -l test-spool
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
@@ -245,7 +245,7 @@ case $1 in
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'seq-check2') # do the usual sequence check to see if everything was properly received. This is
@@ -258,7 +258,7 @@ case $1 in
 		./chkseq -fwork2 -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		rm -f work2
 		;;
@@ -266,27 +266,27 @@ case $1 in
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed
-		    . ./diag.sh error-exit 1
+		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed to find "'$2'" inside "'$3'"
-		    . ./diag.sh error-exit 1
+		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'content-pattern-check') 
 		cat rsyslog.out.log | grep -q "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
-		    . ./diag.sh error-exit 1
+		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
-		    . ./diag.sh error-exit 1
+		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'gzip-seq-check') # do the usual sequence check, but for gzip files
@@ -298,14 +298,14 @@ case $1 in
 		./chkseq -fwork -v -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'nettester') # perform nettester-based tests
    		# use -v for verbose output!
 		./nettester -t$2 -i$3 $4
 		if [ "$?" -ne "0" ]; then
-		  . ./diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'setzcat')   # find out name of zcat tool
