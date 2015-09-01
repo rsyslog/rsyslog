@@ -103,12 +103,12 @@ case $1 in
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-		. $srcdir/diag.sh wait-startup $3 || . ./diag.sh error-exit  $?
+		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-		. $srcdir/diag.sh wait-startup $3 || . ./diag.sh error-exit  $?
+		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
    'startup-vg-noleak') # same as startup-vg, except that --leak-check is set to "none". This
@@ -117,7 +117,7 @@ case $1 in
 		# they are platform-dependent. In that case, we can't test for leak checks
 		# (obviously), but we can check for access violations, what still is useful.
 		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
-		. $srcdir/diag.sh wait-startup $3 || . ./diag.sh error-exit  $?
+		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
@@ -204,7 +204,7 @@ case $1 in
 		then
 		   echo Shutting down instance 2
 		fi
-		. $srcdir/diag.sh wait-queueempty $2 || exit $?
+		. $srcdir/diag.sh wait-queueempty $2
 		./msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
@@ -316,11 +316,11 @@ case $1 in
 		fi
 		;;
    'generate-HOSTNAME')   # generate the HOSTNAME file
-		. $srcdir/diag.sh startup gethostname.conf || . ./diag.sh error-exit  $?
-		. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\"" || . ./diag.sh error-exit  $?
+		. $srcdir/diag.sh startup gethostname.conf
+		. $srcdir/diag.sh tcpflood -m1 -M "\"<128>\""
 		./msleep 100
-		. $srcdir/diag.sh shutdown-when-empty || . ./diag.sh error-exit  $?  # shut down rsyslogd when done processing messages
-		. $srcdir/diag.sh wait-shutdown || . ./diag.sh error-exit  $?	# we need to wait until rsyslogd is finished!
+		. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+		. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
