@@ -36,11 +36,9 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-CURRENT_TEST=
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-   		basename $0 > CURRENT_TEST # save test name for auto-debugging
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
@@ -85,7 +83,7 @@ case $1 in
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
 		rm -f rsyslog.errorfile
-		rm -f CURRENT_TEST HOSTNAME imfile-state:.-rsyslog.input
+		rm -f HOSTNAME imfile-state:.-rsyslog.input
 		unset TCPFLOOD_EXTRA_OPTS
 		echo  -------------------------------------------------------------------------------
 		;;
@@ -340,22 +338,19 @@ case $1 in
 				CORE=
 				rm gdb.in
 			fi
-			# check if we can re-run under valgrind and do so if possible
-			CURRENT_TEST=`cat CURRENT_TEST`
-			echo "" > CURRENT_TEST
-			if [ "x$CURRENT_TEST" != "x" ]; then
-				# OK, we have the testname and can re-run under valgrind
-				echo re-running under valgrind control
-				./$CURRENT_TEST
-				# wait a little bit so that valgrind can finish
-				./msleep 4000
-				# next let's try us to get a debug log
-				RSYSLOG_DEBUG_SAVE=$RSYSLOG_DEBUG
-				export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
-				./$CURRENT_TEST
-				./msleep 4000
-				RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
-			fi
+
+			# OK, we have the testname and can re-run under valgrind
+			echo re-running under valgrind control
+			current_test="./$(basename $0)" # this path is probably wrong -- theinric
+			$current_test
+			# wait a little bit so that valgrind can finish
+			./msleep 4000
+			# next let's try us to get a debug log
+			RSYSLOG_DEBUG_SAVE=$RSYSLOG_DEBUG
+			export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction"
+			$current_test
+			./msleep 4000
+			RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 			rm IN_AUTO_DEBUG
 		fi
 		exit $2
