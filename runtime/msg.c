@@ -2778,8 +2778,10 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 
 	if(pProp->id == PROP_CEE) {
 		jroot = pMsg->json;
+		MsgLock(pMsg);
 	} else if(pProp->id == PROP_LOCAL_VAR) {
 		jroot = pMsg->localvars;
+		MsgLock(pMsg);
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
 		pthread_rwlock_rdlock(&glblVars_rwlock);
 		jroot = global_var_root;
@@ -2807,6 +2809,8 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 finalize_it:
 	if(pProp->id == PROP_GLOBAL_VAR)
 		pthread_rwlock_unlock(&glblVars_rwlock);
+	else
+		MsgUnlock(pMsg);
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
