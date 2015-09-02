@@ -52,6 +52,11 @@ This module provides native support for logging to
 -  **usehttps**\ <on/**off**>
    Send events over HTTPS instead of HTTP. Good for when you have
    Elasticsearch behind Apache or something else that can add HTTPS.
+   Note that if you have a self-signed certificate, you'd need to install
+   it first. This is done by copying the certificate to a trusted path
+   and then running *update-ca-certificates*. That trusted path is
+   typically */usr/local/share/ca-certificates* but check the man page of
+   *update-ca-certificates* for the default path of your distro
 -  **timeout**
    How long Elasticsearch will wait for a primary shard to be available
    for indexing your log before sending back an error. Defaults to "1m".
