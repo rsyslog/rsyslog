@@ -360,6 +360,8 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 	/* if we have a ZMQ_SUB sock, subscribe to topics */
 	if (iconf->sockType == ZMQ_SUB) {
+		iconf->is_server = false;
+
 		char topic[256];
 		while (iconf->topicList) {
 			char *delimiter = strchr(iconf->topicList, ',');
@@ -386,8 +388,8 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		}
 	}
 
-	/* FIXME: currently hard coded to bind */
-	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints, true);
+	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints,
+			iconf->is_server);
 	if (rc == -1) {
 		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s",
 				iconf->sockEndpoints);
