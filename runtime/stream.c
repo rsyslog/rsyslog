@@ -516,7 +516,13 @@ strmHandleEOFMonitor(strm_t *pThis)
 	  pThis->pszCurrFName, (unsigned) statOpen.st_ino,
 	  (unsigned) statName.st_ino,
 	  pThis->iCurrOffs, (long long) statName.st_size);
-	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs >= statName.st_size) {
+
+	/* Consider EOF reached only when no inode change AND current offset
+	 * matches the current file size on disk.  In other word, inode change
+	 * means file was moved, offset/file size mismatch with same inode
+	 * means file was truncated.
+	 */
+	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
 		/* we had a file change! */
