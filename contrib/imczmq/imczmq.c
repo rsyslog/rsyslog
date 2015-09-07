@@ -362,21 +362,21 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	if (iconf->sockType == ZMQ_SUB) {
 		iconf->is_server = false;
 
-		char topic[256];
-		while (iconf->topicList) {
-			char *delimiter = strchr(iconf->topicList, ',');
+		char topic[256], *list = iconf->topicList;
+		while (list) {
+			char *delimiter = strchr(list, ',');
 			if (!delimiter) {
-				delimiter = iconf->topicList + strlen (iconf->topicList);
+				delimiter = list + strlen (list);
 			}
 
-			if (delimiter - iconf->topicList > 255) {
+			if (delimiter - list > 255) {
 				errmsg.LogError(0, NO_ERRCODE,
 						"iconf->topicList must be under 256 characters");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		
-			memcpy(topic, iconf->topicList, delimiter - iconf->topicList);
-			topic[delimiter - iconf->topicList] = 0;
+			memcpy(topic, list, delimiter - list);
+			topic[delimiter - list] = 0;
 
 			zsock_set_subscribe(pData->sock, topic);
 
@@ -384,7 +384,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 				break;
 			}
 
-			iconf->topicList = delimiter + 1;
+			list = delimiter + 1;
 		}
 	}
 
