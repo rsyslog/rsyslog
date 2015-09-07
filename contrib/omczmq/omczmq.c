@@ -193,6 +193,12 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		zsock_set_curve_serverkey (pData->sock, server_key);
 	}
 
+	/* if we are a PUB server */
+	if (pData->sockType == ZMQ_PUB) {
+		DBGPRINTF("omczmq: we are a pub server...\n");
+		is_server = true;
+	}
+
 	/* we default to CONNECT unless told otherwise */
 	int rc = zsock_attach(pData->sock, (const char*)pData->sockEndpoints, is_server);
 	if (rc == -1) {
