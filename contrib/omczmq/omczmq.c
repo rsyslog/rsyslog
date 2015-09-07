@@ -136,7 +136,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 
 	/* if we are a CURVE server */
-	if (!strcmp(pData->authType, "CURVESERVER")) {
+	if ((pData->authType != NULL) && (!strcmp(pData->authType, "CURVESERVER"))) {
 		DBGPRINTF("omczmq: we are a curve server...\n");
 		
 		is_server = true;
@@ -164,7 +164,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(pData->authType, "CURVECLIENT")) {
+	if ((pData->authType != NULL) && (!strcmp(pData->authType, "CURVECLIENT"))) {
 		DBGPRINTF("omczmq: we are a curve client...\n");
 
 		is_server = false;
