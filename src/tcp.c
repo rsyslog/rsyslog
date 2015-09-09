@@ -685,7 +685,7 @@ EnableKeepAlive(const relpTcp_t *__restrict__ const pThis,
 			  RELP_RET_WRN_NO_KEEPALIVE);
 	}
 
-	pThis->pEngine->dbgprint("KEEPALIVE enabled for socket %d\n", sock);
+	// pThis->pEngine->dbgprint("KEEPALIVE enabled for socket %d\n", sock);
 
 done:
   	return;
