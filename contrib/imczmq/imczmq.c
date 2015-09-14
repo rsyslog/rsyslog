@@ -302,7 +302,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	DBGPRINTF("imczmq: authtype is: %s\n", iconf->authType);
 
 	/* if we are a CURVE server */
-	if (!strcmp(iconf->authType, "CURVESERVER")) {
+	if ((iconf->authType != NULL) && (!strcmp(iconf->authType, "CURVESERVER"))) {
 
 		iconf->is_server = true;
 
@@ -329,7 +329,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(iconf->authType, "CURVECLIENT")) {
+	if ((iconf->authType != NULL) && (!strcmp(iconf->authType, "CURVECLIENT"))) {
 		DBGPRINTF("imczmq: we are a curve client...\n");
 
 		iconf->is_server = false;
