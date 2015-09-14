@@ -8,6 +8,9 @@ Version 8.13.0 [v8-stable] 2015-09-22
   liblognorm used.
 - add support for TCP client side keep-alives
   Thanks to github user tinselcity for the patch.
+- bugfix: imtcp/TLS hangs on dropped packets
+  see also https://github.com/rsyslog/rsyslog/issues/318
+  Thanks to github user tinselcity for the patch.
 - bugfix omkafka: Fixes a bug not accepting new messages anymore. 
   see also: https://github.com/rsyslog/rsyslog/pull/472
   Thanks to Janmejay Singh
