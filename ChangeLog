@@ -6,6 +6,9 @@ Version 8.13.0 [v8-stable] 2015-09-22
   This is possible due to a new API in liblognorm 1.1.2;
   Note that the amount of error messages depends on the version of
   liblognorm used.
+- add new "fixedwidth" option to template processing
+  Permits to emit data in fixed width.
+  Thanks to Jonny Törnbom for the patch.
 - bugfix omkafka: Fixes a bug not accepting new messages anymore. 
   see also: https://github.com/rsyslog/rsyslog/pull/472
   Thanks to Janmejay Singh
