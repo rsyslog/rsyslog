@@ -14,9 +14,9 @@
  *
  * CURRENT SUPPORTED COMMANDS:
  *
- * :omtesting:sleep <seconds> <milliseconds>
+ * :omtesting:sleep <seconds> <microseconds>
  *
- * Must be specified exactly as above. Keep in mind milliseconds are a millionth
+ * Must be specified exactly as above. Keep in mind microseconds are a millionth
  * of a second!
  *
  * NOTE: read comments in module-template.h to understand how this file
@@ -69,7 +69,7 @@ typedef struct _instanceData {
 		mode;
 	int	bEchoStdout;
 	int	iWaitSeconds;
-	int	iWaitUSeconds;	/* milli-seconds (one million of a second, just to make sure...) */
+	int	iWaitUSeconds;	/* micro-seconds (one millionth of a second, just to make sure...) */
 	int 	iCurrCallNbr;
 	int	iFailFrequency;
 	int	iResumeAfter;
@@ -109,7 +109,7 @@ ENDcreateWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("Action delays rule by %d second(s) and %d millisecond(s)\n",
+	dbgprintf("Action delays rule by %d second(s) and %d microsecond(s)\n",
 		  pData->iWaitSeconds, pData->iWaitUSeconds);
 	/* do nothing */
 ENDdbgPrintInstInfo
@@ -167,7 +167,7 @@ static rsRetVal doSleep(instanceData *pData)
 
 	dbgprintf("sleep(%d, %d)\n", pData->iWaitSeconds, pData->iWaitUSeconds);
 	tvSelectTimeout.tv_sec = pData->iWaitSeconds;
-	tvSelectTimeout.tv_usec = pData->iWaitUSeconds; /* milli seconds */
+	tvSelectTimeout.tv_usec = pData->iWaitUSeconds; /* microseconds */
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
 	RETiRet;
 }
@@ -286,7 +286,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(isspace(*p))
 			++p;
 		pData->iWaitSeconds = atoi((char*) szBuf);
-		/* parse milliseconds */
+		/* parse microseconds */
 		for(i = 0 ; *p && !isspace(*p) && ((unsigned) i < sizeof(szBuf) - 1) ; ++i) {
 			szBuf[i] = *p++;
 		}
