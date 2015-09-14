@@ -3575,7 +3575,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			if(iTo > 0)
 				--iTo;
 		}
-		if(iFrom == 0 && iTo >=  bufLen) { 
+		if(iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
 			/* in this case, the requested string is a superset of what we already have,
 			 * so there is no need to do any processing. This is a frequent case for size-limited
 			 * fields like TAG in the default forwarding template (so it is a useful optimization
@@ -3583,8 +3583,10 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			 */
 			; /*DO NOTHING*/
 		} else {
-			if(iTo > bufLen) /* iTo is very large, if no to-position is set in the template! */
-				iTo = bufLen;
+			if(iTo > bufLen)  /* iTo is very large, if no to-position is set in the template! */
+				if (pTpe->data.field.options.bFixedWidth == 0)
+					iTo = bufLen;
+
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
 			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
 			if(pBuf == NULL) {
@@ -3604,9 +3606,13 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			/* OK, we are at the begin - now let's copy... */
 			bufLen = iLen;
-			while(*pSb && iLen) {
-				*pBuf++ = *pSb;
-				++pSb;
+			while(iLen) {
+				if (*pSb) {
+					*pBuf++ = *pSb;
+					++pSb;
+				} else {
+					*pBuf++ = ' ';
+				}
 				--iLen;
 			}
 			*pBuf = '\0';

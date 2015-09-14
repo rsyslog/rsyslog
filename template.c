@@ -89,6 +89,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "fixedwidth", eCmdHdlrBinary, 0 },
 	{ "mandatory", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
@@ -755,6 +756,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
 			pTpe->data.field.options.bFromPosEndRelative = 1;
+		 } else if(!strcmp((char*)Buf, "fixed-width")) {
+			pTpe->data.field.options.bFixedWidth = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
 			if(hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
@@ -1413,6 +1416,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int topos = -1;
 	int fieldnum = -1;
 	int fielddelim = 9; /* default is HT (USACSII 9) */
+	int fixedwidth = 0;
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
 	int bComplexProcessing = 0;
@@ -1442,6 +1446,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			free(tmpstr);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
+			bComplexProcessing = 1;
+		} else if(!strcmp(pblkProperty.descr[i].name, "fixedwidth")) {
+			fixedwidth = pvals[i].val.d.n;
 			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
 			mandatory = pvals[i].val.d.n;
@@ -1657,6 +1664,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
 	pTpe->data.field.options.bMandatory = mandatory;
+	pTpe->data.field.options.bFixedWidth = fixedwidth;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:

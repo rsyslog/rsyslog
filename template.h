@@ -126,6 +126,7 @@ struct templateEntry {
 				unsigned bJSONfr: 1;		/* format field JSON *field* non escaped (n/v pair) */
 				unsigned bMandatory: 1;		/* mandatory field - emit even if empty */
 				unsigned bFromPosEndRelative: 1;/* is From/To-Pos relative to end of string? */
+				unsigned bFixedWidth: 1;	/* space pad to toChar if string is shorter */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
