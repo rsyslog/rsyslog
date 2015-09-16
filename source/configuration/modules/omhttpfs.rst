@@ -10,6 +10,7 @@ omhttpfs: Hadoop HTTPFS Output Module
 This module is an alternative to omhdfs via `Hadoop HDFS over HTTP <http://hadoop.apache.org/docs/current/hadoop-hdfs-httpfs/index.html>`_.
 
 **Dependencies**
+
 * libcurl
 
 **Configure**
