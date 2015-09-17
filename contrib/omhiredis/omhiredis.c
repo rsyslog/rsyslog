@@ -1,5 +1,6 @@
 /* omhiredis.c
- * Copyright 2012 Talksum, Inc
+* Copyright 2012 Talksum, Inc
+* Copyright 2015 DigitalOcean, Inc
 *
 * This program is free software: you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -16,7 +17,7 @@
 * <http://www.gnu.org/licenses/>.
 *
 * Author: Brian Knox
-* <briank@talksum.com>
+* <bknox@digitalocean.com>
 */
 
 
@@ -48,27 +49,37 @@ MODULE_CNFNAME("omhiredis")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
+#define OMHIREDIS_MODE_TEMPLATE 0
+#define OMHIREDIS_MODE_QUEUE 1
+#define OMHIREDIS_MODE_PUBLISH 2
+
 /*  our instance data.
  *  this will be accessable 
  *  via pData */
 typedef struct _instanceData {
-	uchar *server; /*  redis server address */
-	int port; /*  redis port */
-	uchar *tplName; /*  template name */
+	uchar *server; /* redis server address */
+	int port; /* redis port */
+	uchar *tplName; /* template name */
+	char *modeDescription; /* mode description */
+	int mode; /* mode constant */
+	char *key; /* key for QUEUE and PUBLISH modes */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
-	redisContext *conn; /*  redis connection */
+	instanceData *pData; /* instanc data */
+	redisContext *conn; /* redis connection */
 	redisReply **replies; /* array to hold replies from redis */
-	int count; /*  count of command sent for current batch */
+	int count; /* count of command sent for current batch */
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrGetWord, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
-	{ "template", eCmdHdlrGetWord, 1 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "mode", eCmdHdlrGetWord, 0 },
+	{ "key", eCmdHdlrGetWord, 0 },
 };
+
 static struct cnfparamblk actpblk = {
 	CNFPARAMBLK_VERSION,
 	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
@@ -157,7 +168,21 @@ rsRetVal writeHiredis(uchar *message, wrkrInstanceData_t *pWrkrData)
 	 *  increase our current pipeline count
 	 *  by 1 and continue. */
 	int rc;
-	rc = redisAppendCommand(pWrkrData->conn, (char*)message);
+    switch(pWrkrData->pData->mode) {
+		case OMHIREDIS_MODE_TEMPLATE:
+			rc = redisAppendCommand(pWrkrData->conn, (char*)message);
+			break;
+		case OMHIREDIS_MODE_QUEUE:
+			rc = redisAppendCommand(pWrkrData->conn, "LPUSH %s %s", pWrkrData->pData->key, (char*)message);
+			break;
+		case OMHIREDIS_MODE_PUBLISH:
+			rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", pWrkrData->pData->key, (char*)message);
+			break;
+		default:
+			dbgprintf("omhiredis: mode %d is invalid something is really wrong\n", pWrkrData->pData->mode);
+			ABORT_FINALIZE(RS_RET_ERR);
+    }
+
 	if (rc == REDIS_ERR) {
 		errmsg.LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
 		dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
@@ -227,6 +252,9 @@ setInstParamDefaults(instanceData *pData)
 	pData->server = NULL;
 	pData->port = 6379;
 	pData->tplName = NULL;
+	pData->mode = OMHIREDIS_MODE_TEMPLATE;
+	pData->modeDescription = "template";
+	pData->key = NULL;
 }
 
 /*  here is where the work to set up a new instance
@@ -254,19 +282,49 @@ CODESTARTnewActInst
 			pData->port = (int) pvals[i].val.d.n, NULL;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
+			pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (!strcmp(pData->modeDescription, "queue")) {
+				pData->mode = OMHIREDIS_MODE_QUEUE;
+			} else if (!strcmp(pData->modeDescription, "publish")) {
+				pData->mode = OMHIREDIS_MODE_PUBLISH;
+			} else {
+				dbgprintf("omhiredis: unsupported mode %s\n", actpblk.descr[i].name);
+				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "key")) {
+			pData->key = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omhiredis: program error, non-handled "
 				"param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
-	if(pData->tplName == NULL) {
-		dbgprintf("omhiredis: action requires a template name");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    dbgprintf("omhiredis: checking config sanity\n");
 
-	/* template string 0 is just a regular string */
-	OMSRsetEntry(*ppOMSR, 0,(uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS);
+	/* check config sanity for selected mode */
+	switch(pData->mode) {
+		case OMHIREDIS_MODE_QUEUE:
+		case OMHIREDIS_MODE_PUBLISH:
+			if (pData->key == NULL) {
+				dbgprintf("omhiredis: mode %s requires a key\n", pData->modeDescription);
+				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+			}
+			if (pData->tplName == NULL) {
+				dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
+				CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"), OMSR_NO_RQD_TPL_OPTS));
+			} else {
+				CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+			}
+			break;
+		case OMHIREDIS_MODE_TEMPLATE:
+			if (pData->tplName == NULL) {
+				dbgprintf("omhiredis: selected mode requires template\n");
+				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+			}
+			CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+			break;
+	}
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
