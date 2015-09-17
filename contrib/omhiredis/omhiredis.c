@@ -306,7 +306,7 @@ CODESTARTnewActInst
 	/* check config sanity for selected mode */
 	switch(pData->mode) {
 		case OMHIREDIS_MODE_QUEUE:
-        case OMHIREDIS_MODE_PUBLISH:
+		case OMHIREDIS_MODE_PUBLISH:
 			if (pData->key == NULL) {
 				dbgprintf("omhiredis: mode %s requires a key\n", pData->modeDescription);
 				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -315,15 +315,15 @@ CODESTARTnewActInst
 				dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
 				CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"), OMSR_NO_RQD_TPL_OPTS));
 			} else {
-                CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
-            }
+				CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+			}
 			break;
 		case OMHIREDIS_MODE_TEMPLATE:
 			if (pData->tplName == NULL) {
 				dbgprintf("omhiredis: selected mode requires template\n");
 				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 			}
-            CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+			CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 			break;
 	}
 
