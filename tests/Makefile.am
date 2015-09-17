@@ -117,6 +117,9 @@ TESTS +=  \
 	rscript_ruleset_call.sh \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
+	rscript_replace_complex.sh \
+	rscript_wrap2.sh \
+	rscript_wrap3.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -177,10 +180,7 @@ TESTS +=  \
 	imptcp_no_octet_counted.sh \
 	imptcp_spframingfix.sh \
 	rscript_random.sh \
-	rscript_replace.sh \
-	rscript_replace_complex.sh \
-	rscript_wrap2.sh \
-	rscript_wrap3.sh
+	rscript_replace.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	imptcp_conndrop-vg.sh
@@ -215,12 +215,14 @@ endif
 endif
 
 if ENABLE_MMNORMALIZE
+if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	mmnormalize_regex_defaulted.sh \
 	mmnormalize_regex_disabled.sh
 
+endif
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
@@ -228,12 +230,15 @@ endif
 endif
 
 if ENABLE_MMJSONPARSE
+if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
-	json_nonarray_looping.sh \
+	json_nonarray_looping.sh
+endif
+TESTS +=  \
 	stop_when_array_has_element.sh
 endif
 
