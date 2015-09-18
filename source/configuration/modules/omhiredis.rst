@@ -54,6 +54,16 @@ is meaningless.
     mode="template"
     template="program_count_tmpl")
 
+Here's an example redis-cli session where we HGETALL the counts:
+
+::
+  > redis-cli 
+  127.0.0.1:6379> HGETALL progcount
+  1) "rsyslogd"
+  2) "35"
+  3) "rsyslogd-pstats"
+  4) "4302"
+
 *Mode: queue*
 
 In "queue" mode, the syslog message is pushed into a Redis list
@@ -70,6 +80,16 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
     type="omhiredis"
     mode="queue"
     key="my_queue")
+
+Here's an example redis-cli session where we RPOP from the queue:
+
+::
+  > redis-cli 
+  127.0.0.1:6379> RPOP my_queue
+
+  "<46>2015-09-17T10:54:50.080252-04:00 myhost rsyslogd: [origin software=\"rsyslogd\" swVersion=\"8.13.0.master\" x-pid=\"6452\" x-info=\"http://www.rsyslog.com\"] start"
+
+  127.0.0.1:6379> 
 
 *Mode: publish*
 
@@ -88,6 +108,26 @@ will default to the RSYSLOG_ForwardFormat template.
     mode="publish"
     key="my_channel")
 
+Here's an example redis-cli session where we SUBSCRIBE to the topic:
+
+::
+  > redis-cli 
+
+  127.0.0.1:6379> subscribe my_channel
+
+  Reading messages... (press Ctrl-C to quit)
+
+  1) "subscribe"
+
+  2) "my_channel"
+
+  3) (integer) 1
+
+  1) "message"
+
+  2) "my_channel"
+
+  3) "<46>2015-09-17T10:55:44.486416-04:00 myhost rsyslogd-pstats: {\"name\":\"imuxsock\",\"origin\":\"imuxsock\",\"submitted\":0,\"ratelimit.discarded\":0,\"ratelimit.numratelimiters\":0}"
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
