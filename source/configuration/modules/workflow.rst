@@ -14,10 +14,10 @@ The simplified workflow is as follows:
 
 As can be seen, messages are received by input modules, then passed to
 one or many parser modules, which generate the in-memory representation
-of the message and may also modify the message itself. The, the internal
+of the message and may also modify the message itself. The internal
 representation is passed to output modules, which may output a message
-and (with the interfaces newly introduced in v5) may also modify
-messageo object content.
+and (with the interfaces introduced in v5) may also modify
+message object content.
 
 String generator modules are not included inside this picture, because
 they are not a required part of the workflow. If used, they operate "in
