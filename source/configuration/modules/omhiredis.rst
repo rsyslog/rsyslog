@@ -46,6 +46,8 @@ with spaces in them - full message won't work correctly.
 
   action(
     name="count_programs"
+    server="my-redis-server.example.com"
+    port="6379"
     type="omhiredis"
     mode="template"
     template="program_count_tmpl")
@@ -61,6 +63,8 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
 
   action(
     name="push_redis"
+    server="my-redis-server.example.com"
+    port="6379"
     type="omhiredis"
     mode="queue"
     key="my_queue")
@@ -76,6 +80,8 @@ will default to the RSYSLOG_ForwardFormat template.
 
   action(
     name="publish_redis"
+    server="my-redis-server.example.com"
+    port="6379"
     type="omhiredis"
     mode="publish"
     key="my_channel")
