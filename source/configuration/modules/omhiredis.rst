@@ -23,7 +23,9 @@ using the hiredis client library.
 
 - **template**
   Template is required if using "template" mode. 
+
 - **key**
+  Key is required if using "publish" or "queue" mode.
 
 
 **Examples**
