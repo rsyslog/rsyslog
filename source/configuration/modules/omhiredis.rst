@@ -34,7 +34,9 @@ using the hiredis client library.
 
 In "template" mode, the string constructed by the template is sent
 to Redis as a command. Note this mode has problems with strings
-with spaces in them - full message won't work correctly.
+with spaces in them - full message won't work correctly. In this
+mode, the template argument is required, and the key argument
+is meaningless.
 
 ::
   module(load="omhiredis")
