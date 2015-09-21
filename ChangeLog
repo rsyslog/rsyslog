@@ -1,6 +1,16 @@
 ------------------------------------------------------------------------------
 Version 8.13.0 [v8-stable] 2015-09-22
-- build requirement for rsyslog/mmnormalize is now liblognorm 1.1.2
+- ZeroMQ enhancements:
+  * Added the ability to set a static publishing topic per action as an
+    alternative to constructing topics with templates
+    Contributor: Luca Bocassi
+  * ZMQ_PUB socket now defaults to bind and ZMQ_SUB socket now defaults to
+    connect - Contributor: Luca Bocassi
+- Redis enhancements:
+  * Can now LPUSH to a Redis list in "queue" mode - Contributor: Brian Knox
+  * Can now PUBLISH to a Redis channel in "publish" mode
+    Contributor: Brian Knox
+- build requirement for rsyslog/mmnormalize is now liblognorm 1.1.2 or above
 - mmnormalize: liblognorm error messages are now emitted via regular
   rsyslog error reporting mechanism (aka "are now logged")
   This is possible due to a new API in liblognorm 1.1.2;
