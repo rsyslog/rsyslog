@@ -605,8 +605,6 @@ rsksiSetHashFunction(rsksictx ctx, char *algName)
 		ctx->hashAlg = KSI_HASHALG_SHA2_384;
 	else if(!strcmp(algName, "SHA2-512"))
 		ctx->hashAlg = KSI_HASHALG_SHA2_512;
-	else if(!strcmp(algName, "RIPEMD-256"))
-		ctx->hashAlg = KSI_HASHALG_RIPEMD_256;
 	else if(!strcmp(algName, "SHA3-244"))
 		ctx->hashAlg = KSI_HASHALG_SHA3_244;
 	else if(!strcmp(algName, "SHA3-256"))
