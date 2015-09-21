@@ -84,7 +84,7 @@ static inline void
 outputKSIHash(FILE *fp, char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose)
 {
 	const unsigned char *digest;
-	unsigned digest_len;
+	size_t digest_len;
 	KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
 
 	fprintf(fp, "%s", hdr);

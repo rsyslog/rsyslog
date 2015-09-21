@@ -95,12 +95,12 @@ rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
 	int r;
 	imprint_t *imp;
 	const unsigned char *digest;
-	unsigned digest_len;
+	size_t digest_len;
 
 	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
 		goto done;
 	}
-	int hashID;
+	KSI_HashAlgorithm hashID;
 	r = KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); 
 	if (r != KSI_OK){
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
@@ -169,14 +169,14 @@ rsksifileConstruct(rsksictx ctx)
 done:	return ksi;
 }
 
-static inline int
+static inline size_t 
 tlvbufPhysWrite(ksifile ksi)
 {
 	ssize_t lenBuf;
 	ssize_t iTotalWritten;
 	ssize_t iWritten;
 	char *pWriteBuf;
-	int r = 0;
+	size_t r = 0;
 
 	lenBuf = ksi->tlvIdx;
 	pWriteBuf = ksi->tlvBuf;
@@ -204,7 +204,7 @@ finalize_it:
 	return r;
 }
 
-static inline int
+static inline size_t 
 tlvbufChkWrite(ksifile ksi)
 {
 	if(ksi->tlvIdx == sizeof(ksi->tlvBuf)) {
@@ -217,19 +217,19 @@ tlvbufChkWrite(ksifile ksi)
 /* write to TLV file buffer. If buffer is full, an actual call occurs. Else
  * output is written only on flush or close.
  */
-static inline int
+static inline size_t
 tlvbufAddOctet(ksifile ksi, int8_t octet)
 {
-	int r;
+	size_t r;
 	r = tlvbufChkWrite(ksi);
 	if(r != 0) goto done;
 	ksi->tlvBuf[ksi->tlvIdx++] = octet;
 done:	return r;
 }
-static inline int
-tlvbufAddOctetString(ksifile ksi, uint8_t *octet, int size)
+static inline size_t 
+tlvbufAddOctetString(ksifile ksi, uint8_t *octet, size_t size)
 {
-	int i, r = 0;
+	size_t i, r = 0;
 	for(i = 0 ; i < size ; ++i) {
 		r = tlvbufAddOctet(ksi, octet[i]);
 		if(r != 0) goto done;
@@ -336,7 +336,7 @@ tlvWriteHashKSI(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 	unsigned tlvlen;
 	int r;
 	const unsigned char *digest;
-	unsigned digest_len;
+	size_t digest_len;
 	r = KSI_DataHash_extract(rec, NULL, &digest, &digest_len); 
 	if (r != KSI_OK){
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
@@ -694,7 +694,7 @@ bufAddHash(ksifile ksi, uchar *buf, size_t *len, KSI_DataHash *hash)
 {
 	int r; 
 	const unsigned char *digest;
-	unsigned digest_len;
+	size_t digest_len;
 	r = KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
 	if (r != KSI_OK){
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
@@ -840,7 +840,7 @@ static int
 signIt(ksifile ksi, KSI_DataHash *hash)
 {
 	unsigned char *der = NULL;
-	unsigned lenDer;
+	size_t lenDer;
 	int r = KSI_OK;
 	int ret = 0;
 	KSI_Signature *sig = NULL;
