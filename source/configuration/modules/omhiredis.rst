@@ -19,7 +19,10 @@ using the hiredis client library.
   Port of the Redis server if the server is not listening on the default port.
 
 - **mode**
-  Mode to run the output action in: "template", "queue" or "publish".
+  Mode to run the output action in: "queue" or "publish". If not supplied, the
+  original "template" mode is used. Note due to a config parsing bug in 8.13, 
+  explicitly setting this to "template" mode will result in a config parsing
+  error.
 
 - **template**
   Template is required if using "template" mode. 
