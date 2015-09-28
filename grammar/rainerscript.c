@@ -3747,7 +3747,7 @@ initFunc_re_match(struct cnffunc *func)
 	regex_t *re;
 	DEFiRet;
 
-	if(func->nParams != 2) {
+	if(func->nParams < 2) {
 		parser_errmsg("rsyslog logic error in line %d of file %s\n",
 			__LINE__, __FILE__);
 		FINALIZE;
