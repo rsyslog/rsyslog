@@ -180,7 +180,9 @@ TESTS +=  \
 	rscript_replace.sh \
 	rscript_replace_complex.sh \
 	rscript_wrap2.sh \
-	rscript_wrap3.sh
+	rscript_wrap3.sh \
+	rscript_re_extract.sh \
+	rscript_re_match.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	imptcp_conndrop-vg.sh
@@ -846,6 +848,10 @@ EXTRA_DIST= \
 	testsuites/stop_when_array_has_element.conf \
 	key_dereference_on_uninitialized_variable_space.sh \
 	testsuites/key_dereference_on_uninitialized_variable_space.conf \
+	rscript_re_extract.sh \
+	testsuites/rscript_re_extract.conf \
+	rscript_re_match.sh \
+	testsuites/rscript_re_match.conf \
 	cfg.sh
 
 # TODO: re-enable
