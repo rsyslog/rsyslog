@@ -284,7 +284,9 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
 			pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if (!strcmp(pData->modeDescription, "queue")) {
+			if (!strcmp(pData->modeDescription, "template")) {
+				pData->mode = OMHIREDIS_MODE_TEMPLATE;
+			} else if (!strcmp(pData->modeDescription, "queue")) {
 				pData->mode = OMHIREDIS_MODE_QUEUE;
 			} else if (!strcmp(pData->modeDescription, "publish")) {
 				pData->mode = OMHIREDIS_MODE_PUBLISH;
