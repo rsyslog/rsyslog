@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.14.0 [v8-stable] 2015-11-03
+------------------------------------------------------------------------------
 Version 8.13.0 [v8-stable] 2015-09-22
 - ZeroMQ enhancements:
   * Added the ability to set a static publishing topic per action as an
