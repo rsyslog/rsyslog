@@ -1,4 +1,4 @@
-IP Address Anonimization Module (mmanon)
+IP Address Anonymization Module (mmanon)
 ========================================
 
 **Module Name**: mmanon
