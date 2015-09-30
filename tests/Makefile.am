@@ -125,6 +125,7 @@ TESTS +=  \
 	incltest_dir_wildcard.sh \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
+	lookup_table.sh \
 	key_dereference_on_uninitialized_variable_space.sh
 
 
@@ -852,6 +853,10 @@ EXTRA_DIST= \
 	testsuites/rscript_re_extract.conf \
 	rscript_re_match.sh \
 	testsuites/rscript_re_match.conf \
+	lookup_table.sh \
+	testsuites/lookup_table.conf \
+	testsuites/xlate.lkp_tbl \
+	testsuites/xlate_more.lkp_tbl \
 	cfg.sh
 
 # TODO: re-enable
