@@ -76,3 +76,4 @@ tests/syslog_caller
 tests/syslog_inject
 tests/tcpflood
 tests/uxsockrcvr
+tests/xlate.lkp_tbl

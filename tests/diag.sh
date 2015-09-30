@@ -195,6 +195,10 @@ case $1 in
 			echo WaitMainQueueEmpty | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
+   'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
+		kill -HUP `cat rsyslog$2.pid`
+		./msleep 1000
+		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
 		if [ "$2" == "2" ]
 		then
