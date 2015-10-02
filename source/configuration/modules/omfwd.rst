@@ -34,7 +34,7 @@ Action Parameters
    Name or IP-Address of the system that shall receive messages. Any
    resolvable name is fine.
 
--  **Port** [Default 514]
+-  **Port**
 
    Name or numerical value of port to use when connecting to target.
 
