@@ -25,7 +25,6 @@
 
 #include "linkedlist.h"
 #include "queue.h"
-#include "lookup.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -144,7 +143,6 @@ struct rsconf_s {
 	globals_t globals;
 	defaults_t defaults;
 	templates_t templates;
-	lookup_tables_t lu_tabs;
 	outchannels_t och;
 	actions_t actions;
 	rulesets_t rulesets;

@@ -166,7 +166,6 @@ void cnfSetDefaults(rsconf_t *pThis)
  */
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
 	cnfSetDefaults(pThis);
-	lookupInitCnf(&pThis->lu_tabs);
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
 			rulesetKeyDestruct, strcasecmp));
 finalize_it:
@@ -422,9 +421,6 @@ void cnfDoObj(struct cnfobj *o)
 		break;
 	case CNFOBJ_INPUT:
 		inputProcessCnf(o);
-		break;
-	case CNFOBJ_LOOKUP_TABLE:
-		lookupProcessCnf(o);
 		break;
 	case CNFOBJ_PARSER:
 		parserProcessCnf(o);

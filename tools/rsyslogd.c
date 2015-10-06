@@ -1429,7 +1429,6 @@ doHUP(void)
 
 	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
-	lookupDoHUP();
 }
 
 /* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable
