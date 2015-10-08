@@ -1,5 +1,5 @@
 omhttpfs: Hadoop HTTPFS Output Module
-============================================
+=====================================
 
 ===========================  ===========================================================================
 **Module Name:**             **omhttpfs**
@@ -15,6 +15,7 @@ This module is an alternative to omhdfs via `Hadoop HDFS over HTTP <http://hadoo
 
 **Configure**
 ::
+
     ./configure --enable-omhttpfs
 
 **Config options**

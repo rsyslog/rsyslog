@@ -1,5 +1,5 @@
 GuardTime Keyless Signature Infrastructure Provider (ksi)
-=====================================
+=========================================================
 
 **Signature Provider Name: ksi**
 
