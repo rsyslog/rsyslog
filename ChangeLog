@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.14.0 [v8-stable] 2015-11-03
+- add property "rawmsg-after-pri"
 - bugfix: re_extract RainerScript function did not work
   Thanks to Janmejay Singh for the patch
 ------------------------------------------------------------------------------
