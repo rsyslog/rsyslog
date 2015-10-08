@@ -102,7 +102,7 @@ Contributions to rsyslog are very welcome. Fork and send us your Pull Requests.
 For more information about contributing, see the
 [CONTRIBUTING](CONTRIBUTING.md) file.
 
-Note that it is esay to add output plugins using languages like Python or
+Note that it is easy to add output plugins using languages like Python or
 Perl. So if you need to connect to a system which is not yet supported, you
 can easily do so via an external plugin. For more information see the
 [README](plugins/external/README.md) file in the external plugin directory.
