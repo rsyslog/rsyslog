@@ -405,6 +405,7 @@ static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value);
+void getRawMsgAfterPRI(msg_t * const pM, uchar **pBuf, int *piLen);
 
 
 /* the locking and unlocking implementations: */
@@ -3154,7 +3155,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			getRawMsg(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_RAWMSG_AFTER_PRI:
-			getRawMsg(pMsg, &pRes, &bufLen);
+			getRawMsgAfterPRI(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_INPUTNAME:
 			getInputName(pMsg, &pRes, &bufLen);
