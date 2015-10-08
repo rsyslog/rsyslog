@@ -405,6 +405,7 @@ static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value);
+void getRawMsgAfterPRI(msg_t * const pM, uchar **pBuf, int *piLen);
 
 
 /* the locking and unlocking implementations: */
@@ -549,6 +550,8 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYSLOGTAG;
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		*pPropID = PROP_RAWMSG;
+	} else if(!strcmp((char*) pName, "rawmsg-after-pri")) {
+		*pPropID = PROP_RAWMSG_AFTER_PRI;
 	} else if(!strcmp((char*) pName, "inputname")) {
 		*pPropID = PROP_INPUTNAME;
 	} else if(!strcmp((char*) pName, "fromhost")) {
@@ -1562,6 +1565,23 @@ getRawMsg(msg_t * const pM, uchar **pBuf, int *piLen)
 		} else {
 			*pBuf = pM->pszRawMsg;
 			*piLen = pM->iLenRawMsg;
+		}
+	}
+}
+
+void
+getRawMsgAfterPRI(msg_t * const pM, uchar **pBuf, int *piLen)
+{
+	if(pM == NULL) {
+		*pBuf=  UCHAR_CONSTANT("");
+		*piLen = 0;
+	} else {
+		if(pM->pszRawMsg == NULL) {
+			*pBuf=  UCHAR_CONSTANT("");
+			*piLen = 0;
+		} else {
+			*pBuf = pM->pszRawMsg + pM->offAfterPRI;
+			*piLen = pM->iLenRawMsg - pM->offAfterPRI;
 		}
 	}
 }
@@ -3133,6 +3153,9 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			break;
 		case PROP_RAWMSG:
 			getRawMsg(pMsg, &pRes, &bufLen);
+			break;
+		case PROP_RAWMSG_AFTER_PRI:
+			getRawMsgAfterPRI(pMsg, &pRes, &bufLen);
 			break;
 		case PROP_INPUTNAME:
 			getInputName(pMsg, &pRes, &bufLen);
