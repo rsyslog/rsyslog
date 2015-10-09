@@ -1264,7 +1264,7 @@ validateConf(void)
 rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
-	int iNbrActions;
+	int iNbrActions = 0;
 	int r;
 	DEFiRet;
 
