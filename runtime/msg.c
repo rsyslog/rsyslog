@@ -4248,6 +4248,9 @@ jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct j
 	while(name < leaf-1) {
 		jsonPathFindNext(*parent, namestart, &name, leaf, parent, bCreate);
 	}
+	if(*parent == NULL)
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+finalize_it:
 	RETiRet;
 }
 
