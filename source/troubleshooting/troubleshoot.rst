@@ -32,7 +32,8 @@ interesting problems, including malformed hostnames and dates. Read the
 quoted guide to find relief. A common symptom is that the %HOSTNAME%
 property is used for generating dynafile names, but some glibberish
 shows up. This is caused by the malformed syslog messages, so be sure to
-read the `guide <syslog_parsing.html>`_ if you face that problem. Just
+read the :doc:`guide on syslog parsing <../whitepapers/syslog_parsing>`
+if you face that problem. Just
 let me add that the common work-around is to use %FROMHOST% or
 %FROMHOST-IP% instead. These do not take the hostname from the message,
 but rather use the host that sent the message (taken from the socket
