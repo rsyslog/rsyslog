@@ -15,18 +15,19 @@ systems.
 It supports, among others, :doc:`MySQL <tutorials/database>`,
 :doc:`PostgreSQL <tutorials/database>`,
 :doc:`failover log destinations <tutorials/failover_syslog_server>`,
-syslog/tcp transport, fine grain output format control, high precision timestamps,
+ElasticSearch, syslog/tcp transport, fine grain output format control,
+high precision timestamps,
 queued operations and the ability to filter on any message part.
 
 Manual
 ------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    
    configuration/index
    installation/index
-   concepts/index
    troubleshooting/index
+   concepts/index
    examples/index
    tutorials/index
    development/index
