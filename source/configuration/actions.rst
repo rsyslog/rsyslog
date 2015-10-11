@@ -194,7 +194,7 @@ character and have no filters. An example would be
 
 These three lines send critical messages to the user rger and root and
 also store them in /var/log/critmsgs. **Using multiple actions per
-selector is** convenient and also **offers a performance benefits**. As
+selector is** convenient and also **offers a performance benefit**. As
 the filter needs to be evaluated only once, there is less computation
 required to process the directive compared to the otherwise-equal config
 directives below:
