@@ -2901,14 +2901,9 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	}
 
 finalize_it:
-	if(pProp->id == PROP_GLOBAL_VAR) {
-		if (*pjson != NULL)
-			*pjson = jsonDeepCopy(*pjson);
-	} else {
-		if (*pjson != NULL)
-			json_object_get(*pjson);
-			//TODO: at least in theory, we need a deep copy here as well...
-	}
+	/* we need a deep copy, as another thread may modify the object */
+	if(*pjson != NULL)
+		*pjson = jsonDeepCopy(*pjson);
 	if(rwlock != NULL)
 		pthread_rwlock_unlock(rwlock);
 	RETiRet;
