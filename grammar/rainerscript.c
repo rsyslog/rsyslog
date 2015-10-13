@@ -1262,15 +1262,15 @@ var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 
 int SKIP_NOTHING = 0x0;
 int SKIP_STRING = 0x1;
-int SKIP_JSON = 0x2;
 
 static void
 varFreeMembersSelectively(const struct var *r, const int skipMask)
 {
-	int kill_string = ! (skipMask & SKIP_STRING);
-	if(kill_string && (r->datatype == 'S')) es_deleteStr(r->d.estr);
-	int kill_json = ! (skipMask & SKIP_JSON);
-	if(kill_json && (r->datatype == 'J')) json_object_put(r->d.json);
+	if(r->datatype == 'J') {
+		json_object_put(r->d.json);
+	} else if( !(skipMask & SKIP_STRING) && (r->datatype == 'S')) {
+		es_deleteStr(r->d.estr);
+	}
 }
 
 static void
