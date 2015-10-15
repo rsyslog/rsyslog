@@ -273,7 +273,7 @@ static struct wrkrInfo_s {
 	pthread_cond_t run;
 	struct epoll_event *event; /* event == NULL -> idle */
 	long long unsigned numCalled;	/* how often was this called */
-} wrkrInfo[16];
+} *wrkrInfo;
 static pthread_mutex_t wrkrMut;
 static pthread_cond_t wrkrIdle;
 static int wrkrRunning;
@@ -1368,9 +1368,12 @@ startWorkerPool(void)
 {
 	int i;
 	wrkrRunning = 0;
-	if(runModConf->wrkrMax > 16)
-		runModConf->wrkrMax = 16; /* TODO: make dynamic? */
 	DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
+    wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
+    if (wrkrInfo == NULL) {
+        DBGPRINTF("imptcp: worker-info array allocation failed.\n");
+        return;
+    }
 	pthread_mutex_init(&wrkrMut, NULL);
 	pthread_cond_init(&wrkrIdle, NULL);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
@@ -1398,6 +1401,7 @@ stopWorkerPool(void)
 	}
 	pthread_cond_destroy(&wrkrIdle);
 	pthread_mutex_destroy(&wrkrMut);
+    free(wrkrInfo);
 }
 
 
