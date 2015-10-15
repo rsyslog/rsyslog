@@ -142,6 +142,7 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	int wrkrMax;
+	int bProcessOnPoller;
 	sbool configSetViaV2Method;
 };
 
@@ -150,7 +151,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "threads", eCmdHdlrPositiveInt, 0 }
+	{ "threads", eCmdHdlrPositiveInt, 0 },
+	{ "processOnPoller", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1549,6 +1551,24 @@ processWorkItem(struct epoll_event *event)
 }
 
 
+static inline int
+assignFreeWorker(struct epoll_event *evt) {
+	int i;
+	/* check if there is a free worker */
+	for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
+		/*do search*/;
+
+	if(i < runModConf->wrkrMax) {
+		/* worker free -> use it! */
+		wrkrInfo[i].event = evt;
+		++wrkrRunning;
+		pthread_cond_signal(&wrkrInfo[i].run);
+		pthread_mutex_unlock(&wrkrMut);
+		return 0;
+	}
+	return 1;
+}
+
 /* This function is called to process a complete workset, that
  * is a set of events returned from epoll.
  */
@@ -1556,35 +1576,33 @@ static inline void
 processWorkSet(int nEvents, struct epoll_event events[])
 {
 	int iEvt;
-	int i;
 	int remainEvents;
 
 	remainEvents = nEvents;
 	for(iEvt = 0 ; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0) ; ++iEvt) {
-		if(remainEvents == 1) {
+		if(runModConf->bProcessOnPoller && remainEvents == 1) {
 			/* process self, save context switch */
 			processWorkItem(events+iEvt);
 		} else {
 			pthread_mutex_lock(&wrkrMut);
-			/* check if there is a free worker */
-			for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
-				/*do search*/;
-			if(i < runModConf->wrkrMax) {
-				/* worker free -> use it! */
-				wrkrInfo[i].event = events+iEvt;
-				++wrkrRunning;
-				pthread_cond_signal(&wrkrInfo[i].run);
-				pthread_mutex_unlock(&wrkrMut);
-			} else {
-				pthread_mutex_unlock(&wrkrMut);
-				/* no free worker, so we process this one ourselfs */
-				processWorkItem(events+iEvt);
+
+			if (assignFreeWorker(events+iEvt) != 0) {
+				if (runModConf->bProcessOnPoller) {
+					/* no free worker, so we process this one ourselfs */
+					pthread_mutex_unlock(&wrkrMut);
+					processWorkItem(events+iEvt);
+				} else {
+					do {
+						pthread_cond_wait(&wrkrIdle, &wrkrMut);
+					} while(assignFreeWorker(events+iEvt) != 0);
+				}				
 			}
+
 		}
 		--remainEvents;
 	}
 
-	if(nEvents > 1) {
+	if((! runModConf->bProcessOnPoller) || nEvents > 1) {
 		/* we now need to wait until all workers finish. This is because the
 		 * rest of this module can not handle the concurrency introduced
 		 * by workers running during the epoll call.
@@ -1711,6 +1729,7 @@ CODESTARTbeginCnfLoad
 	pModConf->pConf = pConf;
 	/* init our settings */
 	loadModConf->wrkrMax = DFLT_wrkrMax;
+	loadModConf->bProcessOnPoller = 1;
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
@@ -1739,6 +1758,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "threads")) {
 			loadModConf->wrkrMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "processOnPoller")) {
+			loadModConf->bProcessOnPoller = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
