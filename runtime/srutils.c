@@ -199,7 +199,6 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
         uchar *p;
         uchar *pszWork;
         size_t len;
-	int err;
 	int iTry = 0;
 	int bErr = 0;
 
@@ -214,9 +213,10 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
+			iTry = 0;
 again:
                         if(access((char*)pszWork, F_OK)) {
-                                if((err = mkdir((char*)pszWork, mode)) == 0) {
+                                if(mkdir((char*)pszWork, mode) == 0) {
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(chown((char*)pszWork, uid, gid) != 0)
@@ -227,7 +227,7 @@ again:
 							 */
 					}
 				} else {
-					if(err == EEXIST && iTry == 0) {
+					if(errno == EEXIST && iTry == 0) {
 						iTry = 1;
 						goto again;
 						}
@@ -645,16 +645,27 @@ containsGlobWildcard(char *str)
 		return 0;
 	}
 	/* From Linux Programmer's Guide:
-	 * "A string is a wildcard pattern if it contains one of the characters '?', '*' or '['"
-	 * "One can remove the special meaning of '?', '*' and '[' by preceding them by a backslash"
+	 * "A string is a wildcard pattern if it contains one of the characters '?', '*', '{' or '['"
+	 * "One can remove the special meaning of '?', '*', '{' and '[' by preceding them by a backslash"
 	 */
 	for(p = str; *p != '\0'; p++) {
-		if((*p == '?' || *p == '*' || *p == '[') &&
+		if((*p == '?' || *p == '*' || *p == '[' || *p == '{') &&
 				(p == str || *(p-1) != '\\')) {
 			return 1;
 		}
 	}
 	return 0;
+}
+
+void seedRandomNumber() {
+	struct timespec t;
+	timeoutComp(&t, 0);
+	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
+	srandom((unsigned int) x);
+}
+
+long int randomNumber() {
+	return random();
 }
 
 /* vim:set ai:

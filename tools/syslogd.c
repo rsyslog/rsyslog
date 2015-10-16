@@ -145,12 +145,10 @@ char **syslogd_crunch_list(char *list)
 
 	/* strip off trailing delimiters */
 	while (p[strlen(p)-1] == LIST_DELIMITER) {
-		count--;
 		p[strlen(p)-1] = '\0';
 	}
 	/* cut off leading delimiters */
 	while (p[0] == LIST_DELIMITER) {
-		count--;
                p++;
 	}
 

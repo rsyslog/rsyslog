@@ -233,6 +233,7 @@ writePgSQL(uchar *psz, instanceData *pData)
 	bHadError = tryExec(psz, pData); /* try insert */
 
 	if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
+#if 0		/* re-enable once we have transaction support */
 		/* error occured, try to re-init connection and retry */
 		int inTransaction = 0;
 		if(pData->f_hpgsql != NULL) {
@@ -241,7 +242,9 @@ writePgSQL(uchar *psz, instanceData *pData)
 				inTransaction = 1;
 			}
 		}
-		if ( inTransaction == 0 ) {
+		if ( inTransaction == 0 )
+#endif
+		{
 			closePgSQL(pData); /* close the current handle */
 			CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
 			bHadError = tryExec(psz, pData); /* retry */
@@ -281,6 +284,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
+#if 0 /* re-enable when TX support is added again */
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 	dbgprintf("ompgsql: beginTransaction\n");
@@ -288,6 +292,7 @@ CODESTARTbeginTransaction
 	       initPgSQL(pWrkrData->pData, 0);
 	iRet = writePgSQL((uchar*) "begin", pWrkrData->pData); /* TODO: make user-configurable */
 ENDbeginTransaction
+#endif
 
 
 BEGINdoAction
@@ -302,11 +307,13 @@ finalize_it:
 ENDdoAction
 
 
+#if 0 /* re-enable when TX support is added again */
 BEGINendTransaction
 CODESTARTendTransaction
 	iRet = writePgSQL((uchar*) "commit;", pWrkrData->pData); /* TODO: make user-configurable */
 dbgprintf("ompgsql: endTransaction\n");
 ENDendTransaction
+#endif
 
 
 BEGINparseSelectorAct
@@ -385,7 +392,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+/* CODEqueryEtryPt_TXIF_OMOD_QUERIES currently no TX support! */ /* we support the transactional interface! */
 ENDqueryEtryPt
 
 

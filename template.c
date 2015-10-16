@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2014 Rainer Gerhards and Adiscon
+ * Copyright 2004-2015 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -89,6 +89,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "regex.match", eCmdHdlrInt, 0 },
 	{ "regex.submatch", eCmdHdlrInt, 0 },
 	{ "droplastlf", eCmdHdlrBinary, 0 },
+	{ "fixedwidth", eCmdHdlrBinary, 0 },
 	{ "mandatory", eCmdHdlrBinary, 0 },
 	{ "spifno1stsp", eCmdHdlrBinary, 0 }
 };
@@ -205,6 +206,11 @@ tplToString(struct template *__restrict__ const pTpl,
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
 			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
+		} else {
+			DBGPRINTF("TplToString: invalid entry type %d\n", pTpe->eEntryType);
+			pVal = (uchar*) "*LOGIC ERROR*";
+			iLenVal = sizeof("*LOGIC ERROR*") - 1;
+			bMustBeFreed = 0;
 		}
 		/* got source, now copy over */
 		if(iLenVal > 0) { /* may be zero depending on property */
@@ -750,6 +756,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
 			pTpe->data.field.options.bFromPosEndRelative = 1;
+		 } else if(!strcmp((char*)Buf, "fixed-width")) {
+			pTpe->data.field.options.bFixedWidth = 1;
 		 } else if(!strcmp((char*)Buf, "csv")) {
 			if(hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
@@ -1408,6 +1416,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int topos = -1;
 	int fieldnum = -1;
 	int fielddelim = 9; /* default is HT (USACSII 9) */
+	int fixedwidth = 0;
 	int re_matchToUse = 0;
 	int re_submatchToUse = 0;
 	int bComplexProcessing = 0;
@@ -1437,6 +1446,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			free(tmpstr);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
+			bComplexProcessing = 1;
+		} else if(!strcmp(pblkProperty.descr[i].name, "fixedwidth")) {
+			fixedwidth = pvals[i].val.d.n;
 			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
 			mandatory = pvals[i].val.d.n;
@@ -1652,6 +1664,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
 	pTpe->data.field.options.bMandatory = mandatory;
+	pTpe->data.field.options.bFixedWidth = fixedwidth;
 	pTpe->data.field.eCaseConv = caseconv;
 	switch(formatType) {
 	case F_NONE:

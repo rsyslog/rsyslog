@@ -194,6 +194,7 @@ typedef uintTiny	propid_t;
 #define PROP_MSGID			22
 #define PROP_PARSESUCCESS		23
 #define PROP_JSONMESG			24
+#define PROP_RAWMSG_AFTER_PRI		25
 #define PROP_SYS_NOW			150
 #define PROP_SYS_YEAR			151
 #define PROP_SYS_MONTH			152
@@ -210,6 +211,7 @@ typedef uintTiny	propid_t;
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202
 #define PROP_GLOBAL_VAR			203
+#define PROP_CEE_ALL_JSON_PLAIN		204
 
 /* types of configuration handlers
  */

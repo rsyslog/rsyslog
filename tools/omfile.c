@@ -48,9 +48,7 @@
 #include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
-#ifdef OS_SOLARIS
-#	include <fcntl.h>
-#endif
+#include <fcntl.h>
 #ifdef HAVE_ATOMIC_BUILTINS
 #	include <pthread.h>
 #endif
@@ -714,12 +712,6 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	/* we have not found an entry */
 	STATSCOUNTER_INC(pData->ctrMiss, pData->mutCtrMiss);
 
-	/* invalidate iCurrElt as we may error-exit out of this function when the currrent
-	 * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
-	 * performance-wise it may be better to do that in each of the exits. However, that
-	 * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
-	 */
-	pData->iCurrElt = -1;
 	/* similarly, we need to set the current pStrm to NULL, because otherwise, if prepareFile() fails,
 	 * we may end up using an old stream. This bug depends on how exactly prepareFile fails,
 	 * but it could be triggered in the common case of a failed open() system call.
@@ -770,7 +762,8 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
 finalize_it:
-	pCache[pData->iCurrElt]->nInactive = 0;
+	if(iRet == RS_RET_OK)
+		pCache[pData->iCurrElt]->nInactive = 0;
 	RETiRet;
 }
 
@@ -1222,7 +1215,7 @@ CODESTARTnewActInst
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
-				"\"dynfile\" parameter must be given");
+				"\"dynafile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 

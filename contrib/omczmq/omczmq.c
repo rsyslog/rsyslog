@@ -48,6 +48,7 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _instanceData {
 	zactor_t *authActor;
+	zactor_t *beaconActor;
 	zsock_t *sock;
 	zcert_t *clientCert;
 	zcert_t *serverCert;
@@ -57,6 +58,9 @@ typedef struct _instanceData {
 	char *clientCertPath;
 	char *serverCertPath;
 	uchar *tplName;
+	char *beacon;
+	int beaconport;
+	char *topicList;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -66,10 +70,13 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
+	{ "beacon", eCmdHdlrGetWord, 0 },
+	{ "beaconport", eCmdHdlrGetWord, 0 },
 	{ "authtype", eCmdHdlrGetWord, 0 },
 	{ "clientcertpath", eCmdHdlrGetWord, 0 },
 	{ "servercertpath", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "topics", eCmdHdlrGetWord, 0 }
 };
 
 static struct cnfparamblk actpblk = {
@@ -86,18 +93,18 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	/* create new auth actor */
 	DBGPRINTF ("omczmq: starting auth actor...\n");
-	pData->authActor = zactor_new (zauth, NULL);
+	pData->authActor = zactor_new(zauth, NULL);
 	if (!pData->authActor) {
-		errmsg.LogError (0, RS_RET_NO_ERRCODE,
+		errmsg.LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: could not create auth service");
 		ABORT_FINALIZE (RS_RET_NO_ERRCODE);
 	}
 
 	/* create our zeromq socket */
 	DBGPRINTF ("omczmq: creating zeromq socket...\n");
-	pData->sock = zsock_new (pData->sockType);
+	pData->sock = zsock_new(pData->sockType);
 	if (!pData->sock) {
-		errmsg.LogError (0, RS_RET_NO_ERRCODE,
+		errmsg.LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
@@ -105,8 +112,33 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	bool is_server = false;
 
+	/* if a beacon is set start it */
+	if((pData->beacon != NULL) && (pData->beaconport > 0)) {
+		DBGPRINTF ("omczmq: starting beacon actor...\n");
+
+		/* create the beacon actor, if it fails abort */	
+		pData->beaconActor = zactor_new(zbeacon, NULL);
+		if (!pData->beaconActor) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+					"omczmq: could not create beacon service");
+			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+		}
+
+		/* configure the beacon and abort if UDP broadcasting ont available */
+		zsock_send(pData->beaconActor, "si", "CONFIGURE", pData->beaconport);
+		char *hostname = zstr_recv(pData->beaconActor);
+		if (!*hostname) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+					"omczmq: no UDP broadcasting available");
+			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+		}
+
+		/* start publishing the beacon */
+		zsock_send(pData->beaconActor, "sbi", "PUBLISH", pData->beacon, strlen(pData->beacon));
+	}
+
 	/* if we are a CURVE server */
-	if (!strcmp(pData->authType, "CURVESERVER")) {
+	if ((pData->authType != NULL) && (!strcmp(pData->authType, "CURVESERVER"))) {
 		DBGPRINTF("omczmq: we are a curve server...\n");
 		
 		is_server = true;
@@ -134,7 +166,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(pData->authType, "CURVECLIENT")) {
+	if ((pData->authType != NULL) && (!strcmp(pData->authType, "CURVECLIENT"))) {
 		DBGPRINTF("omczmq: we are a curve client...\n");
 
 		is_server = false;
@@ -163,6 +195,12 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		zsock_set_curve_serverkey (pData->sock, server_key);
 	}
 
+	/* if we are a PUB server */
+	if (pData->sockType == ZMQ_PUB) {
+		DBGPRINTF("omczmq: we are a pub server...\n");
+		is_server = true;
+	}
+
 	/* we default to CONNECT unless told otherwise */
 	int rc = zsock_attach(pData->sock, (const char*)pData->sockEndpoints, is_server);
 	if (rc == -1) {
@@ -183,14 +221,62 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* send the log line */
-	int rc = zstr_send(pData->sock, (char*)msg);
+	/* if we have a ZMQ_PUB sock and topics, send with topics */
+	if (pData->sockType == ZMQ_PUB && pData->topicList) {
+		char topic[256], *list = pData->topicList;
+		int rc;
 
-	/* something is very wrong */
-	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
-				msg, zmq_strerror(errno));
-		ABORT_FINALIZE(RS_RET_ERR);
+		while (list) {
+			char *delimiter = strchr(list, ',');
+			if (!delimiter) {
+				delimiter = list + strlen (list);
+			}
+
+			if (delimiter - list > 255) {
+				errmsg.LogError(0, NO_ERRCODE,
+						"pData->topicList must be under 256 characters");
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			memcpy(topic, list, delimiter - list);
+			topic[delimiter - list] = 0;
+
+			/* send the topic */
+			rc = zstr_sendm(pData->sock, topic);
+
+			/* something is very wrong */
+			if (rc == -1) {
+				errmsg.LogError(0, NO_ERRCODE, "omczmq: send of topic %s failed"
+						": %s", topic, zmq_strerror(errno));
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			/* send the log line */
+			rc = zstr_send(pData->sock, (char*)msg);
+
+			/* something is very wrong */
+			if (rc == -1) {
+				errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
+						msg, zmq_strerror(errno));
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+
+			if (*delimiter == 0) {
+				break;
+			}
+
+			list = delimiter + 1;
+		}
+	} else {
+		/* send the log line */
+		int rc = zstr_send(pData->sock, (char*)msg);
+
+		/* something is very wrong */
+		if (rc == -1) {
+			errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
+					msg, zmq_strerror(errno));
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
 finalize_it:
 	RETiRet;
@@ -205,9 +291,11 @@ setInstParamDefaults(instanceData* pData) {
 	pData->tplName = NULL;
 	pData->sockType = -1;
 	pData->authActor = NULL;
+	pData->beaconActor = NULL;
 	pData->authType = NULL;
 	pData->clientCertPath = NULL;
 	pData->serverCertPath = NULL;
+	pData->topicList = NULL;
 }
 
 
@@ -238,6 +326,7 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	zsock_destroy(&pData->sock);
 	zactor_destroy(&pData->authActor);
+	zactor_destroy(&pData->beaconActor);
 	zcert_destroy(&pData->serverCert);
 	zcert_destroy(&pData->clientCert);
 
@@ -246,6 +335,7 @@ CODESTARTfreeInstance
 	free(pData->clientCertPath);
 	free(pData->serverCertPath);
 	free(pData->tplName);
+	free(pData->topicList);
 ENDfreeInstance
 
 
@@ -344,6 +434,27 @@ CODESTARTnewActInst
 		/* get server cert argument */
 		else if (!strcmp(actpblk.descr[i].name, "servercertpath")) {
 			pData->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+
+		/* get beacon argument */
+		else if (!strcmp(actpblk.descr[i].name, "beacon")) {
+			pData->beacon = es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+		
+		/* get beacon port */
+		else if (!strcmp(actpblk.descr[i].name, "beaconport")) {
+			pData->beaconport = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
+
+		/* get the subscription topics */
+		else if(!strcmp(actpblk.descr[i].name, "topics")) {
+			if (pData->sockType != ZMQ_PUB) {
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+						"topics is invalid unless socktype is PUB");
+				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+			}
+
+			pData->topicList = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
 
 		/* the config has a bad option */

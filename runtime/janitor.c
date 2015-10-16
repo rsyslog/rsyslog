@@ -7,7 +7,7 @@
  *
  * Module begun 2014-05-15 by Rainer Gerhards
  *
- * Copyright (C) 2014 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2014-2015 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -41,7 +41,7 @@ static pthread_mutex_t janitorMut = PTHREAD_MUTEX_INITIALIZER;
 rsRetVal
 janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr)
 {
-	struct janitorEtry *etry;
+	struct janitorEtry *etry = NULL;
 	DEFiRet;
 	CHKmalloc(etry = malloc(sizeof(struct janitorEtry)));
 	CHKmalloc(etry->id = strdup(id));
@@ -53,6 +53,8 @@ janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr)
 	pthread_mutex_unlock(&janitorMut);
 	DBGPRINTF("janitor: entry %p, id '%s' added\n", etry, id);
 finalize_it:
+	if(iRet != RS_RET_OK && etry != NULL)
+		free(etry);
 	RETiRet;
 }
 

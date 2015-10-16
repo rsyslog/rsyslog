@@ -76,7 +76,7 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal

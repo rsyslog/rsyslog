@@ -422,7 +422,8 @@ SanitizeMsg(msg_t *pMsg)
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
-	if(glbl.GetParserDropTrailingLFOnReception() && pszMsg[lenMsg-1] == '\n') {
+	if(glbl.GetParserDropTrailingLFOnReception()
+	   && lenMsg > 0 && pszMsg[lenMsg-1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
 		pszMsg[lenMsg] = '\0';

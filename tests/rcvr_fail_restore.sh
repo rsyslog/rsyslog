@@ -1,8 +1,9 @@
+#!/bin/bash
 # Copyright (C) 2011 by Rainer Gerhards
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[rcvr_fail_restore.sh\]: test failed receiver restore case
-source $srcdir/diag.sh init
+. $srcdir/diag.sh init
 #
 # STEP1: start both instances and send 1000 messages.
 # Note: receiver is instance 2, sender instance 1.
@@ -12,20 +13,20 @@ source $srcdir/diag.sh init
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log2"
 echo starting receiver
-source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
+. $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 #export RSYSLOG_DEBUG="debug nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 #valgrind="valgrind"
 echo starting sender
-source $srcdir/diag.sh startup rcvr_fail_restore_sender.conf
+. $srcdir/diag.sh startup rcvr_fail_restore_sender.conf
 # re-set params so that new instances do not thrash it...
 #unset RSYSLOG_DEBUG
 #unset RSYSLOG_DEBUGLOG
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-source $srcdir/diag.sh injectmsg  1 1000
-source $srcdir/diag.sh wait-queueempty
+. $srcdir/diag.sh injectmsg  1 1000
+. $srcdir/diag.sh wait-queueempty
 ./msleep 1000 # let things settle down a bit
 
 #
@@ -34,12 +35,12 @@ source $srcdir/diag.sh wait-queueempty
 #
 echo step 2
 
-source $srcdir/diag.sh shutdown-when-empty 2
-source $srcdir/diag.sh wait-shutdown 2
+. $srcdir/diag.sh shutdown-when-empty 2
+. $srcdir/diag.sh wait-shutdown 2
 
-source $srcdir/diag.sh injectmsg  1001 10000
+. $srcdir/diag.sh injectmsg  1001 10000
 ./msleep 3000 # make sure some retries happen (retry interval is set to 3 second)
-source $srcdir/diag.sh get-mainqueuesize
+. $srcdir/diag.sh get-mainqueuesize
 ls -l test-spool
 
 #
@@ -47,9 +48,9 @@ ls -l test-spool
 #
 echo step 3
 #export RSYSLOG_DEBUGLOG="log2"
-source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
+. $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 echo waiting for sender to drain queue [may need a short while]
-source $srcdir/diag.sh wait-queueempty
+. $srcdir/diag.sh wait-queueempty
 ls -l test-spool
 OLDFILESIZE=$(stat -c%s test-spool/mainq.00000001)
 echo file size to expect is $OLDFILESIZE
@@ -60,8 +61,8 @@ echo file size to expect is $OLDFILESIZE
 # (but one file continous to exist).
 #
 echo step 4
-source $srcdir/diag.sh injectmsg  11001 10
-source $srcdir/diag.sh wait-queueempty
+. $srcdir/diag.sh injectmsg  11001 10
+. $srcdir/diag.sh wait-queueempty
 
 # at this point, the queue file shall not have grown. Note
 # that we MUST NOT shut down the instance right now, because it
@@ -90,22 +91,22 @@ fi
 #
 echo step 5
 echo "*** done primary test *** now checking if DA can be restarted"
-source $srcdir/diag.sh shutdown-when-empty 2
-source $srcdir/diag.sh wait-shutdown 2
+. $srcdir/diag.sh shutdown-when-empty 2
+. $srcdir/diag.sh wait-shutdown 2
 
-source $srcdir/diag.sh injectmsg  11011 10000
+. $srcdir/diag.sh injectmsg  11011 10000
 sleep 1 # we need to wait, otherwise we may be so fast that the receiver
 # comes up before we have finally suspended the action
-source $srcdir/diag.sh get-mainqueuesize
+. $srcdir/diag.sh get-mainqueuesize
 ls -l test-spool
 
 #
 # Step 6: restart receiver, wait that the sender drains its queue
 #
 echo step 6
-source $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
+. $srcdir/diag.sh startup rcvr_fail_restore_rcvr.conf 2
 echo waiting for sender to drain queue [may need a short while]
-source $srcdir/diag.sh wait-queueempty
+. $srcdir/diag.sh wait-queueempty
 ls -l test-spool
 
 #
@@ -113,12 +114,12 @@ ls -l test-spool
 # and see if everything could be received (the usual check, done here
 # for completeness, more or less as a bonus).
 #
-source $srcdir/diag.sh shutdown-when-empty
-source $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh shutdown-when-empty
+. $srcdir/diag.sh wait-shutdown
 
 # now it is time to stop the receiver as well
-source $srcdir/diag.sh shutdown-when-empty 2
-source $srcdir/diag.sh wait-shutdown 2
+. $srcdir/diag.sh shutdown-when-empty 2
+. $srcdir/diag.sh wait-shutdown 2
 
 # now abort test if we need to (due to filesize predicate)
 if [ $NEWFILESIZE != $OLDFILESIZE ]
@@ -126,5 +127,5 @@ then
    exit 1
 fi
 # do the final check
-source $srcdir/diag.sh seq-check 1 21010 -m 100
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh seq-check 1 21010 -m 100
+. $srcdir/diag.sh exit

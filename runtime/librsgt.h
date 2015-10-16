@@ -27,8 +27,9 @@
  * cases ;) [and 64 is not really a waste of memory, so we do not even
  * try to work with reallocs and such...]
  */
-#define MAX_ROOTS 64
+/*#define MAX_ROOTS 64
 #define LOGSIGHDR "LOGSIG10"
+*/
 
 /* context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in gtfile.
@@ -45,9 +46,6 @@ struct gtctx_s {
 typedef struct gtctx_s *gtctx;
 typedef struct gtfile_s *gtfile;
 typedef struct gterrctx_s gterrctx_t;
-typedef struct imprint_s imprint_t;
-typedef struct block_sig_s block_sig_t;
-typedef struct tlvrecord_s tlvrecord_t;
 
 /* this describes a file, as far as librsgt is concerned */
 struct gtfile_s {
@@ -65,8 +63,6 @@ struct gtfile_s {
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
-	unsigned char *blkStrtHash; /* last hash from previous block */
-	uint16_t lenBlkStrtHash;
 	uint64_t nRecords;  /* current number of records in current block */
 	uint64_t bInBlk;    /* are we currently inside a blk --> need to finish on close */
 	int8_t nRoots;
@@ -79,14 +75,6 @@ struct gtfile_s {
 	char	tlvBuf[4096];
 	int	tlvIdx; /* current index into tlvBuf */
 	gtctx ctx;
-};
-
-struct tlvrecord_s {
-	uint16_t tlvtype;
-	uint16_t tlvlen;
-	uint8_t hdr[4]; /* the raw header (as persisted to file) */
-	uint8_t lenHdr; /* length of raw header */
-	uint8_t data[64*1024];	/* the actual data part (of length tlvlen) */
 };
 
 /* The following structure describes the "error context" to be used
@@ -118,28 +106,6 @@ struct gterrctx_s {
 	char *frstRecInBlk; /* This holds the first message seen inside the current block */
 };
 
-struct imprint_s {
-	uint8_t hashID;
-	int	len;
-	uint8_t *data;
-};
-
-#define SIGID_RFC3161 0
-struct block_sig_s {
-	uint8_t hashID;
-	uint8_t sigID; /* what type of *signature*? */
-	uint8_t *iv;
-	imprint_t lastHash;
-	uint64_t recCount;
-	struct {
-		struct {
-			uint8_t *data;
-			size_t len; /* must be size_t due to GT API! */
-		} der;
-	} sig;
-};
-
-
 /* the following defines the gtstate file record. Currently, this record
  * is fixed, we may change that over time.
  */
@@ -149,12 +115,6 @@ struct rsgtstatefile {
 	uint8_t lenHash;
 	/* after that, the hash value is contained within the file */
 };
-
-/* Flags and record types for TLV handling */
-#define RSGT_FLAG_NONCRIT 0x80
-#define RSGT_FLAG_FORWARD 0x40
-#define RSGT_FLAG_TLV16 0x20
-#define RSGT_TYPE_MASK 0x1f
 
 /* error states */
 #define RSGTE_IO 1 	/* any kind of io error */
@@ -320,20 +280,13 @@ hashID2Alg(uint8_t hashID)
 		return 0xff;
 	}
 }
-static inline char *
-sigTypeName(uint8_t sigID)
-{
-	switch(sigID) {
-	case SIGID_RFC3161:
-		return "RFC3161";
-	default:return "[unknown]";
-	}
-}
+
 static inline uint16_t
-getIVLen(block_sig_t *bs)
+getIVLen(block_hdr_t *bh)
 {
-	return hashOutputLengthOctets(bs->hashID);
+	return hashOutputLengthOctets(bh->hashID);
 }
+
 static inline void
 rsgtSetTimestamper(gtctx ctx, char *timestamper)
 {
@@ -373,19 +326,22 @@ void rsgtimprintDel(imprint_t *imp);
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
 int rsgt_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
+void rsgt_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
-void rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
+void rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int verifyBLOCK_HDR(FILE *sigfp, FILE *nsigfp);
 int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsgt_errctxInit(gterrctx_t *ectx);
 void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
-
+void rsgt_set_debug(int iDebug); 
+int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
 
 /* TODO: replace these? */
 int hash_m(gtfile gf, GTDataHash **m);
@@ -393,5 +349,7 @@ int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len
 int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
 extern char *rsgt_read_puburl; /**< url of publication server */
 extern uint8_t rsgt_read_showVerified;
+extern int RSGT_FLAG_TLV16_RUNTIME;
+extern int RSGT_FLAG_NONCRIT_RUNTIME; 
 
 #endif  /* #ifndef INCLUDED_LIBRSGT_H */

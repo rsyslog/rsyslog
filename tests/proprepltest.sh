@@ -1,8 +1,9 @@
+#!/bin/bash
 echo \[proprepltest.sh\]: various tests for the property replacer
-source $srcdir/diag.sh init
-source $srcdir/diag.sh generate-HOSTNAME
-source $srcdir/diag.sh nettester rfctag udp
-source $srcdir/diag.sh nettester rfctag tcp
-source $srcdir/diag.sh nettester nolimittag udp
-source $srcdir/diag.sh nettester nolimittag tcp
-source $srcdir/diag.sh init
+. $srcdir/diag.sh init
+. $srcdir/diag.sh generate-HOSTNAME
+. $srcdir/diag.sh nettester rfctag udp
+. $srcdir/diag.sh nettester rfctag tcp
+. $srcdir/diag.sh nettester nolimittag udp
+. $srcdir/diag.sh nettester nolimittag tcp
+. $srcdir/diag.sh init

@@ -7,6 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#if defined(__FreeBSD__)
+#include <netinet/in.h>
+#endif
 
 static void
 errout(char *reason)

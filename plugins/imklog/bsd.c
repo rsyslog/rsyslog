@@ -7,7 +7,7 @@
  * are very small, and so we use a single driver for both OS's with
  * a little help of conditional compilation.
  *
- * Copyright 2008-2014 Adiscon GmbH
+ * Copyright 2008-2015 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -278,7 +278,7 @@ readklog(modConfData_t *pModConf)
 	if (len > 0)
 		submitSyslog(pModConf, LOG_INFO, pRcv);
 
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+	if(pRcv != bufRcv)
 		free(pRcv);
 }
 

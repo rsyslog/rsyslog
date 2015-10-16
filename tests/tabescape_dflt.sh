@@ -1,7 +1,8 @@
+#!/bin/bash
 echo ===============================================================================
 echo \[tabescape_dflt.sh\]: test for default tab escaping
-source $srcdir/diag.sh init
-source $srcdir/diag.sh generate-HOSTNAME
+. $srcdir/diag.sh init
+. $srcdir/diag.sh generate-HOSTNAME
 
 ./nettester -ttabescape_dflt -iudp
 if [ "$?" -ne "0" ]; then

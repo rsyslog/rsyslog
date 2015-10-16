@@ -398,7 +398,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 			}
 		} else {
 			if(bRandomizeExtraData)
-				edLen = ((long) rand() + extraDataLen) % extraDataLen + 1;
+				edLen = ((unsigned long) rand() + extraDataLen) % extraDataLen + 1;
 			else
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);

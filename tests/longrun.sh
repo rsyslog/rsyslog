@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is a test-aid script to try running some tests through many iterations.
 # It is not yet used in the automated testbench, but I keep this file so that
 # I can use it whenever there is need to. As such, it currently does not have

@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #include <gt_http.h>
 
+#include "librsgt_common.h"
 #include "librsgt.h"
 
 typedef unsigned char uchar;
@@ -63,6 +64,12 @@ uint8_t rsgt_read_showVerified = 0;
 /* check return state of operation and abort, if non-OK */
 #define CHKr(code) if((r = code) != 0) goto done
 
+static void
+errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
+{
+	if (rsgt_read_debug)
+		printf("Internal Error: %s \n", emsg);
+}
 
 /* if verbose==0, only the first and last two octets are shown,
  * otherwise everything.
@@ -200,6 +207,109 @@ reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 	}
 }
 
+/* return the actual length in to-be-written octets of an integer */
+static inline uint8_t rsgt_tlvGetInt64OctetSize(uint64_t val)
+{
+	if(val >> 56)
+		return 8;
+	if((val >> 48) & 0xff)
+		return 7;
+	if((val >> 40) & 0xff)
+		return 6;
+	if((val >> 32) & 0xff)
+		return 5;
+	if((val >> 24) & 0xff)
+		return 4;
+	if((val >> 16) & 0xff)
+		return 3;
+	if((val >> 8) & 0xff)
+		return 2;
+	return 1;
+}
+
+static inline int rsgt_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
+{
+	/* Directory write into file */
+	int r = 0;
+	if ( fputc(octet, newsigfp) == EOF ) 
+		r = RSGTE_IO; 
+done:	return r;
+}
+static inline int rsgt_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
+{
+	int i, r = 0;
+	for(i = 0 ; i < size ; ++i) {
+		r = rsgt_tlvfileAddOctet(newsigfp, octet[i]);
+		if(r != 0) goto done;
+	}
+done:	return r;
+}
+static inline int rsgt_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
+{
+	uint8_t doWrite = 0;
+	int r;
+	if(val >> 56) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 56) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 48) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 48) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 40) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 40) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 32) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 32) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 24) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 24) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 16) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >> 16) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	if(doWrite || ((val >> 8) & 0xff)) {
+		r = rsgt_tlvfileAddOctet(newsigfp, (val >>  8) & 0xff), doWrite = 1;
+		if(r != 0) goto done;
+	}
+	r = rsgt_tlvfileAddOctet(newsigfp, val & 0xff);
+done:	return r;
+}
+
+static int
+rsgt_tlv8Write(FILE *newsigfp, int flags, int tlvtype, int len)
+{
+	int r;
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype & RSGT_TYPE_MASK) == tlvtype);
+	r = rsgt_tlvfileAddOctet(newsigfp, (flags & ~RSGT_FLAG_TLV16_RUNTIME) | tlvtype);
+	if(r != 0) goto done;
+	r = rsgt_tlvfileAddOctet(newsigfp, len & 0xff);
+done:	return r;
+} 
+
+static int
+rsgt_tlv16Write(FILE *newsigfp, int flags, int tlvtype, uint16_t len)
+{
+	uint16_t typ;
+	int r;
+	assert((flags & RSGT_TYPE_MASK) == 0);
+	assert((tlvtype >> 8 & RSGT_TYPE_MASK) == (tlvtype >> 8));
+	typ = ((flags | RSGT_FLAG_TLV16_RUNTIME) << 8) | tlvtype;
+	r = rsgt_tlvfileAddOctet(newsigfp, typ >> 8);
+	if(r != 0) goto done;
+	r = rsgt_tlvfileAddOctet(newsigfp, typ & 0xff);
+	if(r != 0) goto done;
+	r = rsgt_tlvfileAddOctet(newsigfp, (len >> 8) & 0xff);
+	if(r != 0) goto done;
+	r = rsgt_tlvfileAddOctet(newsigfp, len & 0xff);
+done:	return r;
+} 
+
 /**
  * Write the provided record to the current file position.
  *
@@ -249,7 +359,9 @@ rsgt_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 	NEXTC;
 	rec->hdr[0] = c;
 	rec->tlvtype = c & 0x1f;
-	if(c & RSGT_FLAG_TLV16) { /* tlv16? */
+	if(c & RSGT_FLAG_TLV16_RUNTIME) { /* tlv16? */
+		if(rsgt_read_debug)
+			printf("debug: TL168 %d\n", c); 
 		rec->lenHdr = 4;
 		NEXTC;
 		rec->hdr[1] = c;
@@ -261,21 +373,26 @@ rsgt_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 		rec->hdr[3] = c;
 		rec->tlvlen |= c;
 	} else {
+		if(rsgt_read_debug)
+			printf("debug: TLV8 %d\n", c); 
 		NEXTC;
 		rec->lenHdr = 2;
 		rec->hdr[1] = c;
 		rec->tlvlen = c;
 	}
 	if(fread(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) {
+		if(rsgt_read_debug)
+			printf("debug: rec->tlvlen %d\n", rec->tlvlen); 
 		r = feof(fp) ? RSGTE_EOF : RSGTE_IO;
 		goto done;
 	}
 
-	if(rsgt_read_debug)
-		printf("read tlvtype %4.4x, len %u\n", (unsigned) rec->tlvtype,
-			(unsigned) rec->tlvlen);
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvRecRead tlvtype %4.4x, len %u, r = %d\n", (unsigned) rec->tlvtype,
+			(unsigned) rec->tlvlen, r);
+	return r;
 }
 
 /* decode a sub-tlv record from an existing record's memory buffer
@@ -290,7 +407,7 @@ rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 	c = rec->data[(*stridx)++];
 	newrec->hdr[0] = c;
 	newrec->tlvtype = c & 0x1f;
-	if(c & RSGT_FLAG_TLV16) { /* tlv16? */
+	if(c & RSGT_FLAG_TLV16_RUNTIME) { /* tlv16? */
 		newrec->lenHdr = 4;
 		if(rec->tlvlen == *stridx) {r=RSGTE_LEN; goto done;}
 		c = rec->data[(*stridx)++];
@@ -311,6 +428,8 @@ rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 		newrec->hdr[1] = c;
 		newrec->tlvlen = c;
 	}
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeSUBREC stridx=%d rec->tlvlen=%d newrec->tlvlen=%d\n", *stridx, rec->tlvlen, newrec->tlvlen);
 	if(rec->tlvlen < *stridx + newrec->tlvlen) {r=RSGTE_LEN; goto done;}
 	memcpy(newrec->data, (rec->data)+(*stridx), newrec->tlvlen);
 	*stridx += newrec->tlvlen;
@@ -320,7 +439,10 @@ rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 			(unsigned) newrec->tlvtype,
 			(unsigned) newrec->tlvlen);
 	r = 0;
-done:	return r;
+done:	
+	if(r != 0 && rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeSUBREC failed with error %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
 }
 
 
@@ -345,7 +467,10 @@ rsgt_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	memcpy(imp->data, rec->data+1, imp->len);
 	*imprint = imp;
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+	return r;
 }
 
 static int
@@ -355,13 +480,16 @@ rsgt_tlvDecodeHASH_ALGO(tlvrecord_t *rec, uint16_t *strtidx, uint8_t *hashAlg)
 	tlvrecord_t subrec;
 
 	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x00 && subrec.tlvlen == 1)) {
+	if(!(subrec.tlvtype == 0x01 && subrec.tlvlen == 1)) {
 		r = RSGTE_FMT;
 		goto done;
 	}
 	*hashAlg = subrec.data[0];
 	r = 0;
-done:	return r;
+done:	
+	if(r != 0 && rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeHASH_ALGO failed with error %d, rec->tlvtype %4.4x, subrec->tlvtype %4.4x\n", r, (unsigned) rec->tlvtype, (unsigned) subrec.tlvtype);
+	return r;
 }
 static int
 rsgt_tlvDecodeBLOCK_IV(tlvrecord_t *rec, uint16_t *strtidx, uint8_t **iv)
@@ -370,14 +498,17 @@ rsgt_tlvDecodeBLOCK_IV(tlvrecord_t *rec, uint16_t *strtidx, uint8_t **iv)
 	tlvrecord_t subrec;
 
 	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x01)) {
+	if(!(subrec.tlvtype == 0x02)) {
 		r = RSGTE_INVLTYP;
 		goto done;
 	}
 	if((*iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {r=RSGTE_OOM;goto done;}
 	memcpy(*iv, subrec.data, subrec.tlvlen);
 	r = 0;
-done:	return r;
+done:	
+	if(r != 0 && rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeBLOCK_IV failed with error %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
 }
 static int
 rsgt_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
@@ -386,7 +517,7 @@ rsgt_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
 	tlvrecord_t subrec;
 
 	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto done; }
+	if(!(subrec.tlvtype == 0x03)) { r = RSGTE_INVLTYP; goto done; }
 	imp->hashID = subrec.data[0];
 	if(subrec.tlvlen != 1 + hashOutputLengthOctets(imp->hashID)) {
 		r = RSGTE_LEN;
@@ -396,7 +527,10 @@ rsgt_tlvDecodeLAST_HASH(tlvrecord_t *rec, uint16_t *strtidx, imprint_t *imp)
 	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {r=RSGTE_OOM;goto done;}
 	memcpy(imp->data, subrec.data+1, subrec.tlvlen-1);
 	r = 0;
-done:	return r;
+done:	
+	if(r != 0 && rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeLAST_HASH failed with error %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
 }
 static int
 rsgt_tlvDecodeREC_COUNT(tlvrecord_t *rec, uint16_t *strtidx, uint64_t *cnt)
@@ -407,7 +541,7 @@ rsgt_tlvDecodeREC_COUNT(tlvrecord_t *rec, uint16_t *strtidx, uint64_t *cnt)
 	tlvrecord_t subrec;
 
 	CHKr(rsgt_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
+	if(!(subrec.tlvtype == 0x01 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto done; }
 	val = 0;
 	for(i = 0 ; i < subrec.tlvlen ; ++i) {
 		val = (val << 8) + subrec.data[i];
@@ -429,7 +563,35 @@ rsgt_tlvDecodeSIG(tlvrecord_t *rec, uint16_t *strtidx, block_sig_t *bs)
 	if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto done;}
 	memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeSIG returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
+}
+
+static int
+rsgt_tlvDecodeBLOCK_HDR(tlvrecord_t *rec, block_hdr_t **blockhdr)
+{
+	int r = 1;
+	uint16_t strtidx = 0;
+	block_hdr_t *bh;
+	if((bh = calloc(1, sizeof(block_hdr_t))) == NULL) {
+		r = RSGTE_OOM;
+		goto done;
+	}
+	CHKr(rsgt_tlvDecodeHASH_ALGO(rec, &strtidx, &(bh->hashID)));
+	CHKr(rsgt_tlvDecodeBLOCK_IV(rec, &strtidx, &(bh->iv)));
+	CHKr(rsgt_tlvDecodeLAST_HASH(rec, &strtidx, &(bh->lastHash)));
+	if(strtidx != rec->tlvlen) {
+		r = RSGTE_LEN;
+		goto done;
+	}
+	*blockhdr = bh;
+	r = 0;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeBLOCK_HDR returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
 }
 
 static int
@@ -442,9 +604,6 @@ rsgt_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 		r = RSGTE_OOM;
 		goto done;
 	}
-	CHKr(rsgt_tlvDecodeHASH_ALGO(rec, &strtidx, &(bs->hashID)));
-	CHKr(rsgt_tlvDecodeBLOCK_IV(rec, &strtidx, &(bs->iv)));
-	CHKr(rsgt_tlvDecodeLAST_HASH(rec, &strtidx, &(bs->lastHash)));
 	CHKr(rsgt_tlvDecodeREC_COUNT(rec, &strtidx, &(bs->recCount)));
 	CHKr(rsgt_tlvDecodeSIG(rec, &strtidx, bs));
 	if(strtidx != rec->tlvlen) {
@@ -453,24 +612,33 @@ rsgt_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 	}
 	*blocksig = bs;
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvDecodeBLOCK_SIG returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	return r;
 }
 static int
 rsgt_tlvRecDecode(tlvrecord_t *rec, void *obj)
 {
 	int r = 1;
 	switch(rec->tlvtype) {
-		case 0x0900:
 		case 0x0901:
-			r = rsgt_tlvDecodeIMPRINT(rec, obj);
+			r = rsgt_tlvDecodeBLOCK_HDR(rec, obj);
 			if(r != 0) goto done;
 			break;
 		case 0x0902:
+		case 0x0903:
+			r = rsgt_tlvDecodeIMPRINT(rec, obj);
+			if(r != 0) goto done;
+			break;
+		case 0x0904:
 			r = rsgt_tlvDecodeBLOCK_SIG(rec, obj);
 			if(r != 0) goto done;
 			break;
 	}
 done:
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvRecDecode returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
 	return r;
 }
 
@@ -481,7 +649,7 @@ rsgt_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	tlvrecord_t rec;
 
 	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
-	if(rec.tlvtype != 0x0900) {
+	if(rec.tlvtype != 0x0902) {
 		r = RSGTE_MISS_REC_HASH;
 		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
@@ -489,7 +657,10 @@ rsgt_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	if(outfp != NULL)
 		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvrdRecHash returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
+	return r;
 }
 
 static int
@@ -499,7 +670,7 @@ rsgt_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	tlvrecord_t rec;
 
 	if((r = rsgt_tlvrd(fp, &rec, imp)) != 0) goto done;
-	if(rec.tlvtype != 0x0901) {
+	if(rec.tlvtype != 0x0903) {
 		r = RSGTE_MISS_TREE_HASH;
 		rsgt_objfree(rec.tlvtype, *imp);
 		goto done;
@@ -507,7 +678,10 @@ rsgt_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	if(outfp != NULL)
 		if((r = rsgt_tlvwrite(outfp, &rec)) != 0) goto done;
 	r = 0;
-done:	return r;
+done:	
+	if(rsgt_read_debug)
+		printf("debug: rsgt_tlvrdTreeHash returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
+	return r;
 }
 
 /* read BLOCK_SIG during verification phase */
@@ -517,7 +691,7 @@ rsgt_tlvrdVrfyBlockSig(FILE *fp, block_sig_t **bs, tlvrecord_t *rec)
 	int r;
 
 	if((r = rsgt_tlvrd(fp, rec, bs)) != 0) goto done;
-	if(rec->tlvtype != 0x0902) {
+	if(rec->tlvtype != 0x0904) {
 		r = RSGTE_MISS_BLOCKSIG;
 		rsgt_objfree(rec->tlvtype, *bs);
 		goto done;
@@ -576,16 +750,43 @@ rsgt_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
 static void
 rsgt_printREC_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsgt_printIMPRINT(fp, "[0x0900]Record hash: ",
+	rsgt_printIMPRINT(fp, "[0x0902]Record hash: ",
 		imp, verbose);
 }
 
 static void
 rsgt_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 {
-	rsgt_printIMPRINT(fp, "[0x0901]Tree hash..: ",
+	rsgt_printIMPRINT(fp, "[0x0903]Tree hash..: ",
 		imp, verbose);
 }
+
+/**
+ * Output a human-readable representation of a block_hdr_t
+ * to proviced file pointer. This function is mainly inteded for
+ * debugging purposes or dumping tlv files.
+ *
+ * @param[in] fp file pointer to send output to
+ * @param[in] bsig ponter to block_hdr_t to output
+ * @param[in] verbose if 0, abbreviate blob hexdump, else complete
+ */
+void
+rsgt_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose)
+ {
+	fprintf(fp, "[0x0901]Block Header Record:\n");
+ 	fprintf(fp, "\tPrevious Block Hash:\n");
+	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgName(bh->lastHash.hashID));
+ 	fprintf(fp, "\t   Hash.......: ");
+		outputHexBlob(fp, bh->lastHash.data, bh->lastHash.len, verbose);
+ 		fputc('\n', fp);
+	if(blobIsZero(bh->lastHash.data, bh->lastHash.len))
+ 		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
+	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgName(bh->hashID));
+ 	fprintf(fp, "\tIV............: ");
+		outputHexBlob(fp, bh->iv, getIVLen(bh), verbose);
+ 		fputc('\n', fp);
+}
+
 
 /**
  * Output a human-readable representation of a block_sig_t
@@ -599,18 +800,7 @@ rsgt_printINT_HASH(FILE *fp, imprint_t *imp, uint8_t verbose)
 void
 rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 {
-	fprintf(fp, "[0x0902]Block Signature Record:\n");
-	fprintf(fp, "\tPrevious Block Hash:\n");
-	fprintf(fp, "\t   Algorithm..: %s\n", hashAlgName(bs->lastHash.hashID));
-	fprintf(fp, "\t   Hash.......: ");
-		outputHexBlob(fp, bs->lastHash.data, bs->lastHash.len, verbose);
-		fputc('\n', fp);
-	if(blobIsZero(bs->lastHash.data, bs->lastHash.len))
-		fprintf(fp, "\t   NOTE: New Hash Chain Start!\n");
-	fprintf(fp, "\tHash Algorithm: %s\n", hashAlgName(bs->hashID));
-	fprintf(fp, "\tIV............: ");
-		outputHexBlob(fp, bs->iv, getIVLen(bs), verbose);
-		fputc('\n', fp);
+	fprintf(fp, "[0x0904]Block Signature Record:\n");
 	fprintf(fp, "\tRecord Count..: %llu\n", (long long unsigned) bs->recCount);
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
 	fprintf(fp, "\tSignature Len.: %u\n", (unsigned) bs->sig.der.len);
@@ -631,13 +821,16 @@ void
 rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 {
 	switch(tlvtype) {
-	case 0x0900:
-		rsgt_printREC_HASH(fp, obj, verbose);
-		break;
 	case 0x0901:
-		rsgt_printINT_HASH(fp, obj, verbose);
+		rsgt_printBLOCK_HDR(fp, obj, verbose);
 		break;
 	case 0x0902:
+		rsgt_printREC_HASH(fp, obj, verbose);
+		break;
+	case 0x0903:
+		rsgt_printINT_HASH(fp, obj, verbose);
+		break;
+	case 0x0904:
 		rsgt_printBLOCK_SIG(fp, obj, verbose);
 		break;
 	default:fprintf(fp, "unknown tlv record %4.4x\n", tlvtype);
@@ -655,13 +848,15 @@ void
 rsgt_objfree(uint16_t tlvtype, void *obj)
 {
 	switch(tlvtype) {
-	case 0x0900:
 	case 0x0901:
-		free(((imprint_t*)obj)->data);
+		free(((block_hdr_t*)obj)->iv);
+		free(((block_hdr_t*)obj)->lastHash.data);
 		break;
 	case 0x0902:
-		free(((block_sig_t*)obj)->iv);
-		free(((block_sig_t*)obj)->lastHash.data);
+	case 0x0903:
+		free(((imprint_t*)obj)->data);
+		break;
+	case 0x0904:
 		free(((block_sig_t*)obj)->sig.der.data);
 		break;
 	default:fprintf(stderr, "rsgt_objfree: unknown tlv record %4.4x\n",
@@ -674,7 +869,7 @@ rsgt_objfree(uint16_t tlvtype, void *obj)
 /**
  * Read block parameters. This detects if the block contains the
  * individual log hashes, the intermediate hashes and the overall
- * block paramters (from the signature block). As we do not have any
+ * block parameters (from the signature block). As we do not have any
  * begin of block record, we do not know e.g. the hash algorithm or IV
  * until reading the block signature record. And because the file is
  * purely sequential and variable size, we need to read all records up to
@@ -695,12 +890,13 @@ rsgt_objfree(uint16_t tlvtype, void *obj)
  * @returns 0 if ok, something else otherwise
  */
 int
-rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
+rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh,
                     uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes)
 {
 	int r;
 	uint64_t nRecs = 0;
 	uint8_t bDone = 0;
+	uint8_t bHdr = 0;
 	off_t rewindPos = 0;
 	void *obj;
 	tlvrecord_t rec;
@@ -710,25 +906,31 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 	*bHasRecHashes = 0;
 	*bHasIntermedHashes = 0;
 	*bs = NULL;
+	*bh = NULL;
 
 	while(!bDone) { /* we will err out on EOF */
 		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) goto done;
+		bHdr = 0;
 		switch(rec.tlvtype) {
-		case 0x0900:
+		case 0x0901:
+			*bh = (block_hdr_t*) obj;
+			bHdr = 1;
+			break;
+		case 0x0902:
 			++nRecs;
 			*bHasRecHashes = 1;
 			break;
-		case 0x0901:
+		case 0x0903:
 			*bHasIntermedHashes = 1;
 			break;
-		case 0x0902:
+		case 0x0904:
 			*bs = (block_sig_t*) obj;
 			bDone = 1;
 			break;
 		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
 		}
-		if(!bDone)
+		if(!bDone && !bHdr)
 			rsgt_objfree(rec.tlvtype, obj);
 	}
 
@@ -744,6 +946,8 @@ rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs,
 		}
 	}
 done:
+	if(rsgt_read_debug)
+		printf("debug: rsgt_getBlockParams returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
 	return r;
 }
 
@@ -762,6 +966,8 @@ rsgt_chkFileHdr(FILE *fp, char *expect)
 	char hdr[9];
 
 	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto done;
+	if (rsgt_read_debug)
+		printf("debug: rsgt_chkFileHdr header returned %s\n", hdr);
 	if(strcmp(hdr, expect))
 		r = RSGTE_INVLHDR;
 	else
@@ -782,18 +988,19 @@ done:	return gf;
 }
 
 void
-rsgt_vrfyBlkInit(gtfile gf, block_sig_t *bs, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
+rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes)
 {
-	gf->hashAlg = hashID2Alg(bs->hashID);
+	gf->hashAlg = hashID2Alg(bh->hashID);
 	gf->bKeepRecordHashes = bHasRecHashes;
 	gf->bKeepTreeHashes = bHasIntermedHashes;
 	free(gf->IV);
-	gf->IV = malloc(getIVLen(bs));
-	memcpy(gf->IV, bs->iv, getIVLen(bs));
-	free(gf->blkStrtHash);
-	gf->lenBlkStrtHash = bs->lastHash.len;
-	gf->blkStrtHash = malloc(gf->lenBlkStrtHash);
-	memcpy(gf->blkStrtHash, bs->lastHash.data, gf->lenBlkStrtHash);
+	gf->IV = malloc(getIVLen(bh));
+	memcpy(gf->IV, bh->iv, getIVLen(bh));
+	gf->x_prev = malloc(sizeof(imprint_t));
+	gf->x_prev->len=bh->lastHash.len;
+	gf->x_prev->hashID = bh->lastHash.hashID;
+	gf->x_prev->data = malloc(gf->x_prev->len);
+	memcpy(gf->x_prev->data, bh->lastHash.data, gf->x_prev->len);
 }
 
 static int
@@ -823,7 +1030,7 @@ rsgt_vrfy_chkRecHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(imp != NULL)
-		rsgt_objfree(0x0900, imp);
+		rsgt_objfree(0x0902, imp);
 	return r;
 }
 
@@ -854,8 +1061,10 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
 	}
 	r = 0;
 done:
+	if(rsgt_read_debug)
+		printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
 	if(imp != NULL)
-		rsgt_objfree(0x0901, imp);
+		rsgt_objfree(0x0903, imp);
 	return r;
 }
 
@@ -935,7 +1144,7 @@ verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 {
 	GTDataHash *root, *rootDel;
 	int8_t j;
-	int r;
+	int r = 0;
 
 	if(gf->nRecords == 0)
 		goto done;
@@ -953,8 +1162,6 @@ verifySigblkFinish(gtfile gf, GTDataHash **pRoot)
 		}
 	}
 
-	free(gf->blkStrtHash);
-	gf->blkStrtHash = NULL;
 	*pRoot = root;
 	r = 0;
 done:
@@ -1011,7 +1218,7 @@ rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 	COPY_SUBREC_TO_NEWREC
 	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
 	/* actual sig! */
-	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16;
+	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16_RUNTIME;
 	newrec.data[iWr++] = 0x06;
 	newrec.data[iWr++] = (lenDer >> 8) & 0xff;
 	newrec.data[iWr++] = lenDer & 0xff;
@@ -1031,6 +1238,26 @@ done:
 	return r;
 }
 
+/* Verify the existance of the header. 
+ */
+int
+verifyBLOCK_HDR(FILE *sigfp, FILE *nsigfp)
+{
+	int r;
+	tlvrecord_t rec;
+	block_hdr_t *bh = NULL;
+	if ((r = rsgt_tlvrd(sigfp, &rec, &bh)) != 0) goto done;
+	if (rec.tlvtype != 0x0901) {
+		r = RSGTE_MISS_BLOCKSIG;
+		goto done;
+	}
+	if (nsigfp != NULL)
+		if ((r = rsgt_tlvwrite(nsigfp, &rec)) != 0) goto done; 
+done:	rsgt_objfree(rec.tlvtype, bh);
+	if(rsgt_read_debug)
+		printf("debug: verifyBLOCK_HDR returned %d\n", r);
+	return r;
+}
 
 /* verify the root hash. This also means we need to compute the
  * Merkle tree root for the current block.
@@ -1083,10 +1310,227 @@ verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(file_bs != NULL)
-		rsgt_objfree(0x0902, file_bs);
+		rsgt_objfree(0x0904, file_bs);
 	if(r != 0)
 		reportError(r, ectx);
 	if(timestamp != NULL)
 		GTTimestamp_free(timestamp);
+	return r;
+}
+
+/* Helper function to enable debug */
+void rsgt_set_debug(int iDebug)
+{
+	rsgt_read_debug = iDebug; 
+}
+
+/* Helper function to convert an old V10 signature file into V11 */
+int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
+{
+	int r = 0, rRead = 0;
+	imprint_t *imp = NULL;
+	tlvrecord_t rec;
+	tlvrecord_t subrec;
+	
+	/* For signature convert*/
+	int i;
+	uint16_t strtidx = 0; 
+	block_hdr_t *bh = NULL;
+	block_sig_t *bs = NULL;
+	uint16_t typconv;
+	unsigned tlvlen;
+	uint8_t tlvlenRecords;
+
+	/* Temporary change flags back to old default */
+	RSGT_FLAG_TLV16_RUNTIME = 0x20; 
+
+	/* Start reading Sigblocks from old FILE */
+	while(1) { /* we will err out on EOF */
+		rRead = rsgt_tlvRecRead(oldsigfp, &rec); 
+		if(rRead == 0 /*|| rRead == RSGTE_EOF*/) {
+			switch(rec.tlvtype) {
+				case 0x0900:
+				case 0x0901:
+					/* Convert tlvrecord Header */
+					if (rec.tlvtype == 0x0900) {
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME*/) << 8) | 0x0902;
+						rec.hdr[0] = typconv >> 8; 
+						rec.hdr[1] = typconv & 0xff; 
+					} else if (rec.tlvtype == 0x0901) {
+						typconv = ((0x00 /*flags*/ | 0x80 /* NEW RSGT_FLAG_TLV16_RUNTIME*/) << 8) | 0x0903;
+						rec.hdr[0] = typconv >> 8; 
+						rec.hdr[1] = typconv & 0xff; 
+					}
+
+					/* Debug verification output */
+					r = rsgt_tlvDecodeIMPRINT(&rec, &imp);
+					if(r != 0) goto donedecode;
+					rsgt_printREC_HASH(stdout, imp, verbose);
+
+					/* Output into new FILE */
+					if((r = rsgt_tlvwrite(newsigfp, &rec)) != 0) goto done;
+
+					/* Free mem*/
+					free(imp->data);
+					free(imp);
+					break;
+				case 0x0902:
+					/* Split Data into HEADER and BLOCK */
+					strtidx = 0;
+
+					/* Create BH and BS*/
+					if((bh = calloc(1, sizeof(block_hdr_t))) == NULL) {
+						r = RSGTE_OOM;
+						goto donedecode;
+					}
+					if((bs = calloc(1, sizeof(block_sig_t))) == NULL) {
+						r = RSGTE_OOM;
+						goto donedecode;
+					}
+
+					/* Check OLD encoded HASH ALGO */
+					CHKr(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x00 && subrec.tlvlen == 1)) {
+						r = RSGTE_FMT;
+						goto donedecode;
+					}
+					bh->hashID = subrec.data[0];
+
+					/* Check OLD encoded BLOCK_IV */
+					CHKr(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x01)) {
+						r = RSGTE_INVLTYP;
+						goto donedecode;
+					}
+					if((bh->iv = (uint8_t*)malloc(subrec.tlvlen)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bh->iv, subrec.data, subrec.tlvlen);
+
+					/* Check OLD encoded LAST HASH */
+					CHKr(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x02)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bh->lastHash.hashID = subrec.data[0];
+					if(subrec.tlvlen != 1 + hashOutputLengthOctets(bh->lastHash.hashID)) {
+						r = RSGTE_LEN;
+						goto donedecode;
+					}
+					bh->lastHash.len = subrec.tlvlen - 1;
+					if((bh->lastHash.data = (uint8_t*)malloc(bh->lastHash.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bh->lastHash.data, subrec.data+1, subrec.tlvlen-1);
+
+					/* Debug verification output */
+					rsgt_printBLOCK_HDR(stdout, bh, verbose);
+
+					/* Check OLD encoded COUNT */
+					CHKr(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x03 && subrec.tlvlen <= 8)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bs->recCount = 0;
+					for(i = 0 ; i < subrec.tlvlen ; ++i) {
+						bs->recCount = (bs->recCount << 8) + subrec.data[i];
+					}
+
+					/* Check OLD encoded SIG */
+					CHKr(rsgt_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
+					if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto donedecode; }
+					bs->sig.der.len = subrec.tlvlen;
+					bs->sigID = SIGID_RFC3161;
+					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
+					memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
+					r = 0;
+
+					/* Debug output */
+					rsgt_printBLOCK_SIG(stdout, bs, verbose);
+
+					if(strtidx != rec.tlvlen) {
+						r = RSGTE_LEN;
+						goto donedecode;
+					}
+
+					/* Set back to NEW default */
+					RSGT_FLAG_TLV16_RUNTIME = 0x80; 
+
+					/* Create Block Header */
+					tlvlen  = 2 + 1 /* hash algo TLV */ +
+						  2 + hashOutputLengthOctets(bh->hashID) /* iv */ +
+						  2 + 1 + bh->lastHash.len /* last hash */;
+					/* write top-level TLV object block-hdr */
+					r = rsgt_tlv16Write(newsigfp, 0x00, 0x0901, tlvlen);
+					/* and now write the children */
+					/* hash-algo */
+					r = rsgt_tlv8Write(newsigfp, 0x00, 0x01, 1);
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddOctet(newsigfp, hashIdentifier(bh->hashID));
+					if(r != 0) goto done;
+					/* block-iv */
+					r = rsgt_tlv8Write(newsigfp, 0x00, 0x02, hashOutputLengthOctets(bh->hashID));
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddOctetString(newsigfp, bh->iv, hashOutputLengthOctets(bh->hashID));
+					if(r != 0) goto done;
+					/* last-hash */
+					r = rsgt_tlv8Write(newsigfp, 0x00, 0x03, bh->lastHash.len + 1);
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddOctet(newsigfp, bh->lastHash.hashID);
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddOctetString(newsigfp, bh->lastHash.data, bh->lastHash.len);
+					if(r != 0) goto done;
+
+					/* Create Block Signature */
+					tlvlenRecords = rsgt_tlvGetInt64OctetSize(bs->recCount);
+					tlvlen  = 2 + tlvlenRecords /* rec-count */ +
+						  4 + bs->sig.der.len /* rfc-3161 */;
+					/* write top-level TLV object (block-sig */
+					r = rsgt_tlv16Write(newsigfp, 0x00, 0x0904, tlvlen);
+					if(r != 0) goto done;
+					/* and now write the children */
+					/* rec-count */
+					r = rsgt_tlv8Write(newsigfp, 0x00, 0x01, tlvlenRecords);
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddInt64(newsigfp, bs->recCount);
+					if(r != 0) goto done;
+					/* rfc-3161 */
+					r = rsgt_tlv16Write(newsigfp, 0x00, 0x906, bs->sig.der.len);
+					if(r != 0) goto done;
+					r = rsgt_tlvfileAddOctetString(newsigfp, bs->sig.der.data, bs->sig.der.len);
+
+					/* Set back to OLD default */
+					RSGT_FLAG_TLV16_RUNTIME = 0x20; 
+
+donedecode:
+					/* Free mem*/
+					if (bh != NULL) {
+						free(bh->iv);
+						free(bh->lastHash.data);
+						free(bh);
+						bh = NULL; 
+					}
+					if (bs != NULL) {
+						free(bs->sig.der.data);
+						free(bs);
+						bs = NULL; 
+					}
+					if(r != 0) goto done;
+					break;
+				default:
+					fprintf(stdout, "unknown tlv record %4.4x\n", rec.tlvtype);
+					break;
+			}
+		} else {
+			/*if(feof(oldsigfp))
+				break;
+			else*/
+			r = rRead; 
+			if(r == RSGTE_EOF) 
+				r = 0; /* Successfully finished file */
+			else if(rsgt_read_debug)
+				printf("debug: rsgt_ConvertSigFile failed to read with error %d\n", r);
+			goto done;
+		}
+
+		/* Abort further processing if EOF */
+		if (rRead == RSGTE_EOF)
+			goto done;
+	}
+done:
+	if(rsgt_read_debug)
+		printf("debug: rsgt_ConvertSigFile returned %d\n", r);
 	return r;
 }

@@ -1,3 +1,4 @@
+#!/bin/bash
 echo \[omod-if-array.sh\]: test omod-if-array via udp
 echo NOTE: the interface checked with this test is currently NOT
 echo supported. We may support it again in the future. So for now\,

@@ -57,6 +57,8 @@
 #include "ruleset.h"
 #include "ratelimit.h"
 
+#include <regex.h> // TODO: fix via own module
+
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imfile")
@@ -106,6 +108,9 @@ typedef struct lstn_s {
 	sbool bRMStateOnDel;
 	sbool hasWildcard;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
+	uchar *startRegex;	/* regex that signifies end of message (NULL if unset) */
+	regex_t end_preg;	/* compiled version of startRegex */
+	uchar *prevLineSegment;	/* previous line segment (in regex mode) */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
 	sbool addMetadata;
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -123,8 +128,7 @@ static struct configSettings_s {
 	int iFacility; /* local0 */
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
-	int maxLinesAtOnce;	/* how many lines to process in a row? */
-	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+	int64 maxLinesAtOnce;	/* how many lines to process in a row? */
 } cs;
 
 struct instanceConf_s {
@@ -140,6 +144,7 @@ struct instanceConf_s {
 	int iSeverity;
 	sbool bRMStateOnDel;
 	uint8_t readMode;
+	uchar *startRegex;
 	sbool escapeLF;
 	sbool addMetadata;
 	int maxLinesAtOnce;
@@ -169,7 +174,7 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
-#if HAVE_INOTIFY_INIT
+#if HAVE_INOTIFY_INIT 
 /* support for inotify mode */
 
 /* we need to track directories */
@@ -252,6 +257,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "facility", eCmdHdlrFacility, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "readmode", eCmdHdlrInt, 0 },
+	{ "startmsg.regex", eCmdHdlrString, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
@@ -297,6 +303,22 @@ finalize_it:
 	RETiRet;
 }
 
+/* looks up a wdmap entry by dirIdx and returns it's index if found
+ * or -1 if not found.
+ */
+static int 
+wdmapLookupListner(lstn_t* pLstn)
+{
+	int i = 0; 
+	int wd = -1; 
+	/* Loop through */
+	for(i = 0 ; i < nWdmap; ++i) {
+		if (wdmap[i].pLstn == pLstn)
+			wd = wdmap[i].wd; 
+	}
+
+	return wd; 
+}
 
 /* compare function for bsearch() */
 static int
@@ -346,8 +368,11 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 	}
 	if(i < nWdmap) {
 		/* we need to shift to make room for new entry */
+		/* OLD 
 		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i,i+1,nWdmap-i);
-		memmove(wdmap + i, wdmap + i + 1, nWdmap - i);
+		memmove(wdmap + i, wdmap + i + 1, nWdmap - i); */
+		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i + 1,i, sizeof(wd_map_t) * (nWdmap - i));
+		memmove(wdmap + i + 1, wdmap + i, sizeof(wd_map_t) * (nWdmap - i));
 	}
 	wdmap[i].wd = wd;
 	wdmap[i].dirIdx = dirIdx;
@@ -376,8 +401,11 @@ wdmapDel(const int wd)
 
 	if(i < nWdmap-1) {
 		/* we need to shift to delete it (see comment at wdmap definition) */
+		/* OLD 
 		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i,i+1,nWdmap-i-1);
-		memmove(wdmap + i, wdmap + i+1, nWdmap - i-1);
+		memmove(wdmap + i, wdmap + i+1, nWdmap - i-1);*/
+		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i, i + 1, sizeof(wd_map_t) * (nWdmap - i - 1));
+		memmove(wdmap + i, wdmap + i + 1, sizeof(wd_map_t) * (nWdmap - i - 1));
 	}
 	--nWdmap;
 	dbgprintf("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
@@ -544,7 +572,8 @@ static void pollFileCancelCleanup(void *pArg)
 
 /* poll a file, need to check file rollover etc. open file if not open */
 #pragma GCC diagnostic ignored "-Wempty-body"
-static rsRetVal pollFile(lstn_t *pLstn, int *pbHadFileData)
+static rsRetVal
+pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
 	int nProcessed = 0;
@@ -562,7 +591,11 @@ static rsRetVal pollFile(lstn_t *pLstn, int *pbHadFileData)
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
-		CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF));
+		if(pLstn->startRegex == NULL) {
+			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF));
+		} else {
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF));
+		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
@@ -587,7 +620,7 @@ finalize_it:
 #pragma GCC diagnostic warning "-Wempty-body"
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -609,6 +642,7 @@ createInstance(instanceConf_t **pinst)
 	inst->maxLinesAtOnce = 0;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
+	inst->startRegex = NULL;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
@@ -788,6 +822,9 @@ lstnDel(lstn_t *pLstn)
 	free(pLstn->pszFileName);
 	free(pLstn->pszTag);
 	free(pLstn->pszStateFile);
+	free(pLstn->pszBaseName);
+	if(pLstn->startRegex != NULL)
+		regfree(&pLstn->end_preg);
 
 	if(pLstn == runModConf->pRootLstn)
 		runModConf->pRootLstn = pLstn->next;
@@ -812,7 +849,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	lstn_t *pThis;
 
 	CHKiRet(lstnAdd(&pThis));
-	pThis->pszDirName = (uchar*)strdup((char*)existing->pszDirName);
+	pThis->pszDirName = existing->pszDirName; /* read-only */
 	pThis->pszBaseName = (uchar*)strdup((char*)newname);
 	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
 	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
@@ -828,6 +865,12 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
 	pThis->iPersistStateInterval = existing->iPersistStateInterval;
 	pThis->readMode = existing->readMode;
+	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
+	if(pThis->startRegex != NULL) // TODO: make this a single function with better error handling
+		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
+			dbgprintf("imfile: error regex compile\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
 	pThis->hasWildcard = existing->hasWildcard;
 	pThis->escapeLF = existing->escapeLF;
@@ -835,6 +878,7 @@ lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
+	pThis->prevLineSegment = NULL;
 	pThis->masterLstn = existing;
 	*ppExisting = pThis;
 finalize_it:
@@ -873,7 +917,7 @@ addListner(instanceConf_t *inst)
 	pThis->hasWildcard = hasWildcard;
 	pThis->pszFileName = (uchar*) strdup((char*) inst->pszFileName);
 	pThis->pszDirName = inst->pszDirName; /* use memory from inst! */
-	pThis->pszBaseName = inst->pszFileBaseName; /* use memory from inst! */
+	pThis->pszBaseName = (uchar*)strdup((char*)inst->pszFileBaseName); /* be consistent with expanded wildcards! */
 	pThis->pszTag = (uchar*) strdup((char*) inst->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
@@ -887,6 +931,12 @@ addListner(instanceConf_t *inst)
 	pThis->maxLinesAtOnce = inst->maxLinesAtOnce;
 	pThis->iPersistStateInterval = inst->iPersistStateInterval;
 	pThis->readMode = inst->readMode;
+	pThis->startRegex = inst->startRegex; /* no strdup, as it is read-only */
+	if(pThis->startRegex != NULL)
+		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
+			dbgprintf("imfile: error regex compile\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;
 	pThis->escapeLF = inst->escapeLF;
 	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
@@ -894,6 +944,7 @@ addListner(instanceConf_t *inst)
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
+	pThis->prevLineSegment = NULL;
 	pThis->masterLstn = NULL; /* we *are* a master! */
 finalize_it:
 	RETiRet;
@@ -938,6 +989,8 @@ CODESTARTnewInpInst
 			inst->iFacility = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "readmode")) {
 			inst->readMode = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
+			inst->startRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
@@ -961,6 +1014,12 @@ CODESTARTnewInpInst
 			dbgprintf("imfile: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
+	}
+	if(inst->readMode != 0 &&  inst->startRegex != NULL) {
+		errmsg.LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+			"readMode and startmsg.regex cannot be set "
+			"at the same time --- remove one of them");
+			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
 	}
 	CHKiRet(checkInstance(inst));
 finalize_it:
@@ -987,7 +1046,6 @@ CODESTARTbeginCnfLoad
 	cs.iSeverity = 5;
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
-	cs.pBindRuleset = NULL;
 ENDbeginCnfLoad
 
 
@@ -1109,6 +1167,7 @@ CODESTARTfreeCnf
 		free(inst->pszFileBaseName);
 		free(inst->pszTag);
 		free(inst->pszStateFile);
+		free(inst->startRegex);
 		del = inst;
 		inst = inst->next;
 		free(del);
@@ -1174,7 +1233,7 @@ fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
 finalize_it:
 	RETiRet;
 }
-
+/* uncomment if needed
 static void
 fileTableDisplay(fileTable_t *tab)
 {
@@ -1186,12 +1245,14 @@ fileTableDisplay(fileTable_t *tab)
 		dbgprintf("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
 	}
 }
+*/
+
 static int
 fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
 {
 	int f;
-	uchar *baseName;
-fileTableDisplay(tab);
+	uchar *baseName = NULL;
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
@@ -1199,7 +1260,24 @@ fileTableDisplay(tab);
 	}
 	if(f == tab->currMax)
 		f = -1;
-	dbgprintf("DDDD: file '%s', found:%d\n", fn, f);
+	dbgprintf("DDDD: imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
+	return f;
+}
+
+static int
+fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __restrict__ fn)
+{
+	int f;
+	uchar *baseName = NULL;
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+	for(f = 0 ; f < tab->currMax ; ++f) {
+		baseName = tab->listeners[f].pLstn->pszBaseName;
+		if (strcmp((const char*)baseName, (const char*)fn) == 0)
+			break; /* found */
+	}
+	if(f == tab->currMax)
+		f = -1;
+	dbgprintf("DDDD: imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1209,9 +1287,8 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 {
 	int j;
 	DEFiRet;
-
 dbgprintf("DDDDD: imfile: fileTableAddFile\n");
-fileTableDisplay(tab);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1358,9 +1435,9 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 
 	dir = dirs + dirIdx;
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
-	dbgprintf("DDDD: associated file [%s] to directory %d[%s]\n",
-		pLstn->pszFileName, dirIdx, dir->dirName);
-fileTableDisplay(bActive ? &dir->active : &dir->configured);
+	dbgprintf("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
+		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
+/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
 finalize_it:
 	RETiRet;
 }
@@ -1370,14 +1447,14 @@ static void
 in_setupDirWatch(const int dirIdx)
 {
 	int wd;
-	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE);
+	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 	if(wd < 0) {
 		DBGPRINTF("imfile: could not create dir watch for '%s'\n",
 			dirs[dirIdx].dirName);
 		goto done;
 	}
 	wdmapAdd(wd, dirIdx, NULL);
-	dbgprintf("DDDD: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
 done:	return;
 }
 
@@ -1402,7 +1479,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 		goto done;
 	}
 	wdmapAdd(wd, -1, pLstn);
-	dbgprintf("DDDD: watch %d added for file %s\n", wd, pLstn->pszFileName);
+	dbgprintf("DDDD: imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
 done:	return;
@@ -1456,7 +1533,7 @@ in_setupFileWatchStatic(lstn_t *const __restrict__ pLstn)
 			  "expansion\n", pLstn->pszFileName);
 		glob_t files;
 		const int ret = glob((char*)pLstn->pszFileName,
-					GLOB_MARK|GLOB_NOSORT, NULL, &files);
+					GLOB_MARK|GLOB_NOSORT|GLOB_BRACE, NULL, &files);
 		if(ret == 0) {
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
@@ -1468,8 +1545,14 @@ in_setupFileWatchStatic(lstn_t *const __restrict__ pLstn)
 			}
 		}
 	} else {
+		/* Duplicate static object as well, otherwise the configobject could be deleted later! */
+		if(lstnDup(&pLstn, pLstn->pszBaseName) != RS_RET_OK) {
+			DBGPRINTF("imfile: in_setupFileWatchStatic failed to duplicate listener for '%s'\n", pLstn->pszFileName);
+			goto done;
+		}
 		startLstnFile(pLstn);
 	}
+done:	return;
 }
 
 /* setup our initial set of watches, based on user config */
@@ -1530,7 +1613,7 @@ filesDisplay(void)
 {
 	lstn_t *pLstn;
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next)
-		dbgprintf("DDDD: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
+		dbgprintf("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -1558,6 +1641,8 @@ filesDisplay(); // TODO: remove after initial unstable release(s)
 		bDoRMState = 0;
 	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
+	/*	delete listener data */ 
+	DBGPRINTF("imfile: DELETING listener data for '%s' - '%s'\n", pLstn->pszBaseName, pLstn->pszFileName);
 	lstnDel(pLstn);
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
 	if(bDoRMState) {
@@ -1590,7 +1675,7 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 		}
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
 	}
-	dbgprintf("DDDD: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name);
 done:	return;
 }
@@ -1610,7 +1695,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile delete processing for '%s'\n",
+	dbgprintf("DDDD: imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
 	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
@@ -1619,7 +1704,7 @@ done:	return;
 static void
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
-	dbgprintf("DDDD: handle dir event for %s\n", dirs[dirIdx].dirName);
+	dbgprintf("DDDD: imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
 	if((ev->mask & IN_CREATE)) {
 		in_handleDirEventCREATE(ev, dirIdx);
 	} else if((ev->mask & IN_DELETE)) {
@@ -1646,9 +1731,45 @@ static void
 in_processEvent(struct inotify_event *ev)
 {
 	wd_map_t *etry;
+	lstn_t *pLstn;
+	int iRet;
+	struct inotify_event evFileHelper; 
+	int ftIdx;
+	int wd; 
 
-	if(ev->mask & IN_IGNORED) {
+	DBGPRINTF("DDDD: imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
+	if			(ev->mask & IN_IGNORED) {
 		wdmapDel(ev->wd);
+		goto done;
+	} else if	(ev->mask & IN_MOVED_FROM) {
+		/* Find wd entry and remove it */
+		etry =  wdmapLookup(ev->wd);
+		if(etry != NULL) {
+			ftIdx = fileTableSearchNoWildcard(&dirs[etry->dirIdx].active, (uchar*)ev->name);
+			DBGPRINTF("DDDD: imfile: IN_MOVED_FROM Event (ftIdx=%d, name=%s)\n", ftIdx, ev->name);
+			if(ftIdx >= 0) {
+				/* Find listener and wd table index*/
+				pLstn = dirs[etry->dirIdx].active.listeners[ftIdx].pLstn; 
+				wd = wdmapLookupListner(pLstn); 
+
+				/* Remove file from inotify watch */
+				iRet = inotify_rm_watch(ino_fd, wd); /* Note this will TRIGGER IN_IGNORED Event! */
+				if (iRet != 0) {
+					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n", errno, ftIdx, wd, ev->name);
+				} else {
+					DBGPRINTF("DDDD: imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
+				}
+
+				/* Create Event to remove file*/
+				evFileHelper.wd = wd; 
+				evFileHelper.mask = IN_DELETE; 
+				evFileHelper.cookie = 0; 
+				evFileHelper.len = ev->len; 
+				evFileHelper.name[0] = ev->name[0]; 
+				in_removeFile(&evFileHelper, etry->dirIdx, pLstn);
+				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
+			}
+		}
 		goto done;
 	}
 	etry =  wdmapLookup(ev->wd);
@@ -1830,6 +1951,15 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
+#if HAVE_INOTIFY_INIT
+	/* we use these vars only in inotify mode */
+	if(dirs != NULL) {
+		free(dirs->active.listeners);
+		free(dirs->configured.listeners);
+		free(dirs);
+	}
+	free(wdmap);
+#endif
 ENDmodExit
 
 
@@ -1866,7 +1996,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iFacility = 128; /* local0 */
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
-	cs.pBindRuleset = NULL;
 	cs.maxLinesAtOnce = 10240;
 
 	RETiRet;

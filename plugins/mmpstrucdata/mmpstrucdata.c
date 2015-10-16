@@ -177,7 +177,6 @@ parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
 {
 	int i, j;
 	DEFiRet;
-dbgprintf("DDDD: parsePARAM_VALUE\n");
 	i = *curridx;
 	j = 0;
 	while(i < lenbuf && sdbuf[i] != '"') {
@@ -198,12 +197,11 @@ dbgprintf("DDDD: parsePARAM_VALUE\n");
 				++i;
 			}
 		} else {
-		fieldbuf[j++] = sdbuf[i++];
+			fieldbuf[j++] = sdbuf[i++];
 		}
 	}
 	fieldbuf[j] = '\0';
 	*curridx = i;
-dbgprintf("DDDD: parsePARAM_VALUE: '%s'\n", fieldbuf);
 	RETiRet;
 }
 
@@ -213,7 +211,6 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 {
 	int i, j;
 	DEFiRet;
-dbgprintf("DDDD: parseSD_NAME %s\n", sdbuf+*curridx);
 	i = *curridx;
 	for(j = 0 ; i < lenbuf && j < 32; ++j) {
 		if(   sdbuf[i] == '=' || sdbuf[i] == '"'
@@ -223,21 +220,19 @@ dbgprintf("DDDD: parseSD_NAME %s\n", sdbuf+*curridx);
 		++i;
 	}
 	namebuf[j] = '\0';
-dbgprintf("DDDD: parseSD_NAME, NAME: '%s'\n", namebuf);
 	*curridx = i;
 	RETiRet;
 }
 
 
 static inline rsRetVal
-parseSD_PARAM(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
+parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar pName[33];
 	uchar pVal[32*1024];
 	struct json_object *jval;
 	DEFiRet;
-dbgprintf("DDDD: parseSD_PARAM %s\n", sdbuf+*curridx);
 	
 	i = *curridx;
 	CHKiRet(parseSD_NAME(sdbuf, lenbuf, &i, pName));
@@ -265,13 +260,12 @@ finalize_it:
 
 
 static inline rsRetVal
-parseSD_ELEMENT(instanceData *pData, uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
+parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
 	uchar sd_id[33];
-	struct json_object *json;
+	struct json_object *json = NULL;
 	DEFiRet;
-dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 	
 	i = *curridx;
 	if(sdbuf[i] != '[') {
@@ -291,8 +285,7 @@ dbgprintf("DDDD: parseSD_ELEMENT: %s\n", sdbuf+*curridx);
 		++i;
 		while(i < lenbuf && sdbuf[i] == ' ')
 			++i;
-		CHKiRet(parseSD_PARAM(pData, sdbuf, lenbuf, &i, json));
-dbgprintf("DDDD: done parseSD_PARAM, in loop, i:%d, lenbuf:%d, rest: %s\n", i, lenbuf, sdbuf+i);
+		CHKiRet(parseSD_PARAM(sdbuf, lenbuf, &i, json));
 	}
 
 	if(sdbuf[i] != ']') {
@@ -303,57 +296,39 @@ dbgprintf("DDDD: done parseSD_PARAM, in loop, i:%d, lenbuf:%d, rest: %s\n", i, l
 	++i; /* eat ']' */
 	*curridx = i;
 	json_object_object_add(jroot, (char*)sd_id, json);
-dbgprintf("DDDD: SD_ELEMENT: json: '%s'\n", json_object_get_string(json));
-dbgprintf("DDDD: SD_ELEMENT: jroot '%s'\n", json_object_get_string(json));
 finalize_it:
-dbgprintf("DDDD: parseSD_ELEMENT iRet:%d, i:%d, *curridx:%d\n", iRet, i, *curridx);
+	if(iRet != RS_RET_OK && json != NULL)
+		json_object_put(json);
 	RETiRet;
 }
 
 static inline rsRetVal
 parse_sd(instanceData *pData, msg_t *pMsg)
 {
-#if 0
-	uchar fieldbuf[32*1024];
-	uchar fieldname[512];
-	struct json_object *json;
-	struct json_object *jval;
-	int field;
-	uchar *buf;
-#endif
 	struct json_object *json, *jroot;
 	uchar *sdbuf;
 	int lenbuf;
 	int i = 0;
 	DEFiRet;
 
-#if 0
-	if(lenMsg < (int) sizeof(fieldbuf)) {
-		buf = fieldbuf;
-	} else {
-		CHKmalloc(buf = malloc(lenMsg+1));
-	}
-#endif
-
-dbgprintf("DDDD: parse_sd\n");
 	json =  json_object_new_object();
 	if(json == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	MsgGetStructuredData(pMsg, &sdbuf,&lenbuf);
 	while(i < lenbuf) {
-		CHKiRet(parseSD_ELEMENT(pData, sdbuf, lenbuf, &i, json));
-dbgprintf("DDDD: parse_sd, i:%d\n", i);
+		CHKiRet(parseSD_ELEMENT(sdbuf, lenbuf, &i, json));
 	}
-dbgprintf("DDDD: json: '%s'\n", json_object_get_string(json));
 
 	jroot =  json_object_new_object();
 	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	json_object_object_add(jroot, "rfc5424-sd", json);
- 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0);
+ 	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
 finalize_it:
+	if(iRet != RS_RET_OK && json != NULL)
+		json_object_put(json);
 	RETiRet;
 }
 
@@ -361,18 +336,16 @@ finalize_it:
 BEGINdoAction
 	msg_t *pMsg;
 CODESTARTdoAction
-dbgprintf("DDDD: enter mmpstrucdata\n");
+	DBGPRINTF("mmpstrucdata: enter\n");
 	pMsg = (msg_t*) ppString[0];
 	if(!MsgHasStructuredData(pMsg)) {
 		DBGPRINTF("mmpstrucdata: message does not have structured data\n");
 		FINALIZE;
 	}
-dbgprintf("DDDD: parse mmpstrucdata\n");
 	/* don't check return code - we never want rsyslog to retry
 	 * or suspend this action!
 	 */
 	parse_sd(pWrkrData->pData, pMsg);
-dbgprintf("DDDD: done parse mmpstrucdata\n");
 finalize_it:
 ENDdoAction
 

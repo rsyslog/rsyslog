@@ -373,7 +373,7 @@ CODESTARTdoAction
 	if (json == NULL) {
 		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED,
 				"mmsequence: unable to create JSON");
-	} else if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, json, 0)) {
+	} else if (RS_RET_OK != msgAddJSON(pMsg, (uchar *)pData->pszVar + 1, json, 0, 0)) {
 		errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED,
 				"mmsequence: unable to pass out the value");
 		json_object_put(json);

@@ -77,7 +77,7 @@ struct globals_s {
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 
 	//TODO: other representation for main queue? Or just load it differently?
-	queuecnf_t mainQ;	/* main queue paramters */
+	queuecnf_t mainQ;	/* main queue parameters */
 };
 
 /* (global) defaults are global in the sense that they are accessible

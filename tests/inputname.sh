@@ -1,6 +1,7 @@
+#!/bin/bash
 echo \[inputname.sh\]: testing $InputTCPServerInputName directive
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
-source $srcdir/diag.sh generate-HOSTNAME
+. $srcdir/diag.sh generate-HOSTNAME
 
 echo port 12514
 ./nettester -tinputname_imtcp_12514 -cinputname_imtcp -itcp -p12514

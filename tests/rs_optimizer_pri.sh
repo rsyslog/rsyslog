@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test for the RainerScript optimizer, folding of
 # syslogfacility/priority-text to prifilt. Unfortunately, we cannot yet
 # automatically detect if the optimizer does not correctly fold, but we
@@ -6,12 +7,12 @@
 # rgerhards, 2013-11-20
 echo ===============================================================================
 echo \[rs_optimizer_pri.sh\]: testing RainerScript PRI optimizer
-source $srcdir/diag.sh init
-source $srcdir/diag.sh startup rs_optimizer_pri.conf
+. $srcdir/diag.sh init
+. $srcdir/diag.sh startup rs_optimizer_pri.conf
 sleep 1
-source $srcdir/diag.sh tcpflood -m100 # correct facility
-source $srcdir/diag.sh tcpflood -m100 -P175 # incorrect facility --> must be ignored
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown
-source $srcdir/diag.sh seq-check 0 99
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh tcpflood -m100 # correct facility
+. $srcdir/diag.sh tcpflood -m100 -P175 # incorrect facility --> must be ignored
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh seq-check 0 99
+. $srcdir/diag.sh exit

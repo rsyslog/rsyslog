@@ -229,15 +229,26 @@ finalize_it:
  */
 static int
 gtlsClientCertCallback(gnutls_session_t session,
-              __attribute__((unused)) const gnutls_datum_t* req_ca_rdn, int __attribute__((unused)) nreqs,
-              __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos, int __attribute__((unused)) sign_algos_length,
-              gnutls_retr_st *st)
+        __attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
+	int __attribute__((unused)) nreqs,
+        __attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
+	int __attribute__((unused)) sign_algos_length,
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+	gnutls_retr2_st* st
+#else
+        gnutls_retr_st *st
+#endif
+	)
 {
 	nsd_gtls_t *pThis;
 
 	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
 
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+	st->cert_type = GNUTLS_CRT_X509;
+#else
 	st->type = GNUTLS_CRT_X509;
+#endif
 	st->ncerts = 1;
 	st->cert.x509 = &pThis->ourCert;
 	st->key.x509 = pThis->ourKey;
@@ -672,7 +683,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
+gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 {
 	DEFiRet;
 	int gnuRet;
@@ -683,7 +694,6 @@ gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
 	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	assert(pCert != NULL);
 	assert(ppstrCN != NULL);
 	assert(*ppstrCN == NULL);
@@ -874,7 +884,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 
 	if(!bFoundPositiveMatch) {
 		/* if we did not succeed so far, we try the CN part of the DN... */
-		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
+		CHKiRet(gtlsGetCN(pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
 			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStr(pstrCN));
 			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStr(pstrCN));
@@ -1647,8 +1657,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-	/* TODO: later? static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };*/
+#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
+#	endif
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1673,14 +1684,31 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
 	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
 	if(iRet == RS_RET_OK) {
+#		if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
+#		else
 		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
+#		endif
 	} else if(iRet != RS_RET_CERTLESS) {
 		FINALIZE; /* we have an error case! */
 	}
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
+#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+	/* The gnutls_certificate_type_set_priority function is deprecated
+	 * and not available in recent GnuTLS versions. However, there is no
+	 * doc how to properly replace it with gnutls_priority_set_direct.
+	 * A lot of folks have simply removed it, when they also called
+	 * gnutls_set_default_priority. This is what we now also do. If
+	 * this causes problems or someone has an idea of how to replace
+	 * the deprecated function in a better way, please let us know!
+	 * In any case, we use it as long as it is available and let
+	 * not insult us by the deprecation warnings.
+	 * 2015-05-18 rgerhards
+	 */
 	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
+#	endif
 
 	/* put the x509 credentials to the current session */
 	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, xcred));

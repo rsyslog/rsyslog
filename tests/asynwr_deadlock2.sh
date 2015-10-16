@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test case from practice, with the version we introduced it, it
 # caused a deadlock during processing (when the a stream was purged from the
 # dynafile cache).
@@ -52,18 +53,18 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo =================================================================================
 echo TEST: \[asynwr_deadlock2.sh\]: a case known to have caused a deadlock in the past
-source $srcdir/diag.sh init
+. $srcdir/diag.sh init
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-source $srcdir/diag.sh startup asynwr_deadlock2.conf
+. $srcdir/diag.sh startup asynwr_deadlock2.conf
 # send 20000 messages, each close to 2K (non-randomized!), so that we can fill
 # the buffers and hopefully run into the "deadlock".
-source $srcdir/diag.sh tcpflood -m20000 -d1800 -P129 -i1 -f5
+. $srcdir/diag.sh tcpflood -m20000 -d1800 -P129 -i1 -f5
 # the sleep below is needed to prevent too-early termination of the tcp listener
 sleep 1
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 cat rsyslog.out.*.log > rsyslog.out.log
-source $srcdir/diag.sh seq-check 1 20000 -E
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh seq-check 1 20000 -E
+. $srcdir/diag.sh exit

@@ -57,19 +57,42 @@ OPTIONS
   Prints out information about correctly verified blocks (by default, only
   errors are printed).
 
--v, --verbose
-  Select verbose mode. Most importantly, hashes and signatures are printed
-  in full length (can be **very** lengthy) rather than the usual abbreviation.
-
 -e, --extend
   Select extend mode. This extends the RFC3161 signatures. Note that this
   mode also implies a full verification. If there are verify errors, extending
   will also fail.
 
+-c, --convert
+  Select "conversion" mode. This converts signature files from 
+  Version 10 to 11. The original file will automatically be backed up.
+
+-v, --verbose
+  Select verbose mode. Most importantly, hashes and signatures are printed
+  in full length (can be **very** lengthy) rather than the usual abbreviation.
+
+
 -P <URL>, --publications-server <URL>
   Sets the publications server. If not set but required by the operation a
   default server is used. The default server is not necessarily optimal
   in regard to performance and reliability.
+
+-h, --help
+  Shows short help for the utility.
+
+-d, --debug
+  Enables additional debug output useful for developers. 
+  
+-a <GT|KSI>, --api <GT|KSI>
+  Specifies the API used by the utility. This parameter overwrites the Libary 
+  used by this utility. However it is only possible to verify .gtsig signatures 
+  with the old Guardtime library and .ksisig signatures only with the new 
+  Guardtime KSI Libary. So the parameter won't have any affect when 
+  verifying signatures. 
+  Available options: 
+  GT = Guardtime Client Library
+  KSI = Guardtime KSI Library
+
+
 
 
 OPERATION MODES

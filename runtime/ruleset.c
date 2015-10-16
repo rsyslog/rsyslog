@@ -108,6 +108,11 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 				scriptIterateAllActions(stmt->d.s_if.t_else,
 							pFunc, pParam);
 			break;
+        case S_FOREACH:
+			if(stmt->d.s_foreach.body != NULL)
+				scriptIterateAllActions(stmt->d.s_foreach.body,
+                                        pFunc, pParam);
+			break;
 		case S_PRIFILT:
 			if(stmt->d.s_prifilt.t_then != NULL)
 				scriptIterateAllActions(stmt->d.s_prifilt.t_then,
@@ -266,11 +271,11 @@ finalize_it:
 static rsRetVal
 execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
-	json_object *arr;
+	json_object *arr = NULL;
 	DEFiRet;
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
-	if (arr == NULL) {
-		DBGPRINTF("foreach loop skipped, as collection is empty\n");
+	if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
+		DBGPRINTF("foreach loop skipped, as object to iterate upon is either empty or not an array\n");
 		FINALIZE;
 	}
 	int len = json_object_array_length(arr);
@@ -285,6 +290,7 @@ execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 	}
 	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
 finalize_it:
+	if (arr != NULL) json_object_put(arr);
 	RETiRet;
 }
 

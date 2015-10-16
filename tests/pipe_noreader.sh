@@ -1,3 +1,4 @@
+#!/bin/bash
 # This is test driver for a pipe that has no reader. This mimics a usual
 # real-world scenario, the /dev/xconsole pipe. Some versions of rsyslog
 # were known to hang or loop on this pipe, thus we added this scenario
@@ -17,13 +18,13 @@ echo TEST: \[pipe_noreader.sh\]: test for pipe writing without reader
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
-source $srcdir/diag.sh init
+. $srcdir/diag.sh init
 mkfifo ./rsyslog.pipe
-source $srcdir/diag.sh startup pipe_noreader.conf
+. $srcdir/diag.sh startup pipe_noreader.conf
 # we need to emit ~ 128K of data according to bug report
-source $srcdir/diag.sh tcpflood -m1000 -d500
-source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-source $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
+. $srcdir/diag.sh tcpflood -m1000 -d500
+. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+. $srcdir/diag.sh wait-shutdown       # and wait for it to terminate
 # NO need to check seqno -- see header comment
 echo we did not loop, so the test is sucessfull
-source $srcdir/diag.sh exit
+. $srcdir/diag.sh exit

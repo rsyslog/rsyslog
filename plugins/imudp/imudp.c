@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -189,7 +189,7 @@ static struct cnfparamblk inppblk =
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -747,6 +747,13 @@ rsRetVal rcvMainLoop(struct wrkrInfo_s *pWrkr)
 	nLstn = 0;
 	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next)
 		++nLstn;
+
+	if(nLstn == 0) {
+		errmsg.LogError(errno, RS_RET_ERR,
+			"imudp error: we have 0 listeners, terminating"
+			"worker thread");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	CHKmalloc(udpEPollEvt = calloc(nLstn, sizeof(struct epoll_event)));
 
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
@@ -881,14 +888,14 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			if(inst->inputname != NULL) {
 				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name and inputname "
-						"paramter specified - only one can be used");
+						"parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
 			inst->inputname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name.appendport")) {
 			if(bAppendPortUsed) {
 				errmsg.LogError(0, RS_RET_INVALID_PARAMS, "imudp: name.appendport and "
-						"inputname.appendport paramter specified - only one can be used");
+						"inputname.appendport parameter specified - only one can be used");
 				ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 			}
 			inst->bAppendPortToInpname = (int) pvals[i].val.d.n;

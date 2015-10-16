@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2014 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2015 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -440,6 +440,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_KAFKA_NO_VALID_BROKERS = -2423,/**< no valid Kafka brokers configured/available */
 	RS_RET_KAFKA_PRODUCE_ERR = -2424,/**< error during Kafka produce function */
 	RS_RET_CONF_PARAM_INVLD = -2425,/**< config parameter is invalid */
+	RS_RET_KSI_ERR = -2426,/**< error in KSI subsystem */
+	RS_RET_ERR_LIBLOGNORM = -2427,/**< cannot obtain liblognorm ctx */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -541,7 +543,7 @@ extern int default_thr_sched_policy;
  * absolutely necessary - all output plugins need to be changed!
  *
  * If a change is "just" for internal working, consider adding a
- * separate paramter outside of this structure. Of course, it is
+ * separate parameter outside of this structure. Of course, it is
  * best to avoid this as well ;-)
  * rgerhards, 2013-12-04
  */
@@ -617,6 +619,14 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 typedef int json_bool;
 #endif
 
+#ifdef HAVE_JSON_OBJECT_TO_JSON_STRING_EXT
+#	define RS_json_object_to_json_string_ext(obj, flags) \
+		json_object_to_json_string_ext((obj), (flags))
+#else
+#	define RS_json_object_to_json_string_ext(obj, flags) \
+		json_object_to_json_string((obj))
+#endif
+
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define
  * a dummy variable. This requires review of where in code empty structs
@@ -628,5 +638,15 @@ typedef int json_bool;
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
 			     yet receive a copy, so that we can incrementially
 			     compile and change... -- rgerhars, 2011-04-19 */
+
+
+/* here we add some stuff from the compatibility layer. A separate include
+ * would be cleaner, but would potentially require changes all over the
+ * place. So doing it here is better. The respective replacement
+ * functions should usually be found under ./compat -- rgerhards, 2015-05-20
+ */
+#ifndef HAVE_STRNDUP
+char * strndup(const char *s, size_t n);
+#endif
 
 #endif /* multi-include protection */

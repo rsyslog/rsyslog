@@ -56,6 +56,9 @@ typedef struct _pollerData_t {
 
 
 struct instanceConf_s {
+	bool is_server;
+	char *beacon;
+	int beaconPort;
 	int sockType;
 	char *sockEndpoints;
 	char *topicList;
@@ -75,6 +78,7 @@ struct modConfData_s {
 };
 
 struct lstn_s {
+	zactor_t *beaconActor;
 	zsock_t *sock;
 	zcert_t *clientCert;
 	zcert_t *serverCert;
@@ -100,6 +104,8 @@ static struct cnfparamblk modpblk = {
 };
 
 static struct cnfparamdescr inppdescr[] = {
+	{ "beacon", eCmdHdlrGetWord, 0 },
+	{ "beaconport", eCmdHdlrGetWord, 0 },
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
 	{ "authtype", eCmdHdlrGetWord, 0 },
@@ -118,6 +124,9 @@ static struct cnfparamblk inppblk = {
 };
 
 static void setDefaults(instanceConf_t* iconf) {
+	iconf->is_server = false;
+	iconf->beacon = NULL;
+	iconf->beaconPort = -1;
 	iconf->sockType = -1;
 	iconf->sockEndpoints = NULL;
 	iconf->topicList = NULL;
@@ -169,6 +178,16 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 		else if(!strcmp(inppblk.descr[i].name, "endpoints")) {
 			inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} 
+
+		/* get beacon argument */
+		else if (!strcmp(inppblk.descr[i].name, "beacon")) {
+			inst->beacon = es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+		
+		/* get beacon port */
+		else if (!strcmp(inppblk.descr[i].name, "beaconport")) {
+			inst->beaconPort = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
 
 		/* get the socket type */
 		else if(!strcmp(inppblk.descr[i].name, "socktype")){
@@ -255,14 +274,37 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 
-	bool is_server = false;
+	/* if a beacon is set start it */
+	if((iconf->beacon != NULL) && (iconf->beaconPort > 0)) {
+		DBGPRINTF ("imczmq: starting beacon actor...\n");
+
+		/* create the beacon actor, if it fails abort */	
+		pData->beaconActor = zactor_new(zbeacon, NULL);
+		if (!pData->beaconActor) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+					"imczmq: could not create beacon service");
+			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+		}
+
+		/* configure the beacon and abort if UDP broadcasting ont available */
+		zsock_send(pData->beaconActor, "si", "CONFIGURE", iconf->beaconPort);
+		char *hostname = zstr_recv(pData->beaconActor);
+		if (!*hostname) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE,
+					"imczmq: no UDP broadcasting available");
+			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+		}
+
+		/* start publishing the beacon */
+		zsock_send(pData->beaconActor, "sbi", "PUBLISH", pData->beaconActor, strlen(iconf->beacon));
+	}
 
 	DBGPRINTF("imczmq: authtype is: %s\n", iconf->authType);
 
 	/* if we are a CURVE server */
-	if (!strcmp(iconf->authType, "CURVESERVER")) {
+	if ((iconf->authType != NULL) && (!strcmp(iconf->authType, "CURVESERVER"))) {
 
-		is_server = true;
+		iconf->is_server = true;
 
 		/* set global auth domain */
 		zsock_set_zap_domain(pData->sock, "global");
@@ -287,10 +329,10 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	/* if we are a CURVE client */
-	if (!strcmp(iconf->authType, "CURVECLIENT")) {
+	if ((iconf->authType != NULL) && (!strcmp(iconf->authType, "CURVECLIENT"))) {
 		DBGPRINTF("imczmq: we are a curve client...\n");
 
-		is_server = false;
+		iconf->is_server = false;
 
 		/* get our client cert */
 		pData->clientCert = zcert_load(iconf->clientCertPath);
@@ -318,21 +360,23 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 	/* if we have a ZMQ_SUB sock, subscribe to topics */
 	if (iconf->sockType == ZMQ_SUB) {
-		char topic[256];
-		while (iconf->topicList) {
-			char *delimiter = strchr(iconf->topicList, ',');
+		iconf->is_server = false;
+
+		char topic[256], *list = iconf->topicList;
+		while (list) {
+			char *delimiter = strchr(list, ',');
 			if (!delimiter) {
-				delimiter = iconf->topicList + strlen (iconf->topicList);
+				delimiter = list + strlen (list);
 			}
 
-			if (delimiter - iconf->topicList > 255) {
+			if (delimiter - list > 255) {
 				errmsg.LogError(0, NO_ERRCODE,
 						"iconf->topicList must be under 256 characters");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		
-			memcpy(topic, iconf->topicList, delimiter - iconf->topicList);
-			topic[delimiter - iconf->topicList] = 0;
+			memcpy(topic, list, delimiter - list);
+			topic[delimiter - list] = 0;
 
 			zsock_set_subscribe(pData->sock, topic);
 
@@ -340,12 +384,12 @@ static rsRetVal addListener(instanceConf_t* iconf){
 				break;
 			}
 
-			iconf->topicList = delimiter + 1;
+			list = delimiter + 1;
 		}
 	}
 
-	/* FIXME: currently hard coded to bind */
-	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints, true);
+	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints,
+			iconf->is_server);
 	if (rc == -1) {
 		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s",
 				iconf->sockEndpoints);

@@ -2,7 +2,7 @@
  *
  * An implementation of the sigprov interface for GuardTime.
  * 
- * Copyright 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2013-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *

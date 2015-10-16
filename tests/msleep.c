@@ -26,7 +26,11 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__FreeBSD__)
+#include <sys/time.h>
+#else
 #include <time.h>
+#endif
 
 int main(int argc, char *argv[])
 {

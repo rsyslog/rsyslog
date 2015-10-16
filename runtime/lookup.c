@@ -203,6 +203,7 @@ lookupReload(lookup_t *pThis)
 	}
 	free(pThis->d.strtab);
 	pThis->d.strtab = newlu.d.strtab; /* hand table AND ALL STRINGS over! */
+	pThis->nmemb = newlu.nmemb;
 	pthread_rwlock_unlock(&pThis->rwlock);
 	errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
 			pThis->name, pThis->filename);
@@ -261,7 +262,7 @@ lookupReadFile(lookup_t *pThis)
 {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json = NULL;
-	int eno = errno;
+	int eno;
 	char errStr[1024];
 	char *iobuf = NULL;
 	int fd;

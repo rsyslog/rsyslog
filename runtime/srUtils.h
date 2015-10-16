@@ -26,6 +26,7 @@
 #ifndef __SRUTILS_H_INCLUDED__
 #define __SRUTILS_H_INCLUDED__ 1
 
+#include <stdlib.h>
 
 /* syslog names */
 #ifndef LOG_MAKEPRI
@@ -92,6 +93,9 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 int containsGlobWildcard(char *str);
+void seedRandomNumber();
+#define MAX_RANDOM_NUMBER RAND_MAX
+long int randomNumber();
 
 /* mutex operations */
 /* some useful constants */

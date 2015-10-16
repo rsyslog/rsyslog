@@ -87,7 +87,7 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* create input instance, set default paramters, and
+/* create input instance, set default parameters, and
  * add it to the list of instances.
  */
 static rsRetVal
@@ -104,7 +104,7 @@ finalize_it:
 }
 
 BEGINnewParserInst
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTnewParserInst
 	DBGPRINTF("newParserInst (pmrfc3164)\n");
