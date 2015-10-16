@@ -997,7 +997,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	DEFiRet;
 	epolld_t *epd = NULL;
 
-	CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
+	CHKmalloc(epd = calloc(1, sizeof(epolld_t)));
 	epd->typ = typ;
 	epd->ptr = ptr;
 	*pEpd = epd;
@@ -1414,7 +1414,9 @@ stopWorkerPool(void)
 	int i;
 	DBGPRINTF("imptcp: stoping worker pool\n");
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
+		pthread_mutex_lock(&wrkrMut);
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
+		pthread_mutex_unlock(&wrkrMut);
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
 		pthread_cond_destroy(&wrkrInfo[i].run);
