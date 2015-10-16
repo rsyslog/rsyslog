@@ -58,6 +58,7 @@
  * -Z	cert (public key) file for TLS mode
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
+ * -O	Use octate-count framing
  *
  * Part of the testbench for rsyslog.
  *
@@ -147,6 +148,7 @@ static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
 static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
+static int octateCountFramed = 0;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
@@ -358,6 +360,8 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 	char extraData[MAX_EXTRADATA_LEN + 1];
 	char dynFileIDBuf[128] = "";
 	int done;
+	char payloadLen[32];
+	int payloadStringLen;
 
 	if(dataFP != NULL) {
 		/* get message from file */
@@ -415,6 +419,13 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 	} else {
 		/* use fixed message format from command line */
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
+	}
+	if (octateCountFramed == 1) {
+		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);
+		payloadStringLen = strlen(payloadLen);
+		memmove(buf + payloadStringLen, buf, *pLenBuf);
+		memcpy(buf, payloadLen, payloadStringLen);
+		*pLenBuf += payloadStringLen;
 	}
 	++inst->numSent;
 
@@ -867,7 +878,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:j:")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:j:O")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -957,6 +968,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'Z':	tlsCertFile = optarg;
 				break;
+		case 'O':	octateCountFramed = 1;
+				break;				
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;

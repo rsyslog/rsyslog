@@ -750,9 +750,11 @@ finalize_it:
  * EXTRACT from tcps_sess.c
  */
 static inline rsRetVal
-processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
+processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
 {
 	DEFiRet;
+	char c = **buff;
+	int octatesToCopy, octatesToDiscard;
 
 	if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && isdigit((int) c)) {
@@ -799,42 +801,57 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
-		if(pThis->iMsg >= iMaxLine) {
-			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
-			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-			/* we might think if it is better to ignore the rest of the
-			 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
-			 */
-		}
 
-		if((   (c == '\n')
-		   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-		       && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
-		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-			pThis->inputState = eAtStrtFram;
-		} else {
-			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
-			 * If we have a message that is larger than the max msg size, we truncate it. This is the best
-			 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
-			 */
-			if(pThis->iMsg < iMaxLine) {
-				*(pThis->pMsg + pThis->iMsg++) = c;
+		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+			if(pThis->iMsg >= iMaxLine) {
+				/* emergency, we now need to flush, no matter if we are at end of message or not... */
+				DBGPRINTF("error: message received is larger than max msg size, we split it\n");
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				/* we might think if it is better to ignore the rest of the
+				 * message than to treat it as a new one. Maybe this is a good
+				 * candidate for a configuration parameter...
+				 * rgerhards, 2006-12-04
+				 */
 			}
-		}
 
-		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
-			/* do we need to find end-of-frame via octet counting? */
-			pThis->iOctetsRemain--;
-			if(pThis->iOctetsRemain < 1) {
+			if ((c == '\n')
+				   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+					   && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
+				   ) { /* record delimiter? */
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				pThis->inputState = eAtStrtFram;
+			} else {
+				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
+				 * If we have a message that is larger than the max msg size, we truncate it. This is the best
+				 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
+				 */
+				if(pThis->iMsg < iMaxLine) {
+					*(pThis->pMsg + pThis->iMsg++) = c;
+				}
+			}
+		} else {
+			assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
+			octatesToCopy = pThis->iOctetsRemain;
+			octatesToDiscard = 0;
+			if (buffLen < octatesToCopy) {
+				octatesToCopy = buffLen;
+			}
+			if (octatesToCopy + pThis->iMsg > iMaxLine) {
+				octatesToDiscard = octatesToCopy - (iMaxLine - pThis->iMsg);
+				octatesToCopy = iMaxLine - pThis->iMsg;
+			}
+
+			memcpy(pThis->pMsg + pThis->iMsg, *buff, octatesToCopy);
+			pThis->iMsg += octatesToCopy;
+			pThis->iOctetsRemain -= (octatesToCopy + octatesToDiscard);
+			*buff += (octatesToCopy + octatesToDiscard - 1);
+			if (pThis->iOctetsRemain == 0) {
 				/* we have end of frame! */
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 				pThis->inputState = eAtStrtFram;
 			}
 		}
+
 	}
 
 finalize_it:
@@ -879,7 +896,8 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, *pData++, stTime, ttGenTime, &multiSub));
+		CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub));
+		pData++;
 	}
 
 	iRet = multiSubmitFlush(&multiSub);

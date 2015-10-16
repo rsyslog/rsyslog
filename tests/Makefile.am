@@ -184,6 +184,7 @@ TESTS +=  \
 	imptcp_no_octet_counted.sh \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -869,6 +870,9 @@ EXTRA_DIST= \
 	testsuites/lookup_table.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
+	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
+	testsuites/imptcp_nonProcessingPoller.conf \
 	cfg.sh
 
 # TODO: re-enable
