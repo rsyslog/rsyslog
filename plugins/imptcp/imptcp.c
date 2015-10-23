@@ -273,7 +273,7 @@ struct ptcplstn_s {
 static struct wrkrInfo_s {
 	pthread_t tid;	/* the worker's thread ID */
 	pthread_cond_t run;
-	struct epoll_event *event; /* event == NULL -> idle */
+	epolld_t *epd; /* epd == NULL -> idle */
 	long long unsigned numCalled;	/* how often was this called */
 } *wrkrInfo;
 static pthread_mutex_t wrkrMut;
@@ -293,6 +293,7 @@ typedef enum {
 struct epolld_s {
 	epolld_type_t typ;
 	void *ptr;
+	int sock;
 	struct epoll_event ev;
 };
 
@@ -1000,8 +1001,9 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	CHKmalloc(epd = calloc(1, sizeof(epolld_t)));
 	epd->typ = typ;
 	epd->ptr = ptr;
+	epd->sock = sock;
 	*pEpd = epd;
-	epd->ev.events = EPOLLIN|EPOLLET;
+	epd->ev.events = EPOLLIN|EPOLLET|EPOLLONESHOT;
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
@@ -1016,6 +1018,9 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		if (epd != NULL) {
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error: could not initialize mutex for ptcp connection for socket: %d", sock);
+		}
 		free(epd);
 	}
 	RETiRet;
@@ -1399,7 +1404,7 @@ startWorkerPool(void)
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&wrkrInfo[i].run, NULL);
-		wrkrInfo[i].event = NULL;
+		wrkrInfo[i].epd = NULL;
 		wrkrInfo[i].numCalled = 0;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
@@ -1461,12 +1466,11 @@ startupServers()
 	RETiRet;
 }
 
-
 /* process new activity on listener. This means we need to accept a new
  * connection.
  */
 static inline rsRetVal
-lstnActivity(ptcplstn_t *pLstn)
+lstnActivity(ptcplstn_t *pLstn, int *continue_polling)
 {
 	int newSock;
 	prop_t *peerName;
@@ -1477,8 +1481,9 @@ lstnActivity(ptcplstn_t *pLstn)
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
-		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
+		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1) {
 			break;
+		}
 		CHKiRet(localRet);
 		localRet = addSess(pLstn, newSock, peerName, peerIP);
 		if(localRet != RS_RET_OK) {
@@ -1493,12 +1498,11 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
 static inline rsRetVal
-sessActivity(ptcpsess_t *pSess)
+sessActivity(ptcpsess_t *pSess, int *continue_polling)
 {
 	int lenRcv;
 	int lenBuf;
@@ -1526,6 +1530,7 @@ sessActivity(ptcpsess_t *pSess)
 				remsock = pSess->sock;
 				bEmitOnClose = 1;
 			}
+			*continue_polling = 0;
 			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			if(bEmitOnClose) {
 				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by "
@@ -1536,6 +1541,7 @@ sessActivity(ptcpsess_t *pSess)
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
+			*continue_polling = 0;
 			closeSess(pSess); /* try clean-up by dropping session */
 			break;
 		}
@@ -1551,36 +1557,38 @@ finalize_it:
  * concurrently.
  */
 static inline void
-processWorkItem(struct epoll_event *event)
+processWorkItem(epolld_t *epd)
 {
-	epolld_t *epd;
+	int continue_polling = 1;
 
-	epd = (epolld_t*) event->data.ptr;
 	switch(epd->typ) {
 	case epolld_lstn:
-		lstnActivity((ptcplstn_t *) epd->ptr);
+		lstnActivity((ptcplstn_t *) epd->ptr, &continue_polling);
 		break;
 	case epolld_sess:
-		sessActivity((ptcpsess_t *) epd->ptr);
+		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
 		break;
 	default:
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-			"error: invalid epolld_type_t %d after epoll", epd->typ);
+						"error: invalid epolld_type_t %d after epoll", epd->typ);
 		break;
+	}
+	if (continue_polling == 1) {
+		epoll_ctl(epollfd, EPOLL_CTL_MOD, epd->sock, &(epd->ev));
 	}
 }
 
 
 static inline int
-assignFreeWorker(struct epoll_event *evt) {
+assignFreeWorker(epolld_t *epd) {
 	int i;
 	/* check if there is a free worker */
-	for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
+	for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].epd != NULL) ; ++i)
 		/*do search*/;
 
 	if(i < runModConf->wrkrMax) {
 		/* worker free -> use it! */
-		wrkrInfo[i].event = evt;
+		wrkrInfo[i].epd = epd;
 		++wrkrRunning;
 		pthread_cond_signal(&wrkrInfo[i].run);
 		pthread_mutex_unlock(&wrkrMut);
@@ -1597,43 +1605,32 @@ processWorkSet(int nEvents, struct epoll_event events[])
 {
 	int iEvt;
 	int remainEvents;
-
 	remainEvents = nEvents;
+	epolld_t *epd;
+
 	for(iEvt = 0 ; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0) ; ++iEvt) {
+		epd = (epolld_t*)events[iEvt].data.ptr;
 		if(runModConf->bProcessOnPoller && remainEvents == 1) {
 			/* process self, save context switch */
-			processWorkItem(events+iEvt);
+			processWorkItem(epd);
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 
-			if (assignFreeWorker(events+iEvt) != 0) {
+			if (assignFreeWorker(epd) != 0) {
 				if (runModConf->bProcessOnPoller) {
 					/* no free worker, so we process this one ourselfs */
 					pthread_mutex_unlock(&wrkrMut);
-					processWorkItem(events+iEvt);
+					processWorkItem(epd);
 				} else {
 					do {
 						pthread_cond_wait(&wrkrIdle, &wrkrMut);
-					} while(assignFreeWorker(events+iEvt) != 0);
+					} while(assignFreeWorker(epd) != 0);
 				}				
 			}
 
 		}
 		--remainEvents;
 	}
-
-	if((! runModConf->bProcessOnPoller) || nEvents > 1) {
-		/* we now need to wait until all workers finish. This is because the
-		 * rest of this module can not handle the concurrency introduced
-		 * by workers running during the epoll call.
-		 */
-		pthread_mutex_lock(&wrkrMut);
-		while(wrkrRunning > 0) {
-			pthread_cond_wait(&wrkrIdle, &wrkrMut);
-		}
-		pthread_mutex_unlock(&wrkrMut);
-	}
-
 }
 
 
@@ -1646,7 +1643,7 @@ wrkr(void *myself)
 	
 	pthread_mutex_lock(&wrkrMut);
 	while(1) {
-		while(me->event == NULL && glbl.GetGlobalInputTermState() == 0) {
+		while(me->epd == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
 		if(glbl.GetGlobalInputTermState() == 1)
@@ -1654,10 +1651,10 @@ wrkr(void *myself)
 		pthread_mutex_unlock(&wrkrMut);
 
 		++me->numCalled;
-		processWorkItem(me->event);
+		processWorkItem(me->epd);
 
 		pthread_mutex_lock(&wrkrMut);
-		me->event = NULL;	/* indicate we are free again */
+		me->epd = NULL;	/* indicate we are free again */
 		--wrkrRunning;
 		pthread_cond_signal(&wrkrIdle);
 	}
@@ -1938,7 +1935,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 		pLstn = pLstn->next;
 		DBGPRINTF("imptcp shutdown listen socket %d (rcvd %lld bytes, "
 			  "decompressed %lld)\n", lstnDel->sock, lstnDel->rcvdBytes,
-			  lstnDel->rcvdDecompressed);
+				  lstnDel->rcvdDecompressed);
 		free(lstnDel->epd);
 		free(lstnDel);
 	}
