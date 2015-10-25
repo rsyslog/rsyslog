@@ -1037,14 +1037,16 @@ CODESTARTcommitTransaction
 		writeFile(pData, pParams, i);
 	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */
-	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-		/* if we have an async writer, it controls the flush via
-		 * a timeout. However, without it, we actually need to flush,
-		 * else incomplete records are written.
-		 */
-		if(!pData->bUseAsyncWriter)
+	if(pData->bUseAsyncWriter) {
+		if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
 			CHKiRet(strm.Flush(pData->pStrm));
+		}
+	} else {
+		if(pData->pStrm != NULL) {
+			CHKiRet(strm.Flush(pData->pStrm));
+		}
 	}
+
 finalize_it:
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDcommitTransaction
