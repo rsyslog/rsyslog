@@ -1580,8 +1580,23 @@ getRawMsgAfterPRI(msg_t * const pM, uchar **pBuf, int *piLen)
 			*pBuf=  UCHAR_CONSTANT("");
 			*piLen = 0;
 		} else {
-			*pBuf = pM->pszRawMsg + pM->offAfterPRI;
-			*piLen = pM->iLenRawMsg - pM->offAfterPRI;
+			/* unfortunately, pM->offAfterPRI seems NOT to be
+			 * correct/consistent in all cases. imuxsock and imudp
+			 * seem to have other values than imptcp. Testbench
+			 * covers some of that. As a work-around, we caluculate
+			 * the value ourselfes here. -- rgerhards, 2015-10-09
+			 */
+			size_t offAfterPRI = 0;
+			if(pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
+				if(pM->pszRawMsg[2] == '>')
+					offAfterPRI = 3;
+				else if(pM->pszRawMsg[3] == '>')
+					offAfterPRI = 4;
+				else if(pM->pszRawMsg[4] == '>')
+					offAfterPRI = 5;
+			}
+			*pBuf = pM->pszRawMsg + offAfterPRI;
+			*piLen = pM->iLenRawMsg - offAfterPRI;
 		}
 	}
 }
