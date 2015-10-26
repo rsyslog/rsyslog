@@ -49,6 +49,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/queue.h>
 #include <netinet/tcp.h>
 #include <stdint.h>
 #include <zlib.h>
@@ -94,6 +95,7 @@ DEFobjCurrIf(statsobj)
 static void * wrkr(void *myself);
 
 #define DFLT_wrkrMax 2
+#define DFLT_inlineDispatchThreshold 1
 
 #define COMPRESS_NEVER 0
 #define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
@@ -272,12 +274,8 @@ struct ptcplstn_s {
  */
 static struct wrkrInfo_s {
 	pthread_t tid;	/* the worker's thread ID */
-	pthread_cond_t run;
-	epolld_t *epd; /* epd == NULL -> idle */
 	long long unsigned numCalled;	/* how often was this called */
 } *wrkrInfo;
-static pthread_mutex_t wrkrMut;
-static pthread_cond_t wrkrIdle;
 static int wrkrRunning;
 
 
@@ -297,12 +295,27 @@ struct epolld_s {
 	struct epoll_event ev;
 };
 
+typedef struct io_req_s {
+	STAILQ_ENTRY(io_req_s) link;
+	epolld_t *epd;
+} io_req_t;
+
+typedef struct io_q_s {
+	STAILQ_HEAD(ioq_s, io_req_s) q;
+	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit);
+	int ctrMaxSz; //TODO: discuss potential problems around concurrent reads and writes
+	int sz; //current q size
+	statsobj_t *stats;
+	pthread_mutex_t mut;
+	pthread_cond_t wakeup_worker;
+} io_q_t;
 
 /* global data */
 pthread_attr_t wrkrThrdAttr;	/* Attribute for session threads; read only after startup */
 static ptcpsrv_t *pSrvRoot = NULL;
 static int epollfd = -1;			/* (sole) descriptor for epoll */
 static int iMaxLine; /* maximum size of a single message */
+static io_q_t io_q;
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -1399,12 +1412,8 @@ startWorkerPool(void)
         DBGPRINTF("imptcp: worker-info array allocation failed.\n");
         return;
     }
-	pthread_mutex_init(&wrkrMut, NULL);
-	pthread_cond_init(&wrkrIdle, NULL);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
-		pthread_cond_init(&wrkrInfo[i].run, NULL);
-		wrkrInfo[i].epd = NULL;
 		wrkrInfo[i].numCalled = 0;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
@@ -1418,16 +1427,13 @@ stopWorkerPool(void)
 {
 	int i;
 	DBGPRINTF("imptcp: stoping worker pool\n");
+	pthread_mutex_lock(&io_q.mut);
+	pthread_cond_broadcast(&io_q.wakeup_worker); /* awake wrkr if not running */
+	pthread_mutex_unlock(&io_q.mut);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
-		pthread_mutex_lock(&wrkrMut);
-		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
-		pthread_mutex_unlock(&wrkrMut);
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
-		pthread_cond_destroy(&wrkrInfo[i].run);
 	}
-	pthread_cond_destroy(&wrkrIdle);
-	pthread_mutex_destroy(&wrkrMut);
     free(wrkrInfo);
 }
 
@@ -1470,7 +1476,7 @@ startupServers()
  * connection.
  */
 static inline rsRetVal
-lstnActivity(ptcplstn_t *pLstn, int *continue_polling)
+lstnActivity(ptcplstn_t *pLstn)
 {
 	int newSock;
 	prop_t *peerName;
@@ -1563,7 +1569,8 @@ processWorkItem(epolld_t *epd)
 
 	switch(epd->typ) {
 	case epolld_lstn:
-		lstnActivity((ptcplstn_t *) epd->ptr, &continue_polling);
+		/* listener never stops polling (except server shutdown) */
+		lstnActivity((ptcplstn_t *) epd->ptr);
 		break;
 	case epolld_sess:
 		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
@@ -1579,22 +1586,78 @@ processWorkItem(epolld_t *epd)
 }
 
 
-static inline int
-assignFreeWorker(epolld_t *epd) {
-	int i;
-	/* check if there is a free worker */
-	for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].epd != NULL) ; ++i)
-		/*do search*/;
+static rsRetVal
+initIoQ() {
+	DEFiRet;
+	CHKiConcCtrl(pthread_mutex_init(&io_q.mut, NULL));
+	CHKiConcCtrl(pthread_cond_init(&io_q.wakeup_worker, NULL));
+	STAILQ_INIT(&io_q.q);
+	io_q.sz = 0;
+	io_q.ctrMaxSz = 0; /* TODO: discuss this and fix potential concurrent read/write issues */
+	CHKiRet(statsobj.Construct(&io_q.stats));
+	STATSCOUNTER_INIT(io_q.ctrSubmit, io_q.mutCtrSubmit);
+	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("submitted"),
+								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &io_q.ctrSubmit));
+	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("maxqsize"),
+								ctrType_Int, CTR_FLAG_NONE, &io_q.ctrMaxSz));
+	CHKiRet(statsobj.ConstructFinalize(io_q.stats));
+finalize_it:
+	RETiRet;
+}
 
-	if(i < runModConf->wrkrMax) {
-		/* worker free -> use it! */
-		wrkrInfo[i].epd = epd;
-		++wrkrRunning;
-		pthread_cond_signal(&wrkrInfo[i].run);
-		pthread_mutex_unlock(&wrkrMut);
-		return 0;
+static void
+destroyIoQ() {
+	io_req_t *n;
+	if (io_q.stats != NULL) {
+		statsobj.Destruct(&io_q.stats);
 	}
-	return 1;
+	pthread_mutex_lock(&io_q.mut);
+	while (!STAILQ_EMPTY(&io_q.q)) {
+		n = STAILQ_FIRST(&io_q.q);
+		STAILQ_REMOVE_HEAD(&io_q.q, link);
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown - ignored");
+		free(n);
+	}
+	io_q.sz = 0;
+	pthread_mutex_unlock(&io_q.mut);
+	pthread_cond_destroy(&io_q.wakeup_worker);
+	pthread_mutex_destroy(&io_q.mut);
+}
+
+static inline rsRetVal
+enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
+	io_req_t *n;
+	int dispatchInline;
+	DEFiRet;
+	
+	CHKmalloc(n = malloc(sizeof(io_req_t)));
+	n->epd = epd;
+	
+	int inlineDispatchThreshold = DFLT_inlineDispatchThreshold * runModConf->wrkrMax;
+	dispatchInline = 0;
+	
+	pthread_mutex_lock(&io_q.mut);
+	if (dispatchInlineIfQueueFull && io_q.sz > inlineDispatchThreshold) {
+		dispatchInline = 1;
+	} else {
+		STAILQ_INSERT_TAIL(&io_q.q, n, link);
+		io_q.sz++;
+		STATSCOUNTER_SETMAX_NOMUT(io_q.ctrMaxSz, io_q.sz);
+		pthread_cond_signal(&io_q.wakeup_worker);
+	}
+	pthread_mutex_unlock(&io_q.mut);
+
+	if (dispatchInline == 1) {
+		free(n);
+		processWorkItem(epd);
+	}
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (n == NULL) {
+			errmsg.LogError(0, iRet, "imptcp: couldn't allocate memory to enqueue io-request - ignored");
+		}
+	}
+	RETiRet;
 }
 
 /* This function is called to process a complete workset, that
@@ -1614,20 +1677,7 @@ processWorkSet(int nEvents, struct epoll_event events[])
 			/* process self, save context switch */
 			processWorkItem(epd);
 		} else {
-			pthread_mutex_lock(&wrkrMut);
-
-			if (assignFreeWorker(epd) != 0) {
-				if (runModConf->bProcessOnPoller) {
-					/* no free worker, so we process this one ourselfs */
-					pthread_mutex_unlock(&wrkrMut);
-					processWorkItem(epd);
-				} else {
-					do {
-						pthread_cond_wait(&wrkrIdle, &wrkrMut);
-					} while(assignFreeWorker(epd) != 0);
-				}				
-			}
-
+			enqueueIoWork(epd, runModConf->bProcessOnPoller);
 		}
 		--remainEvents;
 	}
@@ -1640,26 +1690,37 @@ static void *
 wrkr(void *myself)
 {
 	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
-	
-	pthread_mutex_lock(&wrkrMut);
+	pthread_mutex_lock(&io_q.mut);
+	++wrkrRunning;
+	pthread_mutex_unlock(&io_q.mut);
+
+	io_req_t *n;
 	while(1) {
-		while(me->epd == NULL && glbl.GetGlobalInputTermState() == 0) {
-			pthread_cond_wait(&me->run, &wrkrMut);
+		n = NULL;
+		pthread_mutex_lock(&io_q.mut);
+		if (io_q.sz == 0) {
+			--wrkrRunning;
+			if (glbl.GetGlobalInputTermState() != 0) {
+				pthread_mutex_unlock(&io_q.mut);
+				break;
+			} else {
+				pthread_cond_wait(&io_q.wakeup_worker, &io_q.mut);
+			}
+			++wrkrRunning;
 		}
-		if(glbl.GetGlobalInputTermState() == 1)
-			break;
-		pthread_mutex_unlock(&wrkrMut);
+		if (io_q.sz > 0) {
+			n = STAILQ_FIRST(&io_q.q);
+			STAILQ_REMOVE_HEAD(&io_q.q, link);
+			io_q.sz--;
+		}
+		pthread_mutex_unlock(&io_q.mut);
 
-		++me->numCalled;
-		processWorkItem(me->epd);
-
-		pthread_mutex_lock(&wrkrMut);
-		me->epd = NULL;	/* indicate we are free again */
-		--wrkrRunning;
-		pthread_cond_signal(&wrkrIdle);
+		if (n != NULL) {
+			++me->numCalled;
+			processWorkItem(n->epd);
+			free(n);
+		}
 	}
-	pthread_mutex_unlock(&wrkrMut);
-
 	return NULL;
 }
 
@@ -1897,6 +1958,7 @@ BEGINrunInput
 	int nEvents;
 	struct epoll_event events[128];
 CODESTARTrunInput
+	initIoQ();
 	startWorkerPool();
 	DBGPRINTF("imptcp: now beginning to process input data\n");
 	while(glbl.GetGlobalInputTermState() == 0) {
@@ -1956,6 +2018,7 @@ BEGINafterRun
 	ptcpsrv_t *pSrv, *srvDel;
 CODESTARTafterRun
 	stopWorkerPool();
+	destroyIoQ();
 
 	/* we need to close everything that is still open */
 	pSrv = pSrvRoot;
