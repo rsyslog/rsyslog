@@ -105,6 +105,25 @@
 #	endif
 #endif
 
+char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifndef HAVE_STRERROR_R
+	char *pszErr;
+	pszErr = strerror(errnum);
+	snprintf(buf, buflen, "%s", pszErr);
+#else
+#	ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#	else
+	strerror_r(errnum, buf, buflen);
+#	endif
+#endif /* #ifdef __hpux */
+	return buf;
+}
+
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
@@ -450,6 +469,8 @@ int sendMessages(struct instdata *inst)
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char sendBuf[MAX_SENDBUF];
 	int offsSendBuf = 0;
+	char errStr[1024];
+	int error_number = 0;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
@@ -488,8 +509,10 @@ int sendMessages(struct instdata *inst)
 				}
 			}
 			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
+			error_number = errno;
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
+			error_number = errno;
 		} else if(transport == TP_TLS) {
 			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
 				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
@@ -505,9 +528,9 @@ int sendMessages(struct instdata *inst)
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
-			perror("send test data");
-			printf("send() failed at socket %d, index %d, msgNum %lld\n",
-				sockArray[socknum], i, inst->numSent);
+			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
+			printf("send() failed \"%s\" at socket %d, index %d, msgNum %lld\n",
+				   errStr, sockArray[socknum], i, inst->numSent);
 			fflush(stderr);
 			return(1);
 		}
