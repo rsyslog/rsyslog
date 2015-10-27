@@ -1152,8 +1152,6 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->peerIP = peerIP;
 	pSess->compressionMode = pLstn->pSrv->compressionMode;
 
-	CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
-
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
 	pthread_mutex_lock(&pSrv->mutSessLst);
@@ -1162,6 +1160,8 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 		pSrv->pSess->prev = pSess;
 	pSrv->pSess = pSess;
 	pthread_mutex_unlock(&pSrv->mutSessLst);
+
+	CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
