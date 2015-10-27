@@ -302,7 +302,7 @@ typedef struct io_req_s {
 
 typedef struct io_q_s {
 	STAILQ_HEAD(ioq_s, io_req_s) q;
-	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit);
+	STATSCOUNTER_DEF(ctrEnq, mutCtrEnq);
 	int ctrMaxSz; //TODO: discuss potential problems around concurrent reads and writes
 	int sz; //current q size
 	statsobj_t *stats;
@@ -1595,9 +1595,11 @@ initIoQ() {
 	io_q.sz = 0;
 	io_q.ctrMaxSz = 0; /* TODO: discuss this and fix potential concurrent read/write issues */
 	CHKiRet(statsobj.Construct(&io_q.stats));
-	STATSCOUNTER_INIT(io_q.ctrSubmit, io_q.mutCtrSubmit);
-	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("submitted"),
-								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &io_q.ctrSubmit));
+	CHKiRet(statsobj.SetName(io_q.stats, (uchar*) "io-work-q"));
+	CHKiRet(statsobj.SetOrigin(io_q.stats, (uchar*) "imptcp"));
+	STATSCOUNTER_INIT(io_q.ctrEnq, io_q.mutCtrEnq);
+	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("enqueued"),
+								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &io_q.ctrEnq));
 	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("maxqsize"),
 								ctrType_Int, CTR_FLAG_NONE, &io_q.ctrMaxSz));
 	CHKiRet(statsobj.ConstructFinalize(io_q.stats));
@@ -1642,6 +1644,7 @@ enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
 	} else {
 		STAILQ_INSERT_TAIL(&io_q.q, n, link);
 		io_q.sz++;
+		STATSCOUNTER_INC(io_q.ctrEnq, io_q.mutCtrEnq);
 		STATSCOUNTER_SETMAX_NOMUT(io_q.ctrMaxSz, io_q.sz);
 		pthread_cond_signal(&io_q.wakeup_worker);
 	}
