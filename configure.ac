@@ -1380,7 +1380,7 @@ AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
 
 # settings for pmpanngfw
 AC_ARG_ENABLE(pmpanngfw,
-        [AS_HELP_STRING([--enable-pmpanngfw],[Compiles snare parser module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-pmpanngfw],[Compiles Palo Alto Networks parser module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_pmpanngfw="yes" ;;
           no) enable_pmpanngfw="no" ;;
