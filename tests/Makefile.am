@@ -144,7 +144,9 @@ TESTS +=  \
 	failover-no-rptd-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
-	tcp-msgreduc-vg.sh
+	tcp-msgreduc-vg.sh \
+	unused_lookup_table.sh \
+	lookup_table-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -865,6 +867,9 @@ EXTRA_DIST= \
 	testsuites/lookup_table.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
+	unused_lookup_table.sh \
+	lookup_table-vg.sh \
+	testsuites/unused_lookup_table.conf \
 	cfg.sh
 
 # TODO: re-enable

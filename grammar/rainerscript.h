@@ -281,6 +281,7 @@ struct cnffunc {
 	unsigned short nParams;
 	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
 	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
+	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
 };
 

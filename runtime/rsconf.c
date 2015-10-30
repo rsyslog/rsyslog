@@ -210,6 +210,7 @@ CODESTARTobjDestruct(rsconf)
 	tplDeleteAll(pThis);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
+	lookupDestroyCnf();
 	llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 

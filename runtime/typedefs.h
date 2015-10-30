@@ -98,9 +98,16 @@ typedef struct outchannels_s outchannels_t;
 typedef struct modConfData_s modConfData_t;
 typedef struct instanceConf_s instanceConf_t;
 typedef struct ratelimit_s ratelimit_t;
-typedef struct lookup_string_tab_etry_s lookup_string_tab_etry_t;
+typedef struct lookup_string_tab_entry_s lookup_string_tab_entry_t;
+typedef struct lookup_string_tab_s lookup_string_tab_t;
+typedef struct lookup_array_tab_s lookup_array_tab_t;
+typedef struct lookup_sparseArray_tab_s lookup_sparseArray_tab_t;
+typedef struct lookup_sparseArray_tab_entry_s lookup_sparseArray_tab_entry_t;
 typedef struct lookup_tables_s lookup_tables_t;
+typedef union lookup_key_u lookup_key_t;
+
 typedef struct lookup_s lookup_t;
+typedef struct lookup_ref_s lookup_ref_t;
 typedef struct action_s action_t;
 typedef int rs_size_t; /* we do never need more than 2Gig strings, signed permits to
 			* use -1 as a special flag. */

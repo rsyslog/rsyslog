@@ -45,6 +45,7 @@ DEFobjCurrIf(glbl)
 
 /* forward definitions */
 static rsRetVal lookupReadFile(lookup_t *pThis);
+static void lookupDestruct(lookup_t *pThis);
 
 /* static data */
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -63,14 +64,15 @@ static struct cnfparamblk modpblk =
  * lookup tables.
  */
 rsRetVal
-lookupNew(lookup_t **ppThis)
+lookupNew(lookup_ref_t **ppThis)
 {
-	lookup_t *pThis = NULL;
+	lookup_ref_t *pThis = NULL;
+	lookup_t *t = NULL;
 	DEFiRet;
 
-	CHKmalloc(pThis = malloc(sizeof(lookup_t)));
+	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
+	CHKmalloc(t = calloc(1, sizeof(lookup_t)));
 	pthread_rwlock_init(&pThis->rwlock, NULL);
-	pThis->name = NULL;
 
 	if(loadConf->lu_tabs.root == NULL) {
 		loadConf->lu_tabs.root = pThis;
@@ -80,18 +82,66 @@ lookupNew(lookup_t **ppThis)
 	}
 	loadConf->lu_tabs.last = pThis;
 
+	pThis->self = t;
+
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		free(t);
 		free(pThis);
 	}
 	RETiRet;
 }
-void
-lookupDestruct(lookup_t *pThis)
+
+static void
+lookupRefDestruct(lookup_ref_t *pThis)
 {
 	pthread_rwlock_destroy(&pThis->rwlock);
+	lookupDestruct(pThis->self);
+	free(pThis);
+}
+
+static void
+destructTable_str(lookup_t *pThis) {
+	int i = 0;
+	lookup_string_tab_entry_t *entries = pThis->table.str->entries;
+	for (i = 0; i < pThis->nmemb; i++) {
+		free(entries[i].key);
+	}
+	free(entries);
+	free(pThis->table.str);
+}
+
+
+static void
+destructTable_arr(lookup_t *pThis) {
+
+}
+
+static void
+destructTable_sparseArr(lookup_t *pThis) {
+
+}
+
+static void
+lookupDestruct(lookup_t *pThis) {
+	int i;
+	if (pThis->type == STRING_LOOKUP_TABLE) {
+		destructTable_str(pThis);
+	} else if (pThis->type == ARRAY_LOOKUP_TABLE) {
+		destructTable_arr(pThis);
+	} else if (pThis->type == SPARSE_ARRAY_LOOKUP_TABLE) {
+		destructTable_sparseArr(pThis);
+	} else {
+		assert(0);//destructor is missing for a new lookup-table type
+	}
 	free(pThis->name);
+	free(pThis->filename);
+	for (i = 0; i < pThis->interned_val_count; i++) {
+		free(pThis->interned_vals[i]);
+	}
+	free(pThis->interned_vals);
+	free(pThis->nomatch);
 	free(pThis);
 }
 
@@ -102,59 +152,175 @@ lookupInitCnf(lookup_tables_t *lu_tabs)
 	lu_tabs->last = NULL;
 }
 
+void
+lookupDestroyCnf() {
+	lookup_ref_t *luref, *luref_next;
+	for(luref = loadConf->lu_tabs.root ; luref != NULL ; ) {
+		luref_next = luref->next;
+		lookupRefDestruct(luref);
+		luref = luref_next;
+	}	
+}
 
-/* comparison function for qsort() and string array compare
- * this is for the string lookup table type
- */
+/* comparison function for qsort() */
 static int
 qs_arrcmp_strtab(const void *s1, const void *s2)
 {
-	return ustrcmp(((lookup_string_tab_etry_t*)s1)->key, ((lookup_string_tab_etry_t*)s2)->key);
+	return ustrcmp(((lookup_string_tab_entry_t*)s1)->key, ((lookup_string_tab_entry_t*)s2)->key);
 }
+
+static int
+qs_arrcmp_ustrs(const void *s1, const void *s2)
+{
+	return ustrcmp(*(uchar**)s1, *(uchar**)s2);
+}
+
 /* comparison function for bsearch() and string array compare
  * this is for the string lookup table type
  */
 static int
 bs_arrcmp_strtab(const void *s1, const void *s2)
 {
-	return strcmp((char*)s1, (char*)((lookup_string_tab_etry_t*)s2)->key);
+	return strcmp((char*)s1, (char*)((lookup_string_tab_entry_t*)s2)->key);
+}
+
+static int
+bs_arrcmp_str(const void *s1, const void *s2)
+{
+	return strcmp((uchar*)s1, *(uchar**)s2);
+}
+
+/* lookup_fn for different types of tables */
+static es_str_t*
+lookupKey_str(lookup_t *pThis, lookup_key_t key) {
+	lookup_string_tab_entry_t *entry;
+	const char *r;
+	entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), bs_arrcmp_strtab);
+	if(entry == NULL) {
+		r = (pThis->nomatch == NULL) ? "" : (const char*) pThis->nomatch;
+	} else {
+		r = (const char*)entry->interned_val_ref;
+	}
+	return es_newStrFromCStr(r, strlen(r));
+}
+
+/* builders for different table-types */
+static inline rsRetVal
+build_StringTable(lookup_t *pThis, struct json_object *jtab) {
+	uint32_t i;
+	struct json_object *jrow, *jindex, *jvalue;
+	uchar *value, *canonicalValueRef;
+	DEFiRet;
+	
+	pThis->table.str = NULL;
+	CHKmalloc(pThis->table.str = calloc(1, sizeof(lookup_string_tab_t)));
+	CHKmalloc(pThis->table.str->entries = calloc(pThis->nmemb, sizeof(lookup_string_tab_entry_t)));
+
+	for(i = 0; i < pThis->nmemb; i++) {
+		jrow = json_object_array_get_idx(jtab, i);
+		jindex = json_object_object_get(jrow, "index");
+		jvalue = json_object_object_get(jrow, "value");
+		CHKmalloc(pThis->table.str->entries[i].key = strdup(json_object_get_string(jindex)));
+		value = (uchar*) json_object_get_string(jvalue);
+		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+		assert(canonicalValueRef != NULL);
+		pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
+	}
+	qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
+		
+	pThis->lookup = lookupKey_str;
+	
+finalize_it:
+	RETiRet;
+}
+
+static inline rsRetVal
+build_ArrayTable(lookup_t *pThis, struct json_object *jtab) {
+	DEFiRet;
+finalize_it:
+	RETiRet;
+}
+
+static inline rsRetVal
+build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab) {
+	DEFiRet;
+finalize_it:
+	RETiRet;
 }
 
 rsRetVal
 lookupBuildTable(lookup_t *pThis, struct json_object *jroot)
 {
-	//struct json_object *jversion, *jnomatch, *jtype, *jtab;
-	struct json_object *jtab;
+	struct json_object *jversion, *jnomatch, *jtype, *jtab;
 	struct json_object *jrow, *jindex, *jvalue;
-	uint32_t i;
-	uint32_t maxStrSize;
-	DEFiRet;
+	const char *table_type, *nomatch_value;
+	const uchar **all_values;
+	const uchar *curr, *prev;
+	uint32_t i, j;
+	uint32_t uniq_values;
 
-#if 0 // enable when we continue to work on this module
+	DEFiRet;
+	all_values = NULL;
+
 	jversion = json_object_object_get(jroot, "version");
 	jnomatch = json_object_object_get(jroot, "nomatch");
 	jtype = json_object_object_get(jroot, "type");
-#endif
 	jtab = json_object_object_get(jroot, "table");
 	pThis->nmemb = json_object_array_length(jtab);
-	CHKmalloc(pThis->d.strtab = malloc(pThis->nmemb * sizeof(lookup_string_tab_etry_t)));
-
-	maxStrSize = 0;
-	for(i = 0 ; i < pThis->nmemb ; ++i) {
-		jrow = json_object_array_get_idx(jtab, i);
-		jindex = json_object_object_get(jrow, "index");
-		jvalue = json_object_object_get(jrow, "value");
-		CHKmalloc(pThis->d.strtab[i].key = (uchar*) strdup(json_object_get_string(jindex)));
-		CHKmalloc(pThis->d.strtab[i].val = (uchar*) strdup(json_object_get_string(jvalue)));
-		maxStrSize += ustrlen(pThis->d.strtab[i].val);
+	table_type = json_object_get_string(jtype);
+	if (table_type == NULL) {
+		table_type = "string";
 	}
 
-	qsort(pThis->d.strtab, pThis->nmemb, sizeof(lookup_string_tab_etry_t), qs_arrcmp_strtab);
-dbgprintf("DDDD: table loaded (max size %u):\n", maxStrSize);
-for(i = 0 ; i < pThis->nmemb ; ++i)
-  dbgprintf("key: '%s', val: '%s'\n", pThis->d.strtab[i].key, pThis->d.strtab[i].val);
+	CHKmalloc(all_values = malloc(pThis->nmemb * sizeof(uchar*)));
+
+	/* before actual table can be loaded, prepare all-value list and remove duplicates*/
+	for(i = 0; i < pThis->nmemb; i++) {
+		jrow = json_object_array_get_idx(jtab, i);
+		jvalue = json_object_object_get(jrow, "value");
+		all_values[i] = (const uchar*) json_object_get_string(jvalue);
+	}
+	qsort(all_values, pThis->nmemb, sizeof(uchar*), qs_arrcmp_ustrs);
+	uniq_values = 1;
+	for(i = 1; i < pThis->nmemb; i++) {
+		curr = all_values[i];
+		prev = all_values[i - 1];
+		if (strcmp(prev, curr) != 0) {
+			uniq_values++;
+		}
+	}
+
+	CHKmalloc(pThis->interned_vals = malloc(uniq_values * sizeof(uchar*)));
+	j = 0;
+	CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[0]));
+	for(i = 1; i < pThis->nmemb ; ++i) {
+		curr = all_values[i];
+		prev = all_values[i - 1];
+		if (strcmp(prev, curr) != 0) {
+			CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[i]));
+		}
+	}
+	pThis->interned_val_count = uniq_values;
+	/* uniq values captured (sorted) */
+
+	nomatch_value = json_object_get_string(jnomatch);
+	if (nomatch_value != NULL) {
+		CHKmalloc(pThis->nomatch = strdup(nomatch_value));
+	}
+
+	if (strcmp(table_type, "array") == 0) {
+		pThis->type = ARRAY_LOOKUP_TABLE;
+		CHKiRet(build_ArrayTable(pThis, jtab));
+	} else if (strcmp(table_type, "sparseArray") == 0) {
+		pThis->type = SPARSE_ARRAY_LOOKUP_TABLE;
+		CHKiRet(build_SparseArrayTable(pThis, jtab));
+	} else {
+		pThis->type = STRING_LOOKUP_TABLE;
+		CHKiRet(build_StringTable(pThis, jtab));
+	}
 
 finalize_it:
+	if (all_values != NULL) free(all_values);
 	RETiRet;
 }
 
@@ -164,13 +330,13 @@ finalize_it:
  * load. The function returns either a pointer to the requested
  * table or NULL, if not found.
  */
-lookup_t *
+lookup_ref_t *
 lookupFindTable(uchar *name)
 {
-	lookup_t *curr;
+	lookup_ref_t *curr;
 
 	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) {
-		if(!ustrcmp(curr->name, name))
+		if(!ustrcmp(curr->self->name, name))
 			break;
 	}
 	return curr;
@@ -183,33 +349,36 @@ lookupFindTable(uchar *name)
  * the old table is continued to be used.
  */
 static rsRetVal
-lookupReload(lookup_t *pThis)
+lookupReload(lookup_ref_t *pThis)
 {
 	uint32_t i;
-	lookup_t newlu; /* dummy to be able to use support functions without 
-	                   affecting current settings. */
+	lookup_t *newlu, *oldlu; /* dummy to be able to use support functions without 
+						affecting current settings. */
 	DEFiRet;
+
+	oldlu = pThis->self;
+	newlu = NULL;
 	
-	DBGPRINTF("reload requested for lookup table '%s'\n", pThis->name);
-	memset(&newlu, 0, sizeof(newlu));
-	CHKmalloc(newlu.name = ustrdup(pThis->name));
-	CHKmalloc(newlu.filename = ustrdup(pThis->filename));
-	CHKiRet(lookupReadFile(&newlu));
+	DBGPRINTF("reload requested for lookup table '%s'\n", oldlu->name);
+	CHKmalloc(newlu = calloc(1, sizeof(lookup_t)));
+	CHKmalloc(newlu->name = ustrdup(oldlu->name));
+	CHKmalloc(newlu->filename = ustrdup(oldlu->filename));
+	CHKiRet(lookupReadFile(newlu));
 	/* all went well, copy over data members */
 	pthread_rwlock_wrlock(&pThis->rwlock);
-	for(i = 0 ; i < pThis->nmemb ; ++i) {
-		free(pThis->d.strtab[i].key), /* we don't care about exec order of frees */
-		free(pThis->d.strtab[i].val);
-	}
-	free(pThis->d.strtab);
-	pThis->d.strtab = newlu.d.strtab; /* hand table AND ALL STRINGS over! */
-	pThis->nmemb = newlu.nmemb;
+	pThis->self = newlu;
 	pthread_rwlock_unlock(&pThis->rwlock);
-	errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
-			pThis->name, pThis->filename);
 finalize_it:
-	free(newlu.name);
-	free(newlu.filename);
+	if (iRet != RS_RET_OK) {
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+						"lookup table '%s' could not be reloaded from file '%s'",
+						oldlu->name, oldlu->filename);
+		lookupDestruct(newlu);
+	} else {
+		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+						oldlu->name, oldlu->filename);
+		lookupDestruct(oldlu);
+	}
 	RETiRet;
 }
 
@@ -218,9 +387,9 @@ finalize_it:
 void
 lookupDoHUP()
 {
-	lookup_t *lu;
-	for(lu = loadConf->lu_tabs.root ; lu != NULL ; lu = lu->next) {
-		lookupReload(lu);
+	lookup_ref_t *luref;
+	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
+		lookupReload(luref);
 	}
 }
 
@@ -231,20 +400,13 @@ lookupDoHUP()
  * responsible for freeing it.
  */
 es_str_t *
-lookupKey_estr(lookup_t *pThis, uchar *key)
+lookupKey(lookup_ref_t *pThis, lookup_key_t key)
 {
-	lookup_string_tab_etry_t *etry;
-	char *r;
 	es_str_t *estr;
-
+	lookup_t *t;
 	pthread_rwlock_rdlock(&pThis->rwlock);
-	etry = bsearch(key, pThis->d.strtab, pThis->nmemb, sizeof(lookup_string_tab_etry_t), bs_arrcmp_strtab);
-	if(etry == NULL) {
-		r = ""; // TODO: use set default 
-	} else {
-		r = (char*)etry->val;
-	}
-	estr = es_newStrFromCStr(r, strlen(r));
+	t = pThis->self;
+	estr = t->lookup(t, key);
 	pthread_rwlock_unlock(&pThis->rwlock);
 	return estr;
 }
@@ -326,9 +488,10 @@ rsRetVal
 lookupProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
-	lookup_t *lu;
+	lookup_ref_t *lu;
 	short i;
 	DEFiRet;
+	lu = NULL;
 
 	pvals = nvlstGetParams(o->nvlst, &modpblk, NULL);
 	if(pvals == NULL) {
@@ -343,19 +506,24 @@ lookupProcessCnf(struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "file")) {
-			CHKmalloc(lu->filename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(lu->self->filename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "name")) {
-			CHKmalloc(lu->name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(lu->self->name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else {
 			dbgprintf("lookup_table: program error, non-handled "
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
-	CHKiRet(lookupReadFile(lu));
-	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
+	CHKiRet(lookupReadFile(lu->self));
+	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->self->name, lu->self->filename);
 
 finalize_it:
 	cnfparamvalsDestruct(pvals, &modpblk);
+	if (iRet != RS_RET_OK) {
+		if (lu != NULL) {
+			lookupRefDestruct(lu);
+		}
+	}
 	RETiRet;
 }
 

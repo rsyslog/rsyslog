@@ -1613,6 +1613,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 	int matchnbr;
 	struct funcData_prifilt *pPrifilt;
 	rsRetVal localRet;
+	lookup_key_t key;
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
 	switch(func->fID) {
@@ -1774,7 +1775,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		ret->datatype = 'N';
 		break;
 	case CNFFUNC_LOOKUP:
-dbgprintf("DDDD: executing lookup\n");
+		dbgprintf("DDDD: executing lookup\n");
 		ret->datatype = 'S';
 		if(func->funcdata == NULL) {
 			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
@@ -1782,7 +1783,8 @@ dbgprintf("DDDD: executing lookup\n");
 		}
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		str = (char*) var2CString(&r[1], &bMustFree);
-		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
+		key.k_str = (uchar*)str;
+		ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
 		if(bMustFree) free(str);
 		varFreeMembers(&r[1]);
 		break;
@@ -2426,8 +2428,9 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+	if(func->destructable_funcdata) {
 		free(func->funcdata);
+	}
 	free(func->fname);
 }
 
@@ -3786,6 +3789,8 @@ initFunc_exec_template(struct cnffunc *func)
 	char *tplName = NULL;
 	DEFiRet;
 
+	func->destructable_funcdata = 0;
+
 	if(func->nParams != 1) {
 		parser_errmsg("rsyslog logic error in line %d of file %s\n",
 			__LINE__, __FILE__);
@@ -3846,6 +3851,8 @@ initFunc_lookup(struct cnffunc *func)
 	uchar *cstr = NULL;
 	DEFiRet;
 
+	func->destructable_funcdata = 0;
+
 	if(func->nParams != 2) {
 		parser_errmsg("rsyslog logic error in line %d of file %s\n",
 			__LINE__, __FILE__);
@@ -3888,6 +3895,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		func->fname = fname;
 		func->nParams = nParams;
 		func->funcdata = NULL;
+		func->destructable_funcdata = 1;
 		func->fID = funcName2ID(fname, nParams);
 		/* shuffle params over to array (access speed!) */
 		param = paramlst;
