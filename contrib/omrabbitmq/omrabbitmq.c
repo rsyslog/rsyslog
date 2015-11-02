@@ -72,10 +72,10 @@ typedef struct _instanceData {
 	uchar *vhost;
 	uchar *user;
 	uchar *password;
-	uchar *exchange;
+	char *exchange;
 	uchar *routing_key;
 	uchar *tplName;
-	uchar *exchange_type;
+	char *exchange_type;
 	int durable;
 	int auto_delete;
 	int delivery_mode;
@@ -440,13 +440,13 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "password")) {
 			pData->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "exchange")) {
-			pData->exchange = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->exchange = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "routing_key")) {
 			pData->routing_key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "exchange_type")) {
-			pData->exchange_type = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->exchange_type = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "auto_delete")) {
 			pData->auto_delete = (int) pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
@@ -491,7 +491,7 @@ CODESTARTnewActInst
 	// RabbitMQ properties initialization
 	memset(&pData->props, 0, sizeof pData->props);
 	pData->props._flags = AMQP_BASIC_DELIVERY_MODE_FLAG;
-	pData->props.delivery_mode = pData->delivery_mode; /* persistent delivery mode */
+	pData->props.delivery_mode = pData->delivery_mode;
 	pData->props._flags |= AMQP_BASIC_CONTENT_TYPE_FLAG;
 	pData->props.content_type = amqp_cstring_bytes("application/json");
 
