@@ -6,7 +6,6 @@ echo \[sparse_array_lookup_table.sh\]: test for sparse-array lookup-table and HU
 . $srcdir/diag.sh init
 cp $srcdir/testsuites/xlate_sparse_array.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh startup array_lookup_table.conf
-sleep 5
 . $srcdir/diag.sh injectmsg  0 5
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_old"
