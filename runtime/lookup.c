@@ -128,7 +128,8 @@ destructTable_arr(lookup_t *pThis) {
 
 static void
 destructTable_sparseArr(lookup_t *pThis) {
-
+	free(pThis->table.sprsArr->entries);
+	free(pThis->table.sprsArr);
 }
 
 static void
@@ -190,6 +191,11 @@ qs_arrcmp_uint32_index_val(const void *s1, const void *s2)
 	return ((uint32_index_val_t*)s1)->index - ((uint32_index_val_t*)s2)->index;
 }
 
+static int
+qs_arrcmp_sprsArrtab(const void *s1, const void *s2)
+{
+	return ((lookup_sparseArray_tab_entry_t*)s1)->key - ((lookup_sparseArray_tab_entry_t*)s2)->key;
+}
 
 /* comparison function for bsearch() and string array compare
  * this is for the string lookup table type
@@ -204,6 +210,12 @@ static int
 bs_arrcmp_str(const void *s1, const void *s2)
 {
 	return strcmp((uchar*)s1, *(uchar**)s2);
+}
+
+static int
+bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
+{
+	return *(uint32_t*)s1 - ((lookup_sparseArray_tab_entry_t*)s2)->key;
 }
 
 static inline const char*
@@ -234,6 +246,19 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 		r = defaultVal(pThis);
 	} else {
 		r = (char*) pThis->table.arr->interned_val_refs[uint_key - pThis->table.arr->first_key];
+	}
+	return es_newStrFromCStr(r, strlen(r));
+}
+
+static es_str_t*
+lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
+	lookup_sparseArray_tab_entry_t *entry;
+	const char *r;
+	entry = bsearch(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	if(entry == NULL) {
+		r = defaultVal(pThis);
+	} else {
+		r = (const char*)entry->interned_val_ref;
 	}
 	return es_newStrFromCStr(r, strlen(r));
 }
@@ -321,7 +346,30 @@ finalize_it:
 
 static inline rsRetVal
 build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab) {
+	uint32_t i;
+	struct json_object *jrow, *jindex, *jvalue;
+	uchar *value, *canonicalValueRef;
 	DEFiRet;
+	
+	pThis->table.str = NULL;
+	CHKmalloc(pThis->table.sprsArr = calloc(1, sizeof(lookup_sparseArray_tab_t)));
+	CHKmalloc(pThis->table.sprsArr->entries = calloc(pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t)));
+
+	for(i = 0; i < pThis->nmemb; i++) {
+		jrow = json_object_array_get_idx(jtab, i);
+		jindex = json_object_object_get(jrow, "index");
+		jvalue = json_object_object_get(jrow, "value");
+		pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
+		value = (uchar*) json_object_get_string(jvalue);
+		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+		assert(canonicalValueRef != NULL);
+		pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
+	}
+	qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), qs_arrcmp_sprsArrtab);
+		
+	pThis->lookup = lookupKey_sprsArr;
+	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
+	
 finalize_it:
 	RETiRet;
 }

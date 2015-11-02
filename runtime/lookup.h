@@ -45,8 +45,7 @@ struct lookup_sparseArray_tab_entry_s {
 };
 
 struct lookup_sparseArray_tab_s {
-	int first_key;
-	uchar **interned_val_refs;
+	lookup_sparseArray_tab_entry_t *entries;
 };
 
 struct lookup_string_tab_entry_s {

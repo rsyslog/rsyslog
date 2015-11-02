@@ -132,7 +132,8 @@ TESTS +=  \
 	linkedlistqueue.sh \
 	lookup_table.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
-	array_lookup_table.sh
+	array_lookup_table.sh \
+	sparse_array_lookup_table.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -148,7 +149,8 @@ TESTS +=  \
 	unused_lookup_table.sh \
 	lookup_table-vg.sh \
 	array_lookup_table-vg.sh \
-	array_lookup_table_misuse-vg.sh
+	array_lookup_table_misuse-vg.sh \
+	sparse_array_lookup_table-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -880,7 +882,10 @@ EXTRA_DIST= \
 	testsuites/xlate_array_more.lkp_tbl \
 	testsuites/xlate_array_misuse.lkp_tbl \
 	testsuites/xlate_array_more_misuse.lkp_tbl \
-	testsuites/xlate_array_more.lkp_tbl \
+	sparse_array_lookup_table.sh \
+	sparse_array_lookup_table-vg.sh \
+	testsuites/xlate_sparse_array.lkp_tbl \
+	testsuites/xlate_sparse_array_more.lkp_tbl \
 	cfg.sh
 
 # TODO: re-enable
