@@ -26,6 +26,9 @@
 #define ARRAY_LOOKUP_TABLE 2
 #define SPARSE_ARRAY_LOOKUP_TABLE 3
 
+#define LOOKUP_KEY_TYPE_STRING 1
+#define LOOKUP_KEY_TYPE_UINT 2
+
 struct lookup_tables_s {
 	lookup_ref_t *root;	/* the root of the template list */
 	lookup_ref_t *last;	/* points to the last element of the template list */
@@ -33,8 +36,7 @@ struct lookup_tables_s {
 
 struct lookup_array_tab_s {
 	int first_key;
-	int table_length;
-	uchar *interned_val_refs;
+	uchar **interned_val_refs;
 };
 
 struct lookup_sparseArray_tab_entry_s {
@@ -58,6 +60,8 @@ struct lookup_string_tab_s {
 
 struct lookup_ref_s {
 	pthread_rwlock_t rwlock;	/* protect us in case of dynamic reloads */
+	uchar *name;
+	uchar *filename;
 	lookup_t *self;
 	lookup_ref_t *next;
 };
@@ -66,10 +70,9 @@ typedef es_str_t* (lookup_fn_t)(lookup_t*, lookup_key_t);
 
 /* a single lookup table */
 struct lookup_s {
-	uchar *name;
-	uchar *filename;
 	uint32_t nmemb;
 	uint8_t type;
+	uint8_t key_type;
 	union {
 		lookup_string_tab_t *str;
 		lookup_array_tab_t *arr;

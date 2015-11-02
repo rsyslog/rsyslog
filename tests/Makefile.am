@@ -131,8 +131,8 @@ TESTS +=  \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
-	key_dereference_on_uninitialized_variable_space.sh
-
+	key_dereference_on_uninitialized_variable_space.sh \
+	array_lookup_table.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -146,7 +146,9 @@ TESTS +=  \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
 	unused_lookup_table.sh \
-	lookup_table-vg.sh
+	lookup_table-vg.sh \
+	array_lookup_table-vg.sh \
+	array_lookup_table_misuse-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -870,6 +872,15 @@ EXTRA_DIST= \
 	unused_lookup_table.sh \
 	lookup_table-vg.sh \
 	testsuites/unused_lookup_table.conf \
+	array_lookup_table.sh \
+	array_lookup_table-vg.sh \
+	array_lookup_table_misuse-vg.sh \
+	testsuites/array_lookup_table.conf \
+	testsuites/xlate_array.lkp_tbl \
+	testsuites/xlate_array_more.lkp_tbl \
+	testsuites/xlate_array_misuse.lkp_tbl \
+	testsuites/xlate_array_more_misuse.lkp_tbl \
+	testsuites/xlate_array_more.lkp_tbl \
 	cfg.sh
 
 # TODO: re-enable

@@ -1195,7 +1195,7 @@ done:
 static long long
 var2Number(struct var *r, int *bSuccess)
 {
-	long long n;
+	long long n = 0;
 	if(r->datatype == 'S') {
 		n = es_str2num(r->d.estr, bSuccess);
 	} else {
@@ -1589,7 +1589,7 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
-		dbgprintf("rainerscript: desired random-number range [0 - %ld) is wider than supported limit of [0 - %ld)", max, MAX_RANDOM_NUMBER);
+		dbgprintf("rainerscript: desired random-number range [0 - %lld) is wider than supported limit of [0 - %d)", max, MAX_RANDOM_NUMBER);
 	}
 	return x % max;
 }
@@ -1614,6 +1614,8 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 	struct funcData_prifilt *pPrifilt;
 	rsRetVal localRet;
 	lookup_key_t key;
+	uint8_t lookup_key_type;
+	lookup_t *lookup_table;
 
 	dbgprintf("rainerscript: executing function id %d\n", func->fID);
 	switch(func->fID) {
@@ -1782,10 +1784,20 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			break;
 		}
 		cnfexprEval(func->expr[1], &r[1], usrptr);
-		str = (char*) var2CString(&r[1], &bMustFree);
-		key.k_str = (uchar*)str;
-		ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
-		if(bMustFree) free(str);
+		lookup_table = ((lookup_ref_t*)func->funcdata)->self;
+		if (lookup_table != NULL) {
+			lookup_key_type = lookup_table->key_type;
+			if (lookup_key_type == LOOKUP_KEY_TYPE_STRING) {
+				key.k_str = (uchar*) var2CString(&r[1], &bMustFree);
+			} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
+				key.k_uint = var2Number(&r[1], NULL);
+				bMustFree = 0;
+			}
+			ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
+			if(bMustFree) free(key.k_str);
+		} else {
+			ret->d.estr = es_newStrFromCStr("", 1);
+		}
 		varFreeMembers(&r[1]);
 		break;
 	default:
@@ -3730,7 +3742,7 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("wrap")) {
 		GENERATE_FUNC_WITH_NARG_RANGE("wrap", 2, 3, CNFFUNC_WRAP,
-									  "number of parameters for wrap() must either be "
+									  "number of parameters for %s() must either be "
 									  "two (operand_string, wrapper) or"
 									  "three (operand_string, wrapper, wrapper_escape_str)"
 									  "but is %d.");
