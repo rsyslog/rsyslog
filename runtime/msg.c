@@ -3621,9 +3621,9 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			 */
 			; /*DO NOTHING*/
 		} else {
-			if(iTo > bufLen)  /* iTo is very large, if no to-position is set in the template! */
+			if(iTo >= bufLen)  /* iTo is very large, if no to-position is set in the template! */
 				if (pTpe->data.field.options.bFixedWidth == 0)
-					iTo = bufLen;
+					iTo = bufLen - 1;
 
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
 			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
