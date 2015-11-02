@@ -103,6 +103,10 @@ if ENABLE_PMSNARE
 SUBDIRS += contrib/pmsnare
 endif
 
+if ENABLE_PMPANNGFW
+SUBDIRS += contrib/pmpanngfw
+endif
+
 if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
 endif
