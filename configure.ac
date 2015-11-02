@@ -1378,6 +1378,19 @@ AC_ARG_ENABLE(pmsnare,
 AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
 
 
+# settings for pmpanngfw
+AC_ARG_ENABLE(pmpanngfw,
+        [AS_HELP_STRING([--enable-pmpanngfw],[Compiles Palo Alto Networks parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmpanngfw="yes" ;;
+          no) enable_pmpanngfw="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmpanngfw) ;;
+         esac],
+        [enable_pmpanngfw=no]
+)
+AM_CONDITIONAL(ENABLE_PMPANNGFW, test x$enable_pmpanngfw = xyes)
+
+
 # settings for omruleset
 AC_ARG_ENABLE(omruleset,
         [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=no@:>@])],
@@ -1708,6 +1721,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		contrib/pmsnare/Makefile \
+    contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
@@ -1777,6 +1791,7 @@ echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"

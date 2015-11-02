@@ -1,7 +1,13 @@
 ------------------------------------------------------------------------------
 Version 8.14.0 [v8-stable] 2015-11-03
+- added pmpanngfw: contributed module for translating Palo Alto Networks logs. 
+  see also: https://github.com/rsyslog/rsyslog/pull/573
+  Thanks to Luigi Mori for the contribution. 
+- testbench: Changed valgrind option for imtcp-tls-basic-vg.sh
+  For details see: https://github.com/rsyslog/rsyslog/pull/569
 - Added possibility to customize librdkafka location
   see also: https://github.com/rsyslog/rsyslog/pull/502
+  Thanks to Matthew Wang for the patch.
 - add property "rawmsg-after-pri"
 - solr external output plugin much enhanced
   see also: https://github.com/rsyslog/rsyslog/pull/529
