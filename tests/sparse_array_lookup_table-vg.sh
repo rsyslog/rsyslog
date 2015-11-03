@@ -19,14 +19,33 @@ cp $srcdir/testsuites/xlate_sparse_array.lkp_tbl $srcdir/xlate_array.lkp_tbl
 cp $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh injectmsg  0 6
-echo doing shutdown
-. $srcdir/diag.sh shutdown-when-empty
-echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+. $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000003: bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000004: baz"
 . $srcdir/diag.sh content-check "msgnum:00000005: baz"
+cp $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl $srcdir/xlate_array.lkp_tbl
+. $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh injectmsg  0 15
+echo doing shutdown
+. $srcdir/diag.sh shutdown-when-empty
+echo wait on shutdown
+. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh content-check "msgnum:00000000: quux"
+. $srcdir/diag.sh content-check "msgnum:00000001: quux"
+. $srcdir/diag.sh content-check "msgnum:00000002: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000003: baz_latest"
+. $srcdir/diag.sh content-check "msgnum:00000004: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000005: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000006: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000007: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000008: baz_latest"
+. $srcdir/diag.sh content-check "msgnum:00000009: baz_latest"
+. $srcdir/diag.sh content-check "msgnum:00000010: baz_latest"
+. $srcdir/diag.sh content-check "msgnum:00000011: baz_latest"
+. $srcdir/diag.sh content-check "msgnum:00000012: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000013: foo_latest"
+. $srcdir/diag.sh content-check "msgnum:00000014: foo_latest"
 . $srcdir/diag.sh exit

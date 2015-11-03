@@ -11,6 +11,12 @@ cp $srcdir/testsuites/xlate_empty_file.lkp_tbl $srcdir/xlate.lkp_tbl
 . $srcdir/diag.sh injectmsg  0 5
 . $srcdir/diag.sh wait-queueempty
 
+echo "table with invalid-json..."
+cp $srcdir/testsuites/xlate_invalid_json.lkp_tbl $srcdir/xlate.lkp_tbl
+. $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh injectmsg  0 5
+. $srcdir/diag.sh wait-queueempty
+
 echo "string-table with no index-key..."
 cp $srcdir/testsuites/xlate_string_no_index.lkp_tbl $srcdir/xlate.lkp_tbl
 . $srcdir/diag.sh issue-HUP

@@ -240,8 +240,9 @@ static es_str_t*
 lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 	const char *r;
 	uint32_t uint_key = key.k_uint;
+	uint32_t idx = uint_key - pThis->table.arr->first_key;
 
-	if (pThis->table.arr->first_key + pThis->nmemb <= uint_key) {
+	if ((idx < 0) || (idx >= pThis->nmemb)) {
 		r = defaultVal(pThis);
 	} else {
 		r = (char*) pThis->table.arr->interned_val_refs[uint_key - pThis->table.arr->first_key];
@@ -367,6 +368,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 		if (prev_index_set == 0) {
 			prev_index = index;
 			prev_index_set = 1;
+			pThis->table.arr->first_key = index;
 		} else {
 			if (index != ++prev_index) {
 				errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contiguous members between index '%d' and '%d'",
