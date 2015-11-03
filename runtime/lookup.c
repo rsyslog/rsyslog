@@ -144,9 +144,8 @@ lookupDestruct(lookup_t *pThis) {
 		destructTable_arr(pThis);
 	} else if (pThis->type == SPARSE_ARRAY_LOOKUP_TABLE) {
 		destructTable_sparseArr(pThis);
-	} else {
-		assert(0);//destructor is missing for a new lookup-table type
 	}
+	
 	for (i = 0; i < pThis->interned_val_count; i++) {
 		free(pThis->interned_vals[i]);
 	}
@@ -250,11 +249,45 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 	return es_newStrFromCStr(r, strlen(r));
 }
 
+typedef int (comp_fn_t)(const void *s1, const void *s2);
+
+static inline void *
+bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_fn_t *comp_fn)
+{
+	size_t l, u, idx;
+	const void *p;
+	int comparison;
+
+	l = 0;
+	u = nmemb;
+	if (l == u) {
+		return NULL;
+	}
+	while (l < u) {
+		idx = (l + u) / 2;
+		p = (void *) (((const char *) base) + (idx * size));
+		comparison = (*comp_fn)(key, p);
+		if (comparison < 0)
+			u = idx;
+		else if (comparison > 0)
+			l = idx + 1;
+		else
+			return (void *) p;
+    }
+	if (comparison < 0) {
+		if (idx == 0) {
+			return NULL;
+		}
+		idx--;
+	}
+	return (void *) (((const char *) base) + ( idx * size));
+}
+
 static es_str_t*
 lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	lookup_sparseArray_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -264,8 +297,13 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 }
 
 /* builders for different table-types */
+
+#define NO_INDEX_ERROR(type, name)				\
+	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' field", type, name); \
+	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+
 static inline rsRetVal
-build_StringTable(lookup_t *pThis, struct json_object *jtab) {
+build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
@@ -279,6 +317,9 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab) {
 		jrow = json_object_array_get_idx(jtab, i);
 		jindex = json_object_object_get(jrow, "index");
 		jvalue = json_object_object_get(jrow, "value");
+		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+			NO_INDEX_ERROR("string", name);
+		}
 		CHKmalloc(pThis->table.str->entries[i].key = strdup(json_object_get_string(jindex)));
 		value = (uchar*) json_object_get_string(jvalue);
 		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
@@ -289,7 +330,6 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab) {
 		
 	pThis->lookup = lookupKey_str;
 	pThis->key_type = LOOKUP_KEY_TYPE_STRING;
-	
 finalize_it:
 	RETiRet;
 }
@@ -315,6 +355,9 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 		jrow = json_object_array_get_idx(jtab, i);
 		jindex = json_object_object_get(jrow, "index");
 		jvalue = json_object_object_get(jrow, "value");
+		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+			NO_INDEX_ERROR("array", name);
+		}
 		indexes[i].index = (uint32_t) json_object_get_int(jindex);
 		indexes[i].val = (uchar*) json_object_get_string(jvalue);
 	}
@@ -326,7 +369,7 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 			prev_index_set = 1;
 		} else {
 			if (index != ++prev_index) {
-				errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contigious values between index '%d' and '%d'",
+				errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contiguous members between index '%d' and '%d'",
 								name, prev_index, index);
 				ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 			}
@@ -345,7 +388,7 @@ finalize_it:
 }
 
 static inline rsRetVal
-build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab) {
+build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
 	uchar *value, *canonicalValueRef;
@@ -359,6 +402,9 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab) {
 		jrow = json_object_array_get_idx(jtab, i);
 		jindex = json_object_object_get(jrow, "index");
 		jvalue = json_object_object_get(jrow, "value");
+		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+			NO_INDEX_ERROR("sparseArray", name);
+		}
 		pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
 		value = (uchar*) json_object_get_string(jvalue);
 		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
@@ -374,24 +420,27 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal
-lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
-{
-	struct json_object *jversion, *jnomatch, *jtype, *jtab;
+static rsRetVal
+lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* name) {
+	struct json_object *jnomatch, *jtype, *jtab;
 	struct json_object *jrow, *jindex, *jvalue;
 	const char *table_type, *nomatch_value;
 	const uchar **all_values;
 	const uchar *curr, *prev;
+	int version;
 	uint32_t i, j;
 	uint32_t uniq_values;
 
 	DEFiRet;
 	all_values = NULL;
 
-	jversion = json_object_object_get(jroot, "version");
 	jnomatch = json_object_object_get(jroot, "nomatch");
 	jtype = json_object_object_get(jroot, "type");
 	jtab = json_object_object_get(jroot, "table");
+	if (jtab == NULL || !json_object_is_type(jtab, json_type_array)) {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+	}
 	pThis->nmemb = json_object_array_length(jtab);
 	table_type = json_object_get_string(jtype);
 	if (table_type == NULL) {
@@ -404,6 +453,10 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	for(i = 0; i < pThis->nmemb; i++) {
 		jrow = json_object_array_get_idx(jtab, i);
 		jvalue = json_object_object_get(jrow, "value");
+		if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
+			errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'value' field", table_type, name);
+			ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+		}
 		all_values[i] = (const uchar*) json_object_get_string(jvalue);
 	}
 	qsort(all_values, pThis->nmemb, sizeof(uchar*), qs_arrcmp_ustrs);
@@ -416,17 +469,19 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 		}
 	}
 
-	CHKmalloc(pThis->interned_vals = malloc(uniq_values * sizeof(uchar*)));
-	j = 0;
-	CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[0]));
-	for(i = 1; i < pThis->nmemb ; ++i) {
-		curr = all_values[i];
-		prev = all_values[i - 1];
-		if (strcmp(prev, curr) != 0) {
-			CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[i]));
+	if (pThis->nmemb > 0)  {
+		CHKmalloc(pThis->interned_vals = malloc(uniq_values * sizeof(uchar*)));
+		j = 0;
+		CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[0]));
+		for(i = 1; i < pThis->nmemb ; ++i) {
+			curr = all_values[i];
+			prev = all_values[i - 1];
+			if (strcmp(prev, curr) != 0) {
+				CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[i]));
+			}
 		}
+		pThis->interned_val_count = uniq_values;
 	}
-	pThis->interned_val_count = uniq_values;
 	/* uniq values captured (sorted) */
 
 	nomatch_value = json_object_get_string(jnomatch);
@@ -439,14 +494,41 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 		CHKiRet(build_ArrayTable(pThis, jtab, name));
 	} else if (strcmp(table_type, "sparseArray") == 0) {
 		pThis->type = SPARSE_ARRAY_LOOKUP_TABLE;
-		CHKiRet(build_SparseArrayTable(pThis, jtab));
-	} else {
+		CHKiRet(build_SparseArrayTable(pThis, jtab, name));
+	} else if (strcmp(table_type, "string") == 0) {
 		pThis->type = STRING_LOOKUP_TABLE;
-		CHKiRet(build_StringTable(pThis, jtab));
+		CHKiRet(build_StringTable(pThis, jtab, name));
+	} else {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported type: '%s'", name, table_type);
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+	}
+finalize_it:
+	if (all_values != NULL) free(all_values);
+	RETiRet;	
+}
+
+rsRetVal
+lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
+{
+	struct json_object *jversion;
+	int version = 1;
+
+	DEFiRet;
+
+	jversion = json_object_object_get(jroot, "version");
+	if (jversion != NULL && !json_object_is_type(jversion, json_type_null)) {
+		version = json_object_get_int(jversion);
+	} else {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version (will use default value: %d)", name, version);
+	}
+	if (version == 1) {
+		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
+	} else {
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unsupported version: %d", name, version);
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
 finalize_it:
-	if (all_values != NULL) free(all_values);
 	RETiRet;
 }
 

@@ -286,6 +286,7 @@ case $1 in
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
+		    echo content-missing assertion failed
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;

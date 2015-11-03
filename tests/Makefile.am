@@ -133,7 +133,8 @@ TESTS +=  \
 	lookup_table.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
-	sparse_array_lookup_table.sh
+	sparse_array_lookup_table.sh \
+	lookup_table_bad_configs.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -150,7 +151,8 @@ TESTS +=  \
 	lookup_table-vg.sh \
 	array_lookup_table-vg.sh \
 	array_lookup_table_misuse-vg.sh \
-	sparse_array_lookup_table-vg.sh
+	sparse_array_lookup_table-vg.sh \
+	lookup_table_bad_configs-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -886,6 +888,24 @@ EXTRA_DIST= \
 	sparse_array_lookup_table-vg.sh \
 	testsuites/xlate_sparse_array.lkp_tbl \
 	testsuites/xlate_sparse_array_more.lkp_tbl \
+	lookup_table_bad_configs.sh \
+	lookup_table_bad_configs-vg.sh \
+        testsuites/lookup_table_all.conf \
+	testsuites/xlate_array_empty_table.lkp_tbl \
+	testsuites/xlate_array_no_index.lkp_tbl \
+	testsuites/xlate_array_no_table.lkp_tbl \
+	testsuites/xlate_array_no_value.lkp_tbl \
+	testsuites/xlate_empty_file.lkp_tbl \
+	testsuites/xlate_incorrect_type.lkp_tbl \
+	testsuites/xlate_incorrect_version.lkp_tbl \
+	testsuites/xlate_sparseArray_empty_table.lkp_tbl \
+	testsuites/xlate_sparseArray_no_index.lkp_tbl \
+	testsuites/xlate_sparseArray_no_table.lkp_tbl \
+	testsuites/xlate_sparseArray_no_value.lkp_tbl \
+	testsuites/xlate_string_empty_table.lkp_tbl \
+	testsuites/xlate_string_no_index.lkp_tbl \
+	testsuites/xlate_string_no_table.lkp_tbl \
+	testsuites/xlate_string_no_value.lkp_tbl \
 	cfg.sh
 
 # TODO: re-enable
