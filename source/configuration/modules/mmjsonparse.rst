@@ -12,14 +12,14 @@ JSON/CEE Structured Content Extraction Module (mmjsonparse)
 This module provides support for parsing structured log messages that
 follow the CEE/lumberjack spec. The so-called "CEE cookie" is checked
 and, if present, the JSON-encoded structured message content is parsed.
-The properties are than available as original message properties.
+The properties are then available as original message properties.
 
 The "CEE cookie" is the character squence "@cee:" which must prepend the
 actual JSON. Note that the JSON must be valid and MUST NOT be followed
 by any non-JSON message. If either of these conditions is not true,
 mmjsonparse will **not** parse the associated JSON. This is based on the
 cookie definition used in CEE/project lumberjack and is meant to aid
-against an errornous detection of a message as being CEE where it is
+against an erroneous detection of a message as being CEE where it is
 not.
 
 This also means that mmjsonparse currently is NOT a generic JSON parser

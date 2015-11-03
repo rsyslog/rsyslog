@@ -15,18 +15,19 @@ systems.
 It supports, among others, :doc:`MySQL <tutorials/database>`,
 :doc:`PostgreSQL <tutorials/database>`,
 :doc:`failover log destinations <tutorials/failover_syslog_server>`,
-syslog/tcp transport, fine grain output format control, high precision timestamps,
+ElasticSearch, syslog/tcp transport, fine grain output format control,
+high precision timestamps,
 queued operations and the ability to filter on any message part.
 
 Manual
 ------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    
    configuration/index
    installation/index
-   concepts/index
    troubleshooting/index
+   concepts/index
    examples/index
    tutorials/index
    development/index
@@ -66,11 +67,9 @@ Related Links
 -------------
 
 .. [1] `rsyslog Website <http://www.rsyslog.com/>`_ 
-.. [2] `Project Status Page <http://www.rsyslog.com/status>`_
-.. [3] `rsyslog Change Log <http://www.rsyslog.com/Topic4.phtml>`_
-.. [4] `rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
-.. [5] `Professional rsyslog Support <http://www.rsyslog.com/professional-services>`_
-.. [6] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
-.. [7] `Rainer's twitter feed <http://twitter.com/rgerhards>`_
-.. [8] `Rainer's Blog <http://blog.gerhards.net/>`_
+.. [2] `rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
+.. [3] `Professional rsyslog Support <http://www.rsyslog.com/professional-services>`_
+.. [4] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
+.. [5] `Rainer's twitter feed <http://twitter.com/rgerhards>`_
+.. [6] `Rainer's Blog <http://blog.gerhards.net/>`_
 

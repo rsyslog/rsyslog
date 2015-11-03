@@ -12,3 +12,4 @@ objects.
 
    om*
    sigprov_gt
+   sigprov_ksi

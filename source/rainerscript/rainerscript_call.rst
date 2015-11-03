@@ -2,7 +2,7 @@ The rsyslog "call" statement
 ============================
 
 The rsyslog "call" statement is used to tie rulesets together. It is
-modelled after the usual programming langauge "call" statement. Think of
+modelled after the usual programming language "call" statement. Think of
 a ruleset as a subroutine (what it really is!) and you get the picture.
 
 The "call" statement can be used to call into any type of rulesets. If a

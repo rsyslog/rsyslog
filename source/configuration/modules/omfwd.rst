@@ -34,7 +34,7 @@ Action Parameters
    Name or IP-Address of the system that shall receive messages. Any
    resolvable name is fine.
 
--  **Port** [Default 514]
+-  **Port**
 
    Name or numerical value of port to use when connecting to target.
 
@@ -154,6 +154,36 @@ Action Parameters
    are cycled and not reused too frequently). This usually is perceived
    as a \`\`new connection'' by load balancers, which in turn forward
    messages to another physical target system.
+
+-  **KeepAlive** *[**on**/off*]
+
+   Enable or disable keep-alive packets at the tcp socket layer. The
+   default is to disable them.
+
+-  **KeepAliveProbes** integer
+
+   The number of unacknowledged probes to send before considering the
+   connection dead and notifying the application layer. The default, 0,
+   means that the operating system defaults are used. This has only
+   effect if keep-alive is enabled. The functionality may not be
+   available on all platforms.
+
+-   **KeepAliveIntvl** integer
+
+   The interval between subsequential keepalive probes, regardless of
+   what the connection has exchanged in the meantime. The default, 0,
+   means that the operating system defaults are used. This has only
+   effect if keep-alive is enabled. The functionality may not be
+   available on all platforms.
+
+-   **KeepAliveTime** integer
+
+   The interval between the last data packet sent (simple ACKs are not
+   considered data) and the first keepalive probe; after the connection
+   is marked to need keepalive, this counter is not used any further.
+   The default, 0, means that the operating system defaults are used.
+   This has only effect if keep-alive is enabled. The functionality may
+   not be available on all platforms.
 
 -  **StreamDriver** string
 

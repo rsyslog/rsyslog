@@ -161,10 +161,10 @@ Property Options
 options are defined:
 
 **uppercase**
-  convert property to lowercase only
+  convert property to uppercase only
 
 **lowercase**
-  convert property text to uppercase only
+  convert property text to lowercase only
 
 **json**
   encode the value so that it can be used inside a JSON field. This means

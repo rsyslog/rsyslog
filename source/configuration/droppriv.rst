@@ -11,7 +11,7 @@ another user and/or group after startup.
 Please note that due to POSIX standards, rsyslogd always needs to start
 up as root if there is a listener who must bind to a network port below
 1024. For example, the UDP listener usually needs to listen to 514 and
-as such rsyslogd needs to start up as root.
+therefore rsyslogd needs to start up as root.
 
 If you do not need this functionality, you can start rsyslog directly as
 an ordinary user. That is probably the safest way of operations.

@@ -6,12 +6,9 @@ You can also browse the following online resources:
 -  the `rsyslog wiki <http://wiki.rsyslog.com/>`_, a community resource
    which includes `rsyslog configuration
    examples <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_
--  `rsyslog online documentation (most current version
-   only) <http://www.rsyslog.com/module-Static_Docs-view-f-manual.html.phtml>`_
 -  `rsyslog discussion forum - use this for technical
    support <http://kb.monitorware.com/rsyslog-f40.html>`_
 -  `rsyslog video tutorials <http://www.rsyslog.com/Topic8.phtml>`_
--  `rsyslog change log <http://www.rsyslog.com/Topic4.phtml>`_
 -  `rsyslog FAQ <http://www.rsyslog.com/Topic3.phtml>`_
 -  `syslog device configuration
    guide <http://www.monitorware.com/en/syslog-enabled-products/>`_
@@ -38,4 +35,4 @@ Feedback is always welcome, but if you have a support question, please
 do not mail Rainer directly (`why not? <free_support.html>`_) - use the
 `rsyslog mailing
 list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_ or `rsyslog
-formum <http://kb.monitorware.com/rsyslog-f40.html>`_ instead.
+forum <http://kb.monitorware.com/rsyslog-f40.html>`_ instead.

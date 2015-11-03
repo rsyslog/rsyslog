@@ -7,7 +7,7 @@ there currently is only sparse documentation on the process available. I
 was tempted NOT to write this guide here because I know I will most
 probably not be able to write a complete guide.
 
-However, I finally concluded that it may be better to have same
+However, I finally concluded that it may be better to have some
 information and pointers than to have nothing.
 
 Getting Started and Samples
@@ -59,7 +59,7 @@ So as long as you do not mess around with global data, you do not need
 to think about multithreading (and can apply a purely sequential
 programming methodology).
 
-Please note that duringt the configuraton parsing stage of execution,
+Please note that during the configuration parsing stage of execution,
 access to global variables for the configuration system is safe. In that
 stage, the core will only call sequentially into the plugin.
 
@@ -95,7 +95,7 @@ can also request access to the template components. The typical use case
 seems to be databases, where you would like to access properties via
 specific fields. With that mode, you receive a char \*\* array, where
 each array element points to one field from the template (from left to
-right). Fields start at arrray index 0 and a NULL pointer means you have
+right). Fields start at array index 0 and a NULL pointer means you have
 reached the end of the array (the typical Unix "poor man's linked list
 in an array" design). Note, however, that each of the individual
 components is a string. It is not a date stamp, number or whatever, but
@@ -171,24 +171,24 @@ Previously, only a single-message interface was supported.
 With the **single message** plugin interface, each message is passed via
 a separate call to the plugin. Most importantly, the rsyslog engine
 assumes that each call to the plugin is a complete transaction and as
-such assumes that messages be properly commited after the plugin returns
+such assumes that messages be properly committed after the plugin returns
 to the engine.
 
 With the **batching** interface, rsyslog employs something along the
 line of "transactions". Obviously, the rsyslog core can not make
 non-transactional outputs to be fully transactional. But what it can is
-support that the output tells the core which messages have been commited
+support that the output tells the core which messages have been committed
 by the output and which not yet. The core can than take care of those
-uncommited messages when problems occur. For example, if a plugin has
-received 50 messages but not yet told the core that it commited them,
+uncommitted messages when problems occur. For example, if a plugin has
+received 50 messages but not yet told the core that it committed them,
 and then returns an error state, the core assumes that all these 50
 messages were **not** written to the output. The core then requeues all
 50 messages and does the usual retry processing. Once the output plugin
 tells the core that it is ready again to accept messages, the rsyslog
-core will provide it with these 50 not yet commited messages again
+core will provide it with these 50 not yet committed messages again
 (actually, at this point, the rsyslog core no longer knows that it is
-re-submiting the messages). If, in contrary, the plugin had told rsyslog
-that 40 of these 50 messages were commited (before it failed), then only
+re-submitting the messages). If, in contrary, the plugin had told rsyslog
+that 40 of these 50 messages were committed (before it failed), then only
 10 would have been requeued and resubmitted.
 
 In order to provide an efficient implementation, there are some (mild)
@@ -205,7 +205,7 @@ may receive batches of single messages, so they are required to commit
 each message individually. If the plugin tries to be "smarter" than the
 rsyslog engine and does not commit messages in those cases (for
 example), the plugin puts message stream integrity at risk: once rsyslog
-has notified the plugin of transacton end, it discards all messages as
+has notified the plugin of transaction end, it discards all messages as
 it considers them committed and save. If now something goes wrong, the
 rsyslog core does not try to recover lost messages (and keep in mind
 that "goes wrong" includes such uncontrollable things like connection
@@ -225,8 +225,8 @@ properly-crafted plugins).
 The second restriction is that if a plugin makes commits in between
 (what is perfectly legal) those commits must be in-order. So if a commit
 is made for message ten out of 50, this means that messages one to nine
-are also commited. It would be possible to remove this restriction, but
-we have decided to deliberately introduce it to simpify things.
+are also committed. It would be possible to remove this restriction, but
+we have decided to deliberately introduce it to simplify things.
 
 Output Plugin Transaction Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -329,9 +329,9 @@ batching, no such query-interface exists. So we introduce it with that
 release. What the means is if a rsyslog core can not provide this query
 interface, it is a core that was build before batching support was
 available. So the absence of a query interface indicates that the
-transactional interface is not available. One might now be tempted the
+transactional interface is not available. One might now be tempted to
 think there is no need to do the actual check, but is is recommended to
-ask the rsyslog engine explicitely if the transactional interface is
+ask the rsyslog engine explicitly if the transactional interface is
 present and will be honored. This enables us to create versions in the
 future which have, for whatever reason we do not yet know, no support
 for this interface.
@@ -344,7 +344,7 @@ macro, which can be used as follows:
     INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 
 Here, bCoreSupportsBatching is a plugin-defined integer which after
-execution is 1 if batches (and thus the transational interface) is
+execution is 1 if batches (and thus the transactional interface) is
 supported and 0 otherwise. CORE\_FEATURE\_BATCHING is the feature we are
 interested in. Future versions of rsyslog may contain additional
 feature-test-macros (you can see all of them in ./runtime/rsyslog.h).

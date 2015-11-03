@@ -46,6 +46,14 @@ used.
    that the data is protected against observers. Please note that both
    the client and the server must have set TLS to either "on" or "off".
    Other combinations lead to unpredictable results.
+
+   *Attention when using GnuTLS 2.10.x or older*
+
+   Versions older than GnuTLS 2.10.x may cause a crash (Segfault) under
+   certain circumstances. Most likely when an imrelp inputs and an
+   omrelp output is configured. The crash may happen when you are
+   receiving/sending messages at the same time. Upgrade to a newer
+   version like GnuTLS 2.12.21 to solve the problem.
 -  **tls.compression** (not mandatory, values "on","off", default "off")
    The controls if the TLS stream should be compressed (zipped). While
    this increases CPU use, the network bandwidth should be reduced. Note

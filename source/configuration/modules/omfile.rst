@@ -384,9 +384,13 @@ selects whether a static or dynamic file (name) shall be written to.
 
    enables file syncing capability of omfile.
 
-   Note that this causes a severe performance hit if enabled. Actually,
+   When enabled, rsyslog does a sync to the data file as well as the
+   directory it resides after processing each batch. There currently
+   is no way to sync only after each n-th batch.
+
+   Enabling sync causes a severe performance hit. Actually,
    it slows omfile so much down, that the probability of loosing messages
-   actually increases (except if queue hardening is required). In short,
+   **increases**. In short,
    you should enable syncing only if you know exactly what you do, and
    fully understand how the rest of the engine works, and have tuned
    the rest of the engine to lossless operations.
@@ -398,7 +402,7 @@ selects whether a static or dynamic file (name) shall be written to.
    Selects a signature provider for log signing. By selecting a provider,
    the signature feature is turned on.
 
-   Currently, there only is one provider called ":doc:`gt <sigprov_gt>`". 
+   Currently, there are two providers available ":doc:`gt <sigprov_gt>`" and ":doc:`ksi <sigprov_ksi>`". 
 
 .. function::  cry.provider [providerName]
 
