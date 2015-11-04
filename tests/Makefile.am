@@ -907,9 +907,9 @@ EXTRA_DIST= \
 	testsuites/xlate_string_no_table.lkp_tbl \
 	testsuites/xlate_string_no_value.lkp_tbl \
 	testsuites/xlate_invalid_json.lkp_tbl \
-	tests/testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl \
-	tests/testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
-	tests/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	cfg.sh
 
 # TODO: re-enable
