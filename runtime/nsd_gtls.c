@@ -643,6 +643,17 @@ gtlsInitSession(nsd_gtls_t *pThis)
 
 	pThis->sess = session;
 
+#	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+	/* store a pointer to ourselfs (needed by callback) */
+	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
+	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
+	if(iRet == RS_RET_OK) {
+		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
+	} else if(iRet != RS_RET_CERTLESS) {
+		FINALIZE; /* we have an error case! */
+	}
+#	endif
+
 finalize_it:
 	RETiRet;
 }
