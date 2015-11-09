@@ -71,7 +71,7 @@
 /* TODO: move the global variable root to the config object - had no time to to it
  * right now before vacation -- rgerhards, 2013-07-22
  */
-static pthread_rwlock_t glblVars_rwlock;
+static pthread_mutex_t glblVars_lock;
 struct json_object *global_var_root = NULL;
 
 /* static data */
@@ -2816,7 +2816,7 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 	} else if(pProp->id == PROP_LOCAL_VAR) {
 		jroot = pMsg->localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
-		pthread_rwlock_rdlock(&glblVars_rwlock);
+		pthread_mutex_lock(&glblVars_lock);
 		jroot = global_var_root;
 	} else {
 		DBGPRINTF("msgGetJSONPropVal; invalid property id %d\n",
@@ -2841,7 +2841,7 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 
 finalize_it:
 	if(pProp->id == PROP_GLOBAL_VAR)
-		pthread_rwlock_unlock(&glblVars_rwlock);
+		pthread_mutex_unlock(&glblVars_lock);
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
@@ -2867,7 +2867,7 @@ msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object
 	} else if(pProp->id == PROP_LOCAL_VAR) {
 		jroot = pMsg->localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
-		pthread_rwlock_rdlock(&glblVars_rwlock);
+		pthread_mutex_lock(&glblVars_lock);
 		jroot = global_var_root;
 	} else {
 		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
@@ -2894,7 +2894,7 @@ finalize_it:
 	if(pProp->id == PROP_GLOBAL_VAR) {
 		if (*pjson != NULL)
 			*pjson = jsonDeepCopy(*pjson);
-		pthread_rwlock_unlock(&glblVars_rwlock);
+		pthread_mutex_unlock(&glblVars_lock);
 	} else {
 		if (*pjson != NULL)
 			json_object_get(*pjson);
@@ -4305,7 +4305,7 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_re
 	} else if(name[0] == '.') {
 		pjroot = &pM->localvars;
 	} else if (name[0] == '/') { /* globl var */
-		pthread_rwlock_wrlock(&glblVars_rwlock);
+		pthread_mutex_lock(&glblVars_lock);
 		pjroot = &global_var_root;
 		if (sharedReference) {
 			given = json;
@@ -4367,7 +4367,7 @@ msgAddJSON(msg_t * const pM, uchar *name, struct json_object *json, int force_re
 
 finalize_it:
 	if(name[0] == '/')
-		pthread_rwlock_unlock(&glblVars_rwlock);
+		pthread_mutex_unlock(&glblVars_lock);
 	MsgUnlock(pM);
 	RETiRet;
 }
@@ -4388,7 +4388,7 @@ msgDelJSON(msg_t * const pM, uchar *name)
 	} else if(name[0] == '.') {
 		jroot = &pM->localvars;
 	} else if (name[0] == '/') { /* globl var */
-		pthread_rwlock_wrlock(&glblVars_rwlock);
+		pthread_mutex_lock(&glblVars_lock);
 		jroot = &global_var_root;
 	} else {
 		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, Local or Global variable).", name);
@@ -4429,7 +4429,7 @@ msgDelJSON(msg_t * const pM, uchar *name)
 
 finalize_it:
 	if(name[0] == '/')
-		pthread_rwlock_unlock(&glblVars_rwlock);
+		pthread_mutex_unlock(&glblVars_lock);
 	MsgUnlock(pM);
 	RETiRet;
 }
@@ -4615,7 +4615,7 @@ rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  * rgerhards, 2008-01-04
  */
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
-	pthread_rwlock_init(&glblVars_rwlock, NULL);
+	pthread_mutex_init(&glblVars_lock, NULL);
 
 	/* request objects we use */
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
