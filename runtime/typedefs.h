@@ -84,6 +84,7 @@ typedef struct parserList_s parserList_t;
 typedef struct strgen_s strgen_t;
 typedef struct strgenList_s strgenList_t;
 typedef struct statsobj_s statsobj_t;
+typedef void (*statsobj_read_notifier_t)(statsobj_t *);
 typedef struct nsd_epworkset_s nsd_epworkset_t;
 typedef struct templates_s templates_t;
 typedef struct queuecnf_s queuecnf_t;
@@ -110,6 +111,9 @@ typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerou
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef struct actWrkrIParams actWrkrIParams_t;
+typedef struct dynstats_bucket_s dynstats_bucket_t;
+typedef struct dynstats_buckets_s dynstats_buckets_t;
+typedef struct dynstats_ctr_s dynstats_ctr_t;
 
 /* under Solaris (actually only SPARC), we need to redefine some types
  * to be void, so that we get void* pointers. Otherwise, we will see

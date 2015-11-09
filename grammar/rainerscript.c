@@ -1774,7 +1774,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		ret->datatype = 'N';
 		break;
 	case CNFFUNC_LOOKUP:
-dbgprintf("DDDD: executing lookup\n");
+		dbgprintf("DDDD: executing lookup\n");
 		ret->datatype = 'S';
 		if(func->funcdata == NULL) {
 			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
@@ -1783,6 +1783,18 @@ dbgprintf("DDDD: executing lookup\n");
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		str = (char*) var2CString(&r[1], &bMustFree);
 		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
+		if(bMustFree) free(str);
+		varFreeMembers(&r[1]);
+		break;
+	case CNFFUNC_DYN_INC:
+		ret->datatype = 'N';
+		if(func->funcdata == NULL) {
+			ret->d.n = -1;
+			break;
+		}
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		str = (char*) var2CString(&r[1], &bMustFree);
+		ret->d.n = dynstats_inc(func->funcdata, (uchar*)str);
 		if(bMustFree) free(str);
 		varFreeMembers(&r[1]);
 		break;
@@ -2426,7 +2438,7 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+	if(func->fID != CNFFUNC_EXEC_TEMPLATE && func->fID != CNFFUNC_DYN_INC)
 		free(func->funcdata);
 	free(func->fname);
 }
@@ -3869,6 +3881,34 @@ finalize_it:
 	RETiRet;
 }
 
+static inline rsRetVal
+initFunc_dyn_stats(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+					  __LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating functions like dyn_inc must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
+		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
 
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
@@ -3912,6 +3952,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_EXEC_TEMPLATE:
 				initFunc_exec_template(func);
+				break;
+			case CNFFUNC_DYN_INC:
+				initFunc_dyn_stats(func);
 				break;
 			default:break;
 		}

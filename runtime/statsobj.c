@@ -106,6 +106,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pthread_mutex_init(&pThis->mutCtr, NULL);
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
+	pThis->read_notifier = NULL;
 ENDobjConstruct(statsobj)
 
 
@@ -117,6 +118,17 @@ statsobjConstructFinalize(statsobj_t *pThis)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, statsobj);
 	addToObjList(pThis);
+	RETiRet;
+}
+
+/* set read_notifier (a function which is invoked after stats are read).
+ */
+static rsRetVal
+setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier)
+{
+	DEFiRet;
+	pThis->read_notifier = notifier;
+finalize_it:
 	RETiRet;
 }
 
@@ -156,10 +168,12 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef)
 {
 	ctr_t *ctr;
 	DEFiRet;
+
+	*entryRef = NULL;
 
 	CHKmalloc(ctr = malloc(sizeof(ctr_t)));
 	ctr->next = NULL;
@@ -176,9 +190,46 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t fla
 		break;
 	}
 	addCtrToList(pThis, ctr);
+	*entryRef = ctr;
 
 finalize_it:
 	RETiRet;
+}
+
+static rsRetVal
+addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+{
+	ctr_t *ctr;
+	DEFiRet;
+	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr));
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+destructCounter(statsobj_t *pThis, ctr_t *pCtr)
+{
+    DEFiRet;
+
+    pthread_mutex_lock(&pThis->mutCtr);
+	if (pCtr->prev != NULL) {
+		pCtr->prev->next = pCtr->next;
+	}
+	if (pCtr->next != NULL) {
+		pCtr->next->prev = pCtr->prev;
+	}
+	if (pThis->ctrLast == pCtr) {
+		pThis->ctrLast = pCtr->prev;
+	}
+	if (pThis->ctrRoot == pCtr) {
+		pThis->ctrRoot = pCtr->next;
+	}
+	pthread_mutex_unlock(&pThis->mutCtr);
+	free(pCtr->name);
+	free(pCtr);
+    
+finalize_it:
+    RETiRet;
 }
 
 static inline void
@@ -398,9 +449,12 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->DebugPrint = statsobjDebugPrint;
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
+	pIf->SetReadNotifier = setReadNotifier;
 	//pIf->GetStatsLine = getStatsLine;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
+	pIf->AddManagedCounter = addManagedCounter;
+	pIf->DestructCounter = destructCounter;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)
