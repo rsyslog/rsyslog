@@ -175,7 +175,7 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 
 	*entryRef = NULL;
 
-	CHKmalloc(ctr = malloc(sizeof(ctr_t)));
+	CHKmalloc(ctr = calloc(1, sizeof(ctr_t)));
 	ctr->next = NULL;
 	ctr->prev = NULL;
 	CHKmalloc(ctr->name = ustrdup(ctrName));
@@ -193,6 +193,10 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 	*entryRef = ctr;
 
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(ctr->name);
+        free(ctr);
+    }
 	RETiRet;
 }
 

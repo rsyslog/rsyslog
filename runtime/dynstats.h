@@ -8,6 +8,7 @@ typedef struct hsearch_data htable;
 
 struct dynstats_ctr_s {
     STATSCOUNTER_DEF(ctr, mutCtr);
+    ctr_t *pCtr;
     SLIST_ENTRY(dynstats_ctr_s) link;
 };
 
@@ -37,6 +38,7 @@ struct dynstats_buckets_s {
 	STATSCOUNTER_DEF(metricsAdded, mutMetricsAdded);
 	STATSCOUNTER_DEF(metricsPurged, mutMetricsPurged);
     pthread_rwlock_t lock;
+    uint8_t initialized;
 };
 
 rsRetVal dynstats_initCnf(dynstats_buckets_t *b);
