@@ -226,7 +226,7 @@ TESTS +=  \
 	mmnormalize_variable.sh \
 	mmnormalize_regex_defaulted.sh \
 	mmnormalize_regex_disabled.sh
-	#mmnormalize_tokenized.sh 
+#mmnormalize_tokenized.sh 
 endif
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
