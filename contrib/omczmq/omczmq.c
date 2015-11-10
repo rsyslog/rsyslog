@@ -50,11 +50,12 @@ typedef struct _instanceData {
 	zactor_t *authActor;	/* reference to a CZMQ auth actor */
 	zactor_t *beaconActor;	/* reference to a CZMQ beacon actor */
 	zsock_t *sock;			/* zeromq socket */
-    bool serverish;			/* whether socket will be a server (bind) or client */
+	bool serverish;			/* whether socket will be a server (bind) or client */
+	int sendTimeout;		/* send timeout for socket (defaults to -1) */  
 	zcert_t *clientCert;	/* client curve certificate */
 	zcert_t *serverCert;	/* server curve certificate */
-    zlist_t *topics;        /* publish topics if set */
-
+	zlist_t *topics;		/* publish topics if set */
+	bool sendError;			/* set to true of a socket send timed out */
 	char *sockEndpoints;	/* (required) comma delimited list of endpoints */
 	int sockType;			/* (required) the type of our zeromq socket */
 	char *authType;			/* (optional) type of authentication */
@@ -79,6 +80,10 @@ typedef struct wrkrInstanceData {
  *		each socket type.
  * socktype
  *		The type of zeromq socket to use; supports PUB, PUSH and DEALER.
+ * sndTimeout
+ *		Send timeout. Defaults to -1, which is "block forever" and the
+ *		standard ZeroMQ default. 0 = immediate, otherwise is value
+ *		in milliseconds.
  * beacon
  *		The beacon is lit! If beacon is set to a value, that value
  *		will be used to advertise the existence of this endpoint
@@ -107,6 +112,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
+	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "beacon", eCmdHdlrGetWord, 0 },
 	{ "beaconport", eCmdHdlrGetWord, 0 },
 	{ "authtype", eCmdHdlrGetWord, 0 },
@@ -137,7 +143,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	if (!pData->authActor) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: could not create auth actor");
-		ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+		ABORT_FINALIZE (RS_RET_SUSPENDED);
 	}
 
 	DBGPRINTF ("omczmq: auth actor started\n");
@@ -151,7 +157,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 	DBGPRINTF ("omczmq: created socket...\n");
@@ -166,7 +172,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		if (!pData->beaconActor) {
 			errmsg.LogError(0, RS_RET_NO_ERRCODE,
 					"omczmq: could not create beacon service");
-			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+			ABORT_FINALIZE (RS_RET_SUSPENDED);
 		}
 
 		DBGPRINTF ("omczmq: started beacon actor...\n");
@@ -177,7 +183,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		if (!*hostname) {
 			errmsg.LogError(0, RS_RET_NO_ERRCODE,
 					"omczmq: no UDP broadcasting available");
-			ABORT_FINALIZE (RS_RET_NO_ERRCODE);
+			ABORT_FINALIZE (RS_RET_SUSPENDED);
 		}
 
 		zsock_send(pData->beaconActor, "sbi", "PUBLISH", pData->beacon, strlen(pData->beacon));
@@ -263,7 +269,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	if (rc == -1) {
 		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				pData->sockEndpoints);
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 finalize_it:
@@ -278,36 +284,35 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* if we have a ZMQ_PUB sock and topics, send with topics */
+	/* if we have a ZMQ_PUB sock and topics, send once per topic */
 	if (pData->sockType == ZMQ_PUB && pData->topics) {
 		char *topic = zlist_first(pData->topics);
+		zframe_t *msgFrame = zframe_from((char *)msg);
+
 		while (topic) {
 			int rc = zstr_sendm(pData->sock, topic);
-			if (rc == -1) {
-				errmsg.LogError(0, NO_ERRCODE, "omczmq: send of topic %s failed"
-						": %s", topic, zmq_strerror(errno));
-				ABORT_FINALIZE(RS_RET_ERR);
+			if (rc != 0) {
+				pData->sendError = true;
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 
-			rc = zstr_send(pData->sock, (char*)msg);
-			if (rc == -1) {
-				errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
-						msg, zmq_strerror(errno));
-				ABORT_FINALIZE(RS_RET_ERR);
+			rc = zframe_send (&msgFrame, pData->sock, ZFRAME_REUSE);
+			if (rc != 0) {
+				pData->sendError = true;
+				zframe_destroy(&msgFrame);
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 
 			topic = zlist_next(pData->topics);
 		}
+		zframe_destroy(&msgFrame);
 	} 
+	/* otherwise do a normal send */
 	else {
-		/* send the log line */
 		int rc = zstr_send(pData->sock, (char*)msg);
-
-		/* something is very wrong */
-		if (rc == -1) {
-			errmsg.LogError(0, NO_ERRCODE, "omczmq: send of %s failed: %s",
-					msg, zmq_strerror(errno));
-			ABORT_FINALIZE(RS_RET_ERR);
+		if (rc != 0) {
+			pData->sendError = true;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}
 finalize_it:
@@ -318,14 +323,17 @@ static inline void
 setInstParamDefaults(instanceData* pData) {
 	pData->sockEndpoints = NULL;
 	pData->sock = NULL;
+	pData->sendError = false;
 	pData->serverish = false;
 	pData->clientCert = NULL;
 	pData->serverCert = NULL;
 	pData->tplName = NULL;
 	pData->sockType = -1;
+	pData->sendTimeout = -1;
 	pData->topics = NULL;
 	pData->authActor = NULL;
 	pData->beaconActor = NULL;
+	pData->beaconport = 0;
 	pData->authType = NULL;
 	pData->clientCertPath = NULL;
 	pData->serverCertPath = NULL;
@@ -381,10 +389,20 @@ ENDfreeWrkrInstance
 
 
 BEGINtryResume
+	instanceData *pData = pWrkrData->pData;
 CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
-	if(NULL == pWrkrData->pData->sock) {
-		iRet = initCZMQ(pWrkrData->pData);
+	if (pData->sendError) {
+		DBGPRINTF("omczmq: trying to resume from a send error...\n");
+		pData->sendError = false;
+		iRet = RS_RET_OK;
+	}
+	else {
+		DBGPRINTF("omczmq: trying to resume from an init error...\n");
+		zsock_destroy(&pData->sock);
+		zactor_destroy(&pData->beaconActor);
+		zactor_destroy(&pData->authActor);
+		iRet = initCZMQ(pData);
 	}
 	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
@@ -424,22 +442,23 @@ CODESTARTnewActInst
 	* - topics - optional
 	*/
 
+	/* Handle options from the configuration */
+	/* ------------------------------------- */
+
 	for (i = 0; i < actpblk.nParams; ++i) {
 		if (!pvals[i].bUsed) {
 			continue;
 		}
 
-		/* endpoints */
 		if (!strcmp(actpblk.descr[i].name, "endpoints")) {
 			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} 
-
-		/* template */
 		else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} 
-
-		/* socktype */
+		}
+		else if (!strcmp(actpblk.descr[i].name, "sendtimeout")) {
+			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
 		else if (!strcmp(actpblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
 
@@ -452,18 +471,19 @@ CODESTARTnewActInst
 			else if (!strcmp("DEALER", stringType)) {
 				pData->sockType = ZMQ_DEALER;
 			}
+			else if (!strcmp("STREAM", stringType)) {
+				pData->sockType = ZMQ_STREAM;
+			}
 			else {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"omczmq: invalid socktype");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
-
-		/* authtype */
 		else if (!strcmp(actpblk.descr[i].name, "authtype")) {
 			pData->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
 
-			/* make sure defined type is supported */
+			/* auth must be NULL, CURVESERVER or CURVECLIENT */
 			if ((pData->authType != NULL) && 
 					strcmp("CURVESERVER", pData->authType) &&
 					strcmp("CURVECLIENT", pData->authType))
@@ -475,28 +495,18 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
-
-		/* clientcertpath */
 		else if (!strcmp(actpblk.descr[i].name, "clientcertpath")) {
 			pData->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-
-		/* servercertpath */
 		else if (!strcmp(actpblk.descr[i].name, "servercertpath")) {
 			pData->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-
-		/* beacon */
 		else if (!strcmp(actpblk.descr[i].name, "beacon")) {
 			pData->beacon = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-		
-		/* beaconport */
 		else if (!strcmp(actpblk.descr[i].name, "beaconport")) {
 			pData->beaconport = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 		}
-
-		/* topics */
 		else if(!strcmp(actpblk.descr[i].name, "topics")) {
 			if (pData->sockType != ZMQ_PUB) {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
@@ -504,8 +514,8 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 
+			// create a list of topics
 			pData->topics = zlist_new();
-
 			char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
 			char topic[256];
 			while (*topics) {
@@ -528,36 +538,28 @@ CODESTARTnewActInst
 				topics = delimiter + 1;
 			}
 		}
-
-		/* abort on unrecognized option */
 		else {
-			errmsg.LogError(0, NO_ERRCODE, "omczmq: %s is not a valid option",
+			errmsg.LogError(0, NO_ERRCODE,
+					"omczmq: config error - '%s' is not a valid option",
 					actpblk.descr[i].name);
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		}
 	}
 
-	/* if we don't have a template name, 
-	 * use the default RSYSLOG_ForwardFormat template */
+	/* Defaults and sanity checking  */
+	/* ----------------------------- */
+
 	if (pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
 					OMSR_NO_RQD_TPL_OPTS));
 	} 
-
-	/* use the requested template */
 	else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 	}
 
-	/* error if no socket endpoints are defined */
-	if (NULL == pData->sockEndpoints) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omczmq: sockEndpoint required");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-
-	/* error if no socket type is defined */
-	if (pData->sockType == -1) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "omczmq: socktype required");
+	if ((pData->beacon != NULL) && (pData->beaconport == 0)) {
+		errmsg.LogError(0, NO_ERRCODE,
+				"omczmq: config error - beaconport is required if beacon is set");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
