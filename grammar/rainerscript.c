@@ -3731,6 +3731,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
 	} else if(FUNC_NAME("lookup")) {
 		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
+	} else if(FUNC_NAME("dyn_inc")) {
+		GENERATE_FUNC("dyn_inc", 2, CNFFUNC_DYN_INC);
 	} else if(FUNC_NAME("replace")) {
 		GENERATE_FUNC_WITH_ERR_MSG(
 			"replace", 3, CNFFUNC_REPLACE,

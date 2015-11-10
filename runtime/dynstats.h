@@ -10,6 +10,7 @@ struct dynstats_ctr_s {
     STATSCOUNTER_DEF(ctr, mutCtr);
     ctr_t *pCtr;
     SLIST_ENTRY(dynstats_ctr_s) link;
+    uchar *metric;
 };
 
 struct dynstats_bucket_s {
@@ -21,6 +22,8 @@ struct dynstats_bucket_s {
 	ctr_t *pOpsOverflowCtr;
 	STATSCOUNTER_DEF(ctrNewMetricAdd, mutCtrNewMetricAdd);
 	ctr_t *pNewMetricAddCtr;
+	STATSCOUNTER_DEF(ctrNoMetric, mutCtrNoMetric);
+	ctr_t *pNoMetricCtr;
 	SLIST_ENTRY(dynstats_bucket_s) link;
     SLIST_HEAD(, dynstats_ctr_s) ctrs;
     uint32_t maxCardinality;

@@ -227,6 +227,11 @@ case $1 in
 		echo injectmsg $2 $3 $4 $5 | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
+    'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
+		echo injecting msg payload from: $2
+    cat $2 | sed -e 's/^/injectmsg litteral /g' | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		# TODO: some return state checking? (does it really make sense here?)
+		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
@@ -276,6 +281,14 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+   'first-column-sum-check') 
+		sum=$(cat $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		if [ "$sum" -eq $4 ]; then
+		    echo sum of first column with edit-expr "'$2'" run over file "'$3'" equals "'$sum'" which is not equal to expected value of "'$4'"
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+
    'content-pattern-check') 
 		cat rsyslog.out.log | grep -q "$2"
 		if [ "$?" -ne "0" ]; then

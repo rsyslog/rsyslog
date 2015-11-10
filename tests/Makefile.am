@@ -173,6 +173,17 @@ endif
 endif
 endif
 
+if ENABLE_IMPSTATS
+TESTS +=  \
+	dynstats.sh \
+	dynstats_overflow.sh \
+	dynstats_reset.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	dynstats-vg.sh
+endif
+endif
+
 if ENABLE_IMPTCP
 # note that some tests simply USE imptcp, but they also
 # need to be disabled if we do not have this module
@@ -818,6 +829,13 @@ EXTRA_DIST= \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
+	dynstats.sh \
+	testsuites/dynstats.conf \
+	testsuites/dynstats_input \
+	dynstats_overflow.sh \
+	testsuites/dynstats_overflow.conf \
+	dynstats_reset.sh \
+	testsuites/dynstats_reset.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \

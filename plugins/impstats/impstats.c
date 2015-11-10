@@ -468,6 +468,7 @@ CODESTARTfreeCnf
 	if(runModConf->logfd != -1)
 		close(runModConf->logfd);
 	free(runModConf->logfile);
+	free(runModConf->pszBindRuleset);
 ENDfreeCnf
 
 
