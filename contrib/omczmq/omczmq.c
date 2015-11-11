@@ -287,7 +287,6 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 	/* if we have a ZMQ_PUB sock and topics, send once per topic */
 	if (pData->sockType == ZMQ_PUB && pData->topics) {
 		char *topic = zlist_first(pData->topics);
-		zframe_t *msgFrame = zframe_from((char *)msg);
 
 		while (topic) {
 			int rc = zstr_sendm(pData->sock, topic);
@@ -296,16 +295,14 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 
-			rc = zframe_send (&msgFrame, pData->sock, ZFRAME_REUSE);
+			rc = zstr_send(pData->sock, (char*)msg);
 			if (rc != 0) {
 				pData->sendError = true;
-				zframe_destroy(&msgFrame);
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 
 			topic = zlist_next(pData->topics);
 		}
-		zframe_destroy(&msgFrame);
 	} 
 	/* otherwise do a normal send */
 	else {
