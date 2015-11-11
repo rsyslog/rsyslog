@@ -223,9 +223,9 @@ endif
 if ENABLE_MMNORMALIZE
 if ENABLE_IMPTCP
 TESTS +=  \
-	mmnormalize_variable.sh \
 	mmnormalize_regex_defaulted.sh \
 	mmnormalize_regex_disabled.sh
+#mmnormalize_variable.sh 
 #mmnormalize_tokenized.sh 
 endif
 if LOGNORM_REGEX_SUPPORTED
