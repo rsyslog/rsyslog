@@ -65,6 +65,7 @@ typedef struct _instanceData {
 	char *beacon;			/* (optional) content of beacon if beaconing */
 	int beaconport;			/* (optional) port of beacon if beaconing */
 	char *topicList;		/* (optional) topic list */
+	bool topicFrame;		/* (optional) whether to set topic as separate frame */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -119,7 +120,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "clientcertpath", eCmdHdlrGetWord, 0 },
 	{ "servercertpath", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
-	{ "topics", eCmdHdlrGetWord, 0 }
+	{ "topics", eCmdHdlrGetWord, 0 },
+	{ "topicframe", eCmdHdlrGetWord, 0}
 };
 
 static struct cnfparamblk actpblk = {
@@ -289,18 +291,21 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 		char *topic = zlist_first(pData->topics);
 
 		while (topic) {
-			int rc = zstr_sendm(pData->sock, topic);
-			if (rc != 0) {
-				pData->sendError = true;
-				ABORT_FINALIZE(RS_RET_SUSPENDED);
-			}
+			if (pData->topicFrame) {
+				int rc = zstr_sendx(pData->sock, topic, (char*)msg, NULL);
+				if (rc != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+			} 
+			else {
+				int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)msg);
+				if (rc != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
 
-			rc = zstr_send(pData->sock, (char*)msg);
-			if (rc != 0) {
-				pData->sendError = true;
-				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
-
 			topic = zlist_next(pData->topics);
 		}
 	} 
@@ -335,6 +340,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->clientCertPath = NULL;
 	pData->serverCertPath = NULL;
 	pData->topicList = NULL;
+	pData->topicFrame = true;
 }
 
 
@@ -503,6 +509,15 @@ CODESTARTnewActInst
 		}
 		else if (!strcmp(actpblk.descr[i].name, "beaconport")) {
 			pData->beaconport = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
+		else if (!strcmp(actpblk.descr[i].name, "topicframe")) {
+			int tframe  = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			if (tframe == 1) {
+				pData->topicFrame = true;
+			}
+			else {
+				pData->topicFrame = false;
+			}
 		}
 		else if(!strcmp(actpblk.descr[i].name, "topics")) {
 			if (pData->sockType != ZMQ_PUB) {
