@@ -1188,16 +1188,44 @@ done:
 }
 
 
-/* ensure that retval is a number; if string is no number,
- * try to convert it to one. The semantics from es_str2num()
- * are used (bSuccess tells if the conversion went well or not).
+static inline int64_t
+str2num(es_str_t *s, int *bSuccess)
+{
+	size_t i;
+	int neg;
+	int64_t num = 0;
+	const uchar *const c = es_getBufAddr(s);
+
+	if(c[0] == '-') {
+		neg = -1;
+		i = -1;
+	} else {
+		neg = 1;
+		i = 0;
+	}
+	while(i < s->lenStr && isdigit(c[i])) {
+		num = num * 10 + c[i] - '0';
+		++i;
+	}
+	num *= neg;
+	if(bSuccess != NULL)
+		*bSuccess = (i == s->lenStr) ? 1 : 0;
+	return num;
+}
+
+/* We support decimal integers. Unfortunately, previous versions
+ * said they support oct and hex, but that wasn't really the case.
+ * Everything based on JSON was just dec-converted. As this was/is
+ * the norm, we fix that inconsistency. Luckly, oct and hex support
+ * was never documented.
+ * rgerhards, 2015-11-12
  */
 static long long
 var2Number(struct var *r, int *bSuccess)
 {
 	long long n;
 	if(r->datatype == 'S') {
-		n = es_str2num(r->d.estr, bSuccess);
+		n = str2num(r->d.estr, bSuccess);
 	} else {
 		if(r->datatype == 'J') {
 #ifdef HAVE_JSON_OBJECT_NEW_INT64
