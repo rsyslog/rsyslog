@@ -1226,6 +1226,9 @@ var2Number(struct var *r, int *bSuccess)
 	long long n;
 	if(r->datatype == 'S') {
 		n = str2num(r->d.estr, bSuccess);
+char *cc = es_str2cstr(r->d.estr, NULL);
+dbgprintf("JSONorString: string is '%s', num %d\n", cc, (int)n);
+free(cc);
 	} else {
 		if(r->datatype == 'J') {
 #ifdef HAVE_JSON_OBJECT_NEW_INT64
@@ -1738,6 +1741,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
+		dbgprintf("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
 		break;
 	case CNFFUNC_RE_MATCH:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1778,6 +1782,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
 		}
 		if(localRet == RS_RET_OK) {
+dbgprintf("JSONorString: return String is '%s'\n", resStr);
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
 		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
@@ -1837,21 +1842,31 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	unsigned short bMustBeFreed = 0;
 	rsRetVal localRet;
 	struct json_object *json;
+	uchar *cstr;
 
 	if(var->prop.id == PROP_CEE        ||
 	   var->prop.id == PROP_LOCAL_VAR  ||
 	   var->prop.id == PROP_GLOBAL_VAR   ) {
-		localRet = msgGetJSONPropJSON((msg_t*)usrptr, &var->prop, &json);
-		ret->datatype = 'J';
-		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
-			
-		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name,
+		localRet = msgGetJSONPropJSONorString((msg_t*)usrptr, &var->prop, &json, &cstr);
+		if(json != NULL) {
+			ret->datatype = 'J';
+			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+			DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
+				var->prop.id, var->prop.name,
 			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
+		} else { /* we have a string */
+			ret->datatype = 'S';
+			ret->d.estr = (localRet == RS_RET_OK) ?
+					  es_newStrFromCStr((char*) cstr, strlen((char*) cstr))
+					: es_newStr(1);
+			DBGPRINTF("rainerscript: (json/string) var %d: '%s'\n", var->prop.id, cstr);
+			free(cstr);
+		}
 	} else {
 		ret->datatype = 'S';
 		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
-		DBGPRINTF("rainerscript: var %d: '%s'\n", var->prop.id, pszProp);
+		DBGPRINTF("rainerscript: (string) var %d: '%s'\n", var->prop.id, pszProp);
 		if(bMustBeFreed)
 			free(pszProp);
 	}
@@ -2424,7 +2439,8 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
-	DBGPRINTF("eval expr %p, return datatype '%c'\n", expr, ret->datatype);
+	DBGPRINTF("eval expr %p, return datatype '%c':%d\n", expr, ret->datatype,
+		(ret->datatype == 'N') ? (int)ret->d.n: 0);
 }
 
 //---------------------------------------------------------

@@ -2861,6 +2861,74 @@ finalize_it:
 }
 
 
+/* Get a JSON-based-variable as native json object, except
+ * when it is string type, in which case a string is returned.
+ * This is an optimization to not use JSON when not strictly
+ * necessary. This in turn is helpful, as calling json-c is
+ * *very* expensive due to our need for locking and deep
+ * copies.
+ * The caller needs to check pjson and pcstr: one of them
+ * is non-NULL and contains the return value. Note that
+ * the caller is responsible for freeing the string pointer
+ * it if is being returned.
+ */
+rsRetVal
+msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson,
+	uchar **pcstr)
+{
+	struct json_object *jroot;
+	uchar *leaf;
+	struct json_object *parent;
+	pthread_mutex_t *mut = NULL;
+	DEFiRet;
+
+	*pjson = NULL, *pcstr = NULL;
+
+	if(pProp->id == PROP_CEE) {
+		jroot = pMsg->json;
+		mut = &pMsg->mut_json;
+	} else if(pProp->id == PROP_LOCAL_VAR) {
+		jroot = pMsg->localvars;
+		mut = &pMsg->mut_json;
+	} else if(pProp->id == PROP_GLOBAL_VAR) {
+		mut = &glblVars_lock;
+		jroot = global_var_root;
+	} else {
+		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
+			  pProp->id);
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+	if(mut != NULL)
+		pthread_mutex_lock(mut);
+
+	if(!strcmp((char*)pProp->name, "!")) {
+		*pjson = jroot;
+		FINALIZE;
+	}
+	leaf = jsonPathGetLeaf(pProp->name, pProp->nameLen);
+	CHKiRet(jsonPathFindParent(jroot, pProp->name, leaf, &parent, 1));
+	if(jsonVarExtract(parent, (char*)leaf, pjson) == FALSE) {
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+	if(*pjson != NULL) {
+		if(json_object_get_type(*pjson) == json_type_string) {
+			*pcstr = (uchar*) strdup(json_object_get_string(*pjson));
+			*pjson = NULL;
+		}
+	}
+
+finalize_it:
+	/* we need a deep copy, as another thread may modify the object */
+	if(*pjson != NULL)
+		*pjson = jsonDeepCopy(*pjson);
+	if(mut != NULL)
+		pthread_mutex_unlock(mut);
+dbgprintf("JSONorString: pjson %p, pcstr %p\n", *pjson, *pcstr);
+	RETiRet;
+}
+
+
+
 /* Get a JSON-based-variable as native json object */
 rsRetVal
 msgGetJSONPropJSON(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson)

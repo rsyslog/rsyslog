@@ -216,6 +216,7 @@ uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
 rsRetVal msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
+rsRetVal msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson, uchar **pcstr);
 rsRetVal getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
 rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var, int force_reset);
 rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
