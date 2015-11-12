@@ -264,7 +264,6 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			break;
 		case ZMQ_PUSH:
 		case ZMQ_DEALER:
-		case ZMQ_STREAM:
 			pData->serverish = false;
 			break;
 	}
@@ -475,9 +474,6 @@ CODESTARTnewActInst
 			}
 			else if (!strcmp("DEALER", stringType)) {
 				pData->sockType = ZMQ_DEALER;
-			}
-			else if (!strcmp("STREAM", stringType)) {
-				pData->sockType = ZMQ_STREAM;
 			}
 			else {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
