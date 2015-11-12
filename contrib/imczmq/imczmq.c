@@ -54,6 +54,7 @@ DEFobjCurrIf(ruleset)
 typedef struct _pollerData_t {
 	ruleset_t *ruleset;
 	thrdInfo_t *thread; 
+	int sockType;	
 } pollerData_t;
 
 
@@ -154,7 +155,7 @@ static struct cnfparamblk inppblk = {
 };
 
 static void setDefaults(instanceConf_t* iconf) {
-	iconf->serverish = false;
+	iconf->serverish = true;
 	iconf->beacon = NULL;
 	iconf->beaconPort = -1;
 	iconf->sockType = -1;
@@ -217,14 +218,15 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 			if (!strcmp("SUB", stringType)) {
 				inst->sockType = ZMQ_SUB;
 			}
-
 			else if (!strcmp("PULL", stringType)) {
 				inst->sockType = ZMQ_PULL;
 			}
-
+			else if (!strcmp("ROUTER", stringType)) {
+				inst->sockType = ZMQ_ROUTER;
+			}
 			else {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-						"imczmq: invalid sockType");
+						"imczmq: '%s' is invalid sockType", stringType);
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
 		} 
@@ -328,7 +330,6 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 		if (!strcmp(iconf->authType, "CURVESERVER")) {
 
-			iconf->serverish = true;
 			zsock_set_zap_domain(pData->sock, "global");
 			zsock_set_curve_server(pData->sock, 1);
 
@@ -353,7 +354,6 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 		else if (!strcmp(iconf->authType, "CURVECLIENT")) {
 
-			iconf->serverish = false;
 			pData->clientCert = zcert_load(iconf->clientCertPath);
 			
 			if (!pData->clientCert) {
@@ -386,8 +386,6 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	/* ------------------- */
 
 	if (iconf->sockType == ZMQ_SUB) {
-		iconf->serverish = false;
-
 		char topic[256], *list = iconf->topicList;
 		while (list) {
 			char *delimiter = strchr(list, ',');
@@ -413,6 +411,17 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			list = delimiter + 1;
 		}
 	}
+
+	switch (iconf->sockType) {
+		case ZMQ_SUB:
+			iconf->serverish = false;
+			break;
+		case ZMQ_PULL:
+		case ZMQ_ROUTER:
+			iconf->serverish = true;
+			break;
+	}
+
 
 	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints,
 			iconf->serverish);
@@ -443,9 +452,11 @@ static int handlePoll(zloop_t __attribute__((unused)) *loop, zmq_pollitem_t *pol
 	msg_t* pMsg;
 	pollerData_t *pollerData = (pollerData_t *)args;
 
-	zmsg_t *msg = zmsg_recv(poller->socket);
-	zframe_t *payload = zmsg_last(msg);
-	char* buf = zframe_strdup(payload);
+	if (pollerData->sockType == ZMQ_ROUTER ) {
+		zframe_t *idFrame = zframe_recv (poller->socket);
+		zframe_destroy (&idFrame);
+	}
+	char *buf = zstr_recv(poller->socket);
 	
 	if (msgConstruct(&pMsg) == RS_RET_OK) {
 		MsgSetRawMsg(pMsg, buf, strlen(buf));
@@ -460,8 +471,7 @@ static int handlePoll(zloop_t __attribute__((unused)) *loop, zmq_pollitem_t *pol
 		submitMsg2(pMsg);
 	}
 	
-	free(buf);
-	zmsg_destroy(&msg);
+	zstr_free(&buf);
 	
 	if( pollerData->thread->bShallStop == TRUE) {
 		return -1; 
@@ -520,6 +530,7 @@ static rsRetVal rcvData(thrdInfo_t* pThrd){
 		
 		pollerData[i].thread  = pThrd;
 		pollerData[i].ruleset = current->pRuleset;
+		pollerData[i].sockType = zsock_type(current->sock);
 	}
 
 	int rc;
