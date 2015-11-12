@@ -133,9 +133,10 @@ static struct cnfparamblk actpblk = {
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
 
-	/* Here, we tell CZMQ to not install it's own signal handler,
-	 * as we want to allow rsyslog to handle signals as usual */
-	putenv ("ZSYS_SIGHANDLER=false");
+	/* Turn off CZMQ signal handling */
+	/* ----------------------------- */	
+
+    putenv ("ZSYS_SIGHANDLER=false");
 
 	/* Create the authentication actor */
 	/* ------------------------------ */
@@ -177,8 +178,6 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			ABORT_FINALIZE (RS_RET_SUSPENDED);
 		}
 
-		DBGPRINTF ("omczmq: started beacon actor...\n");
-		
 		zsock_send(pData->beaconActor, "si", "CONFIGURE", pData->beaconport);
 		char *hostname = zstr_recv(pData->beaconActor);
 		
@@ -195,6 +194,9 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 		zstr_free (&hostname);
 	}
+
+	/* Load certs for auth if auth is used */
+	/* ----------------------------------- */
 
 	if (pData->authType != NULL) {
 
