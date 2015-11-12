@@ -1617,7 +1617,9 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
-		dbgprintf("rainerscript: desired random-number range [0 - %ld) is wider than supported limit of [0 - %ld)", max, MAX_RANDOM_NUMBER);
+		dbgprintf("rainerscript: desired random-number range [0 - %lld] "
+			"is wider than supported limit of [0 - %d)",
+			max, MAX_RANDOM_NUMBER);
 	}
 	return x % max;
 }
@@ -3695,10 +3697,10 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 static const char* const numInWords[] = {"zero", "one", "two", "three", "four", "five", "six"};
 
 #define GENERATE_FUNC_WITH_NARG_RANGE(name, minArg, maxArg, funcId, errMsg) \
-	if(nParams < minArg || nParams > maxArg) {							\
-		parser_errmsg(errMsg, name, nParams);							\
-		return CNFFUNC_INVALID;											\
-	}																	\
+	if(nParams < minArg || nParams > maxArg) {	\
+		parser_errmsg(errMsg, name, nParams);	\
+		return CNFFUNC_INVALID;			\
+	}						\
 	return funcId
 
 
@@ -3755,10 +3757,10 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("wrap")) {
 		GENERATE_FUNC_WITH_NARG_RANGE("wrap", 2, 3, CNFFUNC_WRAP,
-									  "number of parameters for wrap() must either be "
-									  "two (operand_string, wrapper) or"
-									  "three (operand_string, wrapper, wrapper_escape_str)"
-									  "but is %d.");
+			"number of parameters for %s() must either be "
+			"two (operand_string, wrapper) or"
+			"three (operand_string, wrapper, wrapper_escape_str)"
+			"but is %d.");
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
 	} else {
