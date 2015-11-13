@@ -1197,7 +1197,7 @@ initAll(int argc, char **argv)
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
 					 "soon.\n"
 					 "For the 0x01 bit, please use the "
-					 "global(net.parseHostnamdAndTag=\"off\") "
+					 "global(parser.parseHostnameAndTag=\"off\") "
 					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
 			}
