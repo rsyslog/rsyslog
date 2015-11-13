@@ -7,6 +7,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to Luigi Mori for the contribution. 
 - testbench: Changed valgrind option for imtcp-tls-basic-vg.sh
   For details see: https://github.com/rsyslog/rsyslog/pull/569
+- pmciscoios: support for asterisk before timestamp added
+  thanks to github user c0by for the patch
+  see also: https://github.com/rsyslog/rsyslog/pull/583
 - solr external output plugin much enhanced
   see also: https://github.com/rsyslog/rsyslog/pull/529
   Thanks to Radu Gheorghe for the patch.
