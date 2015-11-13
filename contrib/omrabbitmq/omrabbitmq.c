@@ -41,6 +41,9 @@
 #include "cfsysline.h"
 
 #include <amqp.h>
+#include <amqp_tcp_socket.h>
+
+#define RABBITMQ_CHANNEL 1
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -69,9 +72,13 @@ typedef struct _instanceData {
 	uchar *vhost;
 	uchar *user;
 	uchar *password;
-	uchar *exchange;
+	char *exchange;
 	uchar *routing_key;
 	uchar *tplName;
+	char *exchange_type;
+	int durable;
+	int auto_delete;
+	int delivery_mode;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -89,7 +96,11 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "password", eCmdHdlrGetWord, 0 },
 	{ "exchange", eCmdHdlrGetWord, 0 },
 	{ "routing_key", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "exchange_type", eCmdHdlrGetWord, 0},
+	{ "durable", eCmdHdlrNonNegInt, 0},
+	{ "auto_delete", eCmdHdlrNonNegInt, 0},
+	{ "delivery_mode", eCmdHdlrNonNegInt, 0}
 };
 static struct cnfparamblk actpblk =
 	{
@@ -108,9 +119,9 @@ die_on_error(int x, char const *context)
 	int retVal = 0; // false
 
 	if (x < 0) {
-		char *errstr = amqp_error_string(-x);
+		const char *errstr = amqp_error_string2(-x);
 		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, errstr);
-		free(errstr);
+
 		retVal = 1; // true
 	}
 
@@ -136,7 +147,7 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 		break;
 
 	case AMQP_RESPONSE_LIBRARY_EXCEPTION:
-		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, amqp_error_string(x.library_error));
+		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: %s", context, amqp_error_string2(x.library_error));
 		break;
 
 	case AMQP_RESPONSE_SERVER_EXCEPTION:
@@ -195,19 +206,26 @@ closeAMQPConnection(instanceData *pData)
 static rsRetVal
 initRabbitMQ(instanceData *pData)
 {
-	int sockfd;
+	amqp_socket_t *asocket;
+	amqp_exchange_declare_t edReq;
 	DEFiRet;
 
 	DBGPRINTF("omrabbitmq: trying connect to '%s' at port %d\n", pData->host, pData->port);
         
 	pData->conn = amqp_new_connection();
 
-	if (die_on_error(sockfd = amqp_open_socket((char*) pData->host, pData->port), "Opening socket")) {
+	asocket = amqp_tcp_socket_new(pData->conn);
+	if (!asocket) {
+		errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: Error allocating tcp socket");
+
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	amqp_set_sockfd(pData->conn, sockfd);
+	if (die_on_error(amqp_socket_open(asocket, (char*) pData->host, pData->port), "Opening socket")) {
+		pData->conn = NULL;
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
 
 	if (die_on_amqp_error(amqp_login(pData->conn, (char*) pData->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, pData->user, pData->password),
 		"Logging in")) {
@@ -215,11 +233,28 @@ initRabbitMQ(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	amqp_channel_open(pData->conn, 1);
-
+	amqp_channel_open(pData->conn, RABBITMQ_CHANNEL);
 	if (die_on_amqp_error(amqp_get_rpc_reply(pData->conn), "Opening channel")) {
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+
+	if(pData->exchange_type != NULL) {
+		edReq.ticket = 0;
+		edReq.exchange = amqp_cstring_bytes(pData->exchange);
+		edReq.type = amqp_cstring_bytes(pData->exchange_type);
+		edReq.passive = 0;
+		edReq.durable = pData->durable;
+		edReq.auto_delete = pData->auto_delete;
+		edReq.internal = 0;
+		edReq.nowait = 0;
+		edReq.arguments = amqp_empty_table;
+
+		amqp_simple_rpc_decoded(pData->conn, RABBITMQ_CHANNEL, AMQP_EXCHANGE_DECLARE_METHOD, AMQP_EXCHANGE_DECLARE_OK_METHOD, &edReq);
+		if(die_on_amqp_error(amqp_get_rpc_reply(pData->conn), "Declaring exchange")) {
+			pData->conn = NULL;
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
 	}
 
 finalize_it:
@@ -262,6 +297,7 @@ CODESTARTfreeInstance
 	free(pData->exchange);
 	free(pData->routing_key);
 	free(pData->tplName);
+	free(pData->exchange_type);
 ENDfreeInstance
 
 
@@ -281,6 +317,10 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\texchange='%s'\n", pData->exchange);
 	dbgprintf("\trouting_key='%s'\n", pData->routing_key);
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
+	dbgprintf("\texchange_type='%s'\n", pData->exchange_type);
+	dbgprintf("\tauto_delete=%d\n", pData->auto_delete);
+	dbgprintf("\tdurable=%d\n", pData->durable);
+	dbgprintf("\tdelivery_mode=%d\n", pData->delivery_mode);
 ENDdbgPrintInstInfo
 
 
@@ -341,7 +381,7 @@ CODESTARTdoAction
 
 	body_bytes = amqp_cstring_bytes((char *)ppString[0]);
 
-	if (die_on_error(amqp_basic_publish(pData->conn, 1,
+	if (die_on_error(amqp_basic_publish(pData->conn, RABBITMQ_CHANNEL,
 			cstring_bytes((char *) pData->exchange),
 			cstring_bytes((char *) pData->routing_key),
 			0, 0, &pData->props, body_bytes), "amqp_basic_publish")) {
@@ -365,6 +405,10 @@ setInstParamDefaults(instanceData *pData)
 	pData->exchange = NULL;
 	pData->routing_key = NULL;
 	pData->tplName = NULL;
+	pData->exchange_type = NULL;
+	pData->auto_delete = 0;
+	pData->durable = 0;
+	pData->delivery_mode = 2;
 }
 
 
@@ -396,11 +440,19 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "password")) {
 			pData->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "exchange")) {
-			pData->exchange = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->exchange = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "routing_key")) {
 			pData->routing_key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "exchange_type")) {
+			pData->exchange_type = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "auto_delete")) {
+			pData->auto_delete = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
+			pData->durable = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "delivery_mode")) {
+			pData->delivery_mode = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("omrabbitmq: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
@@ -439,7 +491,7 @@ CODESTARTnewActInst
 	// RabbitMQ properties initialization
 	memset(&pData->props, 0, sizeof pData->props);
 	pData->props._flags = AMQP_BASIC_DELIVERY_MODE_FLAG;
-	pData->props.delivery_mode = 2; /* persistent delivery mode */
+	pData->props.delivery_mode = pData->delivery_mode;
 	pData->props._flags |= AMQP_BASIC_CONTENT_TYPE_FLAG;
 	pData->props.content_type = amqp_cstring_bytes("application/json");
 
