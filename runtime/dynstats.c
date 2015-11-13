@@ -25,11 +25,11 @@ DEFobjCurrIf(statsobj)
 #define DYNSTATS_PARAM_NAME "name"
 #define DYNSTATS_PARAM_RESETTABLE "resettable"
 #define DYNSTATS_PARAM_MAX_CARDINALITY "maxCardinality"
-#define DYNSTATS_PARAM_UNUSED_METRIC_LIFE "unusedMetricLife"
+#define DYNSTATS_PARAM_UNUSED_METRIC_LIFE "unusedMetricLife" /* in seconds */
 
 #define DYNSTATS_DEFAULT_RESETTABILITY 1
 #define DYNSTATS_DEFAULT_MAX_CARDINALITY 2000
-#define DYNSTATS_DEFAULT_UNUSED_METRIC_LIFE 60 /* minutes */
+#define DYNSTATS_DEFAULT_UNUSED_METRIC_LIFE 3600 /* seconds */
 
 #define DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH 100
 #define DYNSTATS_METRIC_NAME_SEPARATOR ':'
@@ -89,8 +89,10 @@ dynstats_destroyBucket(dynstats_bucket_t* b) {
 
 	bkts = &loadConf->dynstats_buckets;
 
+	pthread_rwlock_wrlock(&b->lock);
 	dynstats_destroyCounters(b);
 	free(b->name);
+	pthread_rwlock_unlock(&b->lock);
 	pthread_rwlock_destroy(&b->lock);
 	pthread_mutex_destroy(&b->mutMetricCount);
 	statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
@@ -187,7 +189,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		CHKmalloc(b = calloc(1, sizeof(dynstats_bucket_t)));
 		b->resettable = resettable;
 		b->maxCardinality = maxCardinality;
-		b->unusedMetricLife = unusedMetricLife;
+		b->unusedMetricLife = 1000 * unusedMetricLife; 
 		CHKmalloc(b->name = ustrdup(name));
 
 		pthread_rwlock_init(&b->lock, NULL);
@@ -265,6 +267,7 @@ finalize_it:
 static void
 dynstats_resetIfExpired(dynstats_bucket_t *b) {
 	if (timeoutVal(&b->metricCleanupTimeout) == 0) {
+		errmsg.LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
 		dynstats_resetBucket(b, 1);
 		timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
 	}
@@ -325,6 +328,7 @@ dynstats_destroyAllBuckets() {
 	dynstats_bucket_t *b;
 	bkts = &loadConf->dynstats_buckets;
 	if (bkts->initialized) {
+		pthread_rwlock_wrlock(&bkts->lock);
 		while(1) {
 			b = SLIST_FIRST(&bkts->list);
 			if (b == NULL) {
@@ -334,6 +338,7 @@ dynstats_destroyAllBuckets() {
 				dynstats_destroyBucket(b);
 			}
 		}
+		pthread_rwlock_unlock(&bkts->lock);
 		pthread_rwlock_destroy(&bkts->lock);
 	}
 }

@@ -4,7 +4,7 @@
 echo ===============================================================================
 echo \[dynstats_reset.sh\]: test for gathering stats with a known-dyn-metrics reset inbetween
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_reset.conf
+. $srcdir/diag.sh startup-vg dynstats_reset.conf
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
 sleep 1
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
@@ -21,8 +21,8 @@ sleep 1
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh custom-assert-content-missing 'baz' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh custom-assert-content-missing 'baz=2' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'foo=2' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'foo=3' 'rsyslog.out.stats.log'

@@ -180,7 +180,8 @@ TESTS +=  \
 	dynstats_reset.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	dynstats-vg.sh
+	dynstats-vg.sh \
+	dynstats_reset-vg.sh
 endif
 endif
 
@@ -824,7 +825,7 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
 	mmpstrucdata.sh \
-        mmpstrucdata-vg.sh \
+	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
@@ -836,6 +837,9 @@ EXTRA_DIST= \
 	testsuites/dynstats_overflow.conf \
 	dynstats_reset.sh \
 	testsuites/dynstats_reset.conf \
+	testsuites/dynstats_input_1 \
+	testsuites/dynstats_input_2 \
+	testsuites/dynstats_input_3 \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \

@@ -386,6 +386,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLineCEE(o, &cstr, 0, bResetCtrs));
 			break;
 		}
+		if (o->read_notifier != NULL) {
+			o->read_notifier(o);
+		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
 	}

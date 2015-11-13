@@ -282,9 +282,9 @@ case $1 in
 		fi
 		;;
    'first-column-sum-check') 
-		sum=$(cat $3 | sed -e $2 | awk '{s+=$1} END {print s}')
-		if [ "$sum" -eq $4 ]; then
-		    echo sum of first column with edit-expr "'$2'" run over file "'$3'" equals "'$sum'" which is not equal to expected value of "'$4'"
+		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		if [ "x${sum}" != "x$5" ]; then
+		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is not equal to expected value of "'$5'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -298,6 +298,12 @@ case $1 in
 		;;
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
+		if [ "$?" -eq "0" ]; then
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'custom-assert-content-missing') 
+		cat $3 | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
 		    . $srcdir/diag.sh error-exit 1
 		fi
