@@ -2559,7 +2559,8 @@ cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict_
 {
 	struct var ret;
 	cnfexprEval(expr, &ret, usrptr);
-	return ret.d.json;/*caller is supposed to free the returned json-object*/
+	return (ret.datatype == 'J') ? ret.d.json : NULL;
+	/*caller is supposed to free the returned json-object*/
 }
 
 inline static void
