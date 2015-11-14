@@ -703,6 +703,7 @@ CODESTARTfreeCnf
 		lstn_r = lstn;
 		zcert_destroy(&lstn->clientCert);
 		zcert_destroy(&lstn->serverCert);
+        zsock_destroy(&lstn->sock);
 		lstn = lstn_r->next;
 		free(lstn_r);
 	}
