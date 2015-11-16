@@ -832,16 +832,24 @@ EXTRA_DIST= \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
-	dynstats.sh \
-	testsuites/dynstats.conf \
-	testsuites/dynstats_input \
-	dynstats_overflow.sh \
-	testsuites/dynstats_overflow.conf \
-	dynstats_reset.sh \
-	testsuites/dynstats_reset.conf \
-	testsuites/dynstats_input_1 \
-	testsuites/dynstats_input_2 \
-	testsuites/dynstats_input_3 \
+	tests/dynstats_ctr_reset.sh \
+	tests/dynstats_overflow.sh \
+	tests/dynstats_overflow-vg.sh \
+	tests/dynstats_reset.sh \
+	tests/dynstats_reset-vg.sh \
+	tests/dynstats.sh \
+	tests/dynstats-vg.sh \
+	tests/testsuites/dynstats.conf \
+	tests/testsuites/dynstats_ctr_reset.conf \
+	tests/testsuites/dynstats_input \
+	tests/testsuites/dynstats_input_1 \
+	tests/testsuites/dynstats_input_2 \
+	tests/testsuites/dynstats_input_3 \
+	tests/testsuites/dynstats_input_more_0 \
+	tests/testsuites/dynstats_input_more_1 \
+	tests/testsuites/dynstats_input_more_2 \
+	tests/testsuites/dynstats_overflow.conf \
+	tests/testsuites/dynstats_reset.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \
