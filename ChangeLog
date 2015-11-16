@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.15.0 [v8-stable] 2015-12-15
+- gnutls fix: Added possible fix for gnutls issue #575
+  see also: https://github.com/rsyslog/rsyslog/issues/575
+  Thanks to Charles Southerland for the patch
 - performance improvement for configs with heavy use of JSON variables
   Depending on the config, this can be a very big gain in performance.
 - added pmpanngfw: contributed module for translating Palo Alto Networks logs. 
