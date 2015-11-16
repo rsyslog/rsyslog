@@ -33,6 +33,7 @@ DEFobjCurrIf(statsobj)
 
 #define DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH 100
 #define DYNSTATS_METRIC_NAME_SEPARATOR ':'
+#define DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING 1.25
 
 static struct cnfparamdescr modpdescr[] = {
 	{ DYNSTATS_PARAM_NAME, eCmdHdlrString, CNFPARAM_REQUIRED },
@@ -151,14 +152,16 @@ finalize_it:
 
 static rsRetVal
 dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
+    size_t htab_sz;
 	DEFiRet;
+    htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
 	pthread_rwlock_wrlock(&b->lock);
 	if (do_purge) {
 		dynstats_destroyCounters(b);
 	}
 	ATOMIC_STORE_0_TO_INT(&b->metricCount, &b->mutMetricCount);
 	SLIST_INIT(&b->ctrs);
-	if (! hcreate_r(b->maxCardinality, &b->table)) {
+	if (! hcreate_r(htab_sz, &b->table)) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
