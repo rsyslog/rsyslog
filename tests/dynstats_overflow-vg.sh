@@ -5,7 +5,7 @@ echo ===========================================================================
 echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup-vg dynstats_overflow.conf
-. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
+. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"
@@ -17,10 +17,13 @@ echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed prov
 . $srcdir/diag.sh content-check "corge 008 -6"
 . $srcdir/diag.sh content-check "quux 009 -6"
 . $srcdir/diag.sh content-check "foo 010 0"
+sleep 1
+. $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
+. $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "corge 011 -6"
 . $srcdir/diag.sh content-check "grault 012 -6"
 . $srcdir/diag.sh content-check "foo 013 0"
-sleep 2
+sleep 1 #sleep above + this = 2 seconds, so metric-names reset should have happened
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 5
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
