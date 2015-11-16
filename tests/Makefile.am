@@ -177,7 +177,8 @@ if ENABLE_IMPSTATS
 TESTS +=  \
 	dynstats.sh \
 	dynstats_overflow.sh \
-	dynstats_reset.sh
+	dynstats_reset.sh \
+	dynstats_ctr_reset.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \

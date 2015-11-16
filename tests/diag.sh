@@ -288,7 +288,13 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
-
+   'assert-first-column-sum-greater-than') 
+		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		if [ ! $sum -gt $5 ]; then
+		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
    'content-pattern-check') 
 		cat rsyslog.out.log | grep -q "$2"
 		if [ "$?" -ne "0" ]; then
