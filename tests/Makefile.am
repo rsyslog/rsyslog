@@ -181,7 +181,8 @@ TESTS +=  \
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
-	dynstats_reset-vg.sh
+	dynstats_reset-vg.sh \
+	dynstats_overflow-vg.sh
 endif
 endif
 

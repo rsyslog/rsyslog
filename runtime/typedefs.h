@@ -84,7 +84,7 @@ typedef struct parserList_s parserList_t;
 typedef struct strgen_s strgen_t;
 typedef struct strgenList_s strgenList_t;
 typedef struct statsobj_s statsobj_t;
-typedef void (*statsobj_read_notifier_t)(statsobj_t *);
+typedef void (*statsobj_read_notifier_t)(statsobj_t *, void *);
 typedef struct nsd_epworkset_s nsd_epworkset_t;
 typedef struct templates_s templates_t;
 typedef struct queuecnf_s queuecnf_t;

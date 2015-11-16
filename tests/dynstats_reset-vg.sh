@@ -23,10 +23,12 @@ echo doing shutdown
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown-vg
 . $srcdir/diag.sh check-exit-vg
+ # because dyn-metrics would be reset before it can accumulate and report high counts, sleep between msg-injection ensures that
 . $srcdir/diag.sh custom-assert-content-missing 'baz=2' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'foo=2' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'foo=3' 'rsyslog.out.stats.log'
-. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'rsyslog.out.stats.log' 3
-. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'rsyslog.out.stats.log' 1
-. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'rsyslog.out.stats.log' 2
+# but actual reported stats (aggregate) should match
+. $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 3
+. $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
+. $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' 'rsyslog.out.stats.log' 2
 . $srcdir/diag.sh exit

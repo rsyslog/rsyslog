@@ -124,10 +124,11 @@ statsobjConstructFinalize(statsobj_t *pThis)
 /* set read_notifier (a function which is invoked after stats are read).
  */
 static rsRetVal
-setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier)
+setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
 {
 	DEFiRet;
 	pThis->read_notifier = notifier;
+    pThis->read_notifier_ctx = ctx;
 finalize_it:
 	RETiRet;
 }
@@ -386,11 +387,11 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLineCEE(o, &cstr, 0, bResetCtrs));
 			break;
 		}
-		if (o->read_notifier != NULL) {
-			o->read_notifier(o);
-		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
+		if (o->read_notifier != NULL) {
+			o->read_notifier(o, o->read_notifier_ctx);
+		}
 	}
 
 finalize_it:
@@ -408,14 +409,11 @@ enableStats()
 	return RS_RET_OK;
 }
 
-
-/* destructor for the statsobj object */
-BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
+static rsRetVal
+destructAllCounters(statsobj_t *pThis) {
+	DEFiRet;
 	ctr_t *ctr, *ctrToDel;
-CODESTARTobjDestruct(statsobj)
-	removeFromObjList(pThis);
 
-	/* destruct counters */
 	ctr = pThis->ctrRoot;
 	while(ctr != NULL) {
 		ctrToDel = ctr;
@@ -423,6 +421,22 @@ CODESTARTobjDestruct(statsobj)
 		free(ctrToDel->name);
 		free(ctrToDel);
 	}
+
+	pThis->ctrLast = NULL;
+	pThis->ctrRoot = NULL;
+	
+finalize_it:
+	RETiRet;
+}
+
+
+/* destructor for the statsobj object */
+BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(statsobj)
+	removeFromObjList(pThis);
+
+	/* destruct counters */
+	CHKiRet(destructAllCounters(pThis));
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
@@ -462,6 +476,7 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;
 	pIf->DestructCounter = destructCounter;
+	pIf->DestructAllCounters = destructAllCounters;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)

@@ -4,7 +4,7 @@
 echo ===============================================================================
 echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
-. $srcdir/diag.sh startup dynstats_overflow.conf
+. $srcdir/diag.sh startup-vg dynstats_overflow.conf
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
@@ -35,7 +35,8 @@ sleep 2
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check "corge 014 0"
 . $srcdir/diag.sh content-check "grault 015 0"
 . $srcdir/diag.sh content-check "quux 016 0"

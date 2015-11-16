@@ -71,7 +71,7 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
 	dynstats_ctr_t *ctr;
 
 	hdestroy_r(&b->table);
-	statsobj.Destruct(&b->stats);//TODO: optimize this, full destruct is not necessary
+	statsobj.DestructAllCounters(b->stats);
 	while(1) {
 		ctr = SLIST_FIRST(&b->ctrs);
 		if (ctr == NULL) {
@@ -91,6 +91,7 @@ dynstats_destroyBucket(dynstats_bucket_t* b) {
 
 	pthread_rwlock_wrlock(&b->lock);
 	dynstats_destroyCounters(b);
+	statsobj.Destruct(&b->stats);
 	free(b->name);
 	pthread_rwlock_unlock(&b->lock);
 	pthread_rwlock_destroy(&b->lock);
@@ -156,10 +157,6 @@ dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 		dynstats_destroyCounters(b);
 	}
 	ATOMIC_STORE_0_TO_INT(&b->metricCount, &b->mutMetricCount);
-	CHKiRet(statsobj.Construct(&b->stats));
-	CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
-	CHKiRet(statsobj.SetName(b->stats, b->name));
-	CHKiRet(statsobj.ConstructFinalize(b->stats));
 	SLIST_INIT(&b->ctrs);
 	if (! hcreate_r(b->maxCardinality, &b->table)) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
@@ -171,6 +168,39 @@ finalize_it:
 		statsobj.Destruct(&b->stats);
 	}
 	RETiRet;
+}
+
+static inline void
+dynstats_resetIfExpired(dynstats_bucket_t *b) {
+	if (timeoutVal(&b->metricCleanupTimeout) == 0) {
+		errmsg.LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
+		dynstats_resetBucket(b, 1);
+		timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
+	}
+}
+
+static void
+dynstats_readCallback(statsobj_t *ignore, void *b) {
+    dynstats_buckets_t *bkts;
+    bkts = &loadConf->dynstats_buckets;
+
+    pthread_rwlock_rdlock(&bkts->lock);
+	dynstats_resetIfExpired((dynstats_bucket_t *) b);
+    pthread_rwlock_unlock(&bkts->lock);
+}
+
+static inline rsRetVal
+dynstats_initNewBucketStats(dynstats_bucket_t *b) {
+    DEFiRet;
+    
+    CHKiRet(statsobj.Construct(&b->stats));
+    CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
+    CHKiRet(statsobj.SetName(b->stats, b->name));
+    statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
+    CHKiRet(statsobj.ConstructFinalize(b->stats));
+    
+finalize_it:
+    RETiRet;
 }
 
 static rsRetVal
@@ -196,6 +226,9 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		lock_initialized = 1;
 		pthread_mutex_init(&b->mutMetricCount, NULL);
 		metric_count_mutex_initialized = 1;
+
+		CHKiRet(dynstats_initNewBucketStats(b));
+
 		CHKiRet(dynstats_resetBucket(b, 0));
 
 		CHKiRet(dynstats_addBucketMetrics(bkts, b, name));
@@ -264,34 +297,6 @@ finalize_it:
 	RETiRet;
 }
 
-static void
-dynstats_resetIfExpired(dynstats_bucket_t *b) {
-	if (timeoutVal(&b->metricCleanupTimeout) == 0) {
-		errmsg.LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
-		dynstats_resetBucket(b, 1);
-		timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
-	}
-}
-
-void
-dynstats_resetExpired() {
-	dynstats_buckets_t *bkts;
-	dynstats_bucket_t *b;
-	bkts = &loadConf->dynstats_buckets;
-	if (bkts->initialized) {
-		pthread_rwlock_rdlock(&bkts->lock);
-		SLIST_FOREACH(b, &bkts->list, link) {
-			dynstats_resetIfExpired(b);
-		}
-		pthread_rwlock_unlock(&bkts->lock);
-	}
-}
-
-static void
-dynstats_readCallback(statsobj_t *ignore) {
-	dynstats_resetExpired();
-}
-
 rsRetVal
 dynstats_initCnf(dynstats_buckets_t *bkts) {
 	DEFiRet;
@@ -302,7 +307,6 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
 	CHKiRet(statsobj.SetName(bkts->global_stats, UCHAR_CONSTANT("global")));
-	statsobj.SetReadNotifier(bkts->global_stats, dynstats_readCallback);
 	
 	STATSCOUNTER_INIT(bkts->metricsAdded, bkts->mutMetricsAdded);
 	CHKiRet(statsobj.AddCounter(bkts->global_stats, UCHAR_CONSTANT("metrics_added"),
@@ -377,6 +381,7 @@ finalize_it:
 	if (iRet != RS_RET_OK) {
 		free((*ctr)->metric);
 		free(*ctr);
+        *ctr = NULL;
 	}
 	RETiRet;
 }
@@ -390,7 +395,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	DEFiRet;
 
 	found = created = 0;
-	lookup.key = NULL;
+    ctr = NULL;
 
 	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -428,7 +433,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	}
 	
 finalize_it:
-	if (! created) {
+	if ((! created) && (ctr != NULL)) {
 		dynstats_destroyCtr(b, ctr, 1);
 	}
 	RETiRet;
@@ -439,6 +444,7 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 	ENTRY lookup;
 	ENTRY *found;
 	int succeed;
+	dynstats_ctr_t *ctr;
 	DEFiRet;
 
 	if (ustrlen(metric) == 0) {
@@ -451,7 +457,8 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 	pthread_rwlock_rdlock(&b->lock);
 	succeed = hsearch_r(lookup, FIND, &found, &b->table);
 	if (succeed) {
-		STATSCOUNTER_INC(((dynstats_ctr_t *) found->data)->ctr, ctr->mutCtr);
+		ctr = (dynstats_ctr_t *) found->data;
+		STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
 	}
 	pthread_rwlock_unlock(&b->lock);
 

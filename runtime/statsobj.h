@@ -72,6 +72,7 @@ struct statsobj_s {
 	uchar *name;
 	uchar *origin;
     statsobj_read_notifier_t read_notifier;
+    void *read_notifier_ctx;
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
 	ctr_t *ctrRoot;			/* doubly-linked list of statsobj counters */
 	ctr_t *ctrLast;
@@ -89,12 +90,13 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
-    rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier);
+    rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
 	rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **ref);
 	rsRetVal (*DestructCounter)(statsobj_t *pThis, ctr_t *ref);
+	rsRetVal (*DestructAllCounters)(statsobj_t *pThis);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
 #define statsobjCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
