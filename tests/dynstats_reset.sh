@@ -5,12 +5,13 @@ echo ===========================================================================
 echo \[dynstats_reset.sh\]: test for gathering stats with a known-dyn-metrics reset inbetween
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup dynstats_reset.conf
+. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"

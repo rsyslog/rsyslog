@@ -5,13 +5,13 @@ echo ===========================================================================
 echo \[dynstats_nometric.sh\]: test for dyn-stats meta-metric behavior with zero-length metric name
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup dynstats_nometric.conf
-sleep 1
+. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh wait-queueempty
 rm $srcdir/rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_empty_input
 . $srcdir/diag.sh wait-queueempty
-sleep 1 # wait for stats flush
+. $srcdir/diag.sh msleep 1100 # wait for stats flush
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown

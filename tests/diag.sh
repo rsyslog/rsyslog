@@ -118,6 +118,10 @@ case $1 in
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
+	 'msleep')
+   	$srcdir/msleep $2
+		;;
+
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
@@ -270,9 +274,22 @@ case $1 in
    'content-check') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
-		    echo content-check failed
+		    echo content-check failed to find "'$2'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
+		;;
+	 'wait-for-stats-flush')
+		echo "will wait for stats push"
+		while [[ ! -f $2 ]]; do
+				echo waiting for stats file "'$2'" to be created
+				./msleep 100
+		done
+		prev_count=$(cat $2 | grep 'BEGIN$' | wc -l)
+		new_count=$prev_count
+		while [[ "x$prev_count" == "x$new_count" ]]; do
+				new_count=$(cat $2 | grep 'BEGIN$' | wc -l) # busy spin, because it allows as close timing-coordination in actual test run as possible
+		done
+		echo "stats push registered"
 		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
@@ -305,12 +322,14 @@ case $1 in
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
+				echo content-missing assertion failed, some line matched pattern "'$2'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
    'custom-assert-content-missing') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
+				echo content-missing assertion failed, some line in "'$3'" matched pattern "'$2'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;

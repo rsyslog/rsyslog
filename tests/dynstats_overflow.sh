@@ -5,25 +5,13 @@ echo ===========================================================================
 echo \[dynstats_overflow.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup dynstats_overflow.conf
+. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "foo 001 0"
-. $srcdir/diag.sh content-check "bar 002 0"
-. $srcdir/diag.sh content-check "baz 003 0"
-. $srcdir/diag.sh content-check "foo 004 0"
-. $srcdir/diag.sh content-check "baz 005 0"
-. $srcdir/diag.sh content-check "foo 006 0"
-. $srcdir/diag.sh content-check "quux 007 -6"
-. $srcdir/diag.sh content-check "corge 008 -6"
-. $srcdir/diag.sh content-check "quux 009 -6"
-. $srcdir/diag.sh content-check "foo 010 0"
-sleep 1
+. $srcdir/diag.sh msleep 800
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh content-check "corge 011 -6"
-. $srcdir/diag.sh content-check "grault 012 -6"
-. $srcdir/diag.sh content-check "foo 013 0"
-sleep 1 #sleep above + this = 2 seconds, so metric-names reset should have happened
+. $srcdir/diag.sh msleep 1300 #sleep above + this = 2 seconds, so metric-names reset should have happened
 . $srcdir/diag.sh wait-queueempty
 
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 5
@@ -42,11 +30,24 @@ sleep 1 #sleep above + this = 2 seconds, so metric-names reset should have happe
 rm $srcdir/rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
-sleep 2
+. $srcdir/diag.sh msleep 2100
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh content-check "foo 001 0"
+. $srcdir/diag.sh content-check "bar 002 0"
+. $srcdir/diag.sh content-check "baz 003 0"
+. $srcdir/diag.sh content-check "foo 004 0"
+. $srcdir/diag.sh content-check "baz 005 0"
+. $srcdir/diag.sh content-check "foo 006 0"
+. $srcdir/diag.sh content-check "quux 007 -6"
+. $srcdir/diag.sh content-check "corge 008 -6"
+. $srcdir/diag.sh content-check "quux 009 -6"
+. $srcdir/diag.sh content-check "foo 010 0"
+. $srcdir/diag.sh content-check "corge 011 -6"
+. $srcdir/diag.sh content-check "grault 012 -6"
+. $srcdir/diag.sh content-check "foo 013 0"
 . $srcdir/diag.sh content-check "corge 014 0"
 . $srcdir/diag.sh content-check "grault 015 0"
 . $srcdir/diag.sh content-check "quux 016 0"

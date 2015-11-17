@@ -2,15 +2,16 @@
 # added 2015-11-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
-echo \[dynstats_reset.sh\]: test for gathering stats with a known-dyn-metrics reset inbetween
+echo \[dynstats_reset-vg.sh\]: test for gathering stats with a known-dyn-metrics reset in-between
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup-vg dynstats_reset.conf
+. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
-sleep 1
+. $srcdir/diag.sh msleep 1100
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"

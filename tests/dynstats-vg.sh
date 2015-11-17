@@ -5,6 +5,7 @@ echo ===========================================================================
 echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with valgrind
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup-vg dynstats.conf
+. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
@@ -13,7 +14,7 @@ echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with
 . $srcdir/diag.sh content-check "foo 004 0"
 . $srcdir/diag.sh content-check "baz 005 0"
 . $srcdir/diag.sh content-check "foo 006 0"
-sleep 1 # wait for stats flush
+. $srcdir/diag.sh msleep 1100 # wait for stats flush
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
