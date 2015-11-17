@@ -2558,9 +2558,15 @@ struct json_object*
 cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
 {
 	struct var ret;
+	void *retptr;
 	cnfexprEval(expr, &ret, usrptr);
-	return (ret.datatype == 'J') ? ret.d.json : NULL;
-	/*caller is supposed to free the returned json-object*/
+	if(ret.datatype == 'J') {
+		retptr = ret.d.json; /*caller is supposed to free the returned json-object*/
+	} else {
+		retptr = NULL;
+		varFreeMembers(&ret); /* we must free the element */
+	}
+	return retptr;
 }
 
 inline static void
@@ -3017,10 +3023,10 @@ cnfNewIterator(char *var, struct cnfexpr *collection)
 static void
 cnfIteratorDestruct(struct cnfitr *itr)
 {
-	if (itr->var != NULL) free(itr->var);
-	itr->var = NULL;
-	if (itr->collection != NULL) cnfexprDestruct(itr->collection);
-	itr->collection = NULL;
+	free(itr->var);
+	if(itr->collection != NULL)
+		cnfexprDestruct(itr->collection);
+	free(itr);
 }
 
 struct cnfstmt *
