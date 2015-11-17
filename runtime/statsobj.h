@@ -157,6 +157,10 @@ PROTOTYPEObj(statsobj);
 	if(GatherStats) \
 		ATOMIC_INC_uint64(&ctr, &mut);
 
+#define STATSCOUNTER_BUMP(ctr, mut, delta) \
+	if(GatherStats) \
+		ATOMIC_ADD_uint64(&ctr, &mut, delta);
+
 #define STATSCOUNTER_DEC(ctr, mut) \
 	if(GatherStats) \
 		ATOMIC_DEC_uint64(&ctr, mut);

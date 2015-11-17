@@ -80,9 +80,9 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
 		} else {
 			SLIST_REMOVE_HEAD(&b->ctrs, link);
 			dynstats_destroyCtr(b, ctr, 0);
-            STATSCOUNTER_INC(b->ctrMetricsPurged, bkts->mutCtrMetricsPurged); /*TODO: make this more efficient, one-shot insteed of incremental*/
 		}
 	}
+	STATSCOUNTER_BUMP(b->ctrMetricsPurged, b->mutCtrMetricsPurged, b->metricCount);
 }
 
 void
@@ -136,8 +136,8 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
 									   CTR_FLAG_RESETTABLE, &(b->ctrNoMetric), &b->pNoMetricCtr));
 
-    suffix_litteral = UCHAR_CONSTANT("metrics_purged");
-    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+	suffix_litteral = UCHAR_CONSTANT("metrics_purged");
+	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
 									   CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr));
@@ -159,9 +159,9 @@ finalize_it:
 
 static rsRetVal
 dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
-    size_t htab_sz;
+	size_t htab_sz;
 	DEFiRet;
-    htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
+	htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
 	pthread_rwlock_wrlock(&b->lock);
 	if (do_purge) {
 		dynstats_destroyCounters(b);
@@ -191,26 +191,26 @@ dynstats_resetIfExpired(dynstats_bucket_t *b) {
 
 static void
 dynstats_readCallback(statsobj_t *ignore, void *b) {
-    dynstats_buckets_t *bkts;
-    bkts = &loadConf->dynstats_buckets;
+	dynstats_buckets_t *bkts;
+	bkts = &loadConf->dynstats_buckets;
 
-    pthread_rwlock_rdlock(&bkts->lock);
+	pthread_rwlock_rdlock(&bkts->lock);
 	dynstats_resetIfExpired((dynstats_bucket_t *) b);
-    pthread_rwlock_unlock(&bkts->lock);
+	pthread_rwlock_unlock(&bkts->lock);
 }
 
 static inline rsRetVal
 dynstats_initNewBucketStats(dynstats_bucket_t *b) {
-    DEFiRet;
-    
-    CHKiRet(statsobj.Construct(&b->stats));
-    CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
-    CHKiRet(statsobj.SetName(b->stats, b->name));
-    statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
-    CHKiRet(statsobj.ConstructFinalize(b->stats));
-    
+	DEFiRet;
+	
+	CHKiRet(statsobj.Construct(&b->stats));
+	CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
+	CHKiRet(statsobj.SetName(b->stats, b->name));
+	statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
+	CHKiRet(statsobj.ConstructFinalize(b->stats));
+	
 finalize_it:
-    RETiRet;
+	RETiRet;
 }
 
 static rsRetVal
@@ -384,7 +384,7 @@ finalize_it:
 	if (iRet != RS_RET_OK) {
 		free((*ctr)->metric);
 		free(*ctr);
-        *ctr = NULL;
+		*ctr = NULL;
 	}
 	RETiRet;
 }
@@ -398,7 +398,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	DEFiRet;
 
 	found = created = 0;
-    ctr = NULL;
+	ctr = NULL;
 
 	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
