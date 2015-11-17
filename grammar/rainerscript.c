@@ -3023,10 +3023,10 @@ cnfNewIterator(char *var, struct cnfexpr *collection)
 static void
 cnfIteratorDestruct(struct cnfitr *itr)
 {
-	if (itr->var != NULL) free(itr->var);
-	itr->var = NULL;
-	if (itr->collection != NULL) cnfexprDestruct(itr->collection);
-	itr->collection = NULL;
+	free(itr->var);
+	if(itr->collection != NULL)
+		cnfexprDestruct(itr->collection);
+	free(itr);
 }
 
 struct cnfstmt *
