@@ -19,6 +19,20 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - KSI utilities: somewhat improved error messages
   Thanks to Henri Lakk for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/588
+- improvments for 0mq modules:
+  * omczmq - suspend / Retry handling - the output plugin can now recover
+    from some error states due to issues with plugin startup or message sending
+  * omczmq - refactored topic handling code for ZMQ_PUB output to be a little
+    more efficient
+  * omczmq - added ability to set a timeout for sends
+  * omczmq - set topics can be in separate frame (default) or part of message
+    frame (configurable)
+  * omcmzq - code cleanup
+  * imczmq - code cleanup
+  * imczmq - fixed a couple of cases where vars could be used uninitialized
+  * imczmq - ZMQ_ROUTER support
+  * imczmq - Fix small memory leak from not freeing sockets  when done with them
+  Thanks to Brian Knox for the contributions.
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
 - bugfix: fix inconsistent number processing
