@@ -962,8 +962,8 @@ rsksi_vrfyConstruct_gf(void)
 	/* Setting KSI Extender! */ 
 	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_read_puburl, rsksi_userid, rsksi_userkey);
 	if(ksistate != KSI_OK) {
-		fprintf(stderr, "Error %d setting KSI Extender: \n", ksistate);
-		return NULL; 
+		fprintf(stderr, "Error %d setting KSI Extender: %s\n", ksistate, KSI_getErrorString(ksistate));
+		return NULL;
 	}
 
 done:	return ksi;
@@ -1283,7 +1283,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
 		if(rsksi_read_debug)
-			printf("debug: KSI_Signature_parse failed with error %d\n", ksistate); 
+			printf("debug: KSI_Signature_parse failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
@@ -1301,7 +1301,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
 	if (ksistate != KSI_OK) {
 		if(rsksi_read_debug)
-			printf("debug: KSI_Signature_verifyDataHash faile with error %d\n", ksistate); 
+			printf("debug: KSI_Signature_verifyDataHash faile with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
