@@ -2910,7 +2910,10 @@ msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct jso
 	if(jsonVarExtract(parent, (char*)leaf, pjson) == FALSE) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
-	if(*pjson != NULL) {
+	if(*pjson == NULL) {
+		/* we had a NULL json object and represent this as empty string */
+		*pcstr = (uchar*) strdup("");
+	} else {
 		if(json_object_get_type(*pjson) == json_type_string) {
 			*pcstr = (uchar*) strdup(json_object_get_string(*pjson));
 			*pjson = NULL;
