@@ -18,6 +18,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - omrabbitmq: improvements
   thanks to Luigi Mori for the patch
   see also: https://github.com/rsyslog/rsyslog/pull/580
+- KSI utilities: somewhat improved error messages
+  Thanks to Henri Lakk for the patch.
+  see also: https://github.com/rsyslog/rsyslog/pull/588
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
 - bugfix: fix inconsistent number processing
