@@ -178,7 +178,8 @@ TESTS +=  \
 	dynstats.sh \
 	dynstats_overflow.sh \
 	dynstats_reset.sh \
-	dynstats_ctr_reset.sh
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -832,24 +833,27 @@ EXTRA_DIST= \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
-	tests/dynstats_ctr_reset.sh \
-	tests/dynstats_overflow.sh \
-	tests/dynstats_overflow-vg.sh \
-	tests/dynstats_reset.sh \
-	tests/dynstats_reset-vg.sh \
-	tests/dynstats.sh \
-	tests/dynstats-vg.sh \
-	tests/testsuites/dynstats.conf \
-	tests/testsuites/dynstats_ctr_reset.conf \
-	tests/testsuites/dynstats_input \
-	tests/testsuites/dynstats_input_1 \
-	tests/testsuites/dynstats_input_2 \
-	tests/testsuites/dynstats_input_3 \
-	tests/testsuites/dynstats_input_more_0 \
-	tests/testsuites/dynstats_input_more_1 \
-	tests/testsuites/dynstats_input_more_2 \
-	tests/testsuites/dynstats_overflow.conf \
-	tests/testsuites/dynstats_reset.conf \
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh \
+	dynstats_overflow.sh \
+	dynstats_overflow-vg.sh \
+	dynstats_reset.sh \
+	dynstats_reset-vg.sh \
+	dynstats.sh \
+	dynstats-vg.sh \
+	testsuites/dynstats.conf \
+	testsuites/dynstats_ctr_reset.conf \
+	testsuites/dynstats_empty_input \
+	testsuites/dynstats_input \
+	testsuites/dynstats_input_1 \
+	testsuites/dynstats_input_2 \
+	testsuites/dynstats_input_3 \
+	testsuites/dynstats_input_more_0 \
+	testsuites/dynstats_input_more_1 \
+	testsuites/dynstats_input_more_2 \
+	testsuites/dynstats_nometric.conf \
+	testsuites/dynstats_overflow.conf \
+	testsuites/dynstats_reset.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \

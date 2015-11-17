@@ -13,7 +13,7 @@ echo \[dynstats-vg.sh\]: test for gathering stats over dynamic metric names with
 . $srcdir/diag.sh content-check "foo 004 0"
 . $srcdir/diag.sh content-check "baz 005 0"
 . $srcdir/diag.sh content-check "foo 006 0"
-sleep 2 # wait for stats flush
+sleep 1 # wait for stats flush
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
