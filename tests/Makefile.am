@@ -244,7 +244,8 @@ TESTS +=  \
 	json_nonarray_looping.sh
 endif
 TESTS +=  \
-	stop_when_array_has_element.sh
+	stop_when_array_has_element.sh \
+	json_null.sh
 endif
 
 if ENABLE_GNUTLS
