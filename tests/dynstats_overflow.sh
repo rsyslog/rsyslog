@@ -25,12 +25,20 @@ sleep 1
 . $srcdir/diag.sh content-check "foo 013 0"
 sleep 1 #sleep above + this = 2 seconds, so metric-names reset should have happened
 . $srcdir/diag.sh wait-queueempty
+
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 5
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
 . $srcdir/diag.sh first-column-sum-check 's/.*baz=\([0-9]\+\)/\1/g' 'baz=' 'rsyslog.out.stats.log' 2
+
 . $srcdir/diag.sh custom-assert-content-missing 'quux' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'corge' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing 'grault' 'rsyslog.out.stats.log'
+
+. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
+. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 5
+. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
+. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
+
 rm $srcdir/rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
@@ -48,6 +56,11 @@ echo wait on shutdown
 . $srcdir/diag.sh first-column-sum-check 's/.*corge=\([0-9]\+\)/\1/g' 'corge=' 'rsyslog.out.stats.log' 2
 . $srcdir/diag.sh first-column-sum-check 's/.*grault=\([0-9]\+\)/\1/g' 'grault=' 'rsyslog.out.stats.log' 1
 . $srcdir/diag.sh first-column-sum-check 's/.*quux=\([0-9]\+\)/\1/g' 'quux=' 'rsyslog.out.stats.log' 1
+
+. $srcdir/diag.sh first-column-sum-check 's/.*new_metric_add=\([0-9]\+\)/\1/g' 'new_metric_add=' 'rsyslog.out.stats.log' 3
+. $srcdir/diag.sh first-column-sum-check 's/.*ops_overflow=\([0-9]\+\)/\1/g' 'ops_overflow=' 'rsyslog.out.stats.log' 1
+. $srcdir/diag.sh first-column-sum-check 's/.*no_metric=\([0-9]\+\)/\1/g' 'no_metric=' 'rsyslog.out.stats.log' 0
+. $srcdir/diag.sh first-column-sum-check 's/.*metrics_purged=\([0-9]\+\)/\1/g' 'metrics_purged=' 'rsyslog.out.stats.log' 3
 
 . $srcdir/diag.sh custom-assert-content-missing 'foo' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh exit

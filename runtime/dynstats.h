@@ -24,6 +24,8 @@ struct dynstats_bucket_s {
 	ctr_t *pNewMetricAddCtr;
 	STATSCOUNTER_DEF(ctrNoMetric, mutCtrNoMetric);
 	ctr_t *pNoMetricCtr;
+	STATSCOUNTER_DEF(ctrMetricsPurged, mutCtrMetricsPurged);
+	ctr_t *pMetricsPurgedCtr;
 	SLIST_ENTRY(dynstats_bucket_s) link;
     SLIST_HEAD(, dynstats_ctr_s) ctrs;
     uint32_t maxCardinality;
@@ -38,8 +40,6 @@ struct dynstats_bucket_s {
 struct dynstats_buckets_s {
 	SLIST_HEAD(, dynstats_bucket_s) list;
 	statsobj_t *global_stats;
-	STATSCOUNTER_DEF(metricsAdded, mutMetricsAdded);
-	STATSCOUNTER_DEF(metricsPurged, mutMetricsPurged);
     pthread_rwlock_t lock;
     uint8_t initialized;
 };

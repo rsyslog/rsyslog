@@ -80,6 +80,7 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
 		} else {
 			SLIST_REMOVE_HEAD(&b->ctrs, link);
 			dynstats_destroyCtr(b, ctr, 0);
+            STATSCOUNTER_INC(b->ctrMetricsPurged, bkts->mutCtrMetricsPurged); /*TODO: make this more efficient, one-shot insteed of incremental*/
 		}
 	}
 }
@@ -134,6 +135,12 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	STATSCOUNTER_INIT(b->ctrNoMetric, b->mutCtrNoMetric);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
 									   CTR_FLAG_RESETTABLE, &(b->ctrNoMetric), &b->pNoMetricCtr));
+
+    suffix_litteral = UCHAR_CONSTANT("metrics_purged");
+    ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+	STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
+	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
+									   CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr));
 finalize_it:
 	free(metric_name_buff);
 	if (iRet != RS_RET_OK) {
@@ -310,13 +317,6 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
 	CHKiRet(statsobj.SetName(bkts->global_stats, UCHAR_CONSTANT("global")));
-	
-	STATSCOUNTER_INIT(bkts->metricsAdded, bkts->mutMetricsAdded);
-	CHKiRet(statsobj.AddCounter(bkts->global_stats, UCHAR_CONSTANT("metrics_added"),
-								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(bkts->metricsAdded)));
-	STATSCOUNTER_INIT(bkts->metricsPurged, bkts->mutMetricsPurged);
-	CHKiRet(statsobj.AddCounter(bkts->global_stats, UCHAR_CONSTANT("metrics_purged"),
-								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(bkts->metricsPurged)));
 	CHKiRet(statsobj.ConstructFinalize(bkts->global_stats));
 	pthread_rwlock_init(&bkts->lock, NULL);
 
