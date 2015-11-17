@@ -245,6 +245,7 @@ TESTS +=  \
 endif
 TESTS +=  \
 	stop_when_array_has_element.sh \
+	json_null_array.sh \
 	json_null.sh
 endif
 
