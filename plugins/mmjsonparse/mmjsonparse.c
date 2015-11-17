@@ -260,7 +260,6 @@ ENDdoAction
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->cookie = NULL;
 	pData->bUseRawMsg = 0;
 }
 
@@ -297,8 +296,6 @@ CODESTARTnewActInst
 
 	if(pData->container == NULL)
 		CHKmalloc(pData->container = (uchar*) strdup("!"));
-	if(pData->cookie == NULL)
-		CHKmalloc(pData->cookie = strdup("@cee:"));
 	pData->lenCookie = strlen(pData->cookie);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
