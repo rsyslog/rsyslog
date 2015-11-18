@@ -100,6 +100,9 @@ dynstats_destroyBucket(dynstats_bucket_t* b) {
 	pthread_mutex_destroy(&b->mutMetricCount);
 	statsobj.DestructCounter(bkts->global_stats, b->pOpsOverflowCtr);
 	statsobj.DestructCounter(bkts->global_stats, b->pNewMetricAddCtr);
+	statsobj.DestructCounter(bkts->global_stats, b->pNoMetricCtr);
+	statsobj.DestructCounter(bkts->global_stats, b->pMetricsPurgedCtr);
+	statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
 	free(b);
 }
 
@@ -141,6 +144,13 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
 									   CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr));
+
+	suffix_litteral = UCHAR_CONSTANT("ops_ignored");
+	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+	STATSCOUNTER_INIT(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
+	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
+									   CTR_FLAG_RESETTABLE, &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr));
+
 finalize_it:
 	free(metric_name_buff);
 	if (iRet != RS_RET_OK) {
@@ -152,6 +162,12 @@ finalize_it:
 		}
 		if (b->pNoMetricCtr != NULL) {
 			statsobj.DestructCounter(bkts->global_stats, b->pNoMetricCtr);
+		}
+		if (b->pMetricsPurgedCtr != NULL) {
+			statsobj.DestructCounter(bkts->global_stats, b->pMetricsPurgedCtr);
+		}
+		if (b->pOpsIgnoredCtr != NULL) {
+			statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
 		}
 	}
 	RETiRet;
@@ -457,20 +473,28 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 
 	lookup.key = metric;
 	
-	pthread_rwlock_rdlock(&b->lock);
-	succeed = hsearch_r(lookup, FIND, &found, &b->table);
-	if (succeed) {
-		ctr = (dynstats_ctr_t *) found->data;
-		STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
+	if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
+		succeed = hsearch_r(lookup, FIND, &found, &b->table);
+		if (succeed) {
+			ctr = (dynstats_ctr_t *) found->data;
+			STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
+		}
+		pthread_rwlock_unlock(&b->lock);
+	} else {
+		ABORT_FINALIZE(RS_RET_NOENTRY);
 	}
-	pthread_rwlock_unlock(&b->lock);
 
 	if (!succeed) {
 		CHKiRet(dynstats_addNewCtr(b, metric, 1));
 	}
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		STATSCOUNTER_INC(b->ctrOpsOverflow, b->mutCtrOpsOverflow);
+		if (iRet == RS_RET_NOENTRY) {
+			/* NOTE: this is not tested (because it requires very strong orchestration to gurantee contended lock for testing) */
+			STATSCOUNTER_INC(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
+		} else {
+			STATSCOUNTER_INC(b->ctrOpsOverflow, b->mutCtrOpsOverflow);
+		}
 	}
 	RETiRet;
 }
