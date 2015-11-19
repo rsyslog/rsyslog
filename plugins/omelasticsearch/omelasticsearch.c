@@ -38,6 +38,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if defined(__FreeBSD__)
+#include <unistd.h>
+#endif
 #include "cJSON/cjson.h"
 #include "conf.h"
 #include "syslogd-types.h"
@@ -48,6 +51,10 @@
 #include "statsobj.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
+
+#ifndef O_LARGEFILE
+#  define O_LARGEFILE 0
+#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
