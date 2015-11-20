@@ -188,6 +188,8 @@ dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
+			
+	timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
 finalize_it:
 	pthread_rwlock_unlock(&b->lock);
 	if (iRet != RS_RET_OK) {
@@ -198,10 +200,13 @@ finalize_it:
 
 static inline void
 dynstats_resetIfExpired(dynstats_bucket_t *b) {
-	if (timeoutVal(&b->metricCleanupTimeout) == 0) {
+	long timeout;
+	pthread_rwlock_rdlock(&b->lock);
+	timeout = timeoutVal(&b->metricCleanupTimeout);
+	pthread_rwlock_unlock(&b->lock);
+	if (timeout == 0) {
 		errmsg.LogMsg(0, RS_RET_TIMED_OUT, LOG_INFO, "dynstats: bucket '%s' is being reset", b->name);
 		dynstats_resetBucket(b, 1);
-		timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
 	}
 }
 
@@ -234,6 +239,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 	dynstats_bucket_t *b;
 	dynstats_buckets_t *bkts;
 	uint8_t lock_initialized, metric_count_mutex_initialized;
+	pthread_rwlockattr_t bucket_lock_attr;
 	DEFiRet;
 
 	lock_initialized = metric_count_mutex_initialized = 0;
@@ -248,7 +254,10 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		b->unusedMetricLife = 1000 * unusedMetricLife; 
 		CHKmalloc(b->name = ustrdup(name));
 
-		pthread_rwlock_init(&b->lock, NULL);
+		pthread_rwlockattr_init(&bucket_lock_attr);
+		pthread_rwlockattr_setkind_np(&bucket_lock_attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+
+		pthread_rwlock_init(&b->lock, &bucket_lock_attr);
 		lock_initialized = 1;
 		pthread_mutex_init(&b->mutMetricCount, NULL);
 		metric_count_mutex_initialized = 1;
@@ -259,8 +268,6 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 
 		CHKiRet(dynstats_addBucketMetrics(bkts, b, name));
 
-		timeoutComp(&b->metricCleanupTimeout, b->unusedMetricLife);
-	
 		pthread_rwlock_wrlock(&bkts->lock);
 		SLIST_INSERT_HEAD(&bkts->list, b, link);
 		pthread_rwlock_unlock(&bkts->lock);
