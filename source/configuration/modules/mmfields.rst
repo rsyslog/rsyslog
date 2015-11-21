@@ -78,8 +78,8 @@ separator character of comma is being used.
   template(name="ftpl"
            type=string
            string="%$!%\\n")
-  action(type="omfields")
-  action(type="omfile"
+  action(type="mmfields")
+  action(type="mmfile"
          file="/path/to/logfile"
          template="ftpl")
 
@@ -93,10 +93,10 @@ json path.
   template(name="ftpl"
            type=string
            string="%$!%\\n")
-  action(type="omfields"
+  action(type="mmfields"
          separator=":"
          jsonRoot="!mmfields")
-         action(type="omfile"
+         action(type="mmfile"
          file="/path/to/logfile"
          template="ftpl")
 
