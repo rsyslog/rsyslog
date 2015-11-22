@@ -228,8 +228,12 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		/* ----------- */
 
 		else if (!strcmp(pData->authType, "CURVECLIENT")) {
-
-			pData->clientCert = zcert_load(pData->clientCertPath);
+			if (!strcmp(pData->clientCertPath, "*")) {
+				pData->clientCert = zcert_new();
+			}
+			else {
+				pData->clientCert = zcert_load(pData->clientCertPath);
+			}
 		
 			if (!pData->clientCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load client cert");
