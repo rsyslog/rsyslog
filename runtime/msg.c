@@ -4478,7 +4478,7 @@ msgDelJSON(msg_t * const pM, uchar *name)
 	}
 	pthread_mutex_lock(mut);
 
-	if(jroot == NULL) {
+	if(*jroot == NULL) {
 		DBGPRINTF("msgDelJSONVar; jroot empty in unset for property %s\n",
 			  name);
 		FINALIZE;
@@ -4492,10 +4492,6 @@ msgDelJSON(msg_t * const pM, uchar *name)
 		json_object_put(*jroot);
 		*jroot = NULL;
 	} else {
-		if(*jroot == NULL) {
-			/* now we need a root obj */
-			*jroot = json_object_new_object();
-		}
 		leaf = jsonPathGetLeaf(name, ustrlen(name));
 		CHKiRet(jsonPathFindParent(*jroot, name, leaf, &parent, 1));
 		if(jsonVarExtract(parent, (char*)leaf, &leafnode) == FALSE)
