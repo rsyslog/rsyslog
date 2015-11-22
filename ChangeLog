@@ -36,6 +36,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
   * imczmq - ZMQ_ROUTER support
   * imczmq - Fix small memory leak from not freeing sockets  when done with them
   Thanks to Brian Knox for the contributions.
+- cleanup on code to unset a variable
+  under extreme cases (very, very unlikely), the old code could also lead
+  to errornous processing
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
 - bugfix: fix inconsistent number processing
