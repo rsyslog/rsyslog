@@ -588,6 +588,7 @@ finalize_it:
 }
 
 BEGINrunInput
+	int count = 0;
 CODESTARTrunInput
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
 	dbgprintf("imjournal: ratelimiting burst %d, interval %d\n", cs.ratelimitBurst,
@@ -616,7 +617,7 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework.
 	 */
 	while (glbl.GetGlobalInputTermState() == 0) {
-		int count = 0, r;
+		int r;
 
 		r = sd_journal_next(j);
 		if (r < 0) {
