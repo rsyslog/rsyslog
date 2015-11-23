@@ -473,6 +473,10 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 	dynstats_ctr_t *ctr;
 	DEFiRet;
 
+	if (! GatherStats) {
+		FINALIZE;
+	}
+
 	if (ustrlen(metric) == 0) {
 		STATSCOUNTER_INC(b->ctrNoMetric, b->mutCtrNoMetric);
 		FINALIZE;
