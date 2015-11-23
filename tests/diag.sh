@@ -274,7 +274,8 @@ case $1 in
    'content-check') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
-		    echo content-check failed to find "'$2'"
+		    echo content-check failed to find "'$2'", content is
+		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;

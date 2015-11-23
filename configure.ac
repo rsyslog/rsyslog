@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.14.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.15.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -1107,8 +1107,8 @@ AC_ARG_ENABLE(gt-ksi,
         [enable_gt_ksi=no]
 )
 if test "x$enable_gt_ksi" = "xyes"; then
-	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.2.2.0)
-	PKG_CHECK_MODULES(GT_KSI, libksi < 3.3.0.0)
+	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.4.0.2)
+	PKG_CHECK_MODULES(GT_KSI, libksi < 3.5.0.0)
 fi
 AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
 

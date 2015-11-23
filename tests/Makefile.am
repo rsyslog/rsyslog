@@ -12,6 +12,8 @@ TESTS = $(TESTRUNS)
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	msgvar-concurrency.sh \
+	localvar-concurrency.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -236,11 +238,10 @@ endif
 if ENABLE_MMNORMALIZE
 if ENABLE_IMPTCP
 TESTS +=  \
-	mmnormalize_variable.sh \
-	mmnormalize_tokenized.sh \
 	mmnormalize_regex_defaulted.sh \
 	mmnormalize_regex_disabled.sh
-
+#mmnormalize_variable.sh 
+#mmnormalize_tokenized.sh 
 endif
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
@@ -258,7 +259,9 @@ TESTS +=  \
 	json_nonarray_looping.sh
 endif
 TESTS +=  \
-	stop_when_array_has_element.sh
+	stop_when_array_has_element.sh \
+	json_null_array.sh \
+	json_null.sh
 endif
 
 if ENABLE_GNUTLS
@@ -478,6 +481,10 @@ EXTRA_DIST= \
 	testsuites/stop-localvar.conf \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
+	msgvar-concurrency.sh \
+	testsuites/msgvar-concurrency.conf \
+	localvar-concurrency.sh \
+	testsuites/localvar-concurrency.conf \
 	global_vars.sh \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \

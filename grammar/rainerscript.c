@@ -1188,16 +1188,47 @@ done:
 }
 
 
-/* ensure that retval is a number; if string is no number,
- * try to convert it to one. The semantics from es_str2num()
- * are used (bSuccess tells if the conversion went well or not).
+static inline int64_t
+str2num(es_str_t *s, int *bSuccess)
+{
+	size_t i;
+	int neg;
+	int64_t num = 0;
+	const uchar *const c = es_getBufAddr(s);
+
+	if(c[0] == '-') {
+		neg = -1;
+		i = -1;
+	} else {
+		neg = 1;
+		i = 0;
+	}
+	while(i < s->lenStr && isdigit(c[i])) {
+		num = num * 10 + c[i] - '0';
+		++i;
+	}
+	num *= neg;
+	if(bSuccess != NULL)
+		*bSuccess = (i == s->lenStr) ? 1 : 0;
+	return num;
+}
+
+/* We support decimal integers. Unfortunately, previous versions
+ * said they support oct and hex, but that wasn't really the case.
+ * Everything based on JSON was just dec-converted. As this was/is
+ * the norm, we fix that inconsistency. Luckly, oct and hex support
+ * was never documented.
+ * rgerhards, 2015-11-12
  */
 static long long
 var2Number(struct var *r, int *bSuccess)
 {
 	long long n;
 	if(r->datatype == 'S') {
-		n = es_str2num(r->d.estr, bSuccess);
+		n = str2num(r->d.estr, bSuccess);
+char *cc = es_str2cstr(r->d.estr, NULL);
+dbgprintf("JSONorString: string is '%s', num %d\n", cc, (int)n);
+free(cc);
 	} else {
 		if(r->datatype == 'J') {
 #ifdef HAVE_JSON_OBJECT_NEW_INT64
@@ -1262,15 +1293,15 @@ var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 
 int SKIP_NOTHING = 0x0;
 int SKIP_STRING = 0x1;
-int SKIP_JSON = 0x2;
 
 static void
 varFreeMembersSelectively(const struct var *r, const int skipMask)
 {
-	int kill_string = ! (skipMask & SKIP_STRING);
-	if(kill_string && (r->datatype == 'S')) es_deleteStr(r->d.estr);
-	int kill_json = ! (skipMask & SKIP_JSON);
-	if(kill_json && (r->datatype == 'J')) json_object_put(r->d.json);
+	if(r->datatype == 'J') {
+		json_object_put(r->d.json);
+	} else if( !(skipMask & SKIP_STRING) && (r->datatype == 'S')) {
+		es_deleteStr(r->d.estr);
+	}
 }
 
 static void
@@ -1589,7 +1620,9 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
-		dbgprintf("rainerscript: desired random-number range [0 - %ld) is wider than supported limit of [0 - %ld)", max, MAX_RANDOM_NUMBER);
+		dbgprintf("rainerscript: desired random-number range [0 - %lld] "
+			"is wider than supported limit of [0 - %d)",
+			max, MAX_RANDOM_NUMBER);
 	}
 	return x % max;
 }
@@ -1708,6 +1741,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
+		dbgprintf("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
 		break;
 	case CNFFUNC_RE_MATCH:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1748,6 +1782,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
 		}
 		if(localRet == RS_RET_OK) {
+dbgprintf("JSONorString: return String is '%s'\n", resStr);
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
 		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
@@ -1819,21 +1854,31 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	unsigned short bMustBeFreed = 0;
 	rsRetVal localRet;
 	struct json_object *json;
+	uchar *cstr;
 
 	if(var->prop.id == PROP_CEE        ||
 	   var->prop.id == PROP_LOCAL_VAR  ||
 	   var->prop.id == PROP_GLOBAL_VAR   ) {
-		localRet = msgGetJSONPropJSON((msg_t*)usrptr, &var->prop, &json);
-		ret->datatype = 'J';
-		ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
-			
-		DBGPRINTF("rainerscript: var %d:%s: '%s'\n", var->prop.id, var->prop.name,
+		localRet = msgGetJSONPropJSONorString((msg_t*)usrptr, &var->prop, &json, &cstr);
+		if(json != NULL) {
+			ret->datatype = 'J';
+			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
+			DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
+				var->prop.id, var->prop.name,
 			  (ret->d.json == NULL) ? "" : json_object_get_string(ret->d.json));
+		} else { /* we have a string */
+			ret->datatype = 'S';
+			ret->d.estr = (localRet == RS_RET_OK) ?
+					  es_newStrFromCStr((char*) cstr, strlen((char*) cstr))
+					: es_newStr(1);
+			DBGPRINTF("rainerscript: (json/string) var %d: '%s'\n", var->prop.id, cstr);
+			free(cstr);
+		}
 	} else {
 		ret->datatype = 'S';
 		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
-		DBGPRINTF("rainerscript: var %d: '%s'\n", var->prop.id, pszProp);
+		DBGPRINTF("rainerscript: (string) var %d: '%s'\n", var->prop.id, pszProp);
 		if(bMustBeFreed)
 			free(pszProp);
 	}
@@ -2406,7 +2451,8 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
-	DBGPRINTF("eval expr %p, return datatype '%c'\n", expr, ret->datatype);
+	DBGPRINTF("eval expr %p, return datatype '%c':%d\n", expr, ret->datatype,
+		(ret->datatype == 'N') ? (int)ret->d.n: 0);
 }
 
 //---------------------------------------------------------
@@ -2524,8 +2570,15 @@ struct json_object*
 cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
 {
 	struct var ret;
+	void *retptr;
 	cnfexprEval(expr, &ret, usrptr);
-	return ret.d.json;/*caller is supposed to free the returned json-object*/
+	if(ret.datatype == 'J') {
+		retptr = ret.d.json; /*caller is supposed to free the returned json-object*/
+	} else {
+		retptr = NULL;
+		varFreeMembers(&ret); /* we must free the element */
+	}
+	return retptr;
 }
 
 inline static void
@@ -2982,10 +3035,10 @@ cnfNewIterator(char *var, struct cnfexpr *collection)
 static void
 cnfIteratorDestruct(struct cnfitr *itr)
 {
-	if (itr->var != NULL) free(itr->var);
-	itr->var = NULL;
-	if (itr->collection != NULL) cnfexprDestruct(itr->collection);
-	itr->collection = NULL;
+	free(itr->var);
+	if(itr->collection != NULL)
+		cnfexprDestruct(itr->collection);
+	free(itr);
 }
 
 struct cnfstmt *
@@ -3679,10 +3732,10 @@ cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
 static const char* const numInWords[] = {"zero", "one", "two", "three", "four", "five", "six"};
 
 #define GENERATE_FUNC_WITH_NARG_RANGE(name, minArg, maxArg, funcId, errMsg) \
-	if(nParams < minArg || nParams > maxArg) {							\
-		parser_errmsg(errMsg, name, nParams);							\
-		return CNFFUNC_INVALID;											\
-	}																	\
+	if(nParams < minArg || nParams > maxArg) {	\
+		parser_errmsg(errMsg, name, nParams);	\
+		return CNFFUNC_INVALID;			\
+	}						\
 	return funcId
 
 
@@ -3741,10 +3794,10 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("wrap")) {
 		GENERATE_FUNC_WITH_NARG_RANGE("wrap", 2, 3, CNFFUNC_WRAP,
-									  "number of parameters for wrap() must either be "
-									  "two (operand_string, wrapper) or"
-									  "three (operand_string, wrapper, wrapper_escape_str)"
-									  "but is %d.");
+			"number of parameters for %s() must either be "
+			"two (operand_string, wrapper) or"
+			"three (operand_string, wrapper, wrapper_escape_str)"
+			"but is %d.");
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
 	} else {

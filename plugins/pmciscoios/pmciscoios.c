@@ -185,6 +185,7 @@ CODESTARTparse2
 	}
 
 	/* TIMESTAMP */
+	if(p2parse[0] == '*') p2parse++;
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
