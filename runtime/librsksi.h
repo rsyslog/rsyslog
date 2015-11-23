@@ -220,6 +220,8 @@ hashOutputLengthOctetsKSI(uint8_t hashID)
 		return 48;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 64;
+	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
+		return 32;
 	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
 		return 28;
 	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
@@ -250,6 +252,8 @@ hashIdentifierKSI(KSI_HashAlgorithm hashID)
 		return 0x04;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 0x05;
+	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
+		return 0x06;
 	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
 		return 0x07;
 	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
@@ -279,6 +283,8 @@ hashAlgNameKSI(uint8_t hashID)
 		return "SHA2-384";
 	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
+	case KSI_HASHALG_RIPEMD_256:
+		return "RIPEMD-256";
 	case KSI_HASHALG_SHA3_244:
 		return "SHA3-224";
 	case KSI_HASHALG_SHA3_256:
@@ -308,6 +314,8 @@ hashID2AlgKSI(uint8_t hashID)
 		return KSI_HASHALG_SHA2_384;
 	case 0x05:
 		return KSI_HASHALG_SHA2_512;
+	case 0x06:
+		return KSI_HASHALG_RIPEMD_256;
 	case 0x07:
 		return KSI_HASHALG_SHA3_244;
 	case 0x08:
