@@ -38,6 +38,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
   * imczmq - fixed a couple of cases where vars could be used uninitialized
   * imczmq - ZMQ_ROUTER support
   * imczmq - Fix small memory leak from not freeing sockets  when done with them
+  * allow creation of on demand ephemeral CurveZMQ certs for encryption.
+    Clients may specify clientcertpath="*" to indicate they want an on
+    demand generated cert.
   Thanks to Brian Knox for the contributions.
 - cleanup on code to unset a variable
   under extreme cases (very, very unlikely), the old code could also lead
