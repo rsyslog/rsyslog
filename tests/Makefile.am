@@ -148,6 +148,7 @@ TESTS +=  \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
+	rscript_field-vg.sh \
 	unused_lookup_table.sh \
 	lookup_table-vg.sh \
 	array_lookup_table-vg.sh \
@@ -446,6 +447,7 @@ EXTRA_DIST= \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
 	rscript_field.sh \
+	rscript_field-vg.sh \
 	testsuites/rscript_field.conf \
 	rscript_stop.sh \
 	testsuites/rscript_stop.conf \

@@ -1284,6 +1284,7 @@ static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
+    int allocLen;
 	int iLen;
 	uchar *pBuf;
 	uchar *pFld;
@@ -1314,7 +1315,12 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 			    * step back a little not to copy it as part of the field. */
 		/* we got our end pointer, now do the copy */
 		iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-		CHKmalloc(pBuf = MALLOC((iLen + 1) * sizeof(uchar)));
+        allocLen = iLen + 1;
+#	ifdef VALGRIND
+		allocLen += (3 - (iLen % 4));
+        /*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
+#	endif
+		CHKmalloc(pBuf = MALLOC(allocLen * sizeof(uchar)));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
