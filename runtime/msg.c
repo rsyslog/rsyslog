@@ -2821,7 +2821,7 @@ getJSONPropVal(msg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_
 		mut = &pMsg->mut_json;
 	} else if(pProp->id == PROP_LOCAL_VAR) {
 		jroot = pMsg->localvars;
-		mut = &pMsg->mut_json;
+		mut = &pMsg->mut_localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
 		mut = &glblVars_lock;
 		jroot = global_var_root;
