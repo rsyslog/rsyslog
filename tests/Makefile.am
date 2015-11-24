@@ -243,6 +243,11 @@ TESTS +=  \
 	json_array_looping.sh \
 	json_nonarray_looping.sh
 endif
+if HAVE_VALGRIND
+TESTS +=  \
+	json_null_array-vg.sh \
+	json_null-vg.sh
+endif
 TESTS +=  \
 	stop_when_array_has_element.sh \
 	json_null_array.sh \
