@@ -6,7 +6,7 @@
  *
  * File begun on 2009-11-03 by RGerhards
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -245,7 +245,11 @@ CODESTARTparse
 	 */
 
 	/* TIMESTAMP */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse, &lenMsg) == RS_RET_OK) {
+	if(lenMsg >= 2 && p2parse[0] == '-' && p2parse[1] == ' ') {
+		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
+		p2parse += 2;
+		lenMsg -= 2;
+	} else if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse, &lenMsg) == RS_RET_OK) {
 		if(pMsg->msgFlags & IGNDATE) {
 			/* we need to ignore the msg data, so simply copy over reception date */
 			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
