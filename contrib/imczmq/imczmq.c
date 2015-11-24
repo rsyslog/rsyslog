@@ -353,8 +353,12 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		/* ----------- */
 
 		else if (!strcmp(iconf->authType, "CURVECLIENT")) {
-
-			pData->clientCert = zcert_load(iconf->clientCertPath);
+			if (!strcmp(iconf->clientCertPath, "*")) {
+				pData->clientCert = zcert_new();
+			}
+			else {
+				pData->clientCert = zcert_load(iconf->clientCertPath);
+			}
 			
 			if (!pData->clientCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load client cert");
