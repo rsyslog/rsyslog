@@ -45,6 +45,10 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - cleanup on code to unset a variable
   under extreme cases (very, very unlikely), the old code could also lead
   to errornous processing
+- bugfix: fix extra whitespace in property expansions
+  Address off-by-one issues introduced in f3bd7a2 resulting in extra
+  whitespace in property expansions
+  Thanks to Matthew Gabeler-Lee for the patch.
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
 - bugfix: fix inconsistent number processing
