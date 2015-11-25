@@ -62,7 +62,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "subtree", eCmdHdlrString, 0 },
 	{ "option.stdsql", eCmdHdlrBinary, 0 },
 	{ "option.sql", eCmdHdlrBinary, 0 },
-	{ "option.json", eCmdHdlrBinary, 0 }
+	{ "option.json", eCmdHdlrBinary, 0 },
+	{ "option.casesensitive", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -537,6 +538,31 @@ struct templateEntry* tpeConstruct(struct template *pTpl)
 }
 
 
+/* Helper function to apply case-sensitivity to templates.
+ */
+static void
+apply_case_sensitivity(struct template *pTpl)
+{
+	if(pTpl->optCaseSensitive) return;
+
+	struct templateEntry *pTpe;
+
+	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
+		if(pTpe->eEntryType == FIELD) {
+			if(pTpe->data.field.msgProp.id == PROP_CEE        ||
+			   pTpe->data.field.msgProp.id == PROP_LOCAL_VAR  ||
+			   pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR   ) {
+				uchar* p;
+				p = pTpe->fieldName;
+				for ( ; *p; ++p) *p = tolower(*p);
+				p = pTpe->data.field.msgProp.name;
+				for ( ; *p; ++p) *p = tolower(*p);
+			}
+		}
+	}
+}
+
+
 /* Constructs a template list object. Returns pointer to it
  * or NULL (if it fails).
  */
@@ -841,8 +867,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		cstrAppendChar(pStrProp, tolower(*p));
-		++p; /* do NOT do this in tolower()! */
+		cstrAppendChar(pStrProp, *p);
+		++p;
 	}
 
 	/* got the name */
@@ -1150,6 +1176,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 
 	/* save field name - if none was given, use the property name instead */
 	if(pStrField == NULL) {
+		/* FIXME Global Var?   AND   Lower case? */
 		if(pTpe->data.field.msgProp.id == PROP_CEE || pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
 			/* in CEE case, we remove "$!"/"$." from the fieldname - it's just our indicator */
 			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+2);
@@ -1354,12 +1381,15 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 			pTpl->optFormatEscape = SQL_ESCAPE;
 		} else if(!strcmp(optBuf, "nosql")) {
 			pTpl->optFormatEscape = NO_ESCAPE;
+		} else if(!strcmp(optBuf, "casesensitive")) {
+			pTpl->optCaseSensitive = 1;
 		} else {
 			dbgprintf("Invalid option '%s' ignored.\n", optBuf);
 		}
 	}
 
 	*ppRestOfConfLine = p;
+	apply_case_sensitivity(pTpl);
 
 	return(pTpl);
 }
@@ -1812,7 +1842,7 @@ tplProcessCnf(struct cnfobj *o)
 	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
 		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
 	int i;
-	int o_sql=0, o_stdsql=0, o_json=0; /* options */
+	int o_sql=0, o_stdsql=0, o_json=0, o_casesensitive=0; /* options */
 	int numopts;
 	rsRetVal localRet;
 	DEFiRet;
@@ -1869,6 +1899,8 @@ tplProcessCnf(struct cnfobj *o)
 			o_sql = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "option.json")) {
 			o_json = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "option.casesensitive")) {
+			o_casesensitive = pvals[i].val.d.n;
 		} else {
 			dbgprintf("template: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
@@ -1941,6 +1973,7 @@ tplProcessCnf(struct cnfobj *o)
 	if(o_sql) ++numopts;
 	if(o_stdsql) ++numopts;
 	if(o_json) ++numopts;
+	if(o_casesensitive) ++numopts;
 	if(numopts > 1) {
 		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
 			"options of sql, stdsql or json specified", name);
@@ -1994,6 +2027,9 @@ tplProcessCnf(struct cnfobj *o)
 	else if(o_json)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
+	if(o_casesensitive)
+		pTpl->optCaseSensitive = 1;
+	apply_case_sensitivity(pTpl);
 finalize_it:
 	free(tplStr);
 	free(plugin);
@@ -2015,7 +2051,7 @@ finalize_it:
 
 
 /* Find a template object based on name. Search
- * currently is case-senstive (should we change?).
+ * currently is case-sensitive (should we change?).
  * returns pointer to template object if found and
  * NULL otherwise.
  * rgerhards 2004-11-17
@@ -2174,6 +2210,8 @@ void tplPrintList(rsconf_t *conf)
 			dbgprintf("[JSON-Escaped Format] ");
 		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
 			dbgprintf("[SQL-Format (standard SQL)] ");
+		if(pTpl->optCaseSensitive)
+			dbgprintf("[Case Sensitive Vars] ");
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {

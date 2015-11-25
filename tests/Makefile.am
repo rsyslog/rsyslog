@@ -265,7 +265,8 @@ TESTS +=  \
 	stop_when_array_has_element.sh \
 	json_null_array.sh \
 	json_null.sh \
-	json_var_cmpr.sh
+	json_var_cmpr.sh \
+	json_var_case.sh
 endif
 
 if ENABLE_GNUTLS
@@ -919,6 +920,8 @@ EXTRA_DIST= \
 	testsuites/xlate_more.lkp_tbl \
 	json_var_cmpr.sh \
 	testsuites/json_var_cmpr.conf \
+	json_var_case.sh \
+	testsuites/json_var_case.conf \
 	cfg.sh
 
 # TODO: re-enable

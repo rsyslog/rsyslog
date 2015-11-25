@@ -54,6 +54,7 @@ struct template {
 	 * we use chars because they are faster than bit fields and smaller
 	 * than short...
 	 */
+	char optCaseSensitive;  /* case-sensitive variable property references, default False, 0 */
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
