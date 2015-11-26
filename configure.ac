@@ -955,6 +955,18 @@ AC_ARG_ENABLE(mmjsonparse,
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
+# mmgrok
+AC_ARG_ENABLE(mmgrok,
+        [AS_HELP_STRING([--enable-mmgrok],[Enable building mmgrok support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmgrok="yes" ;;
+          no) enable_mmgrok="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmgrok) ;;
+        esac],
+        [enable_mmgrok=no]
+)
+AM_CONDITIONAL(ENABLE_MMGROK, test x$enable_mmgrok = xyes)
+
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
         [AS_HELP_STRING([--enable-mmaudit],[Enable building mmaudit support @<:@default=no@:>@])],
@@ -1726,6 +1738,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
 		contrib/imkmsg/Makefile \
+		contrib/mmgrok/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
 		contrib/omczmq/Makefile \
@@ -1796,6 +1809,7 @@ echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmgrok module will be compiled:           $enable_mmgrok"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"

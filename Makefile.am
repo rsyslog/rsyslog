@@ -207,6 +207,10 @@ if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
 
+if ENABLE_MMGROK
+SUBDIRS += plugins/mmgrok
+endif
+
 if ENABLE_MMAUDIT
 SUBDIRS += plugins/mmaudit
 endif
@@ -274,6 +278,7 @@ THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-mail \
 	--enable-klog \
 	--enable-diagtools \
+	--enable-mmgrok \
 	--enable-gnutls \
 	--enable-omstdout \
 	--enable-pmlastmsg \
