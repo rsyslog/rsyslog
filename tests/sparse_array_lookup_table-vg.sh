@@ -32,7 +32,8 @@ cp $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tb
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check "msgnum:00000000: quux"
 . $srcdir/diag.sh content-check "msgnum:00000001: quux"
 . $srcdir/diag.sh content-check "msgnum:00000002: foo_latest"

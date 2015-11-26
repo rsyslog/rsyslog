@@ -24,7 +24,8 @@ cp $srcdir/testsuites/xlate_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: baz"

@@ -131,5 +131,6 @@ cp $srcdir/testsuites/xlate_sparseArray_empty_table.lkp_tbl $srcdir/xlate.lkp_tb
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
-. $srcdir/diag.sh wait-shutdown 
+. $srcdir/diag.sh wait-shutdown-vg
+. $srcdir/diag.sh check-exit-vg
 . $srcdir/diag.sh exit
