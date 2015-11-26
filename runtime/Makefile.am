@@ -71,8 +71,6 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	ratelimit.c \
 	ratelimit.h \
-	lookup.c \
-	lookup.h \
 	cfsysline.c \
 	cfsysline.h \
 	sd-daemon.c \

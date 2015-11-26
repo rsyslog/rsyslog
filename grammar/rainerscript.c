@@ -1808,19 +1808,6 @@ dbgprintf("JSONorString: return String is '%s'\n", resStr);
 			ret->d.n = 1;
 		ret->datatype = 'N';
 		break;
-	case CNFFUNC_LOOKUP:
-dbgprintf("DDDD: executing lookup\n");
-		ret->datatype = 'S';
-		if(func->funcdata == NULL) {
-			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);
-			break;
-		}
-		cnfexprEval(func->expr[1], &r[1], usrptr);
-		str = (char*) var2CString(&r[1], &bMustFree);
-		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
-		if(bMustFree) free(str);
-		varFreeMembers(&r[1]);
-		break;
 	default:
 		if(Debug) {
 			fname = es_str2cstr(func->fname, NULL);
@@ -3770,8 +3757,6 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("exec_template", 1, CNFFUNC_EXEC_TEMPLATE);
 	} else if(FUNC_NAME("prifilt")) {
 		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
-	} else if(FUNC_NAME("lookup")) {
-		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
 	} else if(FUNC_NAME("replace")) {
 		GENERATE_FUNC_WITH_ERR_MSG(
 			"replace", 3, CNFFUNC_REPLACE,
@@ -3892,37 +3877,6 @@ finalize_it:
 	RETiRet;
 }
 
-
-static inline rsRetVal
-initFunc_lookup(struct cnffunc *func)
-{
-	uchar *cstr = NULL;
-	DEFiRet;
-
-	if(func->nParams != 2) {
-		parser_errmsg("rsyslog logic error in line %d of file %s\n",
-			__LINE__, __FILE__);
-		FINALIZE;
-	}
-
-	func->funcdata = NULL;
-	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("table name (param 1) of lookup() must be a constant string");
-		FINALIZE;
-	}
-
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
-	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
-		parser_errmsg("lookup table '%s' not found", cstr);
-		FINALIZE;
-	}
-
-finalize_it:
-	free(cstr);
-	RETiRet;
-}
-
-
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 {
@@ -3959,9 +3913,6 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_PRIFILT:
 				initFunc_prifilt(func);
-				break;
-			case CNFFUNC_LOOKUP:
-				initFunc_lookup(func);
 				break;
 			case CNFFUNC_EXEC_TEMPLATE:
 				initFunc_exec_template(func);
