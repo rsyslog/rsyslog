@@ -208,7 +208,7 @@ SUBDIRS += plugins/mmjsonparse
 endif
 
 if ENABLE_MMGROK
-SUBDIRS += plugins/mmgrok
+SUBDIRS += contrib/mmgrok
 endif
 
 if ENABLE_MMAUDIT
