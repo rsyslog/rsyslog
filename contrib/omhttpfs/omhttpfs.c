@@ -460,8 +460,7 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     strncpy(jre->message, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
     json_tokener_free(jt);
-    json_object_put(json);
-    
+    json_object_put(json);    
 
     return RS_RET_OK;
 }
