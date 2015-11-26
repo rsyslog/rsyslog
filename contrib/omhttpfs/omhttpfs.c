@@ -353,11 +353,11 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     wrkrInstanceData_t *mem = (wrkrInstanceData_t *)userp;
     
     newreply = realloc(mem->reply, mem->replyLen + realsize + 1);
-    if(newreply == NULL) {
+    if (newreply == NULL) {
         /* out of memory! */
         printf("not enough memory (realloc returned NULL)\n");
         
-        if (mem->reply) 
+        if (mem->reply != NULL) 
             free(mem->reply);
         
         mem->reply = NULL;
