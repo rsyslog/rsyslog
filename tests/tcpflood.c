@@ -128,6 +128,7 @@ static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
 static int bSilent = 0; /* completely silent operation */
 static int bRandConnDrop = 0; /* randomly drop connections? */
+static double dbRandConnDrop = 0.95; /* random drop probability */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 static int bBinaryFile = 0;	/* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
@@ -480,6 +481,14 @@ int sendMessages(struct instdata *inst)
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 		} else if(transport == TP_TLS) {
+			if(sockArray[socknum] == -1) {
+				/* connection was dropped, need to re-establish */
+				if(openConn(&(sockArray[socknum])) != 0) {
+					printf("error in trying to re-open connection %d\n", socknum);
+					exit(1);
+				}
+				initTLSSess(socknum);
+			}
 			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
 				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
 				offsSendBuf += lenBuf;
@@ -498,6 +507,7 @@ int sendMessages(struct instdata *inst)
 			printf("send() failed at socket %d, index %d, msgNum %lld\n",
 				sockArray[socknum], i, inst->numSent);
 			fflush(stderr);
+
 			return(1);
 		}
 		if(i % 100 == 0) {
@@ -508,7 +518,7 @@ int sendMessages(struct instdata *inst)
 			/* if we need to randomly drop connections, see if we 
 			 * are a victim
 			 */
-			if(rand() > (int) (RAND_MAX * 0.95)) {
+			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
 				++nConnDrops;
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;
@@ -867,7 +877,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:j:")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -901,6 +911,10 @@ int main(int argc, char *argv[])
 				}
 				break;
 		case 'D':	bRandConnDrop = 1;
+				break;
+		case 'l':	
+					dbRandConnDrop = atof(optarg); 
+					printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
 				break;
 		case 'r':	bRandomizeExtraData = 1;
 				break;
