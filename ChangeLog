@@ -25,6 +25,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - KSI utilities: somewhat improved error messages
   Thanks to Henri Lakk for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/588
+- support grok via new contributed module mmgrok
+  Thanks to 饶琛琳 (github user chenryn) for the contribution.
 - improvments for 0mq modules:
   * omczmq - suspend / Retry handling - the output plugin can now recover
     from some error states due to issues with plugin startup or message sending
