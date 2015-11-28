@@ -305,6 +305,11 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
         DBGPRINTF("'%s'", currentSub->subscribe); 
     }
     DBGPRINTF("\n");
+    
+    if (subscribes) {
+         free(subscribes);
+    }
+    
 finalize_it:
     RETiRet;
 }
