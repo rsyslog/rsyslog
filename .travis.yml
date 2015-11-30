@@ -13,9 +13,12 @@ matrix:
        env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      - compiler: "clang"
        env: CFLAGS="-g -O1 -fsanitize=address"
+     - compiler: "clang"
+       env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99"
+       dist: trusty
 
 before_install:
-  - travis_retry sudo apt-get install -qq python-software-properties
+  #- travis_retry sudo apt-get install -qq python-software-properties
   - travis_retry sudo add-apt-repository ppa:adiscon/v8-devel -y
   - travis_retry sudo apt-get update -qq
 
@@ -23,6 +26,7 @@ install:
   - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
+  - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
 
 script:
   - autoreconf --force --verbose --install
@@ -31,8 +35,8 @@ script:
   - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
   - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --disable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
-  - make && make check #make dist && make check && sudo make install
-  - make distcheck
+  - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd tools; scan-build --status-bugs make ; fi
   # if that all worked, we go the traditional gcc & valgrind way
   #- env TESTS="json_array_looping.sh" make -e check
   # only for newer autoconf tools you need to add:
