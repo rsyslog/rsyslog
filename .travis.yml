@@ -11,9 +11,9 @@ matrix:
   include:
      - compiler: "gcc"
        env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-     - compiler: "gcc"
-       env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-       dist: trusty
+     #- compiler: "gcc"
+     #  env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+     #  dist: trusty
      - compiler: "clang"
        env: CFLAGS="-g -O1 -fsanitize=address"
      - compiler: "clang"
@@ -39,7 +39,7 @@ script:
   - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --disable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
-  - if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
+  #- if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make ; cd .. ;  fi
   #- if [ "x$STAT_AN" == "xYES" ] ; then cd grammar; make ; cd .. ;  fi
