@@ -126,11 +126,17 @@ TESTS +=  \
 	rscript_re_extract.sh \
 	rscript_re_match.sh \
 	rscript_eq.sh \
+	rscript_eq_var.sh \
 	rscript_ge.sh \
+	rscript_ge_var.sh \
 	rscript_gt.sh \
+	rscript_gt_var.sh \
 	rscript_le.sh \
+	rscript_le_var.sh \
 	rscript_lt.sh \
+	rscript_lt_var.sh \
 	rscript_ne.sh \
+	rscript_ne_var.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -460,16 +466,28 @@ EXTRA_DIST= \
 	testsuites/stop.conf \
 	rscript_le.sh \
 	testsuites/rscript_le.conf \
+	rscript_le_var.sh \
+	testsuites/rscript_le_var.conf \
 	rscript_ge.sh \
 	testsuites/rscript_ge.conf \
+	rscript_ge_var.sh \
+	testsuites/rscript_ge_var.conf \
 	rscript_lt.sh \
 	testsuites/rscript_lt.conf \
+	rscript_lt_var.sh \
+	testsuites/rscript_lt_var.conf \
 	rscript_gt.sh \
 	testsuites/rscript_gt.conf \
+	rscript_gt_var.sh \
+	testsuites/rscript_gt_var.conf \
 	rscript_ne.sh \
 	testsuites/rscript_ne.conf \
+	rscript_ne_var.sh \
+	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \
+	rscript_eq_var.sh \
+	testsuites/rscript_eq_var.conf \
 	rscript_set_modify.sh \
 	testsuites/rscript_set_modify.conf \
 	testsuites/rscript_unaffected_reset.conf \
