@@ -634,10 +634,15 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 	DBGPRINTF("omfwd: add %u bytes to send buffer (curr offs %u)\n",
 		(unsigned) len, pWrkrData->offsSndBuf);
 	if(pWrkrData->offsSndBuf != 0 && pWrkrData->offsSndBuf + len >= sizeof(pWrkrData->sndBuf)) {
-		/* no buffer space left, need to commit previous records */
+		/* no buffer space left, need to commit previous records. With the
+		 * current API, there unfortunately is no way to signal this
+		 * state transition to the upper layer.
+		 */
+		DBGPRINTF("omfwd: we need to do a tcp send due to buffer "
+			  "out of space. If the transaction fails, this will "
+			  "lead to duplication of messages");
 		CHKiRet(TCPSendBuf(pWrkrData, pWrkrData->sndBuf, pWrkrData->offsSndBuf, NO_FLUSH));
 		pWrkrData->offsSndBuf = 0;
-		iRet = RS_RET_PREVIOUS_COMMITTED;
 	}
 
 	/* check if the message is too large to fit into buffer */
