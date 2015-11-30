@@ -49,6 +49,7 @@ script:
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omkafka; make ;  cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/ommail; make ;  cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/pmciscoios; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/mmfields; make ;  cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then scan-build --status-bugs make ; fi
   # if that all worked, we go the traditional gcc & valgrind way
   #- env TESTS="json_array_looping.sh" make -e check
