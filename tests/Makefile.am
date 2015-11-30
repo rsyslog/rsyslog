@@ -125,6 +125,12 @@ TESTS +=  \
 	rscript_wrap3.sh \
 	rscript_re_extract.sh \
 	rscript_re_match.sh \
+	rscript_eq.sh \
+	rscript_ge.sh \
+	rscript_gt.sh \
+	rscript_le.sh \
+	rscript_lt.sh \
+	rscript_ne.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
