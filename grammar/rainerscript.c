@@ -1618,6 +1618,10 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 		dbgprintf("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number value to 0");
 		return 0;
 	}
+	if(max == 0) {
+		dbgprintf("rainerscript: random(max) invalid, 'max' is zero, , defaulting random-number value to 0");
+		return 0;
+	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
 		dbgprintf("rainerscript: desired random-number range [0 - %lld] "
