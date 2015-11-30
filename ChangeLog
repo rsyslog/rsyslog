@@ -67,6 +67,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
 - bugfix: divide by zero if max() function was provided zero
+- bugfix: invalid mutex handling in omfile async write mode
+  could lead to segfault, even though highly unlikely (caught by
+  testbench on a single platform)
 - bugfix: fix inconsistent number processing
   Unfortunately, previous versions of the rule engine tried to
   support oct and hex, but that wasn't really the case.
