@@ -143,8 +143,8 @@ setsid(void)
 rsRetVal // TODO: make static
 queryLocalHostname(void)
 {
-	uchar *LocalHostName;
-	uchar *LocalDomain;
+	uchar *LocalHostName = NULL;
+	uchar *LocalDomain = NULL;
 	uchar *LocalFQDNName;
 	DEFiRet;
 
@@ -163,8 +163,12 @@ queryLocalHostname(void)
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
 	glbl.GenerateLocalHostNameProperty();
+	LocalHostName = NULL; /* handed over */
+	LocalDomain = NULL; /* handed over */
 
 finalize_it:
+	free(LocalHostName);
+	free(LocalDomain);
 	RETiRet;
 }
 
@@ -1161,7 +1165,7 @@ initAll(int argc, char **argv)
 			doFork = 0;
 			break;
 		case 'N':		/* enable config verify mode */
-			iConfigVerify = atoi(arg);
+			iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 			fprintf (stderr, "rsyslogd: the -q command line option will go away "
@@ -1186,13 +1190,20 @@ initAll(int argc, char **argv)
 			}
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
+			if(arg == NULL) {
+				/* note this case should already be handled by getopt,
+				 * but we want to keep the static analyzer happy.
+				 */
+				fprintf(stderr, "-T options needs a parameter\n");
+				exit(1);
+			}
 			if(chroot(arg) != 0) {
 				perror("chroot");
 				exit(1);
 			}
 			break;
 		case 'u':		/* misc user settings */
-			iHelperUOpt = atoi(arg);
+			iHelperUOpt = (arg == NULL) ? 0 : atoi(arg);
 			if(iHelperUOpt & 0x01) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
 					 "soon.\n"
