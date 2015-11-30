@@ -4,6 +4,10 @@ compiler:
   - gcc
   - clang
 
+branches:
+  except:
+    - master-candidate
+
 matrix:
   exclude:
      - compiler: "gcc"
