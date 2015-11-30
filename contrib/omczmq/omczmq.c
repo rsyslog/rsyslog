@@ -480,9 +480,15 @@ CODESTARTnewActInst
 				pData->sockType = ZMQ_DEALER;
 			}
 			else {
+				if(stringType != NULL){
+					free(stringType);
+				}				
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"omczmq: invalid socktype");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+			}
+			if(stringType != NULL){
+				free(stringType);
 			}
 		} 
 		else if (!strcmp(actpblk.descr[i].name, "authtype")) {
@@ -550,6 +556,9 @@ CODESTARTnewActInst
 					break;
 				}
 				topics = delimiter + 1;
+			}
+			if(topics != NULL){
+				free(topics);
 			}
 		}
 		else {
