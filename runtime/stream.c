@@ -1271,9 +1271,10 @@ asyncWriterThread(void *pPtr)
 			}
 			if(bTimedOut && pThis->iBufPtr > 0) {
 				/* if we timed out, we need to flush pending data */
+				d_pthread_mutex_unlock(&pThis->mut);
 				strmFlushInternal(pThis, 0);
 				bTimedOut = 0;
-				d_pthread_mutex_unlock(&pThis->mut);
+				d_pthread_mutex_lock(&pThis->mut); 
 				continue;
 			}
 			bTimedOut = 0;
@@ -1310,7 +1311,7 @@ asyncWriterThread(void *pPtr)
 				pthread_cond_broadcast(&pThis->isEmpty);
 		}
 	}
-	d_pthread_mutex_unlock(&pThis->mut);
+	/* Not reached */	
 
 finalize_it:
 	ENDfunc
