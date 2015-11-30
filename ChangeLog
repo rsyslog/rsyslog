@@ -66,6 +66,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to git hub user c6226 for the patch.
 - bugfix: parameter mismatch in error message for wrap() function
 - bugfix: parameter mismatch in error message for random() function
+- bugfix: divide by zero if max() function was provided zero
 - bugfix: fix inconsistent number processing
   Unfortunately, previous versions of the rule engine tried to
   support oct and hex, but that wasn't really the case.
