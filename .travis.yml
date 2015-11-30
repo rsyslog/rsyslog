@@ -36,7 +36,16 @@ script:
   - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --disable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd tools; scan-build --status-bugs make ; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make ; cd .. ;  fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd grammar; make ; cd .. ;  fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imfile; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imptcp; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omrelp; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omkafka; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/ommail; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/pmciscoios; make ;  cd ../..; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd tools; scan-build --status-bugs make && cd ..; fi
   # if that all worked, we go the traditional gcc & valgrind way
   #- env TESTS="json_array_looping.sh" make -e check
   # only for newer autoconf tools you need to add:
