@@ -780,7 +780,7 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 		
 		/* maintain worker data table -- only needed if wrkrHUP is requested! */
 
-		d_pthread_mutex_lock(&pThis->mutWrkrDataTable);
+		pthread_mutex_lock(&pThis->mutWrkrDataTable);
 		int freeSpot;
 		for(freeSpot = 0 ; freeSpot < pThis->wrkrDataTableSize ; ++freeSpot)
 			if(pThis->wrkrDataTable[freeSpot] == NULL)
@@ -794,7 +794,7 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 dbgprintf("DDDD: writing data to table spot %d\n", freeSpot);
 		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
 		pThis->nWrkr++;
-		d_pthread_mutex_unlock(&pThis->mutWrkrDataTable);
+		pthread_mutex_unlock(&pThis->mutWrkrDataTable);
 		DBGPRINTF("wti %p: created action worker instance %d for "
 			  "action %d\n", pWti, pThis->nWrkr, pThis->iActionNbr);
 	}
@@ -1353,7 +1353,7 @@ void
 actionRemoveWorker(action_t *const __restrict__ pAction,
 	void *const __restrict__ actWrkrData)
 {
-	d_pthread_mutex_lock(&pAction->mutWrkrDataTable);
+	pthread_mutex_lock(&pAction->mutWrkrDataTable);
 	pAction->nWrkr--;
 	for(int w = 0 ; w < pAction->wrkrDataTableSize ; ++w) {
 		if(pAction->wrkrDataTable[w] == actWrkrData) {
@@ -1361,7 +1361,7 @@ actionRemoveWorker(action_t *const __restrict__ pAction,
 			break; /* done */
 		}
 	}
-	d_pthread_mutex_unlock(&pAction->mutWrkrDataTable);
+	pthread_mutex_unlock(&pAction->mutWrkrDataTable);
 }
 
 
@@ -1383,7 +1383,7 @@ actionCallHUPHdlr(action_t * const pAction)
 	}
 
 	if(pAction->pMod->doHUPWrkr != NULL) {
-		d_pthread_mutex_lock(&pAction->mutWrkrDataTable);
+		pthread_mutex_lock(&pAction->mutWrkrDataTable);
 		for(int i = 0 ; i < pAction->wrkrDataTableSize ; ++i) {
 			dbgprintf("HUP: table entry %d: %p %s\n", i,
 				pAction->wrkrDataTable[i],
@@ -1397,7 +1397,7 @@ actionCallHUPHdlr(action_t * const pAction)
 				}
 			}
 		}
-		d_pthread_mutex_unlock(&pAction->mutWrkrDataTable);
+		pthread_mutex_unlock(&pAction->mutWrkrDataTable);
 	}
 
 finalize_it:
