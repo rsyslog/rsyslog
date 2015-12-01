@@ -13,13 +13,13 @@ matrix:
      - compiler: "gcc"
      - compiler: "clang"
   include:
-#     - compiler: "gcc"
-#       env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+     - compiler: "gcc"
+       env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      #- compiler: "gcc"
      #  env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      #  dist: trusty
-#     - compiler: "clang"
-#       env: CFLAGS="-g -O1 -fsanitize=address"
+     - compiler: "clang"
+       env: CFLAGS="-g -O1 -fsanitize=address"
      - compiler: "clang"
        env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99"
        dist: trusty
