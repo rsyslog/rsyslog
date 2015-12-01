@@ -3,7 +3,7 @@
  *
  * File begun on 2014-07-07 by RGerhards
  *
- * Copyright 2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2014-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -91,12 +91,20 @@ finalize_it:
 	RETiRet;
 }
 
+
+BEGINfreeParserInst
+CODESTARTfreeParserInst
+	dbgprintf("pmciscoios: free parser instance %p\n", pInst);
+ENDfreeParserInst
+
+
 BEGINnewParserInst
-	struct cnfparamvals *pvals;
+	struct cnfparamvals *pvals = NULL;
 	int i;
 CODESTARTnewParserInst
 	DBGPRINTF("newParserInst (pmciscoios)\n");
 
+	inst = NULL;
 	CHKiRet(createInstance(&inst));
 
 	if(lst == NULL)
@@ -125,13 +133,9 @@ finalize_it:
 CODE_STD_FINALIZERnewParserInst
 	if(lst != NULL)
 		cnfparamvalsDestruct(pvals, &parserpblk);
+	if(iRet != RS_RET_OK)
+		freeParserInst(inst);
 ENDnewParserInst
-
-
-BEGINfreeParserInst
-CODESTARTfreeParserInst
-	dbgprintf("pmciscoios: free parser instance %p\n", pInst);
-ENDfreeParserInst
 
 
 BEGINparse2
