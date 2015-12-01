@@ -459,7 +459,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 {
 	DEFiRet;
 	int iNbrTimeUsed;
-	time_t ttGenTime = 0;
+	time_t ttGenTime;
 	struct syslogTime stTime;
 	char errStr[1024];
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
