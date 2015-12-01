@@ -459,7 +459,9 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 {
 	DEFiRet;
 	int iNbrTimeUsed;
-	time_t ttGenTime;
+	time_t ttGenTime = 0; /* to avoid clang static analyzer false positive */
+		/* note: we do never use this time, because we always get a 
+		 * requery below on first loop iteration */
 	struct syslogTime stTime;
 	char errStr[1024];
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
