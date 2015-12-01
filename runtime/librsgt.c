@@ -420,6 +420,7 @@ readStateFile(gtfile gf)
 	if (gf->x_prev->data == NULL) {
 		free(gf->x_prev);
 		gf->x_prev = NULL;
+		goto err;
 	}
 
 	if(read(fd, gf->x_prev->data, gf->x_prev->len)
@@ -432,7 +433,6 @@ readStateFile(gtfile gf)
 return;
 
 err:
-
 	gf->x_prev = malloc(sizeof(imprint_t));
 	gf->x_prev->hashID = hashIdentifier(gf->hashAlg);
 	gf->x_prev->len = hashOutputLengthOctets(gf->hashAlg);

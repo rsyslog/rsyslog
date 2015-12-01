@@ -439,6 +439,7 @@ readStateFile(ksifile ksi)
 	if (ksi->x_prev->data == NULL) {
 		free(ksi->x_prev);
 		ksi->x_prev = NULL;
+		goto err;
 	}
 
 	if(read(fd, ksi->x_prev->data, ksi->x_prev->len)
@@ -451,7 +452,6 @@ readStateFile(ksifile ksi)
 return;
 
 err:
-
 	ksi->x_prev = malloc(sizeof(imprint_t));
 	ksi->x_prev->hashID = hashIdentifierKSI(ksi->hashAlg);
 	ksi->x_prev->len = hashOutputLengthOctetsKSI(ksi->hashAlg);

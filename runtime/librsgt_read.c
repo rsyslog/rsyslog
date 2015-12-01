@@ -468,8 +468,13 @@ rsgt_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	*imprint = imp;
 	r = 0;
 done:	
-	if(rsgt_read_debug)
-		printf("debug: read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+	if(r == 0) {
+		if(rsgt_read_debug)
+			printf("debug: read tlvDecodeIMPRINT returned %d TLVLen=%d, HashID=%d\n", r, rec->tlvlen, imp->hashID);
+	} else if (r != RSGTE_OOM) {
+		/* Free memory on FAIL!*/
+		rsgt_objfree(rec->tlvtype, imp);
+	}
 	return r;
 }
 
@@ -589,8 +594,13 @@ rsgt_tlvDecodeBLOCK_HDR(tlvrecord_t *rec, block_hdr_t **blockhdr)
 	*blockhdr = bh;
 	r = 0;
 done:	
-	if(rsgt_read_debug)
-		printf("debug: rsgt_tlvDecodeBLOCK_HDR returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	if (r == 0) {
+		if(rsgt_read_debug)
+			printf("debug: tlvDecodeBLOCK_HDR returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	} else if(r != RSGTE_OOM) {
+		/* Free memory on FAIL!*/
+		rsgt_objfree(rec->tlvtype, bh);
+	}	
 	return r;
 }
 
@@ -613,8 +623,13 @@ rsgt_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 	*blocksig = bs;
 	r = 0;
 done:	
-	if(rsgt_read_debug)
-		printf("debug: rsgt_tlvDecodeBLOCK_SIG returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	if(r == 0) {
+		if (rsgt_read_debug)
+			printf("debug: rsgt_tlvDecodeBLOCK_SIG returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	} else if (r != RSGTE_OOM) { 
+		/* Free memory on FAIL!*/
+		rsgt_objfree(rec->tlvtype, bs);
+	}	
 	return r;
 }
 static int
@@ -847,6 +862,10 @@ rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 void
 rsgt_objfree(uint16_t tlvtype, void *obj)
 {
+	// check if obj is valid 
+	if (obj == NULL )
+		return; 
+
 	switch(tlvtype) {
 	case 0x0901:
 		free(((block_hdr_t*)obj)->iv);
@@ -1061,10 +1080,12 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
 	}
 	r = 0;
 done:
-	if(rsgt_read_debug)
-		printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
-	if(imp != NULL)
+	if(imp != NULL) {
+		if(rsgt_read_debug)
+			printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
+		/* Free memory */
 		rsgt_objfree(0x0903, imp);
+	}
 	return r;
 }
 
@@ -1253,7 +1274,11 @@ verifyBLOCK_HDR(FILE *sigfp, FILE *nsigfp)
 	}
 	if (nsigfp != NULL)
 		if ((r = rsgt_tlvwrite(nsigfp, &rec)) != 0) goto done; 
-done:	rsgt_objfree(rec.tlvtype, bh);
+done:	
+	if (r == 0 || r == RSGTE_IO) {
+		/* Only free memory if return is OK or error was RSGTE_IO was (happened in rsksi_tlvwrite) */
+		rsgt_objfree(rec.tlvtype, bh);
+	}
 	if(rsgt_read_debug)
 		printf("debug: verifyBLOCK_HDR returned %d\n", r);
 	return r;
