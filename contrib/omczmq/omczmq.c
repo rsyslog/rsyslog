@@ -113,7 +113,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
-	{ "sendtimeout", eCmdHdlrGetWord, 0 },
+	{ "sendtimeout", eCmdHdlrGetWord, -1 },
 	{ "beacon", eCmdHdlrGetWord, 0 },
 	{ "beaconport", eCmdHdlrGetWord, 0 },
 	{ "authtype", eCmdHdlrGetWord, 0 },
@@ -163,7 +163,8 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	DBGPRINTF ("omczmq: created socket...\n");
+	zsock_set_sndtimeo (pData->sock, pData->sendTimeout);
+	DBGPRINTF ("omczmq: created socket with timeout %d...\n", pData->sendTimeout);
 
 	/* Create the beacon actor if configured */
 	/* ------------------------------------- */
@@ -397,9 +398,10 @@ ENDfreeWrkrInstance
 
 
 BEGINtryResume
-	instanceData *pData = pWrkrData->pData;
+	instanceData *pData;
 CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	if (pData->sendError) {
 		DBGPRINTF("omczmq: trying to resume from a send error...\n");
 		pData->sendError = false;
@@ -417,9 +419,10 @@ ENDtryResume
 
 
 BEGINdoAction
-	instanceData *pData = pWrkrData->pData;
+	instanceData *pData;
 CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	iRet = outputCZMQ(ppString[0], pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
