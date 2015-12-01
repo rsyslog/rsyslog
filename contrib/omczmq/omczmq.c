@@ -113,7 +113,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
-	{ "sendtimeout", eCmdHdlrGetWord, -1 },
+	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "beacon", eCmdHdlrGetWord, 0 },
 	{ "beaconport", eCmdHdlrGetWord, 0 },
 	{ "authtype", eCmdHdlrGetWord, 0 },
