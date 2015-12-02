@@ -85,4 +85,9 @@ sigTypeName(uint8_t sigID)
 #define RSGT_TYPE_MASK 0x1f
 #define RSGT_FLAG_TLV16 0x80
 
+/* check return state of operation and abort, if non-OK */
+#define CHKr(code) if((r = code) != 0) goto done
+/* check return state of operation and jump to donedecode, if non-OK */
+#define CHKrDecode(code) if((r = code) != 0) goto donedecode
+
 #endif  /* #ifndef INCLUDED_LIBRSGTCM_H */
