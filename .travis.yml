@@ -19,9 +19,9 @@ matrix:
      #  env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      #  dist: trusty
      - compiler: "clang"
-       env: CFLAGS="-g -O1 -fsanitize=address"
+       env: CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
      - compiler: "clang"
-       env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99"
+       env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99 -fno-color-diagnostics"
        dist: trusty
 
 before_install:
