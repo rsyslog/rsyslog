@@ -21,7 +21,7 @@ matrix:
      - compiler: "clang"
        env: CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
      - compiler: "clang"
-       env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99 -fno-color-diagnostics"
+       env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99"
        dist: trusty
 
 before_install:
