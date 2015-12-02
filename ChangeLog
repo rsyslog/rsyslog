@@ -1,8 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.15.0 [v8-stable] 2015-12-15
-- KSI Support: Added patch to support libksi version 3.4.0.2 or higher. 
-  Thanks to Henri Lakk for the patches.
-  libksi 3.4.0.2 or higher is required for ksi support now. 
+- KSI/GT Lib: Fixed multiple issues found using static analyzer 
 - gnutls fix: Added possible fix for gnutls issue #575
   see also: https://github.com/rsyslog/rsyslog/issues/575
   Thanks to Charles Southerland for the patch
