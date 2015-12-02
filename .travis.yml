@@ -19,7 +19,7 @@ matrix:
      #  env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      #  dist: trusty
      - compiler: "clang"
-       env: CFLAGS="-g -O1 -fsanitize=address"
+       env: CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
      - compiler: "clang"
        env: STAT_AN="YES", CFLAGS="-g -O1 -std=c99"
        dist: trusty
@@ -40,12 +40,17 @@ script:
   # I don't know how to pass two env vars in the cinlude matrix, so
   # I set the second one here via an "if"
   - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
-  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --disable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
+  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
   #- if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make ; cd .. ;  fi
+  # touch those files from ./runtime that we know to be clean of
+  # static analyzer errors. This triggers a rebuild. That way, we
+  # can test as much as possbile while not everything is yet cleaned
+  # up.
+  - if [ "x$STAT_AN" == "xYES" ] ; then touch runtime/cfsysline.c runtime/conf.c runtime/datetime.c runtime/dnscache.c runtime/errmsg.c geninfile.c runtime/gss-misc.c runtime/hashtable.c runtime/hashtable_itr.c imuxsock-old.c runtime/janitor.c runtime/libgcry_common.c runtime/linkedlist.c runtime/lmcry_gcry.c runtime/lmsig_gt.c runtime/lmsig_ksi.c runtime/msg.c runtime/netstrm.c runtime/netstrms.c runtime/nsdpoll_ptcp.c runtime/nsd_ptcp.c runtime/nsdsel_gtls.c runtime/nsdsel_ptcp.c runtime/nspoll.c runtime/objomsr.c outchannel.c parse.c runtime/prop.c runtime/queue.c runtime/ratelimit.c runtime/regexp.c runtime/rsconf.c runtime/rsyslog.c runtime/ruleset.c runtime/sd-daemon.c runtime/srutils.c runtime/stringbuf.c runtime/strms_sess.c runtime/tcpclt.c threads.c runtime/wtp.c runtime/zlibw.c ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imfile; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imudp; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imptcp; make && cd ../..; fi
