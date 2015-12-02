@@ -78,7 +78,7 @@ BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CO
 CODESTARTobjDebugPrint(var)
 	switch(pThis->varType) {
 		case VARTYPE_STR:
-			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStr(pThis->val.pStr));
+			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
 			break;
 		case VARTYPE_NUMBER:
 			dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
