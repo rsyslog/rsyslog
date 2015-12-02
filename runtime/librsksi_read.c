@@ -996,6 +996,7 @@ rsksi_vrfyConstruct_gf(void)
 	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_read_puburl, rsksi_userid, rsksi_userkey);
 	if(ksistate != KSI_OK) {
 		fprintf(stderr, "Error %d setting KSI Extender: %s\n", ksistate, KSI_getErrorString(ksistate));
+		free(ksi);
 		return NULL;
 	}
 
@@ -1083,8 +1084,8 @@ rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	r = 0;
 done:
 	if(imp != NULL) {
-		if(rsgt_read_debug)
-			printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
+		if(rsksi_read_debug)
+			printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctetsKSI(imp->hashID));
 		/* Free memory */
 		rsksi_objfree(0x0903, imp);
 	}
@@ -1203,7 +1204,6 @@ static inline int
 rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *ectx)
 {
 	KSI_Signature *extended = NULL;
-	/*OLDCODE GTTimestamp *out_timestamp;*/
 	uint8_t *der;
 	size_t lenDer;
 	int r, rgt;
@@ -1217,40 +1217,25 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 		r = RSGTE_SIG_EXTEND;
 		goto done;
 	}
-	/*OLD CODE 
-	rgt = GTHTTP_extendTimestamp(timestamp, rsksi_extend_puburl, &out_timestamp);
-	if(rgt != KSI_OK) {
-		ectx->gtstate = rgt;
-		r = RSGTE_TS_EXTEND;
-		goto done;
-	}
-	r = GTTimestamp_getDEREncoded(out_timestamp, &der, &lenDer);
-	if(r != KSI_OK) {
-		r = RSGTE_TS_DERENCODE;
-		ectx->gtstate = rgt;
-		goto done;
-	}
-	*/
-
 	/* update block_sig tlv record with new extended timestamp */
 	/* we now need to copy all tlv records before the actual der
 	 * encoded part.
 	 */
 	iRd = iWr = 0;
 	// TODO; check tlvtypes at comment places below!
-	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)); 
 	/* HASH_ALGO */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* BLOCK_IV */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* LAST_HASH */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* REC_COUNT */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* actual sig! */
 	newrec.data[iWr++] = 0x09 | RSKSI_FLAG_TLV16_RUNTIME;
 	newrec.data[iWr++] = 0x06;

@@ -1200,6 +1200,7 @@ done:
 	iWr += subrec.lenHdr; \
 	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
 	iWr += subrec.tlvlen;
+
 static inline int
 rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 {
@@ -1228,19 +1229,19 @@ rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 	 */
 	iRd = iWr = 0;
 	// TODO; check tlvtypes at comment places below!
-	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* HASH_ALGO */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* BLOCK_IV */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* LAST_HASH */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* REC_COUNT */
 	COPY_SUBREC_TO_NEWREC
-	if ((r = rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec)) != 0) goto done;
+	CHKr(rsgt_tlvDecodeSUBREC(rec, &iRd, &subrec));
 	/* actual sig! */
 	newrec.data[iWr++] = 0x09 | RSGT_FLAG_TLV16_RUNTIME;
 	newrec.data[iWr++] = 0x06;
