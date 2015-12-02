@@ -402,18 +402,11 @@ BEGINtryResume
 CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
-	if (pData->sendError) {
-		DBGPRINTF("omczmq: trying to resume from a send error...\n");
-		pData->sendError = false;
-		iRet = RS_RET_OK;
-	}
-	else {
-		DBGPRINTF("omczmq: trying to resume from an init error...\n");
-		zsock_destroy(&pData->sock);
-		zactor_destroy(&pData->beaconActor);
-		zactor_destroy(&pData->authActor);
-		iRet = initCZMQ(pData);
-	}
+	DBGPRINTF("omczmq: trying to resume...\n");
+	zsock_destroy(&pData->sock);
+	zactor_destroy(&pData->beaconActor);
+	zactor_destroy(&pData->authActor);
+	iRet = initCZMQ(pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
 
