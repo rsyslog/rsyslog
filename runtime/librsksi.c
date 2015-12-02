@@ -156,7 +156,7 @@ rsksiExit(void)
 static inline ksifile
 rsksifileConstruct(rsksictx ctx)
 {
-	ksifile ksi;
+	ksifile ksi = NULL;
 	if((ksi = calloc(1, sizeof(struct ksifile_s))) == NULL)
 		goto done;
 	ksi->ctx = ctx;
@@ -359,25 +359,18 @@ tlvWriteBlockHdrKSI(ksifile ksi) {
 	 	  2 + hashOutputLengthOctetsKSI(ksi->hashAlg) /* iv */ +
 		  2 + 1 + ksi->x_prev->len /* last hash */;
 	/* write top-level TLV object block-hdr */
-	r = tlv16WriteKSI(ksi, 0x00, 0x0901, tlvlen);
+	CHKr(tlv16WriteKSI(ksi, 0x00, 0x0901, tlvlen));
 	/* and now write the children */
 	/* hash-algo */
-	r = tlv8WriteKSI(ksi, 0x00, 0x01, 1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg));
-	if(r != 0) goto done;
+	CHKr(tlv8WriteKSI(ksi, 0x00, 0x01, 1));
+	CHKr(tlvbufAddOctet(ksi, hashIdentifierKSI(ksi->hashAlg)));
 	/* block-iv */
-	r = tlv8WriteKSI(ksi, 0x00, 0x02, hashOutputLengthOctetsKSI(ksi->hashAlg));
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(ksi, ksi->IV, hashOutputLengthOctetsKSI(ksi->hashAlg));
-	if(r != 0) goto done;
+	CHKr(tlv8WriteKSI(ksi, 0x00, 0x02, hashOutputLengthOctetsKSI(ksi->hashAlg)));
+	CHKr(tlvbufAddOctetString(ksi, ksi->IV, hashOutputLengthOctetsKSI(ksi->hashAlg)));
 	/* last-hash */
-	r = tlv8WriteKSI(ksi, 0x00, 0x03, ksi->x_prev->len + 1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(ksi, ksi->x_prev->hashID);
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(ksi, ksi->x_prev->data, ksi->x_prev->len);
-	if(r != 0) goto done;
+	CHKr(tlv8WriteKSI(ksi, 0x00, 0x03, ksi->x_prev->len + 1));
+	CHKr(tlvbufAddOctet(ksi, ksi->x_prev->hashID));
+	CHKr(tlvbufAddOctetString(ksi, ksi->x_prev->data, ksi->x_prev->len));
 done:	return r;
 }
 
@@ -587,6 +580,8 @@ rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn)
 	ksi->statefilename = (uchar*) strdup(fn);
 	if(tlvOpenKSI(ksi, LOGSIGHDR, sizeof(LOGSIGHDR)-1) != 0) {
 		reportErr(ctx, "signature file open failed");
+		/* Free memory */
+		free(ksi);
 		ksi = NULL;
 	}
 done:	return ksi;
