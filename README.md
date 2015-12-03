@@ -65,6 +65,9 @@ have more information and install additional systems.
 
 sudo apt-get install libdbi-dev
 
+for KSI, from the Adiscon PPA:
+sudo apt-get install libksi0 libksi-devel
+
 
 openSUSE 13
 ~~~~~~~~~~~
