@@ -30,7 +30,7 @@ before_install:
   - travis_retry sudo apt-get update -qq
 
 install:
-  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev
+  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
@@ -40,7 +40,7 @@ script:
   # I don't know how to pass two env vars in the cinlude matrix, so
   # I set the second one here via an "if"
   - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
-  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls $NO_VALGRIND
+  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql $NO_VALGRIND
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
   #- if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
