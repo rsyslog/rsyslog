@@ -1204,7 +1204,7 @@ static inline int
 rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *ectx)
 {
 	KSI_Signature *extended = NULL;
-	uint8_t *der;
+	uint8_t *der = NULL;
 	size_t lenDer;
 	int r, rgt;
 	tlvrecord_t newrec, subrec;
@@ -1217,6 +1217,15 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 		r = RSGTE_SIG_EXTEND;
 		goto done;
 	}
+
+	/* Serialize Signature. */
+	rgt = KSI_Signature_serialize(extended, &der, &lenDer);
+	if(rgt != KSI_OK) {
+		ectx->ksistate = rgt;
+		r = RSGTE_SIG_EXTEND;
+		goto done;
+	}
+
 	/* update block_sig tlv record with new extended timestamp */
 	/* we now need to copy all tlv records before the actual der
 	 * encoded part.
@@ -1256,6 +1265,8 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 done:
 	if(extended != NULL)
 		KSI_Signature_free(extended);
+	if (der != NULL)
+		KSI_free(der);
 	return r;
 }
 
