@@ -840,7 +840,7 @@ lstnDel(lstn_t *pLstn)
  * the ppExisting parameter.
  */
 static rsRetVal
-lstnDup(lstn_t ** ppExisting, uchar *const __restrict__ newname)
+lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 {
 	DEFiRet;
 	lstn_t *const existing = *ppExisting;
@@ -1521,7 +1521,7 @@ done:	return;
  * happen only for things after the watch has been activated.
  */
 static void
-in_setupFileWatchStatic(lstn_t *const __restrict__ pLstn)
+in_setupFileWatchStatic(lstn_t *pLstn)
 {
 	DBGPRINTF("imfile: adding file '%s' to configured table\n",
 		  pLstn->pszFileName);
