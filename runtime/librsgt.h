@@ -347,7 +347,10 @@ int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
 int hash_m(gtfile gf, GTDataHash **m);
 int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
 int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
-extern char *rsgt_read_puburl; /**< url of publication server */
+extern char *rsgt_read_puburl;		/**< url of publication server */
+extern char *rsgt_extend_puburl;	/**< url of extension server */
+extern char *rsgt_userid;			/**< userid for extension server */
+extern char *rsgt_userkey;			/**< userkey for extension server */
 extern uint8_t rsgt_read_showVerified;
 extern int RSGT_FLAG_TLV16_RUNTIME;
 extern int RSGT_FLAG_NONCRIT_RUNTIME; 

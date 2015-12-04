@@ -53,6 +53,8 @@ typedef unsigned char uchar;
 static int rsgt_read_debug = 0;
 char *rsgt_read_puburl = "http://verify.guardtime.com/gt-controlpublications.bin";
 char *rsgt_extend_puburl = "http://verifier.guardtime.net/gt-extendingservice";
+char *rsgt_userid = ""; 
+char *rsgt_userkey = ""; 
 uint8_t rsgt_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */

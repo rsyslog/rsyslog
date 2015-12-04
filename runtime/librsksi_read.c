@@ -992,10 +992,19 @@ rsksi_vrfyConstruct_gf(void)
 	rsksictx ctx = rsksiCtxNew();
 	ksi->ctx = ctx; /* assign context to ksifile */
 
-	/* Setting KSI Extender! */ 
-	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_read_puburl, rsksi_userid, rsksi_userkey);
+	/* Setting KSI Publication URL ! */ 
+
+	ksistate = KSI_CTX_setPublicationUrl(ksi->ctx->ksi_ctx, rsksi_read_puburl);
 	if(ksistate != KSI_OK) {
-		fprintf(stderr, "Error %d setting KSI Extender: %s\n", ksistate, KSI_getErrorString(ksistate));
+		fprintf(stderr, "Failed setting KSI Publication URL '%s' with error (%d): %s\n", rsksi_read_puburl, ksistate, KSI_getErrorString(ksistate));
+		free(ksi);
+		return NULL;
+	}
+
+	/* Setting KSI Extender! */ 
+	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_extend_puburl, rsksi_userid, rsksi_userkey);
+	if(ksistate != KSI_OK) {
+		fprintf(stderr, "Failed setting KSIExtender URL '%s' with error (%d): %s\n", rsksi_extend_puburl, ksistate, KSI_getErrorString(ksistate));
 		free(ksi);
 		return NULL;
 	}

@@ -382,7 +382,10 @@ int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
 int hash_r_ksi(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
 int hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
-extern char *rsksi_read_puburl; /**< url of publication server */
+extern char *rsksi_read_puburl;		/**< url of publication server */
+extern char *rsksi_extend_puburl;	/**< url of extension server */
+extern char *rsksi_userid;			/**< userid for extension server */
+extern char *rsksi_userkey;			/**< userkey for extension server */
 extern uint8_t rsksi_read_showVerified;
 extern int RSKSI_FLAG_TLV16_RUNTIME;
 extern int RSKSI_FLAG_NONCRIT_RUNTIME; 
