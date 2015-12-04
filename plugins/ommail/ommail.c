@@ -502,7 +502,7 @@ finalize_it:
 /* read response line from server
  */
 static rsRetVal
-readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn)
+readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *const __restrict__ respLen)
 {
 	DEFiRet;
 	size_t i = 0;
@@ -518,10 +518,11 @@ readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn)
 		if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
 			pLn[i++] = c;
 	} while(1);
-	pLn[i] = '\0';
 	DBGPRINTF("smtp server response: %s\n", pLn); /* do not remove, this is helpful in troubleshooting SMTP probs! */
 
 finalize_it:
+	pLn[i] = '\0';
+	*respLen = i;
 	RETiRet;
 }
 
@@ -536,17 +537,16 @@ readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
 	DEFiRet;
 	int bCont;
 	char buf[128];
+	size_t respLen;
 	
 	assert(pWrkrData != NULL);
 	assert(piState != NULL);
 	
 	bCont = 1;
 	do {
-		CHKiRet(readResponseLn(pWrkrData, buf, sizeof(buf)));
-		/* note: the code below is not 100% clean as we may have received less than 4 characters.
-		 * However, as we have a fixed size this will not create a vulnerability. An error will
-		 * also most likely be generated, so it is quite acceptable IMHO -- rgerhards, 2008-04-08
-		 */
+		CHKiRet(readResponseLn(pWrkrData, buf, sizeof(buf), &respLen));
+		if(respLen < 4) /* we treat too-short responses as error */
+			ABORT_FINALIZE(RS_RET_SMTP_ERROR);
 		if(buf[3] != '-') { /* last or only response line? */
 			bCont = 0;
 			*piState = buf[0] - '0';
