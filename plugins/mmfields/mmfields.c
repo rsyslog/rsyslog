@@ -232,6 +232,8 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 	}
  	msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
 finalize_it:
+	if(buf != fieldbuf)
+		free(buf);
 	RETiRet;
 }
 
