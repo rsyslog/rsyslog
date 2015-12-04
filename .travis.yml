@@ -56,7 +56,6 @@ script:
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imptcp; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omrelp; make && cd ../..; fi
   #- if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omkafka; make && cd ../..; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/ommail; make && cd ../..; fi
   #- if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/pmciscoios; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/mmfields; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then scan-build --status-bugs make ; fi
