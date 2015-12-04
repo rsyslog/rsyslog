@@ -453,7 +453,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine), cstrLen(cstrLine));
+	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), cstrLen(cstrLine));
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
