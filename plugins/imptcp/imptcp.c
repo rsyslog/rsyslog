@@ -1604,11 +1604,11 @@ wrkr(void *myself)
 	
 	pthread_mutex_lock(&wrkrMut);
 	while(1) {
-		while(me->event == NULL && glbl.GetGlobalInputTermState() == 0) {
+		while(me->event == NULL) {
+			if(glbl.GetGlobalInputTermState() == 1)
+				FINALIZE;
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
-		if(glbl.GetGlobalInputTermState() == 1)
-			break;
 		pthread_mutex_unlock(&wrkrMut);
 
 		++me->numCalled;
@@ -1619,8 +1619,8 @@ wrkr(void *myself)
 		--wrkrRunning;
 		pthread_cond_signal(&wrkrIdle);
 	}
+finalize_it:
 	pthread_mutex_unlock(&wrkrMut);
-
 	return NULL;
 }
 
