@@ -53,7 +53,6 @@ script:
   - if [ "x$STAT_AN" == "xYES" ] ; then touch runtime/cfsysline.c runtime/conf.c runtime/datetime.c runtime/dnscache.c runtime/errmsg.c geninfile.c runtime/gss-misc.c runtime/hashtable.c runtime/hashtable_itr.c imuxsock-old.c runtime/janitor.c runtime/libgcry_common.c runtime/linkedlist.c runtime/lmcry_gcry.c runtime/lmsig_gt.c runtime/lmsig_ksi.c runtime/msg.c runtime/netstrm.c runtime/netstrms.c runtime/nsdpoll_ptcp.c runtime/nsd_ptcp.c runtime/nsdsel_gtls.c runtime/nsdsel_ptcp.c runtime/nspoll.c runtime/objomsr.c outchannel.c parse.c runtime/prop.c runtime/queue.c runtime/ratelimit.c runtime/regexp.c runtime/rsconf.c runtime/rsyslog.c runtime/ruleset.c runtime/sd-daemon.c runtime/srutils.c runtime/stringbuf.c runtime/strms_sess.c runtime/tcpclt.c threads.c runtime/wtp.c runtime/zlibw.c runtime/librsksi.c runtime/librsgt.c runtime/librsksi_read.c runtime/librsgit_read.c  ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imfile; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imudp; make && cd ../..; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/imptcp; make && cd ../..; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omrelp; make && cd ../..; fi
   #- if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/omkafka; make && cd ../..; fi
   #- if [ "x$STAT_AN" == "xYES" ] ; then cd plugins/pmciscoios; make && cd ../..; fi
