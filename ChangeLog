@@ -61,6 +61,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Address off-by-one issues introduced in f3bd7a2 resulting in extra
   whitespace in property expansions
   Thanks to Matthew Gabeler-Lee for the patch.
+- bugfix: mmfields leaked memory if very large messages were processed
+  detected by clang static analyzer
 - bugfix: memory leak in (contributed) module omhttpfs
   Thanks to git hub user c6226 for the patch.
 - bugfix: parameter mismatch in error message for wrap() function
