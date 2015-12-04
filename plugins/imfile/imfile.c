@@ -699,6 +699,12 @@ checkInstance(instanceConf_t *inst)
 	char errStr[512];
 	DEFiRet;
 
+	/* this is primarily for the clang static analyzer, but also
+	 * guards against logic errors in the config handler.
+	 */
+	if(inst->pszFileName == NULL)
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+
 	i = getBasename(basen, inst->pszFileName);
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
