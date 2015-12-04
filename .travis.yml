@@ -4,9 +4,11 @@ compiler:
   - gcc
   - clang
 
-branches:
-  except:
-    - master-candidate
+# you can comment this in if a large number of known-good
+# merges is to happen and only buildbot testing is desired
+#branches:
+#  except:
+#    - master-candidate
 
 matrix:
   exclude:
