@@ -1360,6 +1360,7 @@ dirsAdd(uchar *dirName)
 			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"cannot alloc memory to monitor directory '%s' - ignoring",
 					dirName);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		dirs = newDirTab;
 		allocMaxDirs = newMax;
