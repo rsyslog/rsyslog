@@ -368,10 +368,6 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 	}
 	if(i < nWdmap) {
 		/* we need to shift to make room for new entry */
-		/* OLD 
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i,i+1,nWdmap-i);
-		memmove(wdmap + i, wdmap + i + 1, nWdmap - i); */
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for ADD\n", i + 1,i, sizeof(wd_map_t) * (nWdmap - i));
 		memmove(wdmap + i + 1, wdmap + i, sizeof(wd_map_t) * (nWdmap - i));
 	}
 	wdmap[i].wd = wd;
@@ -401,14 +397,10 @@ wdmapDel(const int wd)
 
 	if(i < nWdmap-1) {
 		/* we need to shift to delete it (see comment at wdmap definition) */
-		/* OLD 
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i,i+1,nWdmap-i-1);
-		memmove(wdmap + i, wdmap + i+1, nWdmap - i-1);*/
-		dbgprintf("DDDD: imfile doing wdmap mmemmov(%d, %d, %d) for DEL\n", i, i + 1, sizeof(wd_map_t) * (nWdmap - i - 1));
 		memmove(wdmap + i, wdmap + i + 1, sizeof(wd_map_t) * (nWdmap - i - 1));
 	}
 	--nWdmap;
-	dbgprintf("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
+	DBGPRINTF("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
 
 finalize_it:
 	RETiRet;
