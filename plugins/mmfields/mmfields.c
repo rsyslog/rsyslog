@@ -226,7 +226,7 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 		DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
 		snprintf((char*)fieldname, sizeof(fieldname), "f%d", field);
 		fieldname[sizeof(fieldname)-1] = '\0';
-		jval = json_object_new_string((char*)fieldbuf);
+		jval = json_object_new_string((char*)buf);
 		json_object_object_add(json, (char*)fieldname, jval);
 		field++;
 	}
