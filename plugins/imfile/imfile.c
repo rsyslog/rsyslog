@@ -284,9 +284,9 @@ static void
 dbg_wdmapPrint(char *msg)
 {
 	int i;
-	dbgprintf("%s\n", msg);
+	DBGPRINTF("%s\n", msg);
 	for(i = 0 ; i < nWdmap ; ++i)
-		dbgprintf("wdmap[%d]: wd: %d, file %d, dir %d\n", i,
+		DBGPRINTF("wdmap[%d]: wd: %d, file %d, dir %d\n", i,
 			  wdmap[i].wd, wdmap[i].fIdx, wdmap[i].dirIdx);
 }
 #endif
@@ -374,7 +374,7 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 	wdmap[i].dirIdx = dirIdx;
 	wdmap[i].pLstn = pLstn;
 	++nWdmap;
-	dbgprintf("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, lstn %s:%s\n",i,wd,dirIdx,
+	DBGPRINTF("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, lstn %s:%s\n",i,wd,dirIdx,
 		  (pLstn == NULL) ? "DIRECTORY" : "FILE",
 	          (pLstn == NULL) ? dirs[dirIdx].dirName : pLstn->pszFileName);
 
@@ -490,12 +490,12 @@ openFile(lstn_t *pLstn)
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			dbgprintf("imfile: clean startup, state file for '%s'\n", pLstn->pszFileName);
+			DBGPRINTF("imfile: clean startup, state file for '%s'\n", pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			dbgprintf("imfile: error trying to access state file for '%s':%s\n",
+			DBGPRINTF("imfile: error trying to access state file for '%s':%s\n",
 			          pLstn->pszFileName, errStr);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
@@ -810,7 +810,7 @@ finalize_it:
 static void
 lstnDel(lstn_t *pLstn)
 {
-	dbgprintf("imfile: lstnDel called for %s\n", pLstn->pszFileName);
+	DBGPRINTF("imfile: lstnDel called for %s\n", pLstn->pszFileName);
 	if(pLstn->pStrm != NULL) { /* stream open? */
 		persistStrmState(pLstn);
 		strm.Destruct(&(pLstn->pStrm));
@@ -866,7 +866,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
 	if(pThis->startRegex != NULL) // TODO: make this a single function with better error handling
 		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
-			dbgprintf("imfile: error regex compile\n");
+			DBGPRINTF("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
@@ -932,7 +932,7 @@ addListner(instanceConf_t *inst)
 	pThis->startRegex = inst->startRegex; /* no strdup, as it is read-only */
 	if(pThis->startRegex != NULL)
 		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
-			dbgprintf("imfile: error regex compile\n");
+			DBGPRINTF("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;
@@ -962,7 +962,7 @@ CODESTARTnewInpInst
 	}
 
 	if(Debug) {
-		dbgprintf("input param blk in imfile:\n");
+		DBGPRINTF("input param blk in imfile:\n");
 		cnfparamsPrint(&inppblk, pvals);
 	}
 
@@ -1009,7 +1009,7 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else {
-			dbgprintf("imfile: program error, non-handled "
+			DBGPRINTF("imfile: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
@@ -1060,7 +1060,7 @@ CODESTARTsetModCnf
 	}
 
 	if(Debug) {
-		dbgprintf("module (global) param blk for imfile:\n");
+		DBGPRINTF("module (global) param blk for imfile:\n");
 		cnfparamsPrint(&modpblk, pvals);
 	}
 
@@ -1081,7 +1081,7 @@ CODESTARTsetModCnf
 				free(cstr);
 			}
 		} else {
-			dbgprintf("imfile: program error, non-handled "
+			DBGPRINTF("imfile: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
@@ -1104,7 +1104,7 @@ CODESTARTendCnfLoad
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iPollInterval = cs.iPollInterval;
 	}
-	dbgprintf("imfile: opmode is %d, polling interval is %d\n",
+	DBGPRINTF("imfile: opmode is %d, polling interval is %d\n",
 		  loadModConf->opMode,
 		  loadModConf->iPollInterval);
 
@@ -1237,10 +1237,10 @@ fileTableDisplay(fileTable_t *tab)
 {
 	int f;
 	uchar *baseName;
-	dbgprintf("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
+	DBGPRINTF("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
-		dbgprintf("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
+		DBGPRINTF("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
 	}
 }
 */
@@ -1258,7 +1258,7 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 	}
 	if(f == tab->currMax)
 		f = -1;
-	dbgprintf("DDDD: imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
+	DBGPRINTF("DDDD: imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1275,7 +1275,7 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 	}
 	if(f == tab->currMax)
 		f = -1;
-	dbgprintf("DDDD: imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
+	DBGPRINTF("DDDD: imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1285,7 +1285,7 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 {
 	int j;
 	DEFiRet;
-dbgprintf("DDDDD: imfile: fileTableAddFile\n");
+DBGPRINTF("DDDDD: imfile: fileTableAddFile\n");
 /* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
@@ -1371,7 +1371,7 @@ dirsAdd(uchar *dirName)
 	CHKiRet(fileTableInit(&dirs[currMaxDirs].configured, INIT_FILE_IN_DIR_TAB_SIZE));
 
 	++currMaxDirs;
-	dbgprintf("DDDD: imfile: added to dirs table: '%s'\n", dirName);
+	DBGPRINTF("DDDD: imfile: added to dirs table: '%s'\n", dirName);
 finalize_it:
 	RETiRet;
 }
@@ -1389,7 +1389,7 @@ dirsFindDir(uchar *dir)
 		; /* just scan, all done in for() */
 	if(i == currMaxDirs)
 		i = -1;
-	//dbgprintf("DDDD: dir '%s', found:%d\n", dir, i);
+	//DBGPRINTF("DDDD: dir '%s', found:%d\n", dir, i);
 	return i;
 }
 
@@ -1434,7 +1434,7 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 
 	dir = dirs + dirIdx;
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
-	dbgprintf("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
+	DBGPRINTF("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
 		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
 /* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
 finalize_it:
@@ -1453,7 +1453,7 @@ in_setupDirWatch(const int dirIdx)
 		goto done;
 	}
 	wdmapAdd(wd, dirIdx, NULL);
-	dbgprintf("DDDD: imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
+	DBGPRINTF("DDDD: imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
 done:	return;
 }
 
@@ -1478,7 +1478,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 		goto done;
 	}
 	wdmapAdd(wd, -1, pLstn);
-	dbgprintf("DDDD: imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
+	DBGPRINTF("DDDD: imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
 done:	return;
@@ -1498,7 +1498,7 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName)
 	if(stat(fullfn, &fileInfo) != 0) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("imfile: ignoring file '%s' cannot stat(): %s\n",
+		DBGPRINTF("imfile: ignoring file '%s' cannot stat(): %s\n",
 			fullfn, errStr);
 		goto done;
 	}
@@ -1575,35 +1575,35 @@ static void
 in_dbg_showEv(struct inotify_event *ev)
 {
 	if(ev->mask & IN_IGNORED) {
-		dbgprintf("watch was REMOVED\n");
+		DBGPRINTF("watch was REMOVED\n");
 	} else if(ev->mask & IN_MODIFY) {
-		dbgprintf("watch was MODIFID\n");
+		DBGPRINTF("watch was MODIFID\n");
 	} else if(ev->mask & IN_ACCESS) {
-		dbgprintf("watch IN_ACCESS\n");
+		DBGPRINTF("watch IN_ACCESS\n");
 	} else if(ev->mask & IN_ATTRIB) {
-		dbgprintf("watch IN_ATTRIB\n");
+		DBGPRINTF("watch IN_ATTRIB\n");
 	} else if(ev->mask & IN_CLOSE_WRITE) {
-		dbgprintf("watch IN_CLOSE_WRITE\n");
+		DBGPRINTF("watch IN_CLOSE_WRITE\n");
 	} else if(ev->mask & IN_CLOSE_NOWRITE) {
-		dbgprintf("watch IN_CLOSE_NOWRITE\n");
+		DBGPRINTF("watch IN_CLOSE_NOWRITE\n");
 	} else if(ev->mask & IN_CREATE) {
-		dbgprintf("file was CREATED: %s\n", ev->name);
+		DBGPRINTF("file was CREATED: %s\n", ev->name);
 	} else if(ev->mask & IN_DELETE) {
-		dbgprintf("watch IN_DELETE\n");
+		DBGPRINTF("watch IN_DELETE\n");
 	} else if(ev->mask & IN_DELETE_SELF) {
-		dbgprintf("watch IN_DELETE_SELF\n");
+		DBGPRINTF("watch IN_DELETE_SELF\n");
 	} else if(ev->mask & IN_MOVE_SELF) {
-		dbgprintf("watch IN_MOVE_SELF\n");
+		DBGPRINTF("watch IN_MOVE_SELF\n");
 	} else if(ev->mask & IN_MOVED_FROM) {
-		dbgprintf("watch IN_MOVED_FROM\n");
+		DBGPRINTF("watch IN_MOVED_FROM\n");
 	} else if(ev->mask & IN_MOVED_TO) {
-		dbgprintf("watch IN_MOVED_TO\n");
+		DBGPRINTF("watch IN_MOVED_TO\n");
 	} else if(ev->mask & IN_OPEN) {
-		dbgprintf("watch IN_OPEN\n");
+		DBGPRINTF("watch IN_OPEN\n");
 	} else if(ev->mask & IN_ISDIR) {
-		dbgprintf("watch IN_ISDIR\n");
+		DBGPRINTF("watch IN_ISDIR\n");
 	} else {
-		dbgprintf("unknown mask code %8.8x\n", ev->mask);
+		DBGPRINTF("unknown mask code %8.8x\n", ev->mask);
 	 }
 }
 
@@ -1612,7 +1612,7 @@ filesDisplay(void)
 {
 	lstn_t *pLstn;
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next)
-		dbgprintf("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
+		DBGPRINTF("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -1664,17 +1664,17 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 	if(ftIdx >= 0) {
 		pLstn = dirs[dirIdx].active.listeners[ftIdx].pLstn;
 	} else {
-		dbgprintf("imfile: file '%s' not active in dir '%s'\n",
+		DBGPRINTF("imfile: file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
 		ftIdx = fileTableSearch(&dirs[dirIdx].configured, (uchar*)ev->name);
 		if(ftIdx == -1) {
-			dbgprintf("imfile: file '%s' not associated with dir '%s'\n",
+			DBGPRINTF("imfile: file '%s' not associated with dir '%s'\n",
 				ev->name, dirs[dirIdx].dirName);
 			goto done;
 		}
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
 	}
-	dbgprintf("DDDD: imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
+	DBGPRINTF("DDDD: imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name);
 done:	return;
 }
@@ -1690,11 +1690,11 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 {
 	const int ftIdx = fileTableSearch(&dirs[dirIdx].active, (uchar*)ev->name);
 	if(ftIdx == -1) {
-		dbgprintf("imfile: deleted file '%s' not active in dir '%s'\n",
+		DBGPRINTF("imfile: deleted file '%s' not active in dir '%s'\n",
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile: imfile delete processing for '%s'\n",
+	DBGPRINTF("DDDD: imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
 	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
@@ -1703,7 +1703,7 @@ done:	return;
 static void
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
-	dbgprintf("DDDD: imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
+	DBGPRINTF("DDDD: imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
 	if((ev->mask & IN_CREATE)) {
 		in_handleDirEventCREATE(ev, dirIdx);
 	} else if((ev->mask & IN_DELETE)) {
@@ -1776,7 +1776,7 @@ in_processEvent(struct inotify_event *ev)
 		DBGPRINTF("imfile: could not lookup wd %d\n", ev->wd);
 		goto done;
 	}
-	dbgprintf("DDDD: imfile: wd %d got file %p, dir %d\n", ev->wd, etry->pLstn, etry->dirIdx);
+	DBGPRINTF("DDDD: imfile: wd %d got file %p, dir %d\n", ev->wd, etry->pLstn, etry->dirIdx);
 	if(etry->pLstn == NULL) { /* directory? */
 		in_handleDirEvent(ev, etry->dirIdx);
 	} else {
@@ -1806,12 +1806,12 @@ do_inotify()
 		if(rd < 0 && Debug) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			dbgprintf("imfile: error during inotify: %s\n", errStr);
+			DBGPRINTF("imfile: error during inotify: %s\n", errStr);
 		}
 		currev = 0;
 		while(currev < rd) {
 			ev = (struct inotify_event*) (iobuf+currev);
-			dbgprintf("DDDD: imfile event notification: rd %d[%d], wd (%d, mask "
+			DBGPRINTF("DDDD: imfile event notification: rd %d[%d], wd (%d, mask "
 				"%8.8x, cookie %4.4x, len %d)\n",
 				(int) rd, currev, ev->wd, ev->mask, ev->cookie, ev->len);
 			in_dbg_showEv(ev);
