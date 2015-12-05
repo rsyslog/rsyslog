@@ -1341,7 +1341,10 @@ processBatchMain(void *__restrict__ const pVoid,
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate ; ++i) {
 		if(batchIsValidElem(pBatch, i)) {
-			iRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
+			/* we do not check error state below, because aborting would be
+			 * more harmful than continuing.
+			 */
+			processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 		}
 	}
