@@ -1117,6 +1117,9 @@ cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals
 	int i;
 	char *cstr;
 
+	if(!Debug)
+		return;
+
 	for(i = 0 ; i < params->nParams ; ++i) {
 		dbgprintf("%s: ", params->descr[i].name);
 		if(vals[i].bUsed) {

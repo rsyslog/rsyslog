@@ -863,8 +863,10 @@ glblProcessTimezone(struct cnfobj *o)
 	int i;
 
 	pvals = nvlstGetParams(o->nvlst, &timezonepblk, NULL);
-	dbgprintf("timezone param blk after glblProcessTimezone:\n");
-	cnfparamsPrint(&timezonepblk, pvals);
+	if(Debug) {
+		dbgprintf("timezone param blk after glblProcessTimezone:\n");
+		cnfparamsPrint(&timezonepblk, pvals);
+	}
 
 	for(i = 0 ; i < timezonepblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
@@ -917,8 +919,10 @@ glblProcessCnf(struct cnfobj *o)
 	int i;
 
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
-	dbgprintf("glbl param blk after glblProcessCnf:\n");
-	cnfparamsPrint(&paramblk, cnfparamvals);
+	if(Debug) {
+		dbgprintf("glbl param blk after glblProcessCnf:\n");
+		cnfparamsPrint(&paramblk, cnfparamvals);
+	}
 
 	/* The next thing is a bit hackish and should be changed in higher
 	 * versions. There are a select few parameters which we need to
