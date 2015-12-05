@@ -427,7 +427,9 @@ int httpfs_permission_to_string(int permission, char* perm_string)
  */
 static rsRetVal
 httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
-{
+{	
+	DEFiRet;
+	
     if (!length) {
         return RS_RET_JSON_PARSE_ERR;
     }
@@ -438,12 +440,12 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     struct json_object *json;
     json = json_tokener_parse_ex(jt, buf, length);
     if (!json_object_is_type(json, json_type_object)) {
-        // not an object ?
-        return RS_RET_JSON_PARSE_ERR;
+        // not an object ?        
+		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
     }
 
     if (!json_object_object_get_ex(json, "RemoteException", &json)) {
-        return RS_RET_JSON_PARSE_ERR;
+		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
     }
 
     struct json_object *jobj;
@@ -459,11 +461,14 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     json_object_object_get_ex(json, "message", &jobj);
     strncpy(jre->message, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
-    json_tokener_free(jt);
-    json_object_put(json);    
+finalize_it:
+	if(jt != NULL)
+		json_tokener_free(jt);
+	if(json != NULL)
+		json_object_put(json); 
+	RETiRet;
+}	
 
-    return RS_RET_OK;
-}
 
 #if 0
 /**
