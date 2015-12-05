@@ -881,6 +881,11 @@ glblProcessTimezone(struct cnfobj *o)
 		}
 	}
 
+	if(offset == NULL) {
+		parser_errmsg("offset parameter missing, timezone config ignored");
+		goto done;
+	}
+
 	if(   strlen((char*)offset) != 6
 	   || !(offset[0] == '-' || offset[0] == '+')
 	   || !(isdigit(offset[1]) && isdigit(offset[2]))
