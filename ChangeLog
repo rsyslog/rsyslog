@@ -63,6 +63,9 @@ Version 8.15.0 [v8-stable] 2015-12-15
   Thanks to Matthew Gabeler-Lee for the patch.
 - bugfix: mmfields leaked memory if very large messages were processed
   detected by clang static analyzer
+- bugfix: mmfields could add garbagge data to field
+  this happened when very large fields were to be processed.
+  Thanks to Peter Portante for reporting this.
 - bugfix: memory leak in (contributed) module omhttpfs
   Thanks to git hub user c6226 for the patch.
 - bugfix: parameter mismatch in error message for wrap() function
