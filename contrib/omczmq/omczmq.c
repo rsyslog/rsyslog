@@ -163,7 +163,8 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	DBGPRINTF ("omczmq: created socket...\n");
+	zsock_set_sndtimeo (pData->sock, pData->sendTimeout);
+	DBGPRINTF ("omczmq: created socket with timeout %d...\n", pData->sendTimeout);
 
 	/* Create the beacon actor if configured */
 	/* ------------------------------------- */
@@ -397,29 +398,24 @@ ENDfreeWrkrInstance
 
 
 BEGINtryResume
-	instanceData *pData = pWrkrData->pData;
+	instanceData *pData;
 CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
-	if (pData->sendError) {
-		DBGPRINTF("omczmq: trying to resume from a send error...\n");
-		pData->sendError = false;
-		iRet = RS_RET_OK;
-	}
-	else {
-		DBGPRINTF("omczmq: trying to resume from an init error...\n");
-		zsock_destroy(&pData->sock);
-		zactor_destroy(&pData->beaconActor);
-		zactor_destroy(&pData->authActor);
-		iRet = initCZMQ(pData);
-	}
+	pData = pWrkrData->pData;
+	DBGPRINTF("omczmq: trying to resume...\n");
+	zsock_destroy(&pData->sock);
+	zactor_destroy(&pData->beaconActor);
+	zactor_destroy(&pData->authActor);
+	iRet = initCZMQ(pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
 
 
 BEGINdoAction
-	instanceData *pData = pWrkrData->pData;
+	instanceData *pData;
 CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
+	pData = pWrkrData->pData;
 	iRet = outputCZMQ(ppString[0], pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
