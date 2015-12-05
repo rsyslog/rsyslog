@@ -1300,7 +1300,7 @@ processMsgMain(action_t *__restrict__ const pAction,
 {
 	DEFiRet;
 
-	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
+	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
