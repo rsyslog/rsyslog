@@ -164,8 +164,8 @@ static struct cnfparamblk paramblk =
 	};
 
 static struct cnfparamdescr timezonecnfparamdescr[] = {
-	{ "id", eCmdHdlrString, 0 },
-	{ "offset", eCmdHdlrGetWord, 0 }
+	{ "id", eCmdHdlrString, CNFPARAM_REQUIRED},
+	{ "offset", eCmdHdlrGetWord, CNFPARAM_REQUIRED }
 };
 static struct cnfparamblk timezonepblk =
 	{ CNFPARAMBLK_VERSION,
@@ -885,8 +885,17 @@ glblProcessTimezone(struct cnfobj *o)
 		}
 	}
 
+	/* note: the following two checks for NULL are not strictly necessary
+	 * as these are required parameters for the config block. But we keep
+	 * them to make the clang static analyzer happy, which also helps
+	 * guard against logic errors.
+	 */
 	if(offset == NULL) {
-		parser_errmsg("offset parameter missing, timezone config ignored");
+		parser_errmsg("offset parameter missing (logic error?), timezone config ignored");
+		goto done;
+	}
+	if(id == NULL) {
+		parser_errmsg("id parameter missing (logic error?), timezone config ignored");
 		goto done;
 	}
 
