@@ -982,15 +982,20 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 		switch(pAction->peParamPassing[j]) {
 		case ACT_ARRAY_PASSING:
 			ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
-			if(((uchar**)ppMsgs)[j] != NULL) {
-				jArr = 0;
-				while(ppMsgs[j][jArr] != NULL) {
-					free(ppMsgs[j][jArr]);
-					ppMsgs[j][jArr] = NULL;
-					++jArr;
+			/* if we every use array passing mode again, we need to check
+			 * this code. It hasn't been used since refactoring for v7.
+			 */
+			if(ppMsgs != NULL) {
+				if(((uchar**)ppMsgs)[j] != NULL) {
+					jArr = 0;
+					while(ppMsgs[j][jArr] != NULL) {
+						free(ppMsgs[j][jArr]);
+						ppMsgs[j][jArr] = NULL;
+						++jArr;
+					}
+					free(((uchar**)ppMsgs)[j]);
+					((uchar**)ppMsgs)[j] = NULL;
 				}
-				free(((uchar**)ppMsgs)[j]);
-				((uchar**)ppMsgs)[j] = NULL;
 			}
 			break;
 		case ACT_JSON_PASSING:
