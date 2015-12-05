@@ -112,7 +112,19 @@ tokenToString(const int token)
 	case CMP_STARTSWITH: tokstr ="CMP_STARTSWITH"; break;
 	case CMP_STARTSWITHI: tokstr ="CMP_STARTSWITHI"; break;
 	case UMINUS: tokstr ="UMINUS"; break;
-	default: snprintf(tokbuf, sizeof(tokbuf), "%c[%d]", token, token); 
+	case '&': tokstr ="&"; break;
+	case '+': tokstr ="+"; break;
+	case '-': tokstr ="-"; break;
+	case '*': tokstr ="*"; break;
+	case '/': tokstr ="/"; break;
+	case '%': tokstr ="%"; break;
+	case 'M': tokstr ="M"; break;
+	case 'N': tokstr ="N"; break;
+	case 'S': tokstr ="S"; break;
+	case 'V': tokstr ="V"; break;
+	case 'F': tokstr ="F"; break;
+	case 'A': tokstr ="A"; break;
+	default: snprintf(tokbuf, sizeof(tokbuf), "%c[%d]", token, token);
 		 tokstr = tokbuf; break;
 	}
 	return tokstr;
