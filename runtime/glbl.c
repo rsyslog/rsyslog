@@ -826,7 +826,11 @@ addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 	DEFiRet;
 	tzinfo_t *newti;
 	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(tzinfo_t)));
-	CHKmalloc(newti[ntzinfos].id = strdup((char*)tzid));
+	if((newti[ntzinfos].id = strdup((char*)tzid)) == NULL) {
+		free(newti);
+		DBGPRINTF("addTimezoneInfo: strdup failed with OOM\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	newti[ntzinfos].offsMode = offsMode;
 	newti[ntzinfos].offsHour = offsHour;
 	newti[ntzinfos].offsMin = offsMin;
