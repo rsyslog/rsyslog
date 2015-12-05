@@ -437,7 +437,8 @@ wtiGetDummy(void)
 	pWti = (wti_t*) pthread_getspecific(thrd_wti_key);
 	if(pWti == NULL) {
 		wtiConstruct(&pWti);
-		wtiConstructFinalize(pWti);
+		if(pWti != NULL)
+			wtiConstructFinalize(pWti);
 		if(pthread_setspecific(thrd_wti_key, pWti) != 0) {
 			DBGPRINTF("wtiGetDummy: error setspecific thrd_wti_key\n");
 		}
