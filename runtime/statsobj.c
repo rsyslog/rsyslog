@@ -164,7 +164,11 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t fla
 	CHKmalloc(ctr = malloc(sizeof(ctr_t)));
 	ctr->next = NULL;
 	ctr->prev = NULL;
-	CHKmalloc(ctr->name = ustrdup(ctrName));
+	if((ctr->name = ustrdup(ctrName)) == NULL) {
+		DBGPRINTF("addCounter: OOM in strdup()\n");
+		free(ctr);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	ctr->flags = flags;
 	ctr->ctrType = ctrType;
 	switch(ctrType) {
