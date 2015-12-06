@@ -308,6 +308,12 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 
 finalize_it:
 	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
+	if(iRet == RS_RET_OK) {
+		*ppArr = pArr;
+	} else {
+		*ppArr = NULL;
+		free(pArr);
+	}
 
 	RETiRet;
 }
