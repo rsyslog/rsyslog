@@ -55,7 +55,8 @@ DEFobjCurrIf(datetime)
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-	{ "present.origin", eCmdHdlrBinary, 0 }
+	{ "present.origin", eCmdHdlrBinary, 0 },
+	{ "present.xr", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -65,6 +66,7 @@ static struct cnfparamblk parserpblk =
 
 struct instanceConf_s {
 	int bOriginPresent; /* is ORIGIN field present? */
+	int bXrPresent; /* is XR? */
 };
 
 BEGINisCompatibleWithFeature
@@ -86,6 +88,7 @@ createInstance(instanceConf_t **pinst)
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->bOriginPresent = 0;
+	inst->bXrPresent = 0;
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -128,6 +131,12 @@ CODESTARTnewParserInst
 			dbgprintf("pmciscoios: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
 		}
+                if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
+                        inst->bXrPresent = (int) pvals[i].val.d.n;
+                } else {
+                        dbgprintf("pmciscoios: program error, non-handled "
+                          "param '%s'\n", parserpblk.descr[i].name);
+                }
 	}
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
@@ -188,8 +197,23 @@ CODESTARTparse2
 		p2parse += 2;
 	}
 
+        /* XR RSP (optional) */
+        if(pInst->bXrPresent) {
+                while(   lenMsg > 1
+                      && !(*p2parse == ':')) {
+                        --lenMsg;
+			++p2parse;
+                }
+                /* delimiter check */
+                if(lenMsg < 2) {
+                        DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
+                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+                }
+                p2parse += 1;
+        }
+
 	/* TIMESTAMP */
-	if(p2parse[0] == '*') p2parse++;
+	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
@@ -198,6 +222,20 @@ CODESTARTparse2
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
+
+        /* XR RSP (optional) */
+        if(pInst->bXrPresent) {
+                while(   lenMsg > 1
+                      && !(*p2parse == '%')) {
+                        --lenMsg;
+                        p2parse++;
+                }
+                /* delimiter check */
+                if(lenMsg < 2) {
+                        DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
+                        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+                }
+        }
 
 	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
 	if(lenMsg < 1 || *p2parse != '%') {
@@ -211,6 +249,7 @@ CODESTARTparse2
 		--lenMsg;
 	}
 	/* delimiter check */
+	if(pInst->bXrPresent) p2parse++;
 	if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
 		DBGPRINTF("pmciscoios: fail after tag: '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
