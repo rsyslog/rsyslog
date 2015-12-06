@@ -780,7 +780,7 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->gr_gid;
-		dbgprintf("param '%s': uid %d obtained for group '%s'\n",
+		DBGPRINTF("param '%s': uid %d obtained for group '%s'\n",
 		   param->name, (int) resultBuf->gr_gid, cstr);
 		r = 1;
 	}
@@ -807,7 +807,7 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	} else {
 		val->val.datatype = 'N';
 		val->val.d.n = resultBuf->pw_uid;
-		dbgprintf("param '%s': uid %d obtained for user '%s'\n",
+		DBGPRINTF("param '%s': uid %d obtained for user '%s'\n",
 		   param->name, (int) resultBuf->pw_uid, cstr);
 		r = 1;
 	}
@@ -1013,7 +1013,7 @@ nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 		r = 1; /* this *is* valid! */
 		break;
 	default:
-		dbgprintf("error: invalid param type\n");
+		DBGPRINTF("error: invalid param type\n");
 		r = 0;
 		break;
 	}
@@ -1038,7 +1038,7 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	struct cnfparamdescr *param;
 
 	if(params->version != CNFPARAMBLK_VERSION) {
-		dbgprintf("nvlstGetParams: invalid param block version "
+		DBGPRINTF("nvlstGetParams: invalid param block version "
 			  "%d, expected %d\n",
 			  params->version, CNFPARAMBLK_VERSION);
 		return NULL;
@@ -1098,7 +1098,7 @@ cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
 	if(vals == NULL)
 		return 0;
 	if(params->version != CNFPARAMBLK_VERSION) {
-		dbgprintf("nvlstGetParams: invalid param block version "
+		DBGPRINTF("nvlstGetParams: invalid param block version "
 			  "%d, expected %d\n",
 			  params->version, CNFPARAMBLK_VERSION);
 		return 0;
@@ -1342,7 +1342,7 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 			++iCurrFld;
 		}
 	}
-	dbgprintf("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
+	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
 	
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
@@ -1389,7 +1389,7 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 			++iCurrFld;
 		}
 	}
-	dbgprintf("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
+	DBGPRINTF("field() field requested %d, field found %d\n", matchnbr, iCurrFld);
 	
 	if(iCurrFld == matchnbr) {
 		/* field found, now extract it */
@@ -1453,16 +1453,16 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 		int iREstat;
 		iREstat = regexp.regexec(func->funcdata, (char*)(str + iOffs),
 					 submatchnbr+1, pmatch, 0);
-		dbgprintf("re_extract: regexec return is %d\n", iREstat);
+		DBGPRINTF("re_extract: regexec return is %d\n", iREstat);
 		if(iREstat == 0) {
 			if(pmatch[0].rm_so == -1) {
-				dbgprintf("oops ... start offset of successful regexec is -1\n");
+				DBGPRINTF("oops ... start offset of successful regexec is -1\n");
 				break;
 			}
 			if(iTry == matchnbr) {
 				bFound = 1;
 			} else {
-				dbgprintf("re_extract: regex found at offset %d, new offset %d, tries %d\n",
+				DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n",
 					  iOffs, (int) (iOffs + pmatch[0].rm_eo), iTry);
 				iOffs += pmatch[0].rm_eo;
 				++iTry;
@@ -1471,7 +1471,7 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 			break;
 		}
 	}
-	dbgprintf("re_extract: regex: end search, found %d\n", bFound);
+	DBGPRINTF("re_extract: regex: end search, found %d\n", bFound);
 	if(!bFound) {
 		bHadNoMatch = 1;
 		goto finalize_it;
@@ -1624,16 +1624,16 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 	int success = 0;
 	long long max = var2Number(sourceVal, &success);
 	if (! success) {
-		dbgprintf("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number value to 0");
+		DBGPRINTF("rainerscript: random(max) didn't get a valid 'max' limit, defaulting random-number value to 0");
 		return 0;
 	}
 	if(max == 0) {
-		dbgprintf("rainerscript: random(max) invalid, 'max' is zero, , defaulting random-number value to 0");
+		DBGPRINTF("rainerscript: random(max) invalid, 'max' is zero, , defaulting random-number value to 0");
 		return 0;
 	}
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
-		dbgprintf("rainerscript: desired random-number range [0 - %lld] "
+		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
 			"is wider than supported limit of [0 - %d)",
 			max, MAX_RANDOM_NUMBER);
 	}
@@ -1647,7 +1647,6 @@ static inline void
 doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ const ret,
 	   void *__restrict__ const usrptr)
 {
-	char *fname;
 	char *envvar;
 	int bMustFree;
 	es_str_t *estr;
@@ -1660,7 +1659,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 	struct funcData_prifilt *pPrifilt;
 	rsRetVal localRet;
 
-	dbgprintf("rainerscript: executing function id %d\n", func->fID);
+	DBGPRINTF("rainerscript: executing function id %d\n", func->fID);
 	switch(func->fID) {
 	case CNFFUNC_STRLEN:
 		if(func->expr[0]->nodetype == 'S') {
@@ -1754,7 +1753,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			varFreeMembers(&r[0]);
 		}
 		ret->datatype = 'N';
-		dbgprintf("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
+		DBGPRINTF("JSONorString: cnum node type %c result %d\n", func->expr[0]->nodetype, (int) ret->d.n);
 		break;
 	case CNFFUNC_RE_MATCH:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1834,7 +1833,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		break;
 	default:
 		if(Debug) {
-			fname = es_str2cstr(func->fname, NULL);
+			char *fname = es_str2cstr(func->fname, NULL);
 			dbgprintf("rainerscript: invalid function id %u (name '%s')\n",
 				  (unsigned) func->fID, fname);
 			free(fname);
@@ -2446,7 +2445,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 	default:
 		ret->datatype = 'N';
 		ret->d.n = 0ll;
-		dbgprintf("eval error: unknown nodetype %u['%c']\n",
+		DBGPRINTF("eval error: unknown nodetype %u['%c']\n",
 			(unsigned) expr->nodetype, (char) expr->nodetype);
 		break;
 	}
@@ -3000,7 +2999,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
 	default:
-		dbgprintf("error: unknown stmt type during destruct %u\n",
+		DBGPRINTF("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
 		break;
 	}
@@ -3403,7 +3402,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 	long long ln, rn;
 	struct cnfexpr *exprswap;
 
-	dbgprintf("optimize expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
+	DBGPRINTF("optimize expr %p, type '%s'\n", expr, tokenToString(expr->nodetype));
 	switch(expr->nodetype) {
 	case '&':
 		constFoldConcat(expr);
@@ -3707,7 +3706,7 @@ cnfstmtOptimize(struct cnfstmt *root)
 			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
 			break;
 		default:
-			dbgprintf("error: unknown stmt type %u during optimizer run\n",
+			DBGPRINTF("error: unknown stmt type %u during optimizer run\n",
 				(unsigned) stmt->nodetype);
 			break;
 		}
@@ -4077,13 +4076,13 @@ cnfDoInclude(char *name)
 		}
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
-			dbgprintf("requested to include config file '%s'\n", cfgFile);
+			DBGPRINTF("requested to include config file '%s'\n", cfgFile);
 			cnfSetLexFile(cfgFile);
 		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
-			dbgprintf("requested to include directory '%s'\n", cfgFile);
+			DBGPRINTF("requested to include directory '%s'\n", cfgFile);
 			cnfDoInclude(cfgFile);
 		} else {
-			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
+			DBGPRINTF("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
 		}
 	}
 

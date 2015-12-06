@@ -143,7 +143,7 @@ CODESTARTfreeInstance
 		for (i = 0; i < pData->iParams; i++) {
 			free(pData->aParams[i]);
 		}
-		free(pData->aParams); 
+		free(pData->aParams);
 	}
 ENDfreeInstance
 
@@ -320,7 +320,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 		 */
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		DBGPRINTF("mmexternal: failed to execute binary '%s': %s\n",
-			  pWrkrData->pData->szBinary, errStr); 
+			  pWrkrData->pData->szBinary, errStr);
 	}
 	
 	/* we should never reach this point, but if we do, we terminate */
@@ -562,8 +562,8 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
-			estrBinary = pvals[i].val.d.estr; 
-			estrParams = NULL; 
+			estrBinary = pvals[i].val.d.estr;
+			estrParams = NULL;
 
 			/* Search for space */
 			c = es_getBufAddr(pvals[i].val.d.estr);
@@ -571,18 +571,22 @@ CODESTARTnewActInst
 			while(iCnt < es_strlen(pvals[i].val.d.estr) ) {
 				if (c[iCnt] == ' ') {
 					/* Split binary name from parameters */
-					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt ); 
-					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1, es_strlen(pvals[i].val.d.estr)); 
+					estrBinary = es_newStrFromSubStr ( pvals[i].val.d.estr, 0, iCnt );
+					estrParams = es_newStrFromSubStr ( pvals[i].val.d.estr, iCnt+1, es_strlen(pvals[i].val.d.estr));
 					break;
 				}
 				iCnt++;
 			}	
 			/* Assign binary and params */
 			pData->szBinary = (uchar*)es_str2cstr(estrBinary, NULL);
-			dbgprintf("mmexternal: szBinary = '%s'\n", pData->szBinary); 
+			DBGPRINTF("mmexternal: szBinary = '%s'\n", pData->szBinary);
 			/* Check for Params! */
 			if (estrParams != NULL) {
-				dbgprintf("mmexternal: szParams = '%s'\n", es_str2cstr(estrParams, NULL) ); 
+				if(Debug) {
+					char *params = es_str2cstr(estrParams, NULL);
+					dbgprintf("mmexternal: szParams = '%s'\n", params, NULL);
+					free(params);
+				}
 				
 				/* Count parameters if set */
 				c = es_getBufAddr(estrParams); /* Reset to beginning */
@@ -590,10 +594,10 @@ CODESTARTnewActInst
 				iCnt = 0;
 				while(iCnt < es_strlen(estrParams) ) {
 					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
-						 pData->iParams++; 
+						 pData->iParams++;
 					iCnt++;
 				}
-				dbgprintf("mmexternal: iParams = '%d'\n", pData->iParams); 
+				DBGPRINTF("mmexternal: iParams = '%d'\n", pData->iParams);
 
 				/* Create argv Array */
 				CHKmalloc(pData->aParams = malloc( (pData->iParams+1) * sizeof(char*))); /* One more for first param */ 
@@ -601,32 +605,32 @@ CODESTARTnewActInst
 				/* Second Loop, create parameter array*/
 				c = es_getBufAddr(estrParams); /* Reset to beginning */
 				iCnt = iStr = iPrm = 0;
-				estrTmp = NULL; 
-				bInQuotes = FALSE; 
+				estrTmp = NULL;
+				bInQuotes = FALSE;
 				/* Set first parameter to binary */
-				pData->aParams[iPrm] = strdup((char*)pData->szBinary); 
-				dbgprintf("mmexternal: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
-				iPrm++; 
+				pData->aParams[iPrm] = strdup((char*)pData->szBinary);
+				DBGPRINTF("mmexternal: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
+				iPrm++;
 				while(iCnt < es_strlen(estrParams) ) {
 					if ( c[iCnt] == ' ' && !bInQuotes ) {
 						/* Copy into Param Array! */
-						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr); 
+						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr);
 					}
 					else if ( iCnt+1 >= es_strlen(estrParams) ) {
 						/* Copy rest of string into Param Array! */
-						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1); 
+						estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1);
 					}
 					else if (c[iCnt] == '"') {
 						/* switch inQuotes Mode */
-						bInQuotes = !bInQuotes; 
+						bInQuotes = !bInQuotes;
 					}
 
 					if ( estrTmp != NULL ) {
-						pData->aParams[iPrm] = es_str2cstr(estrTmp, NULL); 
+						pData->aParams[iPrm] = es_str2cstr(estrTmp, NULL);
 						iStr = iCnt+1; /* Set new start */
-						dbgprintf("mmexternal: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
+						DBGPRINTF("mmexternal: Param (%d): '%s'\n", iPrm, pData->aParams[iPrm]);
 						es_deleteStr( estrTmp );
-						estrTmp = NULL; 
+						estrTmp = NULL;
 						iPrm++;
 					}
 
@@ -634,7 +638,7 @@ CODESTARTnewActInst
 					iCnt++;
 				}
 				/* NULL last parameter! */
-				pData->aParams[iPrm] = NULL; 
+				pData->aParams[iPrm] = NULL;
 
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "output")) {
@@ -656,7 +660,7 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_INVLD_INTERFACE_INPUT);
 			}
 		} else {
-			dbgprintf("mmexternal: program error, non-handled param '%s'\n", actpblk.descr[i].name);
+			DBGPRINTF("mmexternal: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
