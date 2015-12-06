@@ -1238,9 +1238,6 @@ var2Number(struct var *r, int *bSuccess)
 	long long n;
 	if(r->datatype == 'S') {
 		n = str2num(r->d.estr, bSuccess);
-char *cc = es_str2cstr(r->d.estr, NULL);
-dbgprintf("JSONorString: string is '%s', num %d\n", cc, (int)n);
-free(cc);
 	} else {
 		if(r->datatype == 'J') {
 #ifdef HAVE_JSON_OBJECT_NEW_INT64
@@ -1798,7 +1795,6 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			localRet = doExtractFieldByChar((uchar*)str, (char) delim, matchnbr, &resStr);
 		}
 		if(localRet == RS_RET_OK) {
-dbgprintf("JSONorString: return String is '%s'\n", resStr);
 			ret->d.estr = es_newStrFromCStr((char*)resStr, strlen((char*)resStr));
 			free(resStr);
 		} else if(localRet == RS_RET_FIELD_NOT_FOUND) {
@@ -1825,7 +1821,6 @@ dbgprintf("JSONorString: return String is '%s'\n", resStr);
 		ret->datatype = 'N';
 		break;
 	case CNFFUNC_LOOKUP:
-dbgprintf("DDDD: executing lookup\n");
 		ret->datatype = 'S';
 		if(func->funcdata == NULL) {
 			ret->d.estr = es_newStrFromCStr("TABLE-NOT-FOUND", sizeof("TABLE-NOT-FOUND")-1);

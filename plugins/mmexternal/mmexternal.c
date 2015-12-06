@@ -217,7 +217,6 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *con
 	int numCharsRead;
 	char *newptr;
 
-dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 	numCharsRead = 0;
 	do {
 		if(pWrkrData->maxLenRespBuf < numCharsRead + 256) { /* 256 to permit at least a decent read */
@@ -242,7 +241,6 @@ dbgprintf("mmexternal: checking prog output, fd %d\n", pWrkrData->fdPipeIn);
 			strcpy(pWrkrData->respBuf, "{}\n");
 			numCharsRead = 3;
 		}
-dbgprintf("mmexternal: read state %lld, data '%s'\n", (long long) r, pWrkrData->respBuf);
 		if(Debug && r == -1) {
 			DBGPRINTF("mmexternal: error reading from external program: %s\n",
 				   rs_strerror_r(errno, errStr, sizeof(errStr)));
@@ -513,7 +511,6 @@ finalize_it:
 BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
-dbgprintf("DDDD:mmexternal processing message\n");
 	pData = pWrkrData->pData;
 	if(pData->bForceSingleInst)
 		pthread_mutex_lock(&pData->mut);
@@ -527,7 +524,6 @@ dbgprintf("DDDD:mmexternal processing message\n");
 		iRet = RS_RET_SUSPENDED;
 	if(pData->bForceSingleInst)
 		pthread_mutex_unlock(&pData->mut);
-dbgprintf("DDDD:mmexternal DONE processing message\n");
 ENDdoAction
 
 

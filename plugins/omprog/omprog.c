@@ -170,7 +170,6 @@ writeProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	char errStr[1024];
 	ssize_t r;
 
-dbgprintf("omprog: writeProgramOutput, fd %d\n", pWrkrData->fdOutput);
 	if(pWrkrData->fdOutput == -1) {
 		pWrkrData->fdOutput = open((char*)pWrkrData->pData->outputFileName,
 				       O_WRONLY | O_APPEND | O_CREAT, 0600);
