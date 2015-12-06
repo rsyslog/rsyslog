@@ -17,6 +17,9 @@ If you use RH/CentOS/Fedora, you'll have to build grok rpms by yourself as follo
     # use yum command instead of rpm, because grok depends on libevent, pcre, tokyocabinet
     sudo yum install -y libjson-c-devel glib-devel ~/rpbuild/RPMS/x86_64/grok*.rpm
 
+Note: at least on Fedora, when building mmgrok one needs to set CFLAGS to
+include the output of the following: $(pkg-config --cflags glib).
+
 Example
 
 module(load="mmgrok")
