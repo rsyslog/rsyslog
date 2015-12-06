@@ -1874,6 +1874,15 @@ tplProcessCnf(struct cnfobj *o)
 		}
 	}
 
+	/* the following check is just for clang static anaylzer: this condition
+	 * cannot occur if all is setup well, because "name" is a required parameter
+	 * inside the param block and so the code should err out above.
+	 */
+	if(name == NULL) {
+		DBGPRINTF("template/tplProcessConf: logic error name == NULL - pblk wrong?\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	/* do config sanity checks */
 	if(tplStr  == NULL) {
 		if(tplType == T_STRING) {
