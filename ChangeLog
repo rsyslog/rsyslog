@@ -23,6 +23,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - KSI utilities: somewhat improved error messages
   Thanks to Henri Lakk for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/588
+- pmciscoios: support for some format variations
+  Thanks to github user c0by for the patch
 - support grok via new contributed module mmgrok
   Thanks to 饶琛琳 (github user chenryn) for the contribution.
 - improvments for 0mq modules:
@@ -45,6 +47,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - cleanup on code to unset a variable
   under extreme cases (very, very unlikely), the old code could also lead
   to errornous processing
+- omelasticsearch: build on FreeBSD
+  Thanks to github user c0by for the patch
 - pmciscoios: fix some small issues clang static analyzer detected
 - bugfix omkafka: restore ability to build on all platforms
   Undo commit aea09800643343ab8b6aa205b0f10a4be676643b
