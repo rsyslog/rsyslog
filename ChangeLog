@@ -20,6 +20,7 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - omrabbitmq: improvements
   thanks to Luigi Mori for the patch
   see also: https://github.com/rsyslog/rsyslog/pull/580
+- add support for libfastjson (as a replacement for json-c)
 - KSI utilities: somewhat improved error messages
   Thanks to Henri Lakk for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/588
