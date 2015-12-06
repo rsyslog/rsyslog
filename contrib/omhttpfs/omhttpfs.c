@@ -442,7 +442,7 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
         return RS_RET_JSON_PARSE_ERR;
     }
 
-    if (!json_object_object_get_ex(json, "RemoteException", &json)) {
+    if (!RS_json_object_object_get_ex(json, "RemoteException", &json)) {
         return RS_RET_JSON_PARSE_ERR;
     }
 
@@ -450,13 +450,13 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
 
     memset(jre, 0, sizeof(*jre));
 
-    json_object_object_get_ex(json, "javaClassName", &jobj);
+    RS_json_object_object_get_ex(json, "javaClassName", &jobj);
     strncpy(jre->class, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
-    json_object_object_get_ex(json, "exception", &jobj);
+    RS_json_object_object_get_ex(json, "exception", &jobj);
     strncpy(jre->exception, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
-    json_object_object_get_ex(json, "message", &jobj);
+    RS_json_object_object_get_ex(json, "message", &jobj);
     strncpy(jre->message, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
 
     json_object_put(json);
