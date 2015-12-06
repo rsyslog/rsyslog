@@ -437,7 +437,8 @@ wtiGetDummy(void)
 	pWti = (wti_t*) pthread_getspecific(thrd_wti_key);
 	if(pWti == NULL) {
 		wtiConstruct(&pWti);
-		wtiConstructFinalize(pWti);
+		if(pWti != NULL)
+			wtiConstructFinalize(pWti);
 		if(pthread_setspecific(thrd_wti_key, pWti) != 0) {
 			DBGPRINTF("wtiGetDummy: error setspecific thrd_wti_key\n");
 		}
@@ -469,7 +470,7 @@ BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most
 	r = pthread_key_create(&thrd_wti_key, NULL);
 	if(r != 0) {
 		dbgprintf("wti.c: pthread_key_create failed\n");
-		iRet = RS_RET_ERR;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 ENDObjClassInit(wti)
 

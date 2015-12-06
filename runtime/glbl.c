@@ -164,8 +164,8 @@ static struct cnfparamblk paramblk =
 	};
 
 static struct cnfparamdescr timezonecnfparamdescr[] = {
-	{ "id", eCmdHdlrString, 0 },
-	{ "offset", eCmdHdlrGetWord, 0 }
+	{ "id", eCmdHdlrString, CNFPARAM_REQUIRED},
+	{ "offset", eCmdHdlrGetWord, CNFPARAM_REQUIRED }
 };
 static struct cnfparamblk timezonepblk =
 	{ CNFPARAMBLK_VERSION,
@@ -826,7 +826,11 @@ addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 	DEFiRet;
 	tzinfo_t *newti;
 	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(tzinfo_t)));
-	CHKmalloc(newti[ntzinfos].id = strdup((char*)tzid));
+	if((newti[ntzinfos].id = strdup((char*)tzid)) == NULL) {
+		free(newti);
+		DBGPRINTF("addTimezoneInfo: strdup failed with OOM\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	newti[ntzinfos].offsMode = offsMode;
 	newti[ntzinfos].offsHour = offsHour;
 	newti[ntzinfos].offsMin = offsMin;
@@ -863,8 +867,10 @@ glblProcessTimezone(struct cnfobj *o)
 	int i;
 
 	pvals = nvlstGetParams(o->nvlst, &timezonepblk, NULL);
-	dbgprintf("timezone param blk after glblProcessTimezone:\n");
-	cnfparamsPrint(&timezonepblk, pvals);
+	if(Debug) {
+		dbgprintf("timezone param blk after glblProcessTimezone:\n");
+		cnfparamsPrint(&timezonepblk, pvals);
+	}
 
 	for(i = 0 ; i < timezonepblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
@@ -877,6 +883,20 @@ glblProcessTimezone(struct cnfobj *o)
 			dbgprintf("glblProcessTimezone: program error, non-handled "
 			  "param '%s'\n", timezonepblk.descr[i].name);
 		}
+	}
+
+	/* note: the following two checks for NULL are not strictly necessary
+	 * as these are required parameters for the config block. But we keep
+	 * them to make the clang static analyzer happy, which also helps
+	 * guard against logic errors.
+	 */
+	if(offset == NULL) {
+		parser_errmsg("offset parameter missing (logic error?), timezone config ignored");
+		goto done;
+	}
+	if(id == NULL) {
+		parser_errmsg("id parameter missing (logic error?), timezone config ignored");
+		goto done;
 	}
 
 	if(   strlen((char*)offset) != 6
@@ -917,8 +937,10 @@ glblProcessCnf(struct cnfobj *o)
 	int i;
 
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
-	dbgprintf("glbl param blk after glblProcessCnf:\n");
-	cnfparamsPrint(&paramblk, cnfparamvals);
+	if(Debug) {
+		dbgprintf("glbl param blk after glblProcessCnf:\n");
+		cnfparamsPrint(&paramblk, cnfparamvals);
+	}
 
 	/* The next thing is a bit hackish and should be changed in higher
 	 * versions. There are a select few parameters which we need to

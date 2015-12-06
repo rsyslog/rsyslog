@@ -259,8 +259,10 @@ CODESTARTfreeInstance
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
-	for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
-		free(pData->permittedPeers.name[i]);
+	if(pData->permittedPeers.name != NULL) {
+		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
+			free(pData->permittedPeers.name[i]);
+		}
 	}
 ENDfreeInstance
 
@@ -290,6 +292,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
+	pData->permittedPeers.name = NULL;
 	pData->permittedPeers.nmemb = 0;
 }
 
@@ -340,7 +343,7 @@ CODESTARTnewActInst
 			pData->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->permittedPeers.name =
 				malloc(sizeof(uchar*) * pData->permittedPeers.nmemb));
-			for(j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+			for(j = 0 ; j <  pData->permittedPeers.nmemb ; ++j) {
 				pData->permittedPeers.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 			}
 		} else {

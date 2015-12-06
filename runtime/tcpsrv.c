@@ -133,11 +133,22 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 
 	/* create entry */
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
-	CHKmalloc(pEntry->pszPort = ustrdup(pszPort));
+	if((pEntry->pszPort = ustrdup(pszPort)) == NULL) {
+		DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup()\n");
+		free(pEntry);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
-        pEntry->pszAddr = NULL; // Initalize address to null
+        pEntry->pszAddr = NULL;
         /* only if a bind adress is defined copy it in struct */
-        if (pszAddr != NULL) CHKmalloc(pEntry->pszAddr = ustrdup(pszAddr));
+        if (pszAddr != NULL) {
+		if((pEntry->pszAddr = ustrdup(pszAddr)) == NULL) {
+			DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup() 2\n");
+			free(pEntry->pszPort);
+			free(pEntry);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+	}
 
 	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
 	pEntry->bSPFramingFix = pThis->bSPFramingFix;

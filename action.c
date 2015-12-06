@@ -982,15 +982,20 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 		switch(pAction->peParamPassing[j]) {
 		case ACT_ARRAY_PASSING:
 			ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
-			if(((uchar**)ppMsgs)[j] != NULL) {
-				jArr = 0;
-				while(ppMsgs[j][jArr] != NULL) {
-					free(ppMsgs[j][jArr]);
-					ppMsgs[j][jArr] = NULL;
-					++jArr;
+			/* if we every use array passing mode again, we need to check
+			 * this code. It hasn't been used since refactoring for v7.
+			 */
+			if(ppMsgs != NULL) {
+				if(((uchar**)ppMsgs)[j] != NULL) {
+					jArr = 0;
+					while(ppMsgs[j][jArr] != NULL) {
+						free(ppMsgs[j][jArr]);
+						ppMsgs[j][jArr] = NULL;
+						++jArr;
+					}
+					free(((uchar**)ppMsgs)[j]);
+					((uchar**)ppMsgs)[j] = NULL;
 				}
-				free(((uchar**)ppMsgs)[j]);
-				((uchar**)ppMsgs)[j] = NULL;
 			}
 			break;
 		case ACT_JSON_PASSING:
@@ -1295,7 +1300,7 @@ processMsgMain(action_t *__restrict__ const pAction,
 {
 	DEFiRet;
 
-	iRet = prepareDoActionParams(pAction, pWti, pMsg, ttNow);
+	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
 	if(pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
@@ -1336,7 +1341,10 @@ processBatchMain(void *__restrict__ const pVoid,
 
 	for(i = 0 ; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate ; ++i) {
 		if(batchIsValidElem(pBatch, i)) {
-			iRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
+			/* we do not check error state below, because aborting would be
+			 * more harmful than continuing.
+			 */
+			processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 		}
 	}

@@ -308,6 +308,12 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 
 finalize_it:
 	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
+	if(iRet == RS_RET_OK) {
+		*ppArr = pArr;
+	} else {
+		*ppArr = NULL;
+		free(pArr);
+	}
 
 	RETiRet;
 }
@@ -330,7 +336,8 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	DEFiRet;
 
 	if(pTpl->bHaveSubtree){
-		localRet = jsonFind(pMsg->json, &pTpl->subtree, pjson);
+		if(jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
+			*pjson = NULL;
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
@@ -1866,6 +1873,15 @@ tplProcessCnf(struct cnfobj *o)
 			dbgprintf("template: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
 		}
+	}
+
+	/* the following check is just for clang static anaylzer: this condition
+	 * cannot occur if all is setup well, because "name" is a required parameter
+	 * inside the param block and so the code should err out above.
+	 */
+	if(name == NULL) {
+		DBGPRINTF("template/tplProcessConf: logic error name == NULL - pblk wrong?\n");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* do config sanity checks */

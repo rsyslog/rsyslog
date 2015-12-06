@@ -4,7 +4,7 @@
  *
  * Module begun 2008-10-09 by Rainer Gerhards (based on previous code from syslogd.c)
  *
- * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -280,7 +280,7 @@ rsRetVal
 parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restrict__ pName, void *pInst)
 {
 	rsRetVal localRet;
-	parser_t *pParser;
+	parser_t *pParser = NULL;
 	DEFiRet;
 
 	if(pInst == NULL && pMod->mod.pm.newParserInst != NULL) {
@@ -303,6 +303,8 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	pParser->pInst = pInst;
 	CHKiRet(parserConstructFinalize(pParser));
 finalize_it:
+	if(iRet != RS_RET_OK)
+		free(pParser);
 	RETiRet;
 }
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */

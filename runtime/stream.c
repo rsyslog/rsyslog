@@ -1352,7 +1352,8 @@ syncFile(strm_t *pThis)
 	}
 	
 	if(pThis->fdDir != -1) {
-		ret = fsync(pThis->fdDir);
+		if(fsync(pThis->fdDir) != 0)
+			DBGPRINTF("stream/syncFile: fsync returned error, ignoring\n");
 	}
 
 finalize_it:

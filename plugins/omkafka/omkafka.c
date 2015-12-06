@@ -938,18 +938,22 @@ CODESTARTnewActInst
 			CHKmalloc(pData->confParams = malloc(sizeof(struct kafka_params) *
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-				CHKiRet(processKafkaParam(es_str2cstr(pvals[i].val.d.ar->arr[j], NULL),
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(processKafkaParam(cstr,
 							&pData->confParams[j].name,
 							&pData->confParams[j].val));
+				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "topicconfparam")) {
 			pData->nTopicConfParams = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->topicConfParams = malloc(sizeof(struct kafka_params) *
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-				CHKiRet(processKafkaParam(es_str2cstr(pvals[i].val.d.ar->arr[j], NULL),
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(processKafkaParam(cstr,
 							&pData->topicConfParams[j].name,
 							&pData->topicConfParams[j].val));
+				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
