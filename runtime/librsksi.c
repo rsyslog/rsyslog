@@ -394,8 +394,8 @@ tlvWriteBlockSigKSI(ksifile ksi, uchar *der, uint16_t lenDer)
 	if(r != 0) goto done;
 	r = tlvbufAddInt64(ksi, ksi->nRecords);
 	if(r != 0) goto done;
-	/* rfc-3161 */
-	r = tlv16WriteKSI(ksi, 0x00, 0x906, lenDer);
+	/* Open-KSI signature */
+	r = tlv16WriteKSI(ksi, 0x00, 0x905, lenDer);
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, der, lenDer);
 done:	return r;
