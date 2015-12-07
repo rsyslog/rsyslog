@@ -967,7 +967,13 @@ AC_ARG_ENABLE(mmgrok,
         esac],
         [enable_mmgrok=no]
 )
+if test "x$enable_mmgrok" = "xyes"; then
+	GLIB_CFLAGS="$(pkg-config --cflags glib-2.0)"
+	GLIB_LIBS="$(pkg-config --libs glib-2.0)"
+fi
 AM_CONDITIONAL(ENABLE_MMGROK, test x$enable_mmgrok = xyes)
+AC_SUBST(GLIB_CFLAGS)
+AC_SUBST(GLIB_LIBS)
 
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
