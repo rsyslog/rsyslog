@@ -469,26 +469,28 @@ CODESTARTnewActInst
 		}
 		else if (!strcmp(actpblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
-
-			if (!strcmp("PUB", stringType)) {
-				pData->sockType = ZMQ_PUB;
-			}
-			else if (!strcmp("PUSH", stringType)) {
-				pData->sockType = ZMQ_PUSH;
-			}
-			else if (!strcmp("DEALER", stringType)) {
-				pData->sockType = ZMQ_DEALER;
-			}
-			else {
-				if(stringType != NULL){
-					free(stringType);
-				}				
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-						"omczmq: invalid socktype");
-				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-			}
 			if(stringType != NULL){
+				if (!strcmp("PUB", stringType)) {
+					pData->sockType = ZMQ_PUB;
+				}
+				else if (!strcmp("PUSH", stringType)) {
+					pData->sockType = ZMQ_PUSH;
+				}
+				else if (!strcmp("DEALER", stringType)) {
+					pData->sockType = ZMQ_DEALER;
+				}
+				else {
+					free(stringType);
+					errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+							"omczmq: invalid socktype");
+					ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+				}
 				free(stringType);
+			}
+			else{
+				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+						"omczmq: out of memory");
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
 		} 
 		else if (!strcmp(actpblk.descr[i].name, "authtype")) {
@@ -537,7 +539,14 @@ CODESTARTnewActInst
 			// create a list of topics
 			pData->topics = zlist_new();
 			char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
+			char *topics_org = topics;
 			char topic[256];
+			if(topics == NULL){
+				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+					"out of memory");
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
+			
 			while (*topics) {
 				char *delimiter = strchr(topics, ',');
 				if (!delimiter) {
@@ -546,6 +555,7 @@ CODESTARTnewActInst
 				if (delimiter - topics > 255) {
 					errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"topics must be under 256 characters");
+					free(topics_org);
 					ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 				}
 				memcpy (topic, topics, delimiter - topics);
@@ -557,9 +567,8 @@ CODESTARTnewActInst
 				}
 				topics = delimiter + 1;
 			}
-			if(topics != NULL){
-				free(topics);
-			}
+			free(topics_org);
+
 		}
 		else {
 			errmsg.LogError(0, NO_ERRCODE,
