@@ -450,14 +450,23 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
 
     memset(jre, 0, sizeof(*jre));
 
+    const char *str;
+    size_t len;
+
     RS_json_object_object_get_ex(json, "javaClassName", &jobj);
-    strncpy(jre->class, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
+    str = json_object_get_string(jobj);
+    len = strlen(str);
+    strncpy(jre->class, str, len);
 
     RS_json_object_object_get_ex(json, "exception", &jobj);
-    strncpy(jre->exception, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
+    str = json_object_get_string(jobj);
+    len = strlen(str);
+    strncpy(jre->exception, str, len);
 
     RS_json_object_object_get_ex(json, "message", &jobj);
-    strncpy(jre->message, (char*) json_object_get_string(jobj), json_object_get_string_len(jobj));
+    str = json_object_get_string(jobj);
+    len = strlen(str);
+    strncpy(jre->message, str, len);
 
     json_object_put(json);
 
@@ -851,7 +860,7 @@ CODESTARTnewActInst
         if(!strcmp(actpblk.descr[i].name, "host")) {
             pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(actpblk.descr[i].name, "port")) {
-            pData->port = (int) pvals[i].val.d.n, NULL;
+            pData->port = (int) pvals[i].val.d.n;
         } else if(!strcmp(actpblk.descr[i].name, "user")) {
             pData->user = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 
