@@ -287,6 +287,11 @@ Version 8.10.0 [v8-stable] 2015-05-19
   source builds per default but enforced when building from git source.
 - mmpstrucdata: some code cleanup
   removed lots of early development debug outputs
+- bugfix imuxsock: fix a memory leak that happened with large messages
+  ... when annotation was enabled.
+  Thanks to github user c6226 for the patch
+- bugfix omhttpfs: memory leak
+  Thanks to github user c6226 for the patch
 - bugfix imuxsock: fix a crash when setting a hostname
   Setting a hostname via the legacy directive would lead to a crash
   during shutdown caused by a double-free.
