@@ -355,7 +355,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
     newreply = realloc(mem->reply, mem->replyLen + realsize + 1);
     if (newreply == NULL) {
         /* out of memory! */
-        printf("not enough memory (realloc returned NULL)\n");
+        dbgprintf("not enough memory (realloc returned NULL)\n");
         
         if (mem->reply != NULL) 
             free(mem->reply);
