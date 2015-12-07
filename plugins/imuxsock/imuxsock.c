@@ -888,6 +888,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			pmsgbuf[toffs+1] = '\0';
 
 			MsgSetRawMsg(pMsg, (char*)pmsgbuf, toffs + 1);
+			if (pmsgbuf != msgbuf) {
+				free(pmsgbuf);
+			}
 		}
 	} else {
 		/* just add the unmodified message */
