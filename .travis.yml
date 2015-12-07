@@ -33,7 +33,7 @@ before_install:
 
 install:
   - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client
-  - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex libksi0 libksi-dev
+  - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex libksi1 libksi1-dev
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
 
