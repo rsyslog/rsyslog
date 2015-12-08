@@ -1576,14 +1576,6 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
-		*pLenBuf = 0;
-		/* in this case, we also need to free the receive buffer, if we
-		 * allocated one. -- rgerhards, 2008-12-03
-		 */
-		if(pThis->pszRcvBuf != NULL) {
-			free(pThis->pszRcvBuf);
-			pThis->pszRcvBuf = NULL;
-		}
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 
@@ -1600,6 +1592,14 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	*pLenBuf = iBytesCopy;
 
 finalize_it:
+	if (iRet != RS_RET_OK) {
+		/* in this case, we also need to free the receive buffer, if we
+		 * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
+		 */
+		*pLenBuf = 0;
+		free(pThis->pszRcvBuf);
+		pThis->pszRcvBuf = NULL;
+	}
 	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
