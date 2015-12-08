@@ -240,7 +240,6 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
         char  *pname;
         const char  *pdata;
         int    pname_len,pdata_len;
-        bool   is_append = true;
         
         char *key;
         char *type;
