@@ -46,8 +46,10 @@ script:
   - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
   - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs $NO_VALGRIND $GROK
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
-  - if [ "x$STAT_AN" == "x" ] ; then make && make check && make distcheck; fi
+  - make
+  - if [ "x$STAT_AN" == "x" ] ; then make check && make distcheck; fi
   #- if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then make clean ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
   # we now build those components that we know to need some more work
   # they will not be included in the later static analyzer run. But by
