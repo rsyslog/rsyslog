@@ -1,5 +1,16 @@
 ------------------------------------------------------------------------------
 Version 8.15.0 [v8-stable] 2015-12-15
+- KSI Lib: Updated code to run with libksi 3.4.0.5 
+  Also libksi 3.4.0.x is required to build rsyslog if ksi support
+  is enabled. New libpackages have been build as well. 
+- KSI utilities: Added option to ser publication url.
+  Since libksi 3.4.0.x, there is no default publication url anymore. 
+  The publication url has to be set using the --publications-server
+  Parameter, otherwise the ksi signature cannot be verified. UserID
+  and UserKey can also be set by parameter now.   
+  Closes https://github.com/rsyslog/rsyslog/issues/581
+- KSI Lib: Fixed wrong TLV container for KSI signatures from 0905 to 0906. 
+  closes https://github.com/rsyslog/rsyslog/issues/587
 - KSI/GT Lib: Fixed multiple issues found using static analyzer 
 - gnutls fix: Added possible fix for gnutls issue #575
   see also: https://github.com/rsyslog/rsyslog/issues/575
