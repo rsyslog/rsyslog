@@ -36,7 +36,7 @@ install:
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libjson0-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex libksi0 libksi-dev
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
-  - if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libglib2.0-dev libgrok-dev; fi
+  - if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libglib2.0-dev libgrok-dev libtokyocabinet-dev ; fi
 
 script:
   - autoreconf --force --verbose --install
