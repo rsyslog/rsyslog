@@ -965,6 +965,12 @@ verifyGT:
 
 verifyKSI:
 #ifdef ENABLEKSI
+	/* puburl is mandatory for KSI now! */
+	if (strlen(rsksi_read_puburl) <= 0) {
+		iSuccess = 0; 
+		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when verifying KSI signatures.\n"); 
+		goto done; /* abort */
+	} 
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
 	iSuccess = 0; 
@@ -1089,8 +1095,8 @@ rsgtutil_usage(void)
 			"\t-s, --show-verified \t\t Also show correctly verified blocks.\n"
 			"\t-P <URL>, --publications-server <URL> \t Sets the publications server.\n"
 			"\t-E <URL>, --extend-server <URL> \t Sets the extension server.\n"
-			"\t-u <USERID>, --userid <URL> \t Sets the userid used (Needed for the extension server).\n"
-			"\t-k <USERKEY>, --userkey <URL> \t Sets the userkey used (Needed for the extension server).\n"
+			"\t-u <USERID>, --userid <USERID> \t Sets the userid used (Needed for the extension server).\n"
+			"\t-k <USERKEY>, --userkey <USERKEY> \t Sets the userkey used (Needed for the extension server).\n"
 			"\t-v, --verbose \t\t\t Verbose output.\n"
 			"\t-d, --debug \t\t\t Debug (developer) output.\n"
 			);

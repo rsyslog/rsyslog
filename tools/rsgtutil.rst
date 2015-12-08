@@ -72,9 +72,24 @@ OPTIONS
 
 
 -P <URL>, --publications-server <URL>
-  Sets the publications server. If not set but required by the operation a
-  default server is used. The default server is not necessarily optimal
-  in regard to performance and reliability.
+  Sets the publications server used to verify the signature. 
+  When verifying a KSI signature, the parameter is mandatory.  
+  When verifying a GT signature, the parameter is optional. If not set but 
+  required by the operation a default server is used. The default server 
+  is not necessarily optimal in regard to performance and reliability.
+
+-E <URL>, --extend-server <URL> 
+  Sets the extender server. Only needs to be set when using the extend mode 
+  and a custom extend-server is needed. When extending KSI signatures, the 
+  parameter is mandatory. 
+  
+-u <USERID>, --userid <USERID>
+  Sets the userid used for the extension server. The option only 
+  applies in the extend mode. 
+
+-k <USERKEY>, --userkey <USERKEY>
+  Sets the userkey used for the extension server. The option only 
+  applies in the extend mode. 
 
 -h, --help
   Shows short help for the utility.
