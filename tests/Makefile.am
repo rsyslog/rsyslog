@@ -43,7 +43,7 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
-	imtcp_conndrop_tls.sh \
+#	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
