@@ -84,7 +84,7 @@ static inline void
 outputKSIHash(FILE *fp, char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose)
 {
 	const unsigned char *digest;
-	unsigned digest_len;
+	size_t digest_len;
 	KSI_DataHash_extract(hash, NULL, &digest, &digest_len); // TODO: error check
 
 	fprintf(fp, "%s", hdr);
@@ -549,7 +549,7 @@ rsksi_tlvDecodeSIG(tlvrecord_t *rec, uint16_t *strtidx, block_sig_t *bs)
 	tlvrecord_t subrec;
 
 	CHKr(rsksi_tlvDecodeSUBREC(rec, strtidx, &subrec));
-	if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto done; }
+	if(!(subrec.tlvtype == 0x0905)) { r = RSGTE_INVLTYP; goto done; }
 	bs->sig.der.len = subrec.tlvlen;
 	bs->sigID = SIGID_RFC3161;
 	if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto done;}
@@ -992,13 +992,26 @@ rsksi_vrfyConstruct_gf(void)
 	rsksictx ctx = rsksiCtxNew();
 	ksi->ctx = ctx; /* assign context to ksifile */
 
-	/* Setting KSI Extender! */ 
-	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_read_puburl, rsksi_userid, rsksi_userkey);
+	/* Setting KSI Publication URL ! */ 
+
+	ksistate = KSI_CTX_setPublicationUrl(ksi->ctx->ksi_ctx, rsksi_read_puburl);
 	if(ksistate != KSI_OK) {
-		fprintf(stderr, "Error %d setting KSI Extender: %s\n", ksistate, KSI_getErrorString(ksistate));
+		fprintf(stderr, "Failed setting KSI Publication URL '%s' with error (%d): %s\n", rsksi_read_puburl, ksistate, KSI_getErrorString(ksistate));
 		free(ksi);
 		return NULL;
 	}
+	if(rsksi_read_debug)
+		fprintf(stdout, "PublicationUrl set to: '%s'\n", rsksi_read_puburl);
+
+	/* Setting KSI Extender! */ 
+	ksistate = KSI_CTX_setExtender(ksi->ctx->ksi_ctx, rsksi_extend_puburl, rsksi_userid, rsksi_userkey);
+	if(ksistate != KSI_OK) {
+		fprintf(stderr, "Failed setting KSIExtender URL '%s' with error (%d): %s\n", rsksi_extend_puburl, ksistate, KSI_getErrorString(ksistate));
+		free(ksi);
+		return NULL;
+	}
+	if(rsksi_read_debug)
+		fprintf(stdout, "ExtenderUrl set to: '%s'\n", rsksi_extend_puburl);
 
 done:	return ksi;
 }
@@ -1492,7 +1505,7 @@ int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose
 
 					/* Check OLD encoded SIG */
 					CHKrDecode(rsksi_tlvDecodeSUBREC(&rec, &strtidx, &subrec));
-					if(!(subrec.tlvtype == 0x0906)) { r = RSGTE_INVLTYP; goto donedecode; }
+					if(!(subrec.tlvtype == 0x0905)) { r = RSGTE_INVLTYP; goto donedecode; }
 					bs->sig.der.len = subrec.tlvlen;
 					bs->sigID = SIGID_RFC3161;
 					if((bs->sig.der.data = (uint8_t*)malloc(bs->sig.der.len)) == NULL) {r=RSGTE_OOM;goto donedecode;}
@@ -1538,7 +1551,7 @@ int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose
 					CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, tlvlenRecords));
 					CHKrDecode(rsksi_tlvfileAddInt64(newsigfp, bs->recCount));
 					/* rfc-3161 */
-					CHKrDecode(rsksi_tlv16Write(newsigfp, 0x00, 0x906, bs->sig.der.len));
+					CHKrDecode(rsksi_tlv16Write(newsigfp, 0x00, 0x905, bs->sig.der.len));
 					CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bs->sig.der.data, bs->sig.der.len));
 
 donedecode:

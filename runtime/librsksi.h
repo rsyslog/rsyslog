@@ -220,8 +220,6 @@ hashOutputLengthOctetsKSI(uint8_t hashID)
 		return 48;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 64;
-	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
-		return 32;
 	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
 		return 28;
 	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
@@ -252,8 +250,6 @@ hashIdentifierKSI(KSI_HashAlgorithm hashID)
 		return 0x04;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
 		return 0x05;
-	case KSI_HASHALG_RIPEMD_256: /** The RIPEMD-256 algorithm. */
-		return 0x06;
 	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
 		return 0x07;
 	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
@@ -283,8 +279,6 @@ hashAlgNameKSI(uint8_t hashID)
 		return "SHA2-384";
 	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
-	case KSI_HASHALG_RIPEMD_256:
-		return "RIPEMD-256";
 	case KSI_HASHALG_SHA3_244:
 		return "SHA3-224";
 	case KSI_HASHALG_SHA3_256:
@@ -314,8 +308,6 @@ hashID2AlgKSI(uint8_t hashID)
 		return KSI_HASHALG_SHA2_384;
 	case 0x05:
 		return KSI_HASHALG_SHA2_512;
-	case 0x06:
-		return KSI_HASHALG_RIPEMD_256;
 	case 0x07:
 		return KSI_HASHALG_SHA3_244;
 	case 0x08:
@@ -390,7 +382,10 @@ int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
 int hash_r_ksi(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
 int hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
-extern char *rsksi_read_puburl; /**< url of publication server */
+extern char *rsksi_read_puburl;		/**< url of publication server */
+extern char *rsksi_extend_puburl;	/**< url of extension server */
+extern char *rsksi_userid;			/**< userid for extension server */
+extern char *rsksi_userkey;			/**< userkey for extension server */
 extern uint8_t rsksi_read_showVerified;
 extern int RSKSI_FLAG_TLV16_RUNTIME;
 extern int RSKSI_FLAG_NONCRIT_RUNTIME; 
