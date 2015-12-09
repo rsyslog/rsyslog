@@ -453,12 +453,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-				if((*pIP)->addr.NetAddr != NULL) {
-					free((*pIP)->addr.NetAddr);
-				}
-				if((*pIP)->addr.HostWildcard != NULL) {
-					free((*pIP)->addr.HostWildcard);
-				}								
+				free((*pIP)->addr.NetAddr);
+				free((*pIP)->addr.HostWildcard);
 				free (pszIP);
 				free (*pIP);
 				FINALIZE;
@@ -495,12 +491,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
-				if((*pIP)->addr.NetAddr != NULL) {
-					free((*pIP)->addr.NetAddr);
-				}
-				if((*pIP)->addr.HostWildcard != NULL) {
-					free((*pIP)->addr.HostWildcard);
-				}								
+				free((*pIP)->addr.NetAddr);
+				free((*pIP)->addr.HostWildcard);
 				free (pszIP);
 				free (*pIP);
 				FINALIZE;
