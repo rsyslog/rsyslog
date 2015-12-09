@@ -2,7 +2,7 @@ pkglib_LTLIBRARIES = mmgrok.la
 
 mmgrok_la_SOURCES = mmgrok.c
 mmgrok_la_CPPFLAGS = $(GLIB_CFLAGS) $(RSRT_CFLAGS) $(PTHREADS_CFLAGS)
-mmgrok_la_LDFLAGS = -module -avoid-version -L/usr/lib/x86_64-linux-gnu
+mmgrok_la_LDFLAGS = -module -avoid-version
 mmgrok_la_LIBADD = $(GLIB_LIBS) -lgrok -ljson-c
 
 EXTRA_DIST = 
