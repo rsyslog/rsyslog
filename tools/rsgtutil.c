@@ -31,16 +31,16 @@
 
 #ifdef ENABLEGT
 	/* Guardtime Includes */
-	#include <gt_base.h>
-	#include <gt_http.h>
-	#include "librsgt_common.h"
-	#include "librsgt.h"
+#	include <gt_base.h>
+#	include <gt_http.h>
+#	include "librsgt_common.h"
+#	include "librsgt.h"
 #endif
 #ifdef ENABLEKSI
 	/* KSI Includes */
-	#include <stdint.h>
-	#include "librsgt_common.h"
-	#include "librsksi.h"
+#	include <stdint.h>
+#	include "librsgt_common.h"
+#	include "librsksi.h"
 #endif
 
 typedef unsigned char uchar;

@@ -758,9 +758,9 @@ initTLS(void)
 	int r;
 
 	/* order of gcry_control and gnutls_global_init matters! */
-	#if GNUTLS_VERSION_NUMBER <= 0x020b00
+#	if GNUTLS_VERSION_NUMBER <= 0x020b00
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	#endif
+#	endif
 	gnutls_global_init();
 	/* set debug mode, if so required by the options */
 	if(tlsLogLevel > 0) {

@@ -92,11 +92,11 @@ BEGINparse
     uint64 log_type;
     int j;
 CODESTARTparse
-    #define CSV_DELIMITER '\t'
-    #define STATE_FIELD_START 0
-    #define STATE_IN_FIELD 1
-    #define STATE_IN_QUOTE 2
-    #define STATE_IN_QUOTE_QUOTE 3
+#   define CSV_DELIMITER '\t'
+#   define STATE_FIELD_START 0
+#   define STATE_IN_FIELD 1
+#   define STATE_IN_QUOTE 2
+#   define STATE_IN_QUOTE_QUOTE 3
 
     state = STATE_FIELD_START;
 

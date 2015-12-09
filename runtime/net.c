@@ -1356,9 +1356,9 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbu
 			 * do if we have to.
 			 */
 			if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-	#		ifndef IPV6_V6ONLY
+#			ifndef IPV6_V6ONLY
 			     && (errno != EADDRINUSE)
-	#		endif
+#			endif
 			   ) {
 				errmsg.LogError(errno, NO_ERRCODE, "bind");
 				close(*s);

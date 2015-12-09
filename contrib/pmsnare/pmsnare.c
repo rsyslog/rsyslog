@@ -89,7 +89,7 @@ BEGINparse
 	int tablength;
 
 CODESTARTparse
-	#define TabRepresentation "#011"
+#	define TabRepresentation "#011"
 	tablength=sizeof(TabRepresentation);
 	dbgprintf("Message will now be parsed by fix Snare parser.\n");
 	assert(pMsg != NULL);
