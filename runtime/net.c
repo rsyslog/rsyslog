@@ -953,14 +953,12 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 			case AF_INET: {
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
 				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
-				
-				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
 #if BYTE_ORDER == LITTLE_ENDIAN
-				    (ip6->s6_addr32[2] == (u_int32_t)0xffff0000) &&
+				#define ENDIAN_32BIT_MASK (u_int32_t)0xffff0000
 #else
-				    (ip6->s6_addr32[2] == (u_int32_t)0x0000ffff) &&
+				#define ENDIAN_32BIT_MASK (u_int32_t)0x0000ffff
 #endif
-				    (ip6->s6_addr32[1] == 0) && (ip6->s6_addr32[0] == 0))
+				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr && (ip6->s6_addr32[2] == ENDIAN_32BIT_MASK) && (ip6->s6_addr32[1] == 0) && (ip6->s6_addr32[0] == 0))
 					return 1;
 				else
 					return 0;
