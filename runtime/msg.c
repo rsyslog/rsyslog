@@ -3399,13 +3399,27 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				bufLen = 2;
 				*pbMustBeFreed = 0;
 			} else {
+				const char *jstr;
 				pthread_mutex_lock(&pMsg->mut_json);
+#ifdef HAVE_JSON_OBJECT_TO_JSON_STRING_EXT
+				int jflag = 0;
 				if(pProp->id == PROP_CEE_ALL_JSON) {
-					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_SPACED));
+					jflag = JSON_C_TO_STRING_SPACED;
 				} else if(pProp->id == PROP_CEE_ALL_JSON_PLAIN) {
-					pRes = (uchar*)strdup(RS_json_object_to_json_string_ext(pMsg->json, JSON_C_TO_STRING_PLAIN));
+					jflag = JSON_C_TO_STRING_PLAIN;
 				}
+				jstr = json_object_to_json_string_ext(pMsg->json, jflag);
+#else
+				jstr = json_object_to_json_string(pMsg->json);
+#endif
 				pthread_mutex_unlock(&pMsg->mut_json);
+				if(jstr == NULL) {
+					RET_OUT_OF_MEMORY;
+				}
+				pRes = (uchar*)strdup(jstr);
+				if(pRes == NULL) {
+					RET_OUT_OF_MEMORY;
+				}
 				*pbMustBeFreed = 1;
 			}
 			break;
