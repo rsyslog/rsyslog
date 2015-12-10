@@ -64,6 +64,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
 
 struct modConfData_s {
+	int bIgnPrevMsg;
 };
 
 static struct configSettings_s {

@@ -218,9 +218,9 @@ msg_to_json(GList *list,instanceData *pData)
     }
     for(;it;it= it->next)
     {
-        char  *key = (char *)malloc(sizeof(char *)*((result_t *)it->data)->key_len);
+        char  *key = (char *)malloc(sizeof(char)*((result_t *)it->data)->key_len+1);
         sprintf(key,"%.*s",((result_t *)it->data)->key_len,((result_t *)it->data)->key);
-	char  *value = (char *)malloc(sizeof(char *)*((result_t *)it->data)->value_len);
+	char  *value = (char *)malloc(sizeof(char)*((result_t *)it->data)->value_len+1);
         sprintf(value,"%.*s", ((result_t*)it->data)->value_len,((result_t*)it->data)->value);	
 	jval = json_object_new_string(value);
 	json_object_object_add(json,key,jval);
@@ -240,7 +240,6 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
         char  *pname;
         const char  *pdata;
         int    pname_len,pdata_len;
-        bool   is_append = true;
         
         char *key;
         char *type;

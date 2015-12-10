@@ -262,7 +262,8 @@ SUBDIRS += tests
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS= \
 	--disable-silent-rules \
-	--disable-testbench
+	--disable-testbench \
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 
 THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-distcheck-workaround \

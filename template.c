@@ -1232,7 +1232,6 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	struct template *pTpl;
  	unsigned char *p;
 	int bDone;
-	char optBuf[128]; /* buffer for options - should be more than enough... */
 	size_t i;
 	rsRetVal localRet;
 
@@ -1332,8 +1331,9 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 			++p;
 		
 		/* read option word */
+		char optBuf[128] = { '\0' }; /* buffer for options - should be more than enough... */
 		i = 0;
-		while(i < sizeof(optBuf) / sizeof(char) - 1
+		while((i < (sizeof(optBuf) - 1))
 		      && *p && *p != '=' && *p !=',' && *p != '\n') {
 			optBuf[i++] = tolower((int)*p);
 			++p;

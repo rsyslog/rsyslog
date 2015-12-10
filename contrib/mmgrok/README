@@ -4,7 +4,7 @@ Using hundreds of grok patterns from logstash-patterns-core.
 
 Build
 
-This plugin requires json-c, glib and grok package.
+This plugin requires json-c, glib2, and grok packages.
 
 If you use RH/CentOS/Fedora, you'll have to build grok rpms by yourself as follow:
 
@@ -15,10 +15,7 @@ If you use RH/CentOS/Fedora, you'll have to build grok rpms by yourself as follo
     sudo yum-builddep ~/rpmbuild/SPECS/grok.spec
     rpmbuild -bb ~/rpmbuild/SPECS/grok.spec
     # use yum command instead of rpm, because grok depends on libevent, pcre, tokyocabinet
-    sudo yum install -y libjson-c-devel glib-devel ~/rpbuild/RPMS/x86_64/grok*.rpm
-
-Note: at least on Fedora, when building mmgrok one needs to set CFLAGS to
-include the output of the following: $(pkg-config --cflags glib).
+    sudo yum install -y libjson-c-devel glib2-devel ~/rpbuild/RPMS/x86_64/grok*.rpm
 
 Example
 
