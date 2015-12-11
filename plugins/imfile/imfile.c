@@ -102,6 +102,7 @@ typedef struct lstn_s {
 	int iFacility;
 	int iSeverity;
 	int maxLinesAtOnce;
+	uint32_t trimLineOverBytes;
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
@@ -129,6 +130,7 @@ static struct configSettings_s {
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
 	int64 maxLinesAtOnce;	/* how many lines to process in a row? */
+	uint32_t trimLineOverBytes;  /* 0: never trim line, positive number: trim line if over bytes */
 } cs;
 
 struct instanceConf_s {
@@ -148,6 +150,7 @@ struct instanceConf_s {
 	sbool escapeLF;
 	sbool addMetadata;
 	int maxLinesAtOnce;
+	uint32_t trimLineOverBytes;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
 };
@@ -260,6 +263,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "startmsg.regex", eCmdHdlrString, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
+	{ "trimlineoverbytes", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
@@ -584,7 +588,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
 		if(pLstn->startRegex == NULL) {
-			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF));
+			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
 		} else {
 			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF));
 		}
@@ -632,6 +636,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iSeverity = 5;
 	inst->iFacility = 128;
 	inst->maxLinesAtOnce = 0;
+	inst->trimLineOverBytes = 0;
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
@@ -762,6 +767,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			inst->maxLinesAtOnce = cs.maxLinesAtOnce;
 		}
 	}
+	inst->trimLineOverBytes = cs.trimLineOverBytes;
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
@@ -861,6 +867,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->iSeverity = existing->iSeverity;
 	pThis->iFacility = existing->iFacility;
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
+	pThis->trimLineOverBytes = existing->trimLineOverBytes;
 	pThis->iPersistStateInterval = existing->iPersistStateInterval;
 	pThis->readMode = existing->readMode;
 	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
@@ -927,6 +934,7 @@ addListner(instanceConf_t *inst)
 	pThis->iSeverity = inst->iSeverity;
 	pThis->iFacility = inst->iFacility;
 	pThis->maxLinesAtOnce = inst->maxLinesAtOnce;
+	pThis->trimLineOverBytes = inst->trimLineOverBytes;
 	pThis->iPersistStateInterval = inst->iPersistStateInterval;
 	pThis->readMode = inst->readMode;
 	pThis->startRegex = inst->startRegex; /* no strdup, as it is read-only */
@@ -1004,6 +1012,8 @@ CODESTARTnewInpInst
 			} else {
 				inst->maxLinesAtOnce = pvals[i].val.d.n;
 			}
+		} else if(!strcmp(inppblk.descr[i].name, "trimlineoverbytes")) {
+			inst->trimLineOverBytes = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
@@ -1044,6 +1054,7 @@ CODESTARTbeginCnfLoad
 	cs.iSeverity = 5;
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
+	cs.trimLineOverBytes = 0;
 ENDbeginCnfLoad
 
 
@@ -1996,6 +2007,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
 	cs.maxLinesAtOnce = 10240;
+	cs.trimLineOverBytes = 0;
 
 	RETiRet;
 }
@@ -2042,6 +2054,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &cs.readMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilemaxlinesatonce", 0, eCmdHdlrSize,
 	  	NULL, &cs.maxLinesAtOnce, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletrimlineoverbytes", 0, eCmdHdlrSize,
+	  	NULL, &cs.trimLineOverBytes, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
 	  	NULL, &cs.iPersistStateInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
