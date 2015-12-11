@@ -168,8 +168,8 @@ getPartition(instanceData *const __restrict__ pData)
 		return RD_KAFKA_PARTITION_UA;
 	} else {
 		return (pData->fixedPartition == NO_FIXED_PARTITION) ?
-		          ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
-			      &pData->mutCurrPartition) % pData->nPartitions
+		          abs(ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
+			      &pData->mutCurrPartition) % pData->nPartitions)
 			:  pData->fixedPartition;
 	}
 }
