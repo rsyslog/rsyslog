@@ -114,7 +114,7 @@ typedef struct _instanceData {
 	sbool autoPartition;
 	int fixedPartition;
 	int nPartitions;
-	int32_t currPartition;
+	uint32_t currPartition;
 	int nConfParams;
 	struct kafka_params *confParams;
 	int nTopicConfParams;
@@ -161,16 +161,16 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 ENDinitConfVars
 
-static inline int
+static inline uint32_t
 getPartition(instanceData *const __restrict__ pData)
 {
 	if (pData->autoPartition) {
 		return RD_KAFKA_PARTITION_UA;
 	} else {
 		return (pData->fixedPartition == NO_FIXED_PARTITION) ?
-		          ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
+		          ATOMIC_INC_AND_FETCH_unsigned(&pData->currPartition,
 			      &pData->mutCurrPartition) % pData->nPartitions
-			:  pData->fixedPartition;
+			:  (unsigned) pData->fixedPartition;
 	}
 }
 
