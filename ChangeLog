@@ -70,6 +70,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
   This means it currently is not possible to configure the location
   of librdkafka, but that will affect far fewer people.
   closes: https://github.com/rsyslog/rsyslog/issues/596
+- bugfix omkafka: fix potentially negative partition number
+  Thanks to Tait Clarridge for providing a patch.
 - bugfix: solve potential race in creation of additional action workers
   Under extreme circumstances, this could lead to segfault. Note that we
   detected this problem thanks to ASAN address sanitzier in combination
