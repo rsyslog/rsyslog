@@ -299,7 +299,9 @@ relpSessSndData(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+	if (pThis->sessState != eRelpSessState_BROKEN) {
+		CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+	}
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -536,8 +538,17 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 			"fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec,
 			(int) tvSelect.tv_usec);
 		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
-		pThis->pEngine->dbgprint("relpSessWaitRsp select returns, "
-			"nfds %d, errno %d\n", nfds, errno);
+		if(nfds == -1) {
+			if(errno == EINTR) {
+				pThis->pEngine->dbgprint("relpSessWaitRsp select interrupted, continue\n");
+			} else {
+				pThis->pEngine->dbgprint("relpSessWaitRsp select returned error %d\n", errno);
+				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+			}
+		}
+		else 
+			pThis->pEngine->dbgprint("relpSessWaitRsp select returns, "
+				"nfds %d, errno %d\n", nfds, errno);
 		if(relpEngineShouldStop(pThis->pEngine))
 			break;
 		/* we don't check if we had a timeout-we give it one last chance*/
@@ -553,7 +564,9 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 
 finalize_it:
 	pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
-	if(iRet == RELP_RET_TIMED_OUT || relpEngineShouldStop(pThis->pEngine)) {
+	if(	iRet == RELP_RET_TIMED_OUT || 
+		iRet == RELP_RET_SESSION_BROKEN || 
+		relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
 	}
