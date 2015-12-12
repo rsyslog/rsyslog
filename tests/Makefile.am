@@ -14,6 +14,7 @@ TESTS +=  \
 	stop-msgvar.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
+	exec_tpl-concurrency.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -474,6 +475,8 @@ EXTRA_DIST= \
 	testsuites/msgvar-concurrency.conf \
 	localvar-concurrency.sh \
 	testsuites/localvar-concurrency.conf \
+	exec_tpl-concurrency.sh \
+	testsuites/exec_tpl-concurrency.conf \
 	global_vars.sh \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
