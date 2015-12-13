@@ -409,7 +409,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	i = 0;
 	/* get outchannel name */
 	while(*p && *p != ';' && *p != ' ' &&
-	      i < ((sizeof(szBuf) / sizeof(uchar)) - sizeof(uchar))) {
+	      i < (sizeof(szBuf) - 1) ) {
 	      szBuf[i++] = *p++;
 	}
 	szBuf[i] = '\0';
