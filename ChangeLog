@@ -111,6 +111,8 @@ Version 8.15.0 [v8-stable] 2015-12-15
   This happened during startup when the offset or id parameter was not
   given. Could lead to a segfault at startup.
   Detected by clang static analyzer.
+- bugfix omfile: memory addressing error if very long outchannel name used
+  Thanks to github user c6226 for the patch.
 ------------------------------------------------------------------------------
 Version 8.14.0 [v8-stable] 2015-11-03
 - Added possibility to customize librdkafka location
