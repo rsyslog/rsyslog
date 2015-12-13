@@ -12,9 +12,6 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - KSI Lib: Fixed wrong TLV container for KSI signatures from 0905 to 0906. 
   closes https://github.com/rsyslog/rsyslog/issues/587
 - KSI/GT Lib: Fixed multiple issues found using static analyzer 
-- gnutls fix: Added possible fix for gnutls issue #575
-  see also: https://github.com/rsyslog/rsyslog/issues/575
-  Thanks to Charles Southerland for the patch
 - performance improvement for configs with heavy use of JSON variables
   Depending on the config, this can be a very big gain in performance.
 - added pmpanngfw: contributed module for translating Palo Alto Networks logs. 
@@ -64,6 +61,12 @@ Version 8.15.0 [v8-stable] 2015-12-15
 - omelasticsearch: build on FreeBSD
   Thanks to github user c0by for the patch
 - pmciscoios: fix some small issues clang static analyzer detected
+- testbench: many improvements and some new tests
+  note that there still is a number of tests which are somewhat racy
+- overall code improvements thanks to clang static analyzer
+- gnutls fix: Added possible fix for gnutls issue #575
+  see also: https://github.com/rsyslog/rsyslog/issues/575
+  Thanks to Charles Southerland for the patch
 - bugfix omkafka: restore ability to build on all platforms
   Undo commit aea09800643343ab8b6aa205b0f10a4be676643b
   because that lead to build failures on various important platforms.
