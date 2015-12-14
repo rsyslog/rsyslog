@@ -1996,8 +1996,7 @@ tplProcessCnf(struct cnfobj *o)
 
 finalize_it:
 	free(tplStr);
-	if(plugin != NULL)
-		free(plugin);
+	free(plugin);
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {
