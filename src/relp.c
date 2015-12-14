@@ -990,7 +990,12 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	 * at the top of the list!
 	 */
 	if(!strcmp((char*)pFrame->cmd, "syslog")) {
-		CHKRet(relpSCSyslog(pFrame, pSess));
+		/*	When processing Syslog frames, we ignore return code. 
+		*	Otherwise valid messages in the frame buffer will be 
+		*	discarded. And it's better to have duplicated messages 
+		*	instead of losing them. 
+		*/
+		relpSCSyslog(pFrame, pSess); 
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
 		CHKRet(relpSCRsp(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "open")) {
