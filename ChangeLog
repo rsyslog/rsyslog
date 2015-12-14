@@ -82,6 +82,10 @@ Version 8.15.0 [v8-stable] 2015-12-15
   was ever reported in practice.
 - bugfix: potential memory leak in config parsing
   Thanks to github user linmujia for the patch
+- bugfix: small memory leak in loading template config
+  This happened when a plugin was used inside the template. Then, the
+  memory for the template name was never freed.
+  Thanks to github user xushengping for the fix.
 - bugfix: fix extra whitespace in property expansions
   Address off-by-one issues introduced in f3bd7a2 resulting in extra
   whitespace in property expansions
