@@ -299,7 +299,9 @@ relpSessSndData(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+	if (pThis->sessState != eRelpSessState_BROKEN) {
+		CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+	}
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -538,11 +540,11 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
 		if(nfds == -1) {
 			if(errno == EINTR) {
-				pThis->pEngine->dbgprint("relpSessWaitRsp select interrupted\n");
+				pThis->pEngine->dbgprint("relpSessWaitRsp select interrupted, continue\n");
 			} else {
 				pThis->pEngine->dbgprint("relpSessWaitRsp select returned error %d\n", errno);
+				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 			}
-			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
 		else 
 			pThis->pEngine->dbgprint("relpSessWaitRsp select returns, "
