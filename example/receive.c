@@ -35,15 +35,25 @@ static relpRetVal onSyslogRcv(unsigned char *pHostname, unsigned char *pIP, unsi
     return RELP_RET_OK;
 }
 
+void print_usage()
+{
+    printf("Usage: receive PORTNUM\n");
+}
+
 int main(int argc, char *argv[]) {
+    if ((argc != 2)) {
+        // Incorrect parameter count, so just print the usage and return
+        print_usage();
+        return -1;
+    }
 
     relpSrv_t *pRelpSrv;
-    unsigned char *port = argv[1];
+    unsigned char *port = (unsigned char*)argv[1];
     int protFamily = 2; /* IPv4=2, IPv6=10 */
 
     TRY(relpEngineConstruct(&pRelpEngine));
     TRY(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
-    TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", 3)); /* 3=required */
+    TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
     TRY(relpEngineSetFamily(pRelpEngine, protFamily));
     TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
     TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
@@ -56,5 +66,6 @@ int main(int argc, char *argv[]) {
 
     TRY(relpEngineSetStop(pRelpEngine));
     TRY(relpEngineDestruct(&pRelpEngine));
+    
+    return 0;
 }
-
