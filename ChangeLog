@@ -5,6 +5,7 @@ Version 1.2.9 - 2015-12-15
   remote connection is closed during meantime.
 - build bugfix: GnuTLS header was required even if TLS was turned off
   Thanks to Pedro Alvarez Piedehierro for the patch.
+- bugfix: correct wrong assert() calls [debug mode only affected]
 ----------------------------------------------------------------------
 Version 1.2.8 - 2014-09-07
 - bugfix: segfault if KEEPALIVE is used
