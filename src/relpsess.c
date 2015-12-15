@@ -1007,7 +1007,7 @@ relpRetVal
 relpSessSetGnuTLSPriString(relpSess_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Tcp);
+	RELPOBJ_assert(pThis, Sess);
 	
 	free(pThis->pristring);
 	if(pristr == NULL) {
@@ -1024,7 +1024,7 @@ relpRetVal
 relpSessSetCACert(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Tcp);
+	RELPOBJ_assert(pThis, Sess);
 	
 	free(pThis->caCertFile);
 	if(cert == NULL) {
@@ -1041,7 +1041,7 @@ relpRetVal
 relpSessSetOwnCert(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Tcp);
+	RELPOBJ_assert(pThis, Sess);
 	
 	free(pThis->ownCertFile);
 	if(cert == NULL) {
@@ -1058,7 +1058,7 @@ relpRetVal
 relpSessSetPrivKey(relpSess_t *pThis, char *cert)
 {
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Tcp);
+	RELPOBJ_assert(pThis, Sess);
 	
 	free(pThis->privKeyFile);
 	if(cert == NULL) {
