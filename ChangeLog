@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.16.0 [v8-stable] 2016-01-26
+------------------------------------------------------------------------------
 Version 8.15.0 [v8-stable] 2015-12-15
 - KSI Lib: Updated code to run with libksi 3.4.0.5 
   Also libksi 3.4.0.x is required to build rsyslog if ksi support
