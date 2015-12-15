@@ -1,8 +1,10 @@
 ----------------------------------------------------------------------
 Version 1.2.9 - 2015-12-14
-- bugfix: Ignoring return status when handling syslog frames now. 
+- bugfix: Ignoring return status when handling syslog frames now.
   Otherwise valid messages in the frame buffer will get lost when the 
   remote connection is closed during meantime.
+- build bugfix: GnuTLS header was required even if TLS was turned off
+  Thanks to Pedro Alvarez Piedehierro for the patch.
 ----------------------------------------------------------------------
 Version 1.2.8 - 2014-09-07
 - bugfix: segfault if KEEPALIVE is used
