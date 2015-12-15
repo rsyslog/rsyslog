@@ -316,17 +316,16 @@ relpTcpSetRemHost(relpTcp_t *pThis, struct sockaddr *pAddr)
 	pEngine = pThis->pEngine;
 	assert(pAddr != NULL);
 
-        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-
-        if(error) {
-                pThis->pEngine->dbgprint("Malformed from address %s\n", gai_strerror(error));
+	error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+	if(error) {
+		pThis->pEngine->dbgprint("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*)szHname, "???");
 		strcpy((char*)szIP, "???");
 		ABORT_FINALIZE(RELP_RET_INVALID_HNAME);
 	}
 
 	if(pEngine->bEnableDns) {
-		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, sizeof(szHname), NULL, 0, NI_NAMEREQD);
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
