@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------
 Version 1.2.9 - 2015-12-14
-  bugfix: Ignoring return status when handling syslog frames now. 
+- bugfix: Ignoring return status when handling syslog frames now. 
   Otherwise valid messages in the frame buffer will get lost when the 
   remote connection is closed during meantime.
 ----------------------------------------------------------------------
