@@ -688,7 +688,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
-		while((i < sizeof(Buf) / sizeof(char)) &&
+		while((i < ((sizeof(Buf) / sizeof(uchar))-sizeof(uchar))) &&
 		      *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
