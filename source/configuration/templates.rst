@@ -181,6 +181,10 @@ property or modifying it. It supports the following parameters:
 -  position.relativeToEnd - the from and to position is relative to the
    end of the string instead of the usual start of string. (available
    since rsyslog v7.3.10)
+-  fixedwidth - changes behaviour of position.to so that it pads the
+   source string with spaces up to the value of position.to if the source
+   string is shorter. "on" or "off" (default) (available since rsyslog
+   v8.13.0)
 -  field.number - obtain this field match
 -  field.delimiter - decimal value of delimiter character for field
    extraction
