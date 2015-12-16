@@ -207,7 +207,7 @@ doInjectMsg(int iNum, ratelimit_t *ratelimiter)
 	time_t ttGenTime;
 	DEFiRet;
 
-	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
+	snprintf((char*)szMsg, sizeof(szMsg),
 		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
 
 	datetime.getCurrTime(&stTime, &ttGenTime);
@@ -241,9 +241,9 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	DEFiRet;
 
 	/* we do not check errors here! */
-	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
+	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
 	iFrom = atoi((char*)wordBuf);
-	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf)/sizeof(uchar), TO_LOWERCASE);
+	getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
 	nMsgs = atoi((char*)wordBuf);
 	CHKiRet(ratelimitNew(&ratelimit, "imdiag", "injectmsg"));
 
@@ -315,12 +315,12 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	 * WITHOUT a termination \0 char. So we need to convert it to one
 	 * before proceeding.
 	 */
-	CHKmalloc(pszMsg = MALLOC(sizeof(uchar) * (iLenMsg + 1)));
+	CHKmalloc(pszMsg = MALLOC(iLenMsg + 1));
 	pToFree = pszMsg;
 	memcpy(pszMsg, pRcv, iLenMsg);
 	pszMsg[iLenMsg] = '\0';
 
-	getFirstWord(&pszMsg, cmdBuf, sizeof(cmdBuf)/sizeof(uchar), TO_LOWERCASE);
+	getFirstWord(&pszMsg, cmdBuf, sizeof(cmdBuf), TO_LOWERCASE);
 
 	dbgprintf("imdiag received command '%s'\n", cmdBuf);
 	if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("getmainmsgqueuesize"))) {

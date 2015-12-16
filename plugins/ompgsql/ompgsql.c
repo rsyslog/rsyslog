@@ -145,7 +145,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", ePgSQLStatus,
+		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
 				PQerrorMessage(pData->f_hpgsql));
 		if(bSilent || ePgSQLStatus == pData->eLastPgSQLStatus)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);

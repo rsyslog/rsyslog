@@ -319,7 +319,7 @@ static int doParseOnOffOption(uchar **pp)
 	pOptStart = *pp;
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
-	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(pp, (char*) szOpt, sizeof(szOpt), ' ')  != 0) {
 		errmsg.LogError(0, NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
 		return -1;
 	}
@@ -351,7 +351,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
-	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -407,7 +407,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
-	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}

@@ -218,10 +218,12 @@ msg_to_json(GList *list,instanceData *pData)
     }
     for(;it;it= it->next)
     {
-        char  *key = (char *)malloc(sizeof(char)*((result_t *)it->data)->key_len+1);
-        sprintf(key,"%.*s",((result_t *)it->data)->key_len,((result_t *)it->data)->key);
-	char  *value = (char *)malloc(sizeof(char)*((result_t *)it->data)->value_len+1);
-        sprintf(value,"%.*s", ((result_t*)it->data)->value_len,((result_t*)it->data)->value);	
+	int key_len = ((result_t *)it->data)->key_len;
+        char *key = (char *)malloc(key_len+1);
+        snprintf(key,key_len+1,"%.*s",key_len,((result_t *)it->data)->key);
+	int value_len = ((result_t *)it->data)->value_len;
+	char *value = (char *)malloc(value_len+1);
+        snprintf(value,value_len+1,"%.*s",value_len,((result_t*)it->data)->value);
 	jval = json_object_new_string(value);
 	json_object_object_add(json,key,jval);
 	free(key);

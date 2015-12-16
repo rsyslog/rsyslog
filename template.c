@@ -688,7 +688,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
-		while((i < sizeof(Buf) / sizeof(char)) &&
+		while((i < sizeof(Buf)) &&
 		      *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
@@ -1242,7 +1242,7 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) MALLOC(sizeof(char) * (pTpl->iLenName + 1));
+	pTpl->pszName = (char*) MALLOC(pTpl->iLenName + 1);
 	if(pTpl->pszName == NULL) {
 		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;

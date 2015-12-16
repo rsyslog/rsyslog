@@ -206,7 +206,7 @@ rsRetVal imklogLogIntMsg(syslog_pri_t priority, char *fmt, ...)
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
 
 	va_start(ap, fmt);
-	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
+	vsnprintf((char*)msgBuf, sizeof(msgBuf), fmt, ap);
 	va_end(ap);
 
 	logmsgInternal(NO_ERRCODE, priority, msgBuf, 0);

@@ -1105,7 +1105,7 @@ BEGINactivateCnf
 CODESTARTactivateCnf
 	/* caching various settings */
 	iMaxLine = glbl.GetMaxLine();
-	lenRcvBuf = (iMaxLine + 1) * sizeof(char);
+	lenRcvBuf = iMaxLine + 1;
 #	ifdef HAVE_RECVMMSG
 	lenRcvBuf *= runModConf->batchSize;
 #	endif

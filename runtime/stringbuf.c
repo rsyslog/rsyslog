@@ -90,7 +90,7 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = strlen((char *) sz);
-	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->iStrLen)) == NULL) {
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -128,7 +128,7 @@ static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap
 
 	pThis->iBufSize = pThis->iStrLen = len;
 	len++; /* account for the \0 written by vsnprintf */
-	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * len)) == NULL) {
+	if((pThis->pBuf = (uchar*) MALLOC(len)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -168,7 +168,7 @@ rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
 	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = es_strlen(str);
-	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->iStrLen)) == NULL) {
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -197,7 +197,7 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
 	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = pFrom->iStrLen;
-	if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->iStrLen)) == NULL) {
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -252,7 +252,7 @@ rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 	iNewSize += pThis->iBufSize; /* add current size */
 
 	/* DEV debugging only: dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize); */
-	CHKmalloc(pNewBuf = (uchar*) realloc(pThis->pBuf, iNewSize * sizeof(uchar)));
+	CHKmalloc(pNewBuf = (uchar*) realloc(pThis->pBuf, iNewSize));
 	pThis->iBufSize = iNewSize;
 	pThis->pBuf = pNewBuf;
 
@@ -366,7 +366,7 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 		pThis->pszBuf = NULL;
 
 		/* now save the new value */
-		if((pThis->pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->iStrLen)) == NULL) {
+		if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
 			RSFREEOBJ(pThis);
 			return RS_RET_OUT_OF_MEMORY;
 		}
@@ -414,7 +414,7 @@ uchar*  rsCStrGetSzStr(cstr_t *pThis)
 	if(pThis->pBuf != NULL)
 		if(pThis->pszBuf == NULL) {
 			/* we do not yet have a usable sz version - so create it... */
-			if((pThis->pszBuf = MALLOC((pThis->iStrLen + 1) * sizeof(uchar))) == NULL) {
+			if((pThis->pszBuf = MALLOC(pThis->iStrLen + 1)) == NULL) {
 				/* TODO: think about what to do - so far, I have no bright
 				 *       idea... rgerhards 2005-09-07
 				 */
@@ -471,7 +471,7 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
 
 	if(pThis->pBuf == NULL) {
 		if(bRetNULL == 0) {
-			CHKmalloc(pRetBuf = MALLOC(sizeof(uchar)));
+			CHKmalloc(pRetBuf = MALLOC(1));
 			*pRetBuf = '\0';
 		} else {
 			pRetBuf = NULL;

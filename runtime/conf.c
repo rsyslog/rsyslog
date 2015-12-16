@@ -107,7 +107,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	ASSERT(*pp != NULL);
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
-	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -168,7 +168,7 @@ doNameLine(uchar **pp, void* pVal)
 
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
-	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
+	if(getSubString(&p, szName, sizeof(szName), ',')  != 0) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -222,7 +222,7 @@ cfsysline(uchar *p)
 
 	ASSERT(p != NULL);
 	errno = 0;
-	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
 		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline - could not extract command - line ignored\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}

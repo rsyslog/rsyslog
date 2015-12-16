@@ -657,7 +657,7 @@ sigblkInitKSI(ksifile ksi)
 {
 	if(ksi == NULL) goto done;
 	seedIVKSI(ksi);
-	memset(ksi->roots_valid, 0, sizeof(ksi->roots_valid)/sizeof(char));
+	memset(ksi->roots_valid, 0, sizeof(ksi->roots_valid));
 	ksi->nRoots = 0;
 	ksi->nRecords = 0;
 	ksi->bInBlk = 1;

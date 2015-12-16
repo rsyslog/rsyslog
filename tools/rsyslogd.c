@@ -1311,7 +1311,7 @@ initAll(int argc, char **argv)
 
 	if(ourConf->globals.bLogStatusMsgs) {
 		char bufStartUpMsg[512];
-		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 			 (int) glblGetOurPid());
@@ -1430,7 +1430,7 @@ doHUP(void)
 	char buf[512];
 
 	if(ourConf->globals.bLogStatusMsgs) {
-		snprintf(buf, sizeof(buf) / sizeof(char),
+		snprintf(buf, sizeof(buf),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
 			 (int) glblGetOurPid());
@@ -1564,7 +1564,7 @@ deinitAll(void)
 
 	/* and THEN send the termination log message (see long comment above) */
 	if(bFinished && runConf->globals.bLogStatusMsgs) {
-		(void) snprintf(buf, sizeof(buf) / sizeof(char),
+		(void) snprintf(buf, sizeof(buf),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) glblGetOurPid(), bFinished);

@@ -235,7 +235,7 @@ CODESTARTparse
 	 * message, so we can not run into any troubles. I think this is
 	 * wiser than to use individual buffers.
 	 */
-	CHKmalloc(pBuf = MALLOC(sizeof(uchar) * (lenMsg + 1)));
+	CHKmalloc(pBuf = MALLOC(lenMsg + 1));
 		
 	/* IMPORTANT NOTE:
 	 * Validation is not actually done below nor are any errors handled. I have

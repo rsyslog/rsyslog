@@ -2724,15 +2724,19 @@ void MsgSetRawMsgWOSize(msg_t * const pMsg, char* pszRawMsg)
  * The variable pRes must point to a user-supplied buffer of
  * at least 20 characters.
  */
-static void
-textpri(const msg_t *const __restrict__ pMsg, uchar *const __restrict__ pRes)
+static uchar *
+textpri(const msg_t *const __restrict__ pMsg)
 {
-	assert(pRes != NULL);
-	memcpy(pRes, syslog_fac_names[pMsg->iFacility], len_syslog_fac_names[pMsg->iFacility]);
-	pRes[len_syslog_fac_names[pMsg->iFacility]] = '.';
-	memcpy(pRes+len_syslog_fac_names[pMsg->iFacility]+1,
-	       syslog_severity_names[pMsg->iSeverity],
-	       len_syslog_severity_names[pMsg->iSeverity]+1 /* for \0! */);
+	int lenfac = len_syslog_fac_names[pMsg->iFacility];
+	int lensev = len_syslog_severity_names[pMsg->iSeverity];
+	int totlen = lenfac + 1 + lensev + 1;
+	char *pRes = MALLOC(totlen);
+	if(pRes != NULL) {
+		memcpy(pRes, syslog_fac_names[pMsg->iFacility], lenfac);
+		pRes[lenfac] = '.';
+		memcpy(pRes+lenfac+1, syslog_severity_names[pMsg->iSeverity], lensev+1 /* for \0! */);
+	}
+	return pRes;
 }
 
 
@@ -2750,7 +2754,7 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 	uchar *pBuf;
 	struct syslogTime tt;
 
-	if((pBuf = (uchar*) MALLOC(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
+	if((pBuf = (uchar*) MALLOC(tmpBUFSIZE)) == NULL) {
 		return NULL;
 	}
 
@@ -3263,10 +3267,10 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getPRI(pMsg);
 			break;
 		case PROP_PRI_TEXT:
-			if((pRes = MALLOC(20 * sizeof(uchar))) == NULL)
+			pRes = textpri(pMsg);
+			if(pRes == NULL)
 				RET_OUT_OF_MEMORY;
 			*pbMustBeFreed = 1;
-			textpri(pMsg, pRes);
 			break;
 		case PROP_IUT:
 			pRes = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */
@@ -3427,7 +3431,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			{
 			struct timespec tp;
 
-			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+			if((pRes = (uchar*) MALLOC(32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
  
@@ -3439,7 +3443,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
  
 			*pbMustBeFreed = 1;
 
-			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", tp.tv_sec);
+			snprintf((char*) pRes, 32, "%ld", tp.tv_sec);
  			}
 
 #			else
@@ -3447,7 +3451,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			{
 			struct sysinfo s_info;
 
-			if((pRes = (uchar*) MALLOC(sizeof(uchar) * 32)) == NULL) {
+			if((pRes = (uchar*) MALLOC(32)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			}
 
@@ -3459,7 +3463,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 
 			*pbMustBeFreed = 1;
 
-			snprintf((char*) pRes, sizeof(uchar) * 32, "%ld", s_info.uptime);
+			snprintf((char*) pRes, 32, "%ld", s_info.uptime);
 			}
 #			endif
 		break;
@@ -3526,7 +3530,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
+			pBufStart = pBuf = MALLOC(iLen + 1);
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3638,7 +3642,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 
 					iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo
 						  - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
-					pB = MALLOC((iLenBuf + 1) * sizeof(uchar));
+					pB = MALLOC(iLenBuf + 1);
 
 					if (pB == NULL) {
 						if (*pbMustBeFreed == 1)
@@ -3704,7 +3708,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 					iTo = bufLen - 1;
 
 			iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
-			pBufStart = pBuf = MALLOC((iLen + 1) * sizeof(uchar));
+			pBufStart = pBuf = MALLOC(iLen + 1);
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3762,7 +3766,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			uchar *pBStart;
 			uchar *pB;
 			uchar *pSrc;
-			pBStart = pB = MALLOC((bufLen + 1) * sizeof(uchar));
+			pBStart = pB = MALLOC(bufLen + 1);
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -3883,7 +3887,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 				int i;
 
 				iLenBuf += iNumCC * 4;
-				pBStart = pB = MALLOC((iLenBuf + 1) * sizeof(uchar));
+				pBStart = pB = MALLOC(iLenBuf + 1);
 				if(pB == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -4018,7 +4022,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			/* check if we need to obtain a private copy */
 			if(*pbMustBeFreed == 0) {
 				/* ok, original copy, need a private one */
-				pB = MALLOC((iLn + 1) * sizeof(uchar));
+				pB = MALLOC(iLn + 1);
 				if(pB == NULL) {
 					RET_OUT_OF_MEMORY;
 				}
@@ -4046,7 +4050,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			bufLen = ustrlen(pRes);
 		iBufLen = bufLen;
 		/* the malloc may be optimized, we currently use the worst case... */
-		pBStart = pDst = MALLOC((2 * iBufLen + 3) * sizeof(uchar));
+		pBStart = pDst = MALLOC(2 * iBufLen + 3);
 		if(pDst == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);

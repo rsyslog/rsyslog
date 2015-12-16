@@ -229,7 +229,7 @@ reportDBError(instanceData *pData, int bSilent)
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uDBErrno, pszDbiErr);
+		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
 		if(bSilent || uDBErrno == pData->uLastDBErrno)
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {

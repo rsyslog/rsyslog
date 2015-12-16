@@ -387,7 +387,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	}
 	/* generate a friendly name for us action stats */
 	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "action %d", pThis->iActionNbr);
+		snprintf((char*) pszAName, sizeof(pszAName), "action %d", pThis->iActionNbr);
 		pThis->pszName = ustrdup(pszAName);
 	}
 
@@ -440,7 +440,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	/* create our queue */
 
 	/* generate a friendly name for the queue */
-	snprintf((char*) pszAName, sizeof(pszAName)/sizeof(uchar), "%s queue",
+	snprintf((char*) pszAName, sizeof(pszAName), "%s queue",
 		 pThis->pszName);
 
 	/* now check if we can run the action in "firehose mode" during stage one of 
@@ -1791,7 +1791,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		if(!(iTplOpts & OMSR_TPL_AS_MSG)) {
 		   	if((pAction->ppTpl[i] =
 				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
-				snprintf(errMsg, sizeof(errMsg) / sizeof(char),
+				snprintf(errMsg, sizeof(errMsg),
 					 " Could not find template %d '%s' - action disabled",
 					 i, pTplName);
 				errno = 0;
