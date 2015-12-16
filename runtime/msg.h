@@ -109,9 +109,7 @@ struct msg {
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	struct json_object *json;
-	pthread_mutex_t mut_json;
 	struct json_object *localvars;
-	pthread_mutex_t mut_localvars;
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
