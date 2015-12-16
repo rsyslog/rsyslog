@@ -337,6 +337,7 @@ dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac,
 
 static bson *BSONFromJSONArray(struct json_object *json);
 static bson *BSONFromJSONObject(struct json_object *json);
+static gboolean BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json);
 
 /* Append a BSON variant of json to doc using name.  Return TRUE on success */
 static gboolean
@@ -365,6 +366,10 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 			return bson_append_int64(doc, name, i);
 	}
 	case json_type_object: {
+
+		if (BSONAppendExtendedJSON(doc, name, json) == TRUE)
+		    return TRUE;
+
 		bson *sub;
 		gboolean ok;
 
@@ -393,6 +398,34 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 	default:
 		return FALSE;
 	}
+}
+
+static gboolean
+BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json)
+{
+    struct lh_entry *entry;
+
+    entry = json_object_get_object(json)->head;
+    if (entry) {
+        char *key;
+        key = (char*)entry->k;
+        if (strcmp(key, "$date") == 0) {
+            struct tm tm;
+            gint64 ts;
+            struct json_object *val;
+
+            val = (struct json_object*)entry->v;
+
+            DBGPRINTF("ommongodb: extended json date detected %s", json_object_get_string(val));
+
+            tm.tm_isdst = -1;
+            strptime(json_object_get_string(val), "%Y-%m-%dT%H:%M:%S%z", &tm);
+            ts = 1000 * (gint64) mktime(&tm);
+            return bson_append_utc_datetime(doc, name, ts);
+        }
+    }
+
+    return FALSE;
 }
 
 /* Return a BSON variant of json, which must be a json_type_array */
