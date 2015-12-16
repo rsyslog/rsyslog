@@ -6,7 +6,9 @@ Documentation=http://www.rsyslog.com/doc/
 
 [Service]
 Type=notify
-ExecStart=@sbindir@/rsyslogd -n
+@syslogd_options_env_file@
+ExecStart=@sbindir@/rsyslogd -n@syslogd_options@
+UMask=0066
 StandardOutput=null
 Restart=on-failure
 

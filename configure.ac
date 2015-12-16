@@ -409,6 +409,17 @@ if test "$enable_jemalloc" = "yes"; then
     )
 fi
 
+# support using /etc/sysconfig/rsyslog
+AC_ARG_ENABLE(rsyslog_sysconfig,
+	[AS_HELP_STRING([--enable-rsyslog-sysconfig],[Enable use of etc sysconfig rsyslog @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_rsyslog_sysconfig="yes" ;;
+	  no) enable_rsyslog_sysconfig="no" ;;
+	   *) AC_MSG_ERROR(bad value ${enableval} for --enable-rsyslog-sysconfig) ;;
+	 esac],
+	[enable_rsyslog_sysconfig="no"]
+)
+AM_CONDITIONAL(ENABLE_RSYSLOG_SYSCONFIG, test x$enable_rsyslog_sysconfig = xyes)
 
 # support for unlimited select() syscall
 AC_ARG_ENABLE(unlimited_select,
@@ -1748,7 +1759,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		contrib/pmsnare/Makefile \
-    contrib/pmpanngfw/Makefile \
+		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
@@ -1784,6 +1795,7 @@ echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
+echo "    use /etc/sysconfig/rsyslog                $enable_rsyslog_sysconfig"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"

@@ -14,8 +14,13 @@ nodist_systemdsystemunit_DATA = \
 CLEANFILES = \
 	rsyslog.service
 
+if ENABLE_RSYSLOG_SYSCONFIG
 %.service: %.service.in
-	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g' $< > $@
+	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g;s,@syslogd_options\@, $$SYSLOGD_OPTIONS,g;s,@syslogd_options_env_file\@,EnvironmentFile=-/etc/sysconfig/rsyslog,g' $< > $@
+else
+%.service: %.service.in
+	$(AM_V_GEN)sed -e 's,@sbindir\@,$(sbindir),g;s,@syslogd_options\@,,g;/@syslogd_options_env_file\@/d' $< > $@
+endif
 
 endif
 
