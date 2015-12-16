@@ -563,7 +563,7 @@ getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocat
 	if (getSection(req,&req)!=RS_RET_OK)
 			ABORT_FINALIZE(RS_RET_ERR);
 
-    *singleRequest = (char*) calloc (req - start+ 1 + 1,sizeof(char));/* (req - start+ 1 == length of data + 1 for terminal char)*/
+    *singleRequest = (char*) calloc (req - start+ 1 + 1,1);/* (req - start+ 1 == length of data + 1 for terminal char)*/
     if (*singleRequest==NULL) ABORT_FINALIZE(RS_RET_ERR);
     memcpy(*singleRequest,start,req - start);
     *lastLocation=req;

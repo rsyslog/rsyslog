@@ -206,7 +206,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 	assert(lenFile > 0);
 
         len = lenFile + 1; /* add one for '\0'-byte */
-	if((pszWork = MALLOC(sizeof(uchar) * len)) == NULL)
+	if((pszWork = MALLOC(len)) == NULL)
 		return -1;
         memcpy(pszWork, szFile, len);
         for(p = pszWork+1 ; *p ; p++)
@@ -356,7 +356,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 	}
 
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
-	if((pName = MALLOC(sizeof(uchar) * lenName)) == NULL)
+	if((pName = MALLOC(lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	
 	/* got memory, now construct string */

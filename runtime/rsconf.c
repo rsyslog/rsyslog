@@ -513,7 +513,7 @@ static void doDropPrivGid(int iGid)
 		exit(1);
 	}
 	DBGPRINTF("setgid(%d): %d\n", iGid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d", iGid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
@@ -552,7 +552,7 @@ static void doDropPrivUid(int iUid)
 		exit(1);
 	}
 	DBGPRINTF("setuid(%d): %d\n", iUid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", iUid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 

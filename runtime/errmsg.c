@@ -96,7 +96,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 			snprintf(buf, sizeof(buf), "%s [v%s try http://www.rsyslog.com/e/%d ]", msg, VERSION, iErrCode * -1);
 		}
 	}
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	
 	glblErrLogger(severity, iErrCode, (uchar*)buf);
@@ -129,7 +129,7 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 		lenBuf--;
 	}
 	va_end(ap);
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 	
 	doLogMsg(iErrno, iErrCode, LOG_ERR, buf);
 }
@@ -158,7 +158,7 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
 		lenBuf--;
 	}
 	va_end(ap);
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 	
 	doLogMsg(iErrno, iErrCode, severity, buf);
 }

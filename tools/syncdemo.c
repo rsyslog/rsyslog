@@ -329,7 +329,7 @@ dispRuntime(unsigned rt)
 {
 	static char *fmtbuf;
 
-	fmtbuf = malloc(32 * sizeof(char));
+	fmtbuf = malloc(32);
 	snprintf(fmtbuf, 32, "%u.%03.3u",
 		 rt / 1000, rt % 1000);
 	return(fmtbuf);

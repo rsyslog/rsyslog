@@ -248,7 +248,7 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+		CHKmalloc(pRcv = (uchar*) malloc(iMaxLine + 1));
 	}
 
 	 while(pThrd->bShallStop != RSTRUE) {

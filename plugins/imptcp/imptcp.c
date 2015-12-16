@@ -1101,7 +1101,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	ptcpsrv_t *pSrv = pLstn->pSrv;
 
 	CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
-	CHKmalloc(pSess->pMsg = malloc(iMaxLine * sizeof(uchar)));
+	CHKmalloc(pSess->pMsg = malloc(iMaxLine));
 	pSess->pLstn = pLstn;
 	pSess->sock = sock;
 	pSess->bSuppOctetFram = pLstn->bSuppOctetFram;

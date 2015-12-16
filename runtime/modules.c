@@ -1129,7 +1129,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					free(pPathBuf);
 				/* we always alloc enough memory for everything we potentiall need to add */
 				lenPathBuf = PATHBUF_OVERHEAD;
-				CHKmalloc(pPathBuf = malloc(sizeof(uchar)*lenPathBuf));
+				CHKmalloc(pPathBuf = malloc(lenPathBuf));
 			}
 			*pPathBuf = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
@@ -1152,7 +1152,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					free(pPathBuf);
 				/* we always alloc enough memory for everything we potentiall need to add */
 				lenPathBuf = iPathLen + PATHBUF_OVERHEAD;
-				CHKmalloc(pPathBuf = malloc(sizeof(uchar)*lenPathBuf));
+				CHKmalloc(pPathBuf = malloc(lenPathBuf));
 			}
 
 			memcpy((char *) pPathBuf, (char *)pModDirCurr, iPathLen);

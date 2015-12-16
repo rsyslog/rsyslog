@@ -1008,7 +1008,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1)));
+		CHKmalloc(pRcv = (uchar*) MALLOC(iMaxLine + 1));
 	}
 
 	memset(&msgh, 0, sizeof(msgh));

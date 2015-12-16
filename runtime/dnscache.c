@@ -305,7 +305,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
 		 		 */
 		 		if(glbl.GetDropMalPTRMsgs() == 1) {
-					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
+					snprintf((char*)szErrMsg, sizeof(szErrMsg),
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
 						 szIP, fqdnBuf);
@@ -320,7 +320,7 @@ resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
 				 * (OK, I admit this is more or less impossible, but I am paranoid...)
 				 * rgerhards, 2007-07-16
 				 */
-				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
+				snprintf((char*)szErrMsg, sizeof(szErrMsg),
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
 					 szIP, fqdnBuf);

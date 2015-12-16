@@ -626,7 +626,7 @@ sigblkInit(gtfile gf)
 {
 	if(gf == NULL) goto done;
 	seedIV(gf);
-	memset(gf->roots_valid, 0, sizeof(gf->roots_valid)/sizeof(char));
+	memset(gf->roots_valid, 0, sizeof(gf->roots_valid));
 	gf->nRoots = 0;
 	gf->nRecords = 0;
 	gf->bInBlk = 1;

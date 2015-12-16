@@ -484,7 +484,7 @@ openFile(lstn_t *pLstn)
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
 		  pLstn->pszFileName, statefn);
 	/* Construct file name */
-	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam) / sizeof(uchar), "%s/%s",
+	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam), "%s/%s",
 			     (char*) glbl.GetWorkDir(), (char*)statefn);
 
 	/* check if the file exists */
@@ -1633,7 +1633,7 @@ filesDisplay(); // TODO: remove after initial unstable release(s)
 	          pLstn->pszFileName, ev->wd);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
-		snprintf((char*)toDel, sizeof(toDel) / sizeof(uchar), "%s/%s",
+		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
 				     glbl.GetWorkDir(), (char*)statefn);
 		bDoRMState = 1;
 	} else {
