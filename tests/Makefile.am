@@ -861,6 +861,12 @@ EXTRA_DIST= \
 	json_array_looping.sh \
 	json_nonarray_looping.sh \
 	testsuites/json_array_looping.conf \
+	json_null.sh \
+	json_null-vg.sh \
+	testsuites/json_null.conf \
+	json_null_array.sh \
+	json_null_array-vg.sh \
+	testsuites/json_null_array.conf \
 	mmnormalize_regex.sh \
 	testsuites/mmnormalize_regex.conf \
 	testsuites/mmnormalize_regex.rulebase \
