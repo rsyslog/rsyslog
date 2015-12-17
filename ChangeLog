@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
+- bugfix: tarball did not include some testbench files
+  Thanks to Thomas D. (whissi) for the patch.
 - bugfix: memory misadressing during config parsing string template
   This occurred if an (invalid) template option larger than 63 characters
   was given.
