@@ -16,7 +16,7 @@ matrix:
      - compiler: "clang"
   include:
      - compiler: "gcc"
-       env: CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       env: BUILD_FROM_TARBALL="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      - compiler: "clang"
        env: CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
      - compiler: "clang"
@@ -36,6 +36,8 @@ install:
   - if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libglib2.0-dev libgrok1 libgrok-dev libtokyocabinet-dev ; fi
 
 script:
+  - if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
+  - pwd
   - autoreconf --force --verbose --install
   # I don't know how to pass two env vars in the include matrix, so
   # I set the second one here via an "if"
