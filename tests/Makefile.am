@@ -595,6 +595,7 @@ EXTRA_DIST= \
 	imtcp_conndrop.sh \
 	testsuites/imtcp_conndrop.conf \
 	imtcp_conndrop_tls.sh \
+	testsuites/imtcp_conndrop_tls.conf \
 	imtcp_conndrop_tls-vg.sh \
 	testsuites/imtcp_conndrop.conf \
 	imtcp_addtlframedelim.sh \
