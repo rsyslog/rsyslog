@@ -24,7 +24,7 @@ True Global Directives
    options/rsconf1_umask
    options/rsconf1_resetconfigvariables
 
--  **$MaxMessageSize** <size\_nbr>, default 2k - allows to specify
+-  **$MaxMessageSize** <size\_nbr>, default 8k - allows to specify
    maximum supported message size (both for sending and receiving). The
    default should be sufficient for almost all cases. Do not set this
    below 1k, as it would cause interoperability problems with other
@@ -48,7 +48,7 @@ True Global Directives
    rsyslogd actually does what you think it should do ;) It is highly
    suggested to use a TCP based transport instead of UDP (plain TCP
    syslog, RELP). This resolves the UDP stack size restrictions.
-   Note that 2k, the current default, is the smallest size that must be
+   Note that 2k, is the smallest size that must be
    supported in order to be compliant to the upcoming new syslog RFC
    series.
 -  **$LocalHostName** [name] - this directive permits to overwrite the
