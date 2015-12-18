@@ -90,7 +90,52 @@ read the :doc:`queues <../concepts/queues>` documentation.
    immediate!
 -  **queue.timeoutenqueue** number
    number is timeout in ms (1000ms is 1sec!), default 2000, 0 means
-   discard immediate
+   discard immediate.
+
+   This timeout value is used when the queue is full. If rsyslog cannot
+   enqueue a message within the timeout period, the message is discarded.
+   Note that this is setting of last resort (assuming defaults are used
+   for the queue settings or proper parameters are set): all delayable
+   inputs (like imtcp or imfile) have already been pushed back at this
+   stage. Also, discarding of lower priority messages (if configured) has
+   already happened. So we run into one of these situations if we do not
+   timeout quickly enough:
+
+   * if using imuxsock and no systemd journal is involved, the system
+     would become unresponsive and most probably a hard reset would be
+     required.
+   * if using imuxsock with imjournal forwarding is active, messages are
+     lost because the journal discards them (more agressive than rsyslog does)
+   * if using imjournal, the journal will buffer messages. If journal
+     runs out of configured space, messages will be discarded. So in this
+     mode discarding is moved to a bit later place.
+   * other non-delayable sources like imudp will also loose messages
+
+   So this setting is provided in order to guard against problematic situations,
+   which always will result either in message loss or system hang. For
+   action queues, one may debate if it would be better to overflow rapidly
+   to the main queue. If so desired, this is easy to acomplish by setting
+   a very large timeout value. The same, of course, is true for the main
+   queue, but you have been warned if you do so!
+
+   In some other words, you can consider this scenario, using default values.
+   With all progress blocked (unable to deliver a message):
+
+   * all delayable inputs (tcp, relp, imfile, imjournal, etc) will block
+     indefinantly (assuming queue.lightdelaymark and queue.fulldelaymark
+     are set sensible, which they are by default).
+   * imudp will be loosing messages because the OS will be dropping them
+   * messages arriving via UDP or imuxsock that do make it to rsyslog,
+     and that are a severity high enough to not be filtered by
+     discardseverity, will block for 2 seconds trying to put the message in
+     the queue (in the hope that something happens to make space in the
+     queue) and then be dropped to avoid blocking the machine permanently.
+
+     Then the next message to be processed will also be tried for 2 seconds, etc.
+
+   * If this is going into an action queue, the log message will remain
+     in the main queue during these 2 seconds, and additional logs that
+     arrive will accumulate behind this in the main queue.
 -  **queue.timeoutworkerthreadshutdown** number
    number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)
 -  **queue.workerthreadminimummessages** number
