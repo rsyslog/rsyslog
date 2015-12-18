@@ -25,9 +25,11 @@
 #define STRING_LOOKUP_TABLE 1
 #define ARRAY_LOOKUP_TABLE 2
 #define SPARSE_ARRAY_LOOKUP_TABLE 3
+#define STUBBED_LOOKUP_TABLE 4
 
 #define LOOKUP_KEY_TYPE_STRING 1
 #define LOOKUP_KEY_TYPE_UINT 2
+#define LOOKUP_KEY_TYPE_NONE 3
 
 struct lookup_tables_s {
 	lookup_ref_t *root;	/* the root of the template list */
@@ -96,6 +98,8 @@ es_str_t * lookupKey(lookup_ref_t *pThis, lookup_key_t key);
 void lookupDestroyCnf();
 void lookupClassExit(void);
 void lookupDoHUP();
+rsRetVal lookupReload(lookup_ref_t *pThis);
+rsRetVal lookupStub(lookup_ref_t *pThis, const uchar *stub_value);
 rsRetVal lookupClassInit(void);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */

@@ -424,6 +424,20 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+execStubLookupTableValue(struct cnfstmt *stmt) {
+	lookup_ref_t *t;
+	DEFiRet;
+	t = stmt->d.s_stub_lookup_table.table;
+
+	if (t != NULL) {
+		CHKiRet(lookupStub(t, stmt->d.s_stub_lookup_table.value_cstr));
+	}
+	
+finalize_it:
+	RETiRet;
+}
+
 /* The rainerscript execution engine. It is debatable if that would be better
  * contained in grammer/rainerscript.c, HOWEVER, that file focusses primarily
  * on the parsing and object creation part. So as an actual executor, it is
@@ -474,6 +488,9 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 			break;
 		case S_PROPFILT:
 			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
+			break;
+        case S_STUB_LOOKUP_TABLE_VALUE:
+			CHKiRet(execStubLookupTableValue(stmt));
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",

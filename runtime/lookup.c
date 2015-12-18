@@ -144,6 +144,8 @@ lookupDestruct(lookup_t *pThis) {
 		destructTable_arr(pThis);
 	} else if (pThis->type == SPARSE_ARRAY_LOOKUP_TABLE) {
 		destructTable_sparseArr(pThis);
+	} else if (pThis->type == STUBBED_LOOKUP_TABLE) {
+		/*nothing to be done*/
 	}
 	
 	for (i = 0; i < pThis->interned_val_count; i++) {
@@ -223,6 +225,11 @@ defaultVal(lookup_t *pThis) {
 }
 
 /* lookup_fn for different types of tables */
+static es_str_t*
+lookupKey_stub(lookup_t *pThis, lookup_key_t key) {
+	return es_newStrFromCStr(pThis->nomatch, ustrlen(pThis->nomatch));
+}
+
 static es_str_t*
 lookupKey_str(lookup_t *pThis, lookup_key_t key) {
 	lookup_string_tab_entry_t *entry;
@@ -423,6 +430,19 @@ finalize_it:
 }
 
 static rsRetVal
+lookupBuildStubbedTable(lookup_t *pThis, const uchar* stub_val) {
+	DEFiRet;
+	
+	CHKmalloc(pThis->nomatch = ustrdup(stub_val));
+	pThis->lookup = lookupKey_stub;
+	pThis->type = STUBBED_LOOKUP_TABLE;
+	pThis->key_type = LOOKUP_KEY_TYPE_NONE;
+	
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
 lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* name) {
 	struct json_object *jnomatch, *jtype, *jtab;
 	struct json_object *jrow, *jindex, *jvalue;
@@ -559,11 +579,10 @@ lookupFindTable(uchar *name)
  * the old table is continued to be used.
  */
 static rsRetVal
-lookupReload(lookup_ref_t *pThis)
-{
+lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 	uint32_t i;
 	lookup_t *newlu, *oldlu; /* dummy to be able to use support functions without 
-						affecting current settings. */
+								affecting current settings. */
 	DEFiRet;
 
 	oldlu = pThis->self;
@@ -571,7 +590,11 @@ lookupReload(lookup_ref_t *pThis)
 	
 	DBGPRINTF("reload requested for lookup table '%s'\n", pThis->name);
 	CHKmalloc(newlu = calloc(1, sizeof(lookup_t)));
-	CHKiRet(lookupReadFile(newlu, pThis->name, pThis->filename));
+	if (stub_val == NULL) {
+		CHKiRet(lookupReadFile(newlu, pThis->name, pThis->filename));
+	} else {
+		CHKiRet(lookupBuildStubbedTable(newlu, stub_val));
+	}
 	/* all went well, copy over data members */
 	pthread_rwlock_wrlock(&pThis->rwlock);
 	pThis->self = newlu;
@@ -590,6 +613,30 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal
+lookupReload(lookup_ref_t *pThis)
+{
+	DEFiRet;
+	CHKiRet(lookupReloadOrStub(pThis, NULL));
+finalize_it:
+	RETiRet;
+}
+
+rsRetVal
+lookupStub(lookup_ref_t *pThis, const uchar *stub_val)
+{
+	int already_stubbed = 0;
+	DEFiRet;
+	pthread_rwlock_rdlock(&pThis->rwlock);
+	if (pThis->self->type == STUBBED_LOOKUP_TABLE &&
+		ustrcmp(pThis->self->nomatch, stub_val) == 0)
+		already_stubbed = 1;
+	pthread_rwlock_unlock(&pThis->rwlock);
+	if (! already_stubbed)
+		CHKiRet(lookupReloadOrStub(pThis, stub_val));
+finalize_it:
+	RETiRet;
+}
 
 /* reload all lookup tables on HUP */
 void

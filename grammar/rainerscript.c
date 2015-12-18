@@ -1787,11 +1787,11 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		lookup_table = ((lookup_ref_t*)func->funcdata)->self;
 		if (lookup_table != NULL) {
 			lookup_key_type = lookup_table->key_type;
+			bMustFree = 0;
 			if (lookup_key_type == LOOKUP_KEY_TYPE_STRING) {
 				key.k_str = (uchar*) var2CString(&r[1], &bMustFree);
 			} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
 				key.k_uint = var2Number(&r[1], NULL);
-				bMustFree = 0;
 			}
 			ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
 			if(bMustFree) free(key.k_str);
@@ -1799,6 +1799,14 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 			ret->d.estr = es_newStrFromCStr("", 1);
 		}
 		varFreeMembers(&r[1]);
+		break;
+	case CNFFUNC_RELOAD_LOOKUP_TABLE:
+		dbgprintf("DDDD: executing reload_lookup_table\n");
+		ret->datatype = 'N';
+		if(func->funcdata == NULL) {
+			break;
+		}
+		ret->d.n = (lookupReload((lookup_ref_t*)func->funcdata) == RS_RET_OK);
 		break;
 	default:
 		if(Debug) {
@@ -2706,6 +2714,7 @@ void
 cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 {
 	char *cstr;
+	char *cstr2;
 	switch(stmt->nodetype) {
 	case S_NOP:
 		doIndent(indent); dbgprintf("NOP\n");
@@ -2755,6 +2764,14 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 	case S_UNSET:
 		doIndent(indent); dbgprintf("UNSET %s\n",
 				  stmt->d.s_unset.varname);
+		break;
+    case S_STUB_LOOKUP_TABLE_VALUE:
+		cstr = es_str2cstr(stmt->d.s_stub_lookup_table.table_name, NULL);
+		cstr2 = es_str2cstr(stmt->d.s_stub_lookup_table.value, NULL);
+		doIndent(indent); dbgprintf("STUB_LOOKUP_TABLE_VALUE table(%s) = '%s'",
+									cstr, cstr2);
+		free(cstr);
+		free(cstr2);
 		break;
 	case S_PRIFILT:
 		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
@@ -2950,6 +2967,14 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
+    case S_STUB_LOOKUP_TABLE_VALUE:
+        if (stmt->d.s_stub_lookup_table.table_name != NULL) {
+			es_deleteStr(stmt->d.s_stub_lookup_table.table_name);
+        }
+        if (stmt->d.s_stub_lookup_table.value != NULL) {
+			es_deleteStr(stmt->d.s_stub_lookup_table.value);
+        }
+		free(stmt->d.s_stub_lookup_table.value_cstr);
 	default:
 		dbgprintf("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
@@ -3587,6 +3612,20 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 done:	return;
 }
 
+static void
+cnfstmtOptimizeStubLookupTableValue(struct cnfstmt *stmt) {
+	uchar *cstr = NULL;
+	if ((stmt->d.s_stub_lookup_table.value_cstr =
+		 (uchar*) es_str2cstr(stmt->d.s_stub_lookup_table.value, NULL)) != NULL) {
+		cstr = (uchar*)es_str2cstr(stmt->d.s_stub_lookup_table.table_name, NULL);
+
+		if((stmt->d.s_stub_lookup_table.table = lookupFindTable(cstr)) == NULL) {
+			parser_errmsg("lookup table '%s' not found", cstr);
+		}
+		free(cstr);
+	}
+}
+
 /* we abuse "optimize" a bit. Actually, we obtain a ruleset pointer, as
  * all rulesets are only known later in the process (now!).
  */
@@ -3653,6 +3692,9 @@ cnfstmtOptimize(struct cnfstmt *root)
 				parser_errmsg("STOP is followed by unreachable statements!\n");
 			break;
 		case S_UNSET: /* nothing to do */
+			break;
+        case S_STUB_LOOKUP_TABLE_VALUE:
+            cnfstmtOptimizeStubLookupTableValue(stmt);
 			break;
 		case S_NOP:
 			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
@@ -3734,6 +3776,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
 	} else if(FUNC_NAME("lookup")) {
 		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
+	} else if(FUNC_NAME("reload_lookup_table")) {
+		GENERATE_FUNC("reload_lookup_table", 1, CNFFUNC_RELOAD_LOOKUP_TABLE);
 	} else if(FUNC_NAME("replace")) {
 		GENERATE_FUNC_WITH_ERR_MSG(
 			"replace", 3, CNFFUNC_REPLACE,
@@ -3858,33 +3902,37 @@ finalize_it:
 
 
 static inline rsRetVal
-initFunc_lookup(struct cnffunc *func)
+resolveLookupTable(struct cnffunc *func)
 {
 	uchar *cstr = NULL;
+	char *fn_name = NULL;
 	DEFiRet;
 
 	func->destructable_funcdata = 0;
 
-	if(func->nParams != 2) {
+	if(func->nParams == 0) {/*we assume first arg is lookup-table-name*/
 		parser_errmsg("rsyslog logic error in line %d of file %s\n",
 			__LINE__, __FILE__);
 		FINALIZE;
 	}
 
+	CHKmalloc(fn_name = es_str2cstr(func->fname, NULL));
+
 	func->funcdata = NULL;
 	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("table name (param 1) of lookup() must be a constant string");
+		parser_errmsg("table name (param 1) of %s() must be a constant string", fn_name);
 		FINALIZE;
 	}
 
-	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	CHKmalloc(cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL));
 	if((func->funcdata = lookupFindTable(cstr)) == NULL) {
-		parser_errmsg("lookup table '%s' not found", cstr);
+		parser_errmsg("lookup table '%s' not found (used in function: %s)", cstr, fn_name);
 		FINALIZE;
 	}
 
 finalize_it:
 	free(cstr);
+	free(fn_name);
 	RETiRet;
 }
 
@@ -3928,7 +3976,8 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				initFunc_prifilt(func);
 				break;
 			case CNFFUNC_LOOKUP:
-				initFunc_lookup(func);
+			case CNFFUNC_RELOAD_LOOKUP_TABLE:
+				resolveLookupTable(func);
 				break;
 			case CNFFUNC_EXEC_TEMPLATE:
 				initFunc_exec_template(func);
