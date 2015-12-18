@@ -117,6 +117,25 @@ read the :doc:`queues <../concepts/queues>` documentation.
    to the main queue. If so desired, this is easy to acomplish by setting
    a very large timeout value. The same, of course, is true for the main
    queue, but you have been warned if you do so!
+
+   In some other words, you can consider this scenario, using default values.
+   With all progress blocked (unable to deliver a message):
+
+   * all delayable inputs (tcp, relp, imfile, imjournal, etc) will block
+     indefinantly (assuming queue.lightdelaymark and queue.fulldelaymark
+     are set sensible, which they are by default).
+   * imudp will be loosing messages because the OS will be dropping them
+   * messages arriving via UDP or imuxsock that do make it to rsyslog,
+     and that are a severity high enough to not be filtered by
+     discardseverity, will block for 2 seconds trying to put the message in
+     the queue (in the hope that something happens to make space in the
+     queue) and then be dropped to avoid blocking the machine permanently.
+
+     Then the next message to be processed will also be tried for 2 seconds, etc.
+
+   * If this is going into an action queue, the log message will remain
+     in the main queue during these 2 seconds, and additional logs that
+     arrive will accumulate behind this in the main queue.
 -  **queue.timeoutworkerthreadshutdown** number
    number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)
 -  **queue.workerthreadminimummessages** number
