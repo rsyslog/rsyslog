@@ -229,6 +229,9 @@ options are defined:
 
 **date-rfc3339**
   format as RFC 3339 date
+  
+**date-unixtimestamp**
+  Format as a unix timestamp (seconds since epoch)
 
 **date-year**
   just the year part (4-digit) of a timestamp
