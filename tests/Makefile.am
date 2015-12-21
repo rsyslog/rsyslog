@@ -135,7 +135,8 @@ TESTS +=  \
 	array_lookup_table.sh \
 	sparse_array_lookup_table.sh \
 	lookup_table_bad_configs.sh \
-	lookup_table_rscript_reload.sh
+	lookup_table_rscript_reload.sh \
+	lookup_table_rscript_reload_without_stub.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -155,7 +156,8 @@ TESTS +=  \
 	array_lookup_table_misuse-vg.sh \
 	sparse_array_lookup_table-vg.sh \
 	lookup_table_bad_configs-vg.sh \
-	lookup_table_rscript_reload-vg.sh
+	lookup_table_rscript_reload-vg.sh \
+	lookup_table_rscript_reload_without_stub-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -875,9 +877,12 @@ EXTRA_DIST= \
 	testsuites/rscript_re_match.conf \
 	lookup_table.sh \
 	lookup_table_rscript_reload.sh \
+	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
+	lookup_table_rscript_reload_without_stub-vg.sh \
 	testsuites/lookup_table.conf \
 	testsuites/lookup_table_reload_stub.conf \
+	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
 	unused_lookup_table.sh \

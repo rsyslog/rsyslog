@@ -433,7 +433,7 @@ execReloadLookupTable(struct cnfstmt *stmt) {
 		ABORT_FINALIZE(RS_RET_NONE);
 	}
 	
-	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.value_cstr));
+	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.stub_value));
 	/* Note that reload dispatched above is performed asynchronously,
 	   on a different thread. So rsRetVal it returns means it was triggered
 	   successfully, and not that it was reloaded successfully. */

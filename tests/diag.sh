@@ -277,6 +277,13 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+   'content-check-with-count') 
+		count=$(cat rsyslog.out.log | grep -qF "$2" | wc -l)
+		if [ "x$count" == "x$3" ]; then
+		    echo content-check failed, expected $2 to occure $3 times, but found it $count times
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then

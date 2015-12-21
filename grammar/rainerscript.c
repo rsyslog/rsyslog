@@ -2712,7 +2712,6 @@ void
 cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 {
 	char *cstr;
-	char *cstr2;
 	switch(stmt->nodetype) {
 	case S_NOP:
 		doIndent(indent); dbgprintf("NOP\n");
@@ -2764,12 +2763,9 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 				  stmt->d.s_unset.varname);
 		break;
     case S_RELOAD_LOOKUP_TABLE:
-		cstr = es_str2cstr(stmt->d.s_reload_lookup_table.table_name, NULL);
-		cstr2 = es_str2cstr(stmt->d.s_reload_lookup_table.value, NULL);
 		doIndent(indent); dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
-									cstr, cstr2);
-		free(cstr);
-		free(cstr2);
+									stmt->d.s_reload_lookup_table.table_name,
+									stmt->d.s_reload_lookup_table.stub_value);
 		break;
 	case S_PRIFILT:
 		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
@@ -2967,12 +2963,11 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		break;
     case S_RELOAD_LOOKUP_TABLE:
         if (stmt->d.s_reload_lookup_table.table_name != NULL) {
-			es_deleteStr(stmt->d.s_reload_lookup_table.table_name);
+			free(stmt->d.s_reload_lookup_table.table_name);
         }
-        if (stmt->d.s_reload_lookup_table.value != NULL) {
-			es_deleteStr(stmt->d.s_reload_lookup_table.value);
+        if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
+			free(stmt->d.s_reload_lookup_table.stub_value);
         }
-		free(stmt->d.s_reload_lookup_table.value_cstr);
 	default:
 		dbgprintf("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
@@ -3032,6 +3027,68 @@ cnfstmtNewCall(es_str_t *name)
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
 		cnfstmt->d.s_call.name = name;
+	}
+	return cnfstmt;
+}
+
+struct cnfstmt *
+cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
+{
+	int nParams;
+	struct cnffparamlst *param, *nxt;
+	struct cnfstmt* cnfstmt;
+	uint8_t failed = 0;
+	if((cnfstmt = cnfstmtNew(S_RELOAD_LOOKUP_TABLE)) != NULL) {
+		nParams = 0;
+		for(param = fparams ; param != NULL ; param = param->next) {
+			++nParams;
+		}
+		cnfstmt->d.s_reload_lookup_table.table_name = cnfstmt->d.s_reload_lookup_table.stub_value = NULL;
+		switch(nParams) {
+		case 2:
+			param = fparams->next;
+			if (param->expr->nodetype != 'S') {
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
+							  "expects a litteral string for second argument\n");
+				failed = 1;
+			}
+			if ((cnfstmt->d.s_reload_lookup_table.stub_value = (uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
+				parser_errmsg("statement ignored: reload_lookup_table statement failed to allocate memory for lookup-table stub-value\n");
+				failed = 1;
+			}
+		case 1:
+			param = fparams;
+			if (param->expr->nodetype != 'S') {
+				parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
+							  "expects a litteral string for first argument\n");
+				failed = 1;
+			}
+			if ((cnfstmt->d.s_reload_lookup_table.table_name = (uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
+				parser_errmsg("statement ignored: reload_lookup_table statement failed to allocate memory for lookup-table name\n");
+				failed = 1;
+			}
+			break;
+		default:
+			parser_errmsg("statement ignored: reload_lookup_table(table_name, optional:stub_value_in_case_reload_fails) "
+						  "expected 1 or 2 arguments, but found '%d'\n", nParams);
+			failed = 1;
+		}
+	}
+	param = fparams;
+	while(param != NULL) {
+		nxt = param->next;
+		if (param->expr != NULL) cnfexprDestruct(param->expr);
+		free(param);
+		param = nxt;
+	}
+	if (failed) {
+		cnfstmt->nodetype = S_NOP;
+		if (cnfstmt->d.s_reload_lookup_table.table_name != NULL) {
+			free(cnfstmt->d.s_reload_lookup_table.table_name);
+		}
+		if (cnfstmt->d.s_reload_lookup_table.stub_value != NULL) {
+			free(cnfstmt->d.s_reload_lookup_table.stub_value);
+		}
 	}
 	return cnfstmt;
 }
@@ -3612,15 +3669,8 @@ done:	return;
 
 static void
 cnfstmtOptimizeReloadLookupTable(struct cnfstmt *stmt) {
-	uchar *cstr = NULL;
-	if ((stmt->d.s_reload_lookup_table.value_cstr =
-		 (uchar*) es_str2cstr(stmt->d.s_reload_lookup_table.value, NULL)) != NULL) {
-		cstr = (uchar*)es_str2cstr(stmt->d.s_reload_lookup_table.table_name, NULL);
-
-		if((stmt->d.s_reload_lookup_table.table = lookupFindTable(cstr)) == NULL) {
-			parser_errmsg("lookup table '%s' not found", cstr);
-		}
-		free(cstr);
+	if((stmt->d.s_reload_lookup_table.table = lookupFindTable(stmt->d.s_reload_lookup_table.table_name)) == NULL) {
+		parser_errmsg("lookup table '%s' not found\n", stmt->d.s_reload_lookup_table.table_name);
 	}
 }
 

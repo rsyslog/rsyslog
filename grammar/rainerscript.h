@@ -217,9 +217,8 @@ struct cnfstmt {
 		} s_foreach;
         struct {
 			lookup_ref_t *table;
-            es_str_t *table_name;
-            es_str_t *value;
-			uchar *value_cstr;
+            uchar *table_name;
+			uchar *stub_value;
 		} s_reload_lookup_table;
 	} d;
 };
@@ -386,6 +385,7 @@ struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset)
 struct cnfstmt * cnfstmtNewUnset(char *var);
 struct cnfstmt * cnfstmtNewCall(es_str_t *name);
 struct cnfstmt * cnfstmtNewContinue(void);
+struct cnfstmt * cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
 struct cnfarray* cnfarrayNew(es_str_t *val);

@@ -174,10 +174,7 @@ stmt:	  actlst			{ $$ = $1; }
 	| UNSET VAR ';'			{ $$ = cnfstmtNewUnset($2); }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
-	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' STRING ',' STRING ')' {
-					  $$ = cnfstmtNew(S_RELOAD_LOOKUP_TABLE);
-					  $$->d.s_reload_lookup_table.table_name = $3;
-					  $$->d.s_reload_lookup_table.value = $5; }
+	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' fparams ')' { $$ = cnfstmtNewReloadLookupTable($3);}
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }
