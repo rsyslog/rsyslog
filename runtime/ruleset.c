@@ -425,14 +425,18 @@ finalize_it:
 }
 
 static rsRetVal
-execStubLookupTableValue(struct cnfstmt *stmt) {
+execReloadLookupTable(struct cnfstmt *stmt) {
 	lookup_ref_t *t;
 	DEFiRet;
-	t = stmt->d.s_stub_lookup_table.table;
-
-	if (t != NULL) {
-		CHKiRet(lookupStub(t, stmt->d.s_stub_lookup_table.value_cstr));
+	t = stmt->d.s_reload_lookup_table.table;
+	if (t == NULL) {
+		ABORT_FINALIZE(RS_RET_NONE);
 	}
+	
+	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.value_cstr));
+	/* Note that reload dispatched above is performed asynchronously,
+	   on a different thread. So rsRetVal it returns means it was triggered
+	   successfully, and not that it was reloaded successfully. */
 	
 finalize_it:
 	RETiRet;
@@ -489,8 +493,8 @@ scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
 		case S_PROPFILT:
 			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
 			break;
-        case S_STUB_LOOKUP_TABLE_VALUE:
-			CHKiRet(execStubLookupTableValue(stmt));
+        case S_RELOAD_LOOKUP_TABLE:
+			CHKiRet(execReloadLookupTable(stmt));
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",

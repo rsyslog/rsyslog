@@ -153,7 +153,7 @@ struct nvlst {
 #define S_UNSET 4007
 #define S_CALL 4008
 #define S_FOREACH 4009
-#define S_STUB_LOOKUP_TABLE_VALUE 4010
+#define S_RELOAD_LOOKUP_TABLE 4010
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 static inline char*
@@ -220,7 +220,7 @@ struct cnfstmt {
             es_str_t *table_name;
             es_str_t *value;
 			uchar *value_cstr;
-		} s_stub_lookup_table;
+		} s_reload_lookup_table;
 	} d;
 };
 
@@ -276,7 +276,6 @@ enum cnffuncid {
 	CNFFUNC_FIELD,
 	CNFFUNC_PRIFILT,
 	CNFFUNC_LOOKUP,
-	CNFFUNC_RELOAD_LOOKUP_TABLE,
 	CNFFUNC_EXEC_TEMPLATE,
 	CNFFUNC_REPLACE,
 	CNFFUNC_WRAP,

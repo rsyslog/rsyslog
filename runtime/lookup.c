@@ -65,6 +65,11 @@ typedef struct uint32_index_val_s {
 	uchar *val;
 } uint32_index_val_t;
 
+const char * reloader_prefix = "lkp_tbl_reloader:";
+
+static void *
+lookupTableReloader(void *self);
+
 /* create a new lookup table object AND include it in our list of
  * lookup tables.
  */
@@ -73,11 +78,17 @@ lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
+	const uchar *reloader_name = NULL;
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
 	CHKmalloc(t = calloc(1, sizeof(lookup_t)));
 	pthread_rwlock_init(&pThis->rwlock, NULL);
+	pthread_mutex_init(&pThis->reloader_mut, NULL);
+	pthread_cond_init(&pThis->run_reloader, NULL);
+	pthread_attr_init(&pThis->reloader_thd_attr);
+	pThis->do_reload = pThis->do_stop = 0;
+	pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis);
 
 	if(loadConf->lu_tabs.root == NULL) {
 		loadConf->lu_tabs.root = pThis;
@@ -98,9 +109,33 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+freeStubValueForReloadFailure(lookup_ref_t *pThis) {/*must be called with reloader_mut acquired*/
+	if (pThis->stub_value_for_reload_failure != NULL) {
+		free(pThis->stub_value_for_reload_failure);
+		pThis->stub_value_for_reload_failure = NULL;
+	}
+}
+
+static void
+lookupStopReloader(lookup_ref_t *pThis) {
+	pthread_mutex_lock(&pThis->reloader_mut);
+	freeStubValueForReloadFailure(pThis);
+	pThis->do_reload = 0;
+	pThis->do_stop = 1;
+	pthread_cond_signal(&pThis->run_reloader);
+	pthread_mutex_unlock(&pThis->reloader_mut);
+	pthread_join(pThis->reloader, NULL);
+}
+
 static void
 lookupRefDestruct(lookup_ref_t *pThis)
 {
+	lookupStopReloader(pThis);
+	pthread_mutex_destroy(&pThis->reloader_mut);
+	pthread_cond_destroy(&pThis->run_reloader);
+	pthread_attr_destroy(&pThis->reloader_thd_attr);
+
 	pthread_rwlock_destroy(&pThis->rwlock);
 	lookupDestruct(pThis->self);
 	free(pThis->name);
@@ -601,29 +636,31 @@ lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
 	pthread_rwlock_unlock(&pThis->rwlock);
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-						"lookup table '%s' could not be reloaded from file '%s'",
-						pThis->name, pThis->filename);
+		if (stub_val == NULL) {
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+							"lookup table '%s' could not be reloaded from file '%s'",
+							pThis->name, pThis->filename);
+		} else {
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+							"lookup table '%s' could not be stubbed with value '%s'",
+							pThis->name, stub_val);
+		}
 		lookupDestruct(newlu);
 	} else {
-		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
-						pThis->name, pThis->filename);
+		if (stub_val == NULL) {
+			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' reloaded from file '%s'",
+							pThis->name, pThis->filename);
+		} else {
+			errmsg.LogError(0, RS_RET_OK, "lookup table '%s' stubbed with value '%s'",
+							pThis->name, stub_val);
+		}
 		lookupDestruct(oldlu);
 	}
 	RETiRet;
 }
 
-rsRetVal
-lookupReload(lookup_ref_t *pThis)
-{
-	DEFiRet;
-	CHKiRet(lookupReloadOrStub(pThis, NULL));
-finalize_it:
-	RETiRet;
-}
-
-rsRetVal
-lookupStub(lookup_ref_t *pThis, const uchar *stub_val)
+static rsRetVal
+lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val)
 {
 	int already_stubbed = 0;
 	DEFiRet;
@@ -632,10 +669,95 @@ lookupStub(lookup_ref_t *pThis, const uchar *stub_val)
 		ustrcmp(pThis->self->nomatch, stub_val) == 0)
 		already_stubbed = 1;
 	pthread_rwlock_unlock(&pThis->rwlock);
-	if (! already_stubbed)
+	if (! already_stubbed) {
+		errmsg.LogError(0, RS_RET_OK, "stubbing lookup table '%s' with value '%s'",
+						pThis->name, stub_val);
 		CHKiRet(lookupReloadOrStub(pThis, stub_val));
+	} else {
+		errmsg.LogError(0, RS_RET_OK, "lookup table '%s' is already stubbed with value '%s'",
+						pThis->name, stub_val);
+	}
 finalize_it:
 	RETiRet;
+}
+
+uint8_t
+lookupIsReloadPending(lookup_ref_t *pThis) {
+	uint8_t reload_pending;
+	pthread_mutex_lock(&pThis->reloader_mut);
+	reload_pending = pThis->do_reload;
+	pthread_mutex_unlock(&pThis->reloader_mut);
+	return reload_pending;
+}
+
+rsRetVal
+lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
+{
+	uint8_t locked = 0;
+	uint8_t duplicated_stub_value = 0;
+	int lock_errno = 0;
+	DEFiRet;
+	if ((lock_errno = pthread_mutex_trylock(&pThis->reloader_mut)) == 0) {
+		locked = 1;
+		/*so it doesn't leak memory in situation where 2 reload requests are issued back to back*/
+		freeStubValueForReloadFailure(pThis);
+		if (stub_val_if_reload_fails != NULL) {
+			CHKmalloc(pThis->stub_value_for_reload_failure = ustrdup(stub_val_if_reload_fails));
+			duplicated_stub_value = 1;
+		}
+		pThis->do_reload = 1;
+		pthread_cond_signal(&pThis->run_reloader);
+	} else {
+		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger reload of lookup table '%s' failed (not stubbing)",
+						pThis->name);
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+		/* we can choose to stub the table here, but it'll hurt because
+		   the table reloader may take time to complete the reload
+		   and stubbing because of a concurrent reload message may
+		   not be desirable (except in very tightly controled environments
+		   where reload-triggering messages pushed are timed accurately
+		   and an idempotency-filter is used to reject re-deliveries) */
+	}
+finalize_it:
+	if ((iRet != RS_RET_OK) && duplicated_stub_value) {
+		freeStubValueForReloadFailure(pThis);
+	}
+	if (locked) {
+		pthread_mutex_unlock(&pThis->reloader_mut);
+	}
+	RETiRet;
+}
+
+static rsRetVal
+lookupDoReload(lookup_ref_t *pThis)
+{
+	DEFiRet;
+	CHKiRet(lookupReloadOrStub(pThis, NULL));
+finalize_it:
+	if ((iRet != RS_RET_OK) &&
+		(pThis->stub_value_for_reload_failure != NULL)) {
+		CHKiRet(lookupDoStub(pThis, pThis->stub_value_for_reload_failure));
+	}
+	freeStubValueForReloadFailure(pThis);
+	RETiRet;
+}
+
+static void *
+lookupTableReloader(void *self)
+{
+	lookup_ref_t *pThis = (lookup_ref_t*) self;
+	pthread_mutex_lock(&pThis->reloader_mut);
+	while(1) {
+		if (pThis->do_stop) {
+			break;
+		} else if (pThis->do_reload) {
+			pThis->do_reload = 0;
+			lookupDoReload(pThis);
+		} else {
+			pthread_cond_wait(&pThis->run_reloader, &pThis->reloader_mut);
+		}
+	}
+	pthread_mutex_unlock(&pThis->reloader_mut);
 }
 
 /* reload all lookup tables on HUP */
@@ -644,8 +766,21 @@ lookupDoHUP()
 {
 	lookup_ref_t *luref;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
-		lookupReload(luref);
+		lookupReload(luref, NULL);
 	}
+}
+
+uint
+lookupPendingReloadCount()
+{
+	uint pending_reload_count = 0;
+	lookup_ref_t *luref;
+	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
+		if (lookupIsReloadPending(luref)) {
+			pending_reload_count++;
+		}
+	}
+	return pending_reload_count;
 }
 
 
@@ -740,11 +875,13 @@ finalize_it:
 
 
 rsRetVal
-lookupProcessCnf(struct cnfobj *o)
+lookupTableDefProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
 	lookup_ref_t *lu;
 	short i;
+	char *reloader_thd_name = NULL;
+	int thd_name_len = 0;
 	DEFiRet;
 	lu = NULL;
 
@@ -752,7 +889,7 @@ lookupProcessCnf(struct cnfobj *o)
 	if(pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	DBGPRINTF("lookupProcessCnf params:\n");
+	DBGPRINTF("lookupTableDefProcessCnf params:\n");
 	cnfparamsPrint(&modpblk, pvals);
 	
 	CHKiRet(lookupNew(&lu));
@@ -769,10 +906,17 @@ lookupProcessCnf(struct cnfobj *o)
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
+	thd_name_len = ustrlen(lu->name) + strlen(reloader_prefix) + 1;
+	CHKmalloc(reloader_thd_name = malloc(thd_name_len));
+	strcpy(reloader_thd_name, reloader_prefix);
+	strcpy(reloader_thd_name + strlen(reloader_prefix), lu->name);
+	reloader_thd_name[thd_name_len - 1] = '\0';
+	pthread_setname_np(lu->reloader, reloader_thd_name);
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
 
 finalize_it:
+	free(reloader_thd_name);
 	cnfparamvalsDestruct(pvals, &modpblk);
 	if (iRet != RS_RET_OK) {
 		if (lu != NULL) {

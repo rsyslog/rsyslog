@@ -425,7 +425,7 @@ void cnfDoObj(struct cnfobj *o)
 		inputProcessCnf(o);
 		break;
 	case CNFOBJ_LOOKUP_TABLE:
-		lookupProcessCnf(o);
+		lookupTableDefProcessCnf(o);
 		break;
 	case CNFOBJ_PARSER:
 		parserProcessCnf(o);

@@ -13,6 +13,7 @@ cp $srcdir/testsuites/xlate_array_misuse.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh assert-content-missing "baz"
 cp $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh assert-content-missing "foo"
@@ -20,6 +21,7 @@ cp $srcdir/testsuites/xlate_array_more_misuse.lkp_tbl $srcdir/xlate_array.lkp_tb
 . $srcdir/diag.sh assert-content-missing "baz"
 cp $srcdir/testsuites/xlate_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty

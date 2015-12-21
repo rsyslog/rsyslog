@@ -18,6 +18,7 @@ cp $srcdir/testsuites/xlate_sparse_array.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh assert-content-missing "baz"
 cp $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 6
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "msgnum:00000000: foo_new"
@@ -28,6 +29,7 @@ cp $srcdir/testsuites/xlate_sparse_array_more.lkp_tbl $srcdir/xlate_array.lkp_tb
 . $srcdir/diag.sh content-check "msgnum:00000005: baz"
 cp $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl $srcdir/xlate_array.lkp_tbl
 . $srcdir/diag.sh issue-HUP
+. $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 15
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty

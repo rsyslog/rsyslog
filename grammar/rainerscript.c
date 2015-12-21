@@ -1806,14 +1806,6 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		}
 		varFreeMembers(&r[1]);
 		break;
-	case CNFFUNC_RELOAD_LOOKUP_TABLE:
-		dbgprintf("DDDD: executing reload_lookup_table\n");
-		ret->datatype = 'N';
-		if(func->funcdata == NULL) {
-			break;
-		}
-		ret->d.n = (lookupReload((lookup_ref_t*)func->funcdata) == RS_RET_OK);
-		break;
 	default:
 		if(Debug) {
 			fname = es_str2cstr(func->fname, NULL);
@@ -2771,10 +2763,10 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("UNSET %s\n",
 				  stmt->d.s_unset.varname);
 		break;
-    case S_STUB_LOOKUP_TABLE_VALUE:
-		cstr = es_str2cstr(stmt->d.s_stub_lookup_table.table_name, NULL);
-		cstr2 = es_str2cstr(stmt->d.s_stub_lookup_table.value, NULL);
-		doIndent(indent); dbgprintf("STUB_LOOKUP_TABLE_VALUE table(%s) = '%s'",
+    case S_RELOAD_LOOKUP_TABLE:
+		cstr = es_str2cstr(stmt->d.s_reload_lookup_table.table_name, NULL);
+		cstr2 = es_str2cstr(stmt->d.s_reload_lookup_table.value, NULL);
+		doIndent(indent); dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
 									cstr, cstr2);
 		free(cstr);
 		free(cstr2);
@@ -2973,14 +2965,14 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
-    case S_STUB_LOOKUP_TABLE_VALUE:
-        if (stmt->d.s_stub_lookup_table.table_name != NULL) {
-			es_deleteStr(stmt->d.s_stub_lookup_table.table_name);
+    case S_RELOAD_LOOKUP_TABLE:
+        if (stmt->d.s_reload_lookup_table.table_name != NULL) {
+			es_deleteStr(stmt->d.s_reload_lookup_table.table_name);
         }
-        if (stmt->d.s_stub_lookup_table.value != NULL) {
-			es_deleteStr(stmt->d.s_stub_lookup_table.value);
+        if (stmt->d.s_reload_lookup_table.value != NULL) {
+			es_deleteStr(stmt->d.s_reload_lookup_table.value);
         }
-		free(stmt->d.s_stub_lookup_table.value_cstr);
+		free(stmt->d.s_reload_lookup_table.value_cstr);
 	default:
 		dbgprintf("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
@@ -3619,13 +3611,13 @@ done:	return;
 }
 
 static void
-cnfstmtOptimizeStubLookupTableValue(struct cnfstmt *stmt) {
+cnfstmtOptimizeReloadLookupTable(struct cnfstmt *stmt) {
 	uchar *cstr = NULL;
-	if ((stmt->d.s_stub_lookup_table.value_cstr =
-		 (uchar*) es_str2cstr(stmt->d.s_stub_lookup_table.value, NULL)) != NULL) {
-		cstr = (uchar*)es_str2cstr(stmt->d.s_stub_lookup_table.table_name, NULL);
+	if ((stmt->d.s_reload_lookup_table.value_cstr =
+		 (uchar*) es_str2cstr(stmt->d.s_reload_lookup_table.value, NULL)) != NULL) {
+		cstr = (uchar*)es_str2cstr(stmt->d.s_reload_lookup_table.table_name, NULL);
 
-		if((stmt->d.s_stub_lookup_table.table = lookupFindTable(cstr)) == NULL) {
+		if((stmt->d.s_reload_lookup_table.table = lookupFindTable(cstr)) == NULL) {
 			parser_errmsg("lookup table '%s' not found", cstr);
 		}
 		free(cstr);
@@ -3699,8 +3691,8 @@ cnfstmtOptimize(struct cnfstmt *root)
 			break;
 		case S_UNSET: /* nothing to do */
 			break;
-        case S_STUB_LOOKUP_TABLE_VALUE:
-            cnfstmtOptimizeStubLookupTableValue(stmt);
+        case S_RELOAD_LOOKUP_TABLE:
+            cnfstmtOptimizeReloadLookupTable(stmt);
 			break;
 		case S_NOP:
 			DBGPRINTF("optimizer error: we see a NOP, how come?\n");
@@ -3782,8 +3774,6 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
 	} else if(FUNC_NAME("lookup")) {
 		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
-	} else if(FUNC_NAME("reload_lookup_table")) {
-		GENERATE_FUNC("reload_lookup_table", 1, CNFFUNC_RELOAD_LOOKUP_TABLE);
 	} else if(FUNC_NAME("replace")) {
 		GENERATE_FUNC_WITH_ERR_MSG(
 			"replace", 3, CNFFUNC_REPLACE,
@@ -3982,7 +3972,6 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				initFunc_prifilt(func);
 				break;
 			case CNFFUNC_LOOKUP:
-			case CNFFUNC_RELOAD_LOOKUP_TABLE:
 				resolveLookupTable(func);
 				break;
 			case CNFFUNC_EXEC_TEMPLATE:

@@ -110,7 +110,7 @@ int fileno(FILE *stream);
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
 "foreach"			{ BEGIN EXPR; return FOREACH; }
-"stub_lookup_table_value"	{ BEGIN IN_PROCEDURE_CALL; return STUB_LOOKUP_TABLE_VALUE_PROCEDURE; }
+"reload_lookup_table"		{ BEGIN IN_PROCEDURE_CALL; return RELOAD_LOOKUP_TABLE_PROCEDURE; }
 <IN_PROCEDURE_CALL>"("		{ return yytext[0]; }
 <IN_PROCEDURE_CALL>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
 				   yytext[yyleng-1] = '\0';
@@ -122,9 +122,9 @@ int fileno(FILE *stream);
 				   unescapeStr((uchar*)yytext+1, yyleng-2);
 				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
 				   return STRING; }
-<IN_PROCEDURE_CALL>[ ]* 		{  }
 <IN_PROCEDURE_CALL>"," 		{ return yytext[0]; }
 <IN_PROCEDURE_CALL>")" 		{ BEGIN INITIAL; return yytext[0]; }
+<IN_PROCEDURE_CALL>[ \t\n]* 		{  }
 <IN_PROCEDURE_CALL>. 		{ parser_errmsg("invalid character '%s' in expression "
 					        "- is there an invalid escape sequence somewhere?",
 						yytext); }

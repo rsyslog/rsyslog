@@ -65,6 +65,15 @@ struct lookup_ref_s {
 	uchar *filename;
 	lookup_t *self;
 	lookup_ref_t *next;
+	/* reload specific attributes */
+	pthread_mutex_t reloader_mut; /* signaling + access to reload-flow variables*/
+	/* rwlock(above) may be acquired inside critical-section reloader_mut guards */
+	pthread_cond_t run_reloader;
+	pthread_t reloader;
+	pthread_attr_t reloader_thd_attr;
+	uchar *stub_value_for_reload_failure; 
+	uint8_t do_reload;
+	uint8_t do_stop;
 };
 
 typedef es_str_t* (lookup_fn_t)(lookup_t*, lookup_key_t);
@@ -92,14 +101,14 @@ union lookup_key_u {
 
 /* prototypes */
 void lookupInitCnf(lookup_tables_t *lu_tabs);
-rsRetVal lookupProcessCnf(struct cnfobj *o);
+rsRetVal lookupTableDefProcessCnf(struct cnfobj *o);
 lookup_ref_t *lookupFindTable(uchar *name);
 es_str_t * lookupKey(lookup_ref_t *pThis, lookup_key_t key);
 void lookupDestroyCnf();
 void lookupClassExit(void);
 void lookupDoHUP();
-rsRetVal lookupReload(lookup_ref_t *pThis);
-rsRetVal lookupStub(lookup_ref_t *pThis, const uchar *stub_value);
+rsRetVal lookupReload(lookup_ref_t *pThis, const uchar *stub_value_if_reload_fails);
+uint lookupPendingReloadCount();
 rsRetVal lookupClassInit(void);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */
