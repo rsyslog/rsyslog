@@ -46,11 +46,15 @@
 typedef unsigned char uchar;
 
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
-              MD_VERIFY, MD_EXTEND, MD_CONVERT
+              MD_VERIFY, MD_EXTEND, MD_CONVERT, MD_EXTRACT
 } mode = MD_DUMP;
 static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
 static int debug = 0; 
+/* Helper variables for EXTRACT Mode */
+static int append = 0;
+char *outputfile = "";
+char *linenumbers = "";
 
 #ifdef ENABLEGT
 static void
@@ -884,6 +888,124 @@ err:
 	}
 	return 0; 
 }
+
+/* EXTRACT Loglines Function using KSI API 
+ *
+ * Input: logfilename and open file handles
+ */
+static int
+extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
+{
+	FILE *newlogfp = NULL; 
+	FILE *newsigfp = NULL; 
+	size_t lenLineRec;
+	char lineRec[128*1024];
+	char writeMode = 'w'; /* Default = Create new file! */
+
+	block_sig_t *bs = NULL;
+	block_hdr_t *bh = NULL;
+	ksifile ksi;
+	uint8_t bHasRecHashes, bHasIntermedHashes;
+	uint8_t bInBlock;
+	int r = 0;
+	int bInitDone = 0;
+
+	if (append > 0 ) { /* User wants to append logfiledata */
+		writeMode = 'a'; 
+	}
+
+	/* Init KSI library */
+	ksierrctx_t ectx;
+	rsksi_errctxInit(&ectx);
+	rsksiInit("rsyslog rsksiutil " VERSION);
+	bInitDone = 1;
+	ectx.verbose = verbose;
+	ectx.fp = stderr;
+	ectx.filename = strdup(sigfname);
+
+	/* Check for valid file header first! */
+	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11")) != 0) {
+		if (debug)
+			fprintf(stderr, "error %d in rsksi_chkFileHdr\n", r); 
+		goto done;
+	}
+	
+	ksi = rsksi_vrfyConstruct_gf();
+	if(ksi == NULL) {
+		fprintf(stderr, "error initializing signature file structure\n");
+		goto done;
+	}
+
+	/* Start extracting process */
+
+	/* Easy part first, extract loglines and write into own file */
+	if((newlogfp = fopen(name, writeMode)) == NULL) {
+		perror(name);
+		r = RSGTE_IO;
+		goto done;
+	}
+
+	/* Readline from old logfile */
+	if(fgets(line, sizeof(line), logfp) == NULL) {
+		if(feof(logfp)) {
+			r = RSGTE_EOF;
+		} else {
+			perror("log file input");
+			r = RSGTE_IO;
+		}
+		goto done;
+	}
+	lenRec = strlen(line);
+	if(line[lenRec-1] == '\n') {
+		line[lenRec-1] = '\0';
+		--lenRec;
+		rsgt_errctxSetErrRec(ectx, line);
+	}	
+	
+	// 
+
+	printf("extracting lines %s from %s now ...\n", linenumbers, name); 
+
+
+
+	goto done; 
+done:
+	if(r != RSGTE_EOF)
+		goto err;
+
+	/* Make sure we've reached the end of file in both log and signature file */
+	if (fgetc(logfp) != EOF) {
+		fprintf(stderr, "There are unsigned records in the end of log.\n");
+		fprintf(stderr, "Last signed record: %s\n", ectx.errRec);
+		r = RSGTE_END_OF_SIG;
+		goto err;
+	}
+	if (fgetc(sigfp) != EOF) {
+		fprintf(stderr, "There are records missing from the end of the log file.\n");
+		r = RSGTE_END_OF_LOG;
+		goto err;
+	}
+	/* Close file handles */
+	fclose(logfp); logfp = NULL;
+	fclose(sigfp); sigfp = NULL;
+
+	if(bInitDone)
+		rsksi_errctxExit(&ectx);
+	return 1;
+err:
+	if(r != 0)
+		sprintf(errbuf, "error %d (%s) processing file %s\n",
+			r, RSKSIE2String(r), name);
+	else
+		errbuf[0] = '\0';
+	if(logfp != NULL)
+		fclose(logfp);
+	if(sigfp != NULL)
+		fclose(sigfp);
+	if(bInitDone)
+		rsksi_errctxExit(&ectx);
+	return 0; 
+}
 #endif
 
 /* VERIFY if logfile has a Guardtime Signfile 
@@ -986,6 +1108,77 @@ done:
 	return;
 }
 
+/* EXTRACT loglines including their signatures from a logfile 
+*/
+static void
+extract(char *name, char *errbuf)
+{
+	int iSuccess = 1; 
+	char sigfname[4096];
+	FILE *logfp = NULL, *sigfp = NULL;
+	
+	if(!strcmp(name, "-")) {
+		fprintf(stderr, "extract mode cannot work on stdin\n");
+		goto err;
+	} else {
+		/* First check for the logfile itself */
+		if((logfp = fopen(name, "r")) == NULL) {
+			perror(name);
+			goto err;
+		}
+
+		/* Check for .gtsig file */
+		snprintf(sigfname, sizeof(sigfname), "%s.gtsig", name);
+		sigfname[sizeof(sigfname)-1] = '\0';
+		if((sigfp = fopen(sigfname, "r")) == NULL) {
+			/* Use errbuf to output error later */
+			sprintf(errbuf, "%s: No such file or directory\n", sigfname);
+
+			/* Check for .ksisig file */
+			snprintf(sigfname, sizeof(sigfname), "%s.ksisig", name);
+			sigfname[sizeof(sigfname)-1] = '\0';
+			if((sigfp = fopen(sigfname, "r")) == NULL) {
+				/* Output old error first*/
+				fputs(errbuf, stderr); 
+				sprintf(errbuf, "%s: No such file or directory\n", sigfname);
+				fputs(errbuf, stderr); 
+				goto err;
+			}
+			goto extractKSI;
+		}
+		goto extractGT;
+	}
+
+extractGT:
+#ifdef ENABLEGT
+	iSuccess = 0; 
+	sprintf(errbuf, "ERROR, extract loglines from old signature files is NOT supported.\n", name); 
+#endif
+	goto done; 
+
+extractKSI:
+#ifdef ENABLEKSI
+	/* puburl is mandatory for KSI now! */
+	if (strlen(rsksi_read_puburl) <= 0) {
+		iSuccess = 0; 
+		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when extracting KSI signatures.\n"); 
+		goto done; /* abort */
+	} 
+	iSuccess = extractKSI(name, errbuf, sigfname, logfp, sigfp); 
+#else
+	iSuccess = 0; 
+	sprintf(errbuf, "ERROR, unable to extract loglines from %s using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n", name); 
+#endif
+	goto done; 
+
+err:
+done:
+	/* Output error if return was 0*/
+	if (iSuccess == 0)
+		fputs(errbuf, stderr); 
+	return;
+}
+
 static void
 processFile(char *name)
 {
@@ -1049,6 +1242,11 @@ processFile(char *name)
 			fprintf(stdout, "ProcessMode: Verify/Extend\n"); 
 		verify(name, errbuf);
 		break;
+	case MD_EXTRACT:
+		if(verbose)
+			fprintf(stdout, "ProcessMode: Extract"); 
+		extract(name, errbuf);
+		break;
 	}
 }
 
@@ -1063,14 +1261,17 @@ static struct option long_options[] =
 	{"version", no_argument, NULL, 'V'},
 	{"detect-file-type", no_argument, NULL, 'T'},
 	{"show-sigblock-params", no_argument, NULL, 'B'},
-	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
-	{"extend", no_argument, NULL, 'e'},
 	{"show-verified", no_argument, NULL, 's'},
 	{"publications-server", required_argument, NULL, 'P'},
 	{"extend-server", required_argument, NULL, 'E'},
 	{"userid", required_argument, NULL, 'u'},
 	{"userkey", required_argument, NULL, 'k'},
 	{"api", required_argument, NULL, 'a'},
+	{"verify", no_argument, NULL, 't'}, /* 't' as in "test signatures" */
+	{"extend", no_argument, NULL, 'e'},
+	{"extract", required_argument, NULL, 'x'},
+	{"output", required_argument, NULL, 'o'},
+	{"append", no_argument, NULL, 'A'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -1084,6 +1285,7 @@ rsgtutil_usage(void)
 			"\t-D, --dump \t\t\t dump operations mode.\n"
 			"\t-t, --verify \t\t\t Verify operations mode.\n"
 			"\t-e, --extend \t\t\t Extends the RFC3161 signatures.\n"
+			"\t-x, --extract <LINENUMBERS> \t\t\t Extract these linenumbers including signatures.\n"
 			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
 			"\t-T, --detect-file-type \t Show Type of signature file.\n"
 			"\t-c, --convert \t\t\t Convert Signature Format Version 10 to 11.\n"
@@ -1097,6 +1299,8 @@ rsgtutil_usage(void)
 			"\t-E <URL>, --extend-server <URL> \t Sets the extension server.\n"
 			"\t-u <USERID>, --userid <USERID> \t Sets the userid used (Needed for the extension server).\n"
 			"\t-k <USERKEY>, --userkey <USERKEY> \t Sets the userkey used (Needed for the extension server).\n"
+			"\t-o <FILENAME>, --output <FILENAME> \t Sets an output filename (EXTRACT Mode only).\n"
+			"\t-A, --append \t\t\t Append extracted output to file (EXTRACT Mode only).\n"
 			"\t-v, --verbose \t\t\t Verbose output.\n"
 			"\t-d, --debug \t\t\t Debug (developer) output.\n"
 			);
@@ -1109,7 +1313,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "aBcdDeEHkPstTuvV", long_options, NULL);
+		opt = getopt_long(argc, argv, "aABcdDeEHkoPstTuvVx", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -1197,6 +1401,16 @@ main(int argc, char *argv[])
 			break;
 		case 'c':
 			mode = MD_CONVERT;
+			break;
+		case 'x':
+			mode = MD_EXTRACT;
+			linenumbers = optarg;
+			break;
+		case 'o':
+			outputfile = optarg;
+			break;
+		case 'A':
+			append = 1;
 			break;
 		case 'h':
 		case '?':
