@@ -204,13 +204,6 @@ rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) \
 				 NULL,\
 				 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo)); 
 
-#define ENDObjClassInit(objName) \
-	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
-finalize_it: \
-	RETiRet; \
-}
-
-
 /* now come the class exit. This is to be called immediately before the class is 
  * unloaded (actual unload for plugins, program termination for core modules)
  * gerhards, 2008-03-10
