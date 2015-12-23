@@ -100,11 +100,19 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
 		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
@@ -114,6 +122,10 @@ case $1 in
 		# that) we don't can influence and where we cannot provide suppressions as
 		# they are platform-dependent. In that case, we can't test for leak checks
 		# (obviously), but we can check for access violations, what still is useful.
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
 		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
