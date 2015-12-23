@@ -2736,7 +2736,7 @@ textpri(const msg_t *const __restrict__ pMsg)
 		pRes[lenfac] = '.';
 		memcpy(pRes+lenfac+1, syslog_severity_names[pMsg->iSeverity], lensev+1 /* for \0! */);
 	}
-	return pRes;
+	return (uchar*)pRes;
 }
 
 
