@@ -86,7 +86,7 @@ This module supports module parameters, only.
    values from the regular statistic logs. This is the suggested method
    if deltas are not necessarily needed in real-time.
 
-.. function:: format\ json/cee/legacy
+.. function:: format\ json/json-elasticsearch/cee/legacy
 
    *Defaults to legacy*
 
@@ -95,6 +95,14 @@ This module supports module parameters, only.
    support for structured formats (note the "cee" is actually "project
    lumberack" logging).
 
+    
+   The json-elasticsearch format supports the broken ElasticSearch
+   JSON implementation.  ES 2.0 no longer supports valid JSON and
+   disallows dots inside names.  The "json-elasticsearch" format
+   option replaces those dots by the bang ("!") character. So
+   "discarded.full" becomes "discarded!full".
+   This option is available starting with 8.16.0.
+    
 .. function:: log.syslog\ on/off
 
    *Defaults to on*
