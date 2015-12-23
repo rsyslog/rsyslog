@@ -202,7 +202,7 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 
 /* get all the object's countes together as CEE. */
 static rsRetVal
-getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bResetCtrs)
+getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
@@ -210,7 +210,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 
 	CHKiRet(cstrConstruct(&pcstr));
 
-	if (cee_cookie == 1)
+	if (fmt == statsFmt_JSON)
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
 	
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
@@ -238,7 +238,22 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	pthread_mutex_lock(&pThis->mutCtr);
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStr(pcstr, pCtr->name);
+		if (fmt == statsFmt_JSON_ES) {
+			/* work-around for broken Elasticsearch JSON implementation:
+			 * we need to replace dots by a different char, we use bang.
+			 * Note: ES 2.0 does not longer accept dot in name
+			 */
+			uchar esbuf[256];
+			strncpy((char*)esbuf, (char*)pCtr->name, sizeof(esbuf)-1);
+			esbuf[sizeof(esbuf)-1] = '\0';
+			for(uchar *c = esbuf ; *c ; ++c) {
+				if(*c == '.')
+					*c = '!';
+			}
+			rsCStrAppendStr(pcstr, esbuf);
+		} else {
+			rsCStrAppendStr(pcstr, pCtr->name);
+		}
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 		cstrAppendChar(pcstr, ':');
 		switch(pCtr->ctrType) {
@@ -329,10 +344,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLine(o, &cstr, bResetCtrs));
 			break;
 		case statsFmt_CEE:
-			CHKiRet(getStatsLineCEE(o, &cstr, 1, bResetCtrs));
-			break;
 		case statsFmt_JSON:
-			CHKiRet(getStatsLineCEE(o, &cstr, 0, bResetCtrs));
+		case statsFmt_JSON_ES:
+			CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
 			break;
 		}
 		CHKiRet(cb(usrptr, cstr));

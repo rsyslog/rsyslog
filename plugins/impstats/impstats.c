@@ -341,6 +341,8 @@ CODESTARTsetModCnf
 			mode = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcasecmp(mode, "json")) {
 				loadModConf->statsFmt = statsFmt_JSON;
+			} else if(!strcasecmp(mode, "json-elasticsearch")) {
+				loadModConf->statsFmt = statsFmt_JSON_ES;
 			} else if(!strcasecmp(mode, "cee")) {
 				loadModConf->statsFmt = statsFmt_CEE;
 			} else if(!strcasecmp(mode, "legacy")) {
