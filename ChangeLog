@@ -1,5 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
+- impstats: support broken ElasticSearch JSON implementation
+  ES 2.0 no longer supports valid JSON and disallows dots inside names.
+  This adds a new "json-elasticsearch" format option which replaces
+  those dots by the bang ("!") character. So "discarded.full" becomes
+  "discarded!full".
+  This is a workaroud. A method that will provide more control over
+  replacements will be implemented some time in the future. For
+  details, see below-quoted issue tracker.
+  closes https://github.com/rsyslog/rsyslog/issues/713
 - bugfix: tarball did not include some testbench files
   Thanks to Thomas D. (whissi) for the patch.
 - bugfix: memory misadressing during config parsing string template
