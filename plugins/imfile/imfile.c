@@ -1612,7 +1612,7 @@ filesDisplay(void)
 {
 	lstn_t *pLstn;
 	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next)
-		DBGPRINTF("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
+		dbgprintf("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
@@ -1620,17 +1620,16 @@ filesDisplay(void)
  * with the same name may already be in processing.
  */
 static void
-in_removeFile(const struct inotify_event *const ev,
-	      const int dirIdx,
+in_removeFile(const int dirIdx,
 	      lstn_t *const __restrict__ pLstn)
 {
-filesDisplay(); // TODO: remove after initial unstable release(s)
+	if (Debug) filesDisplay(); // TODO: remove after initial unstable release(s)
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
 	uchar *statefn;
-	DBGPRINTF("imfile: remove listener '%s', wd %d\n",
-	          pLstn->pszFileName, ev->wd);
+	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
+	          pLstn->pszFileName, dirIdx);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
@@ -1696,7 +1695,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 	}
 	DBGPRINTF("DDDD: imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
-	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
+	in_removeFile(dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
 }
 
@@ -1732,7 +1731,6 @@ in_processEvent(struct inotify_event *ev)
 	wd_map_t *etry;
 	lstn_t *pLstn;
 	int iRet;
-	struct inotify_event evFileHelper;
 	int ftIdx;
 	int wd;
 
@@ -1758,14 +1756,7 @@ in_processEvent(struct inotify_event *ev)
 				} else {
 					DBGPRINTF("DDDD: imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
 				}
-
-				/* Create Event to remove file*/
-				evFileHelper.wd = wd;
-				evFileHelper.mask = IN_DELETE;
-				evFileHelper.cookie = 0;
-				evFileHelper.len = ev->len;
-				evFileHelper.name[0] = ev->name[0];
-				in_removeFile(&evFileHelper, etry->dirIdx, pLstn);
+				in_removeFile(etry->dirIdx, pLstn);
 				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
 			}
 		}
