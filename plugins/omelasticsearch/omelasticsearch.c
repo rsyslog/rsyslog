@@ -1216,7 +1216,7 @@ CODESTARTnewActInst
 		}else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
 			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n, NULL;
+			pData->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
