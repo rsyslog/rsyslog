@@ -898,20 +898,97 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 {
 	FILE *newlogfp = NULL; 
 	FILE *newsigfp = NULL; 
-	size_t lenLineRec;
-	char lineRec[128*1024];
-	char writeMode = 'w'; /* Default = Create new file! */
+	char* lineRec = NULL; 
+	size_t stlen = 0;
+	ssize_t ssread;
+	char writeMode[2] = "w"; /* Default = Create new file! */
 
+/* NEEDED LATER 
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
-	ksifile ksi;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
-	int r = 0;
+*/
+	ksifile ksi;
 	int bInitDone = 0;
 
+	int r = 0;
+	int iReturn = 1;
+
+	int iLineNumbers = 0;
+	int* paiLineNumbers = NULL; 
+
+	if (strlen(outputfile) <= 0 ) {
+		/* Create default outputfilename */
+		int iNameLength = strlen(name); 
+		outputfile = malloc( iNameLength + 5 );
+		memcpy(outputfile, name, iNameLength);
+		memcpy(outputfile+iNameLength, ".out", strlen(".out"));
+		*(outputfile+iNameLength+5) = '\0'; 
+		if (debug) fprintf(stderr, "debug: default Outputfile: '%s' \n", outputfile); 
+	}
 	if (append > 0 ) { /* User wants to append logfiledata */
-		writeMode = 'a'; 
+		writeMode[0] = 'a'; 
+	}
+
+	/* Count number of linenumbers */ 
+	if (strlen(linenumbers) > 0 ) {
+		/* Get count of line numbers */ 
+		char* pszTmp = linenumbers;
+		if (*(pszTmp) != ',')
+			iLineNumbers++; 
+
+		while(pszTmp != NULL) {
+			pszTmp = strchr(pszTmp, ',');
+
+			if( pszTmp != NULL) {
+				pszTmp++;
+				if ( *(pszTmp) == ',' ) {
+					/* Invalid number, double ,, - skip char */
+					pszTmp++;
+				} else {
+					iLineNumbers++;
+				}
+			}
+		}
+		if (debug) fprintf(stderr, "debug: found '%d' linenumbers\n", iLineNumbers);
+
+		/* Convert line numbers into int Array */
+		paiLineNumbers = malloc(iLineNumbers*sizeof(int));
+		int iNumPos = 0; 
+		int iNumLength = 0; 
+		char szTmpNum[11]; 
+		char* pszBegin = linenumbers;
+		char* pszEnd = linenumbers;
+		while(pszBegin != NULL) {
+			/* Cut number from string */
+			pszEnd = strchr(pszBegin, ',');
+			if (pszEnd != NULL )
+				iNumLength = (pszEnd-pszBegin);
+			else /* Rest of string is last number */
+				iNumLength = strlen(pszBegin);
+			
+			/* Check for valid linenumber */
+			if ( iNumLength <= 0 || iNumLength > 10 ) {
+				fprintf(stderr, "error invalid linenumbers\n");
+				r = RSGTE_IO;
+				goto done;
+			}
+			strncpy(szTmpNum, pszBegin, iNumLength);
+
+			/* Process next linenumber */ 
+			if (pszEnd != NULL ) { pszBegin = pszEnd+1; } else { pszBegin = NULL; }
+			/* if (debug) fprintf(stderr, "Adding linenumber: '%s' \n", szTmpNum); */
+
+			/* try to convert into INT now! */
+			paiLineNumbers[iNumPos] = atoi(szTmpNum); /* invalid numbers will become and ignored */
+			fprintf(stderr, "Adding Linenumber: '%d' \n", paiLineNumbers[iNumPos]); 
+			iNumPos++; 
+		}
+	} else {
+		fprintf(stderr, "error missing linenumbers to extract\n");
+		r = RSGTE_IO;
+		goto done;
 	}
 
 	/* Init KSI library */
@@ -937,74 +1014,124 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	}
 
 	/* Start extracting process */
+	printf("extracting lines(%d) %s from %s now ...\n", iLineNumbers, linenumbers, name); 
 
 	/* Easy part first, extract loglines and write into own file */
-	if((newlogfp = fopen(name, writeMode)) == NULL) {
-		perror(name);
+	if((newlogfp = fopen(outputfile, writeMode)) == NULL) {
+		perror(outputfile);
 		r = RSGTE_IO;
 		goto done;
+	} else {
+		if (debug)
+			fprintf(stderr, "debug: Outputfile %s opened with mode: '%s'\n", outputfile, writeMode); 
 	}
 
-	/* Readline from old logfile */
-	if(fgets(line, sizeof(line), logfp) == NULL) {
-		if(feof(logfp)) {
-			r = RSGTE_EOF;
-		} else {
-			perror("log file input");
-			r = RSGTE_IO;
-		}
-		goto done;
-	}
-	lenRec = strlen(line);
-	if(line[lenRec-1] == '\n') {
-		line[lenRec-1] = '\0';
-		--lenRec;
-		rsgt_errctxSetErrRec(ectx, line);
-	}	
+	/* TODO: Open new signature file for writting !*/
+	int iIndex = 0; 
+	int iLineSearch = 0; 
+	int iLineMax = 0; 
+	int iLineCurrent = 0; 
 	
-	// 
+	/* Find highest number */	
+	for(iIndex = 0; iIndex < iLineNumbers; iIndex++) {
+		if (paiLineNumbers[iIndex] > iLineMax)
+			iLineMax = paiLineNumbers[iIndex]; 
+	} 
 
-	printf("extracting lines %s from %s now ...\n", linenumbers, name); 
+	do
+	{
+		/* Get Next line number */
+		for(iIndex = 0; iIndex < iLineNumbers; iIndex++) {
+			if (paiLineNumbers[iIndex] > iLineSearch) {
+				iLineSearch = paiLineNumbers[iIndex]; 
+				break; 
+			}
+		}
+		if (debug) fprintf(stderr, "debug: Extracting line number '%d'\n", iLineSearch); 
+	
+		do
+		{
+			/* Free memory first*/
+			if (lineRec != NULL) {
+				free(lineRec);
+				lineRec = NULL; 
+			}
 
+			ssread = getline(&lineRec, &stlen, logfp); 
+			if (ssread != -1) {
+				iLineCurrent++; /* Increment Current Line */
+			} else {
+				/* END of file reached */
+				if (debug) fprintf(stderr, "debug: End of file reached.\n"); 
+				break; 
+			}
+		} while (iLineCurrent < iLineSearch); 
+		
+		/* extract line if correct one */
+		if (iLineCurrent == iLineSearch) {
+			if (debug) fprintf(stderr, "debug: Extracted line '%d': %s", iLineSearch, lineRec); 
+			if(fwrite(lineRec, ssread, 1, newlogfp) != 1) {
+				free(lineRec);
+				fprintf(stderr, "error '%d' while writing into output logfile %s\n", ferror(newlogfp), outputfile);
+				r = RSGTE_IO;
+				goto done;
+			} 
+		}
+	} while (iLineMax > iLineSearch); 
+
+	/* Free mem */
+	if (lineRec != NULL)
+		free(lineRec);
 
 
 	goto done; 
 done:
-	if(r != RSGTE_EOF)
-		goto err;
+	/* Free mem first */ 
+	if (paiLineNumbers != NULL)
+		free(paiLineNumbers); 
+
+	if(r != RSGTE_EOF) {
+		goto done2;
+	}
 
 	/* Make sure we've reached the end of file in both log and signature file */
 	if (fgetc(logfp) != EOF) {
 		fprintf(stderr, "There are unsigned records in the end of log.\n");
 		fprintf(stderr, "Last signed record: %s\n", ectx.errRec);
 		r = RSGTE_END_OF_SIG;
-		goto err;
+		goto done2;
 	}
 	if (fgetc(sigfp) != EOF) {
 		fprintf(stderr, "There are records missing from the end of the log file.\n");
 		r = RSGTE_END_OF_LOG;
-		goto err;
+		goto done2;
 	}
-	/* Close file handles */
-	fclose(logfp); logfp = NULL;
-	fclose(sigfp); sigfp = NULL;
 
-	if(bInitDone)
-		rsksi_errctxExit(&ectx);
-	return 1;
-err:
-	if(r != 0)
-		sprintf(errbuf, "error %d (%s) processing file %s\n",
-			r, RSKSIE2String(r), name);
-	else
+done2: 
+	if(r != 0) {
+		sprintf(errbuf, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+		iReturn = 0; 
+	} else
 		errbuf[0] = '\0';
-	if(logfp != NULL)
-		fclose(logfp);
-	if(sigfp != NULL)
-		fclose(sigfp);
+
+	/* Close file handles */
+	if(logfp != NULL) {
+		fclose(logfp); 
+	}
+	if(sigfp != NULL) {
+		fclose(sigfp); 
+	}
+	if(newlogfp != NULL) {
+		fclose(newlogfp); 
+	}
+	if(newsigfp != NULL) {
+		fclose(newsigfp); 
+	}
+	
+	/* Deinit KSI stuff */
 	if(bInitDone)
 		rsksi_errctxExit(&ectx);
-	return 0; 
+	return iReturn;
 }
 #endif
 
@@ -1152,7 +1279,7 @@ extract(char *name, char *errbuf)
 extractGT:
 #ifdef ENABLEGT
 	iSuccess = 0; 
-	sprintf(errbuf, "ERROR, extract loglines from old signature files is NOT supported.\n", name); 
+	sprintf(errbuf, "ERROR, extract loglines from old signature files is NOT supported.\n"); 
 #endif
 	goto done; 
 
