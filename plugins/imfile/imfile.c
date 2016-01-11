@@ -1798,6 +1798,10 @@ do_inotify()
 	CHKiRet(wdmapInit());
 	CHKiRet(dirsInit());
 	ino_fd = inotify_init();
+        if(ino_fd < 0) { /* If inotify instance has been inited successfully, ino_fd should not be a negative */
+            errmsg.LogError(0, RS_RET_NO_ERRCODE, "imfile: Init inotify instance failed ");
+            return RS_RET_NO_ERRCODE;
+        }
 	DBGPRINTF("imfile: inotify fd %d\n", ino_fd);
 	in_setupInitialWatches();
 
