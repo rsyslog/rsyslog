@@ -32,7 +32,7 @@ typedef struct datetime_s {
 
 /* interfaces */
 BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
-	void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds);
+	void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds, const int inUTC);
 	rsRetVal (*ParseTIMESTAMP3339)(struct syslogTime *pTime, uchar** ppszTS, int*);
 	rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, uchar** pszTS, int*, const int bParseTZ, const int bDetectYearAfterTime);
 	int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst);
@@ -42,13 +42,13 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	int (*formatTimestampSecFrac)(struct syslogTime *ts, char* pBuf);
 	/* v3, 2009-11-12 */
 	time_t (*GetTime)(time_t *ttSeconds);
-	/* v6, 2011-06-20 */
-	void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t);
+	/* v6, 2011-06-20 , v10, 2016-01-12*/
+	void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t, const int inUTC);
 	/* v7, 2012-03-29 */
 	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
 	time_t (*syslogTime2time_t)(struct syslogTime *ts);
 ENDinterface(datetime)
-#define datetimeCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+#define datetimeCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 /* interface changes:
  * 1 - initial version
  * 2 - not compatible to 1 - bugfix required ParseTIMESTAMP3164 to accept char ** as
@@ -60,6 +60,8 @@ ENDinterface(datetime)
  * 6 - see above
  * 8 - ParseTIMESTAMP3164 has addtl parameter to permit TZ string parsing
  * 9 - ParseTIMESTAMP3164 has addtl parameter to permit year parsing
+ * 10 - functions having addtl paramater inUTC to emit time in UTC:
+ *      timeval2syslogTime, getCurrtime
  */
 
 #define PARSE3164_TZSTRING 1
@@ -67,6 +69,12 @@ ENDinterface(datetime)
 
 #define PERMIT_YEAR_AFTER_TIME 1
 #define NO_PERMIT_YEAR_AFTER_TIME 0
+
+/* two defines for functions that create timestamps either in local
+ * time or UTC.
+ */
+#define TIME_IN_UTC 1
+#define TIME_IN_LOCALTIME 0
 
 /* prototypes */
 PROTOTYPEObj(datetime);

@@ -852,7 +852,7 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	 * especially as I think there is no codepath currently where it would not be
 	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
 	 */
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime), TIME_IN_LOCALTIME);
 	memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
 
 finalize_it:
@@ -2759,12 +2759,12 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 	}
 
 	if(t == NULL) { /* can happen if called via script engine */
-		datetime.getCurrTime(&tt, NULL);
+		datetime.getCurrTime(&tt, NULL, TIME_IN_LOCALTIME);
 		t = &tt;
 	}
 
 	if(t->year == 0) { /* not yet set! */
-		datetime.getCurrTime(t, NULL);
+		datetime.getCurrTime(t, NULL, TIME_IN_LOCALTIME);
 	}
 
 	switch(eNow) {

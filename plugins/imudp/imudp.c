@@ -509,7 +509,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 		}
 
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
-			datetime.getCurrTime(&stTime, &ttGenTime);
+			datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 		}
 
 		pWrkr->ctrMsgsRcvd += nelem;

@@ -137,7 +137,7 @@ enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, str
 	if(tp == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
-		datetime.timeval2syslogTime(tp, &st);
+		datetime.timeval2syslogTime(tp, &st, TIME_IN_LOCALTIME);
 		CHKiRet(msgConstructWithTime(&pMsg, &st, tp->tv_sec));
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);

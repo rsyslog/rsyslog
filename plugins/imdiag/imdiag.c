@@ -210,7 +210,7 @@ doInjectMsg(int iNum, ratelimit_t *ratelimiter)
 	snprintf((char*)szMsg, sizeof(szMsg),
 		 "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
 
-	datetime.getCurrTime(&stTime, &ttGenTime);
+	datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*) szMsg, ustrlen(szMsg));

@@ -315,7 +315,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		DBGPRINTF("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		datetime.getCurrTime(&stTime, &ttGenTime);
+		datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 		defaultDoSubmitMessage(pThis, &stTime, ttGenTime, NULL);
 	}
 
@@ -476,7 +476,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	assert(pData != NULL);
 	assert(iLen > 0);
 
-	datetime.getCurrTime(&stTime, &ttGenTime);
+	datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 	multiSub.ppMsgs = pMsgs;
 	multiSub.maxElem = NUM_MULTISUB;
 	multiSub.nElem = 0;
