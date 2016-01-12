@@ -715,7 +715,7 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 		if (*cache == NULL) {
 			*cache = calloc(sizeof(regex_t), 1);
-			regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
+			regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
 		}
 		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
 		if(ret != 0)
@@ -888,9 +888,9 @@ rsCStrConvertToBool(cstr_t *pStr, number_t *pBool)
 	}
 
 	/* TODO: maybe we can do better than strcasecmp ;) -- overhead! */
-	if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "true")) {
+	if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "true")) {
 		*pBool = 1;
-	} else if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "yes")) {
+	} else if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "yes")) {
 		*pBool = 1;
 	} else {
 		*pBool = 0;

@@ -703,7 +703,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
-		dbgprintf("DDDDD: readLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
+		dbgprintf("readLine: have previous line segment: '%s'\n",
+			rsCStrGetSzStrNoNULL(pThis->prevLineSegment));
 		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
 		cstrDestruct(&pThis->prevLineSegment);
 	}
@@ -791,10 +792,9 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 	}
 
 finalize_it:
-dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCStrGetSzStr(*ppCStr), *ppCStr);
         if(iRet != RS_RET_OK && *ppCStr != NULL) {
-		if(cstrLen(*ppCStr) > 0) { /* we may have an empty string in an unsuccsfull poll or after restart! */
-			dbgprintf("DDDDD: readLine saves segment '%s'\n", rsCStrGetSzStr(*ppCStr));
+		if(cstrLen(*ppCStr) > 0) {
+		/* we may have an empty string in an unsuccsfull poll or after restart! */
 			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
 		}
                 cstrDestruct(ppCStr);

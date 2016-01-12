@@ -1158,7 +1158,7 @@ finalize_it:
 		/* DEV DEBUG ONLY dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);*/
 		/*EMPTY BY INTENSION*/;
 	} else {
-		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
+		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStrNoNULL(pstrOID), iRet);
 	}
 
 	RETiRet;
