@@ -100,6 +100,7 @@ struct syslogTime {
 	char OffsetMode;	/* UTC offset + or - */
 	short year;
 	int secfrac;	/* fractional seconds (must be 32 bit!) */
+	intTiny inUTC;	/* forced UTC? */
 };
 typedef struct syslogTime syslogTime_t;
 

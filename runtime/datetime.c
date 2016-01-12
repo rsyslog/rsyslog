@@ -135,6 +135,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	t->OffsetHour = lBias / 3600;
 	t->OffsetMinute = (lBias % 3600) / 60;
 	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+	t->inUTC = inUTC;
 }
 
 /**
