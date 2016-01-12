@@ -41,7 +41,6 @@
 #include "regexp.h"
 #include "obj.h"
 
-uchar*  rsCStrGetSzStr(cstr_t *pThis);
 
 /* ################################################################# *
  * private members                                                   *
@@ -378,38 +377,18 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 	return RS_RET_OK;
 }
 
-/* Converts the CStr object to a classical sz string and returns that.
- * Same restrictions as in rsCStrGetSzStr() applies (see there!). This
- * function here guarantees that a valid string is returned, even if
- * the CStr object currently holds a NULL pointer string buffer. If so,
- * "" is returned.
- * rgerhards 2005-10-19
- * WARNING: The returned pointer MUST NOT be freed, as it may be
- *          obtained from that constant memory pool (in case of NULL!)
- */
-uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	if(pThis->pBuf == NULL)
-		return (uchar*) "";
-	else
-		return rsCStrGetSzStr(pThis);
-}
-
-
 /* Converts the CStr object to a classical zero-terminated C string
  * and returns that string. The caller must not free it and must not
  * destroy the CStr object as long as the ascii string is used.
- * This function may return NULL, if the string is currently NULL. This
- * is a feature, not a bug. If you need non-NULL in any case, use
- * rsCStrGetSzStrNoNULL() instead.
- * rgerhards, 2005-09-15
  */
-uchar*  rsCStrGetSzStr(cstr_t *pThis)
+uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 {
 	size_t i;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->pBuf == NULL)
+		return (uchar*) "";
 
 	if(pThis->pBuf != NULL)
 		if(pThis->pszBuf == NULL) {
@@ -715,7 +694,7 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 		if (*cache == NULL) {
 			*cache = calloc(sizeof(regex_t), 1);
-			regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
+			regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
 		}
 		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
 		if(ret != 0)
@@ -888,9 +867,9 @@ rsCStrConvertToBool(cstr_t *pStr, number_t *pBool)
 	}
 
 	/* TODO: maybe we can do better than strcasecmp ;) -- overhead! */
-	if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "true")) {
+	if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "true")) {
 		*pBool = 1;
-	} else if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "yes")) {
+	} else if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "yes")) {
 		*pBool = 1;
 	} else {
 		*pBool = 0;
