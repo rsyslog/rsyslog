@@ -188,7 +188,6 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
 rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
-uchar* __attribute__((deprecated)) rsCStrGetSzStr(cstr_t *pThis);
 uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis);
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
 int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2);
