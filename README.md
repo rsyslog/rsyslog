@@ -63,7 +63,7 @@ Ubuntu
 Note: this list is (obviously) incomplete. We intend to complete it as we 
 have more information and install additional systems.
 
-sudo apt-get install libdbi-dev libmysqlclient-dev postgresql-client
+sudo apt-get install libdbi-dev libmysqlclient-dev postgresql-client libpq-dev  libnet-dev   librdkafka-dev   libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev
 
 for KSI, from the Adiscon PPA:
 sudo apt-get install libksi0 libksi-devel
