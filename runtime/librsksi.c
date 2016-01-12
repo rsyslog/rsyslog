@@ -164,7 +164,10 @@ rsksifileConstruct(rsksictx ctx)
 	ksi->blockSizeLimit = ctx->blockSizeLimit;
 	ksi->bKeepRecordHashes = ctx->bKeepRecordHashes;
 	ksi->bKeepTreeHashes = ctx->bKeepTreeHashes;
+	ksi->x_roothash = NULL;
 	ksi->x_prev = NULL;
+	ksi->x_prevleft = NULL;
+	ksi->x_prevright = NULL;
 
 done:	return ksi;
 }
@@ -395,7 +398,7 @@ tlvWriteBlockSigKSI(ksifile ksi, uchar *der, uint16_t lenDer)
 	r = tlvbufAddInt64(ksi, ksi->nRecords);
 	if(r != 0) goto done;
 	/* Open-KSI signature */
-	r = tlv16WriteKSI(ksi, 0x00, 0x905, lenDer);
+	r = tlv16WriteKSI(ksi, 0x00, 0x0905, lenDer);
 	if(r != 0) goto done;
 	r = tlvbufAddOctetString(ksi, der, lenDer);
 done:	return r;

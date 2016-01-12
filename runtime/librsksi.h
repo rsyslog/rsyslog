@@ -61,7 +61,10 @@ struct ksifile_s {
 	uint8_t disabled; /* permits to disable this file --> set to 1 */
 	uint64_t blockSizeLimit;
 	uint8_t *IV; /* initial value for blinding masks */
-	imprint_t *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
+	imprint_t *x_roothash;	/* last stored root hash						--> preserve on term */
+	imprint_t *x_prev;		/* last leaf hash (maybe of previous block)		--> preserve on term */
+	imprint_t *x_prevleft;	/* last left hash (maybe of previous block)		--> preserve on term */
+	imprint_t *x_prevright; /* last right hash (maybe of previous block)	--> preserve on term */
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
@@ -119,6 +122,7 @@ struct rsksistatefile {
 };
 
 /* error states */
+#define RSGTE_SUCCESS 0 /* Success state */
 #define RSGTE_IO 1 	/* any kind of io error */
 #define RSGTE_FMT 2	/* data fromat error */
 #define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
@@ -142,6 +146,7 @@ struct rsksistatefile {
 #define RSGTE_HASH_CREATE 20 /* error creating a hash */
 #define RSGTE_END_OF_SIG 21 /* unexpected end of signature - more log line exist */
 #define RSGTE_END_OF_LOG 22 /* unexpected end of log file - more signatures exist */
+#define RSGTE_EXTRACT_HASH 23 /* error extracting hashes for record */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
@@ -198,6 +203,8 @@ RSKSIE2String(int err)
 		return "unexpected end of signature";
 	case RSGTE_END_OF_LOG:
 		return "unexpected end of log";
+	case RSGTE_EXTRACT_HASH:
+		return "either record-hash, left-hash or right-hash was empty";
 	default:
 		return "unknown error";
 	}
@@ -363,12 +370,14 @@ int rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
-int rsksi_chkFileHdr(FILE *fp, char *expect);
+int rsksi_getBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsksi_getExcerptBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh); 
+int rsksi_chkFileHdr(FILE *fp, char *expect, uint8_t verbose);
 ksifile rsksi_vrfyConstruct_gf(void);
 void rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
-int verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp);
+int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx, int storehashchain);
+int rsksi_vrfy_nextHashChain(block_sig_t *bs, ksifile ksi, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
+int verifyBLOCK_HDRKSI(ksifile ksi, FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec);
 int verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, ksierrctx_t *ectx);
 void rsksi_errctxInit(ksierrctx_t *ectx);
 void rsksi_errctxExit(ksierrctx_t *ectx);
@@ -377,6 +386,16 @@ void rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
 void rsksi_set_debug(int iDebug); 
 int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
+	int rsksi_StartHashChain(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, int iRightLinkRecords, int verbose); 
+	int rsksi_AddRightToHashChain(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, uint64_t uiLevelCorrectionValue, int verbose); 
+	int rsksi_ExtractBlockSignature(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, ksierrctx_t *ectx, int verbose); 
+	int rsksi_tlvwrite(FILE *fp, tlvrecord_t *rec); 
+	int rsksi_tlvRecDecode(tlvrecord_t *rec, void *obj); 
+	int rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint); 
+	int rsksi_tlvDecodeHASHCHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain); 
+
+	void outputHash(FILE *fp, const char *hdr, const uint8_t *data, const uint16_t len, const uint8_t verbose); 
+	void outputKSIHash(FILE *fp, char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose); 
 
 /* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);

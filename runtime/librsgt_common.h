@@ -36,6 +36,8 @@ typedef struct imprint_s imprint_t;
 typedef struct block_hdr_s block_hdr_t;
 typedef struct block_sig_s block_sig_t;
 typedef struct tlvrecord_s tlvrecord_t;
+typedef struct block_hashchain_s block_hashchain_t;
+typedef struct block_hashstep_s block_hashstep_t;
 
 struct tlvrecord_s {
 	uint16_t tlvtype;
@@ -68,6 +70,18 @@ struct block_sig_s {
 		} der;
 	} sig;
 };
+
+struct block_hashstep_s {
+	uint8_t level_corr;
+	imprint_t sib_hash;
+};
+
+struct block_hashchain_s {
+ 	imprint_t rec_hash;
+ 	block_hashstep_t left_link;
+ 	block_hashstep_t right_link;
+};
+
 
 static inline char *
 sigTypeName(uint8_t sigID)
