@@ -330,14 +330,14 @@ MotifyMessage(instanceData *pData)
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *buf;
         instanceData *pData;
 	
 CODESTARTdoAction
         pData = pWrkrData->pData;
-	pMsg = (msg_t*) ppString[0];
 	buf = getMSG(pMsg);
         pData->pmsg = pMsg;
 	while(*buf && isspace(*buf)) {

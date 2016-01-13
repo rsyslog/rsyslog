@@ -285,12 +285,12 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 	}
 }
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
 	if(pWrkrData->pData->mode == MODE_CC) {
