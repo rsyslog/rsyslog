@@ -597,8 +597,7 @@ doZipFinish(wrkrInstanceData_t *pWrkrData)
 	if(!pWrkrData->bzInitDone)
 		goto done;
 
-// TODO: can we get this into a single common function?
-dbgprintf("DDDD: in doZipFinish()\n");
+	// TODO: can we get this into a single common function?
 	pWrkrData->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
@@ -782,14 +781,14 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	dbgprintf("DDDD: tryResume: pWrkrData %p\n", pWrkrData);
+	dbgprintf("omfwd: tryResume: pWrkrData %p\n", pWrkrData);
 	iRet = doTryResume(pWrkrData);
 ENDtryResume
 
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omfwd: beginTransaction\n");
+	dbgprintf("omfwd: beginTransaction\n");
 	iRet = doTryResume(pWrkrData);
 ENDbeginTransaction
 
@@ -881,7 +880,6 @@ CODESTARTcommitTransaction
 			FINALIZE;
 	}
 
-dbgprintf("omfwd: endTransaction, offsSndBuf %u, iRet %d\n", pWrkrData->offsSndBuf, iRet);
 	if(pWrkrData->offsSndBuf != 0) {
 		iRet = TCPSendBuf(pWrkrData, pWrkrData->sndBuf, pWrkrData->offsSndBuf, IS_FLUSH);
 		pWrkrData->offsSndBuf = 0;

@@ -366,7 +366,6 @@ CODESTARTnewActInst
 			OMSR_RQD_TPL_OPT_SQL));
 	}
 CODE_STD_FINALIZERnewActInst
-dbgprintf("XXXX: added param, iRet %d\n", iRet);
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 

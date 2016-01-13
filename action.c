@@ -63,7 +63,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -791,7 +791,6 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 				(pThis->wrkrDataTableSize + 1) * sizeof(void*));
 			pThis->wrkrDataTableSize++;
 		}
-dbgprintf("DDDD: writing data to table spot %d\n", freeSpot);
 		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
 		pThis->nWrkr++;
 		pthread_mutex_unlock(&pThis->mutWrkrDataTable);

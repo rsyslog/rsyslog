@@ -310,7 +310,6 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 	iRet = writePgSQL((uchar*) "commit;", pWrkrData->pData); /* TODO: make user-configurable */
-dbgprintf("ompgsql: endTransaction\n");
 ENDendTransaction
 #endif
 

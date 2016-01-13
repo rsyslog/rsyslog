@@ -16,7 +16,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2014 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -445,7 +445,7 @@ finalize_it:
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omrelp: beginTransaction\n");
+	DBGPRINTF("omrelp: beginTransaction\n");
 	if(!pWrkrData->bIsConnected) {
 		CHKiRet(doConnect(pWrkrData));
 	}

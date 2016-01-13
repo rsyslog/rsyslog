@@ -83,11 +83,9 @@ CODESTARTparse
 		--lenMsg;
 		++p2parse;
 	}
-dbgprintf("pmaixforwardedfrom: msg to look at: [%d]'%s'\n", lenMsg, p2parse);
 	if((unsigned) lenMsg < 42) {
 		/* too short, can not be "our" message */
                 /* minimum message, 16 character timestamp, 'Message forwarded from ", 1 character name, ': '*/
-dbgprintf("msg too short!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
@@ -97,7 +95,7 @@ dbgprintf("msg too short!\n");
         /* if there is the string "Message forwarded from " were the hostname should be */
 	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
 		/* wrong opening text */
-dbgprintf("not a AIX message forwarded from mangled log!\n");
+	DBGPRINTF("not a AIX message forwarded from mangled log!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by 23 characters to overwrite the "Message forwarded from " with the hostname */
@@ -113,7 +111,7 @@ dbgprintf("not a AIX message forwarded from mangled log!\n");
 		++p2parse;
 	}
 	if (lenMsg && *p2parse != ':') {
-dbgprintf("not a AIX message forwarded from mangled log but similar enough that the preamble has been removed\n");
+	DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has been removed\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by one character to overwrite the extra : */

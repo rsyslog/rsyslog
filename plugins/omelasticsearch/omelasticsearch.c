@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -155,7 +155,6 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-dbgprintf("omelasticsearch: createWrkrInstance\n");
 	pWrkrData->restURL = NULL;
 	if(pData->bulkmode) {
 		pWrkrData->batch.currTpl1 = NULL;
@@ -168,7 +167,6 @@ dbgprintf("omelasticsearch: createWrkrInstance\n");
 	}
 	CHKiRet(curlSetup(pWrkrData, pWrkrData->pData));
 finalize_it:
-dbgprintf("DDDD: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -1074,7 +1072,6 @@ finalize_it:
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omelasticsearch: beginTransaction, pWrkrData %p, pData %p\n", pWrkrData, pWrkrData->pData);
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
@@ -1095,14 +1092,12 @@ CODESTARTdoAction
 		                 ppString, 1));
 	}
 finalize_it:
-dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pWrkrData->pData->bulkmode);
 ENDdoAction
 
 
 BEGINendTransaction
 	char *cstr = NULL;
 CODESTARTendTransaction
-dbgprintf("omelasticsearch: endTransaction init\n");
 	/* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.data != NULL ) {
 		cstr = es_str2cstr(pWrkrData->batch.data, NULL);
@@ -1113,7 +1108,6 @@ dbgprintf("omelasticsearch: endTransaction init\n");
 		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
 finalize_it:
 	free(cstr);
-dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
