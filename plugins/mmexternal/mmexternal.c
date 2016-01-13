@@ -586,7 +586,7 @@ CODESTARTnewActInst
 			if (estrParams != NULL) {
 				if(Debug) {
 					char *params = es_str2cstr(estrParams, NULL);
-					dbgprintf("mmexternal: szParams = '%s'\n", params, NULL);
+					DBGPRINTF("mmexternal: szParams = '%s'\n", params);
 					free(params);
 				}
 				
