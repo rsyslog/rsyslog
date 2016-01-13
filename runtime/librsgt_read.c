@@ -63,13 +63,6 @@ uint8_t rsgt_read_showVerified = 0;
 			goto done; \
 		}
 
-static void
-errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
-{
-	if (rsgt_read_debug)
-		printf("Internal Error: %s \n", emsg);
-}
-
 /* if verbose==0, only the first and last two octets are shown,
  * otherwise everything.
  */
@@ -232,7 +225,7 @@ static inline int rsgt_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 	int r = 0;
 	if ( fputc(octet, newsigfp) == EOF ) 
 		r = RSGTE_IO; 
-done:	return r;
+	return r;
 }
 static inline int rsgt_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
 {
@@ -1095,7 +1088,7 @@ done:
 }
 
 int
-rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp,
+rsgt_vrfy_nextRec(gtfile gf, FILE *sigfp, FILE *nsigfp,
 	          unsigned char *rec, size_t len, gterrctx_t *ectx)
 {
 	int r = 0;
@@ -1357,7 +1350,7 @@ void rsgt_set_debug(int iDebug)
 }
 
 /* Helper function to convert an old V10 signature file into V11 */
-int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
+int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 {
 	int r = 0, rRead = 0;
 	imprint_t *imp = NULL;

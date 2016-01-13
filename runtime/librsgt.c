@@ -17,7 +17,7 @@
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -649,7 +649,7 @@ bufAddIV(gtfile gf, uchar *buf, size_t *len)
 
 /* concat: add imprint to buffer */
 static inline void
-bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
+bufAddImprint(uchar *buf, size_t *len, imprint_t *imp)
 {
 	buf[*len] = imp->hashID;
 	++(*len);
@@ -683,7 +683,7 @@ hash_m(gtfile gf, GTDataHash **m)
 	size_t len = 0;
 	int r = 0;
 
-	bufAddImprint(gf, concatBuf, &len, gf->x_prev);
+	bufAddImprint(concatBuf, &len, gf->x_prev);
 	bufAddIV(gf, concatBuf, &len);
 	rgt = GTDataHash_create(gf->hashAlg, concatBuf, len, m);
 	if(rgt != GT_OK) {
