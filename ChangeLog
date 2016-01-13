@@ -35,6 +35,7 @@ Version 8.16.0 [v8-stable] 2016-01-26
   This occurred if an (invalid) template option larger than 63 characters
   was given.
   Thanks to git hub user c6226 for the patch.
+- some code improvement and cleanup
 ------------------------------------------------------------------------------
 Version 8.15.0 [v8-stable] 2015-12-15
 - KSI Lib: Updated code to run with libksi 3.4.0.5 
