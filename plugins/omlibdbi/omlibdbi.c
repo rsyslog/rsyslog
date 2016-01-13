@@ -51,7 +51,7 @@
 #include "conf.h"
 
 #undef HAVE_DBI_TXSUPP
-#warning transaction support disabled in v8 -- TODO: reenable
+/* transaction support disabled in v8 -- TODO: reenable */
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -617,7 +617,6 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 #	ifndef HAVE_DBI_TXSUPP
 	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
-#	warning libdbi too old - transactions are not enabled (use 0.9 or later)
 #	endif
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));

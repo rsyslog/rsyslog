@@ -247,7 +247,8 @@ static void moduleDestruct(modInfo_t *pThis)
 	free(pThis->cnfName);
 	if(pThis->pModHdlr != NULL) {
 #	ifdef	VALGRIND
-#		warning "dlclose disabled for valgrind"
+		DBGPRINTF("moduleDestruct: compiled with valgrind, do "
+			"not unload module\n");
 #	else
 		if (pThis->eKeepType == eMOD_NOKEEP) {
 			dlclose(pThis->pModHdlr);

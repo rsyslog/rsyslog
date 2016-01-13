@@ -49,7 +49,6 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("ompgsql")
 
 /* internal structures
  */
@@ -404,7 +403,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 
-#	warning: transaction support missing for v8
+	/* TODO: transaction support missing for v8 */
 	bCoreSupportsBatching= 0;
 	DBGPRINTF("ompgsql: transactions are not yet supported on v8\n");
 

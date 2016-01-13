@@ -171,7 +171,7 @@ convertFile(char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsgt_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsgt_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
 			goto err;
 		else {
 			/* Close FILES */
@@ -348,7 +348,7 @@ convertFileKSI(char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsksi_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsksi_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
 			goto err;
 		else {
 			/* Close FILES */
@@ -445,7 +445,7 @@ err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), n
 
 static inline int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
-	    block_sig_t *bs, gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
+	    gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
@@ -473,7 +473,7 @@ doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	if(bInBlock == 0)
 		rsgt_errctxFrstRecInBlk(ectx, line);
 
-	r = rsgt_vrfy_nextRec(bs, gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
+	r = rsgt_vrfy_nextRec(gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
 	return r;
 }
@@ -552,7 +552,7 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
-		if((r = doVerifyRec(logfp, sigfp, nsigfp, bs, gf, &ectx, bInBlock)) != 0)
+		if((r = doVerifyRec(logfp, sigfp, nsigfp, gf, &ectx, bInBlock)) != 0)
 			goto done;
 		if(ectx.recNum == bs->recCount) {
 			if((r = verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 

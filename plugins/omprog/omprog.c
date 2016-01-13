@@ -595,24 +595,23 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "hup.signal")) {
-			const char *const signal = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(!strcmp(signal, "HUP"))
+			const char *const sig = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(!strcmp(sig, "HUP"))
 				pData->iHUPForward = SIGHUP;
-			else if(!strcmp(signal, "USR1"))
+			else if(!strcmp(sig, "USR1"))
 				pData->iHUPForward = SIGUSR1;
-			else if(!strcmp(signal, "USR2"))
+			else if(!strcmp(sig, "USR2"))
 				pData->iHUPForward = SIGUSR2;
-			else if(!strcmp(signal, "INT"))
+			else if(!strcmp(sig, "INT"))
 				pData->iHUPForward = SIGINT;
-			else if(!strcmp(signal, "TERM"))
+			else if(!strcmp(sig, "TERM"))
 				pData->iHUPForward = SIGTERM;
 			else {
 				errmsg.LogError(0, RS_RET_CONF_PARAM_INVLD,
-					"omprog: hup.signal '%s' in hup.signal parameter",
-					signal);
+					"omprog: hup.signal '%s' in hup.signal parameter", sig);
 				ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
 			}
-			free((void*)signal);
+			free((void*)sig);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {

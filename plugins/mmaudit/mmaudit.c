@@ -14,7 +14,7 @@
  *
  * File begun on 2012-02-23 by RGerhards
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -54,7 +54,6 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("mmaudit")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 

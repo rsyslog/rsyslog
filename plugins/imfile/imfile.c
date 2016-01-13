@@ -849,7 +849,10 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	CHKiRet(lstnAdd(&pThis));
 	pThis->pszDirName = existing->pszDirName; /* read-only */
 	pThis->pszBaseName = (uchar*)strdup((char*)newname);
-	asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname);
+	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
+		DBGPRINTF("imfile/lstnDup: asprintf failed, malfunction can happen\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
