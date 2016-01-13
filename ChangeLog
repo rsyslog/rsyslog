@@ -1,5 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
+- clean up doAction output module interface
+  We started with char * pointers, but used different types of pointers
+  over time. This lead to alignment warnings. In practice, I think this
+  should never cause any problems (at least there have been no reports
+  in the 7 or so years we do this), but it is not clean. The interface is
+  now cleaned up. We do this in a way that does not require modifications
+  to modules that just use string parameters. For those with message
+  parameters, have a look at e.g. mmutf8fix to see how easy the
+  required change is.
 - impstats: support broken ElasticSearch JSON implementation
   ES 2.0 no longer supports valid JSON and disallows dots inside names.
   This adds a new "json-elasticsearch" format option which replaces
