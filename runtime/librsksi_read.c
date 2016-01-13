@@ -1399,7 +1399,7 @@ void rsksi_set_debug(int iDebug)
 }
 
 /* Helper function to convert an old V10 signature file into V11 */
-int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
+int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 {
 	int r = 0, rRead = 0;
 	imprint_t *imp = NULL;

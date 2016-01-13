@@ -376,7 +376,7 @@ void rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec);
 void rsksi_errctxFrstRecInBlk(ksierrctx_t *ectx, char *rec);
 void rsksi_objfree(uint16_t tlvtype, void *obj);
 void rsksi_set_debug(int iDebug); 
-int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
+int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose);
 
 /* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
