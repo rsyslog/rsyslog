@@ -1610,13 +1610,6 @@ in_dbg_showEv(struct inotify_event *ev)
 	 }
 }
 
-static void
-filesDisplay(void)
-{
-	lstn_t *pLstn;
-	for(pLstn = runModConf->pRootLstn ; pLstn != NULL ; pLstn = pLstn->next)
-		DBGPRINTF("DDDD: imfile: files: [%p]: '%s'\n", pLstn, pLstn->pszFileName);
-}
 
 /* inotify told us that a file's wd was closed. We now need to remove
  * the file from our internal structures. Remember that a different inode
@@ -1627,7 +1620,6 @@ in_removeFile(const struct inotify_event *const ev,
 	      const int dirIdx,
 	      lstn_t *const __restrict__ pLstn)
 {
-filesDisplay(); // TODO: remove after initial unstable release(s)
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
