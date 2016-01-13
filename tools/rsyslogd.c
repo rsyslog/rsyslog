@@ -961,13 +961,13 @@ hdlr_sigttin()
 }
 
 static void
-hdlr_enable(int signal, void (*hdlr)())
+hdlr_enable(int sig, void (*hdlr)())
 {
 	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = hdlr;
-	sigaction(signal, &sigAct, NULL);
+	sigaction(sig, &sigAct, NULL);
 }
 
 static void
