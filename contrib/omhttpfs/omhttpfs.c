@@ -43,11 +43,8 @@
 #include "statsobj.h"
 #include "unicode-helper.h"
 
-// output module
 MODULE_TYPE_OUTPUT
-// do not need to be kept dynamically linked
 MODULE_TYPE_NOKEEP
-// module name
 MODULE_CNFNAME("omhttpfs")
 
 /* internal structures
@@ -133,9 +130,7 @@ static struct cnfparamdescr actpdescr[] = {
     { "host", eCmdHdlrGetWord, 0 },
     { "port", eCmdHdlrInt, 0 },
     { "user", eCmdHdlrGetWord, 0 },
-    //{ "ip", eCmdHdlrGetWord, 0 },
     { "https", eCmdHdlrBinary, 0 },
-    //{ "timeout", eCmdHdlrInt, 0 },
     { "file", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
     { "isdynfile", eCmdHdlrBinary, 0 },
     { "template", eCmdHdlrGetWord, 0 },
@@ -167,12 +162,12 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
         if (pData->https) {
             DBGPRINTF("%s(): Enable HTTPS\n", __FUNCTION__);
-            // for ssl
+            /* for ssl */
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
             curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
         }
     } else {
-	    // LOG
+	    /* LOG */
         errmsg.LogError(0, RS_RET_OBJ_CREATION_FAILED, "omhttpfs: failed to init cURL\n");
 
         return RS_RET_OBJ_CREATION_FAILED;
@@ -195,10 +190,8 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 static rsRetVal
 httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
 {
-    //
     *url_buf = es_newStr(HTTPFS_URL_BUFFER_LENGTH);
 
-    // scheme
     if (pWrkrData->pData->https) {
         es_addBuf(url_buf, "https://", sizeof("https://")-1);
     } else {
@@ -449,7 +442,6 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     struct json_object *json;
     json = json_tokener_parse_ex(jt, buf, length);
     if (!json_object_is_type(json, json_type_object)) {
-        // not an object ?        
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
     }
 
@@ -540,7 +532,7 @@ HTTPFS_CURL_VARS_RELEASE
 static rsRetVal
 httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
 {
-    // httpfs.create automatically create folders, no mkdirs needed.
+    /* httpfs.create automatically create folders, no mkdirs needed. */
 
     /* 
     curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' -X PUT \
@@ -570,7 +562,6 @@ HTTPFS_CURL_EXEC
     int success = 0;
 
     if (response_code == 201) {
-        //&& !strncmp(result->buf, HTTPFS_JSON_BOOLEAN_TRUE, strlen(HTTPFS_JSON_BOOLEAN_TRUE))) {
         success = 1;
     }
 
@@ -616,7 +607,7 @@ HTTPFS_CURL_EXEC
     if (response_code == 200) {
         success = 1;
     } else if (response_code == 404) {
-        // TODO: 404 ?
+        /* TODO: 404 ? */
         
     }
 HTTPFS_CURL_VARS_RELEASE
@@ -653,11 +644,11 @@ HTTPFS_CURL_EXEC
     if (response_code == 200) {
         success = 1;
     } else if (response_code == 404) {
-        // TODO: 404 ?
+        /* TODO: 404 ? */
 
     }
 
-    // TODO: not success?
+    /* TODO: not success? */
 
 HTTPFS_CURL_VARS_RELEASE
     if (success) {
@@ -698,7 +689,7 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code != 404) {
-        // todo: log error
+        /* TODO: log error */
         DBGPRINTF("omhttpfs: Append fail HTTP %ld: %s\n", response_code, pWrkrData->file);
         return RS_RET_FALSE;
     }
@@ -717,21 +708,19 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 
     if (response_code == 500) {
         DBGPRINTF("omhttpfs: Create file failed HTTP %ld: %s\n", response_code, pWrkrData->file);
-        // retry
         httpfs_parse_exception(pWrkrData->reply, pWrkrData->replyLen, &jre);
         if (!strncmp(jre.exception, HTTPFS_FILEALREADYEXISTSEXCEPTION, strlen(HTTPFS_FILEALREADYEXISTSEXCEPTION))) {
-            // file exists, go to append
+            /* file exists, go to append */
             DBGPRINTF("omhttpfs: File already exists, append again: %s\n", pWrkrData->file);
 
             iRet = httpfs_append_file(pWrkrData, buf);
             if (iRet == RS_RET_OK) {
                 DBGPRINTF("omhttpfs: Re-Append success: %s\n", pWrkrData->file);
-        //free(&jre);
                 return RS_RET_OK;
             } else {
                 DBGPRINTF("omhttpfs: Re-Append failed: %s\n", pWrkrData->file);
-                // error
-                // exit
+                /* error
+                   exit */
             }
 
         } else {
@@ -741,7 +730,6 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
         DBGPRINTF("omhttpfs: Create file failed: %s %s\n", pWrkrData->file, pWrkrData->reply);
     }
 
-    // TODO: ...
     return RS_RET_FALSE;
 }
 
@@ -760,7 +748,6 @@ ENDcreateInstance
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
     DBGPRINTF("omhttpfs: createWrkrInstance\n");
-    // init worker resource
     pWrkrData->curl = NULL;
     CHKiRet(httpfs_init_curl(pWrkrData, pWrkrData->pData));
 finalize_it:
@@ -809,7 +796,7 @@ ENDdbgPrintInstInfo
 BEGINtryResume
 CODESTARTtryResume
     DBGPRINTF("omhttpfs: tryResume called\n");
-    // TODO: test networking
+    /* TODO: test networking */
     iRet = RS_RET_OK;
 ENDtryResume
 
@@ -819,14 +806,14 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
     DBGPRINTF("omhttpfs: doAction\n");
-    // dynamic file name
+    /* dynamic file name */
     if (pWrkrData->pData->isDynFile) {
         pWrkrData->file = ustrdup(ppString[1]);
     } else {
         pWrkrData->file = ustrdup(pWrkrData->pData->file);
     }
 
-    // ppString[0] -> log content
+    /* ppString[0] -> log content */
     iRet = httpfs_log(pWrkrData, ppString[0]);
 
     if(iRet != RS_RET_OK) {
@@ -894,16 +881,13 @@ CODESTARTnewActInst
             DBGPRINTF("omhttpfs: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }
     }
-    // empty user
     if(pData->user == NULL || pData->user[0] == '\0') {
         pData->user = ustrdup((uchar*) OMHTTPFS_DEFAULT_USER);
     }
-    // empty host
     if(pData->host == NULL || pData->host[0] == '\0') {
         pData->host = ustrdup((uchar*) OMHTTPFS_DEFAULT_HOST);
     }
 
-    // register template for file name
     if (pData->isDynFile) {
         CODE_STD_STRING_REQUESTparseSelectorAct(2)
 
@@ -912,7 +896,6 @@ CODESTARTnewActInst
         CODE_STD_STRING_REQUESTparseSelectorAct(1)
     }
 
-    // register template for log content
     tplToUse = ustrdup((pData->tplName == NULL) ? (uchar* ) "RSYSLOG_FileFormat" : pData->tplName);
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
@@ -923,8 +906,6 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-    // this is for the legacy configuration format
-    // forget it
     ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
