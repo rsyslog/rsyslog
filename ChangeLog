@@ -22,6 +22,11 @@ Version 8.16.0 [v8-stable] 2016-01-26
   Elasticsearch is confused by url's ending in a bare '?' or '&'. While
   this is valid, those are no longer produced.
   Thanks to Benno Evers for the patch.
+- bugfix ommail: invalid handling of server response
+  if that response was split into different read calls. Could lead to
+  error-termination of send operation. Problem is pretty unlikely to
+  occur in standard setups (requires slow connection to SMTP server).
+  Thank to github user haixingood for the patch.
 - bugfix omelasticsearch: custom serverport was ignored on some platforms
   Thanks to Benno Evers for the patch.
 - bugfix: tarball did not include some testbench files
