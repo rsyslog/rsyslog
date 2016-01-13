@@ -395,6 +395,7 @@ setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 	int rLocal;
 	int r;
 	DEFiRet;
+	char separator;
 
 	setBaseURL(pData, &url);
 
@@ -407,17 +408,23 @@ setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
 	}
-	if(r == 0) r = es_addChar(&url, '?');
+
+	separator = '?';
 	if(pData->asyncRepl) {
-		if(r == 0) r = es_addBuf(&url, "replication=async&",
-					sizeof("replication=async&")-1);
+		if(r == 0) r = es_addChar(&url, separator);
+		if(r == 0) r = es_addBuf(&url, "replication=async", sizeof("replication=async")-1);
+		separator = '&';
 	}
+
 	if(pData->timeout != NULL) {
+		if(r == 0) r = es_addChar(&url, separator);
 		if(r == 0) r = es_addBuf(&url, "timeout=", sizeof("timeout=")-1);
 		if(r == 0) r = es_addBuf(&url, (char*)pData->timeout, ustrlen(pData->timeout));
-		if(r == 0) r = es_addChar(&url, '&');
+		separator = '&';
 	}
+
 	if(parent != NULL) {
+		if(r == 0) r = es_addChar(&url, separator);
 		if(r == 0) r = es_addBuf(&url, "parent=", sizeof("parent=")-1);
 		if(r == 0) es_addBuf(&url, (char*)parent, ustrlen(parent));
 	}
@@ -1216,7 +1223,7 @@ CODESTARTnewActInst
 		}else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
 			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n, NULL;
+			pData->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
