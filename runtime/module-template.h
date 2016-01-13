@@ -276,8 +276,9 @@ static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkr
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(uchar __attribute__((unused)) **ppString, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
+static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
+	uchar **ppString = (uchar **) pMsgData; \
 	DEFiRet;
 
 #define CODESTARTdoAction \
@@ -286,6 +287,14 @@ static rsRetVal doAction(uchar __attribute__((unused)) **ppString, wrkrInstanceD
 #define ENDdoAction \
 	RETiRet;\
 }
+
+/* below is a variant of doAction where the passed-in data is not the common
+ * case of string.
+ */
+#define BEGINdoAction_NoStrings \
+static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
+{\
+	DEFiRet;
 
 
 /* dbgPrintInstInfo()

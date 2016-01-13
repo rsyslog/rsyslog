@@ -508,7 +508,9 @@ finalize_it:
 }
 
 
-BEGINdoAction
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
@@ -518,7 +520,7 @@ CODESTARTdoAction
 		openPipe(pWrkrData);
 	}
 	
-	iRet = callExtProg(pWrkrData, (msg_t*)ppString[0]);
+	iRet = callExtProg(pWrkrData, pMsg);
 
 	if(iRet != RS_RET_OK)
 		iRet = RS_RET_SUSPENDED;

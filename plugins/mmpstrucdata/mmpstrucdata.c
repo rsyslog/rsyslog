@@ -333,11 +333,11 @@ finalize_it:
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 CODESTARTdoAction
 	DBGPRINTF("mmpstrucdata: enter\n");
-	pMsg = (msg_t*) ppString[0];
 	if(!MsgHasStructuredData(pMsg)) {
 		DBGPRINTF("mmpstrucdata: message does not have structured data\n");
 		FINALIZE;

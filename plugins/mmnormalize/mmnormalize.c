@@ -222,15 +222,15 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *buf;
 	rs_size_t len;
 	int r;
 	struct json_object *json = NULL;
 	unsigned short freeBuf = 0;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else if (pWrkrData->pData->varDescr) {
