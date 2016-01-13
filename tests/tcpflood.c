@@ -813,7 +813,10 @@ initTLSSess(int i)
 	/* NOTE: the following statement generates a cast warning, but there seems to
 	 * be no way around it with current GnuTLS. Do NOT try to "fix" the situation!
 	 */
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t) sockArray[i]);
+	#pragma GCC diagnostic pop
 
 	/* Perform the TLS handshake */
 	r = gnutls_handshake(sessArray[i]);
