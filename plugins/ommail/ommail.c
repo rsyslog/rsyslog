@@ -436,8 +436,8 @@ Send(int sock, char *msg, size_t len)
 				DBGPRINTF("message not (smtp/tcp)send, errno %d", errno);
 				ABORT_FINALIZE(RS_RET_TCP_SEND_ERROR);
 			}
-		} else if(lenSend != (ssize_t) len) {
-			offsBuf += len; /* on to next round... */
+		} else if(lenSend != (ssize_t) (len - offsBuf)) {
+			offsBuf += lenSend; /* on to next round... */
 		} else {
 			FINALIZE;
 		}
