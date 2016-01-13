@@ -171,6 +171,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_MORE_DATA = -3006,	/**< insufficient data, e.g. end of string during parsing */
 	RS_RET_INVALID_IP = -3007,	/**< invalid ip found where valid was expected */
 	RS_RET_OBJ_CREATION_FAILED = - 3008, /**< the creation of an object failed (no details available) */
+	RS_RET_INOTIFY_INIT_FAILED = - 3009, /**< the initialization of an inotify instance failed (no details available) */
 	RS_RET_PARAM_ERROR = -1000,	/**< invalid parameter in call to function */
 	RS_RET_MISSING_INTERFACE = -1001,/**< interface version mismatch, required missing */
 	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */
