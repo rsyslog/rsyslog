@@ -112,6 +112,7 @@ typedef struct lstn_s {
 	regex_t end_preg;	/* compiled version of startRegex */
 	uchar *prevLineSegment;	/* previous line segment (in regex mode) */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
+	sbool reopenOnTruncate;
 	sbool addMetadata;
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
@@ -146,6 +147,7 @@ struct instanceConf_s {
 	uint8_t readMode;
 	uchar *startRegex;
 	sbool escapeLF;
+	sbool reopenOnTruncate;
 	sbool addMetadata;
 	int maxLinesAtOnce;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -259,6 +261,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "readmode", eCmdHdlrInt, 0 },
 	{ "startmsg.regex", eCmdHdlrString, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
+	{ "reopenontruncate", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
 	{ "removestateondelete", eCmdHdlrBinary, 0 },
@@ -511,6 +514,7 @@ openFile(lstn_t *pLstn)
 
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pLstn->pStrm, (uchar*) "strm", psSF, NULL, pLstn));
+	CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
 	DBGPRINTF("imfile: deserialized state file, state file base name '%s', "
 		  "configured base name '%s'\n", pLstn->pStrm->pszFName,
 		  pLstn->pszFileName);
@@ -637,6 +641,7 @@ createInstance(instanceConf_t **pinst)
 	inst->startRegex = NULL;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
+	inst->reopenOnTruncate = 0;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 
 	/* node created, let's add to config */
@@ -765,6 +770,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
+	inst->reopenOnTruncate = 0;
 	inst->addMetadata = 0;
 	inst->bRMStateOnDel = 0;
 
@@ -875,6 +881,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
 	pThis->hasWildcard = existing->hasWildcard;
 	pThis->escapeLF = existing->escapeLF;
+	pThis->reopenOnTruncate = existing->reopenOnTruncate;
 	pThis->addMetadata = existing->addMetadata;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
@@ -940,6 +947,7 @@ addListner(instanceConf_t *inst)
 		}
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;
 	pThis->escapeLF = inst->escapeLF;
+	pThis->reopenOnTruncate = inst->reopenOnTruncate;
 	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
 			       hasWildcard : inst->addMetadata;
 	pThis->pRuleset = inst->pBindRuleset;
@@ -998,6 +1006,8 @@ CODESTARTnewInpInst
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
+			inst->reopenOnTruncate = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlinesatonce")) {
 			if(   loadModConf->opMode == OPMODE_INOTIFY
 			   && pvals[i].val.d.n > 0) {

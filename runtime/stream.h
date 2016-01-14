@@ -111,6 +111,7 @@ typedef struct strm_s {
 	/* dynamic properties, valid only during file open, not to be persistet */
 	sbool bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
 	sbool bSync;	/* sync this file after every write? */
+	sbool bReopenOnTruncate;
 	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
@@ -187,6 +188,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, sType, strmType_t);
 	INTERFACEpropSetMeth(strm, iZipLevel, int);
 	INTERFACEpropSetMeth(strm, bSync, int);
+	INTERFACEpropSetMeth(strm, bReopenOnTruncate, int);
 	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
 	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
@@ -201,8 +203,9 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t*);
 	INTERFACEpropSetMeth(strm, cryprovData, void*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
+/* V11, 2015-12-03: added new parameter bReopenOnTruncate */
 
 static inline int
 strmGetCurrFileNum(strm_t *pStrm) {

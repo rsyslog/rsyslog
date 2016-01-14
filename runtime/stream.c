@@ -509,13 +509,17 @@ strmHandleEOFMonitor(strm_t *pThis)
 	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
 	  pThis->pszCurrFName, (unsigned) pThis->inode,
 	  (unsigned) statName.st_ino);
-	if(pThis->inode == statName.st_ino) {
-		ABORT_FINALIZE(RS_RET_EOF);
-	} else {
-		/* we had a file change! */
+
+	/* Inode unchanged but file size on disk is less than current offset
+	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
+	 */
+	if (pThis->inode != statName.st_ino
+		  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
 		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
+	} else {
+		ABORT_FINALIZE(RS_RET_EOF);
 	}
 
 finalize_it:
@@ -1791,6 +1795,7 @@ DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
 DEFpropSetMeth(strm, bVeryReliableZip, int)
 DEFpropSetMeth(strm, bSync, int)
+DEFpropSetMeth(strm, bReopenOnTruncate, int)
 DEFpropSetMeth(strm, sIOBufSize, size_t)
 DEFpropSetMeth(strm, iSizeLimit, off_t)
 DEFpropSetMeth(strm, iFlushInterval, int)
@@ -2152,6 +2157,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiZipLevel = strmSetiZipLevel;
 	pIf->SetbVeryReliableZip = strmSetbVeryReliableZip;
 	pIf->SetbSync = strmSetbSync;
+	pIf->SetbReopenOnTruncate = strmSetbReopenOnTruncate;
 	pIf->SetsIOBufSize = strmSetsIOBufSize;
 	pIf->SetiSizeLimit = strmSetiSizeLimit;
 	pIf->SetiFlushInterval = strmSetiFlushInterval;
