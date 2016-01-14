@@ -12,11 +12,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -174,7 +174,7 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
-#if HAVE_INOTIFY_INIT 
+#if HAVE_INOTIFY_INIT
 /* support for inotify mode */
 
 /* we need to track directories */
@@ -306,18 +306,18 @@ finalize_it:
 /* looks up a wdmap entry by dirIdx and returns it's index if found
  * or -1 if not found.
  */
-static int 
+static int
 wdmapLookupListner(lstn_t* pLstn)
 {
-	int i = 0; 
-	int wd = -1; 
+	int i = 0;
+	int wd = -1;
 	/* Loop through */
 	for(i = 0 ; i < nWdmap; ++i) {
 		if (wdmap[i].pLstn == pLstn)
-			wd = wdmap[i].wd; 
+			wd = wdmap[i].wd;
 	}
 
-	return wd; 
+	return wd;
 }
 
 /* compare function for bsearch() */
@@ -789,7 +789,7 @@ lstnAdd(lstn_t **newLstn)
 {
 	lstn_t *pLstn;
 	DEFiRet;
-	
+
 	CHKmalloc(pLstn = (lstn_t*) MALLOC(sizeof(lstn_t)));
 	if(runModConf->pRootLstn == NULL) {
 		runModConf->pRootLstn = pLstn;
@@ -801,7 +801,7 @@ lstnAdd(lstn_t **newLstn)
 	runModConf->pTailLstn = pLstn;
 	pLstn->next = NULL;
 	*newLstn = pLstn;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -1189,7 +1189,7 @@ ENDfreeCnf
  * So even if we found some lines, it is highly unlikely to find a new one
  * just now. Trying it would result in a performance-costly additional try
  * which in the very, very vast majority of cases will never find any new
- * lines. 
+ * lines.
  * On spamming the main queue: keep in mind that it will automatically rate-limit
  * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
@@ -1218,7 +1218,7 @@ doPolling(void)
 		if(glbl.GetGlobalInputTermState() == 0)
 			srSleep(runModConf->iPollInterval, 10);
 	}
-	
+
 	RETiRet;
 }
 
@@ -1282,7 +1282,7 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 	return f;
 }
 
-/* add file to file table */ 
+/* add file to file table */
 static rsRetVal
 fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__ pLstn)
 {
@@ -1616,16 +1616,15 @@ in_dbg_showEv(struct inotify_event *ev)
  * with the same name may already be in processing.
  */
 static void
-in_removeFile(const struct inotify_event *const ev,
-	      const int dirIdx,
+in_removeFile(const int dirIdx,
 	      lstn_t *const __restrict__ pLstn)
 {
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
 	uchar *statefn;
-	DBGPRINTF("imfile: remove listener '%s', wd %d\n",
-	          pLstn->pszFileName, ev->wd);
+	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
+	          pLstn->pszFileName, dirIdx);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
@@ -1635,7 +1634,7 @@ in_removeFile(const struct inotify_event *const ev,
 		bDoRMState = 0;
 	}
 	pollFile(pLstn, NULL); /* one final try to gather data */
-	/*	delete listener data */ 
+	/*	delete listener data */
 	DBGPRINTF("imfile: DELETING listener data for '%s' - '%s'\n", pLstn->pszBaseName, pLstn->pszFileName);
 	lstnDel(pLstn);
 	fileTableDelFile(&dirs[dirIdx].active, pLstn);
@@ -1691,7 +1690,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 	}
 	DBGPRINTF("DDDD: imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
-	in_removeFile(ev, dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
+	in_removeFile(dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
 }
 
@@ -1727,15 +1726,14 @@ in_processEvent(struct inotify_event *ev)
 	wd_map_t *etry;
 	lstn_t *pLstn;
 	int iRet;
-	struct inotify_event evFileHelper; 
 	int ftIdx;
-	int wd; 
+	int wd;
 
 	DBGPRINTF("DDDD: imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
-	if			(ev->mask & IN_IGNORED) {
+	if(ev->mask & IN_IGNORED) {
 		wdmapDel(ev->wd);
 		goto done;
-	} else if	(ev->mask & IN_MOVED_FROM) {
+	} else if(ev->mask & IN_MOVED_FROM) {
 		/* Find wd entry and remove it */
 		etry =  wdmapLookup(ev->wd);
 		if(etry != NULL) {
@@ -1743,8 +1741,8 @@ in_processEvent(struct inotify_event *ev)
 			DBGPRINTF("DDDD: imfile: IN_MOVED_FROM Event (ftIdx=%d, name=%s)\n", ftIdx, ev->name);
 			if(ftIdx >= 0) {
 				/* Find listener and wd table index*/
-				pLstn = dirs[etry->dirIdx].active.listeners[ftIdx].pLstn; 
-				wd = wdmapLookupListner(pLstn); 
+				pLstn = dirs[etry->dirIdx].active.listeners[ftIdx].pLstn;
+				wd = wdmapLookupListner(pLstn);
 
 				/* Remove file from inotify watch */
 				iRet = inotify_rm_watch(ino_fd, wd); /* Note this will TRIGGER IN_IGNORED Event! */
@@ -1753,20 +1751,7 @@ in_processEvent(struct inotify_event *ev)
 				} else {
 					DBGPRINTF("DDDD: imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
 				}
-
-				/* Create Event to remove file*/
-				evFileHelper.wd = wd; 
-				evFileHelper.mask = IN_DELETE; 
-				evFileHelper.cookie = 0; 
-				evFileHelper.len = ev->len; 
-
-				/* XXX: evFileHelper.name is not allocated yet,
-				 * here we keep it untouched as we do not use
-				 * it for now.
-				 *
-				 * evFileHelper.name[0] = ev->name[0];
-				 */
-				in_removeFile(&evFileHelper, etry->dirIdx, pLstn);
+				in_removeFile(etry->dirIdx, pLstn);
 				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
 			}
 		}
@@ -1847,7 +1832,7 @@ do_inotify()
  */
 BEGINrunInput
 CODESTARTrunInput
-	DBGPRINTF("imfile: working in %s mode\n", 
+	DBGPRINTF("imfile: working in %s mode\n",
 		 (runModConf->opMode == OPMODE_POLLING) ? "polling" : "inotify");
 	if(runModConf->opMode == OPMODE_POLLING)
 		iRet = doPolling();
@@ -1908,7 +1893,7 @@ persistStrmState(lstn_t *pLstn)
 finalize_it:
 	if(psSF != NULL)
 		strm.Destruct(&psSF);
-	
+
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "imfile: could not persist state "
 				"file %s - data may be repeated on next "
