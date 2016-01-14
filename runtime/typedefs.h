@@ -207,6 +207,14 @@ typedef uintTiny	propid_t;
 #define PROP_SYS_BOM			159
 #define PROP_SYS_UPTIME			160
 #define PROP_UUID			161
+#define PROP_SYS_NOW_UTC		162
+#define PROP_SYS_YEAR_UTC		163
+#define PROP_SYS_MONTH_UTC		164
+#define PROP_SYS_DAY_UTC		165
+#define PROP_SYS_HOUR_UTC		166
+#define PROP_SYS_HHOUR_UTC		167
+#define PROP_SYS_QHOUR_UTC		168
+#define PROP_SYS_MINUTE_UTC		169
 #define PROP_CEE			200
 #define PROP_CEE_ALL_JSON		201
 #define PROP_LOCAL_VAR			202

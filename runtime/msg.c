@@ -611,6 +611,22 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_QHOUR;
 	} else if(!strcmp((char*) pName, "$minute")) {
 		*pPropID = PROP_SYS_MINUTE;
+	} else if(!strcmp((char*) pName, "$now-utc")) {
+		*pPropID = PROP_SYS_NOW;
+	} else if(!strcmp((char*) pName, "$year-utc")) {
+		*pPropID = PROP_SYS_YEAR_UTC;
+	} else if(!strcmp((char*) pName, "$month-utc")) {
+		*pPropID = PROP_SYS_MONTH_UTC;
+	} else if(!strcmp((char*) pName, "$day-utc")) {
+		*pPropID = PROP_SYS_DAY_UTC;
+	} else if(!strcmp((char*) pName, "$hour-utc")) {
+		*pPropID = PROP_SYS_HOUR_UTC;
+	} else if(!strcmp((char*) pName, "$hhour-utc")) {
+		*pPropID = PROP_SYS_HHOUR_UTC;
+	} else if(!strcmp((char*) pName, "$qhour-utc")) {
+		*pPropID = PROP_SYS_QHOUR_UTC;
+	} else if(!strcmp((char*) pName, "$minute-utc")) {
+		*pPropID = PROP_SYS_MINUTE_UTC;
 	} else if(!strcmp((char*) pName, "$myhostname")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
 	} else if(!strcmp((char*) pName, "$!all-json")) {
@@ -705,6 +721,22 @@ uchar *propIDToName(propid_t propID)
 			return UCHAR_CONSTANT("$QHOUR");
 		case PROP_SYS_MINUTE:
 			return UCHAR_CONSTANT("$MINUTE");
+		case PROP_SYS_NOW_UTC:
+			return UCHAR_CONSTANT("$NOW_UTC");
+		case PROP_SYS_YEAR_UTC:
+			return UCHAR_CONSTANT("$YEAR_UTC");
+		case PROP_SYS_MONTH_UTC:
+			return UCHAR_CONSTANT("$MONTH_UTC");
+		case PROP_SYS_DAY_UTC:
+			return UCHAR_CONSTANT("$DAY_UTC");
+		case PROP_SYS_HOUR_UTC:
+			return UCHAR_CONSTANT("$HOUR_UTC");
+		case PROP_SYS_HHOUR_UTC:
+			return UCHAR_CONSTANT("$HHOUR_UTC");
+		case PROP_SYS_QHOUR_UTC:
+			return UCHAR_CONSTANT("$QHOUR_UTC");
+		case PROP_SYS_MINUTE_UTC:
+			return UCHAR_CONSTANT("$MINUTE_UTC");
 		case PROP_SYS_MYHOSTNAME:
 			return UCHAR_CONSTANT("$MYHOSTNAME");
 		case PROP_CEE:
@@ -852,7 +884,7 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	 * especially as I think there is no codepath currently where it would not be
 	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
 	 */
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime), TIME_IN_LOCALTIME);
 	memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
 
 finalize_it:
@@ -2749,7 +2781,7 @@ textpri(const msg_t *const __restrict__ pMsg)
  */
 typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
-static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
+static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 {
 	uchar *pBuf;
 	struct syslogTime tt;
@@ -2759,12 +2791,12 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t)
 	}
 
 	if(t == NULL) { /* can happen if called via script engine */
-		datetime.getCurrTime(&tt, NULL);
+		datetime.getCurrTime(&tt, NULL, inUTC);
 		t = &tt;
 	}
 
-	if(t->year == 0) { /* not yet set! */
-		datetime.getCurrTime(t, NULL);
+	if(t->year == 0 || t->inUTC != inUTC) { /* not yet set! */
+		datetime.getCurrTime(t, NULL, inUTC);
 	}
 
 	switch(eNow) {
@@ -3325,7 +3357,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getParseSuccess(pMsg);
 			break;
 		case PROP_SYS_NOW:
-			if((pRes = getNOW(NOW_NOW, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_NOW, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3333,7 +3365,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_YEAR:
-			if((pRes = getNOW(NOW_YEAR, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_YEAR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3341,7 +3373,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_MONTH:
-			if((pRes = getNOW(NOW_MONTH, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_MONTH, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3349,7 +3381,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_DAY:
-			if((pRes = getNOW(NOW_DAY, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_DAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3357,7 +3389,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_HOUR:
-			if((pRes = getNOW(NOW_HOUR, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_HOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3365,7 +3397,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_HHOUR:
-			if((pRes = getNOW(NOW_HHOUR, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_HHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3373,7 +3405,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_QHOUR:
-			if((pRes = getNOW(NOW_QHOUR, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_QHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
@@ -3381,7 +3413,71 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			}
 			break;
 		case PROP_SYS_MINUTE:
-			if((pRes = getNOW(NOW_MINUTE, ttNow)) == NULL) {
+			if((pRes = getNOW(NOW_MINUTE, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_NOW_UTC:
+			if((pRes = getNOW(NOW_NOW, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 10;
+			}
+			break;
+		case PROP_SYS_YEAR_UTC:
+			if((pRes = getNOW(NOW_YEAR, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 4;
+			}
+			break;
+		case PROP_SYS_MONTH_UTC:
+			if((pRes = getNOW(NOW_MONTH, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_DAY_UTC:
+			if((pRes = getNOW(NOW_DAY, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_HOUR_UTC:
+			if((pRes = getNOW(NOW_HOUR, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_HHOUR_UTC:
+			if((pRes = getNOW(NOW_HHOUR, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_QHOUR_UTC:
+			if((pRes = getNOW(NOW_QHOUR, ttNow, TIME_IN_UTC)) == NULL) {
+				RET_OUT_OF_MEMORY;
+			} else {
+				*pbMustBeFreed = 1;
+				bufLen = 2;
+			}
+			break;
+		case PROP_SYS_MINUTE_UTC:
+			if((pRes = getNOW(NOW_MINUTE, ttNow, TIME_IN_UTC)) == NULL) {
 				RET_OUT_OF_MEMORY;
 			} else {
 				*pbMustBeFreed = 1;
