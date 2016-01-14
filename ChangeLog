@@ -9,6 +9,9 @@ Version 8.16.0 [v8-stable] 2016-01-26
   to modules that just use string parameters. For those with message
   parameters, have a look at e.g. mmutf8fix to see how easy the
   required change is.
+- new system properties for $NOW properties based on UTC
+  This permits to express current system time in UTC.
+  See also https://github.com/rsyslog/rsyslog/issues/729
 - impstats: support broken ElasticSearch JSON implementation
   ES 2.0 no longer supports valid JSON and disallows dots inside names.
   This adds a new "json-elasticsearch" format option which replaces
