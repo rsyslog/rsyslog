@@ -55,6 +55,8 @@ Version 8.16.0 [v8-stable] 2016-01-26
   Thanks to git hub user c6226 for the patch.
 - bugfix imzmq: memory leak
   Thanks to Jeremy Liang for the patch.
+- bugfix imzmq: memory leak
+  Thanks to github user xushengping for the patch.
 - bugfix omzmq: memory leak
   Thanks to Jack Lin for the patch.
 - some code improvement and cleanup
