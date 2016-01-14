@@ -1620,6 +1620,7 @@ in_removeFile(const int dirIdx,
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
+        int wd;
 	uchar *statefn;
 	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
 	          pLstn->pszFileName, dirIdx);
@@ -1645,6 +1646,8 @@ in_removeFile(const int dirIdx,
 				"file \"%s\": %s", toDel, errStr);
 		}
 	}
+        wd = wdmapLookupListner(pLstn);
+        wdmapDel(wd);
 }
 
 static void
@@ -1727,9 +1730,7 @@ in_processEvent(struct inotify_event *ev)
 	int ftIdx;
 	int wd;
 
-	DBGPRINTF("imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
 	if(ev->mask & IN_IGNORED) {
-		wdmapDel(ev->wd);
 		goto done;
 	} else if(ev->mask & IN_MOVED_FROM) {
 		/* Find wd entry and remove it */
