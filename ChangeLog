@@ -27,6 +27,10 @@ Version 8.16.0 [v8-stable] 2016-01-26
   Thanks to Benno Evers for the patch.
 - bugfix imfile: proper handling of inotify initialization failure
   Thanks to Zachary Zhao for the patch.
+- bugfix imfile: potential segfault due to improper handling of ev var
+  This occurs in inotify mode, only.
+  Thanks to Zachary Zhao and Peter Portante for the patch.
+  closes https://github.com/rsyslog/rsyslog/issues/718
 - bugfix ommail: invalid handling of server response
   if that response was split into different read calls. Could lead to
   error-termination of send operation. Problem is pretty unlikely to
