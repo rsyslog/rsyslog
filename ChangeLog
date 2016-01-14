@@ -25,6 +25,8 @@ Version 8.16.0 [v8-stable] 2016-01-26
   Elasticsearch is confused by url's ending in a bare '?' or '&'. While
   this is valid, those are no longer produced.
   Thanks to Benno Evers for the patch.
+- imfile: add experimental "reopenOnTruncate" parameter
+  Thanks to Matthew Wang for the patch.
 - bugfix imfile: proper handling of inotify initialization failure
   Thanks to Zachary Zhao for the patch.
 - bugfix imfile: potential segfault due to improper handling of ev var
