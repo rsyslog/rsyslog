@@ -582,7 +582,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 
 		++pWrkr->ctrMsgsRcvd;
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
-			datetime.getCurrTime(&stTime, &ttGenTime);
+			datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 		}
 
 		CHKiRet(processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime,
