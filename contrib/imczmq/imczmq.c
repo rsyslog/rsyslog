@@ -214,6 +214,11 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 		}
 		else if(!strcmp(inppblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if ( NULL == stringType ){
+                errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
+                    "imczmq: '%s' is invalid sockType", stringType);
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
 			
 			if (!strcmp("SUB", stringType)) {
 				inst->sockType = ZMQ_SUB;
@@ -225,10 +230,12 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
 				inst->sockType = ZMQ_ROUTER;
 			}
 			else {
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-						"imczmq: '%s' is invalid sockType", stringType);
-				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+                errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+                   "imczmq: '%s' is invalid sockType", stringType);
+                free(stringType);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 			}
+            free(stringType);
 		} 
 		else if(!strcmp(inppblk.descr[i].name, "topics")) {
 			if (inst->sockType != ZMQ_SUB) {

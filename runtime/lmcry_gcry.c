@@ -198,14 +198,23 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	}
 
 	cnfparamvalsDestruct(pvals, pblk);
-	if(key != NULL) {
-		memset(key, 0, strlen((char*)key));
-		free(key);
-	}
-	free(keyfile);
-	free(algo);
-	free(mode);
+
 finalize_it:
+    if (key != NULL)
+        free(key);
+    
+    if (keyfile != NULL)
+        free(keyfile);
+    
+    if (algo != NULL)
+        free(algo);
+    
+    if (keyprogram != NULL)
+        free(keyprogram);
+    
+    if (mode != NULL)
+        free(mode);
+    
 	RETiRet;
 }
 
