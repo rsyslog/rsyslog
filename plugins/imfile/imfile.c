@@ -374,7 +374,7 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 	wdmap[i].dirIdx = dirIdx;
 	wdmap[i].pLstn = pLstn;
 	++nWdmap;
-	DBGPRINTF("DDDD: imfile: enter into wdmap[%d]: wd %d, dir %d, lstn %s:%s\n",i,wd,dirIdx,
+	DBGPRINTF("imfile: enter into wdmap[%d]: wd %d, dir %d, lstn %s:%s\n",i,wd,dirIdx,
 		  (pLstn == NULL) ? "DIRECTORY" : "FILE",
 	          (pLstn == NULL) ? dirs[dirIdx].dirName : pLstn->pszFileName);
 
@@ -400,7 +400,7 @@ wdmapDel(const int wd)
 		memmove(wdmap + i, wdmap + i + 1, sizeof(wd_map_t) * (nWdmap - i - 1));
 	}
 	--nWdmap;
-	DBGPRINTF("DDDD: imfile: wd %d deleted, was idx %d\n", wd, i);
+	DBGPRINTF("imfile: wd %d deleted, was idx %d\n", wd, i);
 
 finalize_it:
 	RETiRet;
@@ -1240,10 +1240,10 @@ fileTableDisplay(fileTable_t *tab)
 {
 	int f;
 	uchar *baseName;
-	DBGPRINTF("DDDD: imfile: dirs.currMaxfiles %d\n", tab->currMax);
+	DBGPRINTF("imfile: dirs.currMaxfiles %d\n", tab->currMax);
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
-		DBGPRINTF("DDDD: imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
+		DBGPRINTF("imfile: TABLE %p CONTENTS, %d->%p:'%s'\n", tab, f, tab->listeners[f].pLstn, (char*)baseName);
 	}
 }
 */
@@ -1253,7 +1253,7 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 {
 	int f;
 	uchar *baseName = NULL;
-/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if(!fnmatch((char*)baseName, (char*)fn, FNM_PATHNAME | FNM_PERIOD))
@@ -1261,7 +1261,7 @@ fileTableSearch(fileTable_t *const __restrict__ tab, uchar *const __restrict__ f
 	}
 	if(f == tab->currMax)
 		f = -1;
-	DBGPRINTF("DDDD: imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
+	DBGPRINTF("imfile: fileTableSearch file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1270,7 +1270,7 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 {
 	int f;
 	uchar *baseName = NULL;
-/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(f = 0 ; f < tab->currMax ; ++f) {
 		baseName = tab->listeners[f].pLstn->pszBaseName;
 		if (strcmp((const char*)baseName, (const char*)fn) == 0)
@@ -1278,7 +1278,7 @@ fileTableSearchNoWildcard(fileTable_t *const __restrict__ tab, uchar *const __re
 	}
 	if(f == tab->currMax)
 		f = -1;
-	DBGPRINTF("DDDD: imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
+	DBGPRINTF("imfile: fileTableSearchNoWildcard file '%s' - '%s', found:%d\n", fn, baseName, f);
 	return f;
 }
 
@@ -1288,8 +1288,7 @@ fileTableAddFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 {
 	int j;
 	DEFiRet;
-DBGPRINTF("DDDDD: imfile: fileTableAddFile\n");
-/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
+	/* UNCOMMENT FOR DEBUG fileTableDisplay(tab); */
 	for(j = 0 ; j < tab->currMax && tab->listeners[j].pLstn != pLstn ; ++j)
 		; /* just scan */
 	if(j < tab->currMax) {
@@ -1374,7 +1373,7 @@ dirsAdd(uchar *dirName)
 	CHKiRet(fileTableInit(&dirs[currMaxDirs].configured, INIT_FILE_IN_DIR_TAB_SIZE));
 
 	++currMaxDirs;
-	DBGPRINTF("DDDD: imfile: added to dirs table: '%s'\n", dirName);
+	DBGPRINTF("imfile: added to dirs table: '%s'\n", dirName);
 finalize_it:
 	RETiRet;
 }
@@ -1392,7 +1391,6 @@ dirsFindDir(uchar *dir)
 		; /* just scan, all done in for() */
 	if(i == currMaxDirs)
 		i = -1;
-	//DBGPRINTF("DDDD: dir '%s', found:%d\n", dir, i);
 	return i;
 }
 
@@ -1437,9 +1435,9 @@ dirsAddFile(lstn_t *__restrict__ pLstn, const int bActive)
 
 	dir = dirs + dirIdx;
 	CHKiRet(fileTableAddFile((bActive ? &dir->active : &dir->configured), pLstn));
-	DBGPRINTF("DDDD: imfile: associated file [%s] to directory %d[%s], Active = %d\n",
+	DBGPRINTF("imfile: associated file [%s] to directory %d[%s], Active = %d\n",
 		pLstn->pszFileName, dirIdx, dir->dirName, bActive);
-/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
+	/* UNCOMMENT FOR DEBUG fileTableDisplay(bActive ? &dir->active : &dir->configured); */
 finalize_it:
 	RETiRet;
 }
@@ -1456,7 +1454,7 @@ in_setupDirWatch(const int dirIdx)
 		goto done;
 	}
 	wdmapAdd(wd, dirIdx, NULL);
-	DBGPRINTF("DDDD: imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
+	DBGPRINTF("imfile: watch %d added for dir %s\n", wd, dirs[dirIdx].dirName);
 done:	return;
 }
 
@@ -1481,7 +1479,7 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 		goto done;
 	}
 	wdmapAdd(wd, -1, pLstn);
-	DBGPRINTF("DDDD: imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
+	DBGPRINTF("imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
 done:	return;
@@ -1668,7 +1666,7 @@ in_handleDirEventCREATE(struct inotify_event *ev, const int dirIdx)
 		}
 		pLstn = dirs[dirIdx].configured.listeners[ftIdx].pLstn;
 	}
-	DBGPRINTF("DDDD: imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
+	DBGPRINTF("imfile: file '%s' associated with dir '%s'\n", ev->name, dirs[dirIdx].dirName);
 	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name);
 done:	return;
 }
@@ -1688,7 +1686,7 @@ in_handleDirEventDELETE(struct inotify_event *const ev, const int dirIdx)
 			ev->name, dirs[dirIdx].dirName);
 		goto done;
 	}
-	DBGPRINTF("DDDD: imfile: imfile delete processing for '%s'\n",
+	DBGPRINTF("imfile: imfile delete processing for '%s'\n",
 	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
 	in_removeFile(dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
@@ -1697,7 +1695,7 @@ done:	return;
 static void
 in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
-	DBGPRINTF("DDDD: imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
+	DBGPRINTF("imfile: handle dir event for %s\n", dirs[dirIdx].dirName);
 	if((ev->mask & IN_CREATE)) {
 		in_handleDirEventCREATE(ev, dirIdx);
 	} else if((ev->mask & IN_DELETE)) {
@@ -1729,7 +1727,7 @@ in_processEvent(struct inotify_event *ev)
 	int ftIdx;
 	int wd;
 
-	DBGPRINTF("DDDD: imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
+	DBGPRINTF("imfile: in_processEvent (wd=%d) event Mask='0x%.8X'\n", ev->wd, ev->mask);
 	if(ev->mask & IN_IGNORED) {
 		wdmapDel(ev->wd);
 		goto done;
@@ -1738,7 +1736,7 @@ in_processEvent(struct inotify_event *ev)
 		etry =  wdmapLookup(ev->wd);
 		if(etry != NULL) {
 			ftIdx = fileTableSearchNoWildcard(&dirs[etry->dirIdx].active, (uchar*)ev->name);
-			DBGPRINTF("DDDD: imfile: IN_MOVED_FROM Event (ftIdx=%d, name=%s)\n", ftIdx, ev->name);
+			DBGPRINTF("imfile: IN_MOVED_FROM Event (ftIdx=%d, name=%s)\n", ftIdx, ev->name);
 			if(ftIdx >= 0) {
 				/* Find listener and wd table index*/
 				pLstn = dirs[etry->dirIdx].active.listeners[ftIdx].pLstn;
@@ -1749,7 +1747,7 @@ in_processEvent(struct inotify_event *ev)
 				if (iRet != 0) {
 					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n", errno, ftIdx, wd, ev->name);
 				} else {
-					DBGPRINTF("DDDD: imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
+					DBGPRINTF("imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
 				}
 				in_removeFile(etry->dirIdx, pLstn);
 				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
@@ -1762,7 +1760,6 @@ in_processEvent(struct inotify_event *ev)
 		DBGPRINTF("imfile: could not lookup wd %d\n", ev->wd);
 		goto done;
 	}
-	DBGPRINTF("DDDD: imfile: wd %d got file %p, dir %d\n", ev->wd, etry->pLstn, etry->dirIdx);
 	if(etry->pLstn == NULL) { /* directory? */
 		in_handleDirEvent(ev, etry->dirIdx);
 	} else {
@@ -1801,9 +1798,6 @@ do_inotify()
 		currev = 0;
 		while(currev < rd) {
 			ev = (struct inotify_event*) (iobuf+currev);
-			DBGPRINTF("DDDD: imfile event notification: rd %d[%d], wd (%d, mask "
-				"%8.8x, cookie %4.4x, len %d)\n",
-				(int) rd, currev, ev->wd, ev->mask, ev->cookie, ev->len);
 			in_dbg_showEv(ev);
 			in_processEvent(ev);
 			currev += sizeof(struct inotify_event) + ev->len;
