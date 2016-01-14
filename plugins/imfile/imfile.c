@@ -1759,7 +1759,13 @@ in_processEvent(struct inotify_event *ev)
 				evFileHelper.mask = IN_DELETE; 
 				evFileHelper.cookie = 0; 
 				evFileHelper.len = ev->len; 
-				evFileHelper.name[0] = ev->name[0]; 
+
+				/* XXX: evFileHelper.name is not allocated yet,
+				 * here we keep it untouched as we do not use
+				 * it for now.
+				 *
+				 * evFileHelper.name[0] = ev->name[0];
+				 */
 				in_removeFile(&evFileHelper, etry->dirIdx, pLstn);
 				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
 			}
