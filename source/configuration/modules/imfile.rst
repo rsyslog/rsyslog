@@ -318,6 +318,16 @@ Input Parameters
    usually **not** be used. Check the section on "State Files" above
    for more details.
 
+.. index::
+   single: imfile; reopenOnTruncate
+.. function:: reopenOnTruncate [on/off] (requires v8.16.0+)
+
+   **Default: off**
+
+   This is an **experimental** feature that tells rsyslog to reopen input file
+   when it was truncated (inode unchanged but file size on disk is less than
+   current offset in memory).
+
 Caveats/Known Bugs
 ------------------
 
