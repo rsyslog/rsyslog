@@ -1109,7 +1109,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "aBcdDeEHkPstTuvV", long_options, NULL);
+		opt = getopt_long(argc, argv, "aBcdDeEhkPstTuvV", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
