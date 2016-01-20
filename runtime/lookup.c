@@ -90,11 +90,11 @@ lookupNew(lookup_ref_t **ppThis)
 	pThis->do_reload = pThis->do_stop = 0;
 	pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis);
 
+	pThis->next = NULL;
 	if(loadConf->lu_tabs.root == NULL) {
 		loadConf->lu_tabs.root = pThis;
-		pThis->next = NULL;
 	} else {
-		pThis->next = loadConf->lu_tabs.last;
+		loadConf->lu_tabs.last->next = pThis;
 	}
 	loadConf->lu_tabs.last = pThis;
 
