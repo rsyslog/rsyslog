@@ -66,10 +66,24 @@ OPTIONS
   Select "conversion" mode. This converts signature files from 
   Version 10 to 11. The original file will automatically be backed up.
 
+-x, --extract <LINENUMBERS>
+  Extract Lines (separated by comma) from the input logfile and creates 
+  hash chains needed to verify the integrity of the extracted records. 
+  If no output file is specified, a new file with the same name as the 
+  inputfile + ".out" will be created. 
+
 -v, --verbose
   Select verbose mode. Most importantly, hashes and signatures are printed
   in full length (can be **very** lengthy) rather than the usual abbreviation.
 
+-o <FILENAME>, --output <FILENAME>
+  Sets an output filename. Optional for EXTRACT operation mode. If no output
+  filename is configured, rsgtutil we create a new file appending ".out". 
+
+-A, --append
+  Append extracted output to an existing file. Optional for EXTRACT 
+  operation mode. By appending to an existing outputfile, it is possible to 
+  extract loglines from multiple input sources into one file. 
 
 -P <URL>, --publications-server <URL>
   Sets the publications server used to verify the signature. 
@@ -131,12 +145,12 @@ verify
 ------
 
 This mode does not work with stdin. On the command line, the *log* file names
-are specified. The corresponding *signature* files (ending on ".gtsig") must also
-be preset at the same location as the log file. In verify mode, both the log
-and signature file is read and the validity of the log file checked. If verification
-errors are detected these are printed and processing of the file aborted. By default,
-each file is verified individually, without taking cross-file hash chains into
-account (so the order of files on the command line does not matter).
+are specified. The corresponding *signature* files (ending on ".gtsig"/".ksisig") 
+must also be preset at the same location as the log file. In verify mode, both the 
+log and signature file is read and the validity of the log file checked. If 
+verification errors are detected these are printed and processing of the file 
+aborted. By default, each file is verified individually, without taking cross-file 
+hash chains into account (so the order of files on the command line does not matter).
 
 Note that the actual amount of what can be verified depends on the parameters with
 which the signature file was written. If record and tree hashes are present, they
@@ -146,6 +160,27 @@ not present, only the block signature itself is verified.
 By default, only errors are printed. To also print successful verifications, use the
 **--show-verified** option.
 
+convert
+-------
+
+As the binary file format has changed between LOGSIG10 and LOGSIG11, it might be 
+necessary to convert old signature files in order to be able to verify them with 
+the current version of rsgtutil. This conversion needs to be done once, and will
+automatically create a new .*sig file and backup the old file in case of success. 
+
+extract
+-------
+
+Extract single or multiple lines from a given input logfile. The lines have to be
+separated by comma, for example ./rsgtutil --extract 1,2 security.log will 
+extract line 1 and 2 from security.log. 
+The corresponding *signature* file (ending on ".ksisig") needs to be present 
+at the same location and will be needed during the process of creating hash chains. 
+The hash chains will be written into their own .ksisig file (RECSIG11) including 
+the signature blocks. If no outputfile name is specified, a new file with the same
+name as the inputfile appending ".out" will be created. 
+The --append option can be used to append results to an existing outputfile if 
+loglines from multiple input sources have to be combined into one extraction file. 
 
 extend
 ------
@@ -203,6 +238,13 @@ Otherwise, rsgtutil terminates without messages.
 This dumps the content of the signature file "logfile.gtsig". The
 actual log file is not being processed and does not even need to be
 present.
+
+**rsgtutil --extract 1,2,3,4 logfile**
+
+This exports loglines 1, 2, 3 and 4 into a new file "logfile.out". 
+The actual log file combined with the signature file will be processed 
+to create and export corresponding hash chains. 
+
 
 SEE ALSO
 ========
