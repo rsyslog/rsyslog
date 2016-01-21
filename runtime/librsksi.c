@@ -71,7 +71,7 @@ reportErr(rsksictx ctx, char *errmsg)
 done:	return;
 }
 
-static void
+void
 reportKSIAPIErr(rsksictx ctx, ksifile ksi, char *apiname, int ecode)
 {
 	char errbuf[4096];
@@ -89,31 +89,51 @@ rsksisetErrFunc(rsksictx ctx, void (*func)(void*, uchar *), void *usrptr)
 	ctx->errFunc = func;
 }
 
-imprint_t *
-rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
+int
+rsksiIntoImprintFromKSI_DataHash(imprint_t* imp, ksifile ksi, KSI_DataHash *hash)
 {
-	int r;
-	imprint_t *imp;
+	int r = RSGTE_SUCCESS;
 	const unsigned char *digest;
 	size_t digest_len;
 
-	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
-		goto done;
-	}
 	KSI_HashAlgorithm hashID;
 	r = KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); 
 	if (r != KSI_OK){
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
-		free(imp); imp = NULL; goto done;
+		r = RSGTE_IO; 
+		goto done;
 	}
 
 	imp->hashID = hashID;
 	imp->len = digest_len;
 	if((imp->data = (uint8_t*)malloc(imp->len)) == NULL) {
-		free(imp); imp = NULL; goto done;
+		r = RSGTE_OOM; 
+		goto done;
 	}
 	memcpy(imp->data, digest, digest_len);
-done:	return imp;
+done:	
+	return r;
+}
+
+
+imprint_t *
+rsksiImprintFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
+{
+	int r;
+	imprint_t *imp;
+
+	if((imp = calloc(1, sizeof(imprint_t))) == NULL) {
+		goto done;
+	}
+
+	r = rsksiIntoImprintFromKSI_DataHash(imp, ksi, hash); 
+	if (r != RSGTE_SUCCESS) {
+		free(imp); 
+		imp = NULL; 
+		goto done;
+	}
+done:	
+	return imp;
 }
 
 void
@@ -130,19 +150,6 @@ rsksiInit(char *usragent)
 {
 	int r = 0;
 	int ret = KSI_OK;
-
-/*
-	ret = GT_init();
-	if(ret != KSI_OK) {
-		r = 1;
-		goto done;
-	}
-	ret = GTHTTP_init(usragent, 1);
-	if(ret != KSI_OK) {
-		r = 1;
-		goto done;
-	}
-*/
 
 done:	return r;
 }
@@ -164,10 +171,7 @@ rsksifileConstruct(rsksictx ctx)
 	ksi->blockSizeLimit = ctx->blockSizeLimit;
 	ksi->bKeepRecordHashes = ctx->bKeepRecordHashes;
 	ksi->bKeepTreeHashes = ctx->bKeepTreeHashes;
-	ksi->x_roothash = NULL;
 	ksi->x_prev = NULL;
-	ksi->x_prevleft = NULL;
-	ksi->x_prevright = NULL;
 
 done:	return ksi;
 }

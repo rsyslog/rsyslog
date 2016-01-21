@@ -49,7 +49,7 @@ struct tlvrecord_s {
 
 struct imprint_s {
 	uint8_t hashID;
-	int	len;
+	size_t len;
 	uint8_t *data;
 };
 
@@ -72,14 +72,19 @@ struct block_sig_s {
 };
 
 struct block_hashstep_s {
+	uint8_t direction;	/* left-link or right-link */
 	uint8_t level_corr;
 	imprint_t sib_hash;
 };
 
 struct block_hashchain_s {
  	imprint_t rec_hash;
- 	block_hashstep_t left_link;
- 	block_hashstep_t right_link;
+	uint64_t stepCount; /* Helper to count left & right links */
+	block_hashstep_t *hashsteps[MAX_ROOTS]; /* Using MAX_ROOTS here as well for the moment! */
+	uint8_t direction;	/* left-link or right-link */
+	uint8_t level;		/* default 0 */
+// 	block_hashstep_t left_link;
+// 	block_hashstep_t right_link;
 };
 
 

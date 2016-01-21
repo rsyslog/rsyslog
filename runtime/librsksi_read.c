@@ -378,6 +378,9 @@ rsksi_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 {
 	int r = 1;
 	int c;
+	/* Init record variables */
+	rec->tlvtype = 0; 
+	rec->tlvlen = 0; 
 
 	NEXTC;
 	rec->hdr[0] = c;
@@ -399,17 +402,17 @@ rsksi_tlvRecRead(FILE *fp, tlvrecord_t *rec)
 		rec->hdr[1] = c;
 		rec->tlvlen = c;
 	}
-	if(fread(rec->data, (size_t) rec->tlvlen, 1, fp) != 1) {
+	if((r = fread(rec->data, (size_t) rec->tlvlen, 1, fp)) != 1) {
 		r = feof(fp) ? RSGTE_EOF : RSGTE_IO;
 		goto done;
 	}
 
 	r = 0;
-done:	return r;
-	if(r == 0 && rsksi_read_debug)
-		/* Only show debug if no fail */
-		printf("debug: rsksi_tlvRecRead:\t read tlvtype %4.4x, len %u\n", (unsigned) rec->tlvtype,
-			(unsigned) rec->tlvlen);
+done:	
+	/* Only show debug if no fail */
+	if(rsksi_read_debug && r != 0 && r != RSGTE_EOF)
+		printf("debug: rsksi_tlvRecRead:\t read tlvtype %4.4x, len %u r=%d\n", (unsigned) rec->tlvtype, (unsigned) rec->tlvlen, r);
+	return r;
 }
 
 /* decode a sub-tlv record from an existing record's memory buffer
@@ -483,11 +486,11 @@ rsksi_tlvDecodeIMPRINT(tlvrecord_t *rec, imprint_t **imprint)
 	r = 0;
 done:	
 	if(r == 0) {
-		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeIMPRINT:\t returned %d TLVType=%4.4x, TLVLen=%d, HashID=%d\n", r, rec->tlvtype, rec->tlvlen, imp->hashID);
-		if (rsksi_read_debug) outputHash(stdout, "debug: rsksi_tlvDecodeIMPRINT:\t hash: ", imp->data, imp->len, 1);
+		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeIMPRINT:\t\t returned %d TLVType=%4.4x, TLVLen=%d, HashID=%d\n", r, rec->tlvtype, rec->tlvlen, imp->hashID);
+		if (rsksi_read_debug) outputHash(stdout, "debug: rsksi_tlvDecodeIMPRINT:\t\t hash: ", imp->data, imp->len, 1);
 	} else { 
 		/* Free memory on FAIL!*/
-		printf("debug: rsksi_tlvDecodeIMPRINT:\t Failed, tlv record %4.4x with error %d\n", rec->tlvtype, r);
+		printf("debug: rsksi_tlvDecodeIMPRINT:\t\t Failed, tlv record %4.4x with error %d\n", rec->tlvtype, r);
 		if (imp != NULL)
 			rsksi_objfree(rec->tlvtype, imp);
 	}
@@ -561,32 +564,35 @@ done:
 }
 
 static int
-rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t *blhashstep)
+rsksi_tlvDecodeHASH_STEP(tlvrecord_t *rec, uint16_t *pstrtidx, block_hashstep_t **blhashstep)
 {
 	int r = 1;
 	uint16_t strtidx = 0;
 	tlvrecord_t subrec;
-/*
+ 	*blhashstep = NULL; /* Set to NULL by default first */
+	
+	/* Init HashStep */
 	block_hashstep_t *hashstep = NULL;
 	if((hashstep = calloc(1, sizeof(block_hashstep_t))) == NULL) {
 		r = RSGTE_OOM;
 		goto done;
 	}
-*/
-	blhashstep->sib_hash.data = NULL; 
+	hashstep->sib_hash.data = NULL; 
 
+	/* Get Haststep Subrecord now */
 	CHKr(rsksi_tlvDecodeSUBREC(rec, pstrtidx, &subrec)); /* Add to external counter */
+	hashstep->direction = subrec.tlvtype; /* TLVType is also the DIRECTION! */
 
-	/* Extract HASH-STEP */
-	CHKr(rsksi_tlvDecodeLEVEL_CORR(&subrec, &strtidx, &(blhashstep->level_corr)));
-	CHKr(rsksi_tlvDecodeSIB_HASH(&subrec, &strtidx, &(blhashstep->sib_hash)));
+	/* Extract HASH and LEVEL Correction!*/
+	CHKr(rsksi_tlvDecodeLEVEL_CORR(&subrec, &strtidx, &(hashstep->level_corr)));
+	CHKr(rsksi_tlvDecodeSIB_HASH(&subrec, &strtidx, &(hashstep->sib_hash)));
 
 	if(strtidx != subrec.tlvlen) {
 		r = RSGTE_LEN;
 		goto done;
 	} 
 
-// 	*blhashstep = hashstep;
+ 	*blhashstep = hashstep;
 	r = 0;
 done:	
 	if (r == 0) {
@@ -594,10 +600,10 @@ done:
 	} else { 
 		/* Free memory on FAIL!*/
 		printf("debug: rsksi_tlvDecodeHASH_STEP:\t Failed, tlv record %4.4x with error %d\n", rec->tlvtype, r);
-		if (blhashstep != NULL) {
-			if (blhashstep->sib_hash.data != NULL)
-				free(blhashstep->sib_hash.data); 
-			free(blhashstep); 
+		if (hashstep != NULL) {
+			if (hashstep->sib_hash.data != NULL)
+				free(hashstep->sib_hash.data); 
+			free(hashstep);
 		}
 	}
 	return r;
@@ -607,19 +613,24 @@ rsksi_tlvDecodeHASH_CHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain)
 {
 	int r = 1;
 	uint16_t strtidx = 0;
+	/* Init HashChain Object */
 	block_hashchain_t *hashchain = NULL;
 	if((hashchain = calloc(1, sizeof(block_hashchain_t))) == NULL) {
 		r = RSGTE_OOM;
 		goto done;
 	}
 	hashchain->rec_hash.data = NULL; 
-	hashchain->left_link.sib_hash.data = NULL; 
-	hashchain->right_link.sib_hash.data = NULL; 
+	hashchain->stepCount = 0; 
+	hashchain->level = 0; 
 
 	/* Extract hash chain */
 	CHKr(rsksi_tlvDecodeREC_HASH(rec, &strtidx, &(hashchain->rec_hash)));
-	CHKr(rsksi_tlvDecodeHASH_STEP(rec, &strtidx, &(hashchain->left_link)));
-	CHKr(rsksi_tlvDecodeHASH_STEP(rec, &strtidx, &(hashchain->right_link)));
+	
+	/* Loop until all Steps have been processed */
+	while(rec->tlvlen > strtidx) { 
+		CHKr(rsksi_tlvDecodeHASH_STEP(rec, &strtidx, &(hashchain->hashsteps[hashchain->stepCount++])));
+		if (rsksi_read_debug) printf("debug: rsksi_tlvDecodeHASH_CHAIN:\t tlvlen=%d strtidx=%d\n", rec->tlvlen, strtidx);
+	}
 
 	*blhashchain = hashchain;
 	r = 0;
@@ -717,7 +728,7 @@ rsksi_tlvDecodeSIG(tlvrecord_t *rec, uint16_t *strtidx, block_sig_t *bs)
 	memcpy(bs->sig.der.data, subrec.data, bs->sig.der.len);
 	r = 0;
 done:	
-	if(rsksi_read_debug) printf("debug: rsksi_tlvDecodeSIG:\t returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+	if(rsksi_read_debug) printf("debug: rsksi_tlvDecodeSIG:\t\t returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
 	return r;
 }
 
@@ -742,7 +753,7 @@ rsksi_tlvDecodeBLOCK_HDR(tlvrecord_t *rec, block_hdr_t **blockhdr)
 	r = 0;
 done:	
 	if (r == 0) {
-		if(rsksi_read_debug) printf("debug: tlvDecodeBLOCK_HDR:\t returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
+		if(rsksi_read_debug) printf("debug: tlvDecodeBLOCK_HDR:\t\t returned %d, tlvtype %4.4x\n", r, (unsigned) rec->tlvtype);
 	} else { 
 		/* Free memory on FAIL!*/
 		if (bh != NULL)
@@ -801,7 +812,7 @@ rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 	r = 0;
 done:	
 	if(r == 0) {
-		if (rsksi_read_debug) printf("debug: tlvDecodeBLOCK_SIG:\t returned %d, tlvtype %4.4x, recCount %ju\n", r, (unsigned) rec->tlvtype, bs->recCount);
+		if (rsksi_read_debug) printf("debug: tlvDecodeBLOCK_SIG:\t\t returned %d, tlvtype %4.4x, recCount %ju\n", r, (unsigned) rec->tlvtype, bs->recCount);
 	} else { 
 		/* Free memory on FAIL!*/
 		if (bs != NULL)
@@ -849,7 +860,7 @@ rsksi_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 
 	if((r = rsksi_tlvrd(fp, &rec, imp)) != 0) goto done;
 	if(rec.tlvtype != 0x0902) {
-		if(rsksi_read_debug) printf("debug: rsksi_tlvrdRecHash:\t\t expected tlvtype 0x0902, but was %4.4x\n", rec.tlvtype);
+		if(rsksi_read_debug) printf("debug: rsksi_tlvrdRecHash:\t\t\t expected tlvtype 0x0902, but was %4.4x\n", rec.tlvtype);
 		r = RSGTE_MISS_REC_HASH;
 		rsksi_objfree(rec.tlvtype, *imp);
 		*imp = NULL; 
@@ -861,7 +872,7 @@ rsksi_tlvrdRecHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	r = 0;
 done:	
 	if(r == 0 && rsksi_read_debug)
-		printf("debug: tlvrdRecHash:\t returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
+		printf("debug: tlvrdRecHash:\t\t\t returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
 	return r;
 }
 
@@ -873,7 +884,7 @@ rsksi_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 
 	if((r = rsksi_tlvrd(fp, &rec, imp)) != 0) goto done;
 	if(rec.tlvtype != 0x0903) {
-		if(rsksi_read_debug) printf("debug: rsksi_tlvrdTreeHash:\t expected tlvtype 0x0903, but was %4.4x\n", rec.tlvtype);
+		if(rsksi_read_debug) printf("debug: rsksi_tlvrdTreeHash:\t\t expected tlvtype 0x0903, but was %4.4x\n", rec.tlvtype);
 		r = RSGTE_MISS_TREE_HASH;
 		rsksi_objfree(rec.tlvtype, *imp);
 		*imp = NULL; 
@@ -884,7 +895,7 @@ rsksi_tlvrdTreeHash(FILE *fp, FILE *outfp, imprint_t **imp)
 	}
 	r = 0;
 done:	
-	if(r == 0 && rsksi_read_debug) printf("debug: rsksi_tlvrdTreeHash:\t returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
+	if(r == 0 && rsksi_read_debug) printf("debug: rsksi_tlvrdTreeHash:\t\t returned %d, rec->tlvtype %4.4x\n", r, (unsigned) rec.tlvtype);
 	return r;
 }
 
@@ -929,7 +940,9 @@ rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj)
 	int r;
 	if((r = rsksi_tlvRecRead(fp, rec)) != 0) goto done;
 	r = rsksi_tlvRecDecode(rec, obj);
-done:	return r;
+done:	
+	if(rsksi_read_debug && r != RSGTE_SUCCESS && r != RSGTE_EOF) printf("debug: rsksi_tlvrd:\t failed with error %d\n", r);
+	return r;
 }
 
 
@@ -1052,6 +1065,7 @@ rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 void
 rsksi_objfree(uint16_t tlvtype, void *obj)
 {
+	int j; 
 	// check if obj is valid 
 	if (obj == NULL )
 		return; 
@@ -1077,17 +1091,52 @@ rsksi_objfree(uint16_t tlvtype, void *obj)
 		if ( ((block_hashchain_t*)obj)->rec_hash.data != NULL) {
 			free(((block_hashchain_t*)obj)->rec_hash.data);
 		}
-		if ( ((block_hashchain_t*)obj)->left_link.sib_hash.data != NULL) {
-			free(((block_hashchain_t*)obj)->left_link.sib_hash.data);
-		}
-		if ( ((block_hashchain_t*)obj)->right_link.sib_hash.data != NULL) {
-			free(((block_hashchain_t*)obj)->right_link.sib_hash.data);
+		/* Loop through Step Objects and delete mem */
+		if (((block_hashchain_t*)obj)->stepCount > 0) {
+			for(j = 0 ; j < ((block_hashchain_t*)obj)->stepCount ; ++j) {
+				if (((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data != NULL) {
+					free(((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data);
+				}
+			}
 		}
 		break;
 	default:fprintf(stderr, "rsksi_objfree:\t unknown tlv record %4.4x\n", tlvtype);
 		break;
 	}
 	free(obj);
+}
+
+block_hashstep_t*
+rsksiHashstepFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
+{
+	int r;
+	const unsigned char *digest;
+	size_t digest_len;
+	block_hashstep_t* hashstep; 
+
+	if((hashstep = calloc(1, sizeof(block_hashstep_t))) == NULL) {
+		goto done;
+	}
+
+	/* Get imprint from KSI_Hash */
+	KSI_HashAlgorithm hashID;
+	r = KSI_DataHash_extract(hash, &hashID, &digest, &digest_len); 
+	if (r != KSI_OK){
+		reportKSIAPIErr(ksi->ctx, ksi, "KSI_DataHash_extract", r);
+		free(hashstep); hashstep = NULL; 
+		goto done;
+	}
+
+	/* Fill Hashstep object */
+	hashstep->sib_hash.hashID = hashID;
+	hashstep->sib_hash.len = digest_len;
+	if((hashstep->sib_hash.data = (uint8_t*)malloc(hashstep->sib_hash.len)) == NULL) {
+		free(hashstep); hashstep = NULL; 
+		goto done;
+	}
+	memcpy(hashstep->sib_hash.data, digest, digest_len);
+done:	
+	return hashstep;
 }
 
 /**
@@ -1146,20 +1195,6 @@ rsksi_getBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t **bs,
 			break;
 		case 0x0903:
 			*bHasIntermedHashes = 1;
-/* TODO MAY DELETE LATER */
-if (ksi != NULL) {
-	/* Free MEM first! */
-	if (ksi->x_roothash != NULL) {
-		free(ksi->x_roothash->data),
-		free(ksi->x_roothash);
-	}
-	/* Not the best solution but right now we copy each recordhash, the last one will be the root hash */
-	if((ksi->x_roothash = calloc(1, sizeof(imprint_t))) == NULL) { r = RSGTE_OOM; goto done; }
-	ksi->x_roothash->hashID = ((imprint_t*)obj)->hashID;
-	ksi->x_roothash->len = ((imprint_t*)obj)->len;
-	if((ksi->x_roothash->data = (uint8_t*)malloc(ksi->x_roothash->len)) == NULL) {r=RSGTE_OOM;goto done;}
-	memcpy(ksi->x_roothash->data, ((imprint_t*)obj)->data, ((imprint_t*)obj)->len);
-}
 			break;
 		case 0x0904:
 			*bs = (block_sig_t*) obj;
@@ -1240,7 +1275,7 @@ rsksi_getExcerptBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t 
 			}
 			break;
 		case 0x0907: /* hash chain for one log record | Excerpt File */
-			if (bs != NULL) {
+			if (*bs != NULL) {
 				if (nRecs == 0) /* Copy HASHID from record hash */
 					(*bh)->hashID = ((block_hashchain_t*)obj)->rec_hash.hashID; 
 				/* Increment hash chain count */
@@ -1255,11 +1290,14 @@ rsksi_getExcerptBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t 
 		if(bSig == 1 && obj != NULL) rsksi_objfree(rec.tlvtype, obj);
 	}
 done:
-	if (*bs != NULL && r == RSGTE_EOF) {
-		if(rsksi_read_debug) printf("debug: rsksi_getExcerptBlockParams:\t Reached END of FILE\n");
-		r = RSGTE_SUCCESS;
-	} else 
+	if (*bs != NULL) {
+		if (r == RSGTE_EOF) {
+			if(rsksi_read_debug) printf("debug: rsksi_getExcerptBlockParams:\t Reached END of FILE\n");
+			r = RSGTE_SUCCESS;
+		} 
+	} else {
 		goto done2; 
+	}
 	
 	/* Copy Count back! */
 	(*bs)->recCount = nRecs; 
@@ -1311,15 +1349,12 @@ rsksi_vrfyConstruct_gf(void)
 	if((ksi = calloc(1, sizeof(struct ksifile_s))) == NULL)
 		goto done;
 	ksi->x_prev = NULL;
-	ksi->x_prevleft = NULL;
-	ksi->x_prevright = NULL;
 
 	/* Create new KSI Context! */
 	rsksictx ctx = rsksiCtxNew();
 	ksi->ctx = ctx; /* assign context to ksifile */
 
 	/* Setting KSI Publication URL ! */ 
-
 	ksistate = KSI_CTX_setPublicationUrl(ksi->ctx->ksi_ctx, rsksi_read_puburl);
 	if(ksistate != KSI_OK) {
 		fprintf(stderr, "Failed setting KSI Publication URL '%s' with error (%d): %s\n", rsksi_read_puburl, ksistate, KSI_getErrorString(ksistate));
@@ -1427,25 +1462,11 @@ rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		reportError(r, ectx);
 		ectx->computedHash = NULL, ectx->fileHash = NULL;
 		goto done;
-	} else {
-		/* EXTRA DEBUG !!!! */
-		if(rsksi_read_debug) {
-			ectx->computedHash = hash;
-			ectx->fileHash = imp;
-			printf("debug: rsksi_vrfy_chkTreeHash:\t DEBUG OUTPUT\n");
-			if(ectx->frstRecInBlk != NULL) fprintf(stdout, "\tBlock Start Record.: '%s'\n", ectx->frstRecInBlk);
-			if(ectx->errRec != NULL) fprintf(stdout, "\tRecord in Question.: '%s'\n", ectx->errRec);
-			if(ectx->computedHash != NULL) outputKSIHash(stdout, "\tComputed Hash......: ", ectx->computedHash, ectx->verbose);
-			if(ectx->fileHash != NULL) outputHash(stdout, "\tSignature File Hash: ", ectx->fileHash->data, ectx->fileHash->len, ectx->verbose); 
-			outputKSIHash(stdout, "\tTree Left Hash.....: ", ectx->lefthash, ectx->verbose);
-			outputKSIHash(stdout, "\tTree Right Hash....: ", ectx->righthash, ectx->verbose);
-			ectx->computedHash = NULL, ectx->fileHash = NULL;
-		}
-	}
+	} 
 	r = 0;
 done:
 	if(imp != NULL) {
-		if(rsksi_read_debug) printf("debug: rsksi_vrfy_chkTreeHash:\t returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctetsKSI(imp->hashID));
+		if(rsksi_read_debug) printf("debug: rsksi_vrfy_chkTreeHash:\t\t returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctetsKSI(imp->hashID));
 		/* Free memory */
 		rsksi_objfree(0x0903, imp);
 	}
@@ -1454,7 +1475,7 @@ done:
 
 /* Helper function to verifiy the next record in the signature file */
 int
-rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx, int storehashchain)
+rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx)
 {
 	int r = 0;
 	KSI_DataHash *x; /* current hash */
@@ -1476,21 +1497,6 @@ rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, s
 		r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
-/* EXTRA DEBUG !!!! */
-if(rsksi_read_debug) {
-	outputKSIHash(stdout, "\tTree Left Hash.....: ", m, ectx->verbose);
-	outputKSIHash(stdout, "\tTree Right Hash....: ", recHash, ectx->verbose);
-	outputKSIHash(stdout, "\tTree Current Hash....: ", x, ectx->verbose);
-}
-
-	if (storehashchain == 1) {
-		/* Store Left Hash for extraction */
-		rsksiimprintDel(ksi->x_prevleft);
-		ksi->x_prevleft = rsksiImprintFromKSI_DataHash(ksi, m);
-
-		//	rsksiimprintDel(ksi->x_prevright);
-		//	ksi->x_prevright = rsksiImprintFromKSI_DataHash(ksi, recHash);
-	}
 
 	/* Store Current Hash for later use */
 	rsksiimprintDel(ksi->x_prev);
@@ -1498,7 +1504,6 @@ if(rsksi_read_debug) {
 
 	/* add x to the forest as new leaf, update roots list */
 	t = x;
-if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRec:\t nRoots = (%d)\n", ksi->nRoots);
 	for(j = 0 ; j < ksi->nRoots ; ++j) {
 		if(ksi->roots_valid[j] == 0) {
 			ksi->roots_hash[j] = t;
@@ -1506,15 +1511,6 @@ if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRec:\t nRoots = (%d)\n", ksi-
 			t = NULL;
 			break;
 		} else if(t != NULL) {
-if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRec:\t hash interim node level (%d)\n", (j+1));
-outputKSIHash(stdout, "\tKSI Root hash!!!!....: ", ksi->roots_hash[j], ectx->verbose);
-
-if (storehashchain == 1) {
-	/* Store Right Hash for extraction */
-	rsksiimprintDel(ksi->x_prevright);
-	ksi->x_prevright = rsksiImprintFromKSI_DataHash(ksi, ksi->roots_hash[j]);
-}
-
 			/* hash interim node */
 			ectx->treeLevel = j+1;
 			ectx->righthash = t;
@@ -1531,10 +1527,146 @@ if (storehashchain == 1) {
 		}
 	}
 	if(t != NULL) {
+		/* new level, append "at the top" */
+		ksi->roots_hash[ksi->nRoots] = t;
+		ksi->roots_valid[ksi->nRoots] = 1;
+		++ksi->nRoots;
+		assert(ksi->nRoots < MAX_ROOTS);
+		t = NULL;
+	}
+	++ksi->nRecords;
 
-//if (ksi->x_prevright == NULL)
-//	ksi->x_prevright = rsksiImprintFromKSI_DataHash(ksi, t);
-if(rsksi_read_debug) outputKSIHash(stdout, "\tTree Root Hash....: ", t, ectx->verbose);
+	/* cleanup */
+	KSI_DataHash_free(m);
+done:
+	if(recHash != NULL) KSI_DataHash_free(recHash);
+	if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRec:\t\t returned %d\n", r);
+	return r;
+}
+
+/* Helper function to verifiy the next record in the signature file */
+int
+rsksi_vrfy_nextRecExtract(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx, block_hashchain_t *hashchain, int storehashchain)
+{
+	int r = 0;
+	KSI_DataHash *x; /* current hash */
+	KSI_DataHash *m, *recHash = NULL, *t, *t_del;
+	uint8_t j;
+	block_hashstep_t *hashstep = NULL; 
+
+	hash_m_ksi(ksi, &m);
+	hash_r_ksi(ksi, &recHash, rec, len);
+
+	if(ksi->bKeepRecordHashes) {
+		r = rsksi_vrfy_chkRecHash(ksi, sigfp, nsigfp, recHash, ectx);
+		if(r != 0) goto done;
+	}
+	hash_node_ksi(ksi, &x, m, recHash, 1); /* hash leaf */
+	if(ksi->bKeepTreeHashes) {
+		ectx->treeLevel = 0;
+		ectx->lefthash = m;
+		ectx->righthash = recHash;
+		r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, x, ectx);
+		if(r != 0) goto done;
+	}
+
+/* EXTRA DEBUG !!!! */
+if(rsksi_read_debug) {
+	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Left Hash.....: ", m, ectx->verbose);
+	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Right Hash....: ", recHash, ectx->verbose);
+	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Current Hash..: ", x, ectx->verbose);
+}
+
+	/* Store Current Hash for later use */
+	rsksiimprintDel(ksi->x_prev);
+	ksi->x_prev = rsksiImprintFromKSI_DataHash(ksi, x);
+
+	if (storehashchain == 1) {
+		/* Store record hash for HashChain */
+		if (hashchain->rec_hash.data == NULL) {
+			/* Extract and copy record imprint*/
+			rsksiIntoImprintFromKSI_DataHash( &(hashchain->rec_hash), ksi, x ); 
+			if(rsksi_read_debug) outputHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t RECORD Hash: \t\t", hashchain->rec_hash.data, hashchain->rec_hash.len, ectx->verbose);
+			hashchain->direction = 0x03; /* RIGHT */
+			hashstep = rsksiHashstepFromKSI_DataHash(ksi, m);
+			if (hashstep == NULL ) { r = RSGTE_IO; goto done; }
+			hashstep->direction = hashchain->direction;
+			hashstep->level_corr = 0;	/* Level Correction 0 */
+			if(rsksi_read_debug) outputHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t RIGHT Hash: \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
+			
+			/* Attach to HashChain */
+			hashchain->hashsteps[hashchain->stepCount] = hashstep; 
+			hashchain->stepCount++; 
+			
+			hashchain->direction = 0x03; /* RIGHT */
+			hashchain->level = 1; 
+		}
+	}
+
+	/* add x to the forest as new leaf, update roots list */
+	t = x;
+
+	for(j = 0 ; j < ksi->nRoots ; ++j) {
+		if(ksi->roots_valid[j] == 0) {
+			if ((j+1) == hashchain->level) { 
+/* NOT SURE ABOUT j+1 ! */
+				hashchain->direction = 0x02; /* LEFT */
+				if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRecExtract:\t LEFT DIRECTION %d!!!\n", j);
+			}
+			ksi->roots_hash[j] = t;
+			ksi->roots_valid[j] = 1;
+			t = NULL;
+			break;
+		} else if(t != NULL) {
+			if ((j+1) == hashchain->level) {
+/* NOT SURE ABOUT j+1 ! */
+				if (hashchain->direction == 0x03) {	/*RIGHT*/
+					hashstep = rsksiHashstepFromKSI_DataHash(ksi, ksi->roots_hash[j]); 
+					if(hashstep == NULL ) { r = RSGTE_IO; goto done; }
+					if(rsksi_read_debug) {
+						printf("debug: rsksi_vrfy_nextRecExtract:\t RIGHT DIRECTION Level %d!!!\n", j);
+						outputHash(stdout, "debug: rsksi_vrfy_nextRecExtract: \t RIGHT Hash: \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
+					}
+				} else {							/*LEFT*/
+					hashstep = rsksiHashstepFromKSI_DataHash(ksi, t); 
+					if(hashstep == NULL ) { r = RSGTE_IO; goto done; }
+					if(rsksi_read_debug) {
+						printf("debug: rsksi_vrfy_nextRecExtract:\t LEFT DIRECTION Level %d!!!\n", j);
+						outputHash(stdout, "debug: rsksi_vrfy_nextRecExtract: \t LEFT Hash: \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
+					}
+				}
+				hashstep->direction = hashchain->direction;
+				hashstep->level_corr = j;	
+
+				/* Attach to HashChain */
+				hashchain->hashsteps[hashchain->stepCount] = hashstep; 
+				hashchain->stepCount++; 
+				
+				/* Set Direction and Chainlevel */
+				hashchain->direction = 0x03; /*RIGHT*/
+				hashchain->level = j+1;
+			}
+
+			/* hash interim node */
+			ectx->treeLevel = j+1;
+			ectx->righthash = t;
+			t_del = t;
+			hash_node_ksi(ksi, &t, ksi->roots_hash[j], t_del, j+2);
+			ksi->roots_valid[j] = 0;
+			if(ksi->bKeepTreeHashes) {
+				ectx->lefthash = ksi->roots_hash[j];
+				r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, t, ectx);
+				if(r != 0) goto done; /* mem leak ok, we terminate! */
+			}
+			KSI_DataHash_free(ksi->roots_hash[j]);
+			KSI_DataHash_free(t_del);
+		}
+	}
+
+	if(t != NULL) {
+		if(rsksi_read_debug) outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t New Root Hash....: ", t, ectx->verbose);
+		if (ksi->nRoots < hashchain->level) 
+			hashchain->direction = 0x02; /*LEFT*/
 
 		/* new level, append "at the top" */
 		ksi->roots_hash[ksi->nRoots] = t;
@@ -1549,23 +1681,25 @@ if(rsksi_read_debug) outputKSIHash(stdout, "\tTree Root Hash....: ", t, ectx->ve
 	KSI_DataHash_free(m);
 done:
 	if(recHash != NULL) KSI_DataHash_free(recHash);
-if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRec:\t returned %d\n", r);
+if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextRecExtract:\t returned %d\n", r);
 	return r;
 }
 
 /* Helper function to verifiy the next hash chain record in the signature file */
 int 
-rsksi_vrfy_nextHashChain(block_sig_t *bs, ksifile ksi, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx)
+rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx)
 {
+	unsigned int j;
 	int r = 0;
 	int ksistate;
 	KSI_Signature *sig = NULL;
 	KSI_DataHash *line_hash = NULL, *root_hash = NULL, *root_tmp = NULL; 
-	KSI_DataHash *rec_hash = NULL, *left_hash = NULL, *right_hash = NULL; 
-	uint8_t j;
+	KSI_DataHash *rec_hash = NULL, *sibling_hash = NULL;	/* left_hash = NULL, *right_hash = NULL; */
+	int bCheckLineHash = 0;									/* Line Hash will be checked after first record !*/
 	void *obj;
 	tlvrecord_t tlvrec;
-	block_hashchain_t *blhashchain = NULL; 
+	block_hashchain_t *hashchain = NULL; 
+	uint8_t uiLevelCorr = 0; 
 	
 	/* Check for next valid tlvrecord */
 	if ((r = rsksi_tlvrd(sigfp, &tlvrec, &obj)) != 0) goto done;
@@ -1575,51 +1709,70 @@ rsksi_vrfy_nextHashChain(block_sig_t *bs, ksifile ksi, FILE *sigfp, unsigned cha
 	}
 	
 	/* Convert Pointer to block_hashchain_t*/ 
-	blhashchain = (block_hashchain_t*)obj; 
+	hashchain = (block_hashchain_t*)obj; 
 	
 	/* Verify Hash Alg */
-	if(blhashchain->rec_hash.hashID != hashIdentifierKSI(ksi->hashAlg)) {
+	if(hashchain->rec_hash.hashID != hashIdentifierKSI(ksi->hashAlg)) {
 		reportError(r, ectx);
 		r = RSGTE_INVLD_REC_HASHID;
 		goto done;
 	}
 
-	/* Convert imprints into KSI_DataHashes */
-	KSI_DataHash_fromDigest (ksi->ctx->ksi_ctx, blhashchain->rec_hash.hashID, blhashchain->rec_hash.data, blhashchain->rec_hash.len, &rec_hash);  	
-	KSI_DataHash_fromDigest (ksi->ctx->ksi_ctx, blhashchain->left_link.sib_hash.hashID, blhashchain->left_link.sib_hash.data, blhashchain->left_link.sib_hash.len, &left_hash);  	
-	KSI_DataHash_fromDigest (ksi->ctx->ksi_ctx, blhashchain->right_link.sib_hash.hashID, blhashchain->right_link.sib_hash.data, blhashchain->right_link.sib_hash.len, &right_hash);  	
-	
-	/* Create Root Hash from LINE and Left Sibling */
+	/* Create Hash from Line */
 	hash_r_ksi(ksi, &line_hash, rec, len);
-	hash_node_ksi(ksi, &root_hash, left_hash, line_hash, blhashchain->left_link.level_corr + 1); 
+	if(rsksi_read_debug) outputKSIHash(stdout, "debug: rsksi_vrfy_nextHashChain:\t Line Hash.:.............: ", line_hash, ectx->verbose);
 
-	/* Compare root_hash vs rec_hash */
-	if ( KSI_DataHash_equals (root_hash, rec_hash) != 1 ) {
-		r = RSGTE_INVLD_REC_HASH;
-		ectx->computedHash = root_hash;
-		ectx->fileHash = &(blhashchain->rec_hash);
-		reportError(r, ectx);
-		ectx->computedHash = NULL, ectx->fileHash = NULL;
+	/* Convert Record hash from HashChain into KSI_DataHash */
+	KSI_DataHash_fromDigest (ksi->ctx->ksi_ctx, hashchain->rec_hash.hashID, hashchain->rec_hash.data, hashchain->rec_hash.len, &rec_hash);  
+	if(rsksi_read_debug) outputKSIHash(stdout, "debug: rsksi_vrfy_nextHashChain:\t HashChain Record Hash...: ", rec_hash, ectx->verbose);
+
+	/* Clone Line Hash for first time*/
+	if ( KSI_DataHash_clone(line_hash, &root_tmp) != KSI_OK ) {
+		r = RSGTE_IO;
 		goto done;
-	} else {
-		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t Success root_hash equals rec_hash\n"); 
 	}
 
-//	outputKSIHash(stdout, "\tTree Computed Root Hash.1.: ", root_hash, ectx->verbose);
-	/* Create Root hash using Right Sibling */
-	root_tmp = root_hash; 
-	hash_node_ksi(ksi, &root_hash, right_hash, root_tmp, blhashchain->right_link.level_corr);
-	KSI_DataHash_free(root_tmp);
-//	outputKSIHash(stdout, "\tTree Computed Root Hash.2.: ", root_hash, ectx->verbose);
+	/* Loop through hashchain now */
+	for(j = 0 ; j < hashchain->stepCount ; ++j) {
+		/* Set Level correction */
+		uiLevelCorr += hashchain->hashsteps[j]->level_corr + 1; 
 
-/* EXTRA DEBUG !!!! */
-if(rsksi_read_debug) {
-outputKSIHash(stdout, "\tTree Left Hash............: ", left_hash, ectx->verbose);
-outputKSIHash(stdout, "\tTree Right Hash...........: ", right_hash, ectx->verbose);
-outputKSIHash(stdout, "\tTree Record Hash..........: ", rec_hash, ectx->verbose);
-outputKSIHash(stdout, "\tTree Line Hash.:..........: ", line_hash, ectx->verbose);
-outputKSIHash(stdout, "\tTree Computed Root Hash...: ", root_hash, ectx->verbose);
-}
+		/* Convert Sibling hash from HashChain into KSI_DataHash */
+		KSI_DataHash_fromDigest (ksi->ctx->ksi_ctx, hashchain->hashsteps[j]->sib_hash.hashID, hashchain->hashsteps[j]->sib_hash.data, hashchain->hashsteps[j]->sib_hash.len, &sibling_hash);  	
+		if(rsksi_read_debug) outputKSIHash(stdout, "debug: rsksi_vrfy_nextHashChain:\t HashChain Sibling Hash..: ", sibling_hash, ectx->verbose);
+
+		if (hashchain->hashsteps[j]->direction == 0x02 /* LEFT */){
+			/* Combine Root Hash with LEFT Sibling */
+			hash_node_ksi(ksi, &root_hash, root_tmp, sibling_hash, uiLevelCorr); 
+		} else /* RIGHT */ {
+			/* Combine Root Hash with RIGHT Sibling */
+			hash_node_ksi(ksi, &root_hash, sibling_hash, root_tmp, uiLevelCorr); 
+		}
+		KSI_DataHash_free(root_tmp); /* Free tmp hash*/
+		if(rsksi_read_debug) outputKSIHash(stdout, "debug: rsksi_vrfy_nextHashChain:\t HashChain New Root Hash.: ", root_hash, ectx->verbose);
+
+		/* First Sibling, check */
+		if (bCheckLineHash == 0) {
+			/* Compare root_hash vs rec_hash */
+			if ( KSI_DataHash_equals (root_hash, rec_hash) != 1 ) {
+				r = RSGTE_INVLD_REC_HASH;
+				ectx->computedHash = root_hash;
+				ectx->fileHash = &(hashchain->rec_hash);
+				reportError(r, ectx);
+				ectx->computedHash = NULL, ectx->fileHash = NULL;
+				goto done;
+			} else {
+				if(rsksi_read_showVerified) printf("Successfully compared line hash against record hash\n"); 
+			}
+			bCheckLineHash = 1; 
+		}
+		
+		/* Store into TMP for next LOOP */
+		root_tmp = root_hash; 
+
+		/* Free memory */
+		if(sibling_hash != NULL) KSI_DataHash_free(sibling_hash);
+	}
 
 	/* Parse KSI Signature */
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, bs->sig.der.data, bs->sig.der.len, &sig);
@@ -1652,33 +1805,93 @@ outputKSIHash(stdout, "\tTree Computed Root Hash...: ", root_hash, ectx->verbose
 		goto done;
 	} else {
 		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_parse was successfull\n"); 
+		if(rsksi_read_showVerified)
+			reportVerifySuccess(ectx);
 	}
 done:
 	/* Free Memory */
 	if(root_hash != NULL) KSI_DataHash_free(root_hash);
 	if(line_hash != NULL) KSI_DataHash_free(line_hash);
 	if(rec_hash != NULL) KSI_DataHash_free(rec_hash);
-	if(left_hash != NULL) KSI_DataHash_free(left_hash);
-	if(right_hash != NULL) KSI_DataHash_free(right_hash);
-	if(blhashchain != NULL) rsksi_objfree(0x0907, blhashchain); 
+	if(hashchain != NULL) rsksi_objfree(0x0907, hashchain); 
 
 	if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t returned %d\n", r);
 	return r;
 }
 
+/* Finish Verify Sigblock with additional HashChain handling */
+int 
+verifySigblkFinishChain(ksifile ksi, block_hashchain_t *hashchain, KSI_DataHash **pRoot, ksierrctx_t *ectx)
+{
+	KSI_DataHash *root, *rootDel;
+	int8_t j;
+	int r = 0;
+	root = NULL;
+	block_hashstep_t *hashstep = NULL; 
+
+	if(ksi->nRecords == 0) {
+		if(rsksi_read_debug) printf("debug: verifySigblkFinishChain:\t\t Error, No records found! %d\n", r);
+		goto done;
+	}
+
+	for(j = 0 ; j < ksi->nRoots ; ++j) {
+		if(root == NULL) {
+			if (j == hashchain->level ) {
+				hashchain->direction = 0x03; /*RIGHT*/
+			}
+			root = ksi->roots_valid[j] ? ksi->roots_hash[j] : NULL;
+			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+		} else if(ksi->roots_valid[j]) {
+			if (j >= hashchain->level ) {
+				if (hashchain->direction == 0x03) {	/*RIGHT*/
+					hashstep = rsksiHashstepFromKSI_DataHash(ksi, ksi->roots_hash[j]); 
+					if(hashstep == NULL ) { r = RSGTE_IO; goto done; }
+					if(rsksi_read_debug) outputHash(stdout, "debug: verifySigblkFinishChain:\t\t RIGHT Hash: \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
+				} else {							/*LEFT*/
+					hashstep = rsksiHashstepFromKSI_DataHash(ksi, root); 
+					if(hashstep == NULL ) { r = RSGTE_IO; goto done; }
+					if(rsksi_read_debug) outputHash(stdout, "debug: verifySigblkFinishChain:\t\t LEFT Hash: \t\t", hashstep->sib_hash.data, hashstep->sib_hash.len, ectx->verbose);
+				}
+				hashstep->direction = hashchain->direction;
+				hashstep->level_corr = j - hashchain->level;	
+
+				/* Attach to HashChain */
+				hashchain->hashsteps[hashchain->stepCount] = hashstep; 
+				hashchain->stepCount++; 
+
+				/* Set Direction and Chainlevel */
+				hashchain->direction = 0x03; /*RIGHT*/
+				hashchain->level = j+1;
+			}
+			rootDel = root;
+			hash_node_ksi(ksi, &root, ksi->roots_hash[j], root, j+2);
+			ksi->roots_valid[j] = 0; /* guess this is redundant with init, maybe del */
+			KSI_DataHash_free(rootDel);
+		}
+	}
+
+	*pRoot = root;
+	r = 0;
+done:
+	ksi->bInBlk = 0;
+	if (rsksi_read_debug && root != NULL) outputKSIHash(stdout, "debug: verifySigblkFinishChain:\t\t ROOTHash: \t", root, 0);
+return r;
+}
+
+
 /* TODO: think about merging this with the writer. The
  * same applies to the other computation algos.
  */
-static int
+int
 verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 {
 	KSI_DataHash *root, *rootDel;
 	int8_t j;
-	int r;
+	int r = 0;
 	root = NULL;
 
 	if(ksi->nRecords == 0) {
-		if(rsksi_read_debug) printf("debug: verifySigblkFinish:\t no records!!!%d\n", r);
+		if(rsksi_read_debug) printf("debug: verifySigblkFinish:\t\t no records!!!%d\n", r);
 		goto done;
 	}
 
@@ -1698,7 +1911,7 @@ verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot)
 	r = 0;
 done:
 	ksi->bInBlk = 0;
-	if (rsksi_read_debug && root != NULL) outputKSIHash(stdout, "debug: verifySigblkFinish: Root hash: \t", root, 1);
+	if (rsksi_read_debug && root != NULL) outputKSIHash(stdout, "debug: verifySigblkFinish:\t\t Root hash: \t", root, 1);
 return r;
 }
 
@@ -1779,8 +1992,6 @@ done:
 	return r;
 }
 
-
-
 /* Verify the existance of the header. 
  */
 int
@@ -1790,7 +2001,7 @@ verifyBLOCK_HDRKSI(ksifile ksi, FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
 	block_hdr_t *bh = NULL;
 	if ((r = rsksi_tlvrd(sigfp, tlvrec, &bh)) != 0) goto done;
 	if (tlvrec->tlvtype != 0x0901) {
-		if(rsksi_read_debug) printf("debug: verifyBLOCK_HDRKSI:\t expected tlvtype 0x0901, but was %4.4x\n", tlvrec->tlvtype);
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_HDRKSI:\t\t expected tlvtype 0x0901, but was %4.4x\n", tlvrec->tlvtype);
 		r = RSGTE_MISS_BLOCKSIG;
 		goto done;
 	}
@@ -1799,7 +2010,7 @@ verifyBLOCK_HDRKSI(ksifile ksi, FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
 done:	
 	if (bh != NULL)
 		rsksi_objfree(tlvrec->tlvtype, bh);
-	if(rsksi_read_debug) printf("debug: verifyBLOCK_HDRKSI:\t returned %d\n", r);
+	if(rsksi_read_debug) printf("debug: verifyBLOCK_HDRKSI:\t\t returned %d\n", r);
 	return r;
 }
 
@@ -1808,17 +2019,18 @@ done:
  */
 int
 verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
-                uint8_t bExtend, ksierrctx_t *ectx)
+                uint8_t bExtend, KSI_DataHash *ksiHash, ksierrctx_t *ectx)
 {
 	int r;
 	int ksistate;
 	block_sig_t *file_bs = NULL;
 	KSI_Signature *sig = NULL;
-	KSI_DataHash *ksiHash = NULL;
 	tlvrecord_t rec;
-
-	if((r = verifySigblkFinish(ksi, &ksiHash)) != 0)
-		goto done;
+	if (ksiHash == NULL) {
+		if((r = verifySigblkFinish(ksi, &ksiHash)) != 0)
+			goto done;
+	}
+	if(rsksi_read_debug) outputKSIHash(stdout, "debug: verifyBLOCK_SIGKSI:\t\t SigBlock Finish Hash....: ", ksiHash, ectx->verbose);
 	if((r = rsksi_tlvrdVrfyBlockSig(sigfp, &file_bs, &rec)) != 0)
 		goto done;
 	if(ectx->recNum != bs->recCount) {
@@ -1829,28 +2041,40 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	/* Parse KSI Signature */
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
-		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t KSI_Signature_parse failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
+	} else {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_parse was successfull\n"); 
+	}
+	/* Verify KSI Signature */
+	ksistate = KSI_Signature_verify(sig, ksi->ctx->ksi_ctx);
+	if(ksistate != KSI_OK) {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
+		r = RSGTE_INVLD_SIGNATURE;
+		ectx->ksistate = ksistate;
+		goto done;
+	} else {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successfull\n"); 
 	}
 	ksistate = KSI_Signature_verifyDataHash(sig, ksi->ctx->ksi_ctx, ksiHash);
 	if (ksistate != KSI_OK) {
-		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t KSI_Signature_verifyDataHash failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
 		goto done;
-		/* TODO proberly additional verify with KSI_Signature_verify*/
+	} else {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verifyDataHash was successfull\n"); 
 	}
 
-	if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t processed without error's\n"); 
+	if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t processed without error's\n"); 
 	if(rsksi_read_showVerified)
 		reportVerifySuccess(ectx);
 	if(bExtend)
 		if((r = rsksi_extendSig(sig, ksi, &rec, ectx)) != 0) goto done;
 		
 	if(nsigfp != NULL) {
-if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t WRITE ROOT HASH!!!\n"); 
 		if((r = rsksi_tlvwrite(nsigfp, &rec)) != 0) goto done;
 	}
 	r = 0;
@@ -2072,85 +2296,72 @@ done:
 	return r;
 }
 
-/* Helper function to write Block header */
-int rsksi_StartHashChain(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, int iRightLinkRecords, int verbose)
+
+
+/* Helper function to write full hashchain! */
+int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, block_sig_t *bsIn, int verbose)
 {
+	uint8_t j;
 	int r = 0;
 	unsigned tlvlen;
 	uint8_t tlvlenLevelCorr;
+	uint8_t uiLevelCorr = 0; 
 
-	if(rsksi_read_debug) printf("debug: rsksi_StartHashChain:\t NEW HashChain started with %d RightLink records\n", iRightLinkRecords);
-
+	if(rsksi_read_debug) printf("debug: rsksi_WriteHashChain:\t\t NEW HashChain started with %lld Chains\n", (long long unsigned)hashchain->stepCount);
+	
 	/* Error Check */
-	if (ksi->x_prevleft == NULL || ksi->x_prev == NULL) {
+	if (hashchain == NULL || 
+		hashchain->rec_hash.data == NULL || 
+		hashchain->stepCount == 0) {
 		r = RSGTE_EXTRACT_HASH; 
 		goto done; 
 	}
 
 	/* Total Length of Hash Chain */
-	tlvlenLevelCorr = rsksi_tlvGetInt64OctetSize(ksi->nRoots);
+	tlvlenLevelCorr = rsksi_tlvGetInt64OctetSize(uiLevelCorr);
+
+	/* Total Length of Hash Chain */
 	tlvlen =	4 + /* ???? */	
-				2 + 1 + ksi->x_prev->len												/* rec-hash */ +
-				2 + tlvlenLevelCorr + 2 + 1 + ksi->x_prevleft->len						/* left-link */ + 
-				((2 + tlvlenLevelCorr + 2 + 1 + ksi->x_prevright->len)*iRightLinkRecords);	/* Count of all other right-links */
+				2 + 1 + hashchain->rec_hash.len	/* rec-hash */ +
+				((2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len)*hashchain->stepCount);	/* Count of all left/right chains */
+	if(rsksi_read_debug) printf("debug: rsksi_WriteHashChain:\t\t tlvlen=%d \n", tlvlen);
 
 	/* Start hash chain for one log record */
 	CHKrDecode(rsksi_tlv16Write(newsigfp, 0x00, 0x0907, tlvlen));
 
 	/* rec-hash */
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, 1 + ksi->x_prev->len));
-	CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, ksi->x_prev->hashID));
-	CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, ksi->x_prev->data, ksi->x_prev->len));
-outputHash(stdout, "debug: rsksi_StartHashChain:\t Record Hash: \t\t", ksi->x_prev->data, ksi->x_prev->len, 1);
-
-	/* left-link - step in the hash chain*/
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x02, 2 + tlvlenLevelCorr + 2 + 1 + ksi->x_prevleft->len));
-	/* level correction value */
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, tlvlenLevelCorr));
-	CHKrDecode(rsksi_tlvfileAddInt64(newsigfp, 0)); /* Left HASH is stored with Level 0 ! */
-	/* sibling hash value */
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x02, 1 + ksi->x_prevleft->len));
-	CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, ksi->x_prevleft->hashID));
-	CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, ksi->x_prevleft->data, ksi->x_prevleft->len));
-outputHash(stdout, "debug: rsksi_StartHashChain:\t Left Hash: \t\t", ksi->x_prevleft->data, ksi->x_prevleft->len, 1);
-
-donedecode:
-	if(r != 0) printf("debug: rsksi_StartHashChain:\t failed to write with error %d\n", r);
-done:
-	if(rsksi_read_debug) printf("debug: rsksi_StartHashChain:\t returned %d\n", r);
-	return r;
-}
-
-/* Helper function to write Block header */
-int rsksi_AddRightToHashChain(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, uint64_t uiLevelCorrectionValue, int verbose)
-{
-	int r = 0;
-	uint8_t tlvlenLevelCorr;
-	
-	/* Error Check */
-	if (ksi->x_prevright == NULL) {
-		r = RSGTE_EXTRACT_HASH; 
-		goto done; 
+	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, 1 + hashchain->rec_hash.len));
+	CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, hashchain->rec_hash.hashID));
+	CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, hashchain->rec_hash.data, hashchain->rec_hash.len));
+	if(rsksi_read_debug) {
+		printf("debug: rsksi_WriteHashChain:\t\t Write Record tlvlen=%zu \n", 1 + hashchain->rec_hash.len);
+		outputHash(stdout, "debug: rsksi_WriteHashChain:\t\t RECORD Hash: \t\t", hashchain->rec_hash.data, hashchain->rec_hash.len, verbose);
 	}
 
-	/* Total Length of Hash Chain */
-	tlvlenLevelCorr = rsksi_tlvGetInt64OctetSize(uiLevelCorrectionValue);
+	/* Process Chains */
+	for(j = 0 ; j < hashchain->stepCount ; ++j) {
+		tlvlen = 2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[j]->sib_hash.len; 
 
-	/* right-link - step in the hash chain*/
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x03, 2 + tlvlenLevelCorr + 2 + 1 + ksi->x_prevright->len));
-	/* level correction value */
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, tlvlenLevelCorr));
-	CHKrDecode(rsksi_tlvfileAddInt64(newsigfp, uiLevelCorrectionValue)); /* Left HASH is stored with Level 2 ! */
-	/* sibling hash value */
-	CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x02, 1 + ksi->x_prevright->len));
-	CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, ksi->x_prevright->hashID));
-	CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, ksi->x_prevright->data, ksi->x_prevright->len));
-outputHash(stdout, "debug: AddRightToHashChain:\t Right  Hash: \t\t", ksi->x_prevright->data, ksi->x_prevright->len, 1);
+		/* Step in the hash chain*/
+		CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, hashchain->hashsteps[j]->direction, tlvlen));
+		/* level correction value */
+		CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x01, tlvlenLevelCorr));
+		CHKrDecode(rsksi_tlvfileAddInt64(newsigfp, hashchain->hashsteps[j]->level_corr)); 
+		/* sibling hash value */
+		CHKrDecode(rsksi_tlv8Write(newsigfp, 0x00, 0x02, 1 + hashchain->hashsteps[j]->sib_hash.len));
+		CHKrDecode(rsksi_tlvfileAddOctet(newsigfp, hashchain->hashsteps[j]->sib_hash.hashID));
+		CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, hashchain->hashsteps[j]->sib_hash.data, hashchain->hashsteps[j]->sib_hash.len));
 
+		if(rsksi_read_debug) {
+			printf("debug: rsksi_WriteHashChain:\t\t Write Chain  tlvlen=%d \n", tlvlen);
+			printf("debug: rsksi_WriteHashChain:\t\t Direction %d, level_corr %lld\n", hashchain->hashsteps[j]->direction, (long long unsigned) uiLevelCorr);
+			outputHash(stdout, "debug: rsksi_WriteHashChain:\t\t Chain Hash: \t\t", hashchain->hashsteps[j]->sib_hash.data, hashchain->hashsteps[j]->sib_hash.len, verbose);
+		}
+	}
 donedecode:
-	if(r != 0) printf("debug: AddRightToHashChain:\t failed to write with error %d\n", r);
+	if(r != 0) printf("debug: rsksi_WriteHashChain:\t\t failed to write with error %d\n", r);
 done:
-	if(rsksi_read_debug) printf("debug: AddRightToHashChain:\t returned %d\n", r);
+	if(rsksi_read_debug) printf("debug: rsksi_WriteHashChain:\t\t returned %d\n", r);
 	return r;
 }
 
@@ -2165,8 +2376,8 @@ int rsksi_ExtractBlockSignature(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, 
 	CHKrDecode(rsksi_tlvfileAddOctetString(newsigfp, bsIn->sig.der.data, bsIn->sig.der.len));
 
 donedecode:
-	if(r != 0) printf("debug: rsksi_ExtractBlockSignature:\t failed to write with error %d\n", r);
+	if(r != 0) printf("debug: rsksi_ExtractBlockSignature:\t\t failed to write with error %d\n", r);
 done:
-	if(rsksi_read_debug) printf("debug: ExtractBlockSignature:\t returned %d\n", r);
+	if(rsksi_read_debug) printf("debug: ExtractBlockSignature:\t\t returned %d\n", r);
 	return r;
 }
