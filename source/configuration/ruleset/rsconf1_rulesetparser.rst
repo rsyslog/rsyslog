@@ -78,26 +78,44 @@ all messages. So we simply forward the malformed messages to the regular
 queue once they are parsed (keep in mind that a message is never again
 parsed once any parser properly processed it).
 
-$ModLoad imudp $ModLoad pmdevice1 # load parser "device1.parser" for
-device 1 $ModLoad pmdevice2 # load parser "device2.parser" for device 2
-# define ruleset for the first device sending malformed data $Ruleset
-maldev1 $RulesetCreateMainQueue on # create ruleset-specific queue
-$RulesetParser "device1.parser" # note: this deactivates the default
-parsers # forward all messages to default ruleset:
-$ActionOmrulesetRulesetName RSYSLOG\_DefaultRuleset \*.\* :omruleset: #
-define ruleset for the second device sending malformed data $Ruleset
-maldev2 $RulesetCreateMainQueue on # create ruleset-specific queue
-$RulesetParser "device2.parser" # note: this deactivates the default
-parsers # forward all messages to default ruleset:
-$ActionOmrulesetRulesetName RSYSLOG\_DefaultRuleset \*.\* :omruleset: #
-switch back to default ruleset $Ruleset RSYSLOG\_DefaultRuleset \*.\*
-/path/to/file auth.info @authlogger.example.net # whatever else you
-usually do... # now define the inputs and bind them to the rulesets #
-first the default listener (utilizing the default ruleset) $UDPServerRun
-514 # now the one with the parser for device type 1:
-$InputUDPServerBindRuleset maldev1 $UDPServerRun 10514 # and finally the
-one for device type 2: $InputUDPServerBindRuleset maldev2 $UDPServerRun
-10515
+::
+
+  $ModLoad imudp
+  $ModLoad pmdevice1 # load parser "device1.parser" for device 1
+  $ModLoad pmdevice2 # load parser "device2.parser" for device 2
+
+  # define ruleset for the first device sending malformed data
+  $Ruleset maldev1
+  $RulesetCreateMainQueue on # create ruleset-specific queue
+  $RulesetParser "device1.parser" # note: this deactivates the default parsers
+  # forward all messages to default ruleset:
+  $ActionOmrulesetRulesetName RSYSLOG\_DefaultRuleset
+  \*.\* :omruleset:
+
+  # define ruleset for the second device sending malformed data
+  $Ruleset maldev2 $RulesetCreateMainQueue on # create ruleset-specific queue
+  $RulesetParser "device2.parser" # note: this deactivates the default parsers
+  # forward all messages to default ruleset:
+  $ActionOmrulesetRulesetName RSYSLOG\_DefaultRuleset
+  \*.\* :omruleset:
+
+  # switch back to default ruleset
+  $Ruleset RSYSLOG\_DefaultRuleset
+  \*.\* /path/to/file
+  auth.info @authlogger.example.net
+  # whatever else you usually do...
+
+  # now define the inputs and bind them to the rulesets
+  # first the default listener (utilizing the default ruleset)
+  $UDPServerRun 514
+
+  # now the one with the parser for device type 1:
+  $InputUDPServerBindRuleset maldev1
+  $UDPServerRun 10514
+
+  # and finally the one for device type 2:
+  $InputUDPServerBindRuleset maldev2
+  $UDPServerRun 10515
 
 For an example of how multiple parser can be chained (and an actual use
 case), please see the example section on the
