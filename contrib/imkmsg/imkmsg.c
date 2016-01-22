@@ -99,7 +99,7 @@ enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct j
 	if(tp == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
-		datetime.timeval2syslogTime(tp, &st);
+		datetime.timeval2syslogTime(tp, &st, TIME_IN_LOCALTIME);
 		CHKiRet(msgConstructWithTime(&pMsg, &st, tp->tv_sec));
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
