@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
+- rsgtutil: Added extraction support including loglines and hash chains. 
+  More details on how to extract loglines can be found in the rsgtutil
+  manpage. See also: https://github.com/rsyslog/rsyslog/issues/561   
 - clean up doAction output module interface
   We started with char * pointers, but used different types of pointers
   over time. This lead to alignment warnings. In practice, I think this
