@@ -353,7 +353,7 @@ convertFileKSI(char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsksi_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsksi_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
 			goto err;
 		else {
 			/* Close FILES */
@@ -690,7 +690,7 @@ err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), 
 
 static inline int
 doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
-		/*block_sig_t *bs, */ ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
+		ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
 {
 	int r;
 	size_t lenRec;
@@ -800,7 +800,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 				++ectx.blkNum;
 			}
 			++ectx.recNum, ++ectx.recNumInFile;
-			if((r = doVerifyRecKSI(logfp, sigfp, nsigfp, /*bs,*/ ksi, &ectx, bInBlock)) != 0)
+			if((r = doVerifyRecKSI(logfp, sigfp, nsigfp, ksi, &ectx, bInBlock)) != 0)
 				goto done;
 			if(ectx.recNum == bs->recCount) {
 				/* And Verify Block signature */
