@@ -36,6 +36,8 @@ typedef struct imprint_s imprint_t;
 typedef struct block_hdr_s block_hdr_t;
 typedef struct block_sig_s block_sig_t;
 typedef struct tlvrecord_s tlvrecord_t;
+typedef struct block_hashchain_s block_hashchain_t;
+typedef struct block_hashstep_s block_hashstep_t;
 
 struct tlvrecord_s {
 	uint16_t tlvtype;
@@ -47,7 +49,7 @@ struct tlvrecord_s {
 
 struct imprint_s {
 	uint8_t hashID;
-	int	len;
+	size_t len;
 	uint8_t *data;
 };
 
@@ -68,6 +70,23 @@ struct block_sig_s {
 		} der;
 	} sig;
 };
+
+struct block_hashstep_s {
+	uint8_t direction;	/* left-link or right-link */
+	uint8_t level_corr;
+	imprint_t sib_hash;
+};
+
+struct block_hashchain_s {
+ 	imprint_t rec_hash;
+	uint64_t stepCount; /* Helper to count left & right links */
+	block_hashstep_t *hashsteps[MAX_ROOTS]; /* Using MAX_ROOTS here as well for the moment! */
+	uint8_t direction;	/* left-link or right-link */
+	uint8_t level;		/* default 0 */
+// 	block_hashstep_t left_link;
+// 	block_hashstep_t right_link;
+};
+
 
 static inline char *
 sigTypeName(uint8_t sigID)
