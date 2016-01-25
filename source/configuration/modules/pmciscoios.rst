@@ -20,6 +20,13 @@ format, rsyslog will pick it up. In order to apply proper timezone offsets,
 the timezone ids (e.g. "EST") must be configured via the
 :doc:`timezone object <../timezone>`.
 
+Note if the clock on the Cisco device has not been set and cannot be
+verified the Cisco will prepend the timestamp field with an asterisk (*).
+If the clock has gone out of sync with its configured NTP server the
+timestamp field will be prepended with a dot (.). In both of these cases
+parsing the timestamp would fail, therefore any preceding asterisks (*) or
+dots (.) are ignored. This may lead to "incorrect" timestamps being logged.
+
 Parser Parameters
 -----------------
 
@@ -33,6 +40,17 @@ Parser Parameters
    or not (at least not with reasonable performance). As such, the parser
    must be provided with that information. If the origin is present,
    its value is stored inside the HOSTNAME message property.
+   
+   .. function::  present.xr <boolean>
+
+   **Default**: off
+
+   If syslog is recviced from an IOSXR device the syslog format will usually
+   start with the RSP/LC/etc that produced the log, then the timestamp.
+   It will also contain an additional syslog tag before the standard Cisco
+   %TAG, this tag references the process that produced the log.
+   In order to use this Cisco IOS parser module with XR format messages both
+   of these additional fields must be ignored.
 
 Example
 -------
@@ -95,4 +113,28 @@ definitions interact. In this case, we can use a single listener.
    ruleset(name="ciscoBoth"
            parser=["custom.ciscoios.withOrigin", "rsyslog.ciscoios"]) {
        ... do processing here ...
+   }
+
+The following sample demonstrates how to handle Cisco IOS and IOSXR formats
+
+::
+
+   module(load="imudp")
+   module(load="pmciscoios")
+
+   input(type="imudp" port="10514" ruleset="ios")
+   input(type="imudp" port="10515" ruleset="iosxr")
+
+   ruleset(name="common") {
+       ... do processing here ...
+   }
+
+   ruleset(name="ios" parser="rsyslog.ciscoios") {
+       call common
+   }
+   
+   parser(name="custom.ciscoios.withXr" type="pmciscoios"
+          present.xr="on")
+   ruleset(name="iosxr" parser="custom.ciscoios.withXr"] {
+       call common
    }

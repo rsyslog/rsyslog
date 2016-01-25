@@ -166,6 +166,11 @@ options are defined:
 **lowercase**
   convert property text to lowercase only
 
+**fixed-width**
+  changes behaviour of toChar so that it pads the source string with spaces
+  up to the value of toChar if the source string is shorter.
+  *This feature was introduced in rsyslog 8.13.0*
+
 **json**
   encode the value so that it can be used inside a JSON field. This means
   that several characters (according to the JSON spec) are being escaped, for 
@@ -224,6 +229,9 @@ options are defined:
 
 **date-rfc3339**
   format as RFC 3339 date
+  
+**date-unixtimestamp**
+  Format as a unix timestamp (seconds since epoch)
 
 **date-year**
   just the year part (4-digit) of a timestamp

@@ -47,7 +47,7 @@ unique name. If not, you can not apply proper access control.
 
 ::
 
-    [root@rgf9dev sample]# certtool --generate-privkey --outfile key.pem --bits 2048
+    [root@rgf9dev sample]# certtool --generate-privkey --outfile key.pem --sec-param 2048
     Generating a 2048 bit RSA private key...
     [root@rgf9dev sample]# certtool --generate-request --load-privkey key.pem --outfile request.pem
     Generating a PKCS #10 certificate request...
@@ -79,6 +79,7 @@ unique name. If not, you can not apply proper access control.
     Extensions.
     Do you want to honour the extensions from the request? (y/N):
     Does the certificate belong to an authority? (Y/N): n
+    Will the certificate be used for IPsec IKE operations? (y/N):
     Is this a TLS web client certificate? (Y/N): y
     Is this also a TLS web server certificate? (Y/N): y
     Enter the dnsName of the subject of the certificate: machine.example.net {This is the name of the machine that will use the certificate}

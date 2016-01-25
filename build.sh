@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo "This script is intended to run with the clean repo version of the code."
 echo "Run the sphinx-build command manually if you want to see your uncommited changes."
@@ -10,17 +10,18 @@ read
 
 MASTERBRANCH=v8-devel
 
-for version in `git branch | cut -c3-`
-  do 
-    VER=$(if [[ ${version} == 'master' ]];then echo ${MASTERBRANCH} ; else echo ${version}; fi)
-    echo "Checkout Branch ${versions}"
-    git checkout ${version}
-    echo "Fetch Branch ${versions}"
-    git fetch origin ${version}
-    echo "Reset Branch ${versions}"
+for version in $(git branch | cut -c3-)
+  do
+    ver=$MASTERBRANCH
+    [ "$version" = master ] || ver=$version
+    echo "Checkout Branch $version"
+    git checkout $version
+    echo "Fetch Branch $version"
+    git fetch origin $version
+    echo "Reset Branch $version"
     git reset --hard
-    echo "Pull Branch ${versions}"
-    git pull origin ${version}
-    echo "Build ${versions}"
-    sphinx-build -b html source ${VER}
+    echo "Pull Branch $version"
+    git pull origin $version
+    echo "Build $version"
+    sphinx-build -b html source $ver
 done

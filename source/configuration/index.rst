@@ -8,9 +8,6 @@ This can be changed by a command line option.
 Note that **configurations can be built interactively** via the online
 `rsyslog configuration builder <http://www.rsyslog.com/rsyslog-configuration-builder/>`_ tool.
 
-All configuration directives need to be specified on a line by their own
-and must start with a dollar-sign.
-
 .. toctree::
    :maxdepth: 2
 
