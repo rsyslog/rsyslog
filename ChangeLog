@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.17.0 [v8-stable] 2016-03-08
+------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
 - rsgtutil: Added extraction support including loglines and hash chains. 
   More details on how to extract loglines can be found in the rsgtutil
