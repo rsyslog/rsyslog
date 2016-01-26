@@ -440,7 +440,7 @@ readStateFile(ksifile ksi)
 	}
 
 	if(read(fd, ksi->x_prev->data, ksi->x_prev->len)
-		!= ksi->x_prev->len) {
+		!= (ssize_t) ksi->x_prev->len) {
 		rsksiimprintDel(ksi->x_prev);
 		ksi->x_prev = NULL;
 		goto err;
