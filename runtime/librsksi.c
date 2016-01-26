@@ -59,6 +59,11 @@ typedef unsigned char uchar;
 #define VERSION "no-version"
 #endif
 
+/* TODO: FIX Warnings! */
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-label"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 int RSKSI_FLAG_TLV16_RUNTIME = RSGT_FLAG_TLV16;
 int RSKSI_FLAG_NONCRIT_RUNTIME = RSGT_FLAG_NONCRIT; 
 
