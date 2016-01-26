@@ -1701,7 +1701,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "aABcdDeEHkoPstTuvVx", long_options, NULL);
+		opt = getopt_long(argc, argv, "aABcdDeEhkoPstTuvVx", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
