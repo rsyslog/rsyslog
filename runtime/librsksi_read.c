@@ -7,7 +7,7 @@
  * This part of the library uses C stdio and expects that the
  * caller will open and close the file to be read itself.
  *
- * Copyright 2013-2015 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -43,6 +43,11 @@
 
 #include "librsgt_common.h"
 #include "librsksi.h"
+
+/* TODO: FIX Warnings! */
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-label"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 typedef unsigned char uchar;
 #ifndef VERSION
