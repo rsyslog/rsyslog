@@ -666,7 +666,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 
 			response = cJSON_PrintUnformatted(create);
 
-			if(*response==NULL)
+			if(response==NULL)
 			{
 				free(request);/*as its has been assigned.*/
 				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
