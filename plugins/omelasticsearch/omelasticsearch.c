@@ -560,8 +560,8 @@ static inline rsRetVal
 getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocation)
 {
 	DEFiRet;
-	char *req = bulkRequest;
-	char *start = bulkRequest;
+	const char *req = bulkRequest;
+	const char *start = bulkRequest;
 	if (getSection(req,&req)!=RS_RET_OK)
 		ABORT_FINALIZE(RS_RET_ERR);
 
