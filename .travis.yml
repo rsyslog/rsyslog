@@ -16,7 +16,7 @@ matrix:
      - compiler: "clang"
   include:
      - compiler: "gcc"
-       env: CFLAGS="-g -std=c99 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute "
+       env: CFLAGS="-g -std=c99 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Werror"
        dist: trusty
      - compiler: "gcc"
        env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
