@@ -146,12 +146,9 @@ rsksiimprintDel(imprint_t *imp)
 }
 
 int
-rsksiInit(char *usragent)
+rsksiInit(__attribute__((unused)) char *usragent)
 {
-	int r = 0;
-	int ret = KSI_OK;
-
-done:	return r;
+	return 0;
 }
 
 void
@@ -687,7 +684,7 @@ bufAddIV(ksifile ksi, uchar *buf, size_t *len)
 
 /* concat: add imprint to buffer */
 static inline void
-bufAddImprint(ksifile ksi, uchar *buf, size_t *len, imprint_t *imp)
+bufAddImprint(uchar *buf, size_t *len, imprint_t *imp)
 {
 	buf[*len] = imp->hashID;
 	++(*len);
@@ -730,7 +727,7 @@ hash_m_ksi(ksifile ksi, KSI_DataHash **m)
 	size_t len = 0;
 	int r = 0;
 
-	bufAddImprint(ksi, concatBuf, &len, ksi->x_prev);
+	bufAddImprint(concatBuf, &len, ksi->x_prev);
 	bufAddIV(ksi, concatBuf, &len);
 	rgt = KSI_DataHash_create(ksi->ctx->ksi_ctx, concatBuf, len, ksi->hashAlg, m);
 	if(rgt != KSI_OK) {
