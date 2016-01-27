@@ -206,8 +206,9 @@ finalize_it:
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *buf;
 	int typeID;
 	struct json_object *jsonRoot;
@@ -217,7 +218,6 @@ BEGINdoAction
 	char auditID[1024];
 	int bSuccess = 0;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
 	 * requires changes to the libraries. For now, we accept message
 	 * duplication. -- rgerhards, 2010-12-01
