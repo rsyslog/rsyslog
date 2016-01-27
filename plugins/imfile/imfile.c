@@ -1780,6 +1780,9 @@ done:	return;
 }
 
 /* Monitor files in inotify mode */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 do_inotify()
 {
@@ -1819,6 +1822,7 @@ finalize_it:
 	close(ino_fd);
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 #else /* #if HAVE_INOTIFY_INIT */
 static rsRetVal
