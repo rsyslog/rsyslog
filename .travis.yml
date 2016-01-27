@@ -16,15 +16,15 @@ matrix:
      - compiler: "clang"
   include:
      - compiler: "gcc"
-       env: CFLAGS="-g -std=c99 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Werror"
+       env: CFLAGS="-g -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
        dist: trusty
-#     - compiler: "gcc"
-#       env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
-#     - compiler: "clang"
-#       env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
-#     - compiler: "clang"
-#       env: STAT_AN="YES", GROK="YES", CFLAGS="-g -O1 -std=c99 -Werror"
-#       dist: trusty
+     - compiler: "gcc"
+       env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+     - compiler: "clang"
+       env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
+     - compiler: "clang"
+       env: STAT_AN="YES", GROK="YES", CFLAGS="-g -O1 -std=c99 -Werror"
+       dist: trusty
        # note: -Werror makes ./configure.sh not properly detect functions
        # like strndup() on Ubuntu 12.04. So we enable it on the clang
        # build only. We might think about doing this for gcc later as well.
@@ -45,7 +45,6 @@ script:
   - if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
   - pwd
   - autoreconf --force --verbose --install
-  - cat runtime/nsd_gtls.c
   # I don't know how to pass two env vars in the include matrix, so
   # I set the second one here via an "if"
   - if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi

@@ -1664,7 +1664,6 @@ EnableKeepAlive(nsd_t *pNsd)
  */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
-#pragma GCC diagnostic ignored "-Werror=deprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 {
