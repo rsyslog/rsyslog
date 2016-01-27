@@ -1662,7 +1662,9 @@ EnableKeepAlive(nsd_t *pNsd)
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
  */
-#pragma GCC diagnostic ignored "-Wsign-compare" /* TODO: FIX Warnings! */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
+#pragma GCC diagnostic ignored "-Werror=deprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 {
@@ -1755,7 +1757,7 @@ finalize_it:
 
 	RETiRet;
 }
-#pragma GCC diagnostic warning "-Wsign-compare"
+#pragma GCC diagnostic pop
 
 
 /* queryInterface function */
