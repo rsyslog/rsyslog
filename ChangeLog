@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.17.0 [v8-stable] 2016-03-08
+- made build compile (almost) without warnings
+  still some warnings are suppressed where this is currently required
+- improve interface definition in some modules, e.g. mmanon, mmsequence
+  This is more an internal cleanup and should have no actual affect to
+  the end user.
 - bugfix ommysql: on some platforms, serverport parameter had no effect
   This was caused by an invalid code sequence which's outcome depends on
   compiler settings.
