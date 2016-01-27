@@ -1,7 +1,14 @@
 ------------------------------------------------------------------------------
 Version 8.17.0 [v8-stable] 2016-03-08
+- simplified locking in when accessing message and local variables
+  this simlifies the code and slightly increases performance if such
+  variables are heavily accessed.
 - made build compile (almost) without warnings
   still some warnings are suppressed where this is currently required
+- bugfix: potential deadlock with heavy variable access
+  When making havy use of global, local and message variables, a deadlock
+  could occur. While it is extremly unlikely to happen, we have at least
+  seen one incarnation of this problem in practice.
 - improve interface definition in some modules, e.g. mmanon, mmsequence
   This is more an internal cleanup and should have no actual affect to
   the end user.
