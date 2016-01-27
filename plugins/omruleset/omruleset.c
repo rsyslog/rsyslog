@@ -10,7 +10,7 @@
  *
  * File begun on 2009-11-02 by RGerhards
  *
- * Copyright 2009-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -125,10 +125,11 @@ ENDtryResume
  * rsyslog procesing we can not really slow down the producer any longer, as we already
  * work off a queue. So a delay would just block out execution for longer than needed.
  */
-BEGINdoAction
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
 	msg_t *pMsg;
 CODESTARTdoAction
-	CHKmalloc(pMsg = MsgDup((msg_t*) ppString[0]));
+	CHKmalloc(pMsg = MsgDup(ppMsg[0]));
 	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,
 		  (char*) pWrkrData->pData->pszRulesetName, pWrkrData->pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
