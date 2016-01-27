@@ -15,19 +15,22 @@ matrix:
      - compiler: "gcc"
      - compiler: "clang"
   include:
+       # note: -Werror makes ./configure.sh not properly detect functions
+       # like strndup() on Ubuntu 12.04. So we enable it on trusty builds
+       # only. The first build with gcc actually only has the purpose of
+       # checking for warnings (the testbench currently has some issues
+       # on travis Ubuntu 14.04, but not in the regular environments, we
+       # need to find out some time why this is).
      - compiler: "gcc"
        env: CFLAGS="-g -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       dist: trusty
+     - compiler: "clang"
+       env: STAT_AN="YES", GROK="YES", CFLAGS="-g -O1 -std=c99 -Werror"
        dist: trusty
      - compiler: "gcc"
        env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
      - compiler: "clang"
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
-     - compiler: "clang"
-       env: STAT_AN="YES", GROK="YES", CFLAGS="-g -O1 -std=c99 -Werror"
-       dist: trusty
-       # note: -Werror makes ./configure.sh not properly detect functions
-       # like strndup() on Ubuntu 12.04. So we enable it on the clang
-       # build only. We might think about doing this for gcc later as well.
 
 before_install:
   #- travis_retry sudo apt-get install -qq python-software-properties
