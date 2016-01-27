@@ -980,6 +980,9 @@ finalize_it:
  * of the socket which is to be processed. This eases access to the
  * growing number of properties. -- rgerhards, 2008-08-01
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal readSocket(lstn_t *pLstn)
 {
 	DEFiRet;
@@ -1063,6 +1066,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 
 /* activate current listeners */
