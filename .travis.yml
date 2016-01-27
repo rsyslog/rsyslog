@@ -29,6 +29,7 @@ matrix:
        dist: trusty
      - compiler: "gcc"
        env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
+       dist: trusty
      - compiler: "clang"
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
@@ -56,8 +57,8 @@ script:
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - make
   - if [ "x$CHECK" == "xYES" ] ; then make check ; fi
+  - if [ -f tests/test-suite.log ] ; then cat tests/test-suite.log; fi
   - if [ "x$CHECK" == "xYES" ] ; then make distcheck ; fi
-  #- if [ "x$STAT_AN" == "x" ] ; then cat tests/test-suite.log; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then make clean ; fi
   - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
   # we now build those components that we know to need some more work
