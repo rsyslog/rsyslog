@@ -919,7 +919,8 @@ EXTRA_DIST= \
 	testsuites/xlate_more.lkp_tbl \
 	json_var_cmpr.sh \
 	testsuites/json_var_cmpr.conf \
-	cfg.sh
+	cfg.sh \
+	travis/trusty.supp
 
 # TODO: re-enable
 #sndrcv_tls_anon_rebind.sh \
