@@ -262,7 +262,6 @@ CODESTARTparse2
 	/* if we reach this point, we have a wellformed message and can persist the values */
 	MsgSetTAG(pMsg, bufParseTAG, i);
 	/* if bOriginPresent !=0 iHostname gets initialized */
-	#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 	if(pInst->bOriginPresent)
 		MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);

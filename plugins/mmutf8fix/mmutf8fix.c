@@ -213,7 +213,6 @@ fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *end
 
 	/* startIdx and seqLen always set if bytesLeft is set,
 	   which is required before this function is called */
-	#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 	*endIdx = strtIdx + seqLen;
 	if(*endIdx > lenMsg)
 		*endIdx = lenMsg;
@@ -236,7 +235,6 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 			if((c & 0xc0) != 0x80) {
 				/* sequence invalid, invalidate all bytes
 				   startIdx is always set if bytesLeft is set */
-				#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &endIdx,
 				              seqLen);
 				i = endIdx - 1;
@@ -249,7 +247,6 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 					if(codepoint > 0x10FFFF) {
 						/* sequence invalid, invalidate all bytes
 						   startIdx is always set if bytesLeft is set */
-						#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 						fixInvldMBSeq(pData, msg, lenMsg,
 							      strtIdx, &endIdx,
 							      seqLen);
