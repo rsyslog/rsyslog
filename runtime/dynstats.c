@@ -487,6 +487,13 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 	}
 
 	lookup.key = (char*) metric;
+    /* Static-analysis(clang) does not understand hsearch_r FIND well,
+       it complains that found->data dereferences an uninitialized pointer.
+       Starting from this line to closing comment "hsearch_r: Static_analysis_false_alarm_supression"
+       prevents this false alarm.*/
+    lookup.data = NULL;
+    found = &lookup;
+    /* hsearch_r: Static_analysis_false_alarm_supression */
 	
 	if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
 		succeed = hsearch_r(lookup, FIND, &found, &b->table);
