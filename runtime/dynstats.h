@@ -1,10 +1,10 @@
 #ifndef INCLUDED_DYNSTATS_H
 #define INCLUDED_DYNSTATS_H
 
-#include <search.h>
+#include "hashtable.h"
 #include <sys/queue.h>
 
-typedef struct hsearch_data htable;
+typedef struct hashtable htable;
 
 struct dynstats_ctr_s {
 	STATSCOUNTER_DEF(ctr, mutCtr);
@@ -14,7 +14,7 @@ struct dynstats_ctr_s {
 };
 
 struct dynstats_bucket_s {
-	htable table;
+	htable *table;
 	uchar *name;
 	pthread_rwlock_t lock;
 	statsobj_t *stats;

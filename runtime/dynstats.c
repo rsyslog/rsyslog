@@ -71,7 +71,7 @@ static inline void /* assumes exclusive access to bucket */
 dynstats_destroyCounters(dynstats_bucket_t *b) {
 	dynstats_ctr_t *ctr;
 
-	hdestroy_r(&b->table);
+    hashtable_destroy(b->table, 0);
 	statsobj.DestructAllCounters(b->stats);
 	while(1) {
 		ctr = SLIST_FIRST(&b->ctrs);
@@ -173,6 +173,9 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+no_op_free(void __attribute__((unused)) *ignore)  {}
+
 static rsRetVal
 dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 	size_t htab_sz;
@@ -184,7 +187,7 @@ dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 	}
 	ATOMIC_STORE_0_TO_INT(&b->metricCount, &b->mutMetricCount);
 	SLIST_INIT(&b->ctrs);
-	if (! hcreate_r(htab_sz, &b->table)) {
+	if ((b->table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free)) == NULL) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
@@ -420,8 +423,8 @@ static rsRetVal
 dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialIncrement) {
 	dynstats_ctr_t *ctr;
 	dynstats_ctr_t *found_ctr;
-	ENTRY lookup, *entry;
-	int found, created;
+	int created;
+    char *copy_of_key = NULL;
 	DEFiRet;
 
 	created = 0;
@@ -432,18 +435,18 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	}
 	
 	CHKiRet(dynstats_createCtr(b, metric, &ctr));
-	lookup.data = ctr;
-	lookup.key = (char*) ctr->metric;
 
 	pthread_rwlock_wrlock(&b->lock);
-	found = hsearch_r(lookup, FIND, &entry, &b->table);//TODO: see what happens on 2nd ENTER for same key, it may be simplifiable.
-	if (found) {
-		found_ctr = (dynstats_ctr_t*) entry->data;
+    found_ctr = (dynstats_ctr_t*) hashtable_search(b->table, ctr->metric);
+	if (found_ctr != NULL) {
 		if (doInitialIncrement) {
 			STATSCOUNTER_INC(found_ctr->ctr, found_ctr->mutCtr);
 		}
 	} else {
-		created = hsearch_r(lookup, ENTER, &entry, &b->table);
+        copy_of_key = ustrdup(ctr->metric);
+        if (copy_of_key != NULL) {
+            created = hashtable_insert(b->table, copy_of_key, ctr);
+        }
 		if (created) {
 			SLIST_INSERT_HEAD(&b->ctrs, ctr, link);
 			if (doInitialIncrement) {
@@ -453,12 +456,15 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	}
 	pthread_rwlock_unlock(&b->lock);
 
-	if (found) {
+	if (found_ctr != NULL) {
 		//ignore
 	} else if (created) {
 		ATOMIC_INC(&b->metricCount, &b->mutMetricCount);
 		STATSCOUNTER_INC(b->ctrNewMetricAdd, b->mutCtrNewMetricAdd);
 	} else {
+        if (copy_of_key != NULL) {
+            free(copy_of_key);
+        }
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	
@@ -471,9 +477,6 @@ finalize_it:
 
 rsRetVal
 dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
-	ENTRY lookup;
-	ENTRY *found;
-	int succeed;
 	dynstats_ctr_t *ctr;
 	DEFiRet;
 
@@ -486,19 +489,9 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 		FINALIZE;
 	}
 
-	lookup.key = (char*) metric;
-    /* Static-analysis(clang) does not understand hsearch_r FIND well,
-       it complains that found->data dereferences an uninitialized pointer.
-       Starting from this line to closing comment "hsearch_r: Static_analysis_false_alarm_supression"
-       prevents this false alarm.*/
-    lookup.data = NULL;
-    found = &lookup;
-    /* hsearch_r: Static_analysis_false_alarm_supression */
-	
 	if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
-		succeed = hsearch_r(lookup, FIND, &found, &b->table);
-		if (succeed) {
-			ctr = (dynstats_ctr_t *) found->data;
+        ctr = (dynstats_ctr_t *) hashtable_search(b->table, metric);
+		if (ctr != NULL) {
 			STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
 		}
 		pthread_rwlock_unlock(&b->lock);
@@ -506,7 +499,7 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 		ABORT_FINALIZE(RS_RET_NOENTRY);
 	}
 
-	if (!succeed) {
+	if (ctr == NULL) {
 		CHKiRet(dynstats_addNewCtr(b, metric, 1));
 	}
 finalize_it:
