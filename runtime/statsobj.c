@@ -180,7 +180,6 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 	ctr->prev = NULL;
 	if((ctr->name = ustrdup(ctrName)) == NULL) {
 		DBGPRINTF("addCounter: OOM in strdup()\n");
-		free(ctr);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	ctr->flags = flags;
@@ -198,8 +197,10 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        free(ctr->name);
-        free(ctr);
+        if (ctr != NULL) {
+            free(ctr->name);
+            free(ctr);
+        }
     }
 	RETiRet;
 }

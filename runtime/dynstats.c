@@ -295,7 +295,7 @@ rsRetVal
 dynstats_processCnf(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	short i;
-	uchar *name;
+	uchar *name = NULL;
 	uint8_t resettable = DYNSTATS_DEFAULT_RESETTABILITY;
 	uint32_t maxCardinality = DYNSTATS_DEFAULT_MAX_CARDINALITY;
 	uint32_t unusedMetricLife = DYNSTATS_DEFAULT_UNUSED_METRIC_LIFE;
@@ -322,7 +322,9 @@ dynstats_processCnf(struct cnfobj *o) {
 					  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
-	CHKiRet(dynstats_newBucket(name, resettable, maxCardinality, unusedMetricLife));
+    if (name != NULL) {
+        CHKiRet(dynstats_newBucket(name, resettable, maxCardinality, unusedMetricLife));
+    }
 
 finalize_it:
 	free(name);
@@ -405,9 +407,11 @@ dynstats_createCtr(dynstats_bucket_t *b, const uchar* metric, dynstats_ctr_t **c
 									   b->resettable, &(*ctr)->ctr, &(*ctr)->pCtr));
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		free((*ctr)->metric);
-		free(*ctr);
-		*ctr = NULL;
+        if ((*ctr) != NULL) {
+            free((*ctr)->metric);
+            free(*ctr);
+            *ctr = NULL;
+        }
 	}
 	RETiRet;
 }
@@ -420,7 +424,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	int found, created;
 	DEFiRet;
 
-	found = created = 0;
+	created = 0;
 	ctr = NULL;
 
 	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
