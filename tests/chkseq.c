@@ -11,6 +11,8 @@
  *    failure. This is necessary for some failover tests, where it is
  *    impossible to totally guard against messagt loss. By default, NO
  *    message is permitted to be lost.
+ * -T anticipate truncation (which means specified payload length may be
+ *    more than actual payload (which may have been truncated)
  *
  * Part of the testbench for rsyslog.
  *
@@ -48,6 +50,7 @@ int main(int argc, char *argv[])
 	int scanfOK;
 	int verbose = 0;
 	int bHaveExtraData = 0;
+	int bAnticipateTruncation = 0;
 	int dupsPermitted = 0;
 	int start = 0, end = 0;
 	int opt;
@@ -59,28 +62,31 @@ int main(int argc, char *argv[])
 	static char ioBuf[sizeof(edBuf)+1024];
 	char *file = NULL;
 
-	while((opt = getopt(argc, argv, "e:f:ds:vm:E")) != EOF) {
+	while((opt = getopt(argc, argv, "e:f:ds:vm:ET")) != EOF) {
 		switch((char)opt) {
 		case 'f':
 			file = optarg;
 			break;
-                case 'd':
+		case 'd':
 			dupsPermitted = 1;
 			break;
-                case 'e':
+		case 'e':
 			end = atoi(optarg);
 			break;
-                case 's':
+		case 's':
 			start = atoi(optarg);
 			break;
-                case 'v':
+		case 'v':
 			++verbose;
 			break;
-                case 'm':
+		case 'm':
 			lostok = atoi(optarg);
 			break;
-                case 'E':
+		case 'E':
 			bHaveExtraData = 1;
+			break;
+		case 'T':
+			bAnticipateTruncation = 1;
 			break;
 		default:printf("Invalid call of chkseq, optchar='%c'\n", opt);
 			printf("Usage: chkseq file -sstart -eend -d -E\n");
@@ -118,9 +124,18 @@ int main(int argc, char *argv[])
 				scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
 			}
 			if(edLen != (int) strlen(edBuf)) {
-				printf("extra data length specified %d, but actually is %ld in record %d\n",
-					edLen, (long) strlen(edBuf), i);
-				exit(1);
+				if (bAnticipateTruncation == 1) {
+					if (edLen < strlen(edBuf)) {
+						printf("extra data length specified %d, but actually is %ld in record %d"
+							   " (truncation was anticipated, but payload should have been smaller than data-length, not smaller)\n",
+							   edLen, (long) strlen(edBuf), i);
+						exit(1);
+					}
+				} else {
+					printf("extra data length specified %d, but actually is %ld in record %d\n",
+						   edLen, (long) strlen(edBuf), i);
+					exit(1);
+				}
 			}
 		} else {
 			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
@@ -172,9 +187,18 @@ int main(int argc, char *argv[])
 						scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
 					}
 					if(edLen != (int) strlen(edBuf)) {
-						printf("extra data length specified %d, but actually is %ld in record %d\n",
-							edLen, (long) strlen(edBuf), i);
-						exit(1);
+						if (bAnticipateTruncation == 1) {
+							if (edLen < strlen(edBuf)) {
+								printf("extra data length specified %d, but actually is %ld in record %d"
+									   " (truncation was anticipated, but payload should have been smaller than data-length, not smaller)\n",
+									   edLen, (long) strlen(edBuf), i);
+								exit(1);
+							}
+						} else {
+							printf("extra data length specified %d, but actually is %ld in record %d\n",
+								   edLen, (long) strlen(edBuf), i);
+							exit(1);
+						}
 					}
 				} else {
 					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {

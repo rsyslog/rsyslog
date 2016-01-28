@@ -198,6 +198,8 @@ TESTS +=  \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
 	imptcp_spframingfix.sh \
+	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -919,6 +921,9 @@ EXTRA_DIST= \
 	testsuites/xlate_more.lkp_tbl \
 	json_var_cmpr.sh \
 	testsuites/json_var_cmpr.conf \
+	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
+	testsuites/imptcp_nonProcessingPoller.conf \
 	cfg.sh
 
 # TODO: re-enable
