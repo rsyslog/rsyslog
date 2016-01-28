@@ -160,7 +160,8 @@ TESTS +=  \
 	failover-no-rptd-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
-	tcp-msgreduc-vg.sh
+	tcp-msgreduc-vg.sh \
+	rscript_field-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -185,6 +186,21 @@ if HAVE_VALGRIND
 TESTS +=  \
 	libdbi-basic-vg.sh
 endif
+endif
+endif
+
+if ENABLE_IMPSTATS
+TESTS +=  \
+	dynstats.sh \
+	dynstats_overflow.sh \
+	dynstats_reset.sh \
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	dynstats-vg.sh \
+	dynstats_reset-vg.sh \
+	dynstats_overflow-vg.sh
 endif
 endif
 
@@ -459,6 +475,7 @@ EXTRA_DIST= \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
 	rscript_field.sh \
+	rscript_field-vg.sh \
 	testsuites/rscript_field.conf \
 	rscript_stop.sh \
 	testsuites/rscript_stop.conf \
@@ -861,6 +878,27 @@ EXTRA_DIST= \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh \
+	dynstats_overflow.sh \
+	dynstats_overflow-vg.sh \
+	dynstats_reset.sh \
+	dynstats_reset-vg.sh \
+	dynstats.sh \
+	dynstats-vg.sh \
+	testsuites/dynstats.conf \
+	testsuites/dynstats_ctr_reset.conf \
+	testsuites/dynstats_empty_input \
+	testsuites/dynstats_input \
+	testsuites/dynstats_input_1 \
+	testsuites/dynstats_input_2 \
+	testsuites/dynstats_input_3 \
+	testsuites/dynstats_input_more_0 \
+	testsuites/dynstats_input_more_1 \
+	testsuites/dynstats_input_more_2 \
+	testsuites/dynstats_nometric.conf \
+	testsuites/dynstats_overflow.conf \
+	testsuites/dynstats_reset.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \

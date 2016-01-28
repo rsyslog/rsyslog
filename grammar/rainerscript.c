@@ -1327,6 +1327,7 @@ static rsRetVal
 doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
 {
 	int iCurrFld;
+    int allocLen;
 	int iLen;
 	uchar *pBuf;
 	uchar *pFld;
@@ -1357,7 +1358,12 @@ doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr
 			    * step back a little not to copy it as part of the field. */
 		/* we got our end pointer, now do the copy */
 		iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-		CHKmalloc(pBuf = MALLOC(iLen + 1));
+		allocLen = iLen + 1;
+#		ifdef VALGRIND
+		allocLen += (3 - (iLen % 4));
+        	/*older versions of valgrind have a problem with strlen inspecting 4-bytes at a time*/
+#		endif
+		CHKmalloc(pBuf = MALLOC(allocLen));
 		/* now copy */
 		memcpy(pBuf, pFld, iLen);
 		pBuf[iLen] = '\0'; /* terminate it */
@@ -1831,6 +1837,18 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 		str = (char*) var2CString(&r[1], &bMustFree);
 		ret->d.estr = lookupKey_estr(func->funcdata, (uchar*)str);
+		if(bMustFree) free(str);
+		varFreeMembers(&r[1]);
+		break;
+	case CNFFUNC_DYN_INC:
+		ret->datatype = 'N';
+		if(func->funcdata == NULL) {
+			ret->d.n = -1;
+			break;
+		}
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+		str = (char*) var2CString(&r[1], &bMustFree);
+		ret->d.n = dynstats_inc(func->funcdata, (uchar*)str);
 		if(bMustFree) free(str);
 		varFreeMembers(&r[1]);
 		break;
@@ -2485,7 +2503,7 @@ cnffuncDestruct(struct cnffunc *func)
 			break;
 		default:break;
 	}
-	if(func->fID != CNFFUNC_EXEC_TEMPLATE)
+	if(func->fID != CNFFUNC_EXEC_TEMPLATE && func->fID != CNFFUNC_DYN_INC)
 		free(func->funcdata);
 	free(func->fname);
 }
@@ -3785,6 +3803,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("prifilt", 1, CNFFUNC_PRIFILT);
 	} else if(FUNC_NAME("lookup")) {
 		GENERATE_FUNC("lookup", 2, CNFFUNC_LOOKUP);
+	} else if(FUNC_NAME("dyn_inc")) {
+		GENERATE_FUNC("dyn_inc", 2, CNFFUNC_DYN_INC);
 	} else if(FUNC_NAME("replace")) {
 		GENERATE_FUNC_WITH_ERR_MSG(
 			"replace", 3, CNFFUNC_REPLACE,
@@ -3935,6 +3955,34 @@ finalize_it:
 	RETiRet;
 }
 
+static inline rsRetVal
+initFunc_dyn_stats(struct cnffunc *func)
+{
+	uchar *cstr = NULL;
+	DEFiRet;
+
+	if(func->nParams != 2) {
+		parser_errmsg("rsyslog logic error in line %d of file %s\n",
+					  __LINE__, __FILE__);
+		FINALIZE;
+	}
+
+	func->funcdata = NULL;
+	if(func->expr[0]->nodetype != 'S') {
+		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating functions like dyn_inc must be a constant string");
+		FINALIZE;
+	}
+
+	cstr = (uchar*)es_str2cstr(((struct cnfstringval*) func->expr[0])->estr, NULL);
+	if((func->funcdata = dynstats_findBucket(cstr)) == NULL) {
+		parser_errmsg("dyn-stats bucket '%s' not found", cstr);
+		FINALIZE;
+	}
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
 
 struct cnffunc *
 cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
@@ -3978,6 +4026,9 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 				break;
 			case CNFFUNC_EXEC_TEMPLATE:
 				initFunc_exec_template(func);
+				break;
+			case CNFFUNC_DYN_INC:
+				initFunc_dyn_stats(func);
 				break;
 			default:break;
 		}

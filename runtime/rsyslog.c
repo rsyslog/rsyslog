@@ -195,6 +195,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(rsconfClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "lookup";
 		CHKiRet(lookupClassInit());
+		if(ppErrObj != NULL) *ppErrObj = "dynstats";
+		CHKiRet(dynstatsClassInit());
 
 		/* dummy "classes" */
 		if(ppErrObj != NULL) *ppErrObj = "str";
