@@ -128,8 +128,7 @@ setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
 {
 	DEFiRet;
 	pThis->read_notifier = notifier;
-    pThis->read_notifier_ctx = ctx;
-finalize_it:
+	pThis->read_notifier_ctx = ctx;
 	RETiRet;
 }
 
@@ -237,7 +236,6 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 	free(pCtr->name);
 	free(pCtr);
     
-finalize_it:
     RETiRet;
 }
 
@@ -443,7 +441,6 @@ destructAllCounters(statsobj_t *pThis) {
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
 	
-finalize_it:
 	RETiRet;
 }
 

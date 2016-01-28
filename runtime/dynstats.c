@@ -211,7 +211,7 @@ dynstats_resetIfExpired(dynstats_bucket_t *b) {
 }
 
 static void
-dynstats_readCallback(statsobj_t *ignore, void *b) {
+dynstats_readCallback(statsobj_t __attribute__((unused)) *ignore, void *b) {
 	dynstats_buckets_t *bkts;
 	bkts = &loadConf->dynstats_buckets;
 
@@ -429,7 +429,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	
 	CHKiRet(dynstats_createCtr(b, metric, &ctr));
 	lookup.data = ctr;
-	lookup.key = ctr->metric;
+	lookup.key = (char*) ctr->metric;
 
 	pthread_rwlock_wrlock(&b->lock);
 	found = hsearch_r(lookup, FIND, &entry, &b->table);//TODO: see what happens on 2nd ENTER for same key, it may be simplifiable.
@@ -482,7 +482,7 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 		FINALIZE;
 	}
 
-	lookup.key = metric;
+	lookup.key = (char*) metric;
 	
 	if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
 		succeed = hsearch_r(lookup, FIND, &found, &b->table);

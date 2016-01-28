@@ -55,5 +55,3 @@ void dynstats_resetExpired();
 rsRetVal dynstatsClassInit(void);
 
 #endif /* #ifndef INCLUDED_DYNSTATS_H */
-
-
