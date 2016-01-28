@@ -28,7 +28,7 @@ matrix:
        env: STAT_AN="YES", GROK="YES", CFLAGS="-g -O1 -std=c99 -Werror"
        dist: trusty
      - compiler: "gcc"
-       env: BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all"
+       env: BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all"
        dist: trusty
      - compiler: "clang"
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
