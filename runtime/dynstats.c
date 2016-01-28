@@ -3,18 +3,12 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <json.h>
 #include <assert.h>
 
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "errmsg.h"
-#include "lookup.h"
-#include "msg.h"
 #include "rsconf.h"
-#include "dirty.h"
 #include "unicode-helper.h"
 
 /* definitions for objects we access */
@@ -74,11 +68,11 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
     hashtable_destroy(b->table, 0);
 	statsobj.DestructAllCounters(b->stats);
 	while(1) {
-		ctr = SLIST_FIRST(&b->ctrs);
+        ctr = b->ctrs;
 		if (ctr == NULL) {
 			break;
 		} else {
-			SLIST_REMOVE_HEAD(&b->ctrs, link);
+            b->ctrs = ctr->next;
 			dynstats_destroyCtr(b, ctr, 0);
 		}
 	}
@@ -186,7 +180,7 @@ dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 		dynstats_destroyCounters(b);
 	}
 	ATOMIC_STORE_0_TO_INT(&b->metricCount, &b->mutMetricCount);
-	SLIST_INIT(&b->ctrs);
+    b->ctrs = NULL;
 	if ((b->table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free)) == NULL) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
@@ -272,7 +266,12 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		CHKiRet(dynstats_addBucketMetrics(bkts, b, name));
 
 		pthread_rwlock_wrlock(&bkts->lock);
-		SLIST_INSERT_HEAD(&bkts->list, b, link);
+        if (bkts->list == NULL) {
+            bkts->list = b;
+        } else {
+            b->next = bkts->list;
+            bkts->list = b;
+        }
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as global-initialization of buckets was unsuccessful");
@@ -341,7 +340,7 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 
 	bkts->initialized = 0;
 	
-	SLIST_INIT(&bkts->list);
+	bkts->list == NULL;
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
 	CHKiRet(statsobj.SetName(bkts->global_stats, UCHAR_CONSTANT("global")));
@@ -365,11 +364,11 @@ dynstats_destroyAllBuckets() {
 	if (bkts->initialized) {
 		pthread_rwlock_wrlock(&bkts->lock);
 		while(1) {
-			b = SLIST_FIRST(&bkts->list);
+			b = bkts->list;
 			if (b == NULL) {
 				break;
 			} else {
-				SLIST_REMOVE_HEAD(&bkts->list, link);
+                bkts->list = b->next;
 				dynstats_destroyBucket(b);
 			}
 		}
@@ -385,11 +384,13 @@ dynstats_findBucket(const uchar* name) {
 	bkts = &loadConf->dynstats_buckets;
 	if (bkts->initialized) {
 		pthread_rwlock_rdlock(&bkts->lock);
-		SLIST_FOREACH(b, &bkts->list, link) {
-			if (! ustrcmp(name, b->name)) {
+        b = bkts->list;
+        while(b != NULL) {
+            if (! ustrcmp(name, b->name)) {
 				break;
 			}
-		}
+            b = b->next;
+        }
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
 		b = NULL;
@@ -448,7 +449,12 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
             created = hashtable_insert(b->table, copy_of_key, ctr);
         }
 		if (created) {
-			SLIST_INSERT_HEAD(&b->ctrs, ctr, link);
+            if (b->ctrs == NULL) {
+                b->ctrs = ctr;
+            } else {
+                ctr->next = b->ctrs;
+                b->ctrs = ctr;
+            }
 			if (doInitialIncrement) {
 				STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
 			}

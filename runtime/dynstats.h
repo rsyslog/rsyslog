@@ -2,15 +2,14 @@
 #define INCLUDED_DYNSTATS_H
 
 #include "hashtable.h"
-#include <sys/queue.h>
 
 typedef struct hashtable htable;
 
 struct dynstats_ctr_s {
 	STATSCOUNTER_DEF(ctr, mutCtr);
 	ctr_t *pCtr;
-	SLIST_ENTRY(dynstats_ctr_s) link;
 	uchar *metric;
+	struct dynstats_ctr_s *next; /* linked list ptr */
 };
 
 struct dynstats_bucket_s {
@@ -28,8 +27,8 @@ struct dynstats_bucket_s {
 	ctr_t *pMetricsPurgedCtr;
 	STATSCOUNTER_DEF(ctrOpsIgnored, mutCtrOpsIgnored);
 	ctr_t *pOpsIgnoredCtr;
-	SLIST_ENTRY(dynstats_bucket_s) link;
-	SLIST_HEAD(, dynstats_ctr_s) ctrs;
+	struct dynstats_bucket_s *next; /* linked list ptr */
+	struct dynstats_ctr_s *ctrs;
 	uint32_t maxCardinality;
 	uint32_t metricCount;
 	pthread_mutex_t mutMetricCount;
@@ -40,7 +39,7 @@ struct dynstats_bucket_s {
 };
 
 struct dynstats_buckets_s {
-	SLIST_HEAD(, dynstats_bucket_s) list;
+	struct dynstats_bucket_s *list;
 	statsobj_t *global_stats;
 	pthread_rwlock_t lock;
 	uint8_t initialized;
