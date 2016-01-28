@@ -534,7 +534,7 @@ getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqm
  * Sections are marked by { and }
  */
 static inline rsRetVal
-getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
+getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
 		char* index =0;
@@ -557,7 +557,7 @@ getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
  * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
  */
 static inline rsRetVal
-getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocation)
+getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
 {
 	DEFiRet;
 	const char *req = bulkRequest;
@@ -568,13 +568,13 @@ getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocat
 	if (getSection(req,&req)!=RS_RET_OK)
 			ABORT_FINALIZE(RS_RET_ERR);
 
-    *singleRequest = (char*) calloc (req - start+ 1 + 1,1);/* (req - start+ 1 == length of data + 1 for terminal char)*/
-    if (*singleRequest==NULL) ABORT_FINALIZE(RS_RET_ERR);
-    memcpy(*singleRequest,start,req - start);
-    *lastLocation=req;
+	CHKmalloc(*singleRequest = (char*) calloc (req - start+ 1 + 1,1));
+	/* (req - start+ 1 == length of data + 1 for terminal char)*/
+	memcpy(*singleRequest,start,req - start);
+	*lastLocation=req;
 
-	finalize_it:
-			RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 /*
@@ -620,7 +620,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	numitems = cJSON_GetArraySize(items);
 
 	DBGPRINTF("omelasticsearch: Entire request %s\n",reqmsg);
-	char *lastReqRead= (char*)reqmsg;
+	const char *lastReqRead= (char*)reqmsg;
 
 	DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 	for(i = 0 ; i < numitems ; ++i) {
@@ -731,8 +731,11 @@ getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
  * Dumps all requests of bulk insert interleaved with request and response
  */
 
-static inline rsRetVal
-getDataInterleaved(context *ctx,int itemStatus,char *request,char *response)
+static rsRetVal
+getDataInterleaved(context *ctx,
+	int __attribute__((unused)) itemStatus,
+	char *request,
+	char *response)
 {
 	DEFiRet;
 	cJSON *interleaved =0;
