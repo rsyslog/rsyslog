@@ -15,6 +15,10 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - bugfix ommysql: on some platforms, serverport parameter had no effect
   This was caused by an invalid code sequence which's outcome depends on
   compiler settings.
+- bugfix omelasticsearch: invalid pointer dereference
+  The actual practical impact is not clear. This came up when working
+  on compiler warnings.
+  Thanks to David Lang for the patch.
 - bugfix rsgtutil: -h command line option did not work
   Thanks to Henri Lakk for the patch.
 ------------------------------------------------------------------------------
