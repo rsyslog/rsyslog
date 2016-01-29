@@ -152,7 +152,7 @@ BEGINparse2
 	long long msgcounter;
 	int lenMsg;
 	int i;
-	int iHostname;
+	int iHostname = 0;
 	uchar bufParseTAG[512];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
 CODESTARTparse2
