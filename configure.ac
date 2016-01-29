@@ -296,6 +296,14 @@ AC_CHECK_HEADERS(
     [AC_MSG_FAILURE([pthread is missing])]
 )
 
+AC_CHECK_LIB(
+  [pthread],
+	[pthread_rwlockattr_setkind_np],
+	[AC_DEFINE(
+	   [HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP],
+		 [1],
+		 [Set-kind available for rwlock attr.])])
+		 
 AC_CHECK_FUNCS(
     [pthread_setschedparam],
     [

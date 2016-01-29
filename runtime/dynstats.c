@@ -252,7 +252,9 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		CHKmalloc(b->name = ustrdup(name));
 
 		pthread_rwlockattr_init(&bucket_lock_attr);
+#ifdef HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP
 		pthread_rwlockattr_setkind_np(&bucket_lock_attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+#endif
 
 		pthread_rwlock_init(&b->lock, &bucket_lock_attr);
 		lock_initialized = 1;
@@ -340,7 +342,7 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 
 	bkts->initialized = 0;
 	
-	bkts->list == NULL;
+	bkts->list = NULL;
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
 	CHKiRet(statsobj.SetName(bkts->global_stats, UCHAR_CONSTANT("global")));
@@ -425,7 +427,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	dynstats_ctr_t *ctr;
 	dynstats_ctr_t *found_ctr;
 	int created;
-    char *copy_of_key = NULL;
+	uchar *copy_of_key = NULL;
 	DEFiRet;
 
 	created = 0;
