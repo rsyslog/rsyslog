@@ -224,9 +224,9 @@ static inline void
 doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 {
 	uchar c;
-	int8_t seqLen, bytesLeft = 0;
+	int8_t seqLen = 0, bytesLeft = 0;
 	uint32_t codepoint;
-	int strtIdx, endIdx;
+	int strtIdx = 0, endIdx = 0;
 	int i;
 
 	for(i = 0 ; i < lenMsg ; ++i) {
