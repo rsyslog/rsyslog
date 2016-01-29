@@ -102,7 +102,7 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	int i, r;
-	unsigned keylen;
+	unsigned keylen = 0;
 	uchar *key = NULL;
 	uchar *keyfile = NULL;
 	uchar *keyprogram = NULL;

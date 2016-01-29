@@ -1008,7 +1008,7 @@ regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
 	DEFiRet;
 	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
 	readyModForCnf(pMod, &pNew, &pLast);
-	addModToCnfList(pNew, pLast);
+	addModToCnfList(&pNew, pLast);
 finalize_it:
 	RETiRet;
 }
