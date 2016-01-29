@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -415,33 +415,43 @@ finalize_it:
  * module list. Needed to prevent mem leaks.
  */
 static inline void
-abortCnfUse(cfgmodules_etry_t *pNew)
+abortCnfUse(cfgmodules_etry_t **pNew)
 {
-	free(pNew);
+	if(pNew != NULL) {
+		free(*pNew);
+		*pNew = NULL;
+	}
 }
 
 
 /* Add a module to the config module list for current loadConf.
  * Requires last pointer obtained by readyModForCnf().
+ * The module pointer is handed over to this function. It is no
+ * longer available to caller one we are called.
  */
 rsRetVal
-addModToCnfList(cfgmodules_etry_t *pNew, cfgmodules_etry_t *pLast)
+addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast)
 {
 	DEFiRet;
-	assert(pNew != NULL);
+	assert(*pNew != NULL);
 
+	if(pNew == NULL)
+		ABORT_FINALIZE(RS_RET_ERR);
 	if(loadConf == NULL) {
+		abortCnfUse(pNew);
 		FINALIZE; /* we are in an early init state */
 	}
 
 	if(pLast == NULL) {
-		loadConf->modules.root = pNew;
+		loadConf->modules.root = *pNew;
 	} else {
 		/* there already exist entries */
-		pLast->next = pNew;
+		pLast->next = *pNew;
 	}
 
 finalize_it:
+	if(pNew != NULL)
+		*pNew = NULL;
 	RETiRet;
 }
 
@@ -1054,8 +1064,8 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	int bHasExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
-	cfgmodules_etry_t *pNew;
-	cfgmodules_etry_t *pLast;
+	cfgmodules_etry_t *pNew = NULL;
+	cfgmodules_etry_t *pLast = NULL;
 	uchar *pModDirCurr, *pModDirNext;
 	int iLoadCnt;
 	struct dlhandle_s *pHandle = NULL;
@@ -1111,7 +1121,7 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					/* regular modules need to be added to conf list (for
 					 * builtins, this happend during initial load).
 					 */
-					addModToCnfList(pNew, pLast);
+					addModToCnfList(&pNew, pLast);
 				}
 			}
 		}
@@ -1231,18 +1241,19 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 					errmsg.LogError(0, localRet,
 						"module '%s', failed processing config parameters",
 						pPathBuf);
-					abortCnfUse(pNew);
 					ABORT_FINALIZE(localRet);
 				}
 			}
 			pModInfo->bSetModCnfCalled = 1;
 		}
-		addModToCnfList(pNew, pLast);
+		addModToCnfList(&pNew, pLast);
 	}
 
 finalize_it:
 	if(pPathBuf != pathBuf) /* used malloc()ed memory? */
 		free(pPathBuf);
+	if(iRet != RS_RET_OK)
+		abortCnfUse(&pNew);
 	pthread_mutex_unlock(&mutObjGlobalOp);
 	RETiRet;
 }
