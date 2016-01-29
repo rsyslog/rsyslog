@@ -319,6 +319,8 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
 			  uchar **bulkId)
 {
+	if(tpls == NULL)
+		return;
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
@@ -385,7 +387,7 @@ static rsRetVal
 setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 {
 	char authBuf[1024];
-	uchar *searchIndex;
+	uchar *searchIndex = 0;
 	uchar *searchType;
 	uchar *parent;
 	uchar *bulkId;
@@ -394,10 +396,11 @@ setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 	int r;
 	DEFiRet;
 	char separator;
+	const int bulkmode = pData->bulkmode;
 
 	setBaseURL(pData, &url);
 
-	if(pData->bulkmode) {
+	if(bulkmode) {
 		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
 		parent = NULL;
 	} else {
@@ -459,9 +462,9 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
-	uchar *searchIndex;
+	uchar *searchIndex = 0;
 	uchar *searchType;
-	uchar *parent;
+	uchar *parent = NULL;
 	uchar *bulkId = NULL;
 	DEFiRet;
 #	define META_STRT "{\"index\":{\"_index\": \""
