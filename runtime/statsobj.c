@@ -106,6 +106,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pthread_mutex_init(&pThis->mutCtr, NULL);
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
+	pThis->read_notifier = NULL;
 ENDobjConstruct(statsobj)
 
 
@@ -117,6 +118,17 @@ statsobjConstructFinalize(statsobj_t *pThis)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, statsobj);
 	addToObjList(pThis);
+	RETiRet;
+}
+
+/* set read_notifier (a function which is invoked after stats are read).
+ */
+static rsRetVal
+setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
+{
+	DEFiRet;
+	pThis->read_notifier = notifier;
+	pThis->read_notifier_ctx = ctx;
 	RETiRet;
 }
 
@@ -156,17 +168,18 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef)
 {
 	ctr_t *ctr;
 	DEFiRet;
 
-	CHKmalloc(ctr = malloc(sizeof(ctr_t)));
+	*entryRef = NULL;
+
+	CHKmalloc(ctr = calloc(1, sizeof(ctr_t)));
 	ctr->next = NULL;
 	ctr->prev = NULL;
 	if((ctr->name = ustrdup(ctrName)) == NULL) {
 		DBGPRINTF("addCounter: OOM in strdup()\n");
-		free(ctr);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	ctr->flags = flags;
@@ -180,9 +193,51 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t fla
 		break;
 	}
 	addCtrToList(pThis, ctr);
+	*entryRef = ctr;
 
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (ctr != NULL) {
+            free(ctr->name);
+            free(ctr);
+        }
+    }
 	RETiRet;
+}
+
+static rsRetVal
+addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+{
+	ctr_t *ctr;
+	DEFiRet;
+	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr));
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+destructCounter(statsobj_t *pThis, ctr_t *pCtr)
+{
+    DEFiRet;
+
+    pthread_mutex_lock(&pThis->mutCtr);
+	if (pCtr->prev != NULL) {
+		pCtr->prev->next = pCtr->next;
+	}
+	if (pCtr->next != NULL) {
+		pCtr->next->prev = pCtr->prev;
+	}
+	if (pThis->ctrLast == pCtr) {
+		pThis->ctrLast = pCtr->prev;
+	}
+	if (pThis->ctrRoot == pCtr) {
+		pThis->ctrRoot = pCtr->next;
+	}
+	pthread_mutex_unlock(&pThis->mutCtr);
+	free(pCtr->name);
+	free(pCtr);
+    
+    RETiRet;
 }
 
 static inline void
@@ -351,6 +406,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
+		if (o->read_notifier != NULL) {
+			o->read_notifier(o, o->read_notifier_ctx);
+		}
 	}
 
 finalize_it:
@@ -368,14 +426,11 @@ enableStats()
 	return RS_RET_OK;
 }
 
-
-/* destructor for the statsobj object */
-BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
+static rsRetVal
+destructAllCounters(statsobj_t *pThis) {
+	DEFiRet;
 	ctr_t *ctr, *ctrToDel;
-CODESTARTobjDestruct(statsobj)
-	removeFromObjList(pThis);
 
-	/* destruct counters */
 	ctr = pThis->ctrRoot;
 	while(ctr != NULL) {
 		ctrToDel = ctr;
@@ -383,6 +438,21 @@ CODESTARTobjDestruct(statsobj)
 		free(ctrToDel->name);
 		free(ctrToDel);
 	}
+
+	pThis->ctrLast = NULL;
+	pThis->ctrRoot = NULL;
+	
+	RETiRet;
+}
+
+
+/* destructor for the statsobj object */
+BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(statsobj)
+	removeFromObjList(pThis);
+
+	/* destruct counters */
+	CHKiRet(destructAllCounters(pThis));
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
@@ -416,9 +486,13 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->DebugPrint = statsobjDebugPrint;
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
+	pIf->SetReadNotifier = setReadNotifier;
 	//pIf->GetStatsLine = getStatsLine;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
+	pIf->AddManagedCounter = addManagedCounter;
+	pIf->DestructCounter = destructCounter;
+	pIf->DestructAllCounters = destructAllCounters;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)
