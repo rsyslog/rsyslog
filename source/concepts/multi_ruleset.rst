@@ -212,7 +212,7 @@ only. But this time we set up three syslog/tcp listeners, each one
 listening to a different port (in this example 10514, 10515, and 10516).
 Logs received from these receivers shall go into different files. Also,
 logs received from 10516 (and only from that port!) with "mail.\*"
-priority, shall be written into a specif file and **not** be written to
+priority, shall be written into a specific file and **not** be written to
 10516's general log file.
 
 This is the config:
@@ -230,7 +230,7 @@ This is the config:
         action(type="omfile" file="/var/log/remote10515")
     }
 
-    ruleset(name="test1"){
+    ruleset(name="remote10516"){
         if prifilt("mail.*") then {
             /var/log/mail10516
             stop
