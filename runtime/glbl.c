@@ -113,6 +113,7 @@ static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0
 short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
 int glblReportGoneAwaySenders = 0;
 int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
+int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -154,6 +155,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
 	{ "senders.reportgoneaway", eCmdHdlrBinary, 0 },
 	{ "senders.timeoutafter", eCmdHdlrPositiveInt, 0 },
+	{ "senders.keeptrack", eCmdHdlrBinary, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
@@ -1118,6 +1120,8 @@ glblDoneLoadCnf(void)
 		        glblReportGoneAwaySenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.timeoutafter")) {
 		        glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
+		        glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
 		        *(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {

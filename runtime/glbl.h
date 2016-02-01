@@ -111,6 +111,7 @@ PROTOTYPEObj(glbl);
 extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
 extern int glblReportGoneAwaySenders;
 extern int glblSenderStatsTimeout;
+extern int glblSenderKeepTrack;
 extern short janitorInterval;
 
 static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }

@@ -926,7 +926,8 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 
 	iRet = multiSubmitFlush(&multiSub);
 
-	statsRecordSender(propGetSzStr(pThis->peerName), nMsgs, ttGenTime);
+	if(glblSenderKeepTrack)
+		statsRecordSender(propGetSzStr(pThis->peerName), nMsgs, ttGenTime);
 
 finalize_it:
 	RETiRet;
