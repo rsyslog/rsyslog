@@ -49,6 +49,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <sys/queue.h>
 #include <netinet/tcp.h>
 #include <stdint.h>
 #include <zlib.h>
@@ -94,6 +95,7 @@ DEFobjCurrIf(statsobj)
 static void * wrkr(void *myself);
 
 #define DFLT_wrkrMax 2
+#define DFLT_inlineDispatchThreshold 1
 
 #define COMPRESS_NEVER 0
 #define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
@@ -142,6 +144,7 @@ struct modConfData_s {
 	rsconf_t *pConf;		/* our overall config object */
 	instanceConf_t *root, *tail;
 	int wrkrMax;
+	int bProcessOnPoller;
 	sbool configSetViaV2Method;
 };
 
@@ -150,7 +153,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "threads", eCmdHdlrPositiveInt, 0 }
+	{ "threads", eCmdHdlrPositiveInt, 0 },
+	{ "processOnPoller", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -270,12 +274,8 @@ struct ptcplstn_s {
  */
 static struct wrkrInfo_s {
 	pthread_t tid;	/* the worker's thread ID */
-	pthread_cond_t run;
-	struct epoll_event *event; /* event == NULL -> idle */
 	long long unsigned numCalled;	/* how often was this called */
-} wrkrInfo[16];
-static pthread_mutex_t wrkrMut;
-static pthread_cond_t wrkrIdle;
+} *wrkrInfo;
 static int wrkrRunning;
 
 
@@ -291,15 +291,31 @@ typedef enum {
 struct epolld_s {
 	epolld_type_t typ;
 	void *ptr;
+	int sock;
 	struct epoll_event ev;
 };
 
+typedef struct io_req_s {
+	STAILQ_ENTRY(io_req_s) link;
+	epolld_t *epd;
+} io_req_t;
+
+typedef struct io_q_s {
+	STAILQ_HEAD(ioq_s, io_req_s) q;
+	STATSCOUNTER_DEF(ctrEnq, mutCtrEnq);
+	int ctrMaxSz; //TODO: discuss potential problems around concurrent reads and writes
+	int sz; //current q size
+	statsobj_t *stats;
+	pthread_mutex_t mut;
+	pthread_cond_t wakeup_worker;
+} io_q_t;
 
 /* global data */
 pthread_attr_t wrkrThrdAttr;	/* Attribute for session threads; read only after startup */
 static ptcpsrv_t *pSrvRoot = NULL;
 static int epollfd = -1;			/* (sole) descriptor for epoll */
 static int iMaxLine; /* maximum size of a single message */
+static io_q_t io_q;
 
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -748,9 +764,11 @@ finalize_it:
  * EXTRACT from tcps_sess.c
  */
 static inline rsRetVal
-processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
+processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
 {
 	DEFiRet;
+	char c = **buff;
+	int octatesToCopy, octatesToDiscard;
 
 	if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && isdigit((int) c)) {
@@ -797,42 +815,57 @@ processDataRcvd(ptcpsess_t *pThis, char c, struct syslogTime *stTime, time_t ttG
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
-		if(pThis->iMsg >= iMaxLine) {
-			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
-			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-			/* we might think if it is better to ignore the rest of the
-			 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
-			 */
-		}
 
-		if((   (c == '\n')
-		   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-		       && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
-		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-			pThis->inputState = eAtStrtFram;
-		} else {
-			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
-			 * If we have a message that is larger than the max msg size, we truncate it. This is the best
-			 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
-			 */
-			if(pThis->iMsg < iMaxLine) {
-				*(pThis->pMsg + pThis->iMsg++) = c;
+		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+			if(pThis->iMsg >= iMaxLine) {
+				/* emergency, we now need to flush, no matter if we are at end of message or not... */
+				DBGPRINTF("error: message received is larger than max msg size, we split it\n");
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				/* we might think if it is better to ignore the rest of the
+				 * message than to treat it as a new one. Maybe this is a good
+				 * candidate for a configuration parameter...
+				 * rgerhards, 2006-12-04
+				 */
 			}
-		}
 
-		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
-			/* do we need to find end-of-frame via octet counting? */
-			pThis->iOctetsRemain--;
-			if(pThis->iOctetsRemain < 1) {
+			if ((c == '\n')
+				   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+					   && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
+				   ) { /* record delimiter? */
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				pThis->inputState = eAtStrtFram;
+			} else {
+				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
+				 * If we have a message that is larger than the max msg size, we truncate it. This is the best
+				 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
+				 */
+				if(pThis->iMsg < iMaxLine) {
+					*(pThis->pMsg + pThis->iMsg++) = c;
+				}
+			}
+		} else {
+			assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
+			octatesToCopy = pThis->iOctetsRemain;
+			octatesToDiscard = 0;
+			if (buffLen < octatesToCopy) {
+				octatesToCopy = buffLen;
+			}
+			if (octatesToCopy + pThis->iMsg > iMaxLine) {
+				octatesToDiscard = octatesToCopy - (iMaxLine - pThis->iMsg);
+				octatesToCopy = iMaxLine - pThis->iMsg;
+			}
+
+			memcpy(pThis->pMsg + pThis->iMsg, *buff, octatesToCopy);
+			pThis->iMsg += octatesToCopy;
+			pThis->iOctetsRemain -= (octatesToCopy + octatesToDiscard);
+			*buff += (octatesToCopy + octatesToDiscard - 1);
+			if (pThis->iOctetsRemain == 0) {
 				/* we have end of frame! */
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 				pThis->inputState = eAtStrtFram;
 			}
 		}
+
 	}
 
 finalize_it:
@@ -877,7 +910,8 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, *pData++, stTime, ttGenTime, &multiSub));
+		CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub));
+		pData++;
 	}
 
 	iRet = multiSubmitFlush(&multiSub);
@@ -977,11 +1011,12 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	DEFiRet;
 	epolld_t *epd = NULL;
 
-	CHKmalloc(epd = calloc(sizeof(epolld_t), 1));
+	CHKmalloc(epd = calloc(1, sizeof(epolld_t)));
 	epd->typ = typ;
 	epd->ptr = ptr;
+	epd->sock = sock;
 	*pEpd = epd;
-	epd->ev.events = EPOLLIN|EPOLLET;
+	epd->ev.events = EPOLLIN|EPOLLET|EPOLLONESHOT;
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
@@ -996,6 +1031,9 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		if (epd != NULL) {
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error: could not initialize mutex for ptcp connection for socket: %d", sock);
+		}
 		free(epd);
 	}
 	RETiRet;
@@ -1114,8 +1152,6 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->peerIP = peerIP;
 	pSess->compressionMode = pLstn->pSrv->compressionMode;
 
-	CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
-
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
 	pthread_mutex_lock(&pSrv->mutSessLst);
@@ -1124,6 +1160,8 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 		pSrv->pSess->prev = pSess;
 	pSrv->pSess = pSess;
 	pthread_mutex_unlock(&pSrv->mutSessLst);
+
+	CHKiRet(addEPollSock(epolld_sess, pSess, sock, &pSess->epd));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1368,15 +1406,14 @@ startWorkerPool(void)
 {
 	int i;
 	wrkrRunning = 0;
-	if(runModConf->wrkrMax > 16)
-		runModConf->wrkrMax = 16; /* TODO: make dynamic? */
 	DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
-	pthread_mutex_init(&wrkrMut, NULL);
-	pthread_cond_init(&wrkrIdle, NULL);
+    wrkrInfo = calloc(runModConf->wrkrMax, sizeof(struct wrkrInfo_s));
+    if (wrkrInfo == NULL) {
+        DBGPRINTF("imptcp: worker-info array allocation failed.\n");
+        return;
+    }
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
-		pthread_cond_init(&wrkrInfo[i].run, NULL);
-		wrkrInfo[i].event = NULL;
 		wrkrInfo[i].numCalled = 0;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
@@ -1390,14 +1427,14 @@ stopWorkerPool(void)
 {
 	int i;
 	DBGPRINTF("imptcp: stoping worker pool\n");
+	pthread_mutex_lock(&io_q.mut);
+	pthread_cond_broadcast(&io_q.wakeup_worker); /* awake wrkr if not running */
+	pthread_mutex_unlock(&io_q.mut);
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
-		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("imptcp: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
-		pthread_cond_destroy(&wrkrInfo[i].run);
 	}
-	pthread_cond_destroy(&wrkrIdle);
-	pthread_mutex_destroy(&wrkrMut);
+    free(wrkrInfo);
 }
 
 
@@ -1435,7 +1472,6 @@ startupServers()
 	RETiRet;
 }
 
-
 /* process new activity on listener. This means we need to accept a new
  * connection.
  */
@@ -1451,8 +1487,9 @@ lstnActivity(ptcplstn_t *pLstn)
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
-		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1)
+		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1) {
 			break;
+		}
 		CHKiRet(localRet);
 		localRet = addSess(pLstn, newSock, peerName, peerIP);
 		if(localRet != RS_RET_OK) {
@@ -1467,12 +1504,11 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
 static inline rsRetVal
-sessActivity(ptcpsess_t *pSess)
+sessActivity(ptcpsess_t *pSess, int *continue_polling)
 {
 	int lenRcv;
 	int lenBuf;
@@ -1500,6 +1536,7 @@ sessActivity(ptcpsess_t *pSess)
 				remsock = pSess->sock;
 				bEmitOnClose = 1;
 			}
+			*continue_polling = 0;
 			CHKiRet(closeSess(pSess)); /* close may emit more messages in strmzip mode! */
 			if(bEmitOnClose) {
 				errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "imptcp session %d closed by "
@@ -1510,6 +1547,7 @@ sessActivity(ptcpsess_t *pSess)
 			if(errno == EAGAIN || errno == EWOULDBLOCK)
 				break;
 			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
+			*continue_polling = 0;
 			closeSess(pSess); /* try clean-up by dropping session */
 			break;
 		}
@@ -1525,25 +1563,105 @@ finalize_it:
  * concurrently.
  */
 static inline void
-processWorkItem(struct epoll_event *event)
+processWorkItem(epolld_t *epd)
 {
-	epolld_t *epd;
+	int continue_polling = 1;
 
-	epd = (epolld_t*) event->data.ptr;
 	switch(epd->typ) {
 	case epolld_lstn:
+		/* listener never stops polling (except server shutdown) */
 		lstnActivity((ptcplstn_t *) epd->ptr);
 		break;
 	case epolld_sess:
-		sessActivity((ptcpsess_t *) epd->ptr);
+		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
 		break;
 	default:
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-			"error: invalid epolld_type_t %d after epoll", epd->typ);
+						"error: invalid epolld_type_t %d after epoll", epd->typ);
 		break;
+	}
+	if (continue_polling == 1) {
+		epoll_ctl(epollfd, EPOLL_CTL_MOD, epd->sock, &(epd->ev));
 	}
 }
 
+
+static rsRetVal
+initIoQ() {
+	DEFiRet;
+	CHKiConcCtrl(pthread_mutex_init(&io_q.mut, NULL));
+	CHKiConcCtrl(pthread_cond_init(&io_q.wakeup_worker, NULL));
+	STAILQ_INIT(&io_q.q);
+	io_q.sz = 0;
+	io_q.ctrMaxSz = 0; /* TODO: discuss this and fix potential concurrent read/write issues */
+	CHKiRet(statsobj.Construct(&io_q.stats));
+	CHKiRet(statsobj.SetName(io_q.stats, (uchar*) "io-work-q"));
+	CHKiRet(statsobj.SetOrigin(io_q.stats, (uchar*) "imptcp"));
+	STATSCOUNTER_INIT(io_q.ctrEnq, io_q.mutCtrEnq);
+	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("enqueued"),
+								ctrType_IntCtr, CTR_FLAG_RESETTABLE, &io_q.ctrEnq));
+	CHKiRet(statsobj.AddCounter(io_q.stats, UCHAR_CONSTANT("maxqsize"),
+								ctrType_Int, CTR_FLAG_NONE, &io_q.ctrMaxSz));
+	CHKiRet(statsobj.ConstructFinalize(io_q.stats));
+finalize_it:
+	RETiRet;
+}
+
+static void
+destroyIoQ() {
+	io_req_t *n;
+	if (io_q.stats != NULL) {
+		statsobj.Destruct(&io_q.stats);
+	}
+	pthread_mutex_lock(&io_q.mut);
+	while (!STAILQ_EMPTY(&io_q.q)) {
+		n = STAILQ_FIRST(&io_q.q);
+		STAILQ_REMOVE_HEAD(&io_q.q, link);
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: discarded enqueued io-work to allow shutdown - ignored");
+		free(n);
+	}
+	io_q.sz = 0;
+	pthread_mutex_unlock(&io_q.mut);
+	pthread_cond_destroy(&io_q.wakeup_worker);
+	pthread_mutex_destroy(&io_q.mut);
+}
+
+static inline rsRetVal
+enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
+	io_req_t *n;
+	int dispatchInline;
+	DEFiRet;
+	
+	CHKmalloc(n = malloc(sizeof(io_req_t)));
+	n->epd = epd;
+	
+	int inlineDispatchThreshold = DFLT_inlineDispatchThreshold * runModConf->wrkrMax;
+	dispatchInline = 0;
+	
+	pthread_mutex_lock(&io_q.mut);
+	if (dispatchInlineIfQueueFull && io_q.sz > inlineDispatchThreshold) {
+		dispatchInline = 1;
+	} else {
+		STAILQ_INSERT_TAIL(&io_q.q, n, link);
+		io_q.sz++;
+		STATSCOUNTER_INC(io_q.ctrEnq, io_q.mutCtrEnq);
+		STATSCOUNTER_SETMAX_NOMUT(io_q.ctrMaxSz, io_q.sz);
+		pthread_cond_signal(&io_q.wakeup_worker);
+	}
+	pthread_mutex_unlock(&io_q.mut);
+
+	if (dispatchInline == 1) {
+		free(n);
+		processWorkItem(epd);
+	}
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (n == NULL) {
+			errmsg.LogError(0, iRet, "imptcp: couldn't allocate memory to enqueue io-request - ignored");
+		}
+	}
+	RETiRet;
+}
 
 /* This function is called to process a complete workset, that
  * is a set of events returned from epoll.
@@ -1552,46 +1670,20 @@ static inline void
 processWorkSet(int nEvents, struct epoll_event events[])
 {
 	int iEvt;
-	int i;
 	int remainEvents;
-
 	remainEvents = nEvents;
+	epolld_t *epd;
+
 	for(iEvt = 0 ; (iEvt < nEvents) && (glbl.GetGlobalInputTermState() == 0) ; ++iEvt) {
-		if(remainEvents == 1) {
+		epd = (epolld_t*)events[iEvt].data.ptr;
+		if(runModConf->bProcessOnPoller && remainEvents == 1) {
 			/* process self, save context switch */
-			processWorkItem(events+iEvt);
+			processWorkItem(epd);
 		} else {
-			pthread_mutex_lock(&wrkrMut);
-			/* check if there is a free worker */
-			for(i = 0 ; (i < runModConf->wrkrMax) && (wrkrInfo[i].event != NULL) ; ++i)
-				/*do search*/;
-			if(i < runModConf->wrkrMax) {
-				/* worker free -> use it! */
-				wrkrInfo[i].event = events+iEvt;
-				++wrkrRunning;
-				pthread_cond_signal(&wrkrInfo[i].run);
-				pthread_mutex_unlock(&wrkrMut);
-			} else {
-				pthread_mutex_unlock(&wrkrMut);
-				/* no free worker, so we process this one ourselfs */
-				processWorkItem(events+iEvt);
-			}
+			enqueueIoWork(epd, runModConf->bProcessOnPoller);
 		}
 		--remainEvents;
 	}
-
-	if(nEvents > 1) {
-		/* we now need to wait until all workers finish. This is because the
-		 * rest of this module can not handle the concurrency introduced
-		 * by workers running during the epoll call.
-		 */
-		pthread_mutex_lock(&wrkrMut);
-		while(wrkrRunning > 0) {
-			pthread_cond_wait(&wrkrIdle, &wrkrMut);
-		}
-		pthread_mutex_unlock(&wrkrMut);
-	}
-
 }
 
 
@@ -1601,26 +1693,37 @@ static void *
 wrkr(void *myself)
 {
 	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
-	
-	pthread_mutex_lock(&wrkrMut);
+	pthread_mutex_lock(&io_q.mut);
+	++wrkrRunning;
+	pthread_mutex_unlock(&io_q.mut);
+
+	io_req_t *n;
 	while(1) {
-		while(me->event == NULL) {
-			if(glbl.GetGlobalInputTermState() == 1)
-				FINALIZE;
-			pthread_cond_wait(&me->run, &wrkrMut);
+		n = NULL;
+		pthread_mutex_lock(&io_q.mut);
+		if (io_q.sz == 0) {
+			--wrkrRunning;
+			if (glbl.GetGlobalInputTermState() != 0) {
+				pthread_mutex_unlock(&io_q.mut);
+				break;
+			} else {
+				pthread_cond_wait(&io_q.wakeup_worker, &io_q.mut);
+			}
+			++wrkrRunning;
 		}
-		pthread_mutex_unlock(&wrkrMut);
+		if (io_q.sz > 0) {
+			n = STAILQ_FIRST(&io_q.q);
+			STAILQ_REMOVE_HEAD(&io_q.q, link);
+			io_q.sz--;
+		}
+		pthread_mutex_unlock(&io_q.mut);
 
-		++me->numCalled;
-		processWorkItem(me->event);
-
-		pthread_mutex_lock(&wrkrMut);
-		me->event = NULL;	/* indicate we are free again */
-		--wrkrRunning;
-		pthread_cond_signal(&wrkrIdle);
+		if (n != NULL) {
+			++me->numCalled;
+			processWorkItem(n->epd);
+			free(n);
+		}
 	}
-finalize_it:
-	pthread_mutex_unlock(&wrkrMut);
 	return NULL;
 }
 
@@ -1707,6 +1810,7 @@ CODESTARTbeginCnfLoad
 	pModConf->pConf = pConf;
 	/* init our settings */
 	loadModConf->wrkrMax = DFLT_wrkrMax;
+	loadModConf->bProcessOnPoller = 1;
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
@@ -1735,6 +1839,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "threads")) {
 			loadModConf->wrkrMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "processOnPoller")) {
+			loadModConf->bProcessOnPoller = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
@@ -1855,6 +1961,7 @@ BEGINrunInput
 	int nEvents;
 	struct epoll_event events[128];
 CODESTARTrunInput
+	initIoQ();
 	startWorkerPool();
 	DBGPRINTF("imptcp: now beginning to process input data\n");
 	while(glbl.GetGlobalInputTermState() == 0) {
@@ -1893,7 +2000,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 		pLstn = pLstn->next;
 		DBGPRINTF("imptcp shutdown listen socket %d (rcvd %lld bytes, "
 			  "decompressed %lld)\n", lstnDel->sock, lstnDel->rcvdBytes,
-			  lstnDel->rcvdDecompressed);
+				  lstnDel->rcvdDecompressed);
 		free(lstnDel->epd);
 		free(lstnDel);
 	}
@@ -1914,6 +2021,7 @@ BEGINafterRun
 	ptcpsrv_t *pSrv, *srvDel;
 CODESTARTafterRun
 	stopWorkerPool();
+	destroyIoQ();
 
 	/* we need to close everything that is still open */
 	pSrv = pSrvRoot;
