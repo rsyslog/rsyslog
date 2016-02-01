@@ -119,6 +119,11 @@ ENDinterface(statsobj)
 PROTOTYPEObj(statsobj);
 
 rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen);
+/* checkGoneAwaySenders() is part of this module because all it needs is
+ * done by this module, so even though it's own processing is not directly
+ * related to stats, it makes sense to do it here... -- rgerhards, 2016-02-01
+ */
+void checkGoneAwaySenders(time_t);
 
 /* macros to handle stats counters
  * These are to be used by "counter providers". Note that we MUST

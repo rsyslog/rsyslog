@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -545,6 +546,45 @@ destructAllCounters(statsobj_t *pThis) {
 	RETiRet;
 }
 
+/* check if a sender has not sent info to us for an extended period
+ * of time.
+ */
+void
+checkGoneAwaySenders(const time_t tCurr)
+{
+	struct hashtable_itr *itr;
+	struct sender_stats *stat;
+	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
+	struct tm tm;
+
+	pthread_mutex_lock(&mutSenders);
+
+	/* Iterator constructor only returns a valid iterator if
+	 * the hashtable is not empty
+	 */
+	if(hashtable_count(stats_senders) > 0) {
+		itr = hashtable_iterator(stats_senders);
+		do {
+			stat = (struct sender_stats*)hashtable_iterator_value(itr);
+			if(stat->lastSeen < rqdLast) {
+				if(glblReportGoneAwaySenders) {
+					localtime_r(&stat->lastSeen, &tm);
+					errmsg.LogMsg(0, RS_RET_SENDER_GONE_AWAY,
+						LOG_WARNING,
+						"removing sender '%s' from connection "
+						"table, last seen at "
+						"%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
+						stat->sender,
+						tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+						tm.tm_hour, tm.tm_min, tm.tm_sec);
+				}
+				hashtable_remove(stats_senders, (void*)stat->sender);
+			}
+		} while (hashtable_iterator_advance(itr));
+	}
+
+	pthread_mutex_unlock(&mutSenders);
+}
 
 /* destructor for the statsobj object */
 BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
@@ -613,7 +653,7 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	pthread_mutex_init(&mutSenders, NULL);
 
 	if((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
-		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
 			"for sender table. Sender statistics and warnings are disabled.");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
