@@ -472,7 +472,7 @@ int sendMessages(struct instdata *inst)
 	int offsSendBuf = 0;
 	char errStr[1024];
 	int error_number = 0;
-	int show_progress_interval = 100;
+	unsigned show_progress_interval = 100;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
