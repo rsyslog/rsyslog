@@ -10,18 +10,18 @@
  *
  * File begun on 2010-08-10 by RGerhards
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -763,8 +763,14 @@ finalize_it:
  * rgerhards, 2008-03-14
  * EXTRACT from tcps_sess.c
  */
-static inline rsRetVal
-processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
+static rsRetVal
+processDataRcvd(ptcpsess_t *const __restrict__ pThis,
+	char **buff,
+	const int buffLen,
+	struct syslogTime *stTime,
+	const time_t ttGenTime,
+	multi_submit_t *pMultiSub,
+	unsigned *const __restrict__ pnMsgs)
 {
 	DEFiRet;
 	char c = **buff;
@@ -821,6 +827,7 @@ processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *
 				/* emergency, we now need to flush, no matter if we are at end of message or not... */
 				DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
 				/* we might think if it is better to ignore the rest of the
 				 * message than to treat it as a new one. Maybe this is a good
 				 * candidate for a configuration parameter...
@@ -833,6 +840,7 @@ processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *
 					   && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
 				   ) { /* record delimiter? */
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
 				pThis->inputState = eAtStrtFram;
 			} else {
 				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
@@ -862,6 +870,7 @@ processDataRcvd(ptcpsess_t *pThis, char **buff, int buffLen, struct syslogTime *
 			if (pThis->iOctetsRemain == 0) {
 				/* we have end of frame! */
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
 				pThis->inputState = eAtStrtFram;
 			}
 		}
@@ -895,6 +904,7 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	multi_submit_t multiSub;
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char *pEnd;
+	unsigned nMsgs = 0;
 	DEFiRet;
 
 	assert(pData != NULL);
@@ -910,11 +920,13 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub));
+		CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub, &nMsgs));
 		pData++;
 	}
 
 	iRet = multiSubmitFlush(&multiSub);
+
+	statsRecordSender(propGetSzStr(pThis->peerName), nMsgs, ttGenTime);
 
 finalize_it:
 	RETiRet;

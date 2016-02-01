@@ -1,17 +1,17 @@
 /* The statsobj object.
  *
- * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,6 +82,12 @@ struct statsobj_s {
 	statsobj_t *next;
 };
 
+struct sender_stats {
+	const uchar *sender;
+	uint64_t nMsgs;
+	time_t lastSeen;
+};
+
 
 /* interfaces */
 BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
@@ -112,6 +118,7 @@ ENDinterface(statsobj)
 /* prototypes */
 PROTOTYPEObj(statsobj);
 
+rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen);
 
 /* macros to handle stats counters
  * These are to be used by "counter providers". Note that we MUST

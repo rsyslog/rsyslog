@@ -3,18 +3,18 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2014 Adiscon GmbH.
+ * Copyright 2010-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <errno.h>
 #include <assert.h>
@@ -36,6 +37,9 @@
 #include "statsobj.h"
 #include "srUtils.h"
 #include "stringbuf.h"
+#include "errmsg.h"
+#include "hashtable.h"
+#include "hashtable_itr.h"
 
 
 /* externally-visiable data (see statsobj.h for explanation) */
@@ -43,6 +47,7 @@ int GatherStats = 0;
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 
 /* doubly linked list of stats objects. Object is automatically linked to it
  * upon construction. Enqueue always happens at the front (simplifies logic).
@@ -51,6 +56,9 @@ static statsobj_t *objRoot = NULL;
 static statsobj_t *objLast = NULL;
 
 static pthread_mutex_t mutStats;
+static pthread_mutex_t mutSenders;
+
+static struct hashtable *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
@@ -380,6 +388,56 @@ finalize_it:
 }
 
 
+
+/* this function obtains all sender stats. hlper to getAllStatsLines()
+ * We need to keep this looked to avoid resizing of the hash table
+ * (what could otherwise cause a segfault).
+ */
+static void
+getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
+	void *usrptr,
+	statsFmtType_t fmt,
+	const int8_t bResetCtrs)
+{
+	struct hashtable_itr *itr;
+	struct sender_stats *stat;
+	char fmtbuf[2048];
+
+	pthread_mutex_lock(&mutSenders);
+
+	/* Iterator constructor only returns a valid iterator if
+	 * the hashtable is not empty
+	 */
+	if(hashtable_count(stats_senders) > 0) {
+		itr = hashtable_iterator(stats_senders);
+		do {
+			stat = (struct sender_stats*)hashtable_iterator_value(itr);
+			if(fmt == statsFmt_Legacy) {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"_sender_stat: sender=%s messages=%"
+					PRIu64,
+					stat->sender, stat->nMsgs);
+			} else {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"{ \"name\":\"_sender_stat\", "
+					"\"sender\":\"%s\", \"messages\":\"%"
+					PRIu64 "\"}",
+					stat->sender, stat->nMsgs);
+			}
+			fmtbuf[sizeof(fmtbuf)-1] = '\0';
+			cstr_t *cs;
+			rsCStrConstructFromszStr(&cs, (uchar*)fmtbuf);
+			cb(usrptr, cs);
+			rsCStrDestruct(&cs);
+			if(bResetCtrs)
+				stat->nMsgs = 0;
+		} while (hashtable_iterator_advance(itr));
+	}
+
+	pthread_mutex_unlock(&mutSenders);
+}
+
+
 /* this function can be used to obtain all stats lines. In this case,
  * a callback must be provided. This module than iterates over all objects and
  * submits each stats line to the callback. The callback has two parameters:
@@ -387,7 +445,7 @@ finalize_it:
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
@@ -411,6 +469,8 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 		}
 	}
 
+	getSenderStats(cb, usrptr, fmt, bResetCtrs);
+
 finalize_it:
 	RETiRet;
 }
@@ -425,6 +485,46 @@ enableStats()
 	GatherStats = 1;
 	return RS_RET_OK;
 }
+
+
+rsRetVal
+statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
+{
+	struct sender_stats *stat;
+	int mustUnlock = 0;
+	DEFiRet;
+
+	if(stats_senders == NULL)
+		FINALIZE;	/* unlikely: we could not init our hash table */
+
+	pthread_mutex_lock(&mutSenders);
+	mustUnlock = 1;
+	stat = hashtable_search(stats_senders, (void*)sender);
+	if(stat == NULL) {
+		DBGPRINTF("statsRecordSender: sender '%s' not found, adding\n",
+			sender);
+		CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
+		stat->sender = (const uchar*)strdup((const char*)sender);
+		stat->nMsgs = 0;
+		if(hashtable_insert(stats_senders, (void*)stat->sender,
+			(void*)stat) == 0) {
+			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR,
+				"error inserting sender '%s' into sender "
+				"hash table", sender);
+			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+		}
+	}
+
+	stat->nMsgs += nMsgs;
+	stat->lastSeen = lastSeen;
+	DBGPRINTF("DDDDD: statsRecordSender: '%s', nmsgs %u [%llu], lastSeen %llu\n", sender, nMsgs, (long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
+
+finalize_it:
+	if(mustUnlock)
+		pthread_mutex_unlock(&mutSenders);
+	RETiRet;
+}
+
 
 static rsRetVal
 destructAllCounters(statsobj_t *pThis) {
@@ -487,7 +587,6 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
 	pIf->SetReadNotifier = setReadNotifier;
-	//pIf->GetStatsLine = getStatsLine;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;
@@ -507,10 +606,17 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, statsobjDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, statsobjConstructFinalize);
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* init other data items */
 	pthread_mutex_init(&mutStats, NULL);
+	pthread_mutex_init(&mutSenders, NULL);
 
+	if((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+			"for sender table. Sender statistics and warnings are disabled.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
 ENDObjClassInit(statsobj)
 
 /* Exit the class.
@@ -518,4 +624,5 @@ ENDObjClassInit(statsobj)
 BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
 	/* release objects we no longer need */
 	pthread_mutex_destroy(&mutStats);
+	pthread_mutex_destroy(&mutSenders);
 ENDObjClassExit(statsobj)
