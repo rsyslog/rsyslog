@@ -353,7 +353,12 @@ Close(tcps_sess_t *pThis)
  * rgerhards, 2008-03-14
  */
 static rsRetVal
-processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
+processDataRcvd(tcps_sess_t *pThis,
+	char c,
+	struct syslogTime *stTime,
+	const time_t ttGenTime,
+	multi_submit_t *pMultiSub,
+	unsigned *const __restrict__ pnMsgs)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -408,6 +413,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+			++(*pnMsgs);
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
 			 * candidate for a configuration parameter...
@@ -419,6 +425,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+			++(*pnMsgs);
 			pThis->inputState = eAtStrtFram;
 		} else {
 			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
@@ -436,6 +443,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
 				defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
 				pThis->inputState = eAtStrtFram;
 			}
 		}
@@ -463,13 +471,14 @@ finalize_it:
  */
 #define NUM_MULTISUB 1024
 static rsRetVal
-DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
+DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 {
 	multi_submit_t multiSub;
 	msg_t *pMsgs[NUM_MULTISUB];
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	char *pEnd;
+	unsigned nMsgs = 0;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -485,9 +494,12 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub));
+		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub, &nMsgs));
 	}
 	iRet = multiSubmitFlush(&multiSub);
+
+	if(glblSenderKeepTrack)
+		statsRecordSender(propGetSzStr(pThis->fromHost), nMsgs, ttGenTime);
 
 finalize_it:
 	RETiRet;
