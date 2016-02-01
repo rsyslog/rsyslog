@@ -472,11 +472,15 @@ int sendMessages(struct instdata *inst)
 	int offsSendBuf = 0;
 	char errStr[1024];
 	int error_number = 0;
+	int show_progress_interval = 100;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
 			printf("Sending %llu messages.\n", inst->numMsgs);
 			statusText = "messages";
+			if ((inst->numMsgs / 100) > show_progress_interval) {
+				show_progress_interval = inst->numMsgs / 100;
+			}
 		} else {
 			printf("Sending file '%s' %d times.\n", dataFile,
 			       numFileIterations);
@@ -544,7 +548,7 @@ int sendMessages(struct instdata *inst)
 
 			return(1);
 		}
-		if(i % 100 == 0) {
+		if(i % show_progress_interval == 0) {
 			if(bShowProgress)
 				printf("\r%8.8d", i);
 		}

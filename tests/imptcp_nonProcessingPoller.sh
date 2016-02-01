@@ -2,7 +2,7 @@
 # added 2015-10-16 by singh.janmejay
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
-echo TEST: \[imptcp_nonProcessingPoller.sh\]: test imptcp with with poller driven processing disabled
+echo TEST: \[imptcp_nonProcessingPoller.sh\]: test imptcp with poller driven processing disabled
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imptcp_nonProcessingPoller.conf
 . $srcdir/diag.sh tcpflood -c1 -m20000 -r -d10000 -P129 -O

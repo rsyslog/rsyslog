@@ -107,6 +107,15 @@ case $1 in
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		;;
+   'startup-silent')   # start rsyslogd with default params. $2 is the config file name to use
+   		# returns only after successful startup, $3 is the instance (blank or 2!)
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
+		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
+		. $srcdir/diag.sh wait-startup $3
+		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		if [ ! -f $srcdir/testsuites/$2 ]; then
