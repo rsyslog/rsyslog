@@ -6,6 +6,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - simplified locking in when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
+- imptcp: performance improvements
+  Thanks to Janmejay Singh for implementing this improvement
 - made build compile (almost) without warnings
   still some warnings are suppressed where this is currently required
 - bugfix: potential deadlock with heavy variable access
