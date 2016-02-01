@@ -111,6 +111,7 @@ static int bEscape8BitChars = 0; /* escape characters > 127 on reception: 0 - no
 static int bEscapeTab = 1; /* escape tab control character when doing CC escapes: 0 - no, 1 - yes */
 static int bParserEscapeCCCStyle = 0; /* escape control characters in c style: 0 - no, 1 - yes */
 short janitorInterval = 10; /* interval (in minutes) at which the janitor runs */
+int glblReportNewSenders = 0;
 int glblReportGoneAwaySenders = 0;
 int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
 int glblSenderKeepTrack = 0;  /* keep track of known senders? */
@@ -153,6 +154,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.parsehostnameandtag", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
+	{ "senders.reportnew", eCmdHdlrBinary, 0 },
 	{ "senders.reportgoneaway", eCmdHdlrBinary, 0 },
 	{ "senders.timeoutafter", eCmdHdlrPositiveInt, 0 },
 	{ "senders.keeptrack", eCmdHdlrBinary, 0 },
@@ -1116,6 +1118,8 @@ glblDoneLoadCnf(void)
 					"parameter '%s' -- ignored", proto);
 			}
 			free(proto);
+		} else if(!strcmp(paramblk.descr[i].name, "senders.reportnew")) {
+		        glblReportNewSenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.reportgoneaway")) {
 		        glblReportGoneAwaySenders = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.timeoutafter")) {

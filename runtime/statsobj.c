@@ -507,6 +507,10 @@ statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 		CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
 		stat->sender = (const uchar*)strdup((const char*)sender);
 		stat->nMsgs = 0;
+		if(glblReportNewSenders) {
+			errmsg.LogMsg(0, RS_RET_SENDER_APPEARED,
+				LOG_INFO, "new sender '%s'", stat->sender);
+		}
 		if(hashtable_insert(stats_senders, (void*)stat->sender,
 			(void*)stat) == 0) {
 			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR,
