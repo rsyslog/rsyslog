@@ -328,6 +328,19 @@ Input Parameters
    when it was truncated (inode unchanged but file size on disk is less than
    current offset in memory).
 
+.. index::
+   single: imfile; trimLineOverBytes
+.. function:: trimLineOverBytes [number] (requires v8.17.0+)
+
+   **Default: 0**
+
+   This is used to tell rsyslog to truncate the line which length is greater
+   than specified bytes. If it is positive number, rsyslog truncate the line
+   at specified bytes. Default value of 'trimLineOverBytes' is 0, means never
+   truncate line.
+
+   This option can be used when ``readMode`` is 0 or 2.
+
 Caveats/Known Bugs
 ------------------
 
