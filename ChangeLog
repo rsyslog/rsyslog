@@ -6,6 +6,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - simplified locking in when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
+- imuxsock: add "ruleset" input parameter
 - imptcp: performance improvements
   Thanks to Janmejay Singh for implementing this improvement
 - made build compile (almost) without warnings
