@@ -57,7 +57,8 @@ the input they are specified with.
 
 .. function:: ruleset <name>
 
-   Binds specified ruleset to next server defined.
+   Binds specified ruleset to this input. If not set, the default
+   ruleset is bound.
 
 .. function:: address <name>
 
