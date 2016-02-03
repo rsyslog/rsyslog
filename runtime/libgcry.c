@@ -1,6 +1,6 @@
 /* gcry.c - rsyslog's libgcrypt based crypto provider
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * We need to store some additional information in support of encryption.
  * For this, we create a side-file, which is named like the actual log
@@ -25,11 +25,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -285,8 +285,8 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-eiWriteIV(gcryfile gf, uchar *iv)
+static rsRetVal __attribute__((nonnull(2)))
+eiWriteIV(gcryfile gf, const uchar *const iv)
 {
 	static const char hexchars[16] =
 	   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
@@ -520,7 +520,17 @@ seedIV(gcryfile gf, uchar **iv)
 {
 	int fd;
 
+	#ifdef __clang_analyzer__
+	*iv = calloc(1, gf->blkLength); /* do NOT use this code! */
+	/* this execution branch is only present to prevent a
+	 * "garbagge value used" warning by the static analyzer.
+	 * In fact, that is exactly what we want to and need to
+	 * use. Using calloc here keeps that analyzer happy, but would
+	 * cause a security issue if used in practice.
+	 */
+	#else
 	*iv = malloc(gf->blkLength); /* do NOT zero-out! */
+	#endif
 	/* if we cannot obtain data from /dev/urandom, we use whatever
 	 * is present at the current memory location as random data. Of
 	 * course, this is very weak and we should consider a different
@@ -595,6 +605,7 @@ rsgcryBlkBegin(gcryfile gf)
 	gcry_error_t gcryError;
 	uchar *iv = NULL;
 	DEFiRet;
+	const char openMode = gf->openMode;
 
 	gcryError = gcry_cipher_open(&gf->chd, gf->ctx->algo, gf->ctx->mode, 0);
 	if (gcryError) {
@@ -610,7 +621,7 @@ rsgcryBlkBegin(gcryfile gf)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if(gf->openMode == 'r') {
+	if(openMode == 'r') {
 		readIV(gf, &iv);
 		readBlkEnd(gf);
 	} else {
@@ -624,7 +635,7 @@ rsgcryBlkBegin(gcryfile gf)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if(gf->openMode == 'w') {
+	if(openMode == 'w') {
 		CHKiRet(eiOpenAppend(gf));
 		CHKiRet(eiWriteIV(gf, iv));
 	}
