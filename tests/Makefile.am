@@ -15,8 +15,6 @@ TESTS +=  \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
-	msgvar-concurrency-array.sh \
-	msgvar-concurrency-array-event.tags.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -255,6 +253,8 @@ endif
 endif
 
 if ENABLE_MMNORMALIZE
+TESTS += msgvar-concurrency-array.sh \
+	msgvar-concurrency-array-event.tags.sh
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
