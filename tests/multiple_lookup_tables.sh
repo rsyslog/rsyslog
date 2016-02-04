@@ -25,7 +25,11 @@ cp $srcdir/testsuites/xlate_more.lkp_tbl $srcdir/xlate_1.lkp_tbl
 . $srcdir/diag.sh issue-HUP
 . $srcdir/diag.sh await-lookup-table-reload
 . $srcdir/diag.sh injectmsg  0 3
-. $srcdir/diag.sh wait-queueempty
+echo doing shutdown
+. $srcdir/diag.sh shutdown-when-empty
+echo wait on shutdown
+. $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh content-check "msgnum:00000000: 0_foo_new 1_foo_new"
 . $srcdir/diag.sh content-check "msgnum:00000001: 0_bar_new 1_bar_new"
 . $srcdir/diag.sh content-check "msgnum:00000002: 0_baz 1_baz"
+. $srcdir/diag.sh exit
