@@ -312,6 +312,7 @@ TESTS += \
 	imtcp-tls-basic-vg.sh \
 	imtcp_conndrop_tls-vg.sh
 if !ENABLE_DISTCHECK_WORKAROUND
+TESTS += \
 	manytcp-too-few-tls-vg.sh
 endif
 endif
@@ -1019,7 +1020,7 @@ EXTRA_DIST= \
 	testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
-	testsuites/multiple_lookup_tables.conf
+	testsuites/multiple_lookup_tables.conf \
 	json_var_cmpr.sh \
 	testsuites/json_var_cmpr.conf \
 	imptcp_nonProcessingPoller.sh \
