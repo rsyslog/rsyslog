@@ -17,7 +17,7 @@
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -146,7 +146,7 @@ rsgtExit(void)
 static inline gtfile
 rsgtfileConstruct(gtctx ctx)
 {
-	gtfile gf;
+	gtfile gf = NULL;
 	if((gf = calloc(1, sizeof(struct gtfile_s))) == NULL)
 		goto done;
 	gf->ctx = ctx;
@@ -342,25 +342,18 @@ tlvWriteBlockHdr(gtfile gf) {
 	 	  2 + hashOutputLengthOctets(gf->hashAlg) /* iv */ +
 		  2 + 1 + gf->x_prev->len /* last hash */;
 	/* write top-level TLV object block-hdr */
-	r = tlv16Write(gf, 0x00, 0x0901, tlvlen);
+	CHKr(tlv16Write(gf, 0x00, 0x0901, tlvlen));
 	/* and now write the children */
 	/* hash-algo */
-	r = tlv8Write(gf, 0x00, 0x01, 1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg));
-	if(r != 0) goto done;
+	CHKr(tlv8Write(gf, 0x00, 0x01, 1));
+	CHKr(tlvbufAddOctet(gf, hashIdentifier(gf->hashAlg)));
 	/* block-iv */
-	r = tlv8Write(gf, 0x00, 0x02, hashOutputLengthOctets(gf->hashAlg));
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg));
-	if(r != 0) goto done;
+	CHKr(tlv8Write(gf, 0x00, 0x02, hashOutputLengthOctets(gf->hashAlg)));
+	CHKr(tlvbufAddOctetString(gf, gf->IV, hashOutputLengthOctets(gf->hashAlg)));
 	/* last-hash */
-	r = tlv8Write(gf, 0x00, 0x03, gf->x_prev->len + 1);
-	if(r != 0) goto done;
-	r = tlvbufAddOctet(gf, gf->x_prev->hashID);
-	if(r != 0) goto done;
-	r = tlvbufAddOctetString(gf, gf->x_prev->data, gf->x_prev->len);
-	if(r != 0) goto done;
+	CHKr(tlv8Write(gf, 0x00, 0x03, gf->x_prev->len + 1));
+	CHKr(tlvbufAddOctet(gf, gf->x_prev->hashID));
+	CHKr(tlvbufAddOctetString(gf, gf->x_prev->data, gf->x_prev->len));
 done:	return r;
 }
 
@@ -420,6 +413,7 @@ readStateFile(gtfile gf)
 	if (gf->x_prev->data == NULL) {
 		free(gf->x_prev);
 		gf->x_prev = NULL;
+		goto err;
 	}
 
 	if(read(fd, gf->x_prev->data, gf->x_prev->len)
@@ -432,7 +426,6 @@ readStateFile(gtfile gf)
 return;
 
 err:
-
 	gf->x_prev = malloc(sizeof(imprint_t));
 	gf->x_prev->hashID = hashIdentifier(gf->hashAlg);
 	gf->x_prev->len = hashOutputLengthOctets(gf->hashAlg);
@@ -567,6 +560,8 @@ rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn)
 	gf->statefilename = (uchar*) strdup(fn);
 	if(tlvOpen(gf, LOGSIGHDR, sizeof(LOGSIGHDR)-1) != 0) {
 		reportErr(ctx, "signature file open failed");
+		/* Free memory */
+		free(gf);
 		gf = NULL;
 	}
 done:	return gf;
@@ -631,7 +626,7 @@ sigblkInit(gtfile gf)
 {
 	if(gf == NULL) goto done;
 	seedIV(gf);
-	memset(gf->roots_valid, 0, sizeof(gf->roots_valid)/sizeof(char));
+	memset(gf->roots_valid, 0, sizeof(gf->roots_valid));
 	gf->nRoots = 0;
 	gf->nRecords = 0;
 	gf->bInBlk = 1;
@@ -654,7 +649,7 @@ bufAddIV(gtfile gf, uchar *buf, size_t *len)
 
 /* concat: add imprint to buffer */
 static inline void
-bufAddImprint(gtfile gf, uchar *buf, size_t *len, imprint_t *imp)
+bufAddImprint(uchar *buf, size_t *len, imprint_t *imp)
 {
 	buf[*len] = imp->hashID;
 	++(*len);
@@ -688,7 +683,7 @@ hash_m(gtfile gf, GTDataHash **m)
 	size_t len = 0;
 	int r = 0;
 
-	bufAddImprint(gf, concatBuf, &len, gf->x_prev);
+	bufAddImprint(concatBuf, &len, gf->x_prev);
 	bufAddIV(gf, concatBuf, &len);
 	rgt = GTDataHash_create(gf->hashAlg, concatBuf, len, m);
 	if(rgt != GT_OK) {

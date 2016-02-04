@@ -64,6 +64,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(errmsg)
 
 struct modConfData_s {
+	int bIgnPrevMsg;
 };
 
 static struct configSettings_s {
@@ -185,7 +186,7 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	if(tp == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
-		datetime.timeval2syslogTime(tp, &st);
+		datetime.timeval2syslogTime(tp, &st, TIME_IN_LOCALTIME);
 		CHKiRet(msgConstructWithTime(&pMsg, &st, tp->tv_sec));
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
@@ -233,7 +234,6 @@ readjournal() {
 
 	const void *get;
 	const void *pidget;
-	char *parse;
 	size_t length;
 	size_t pidlength;
 
@@ -334,64 +334,7 @@ readjournal() {
 		/* get length of journal data prefix */
 		prefixlen = ((char *)equal_sign - (char *)get);
 
-		/* translate name fields to lumberjack names */
-		parse = (char *)get;
-
-		switch (*parse)
-		{
-		case '_':
-			++parse;
-			if (*parse == 'P') {
-				if (!strncmp(parse+1, "ID=", 4)) {
-					name = strdup("pid");
-				} else {
-					name = strndup(get, prefixlen);
-				}
-			} else if (*parse == 'G') {
-				if (!strncmp(parse+1, "ID=", 4)) {
-					name = strdup("gid");
-				} else {
-					name = strndup(get, prefixlen);
-				}
-			} else if (*parse == 'U') {
-				if (!strncmp(parse+1, "ID=", 4)) {
-					name = strdup("uid");
-				} else {
-					name = strndup(get, prefixlen);
-				}
-			} else if (*parse == 'E') {
-				if (!strncmp(parse+1, "XE=", 4)) {
-					name = strdup("exe");
-				} else {
-					name = strndup(get, prefixlen);
-				}
-			} else if (*parse == 'C') {
-				parse++;
-				if (*parse == 'O') {
-					if (!strncmp(parse+1, "MM=", 4)) {
-						name = strdup("appname");
-					} else {
-						name = strndup(get, prefixlen);
-					}
-				} else if (*parse == 'M') {
-					if (!strncmp(parse+1, "DLINE=", 7)) {
-						name = strdup("cmd");
-					} else {
-						name = strndup(get, prefixlen);
-					}
-				} else {
-					name = strndup(get, prefixlen);
-				}
-			} else {
-				name = strndup(get, prefixlen);
-			}
-			break;
-
-		default:
-			name = strndup(get, prefixlen);
-			break;
-		}
-
+		name = strndup(get, prefixlen);
 		CHKmalloc(name);
 
 		prefixlen++; /* remove '=' */
@@ -588,6 +531,7 @@ finalize_it:
 }
 
 BEGINrunInput
+	int count = 0;
 CODESTARTrunInput
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
 	dbgprintf("imjournal: ratelimiting burst %d, interval %d\n", cs.ratelimitBurst,
@@ -616,7 +560,7 @@ CODESTARTrunInput
 	 * signalled to do so. This, however, is handled by the framework.
 	 */
 	while (glbl.GetGlobalInputTermState() == 0) {
-		int count = 0, r;
+		int r;
 
 		r = sd_journal_next(j);
 		if (r < 0) {

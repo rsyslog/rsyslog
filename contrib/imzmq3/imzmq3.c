@@ -305,6 +305,7 @@ static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
         DBGPRINTF("'%s'", currentSub->subscribe); 
     }
     DBGPRINTF("\n");
+    
 finalize_it:
     RETiRet;
 }
@@ -474,8 +475,10 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
         } else if(!strcmp(inppblk.descr[i].name, "rcvHWM")) {
             inst->rcvHWM = (int) pvals[i].val.d.n;
         } else if(!strcmp(inppblk.descr[i].name, "subscribe")) {
-            CHKiRet(parseSubscriptions(es_str2cstr(pvals[i].val.d.estr, NULL), 
-                                       &inst->subscriptions));
+            char *subscribes = es_str2cstr(pvals[i].val.d.estr, NULL);
+            rsRetVal ret = parseSubscriptions(subscribes, &inst->subscriptions);
+            free(subscribes);
+            CHKiRet(ret);
         } else if(!strcmp(inppblk.descr[i].name, "identity")){
             inst->identity = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(inppblk.descr[i].name, "sndBuf")) {

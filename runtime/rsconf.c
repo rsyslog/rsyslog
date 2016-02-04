@@ -167,6 +167,7 @@ void cnfSetDefaults(rsconf_t *pThis)
 BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macro! */
 	cnfSetDefaults(pThis);
 	lookupInitCnf(&pThis->lu_tabs);
+	CHKiRet(dynstats_initCnf(&pThis->dynstats_buckets));
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
 			rulesetKeyDestruct, strcasecmp));
 finalize_it:
@@ -208,6 +209,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
 CODESTARTobjDestruct(rsconf)
 	freeCnf(pThis);
 	tplDeleteAll(pThis);
+	dynstats_destroyAllBuckets();
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	lookupDestroyCnf();
@@ -427,6 +429,9 @@ void cnfDoObj(struct cnfobj *o)
 	case CNFOBJ_LOOKUP_TABLE:
 		lookupTableDefProcessCnf(o);
 		break;
+	case CNFOBJ_DYN_STATS:
+		dynstats_processCnf(o);
+		break;
 	case CNFOBJ_PARSER:
 		parserProcessCnf(o);
 		break;
@@ -514,7 +519,7 @@ static void doDropPrivGid(int iGid)
 		exit(1);
 	}
 	DBGPRINTF("setgid(%d): %d\n", iGid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d", iGid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
@@ -553,7 +558,7 @@ static void doDropPrivUid(int iUid)
 		exit(1);
 	}
 	DBGPRINTF("setuid(%d): %d\n", iUid, res);
-	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", iUid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
@@ -1004,7 +1009,7 @@ regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
 	DEFiRet;
 	CHKiRet(module.doModInit(modInit, name, pModHdlr, &pMod));
 	readyModForCnf(pMod, &pNew, &pLast);
-	addModToCnfList(pNew, pLast);
+	addModToCnfList(&pNew, pLast);
 finalize_it:
 	RETiRet;
 }
@@ -1265,7 +1270,7 @@ validateConf(void)
 rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
-	int iNbrActions;
+	int iNbrActions = 0;
 	int r;
 	DEFiRet;
 

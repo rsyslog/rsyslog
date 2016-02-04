@@ -643,6 +643,17 @@ gtlsInitSession(nsd_gtls_t *pThis)
 
 	pThis->sess = session;
 
+#	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION 
+	/* store a pointer to ourselfs (needed by callback) */
+	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
+	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
+	if(iRet == RS_RET_OK) {
+		gnutls_certificate_set_retrieve_function(xcred, gtlsClientCertCallback);
+	} else if(iRet != RS_RET_CERTLESS) {
+		FINALIZE; /* we have an error case! */
+	}
+#	endif
+
 finalize_it:
 	RETiRet;
 }
@@ -1565,14 +1576,6 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
-		*pLenBuf = 0;
-		/* in this case, we also need to free the receive buffer, if we
-		 * allocated one. -- rgerhards, 2008-12-03
-		 */
-		if(pThis->pszRcvBuf != NULL) {
-			free(pThis->pszRcvBuf);
-			pThis->pszRcvBuf = NULL;
-		}
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 
@@ -1589,6 +1592,14 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	*pLenBuf = iBytesCopy;
 
 finalize_it:
+	if (iRet != RS_RET_OK) {
+		/* in this case, we also need to free the receive buffer, if we
+		 * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
+		 */
+		*pLenBuf = 0;
+		free(pThis->pszRcvBuf);
+		pThis->pszRcvBuf = NULL;
+	}
 	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
@@ -1651,6 +1662,8 @@ EnableKeepAlive(nsd_t *pNsd)
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 {
@@ -1743,6 +1756,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 
 /* queryInterface function */

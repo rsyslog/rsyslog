@@ -74,6 +74,7 @@ struct action_s {
 	uchar *pszName;		/* action name */
 	DEF_ATOMIC_HELPER_MUT(mutCAS)
 	/* for per-worker HUP processing */
+	pthread_mutex_t mutWrkrDataTable; /* protects table structures */
 	void **wrkrDataTable;
 	int wrkrDataTableSize;
 	int nWrkr;

@@ -49,7 +49,6 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("ompgsql")
 
 /* internal structures
  */
@@ -145,7 +144,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", ePgSQLStatus,
+		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
 				PQerrorMessage(pData->f_hpgsql));
 		if(bSilent || ePgSQLStatus == pData->eLastPgSQLStatus)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
@@ -311,7 +310,6 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 	iRet = writePgSQL((uchar*) "commit;", pWrkrData->pData); /* TODO: make user-configurable */
-dbgprintf("ompgsql: endTransaction\n");
 ENDendTransaction
 #endif
 
@@ -404,7 +402,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 
-#	warning: transaction support missing for v8
+	/* TODO: transaction support missing for v8 */
 	bCoreSupportsBatching= 0;
 	DBGPRINTF("ompgsql: transactions are not yet supported on v8\n");
 

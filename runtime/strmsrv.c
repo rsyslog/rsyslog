@@ -169,7 +169,11 @@ addNewLstnPort(strmsrv_t *pThis, uchar *pszPort)
 	CHKmalloc(pEntry = MALLOC(sizeof(strmLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
-	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
+	if((pEntry->pszInputName = ustrdup(pThis->pszInputName)) == NULL) {
+		DBGPRINTF("strmsrv/addNewLstnPort: OOM in strdup()\n");
+		free(pEntry);
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	/* and add to list */
 	pEntry->pNext = pThis->pLstnPorts;

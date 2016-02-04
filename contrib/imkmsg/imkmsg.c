@@ -99,7 +99,7 @@ enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct j
 	if(tp == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
-		datetime.timeval2syslogTime(tp, &st);
+		datetime.timeval2syslogTime(tp, &st, TIME_IN_LOCALTIME);
 		CHKiRet(msgConstructWithTime(&pMsg, &st, tp->tv_sec));
 	}
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
@@ -129,7 +129,7 @@ rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...)
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
 
 	va_start(ap, fmt);
-	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
+	vsnprintf((char*)msgBuf, sizeof(msgBuf), fmt, ap);
 	va_end(ap);
 
 	logmsgInternal(NO_ERRCODE, priority, msgBuf, 0);

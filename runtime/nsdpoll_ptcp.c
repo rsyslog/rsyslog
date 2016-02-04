@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd epoll() interface for plain tcp sockets.
  * 
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -252,12 +252,11 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[
 	}
 
 	/* we got valid events, so tell the caller... */
-dbgprintf("epoll returned %d entries\n", nfds);
+	DBGPRINTF("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
 		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.ptr;
 		workset[i].id = pOurEvt->id;
 		workset[i].pUsr = pOurEvt->pUsr;
-dbgprintf("epoll push ppusr[%d]: %p\n", i, pOurEvt->pUsr);
 	}
 	*numEntries = nfds;
 

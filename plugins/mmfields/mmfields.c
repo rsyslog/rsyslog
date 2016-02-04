@@ -226,22 +226,24 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 		DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
 		snprintf((char*)fieldname, sizeof(fieldname), "f%d", field);
 		fieldname[sizeof(fieldname)-1] = '\0';
-		jval = json_object_new_string((char*)fieldbuf);
+		jval = json_object_new_string((char*)buf);
 		json_object_object_add(json, (char*)fieldname, jval);
 		field++;
 	}
  	msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
 finalize_it:
+	if(buf != fieldbuf)
+		free(buf);
 	RETiRet;
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
 	CHKiRet(parse_fields(pWrkrData->pData, pMsg, msg, lenMsg));

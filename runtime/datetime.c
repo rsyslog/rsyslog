@@ -90,7 +90,7 @@ static const time_t yearInSecs[] = {
  * Convert struct timeval to syslog_time
  */
 void
-timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
+timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 {
 	struct tm *tm;
 	struct tm tmBuf;
@@ -98,7 +98,10 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
 	time_t secs;
 
 	secs = tp->tv_sec;
-	tm = localtime_r(&secs, &tmBuf);
+	if(inUTC)
+		tm = gmtime_r(&secs, &tmBuf);
+	else
+		tm = localtime_r(&secs, &tmBuf);
 
 	t->year = tm->tm_year + 1900;
 	t->month = tm->tm_mon + 1;
@@ -109,24 +112,30 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
 	t->secfrac = tp->tv_usec;
 	t->secfracPrecision = 6;
 
-#	if __sun
-		/* Solaris uses a different method of exporting the time zone.
-		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
-		 */
-		lBias = -(tm->tm_isdst ? altzone : timezone);
-#	elif defined(__hpux)
-		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
-#	else
-		lBias = tm->tm_gmtoff;
-#	endif
-	if(lBias < 0) {
-		t->OffsetMode = '-';
-		lBias *= -1;
-	} else
+	if(inUTC) {
 		t->OffsetMode = '+';
+		lBias = 0;
+	} else {
+#		if __sun
+			/* Solaris uses a different method of exporting the time zone.
+			 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
+			 */
+			lBias = -(tm->tm_isdst ? altzone : timezone);
+#		elif defined(__hpux)
+			lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
+#		else
+			lBias = tm->tm_gmtoff;
+#		endif
+		if(lBias < 0) {
+			t->OffsetMode = '-';
+			lBias *= -1;
+		} else
+			t->OffsetMode = '+';
+	}
 	t->OffsetHour = lBias / 3600;
 	t->OffsetMinute = (lBias % 3600) / 60;
 	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+	t->inUTC = inUTC;
 }
 
 /**
@@ -145,7 +154,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t)
  * in some situations to minimize time() calls (namely when doing
  * output processing). This can be left NULL if not needed.
  */
-static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
+static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC)
 {
 	struct timeval tp;
 #	if defined(__hpux)
@@ -164,7 +173,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 	if(ttSeconds != NULL)
 		*ttSeconds = tp.tv_sec;
 
-	timeval2syslogTime(&tp, t);
+	timeval2syslogTime(&tp, t, inUTC);
 }
 
 

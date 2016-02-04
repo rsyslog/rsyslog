@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd select() interface for GnuTLS.
  * 
- * Copyright (C) 2008-2012 Adiscon GmbH.
+ * Copyright (C) 2008-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -175,7 +175,6 @@ doRetry(nsd_gtls_t *pNsd)
 finalize_it:
 	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
-dbgprintf("XXXXXX: doRetry: iRet %d, pNsd->bAbortConn %d\n", iRet, pNsd->bAbortConn);
 	RETiRet;
 }
 

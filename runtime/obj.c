@@ -1106,7 +1106,7 @@ GetName(obj_t *pThis)
 	ISOBJ_assert(pThis);
 
 	if(pThis->pszName == NULL) {
-		snprintf((char*)szName, sizeof(szName)/sizeof(uchar), "%s %p", objGetClassName(pThis), pThis);
+		snprintf((char*)szName, sizeof(szName), "%s %p", objGetClassName(pThis), pThis);
 		SetName(pThis, szName);
 		/* looks strange, but we NEED to re-check because if there was an
 		 * error in objSetName(), the pointer may still be NULL
@@ -1158,7 +1158,7 @@ finalize_it:
 		/* DEV DEBUG ONLY dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);*/
 		/*EMPTY BY INTENSION*/;
 	} else {
-		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
+		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStrNoNULL(pstrOID), iRet);
 	}
 
 	RETiRet;

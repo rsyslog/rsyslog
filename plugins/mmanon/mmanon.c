@@ -361,13 +361,13 @@ done:	*idx = i;
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 	int i;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
 	for(i = 0 ; i < lenMsg ; ++i) {

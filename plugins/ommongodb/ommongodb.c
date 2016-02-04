@@ -287,8 +287,8 @@ getDefaultBSON(msg_t *pMsg)
 
 	/* TODO: move to datetime? Refactor in any case! rgerhards, 2012-03-30 */
 	ts_gen = (gint64) datetime.syslogTime2time_t(&pMsg->tTIMESTAMP) * 1000; /* ms! */
-dbgprintf("ommongodb: ts_gen is %lld\n", (long long) ts_gen);
-dbgprintf("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac, pMsg->tTIMESTAMP.secfracPrecision);
+	DBGPRINTF("ommongodb: ts_gen is %lld\n", (long long) ts_gen);
+	DBGPRINTF("ommongodb: secfrac is %d, precision %d\n",  pMsg->tTIMESTAMP.secfrac, pMsg->tTIMESTAMP.secfracPrecision);
 	if(pMsg->tTIMESTAMP.secfracPrecision > 3) {
 		secfrac = pMsg->tTIMESTAMP.secfrac / i10pow(pMsg->tTIMESTAMP.secfracPrecision - 3);
 	} else if(pMsg->tTIMESTAMP.secfracPrecision < 3) {

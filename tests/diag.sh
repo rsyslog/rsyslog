@@ -100,12 +100,29 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		. $srcdir/diag.sh wait-startup $3
+		;;
+   'startup-silent')   # start rsyslogd with default params. $2 is the config file name to use
+   		# returns only after successful startup, $3 is the instance (blank or 2!)
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
+		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
+		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
@@ -114,10 +131,18 @@ case $1 in
 		# that) we don't can influence and where we cannot provide suppressions as
 		# they are platform-dependent. In that case, we can't test for leak checks
 		# (obviously), but we can check for access violations, what still is useful.
-		valgrind --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		if [ ! -f $srcdir/testsuites/$2 ]; then
+		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		    exit 1
+		fi
+		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=no ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
+	 'msleep')
+   	$srcdir/msleep $2
+		;;
+
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
@@ -235,6 +260,11 @@ case $1 in
 		echo injectmsg $2 $3 $4 $5 | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		# TODO: some return state checking? (does it really make sense here?)
 		;;
+    'injectmsg-litteral') # inject litteral-payload  via our inject interface (imdiag)
+		echo injecting msg payload from: $2
+    cat $2 | sed -e 's/^/injectmsg litteral /g' | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		# TODO: some return state checking? (does it really make sense here?)
+		;;
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
@@ -273,7 +303,8 @@ case $1 in
    'content-check') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
-		    echo content-check failed
+		    echo content-check failed to find "'$2'", content is
+		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -284,10 +315,37 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+	 'wait-for-stats-flush')
+		echo "will wait for stats push"
+		while [[ ! -f $2 ]]; do
+				echo waiting for stats file "'$2'" to be created
+				./msleep 100
+		done
+		prev_count=$(cat $2 | grep 'BEGIN$' | wc -l)
+		new_count=$prev_count
+		while [[ "x$prev_count" == "x$new_count" ]]; do
+				new_count=$(cat $2 | grep 'BEGIN$' | wc -l) # busy spin, because it allows as close timing-coordination in actual test run as possible
+		done
+		echo "stats push registered"
+		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed to find "'$2'" inside "'$3'"
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'first-column-sum-check') 
+		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		if [ "x${sum}" != "x$5" ]; then
+		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is not equal to expected value of "'$5'"
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'assert-first-column-sum-greater-than') 
+		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
+		if [ ! $sum -gt $5 ]; then
+		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -301,7 +359,14 @@ case $1 in
    'assert-content-missing') 
 		cat rsyslog.out.log | grep -qF "$2"
 		if [ "$?" -eq "0" ]; then
-		    echo content-missing assertion failed
+				echo content-missing assertion failed, some line matched pattern "'$2'"
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'custom-assert-content-missing') 
+		cat $3 | grep -qF "$2"
+		if [ "$?" -eq "0" ]; then
+				echo content-missing assertion failed, some line in "'$3'" matched pattern "'$2'"
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;

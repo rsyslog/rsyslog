@@ -12,6 +12,9 @@ TESTS = $(TESTRUNS)
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	msgvar-concurrency.sh \
+	localvar-concurrency.sh \
+	exec_tpl-concurrency.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -24,6 +27,8 @@ TESTS +=  \
 	fac_invld2.sh \
 	fac_invld3.sh \
 	fac_invld4_rfc5424.sh \
+	now_family_utc.sh \
+	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
@@ -40,7 +45,6 @@ TESTS +=  \
 	rulesetmultiqueue-v6.sh \
 	manytcp.sh \
 	rsf_getenv.sh \
-	imtcp_conndrop_tls.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
 	imtcp_no_octet_counted.sh \
@@ -90,6 +94,7 @@ TESTS +=  \
 	dircreate_dflt.sh \
 	dircreate_off.sh \
 	imuxsock_logger.sh \
+	imuxsock_logger_ruleset.sh \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_traillf.sh \
@@ -122,6 +127,18 @@ TESTS +=  \
 	rscript_wrap3.sh \
 	rscript_re_extract.sh \
 	rscript_re_match.sh \
+	rscript_eq.sh \
+	rscript_eq_var.sh \
+	rscript_ge.sh \
+	rscript_ge_var.sh \
+	rscript_gt.sh \
+	rscript_gt_var.sh \
+	rscript_le.sh \
+	rscript_le_var.sh \
+	rscript_lt.sh \
+	rscript_lt_var.sh \
+	rscript_ne.sh \
+	rscript_ne_var.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -187,6 +204,21 @@ endif
 endif
 endif
 
+if ENABLE_IMPSTATS
+TESTS +=  \
+	dynstats.sh \
+	dynstats_overflow.sh \
+	dynstats_reset.sh \
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	dynstats-vg.sh \
+	dynstats_reset-vg.sh \
+	dynstats_overflow-vg.sh
+endif
+endif
+
 if ENABLE_IMPTCP
 # note that some tests simply USE imptcp, but they also
 # need to be disabled if we do not have this module
@@ -197,6 +229,8 @@ TESTS +=  \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
 	imptcp_spframingfix.sh \
+	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -235,11 +269,10 @@ endif
 if ENABLE_MMNORMALIZE
 if ENABLE_IMPTCP
 TESTS +=  \
-	mmnormalize_variable.sh \
-	mmnormalize_tokenized.sh \
 	mmnormalize_regex_defaulted.sh \
-	mmnormalize_regex_disabled.sh
-
+	mmnormalize_regex_disabled.sh \
+	mmnormalize_variable.sh \
+	mmnormalize_tokenized.sh
 endif
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
@@ -256,8 +289,16 @@ TESTS +=  \
 	json_array_looping.sh \
 	json_nonarray_looping.sh
 endif
+if HAVE_VALGRIND
 TESTS +=  \
-	stop_when_array_has_element.sh
+	json_null_array-vg.sh \
+	json_null-vg.sh
+endif
+TESTS +=  \
+	stop_when_array_has_element.sh \
+	json_null_array.sh \
+	json_null.sh \
+	json_var_cmpr.sh
 endif
 
 if ENABLE_GNUTLS
@@ -461,16 +502,28 @@ EXTRA_DIST= \
 	testsuites/stop.conf \
 	rscript_le.sh \
 	testsuites/rscript_le.conf \
+	rscript_le_var.sh \
+	testsuites/rscript_le_var.conf \
 	rscript_ge.sh \
 	testsuites/rscript_ge.conf \
+	rscript_ge_var.sh \
+	testsuites/rscript_ge_var.conf \
 	rscript_lt.sh \
 	testsuites/rscript_lt.conf \
+	rscript_lt_var.sh \
+	testsuites/rscript_lt_var.conf \
 	rscript_gt.sh \
 	testsuites/rscript_gt.conf \
+	rscript_gt_var.sh \
+	testsuites/rscript_gt_var.conf \
 	rscript_ne.sh \
 	testsuites/rscript_ne.conf \
+	rscript_ne_var.sh \
+	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \
+	rscript_eq_var.sh \
+	testsuites/rscript_eq_var.conf \
 	rscript_set_modify.sh \
 	testsuites/rscript_set_modify.conf \
 	testsuites/rscript_unaffected_reset.conf \
@@ -478,6 +531,12 @@ EXTRA_DIST= \
 	testsuites/stop-localvar.conf \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
+	msgvar-concurrency.sh \
+	testsuites/msgvar-concurrency.conf \
+	localvar-concurrency.sh \
+	testsuites/localvar-concurrency.conf \
+	exec_tpl-concurrency.sh \
+	testsuites/exec_tpl-concurrency.conf \
 	global_vars.sh \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
@@ -506,6 +565,10 @@ EXTRA_DIST= \
 	testsuites/fac_invld3.conf \
 	fac_invld4_rfc5424.sh \
 	testsuites/fac_invld4_rfc5424.conf \
+	now_family_utc.sh \
+	testsuites/now_family_utc.conf \
+	rawmsg-after-pri.sh \
+	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
 	testsuites/rs_optimizer_pri.conf \
 	rscript_prifilt.sh \
@@ -594,6 +657,7 @@ EXTRA_DIST= \
 	imtcp_conndrop.sh \
 	testsuites/imtcp_conndrop.conf \
 	imtcp_conndrop_tls.sh \
+	testsuites/imtcp_conndrop_tls.conf \
 	imtcp_conndrop_tls-vg.sh \
 	testsuites/imtcp_conndrop.conf \
 	imtcp_addtlframedelim.sh \
@@ -790,6 +854,8 @@ EXTRA_DIST= \
 	testsuites/imuxsock_logger_parserchain.conf \
 	imuxsock_logger.sh \
 	testsuites/imuxsock_logger.conf \
+	imuxsock_logger_ruleset.sh \
+	testsuites/imuxsock_logger_ruleset.conf \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
 	testsuites/imuxsock_logger_root.conf \
@@ -826,11 +892,32 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
 	mmpstrucdata.sh \
-        mmpstrucdata-vg.sh \
+	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
 	mmpstrucdata-invalid-vg.sh \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
+	dynstats_ctr_reset.sh \
+	dynstats_nometric.sh \
+	dynstats_overflow.sh \
+	dynstats_overflow-vg.sh \
+	dynstats_reset.sh \
+	dynstats_reset-vg.sh \
+	dynstats.sh \
+	dynstats-vg.sh \
+	testsuites/dynstats.conf \
+	testsuites/dynstats_ctr_reset.conf \
+	testsuites/dynstats_empty_input \
+	testsuites/dynstats_input \
+	testsuites/dynstats_input_1 \
+	testsuites/dynstats_input_2 \
+	testsuites/dynstats_input_3 \
+	testsuites/dynstats_input_more_0 \
+	testsuites/dynstats_input_more_1 \
+	testsuites/dynstats_input_more_2 \
+	testsuites/dynstats_nometric.conf \
+	testsuites/dynstats_overflow.conf \
+	testsuites/dynstats_reset.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \
@@ -860,6 +947,12 @@ EXTRA_DIST= \
 	json_array_looping.sh \
 	json_nonarray_looping.sh \
 	testsuites/json_array_looping.conf \
+	json_null.sh \
+	json_null-vg.sh \
+	testsuites/json_null.conf \
+	json_null_array.sh \
+	json_null_array-vg.sh \
+	testsuites/json_null_array.conf \
 	mmnormalize_regex.sh \
 	testsuites/mmnormalize_regex.conf \
 	testsuites/mmnormalize_regex.rulebase \
@@ -927,6 +1020,12 @@ EXTRA_DIST= \
 	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
 	testsuites/multiple_lookup_tables.conf
+	json_var_cmpr.sh \
+	testsuites/json_var_cmpr.conf \
+	imptcp_nonProcessingPoller.sh \
+	imptcp_veryLargeOctateCountedMessages.sh \
+	testsuites/imptcp_nonProcessingPoller.conf \
+	travis/trusty.supp \
 	cfg.sh
 
 # TODO: re-enable

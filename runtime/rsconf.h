@@ -26,6 +26,7 @@
 #include "linkedlist.h"
 #include "queue.h"
 #include "lookup.h"
+#include "dynstats.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -145,6 +146,7 @@ struct rsconf_s {
 	defaults_t defaults;
 	templates_t templates;
 	lookup_tables_t lu_tabs;
+	dynstats_buckets_t dynstats_buckets;
 	outchannels_t och;
 	actions_t actions;
 	rulesets_t rulesets;

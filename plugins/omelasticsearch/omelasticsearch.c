@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -38,6 +38,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if defined(__FreeBSD__)
+#include <unistd.h>
+#endif
 #include "cJSON/cjson.h"
 #include "conf.h"
 #include "syslogd-types.h"
@@ -48,6 +51,10 @@
 #include "statsobj.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
+
+#ifndef O_LARGEFILE
+#  define O_LARGEFILE 0
+#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -148,7 +155,6 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-dbgprintf("omelasticsearch: createWrkrInstance\n");
 	pWrkrData->restURL = NULL;
 	if(pData->bulkmode) {
 		pWrkrData->batch.currTpl1 = NULL;
@@ -161,7 +167,6 @@ dbgprintf("omelasticsearch: createWrkrInstance\n");
 	}
 	CHKiRet(curlSetup(pWrkrData, pWrkrData->pData));
 finalize_it:
-dbgprintf("DDDD: createWrkrInstance,pData %p/%p, pWrkrData %p\n", pData, pWrkrData->pData, pWrkrData);
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -314,6 +319,8 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
 			  uchar **bulkId)
 {
+	if(tpls == NULL)
+		return;
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
@@ -380,7 +387,7 @@ static rsRetVal
 setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 {
 	char authBuf[1024];
-	uchar *searchIndex;
+	uchar *searchIndex = 0;
 	uchar *searchType;
 	uchar *parent;
 	uchar *bulkId;
@@ -388,10 +395,12 @@ setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 	int rLocal;
 	int r;
 	DEFiRet;
+	char separator;
+	const int bulkmode = pData->bulkmode;
 
 	setBaseURL(pData, &url);
 
-	if(pData->bulkmode) {
+	if(bulkmode) {
 		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
 		parent = NULL;
 	} else {
@@ -400,17 +409,23 @@ setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
 	}
-	if(r == 0) r = es_addChar(&url, '?');
+
+	separator = '?';
 	if(pData->asyncRepl) {
-		if(r == 0) r = es_addBuf(&url, "replication=async&",
-					sizeof("replication=async&")-1);
+		if(r == 0) r = es_addChar(&url, separator);
+		if(r == 0) r = es_addBuf(&url, "replication=async", sizeof("replication=async")-1);
+		separator = '&';
 	}
+
 	if(pData->timeout != NULL) {
+		if(r == 0) r = es_addChar(&url, separator);
 		if(r == 0) r = es_addBuf(&url, "timeout=", sizeof("timeout=")-1);
 		if(r == 0) r = es_addBuf(&url, (char*)pData->timeout, ustrlen(pData->timeout));
-		if(r == 0) r = es_addChar(&url, '&');
+		separator = '&';
 	}
+
 	if(parent != NULL) {
+		if(r == 0) r = es_addChar(&url, separator);
 		if(r == 0) r = es_addBuf(&url, "parent=", sizeof("parent=")-1);
 		if(r == 0) es_addBuf(&url, (char*)parent, ustrlen(parent));
 	}
@@ -447,9 +462,9 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
-	uchar *searchIndex;
+	uchar *searchIndex = 0;
 	uchar *searchType;
-	uchar *parent;
+	uchar *parent = NULL;
 	uchar *bulkId = NULL;
 	DEFiRet;
 #	define META_STRT "{\"index\":{\"_index\": \""
@@ -522,7 +537,7 @@ getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqm
  * Sections are marked by { and }
  */
 static inline rsRetVal
-getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
+getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
 		char* index =0;
@@ -545,24 +560,24 @@ getSection(const char* bulkRequest,char **bulkRequestNextSectionStart )
  * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
  */
 static inline rsRetVal
-getSingleRequest(const char* bulkRequest, char** singleRequest ,char **lastLocation)
+getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
 {
 	DEFiRet;
-	char *req = bulkRequest;
-	char *start = bulkRequest;
+	const char *req = bulkRequest;
+	const char *start = bulkRequest;
 	if (getSection(req,&req)!=RS_RET_OK)
 		ABORT_FINALIZE(RS_RET_ERR);
 
 	if (getSection(req,&req)!=RS_RET_OK)
 			ABORT_FINALIZE(RS_RET_ERR);
 
-    *singleRequest = (char*) calloc (req - start+ 1 + 1,sizeof(char));/* (req - start+ 1 == length of data + 1 for terminal char)*/
-    if (*singleRequest==NULL) ABORT_FINALIZE(RS_RET_ERR);
-    memcpy(*singleRequest,start,req - start);
-    *lastLocation=req;
+	CHKmalloc(*singleRequest = (char*) calloc (req - start+ 1 + 1,1));
+	/* (req - start+ 1 == length of data + 1 for terminal char)*/
+	memcpy(*singleRequest,start,req - start);
+	*lastLocation=req;
 
-	finalize_it:
-			RETiRet;
+finalize_it:
+	RETiRet;
 }
 
 /*
@@ -608,7 +623,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	numitems = cJSON_GetArraySize(items);
 
 	DBGPRINTF("omelasticsearch: Entire request %s\n",reqmsg);
-	char *lastReqRead= (char*)reqmsg;
+	const char *lastReqRead= (char*)reqmsg;
 
 	DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 	for(i = 0 ; i < numitems ; ++i) {
@@ -654,7 +669,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 
 			response = cJSON_PrintUnformatted(create);
 
-			if(*response==NULL)
+			if(response==NULL)
 			{
 				free(request);/*as its has been assigned.*/
 				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
@@ -719,8 +734,11 @@ getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
  * Dumps all requests of bulk insert interleaved with request and response
  */
 
-static inline rsRetVal
-getDataInterleaved(context *ctx,int itemStatus,char *request,char *response)
+static rsRetVal
+getDataInterleaved(context *ctx,
+	int __attribute__((unused)) itemStatus,
+	char *request,
+	char *response)
 {
 	DEFiRet;
 	cJSON *interleaved =0;
@@ -1060,7 +1078,6 @@ finalize_it:
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omelasticsearch: beginTransaction, pWrkrData %p, pData %p\n", pWrkrData, pWrkrData->pData);
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
@@ -1081,14 +1098,12 @@ CODESTARTdoAction
 		                 ppString, 1));
 	}
 finalize_it:
-dbgprintf("omelasticsearch: result doAction: %d (bulkmode %d)\n", iRet, pWrkrData->pData->bulkmode);
 ENDdoAction
 
 
 BEGINendTransaction
 	char *cstr = NULL;
 CODESTARTendTransaction
-dbgprintf("omelasticsearch: endTransaction init\n");
 	/* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.data != NULL ) {
 		cstr = es_str2cstr(pWrkrData->batch.data, NULL);
@@ -1099,7 +1114,6 @@ dbgprintf("omelasticsearch: endTransaction init\n");
 		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
 finalize_it:
 	free(cstr);
-dbgprintf("omelasticsearch: endTransaction done with %d\n", iRet);
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
@@ -1209,7 +1223,7 @@ CODESTARTnewActInst
 		}else if(!strcmp(actpblk.descr[i].name, "interleaved")) {
 			pData->interleaved = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n, NULL;
+			pData->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {

@@ -58,6 +58,7 @@
  * -Z	cert (public key) file for TLS mode
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
+ * -O	Use octate-count framing
  *
  * Part of the testbench for rsyslog.
  *
@@ -104,6 +105,25 @@
 #	endif
 #endif
 
+char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifndef HAVE_STRERROR_R
+	char *pszErr;
+	pszErr = strerror(errnum);
+	snprintf(buf, buflen, "%s", pszErr);
+#else
+#	ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#	else
+	strerror_r(errnum, buf, buflen);
+#	endif
+#endif /* #ifdef __hpux */
+	return buf;
+}
+
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
@@ -128,6 +148,7 @@ static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
 static int bSilent = 0; /* completely silent operation */
 static int bRandConnDrop = 0; /* randomly drop connections? */
+static double dbRandConnDrop = 0.95; /* random drop probability */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
 static int bBinaryFile = 0;	/* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
@@ -147,6 +168,7 @@ static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
 static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
+static int octateCountFramed = 0;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
@@ -358,6 +380,8 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 	char extraData[MAX_EXTRADATA_LEN + 1];
 	char dynFileIDBuf[128] = "";
 	int done;
+	char payloadLen[32];
+	int payloadStringLen;
 
 	if(dataFP != NULL) {
 		/* get message from file */
@@ -416,6 +440,13 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		/* use fixed message format from command line */
 		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
 	}
+	if (octateCountFramed == 1) {
+		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);
+		payloadStringLen = strlen(payloadLen);
+		memmove(buf + payloadStringLen, buf, *pLenBuf);
+		memcpy(buf, payloadLen, payloadStringLen);
+		*pLenBuf += payloadStringLen;
+	}
 	++inst->numSent;
 
 finalize_it: /*EMPTY to keep the compiler happy */;
@@ -439,11 +470,17 @@ int sendMessages(struct instdata *inst)
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char sendBuf[MAX_SENDBUF];
 	int offsSendBuf = 0;
+	char errStr[1024];
+	int error_number = 0;
+	unsigned show_progress_interval = 100;
 
 	if(!bSilent) {
 		if(dataFile == NULL) {
 			printf("Sending %llu messages.\n", inst->numMsgs);
 			statusText = "messages";
+			if ((inst->numMsgs / 100) > show_progress_interval) {
+				show_progress_interval = inst->numMsgs / 100;
+			}
 		} else {
 			printf("Sending file '%s' %d times.\n", dataFile,
 			       numFileIterations);
@@ -477,9 +514,19 @@ int sendMessages(struct instdata *inst)
 				}
 			}
 			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
+			error_number = errno;
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
+			error_number = errno;
 		} else if(transport == TP_TLS) {
+			if(sockArray[socknum] == -1) {
+				/* connection was dropped, need to re-establish */
+				if(openConn(&(sockArray[socknum])) != 0) {
+					printf("error in trying to re-open connection %d\n", socknum);
+					exit(1);
+				}
+				initTLSSess(socknum);
+			}
 			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
 				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
 				offsSendBuf += lenBuf;
@@ -494,13 +541,14 @@ int sendMessages(struct instdata *inst)
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
-			perror("send test data");
-			printf("send() failed at socket %d, index %d, msgNum %lld\n",
-				sockArray[socknum], i, inst->numSent);
+			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
+			printf("send() failed \"%s\" at socket %d, index %d, msgNum %lld\n",
+				   errStr, sockArray[socknum], i, inst->numSent);
 			fflush(stderr);
+
 			return(1);
 		}
-		if(i % 100 == 0) {
+		if(i % show_progress_interval == 0) {
 			if(bShowProgress)
 				printf("\r%8.8d", i);
 		}
@@ -508,7 +556,7 @@ int sendMessages(struct instdata *inst)
 			/* if we need to randomly drop connections, see if we 
 			 * are a victim
 			 */
-			if(rand() > (int) (RAND_MAX * 0.95)) {
+			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
 				++nConnDrops;
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;
@@ -783,6 +831,8 @@ initTLS(void)
 }
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static void
 initTLSSess(int i)
 {
@@ -813,6 +863,8 @@ initTLSSess(int i)
 		exit(1);
 	}
 }
+#pragma GCC diagnostic pop
+
 
 static int
 sendTLS(int i, char *buf, int lenBuf)
@@ -867,7 +919,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:L:M:rsBR:S:T:XW:yYz:Z:j:")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:O")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -901,6 +953,10 @@ int main(int argc, char *argv[])
 				}
 				break;
 		case 'D':	bRandConnDrop = 1;
+				break;
+		case 'l':	
+					dbRandConnDrop = atof(optarg); 
+					printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
 				break;
 		case 'r':	bRandomizeExtraData = 1;
 				break;
@@ -957,6 +1013,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'Z':	tlsCertFile = optarg;
 				break;
+		case 'O':	octateCountFramed = 1;
+				break;				
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;

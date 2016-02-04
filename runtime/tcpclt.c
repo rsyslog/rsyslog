@@ -169,7 +169,7 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 			 * I have added this comment so that the logic is not accidently
 			 * changed again. rgerhards, 2005-10-25
 			 */
-			if((buf = MALLOC((len + 2) * sizeof(char))) == NULL) {
+			if((buf = MALLOC(len + 2)) == NULL) {
 				/* extreme mem shortage, try to solve
 				 * as good as we can. No point in calling
 				 * any alarms, they might as well run out
@@ -213,11 +213,11 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 		 * comments with "IETF20061218".
 		 * rgerhards, 2006-12-19
 		 */
-		iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", (int) len);
+		iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf), "%d ", (int) len);
 		/* IETF20061218 iLenBuf =
-		  snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);*/
+		  snprintf(szLenBuf, sizeof(szLenBuf), "%d ", len + iLenBuf);*/
 
-		if((buf = MALLOC((len + iLenBuf) * sizeof(char))) == NULL) {
+		if((buf = MALLOC(len + iLenBuf)) == NULL) {
 			/* we are out of memory. This is an extreme situation. We do not
 			 * call any alarm handlers because they most likely run out of mem,
 			 * too. We are brave enough to call debug output, though. Other than

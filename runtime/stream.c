@@ -509,13 +509,17 @@ strmHandleEOFMonitor(strm_t *pThis)
 	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
 	  pThis->pszCurrFName, (unsigned) pThis->inode,
 	  (unsigned) statName.st_ino);
-	if(pThis->inode == statName.st_ino) {
-		ABORT_FINALIZE(RS_RET_EOF);
-	} else {
-		/* we had a file change! */
+
+	/* Inode unchanged but file size on disk is less than current offset
+	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
+	 */
+	if (pThis->inode != statName.st_ino
+		  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
 		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
+	} else {
+		ABORT_FINALIZE(RS_RET_EOF);
 	}
 
 finalize_it:
@@ -703,7 +707,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 
 	/* append previous message to current message if necessary */
 	if(pThis->prevLineSegment != NULL) {
-		dbgprintf("DDDDD: readLine: have previous line segment: '%s'\n", rsCStrGetSzStr(pThis->prevLineSegment));
+		dbgprintf("readLine: have previous line segment: '%s'\n",
+			rsCStrGetSzStrNoNULL(pThis->prevLineSegment));
 		CHKiRet(cstrAppendCStr(*ppCStr, pThis->prevLineSegment));
 		cstrDestruct(&pThis->prevLineSegment);
 	}
@@ -791,10 +796,9 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
 	}
 
 finalize_it:
-dbgprintf("DDDDD: readLine returns[%d]: '%s' [*ppCStr %p]\n", iRet, (char*)rsCStrGetSzStr(*ppCStr), *ppCStr);
         if(iRet != RS_RET_OK && *ppCStr != NULL) {
-		if(cstrLen(*ppCStr) > 0) { /* we may have an empty string in an unsuccsfull poll or after restart! */
-			dbgprintf("DDDDD: readLine saves segment '%s'\n", rsCStrGetSzStr(*ppCStr));
+		if(cstrLen(*ppCStr) > 0) {
+		/* we may have an empty string in an unsuccsfull poll or after restart! */
 			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
 		}
                 cstrDestruct(ppCStr);
@@ -915,7 +919,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			 * to make sure we can write out everything with a SINGLE api call!
 			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
 			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) MALLOC(sizeof(uchar) * (pThis->sIOBufSize + 128)));
+			CHKmalloc(pThis->pZipBuf = (Bytef*) MALLOC(pThis->sIOBufSize + 128));
 		}
 	}
 
@@ -947,7 +951,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		pthread_cond_init(&pThis->isEmpty, 0);
 		pThis->iCnt = pThis->iEnq = pThis->iDeq = 0;
 		for(i = 0 ; i < STREAM_ASYNC_NUMBUFS ; ++i) {
-			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->sIOBufSize));
+			CHKmalloc(pThis->asyncBuf[i].pBuf = (uchar*) MALLOC(pThis->sIOBufSize));
 		}
 		pThis->pIOBuf = pThis->asyncBuf[0].pBuf;
 		pThis->bStopWriter = 0;
@@ -961,7 +965,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 			DBGPRINTF("ERROR: stream %p cold not create writer thread\n", pThis);
 	} else {
 		/* we work synchronously, so we need to alloc a fixed pIOBuf */
-		CHKmalloc(pThis->pIOBuf = (uchar*) MALLOC(sizeof(uchar) * pThis->sIOBufSize));
+		CHKmalloc(pThis->pIOBuf = (uchar*) MALLOC(pThis->sIOBufSize));
 	}
 
 finalize_it:
@@ -1271,9 +1275,10 @@ asyncWriterThread(void *pPtr)
 			}
 			if(bTimedOut && pThis->iBufPtr > 0) {
 				/* if we timed out, we need to flush pending data */
+				d_pthread_mutex_unlock(&pThis->mut);
 				strmFlushInternal(pThis, 0);
 				bTimedOut = 0;
-				d_pthread_mutex_unlock(&pThis->mut);
+				d_pthread_mutex_lock(&pThis->mut); 
 				continue;
 			}
 			bTimedOut = 0;
@@ -1310,7 +1315,7 @@ asyncWriterThread(void *pPtr)
 				pthread_cond_broadcast(&pThis->isEmpty);
 		}
 	}
-	d_pthread_mutex_unlock(&pThis->mut);
+	/* Not reached */	
 
 finalize_it:
 	ENDfunc
@@ -1351,7 +1356,8 @@ syncFile(strm_t *pThis)
 	}
 	
 	if(pThis->fdDir != -1) {
-		ret = fsync(pThis->fdDir);
+		if(fsync(pThis->fdDir) != 0)
+			DBGPRINTF("stream/syncFile: fsync returned error, ignoring\n");
 	}
 
 finalize_it:
@@ -1789,6 +1795,7 @@ DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
 DEFpropSetMeth(strm, bVeryReliableZip, int)
 DEFpropSetMeth(strm, bSync, int)
+DEFpropSetMeth(strm, bReopenOnTruncate, int)
 DEFpropSetMeth(strm, sIOBufSize, size_t)
 DEFpropSetMeth(strm, iSizeLimit, off_t)
 DEFpropSetMeth(strm, iFlushInterval, int)
@@ -1832,7 +1839,7 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 	if(pThis->pszFName != NULL)
 		free(pThis->pszFName);
 
-	if((pThis->pszFName = MALLOC(sizeof(uchar) * (iLenName + 1))) == NULL)
+	if((pThis->pszFName = MALLOC(iLenName + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszFName, pszName, iLenName + 1); /* always think about the \0! */
@@ -1859,7 +1866,7 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	CHKmalloc(pThis->pszDir = MALLOC(sizeof(uchar) * (iLenDir + 1)));
+	CHKmalloc(pThis->pszDir = MALLOC(iLenDir + 1));
 
 	memcpy(pThis->pszDir, pszDir, iLenDir + 1); /* always think about the \0! */
 	pThis->lenDir = iLenDir;
@@ -2150,6 +2157,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiZipLevel = strmSetiZipLevel;
 	pIf->SetbVeryReliableZip = strmSetbVeryReliableZip;
 	pIf->SetbSync = strmSetbSync;
+	pIf->SetbReopenOnTruncate = strmSetbReopenOnTruncate;
 	pIf->SetsIOBufSize = strmSetsIOBufSize;
 	pIf->SetiSizeLimit = strmSetiSizeLimit;
 	pIf->SetiFlushInterval = strmSetiFlushInterval;

@@ -8,18 +8,18 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,6 +109,10 @@ ENDinterface(glbl)
 PROTOTYPEObj(glbl);
 
 extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
+extern int glblReportNewSenders;
+extern int glblReportGoneAwaySenders;
+extern int glblSenderStatsTimeout;
+extern int glblSenderKeepTrack;
 extern short janitorInterval;
 
 static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }

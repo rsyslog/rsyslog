@@ -52,6 +52,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(statsobj)
 
 statsobj_t *kafkaStats;
+int ctrQueueSize;
 STATSCOUNTER_DEF(ctrTopicSubmit, mutCtrTopicSubmit);
 STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
 STATSCOUNTER_DEF(ctrCacheMiss, mutCtrCacheMiss);
@@ -113,7 +114,7 @@ typedef struct _instanceData {
 	sbool autoPartition;
 	int fixedPartition;
 	int nPartitions;
-	int32_t currPartition;
+	uint32_t currPartition;
 	int nConfParams;
 	struct kafka_params *confParams;
 	int nTopicConfParams;
@@ -160,16 +161,16 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 ENDinitConfVars
 
-static inline int
+static inline uint32_t
 getPartition(instanceData *const __restrict__ pData)
 {
 	if (pData->autoPartition) {
 		return RD_KAFKA_PARTITION_UA;
 	} else {
 		return (pData->fixedPartition == NO_FIXED_PARTITION) ?
-		          ATOMIC_INC_AND_FETCH_int(&pData->currPartition,
+		          ATOMIC_INC_AND_FETCH_unsigned(&pData->currPartition,
 			      &pData->mutCurrPartition) % pData->nPartitions
-			:  pData->fixedPartition;
+			:  (unsigned) pData->fixedPartition;
 	}
 }
 
@@ -830,6 +831,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
 	}
+    STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
 	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
 	RETiRet;
 }
@@ -938,18 +940,22 @@ CODESTARTnewActInst
 			CHKmalloc(pData->confParams = malloc(sizeof(struct kafka_params) *
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-				CHKiRet(processKafkaParam(es_str2cstr(pvals[i].val.d.ar->arr[j], NULL),
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(processKafkaParam(cstr,
 							&pData->confParams[j].name,
 							&pData->confParams[j].val));
+				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "topicconfparam")) {
 			pData->nTopicConfParams = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->topicConfParams = malloc(sizeof(struct kafka_params) *
 			                                      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-				CHKiRet(processKafkaParam(es_str2cstr(pvals[i].val.d.ar->arr[j], NULL),
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(processKafkaParam(cstr,
 							&pData->topicConfParams[j].name,
 							&pData->topicConfParams[j].val));
+				free(cstr);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
 			pData->errorFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1055,6 +1061,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(ctrTopicSubmit, mutCtrTopicSubmit);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrTopicSubmit));
+    ctrQueueSize = 0;
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"maxoutqsize",
+        ctrType_Int, CTR_FLAG_NONE, &ctrQueueSize));
 	STATSCOUNTER_INIT(ctrKafkaFail, mutCtrKafkaFail);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"failures",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaFail));

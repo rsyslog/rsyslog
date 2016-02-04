@@ -435,7 +435,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		 */
 		char *buf;
 		int ret = 0;
-		CHKmalloc(buf = (char*) MALLOC(sizeof(char) * (glbl.GetMaxLine() + 1)));
+		CHKmalloc(buf = (char*) MALLOC(glbl.GetMaxLine() + 1));
 
                 prop.GetString(pSess->fromHostIP, &pszPeer, &lenPeer);
                 

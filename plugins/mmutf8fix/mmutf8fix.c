@@ -211,6 +211,8 @@ fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *end
 {
 	int i;
 
+	/* startIdx and seqLen always set if bytesLeft is set,
+	   which is required before this function is called */
 	*endIdx = strtIdx + seqLen;
 	if(*endIdx > lenMsg)
 		*endIdx = lenMsg;
@@ -222,16 +224,17 @@ static inline void
 doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 {
 	uchar c;
-	int8_t seqLen, bytesLeft = 0;
+	int8_t seqLen = 0, bytesLeft = 0;
 	uint32_t codepoint;
-	int strtIdx, endIdx;
+	int strtIdx = 0, endIdx = 0;
 	int i;
 
 	for(i = 0 ; i < lenMsg ; ++i) {
 		c = msg[i];
 		if(bytesLeft) {
 			if((c & 0xc0) != 0x80) {
-				/* sequence invalid, invalidate all bytes */
+				/* sequence invalid, invalidate all bytes
+				   startIdx is always set if bytesLeft is set */
 				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &endIdx,
 				              seqLen);
 				i = endIdx - 1;
@@ -242,6 +245,8 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 				if(bytesLeft == 0) {
 					/* too-large codepoint? */
 					if(codepoint > 0x10FFFF) {
+						/* sequence invalid, invalidate all bytes
+						   startIdx is always set if bytesLeft is set */
 						fixInvldMBSeq(pData, msg, lenMsg,
 							      strtIdx, &endIdx,
 							      seqLen);
@@ -285,12 +290,12 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 	}
 }
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
 	if(pWrkrData->pData->mode == MODE_CC) {

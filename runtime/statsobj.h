@@ -1,17 +1,17 @@
 /* The statsobj object.
  *
- * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,6 +47,7 @@ typedef enum statsCtrType_e {
 typedef enum statsFmtType_e {
 	statsFmt_Legacy,
 	statsFmt_JSON,
+	statsFmt_JSON_ES,
 	statsFmt_CEE
 } statsFmtType_t;
 
@@ -71,12 +72,20 @@ struct statsobj_s {
 	BEGINobjInstance;		/* Data to implement generic object - MUST be the first data element! */
 	uchar *name;
 	uchar *origin;
+    statsobj_read_notifier_t read_notifier;
+    void *read_notifier_ctx;
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
 	ctr_t *ctrRoot;			/* doubly-linked list of statsobj counters */
 	ctr_t *ctrLast;
 	/* used to link ourselves together */
 	statsobj_t *prev;
 	statsobj_t *next;
+};
+
+struct sender_stats {
+	const uchar *sender;
+	uint64_t nMsgs;
+	time_t lastSeen;
 };
 
 
@@ -88,9 +97,13 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(statsobj_t **ppThis);
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
+    rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
-	rsRetVal (*AddCounter)(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
+	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
+	rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **ref);
+	rsRetVal (*DestructCounter)(statsobj_t *pThis, ctr_t *ref);
+	rsRetVal (*DestructAllCounters)(statsobj_t *pThis);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
 #define statsobjCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
@@ -105,6 +118,12 @@ ENDinterface(statsobj)
 /* prototypes */
 PROTOTYPEObj(statsobj);
 
+rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen);
+/* checkGoneAwaySenders() is part of this module because all it needs is
+ * done by this module, so even though it's own processing is not directly
+ * related to stats, it makes sense to do it here... -- rgerhards, 2016-02-01
+ */
+void checkGoneAwaySenders(time_t);
 
 /* macros to handle stats counters
  * These are to be used by "counter providers". Note that we MUST
@@ -150,6 +169,10 @@ PROTOTYPEObj(statsobj);
 #define STATSCOUNTER_INC(ctr, mut) \
 	if(GatherStats) \
 		ATOMIC_INC_uint64(&ctr, &mut);
+
+#define STATSCOUNTER_BUMP(ctr, mut, delta) \
+	if(GatherStats) \
+		ATOMIC_ADD_uint64(&ctr, &mut, delta);
 
 #define STATSCOUNTER_DEC(ctr, mut) \
 	if(GatherStats) \

@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.14.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.17.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -26,9 +26,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
-PKG_CHECK_MODULES([JSON_C], [json],, [
-	PKG_CHECK_MODULES([JSON_C], [json-c],,)
-])
+PKG_CHECK_MODULES([JSON_C], [libfastjson],,)
 
 save_CFLAGS="$CFLAGS"
 save_LIBS="$LIBS"
@@ -294,6 +292,14 @@ AC_CHECK_HEADERS(
     [AC_MSG_FAILURE([pthread is missing])]
 )
 
+AC_CHECK_LIB(
+  [pthread],
+	[pthread_rwlockattr_setkind_np],
+	[AC_DEFINE(
+	   [HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP],
+		 [1],
+		 [Set-kind available for rwlock attr.])])
+		 
 AC_CHECK_FUNCS(
     [pthread_setschedparam],
     [
@@ -955,6 +961,24 @@ AC_ARG_ENABLE(mmjsonparse,
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
+# mmgrok
+AC_ARG_ENABLE(mmgrok,
+        [AS_HELP_STRING([--enable-mmgrok],[Enable building mmgrok support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmgrok="yes" ;;
+          no) enable_mmgrok="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmgrok) ;;
+        esac],
+        [enable_mmgrok=no]
+)
+if test "x$enable_mmgrok" = "xyes"; then
+	GLIB_CFLAGS="$(pkg-config --cflags glib-2.0)"
+	GLIB_LIBS="$(pkg-config --libs glib-2.0)"
+fi
+AM_CONDITIONAL(ENABLE_MMGROK, test x$enable_mmgrok = xyes)
+AC_SUBST(GLIB_CFLAGS)
+AC_SUBST(GLIB_LIBS)
+
 # mmaudit
 AC_ARG_ENABLE(mmaudit,
         [AS_HELP_STRING([--enable-mmaudit],[Enable building mmaudit support @<:@default=no@:>@])],
@@ -1107,8 +1131,8 @@ AC_ARG_ENABLE(gt-ksi,
         [enable_gt_ksi=no]
 )
 if test "x$enable_gt_ksi" = "xyes"; then
-	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.2.2.0)
-	PKG_CHECK_MODULES(GT_KSI, libksi < 3.3.0.0)
+	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.4.0.2)
+	PKG_CHECK_MODULES(GT_KSI, libksi < 3.5.0.0)
 fi
 AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
 
@@ -1378,6 +1402,19 @@ AC_ARG_ENABLE(pmsnare,
 AM_CONDITIONAL(ENABLE_PMSNARE, test x$enable_pmsnare = xyes)
 
 
+# settings for pmpanngfw
+AC_ARG_ENABLE(pmpanngfw,
+        [AS_HELP_STRING([--enable-pmpanngfw],[Compiles Palo Alto Networks parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmpanngfw="yes" ;;
+          no) enable_pmpanngfw="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmpanngfw) ;;
+         esac],
+        [enable_pmpanngfw=no]
+)
+AM_CONDITIONAL(ENABLE_PMPANNGFW, test x$enable_pmpanngfw = xyes)
+
+
 # settings for omruleset
 AC_ARG_ENABLE(omruleset,
         [AS_HELP_STRING([--enable-omruleset],[Compiles ruleset forwarding module @<:@default=no@:>@])],
@@ -1443,8 +1480,15 @@ AC_ARG_ENABLE(omkafka,
          esac],
         [enable_omkafka=no]
 )
-if test "x$enable_omkafka"; then
-	#PKG_CHECK_MODULES(LIBRDKAFKA, librdkafka)
+if test "x$enable_omkafka" = "xyes"; then
+	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
+		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
+			LIBRDKAFKA_LIBS=-lrdkafka
+		], [
+			AC_MSG_ERROR([could not find rdkafka library])
+		])
+	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 fi
 AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
@@ -1708,10 +1752,12 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		contrib/pmsnare/Makefile \
+    contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
 		contrib/imkmsg/Makefile \
+		contrib/mmgrok/Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omzmq3/Makefile \
 		contrib/omczmq/Makefile \
@@ -1777,10 +1823,12 @@ echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
+echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
 echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmgrok module will be compiled:           $enable_mmgrok"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"

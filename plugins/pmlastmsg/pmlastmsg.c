@@ -10,7 +10,7 @@
  *
  * File begun on 2010-07-13 by RGerhards
  *
- * Copyright 2014-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2014-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -91,16 +91,13 @@ CODESTARTparse
 		--lenMsg;
 		++p2parse;
 	}
-dbgprintf("pmlastmsg: msg to look at: [%d]'%s'\n", lenMsg, p2parse);
 	if((unsigned) lenMsg < sizeof(OpeningText)-1 + sizeof(ClosingText)-1 + 1) {
 		/* too short, can not be "our" message */
-dbgprintf("msg too short!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
 	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
 		/* wrong opening text */
-dbgprintf("wrong opening text!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	lenMsg -= sizeof(OpeningText) - 1;
@@ -119,9 +116,6 @@ dbgprintf("wrong opening text!\n");
 
 	if(strncasecmp((char*) p2parse, ClosingText, lenMsg) != 0) {
 		/* wrong closing text */
-dbgprintf("strcasecmp: %d\n", strncasecmp((char*) p2parse, ClosingText, lenMsg));
-dbgprintf("pmlastmsg: closing msg to look at: [%d]'%s', (%s)\n", lenMsg, p2parse, ClosingText);
-dbgprintf("wrong closing text!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 

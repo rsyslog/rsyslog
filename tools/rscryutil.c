@@ -276,7 +276,7 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 {
 	off64_t blkEnd;
 	off64_t currOffs = 0;
-	int r;
+	int r = 1;
 	int fd;
         struct stat buf;
 

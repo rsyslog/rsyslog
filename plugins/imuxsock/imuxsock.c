@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,6 +50,7 @@
 #include "parser.h"
 #include "prop.h"
 #include "debug.h"
+#include "ruleset.h"
 #include "unlimited_select.h"
 #include "sd-daemon.h"
 #include "statsobj.h"
@@ -99,6 +100,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
+DEFobjCurrIf(ruleset)
 
 
 statsobj_t *modStats;
@@ -148,6 +150,7 @@ typedef struct lstn_s {
 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
 	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
 	sbool bUseSpecialParser;/* use "canned" log socket parser instead of parser chain? */
+	ruleset_t *pRuleset;
 } lstn_t;
 static lstn_t *listeners;
 
@@ -208,6 +211,8 @@ struct instanceConf_s {
 	sbool bUnlink;
 	sbool bUseSpecialParser;
 	sbool bParseHost;
+	uchar *pszBindRuleset;		/* name of ruleset to bind to */
+	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
 };
 
@@ -273,6 +278,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "usespecialparser", eCmdHdlrBinary, 0 },
 	{ "parsehostname", eCmdHdlrBinary, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
+	{ "ruleset", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "ratelimit.severity", eCmdHdlrInt, 0 }
@@ -283,8 +289,7 @@ static struct cnfparamblk inppblk =
 	  inppdescr
 	};
 
-/* we do not use this, because we do not bind to a ruleset so far
- * enable when this is changed: #include "im-helper.h" */ /* must be included AFTER the type definitions! */
+#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config parameters permitted? */
 
@@ -300,6 +305,8 @@ createInstance(instanceConf_t **pinst)
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->sockName = NULL;
 	inst->pLogHostName = NULL;
+	inst->pszBindRuleset = NULL;
+	inst->pBindRuleset = NULL;
 	inst->ratelimitInterval = DFLT_ratelimitInterval;
 	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
@@ -422,6 +429,7 @@ addListner(instanceConf_t *inst)
 	listeners[nfd].bWritePid = inst->bWritePid;
 	listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
 	listeners[nfd].bUseSpecialParser = inst->bUseSpecialParser;
+	listeners[nfd].pRuleset = inst->pBindRuleset;
 	CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
 	ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
 			      listeners[nfd].ratelimitInterval,
@@ -791,9 +799,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	findRatelimiter(pLstn, cred, &ratelimiter); /* ignore error, better so than others... */
 
 	if(ts == NULL) {
-		datetime.getCurrTime(&st, &tt);
+		datetime.getCurrTime(&st, &tt, TIME_IN_LOCALTIME);
 	} else {
-		datetime.timeval2syslogTime(ts, &st);
+		datetime.timeval2syslogTime(ts, &st, TIME_IN_LOCALTIME);
 		tt = ts->tv_sec;
 	}
 
@@ -888,6 +896,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			pmsgbuf[toffs+1] = '\0';
 
 			MsgSetRawMsg(pMsg, (char*)pmsgbuf, toffs + 1);
+			if (pmsgbuf != msgbuf) {
+				free(pmsgbuf);
+			}
 		}
 	} else {
 		/* just add the unmodified message */
@@ -959,6 +970,7 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
+	MsgSetRuleset(pMsg, pLstn->pRuleset);
 	ratelimitAddMsg(ratelimiter, NULL, pMsg);
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
@@ -977,6 +989,9 @@ finalize_it:
  * of the socket which is to be processed. This eases access to the
  * growing number of properties. -- rgerhards, 2008-08-01
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+/* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal readSocket(lstn_t *pLstn)
 {
 	DEFiRet;
@@ -1005,7 +1020,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) MALLOC(sizeof(uchar) * (iMaxLine + 1)));
+		CHKmalloc(pRcv = (uchar*) MALLOC(iMaxLine + 1));
 	}
 
 	memset(&msgh, 0, sizeof(msgh));
@@ -1060,6 +1075,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 
 /* activate current listeners */
@@ -1285,6 +1301,8 @@ CODESTARTnewInpInst
 			inst->bParseHost  = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "usespecialparser")) {
 			inst->bUseSpecialParser  = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
@@ -1328,8 +1346,20 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 
+/* function to generate error message if framework does not find requested ruleset */
+static void
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
+{
+	errmsg.LogError(0, NO_ERRCODE, "imuxsock: ruleset '%s' for socket %s not found - "
+			"using default ruleset instead", inst->pszBindRuleset,
+			inst->sockName);
+}
 BEGINcheckCnf
+	instanceConf_t *inst;
 CODESTARTcheckCnf
+	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
+		std_checkRuleset(pModConf, inst);
+	}
 ENDcheckCnf
 
 
@@ -1384,6 +1414,7 @@ CODESTARTfreeCnf
 	free(pModConf->pLogSockName);
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->sockName);
+		free(inst->pszBindRuleset);
 		free(inst->pLogHostName);
 		del = inst;
 		inst = inst->next;
@@ -1512,6 +1543,7 @@ CODESTARTmodExit
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -1573,6 +1605,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	DBGPRINTF("imuxsock version %s initializing\n", PACKAGE_VERSION);
 

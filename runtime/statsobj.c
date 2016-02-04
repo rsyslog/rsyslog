@@ -3,18 +3,18 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2014 Adiscon GmbH.
+ * Copyright 2010-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,8 +26,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -36,6 +38,9 @@
 #include "statsobj.h"
 #include "srUtils.h"
 #include "stringbuf.h"
+#include "errmsg.h"
+#include "hashtable.h"
+#include "hashtable_itr.h"
 
 
 /* externally-visiable data (see statsobj.h for explanation) */
@@ -43,6 +48,7 @@ int GatherStats = 0;
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 
 /* doubly linked list of stats objects. Object is automatically linked to it
  * upon construction. Enqueue always happens at the front (simplifies logic).
@@ -51,6 +57,9 @@ static statsobj_t *objRoot = NULL;
 static statsobj_t *objLast = NULL;
 
 static pthread_mutex_t mutStats;
+static pthread_mutex_t mutSenders;
+
+static struct hashtable *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
@@ -106,6 +115,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pthread_mutex_init(&pThis->mutCtr, NULL);
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
+	pThis->read_notifier = NULL;
 ENDobjConstruct(statsobj)
 
 
@@ -117,6 +127,17 @@ statsobjConstructFinalize(statsobj_t *pThis)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, statsobj);
 	addToObjList(pThis);
+	RETiRet;
+}
+
+/* set read_notifier (a function which is invoked after stats are read).
+ */
+static rsRetVal
+setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
+{
+	DEFiRet;
+	pThis->read_notifier = notifier;
+	pThis->read_notifier_ctx = ctx;
 	RETiRet;
 }
 
@@ -156,15 +177,20 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef)
 {
 	ctr_t *ctr;
 	DEFiRet;
 
-	CHKmalloc(ctr = malloc(sizeof(ctr_t)));
+	*entryRef = NULL;
+
+	CHKmalloc(ctr = calloc(1, sizeof(ctr_t)));
 	ctr->next = NULL;
 	ctr->prev = NULL;
-	CHKmalloc(ctr->name = ustrdup(ctrName));
+	if((ctr->name = ustrdup(ctrName)) == NULL) {
+		DBGPRINTF("addCounter: OOM in strdup()\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	ctr->flags = flags;
 	ctr->ctrType = ctrType;
 	switch(ctrType) {
@@ -176,9 +202,51 @@ addCounter(statsobj_t *pThis, uchar *ctrName, statsCtrType_t ctrType, int8_t fla
 		break;
 	}
 	addCtrToList(pThis, ctr);
+	*entryRef = ctr;
 
 finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (ctr != NULL) {
+            free(ctr->name);
+            free(ctr);
+        }
+    }
 	RETiRet;
+}
+
+static rsRetVal
+addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
+{
+	ctr_t *ctr;
+	DEFiRet;
+	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr));
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+destructCounter(statsobj_t *pThis, ctr_t *pCtr)
+{
+    DEFiRet;
+
+    pthread_mutex_lock(&pThis->mutCtr);
+	if (pCtr->prev != NULL) {
+		pCtr->prev->next = pCtr->next;
+	}
+	if (pCtr->next != NULL) {
+		pCtr->next->prev = pCtr->prev;
+	}
+	if (pThis->ctrLast == pCtr) {
+		pThis->ctrLast = pCtr->prev;
+	}
+	if (pThis->ctrRoot == pCtr) {
+		pThis->ctrRoot = pCtr->next;
+	}
+	pthread_mutex_unlock(&pThis->mutCtr);
+	free(pCtr->name);
+	free(pCtr);
+    
+    RETiRet;
 }
 
 static inline void
@@ -198,7 +266,7 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 
 /* get all the object's countes together as CEE. */
 static rsRetVal
-getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bResetCtrs)
+getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
@@ -206,7 +274,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 
 	CHKiRet(cstrConstruct(&pcstr));
 
-	if (cee_cookie == 1)
+	if (fmt == statsFmt_JSON)
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
 	
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
@@ -234,7 +302,22 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, int cee_cookie, int8_t bRese
 	pthread_mutex_lock(&pThis->mutCtr);
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStr(pcstr, pCtr->name);
+		if (fmt == statsFmt_JSON_ES) {
+			/* work-around for broken Elasticsearch JSON implementation:
+			 * we need to replace dots by a different char, we use bang.
+			 * Note: ES 2.0 does not longer accept dot in name
+			 */
+			uchar esbuf[256];
+			strncpy((char*)esbuf, (char*)pCtr->name, sizeof(esbuf)-1);
+			esbuf[sizeof(esbuf)-1] = '\0';
+			for(uchar *c = esbuf ; *c ; ++c) {
+				if(*c == '.')
+					*c = '!';
+			}
+			rsCStrAppendStr(pcstr, esbuf);
+		} else {
+			rsCStrAppendStr(pcstr, pCtr->name);
+		}
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 		cstrAppendChar(pcstr, ':');
 		switch(pCtr->ctrType) {
@@ -306,6 +389,56 @@ finalize_it:
 }
 
 
+
+/* this function obtains all sender stats. hlper to getAllStatsLines()
+ * We need to keep this looked to avoid resizing of the hash table
+ * (what could otherwise cause a segfault).
+ */
+static void
+getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
+	void *usrptr,
+	statsFmtType_t fmt,
+	const int8_t bResetCtrs)
+{
+	struct hashtable_itr *itr;
+	struct sender_stats *stat;
+	char fmtbuf[2048];
+
+	pthread_mutex_lock(&mutSenders);
+
+	/* Iterator constructor only returns a valid iterator if
+	 * the hashtable is not empty
+	 */
+	if(hashtable_count(stats_senders) > 0) {
+		itr = hashtable_iterator(stats_senders);
+		do {
+			stat = (struct sender_stats*)hashtable_iterator_value(itr);
+			if(fmt == statsFmt_Legacy) {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"_sender_stat: sender=%s messages=%"
+					PRIu64,
+					stat->sender, stat->nMsgs);
+			} else {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"{ \"name\":\"_sender_stat\", "
+					"\"sender\":\"%s\", \"messages\":\"%"
+					PRIu64 "\"}",
+					stat->sender, stat->nMsgs);
+			}
+			fmtbuf[sizeof(fmtbuf)-1] = '\0';
+			cstr_t *cs;
+			rsCStrConstructFromszStr(&cs, (uchar*)fmtbuf);
+			cb(usrptr, cs);
+			rsCStrDestruct(&cs);
+			if(bResetCtrs)
+				stat->nMsgs = 0;
+		} while (hashtable_iterator_advance(itr));
+	}
+
+	pthread_mutex_unlock(&mutSenders);
+}
+
+
 /* this function can be used to obtain all stats lines. In this case,
  * a callback must be provided. This module than iterates over all objects and
  * submits each stats line to the callback. The callback has two parameters:
@@ -313,7 +446,7 @@ finalize_it:
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
@@ -325,15 +458,19 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLine(o, &cstr, bResetCtrs));
 			break;
 		case statsFmt_CEE:
-			CHKiRet(getStatsLineCEE(o, &cstr, 1, bResetCtrs));
-			break;
 		case statsFmt_JSON:
-			CHKiRet(getStatsLineCEE(o, &cstr, 0, bResetCtrs));
+		case statsFmt_JSON_ES:
+			CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
 			break;
 		}
 		CHKiRet(cb(usrptr, cstr));
 		rsCStrDestruct(&cstr);
+		if (o->read_notifier != NULL) {
+			o->read_notifier(o, o->read_notifier_ctx);
+		}
 	}
+
+	getSenderStats(cb, usrptr, fmt, bResetCtrs);
 
 finalize_it:
 	RETiRet;
@@ -351,13 +488,54 @@ enableStats()
 }
 
 
-/* destructor for the statsobj object */
-BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
-	ctr_t *ctr, *ctrToDel;
-CODESTARTobjDestruct(statsobj)
-	removeFromObjList(pThis);
+rsRetVal
+statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
+{
+	struct sender_stats *stat;
+	int mustUnlock = 0;
+	DEFiRet;
 
-	/* destruct counters */
+	if(stats_senders == NULL)
+		FINALIZE;	/* unlikely: we could not init our hash table */
+
+	pthread_mutex_lock(&mutSenders);
+	mustUnlock = 1;
+	stat = hashtable_search(stats_senders, (void*)sender);
+	if(stat == NULL) {
+		DBGPRINTF("statsRecordSender: sender '%s' not found, adding\n",
+			sender);
+		CHKmalloc(stat = calloc(1, sizeof(struct sender_stats)));
+		stat->sender = (const uchar*)strdup((const char*)sender);
+		stat->nMsgs = 0;
+		if(glblReportNewSenders) {
+			errmsg.LogMsg(0, RS_RET_SENDER_APPEARED,
+				LOG_INFO, "new sender '%s'", stat->sender);
+		}
+		if(hashtable_insert(stats_senders, (void*)stat->sender,
+			(void*)stat) == 0) {
+			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR,
+				"error inserting sender '%s' into sender "
+				"hash table", sender);
+			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+		}
+	}
+
+	stat->nMsgs += nMsgs;
+	stat->lastSeen = lastSeen;
+	DBGPRINTF("DDDDD: statsRecordSender: '%s', nmsgs %u [%llu], lastSeen %llu\n", sender, nMsgs, (long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
+
+finalize_it:
+	if(mustUnlock)
+		pthread_mutex_unlock(&mutSenders);
+	RETiRet;
+}
+
+
+static rsRetVal
+destructAllCounters(statsobj_t *pThis) {
+	DEFiRet;
+	ctr_t *ctr, *ctrToDel;
+
 	ctr = pThis->ctrRoot;
 	while(ctr != NULL) {
 		ctrToDel = ctr;
@@ -365,6 +543,60 @@ CODESTARTobjDestruct(statsobj)
 		free(ctrToDel->name);
 		free(ctrToDel);
 	}
+
+	pThis->ctrLast = NULL;
+	pThis->ctrRoot = NULL;
+	
+	RETiRet;
+}
+
+/* check if a sender has not sent info to us for an extended period
+ * of time.
+ */
+void
+checkGoneAwaySenders(const time_t tCurr)
+{
+	struct hashtable_itr *itr;
+	struct sender_stats *stat;
+	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
+	struct tm tm;
+
+	pthread_mutex_lock(&mutSenders);
+
+	/* Iterator constructor only returns a valid iterator if
+	 * the hashtable is not empty
+	 */
+	if(hashtable_count(stats_senders) > 0) {
+		itr = hashtable_iterator(stats_senders);
+		do {
+			stat = (struct sender_stats*)hashtable_iterator_value(itr);
+			if(stat->lastSeen < rqdLast) {
+				if(glblReportGoneAwaySenders) {
+					localtime_r(&stat->lastSeen, &tm);
+					errmsg.LogMsg(0, RS_RET_SENDER_GONE_AWAY,
+						LOG_WARNING,
+						"removing sender '%s' from connection "
+						"table, last seen at "
+						"%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
+						stat->sender,
+						tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+						tm.tm_hour, tm.tm_min, tm.tm_sec);
+				}
+				hashtable_remove(stats_senders, (void*)stat->sender);
+			}
+		} while (hashtable_iterator_advance(itr));
+	}
+
+	pthread_mutex_unlock(&mutSenders);
+}
+
+/* destructor for the statsobj object */
+BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(statsobj)
+	removeFromObjList(pThis);
+
+	/* destruct counters */
+	CHKiRet(destructAllCounters(pThis));
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
@@ -398,9 +630,12 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->DebugPrint = statsobjDebugPrint;
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
-	//pIf->GetStatsLine = getStatsLine;
+	pIf->SetReadNotifier = setReadNotifier;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
+	pIf->AddManagedCounter = addManagedCounter;
+	pIf->DestructCounter = destructCounter;
+	pIf->DestructAllCounters = destructAllCounters;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)
@@ -415,10 +650,17 @@ BEGINAbstractObjClassInit(statsobj, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, statsobjDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, statsobjConstructFinalize);
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* init other data items */
 	pthread_mutex_init(&mutStats, NULL);
+	pthread_mutex_init(&mutSenders, NULL);
 
+	if((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+			"for sender table. Sender statistics and warnings are disabled.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
 ENDObjClassInit(statsobj)
 
 /* Exit the class.
@@ -426,4 +668,5 @@ ENDObjClassInit(statsobj)
 BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
 	/* release objects we no longer need */
 	pthread_mutex_destroy(&mutStats);
+	pthread_mutex_destroy(&mutSenders);
 ENDObjClassExit(statsobj)

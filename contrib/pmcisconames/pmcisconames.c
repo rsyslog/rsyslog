@@ -82,11 +82,9 @@ CODESTARTparse
 		--lenMsg;
 		++p2parse;
 	}
-dbgprintf("pmcisconames: msg to look at: [%d]'%s'\n", lenMsg, p2parse);
 	if((unsigned) lenMsg < 34) {
 		/* too short, can not be "our" message */
                 /* minimum message, 16 character timestamp, 1 character name, ' : %ASA-1-000000: '*/
-dbgprintf("msg too short!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* check if the timestamp is a 16 character or 21 character timestamp
@@ -123,7 +121,7 @@ dbgprintf("msg too short!\n");
         /* if the syslog tag is : and the next thing starts with a % assume that this is a mangled cisco log and fix it */
 	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
 		/* wrong opening text */
-dbgprintf("not a cisco name mangled log!\n");
+	DBGPRINTF("not a cisco name mangled log!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by two characters to overwrite the extra : */

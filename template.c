@@ -308,6 +308,12 @@ tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime
 
 finalize_it:
 	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
+	if(iRet == RS_RET_OK) {
+		*ppArr = pArr;
+	} else {
+		*ppArr = NULL;
+		free(pArr);
+	}
 
 	RETiRet;
 }
@@ -330,7 +336,8 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	DEFiRet;
 
 	if(pTpl->bHaveSubtree){
-		localRet = jsonFind(pMsg->json, &pTpl->subtree, pjson);
+		if(jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
+			*pjson = NULL;
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
@@ -681,7 +688,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 	while(*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
-		while((i < sizeof(Buf) / sizeof(char)) &&
+		while((i < sizeof(Buf)-1) &&
 		      *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
@@ -1225,7 +1232,6 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	struct template *pTpl;
  	unsigned char *p;
 	int bDone;
-	char optBuf[128]; /* buffer for options - should be more than enough... */
 	size_t i;
 	rsRetVal localRet;
 
@@ -1236,7 +1242,7 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 	
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) MALLOC(sizeof(char) * (pTpl->iLenName + 1));
+	pTpl->pszName = (char*) MALLOC(pTpl->iLenName + 1);
 	if(pTpl->pszName == NULL) {
 		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;
@@ -1325,8 +1331,9 @@ struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLin
 			++p;
 		
 		/* read option word */
+		char optBuf[128] = { '\0' }; /* buffer for options - should be more than enough... */
 		i = 0;
-		while(i < sizeof(optBuf) / sizeof(char) - 1
+		while((i < (sizeof(optBuf) - 1))
 		      && *p && *p != '=' && *p !=',' && *p != '\n') {
 			optBuf[i++] = tolower((int)*p);
 			++p;
@@ -1868,6 +1875,15 @@ tplProcessCnf(struct cnfobj *o)
 		}
 	}
 
+	/* the following check is just for clang static anaylzer: this condition
+	 * cannot occur if all is setup well, because "name" is a required parameter
+	 * inside the param block and so the code should err out above.
+	 */
+	if(name == NULL) {
+		DBGPRINTF("template/tplProcessConf: logic error name == NULL - pblk wrong?\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	/* do config sanity checks */
 	if(tplStr  == NULL) {
 		if(tplType == T_STRING) {
@@ -1980,6 +1996,7 @@ tplProcessCnf(struct cnfobj *o)
 
 finalize_it:
 	free(tplStr);
+	free(plugin);
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	if(iRet != RS_RET_OK) {

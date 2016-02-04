@@ -51,7 +51,7 @@
 #include "conf.h"
 
 #undef HAVE_DBI_TXSUPP
-#warning transaction support disabled in v8 -- TODO: reenable
+/* transaction support disabled in v8 -- TODO: reenable */
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -229,7 +229,7 @@ reportDBError(instanceData *pData, int bSilent)
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uDBErrno, pszDbiErr);
+		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
 		if(bSilent || uDBErrno == pData->uLastDBErrno)
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {
@@ -617,7 +617,6 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 #	ifndef HAVE_DBI_TXSUPP
 	DBGPRINTF("omlibdbi: no transaction support in libdbi\n");
-#	warning libdbi too old - transactions are not enabled (use 0.9 or later)
 #	endif
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &cs.dbiDrvrDir, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));

@@ -103,6 +103,10 @@ if ENABLE_PMSNARE
 SUBDIRS += contrib/pmsnare
 endif
 
+if ENABLE_PMPANNGFW
+SUBDIRS += contrib/pmpanngfw
+endif
+
 if ENABLE_PMLASTMSG
 SUBDIRS += plugins/pmlastmsg
 endif
@@ -203,6 +207,10 @@ if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
 
+if ENABLE_MMGROK
+SUBDIRS += contrib/mmgrok
+endif
+
 if ENABLE_MMAUDIT
 SUBDIRS += plugins/mmaudit
 endif
@@ -254,7 +262,8 @@ SUBDIRS += tests
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS= \
 	--disable-silent-rules \
-	--disable-testbench
+	--disable-testbench \
+	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) 
 
 THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-distcheck-workaround \
@@ -270,6 +279,7 @@ THIS_IS_TEMPORARILY_DISABLED = \
 	--enable-mail \
 	--enable-klog \
 	--enable-diagtools \
+	--enable-mmgrok \
 	--enable-gnutls \
 	--enable-omstdout \
 	--enable-pmlastmsg \

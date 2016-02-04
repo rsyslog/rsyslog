@@ -14,7 +14,7 @@
  *
  * File begun on 2012-02-23 by RGerhards
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -54,7 +54,6 @@
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
-MODULE_CNFNAME("mmaudit")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
@@ -191,7 +190,6 @@ audit_parse(uchar *buf, struct json_object **jsonRoot)
 	json_object_object_add(*jsonRoot, "data", json);
 
 	while(*buf) {
-//dbgprintf("audit_parse, buf: '%s'\n", buf);
 		CHKiRet(parseName(&buf, name, sizeof(name)));
 		if(*buf != '=') {
 			ABORT_FINALIZE(RS_RET_ERR);
@@ -200,7 +198,6 @@ audit_parse(uchar *buf, struct json_object **jsonRoot)
 		CHKiRet(parseValue(&buf, val, sizeof(val)));
 		jval = json_object_new_string(val);
 		json_object_object_add(json, name, jval);
-dbgprintf("mmaudit: parsed %s=%s\n", name, val);
 	}
 	
 
@@ -209,8 +206,9 @@ finalize_it:
 }
 
 
-BEGINdoAction
-	msg_t *pMsg;
+BEGINdoAction_NoStrings
+	msg_t **ppMsg = (msg_t **) pMsgData;
+	msg_t *pMsg = ppMsg[0];
 	uchar *buf;
 	int typeID;
 	struct json_object *jsonRoot;
@@ -220,14 +218,12 @@ BEGINdoAction
 	char auditID[1024];
 	int bSuccess = 0;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
 	/* note that we can performance-optimize the interface, but this also
 	 * requires changes to the libraries. For now, we accept message
 	 * duplication. -- rgerhards, 2010-12-01
 	 */
 	buf = getMSG(pMsg);
 
-dbgprintf("mmaudit: msg is '%s'\n", buf);
 	while(*buf && isspace(*buf)) {
 		++buf;
 	}

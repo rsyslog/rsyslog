@@ -332,7 +332,7 @@ int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
-int rsgt_vrfy_nextRec(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
+int rsgt_vrfy_nextRec(gtfile gf, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, gterrctx_t *ectx);
 int verifyBLOCK_HDR(FILE *sigfp, FILE *nsigfp);
 int verifyBLOCK_SIG(block_sig_t *bs, gtfile gf, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, gterrctx_t *ectx);
 void rsgt_errctxInit(gterrctx_t *ectx);
@@ -341,13 +341,16 @@ void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
 void rsgt_set_debug(int iDebug); 
-int rsgt_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose); 
+int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose); 
 
 /* TODO: replace these? */
 int hash_m(gtfile gf, GTDataHash **m);
 int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
 int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
-extern char *rsgt_read_puburl; /**< url of publication server */
+extern char *rsgt_read_puburl;		/**< url of publication server */
+extern char *rsgt_extend_puburl;	/**< url of extension server */
+extern char *rsgt_userid;			/**< userid for extension server */
+extern char *rsgt_userkey;			/**< userkey for extension server */
 extern uint8_t rsgt_read_showVerified;
 extern int RSGT_FLAG_TLV16_RUNTIME;
 extern int RSGT_FLAG_NONCRIT_RUNTIME; 

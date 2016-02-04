@@ -213,7 +213,7 @@ filePrepare(file_t *pFile)
 	/* file does not exist, create it (and eventually parent directories */
 	if(1) { // check if bCreateDirs
 		len = ustrlen(pFile->name) + 1;
-		CHKmalloc(pszWork = MALLOC(sizeof(uchar) * len));
+		CHKmalloc(pszWork = MALLOC(len));
 		memcpy(pszWork, pFile->name, len);
 		for(p = pszWork+1 ; *p ; p++)
 			if(*p == '/') {
@@ -312,7 +312,6 @@ fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite)
 		}
 	}
 
-dbgprintf("XXXXX: omhdfs writing %u bytes\n", *lenWrite);
 	tSize num_written_bytes = hdfsWrite(pFile->fs, pFile->fh, buf, *lenWrite);
 	if((unsigned) num_written_bytes != *lenWrite) {
 		errmsg.LogError(errno, RS_RET_ERR_HDFS_WRITE,
@@ -371,7 +370,6 @@ addData(instanceData *pData, uchar *buf)
 		memcpy((char*) pData->ioBuf + pData->offsBuf, buf, len);
 		pData->offsBuf += len;
 	} else {
-dbgprintf("XXXXX: not enough room, need to flush\n");
 		CHKiRet(fileWrite(pData->pFile, pData->ioBuf, &pData->offsBuf));
 		if(len >= sizeof(pData->ioBuf)) {
 			CHKiRet(fileWrite(pData->pFile, buf, &len));
@@ -426,7 +424,7 @@ ENDtryResume
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-dbgprintf("omhdfs: beginTransaction\n");
+	DBGPRINTF("omhdfs: beginTransaction\n");
 ENDbeginTransaction
 
 
@@ -444,7 +442,7 @@ ENDdoAction
 BEGINendTransaction
 	instanceData *pData = pWrkrData->pData;
 CODESTARTendTransaction
-dbgprintf("omhdfs: endTransaction\n");
+	DBGPRINTF("omhdfs: endTransaction\n");
 	pthread_mutex_lock(&mutDoAct);
 	if(pData->offsBuf != 0) {
 		DBGPRINTF("omhdfs: data unwritten at end of transaction, persisting...\n");

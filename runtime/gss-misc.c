@@ -76,7 +76,7 @@ static void display_status_(char *m, OM_uint32 code, int type)
 		} else {
 			char buf[1024];
 			snprintf(buf, sizeof(buf), "GSS-API error %s: %s\n", m, (char *) msg.value);
-			buf[sizeof(buf)/sizeof(char) - 1] = '\0';
+			buf[sizeof(buf) - 1] = '\0';
 			errmsg.LogError(0, NO_ERRCODE, "%s", buf);
 		}
 		if (msg.length != 0)

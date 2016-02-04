@@ -81,8 +81,9 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-BEGINdoAction
+BEGINdoAction_NoStrings
 CODESTARTdoAction
+	(void)pMsgData; /* Suppress compiler warning on unused var */
 	dbgprintf("\n");
 	iRet = RS_RET_DISCARDMSG;
 ENDdoAction

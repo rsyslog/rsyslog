@@ -3,18 +3,18 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2015 Rainer Gerhards and Adiscon
+ * Copyright 2004-2016 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -143,8 +143,8 @@ setsid(void)
 rsRetVal // TODO: make static
 queryLocalHostname(void)
 {
-	uchar *LocalHostName;
-	uchar *LocalDomain;
+	uchar *LocalHostName = NULL;
+	uchar *LocalDomain = NULL;
 	uchar *LocalFQDNName;
 	DEFiRet;
 
@@ -163,8 +163,12 @@ queryLocalHostname(void)
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
 	glbl.GenerateLocalHostNameProperty();
+	LocalHostName = NULL; /* handed over */
+	LocalDomain = NULL; /* handed over */
 
 finalize_it:
+	free(LocalHostName);
+	free(LocalDomain);
 	RETiRet;
 }
 
@@ -957,13 +961,13 @@ hdlr_sigttin()
 }
 
 static void
-hdlr_enable(int signal, void (*hdlr)())
+hdlr_enable(int sig, void (*hdlr)())
 {
 	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = hdlr;
-	sigaction(signal, &sigAct, NULL);
+	sigaction(sig, &sigAct, NULL);
 }
 
 static void
@@ -1161,7 +1165,7 @@ initAll(int argc, char **argv)
 			doFork = 0;
 			break;
 		case 'N':		/* enable config verify mode */
-			iConfigVerify = atoi(arg);
+			iConfigVerify = (arg == NULL) ? 0 : atoi(arg);
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
 			fprintf (stderr, "rsyslogd: the -q command line option will go away "
@@ -1186,18 +1190,25 @@ initAll(int argc, char **argv)
 			}
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
+			if(arg == NULL) {
+				/* note this case should already be handled by getopt,
+				 * but we want to keep the static analyzer happy.
+				 */
+				fprintf(stderr, "-T options needs a parameter\n");
+				exit(1);
+			}
 			if(chroot(arg) != 0) {
 				perror("chroot");
 				exit(1);
 			}
 			break;
 		case 'u':		/* misc user settings */
-			iHelperUOpt = atoi(arg);
+			iHelperUOpt = (arg == NULL) ? 0 : atoi(arg);
 			if(iHelperUOpt & 0x01) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
 					 "soon.\n"
 					 "For the 0x01 bit, please use the "
-					 "global(net.parseHostnamdAndTag=\"off\") "
+					 "global(parser.parseHostnameAndTag=\"off\") "
 					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
 			}
@@ -1300,7 +1311,7 @@ initAll(int argc, char **argv)
 
 	if(ourConf->globals.bLogStatusMsgs) {
 		char bufStartUpMsg[512];
-		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char),
+		snprintf(bufStartUpMsg, sizeof(bufStartUpMsg),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] start",
 			 (int) glblGetOurPid());
@@ -1419,7 +1430,7 @@ doHUP(void)
 	char buf[512];
 
 	if(ourConf->globals.bLogStatusMsgs) {
-		snprintf(buf, sizeof(buf) / sizeof(char),
+		snprintf(buf, sizeof(buf),
 			 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed",
 			 (int) glblGetOurPid());
@@ -1483,6 +1494,7 @@ static void
 mainloop(void)
 {
 	struct timeval tvSelectTimeout;
+	time_t tTime;
 
 	BEGINfunc
 	/* first check if we have any internal messages queued and spit them out. */
@@ -1506,6 +1518,9 @@ mainloop(void)
 			break;	/* exit as quickly as possible */
 
 		janitorRun();
+
+		datetime.GetTime(&tTime);
+		checkGoneAwaySenders(tTime);
 
 		if(bHadHUP) {
 			doHUP();
@@ -1553,7 +1568,7 @@ deinitAll(void)
 
 	/* and THEN send the termination log message (see long comment above) */
 	if(bFinished && runConf->globals.bLogStatusMsgs) {
-		(void) snprintf(buf, sizeof(buf) / sizeof(char),
+		(void) snprintf(buf, sizeof(buf),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) glblGetOurPid(), bFinished);

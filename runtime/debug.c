@@ -367,7 +367,7 @@ static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
 			strmutop = "owned";
 			break;
 		default:
-			snprintf(buf, sizeof(buf)/sizeof(char), "unknown state %d - should not happen!", pLog->mutexOp);
+			snprintf(buf, sizeof(buf), "unknown state %d - should not happen!", pLog->mutexOp);
 			strmutop = buf;
 			break;
 	}
@@ -465,7 +465,7 @@ static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 		pszHolder = "[NONE]";
 	else {
 		dbgGetThrdName(pszHolderThrdName, sizeof(pszHolderThrdName), pHolder->thrd, 1);
-		snprintf(pszBuf, sizeof(pszBuf)/sizeof(char), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
+		snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
 		pszHolder = pszBuf;
 	}
 
@@ -512,7 +512,7 @@ static inline void dbgMutexPreTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFu
       pszHolder = "[NONE]";
    else {
       dbgGetThrdName(pszHolderThrdName, sizeof(pszHolderThrdName), pHolder->thrd, 1);
-      snprintf(pszBuf, sizeof(pszBuf)/sizeof(char), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
+      snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
       pszHolder = pszBuf;
    }
 
@@ -1226,7 +1226,7 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 
 	/* name - up until '=' or whitespace */
 	i = 0;
-	while(i < (sizeof(optname)/sizeof(uchar) - 1) && *p && *p != '=' && !isspace(*p)) {
+	while(i < (sizeof(optname) - 1) && *p && *p != '=' && !isspace(*p)) {
 		optname[i++] = *p++;
 	}
 
@@ -1237,7 +1237,7 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 			/* we have a value, get it */
 			++p;
 			i = 0;
-			while(i < (sizeof(optval)/sizeof(uchar) - 1) && *p && !isspace(*p)) {
+			while(i < (sizeof(optval) - 1) && *p && !isspace(*p)) {
 				optval[i++] = *p++;
 			}
 			optval[i] = '\0';

@@ -417,7 +417,7 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 		*pbIsPermitted = 1; /* no check -> everything permitted */
 	}
 
-	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.128s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, rcvBuf);
+	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.*s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, (int)lenRcvBuf, rcvBuf);
 
 	if(*pbIsPermitted != 0)  {
 		/* we now create our own message object and submit it to the queue */
@@ -459,7 +459,9 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 {
 	DEFiRet;
 	int iNbrTimeUsed;
-	time_t ttGenTime;
+	time_t ttGenTime = 0; /* to avoid clang static analyzer false positive */
+		/* note: we do never use this time, because we always get a 
+		 * requery below on first loop iteration */
 	struct syslogTime stTime;
 	char errStr[1024];
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
@@ -507,7 +509,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 		}
 
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
-			datetime.getCurrTime(&stTime, &ttGenTime);
+			datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 		}
 
 		pWrkr->ctrMsgsRcvd += nelem;
@@ -580,7 +582,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 
 		++pWrkr->ctrMsgsRcvd;
 		if((runModConf->iTimeRequery == 0) || (iNbrTimeUsed++ % runModConf->iTimeRequery) == 0) {
-			datetime.getCurrTime(&stTime, &ttGenTime);
+			datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
 		}
 
 		CHKiRet(processPacket(lstn, frominetPrev, pbIsPermitted, pWrkr->pRcvBuf, lenRcvBuf, &stTime,
@@ -1103,7 +1105,7 @@ BEGINactivateCnf
 CODESTARTactivateCnf
 	/* caching various settings */
 	iMaxLine = glbl.GetMaxLine();
-	lenRcvBuf = (iMaxLine + 1) * sizeof(char);
+	lenRcvBuf = iMaxLine + 1;
 #	ifdef HAVE_RECVMMSG
 	lenRcvBuf *= runModConf->batchSize;
 #	endif
