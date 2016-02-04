@@ -319,8 +319,6 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
 			  uchar **bulkId)
 {
-	if(tpls == NULL)
-		return;
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
