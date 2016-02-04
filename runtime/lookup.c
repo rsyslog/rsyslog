@@ -80,7 +80,6 @@ lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
-	const uchar *reloader_name = NULL;
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
@@ -147,7 +146,7 @@ lookupRefDestruct(lookup_ref_t *pThis)
 
 static void
 destructTable_str(lookup_t *pThis) {
-	int i = 0;
+	uint32_t i = 0;
 	lookup_string_tab_entry_t *entries = pThis->table.str->entries;
 	for (i = 0; i < pThis->nmemb; i++) {
 		free(entries[i].key);
@@ -171,7 +170,7 @@ destructTable_sparseArr(lookup_t *pThis) {
 
 static void
 lookupDestruct(lookup_t *pThis) {
-	int i;
+	uint32_t i;
 
 	if (pThis == NULL) return;
 	
@@ -247,7 +246,7 @@ bs_arrcmp_strtab(const void *s1, const void *s2)
 static int
 bs_arrcmp_str(const void *s1, const void *s2)
 {
-	return strcmp((uchar*)s1, *(uchar**)s2);
+	return ustrcmp((uchar*)s1, *(uchar**)s2);
 }
 
 static int
@@ -263,8 +262,8 @@ defaultVal(lookup_t *pThis) {
 
 /* lookup_fn for different types of tables */
 static es_str_t*
-lookupKey_stub(lookup_t *pThis, lookup_key_t key) {
-	return es_newStrFromCStr(pThis->nomatch, ustrlen(pThis->nomatch));
+lookupKey_stub(lookup_t *pThis, lookup_key_t __attribute__((unused)) key) {
+	return es_newStrFromCStr((char*) pThis->nomatch, ustrlen(pThis->nomatch));
 }
 
 static es_str_t*
@@ -286,7 +285,7 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 	uint32_t uint_key = key.k_uint;
 	uint32_t idx = uint_key - pThis->table.arr->first_key;
 
-	if ((idx < 0) || (idx >= pThis->nmemb)) {
+	if (idx >= pThis->nmemb) {
 		r = defaultVal(pThis);
 	} else {
 		r = (char*) pThis->table.arr->interned_val_refs[uint_key - pThis->table.arr->first_key];
@@ -356,22 +355,24 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 	
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.str = calloc(1, sizeof(lookup_string_tab_t)));
-	CHKmalloc(pThis->table.str->entries = calloc(pThis->nmemb, sizeof(lookup_string_tab_entry_t)));
+	if (pThis->nmemb > 0) {
+		CHKmalloc(pThis->table.str->entries = calloc(pThis->nmemb, sizeof(lookup_string_tab_entry_t)));
 
-	for(i = 0; i < pThis->nmemb; i++) {
-		jrow = json_object_array_get_idx(jtab, i);
-		jindex = json_object_object_get(jrow, "index");
-		jvalue = json_object_object_get(jrow, "value");
-		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
-			NO_INDEX_ERROR("string", name);
+		for(i = 0; i < pThis->nmemb; i++) {
+			jrow = json_object_array_get_idx(jtab, i);
+			jindex = json_object_object_get(jrow, "index");
+			jvalue = json_object_object_get(jrow, "value");
+			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+				NO_INDEX_ERROR("string", name);
+			}
+			CHKmalloc(pThis->table.str->entries[i].key = ustrdup((uchar*) json_object_get_string(jindex)));
+			value = (uchar*) json_object_get_string(jvalue);
+			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			assert(canonicalValueRef != NULL);
+			pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
 		}
-		CHKmalloc(pThis->table.str->entries[i].key = strdup(json_object_get_string(jindex)));
-		value = (uchar*) json_object_get_string(jvalue);
-		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-		assert(canonicalValueRef != NULL);
-		pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
+		qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 	}
-	qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 		
 	pThis->lookup = lookupKey_str;
 	pThis->key_type = LOOKUP_KEY_TYPE_STRING;
@@ -383,7 +384,7 @@ static inline rsRetVal
 build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
-	uchar *value, *canonicalValueRef;
+	uchar *canonicalValueRef;
 	uint32_t prev_index, index;
 	uint8_t prev_index_set;
 	uint32_index_val_t *indexes = NULL;
@@ -392,37 +393,39 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	prev_index_set = 0;
 	
 	pThis->table.arr = NULL;
-	CHKmalloc(indexes = calloc(pThis->nmemb, sizeof(uint32_index_val_t)));
 	CHKmalloc(pThis->table.arr = calloc(1, sizeof(lookup_array_tab_t)));
-	CHKmalloc(pThis->table.arr->interned_val_refs = calloc(pThis->nmemb, sizeof(uchar*)));
+	if (pThis->nmemb > 0) {
+		CHKmalloc(indexes = calloc(pThis->nmemb, sizeof(uint32_index_val_t)));
+		CHKmalloc(pThis->table.arr->interned_val_refs = calloc(pThis->nmemb, sizeof(uchar*)));
 
-	for(i = 0; i < pThis->nmemb; i++) {
-		jrow = json_object_array_get_idx(jtab, i);
-		jindex = json_object_object_get(jrow, "index");
-		jvalue = json_object_object_get(jrow, "value");
-		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
-			NO_INDEX_ERROR("array", name);
-		}
-		indexes[i].index = (uint32_t) json_object_get_int(jindex);
-		indexes[i].val = (uchar*) json_object_get_string(jvalue);
-	}
-	qsort(indexes, pThis->nmemb, sizeof(uint32_index_val_t), qs_arrcmp_uint32_index_val);
-	for(i = 0; i < pThis->nmemb; i++) {
-		index = indexes[i].index;
-		if (prev_index_set == 0) {
-			prev_index = index;
-			prev_index_set = 1;
-			pThis->table.arr->first_key = index;
-		} else {
-			if (index != ++prev_index) {
-				errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contiguous members between index '%d' and '%d'",
-								name, prev_index, index);
-				ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+		for(i = 0; i < pThis->nmemb; i++) {
+			jrow = json_object_array_get_idx(jtab, i);
+			jindex = json_object_object_get(jrow, "index");
+			jvalue = json_object_object_get(jrow, "value");
+			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+				NO_INDEX_ERROR("array", name);
 			}
+			indexes[i].index = (uint32_t) json_object_get_int(jindex);
+			indexes[i].val = (uchar*) json_object_get_string(jvalue);
 		}
-		canonicalValueRef = *(uchar**) bsearch(indexes[i].val, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-		assert(canonicalValueRef != NULL);
-		pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
+		qsort(indexes, pThis->nmemb, sizeof(uint32_index_val_t), qs_arrcmp_uint32_index_val);
+		for(i = 0; i < pThis->nmemb; i++) {
+			index = indexes[i].index;
+			if (prev_index_set == 0) {
+				prev_index = index;
+				prev_index_set = 1;
+				pThis->table.arr->first_key = index;
+			} else {
+				if (index != ++prev_index) {
+					errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contiguous members between index '%d' and '%d'",
+									name, prev_index, index);
+					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+				}
+			}
+			canonicalValueRef = *(uchar**) bsearch(indexes[i].val, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			assert(canonicalValueRef != NULL);
+			pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
+		}
 	}
 		
 	pThis->lookup = lookupKey_arr;
@@ -442,22 +445,24 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 	
 	pThis->table.str = NULL;
 	CHKmalloc(pThis->table.sprsArr = calloc(1, sizeof(lookup_sparseArray_tab_t)));
-	CHKmalloc(pThis->table.sprsArr->entries = calloc(pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t)));
+	if (pThis->nmemb > 0) {
+		CHKmalloc(pThis->table.sprsArr->entries = calloc(pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t)));
 
-	for(i = 0; i < pThis->nmemb; i++) {
-		jrow = json_object_array_get_idx(jtab, i);
-		jindex = json_object_object_get(jrow, "index");
-		jvalue = json_object_object_get(jrow, "value");
-		if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
-			NO_INDEX_ERROR("sparseArray", name);
+		for(i = 0; i < pThis->nmemb; i++) {
+			jrow = json_object_array_get_idx(jtab, i);
+			jindex = json_object_object_get(jrow, "index");
+			jvalue = json_object_object_get(jrow, "value");
+			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
+				NO_INDEX_ERROR("sparseArray", name);
+			}
+			pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
+			value = (uchar*) json_object_get_string(jvalue);
+			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			assert(canonicalValueRef != NULL);
+			pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
 		}
-		pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
-		value = (uchar*) json_object_get_string(jvalue);
-		canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-		assert(canonicalValueRef != NULL);
-		pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
+		qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), qs_arrcmp_sprsArrtab);
 	}
-	qsort(pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), qs_arrcmp_sprsArrtab);
 		
 	pThis->lookup = lookupKey_sprsArr;
 	pThis->key_type = LOOKUP_KEY_TYPE_UINT;
@@ -482,11 +487,10 @@ finalize_it:
 static rsRetVal
 lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* name) {
 	struct json_object *jnomatch, *jtype, *jtab;
-	struct json_object *jrow, *jindex, *jvalue;
+	struct json_object *jrow, *jvalue;
 	const char *table_type, *nomatch_value;
 	const uchar **all_values;
 	const uchar *curr, *prev;
-	int version;
 	uint32_t i, j;
 	uint32_t uniq_values;
 
@@ -523,7 +527,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	for(i = 1; i < pThis->nmemb; i++) {
 		curr = all_values[i];
 		prev = all_values[i - 1];
-		if (strcmp(prev, curr) != 0) {
+		if (ustrcmp(prev, curr) != 0) {
 			uniq_values++;
 		}
 	}
@@ -531,12 +535,12 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	if (pThis->nmemb > 0)  {
 		CHKmalloc(pThis->interned_vals = malloc(uniq_values * sizeof(uchar*)));
 		j = 0;
-		CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[0]));
+		CHKmalloc(pThis->interned_vals[j++] = ustrdup(all_values[0]));
 		for(i = 1; i < pThis->nmemb ; ++i) {
 			curr = all_values[i];
 			prev = all_values[i - 1];
-			if (strcmp(prev, curr) != 0) {
-				CHKmalloc(pThis->interned_vals[j++] = strdup(all_values[i]));
+			if (ustrcmp(prev, curr) != 0) {
+				CHKmalloc(pThis->interned_vals[j++] = ustrdup(all_values[i]));
 			}
 		}
 		pThis->interned_val_count = uniq_values;
@@ -545,7 +549,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 
 	nomatch_value = json_object_get_string(jnomatch);
 	if (nomatch_value != NULL) {
-		CHKmalloc(pThis->nomatch = strdup(nomatch_value));
+		CHKmalloc(pThis->nomatch = (uchar*) strdup(nomatch_value));
 	}
 
 	if (strcmp(table_type, "array") == 0) {
@@ -617,7 +621,6 @@ lookupFindTable(uchar *name)
  */
 static rsRetVal
 lookupReloadOrStub(lookup_ref_t *pThis, const uchar* stub_val) {
-	uint32_t i;
 	lookup_t *newlu, *oldlu; /* dummy to be able to use support functions without 
 								affecting current settings. */
 	DEFiRet;
@@ -760,6 +763,7 @@ lookupTableReloader(void *self)
 		}
 	}
 	pthread_mutex_unlock(&pThis->reloader_mut);
+    return NULL;
 }
 
 /* reload all lookup tables on HUP */
@@ -911,7 +915,7 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	thd_name_len = ustrlen(lu->name) + strlen(reloader_prefix) + 1;
 	CHKmalloc(reloader_thd_name = malloc(thd_name_len));
 	strcpy(reloader_thd_name, reloader_prefix);
-	strcpy(reloader_thd_name + strlen(reloader_prefix), lu->name);
+	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
 	pthread_setname_np(lu->reloader, reloader_thd_name);
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
