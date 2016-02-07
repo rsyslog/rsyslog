@@ -148,8 +148,13 @@ TESTS +=  \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
-	key_dereference_on_uninitialized_variable_space.sh
-
+	key_dereference_on_uninitialized_variable_space.sh \
+	array_lookup_table.sh \
+	sparse_array_lookup_table.sh \
+	lookup_table_bad_configs.sh \
+	lookup_table_rscript_reload.sh \
+	lookup_table_rscript_reload_without_stub.sh \
+	multiple_lookup_tables.sh
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -162,7 +167,16 @@ TESTS +=  \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
-	rscript_field-vg.sh
+	rscript_field-vg.sh \
+	unused_lookup_table.sh \
+	lookup_table-vg.sh \
+	array_lookup_table-vg.sh \
+	array_lookup_table_misuse-vg.sh \
+	sparse_array_lookup_table-vg.sh \
+	lookup_table_bad_configs-vg.sh \
+	lookup_table_rscript_reload-vg.sh \
+	lookup_table_rscript_reload_without_stub-vg.sh \
+	multiple_lookup_tables-vg.sh
 endif # HAVE_VALGRIND
 
 
@@ -298,6 +312,7 @@ TESTS += \
 	imtcp-tls-basic-vg.sh \
 	imtcp_conndrop_tls-vg.sh
 if !ENABLE_DISTCHECK_WORKAROUND
+TESTS += \
 	manytcp-too-few-tls-vg.sh
 endif
 endif
@@ -957,16 +972,62 @@ EXTRA_DIST= \
 	rscript_re_match.sh \
 	testsuites/rscript_re_match.conf \
 	lookup_table.sh \
+	lookup_table_rscript_reload.sh \
+	lookup_table_rscript_reload_without_stub.sh \
+	lookup_table_rscript_reload-vg.sh \
+	lookup_table_rscript_reload_without_stub-vg.sh \
 	testsuites/lookup_table.conf \
+	testsuites/lookup_table_reload_stub.conf \
+	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \
 	testsuites/xlate_more.lkp_tbl \
+	unused_lookup_table.sh \
+	lookup_table-vg.sh \
+	testsuites/unused_lookup_table.conf \
+	array_lookup_table.sh \
+	array_lookup_table-vg.sh \
+	array_lookup_table_misuse-vg.sh \
+	multiple_lookup_tables.sh \
+	multiple_lookup_tables-vg.sh \
+	testsuites/array_lookup_table.conf \
+	testsuites/xlate_array.lkp_tbl \
+	testsuites/xlate_array_more.lkp_tbl \
+	testsuites/xlate_array_misuse.lkp_tbl \
+	testsuites/xlate_array_more_misuse.lkp_tbl \
+	sparse_array_lookup_table.sh \
+	sparse_array_lookup_table-vg.sh \
+	testsuites/xlate_sparse_array.lkp_tbl \
+	testsuites/xlate_sparse_array_more.lkp_tbl \
+	lookup_table_bad_configs.sh \
+	lookup_table_bad_configs-vg.sh \
+	testsuites/lookup_table_all.conf \
+	testsuites/xlate_array_empty_table.lkp_tbl \
+	testsuites/xlate_array_no_index.lkp_tbl \
+	testsuites/xlate_array_no_table.lkp_tbl \
+	testsuites/xlate_array_no_value.lkp_tbl \
+	testsuites/xlate_empty_file.lkp_tbl \
+	testsuites/xlate_incorrect_type.lkp_tbl \
+	testsuites/xlate_incorrect_version.lkp_tbl \
+	testsuites/xlate_sparseArray_empty_table.lkp_tbl \
+	testsuites/xlate_sparseArray_no_index.lkp_tbl \
+	testsuites/xlate_sparseArray_no_table.lkp_tbl \
+	testsuites/xlate_sparseArray_no_value.lkp_tbl \
+	testsuites/xlate_string_empty_table.lkp_tbl \
+	testsuites/xlate_string_no_index.lkp_tbl \
+	testsuites/xlate_string_no_table.lkp_tbl \
+	testsuites/xlate_string_no_value.lkp_tbl \
+	testsuites/xlate_invalid_json.lkp_tbl \
+	testsuites/xlate_array_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/xlate_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp_tbl \
+	testsuites/multiple_lookup_tables.conf \
 	json_var_cmpr.sh \
 	testsuites/json_var_cmpr.conf \
-	cfg.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	testsuites/imptcp_nonProcessingPoller.conf \
-	travis/trusty.supp
+	travis/trusty.supp \
+	cfg.sh
 
 # TODO: re-enable
 #sndrcv_tls_anon_rebind.sh \

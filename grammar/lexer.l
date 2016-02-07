@@ -55,6 +55,8 @@
 	/* LINENO: support for setting the linenumber */
 %x INCALL
 	/* INCALL: support for the call statement */
+%x IN_PROCEDURE_CALL
+	/* IN_PROCEDURE_CALL: support for the call statement */	
 %x EXPR
 	/* EXPR is a bit ugly, but we need it to support pre v6-syntax. The problem
 	 * is that cfsysline statement start with $..., the same like variables in
@@ -108,6 +110,25 @@ int fileno(FILE *stream);
  /* keywords */
 "if"				{ BEGIN EXPR; return IF; }
 "foreach"			{ BEGIN EXPR; return FOREACH; }
+"reload_lookup_table"		{ BEGIN IN_PROCEDURE_CALL; return RELOAD_LOOKUP_TABLE_PROCEDURE; }
+<IN_PROCEDURE_CALL>"("		{ return yytext[0]; }
+<IN_PROCEDURE_CALL>\'([^'\\]|\\['"\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\'	 {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+<IN_PROCEDURE_CALL>\"([^"\\$]|\\["'\\$bntr]|\\x[0-9a-f][0-9a-f]|\\[0-7][0-7][0-7])*\" {
+				   yytext[yyleng-1] = '\0';
+				   unescapeStr((uchar*)yytext+1, yyleng-2);
+				   yylval.estr = es_newStrFromBuf(yytext+1, strlen(yytext)-1);
+				   return STRING; }
+<IN_PROCEDURE_CALL>"," 		{ return yytext[0]; }
+<IN_PROCEDURE_CALL>")" 		{ BEGIN INITIAL; return yytext[0]; }
+<IN_PROCEDURE_CALL>[ \t\n]* 		{  }
+<IN_PROCEDURE_CALL>. 		{ parser_errmsg("invalid character '%s' in expression "
+					        "- is there an invalid escape sequence somewhere?",
+						yytext); }
+<EXPR>"("			{ BEGIN EXPR; return yytext[0]; }
 <EXPR>"then"			{ BEGIN INITIAL; return THEN; }
 <EXPR>"do"			{ BEGIN INITIAL; return DO; }
 <EXPR>";"			{ BEGIN INITIAL; return ';'; }

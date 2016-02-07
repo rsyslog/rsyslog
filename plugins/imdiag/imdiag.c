@@ -53,6 +53,7 @@
 #include "datetime.h"
 #include "ratelimit.h"
 #include "queue.h"
+#include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -314,6 +315,25 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+awaitLookupTableReload(tcps_sess_t *pSess)
+{
+	DEFiRet;
+
+	while(1) {
+		if(lookupPendingReloadCount() == 0) {
+			break;
+		}
+		srSleep(0,500000);
+	}
+
+	CHKiRet(sendResponse(pSess, "no pending lookup-table reloads found\n"));
+	DBGPRINTF("imdiag: no pending lookup-table reloads found\n");
+
+finalize_it:
+	RETiRet;
+}
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -345,6 +365,8 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 		DBGPRINTF("imdiag: %d messages in main queue\n", iOverallQueueSize);
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("waitmainqueueempty"))) {
 		CHKiRet(waitMainQEmpty(pSess));
+	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitlookuptablereload"))) {
+		CHKiRet(awaitLookupTableReload(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("injectmsg"))) {
 		CHKiRet(injectMsg(pszMsg, pSess));
 	} else {

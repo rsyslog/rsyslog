@@ -77,6 +77,7 @@ extern int yyerror(char*);
 %token <s> PROPFILT
 %token <s> BSD_TAG_SELECTOR
 %token <s> BSD_HOST_SELECTOR
+%token <s> RELOAD_LOOKUP_TABLE_PROCEDURE
 %token IF
 %token THEN
 %token ELSE
@@ -173,6 +174,7 @@ stmt:	  actlst			{ $$ = $1; }
 	| UNSET VAR ';'			{ $$ = cnfstmtNewUnset($2); }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
+	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' fparams ')' { $$ = cnfstmtNewReloadLookupTable($3);}
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }

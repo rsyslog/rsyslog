@@ -220,6 +220,14 @@ case $1 in
 			echo WaitMainQueueEmpty | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		fi
 		;;
+   'await-lookup-table-reload') # wait for all pending lookup table reloads to complete $2 is the instance.
+		if [ "$2" == "2" ]
+		then
+			echo AwaitLookupTableReload | ./diagtalker -p13501 || . $srcdir/diag.sh error-exit  $?
+		else
+			echo AwaitLookupTableReload | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		fi
+		;;
    'issue-HUP') # shut rsyslogd down when main queue is empty. $2 is the instance.
 		kill -HUP `cat rsyslog$2.pid`
 		./msleep 1000
@@ -297,6 +305,13 @@ case $1 in
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed to find "'$2'", content is
 		    cat rsyslog.out.log
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
+   'content-check-with-count') 
+		count=$(cat rsyslog.out.log | grep -qF "$2" | wc -l)
+		if [ "x$count" == "x$3" ]; then
+		    echo content-check failed, expected $2 to occure $3 times, but found it $count times
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
