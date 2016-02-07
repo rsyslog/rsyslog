@@ -2,6 +2,12 @@
 Version 8.17.0 [v8-stable] 2016-03-08
 - NEW REQUIREMENT: libfastjson
   see also: 
+- new experimental feature: lookup table suport
+  Note that at this time, this is an experimental feature which is not yet
+  fully supported by the rsyslog team. It is introduced in order to gain
+  more feedback and to make it available as early as possible because many
+  people consider it useful.
+  Thanks to Janmejay Singh for implementing this feature
 - new feature: dynamic statistics counters
   which may be changed during rule processing
   Thanks to Janmejay Singh for suggesting and implementing this feature
