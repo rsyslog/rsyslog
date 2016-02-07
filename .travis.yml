@@ -18,6 +18,7 @@ addons:
     - mysql-server
     - mysql-client-core
     - mysql-client
+    - libdbd-mysql
 
 matrix:
   exclude:
