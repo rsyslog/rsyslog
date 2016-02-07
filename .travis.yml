@@ -16,9 +16,7 @@ addons:
   apt:
     packages:
     - mysql-server
-    - mysql-client-core
     - mysql-client
-    - libdbd-mysql
 
 matrix:
   exclude:
@@ -53,7 +51,7 @@ before_install:
   - mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);"
 
 install:
-  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client faketime
+  - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client faketime libdbd-mysql
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex libksi1 libksi1-dev libcurl4-gnutls-dev
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
