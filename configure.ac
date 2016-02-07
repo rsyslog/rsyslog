@@ -299,7 +299,15 @@ AC_CHECK_LIB(
 	   [HAVE_PTHREAD_RWLOCKATTR_SETKIND_NP],
 		 [1],
 		 [Set-kind available for rwlock attr.])])
-		 
+
+AC_CHECK_LIB(
+  [pthread],
+	[pthread_setname_np],
+	[AC_DEFINE(
+	   [HAVE_PTHREAD_SETNAME_NP],
+		 [1],
+		 [Can set thread-name.])])
+
 AC_CHECK_FUNCS(
     [pthread_setschedparam],
     [

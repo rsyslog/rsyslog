@@ -886,8 +886,10 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	struct cnfparamvals *pvals;
 	lookup_ref_t *lu;
 	short i;
+#ifdef HAVE_PTHREAD_SETNAME_NP
 	char *reloader_thd_name = NULL;
 	int thd_name_len = 0;
+#endif
 	DEFiRet;
 	lu = NULL;
 
@@ -912,17 +914,21 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
+#ifdef HAVE_PTHREAD_SETNAME_NP
 	thd_name_len = ustrlen(lu->name) + strlen(reloader_prefix) + 1;
 	CHKmalloc(reloader_thd_name = malloc(thd_name_len));
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
 	pthread_setname_np(lu->reloader, reloader_thd_name);
+#endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
 
 finalize_it:
+#ifdef HAVE_PTHREAD_SETNAME_NP
 	free(reloader_thd_name);
+#endif
 	cnfparamvalsDestruct(pvals, &modpblk);
 	if (iRet != RS_RET_OK) {
 		if (lu != NULL) {
