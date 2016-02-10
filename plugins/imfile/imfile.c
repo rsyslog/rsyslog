@@ -114,6 +114,7 @@ typedef struct lstn_s {
 	sbool escapeLF;	/* escape LF inside the MSG content? */
 	sbool reopenOnTruncate;
 	sbool addMetadata;
+	sbool addCeeTag;
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
@@ -148,6 +149,7 @@ struct instanceConf_s {
 	uchar *startRegex;
 	sbool escapeLF;
 	sbool reopenOnTruncate;
+	sbool addCeeTag;
 	sbool addMetadata;
 	int maxLinesAtOnce;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -268,6 +270,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
+	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED }
 };
 static struct cnfparamblk inppblk =
@@ -456,7 +459,19 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), cstrLen(cstrLine));
+	if (pLstn->addCeeTag) {
+		size_t msgLen = cstrLen(cstrLine);
+		char *ceeToken = "@cee:";
+		size_t ceeMsgSize = msgLen + strlen(ceeToken);
+		char *ceeMsg;
+		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
+		strcpy(ceeMsg, ceeToken);
+		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
+		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
+		free(ceeMsg);
+	} else {
+		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), cstrLen(cstrLine));
+	}
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
@@ -643,6 +658,7 @@ createInstance(instanceConf_t **pinst)
 	inst->escapeLF = 1;
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
+	inst->addCeeTag = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -772,6 +788,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->escapeLF = 0;
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = 0;
+	inst->addCeeTag = 0;
 	inst->bRMStateOnDel = 0;
 
 	CHKiRet(checkInstance(inst));
@@ -883,6 +900,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->escapeLF = existing->escapeLF;
 	pThis->reopenOnTruncate = existing->reopenOnTruncate;
 	pThis->addMetadata = existing->addMetadata;
+	pThis->addCeeTag = existing->addCeeTag;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -950,6 +968,7 @@ addListner(instanceConf_t *inst)
 	pThis->reopenOnTruncate = inst->reopenOnTruncate;
 	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
 			       hasWildcard : inst->addMetadata;
+	pThis->addCeeTag = inst->addCeeTag;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -1004,6 +1023,8 @@ CODESTARTnewInpInst
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
+		} else if (!strcmp(inppblk.descr[i].name, "addceetag")) {
+			inst->addCeeTag = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
