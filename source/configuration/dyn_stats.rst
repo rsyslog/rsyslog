@@ -5,12 +5,14 @@ Rsyslog produces runtime-stats to allow user to study service health, performanc
 
 **Dynamic Stats** (called dyn-stats henceforth) component allows user to configure stats-namespaces (called stats-buckets) and increment counters within these buckets using Rainerscript function call.
 
+The metric-name in this case can be a message-property or a sub-string extracted from message etc.
+
 Dyn-stats configuration involves a **two part setup**:
 
-dyn_stats(name="<bucket>"...) (statement)
+dyn_stats(name="<bucket>"...) (object)
 -----------------------------------------
 
-**Declares** the bucket(identified by the bucket-name) and allows user to set some properties that control behavior of the bucket.
+**Defines** the bucket(identified by the bucket-name) and allows user to set some properties that control behavior of the bucket.
 
 ::
 
@@ -26,14 +28,14 @@ Parameters:
     **unusedMetricLife** <number, default: 3600> : Interval between full purges (in seconds).  This prevents unused counters from occupying resources forever.
 
 
-A declaration using all the parameters looks like:
+A definition setting all the parameters looks like:
 
 ::
 
    dyn_stats(name="msg_per_host" resettable="on" maxCardinality="3000" unusedMetricLife="600")
 
 
-dyn_inc("<bucket>", <variable>) (function)
+dyn_inc("<bucket>", <expr>) (function)
 ------------------------------------------
 
 **Increments** counter identified by value of variable in bucket identified by name.
@@ -41,7 +43,7 @@ dyn_inc("<bucket>", <variable>) (function)
 Parameters:
     **name** <string litteral, mandatory> : Name of the bucket
     
-    **variable** <string> : Name of counter (this name will be reported by impstats to identify the counter)
+    **expr** <expression resulting in a string> : Name of counter (this name will be reported by impstats to identify the counter)
     
 A ``dyn_inc`` call looks like:
 
