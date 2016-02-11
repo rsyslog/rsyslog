@@ -16,17 +16,20 @@ dedicated component allows ``lookup`` to be made fast.
 The lookup tables itself exists in a separate data file (one per
 table). This file is loaded on Rsyslog startup and when a reload is requested.
 
-There are different types of lookup tables (identified by "type" field in json data-file):
+There are different types of lookup tables (identified by "type" field in json data-file).
+
+Types
+^^^^^
 
 string
-^^^^^^
+------
 
 The key to be looked up is an arbitrary string.
 
 **Match criterion**: The key must be exactly equal to index from one of the entries.
 
 array
-^^^^^
+-----
 
 The value to be looked up is an integer number from a consequtive set.
 The set does not need to start at zero or one, but there must be no number missing.
@@ -36,7 +39,7 @@ not be (due to missing ``3``).
 **Match criterion**: Looked-up number(key) must be exactly equal to index from one of the entries.
 
 sparseArray
-^^^^^^^^^^^
+-----------
 
 The value to be looked up is an integer value, but there may be gaps inside the
 set of values (usually there are large gaps). A typical use case would be the
@@ -48,7 +51,7 @@ Note that index integer numbers are represented by unsigned 32 bits.
 
 
 Lookup Table File Format
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Lookup table files contain a single JSON object. This object contains of a header and a table part.
 
@@ -93,12 +96,14 @@ the lookup result and later use that variable in templates.
 
 
 
-Lookup-table configuration involves a **three part setup**
-==========================================================
+Lookup-table configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Lookup-table configuration involves a **two part setup** (definition and usage(lookup)), with an optional third part,
+which allows reloading table using internal trigger.
 
 lookup_table(name="<table>" file="</path/to/file>"...) (object)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------------------------------
 
 **Defines** the table(identified by the table-name) and allows user to set some properties that control behavior of the table.
 
@@ -121,7 +126,7 @@ A definition setting all the parameters looks like:
 
 
 lookup("<table>", <expr>) (function)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 
 **Looks up** and returns the value that is associated with the given key (passed as <variable>)
 in lookup table identified by table-name. If no match is found (according to table-type
@@ -211,7 +216,7 @@ key     return
 
 
 reload_lookup_table("<table>", "<stub value>") (statement)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------------------------------------
 
 **Reloads** lookup table identified by given table name **asynchronously** (by internal trigger, as opposed to HUP).
 
@@ -237,7 +242,7 @@ A ``reload_lookup_table`` invocation looks like:
 
 
 Implementation Details
-======================
+^^^^^^^^^^^^^^^^^^^^^^
 
 The lookup table functionality is implemented via efficient algorithms.
 
