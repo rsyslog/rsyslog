@@ -171,6 +171,7 @@ TESTS +=  \
 	rscript_field-vg.sh \
 	unused_lookup_table.sh \
 	lookup_table-vg.sh \
+	lookup_table_no_hup_reload-vg.sh \
 	array_lookup_table-vg.sh \
 	array_lookup_table_misuse-vg.sh \
 	sparse_array_lookup_table-vg.sh \
@@ -974,6 +975,7 @@ EXTRA_DIST= \
 	testsuites/rscript_re_match.conf \
 	lookup_table.sh \
 	lookup_table_no_hup_reload.sh \
+	lookup_table_no_hup_reload-vg.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
