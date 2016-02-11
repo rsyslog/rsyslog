@@ -13,7 +13,7 @@ server or the department or remote office it is located in.
 This can be emulated using if and else-if stack, but implementing it as a
 dedicated component allows ``lookup`` to be made fast.
 
-The lookup tables itself exists in a separate configuration file (one per
+The lookup tables itself exists in a separate data file (one per
 table). This file is loaded on Rsyslog startup and when a reload is requested.
 
 There are different types of lookup tables (identified by "type" field in json data-file):
@@ -56,10 +56,13 @@ Lookup table files contain a single JSON object. This object contains of a heade
 
 The header is the top-level json.
 It has paramters "version", "nomatch", and "type".
-The version parameter must be given and must always be one for this version of rsyslog.
-The nomatch parameter is optional. If specified, it contains the value to be used if lookup() is provided
-an index value for which no entry exists. The default for "nomatch" is the empty string.
-Type specifies the type of lookup to be done.
+
+Parameters:
+    **version** <number, default: 1> : Version of table-definition format (so improvements in the future can be managed in a backward compatible way).
+
+    **nomatch** <string litteral, default: ""> : Value to be returned for a lookup when match fails.
+
+    **type** <*string*, *array* or *sparseArray*, default: *string*> : Type of lookup-table (controls how matches are performed).
 
 **Table**
 
@@ -81,16 +84,21 @@ This is a sample of how an ip-to-office mapping may look like:
         {"index" : "10.0.2.1", "value" : "B" },
         {"index" : "10.0.2.2", "value" : "B" },
         {"index" : "10.0.2.3", "value" : "B" }]}
-    
-Note: if a different IP comes in, the value "unk" is returend thanks to the nomatch parameter in the first line.
+
+				
+Note: In the example above, if a different IP comes in, the value "unk" is returend thanks to the nomatch parameter in the first line.
 
 Lookup tables can be access via the ``lookup()`` built-in function. Common usage pattern is to set a local variable to
 the lookup result and later use that variable in templates.
 
-Lookup-table configuration involves a **three part setup**:
+
+
+Lookup-table configuration involves a **three part setup**
+==========================================================
+
 
 lookup_table(name="<table>" file="</path/to/file>"...) (object)
----------------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Defines** the table(identified by the table-name) and allows user to set some properties that control behavior of the table.
 
@@ -113,7 +121,7 @@ A definition setting all the parameters looks like:
 
 
 lookup("<table>", <expr>) (function)
-------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Looks up** and returns the value that is associated with the given key (passed as <variable>)
 in lookup table identified by table-name. If no match is found (according to table-type
@@ -203,7 +211,7 @@ key     return
 
 
 reload_lookup_table("<table>", "<stub value>") (statement)
------------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Reloads** lookup table identified by given table name **asynchronously** (by internal trigger, as opposed to HUP).
 
@@ -229,7 +237,7 @@ A ``reload_lookup_table`` invocation looks like:
 
 
 Implementation Details
-----------------------
+======================
 
 The lookup table functionality is implemented via efficient algorithms.
 

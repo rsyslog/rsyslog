@@ -4,7 +4,8 @@ Functions
 RainerScript supports a currently quite limited set of functions:
 
 
-.. function:: getenv(str)
+getenv(str)
+-----------
 
    like the OS call, returns the value of the environment
    variable, if it exists. Returns an empty string if it does not exist.
@@ -17,36 +18,43 @@ RainerScript supports a currently quite limited set of functions:
     if $msg contains getenv('TRIGGERVAR') then /path/to/errfile
 
 
-.. function:: strlen(str)
+strlen(str)
+-----------
 
    returns the length of the provided string
    
-.. function:: tolower(str)
+tolower(str)
+------------
 
    converts the provided string into lowercase
 
-.. function:: cstr(expr)
+cstr(expr)
+----------
 
    converts expr to a string value
 
-.. function:: cnum(expr)
+cnum(expr)
+----------
 
    converts expr to a number (integer)
 
-.. function:: wrap(str, wrapper_str)
+wrap(str, wrapper_str)
+----------------------
 
    returns the str wrapped with wrapper_str. Eg.
    
 ::
    
    wrap("foo bar", "##")
+
 produces    
 
 ::
    
    "##foo bar##"
 
-.. function:: wrap(str, wrapper_str, escaper_str)
+wrap(str, wrapper_str, escaper_str)
+-----------------------------------
 
    returns the str wrapped with wrapper_str.
    But additionally, any instances of wrapper_str appearing in str would be replaced
@@ -62,7 +70,8 @@ produces
    
    "'foo_bar'"
 
-.. function:: replace(str, substr_to_replace, replace_with)
+replace(str, substr_to_replace, replace_with)
+---------------------------------------------
 
    returns new string with all instances of substr_to_replace replaced
    by replace_with. Eg. 
@@ -77,11 +86,13 @@ produces
    
    "foo, Bar, Baz".
 
-.. function:: re\_match(expr, re)
+re\_match(expr, re)
+-------------------
 
     returns 1, if expr matches re, 0 otherwise. Uses POSIX ERE.
 
-.. function:: re\_extract(expr, re, match, submatch, no-found)
+re\_extract(expr, re, match, submatch, no-found)
+------------------------------------------------
 
    extracts data from a string (property) via a regular expression match.
    POSIX ERE regular expressions are used. The variable "match" contains
@@ -92,7 +103,8 @@ produces
    submatch start with zero. It currently is not possible to extract
    more than one submatch with a single call.
 
-.. function:: field(str, delim, matchnbr)
+field(str, delim, matchnbr)
+---------------------------
 
    returns a field-based substring. str is
    the string to search, delim is the delimiter and matchnbr is the
@@ -117,14 +129,16 @@ produces
    set $!usr!field = field($msg, "#011", 2); -- the second field, delmited by "#011"
 
 
-.. function:: prifilt(constant)
+prifilt(constant)
+-----------------
 
    mimics a traditional PRI-based filter (like
    "\*.\*" or "mail.info"). The traditional filter string must be given
    as a **constant string**. Dynamic string evaluation is not permitted
    (for performance reasons).
 
-.. function:: dyn_inc(bucket_name_litteral_string, str)
+dyn_inc(bucket_name_litteral_string, str)
+-----------------------------------------
 
    Increments counter identified by ``str`` in dyn-stats bucket identified
    by ``bucket_name_litteral_string``. Returns 0 when increment is successful,
@@ -138,9 +152,10 @@ produces
    and it rejects increment-operation if it encounters a new(previously unseen)
    metric-name(``str``) when full.
 
-   Read more about it here :doc:`Dynamic Stats<../configuration/dyn_stats>`
+   **Read more about it here** :doc:`Dynamic Stats<../configuration/dyn_stats>`
    
-.. function:: lookup(table_name_litteral_string, key)
+lookup(table_name_litteral_string, key)
+---------------------------------------
 
    Lookup tables are a powerful construct to obtain *class* information based
    on message content. It works on top of a data-file which maps key (to be looked
@@ -151,5 +166,5 @@ produces
    could be used as an index, with the table value representing the type of
    server or the department or remote office it is located in.
 
-   Read more about it here :doc:`Lookup Tables<../configuration/lookup_tables>`
+   **Read more about it here** :doc:`Lookup Tables<../configuration/lookup_tables>`
    

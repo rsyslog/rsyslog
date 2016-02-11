@@ -10,7 +10,7 @@ The metric-name in this case can be a message-property or a sub-string extracted
 Dyn-stats configuration involves a **two part setup**:
 
 dyn_stats(name="<bucket>"...) (object)
------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Defines** the bucket(identified by the bucket-name) and allows user to set some properties that control behavior of the bucket.
 
@@ -36,7 +36,7 @@ A definition setting all the parameters looks like:
 
 
 dyn_inc("<bucket>", <expr>) (function)
-------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Increments** counter identified by value of variable in bucket identified by name.
 
@@ -57,7 +57,7 @@ A ``dyn_inc`` call looks like:
 
 
 Reporting
----------
+=========
 
 ::
 
