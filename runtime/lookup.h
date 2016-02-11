@@ -74,6 +74,7 @@ struct lookup_ref_s {
 	uchar *stub_value_for_reload_failure; 
 	uint8_t do_reload;
 	uint8_t do_stop;
+	uint8_t reload_on_hup;
 };
 
 typedef es_str_t* (lookup_fn_t)(lookup_t*, lookup_key_t);
