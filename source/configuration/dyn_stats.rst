@@ -60,7 +60,7 @@ A ``dyn_inc`` call looks like:
 
 
 Reporting
----------
+^^^^^^^^^
 
 ::
 
@@ -71,7 +71,7 @@ Reporting
    ...
 
 Fields
-^^^^^^
+------
 
 **global: origin=dynstats**:
     **ops_overflow**: Number of operations ignored because number-of-counters-tracked has hit configured max-cardinality.
