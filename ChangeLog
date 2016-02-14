@@ -14,6 +14,9 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - simplified locking in when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
+- omjournal: add support for templates
+  see also: https://github.com/rsyslog/rsyslog/pull/770
+  Thanks to github user bobthemighty for the patch
 - imuxsock: add "ruleset" input parameter
 - imptcp: performance improvements
   Thanks to Janmejay Singh for implementing this improvement
