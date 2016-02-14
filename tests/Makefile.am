@@ -148,6 +148,7 @@ TESTS +=  \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
+	lookup_table_no_hup_reload.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
 	sparse_array_lookup_table.sh \
@@ -170,6 +171,7 @@ TESTS +=  \
 	rscript_field-vg.sh \
 	unused_lookup_table.sh \
 	lookup_table-vg.sh \
+	lookup_table_no_hup_reload-vg.sh \
 	array_lookup_table-vg.sh \
 	array_lookup_table_misuse-vg.sh \
 	sparse_array_lookup_table-vg.sh \
@@ -972,11 +974,14 @@ EXTRA_DIST= \
 	rscript_re_match.sh \
 	testsuites/rscript_re_match.conf \
 	lookup_table.sh \
+	lookup_table_no_hup_reload.sh \
+	lookup_table_no_hup_reload-vg.sh \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
 	testsuites/lookup_table.conf \
+	testsuites/lookup_table_no_hup_reload.conf \
 	testsuites/lookup_table_reload_stub.conf \
 	testsuites/lookup_table_reload.conf \
 	testsuites/xlate.lkp_tbl \

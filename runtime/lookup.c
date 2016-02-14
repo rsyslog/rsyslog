@@ -53,7 +53,8 @@ static void lookupDestruct(lookup_t *pThis);
 /* tables for interfacing with the v6 config system (as far as we need to) */
 static struct cnfparamdescr modpdescr[] = {
 	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED }
+	{ "file", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "reloadOnHUP", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -89,6 +90,7 @@ lookupNew(lookup_ref_t **ppThis)
 	pthread_cond_init(&pThis->run_reloader, NULL);
 	pthread_attr_init(&pThis->reloader_thd_attr);
 	pThis->do_reload = pThis->do_stop = 0;
+	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
 	pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis);
 
 	pThis->next = NULL;
@@ -317,7 +319,7 @@ bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_f
 			l = idx + 1;
 		else
 			return (void *) p;
-    }
+	}
 	if (comparison < 0) {
 		if (idx == 0) {
 			return NULL;
@@ -763,7 +765,7 @@ lookupTableReloader(void *self)
 		}
 	}
 	pthread_mutex_unlock(&pThis->reloader_mut);
-    return NULL;
+	return NULL;
 }
 
 /* reload all lookup tables on HUP */
@@ -772,7 +774,9 @@ lookupDoHUP()
 {
 	lookup_ref_t *luref;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
-		lookupReload(luref, NULL);
+		if (luref->reload_on_hup) {
+			lookupReload(luref, NULL);
+		}
 	}
 }
 
@@ -909,6 +913,8 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 			CHKmalloc(lu->filename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "name")) {
 			CHKmalloc(lu->name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		} else if(!strcmp(modpblk.descr[i].name, "reloadOnHUP")) {
+			lu->reload_on_hup = (pvals[i].val.d.n != 0);
 		} else {
 			dbgprintf("lookup_table: program error, non-handled "
 			  "param '%s'\n", modpblk.descr[i].name);
