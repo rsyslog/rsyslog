@@ -35,12 +35,16 @@
 #include <errno.h>
 #include <unistd.h>
 #include "conf.h"
+#include "cfsysline.h"
+#include <json.h>
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
 #include <systemd/sd-journal.h>
+#include "unicode-helper.h"
+#include <sys/uio.h>
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -54,22 +58,30 @@ DEF_OMOD_STATIC_DATA
 
 
 typedef struct _instanceData {
+    uchar *tplName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
 } wrkrInstanceData_t;
 
+static struct cnfparamdescr actpdescr[] = {
+	{ "template", eCmdHdlrGetWord, 0 }
+};
+static struct cnfparamblk actpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+	  actpdescr
+	};
+
+
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 };
-static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
-	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -102,11 +114,14 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+    free(pData->tplName);
 ENDfreeInstance
 
 
@@ -114,21 +129,44 @@ BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
+static inline void
+setInstParamDefaults(instanceData *pData)
+{
+	pData->tplName = NULL;
+}
 
 BEGINnewActInst
+	struct cnfparamvals *pvals;
+	int i;
 CODESTARTnewActInst
-	/* Note: we currently do not have any parameters, so we do not need
-	 * the lst ptr. However, we will most probably need params in the 
-	 * future.
-	 */
-	(void) lst; /* prevent compiler warning */
 	DBGPRINTF("newActInst (mmjournal)\n");
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	pvals = nvlstGetParams(lst, &actpblk, NULL);
+
 	CHKiRet(createInstance(&pData));
-	/*setInstParamDefaults(pData);*/
+	setInstParamDefaults(pData);
+
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	for(i = 0 ; i < actpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+    		continue;
+
+        if(!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("ommongodb: program error, non-handled "
+			  "param '%s'\n", actpblk.descr[i].name);
+		}
+    }
+
+	if(pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	} else {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName),
+				     OMSR_TPL_AS_JSON));
+	}
+	
 CODE_STD_FINALIZERnewActInst
-/*	cnfparamvalsDestruct(pvals, &actpblk);*/
+	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
@@ -141,27 +179,124 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+
+struct iovec *
+build_iovec(size_t *argc, struct json_object *json) {
+
+    struct lh_entry *entry ;
+    struct iovec *iov;
+    const char *key;
+    const char *val;
+    size_t key_len;
+    size_t val_len;
+    size_t vec_len;
+    size_t i;
+
+    *argc = json_object_object_length(json);
+    iov = malloc( sizeof(struct iovec) * *argc );
+    entry = json_object_get_object(json)->head;
+
+    if(NULL == iov)
+        goto fail;
+
+    /* 
+     * we have to avoid using json_object_object_foreachC because clang static analyzer doesn't believe
+     * that I've correct initialised all the elements of iov.
+     * I'm assuming that json_object_object_length isn't lying to me, and that the json object isn't
+     * changing under my feet so that we can do an explicit `for` iteration instead of just walking the
+     * the linked list.
+     */
+
+    for(i = 0; i < *argc; i++)
+    {
+        key = (char *)entry->k;
+        val = json_object_get_string((struct json_object*)entry->v);
+
+        key_len = strlen(key);
+        val_len = strlen(val);
+        // vec length is len(key=val)
+        vec_len = key_len + val_len + 1;
+
+        char *buf = malloc(vec_len + 1);
+        if(NULL == buf) 
+            goto fail;
+       
+        memcpy(buf, key, key_len);
+        memcpy(buf + key_len, "=", 1);
+        memcpy(buf + key_len + 1, val, val_len+1);
+
+        iov[i].iov_base = buf;
+        iov[i].iov_len = vec_len;
+
+        entry = entry->next;
+    }
+    return iov;
+
+fail:
+    if( NULL == iov)
+        return NULL;
+
+    size_t j;
+    // iterate over any iovecs that were initalised above and free them.
+    for(j = 0; j < i; j++)
+    {
+        free(iov[j].iov_base);
+    }
+
+    free(iov);
+    return NULL;
+}
+
+
+void
+send_non_template_message(msg_t *pMsg) {
+  uchar *tag;
+  int lenTag;
+  int sev;  
+
+  MsgGetSeverity(pMsg, &sev);
+  getTAG(pMsg, &tag, &lenTag);
+  /* we can use more properties here, but let's see if there
+   *   * is some real user interest. We can always add later...
+   *       */
+   sd_journal_send("MESSAGE=%s", getMSG(pMsg),
+       "PRIORITY=%d", sev,
+       "SYSLOG_FACILITY=%d", pMsg->iFacility,
+       "SYSLOG_IDENTIFIER=%s", tag,
+       NULL);
+
+}
+
+void
+send_template_message(struct json_object* json){
+
+    size_t argc;
+    struct iovec *iovec;
+    size_t i;
+
+    iovec = build_iovec(&argc,  json);
+    if( NULL != iovec) {
+        sd_journal_sendv(iovec, argc);
+        for (i =0; i< argc; i++)
+            free(iovec[i].iov_base);
+        free(iovec);
+    }
+
+}
+
 BEGINdoAction
-	msg_t *pMsg;
-	uchar *tag;
-	int lenTag;
-	int sev;
-	int r;
+    instanceData *pData;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
-	MsgGetSeverity(pMsg, &sev);
-	getTAG(pMsg, &tag, &lenTag);
-	/* we can use more properties here, but let's see if there
-	 * is some real user interest. We can always add later...
-	 */
-	r = sd_journal_send("MESSAGE=%s", getMSG(pMsg),
-                "PRIORITY=%d", sev,
-		"SYSLOG_FACILITY=%d", pMsg->iFacility,
-		"SYSLOG_IDENTIFIER=%s", tag,
-                NULL);
-	/* FIXME: think about what to do with errors ;) */
-	(void) r; /* prevent compiler warning */
-ENDdoAction
+
+	pData = pWrkrData->pData;
+
+    if (pData->tplName == NULL) {   
+        send_non_template_message((msg_t*) ppString[0]);
+     }
+    else {
+        send_template_message((struct json_object*) ppString[0]);
+    }
+ ENDdoAction
 
 
 BEGINparseSelectorAct
@@ -200,3 +335,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omjournal: module compiled with rsyslog version %s.\n", VERSION);
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
+
+
