@@ -692,7 +692,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes)
 {
         uchar c;
 	uchar finished;
@@ -721,6 +721,12 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
                 	}
                 	CHKiRet(readCharRet);
         	}
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
+			/* Truncate long line at trimLineOverBytes position */
+			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
+			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
+			cstrAppendChar(*ppCStr, '\n');
+		}
         	CHKiRet(cstrFinalize(*ppCStr));
 	} else if(mode == 1) {
 		finished=0;
@@ -790,6 +796,12 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF)
                				CHKiRet(strmReadChar(pThis, &c));
 				}
 			}
+		}
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
+			/* Truncate long line at trimLineOverBytes position */
+			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
+			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
+			cstrAppendChar(*ppCStr, '\n');
 		}
        		CHKiRet(cstrFinalize(*ppCStr));
 		pThis->bPrevWasNL = 0;
