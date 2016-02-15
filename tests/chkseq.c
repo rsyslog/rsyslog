@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 			}
 			if(edLen != (int) strlen(edBuf)) {
 				if (bAnticipateTruncation == 1) {
-					if (edLen < strlen(edBuf)) {
+					if (edLen < (int) strlen(edBuf)) {
 						printf("extra data length specified %d, but actually is %ld in record %d"
 							   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
 							   edLen, (long) strlen(edBuf), i);
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 					}
 					if(edLen != (int) strlen(edBuf)) {
 						if (bAnticipateTruncation == 1) {
-							if (edLen < strlen(edBuf)) {
+							if (edLen < (int) strlen(edBuf)) {
 								printf("extra data length specified %d, but actually is %ld in record %d"
 									   " (truncation was anticipated, but payload should have been smaller than data-length, not larger)\n",
 									   edLen, (long) strlen(edBuf), i);
