@@ -721,7 +721,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
                 	}
                 	CHKiRet(readCharRet);
         	}
-		if (trimLineOverBytes > 0 && cstrLen(*ppCStr) > trimLineOverBytes) {
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
 			/* Truncate long line at trimLineOverBytes position */
 			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
 			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
@@ -797,7 +797,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 				}
 			}
 		}
-		if (trimLineOverBytes > 0 && cstrLen(*ppCStr) > trimLineOverBytes) {
+		if (trimLineOverBytes > 0 && (uint32_t) cstrLen(*ppCStr) > trimLineOverBytes) {
 			/* Truncate long line at trimLineOverBytes position */
 			dbgprintf("Truncate long line at %u, mode %d\n", trimLineOverBytes, mode);
 			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
