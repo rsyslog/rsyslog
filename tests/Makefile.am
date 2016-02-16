@@ -269,6 +269,8 @@ endif
 endif
 
 if ENABLE_MMNORMALIZE
+TESTS += msgvar-concurrency-array.sh \
+	msgvar-concurrency-array-event.tags.sh
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
@@ -536,10 +538,18 @@ EXTRA_DIST= \
 	testsuites/stop-msgvar.conf \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
+	msgvar-concurrency-array.sh \
+	testsuites/msgvar-concurrency-array.conf \
+	testsuites/msgvar-concurrency-array.rulebase \
+	msgvar-concurrency-array-event.tags.sh \
+	testsuites/msgvar-concurrency-array-event.tags.conf \
+	testsuites/msgvar-concurrency-array-event.tags.rulebase \
 	localvar-concurrency.sh \
 	testsuites/localvar-concurrency.conf \
 	exec_tpl-concurrency.sh \
 	testsuites/exec_tpl-concurrency.conf \
+	prop-all-json-concurrency.sh \
+	testsuites/prop-all-json-concurrency.conf \
 	global_vars.sh \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
