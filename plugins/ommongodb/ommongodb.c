@@ -464,7 +464,7 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
-BEGINdoAction
+BEGINdoAction_NoStrings
 	bson *doc = NULL;
 	instanceData *pData;
 CODESTARTdoAction
@@ -476,9 +476,9 @@ CODESTARTdoAction
 	}
 
 	if(pData->tplName == NULL) {
-		doc = getDefaultBSON((msg_t*)ppString[0]);
+		doc = getDefaultBSON((msg_t*)pMsgData);
 	} else {
-		doc = BSONFromJSONObject((struct json_object *)ppString[0]);
+		doc = BSONFromJSONObject((struct json_object *)pMsgData);
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
