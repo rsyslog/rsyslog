@@ -557,9 +557,9 @@ CODESTARTnewActInst
 	}
 
 	if(pData->db == NULL)
-		pData->db = (uchar*)strdup("syslog");
+		CHKmalloc(pData->db = (uchar*)strdup("syslog"));
 	if(pData->collection == NULL)
-		pData->collection = (uchar*)strdup("log");
+		 CHKmalloc(pData->collection = (uchar*)strdup("log"));
 
 	/* we now create a db+collection string as we need to pass this
 	 * into the API and we do not want to generate it each time ;)
