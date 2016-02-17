@@ -317,7 +317,7 @@ ENDtryResume
 static inline void
 getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
-			  uchar **bulkId)
+		      uchar **bulkId)
 {
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
@@ -354,27 +354,27 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 			*srchType = tpls[1];
 			if(pData->dynParent) {
 				*parent = tpls[2];
-                 if(pData->dynBulkId) {
-                    *bulkId = tpls[3];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[3];
+				}
 			} else {
 				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[2];
+				}
 			}
 		} else  {
 			*srchType = pData->searchType;
 			if(pData->dynParent) {
 				*parent = tpls[1];
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[2];
+				}
 			} else {
 				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[1];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[1];
+				}
 			}
 		}
 	}
