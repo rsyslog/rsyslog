@@ -73,6 +73,7 @@ TESTS +=  \
 	abort-uncleancfg-goodcfg-check.sh \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
+	variable_leading_underscore.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -302,7 +303,8 @@ TESTS +=  \
 	stop_when_array_has_element.sh \
 	json_null_array.sh \
 	json_null.sh \
-	json_var_cmpr.sh
+	json_var_cmpr.sh \
+	json_var_case.sh
 endif
 
 if ENABLE_GNUTLS
@@ -791,6 +793,8 @@ EXTRA_DIST= \
 	testsuites/abort-uncleancfg-badcfg.conf \
 	abort-uncleancfg-badcfg-check_1.sh \
 	testsuites/abort-uncleancfg-badcfg_1.conf \
+	variable_leading_underscore.sh \
+	testsuites/variable_leading_underscore.conf \
 	gzipwr_large.sh \
 	testsuites/gzipwr_large.conf \
 	gzipwr_large_dynfile.sh \
@@ -1042,6 +1046,8 @@ EXTRA_DIST= \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	testsuites/imptcp_nonProcessingPoller.conf \
 	travis/trusty.supp \
+	json_var_case.sh \
+	testsuites/json_var_case.conf \
 	cfg.sh
 
 # TODO: re-enable

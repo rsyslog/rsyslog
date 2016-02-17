@@ -235,7 +235,7 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 
 
 /* Find a outchannel object based on name. Search
- * currently is case-senstive (should we change?).
+ * currently is case-sensitive (should we change?).
  * returns pointer to outchannel object if found and
  * NULL otherwise.
  * rgerhards 2004-11-17
