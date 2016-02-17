@@ -365,7 +365,7 @@ wdmapAdd(int wd, const int dirIdx, lstn_t *const pLstn)
 		; 	/* just scan */
 	if(i >= 0 && wdmap[i].wd == wd) {
 		DBGPRINTF("imfile: wd %d already in wdmap!\n", wd);
-		FINALIZE;
+		ABORT_FINALIZE(RS_RET_FILE_ALREADY_IN_TABLE);
 	}
 	++i;
 	/* i now points to the entry that is to be moved upwards (or end of map) */
@@ -1511,6 +1511,7 @@ done:	return;
 static void
 startLstnFile(lstn_t *const __restrict__ pLstn)
 {
+	rsRetVal localRet;
 	const int wd = inotify_add_watch(ino_fd, (char*)pLstn->pszFileName, IN_MODIFY);
 	if(wd < 0) {
 		char errStr[512];
@@ -1520,7 +1521,10 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 			  pLstn->pszFileName, errStr);
 		goto done;
 	}
-	wdmapAdd(wd, -1, pLstn);
+	if((localRet = wdmapAdd(wd, -1, pLstn)) != RS_RET_OK) {
+		DBGPRINTF("imfile: error %d adding file to wdmap, ignoring\n", localRet);
+		goto done;
+	}
 	DBGPRINTF("imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
@@ -1618,35 +1622,35 @@ static void
 in_dbg_showEv(struct inotify_event *ev)
 {
 	if(ev->mask & IN_IGNORED) {
-		DBGPRINTF("watch was REMOVED\n");
+		DBGPRINTF("INOTIFY event: watch was REMOVED\n");
 	} else if(ev->mask & IN_MODIFY) {
-		DBGPRINTF("watch was MODIFID\n");
+		DBGPRINTF("INOTIFY event: watch was MODIFID\n");
 	} else if(ev->mask & IN_ACCESS) {
-		DBGPRINTF("watch IN_ACCESS\n");
+		DBGPRINTF("INOTIFY event: watch IN_ACCESS\n");
 	} else if(ev->mask & IN_ATTRIB) {
-		DBGPRINTF("watch IN_ATTRIB\n");
+		DBGPRINTF("INOTIFY event: watch IN_ATTRIB\n");
 	} else if(ev->mask & IN_CLOSE_WRITE) {
-		DBGPRINTF("watch IN_CLOSE_WRITE\n");
+		DBGPRINTF("INOTIFY event: watch IN_CLOSE_WRITE\n");
 	} else if(ev->mask & IN_CLOSE_NOWRITE) {
-		DBGPRINTF("watch IN_CLOSE_NOWRITE\n");
+		DBGPRINTF("INOTIFY event: watch IN_CLOSE_NOWRITE\n");
 	} else if(ev->mask & IN_CREATE) {
-		DBGPRINTF("file was CREATED: %s\n", ev->name);
+		DBGPRINTF("INOTIFY event: file was CREATED: %s\n", ev->name);
 	} else if(ev->mask & IN_DELETE) {
-		DBGPRINTF("watch IN_DELETE\n");
+		DBGPRINTF("INOTIFY event: watch IN_DELETE\n");
 	} else if(ev->mask & IN_DELETE_SELF) {
-		DBGPRINTF("watch IN_DELETE_SELF\n");
+		DBGPRINTF("INOTIFY event: watch IN_DELETE_SELF\n");
 	} else if(ev->mask & IN_MOVE_SELF) {
-		DBGPRINTF("watch IN_MOVE_SELF\n");
+		DBGPRINTF("INOTIFY event: watch IN_MOVE_SELF\n");
 	} else if(ev->mask & IN_MOVED_FROM) {
-		DBGPRINTF("watch IN_MOVED_FROM\n");
+		DBGPRINTF("INOTIFY event: watch IN_MOVED_FROM\n");
 	} else if(ev->mask & IN_MOVED_TO) {
-		DBGPRINTF("watch IN_MOVED_TO\n");
+		DBGPRINTF("INOTIFY event: watch IN_MOVED_TO\n");
 	} else if(ev->mask & IN_OPEN) {
-		DBGPRINTF("watch IN_OPEN\n");
+		DBGPRINTF("INOTIFY event: watch IN_OPEN\n");
 	} else if(ev->mask & IN_ISDIR) {
-		DBGPRINTF("watch IN_ISDIR\n");
+		DBGPRINTF("INOTIFY event: watch IN_ISDIR\n");
 	} else {
-		DBGPRINTF("unknown mask code %8.8x\n", ev->mask);
+		DBGPRINTF("INOTIFY event: unknown mask code %8.8x\n", ev->mask);
 	 }
 }
 

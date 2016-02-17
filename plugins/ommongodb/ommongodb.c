@@ -497,7 +497,7 @@ CODESTARTtryResume
 	}
 ENDtryResume
 
-BEGINdoAction
+BEGINdoAction_NoStrings
 	bson *doc = NULL;
 	instanceData *pData;
 CODESTARTdoAction
@@ -509,9 +509,9 @@ CODESTARTdoAction
 	}
 
 	if(pData->tplName == NULL) {
-		doc = getDefaultBSON((msg_t*)ppString[0]);
+		doc = getDefaultBSON((msg_t*)pMsgData);
 	} else {
-		doc = BSONFromJSONObject((struct json_object *)ppString[0]);
+		doc = BSONFromJSONObject((struct json_object *)pMsgData);
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
@@ -590,9 +590,9 @@ CODESTARTnewActInst
 	}
 
 	if(pData->db == NULL)
-		pData->db = (uchar*)strdup("syslog");
+		CHKmalloc(pData->db = (uchar*)strdup("syslog"));
 	if(pData->collection == NULL)
-		pData->collection = (uchar*)strdup("log");
+		 CHKmalloc(pData->collection = (uchar*)strdup("log"));
 
 	/* we now create a db+collection string as we need to pass this
 	 * into the API and we do not want to generate it each time ;)
