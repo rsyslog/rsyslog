@@ -568,17 +568,11 @@ static void _log_error(const char *message, pn_condition_t *cond)
 }
 
 
-// link, session, connection endpoint state flags
-static const pn_state_t ENDPOINT_ACTIVE = (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-static const pn_state_t ENDPOINT_CLOSING = (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
-static const pn_state_t ENDPOINT_CLOSED = (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED);
-
-
 /* is the link ready to send messages? */
 static sbool _is_ready(pn_link_t *link)
 {
     return (link
-            && pn_link_state(link) == ENDPOINT_ACTIVE
+            && pn_link_state(link) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)
             && pn_link_credit(link) > 0);
 }
 
