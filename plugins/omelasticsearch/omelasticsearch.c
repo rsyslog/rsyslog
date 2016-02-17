@@ -320,6 +320,7 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **bulkId)
 {
 	if(tpls == NULL) {
+		*srchIndex = pData->searchIndex;
 		*parent = pData->parent;
 		*srchType = pData->searchType;
 		*bulkId = NULL;
