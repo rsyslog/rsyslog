@@ -314,11 +314,18 @@ ENDtryResume
 
 
 /* get the current index and type for this message */
-static inline void
+static void
 getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
 		      uchar **bulkId)
 {
+	if(tpls == NULL) {
+		*parent = pData->parent;
+		*srchType = pData->searchType;
+		*bulkId = NULL;
+		goto done;
+	}
+
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
@@ -378,6 +385,7 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 			}
 		}
 	}
+done:	return;
 }
 
 
