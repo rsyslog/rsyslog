@@ -16,6 +16,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
   variables are heavily accessed.
 - imfile: add "trimlineoverbytes" input paramter
   Thanks to github user JindongChen for the patch.
+- ommongodb: add support for extended json format for dates
+  Thanks to Florian Bücklers for the patch.
 - omjournal: add support for templates
   see also: https://github.com/rsyslog/rsyslog/pull/770
   Thanks to github user bobthemighty for the patch
