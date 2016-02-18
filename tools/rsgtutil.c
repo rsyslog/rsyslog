@@ -1677,7 +1677,7 @@ rsgtutil_usage(void)
 			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
 			"\t-T, --detect-file-type \t Show Type of signature file.\n"
 			"\t-c, --convert \t\t\t Convert Signature Format Version 10 to 11.\n"
-			"\t-V, --Version \t\t\t Print utility version\n"
+			"\t-V, --version \t\t\t Print utility version\n"
 			"\t\tOptional parameters\n"
 			"\t-a <GT|KSI>, --api  <GT|KSI> \t Set which API to use.\n"
 			"\t\tGT = Guardtime Client Library\n"
