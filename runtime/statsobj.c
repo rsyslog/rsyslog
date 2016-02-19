@@ -274,7 +274,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	CHKiRet(cstrConstruct(&pcstr));
 
-	if (fmt == statsFmt_JSON)
+	if (fmt == statsFmt_CEE)
 		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
 	
 	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
