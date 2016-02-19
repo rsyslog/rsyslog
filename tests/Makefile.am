@@ -96,6 +96,7 @@ TESTS +=  \
 	dircreate_off.sh \
 	imuxsock_logger.sh \
 	imuxsock_logger_ruleset.sh \
+	imuxsock_logger_ruleset_ratelimit.sh \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_traillf.sh \
@@ -873,6 +874,8 @@ EXTRA_DIST= \
 	testsuites/imuxsock_logger.conf \
 	imuxsock_logger_ruleset.sh \
 	testsuites/imuxsock_logger_ruleset.conf \
+	imuxsock_logger_ruleset_ratelimit.sh \
+	testsuites/imuxsock_logger_ruleset_ratelimit.conf \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
 	testsuites/imuxsock_logger_root.conf \

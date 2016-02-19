@@ -1109,6 +1109,7 @@ activateListeners()
 			listeners[0].ht = NULL;
 		}
 		listeners[0].fd = -1;
+		listeners[0].pRuleset = NULL;
 		listeners[0].hostName = NULL;
 		listeners[0].bParseHost = 0;
 		listeners[0].bCreatePath = 0;
