@@ -101,6 +101,9 @@ TESTS +=  \
 	imuxsock_logger_parserchain.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
+	imuxsock_logger_syssock.sh \
+	imuxsock_traillf_syssock.sh \
+	imuxsock_ccmiddle_syssock.sh \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
@@ -878,17 +881,23 @@ EXTRA_DIST= \
 	testsuites/imuxsock_logger_ruleset_ratelimit.conf \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_root.sh \
+	imuxsock_logger_syssock.sh \
 	testsuites/imuxsock_logger_root.conf \
+	testsuites/imuxsock_logger_syssock.conf \
 	resultdata/imuxsock_logger.log \
 	imuxsock_traillf.sh \
 	testsuites/imuxsock_traillf.conf \
 	imuxsock_traillf_root.sh \
+	imuxsock_traillf_syssock.sh \
 	testsuites/imuxsock_traillf_root.conf \
+	testsuites/imuxsock_traillf_syssock.conf \
 	resultdata/imuxsock_traillf.log \
 	imuxsock_ccmiddle.sh \
 	testsuites/imuxsock_ccmiddle.conf \
 	imuxsock_ccmiddle_root.sh \
+	imuxsock_ccmiddle_syssock.sh \
 	testsuites/imuxsock_ccmiddle_root.conf \
+	testsuites/imuxsock_ccmiddle_syssock.conf \
 	resultdata/imuxsock_ccmiddle.log \
 	imuxsock_hostname.sh \
 	testsuites/imuxsock_hostname.conf \
