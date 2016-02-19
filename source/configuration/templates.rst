@@ -264,7 +264,7 @@ This is a sample for a string-based template:
 The text between percent signs ('%') is interpreted by the rsyslog
 :doc:`property replacer <property_replacer>`. In a nutshell,
 it contains the property to use as well as options for formatting
-and further processing. This is very similar to what the ``property`` 
+and further processing. This is very similar to what the ``property``
 object in list templates does (it actually is just a different language to
 express most of the same things).
 
@@ -322,8 +322,18 @@ must use stdsql together with MySQL if in MySQL configuration the
 will replace single quotes ("'") by two single quotes ("''") inside each
 field.
 
-At no time, multiple template option should be used. This can cause
-unpredictable behaviour and is against all logic.
+**option.casesensitive** - treat property name references as case
+sensitive. The default is "off", where all property name references are
+first converted to lowercase during template definition. With this
+option turned "on", property names are looked up as defined in the
+template. Use this option if you have JSON (``$!*``), local (``!.*``),
+or global (``$!\\*``) properties which container uppercase letters. The
+normal Rsyslog properties are case-insensitive, so this option is not
+needed for properly referencing those properties.
+
+The use the options **option.sql**, **option.stdsql**, and
+**option.json** are mutually exclusive. Using more than one at the same
+time can cause unpredictable behaviour.
 
 Either the **sql** or **stdsql** option **must** be specified when a
 template is used for writing to a database, otherwise injection might
@@ -482,7 +492,7 @@ The general format is
 ::
 
   $template name,param[,options]
-  
+
 where "name" is the template name and
 "param" is a single parameter that specifies template content. The
 optional "options" part is used to set template options.
