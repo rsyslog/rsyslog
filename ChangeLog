@@ -29,6 +29,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - improve interface definition in some modules, e.g. mmanon, mmsequence
   This is more an internal cleanup and should have no actual affect to
   the end user.
+- bugfix impstats: @cee cookie was prefixed to wrong fromat (json vs. cee)
+  Thanks to Volker Fröhlich for the fix.
 - bugfix imfile: fix race during startup that could lead to some duplication
   If a to-be-monitored file was created after inotify was initialized
   but before startup was completed, the first chunk of data from this
