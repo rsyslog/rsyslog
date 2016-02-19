@@ -1,6 +1,6 @@
 /* rsyslog parser interface.
  *
- * Copyright 2011-2014 Rainer Gerhards
+ * Copyright 2011-2016 Rainer Gerhards
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@
 #include "rainerscript.h"
 int cnfSetLexFile(char*);
 int yyparse();
-char *cnfcurrfn;
 void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_errmsg(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);
 extern int yydebug;
 extern int yylineno;
+extern char *cnfcurrfn;
 
 /* entry points to be called after the parser has processed the
  * element in question. Actual processing must than be done inside
@@ -38,4 +38,4 @@ void cnfDoScript(struct cnfstmt *script);
 void cnfDoCfsysline(char *ln);
 void cnfDoBSDTag(char *ln);
 void cnfDoBSDHost(char *ln);
- #endif
+#endif
