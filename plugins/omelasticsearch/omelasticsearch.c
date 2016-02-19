@@ -316,14 +316,12 @@ ENDtryResume
 /* get the current index and type for this message */
 static inline void
 getIndexTypeAndParent(instanceData *pData, uchar **tpls,
-		      uchar **srchIndex, uchar **srchType, uchar **parent,
-			  uchar **bulkId)
+			uchar **srchIndex, uchar **srchType, uchar **parent,
+			uchar **bulkId)
 {
-	if(tpls == NULL)
-		return;
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
-		if(pData->dynSrchType) {
+		if(pData->dynSrchType && (tpls != NULL)) {
 			*srchType = tpls[2];
 			if(pData->dynParent) {
 				*parent = tpls[3];
@@ -338,6 +336,22 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 			}
 		} else  {
 			*srchType = pData->searchType;
+			if(pData->dynParent && (tpls != NULL)) {
+				*parent = tpls[2];
+				if(pData->dynBulkId) {
+					*bulkId = tpls[3];
+				}
+			} else {
+				*parent = pData->parent;
+				if(pData->dynBulkId && (tpls != NULL)) {
+					*bulkId = tpls[2];
+				}
+			}
+		}
+	} else {
+		*srchIndex = pData->searchIndex;
+		if(pData->dynSrchType && (tpls != NULL)) {
+			*srchType = tpls[1];
 			if(pData->dynParent) {
 				*parent = tpls[2];
 				if(pData->dynBulkId) {
@@ -349,34 +363,18 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 					*bulkId = tpls[2];
 				}
 			}
-		}
-	} else {
-		*srchIndex = pData->searchIndex;
-		if(pData->dynSrchType) {
-			*srchType = tpls[1];
-			if(pData->dynParent) {
-				*parent = tpls[2];
-                 if(pData->dynBulkId) {
-                    *bulkId = tpls[3];
-                }
-			} else {
-				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
-			}
 		} else  {
 			*srchType = pData->searchType;
-			if(pData->dynParent) {
+			if(pData->dynParent && (tpls != NULL)) {
 				*parent = tpls[1];
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[2];
+				}
 			} else {
 				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[1];
-                }
+				if(pData->dynBulkId && (tpls != NULL)) {
+					*bulkId = tpls[1];
+				}
 			}
 		}
 	}
