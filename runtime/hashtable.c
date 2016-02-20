@@ -266,7 +266,7 @@ hashtable_destroy(struct hashtable *h, int free_values)
 /* one provided by Aaaron Wiebe based on perl's hashing algorithm 
  * (so probably pretty generic). Not for excessively large strings!
  */
-unsigned int
+unsigned __attribute__((nonnull(1))) int
 hash_from_string(void *k) 
 {
     char *rkey = (char*) k;
