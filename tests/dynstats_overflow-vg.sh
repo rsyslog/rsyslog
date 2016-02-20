@@ -5,13 +5,13 @@ echo ===========================================================================
 echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed provisioned capacity
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup-vg dynstats_overflow.conf
-. $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
+. $srcdir/diag.sh wait-for-dyn-stats-reset 'rsyslog.out.stats.log' 'msg_stats'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_0
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh msleep 800
+. $srcdir/diag.sh msleep 1000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_1
 . $srcdir/diag.sh wait-queueempty
-. $srcdir/diag.sh msleep 1300 #sleep above + this = 2 seconds, so metric-names reset should have happened
+. $srcdir/diag.sh msleep 3100 #sleep above + this = 4 seconds, so metric-names reset should have happened
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh first-column-sum-check 's/.*foo=\([0-9]\+\)/\1/g' 'foo=' 'rsyslog.out.stats.log' 5
 . $srcdir/diag.sh first-column-sum-check 's/.*bar=\([0-9]\+\)/\1/g' 'bar=' 'rsyslog.out.stats.log' 1
@@ -21,8 +21,9 @@ echo \[dynstats_overflow-vg.sh\]: test for gathering stats when metrics exceed p
 . $srcdir/diag.sh custom-assert-content-missing 'grault' 'rsyslog.out.stats.log'
 rm $srcdir/rsyslog.out.stats.log
 . $srcdir/diag.sh issue-HUP #reopen stats file
+. $srcdir/diag.sh wait-for-dyn-stats-reset 'rsyslog.out.stats.log' 'msg_stats'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_more_2
-. $srcdir/diag.sh msleep 2100
+. $srcdir/diag.sh msleep 4100
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown

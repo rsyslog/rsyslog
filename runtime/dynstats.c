@@ -114,6 +114,7 @@ dynstats_destroyBucket(dynstats_bucket_t* b) {
 	statsobj.DestructCounter(bkts->global_stats, b->pNoMetricCtr);
 	statsobj.DestructCounter(bkts->global_stats, b->pMetricsPurgedCtr);
 	statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
+	statsobj.DestructCounter(bkts->global_stats, b->pPurgeTriggeredCtr);
 	free(b);
 }
 
@@ -162,6 +163,12 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
 									   CTR_FLAG_RESETTABLE, &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr));
 
+	suffix_litteral = UCHAR_CONSTANT("purge_triggered");
+	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
+	STATSCOUNTER_INIT(b->ctrPurgeTriggered, b->mutCtrPurgeTriggered);
+	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
+									   CTR_FLAG_RESETTABLE, &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr));
+
 finalize_it:
 	free(metric_name_buff);
 	if (iRet != RS_RET_OK) {
@@ -180,6 +187,9 @@ finalize_it:
 		if (b->pOpsIgnoredCtr != NULL) {
 			statsobj.DestructCounter(bkts->global_stats, b->pOpsIgnoredCtr);
 		}
+        if (b->pPurgeTriggeredCtr != NULL) {
+			statsobj.DestructCounter(bkts->global_stats, b->pPurgeTriggeredCtr);
+		}
 	}
 	RETiRet;
 }
@@ -197,6 +207,7 @@ dynstats_resetBucket(dynstats_bucket_t *b, uint8_t do_purge) {
 		dynstats_destroyCounters(b);
 	}
 	ATOMIC_STORE_0_TO_INT(&b->metricCount, &b->mutMetricCount);
+	STATSCOUNTER_INC(b->ctrPurgeTriggered, b->mutCtrPurgeTriggered);
     b->ctrs = NULL;
 	if ((b->table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free)) == NULL) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);

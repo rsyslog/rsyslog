@@ -328,6 +328,20 @@ case $1 in
 		done
 		echo "stats push registered"
 		;;
+	 'wait-for-dyn-stats-reset')
+		echo "will wait for dyn-stats-reset"
+		while [[ ! -f $2 ]]; do
+				echo waiting for stats file "'$2'" to be created
+				./msleep 100
+		done
+		prev_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+.purge_triggered=//g' | awk '{s+=$1} END {print s}')
+		new_purged=$prev_purged
+		while [[ "x$prev_purged" == "x$new_purged" ]]; do
+				new_purged=$(cat $2 | grep -F 'origin=dynstats' | grep -F "${3}.purge_triggered=" | sed -e 's/.\+\.purge_triggered=//g' | awk '{s+=$1} END {print s}') # busy spin, because it allows as close timing-coordination in actual test run as possible
+				./msleep 10
+		done
+		echo "dyn-stats reset for bucket ${3} registered"
+		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then

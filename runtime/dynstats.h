@@ -44,6 +44,8 @@ struct dynstats_bucket_s {
 	ctr_t *pMetricsPurgedCtr;
 	STATSCOUNTER_DEF(ctrOpsIgnored, mutCtrOpsIgnored);
 	ctr_t *pOpsIgnoredCtr;
+	STATSCOUNTER_DEF(ctrPurgeTriggered, mutCtrPurgeTriggered);
+	ctr_t *pPurgeTriggeredCtr;
 	struct dynstats_bucket_s *next; /* linked list ptr */
 	struct dynstats_ctr_s *ctrs;
 	uint32_t maxCardinality;
