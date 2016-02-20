@@ -269,12 +269,10 @@ hashtable_destroy(struct hashtable *h, int free_values)
 unsigned int
 hash_from_string(void *k) 
 {
-    int len;
     char *rkey = (char*) k;
     unsigned hashval = 1;
 
-    len = (int) strlen(rkey);
-    while (len--)
+    while (*rkey)
         hashval = hashval * 33 + *rkey++;
 
     return hashval;
