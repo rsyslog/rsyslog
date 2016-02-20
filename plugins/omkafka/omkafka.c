@@ -391,7 +391,10 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 		STATSCOUNTER_INC(ctrCacheEvict, mutCtrCacheEvict);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
-		/* we need to allocate memory for the cache structure */
+		pCache[iFirstFree] = NULL;
+	}
+	/* we need to allocate memory for the cache structure */
+	if(pCache[iFirstFree] == NULL) {
 		CHKmalloc(pCache[iFirstFree] = (dynaTopicCacheEntry*) calloc(1, sizeof(dynaTopicCacheEntry)));
 		CHKiRet(pthread_rwlock_init(&pCache[iFirstFree]->lock, NULL));
 	}
