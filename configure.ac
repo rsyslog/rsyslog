@@ -156,6 +156,7 @@ AC_CHECK_DECL([GLOB_NOMAGIC], [AC_DEFINE(HAVE_GLOB_NOMAGIC, [1], [set define])],
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
 AC_TRY_COMPILE([
 	#include <sys/param.h>
+	#include <netdb.h>
 	], [
 	return MAXHOSTNAMELEN;
 	]
