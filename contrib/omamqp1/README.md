@@ -76,9 +76,10 @@ module, install the _qpid-proton-c-devel_ package.
 
 Pre-built packages from most Ubuntu/Debian systems are available via
 the [QPID project's PPA on Launchpad](https://launchpad.net/~qpid).
-For example, to install the latest version of the Proton packages:
+For example, to install the latest version of the Proton packages (as
+of this writing):
 
-  $ sudo apt-get-repository ppa:qpid/released
+  $ sudo add-apt-repository ppa:qpid/released
   $ sudo apt-get update
   $ sudo apt-get install libqpid-proton3 libqpid-proton3-dev
 
