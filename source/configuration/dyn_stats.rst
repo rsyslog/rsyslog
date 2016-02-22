@@ -84,6 +84,7 @@ Fields
 
     **ops_ignored**: Number of operations ignored due to potential performance overhead. Dyn-stats subsystem ignores operations to avoid performance-penalty if it can't get access to counter without delay(lock acquiring latency).
 
+    **purge_triggered**: Indicates that a discard was performed (1 implies a discard-cycle run).
     
 **msg_per_host: origin=dynstats.bucket**:
     **<metric_name>**: Value of counter identified by <metric-name>.
