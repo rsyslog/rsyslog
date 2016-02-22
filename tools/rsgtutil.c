@@ -764,7 +764,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	}
 
 	/* Check if we have a logsignature file */
-	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11", verbose)) == 0) {
+	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11", 0)) == 0) {
 		/* Verify Log signature */
 		if(debug) printf("debug: verifyKSI:\t\t\t Found log signature file ... \n");
 		if(mode == MD_EXTEND) {
@@ -814,7 +814,6 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 		if(debug) printf("verifyKSI:\t\t\t Found record integrity proof file ... \n");
 		FILEMODE = FILEMODE_RECSIG; 
 
-		bInBlock = 0;
 		ectx.blkNum = 0;
 		ectx.recNumInFile = 0;
 
@@ -896,8 +895,10 @@ if (debug) printf("debug: verifyKSI:\t\t\t DONE with LOOP iCurrentLine=%d > iMax
 	}
 done:
 	/* Free mem first */
-	if (lineRec != NULL)
+	if (lineRec != NULL) {
 		free(lineRec);
+		lineRec = NULL; 
+	}
 
 	if(r != RSGTE_EOF)
 		goto err;
@@ -1028,10 +1029,11 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 		char* pszTmp = linenumbers;
 		if (*(pszTmp) != ',')
 			iLineNumbers++; 
+		else
+			pszTmp++; /*Next Char*/
 
 		while(pszTmp != NULL) {
 			pszTmp = strchr(pszTmp, ',');
-
 			if( pszTmp != NULL) {
 				pszTmp++;
 				if ( *(pszTmp) == ',' ) {
@@ -1042,6 +1044,11 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 				}
 			}
 		}
+		if (iLineNumbers == 0) {
+			fprintf(stderr, "extractKSI:\t\t\t error invalid linenumbers\n");
+			r = RSGTE_IO;
+			goto done;
+		}
 		if (debug) printf("debug: extractKSI:\t\t\t found '%d' linenumbers\n", iLineNumbers);
 
 		/* Convert line numbers into int Array */
@@ -1050,7 +1057,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 		int iNumLength = 0; 
 		char szTmpNum[11]; 
 		char* pszBegin = linenumbers;
-		char* pszEnd = linenumbers;
+		char* pszEnd; 
 		while(pszBegin != NULL) {
 			/* Cut number from string */
 			pszEnd = strchr(pszBegin, ',');
@@ -1165,6 +1172,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 				if (hashchain->hashsteps[j]->sib_hash.data == NULL) free(hashchain->hashsteps[j]->sib_hash.data); 
 			}
 			free(hashchain); 
+			hashchain = NULL; 
 		}
 
 		/* Init new HashChain */
@@ -1350,7 +1358,14 @@ done:
 		free(lineRec);
 	if (paiLineNumbers != NULL)
 		free(paiLineNumbers); 
-
+	/* Free hashchain */
+	if (hashchain != NULL) {
+		if (hashchain->rec_hash.data == NULL) free(hashchain->rec_hash.data); 
+		for(j = 0 ; j < hashchain->stepCount ; ++j) {
+			if (hashchain->hashsteps[j]->sib_hash.data == NULL) free(hashchain->hashsteps[j]->sib_hash.data); 
+		}
+		free(hashchain); 
+	}
 	if(r != RSGTE_EOF) {
 		goto done2;
 	}

@@ -866,15 +866,18 @@ rsgt_objfree(uint16_t tlvtype, void *obj)
 
 	switch(tlvtype) {
 	case 0x0901:
-		free(((block_hdr_t*)obj)->iv);
-		free(((block_hdr_t*)obj)->lastHash.data);
+		if ( ((block_hdr_t*)obj)->iv != NULL)
+			free(((block_hdr_t*)obj)->iv);
+		if ( ((block_hdr_t*)obj)->lastHash.data != NULL)
+			free(((block_hdr_t*)obj)->lastHash.data);
 		break;
 	case 0x0902:
 	case 0x0903:
 		free(((imprint_t*)obj)->data);
 		break;
 	case 0x0904:
-		free(((block_sig_t*)obj)->sig.der.data);
+		if ( ((block_sig_t*)obj)->sig.der.data != NULL)
+			free(((block_sig_t*)obj)->sig.der.data);
 		break;
 	default:fprintf(stderr, "rsgt_objfree: unknown tlv record %4.4x\n",
 		        tlvtype);
