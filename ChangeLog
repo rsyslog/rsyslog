@@ -29,6 +29,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - improve interface definition in some modules, e.g. mmanon, mmsequence
   This is more an internal cleanup and should have no actual affect to
   the end user.
+- solaris build: MAXHOSTNAMELEN properly detected
 - bugfix omkafka: fix potential NULL pointer addressing
   this happened when the topic cache was full and an entry
   needed to be evicted
