@@ -11,6 +11,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - new feature: dynamic statistics counters
   which may be changed during rule processing
   Thanks to Janmejay Singh for suggesting and implementing this feature
+- new contributed plugin: omampq1 for AMQP 1.0-compliant brokers
+  Thanks to Ken Giusti for this module
 - simplified locking in when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
