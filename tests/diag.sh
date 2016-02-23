@@ -55,6 +55,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
+		rm -f testconf.conf
 		rm -f rsyslog.errorfile
 		rm -f core.* vgcore.*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -82,6 +83,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
+		rm -f testconf.conf
 		rm -f rsyslog.errorfile
 		rm -f HOSTNAME imfile-state:.-rsyslog.input
 		unset TCPFLOOD_EXTRA_OPTS
@@ -100,11 +102,16 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		if [ ! -f $srcdir/testsuites/$2 ]; then
-		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		if [ "x$2" == "x" ]; then
+		    CONF_FILE="testconf.conf"
+		else
+		    CONF_FILE="$srcdir/testsuites/$2"
+		fi
+		if [ ! -f $CONF_FILE ]; then
+		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-silent')   # start rsyslogd with default params. $2 is the config file name to use
@@ -118,11 +125,16 @@ case $1 in
 		;;
    'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
-		if [ ! -f $srcdir/testsuites/$2 ]; then
-		    echo "ERROR: config file '$srcdir/testsuites/$2' not found!"
+		if [ "x$2" == "x" ]; then
+		    CONF_FILE="testconf.conf"
+		else
+		    CONF_FILE="$srcdir/testsuites/$2"
+		fi
+		if [ ! -f $CONF_FILE ]; then
+		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
@@ -418,10 +430,10 @@ case $1 in
 		. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 		;;
    'generate-conf')   # start a standard test rsyslog.conf
-		echo "\$IncludeConfig diag-common.conf" > $srcdir/testsuites/testconf.conf
+		echo "\$IncludeConfig diag-common.conf" > testconf.conf
 		;;
    'add-conf')   # start a standard test rsyslog.conf
-		echo "$2" >> $srcdir/testsuites/testconf.conf
+		echo "$2" >> testconf.conf
 		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
