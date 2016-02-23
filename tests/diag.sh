@@ -417,6 +417,12 @@ case $1 in
 		. $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 		. $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 		;;
+   'generate-conf')   # start a standard test rsyslog.conf
+		echo "\$IncludeConfig diag-common.conf" > $srcdir/testsuites/testconf.conf
+		;;
+   'add-conf')   # start a standard test rsyslog.conf
+		echo "$2" >> $srcdir/testsuites/testconf.conf
+		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
