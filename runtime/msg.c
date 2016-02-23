@@ -612,7 +612,7 @@ propNameToID(uchar *pName, propid_t *pPropID)
 	} else if(!strcasecmp((char*) pName, "$MINUTE")) {
 		*pPropID = PROP_SYS_MINUTE;
 	} else if(!strcmp((char*) pName, "$now-utc")) {
-		*pPropID = PROP_SYS_NOW;
+		*pPropID = PROP_SYS_NOW_UTC;
 	} else if(!strcmp((char*) pName, "$year-utc")) {
 		*pPropID = PROP_SYS_YEAR_UTC;
 	} else if(!strcmp((char*) pName, "$month-utc")) {

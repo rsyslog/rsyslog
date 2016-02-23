@@ -28,6 +28,7 @@ TESTS +=  \
 	fac_invld3.sh \
 	fac_invld4_rfc5424.sh \
 	now_family_utc.sh \
+	now-utc.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
@@ -586,6 +587,8 @@ EXTRA_DIST= \
 	testsuites/fac_invld4_rfc5424.conf \
 	now_family_utc.sh \
 	testsuites/now_family_utc.conf \
+	now-utc.sh \
+	testsuites/now-utc.conf \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
