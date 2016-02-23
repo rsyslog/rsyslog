@@ -67,9 +67,26 @@ The following parameters are recognized by the module:
 The package is dependent on the QPID Proton AMQP 1.0 library.
 
 To build this package you must also have the QPID Proton C headers
-installed.  Check your distribution for the availability of Proton
+installed.
+
+Pre-built packages are available for Fedora 22+ via the base Fedora
+repos.  Packages for RHEL/Centos based systems can be obtained via
+[EPEL](https://fedoraproject.org/wiki/EPEL).  In order to build the
+module, install the _qpid-proton-c-devel_ package.
+
+Pre-built packages from most Ubuntu/Debian systems are available via
+the [QPID project's PPA on Launchpad](https://launchpad.net/~qpid).
+For example, to install the latest version of the Proton packages (as
+of this writing):
+
+  $ sudo add-apt-repository ppa:qpid/released
+  $ sudo apt-get update
+  $ sudo apt-get install libqpid-proton3 libqpid-proton3-dev
+
+Check your distribution for the availability of Proton
 packages.  Alternatively, you can pull down the Proton code from the
 [project website](http://qpid.apache.org/) and build it yourself.
+
 
 ## Debugging ##
 
