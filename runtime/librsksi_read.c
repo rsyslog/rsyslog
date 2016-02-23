@@ -123,6 +123,7 @@ rsksi_errctxInit(ksierrctx_t *ectx)
 void
 rsksi_errctxExit(ksierrctx_t *ectx)
 {
+	free(ectx->errRec); 
 	free(ectx->filename);
 	free(ectx->frstRecInBlk);
 }
@@ -135,6 +136,7 @@ rsksi_errctxExit(ksierrctx_t *ectx)
 void
 rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec)
 {
+	free(ectx->errRec); 
 	ectx->errRec = strdup(rec);
 }
 /* This stores the block's first record. Here we copy the data,
@@ -1102,6 +1104,7 @@ rsksi_objfree(uint16_t tlvtype, void *obj)
 				if (((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data != NULL) {
 					free(((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data);
 				}
+				free( (block_hashstep_t*)((block_hashchain_t*)obj)->hashsteps[j] ); 
 			}
 		}
 		break;
@@ -1397,6 +1400,7 @@ rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t b
 		memcpy(ksi->IV, bh->iv, getIVLenKSI(bh));
 	}
 	if (bh->lastHash.data != NULL ) {
+		rsksiimprintDel(ksi->x_prev); /* Delete first incase isset */
 		ksi->x_prev = malloc(sizeof(imprint_t));
 		ksi->x_prev->len=bh->lastHash.len;
 		ksi->x_prev->hashID = bh->lastHash.hashID;
@@ -1574,14 +1578,12 @@ rsksi_vrfy_nextRecExtract(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char 
 		r = rsksi_vrfy_chkTreeHash(ksi, sigfp, nsigfp, x, ectx);
 		if(r != 0) goto done;
 	}
-
-/* EXTRA DEBUG !!!! */
-if(rsksi_read_debug) {
-	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Left Hash.....: ", m, ectx->verbose);
-	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Right Hash....: ", recHash, ectx->verbose);
-	outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Current Hash..: ", x, ectx->verbose);
-}
-
+	/* EXTRA DEBUG !!!! */
+	if(rsksi_read_debug) {
+		outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Left Hash.....: ", m, ectx->verbose);
+		outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Right Hash....: ", recHash, ectx->verbose);
+		outputKSIHash(stdout, "debug: rsksi_vrfy_nextRecExtract:\t Tree Current Hash..: ", x, ectx->verbose);
+	}
 	/* Store Current Hash for later use */
 	rsksiimprintDel(ksi->x_prev);
 	ksi->x_prev = rsksiImprintFromKSI_DataHash(ksi, x);

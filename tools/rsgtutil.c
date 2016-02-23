@@ -735,7 +735,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	int FILEMODE = FILEMODE_LOGSIG; /* Default FileMode */ 
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
-	ksifile ksi;
+	ksifile ksi = NULL;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int r = 0;
@@ -998,7 +998,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
 	tlvrecord_t tlvbhrec; 
-	ksifile ksi;
+	ksifile ksi = NULL;
 	uint8_t bHasRecHashes, bHasIntermedHashes;
 	uint8_t bInBlock;
 	int bInitDone = 0;
@@ -1167,12 +1167,8 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	{
 		/* Free previous hashchain */
 		if (hashchain != NULL) {
-			if (hashchain->rec_hash.data == NULL) free(hashchain->rec_hash.data); 
-			for(j = 0 ; j < hashchain->stepCount ; ++j) {
-				if (hashchain->hashsteps[j]->sib_hash.data == NULL) free(hashchain->hashsteps[j]->sib_hash.data); 
-			}
-			free(hashchain); 
-			hashchain = NULL; 
+			rsksi_objfree(0x0907, hashchain); 
+			hashchain = NULL;
 		}
 
 		/* Init new HashChain */
@@ -1253,8 +1249,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineSearch,
 			/* Check if this is a new signature block */
 			if(bInBlock == 0) {
 				/* Free memory */
-				if(bs != NULL) rsksi_objfree(0x0904, bs);
-				if(bh != NULL) rsksi_objfree(0x0901, bh);
+				if(bs != NULL) { rsksi_objfree(0x0904, bs); bs = NULL; }
+				if(bh != NULL) { rsksi_objfree(0x0901, bh); bh = NULL; }
 				
 				/* Get/Verify Block Paramaters */
 				if((r = rsksi_getBlockParams(ksi, sigfp, 1, &bs, &bh, &bHasRecHashes, &bHasIntermedHashes)) != 0) {
@@ -1358,14 +1354,25 @@ done:
 		free(lineRec);
 	if (paiLineNumbers != NULL)
 		free(paiLineNumbers); 
+
 	/* Free hashchain */
 	if (hashchain != NULL) {
-		if (hashchain->rec_hash.data == NULL) free(hashchain->rec_hash.data); 
-		for(j = 0 ; j < hashchain->stepCount ; ++j) {
-			if (hashchain->hashsteps[j]->sib_hash.data == NULL) free(hashchain->hashsteps[j]->sib_hash.data); 
-		}
-		free(hashchain); 
+		rsksi_objfree(0x0907, hashchain); 
+		hashchain = NULL;
 	}
+
+	/* Free Blockheader / Sig */
+	if(bs != NULL) rsksi_objfree(0x0904, bs);
+	if(bh != NULL) rsksi_objfree(0x0901, bh);
+
+	/* Free KSI File helper stuff */
+	if (ksi != NULL) {
+		rsksiCtxDel(ksi->ctx);
+		free(ksi->IV);
+		rsksiimprintDel(ksi->x_prev);
+		free(ksi);
+	}
+
 	if(r != RSGTE_EOF) {
 		goto done2;
 	}
