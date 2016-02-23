@@ -30,6 +30,7 @@ TESTS +=  \
 	now_family_utc.sh \
 	now-utc.sh \
 	now-utc-ymd.sh \
+	now-utc-casecmp.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
@@ -589,6 +590,7 @@ EXTRA_DIST= \
 	now_family_utc.sh \
 	testsuites/now_family_utc.conf \
 	now-utc-ymd.sh \
+	now-utc-casecmp.sh \
 	now-utc.sh \
 	testsuites/now-utc.conf \
 	rawmsg-after-pri.sh \

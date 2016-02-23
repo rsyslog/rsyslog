@@ -611,21 +611,21 @@ propNameToID(uchar *pName, propid_t *pPropID)
 		*pPropID = PROP_SYS_QHOUR;
 	} else if(!strcasecmp((char*) pName, "$MINUTE")) {
 		*pPropID = PROP_SYS_MINUTE;
-	} else if(!strcmp((char*) pName, "$now-utc")) {
+	} else if(!strcasecmp((char*) pName, "$now-utc")) {
 		*pPropID = PROP_SYS_NOW_UTC;
-	} else if(!strcmp((char*) pName, "$year-utc")) {
+	} else if(!strcasecmp((char*) pName, "$year-utc")) {
 		*pPropID = PROP_SYS_YEAR_UTC;
-	} else if(!strcmp((char*) pName, "$month-utc")) {
+	} else if(!strcasecmp((char*) pName, "$month-utc")) {
 		*pPropID = PROP_SYS_MONTH_UTC;
-	} else if(!strcmp((char*) pName, "$day-utc")) {
+	} else if(!strcasecmp((char*) pName, "$day-utc")) {
 		*pPropID = PROP_SYS_DAY_UTC;
-	} else if(!strcmp((char*) pName, "$hour-utc")) {
+	} else if(!strcasecmp((char*) pName, "$hour-utc")) {
 		*pPropID = PROP_SYS_HOUR_UTC;
-	} else if(!strcmp((char*) pName, "$hhour-utc")) {
+	} else if(!strcasecmp((char*) pName, "$hhour-utc")) {
 		*pPropID = PROP_SYS_HHOUR_UTC;
-	} else if(!strcmp((char*) pName, "$qhour-utc")) {
+	} else if(!strcasecmp((char*) pName, "$qhour-utc")) {
 		*pPropID = PROP_SYS_QHOUR_UTC;
-	} else if(!strcmp((char*) pName, "$minute-utc")) {
+	} else if(!strcasecmp((char*) pName, "$minute-utc")) {
 		*pPropID = PROP_SYS_MINUTE_UTC;
 	} else if(!strcasecmp((char*) pName, "$MYHOSTNAME")) {
 		*pPropID = PROP_SYS_MYHOSTNAME;
