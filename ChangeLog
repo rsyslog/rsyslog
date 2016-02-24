@@ -24,6 +24,12 @@ Version 8.17.0 [v8-stable] 2016-03-08
   see also: https://github.com/rsyslog/rsyslog/pull/770
   Thanks to github user bobthemighty for the patch
 - imuxsock: add "ruleset" input parameter
+- testbench: framework improvement: configs can be included in test file
+  they do no longer need to be in a separate file, which saves a bit
+  of work when working with them. This is supported for simple tests with
+  a single running rsyslog instance
+  Thanks to Janmejay Singh for inspiring me with a similar method in
+  liblognorm testbench.
 - imptcp: performance improvements
   Thanks to Janmejay Singh for implementing this improvement
 - made build compile (almost) without warnings
