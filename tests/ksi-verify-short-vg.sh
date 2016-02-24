@@ -1,6 +1,7 @@
 #!/bin/bash
-# rsgtutil configuration test 
+# rsgtutil utility test 
 #	Verifies sample logdata against public ksi verification repository. 
+#	Test uses valgrind.
 #
 # This is part of the rsyslog testbench, licensed under GPLv3
 #

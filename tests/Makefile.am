@@ -9,17 +9,6 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
-if ENABLE_GT_KSI
-TESTS +=  \
-	ksi-verify-short.sh \
-	ksi-verify-long.sh
-if HAVE_VALGRIND
-TESTS +=  \
-	ksi-verify-short-vg.sh \
-	ksi-verify-long-vg.sh
-endif
-endif
-
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
@@ -207,6 +196,20 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh
 endif # HAVE_VALGRIND
 
+if ENABLE_GT_KSI
+TESTS +=  \
+	ksi-verify-short.sh \
+	ksi-verify-long.sh \
+	ksi-extract-verify-short.sh \
+	ksi-extract-verify-long.sh 
+if HAVE_VALGRIND
+TESTS +=  \
+	ksi-verify-short-vg.sh \
+	ksi-verify-long-vg.sh \
+	ksi-extract-verify-short-vg.sh \
+	ksi-extract-verify-long-vg.sh 
+endif
+endif
 
 if ENABLE_MYSQL_TESTS
 TESTS +=  \

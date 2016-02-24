@@ -1,17 +1,18 @@
 #!/bin/bash
-# rsgtutil configuration test 
+# rsgtutil utility test 
 #	Verifies sample logdata against public ksi verification repository. 
+#	Test uses valgrind.
 #
 # This is part of the rsyslog testbench, licensed under GPLv3
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
 
-echo \[ksi-verify-long.sh\]: testing rsgtutil verify with valgrind - long options
+echo \[ksi-verify-long-vg.sh\]: testing rsgtutil verify with valgrind - long options
 . $srcdir/diag.sh init
 
-echo "running rsgtutil command with short options"
-valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil -t -s --publications-server $RSYSLOG_KSI_BIN $srcdir/testsuites/ksi-sample.log #> rsgtutil.out.log 2>&1
+echo "running rsgtutil command with long options"
+valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil --verify --show-verified --publications-server $RSYSLOG_KSI_BIN $srcdir/testsuites/ksi-sample.log #> rsgtutil.out.log 2>&1
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
