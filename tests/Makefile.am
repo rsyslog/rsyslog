@@ -196,6 +196,7 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh
 endif # HAVE_VALGRIND
 
+if ENABLE_USERTOOLS
 if ENABLE_GT_KSI
 TESTS +=  \
 	ksi-verify-short.sh \
@@ -208,6 +209,7 @@ TESTS +=  \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
 	ksi-extract-verify-long-vg.sh 
+endif
 endif
 endif
 
