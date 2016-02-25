@@ -781,8 +781,11 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 
 		while(!feof(logfp)) {
 			if(bInBlock == 0) {
+				/* Free block sig & header memory */
 				if (bs != NULL) rsksi_objfree(0x0904, bs);
 				if (bh != NULL) rsksi_objfree(0x0901, bh);
+
+				/* Get/Verify Block Paramaters */
 				if((r = rsksi_getBlockParams(ksi, sigfp, 1, &bs, &bh, &bHasRecHashes,
 								&bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
@@ -819,7 +822,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 
 		while(	!feof(logfp) && 
 				!feof(sigfp)) {
-			/* Free memory */
+			/* Free block sig & header memory */
 			if (bs != NULL) rsksi_objfree(0x0905, bs);
 			if (bh != NULL) rsksi_objfree(0x0901, bh);
 
@@ -894,10 +897,27 @@ if (debug) printf("debug: verifyKSI:\t\t\t DONE with LOOP iCurrentLine=%d > iMax
 		fprintf(stderr, "verifyKSI:\t\t\t Error %d invalid file header found \n", r); 
 	}
 done:
-	/* Free mem first */
+	/* Free linerec helper mem */
 	if (lineRec != NULL) {
 		free(lineRec);
 		lineRec = NULL; 
+	}
+
+	/* Free block sig & header memory */
+	if (bs != NULL) rsksi_objfree(0x0905, bs);
+	if (bh != NULL) rsksi_objfree(0x0901, bh);
+
+	/* Free KSI File helper stuff */
+	if (ksi != NULL) {
+		/* Free Top Root Hash as well! */
+		if(ksi->roots_hash[ksi->nRoots-1] != 0) {
+			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
+		}
+		/* Free other ksi helper variables */
+		rsksiCtxDel(ksi->ctx);
+		free(ksi->IV);
+		rsksiimprintDel(ksi->x_prev);
+		free(ksi);
 	}
 
 	if(r != RSGTE_EOF)
@@ -1367,6 +1387,11 @@ done:
 
 	/* Free KSI File helper stuff */
 	if (ksi != NULL) {
+		/* Free Top Root Hash as well! */
+		if(ksi->roots_hash[ksi->nRoots-1] != 0) {
+			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
+		}
+		/* Free other ksi helper variables */
 		rsksiCtxDel(ksi->ctx);
 		free(ksi->IV);
 		rsksiimprintDel(ksi->x_prev);

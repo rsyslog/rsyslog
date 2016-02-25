@@ -1101,7 +1101,8 @@ rsksi_objfree(uint16_t tlvtype, void *obj)
 		/* Loop through Step Objects and delete mem */
 		if (((block_hashchain_t*)obj)->stepCount > 0) {
 			for(j = 0 ; j < ((block_hashchain_t*)obj)->stepCount ; ++j) {
-				if (((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data != NULL) {
+				if (	((block_hashchain_t*)obj)->hashsteps[j] != NULL && 
+						((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data != NULL) {
 					free(((block_hashchain_t*)obj)->hashsteps[j]->sib_hash.data);
 				}
 				free( (block_hashstep_t*)((block_hashchain_t*)obj)->hashsteps[j] ); 
