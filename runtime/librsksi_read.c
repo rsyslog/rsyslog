@@ -1812,7 +1812,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 		ectx->ksistate = ksistate;
 		goto done;
 	} else {
-		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_parse was successfull\n"); 
+		if(rsksi_read_debug) printf("debug: rsksi_vrfy_nextHashChain:\t KSI_Signature_verifyDataHash was successfull\n"); 
 		if(rsksi_read_showVerified)
 			reportVerifySuccess(ectx);
 	}
@@ -2329,9 +2329,9 @@ int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, block_sig
 	tlvlenLevelCorr = rsksi_tlvGetInt64OctetSize(uiLevelCorr);
 
 	/* Total Length of Hash Chain */
-	tlvlen =	4 + /* ???? */	
+	tlvlen =	/*4 +  ???? */	
 				2 + 1 + hashchain->rec_hash.len	/* rec-hash */ +
-				((2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len)*hashchain->stepCount);	/* Count of all left/right chains */
+				((2 + 2 + tlvlenLevelCorr + 2 + 1 + hashchain->hashsteps[0]->sib_hash.len) * hashchain->stepCount);	/* Count of all left/right chains*/
 	if(rsksi_read_debug) printf("debug: rsksi_WriteHashChain:\t\t tlvlen=%d \n", tlvlen);
 
 	/* Start hash chain for one log record */

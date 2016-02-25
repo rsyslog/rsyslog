@@ -7,12 +7,15 @@
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
+RSYSLOG_KSI_DEBUG="--debug"
+RSYSLOG_KSI_LOG="ksi-sample.log"
+#RSYSLOG_KSI_LOG="ksi.log"
 
 echo "[ksi-extract-verify-long.sh]: testing rsgtutil extract function - long options"
 . $srcdir/diag.sh init
 
 echo "running rsgtutil extract command"
-../tools/rsgtutil --show-verified --extract 1,3,5 --output $srcdir/ksi-export.log --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/ksi-sample.log
+../tools/rsgtutil $RSYSLOG_KSI_DEBUG --show-verified --extract 12 --output $srcdir/ksi-export.log --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
@@ -21,7 +24,7 @@ if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
 fi
 
 echo "running rsgtutil verify command"
-../tools/rsgtutil --verify --show-verified --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/ksi-export.log
+../tools/rsgtutil $RSYSLOG_KSI_DEBUG --verify --show-verified --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/ksi-export.log
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then

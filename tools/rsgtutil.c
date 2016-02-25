@@ -28,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <sysexits.h>
 
 #ifdef ENABLEGT
 	/* Guardtime Includes */
@@ -760,6 +761,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	ksi = rsksi_vrfyConstruct_gf();
 	if(ksi == NULL) {
 		fprintf(stderr, "verifyKSI:\t\t\t Error initializing signature file structure\n");
+		r = RSGTE_IO;
 		goto done;
 	}
 
@@ -1382,14 +1384,14 @@ done:
 	}
 
 	/* Free Blockheader / Sig */
-	if(bs != NULL) rsksi_objfree(0x0904, bs);
-	if(bh != NULL) rsksi_objfree(0x0901, bh);
+	if (bs != NULL) rsksi_objfree(0x0904, bs);
+	if (bh != NULL) rsksi_objfree(0x0901, bh);
 
 	/* Free KSI File helper stuff */
 	if (ksi != NULL) {
 		/* Free Top Root Hash as well! */
 		if(ksi->roots_hash[ksi->nRoots-1] != 0) {
-			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
+//wtf			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
 		}
 		/* Free other ksi helper variables */
 		rsksiCtxDel(ksi->ctx);
@@ -1538,8 +1540,10 @@ verifyKSI:
 err:
 done:
 	/* Output error if return was 0*/
-	if (iSuccess == 0)
+	if (iSuccess == 0) {
 		fputs(errbuf, stderr); 
+		exit(EX_DATAERR); /* Return error */
+	}
 	return;
 }
 
@@ -1609,8 +1613,10 @@ extractKSI:
 err:
 done:
 	/* Output error if return was 0*/
-	if (iSuccess == 0)
+	if (iSuccess == 0) {
 		fputs(errbuf, stderr); 
+		exit(EX_DATAERR); /* Return error */
+	}
 	return;
 }
 
