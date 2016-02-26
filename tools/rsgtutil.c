@@ -792,6 +792,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 								&bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
 						fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
+						r = RSGTE_IO;
 					} else {
 						if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
 					}
@@ -832,6 +833,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 			if((r = rsksi_getExcerptBlockParams(ksi, sigfp, 1, &bs, &bh)) != 0) {
 				if(ectx.blkNum == 0) {
 					fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block\n", r);
+					r = RSGTE_IO;
 				} else {
 					if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
 				}

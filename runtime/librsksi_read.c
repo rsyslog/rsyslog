@@ -1290,6 +1290,9 @@ rsksi_getExcerptBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t 
 				/* Increment hash chain count */
 				nRecs++;
 			}
+
+			/* Free MEM, hashchain obj not needed here*/
+			rsksi_objfree(rec.tlvtype, obj);
 			break;
 		default:fprintf(fp, "unknown tlv record %4.4x\n", rec.tlvtype);
 			break;
@@ -1818,6 +1821,7 @@ rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned cha
 	}
 done:
 	/* Free Memory */
+	if(sig != NULL) KSI_Signature_free(sig);
 	if(root_hash != NULL) KSI_DataHash_free(root_hash);
 	if(line_hash != NULL) KSI_DataHash_free(line_hash);
 	if(rec_hash != NULL) KSI_DataHash_free(rec_hash);

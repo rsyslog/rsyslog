@@ -3,19 +3,19 @@
 #	Extract lines from sample logdata and verifies against public 
 #	ksi verification repository. Test uses valgrind.
 #
-# This is part of the rsyslog testbench, licensed under GPLv3
+# This file is part of the rsyslog project, released under ASL 2.0
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
 #RSYSLOG_KSI_DEBUG="--debug"
-#RSYSLOG_KSI_LOG="ksi-sample.log"
-RSYSLOG_KSI_LOG="ksi.log"
+RSYSLOG_KSI_LOG="ksi-sample.log"
+#RSYSLOG_KSI_LOG="ksi.log"
 
 echo "[ksi-extract-verify-long-vg.sh]: testing rsgtutil extract with valgrind - long options"
 . $srcdir/diag.sh init
 
 echo "running rsgtutil extract command"
-valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --show-verified --extract 1,3,5 --output $srcdir/ksi-export.log --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/$RSYSLOG_KSI_LOG
+valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --show-verified --extract 1 --output $srcdir/ksi-export.log --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then

@@ -3,7 +3,7 @@
 #	Extract lines from sample logdata and verifies against public 
 #	ksi verification repository. 
 #
-# This is part of the rsyslog testbench, licensed under GPLv3
+# This file is part of the rsyslog project, released under ASL 2.0
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
