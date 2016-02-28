@@ -1622,7 +1622,29 @@ AC_ARG_ENABLE(omhiredis,
 )
 #
 if test "x$enable_omhiredis" = "xyes"; then
-	PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1)
+    PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1, [],
+        [AC_SEARCH_LIBS(redisConnectWithTimeout, hiredis,
+            [AC_COMPILE_IFELSE(
+                [AC_LANG_PROGRAM(
+                    [[ #include <hiredis/hiredis.h> ]],
+                    [[ #define major 0
+                       #define minor 10
+                       #define patch 1
+                       #if (( HIREDIS_MAJOR > major ) || \
+                         (( HIREDIS_MAJOR == major ) && ( HIREDIS_MINOR > minor )) || \
+                         (( HIREDIS_MAJOR == major ) && ( HIREDIS_MINOR == minor ) && ( HIREDIS_PATCH >= patch ))) \
+                       /* OK */
+                       #else
+                       # error Hiredis version must be >= major.minor.path
+                       #endif
+                    ]]
+                )],
+                [],
+                [AC_MSG_ERROR([hiredis version must be >= 0.10.1])]
+            )],
+            [AC_MSG_ERROR([hiredis not found])]
+        )]
+    )
 fi
 AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
 
