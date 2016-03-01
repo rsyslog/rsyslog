@@ -71,6 +71,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
   The actual practical impact is not clear. This came up when working
   on compiler warnings.
   Thanks to David Lang for the patch.
+- bugfix omhiredis: serverport config parameter did not reliably work
+  depended on environment/compiler used to build
 - bugfix rsgtutil: -h command line option did not work
   Thanks to Henri Lakk for the patch.
 - bugfix lexer: hex numbers were not properly represented
