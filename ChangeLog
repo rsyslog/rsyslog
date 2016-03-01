@@ -76,6 +76,9 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - bugfix lexer: hex numbers were not properly represented
   see: https://github.com/rsyslog/rsyslog/pull/771
   Thanks to Sam Hanes for the patch.
+- bugfix TLS syslog: intermittent errors while sending data
+  Regression from commit 1394e0b. A symptom often seen was the message
+  "unexpected GnuTLS error -50 in nsd_gtls.c:530"
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
 - rsgtutil: Added extraction support including loglines and hash chains. 
