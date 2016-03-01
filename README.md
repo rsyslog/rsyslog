@@ -63,7 +63,7 @@ sudo yum install git valgrind autoconf automake flex bison python-docutils pytho
 Note: this list is (obviously) incomplete. We intend to complete it as we 
 have more information and install additional systems.
 ```
-sudo apt-get install libdbi-dev libmysqlclient-dev postgresql-client libpq-dev  libnet-dev   librdkafka-dev   libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev  libmongo-client-dev
+sudo apt-get install libdbi-dev libmysqlclient-dev postgresql-client libpq-dev  libnet-dev   librdkafka-dev   libgrok-dev libgrok1 libgrok-dev libpcre3-dev libtokyocabinet-dev libglib2.0-dev  libmongo-client-dev  libhiredis-dev
 ```
 for KSI, from the Adiscon PPA:
 ```
