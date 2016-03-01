@@ -557,6 +557,18 @@ int sendMessages(struct instdata *inst)
 			 * are a victim
 			 */
 			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
+#if 1
+				if(transport == TP_TLS && offsSendBuf != 0) {
+					/* send remaining buffer */
+					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
+					if(lenSend != offsSendBuf) {
+						fprintf(stderr, "tcpflood: error in send function causes potential data loss "
+						"lenSend %d, offsSendBuf %d\n",
+						lenSend, offsSendBuf);
+					}
+					offsSendBuf = 0;
+				}
+#endif
 				++nConnDrops;
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;
