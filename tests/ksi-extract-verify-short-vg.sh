@@ -7,12 +7,14 @@
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
+RSYSLOG_KSI_DEBUG=""
+RSYSLOG_KSI_LOG="ksi-sample.log"
 
 echo "[ksi-extract-verify-short-vg.sh]: testing rsgtutil extract with valgrind - short options"
 . $srcdir/diag.sh init
 
 echo "running rsgtutil extract command"
-valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil -s -x 1,3,5 -o $srcdir/ksi-export.log -P http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/ksi-sample.log
+valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG -s -x 3 -o $srcdir/ksi-export.log -P http://verify.guardtime.com/ksi-publications.bin $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then

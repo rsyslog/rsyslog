@@ -49,7 +49,7 @@ typedef unsigned char uchar;
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND, MD_CONVERT, MD_EXTRACT
 } mode = MD_DUMP;
-static enum { FILEMODE_LOGSIG, FILEMODE_RECSIG }; 
+static enum { FILEMODE_LOGSIG, FILEMODE_RECSIG } filemode = FILEMODE_LOGSIG; 
 static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
 static int debug = 0; 
@@ -733,7 +733,7 @@ done:
 static int
 verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
-	int FILEMODE = FILEMODE_LOGSIG; /* Default FileMode */ 
+	filemode = FILEMODE_LOGSIG; /* Default FileMode */ 
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
 	ksifile ksi = NULL;
@@ -818,7 +818,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	} else if((r = rsksi_chkFileHdr(sigfp, "RECSIG11", verbose)) == 0) {
 		/* Verify Log Excerpts */
 		if(debug) printf("verifyKSI:\t\t\t Found record integrity proof file ... \n");
-		FILEMODE = FILEMODE_RECSIG; 
+		filemode = FILEMODE_RECSIG; 
 
 		ectx.blkNum = 0;
 		ectx.recNumInFile = 0;
@@ -914,9 +914,15 @@ done:
 	/* Free KSI File helper stuff */
 	if (ksi != NULL) {
 		/* Free Top Root Hash as well! */
-		if(ksi->roots_hash[ksi->nRoots-1] != 0) {
-			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
+		uint8_t j;
+		for(j = 0 ; j < ksi->nRoots ; ++j) {
+			if(ksi->roots_valid[j] == 1) {
+				KSI_DataHash_free(ksi->roots_hash[j]);
+				ksi->roots_valid[j] = 0;
+				if (debug) printf("debug: verifyKSI:\t\t\t Free ROOTHASH Level %d \n", j); 
+			}
 		}
+
 		/* Free other ksi helper variables */
 		rsksiCtxDel(ksi->ctx);
 		free(ksi->IV);
@@ -946,7 +952,7 @@ done:
 	if(nsigfp != NULL) { fclose(nsigfp); nsigfp = NULL; }
 
 	/* Check for Extend in LogSig Mode: Everything went fine, so we rename files if we updated them */
-	if(FILEMODE == FILEMODE_LOGSIG && mode == MD_EXTEND) {
+	if(filemode == FILEMODE_LOGSIG && mode == MD_EXTEND) {
 		if(unlink(oldsigfname) != 0) {
 			if(errno != ENOENT) {
 				perror("unlink oldsig");
@@ -1015,7 +1021,6 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	int iLineNumbers = 0;
 	int* paiLineNumbers = NULL; 
 	int r = 0;
-	unsigned int j = 0; 
 	int iReturn = 1;
 	
 	/* KSI Signature related variables */
@@ -1244,7 +1249,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 				break; 
 			}
 
-if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineSearch, lineRec); 
+if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent, lineRec); 
 
 			/* Extract line if correct one */
 			if (iLineCurrent == iLineSearch) {
@@ -1392,9 +1397,15 @@ done:
 	/* Free KSI File helper stuff */
 	if (ksi != NULL) {
 		/* Free Top Root Hash as well! */
-		if(ksi->roots_hash[ksi->nRoots-1] != 0) {
-//wtf			KSI_DataHash_free(ksi->roots_hash[ksi->nRoots-1]); 
+		uint8_t j;
+		for(j = 0 ; j < ksi->nRoots ; ++j) {
+			if(ksi->roots_valid[j] == 1) {
+				KSI_DataHash_free(ksi->roots_hash[j]);
+				ksi->roots_valid[j] = 0;
+				if (debug) printf("debug: extractKSI:\t\t\t Free ROOTHASH Level %d \n", j); 
+			}
 		}
+
 		/* Free other ksi helper variables */
 		rsksiCtxDel(ksi->ctx);
 		free(ksi->IV);

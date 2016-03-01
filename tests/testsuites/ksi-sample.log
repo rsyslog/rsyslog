@@ -1,12 +1,28 @@
-Feb 24 11:32:54 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="34052" x-info="http://www.rsyslog.com"] start
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 1
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 2
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 3
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 4
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 5
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 6
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 7
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 8
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 9
-Feb 24 11:33:03 WIN10AL MonitorWare Agent: This is a SyslogTest 10
-Feb 24 11:33:04 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="34052" x-info="http://www.rsyslog.com"] exiting on signal 2.
+Mar  1 14:51:21 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19074" x-info="http://www.rsyslog.com"] start
+Mar  1 14:51:23 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19074" x-info="http://www.rsyslog.com"] exiting on signal 2.
+Mar  1 14:51:25 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19127" x-info="http://www.rsyslog.com"] start
+Mar  1 14:52:30 WIN10AL MonitorWare Agent: This is a SyslogTest 1
+Mar  1 14:52:30 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19127" x-info="http://www.rsyslog.com"] exiting on signal 2.
+Mar  1 14:52:34 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19182" x-info="http://www.rsyslog.com"] start
+Mar  1 14:52:44 WIN10AL MonitorWare Agent: This is a SyslogTest 1
+Mar  1 14:52:44 WIN10AL MonitorWare Agent: This is a SyslogTest 2
+Mar  1 14:52:47 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19182" x-info="http://www.rsyslog.com"] exiting on signal 2.
+Mar  1 14:52:50 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19236" x-info="http://www.rsyslog.com"] start
+Mar  1 14:52:59 WIN10AL MonitorWare Agent: This is a SyslogTest 1
+Mar  1 14:52:59 WIN10AL MonitorWare Agent: This is a SyslogTest 2
+Mar  1 14:52:59 WIN10AL MonitorWare Agent: This is a SyslogTest 3
+Mar  1 14:52:59 WIN10AL MonitorWare Agent: This is a SyslogTest 4
+Mar  1 14:52:59 WIN10AL MonitorWare Agent: This is a SyslogTest 5
+Mar  1 14:52:59 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19236" x-info="http://www.rsyslog.com"] exiting on signal 2.
+Mar  1 14:53:01 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19289" x-info="http://www.rsyslog.com"] start
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 1
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 2
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 3
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 4
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 5
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 6
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 7
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 8
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 9
+Mar  1 14:53:11 WIN10AL MonitorWare Agent: This is a SyslogTest 10
+Mar  1 14:53:11 ubuntu rsyslogd: [origin software="rsyslogd" swVersion="8.17.0.master" x-pid="19289" x-info="http://www.rsyslog.com"] exiting on signal 2.
