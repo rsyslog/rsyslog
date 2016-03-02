@@ -31,6 +31,8 @@ TESTS +=  \
 	now-utc.sh \
 	now-utc-ymd.sh \
 	now-utc-casecmp.sh \
+	timegenerated-ymd.sh \
+	timegenerated-uxtimestamp.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
@@ -594,6 +596,8 @@ EXTRA_DIST= \
 	now-utc-casecmp.sh \
 	now-utc.sh \
 	testsuites/now-utc.conf \
+	timegenerated-ymd.sh \
+	timegenerated-uxtimestamp.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
