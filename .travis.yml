@@ -42,7 +42,6 @@ matrix:
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
 before_install:
-  #- travis_retry sudo apt-get install -qq python-software-properties
   - travis_retry sudo add-apt-repository ppa:adiscon/v8-stable -y
   - travis_retry sudo add-apt-repository ppa:qpid/released -y
   - travis_retry sudo apt-get update -qq
@@ -52,9 +51,11 @@ before_install:
   - mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);"
 
 install:
+  - source /etc/lsb-release
   - travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client faketime libdbd-mysql libmongo-client-dev
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev bison flex libksi1 libksi1-dev libcurl4-gnutls-dev
-  - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev
+  - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev 
+  - if [ "$DISTRIB_CODENAME" == "trusty" ]; then travis_retry sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
   - travis_retry sudo apt-get install -qq libqpid-proton3-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
   - if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libglib2.0-dev libgrok1 libgrok-dev libtokyocabinet-dev ; fi
@@ -69,7 +70,7 @@ script:
   # I set the second one here via an "if"
   - if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
   - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
-  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 $ENABLE_KAFKA $NO_VALGRIND $GROK
+  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - make
   - if [ "x$CHECK" == "xYES" ] ; then make check ; fi
