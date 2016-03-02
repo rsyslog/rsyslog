@@ -1023,6 +1023,13 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 	int utcOffset;
 	time_t TimeInUnixFormat;
 
+	if(ts->year < 1970 || ts->year > 2100) {
+		TimeInUnixFormat = 0;
+		errmsg.LogError(0, RS_RET_ERR, "syslogTime2time_t: invalid year %d "
+			"in timestamp - returning 1970-01-01 instead", ts->year);
+		goto done;
+	}
+
 	/* Counting how many Days have passed since the 01.01 of the
 	 * selected Year (Month level), according to the selected Month*/
 
@@ -1096,6 +1103,7 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 	if(ts->OffsetMode == '+')
 		utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
 	TimeInUnixFormat += utcOffset;
+done:
 	return TimeInUnixFormat;
 }
 
