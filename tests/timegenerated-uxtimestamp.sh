@@ -144,6 +144,21 @@ if [ ! $? -eq 0 ]; then
 fi;
 
 
+echo "***SUBTEST: check 2020-03-01"
+rm -f rsyslog.out.log	# do cleanup of previous subtest
+faketime '2020-03-01 12:00:00' $srcdir/diag.sh startup
+. $srcdir/diag.sh tcpflood -m1
+. $srcdir/diag.sh shutdown-when-empty
+. $srcdir/diag.sh wait-shutdown
+echo "1583064000" | cmp rsyslog.out.log
+if [ ! $? -eq 0 ]; then
+  echo "invalid timestamps generated, rsyslog.out.log is:"
+  cat rsyslog.out.log
+  date -d @`cat rsyslog.out.log`
+  exit 1
+fi;
+
+
 echo "***SUBTEST: check 2038-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
 faketime '2038-01-01 12:00:00' $srcdir/diag.sh startup
