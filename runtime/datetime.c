@@ -1000,6 +1000,22 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 
 /**
  * convert syslog timestamp to time_t
+ * Note: it would be better to use something similar to mktime() here.
+ * Unfortunately, mktime() semantics are problematic: first of all, it
+ * works on local time, on the machine's time zone. In syslog, we have
+ * to deal with multiple time zones at once, so we cannot plainly rely
+ * on the local zone, and so we cannot rely on mktime(). One solution would
+ * be to refactor all time-related functions so that they are all guarded 
+ * by a mutex to ensure TZ consistency (which would also enable us to
+ * change the TZ at will for specific function calls). But that would
+ * potentially mean a lot of overhead.
+ * Also, mktime() has some side effects, at least setting of tzname. With
+ * a refactoring as described above that should probably not be a problem,
+ * but would also need more work. For some more thoughts on this topic,
+ * have a look here:
+ * http://stackoverflow.com/questions/18355101/is-standard-c-mktime-thread-safe-on-linux
+ * In conclusion, we keep our own code for generating the unix timestamp.
+ * rgerhards, 2016-03-02
  */
 time_t syslogTime2time_t(struct syslogTime *ts)
 {
