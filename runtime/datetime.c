@@ -1054,6 +1054,11 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 			MonthInDays = 0;	/* any value fits ;) */
 			break;
 	}	
+	/* adjust for leap years */
+	if((ts->year % 100 != 0 && ts->year % 4 == 0) || (ts->year == 2000)) {
+		if(ts->month > 2)
+			MonthInDays++;
+	}
 
 
 	/*	1) Counting how many Years have passed since 1970
@@ -1064,7 +1069,7 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 
 	NumberOfYears = ts->year - yearInSec_startYear - 1;
 	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = yearInSecs[NumberOfYears] + NumberOfDays * 86400;
+	TimeInUnixFormat = (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
 
 	/*Add Hours, minutes and seconds */
 	TimeInUnixFormat += ts->hour*60*60;
