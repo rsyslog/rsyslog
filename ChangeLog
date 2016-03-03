@@ -16,11 +16,13 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - simplified locking in when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
+- new global parameter "debug.unloadModules"
+  This permits to disable unloading of modules, e.g.  to make valgrind
+  reports more useful (without a need to recompile).
 - bugfix: unixtimestamp date format was incorrectly computed
   The problem happened in leap year from March til then end
   of year and healed itself at the begining of the next year.
-  During the problem period, the timestamp was 24 hours too
-  low.
+  During the problem period, the timestamp was 24 hours too low.
   fixes https://github.com/rsyslog/rsyslog/issues/830
 - timestamp handling: guard against invalid dates
   We do not permit dates outside of the year 1970..2100
