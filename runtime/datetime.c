@@ -1159,6 +1159,13 @@ int getOrdinal(struct syslogTime *ts)
 	int utcOffset;
 	time_t seconds_into_year;
 
+	if(ts->year < 1970 || ts->year > 2100) {
+		yday = 0;
+		errmsg.LogError(0, RS_RET_ERR, "getOrdinal: invalid year %d "
+			"in timestamp - returning 1970-01-01 instead", ts->year);
+		goto done;
+	}
+
 	thistime = syslogTime2time_t(ts);
 
 	previousyears = yearInSecs[ts->year - yearInSec_startYear - 1];
@@ -1174,6 +1181,7 @@ int getOrdinal(struct syslogTime *ts)
 
 	/* divide by seconds in a day and truncate to int */
 	yday = seconds_into_year / 86400;
+done:
 	return yday;
 }
 
