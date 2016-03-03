@@ -22,6 +22,10 @@ Version 8.17.0 [v8-stable] 2016-03-08
   During the problem period, the timestamp was 24 hours too
   low.
   fixes https://github.com/rsyslog/rsyslog/issues/830
+- bugfix: date-ordinal date format was incorrectly computed
+  same root cause aus for unixtimestamp and same triggering
+  condition. During the affected perido, the ordinal was one
+  too less.
 - timestamp handling: guard against invalid dates
   We do not permit dates outside of the year 1970..2100
   interval. Note that network-receivers do already guard
