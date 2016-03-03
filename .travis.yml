@@ -29,12 +29,7 @@ addons:
     - libsnmp-dev
     - libmysqlclient-dev
     - postgresql-client
-    - faketime
-    - libdbd-mysql
-    - libmongo-client-dev
     - libglib2.0-dev
-    - libgrok1
-    - libgrok-dev
     - libtokyocabinet-dev
     - zlib1g-dev
     - uuid-dev
@@ -43,6 +38,11 @@ addons:
     - flex
     - libcurl4-gnutls-dev
     - python-docutils 
+    #- libgrok1
+    #- libgrok-dev
+    #- faketime
+    #- libdbd-mysql
+    #- libmongo-client-dev
 
 matrix:
   exclude:
@@ -78,14 +78,13 @@ before_install:
 
 install:
   - source /etc/lsb-release
-  #- travis_retry sudo apt-get install -qq build-essential automake pkg-config libtool autoconf autotools-dev gdb valgrind libdbi-dev libsnmp-dev libmysqlclient-dev postgresql-client faketime libdbd-mysql libmongo-client-dev
- # - travis_retry sudo apt-get install -qq zlib1g-dev uuid-dev libgcrypt11-dev bison flex libcurl4-gnutls-dev
+  # the following packages are not yet available via travis package system above
+  - travis_retry sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev libgrok1 libgrok-dev
   - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev
   - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev 
   - if [ "$DISTRIB_CODENAME" == "trusty" ]; then travis_retry sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
   - travis_retry sudo apt-get install -qq libqpid-proton3-dev
   - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
-  #- if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libglib2.0-dev libgrok1 libgrok-dev libtokyocabinet-dev ; fi
   - if [ "x$KAFKA" == "xYES" ]; then travis_retry sudo apt-get install -qq librdkafka-dev ; fi
   - if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka" ; fi
 
