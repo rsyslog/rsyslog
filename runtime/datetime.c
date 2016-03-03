@@ -1000,12 +1000,35 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 
 /**
  * convert syslog timestamp to time_t
+ * Note: it would be better to use something similar to mktime() here.
+ * Unfortunately, mktime() semantics are problematic: first of all, it
+ * works on local time, on the machine's time zone. In syslog, we have
+ * to deal with multiple time zones at once, so we cannot plainly rely
+ * on the local zone, and so we cannot rely on mktime(). One solution would
+ * be to refactor all time-related functions so that they are all guarded 
+ * by a mutex to ensure TZ consistency (which would also enable us to
+ * change the TZ at will for specific function calls). But that would
+ * potentially mean a lot of overhead.
+ * Also, mktime() has some side effects, at least setting of tzname. With
+ * a refactoring as described above that should probably not be a problem,
+ * but would also need more work. For some more thoughts on this topic,
+ * have a look here:
+ * http://stackoverflow.com/questions/18355101/is-standard-c-mktime-thread-safe-on-linux
+ * In conclusion, we keep our own code for generating the unix timestamp.
+ * rgerhards, 2016-03-02
  */
 time_t syslogTime2time_t(struct syslogTime *ts)
 {
 	long MonthInDays, NumberOfYears, NumberOfDays;
 	int utcOffset;
 	time_t TimeInUnixFormat;
+
+	if(ts->year < 1970 || ts->year > 2100) {
+		TimeInUnixFormat = 0;
+		errmsg.LogError(0, RS_RET_ERR, "syslogTime2time_t: invalid year %d "
+			"in timestamp - returning 1970-01-01 instead", ts->year);
+		goto done;
+	}
 
 	/* Counting how many Days have passed since the 01.01 of the
 	 * selected Year (Month level), according to the selected Month*/
@@ -1054,6 +1077,11 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 			MonthInDays = 0;	/* any value fits ;) */
 			break;
 	}	
+	/* adjust for leap years */
+	if((ts->year % 100 != 0 && ts->year % 4 == 0) || (ts->year == 2000)) {
+		if(ts->month > 2)
+			MonthInDays++;
+	}
 
 
 	/*	1) Counting how many Years have passed since 1970
@@ -1064,7 +1092,7 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 
 	NumberOfYears = ts->year - yearInSec_startYear - 1;
 	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = yearInSecs[NumberOfYears] + NumberOfDays * 86400;
+	TimeInUnixFormat = (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
 
 	/*Add Hours, minutes and seconds */
 	TimeInUnixFormat += ts->hour*60*60;
@@ -1075,6 +1103,7 @@ time_t syslogTime2time_t(struct syslogTime *ts)
 	if(ts->OffsetMode == '+')
 		utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
 	TimeInUnixFormat += utcOffset;
+done:
 	return TimeInUnixFormat;
 }
 
