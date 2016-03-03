@@ -947,6 +947,11 @@ glblProcessCnf(struct cnfobj *o)
 	int i;
 
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
+	if(cnfparamvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing global "
+				"config parameters [global(...)]");
+		goto done;
+	}
 	if(Debug) {
 		dbgprintf("glbl param blk after glblProcessCnf:\n");
 		cnfparamsPrint(&paramblk, cnfparamvals);
@@ -984,6 +989,7 @@ glblProcessCnf(struct cnfobj *o)
 #endif
 		}
 	}
+done:	return;
 }
 
 /* Set mainq parameters. Note that when this is not called, we'll use the
