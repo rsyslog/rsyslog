@@ -44,6 +44,11 @@ Version 8.17.0 [v8-stable] 2016-03-08
   This is more an internal cleanup and should have no actual affect to
   the end user.
 - solaris build: MAXHOSTNAMELEN properly detected
+- build system improvement: ability to detect old hiredis libs
+  This permits to automatically build omhiredis on systems where the
+  hiredis libs do not provide a pkgconfig file. Previsouly, this
+  required manual configuration.
+  Thanks to github user jaymell for the patch.
 - bugfix tcpflood: did not handle connection drops correct in TLS case
   note that tcpflood is a testbench too. The bug caused some testbench
   instability, but had no effect on deplyments.
