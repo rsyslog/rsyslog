@@ -113,6 +113,7 @@ extern int glblReportNewSenders;
 extern int glblReportGoneAwaySenders;
 extern int glblSenderStatsTimeout;
 extern int glblSenderKeepTrack;
+extern int glblUnloadModules;
 extern short janitorInterval;
 
 static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }

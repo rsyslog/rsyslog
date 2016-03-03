@@ -250,8 +250,13 @@ static void moduleDestruct(modInfo_t *pThis)
 		DBGPRINTF("moduleDestruct: compiled with valgrind, do "
 			"not unload module\n");
 #	else
-		if (pThis->eKeepType == eMOD_NOKEEP) {
-			dlclose(pThis->pModHdlr);
+		if(glblUnloadModules) {
+			if(pThis->eKeepType == eMOD_NOKEEP) {
+				dlclose(pThis->pModHdlr);
+			}
+		} else {
+			DBGPRINTF("moduleDestruct: not unloading module "
+				"due to user configuration\n");
 		}
 #	endif
 	}
