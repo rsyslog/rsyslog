@@ -12,6 +12,8 @@ TESTS = $(TESTRUNS)
 TESTS +=  \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-unloadmodules.sh \
+	glbl-invld-param.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -403,6 +405,8 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	glbl-unloadmodules.sh \
+	glbl-invld-param.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	validation-run.sh \
 	tls-certs/ca-key.pem \
