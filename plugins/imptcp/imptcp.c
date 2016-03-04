@@ -2082,7 +2082,6 @@ shutdownSrv(ptcpsrv_t *pSrv)
 	ptcplstn_t *pLstn, *lstnDel;
 	ptcpsess_t *pSess, *sessDel;
 
-	//TODO: delete unix socket
 	/* listeners */
 	pLstn = pSrv->pLstn;
 	while(pLstn != NULL) {
@@ -2096,6 +2095,10 @@ shutdownSrv(ptcpsrv_t *pSrv)
 				  lstnDel->rcvdDecompressed);
 		free(lstnDel->epd);
 		free(lstnDel);
+	}
+
+	if (pSrv->bUnixSocket) {
+		unlink((char*) pLstn->pSrv->path);
 	}
 
 	/* sessions */
