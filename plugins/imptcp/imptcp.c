@@ -366,50 +366,55 @@ destructSrv(ptcpsrv_t *pSrv)
 static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 	DEFiRet;
 	int sock;
-	int on = 1;
 	int sockflags;
 	struct sockaddr_un local;
-	int len;
 
 	uchar *path = pSrv->path == NULL ? UCHAR_CONSTANT("") : pSrv->path;
-	DBGPRINTF("imptcp: creating listen socket on server %s\n", path);
+	DBGPRINTF("imptcp: creating listen unix socket at %s\n", path);
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	local.sun_family = AF_UNIX;
-	strcpy(local.sun_path, (char *) path);
-
-	unlink(local.sun_path);
-	//TODO: test failure
-	len = strlen(local.sun_path) + sizeof(local.sun_family);
-
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
-		DBGPRINTF("imptcp: error %d setting unix socket option\n", errno);
-		close(sock);
-		sock = -1;
+	if(sock < 0) {
+		DBGPRINTF("error %d creating unix socket", errno);
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
+
+	local.sun_family = AF_UNIX;
+	strncpy(local.sun_path, (char*) path, sizeof(local.sun_path));
+	unlink(local.sun_path);
 
 	/* We use non-blocking IO! */
 	if ((sockflags = fcntl(sock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
-		/* SETFL could fail too, so get it caught by the subsequent
-		* error check.
-		*/
+		// SETFL could fail too, so get it caught by the subsequent error check.
 		sockflags = fcntl(sock, F_SETFL, sockflags);
 	}
 
 	if (sockflags == -1) {
 		DBGPRINTF("imptcp: error %d setting fcntl(O_NONBLOCK) on unix socket\n", errno);
-		close(sock);
-		sock = -1;
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
-	bind(sock, (struct sockaddr *)&local, len);
-	//TODO: test error
+	if (bind(sock, (struct sockaddr *)&local, SUN_LEN(&local)) < 0) {
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		dbgprintf("error %d while binding unix socket: %s\n", errno, errStr);
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
 
-	listen(sock, 5);
-	//TODO: test error
+	if (listen(sock, 5) < 0) {
+		DBGPRINTF("unix socket listen error %d, suspending\n", errno);
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
 
-	addLstn(pSrv, sock, 0);
+	CHKiRet(addLstn(pSrv, sock, 0));
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (sock != -1) {
+			close(sock);
+		}
+	}
+
 	RETiRet;
 }
 
