@@ -686,10 +686,12 @@ static int
 getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 {
 	int i;
+	int found = 0;
 	const int lenName = ustrlen(path);
 	for(i = lenName ; i >= 0 ; --i) {
 		if(path[i] == '/') {
 			/* found basename component */
+			found = 1;
 			if(i == lenName)
 				basen[0] = '\0';
 			else {
@@ -698,7 +700,11 @@ getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 			break;
 		}
 	}
-	return i;
+	if (found == 1)
+		return i;
+	else {
+		return -1;
+	}
 }
 
 /* this function checks instance parameters and does some required pre-processing
@@ -724,6 +730,12 @@ checkInstance(instanceConf_t *inst)
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 
 	i = getBasename(basen, inst->pszFileName);
+	if (i == -1) {
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile config error: file path issue: '%s'",
+			inst->pszFileName);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
 	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
