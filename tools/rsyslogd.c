@@ -1636,6 +1636,8 @@ deinitAll(void)
 int
 main(int argc, char **argv)
 {
+	/* use faster hash function inside json lib */
+	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");
