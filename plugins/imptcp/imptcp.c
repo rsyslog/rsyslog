@@ -166,7 +166,7 @@ static struct cnfparamblk modpblk =
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "port", eCmdHdlrString, 0 }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
 	{ "path", eCmdHdlrString, 0 },
 	{ "name", eCmdHdlrString, 0 },
@@ -587,7 +587,7 @@ finalize_it:
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
+getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer)
 {
 	int error;
 	uchar szIP[NI_MAXHOST] = "";
@@ -600,38 +600,41 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	*peerName = NULL;
 	*peerIP = NULL;
 
-	//TODO: support unix sockets
+	if (bUXServer) {
+		strcpy((char *) szHname, (char *) glbl.GetLocalHostName());
+		strcpy((char *) szIP, (char *) glbl.GetLocalHostIP());
+	} else {
+		error = getnameinfo(pAddr, SALEN(pAddr), (char *) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+		if (error) {
+			DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
+			strcpy((char *) szHname, "???");
+			strcpy((char *) szIP, "???");
+			ABORT_FINALIZE(RS_RET_INVALID_HNAME);
+		}
 
-	error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-	if (error) {
-		DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*)szHname, "???");
-		strcpy((char*)szIP, "???");
-		//ABORT_FINALIZE(RS_RET_INVALID_HNAME);
-	}
-
-	if(!glbl.GetDisableDNS()) {
-		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		if(error == 0) {
-			memset (&hints, 0, sizeof (struct addrinfo));
-			hints.ai_flags = AI_NUMERICHOST;
-			hints.ai_socktype = SOCK_STREAM;
-			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a non-numeric address. If
-			 * we got a numeric one, someone messed with DNS!
-			 */
-			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
-				freeaddrinfo (res);
-				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
-				DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				bMaliciousHName = 1;
+		if (!glbl.GetDisableDNS()) {
+			error = getnameinfo(pAddr, SALEN(pAddr), (char *) szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+			if (error == 0) {
+				memset(&hints, 0, sizeof(struct addrinfo));
+				hints.ai_flags = AI_NUMERICHOST;
+				hints.ai_socktype = SOCK_STREAM;
+				/* we now do a lookup once again. This one should fail,
+				 * because we should not have obtained a non-numeric address. If
+				 * we got a numeric one, someone messed with DNS!
+				 */
+				if (getaddrinfo((char *) szHname, NULL, &hints, &res) == 0) {
+					freeaddrinfo(res);
+					/* OK, we know we have evil, so let's indicate this to our caller */
+					snprintf((char *) szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+					DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
+					bMaliciousHName = 1;
+				}
+			} else {
+				strcpy((char *) szHname, (char *) szIP);
 			}
 		} else {
-			strcpy((char*)szHname, (char*)szIP);
+			strcpy((char *) szHname, (char *) szIP);
 		}
-	} else {
-		strcpy((char*)szHname, (char*)szIP);
 	}
 
 	/* We now have the names, so now let's allocate memory and store them permanently. */
@@ -747,8 +750,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	if(pLstn->pSrv->bKeepAlive)
 		EnableKeepAlive(pLstn, iNewSock);/* we ignore errors, best to do! */
 
-	
-	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr*) &addr));
+	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr *) &addr, pLstn->pSrv->bUnixSocket));
 
 	/* set the new socket to non-blocking IO */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -1888,6 +1890,13 @@ CODESTARTnewInpInst
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
+		}
+
+		char *bindPort = (char *) inst->pszBindPort;
+		char *bindPath = (char *) inst->pszBindPath;
+		if ((bindPort == NULL || strlen(bindPort) < 1) && (bindPath == NULL || strlen (bindPath) < 1)) {
+			errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: Must have either port or path defined");
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 finalize_it:
