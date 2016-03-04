@@ -260,7 +260,9 @@ dumpFileKSI(char *name)
 	if(!strcmp(hdr, "LOGSIG10"))
 		printf("File Header: Version 10 (deprecated) - conversion needed.\n");
 	else if(!strcmp(hdr, "LOGSIG11"))
-		printf("File Header: Version 11\n");
+		printf("File Header: Log Signature File Version 11\n");
+	else if(!strcmp(hdr, "RECSIG11"))
+		printf("File Header: Record Integrity Proof File Version 11\n");
 	else
 		printf("File Header: '%s'\n", hdr);
 	while(1) { /* we will err out on EOF */
@@ -1655,13 +1657,13 @@ processFile(char *name)
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
 
-		if (apimode == API_GT)
+		if (apimode == API_GT || strstr(name, ".gtsig") != NULL )	/* Detect API Mode by file extension */
 #ifdef ENABLEGT
 			dumpFile(name);
 #else
 			fprintf(stderr, "ERROR, unable to perform dump using GuardTime Api, rsyslog need to be configured with --enable-guardtime.\n"); 
 #endif
-		if (apimode == API_KSI)
+		if (apimode == API_KSI || strstr(name, ".ksisig") != NULL )	/* Detect API Mode by file extension */
 #ifdef ENABLEKSI
 			dumpFileKSI(name);
 #else
