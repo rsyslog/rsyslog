@@ -106,6 +106,8 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - bugfix TLS syslog: intermittent errors while sending data
   Regression from commit 1394e0b. A symptom often seen was the message
   "unexpected GnuTLS error -50 in nsd_gtls.c:530"
+- bugfix imfile: abort on startup if no slash was present in file name param
+  Thanks to Brian Knox for the patch.
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
 - rsgtutil: Added extraction support including loglines and hash chains. 
