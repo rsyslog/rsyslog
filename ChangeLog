@@ -66,6 +66,15 @@ Version 8.17.0 [v8-stable] 2016-03-08
   hiredis libs do not provide a pkgconfig file. Previsouly, this
   required manual configuration.
   Thanks to github user jaymell for the patch.
+- build system: fix build issues with clang
+  clang builds often failed with a missing external symbol
+  "rpl_malloc". This was caused by checks in configure.ac,
+  which checked for specific GNU semantics. As we do not need
+  them (we never ask malloc for zero bytes), we can safely
+  remove the macros.
+  Note that we routinely run clang static analyer in CI and
+  it also detects such calls as invalid.
+  closes https://github.com/rsyslog/rsyslog/issues/834
 - bugfix tcpflood: did not handle connection drops correct in TLS case
   note that tcpflood is a testbench too. The bug caused some testbench
   instability, but had no effect on deplyments.
