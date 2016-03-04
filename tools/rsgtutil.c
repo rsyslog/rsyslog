@@ -1657,13 +1657,13 @@ processFile(char *name)
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Dump FileHashes\n"); 
 
-		if (apimode == API_GT || strstr(name, ".gtsig") != NULL )	/* Detect API Mode by file extension */
+		if (strstr(name, ".gtsig") != NULL )	/* Detect API Mode by file extension */
 #ifdef ENABLEGT
 			dumpFile(name);
 #else
 			fprintf(stderr, "ERROR, unable to perform dump using GuardTime Api, rsyslog need to be configured with --enable-guardtime.\n"); 
 #endif
-		if (apimode == API_KSI || strstr(name, ".ksisig") != NULL )	/* Detect API Mode by file extension */
+		if (strstr(name, ".ksisig") != NULL )	/* Detect API Mode by file extension */
 #ifdef ENABLEKSI
 			dumpFileKSI(name);
 #else

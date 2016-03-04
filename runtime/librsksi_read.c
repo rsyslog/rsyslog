@@ -1030,10 +1030,54 @@ rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
 	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
 	fprintf(fp, "\tSignature Len.: %u\n", (unsigned) bs->sig.der.len);
 	fprintf(fp, "\tSignature.....: ");
-		outputHexBlob(fp, bs->sig.der.data, bs->sig.der.len, verbose);
-		fputc('\n', fp);
+	outputHexBlob(fp, bs->sig.der.data, bs->sig.der.len, verbose);
+	fputc('\n', fp);
 }
 
+/**
+ * Output a human-readable representation of a block_hashchain_t
+ * to proviced file pointer. This function is mainly inteded for
+ * debugging purposes or dumping tlv files.
+ *
+ * @param[in] fp file pointer to send output to
+ * @param[in] bsig ponter to block_sig_t to output
+ * @param[in] verbose if 0, abbreviate blob hexdump, else complete
+ */
+void
+rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose)
+{
+	fprintf(fp, "[0x0905]HashChain Start Record:\n");
+	fprintf(fp, "\tSignature Type: %s\n", sigTypeName(bs->sigID));
+	fprintf(fp, "\tSignature Len.: %u\n", (unsigned) bs->sig.der.len);
+	outputHash(fp, "\tSignature.....: ", bs->sig.der.data, bs->sig.der.len, verbose);
+}
+
+/**
+ * Output a human-readable representation of a block_hashchain_t
+ * to proviced file pointer. This function is mainly inteded for
+ * debugging purposes or dumping tlv files.
+ *
+ * @param[in] fp file pointer to send output to
+ * @param[in] hashchain step ponter to block_hashstep_s to output
+ * @param[in] verbose if 0, abbreviate blob hexdump, else complete
+ */
+void
+rsksi_printHASHCHAINSTEP(FILE *fp, block_hashchain_t *hschain, uint8_t verbose)
+{
+	uint8_t j;
+
+	fprintf(fp, "[0x0907]HashChain Step:\n");
+	fprintf(fp, "\tChain Count ....: %llu\n", (long long unsigned) hschain->stepCount);
+	fprintf(fp, "\tRecord Hash Len.: %d\n", hschain->rec_hash.len);
+	outputHash(fp, "\tRecord Hash.....: ", hschain->rec_hash.data, hschain->rec_hash.len, verbose);
+
+	for(j = 0 ; j < hschain->stepCount ; ++j) {
+		fprintf(fp, "\tDirection.....: %s\n", (hschain->hashsteps[j]->direction == 0x02) ? "LEFT" : "RIGHT");
+		fprintf(fp, "\tLevel Correction.: %llu\n", (long long unsigned) hschain->hashsteps[j]->level_corr);
+		fprintf(fp, "\tChain Hash Len.: %llu\n", (long long unsigned) hschain->hashsteps[j]->sib_hash.len);
+		outputHash(fp, "\tRecord Hash.....: ", hschain->hashsteps[j]->sib_hash.data, hschain->hashsteps[j]->sib_hash.len, verbose);
+	}
+}
 
 /**
  * Output a human-readable representation of a tlv object.
@@ -1057,6 +1101,12 @@ rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 		break;
 	case 0x0904:
 		rsksi_printBLOCK_SIG(fp, obj, verbose);
+		break;
+	case 0x0905:
+		rsksi_printHASHCHAIN(fp, obj, verbose);
+		break;
+	case 0x0907:
+		rsksi_printHASHCHAINSTEP(fp, obj, verbose);
 		break;
 	default:fprintf(fp, "rsksi_tlvprint :\t unknown tlv record %4.4x\n", tlvtype);
 		break;
