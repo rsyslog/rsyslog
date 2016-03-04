@@ -731,7 +731,7 @@ checkInstance(instanceConf_t *inst)
 
 	i = getBasename(basen, inst->pszFileName);
 	if (i == -1) {
-		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile config error: file path issue: '%s'",
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile: file path '%s' does not include a basename component",
 			inst->pszFileName);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
