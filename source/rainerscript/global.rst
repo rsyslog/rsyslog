@@ -199,3 +199,13 @@ The following parameters can be set:
   If sender tracking is active, report a sender that is not yet inside
   the cache. Note that this means that senders which have been timed out
   due to prolonged inactivity are also reported once they connect again.
+
+- **debug.unloadModules** [on/off] available 8.17.0+
+
+  **Default:** on
+
+  This is primarily a debug setting. If set to "off", rsyslog will never
+  unload any modules (including plugins). This usually causes no operational
+  problems, but may in extreme cases. The core benefit of this setting is
+  that it makes valgrind stack traces readable. In previous versions, the
+  same functionality was only available via a special build option.
