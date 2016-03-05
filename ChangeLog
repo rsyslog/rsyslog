@@ -2,6 +2,12 @@
 Version 8.17.0 [v8-stable] 2016-03-08
 - NEW REQUIREMENT: libfastjson
   see also: 
+- improve json variable performance
+  We use libfastjson's alternative hash function, which has been
+  proven to be much faster than the default one (which stems
+  back to libjson-c). This should bring an overall performance
+  improvement for all operations involving variable processing.
+  closes https://github.com/rsyslog/rsyslog/issues/848
 - new experimental feature: lookup table suport
   Note that at this time, this is an experimental feature which is not yet
   fully supported by the rsyslog team. It is introduced in order to gain
