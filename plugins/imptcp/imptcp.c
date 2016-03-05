@@ -353,6 +353,8 @@ destructSrv(ptcpsrv_t *pSrv)
 		free(pSrv->pszInputName);
 	if(pSrv->port != NULL)
 		free(pSrv->port);
+	if(pSrv->path != NULL)
+		free(pSrv->path);
 	if(pSrv->lstnIP != NULL)
 		free(pSrv->lstnIP);
 	free(pSrv);
@@ -1449,10 +1451,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	pSrv->compressionMode = inst->compressionMode;
 	pSrv->dfltTZ = inst->dfltTZ;
-	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
-	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
-	ratelimitSetThreadSafe(pSrv->ratelimiter);
-	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
+	if (inst->pszBindPort != NULL) {
+		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
+	}
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
 	if (inst->pszBindAddr == NULL) {
 		pSrv->lstnIP = NULL;
@@ -1463,6 +1464,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		pSrv->path = NULL;
 	} else {
 		CHKmalloc(pSrv->path = ustrdup(inst->pszBindPath));
+		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPath));
 		pSrv->bUnixSocket = 1;
 	}
 	pSrv->pRuleset = inst->pBindRuleset;
@@ -1471,6 +1473,9 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
 
+	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*) pSrv->port));
+	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	/* add to linked list */
 	pSrv->pNext = pSrvRoot;
 	pSrvRoot = pSrv;
@@ -2045,6 +2050,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		free(inst->pszBindPath);
 		free(inst->pszBindAddr);
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
@@ -2107,7 +2113,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 	}
 
 	if (pSrv->bUnixSocket) {
-		unlink((char*) pLstn->pSrv->path);
+		unlink((char*) pSrv->path);
 	}
 
 	/* sessions */
