@@ -161,12 +161,34 @@ System Properties
 These properties are provided by the rsyslog core engine. They are **not**
 related to the message. All system properties start with a dollar-sign.
 
-For example, ``timereported`` contains the timestamp
-from the message. Depending on how long the message was in the relay chain, this
-can be quite old. In contrast, ``$now`` is the system time when the message
-is being processed. Depending on your needs, you need one or the other. Usually,
-the message-based timestamp is the more important one, but that really depdends
-on the use case.
+Special care needs to be taken in regard to time-related system variables:
+
+* ``timereported`` contains the timestamp that is contained within the
+  message header. Ideally, it resembles the time when the message was
+  created at the original sender.
+  Depending on how long the message was in the relay chain, this
+  can be quite old.
+* ``timegenerated`` contains the timestamp when the message was received
+  by the local system. Here "received" actually means the point in time
+  when the message was handed over from the OS to rsyslog's reception
+  buffers, but before any actual processing takes place. This also means
+  a message is "received" before it is placed into any queue. Note that
+  depending on the input, some minimal processing like extraction of the
+  actual message content from the receive buffer can happen. If multiple
+  messages are received via the same receive buffer (a common scenario
+  for example with TCP-based syslog), they bear the same ``timegenerated``
+  stamp because they actually were received at the same time.
+* ``$now`` is **not** from the message. It is the system time when the
+  message is being **processed**. There is always a small difference
+  between ``timegenerated`` and ``$now`` because processing always
+  happens after reception. If the message is sitting inside a queue
+  on the local system, the time difference between the two can be some
+  seconds (e.g. due to a message burst and in-memory queueing) up to
+  several hours in extreme cases where a message is sitting inside a
+  disk queue (e.g. due to a database outage). The ``timereported``
+  property is usually older than ``timegenerated``, but may be totally
+  different due to differences in time and time zone configuration
+  between systems.
 
 The following system properties exist:
 
