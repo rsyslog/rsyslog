@@ -2932,7 +2932,7 @@ msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct jso
 		jroot = global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
 	} else {
-		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
+		DBGPRINTF("msgGetJSONPropJSONorString; invalid property id %d\n",
 			  pProp->id);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
