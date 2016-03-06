@@ -175,6 +175,32 @@ The following system properties exist:
   templates for RFC5424 support, when the character set is know to be
   Unicode.
   
+**$myhostname**
+  The name of the current host as it knows itself (probably useful for
+  filtering in a generic way)
+
+**$myhostname**
+  The name of the current host as it knows itself (probably useful for
+  filtering in a generic way)
+
+Time-Related System Properties
+..............................
+
+All of these system properties exist in a local time variant (e.g. \$now)
+and a variant that emits UTC (e.g. \$now-utc). The UTC variant is always
+available by appending "-utc". Note that within a single template, only
+the localtime or UTC variant should be used. It is possible to mix both
+variants within a single template. However, in this case it is **not**
+guaranteed that both variants given exactly the same time. The technical
+reason behind is that rsyslog needs to re-query system time when the
+variant is changed. So we strongly recommend not mixing both variants in
+the same template.
+
+Note that use in different templates will generate a consistent timestamp
+within each template. However, as $now always provides local system time
+at time of using it, time may advance and consequently different templates
+may have different time stamp. To avoid this, use *timegenerated* instead.
+
 **$now**
   The current date stamp in the format YYYY-MM-DD
 
@@ -200,7 +226,3 @@ The following system properties exist:
 
 **$minute**
   The current minute (2-digit)
-
-**$myhostname**
-  The name of the current host as it knows itself (probably useful for
-  filtering in a generic way)
