@@ -1,7 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.17.0 [v8-stable] 2016-03-08
 - NEW REQUIREMENT: libfastjson
-  see also: 
+  see also:
+  http://blog.gerhards.net/2015/12/rsyslog-and-liblognorm-will-switch-to.html
 - improve json variable performance
   We use libfastjson's alternative hash function, which has been
   proven to be much faster than the default one (which stems
@@ -19,32 +20,18 @@ Version 8.17.0 [v8-stable] 2016-03-08
   Thanks to Janmejay Singh for suggesting and implementing this feature
 - new contributed plugin: omampq1 for AMQP 1.0-compliant brokers
   Thanks to Ken Giusti for this module
-- simplified locking in when accessing message and local variables
+- new set of UTC-based $now family of variables ($now-utc, $year-utc, ...)
+- simplified locking when accessing message and local variables
   this simlifies the code and slightly increases performance if such
   variables are heavily accessed.
 - new global parameter "debug.unloadModules"
   This permits to disable unloading of modules, e.g.  to make valgrind
   reports more useful (without a need to recompile).
-- bugfix: unixtimestamp date format was incorrectly computed
-  The problem happened in leap year from March til then end
-  of year and healed itself at the begining of the next year.
-  During the problem period, the timestamp was 24 hours too low.
-  fixes https://github.com/rsyslog/rsyslog/issues/830
-- bugfix: date-ordinal date format was incorrectly computed
-  same root cause aus for unixtimestamp and same triggering
-  condition. During the affected perido, the ordinal was one
-  too less.
 - timestamp handling: guard against invalid dates
   We do not permit dates outside of the year 1970..2100
   interval. Note that network-receivers do already guard
   against this, so the new guard only guards against invalid
   system time.
-- bugfix: some race when shutting down input module threads
-  this had little, if at all, effect on real deployments as it resulted
-  in a small leak right before rsyslog termination. However, it caused
-  trouble with the testbench (and other QA tools).
-  Thanks to Peter Portante for the patch and both Peter and Janmejay
-  Singh for helping to analyze what was going on.
 - imfile: add "trimlineoverbytes" input paramter
   Thanks to github user JindongChen for the patch.
 - ommongodb: add support for extended json format for dates
@@ -81,6 +68,21 @@ Version 8.17.0 [v8-stable] 2016-03-08
   Note that we routinely run clang static analyer in CI and
   it also detects such calls as invalid.
   closes https://github.com/rsyslog/rsyslog/issues/834
+- bugfix: unixtimestamp date format was incorrectly computed
+  The problem happened in leap year from March til then end
+  of year and healed itself at the begining of the next year.
+  During the problem period, the timestamp was 24 hours too low.
+  fixes https://github.com/rsyslog/rsyslog/issues/830
+- bugfix: date-ordinal date format was incorrectly computed
+  same root cause aus for unixtimestamp and same triggering
+  condition. During the affected perido, the ordinal was one
+  too less.
+- bugfix: some race when shutting down input module threads
+  this had little, if at all, effect on real deployments as it resulted
+  in a small leak right before rsyslog termination. However, it caused
+  trouble with the testbench (and other QA tools).
+  Thanks to Peter Portante for the patch and both Peter and Janmejay
+  Singh for helping to analyze what was going on.
 - bugfix tcpflood: did not handle connection drops correct in TLS case
   note that tcpflood is a testbench too. The bug caused some testbench
   instability, but had no effect on deplyments.
@@ -123,7 +125,7 @@ Version 8.17.0 [v8-stable] 2016-03-08
   "unexpected GnuTLS error -50 in nsd_gtls.c:530"
 - bugfix imfile: abort on startup if no slash was present in file name param
   Thanks to Brian Knox for the patch.
-- rsgtutil: Fixed getopt_long parameter colons 
+- bugfix rsgtutil: fixed abort when using short command line options
   Thanks to Henri Lakk 
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
