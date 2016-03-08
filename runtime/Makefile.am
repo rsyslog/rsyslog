@@ -254,6 +254,7 @@ lmtcpclt_la_LIBADD =
 if ENABLE_GT_KSI
    noinst_LTLIBRARIES +=  librsksi.la
    librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h librsgt_common.h
+   librsksi_la_CPPFLAGS =  $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
    pkglib_LTLIBRARIES += lmsig_ksi.la
    lmsig_ksi_la_SOURCES = lmsig_ksi.c lmsig_ksi.h
    lmsig_ksi_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
