@@ -1068,7 +1068,7 @@ rsksi_printHASHCHAINSTEP(FILE *fp, block_hashchain_t *hschain, uint8_t verbose)
 
 	fprintf(fp, "[0x0907]HashChain Step:\n");
 	fprintf(fp, "\tChain Count ....: %llu\n", (long long unsigned) hschain->stepCount);
-	fprintf(fp, "\tRecord Hash Len.: %d\n", hschain->rec_hash.len);
+	fprintf(fp, "\tRecord Hash Len.: %zd\n", hschain->rec_hash.len);
 	outputHash(fp, "\tRecord Hash.....: ", hschain->rec_hash.data, hschain->rec_hash.len, verbose);
 
 	for(j = 0 ; j < hschain->stepCount ; ++j) {
