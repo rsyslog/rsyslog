@@ -3,6 +3,9 @@ Version 8.17.0 [v8-stable] 2016-03-08
 - NEW REQUIREMENT: libfastjson
   see also:
   http://blog.gerhards.net/2015/12/rsyslog-and-liblognorm-will-switch-to.html
+- new testbench requirement: faketime command line tool
+  This is used to generate a controlled environment for time-based tests; if
+  not available, tests will gracefully be skipped.
 - improve json variable performance
   We use libfastjson's alternative hash function, which has been
   proven to be much faster than the default one (which stems
@@ -59,6 +62,9 @@ Version 8.17.0 [v8-stable] 2016-03-08
   hiredis libs do not provide a pkgconfig file. Previsouly, this
   required manual configuration.
   Thanks to github user jaymell for the patch.
+- rsgtutil: dump mode improvements
+  * auto-detect signature file type
+  * ability to dump hash chains for log extraction files
 - build system: fix build issues with clang
   clang builds often failed with a missing external symbol
   "rpl_malloc". This was caused by checks in configure.ac,
@@ -127,6 +133,11 @@ Version 8.17.0 [v8-stable] 2016-03-08
   Thanks to Brian Knox for the patch.
 - bugfix rsgtutil: fixed abort when using short command line options
   Thanks to Henri Lakk 
+- bugfix rsgtutil: invalid computation of log record extraction file
+  This caused verification to fail because the hash chain was actually
+  incorrect. Depended on the input data set.
+  closes https://github.com/rsyslog/rsyslog/issues/832
+- bugfix build system: KSI components could only be build if in default path
 ------------------------------------------------------------------------------
 Version 8.16.0 [v8-stable] 2016-01-26
 - rsgtutil: Added extraction support including loglines and hash chains. 
