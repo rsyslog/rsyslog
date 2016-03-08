@@ -1099,8 +1099,8 @@ EXTRA_DIST= \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \
-	ksi-sample.log \
-	ksi-sample.log.ksisig \
+	testsuites/ksi-sample.log \
+	testsuites/ksi-sample.log.ksisig \
 	ksi-verify-short.sh \
 	ksi-verify-long.sh \
 	ksi-extract-verify-short.sh \
