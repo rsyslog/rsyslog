@@ -44,10 +44,6 @@
 #include "librsgt_common.h"
 #include "librsksi.h"
 
-/* TODO: FIX Warnings! */
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-label"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 typedef unsigned char uchar;
 #ifndef VERSION
@@ -241,7 +237,7 @@ static inline int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 	int r = 0;
 	if ( fputc(octet, newsigfp) == EOF ) 
 		r = RSGTE_IO; 
-done:	return r;
+	return r;
 }
 static inline int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
 {
@@ -1122,7 +1118,7 @@ rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 void
 rsksi_objfree(uint16_t tlvtype, void *obj)
 {
-	int j; 
+	unsigned j;
 	// check if obj is valid 
 	if (obj == NULL )
 		return; 
@@ -2495,7 +2491,6 @@ int rsksi_ExtractBlockSignature(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, 
 
 donedecode:
 	if(r != 0) printf("debug: rsksi_ExtractBlockSignature:\t\t failed to write with error %d\n", r);
-done:
 	if(rsksi_read_debug) printf("debug: ExtractBlockSignature:\t\t returned %d\n", r);
 	return r;
 }
