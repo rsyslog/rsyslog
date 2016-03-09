@@ -243,7 +243,9 @@ TESTS +=  \
 	dynstats_overflow.sh \
 	dynstats_reset.sh \
 	dynstats_ctr_reset.sh \
-	dynstats_nometric.sh
+	dynstats_nometric.sh \
+	no-dynstats-json.sh \
+	no-dynstats.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -985,6 +987,10 @@ EXTRA_DIST= \
 	testsuites/dynstats_nometric.conf \
 	testsuites/dynstats_overflow.conf \
 	testsuites/dynstats_reset.conf \
+	no-dynstats-json.sh \
+	testsuites/no-dynstats-json.conf \
+	no-dynstats.sh \
+	testsuites/no-dynstats.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \
