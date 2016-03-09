@@ -44,10 +44,6 @@
 #include "librsgt_common.h"
 #include "librsksi.h"
 
-/* TODO: FIX Warnings! */
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-label"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 
 typedef unsigned char uchar;
 #ifndef VERSION
@@ -241,7 +237,7 @@ static inline int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 	int r = 0;
 	if ( fputc(octet, newsigfp) == EOF ) 
 		r = RSGTE_IO; 
-done:	return r;
+	return r;
 }
 static inline int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
 {
@@ -1122,7 +1118,7 @@ rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose)
 void
 rsksi_objfree(uint16_t tlvtype, void *obj)
 {
-	int j; 
+	unsigned j;
 	// check if obj is valid 
 	if (obj == NULL )
 		return; 
@@ -1222,7 +1218,7 @@ done:
  * @returns 0 if ok, something else otherwise
  */
 int
-rsksi_getBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t **bs, 
+rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, 
 		block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes)
 {
 	int r = RSGTE_SUCCESS;
@@ -1298,7 +1294,7 @@ done:
  * @returns 0 if ok, something else otherwise
  */
 int
-rsksi_getExcerptBlockParams(ksifile ksi, FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh)
+rsksi_getExcerptBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh)
 {
 	int r = RSGTE_SUCCESS;
 	uint64_t nRecs = 0;
@@ -2100,7 +2096,7 @@ done:
 /* Verify the existance of the header. 
  */
 int
-verifyBLOCK_HDRKSI(ksifile ksi, FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
+verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec)
 {
 	int r;
 	block_hdr_t *bh = NULL;
@@ -2213,7 +2209,7 @@ void rsksi_set_debug(int iDebug)
 }
 
 /* Helper function to convert an old V10 signature file into V11 */
-int rsksi_ConvertSigFile(char* name, FILE *oldsigfp, FILE *newsigfp, int verbose)
+int rsksi_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose)
 {
 	int r = 0, rRead = 0;
 	imprint_t *imp = NULL;
@@ -2415,7 +2411,7 @@ done:
 
 
 /* Helper function to write full hashchain! */
-int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, block_sig_t *bsIn, int verbose)
+int rsksi_WriteHashChain(FILE *newsigfp, block_hashchain_t *hashchain, int verbose)
 {
 	uint8_t j;
 	int r = 0;
@@ -2484,7 +2480,7 @@ done:
 }
 
 /* Helper function to Extract Block Signature */
-int rsksi_ExtractBlockSignature(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, ksierrctx_t *ectx, int verbose)
+int rsksi_ExtractBlockSignature(FILE *newsigfp, block_sig_t *bsIn)
 {
 	int r = 0;
 
@@ -2495,7 +2491,6 @@ int rsksi_ExtractBlockSignature(FILE *newsigfp, ksifile ksi, block_sig_t *bsIn, 
 
 donedecode:
 	if(r != 0) printf("debug: rsksi_ExtractBlockSignature:\t\t failed to write with error %d\n", r);
-done:
 	if(rsksi_read_debug) printf("debug: ExtractBlockSignature:\t\t returned %d\n", r);
 	return r;
 }
