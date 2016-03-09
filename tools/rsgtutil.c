@@ -303,7 +303,7 @@ showSigblkParamsKSI(char *name)
 	if((r = rsksi_chkFileHdr(fp, "LOGSIG11", verbose)) != 0) goto err;
 
 	while(1) { /* we will err out on EOF */
-		if((r = rsksi_getBlockParams(NULL, fp, 0, &bs, &bh, &bHasRecHashes,
+		if((r = rsksi_getBlockParams(fp, 0, &bs, &bh, &bHasRecHashes,
 				        &bHasIntermedHashes)) != 0)
 			goto err;
 		++blkCnt;
@@ -356,7 +356,7 @@ convertFileKSI(char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsksi_ConvertSigFile(name, oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsksi_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
 			goto err;
 		else {
 			/* Close FILES */
@@ -790,7 +790,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 				if (bh != NULL) rsksi_objfree(0x0901, bh);
 
 				/* Get/Verify Block Paramaters */
-				if((r = rsksi_getBlockParams(ksi, sigfp, 1, &bs, &bh, &bHasRecHashes,
+				if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes,
 								&bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
 						fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
@@ -801,7 +801,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 					goto done;
 				}
 				/* Copy block header */
-				if ((r = verifyBLOCK_HDRKSI(ksi, sigfp, nsigfp, &tlvrec)) != 0) goto done;
+				if ((r = verifyBLOCK_HDRKSI(sigfp, nsigfp, &tlvrec)) != 0) goto done;
 
 				rsksi_vrfyBlkInit(ksi, bh, bHasRecHashes, bHasIntermedHashes);
 				ectx.recNum = 0;
@@ -832,7 +832,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 			if (bh != NULL) rsksi_objfree(0x0901, bh);
 
 			/* Get/Verify Block Paramaters */
-			if((r = rsksi_getExcerptBlockParams(ksi, sigfp, 1, &bs, &bh)) != 0) {
+			if((r = rsksi_getExcerptBlockParams(sigfp, 1, &bs, &bh)) != 0) {
 				if(ectx.blkNum == 0) {
 					fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block\n", r);
 					r = RSGTE_IO;
@@ -1284,7 +1284,7 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				if(bh != NULL) { rsksi_objfree(0x0901, bh); bh = NULL; }
 				
 				/* Get/Verify Block Paramaters */
-				if((r = rsksi_getBlockParams(ksi, sigfp, 1, &bs, &bh, &bHasRecHashes, &bHasIntermedHashes)) != 0) {
+				if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes, &bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
 						fprintf(stderr, "extractKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
 						r = RSGTE_IO;
@@ -1300,7 +1300,7 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				}
 
 				/* Verify block header */
-				if ((r = verifyBLOCK_HDRKSI(ksi, sigfp, NULL, &tlvbhrec)) != 0) {
+				if ((r = verifyBLOCK_HDRKSI(sigfp, NULL, &tlvbhrec)) != 0) {
 					perror(sigfname);
 					r = RSGTE_IO;
 					goto done;
@@ -1328,7 +1328,7 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				if (bBlockSigWritten == 0) {
 					/* WRITE BLOCK Signature */
 					if (debug) printf("debug: extractKSI:\t\t\t rsksi_ExtractBlockSignature #1: \n"); 
-					if ((r = rsksi_ExtractBlockSignature(newsigfp, ksi, bs, &ectx, verbose)) != RSGTE_SUCCESS) {
+					if ((r = rsksi_ExtractBlockSignature(newsigfp, bs)) != RSGTE_SUCCESS) {
 						fprintf(stderr, "extractKSI:\t\t\t error %d while writing block signature for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 						goto done;
 					}
@@ -1362,7 +1362,7 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 
 				if (bLogLineFound == 1 ) {
 					/* Write HashChain now */
-					if ((r = rsksi_WriteHashChain(newsigfp, hashchain, bs, verbose)) != RSGTE_SUCCESS) {
+					if ((r = rsksi_WriteHashChain(newsigfp, hashchain, verbose)) != RSGTE_SUCCESS) {
 						fprintf(stderr, "extractKSI:\t\t\t error %d while starting new hash chain for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 						goto done;
 					}
