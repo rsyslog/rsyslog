@@ -350,11 +350,13 @@ struct db_connect* create_conn()
 void close_conn(struct db_connect *db_conn)
 {
 	mongo_sync_disconnect (db_conn->conn);
+	free(db_conn);
 }
 
 void free_cursor(struct db_cursor *db_c)
 {
 	mongo_sync_cursor_free (db_c->cursor);
+	free(db_c);
 }
 
 struct output* launch_query(struct queryopt *opt, struct select_doc *s_doc,
@@ -446,10 +448,14 @@ int main (int argc, char *argv[])
 		fields = get_data(res);
         	formater(fields);				// formate output
 		free(fields);
+		free(res);
     	}
 
 	free_cursor(db_c);
 	close_conn(db_conn); 
+	free(out);
+	free(s_doc);
+	free(qu_doc);
  
 	return (0);
 }
