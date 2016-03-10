@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
+- bugfix: incorrect formatting of stats when CEE/Json format is used
+  This lead to ill-formed json being generated
 - bugfix: memory leaks in logctl utility
   Detected by clang static analyzer. Note that these leaks CAN happen in
   practice and may even be pretty large. This was probably never detected
