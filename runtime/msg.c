@@ -2233,7 +2233,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	json_object_object_add(json, "uuid", jval);
 #endif
 
-	json_object_object_add(json, "$!", pMsg->json);
+	json_object_object_add(json, "$!", json_object_get(pMsg->json));
 
 	pRes = (uchar*) strdup(json_object_get_string(json));
 	json_object_put(json);
