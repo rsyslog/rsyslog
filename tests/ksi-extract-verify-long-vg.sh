@@ -7,14 +7,14 @@
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
-RSYSLOG_KSI_DEBUG="--debug"
+RSYSLOG_KSI_DEBUG="--show-verified"
 RSYSLOG_KSI_LOG="ksi-sample.log"
 
 echo "[ksi-extract-verify-long-vg.sh]: testing rsgtutil extract with valgrind - long options"
 . $srcdir/diag.sh init
 
 echo "running rsgtutil extract command"
-valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --show-verified --extract 3 --output $srcdir/ksi-export.log --publications-server $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG
+valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --extract 4,8,21 --output $srcdir/ksi-export.log --publications-server $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
@@ -23,7 +23,7 @@ if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
 fi
 
 echo "running rsgtutil verify command"
-valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --verify --show-verified --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/ksi-export.log
+valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG --verify --publications-server http://verify.guardtime.com/ksi-publications.bin $srcdir/ksi-export.log
 
 RSYSLOGD_EXIT=$?
 if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
