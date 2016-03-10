@@ -146,7 +146,7 @@ done:	return r;
 static int
 eiGetEND(FILE *eifp, off64_t *offs)
 {
-	char rectype[EIF_MAX_RECTYPE_LEN+1];
+	char rectype[EIF_MAX_RECTYPE_LEN+1] = "";
 	char value[EIF_MAX_VALUE_LEN+1];
 	int r;
 
