@@ -59,7 +59,9 @@ matrix:
        env: KAFKA="YES", CFLAGS="-g -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
        dist: trusty
      - compiler: "clang"
-       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -Werror"
+       env: STAT_AN="YES", GROK="YES", KAFKA="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
+       # note: we currently need -Wno-unused-function until we fix inline
+       # functions (C99 semantics are really ugly...)
        dist: trusty
      - compiler: "gcc"
        env: BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all"
@@ -68,9 +70,9 @@ matrix:
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
 before_install:
-  - travis_retry sudo add-apt-repository ppa:adiscon/v8-stable -y
-  - travis_retry sudo add-apt-repository ppa:qpid/released -y
-  - travis_retry sudo apt-get update -qq
+  - sudo add-apt-repository ppa:adiscon/v8-stable -y
+  - sudo add-apt-repository ppa:qpid/released -y
+  - sudo apt-get update -qq
   - mysql -u root -e "CREATE USER 'rsyslog'@'localhost' IDENTIFIED BY 'testbench';"
   - mysql -u root -e "GRANT ALL PRIVILEGES ON * . * TO 'rsyslog'@'localhost'; FLUSH PRIVILEGES;"
   - mysql -u root -e "CREATE DATABASE Syslog; GRANT ALL ON Syslog.* to 'rsyslog'@'localhost' identified by 'testbench';"
@@ -79,14 +81,16 @@ before_install:
 install:
   - source /etc/lsb-release
   # the following packages are not yet available via travis package system above
-  - travis_retry sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev
-  - if [ "x$GROK" == "xYES" ]; then travis_retry sudo apt-get install -qq libgrok1 libgrok-dev ; fi
-  - travis_retry sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev
-  - travis_retry sudo apt-get install -qq python-docutils liblognorm1-dev 
-  - if [ "$DISTRIB_CODENAME" == "trusty" ]; then travis_retry sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
-  - travis_retry sudo apt-get install -qq libqpid-proton3-dev
-  - if [ "$CC" == "clang" ]; then travis_retry sudo apt-get install -qq clang; fi
-  - if [ "x$KAFKA" == "xYES" ]; then travis_retry sudo apt-get install -qq librdkafka-dev ; fi
+  - sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev
+  - if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
+  - sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev
+  - sudo apt-get install -qq python-docutils liblognorm1-dev 
+  - if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
+  - sudo apt-get install -qq libqpid-proton3-dev
+  - if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-3.6"; SCAN_BUILD="scan-build-3.6"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
+  - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
+  - if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
+  - if [ "x$KAFKA" == "xYES" ]; then sudo apt-get install -qq librdkafka-dev ; fi
   - if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka" ; fi
 
 script:
@@ -96,21 +100,25 @@ script:
   # I don't know how to pass two env vars in the include matrix, so
   # I set the second one here via an "if"
   - if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
-  - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
-  - ./configure  --prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools=no --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK
+  # at this point, the environment should be setup for ./configure
+  - if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="clang-3.6"; fi
+  - $CC -v
+  - env
+  - export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools=no --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK"
+  - ./configure  $CONFIG_FLAGS
   - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
   - make
   - if [ "x$CHECK" == "xYES" ] ; then make check ; fi
   - if [ -f tests/test-suite.log ] ; then cat tests/test-suite.log; fi
   - if [ "x$CHECK" == "xYES" ] ; then make distcheck ; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then make clean ; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; scan-build --status-bugs make && cd .. ; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make && cd .. ; fi
   # we now build those components that we know to need some more work
   # they will not be included in the later static analyzer run. But by
   # explicitely listing the modules which do not work, we automatically
   # get new modules/files covered.
   - if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then scan-build --status-bugs make ; fi
+  - if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --status-bugs make ; fi
   # if that all worked, we go the traditional gcc & valgrind way
   #- env TESTS="json_array_looping.sh" make -e check
   # only for newer autoconf tools you need to add:
