@@ -136,6 +136,7 @@ struct instanceConf_s {
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *dfltTZ;
+	sbool bUnlink;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -169,6 +170,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, 0 }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
 	{ "path", eCmdHdlrString, 0 },
+	{ "unlink", eCmdHdlrBinary, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
@@ -225,6 +227,7 @@ struct ptcpsrv_s {
 	sbool bEmitMsgOnClose;
 	sbool bSuppOctetFram;
 	sbool bSPFramingFix;
+	sbool bUnlink;
 	ratelimit_t *ratelimiter;
 };
 
@@ -376,35 +379,35 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if(sock < 0) {
-		DBGPRINTF("error %d creating unix socket", errno);
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error creating unix socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
 	local.sun_family = AF_UNIX;
 	strncpy(local.sun_path, (char*) path, sizeof(local.sun_path));
-	unlink(local.sun_path);
+	if (pSrv->bUnlink) {
+		unlink(local.sun_path);
+	}
 
 	/* We use non-blocking IO! */
 	if ((sockflags = fcntl(sock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
-		// SETFL could fail too, so get it caught by the subsequent error check.
+		/* SETFL could fail too, so get it caught by the subsequent error check. */
 		sockflags = fcntl(sock, F_SETFL, sockflags);
 	}
 
 	if (sockflags == -1) {
-		DBGPRINTF("imptcp: error %d setting fcntl(O_NONBLOCK) on unix socket\n", errno);
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error setting fcntl(O_NONBLOCK) on unix socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
 	if (bind(sock, (struct sockaddr *)&local, SUN_LEN(&local)) < 0) {
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("error %d while binding unix socket: %s\n", errno, errStr);
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error while binding unix socket");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
 	if (listen(sock, 5) < 0) {
-		DBGPRINTF("unix socket listen error %d, suspending\n", errno);
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
 
@@ -1354,6 +1357,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindPath = NULL;
+	inst->bUnlink = 0;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
@@ -1467,13 +1471,15 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPath));
 		pSrv->bUnixSocket = 1;
 	}
+
+	pSrv->bUnlink = inst->bUnlink;
 	pSrv->pRuleset = inst->pBindRuleset;
 	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
 
-	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*) pSrv->port));
+	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char*) pSrv->port));
 	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
 	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	/* add to linked list */
@@ -1853,6 +1859,8 @@ CODESTARTnewInpInst
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "path")) {
 			inst->pszBindPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "unlink")) {
+			inst->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -2112,7 +2120,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 		free(lstnDel);
 	}
 
-	if (pSrv->bUnixSocket) {
+	if (pSrv->bUnixSocket && pSrv->bUnlink) {
 		unlink((char*) pSrv->path);
 	}
 
