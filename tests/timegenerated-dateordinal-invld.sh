@@ -4,7 +4,7 @@
 # the key point of this test is that we do not abort and
 # instead provide the defined return value (0)
 # requires faketime
-echo \[timegenerated-uxtimestamp-invld\]: check invalid dates with uxtimestamp format
+echo \[timegenerated-dateordinal-invld\]: check invalid dates with ordinal format
 export TZ=UTC+00:00
 faketime -f '2216-03-01 12:00:00' date
 if [ $? -ne 0 ]; then

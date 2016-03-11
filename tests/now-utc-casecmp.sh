@@ -2,7 +2,7 @@
 # test many concurrent tcp connections
 # addd 2016-02-23 by RGerhards, released under ASL 2.0
 # requires faketime
-echo \[now-utc\]: test \$year-utc, \$month-utc, \$day-utc
+echo \[now-utc-casecmp\]: test \$year-utc, \$month-utc, \$day-utc
 export TZ=TEST-02:00
 faketime '2016-01-01 01:00:00' date
 if [ $? -ne 0 ]; then

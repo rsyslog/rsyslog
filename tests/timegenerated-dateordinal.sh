@@ -4,7 +4,7 @@
 # Note: we run several subtests here in order to save us
 # from creating additional tests
 # requires faketime
-echo \[timegenerated-uxtimestamp\]: 
+echo \[timegenerated-dateordinal\]: check valid dates with ordinal format
 export TZ=UTC+00:00
 faketime -f '2016-03-01 12:00:00' date
 if [ $? -ne 0 ]; then
