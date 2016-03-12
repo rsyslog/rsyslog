@@ -4,6 +4,7 @@
 set -o xtrace # we want to see the execution steps
 set -e  # abort on first failure
 
+if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-3.6"; else SCAN_BUILD="scan-build"; fi
 if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
 pwd
 autoreconf --force --verbose --install
