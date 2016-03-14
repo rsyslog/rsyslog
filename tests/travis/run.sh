@@ -5,6 +5,7 @@ set -o xtrace # we want to see the execution steps
 set -e  # abort on first failure
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
+source tests/travis/install.sh
 source /etc/lsb-release
 
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
