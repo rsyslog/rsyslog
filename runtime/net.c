@@ -1348,6 +1348,9 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbu
 		}
 
 		if(bIsServer) {
+			if (setsockopt(*s, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on)) < 0)
+				dbgprintf("unable to enable free IP bind socket option");
+
 			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
 			 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
 			 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
