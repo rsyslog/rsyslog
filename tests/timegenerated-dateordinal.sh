@@ -4,13 +4,12 @@
 # Note: we run several subtests here in order to save us
 # from creating additional tests
 # requires faketime
-echo \[timegenerated-uxtimestamp\]: 
+echo \[timegenerated-dateordinal\]: check valid dates with ordinal format
+
+. $srcdir/faketime_common.sh
+
 export TZ=UTC+00:00
-faketime -f '2016-03-01 12:00:00' date
-if [ $? -ne 0 ]; then
-    echo "faketime command missing, skipping test"
-    exit 77
-fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -162,6 +161,9 @@ if [ ! $? -eq 0 ]; then
   cat rsyslog.out.log
   exit 1
 fi;
+
+
+rsyslog_testbench_require_y2k38_support
 
 
 echo "***SUBTEST: check 2038-12-31"

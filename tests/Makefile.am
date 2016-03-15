@@ -621,6 +621,7 @@ EXTRA_DIST= \
 	now-utc-casecmp.sh \
 	now-utc.sh \
 	testsuites/now-utc.conf \
+	faketime_common.sh \
 	timegenerated-ymd.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
