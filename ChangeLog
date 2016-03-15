@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
+- imptcp: added AF_UNIX support
+  Thanks to Nathan Brown for implementing this feature.
 - testbench improvements (more test and more thourough tests)
 - improvements to the CI environment
 - bugfix: double free in jsonmesg template
