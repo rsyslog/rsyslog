@@ -30,6 +30,8 @@ then
     set +e  # begin testbench, here we do not want to abort
     make check
     ALL_OK=$?
+    cat tests/omjournal-abort-template.sh.log 
+    cat tests/omjournal-abort-no-template.sh.log 
     if [ -f tests/test-suite.log ]
     then
         cat tests/test-suite.log

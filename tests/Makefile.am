@@ -216,7 +216,9 @@ endif
 if ENABLE_OMJOURNAL
 TESTS +=  \
 	omjournal-abort-template.sh \
-	omjournal-abort-no-template.sh
+	omjournal-abort-no-template.sh \
+	omjournal-basic-template.sh \
+	omjournal-basic-no-template.sh
 endif
 
 if ENABLE_MYSQL_TESTS
@@ -630,6 +632,8 @@ EXTRA_DIST= \
 	faketime_common.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
+	omjournal-basic-template.sh \
+	omjournal-basic-no-template.sh \
 	timegenerated-ymd.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
