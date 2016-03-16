@@ -213,6 +213,12 @@ endif
 endif
 endif
 
+if ENABLE_OMJOURNAL
+TESTS +=  \
+	omjournal-abort-template.sh \
+	omjournal-abort-no-template.sh
+endif
+
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
@@ -622,6 +628,8 @@ EXTRA_DIST= \
 	now-utc.sh \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
+	omjournal-abort-template.sh \
+	omjournal-abort-no-template.sh \
 	timegenerated-ymd.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
