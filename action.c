@@ -1084,7 +1084,7 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 	actWrkrIParams_t *__restrict__ const iparams,
 	wti_t *__restrict__ const pWti)
 {
-	uchar *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 	int i;
 	DEFiRet;
 

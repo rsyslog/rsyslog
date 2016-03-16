@@ -287,13 +287,12 @@ send_template_message(struct json_object* json){
 BEGINdoAction_NoStrings
     instanceData *pData;
 CODESTARTdoAction
-
 	pData = pWrkrData->pData;
 
 	if (pData->tplName == NULL) {
-		send_non_template_message((msg_t*) pMsgData);
+		send_non_template_message((msg_t*) ((void**)pMsgData)[0]);
 	} else {
-		send_template_message((struct json_object*) pMsgData);
+		send_template_message((struct json_object*) ((void**)pMsgData)[0]);
 	}
  ENDdoAction
 
