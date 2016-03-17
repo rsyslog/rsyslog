@@ -24,9 +24,25 @@ export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x8
 ./configure  $CONFIG_FLAGS
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make
-if [ "x$CHECK" == "xYES" ] ; then make check ; fi
-if [ -f tests/test-suite.log ] ; then cat tests/test-suite.log; fi
-if [ "x$CHECK" == "xYES" ] ; then make distcheck ; fi
+
+if [ "x$CHECK" == "xYES" ]
+then
+    set +e  # begin testbench, here we do not want to abort
+    make check
+    ALL_OK=$?
+    if [ -f tests/test-suite.log ]
+    then
+        cat tests/test-suite.log
+    fi
+    if [ $ALL_OK -ne 0 ]
+    then
+        echo "error in make check, error-terminating now"
+        exit $ALL_OK
+    fi
+    set -e # now errors are no longer permited, again
+    make distcheck
+fi
+
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
 if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make && cd .. ; fi
 # we now build those components that we know to need some more work
