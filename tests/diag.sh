@@ -435,6 +435,12 @@ case $1 in
    'add-conf')   # start a standard test rsyslog.conf
 		echo "$2" >> testconf.conf
 		;;
+   'require-journalctl')   # check if journalctl exists on the system
+		if ! hash journalctl 2>/dev/null ; then
+		    echo "journalctl command missing, skipping test"
+		    exit 77
+		fi
+		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
