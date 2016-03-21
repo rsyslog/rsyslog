@@ -4,6 +4,8 @@ Version 8.18.0 [v8-stable] 2016-04-19
 - imptcp: added AF_UNIX support
   Thanks to Nathan Brown for implementing this feature.
 - testbench improvements (more tests and more thourough tests)
+  among others:
+  - tests for omjournal added
 - improvements to the CI environment
 - bugfix: double free in jsonmesg template
   There has to be actual json data in the message (from mmjsonparse,
