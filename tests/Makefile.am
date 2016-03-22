@@ -29,6 +29,8 @@ TESTS +=  \
 	fac_invld2.sh \
 	fac_invld3.sh \
 	fac_invld4_rfc5424.sh \
+	compresssp.sh \
+	compresssp-stringtpl.sh \
 	now_family_utc.sh \
 	now-utc.sh \
 	now-utc-ymd.sh \
@@ -628,6 +630,8 @@ EXTRA_DIST= \
 	testsuites/fac_invld3.conf \
 	fac_invld4_rfc5424.sh \
 	testsuites/fac_invld4_rfc5424.conf \
+	compresssp.sh \
+	compresssp-stringtpl.sh \
 	now_family_utc.sh \
 	testsuites/now_family_utc.conf \
 	now-utc-ymd.sh \
