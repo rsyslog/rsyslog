@@ -154,6 +154,9 @@ property or modifying it. It supports the following parameters:
 -  name - the name of the property to access
 -  outname - output field name (for structured outputs)
 -  dateformat - date format to use (only for date-related properties)
+-  date.inUTC - date shall be shown in UTC (please note that this
+   requires a bit more performance due to the necessary conversions)
+   Available since 8.18.0.
 -  caseconversion - permits to convert case of the text. Supported
    values are "lower" and "upper"
 -  controlcharacters - specifies how to handle control characters.

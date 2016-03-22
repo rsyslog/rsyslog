@@ -208,6 +208,9 @@ options are defined:
   The last LF in the message (if any), is dropped. Especially useful for
   PIX.
 
+**date-utc**
+  convert data to UTC prior to outputing it (available since 8.18.0)
+
 **date-mysql**
   format as mysql date
 
