@@ -116,6 +116,10 @@ struct instanceConf_s {
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int rcvbuf;			/* 0 means: do not set, keep OS default */
+	/*  0 means:  IP_FREEBIND is disabled
+	1 means:  IP_FREEBIND enabled + warning disabled
+	1+ means: IP+FREEBIND enabled + warning enabled */
+	int ipfreebind;
 	struct instanceConf_s *next;
 	sbool bAppendPortToInpname;
 };
@@ -179,6 +183,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "rcvbufsize", eCmdHdlrSize, 0 },
+	{ "ipfreebind", eCmdHdlrInt, 0 },
 	{ "ruleset", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk inppblk =
@@ -209,6 +214,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
 	inst->rcvbuf = 0;
+	inst->ipfreebind = 2; /* IP_FREEBIND is enabled with warning message */
 	inst->dfltTZ = NULL;
 
 	/* node created, let's add to config */
@@ -285,7 +291,7 @@ addListner(instanceConf_t *inst)
 
 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf);
+	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, inst->ipfreebind);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */
@@ -933,6 +939,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
 			inst->rcvbuf = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ipfreebind")) {
+			inst->ipfreebind = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imudp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
