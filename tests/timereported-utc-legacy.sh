@@ -3,13 +3,11 @@
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="13514")
+$ModLoad ../plugins/imtcp/.libs/imtcp
+$InputTCPServerRun 13514
 
-template(name="outfmt" type="list") {
-	property(name="timereported" dateformat="rfc3339" date.inUTC="on")
-	constant(value="\n")
-}
+template(name="outfmt" type="string"
+	 string="%timereported:::date-rfc3339,date-utc%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '

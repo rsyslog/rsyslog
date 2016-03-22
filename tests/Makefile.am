@@ -39,7 +39,9 @@ TESTS +=  \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
 	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
+	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
@@ -643,7 +645,9 @@ EXTRA_DIST= \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
 	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
+	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
