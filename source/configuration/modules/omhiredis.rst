@@ -17,6 +17,11 @@ using the hiredis client library.
 
 - **serverport**
   Port of the Redis server if the server is not listening on the default port.
+  
+- **serverpassword**
+  Password to support authenticated redis database server to push messages 
+  across networks and datacenters. Parameter is optional if not provided 
+  AUTH command wont be sent to the server.
 
 - **mode**
   Mode to run the output action in: "queue" or "publish". If not supplied, the
@@ -52,6 +57,7 @@ is meaningless.
   action(
     name="count_programs"
     server="my-redis-server.example.com"
+    serverpassword="my-redis-password"
     port="6379"
     type="omhiredis"
     mode="template"
@@ -79,6 +85,7 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
   action(
     name="push_redis"
     server="my-redis-server.example.com"
+    serverpassword="my-redis-password"
     port="6379"
     type="omhiredis"
     mode="queue"
@@ -106,6 +113,7 @@ will default to the RSYSLOG_ForwardFormat template.
   action(
     name="publish_redis"
     server="my-redis-server.example.com"
+    serverpassword="my-redis-password"
     port="6379"
     type="omhiredis"
     mode="publish"
