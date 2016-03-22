@@ -28,6 +28,8 @@ Note that **configurations can be built interactively** via the online
    droppriv
    ipv6
    cryprov_gcry
+   dyn_stats
+   lookup_tables
 
 `Configuration file examples can be found in the rsyslog
 wiki <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_. Also

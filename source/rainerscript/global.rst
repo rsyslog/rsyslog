@@ -152,3 +152,60 @@ The following parameters can be set:
 
   It is highly suggested to change this setting to "off" only if you
   know exactly why you are doing this.
+
+- **senders.keepTrack** [on/off] available 8.17.0+
+
+  **Default:** off
+
+  If turned on, rsyslog keeps track of known senders and also reports
+  statistical data for them via the impstats mechanism.
+
+  A list of active senders is kept. When a new sender is detected, an
+  informational message is emitted. Senders are purged from the list
+  only after a timeout (see *senders.timoutAfter* parameter). Note
+  that we do not intentionally remove a sender when a connection is
+  closed. The whole point of this sender-tracking is to have the ability
+  to provide longer-duration data. As such, we would not like to drop
+  information just because the sender has disconnected for a short period
+  of time (e.g. for a reboot).
+
+  Senders are tracked by their hostname (taken at connection establishment).
+
+  Note: currently only imptcp and imtcp support sender tracking.
+
+- **senders.timeoutAfter** [seconds] available 8.17.0+
+
+  **Default:** 12 hours (12*60*60 seconds)
+
+  Specifies after which period a sender is considered to "have gone
+  away". For each sender, rsyslog keeps track of the time it least
+  received messages from it. When it has not received a message during
+  that interval, rsyslog considers the sender to be no longer present.
+  It will then a) emit a warning message (if configured) and b) purge
+  it from the active senders list. As such, the sender will no longer
+  be reported in impstats data once it has timed out.
+
+- **senders.reportGoneAway** [on/off] available 8.17.0+
+
+  **Default:** off
+
+  Emit a warning message when now data has been received from a sender
+  within the *senders.timeoutAfter* interval.
+
+- **senders.reportNew** [on/off] available 8.17.0+
+
+  **Default:** off
+
+  If sender tracking is active, report a sender that is not yet inside
+  the cache. Note that this means that senders which have been timed out
+  due to prolonged inactivity are also reported once they connect again.
+
+- **debug.unloadModules** [on/off] available 8.17.0+
+
+  **Default:** on
+
+  This is primarily a debug setting. If set to "off", rsyslog will never
+  unload any modules (including plugins). This usually causes no operational
+  problems, but may in extreme cases. The core benefit of this setting is
+  that it makes valgrind stack traces readable. In previous versions, the
+  same functionality was only available via a special build option.
