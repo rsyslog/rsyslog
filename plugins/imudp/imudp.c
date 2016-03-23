@@ -214,7 +214,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
 	inst->rcvbuf = 0;
-	inst->ipfreebind = 2; /* IP_FREEBIND is enabled with warning message */
+	inst->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
 	inst->dfltTZ = NULL;
 
 	/* node created, let's add to config */
