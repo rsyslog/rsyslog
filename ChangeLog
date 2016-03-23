@@ -1,7 +1,22 @@
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
-- testbench improvements (more test and more thourough tests)
+- templates: add option to convert timestamps to UTC
+  closes https://github.com/rsyslog/rsyslog/issues/730
+- omjournal: fix segfault (regression in 8.17.0)
+- imptcp: added AF_UNIX support
+  Thanks to Nathan Brown for implementing this feature.
+- redis: support for authentication
+  Thanks to Manohar Ht for the patch
+- testbench improvements (more tests and more thourough tests)
+  among others:
+  - tests for omjournal added
 - improvements to the CI environment
+- bugfix: small memory leak in imfile
+  Thanks to Tomas Heinrich for the patch.
+- bugfix: double free in jsonmesg template
+  There has to be actual json data in the message (from mmjsonparse,
+  mmnormalize, imjournal, ...) to trigger the crash.
+  Thanks to Tomas Heinrich for the patch.
 - bugfix: incorrect formatting of stats when CEE/Json format is used
   This lead to ill-formed json being generated
 - bugfix: memory leaks in logctl utility

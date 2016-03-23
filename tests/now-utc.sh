@@ -3,12 +3,11 @@
 # addd 2016-02-23 by RGerhards, released under ASL 2.0
 # requires faketime
 echo \[now-utc\]: test \$NOW-UTC
+
+. $srcdir/faketime_common.sh
+
 export TZ=TEST-02:00
-faketime '2016-01-01 01:00:00' date
-if [ $? -ne 0 ]; then
-    echo "faketime command missing, skipping test"
-    exit 77
-fi
+
 . $srcdir/diag.sh init
 faketime '2016-01-01 01:00:00' $srcdir/diag.sh startup now-utc.conf
 # what we send actually is irrelevant, as we just use system properties.
@@ -22,4 +21,6 @@ if [ ! $? -eq 0 ]; then
   cat rsyslog.out.log
   exit 1
 fi;
+
+
 . $srcdir/diag.sh exit

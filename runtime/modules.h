@@ -136,7 +136,7 @@ struct modInfo_s {
 			 */
 			rsRetVal (*beginTransaction)(void*);
 			rsRetVal (*commitTransaction)(void *const, actWrkrIParams_t *const, const unsigned);
-			rsRetVal (*doAction)(uchar**, void*);
+			rsRetVal (*doAction)(void** params, void*pWrkrData);
 			rsRetVal (*endTransaction)(void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 			rsRetVal (*newActInst)(uchar *modName, struct nvlst *lst, void **, omodStringRequest_t **);

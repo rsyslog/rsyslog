@@ -79,47 +79,6 @@ before_install:
   - mysql -u root -e "USE Syslog; CREATE TABLE SystemEvents (ID int unsigned not null auto_increment primary key, CustomerID bigint,ReceivedAt datetime NULL,DeviceReportedTime datetime NULL,Facility smallint NULL,Priority smallint NULL,FromHost varchar(60) NULL,Message text,NTSeverity int NULL,Importance int NULL,EventSource varchar(60),EventUser varchar(60) NULL,EventCategory int NULL,EventID int NULL,EventBinaryData text NULL,MaxAvailable int NULL,CurrUsage int NULL,MinUsage int NULL,MaxUsage int NULL,InfoUnitID int NULL,SysLogTag varchar(60),EventLogType varchar(60),GenericFileName VarChar(60),SystemID int NULL); CREATE TABLE SystemEventsProperties (ID int unsigned not null auto_increment primary key,SystemEventID int NULL,ParamName varchar(255) NULL,ParamValue text NULL);"
 
 install:
-  - source /etc/lsb-release
-  # the following packages are not yet available via travis package system above
-  - sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev
-  - if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
-  - sudo apt-get install -qq libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev
-  - sudo apt-get install -qq python-docutils liblognorm1-dev 
-  - if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
-  - sudo apt-get install -qq libqpid-proton3-dev
-  - if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-3.6"; SCAN_BUILD="scan-build-3.6"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
-  - if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
-  - if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
-  - if [ "x$KAFKA" == "xYES" ]; then sudo apt-get install -qq librdkafka-dev ; fi
-  - if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka" ; fi
 
 script:
-  - if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
-  - pwd
-  - autoreconf --force --verbose --install
-  # I don't know how to pass two env vars in the include matrix, so
-  # I set the second one here via an "if"
-  - if [ "x$GROK" == "xYES" ]; then export GROK="--enable-mmgrok"; fi
-  # at this point, the environment should be setup for ./configure
-  - if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="clang-3.6"; fi
-  - $CC -v
-  - env
-  - export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK"
-  - ./configure  $CONFIG_FLAGS
-  - export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
-  - make
-  - if [ "x$CHECK" == "xYES" ] ; then make check ; fi
-  - if [ -f tests/test-suite.log ] ; then cat tests/test-suite.log; fi
-  - if [ "x$CHECK" == "xYES" ] ; then make distcheck ; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make && cd .. ; fi
-  # we now build those components that we know to need some more work
-  # they will not be included in the later static analyzer run. But by
-  # explicitely listing the modules which do not work, we automatically
-  # get new modules/files covered.
-  - if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
-  - if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --status-bugs make ; fi
-  # if that all worked, we go the traditional gcc & valgrind way
-  #- env TESTS="json_array_looping.sh" make -e check
-  # only for newer autoconf tools you need to add:
-  # - cat tests/test-suite.log
+  - tests/travis/run.sh

@@ -48,6 +48,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/epoll.h>
 #include <sys/queue.h>
 #include <netinet/tcp.h>
@@ -130,10 +131,12 @@ struct instanceConf_s {
 	uint8_t compressionMode;
 	uchar *pszBindPort;		/* port to bind to */
 	uchar *pszBindAddr;		/* IP to bind socket to */
+	uchar *pszBindPath;     /* Path to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *dfltTZ;
+	sbool bUnlink;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -164,8 +167,10 @@ static struct cnfparamblk modpblk =
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
+	{ "port", eCmdHdlrString, 0 }, /* legacy: InputTCPServerRun */
 	{ "address", eCmdHdlrString, 0 },
+	{ "path", eCmdHdlrString, 0 },
+	{ "unlink", eCmdHdlrBinary, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
@@ -204,6 +209,8 @@ struct ptcpsrv_s {
 	ptcpsrv_t *pNext;		/* linked list maintenance */
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
+	uchar *path;            /* Use a unix socket instead */
+	sbool bUnixSocket;
 	int iAddtlFrameDelim;
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
@@ -220,6 +227,7 @@ struct ptcpsrv_s {
 	sbool bEmitMsgOnClose;
 	sbool bSuppOctetFram;
 	sbool bSPFramingFix;
+	sbool bUnlink;
 	ratelimit_t *ratelimiter;
 };
 
@@ -348,6 +356,8 @@ destructSrv(ptcpsrv_t *pSrv)
 		free(pSrv->pszInputName);
 	if(pSrv->port != NULL)
 		free(pSrv->port);
+	if(pSrv->path != NULL)
+		free(pSrv->path);
 	if(pSrv->lstnIP != NULL)
 		free(pSrv->lstnIP);
 	free(pSrv);
@@ -358,6 +368,60 @@ destructSrv(ptcpsrv_t *pSrv)
  * so far was to keep everything related close togehter. -- rgerhards, 2010-08-10
  */
 
+static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
+	DEFiRet;
+	int sock;
+	int sockflags;
+	struct sockaddr_un local;
+
+	uchar *path = pSrv->path == NULL ? UCHAR_CONSTANT("") : pSrv->path;
+	DBGPRINTF("imptcp: creating listen unix socket at %s\n", path);
+
+	sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	if(sock < 0) {
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error creating unix socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	local.sun_family = AF_UNIX;
+	strncpy(local.sun_path, (char*) path, sizeof(local.sun_path));
+	if (pSrv->bUnlink) {
+		unlink(local.sun_path);
+	}
+
+	/* We use non-blocking IO! */
+	if ((sockflags = fcntl(sock, F_GETFL)) != -1) {
+		sockflags |= O_NONBLOCK;
+		/* SETFL could fail too, so get it caught by the subsequent error check. */
+		sockflags = fcntl(sock, F_SETFL, sockflags);
+	}
+
+	if (sockflags == -1) {
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error setting fcntl(O_NONBLOCK) on unix socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	if (bind(sock, (struct sockaddr *)&local, SUN_LEN(&local)) < 0) {
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: error while binding unix socket");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	if (listen(sock, 5) < 0) {
+		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
+		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	CHKiRet(addLstn(pSrv, sock, 0));
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (sock != -1) {
+			close(sock);
+		}
+	}
+
+	RETiRet;
+}
 
 /* Start up a server. That means all of its listeners are created.
  * Does NOT yet accept/process any incoming data (but binds ports). Hint: this
@@ -367,62 +431,68 @@ static rsRetVal
 startupSrv(ptcpsrv_t *pSrv)
 {
 	DEFiRet;
-        int error, maxs, on = 1;
+	int error, maxs, on = 1;
 	int sock = -1;
 	int numSocks;
 	int sockflags;
-        struct addrinfo hints, *res = NULL, *r;
+	struct addrinfo hints, *res = NULL, *r;
 	uchar *lstnIP;
 	int isIPv6 = 0;
+
+	if (pSrv->bUnixSocket) {
+		return startupUXSrv(pSrv);
+	}
 
 	lstnIP = pSrv->lstnIP == NULL ? UCHAR_CONSTANT("") : pSrv->lstnIP;
 
 	DBGPRINTF("imptcp: creating listen socket on server '%s', port %s\n", lstnIP, pSrv->port);
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_STREAM;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo((char*)pSrv->lstnIP, (char*) pSrv->port, &hints, &res);
-        if(error) {
+	error = getaddrinfo((char*)pSrv->lstnIP, (char*) pSrv->port, &hints, &res);
+	if(error) {
 		DBGPRINTF("error %d querying server '%s', port '%s'\n", error, pSrv->lstnIP, pSrv->port);
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
-        /* Count max number of sockets we may open */
-        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++) {
 		/* EMPTY */;
+	}
 
-        numSocks = 0;   /* num of sockets counter at start of array */
+	numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
-               sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if(sock < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+		sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		if(sock < 0) {
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 				DBGPRINTF("error %d creating tcp listen socket", errno);
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
-                        continue;
-                }
+				continue;
+			}
+		}
 
-                if(r->ai_family == AF_INET6) {
+		if(r->ai_family == AF_INET6) {
 			isIPv6 = 1;
 #ifdef IPV6_V6ONLY
-                	int iOn = 1;
-			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
+			int iOn = 1;
+			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&iOn, sizeof (iOn)) < 0) {
 				close(sock);
 				sock = -1;
 				continue;
-                	}
+			}
 #endif
-                } else {
+		} else {
 			isIPv6 = 0;
 		}
-       		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+
+		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			DBGPRINTF("error %d setting tcp socket option\n", errno);
-                        close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
@@ -437,7 +507,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		}
 		if(sockflags == -1) {
 			DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-                        close(sock);
+            close(sock);
 			sock = -1;
 			continue;
 		}
@@ -459,19 +529,19 @@ startupSrv(ptcpsrv_t *pSrv)
 		}
 #endif
 
-	        if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
+		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
 		     && (errno != EADDRINUSE)
 #endif
-	           ) {
+	    ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-                        dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
-                	close(sock);
+			dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
+			close(sock);
 			sock = -1;
-                        continue;
-                }
+			continue;
+		}
 
 		if(listen(sock, 511) < 0) {
 			DBGPRINTF("tcp listen error %d, suspending\n", errno);
@@ -487,22 +557,25 @@ startupSrv(ptcpsrv_t *pSrv)
 		++numSocks;
 	}
 
-	if(numSocks != maxs)
+	if(numSocks != maxs) {
 		DBGPRINTF("We could initialize %d TCP listen sockets out of %d we received "
 		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
+	}
 
-        if(numSocks == 0) {
+	if(numSocks == 0) {
 		DBGPRINTF("No TCP listen sockets could successfully be initialized");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 
 finalize_it:
-	if(res != NULL)
+	if(res != NULL) {
 		freeaddrinfo(res);
+	}
 
 	if(iRet != RS_RET_OK) {
-		if(sock != -1)
+		if(sock != -1) {
 			close(sock);
+		}
 	}
 
 	RETiRet;
@@ -519,7 +592,7 @@ finalize_it:
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
+getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer)
 {
 	int error;
 	uchar szIP[NI_MAXHOST] = "";
@@ -532,36 +605,41 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr)
 	*peerName = NULL;
 	*peerIP = NULL;
 
-	error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-        if(error) {
-                DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*)szHname, "???");
-		strcpy((char*)szIP, "???");
-		ABORT_FINALIZE(RS_RET_INVALID_HNAME);
-	}
+	if (bUXServer) {
+		strcpy((char *) szHname, (char *) glbl.GetLocalHostName());
+		strcpy((char *) szIP, (char *) glbl.GetLocalHostIP());
+	} else {
+		error = getnameinfo(pAddr, SALEN(pAddr), (char *) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+		if (error) {
+			DBGPRINTF("Malformed from address %s\n", gai_strerror(error));
+			strcpy((char *) szHname, "???");
+			strcpy((char *) szIP, "???");
+			ABORT_FINALIZE(RS_RET_INVALID_HNAME);
+		}
 
-	if(!glbl.GetDisableDNS()) {
-		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		if(error == 0) {
-			memset (&hints, 0, sizeof (struct addrinfo));
-			hints.ai_flags = AI_NUMERICHOST;
-			hints.ai_socktype = SOCK_STREAM;
-			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a non-numeric address. If
-			 * we got a numeric one, someone messed with DNS!
-			 */
-			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
-				freeaddrinfo (res);
-				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
-				DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				bMaliciousHName = 1;
+		if (!glbl.GetDisableDNS()) {
+			error = getnameinfo(pAddr, SALEN(pAddr), (char *) szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+			if (error == 0) {
+				memset(&hints, 0, sizeof(struct addrinfo));
+				hints.ai_flags = AI_NUMERICHOST;
+				hints.ai_socktype = SOCK_STREAM;
+				/* we now do a lookup once again. This one should fail,
+				 * because we should not have obtained a non-numeric address. If
+				 * we got a numeric one, someone messed with DNS!
+				 */
+				if (getaddrinfo((char *) szHname, NULL, &hints, &res) == 0) {
+					freeaddrinfo(res);
+					/* OK, we know we have evil, so let's indicate this to our caller */
+					snprintf((char *) szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+					DBGPRINTF("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
+					bMaliciousHName = 1;
+				}
+			} else {
+				strcpy((char *) szHname, (char *) szIP);
 			}
 		} else {
-			strcpy((char*)szHname, (char*)szIP);
+			strcpy((char *) szHname, (char *) szIP);
 		}
-	} else {
-		strcpy((char*)szHname, (char*)szIP);
 	}
 
 	/* We now have the names, so now let's allocate memory and store them permanently. */
@@ -677,8 +755,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	if(pLstn->pSrv->bKeepAlive)
 		EnableKeepAlive(pLstn, iNewSock);/* we ignore errors, best to do! */
 
-	
-	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr*) &addr));
+	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr *) &addr, pLstn->pSrv->bUnixSocket));
 
 	/* set the new socket to non-blocking IO */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -1279,6 +1356,8 @@ createInstance(instanceConf_t **pinst)
 
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
+	inst->pszBindPath = NULL;
+	inst->bUnlink = 0;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
@@ -1376,22 +1455,33 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
 	pSrv->compressionMode = inst->compressionMode;
 	pSrv->dfltTZ = inst->dfltTZ;
-	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imtcp", (char*)inst->pszBindPort));
-	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
-	ratelimitSetThreadSafe(pSrv->ratelimiter);
-	CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
+	if (inst->pszBindPort != NULL) {
+		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
+	}
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
-	if(inst->pszBindAddr == NULL)
+	if (inst->pszBindAddr == NULL) {
 		pSrv->lstnIP = NULL;
-	else {
+	} else {
 		CHKmalloc(pSrv->lstnIP = ustrdup(inst->pszBindAddr));
 	}
+	if (inst->pszBindPath == NULL) {
+		pSrv->path = NULL;
+	} else {
+		CHKmalloc(pSrv->path = ustrdup(inst->pszBindPath));
+		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPath));
+		pSrv->bUnixSocket = 1;
+	}
+
+	pSrv->bUnlink = inst->bUnlink;
 	pSrv->pRuleset = inst->pBindRuleset;
 	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
 	CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
 
+	CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char*) pSrv->port));
+	ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+	ratelimitSetThreadSafe(pSrv->ratelimiter);
 	/* add to linked list */
 	pSrv->pNext = pSrvRoot;
 	pSrvRoot = pSrv;
@@ -1767,6 +1857,10 @@ CODESTARTnewInpInst
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "path")) {
+			inst->pszBindPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "unlink")) {
+			inst->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -1809,6 +1903,13 @@ CODESTARTnewInpInst
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
+		}
+
+		char *bindPort = (char *) inst->pszBindPort;
+		char *bindPath = (char *) inst->pszBindPath;
+		if ((bindPort == NULL || strlen(bindPort) < 1) && (bindPath == NULL || strlen (bindPath) < 1)) {
+			errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: Must have either port or path defined");
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 finalize_it:
@@ -1957,6 +2058,7 @@ BEGINfreeCnf
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
+		free(inst->pszBindPath);
 		free(inst->pszBindAddr);
 		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
@@ -2016,6 +2118,10 @@ shutdownSrv(ptcpsrv_t *pSrv)
 				  lstnDel->rcvdDecompressed);
 		free(lstnDel->epd);
 		free(lstnDel);
+	}
+
+	if (pSrv->bUnixSocket && pSrv->bUnlink) {
+		unlink((char*) pSrv->path);
 	}
 
 	/* sessions */

@@ -5,7 +5,7 @@
  * in a useful manner. It is still undecided if all functions will continue
  * to stay here or some will be moved into parser modules (once we have them).
  *
- * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1017,7 +1017,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  * In conclusion, we keep our own code for generating the unix timestamp.
  * rgerhards, 2016-03-02
  */
-time_t syslogTime2time_t(struct syslogTime *ts)
+time_t syslogTime2time_t(const struct syslogTime *ts)
 {
 	long MonthInDays, NumberOfYears, NumberOfDays;
 	int utcOffset;
@@ -1221,6 +1221,16 @@ int getWeek(struct syslogTime *ts)
 		++weekNum;
 	}
 	return weekNum;
+}
+
+void
+timeConvertToUTC(const struct syslogTime *const __restrict__ local,
+	struct syslogTime *const __restrict__ utc)
+{
+	struct timeval tp;
+	tp.tv_sec = syslogTime2time_t(local);
+	tp.tv_usec = local->secfrac;
+	timeval2syslogTime(&tp, utc, 1);
 }
 
 /* queryInterface function

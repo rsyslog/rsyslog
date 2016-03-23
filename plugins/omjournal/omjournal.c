@@ -6,7 +6,7 @@
  * is an option in imuxsock to ignore messages from ourselves 
  * (actually from our pid). So there are some module-interdependencies.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -284,18 +284,16 @@ send_template_message(struct json_object* json){
 
 }
 
-BEGINdoAction
+BEGINdoAction_NoStrings
     instanceData *pData;
 CODESTARTdoAction
-
 	pData = pWrkrData->pData;
 
-    if (pData->tplName == NULL) {   
-        send_non_template_message((msg_t*) ppString[0]);
-     }
-    else {
-        send_template_message((struct json_object*) ppString[0]);
-    }
+	if (pData->tplName == NULL) {
+		send_non_template_message((msg_t*) ((void**)pMsgData)[0]);
+	} else {
+		send_template_message((struct json_object*) ((void**)pMsgData)[0]);
+	}
  ENDdoAction
 
 

@@ -38,6 +38,10 @@ TESTS +=  \
 	timegenerated-uxtimestamp-invld.sh \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
+	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
+	timereported-utc.sh \
+	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
@@ -180,6 +184,7 @@ TESTS +=  \
 	failover-rptd-vg.sh \
 	failover-no-basic-vg.sh \
 	failover-no-rptd-vg.sh \
+	timereported-utc-vg.sh \
 	udp-msgreduc-vg.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
@@ -211,6 +216,14 @@ TESTS +=  \
 	ksi-extract-verify-long-vg.sh 
 endif
 endif
+endif
+
+if ENABLE_OMJOURNAL
+TESTS +=  \
+	omjournal-abort-template.sh \
+	omjournal-abort-no-template.sh \
+	omjournal-basic-template.sh \
+	omjournal-basic-no-template.sh
 endif
 
 if ENABLE_MYSQL_TESTS
@@ -621,11 +634,21 @@ EXTRA_DIST= \
 	now-utc-casecmp.sh \
 	now-utc.sh \
 	testsuites/now-utc.conf \
+	faketime_common.sh \
+	omjournal-abort-template.sh \
+	omjournal-abort-no-template.sh \
+	omjournal-basic-template.sh \
+	omjournal-basic-no-template.sh \
 	timegenerated-ymd.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
 	timegenerated-dateordinal.sh \
 	timegenerated-dateordinal-invld.sh \
+	timegenerated-utc.sh \
+	timegenerated-utc-legacy.sh \
+	timereported-utc.sh \
+	timereported-utc-legacy.sh \
+	timereported-utc-vg.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \

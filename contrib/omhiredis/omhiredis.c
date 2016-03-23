@@ -59,6 +59,7 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	uchar *server; /* redis server address */
 	int port; /* redis port */
+	uchar *serverpassword; /* redis password */
 	uchar *tplName; /* template name */
 	char *modeDescription; /* mode description */
 	int mode; /* mode constant */
@@ -75,6 +76,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrGetWord, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
+	{ "serverpassword", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
@@ -133,6 +135,7 @@ ENDdbgPrintInstInfo
 static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
 	char *server;
+	char *serverpasswd;
 	DEFiRet;
 
 	server = (pWrkrData->pData->server == NULL) ? "127.0.0.1" : 
@@ -149,6 +152,19 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 				"can not initialize redis handle");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+
+	if (pWrkrData->pData->serverpassword != NULL) {
+		serverpasswd = (char*) pWrkrData->pData->serverpassword;
+		int rc;
+		rc = redisAppendCommand(pWrkrData->conn, "AUTH %s", serverpasswd);
+		if (rc == REDIS_ERR) {
+			errmsg.LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+			ABORT_FINALIZE(RS_RET_ERR);
+		} else {
+			pWrkrData->count++;
+		}
+	}
+         
 finalize_it:
 	RETiRet;
 }
@@ -251,6 +267,7 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;
 	pData->port = 6379;
+	pData->serverpassword = NULL;
 	pData->tplName = NULL;
 	pData->mode = OMHIREDIS_MODE_TEMPLATE;
 	pData->modeDescription = "template";
@@ -280,6 +297,8 @@ CODESTARTnewActInst
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->port = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "serverpassword")) {
+			pData->serverpassword = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
