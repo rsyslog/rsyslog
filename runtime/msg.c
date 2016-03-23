@@ -4266,6 +4266,65 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 		}
 	}
 
+	/* Now everything is squased as much as possible and more or less ready to
+	 * go. This is the perfect place to compress any remaining spaces, if so
+	 * instructed by the user/config.
+	 */
+	if(pTpe->data.field.options.bCompressSP) {
+		int needCompress = 0;
+		int hadSP = 0;
+		uchar *pB;
+		if(*pbMustBeFreed == 0) {
+			for(pB = pRes ; *pB && needCompress == 0 ; ++pB) {
+				if(*pB == ' ') {
+					if(hadSP) {
+						uchar *const tmp = ustrdup(pRes);
+						if(tmp == NULL)
+							/* better not compress than
+							 * loose message. */
+							break;
+						*pbMustBeFreed = 1;
+						pRes = tmp;
+						needCompress = 1;
+					} else {
+						hadSP = 1;
+					}
+				}
+			}
+		} else {
+			/* If we can modify the buffer in any case, we
+			 * do NOT check if we actually need to compress,
+			 * but "just do it" - that's the quickest way
+			 * to get it done.
+			 */
+			needCompress = 1;
+		}
+		if(needCompress) {
+			hadSP = 0;
+			uchar *pDst = pRes;
+			int needCopy = 0;
+			for(pB = pRes ; *pB ; ++pB) {
+				if(*pB == ' ') {
+					if(hadSP) {
+						needCopy = 1;
+					}  else {
+						hadSP = 1;
+						if(needCopy)
+							*pDst = *pB;
+						++pDst;
+					}
+				} else {
+					hadSP = 0;
+					if(needCopy)
+						*pDst = *pB;
+					++pDst;
+				}
+			}
+			*pDst = '\0';
+			bufLen = pDst - pRes;
+		}
+	}
+
 	/* finally, we need to check if the property should be formatted in CSV or JSON.
 	 * For CSV we use RFC 4180, and always use double quotes. As of this writing,
 	 * this should be the last action carried out on the property, but in the

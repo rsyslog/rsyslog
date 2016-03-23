@@ -76,6 +76,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {
 	{ "outname", eCmdHdlrString, 0 },
 	{ "dateformat", eCmdHdlrString, 0 },
 	{ "date.inutc", eCmdHdlrBinary, 0 },
+	{ "compressspace", eCmdHdlrBinary, 0 },
 	{ "caseconversion", eCmdHdlrString, 0 },
 	{ "controlcharacters", eCmdHdlrString, 0 },
 	{ "securepath", eCmdHdlrString, 0 },
@@ -778,6 +779,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
 		 } else if(!strcmp((char*)Buf, "sp-if-no-1st-sp")) {
 			pTpe->data.field.options.bSPIffNo1stSP = 1;
+		 } else if(!strcmp((char*)Buf, "compressspace")) {
+			pTpe->data.field.options.bCompressSP = 1;
 		 } else if(!strcmp((char*)Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
 		 } else if(!strcmp((char*)Buf, "drop-cc")) {
@@ -1462,6 +1465,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int bComplexProcessing = 0;
 	int bPosRelativeToEnd = 0;
 	int bDateInUTC = 0;
+	int bCompressSP = 0;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
 	enum {F_NONE, F_CSV, F_JSON, F_JSONF, F_JSONR, F_JSONFR} formatType = F_NONE;
@@ -1611,6 +1615,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
+		} else if(!strcmp(pblkProperty.descr[i].name, "compressspace")) {
+			bComplexProcessing = 1;
+			bCompressSP = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "date.inutc")) {
 			bDateInUTC = pvals[i].val.d.n;
 		} else if(!strcmp(pblkProperty.descr[i].name, "dateformat")) {
@@ -1760,6 +1767,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->bComplexProcessing = bComplexProcessing;
 	pTpe->data.field.eDateFormat = datefmt;
 	pTpe->data.field.options.bDateInUTC = bDateInUTC;
+	pTpe->data.field.options.bCompressSP = bCompressSP;
 	if(fieldnum != -1) {
 		pTpe->data.field.has_fields = 1;
 		pTpe->data.field.iFieldNr = fieldnum;
