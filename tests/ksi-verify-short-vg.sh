@@ -7,7 +7,7 @@
 #
 # Copyright 2016 Rainer Gerhards and Adiscon GmbH.
 RSYSLOG_KSI_BIN="http://verify.guardtime.com/ksi-publications.bin"
-RSYSLOG_KSI_DEBUG="--debug"
+RSYSLOG_KSI_DEBUG="-s"
 RSYSLOG_KSI_LOG="ksi-sample.log"
 
 echo \[ksi-verify-short-vg.sh\]: testing rsgtutil verify with valgrind - short options

@@ -1137,7 +1137,7 @@ EXTRA_DIST= \
 	ksi-verify-short.sh \
 	ksi-verify-long.sh \
 	ksi-extract-verify-short.sh \
-	ksi-extract-verify-long.sh 
+	ksi-extract-verify-long.sh \ 
 	ksi-verify-short-vg.sh \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
