@@ -132,6 +132,7 @@ void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
 	pThis->globals.bErrMsgToStderr = 1;
 	pThis->globals.umask = -1;
+	pThis->globals.gidDropPrivKeepSupplemental = 0;
 	pThis->templates.root = NULL;
 	pThis->templates.last = NULL;
 	pThis->templates.lastStatic = NULL;
@@ -500,29 +501,32 @@ void cnfDoBSDHost(char *ln)
  * if something goes wrong, the function never returns
  */
 static
-rsRetVal doDropPrivGid(int iGid)
+rsRetVal doDropPrivGid(void)
 {
 	int res;
 	uchar szBuf[1024];
 	DEFiRet;
 
-	res = setgroups(0, NULL); /* remove all supplementary group IDs */
-	if(res) {
-		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
-		errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
-				"could not remove supplementary group IDs: %s", szBuf);
-		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
+	if(!ourConf->globals.gidDropPrivKeepSupplemental) {
+		res = setgroups(0, NULL); /* remove all supplemental group IDs */
+		if(res) {
+			rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
+			errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
+					"could not remove supplemental group IDs: %s", szBuf);
+			ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
+		}
+		DBGPRINTF("setgroups(0, NULL): %d\n", res);
 	}
-	DBGPRINTF("setgroups(0, NULL): %d\n", res);
-	res = setgid(iGid);
+	res = setgid(ourConf->globals.gidDropPriv);
 	if(res) {
 		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
 		errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
 				"could not set requested group id: %s", szBuf);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
-	DBGPRINTF("setgid(%d): %d\n", iGid, res);
-	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d", iGid);
+	DBGPRINTF("setgid(%d): %d\n", ourConf->globals.gidDropPriv, res);
+	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d",
+		 ourConf->globals.gidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 finalize_it:
 	RETiRet;
@@ -579,7 +583,7 @@ dropPrivileges(rsconf_t *cnf)
 	DEFiRet;
 
 	if(cnf->globals.gidDropPriv != 0) {
-		CHKiRet(doDropPrivGid(ourConf->globals.gidDropPriv));
+		CHKiRet(doDropPrivGid());
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
 			  ourConf->globals.gidDropPriv);
 	}

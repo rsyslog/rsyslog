@@ -50,6 +50,7 @@
 #include "parserif.h"
 #include "rainerscript.h"
 #include "net.h"
+#include "rsconf.h"
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
@@ -160,6 +161,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "senders.reportgoneaway", eCmdHdlrBinary, 0 },
 	{ "senders.timeoutafter", eCmdHdlrPositiveInt, 0 },
 	{ "senders.keeptrack", eCmdHdlrBinary, 0 },
+	{ "privdrop.group.keepsupplemental", eCmdHdlrBinary, 0 },
 	{ "net.ipprotocol", eCmdHdlrGetWord, 0 },
 	{ "net.acladdhostnameonfail", eCmdHdlrBinary, 0 },
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
@@ -1136,6 +1138,8 @@ glblDoneLoadCnf(void)
 		        glblSenderStatsTimeout = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "senders.keeptrack")) {
 		        glblSenderKeepTrack = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "privdrop.group.keepsupplemental")) {
+		        loadConf->globals.gidDropPrivKeepSupplemental = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.acladdhostnameonfail")) {
 		        *(net.pACLAddHostnameOnFail) = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "net.aclresolvehostname")) {
