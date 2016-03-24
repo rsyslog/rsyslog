@@ -490,4 +490,5 @@ defaults instead.
   $InputFileStateFile stat-file2 
   $InputRunFileMonitor 
   # ... and so on ...
-  # check for new lines every 10 seconds $InputFilePollingInterval 10
+  # check for new lines every 10 seconds
+  $InputFilePollInterval 10
