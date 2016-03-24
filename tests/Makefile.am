@@ -17,6 +17,8 @@ TESTS +=  \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	privdropuser.sh \
+	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	fac_authpriv.sh \
@@ -608,6 +610,8 @@ EXTRA_DIST= \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
+	privdropuser.sh \
+	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	fac_authpriv.sh \
