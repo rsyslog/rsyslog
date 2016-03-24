@@ -94,6 +94,8 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		switch(stmt->nodetype) {
 		case S_NOP:
 		case S_STOP:
+		case S_SET:
+		case S_UNSET:
 		case S_CALL:/* call does not need to do anything - done in called ruleset! */
 			break;
 		case S_ACT:
@@ -108,7 +110,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 				scriptIterateAllActions(stmt->d.s_if.t_else,
 							pFunc, pParam);
 			break;
-        case S_FOREACH:
+		case S_FOREACH:
 			if(stmt->d.s_foreach.body != NULL)
 				scriptIterateAllActions(stmt->d.s_foreach.body,
                                         pFunc, pParam);
