@@ -1107,7 +1107,7 @@ initLegacyConf(void)
 		NULL, &loadConf->globals.uidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID,
 		NULL, &loadConf->globals.gidDropPriv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID,
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrInt,
 		NULL, &loadConf->globals.gidDropPriv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord,
 		NULL, &loadConf->globals.pszConfDAGFile, NULL));
