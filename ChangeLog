@@ -13,6 +13,7 @@ Version 8.18.0 [v8-stable] 2016-04-19
 - testbench improvements (more tests and more thourough tests)
   among others:
   - tests for omjournal added
+  - tests for KSI subsystem
 - improvements to the CI environment
 - bugfix: small memory leak in imfile
   Thanks to Tomas Heinrich for the patch.
