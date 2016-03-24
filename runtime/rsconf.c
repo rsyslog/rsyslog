@@ -498,29 +498,34 @@ void cnfDoBSDHost(char *ln)
 
 /* drop to specified group
  * if something goes wrong, the function never returns
- * Note that such an abort can cause damage to on-disk structures, so we should
- * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
  */
-static void doDropPrivGid(int iGid)
+static
+rsRetVal doDropPrivGid(int iGid)
 {
 	int res;
 	uchar szBuf[1024];
+	DEFiRet;
 
 	res = setgroups(0, NULL); /* remove all supplementary group IDs */
 	if(res) {
-		perror("could not remove supplemental group IDs");
-		exit(1);
+		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
+		errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
+				"could not remove supplementary group IDs: %s", szBuf);
+		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
 	DBGPRINTF("setgroups(0, NULL): %d\n", res);
 	res = setgid(iGid);
 	if(res) {
-		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
-		perror("could not set requested group id");
-		exit(1);
+		rs_strerror_r(errno, (char*)szBuf, sizeof(szBuf));
+		errmsg.LogError(0, RS_RET_ERR_DROP_PRIV,
+				"could not set requested group id: %s", szBuf);
+		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
 	DBGPRINTF("setgid(%d): %d\n", iGid, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d", iGid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -574,7 +579,7 @@ dropPrivileges(rsconf_t *cnf)
 	DEFiRet;
 
 	if(cnf->globals.gidDropPriv != 0) {
-		doDropPrivGid(ourConf->globals.gidDropPriv);
+		CHKiRet(doDropPrivGid(ourConf->globals.gidDropPriv));
 		DBGPRINTF("group privileges have been dropped to gid %u\n", (unsigned) 
 			  ourConf->globals.gidDropPriv);
 	}
@@ -585,6 +590,7 @@ dropPrivileges(rsconf_t *cnf)
 			  ourConf->globals.uidDropPriv);
 	}
 
+finalize_it:
 	RETiRet;
 }
 

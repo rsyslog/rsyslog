@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2015 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2016 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -447,6 +447,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SENDER_GONE_AWAY = -2429,/**< warning: sender not seen for configured amount of time */
 	RS_RET_SENDER_APPEARED = -2430,/**< info: new sender appeared */
 	RS_RET_FILE_ALREADY_IN_TABLE = -2431,/**< in imfile: table already contains to be added file */
+	RS_RET_ERR_DROP_PRIV = -2432,/**< error droping privileges */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
