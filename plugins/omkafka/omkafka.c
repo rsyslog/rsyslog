@@ -127,6 +127,7 @@ typedef struct _instanceData {
 	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
 	int closeTimeout;
+	int bReopenOnHup;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -149,7 +150,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "errorfile", eCmdHdlrGetWord, 0 },
 	{ "key", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
-	{ "closeTimeout", eCmdHdlrPositiveInt, 0 }
+	{ "closeTimeout", eCmdHdlrPositiveInt, 0 },
+	{ "reopenOnHup", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -695,7 +697,9 @@ CODESTARTdoHUP
 		pData->fdErrFile = -1;
 	}
 	pthread_mutex_unlock(&pData->mutErrFile);
-	CHKiRet(setupKafkaHandle(pData, 1));
+	if (pData->bReopenOnHup) {
+		CHKiRet(setupKafkaHandle(pData, 1));
+	}
 finalize_it:
 ENDdoHUP
 
@@ -706,6 +710,7 @@ CODESTARTcreateInstance
 	pData->fdErrFile = -1;
 	pData->pTopic = NULL;
 	pData->bReportErrs = 1;
+	pData->bReopenOnHup = 1;
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
@@ -966,6 +971,8 @@ CODESTARTnewActInst
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "reopenOnHup")) {
+			pData->bReopenOnHup = pvals[i].val.d.n;
 		} else {
 			dbgprintf("omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
