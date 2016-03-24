@@ -10,6 +10,14 @@ Version 8.18.0 [v8-stable] 2016-04-19
   * date-utc
 - redis: support for authentication
   Thanks to Manohar Ht for the patch
+- omkafka: makes kafka-producer on-HUP restart optional 
+  As of now, omkafka kills and re-creates kafka-producer on HUP. This
+  is not always desirable. This change introduces an action param
+  (reopenOnHup="on|off") which allows user to control re-cycling of
+  kafka-producer.
+  It defaults to on (for backward compatibility). Off allows user to
+  ignore HUP as far as kafka-producer is concerned.
+  Thanks to Janmejay Singh for implementing this feature
 - testbench improvements (more tests and more thourough tests)
   among others:
   - tests for omjournal added
