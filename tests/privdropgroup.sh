@@ -3,6 +3,7 @@
 # addd 2016-03-24 by RGerhards, released under ASL 2.0
 . $srcdir/diag.sh init
 USER_GID=`id -g $USER`
+GROUP=`getent group $USER_GID | cut -d: -f1`
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 global(privdrop.group.keepsupplemental="on")
@@ -12,7 +13,7 @@ template(name="outfmt" type="list") {
 }
 action(type="omfile" template="outfmt" file="rsyslog.out.log")
 '
-. $srcdir/diag.sh add-conf "\$PrivDropToGroup $USER"
+. $srcdir/diag.sh add-conf "\$PrivDropToGroup $GROUP"
 
 . $srcdir/diag.sh startup
 . $srcdir/diag.sh shutdown-when-empty
