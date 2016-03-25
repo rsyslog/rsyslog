@@ -54,6 +54,10 @@
 #include "debug.h"
 #include "unicode-helper.h"
 
+#ifndef RELP_DFLT_PT
+#	define RELP_DFLT_PT "514"
+#endif
+
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omrelp")
@@ -143,7 +147,7 @@ static uchar *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
-		return((uchar*)"514");
+		return((uchar*)RELP_DFLT_PT);
 	else
 		return(pData->port);
 }
@@ -391,7 +395,7 @@ static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
 
 	if(pWrkrData->bInitialConnect) {
 		iRet = relpCltConnect(pWrkrData->pRelpClt, glbl.GetDefPFFamily(),
-				      pWrkrData->pData->port, pWrkrData->pData->target);
+				      getRelpPt(pWrkrData->pData), pWrkrData->pData->target);
 		if(iRet == RELP_RET_OK)
 			pWrkrData->bInitialConnect = 0;
 	} else {
