@@ -1110,6 +1110,16 @@ if test "x$enable_relp" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
+# RELP default port
+AC_ARG_ENABLE(omrelp-default-port,
+        [AS_HELP_STRING([--enable-omrelp-default-port],[set omrelp default port @<:@default=514@:>@])],
+	[ AC_DEFINE_UNQUOTED(RELP_DFLT_PT, "${enableval}", [default port for omrelp]) ],
+	[ AC_DEFINE(RELP_DFLT_PT, 514, [default port for omrelp]) ]
+)
+if test "x$enable_relp" = "xyes"; then
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.5)
+fi
+
 
 # GuardTime support
 AC_ARG_ENABLE(guardtime,
