@@ -17,6 +17,10 @@ TESTS +=  \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
+	privdropuser.sh \
+	privdropuserid.sh \
+	privdropgroup.sh \
+	privdropgroupid.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -606,6 +610,10 @@ EXTRA_DIST= \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
+	privdropuser.sh \
+	privdropuserid.sh \
+	privdropgroup.sh \
+	privdropgroupid.sh \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
@@ -1137,7 +1145,7 @@ EXTRA_DIST= \
 	ksi-verify-short.sh \
 	ksi-verify-long.sh \
 	ksi-extract-verify-short.sh \
-	ksi-extract-verify-long.sh \ 
+	ksi-extract-verify-long.sh \
 	ksi-verify-short-vg.sh \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
