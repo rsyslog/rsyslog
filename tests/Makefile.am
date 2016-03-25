@@ -5,7 +5,9 @@ CLEANFILES = \
 # there exists no such hook. Se we at least delete it on make clean.
 
 # TODO: reenable TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv
+check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
+	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
+	omrelp_dflt_port
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -1154,6 +1156,7 @@ EXTRA_DIST= \
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
+omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
 chkseq_SOURCES = chkseq.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c
