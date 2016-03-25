@@ -589,6 +589,7 @@ CODESTARTfreeCnf
 		free(inst->pszInputName);
 		free(inst->pristring);
 		free(inst->authmode);
+		prop.Destruct(&inst->pInputName);
 		statsobj.Destruct(&(inst->data.stats));
 		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
 			free(inst->permittedPeers.name[i]);
