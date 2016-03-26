@@ -22,7 +22,10 @@ Version 8.18.0 [v8-stable] 2016-04-19
   among others:
   - tests for omjournal added
   - tests for KSI subsystem
+  - tests for priviledge drop statements
 - improvements to the CI environment
+- bugfix: $PrivDropToGroupID actually did a name lookup
+  ... instead of using the provided ID
 - bugfix: small memory leak in imfile
   Thanks to Tomas Heinrich for the patch.
 - bugfix: double free in jsonmesg template
