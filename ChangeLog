@@ -38,6 +38,8 @@ Version 8.18.0 [v8-stable] 2016-04-19
   Detected by clang static analyzer. Note that these leaks CAN happen in
   practice and may even be pretty large. This was probably never detected
   because the tool is not often used.
+- bugfix omrelp: fix segfault if no port action parameter was given
+  closes https://github.com/rsyslog/rsyslog/issues/911
 ------------------------------------------------------------------------------
 Version 8.17.0 [v8-stable] 2016-03-08
 - NEW REQUIREMENT: libfastjson
