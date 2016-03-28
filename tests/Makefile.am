@@ -23,6 +23,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-pos-from-to.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -617,6 +618,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-pos-from-to.sh \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
