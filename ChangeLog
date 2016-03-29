@@ -2,6 +2,13 @@
 Version 1.2.10 - 2016-??-??
 - make compatible with older versions of GnuTLS which require
   libgcrypt
+- bugfix: Send full buffers after connection re-establishing
+  When sending large buffers it's possible that only part of buffer data
+  will be transferred before connection is closed. Then on connection
+  re-establishing librelp thinks part of buffer is already sent and
+  transfers only remaining part. Remote side then is not be able to parse
+  such message and always closes the connection.
+  Thanks to github user cellscape for the patch.
 ----------------------------------------------------------------------
 Version 1.2.9 - 2015-12-15
 - bugfix: Ignoring return status when handling syslog frames now.
