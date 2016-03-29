@@ -2,6 +2,8 @@
 Version 1.2.10 - 2016-??-??
 - make compatible with older versions of GnuTLS which require
   libgcrypt
+- improve example sender/receiver code
+  Thanks to Chris Pilkington for the patches.
 - bugfix: Send full buffers after connection re-establishing
   When sending large buffers it's possible that only part of buffer data
   will be transferred before connection is closed. Then on connection
