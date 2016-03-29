@@ -39,6 +39,10 @@ typedef enum _TCPFRAMINGMODE {
 #define ADDR_NAME 0x01 /* address is hostname wildcard) */
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
 
+/* portability: incase IP_FREEBIND is not defined */
+#ifndef IP_FREEBIND
+#define IP_FREEBIND 0
+#endif
 /* defines for IP_FREEBIND, currently being used in imudp */
 #define IPFREEBIND_DISABLED 0x00 /* don't enable IP_FREEBIND in  sock option */
 #define IPFREEBIND_ENABLED_NO_LOG 0x01 /* enable IP_FREEBIND but no warn on success */
