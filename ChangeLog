@@ -25,6 +25,12 @@ Version 8.18.0 [v8-stable] 2016-04-19
   - tests for priviledge drop statements
   - basic test for RELP with TLS
 - improvements to the CI environment
+- enhancement: Allow rsyslog to bind UDP ports even w/out specific
+  interface being up at the moment.
+  Alternatively, rsyslog could be ordered after networking, however,
+  that might have some negative side effects. Also IP_FREEBIND is
+  recommended by systemd documentation.
+  Thanks to Nirmoy Das and Marius Tomaschewski for the patch.
 - bugfix: $PrivDropToGroupID actually did a name lookup
   ... instead of using the provided ID
 - bugfix: small memory leak in imfile
