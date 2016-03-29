@@ -1,11 +1,7 @@
 This external plugin helps you push numbers from your logs as [SPM](http://sematext.com/spm/) Custom Metrics:
 https://sematext.atlassian.net/wiki/display/PUBSPM/Custom+Metrics
 
-The point would be grah and alert on those metrics. For example:
-  <iframe src="https://apps.sematext.com/spm-reports/s/wnsdoAstHj" marginwidth="0" marginheight="0" scrolling="yes" style="border: 1px solid #CCC; border-width: 1px 1px 0; margin-bottom: 5px; padding: 5px" frameborder="0" height="350px" width="600px"> </iframe>
-  <div style="margin-bottom: 5px">
-    <span style="vertical-align: middle; font-size: 140%; color: #555555;">
-  </span></div>
+The point would be graph and alert on those metrics. For example: https://apps.sematext.com/spm-reports/s/wnsdoAstHj
 
 ###Howto
 
