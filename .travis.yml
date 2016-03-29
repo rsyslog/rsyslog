@@ -5,6 +5,6 @@ sudo: false
 install:
 
 script:
-  - autoreconf --fvi
+  - autoreconf -fvi
   - ./configure 
   - make distcheck
