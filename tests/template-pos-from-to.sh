@@ -4,8 +4,8 @@
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
-$ModLoad ../plugins/imtcp/.libs/imtcp
-$InputTCPServerRun 13514
+module(load="../plugins/imtcp/.libs/imtcp")
+input(type="imtcp" port="13514")
 
 template(name="outfmt" type="string" string="%msg:9:16:%\n")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
