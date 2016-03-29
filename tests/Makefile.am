@@ -24,7 +24,10 @@ TESTS +=  \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	template-pos-from-to.sh \
+	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
+	template-pos-from-to-oversize-lowercase.sh \
+	template-pos-from-to-missing-jsonvar.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -620,7 +623,10 @@ EXTRA_DIST= \
 	privdropgroup.sh \
 	privdropgroupid.sh \
 	template-pos-from-to.sh \
+	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
+	template-pos-from-to-oversize-lowercase.sh \
+	template-pos-from-to-missing-jsonvar.sh \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
