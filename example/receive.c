@@ -42,7 +42,7 @@ void print_usage()
 
 int main(int argc, char *argv[]) {
     if ((argc != 2)) {
-        // Incorrect parameter count, so just print the usage and return
+        /* Incorrect parameter count, so just print the usage and return */
         print_usage();
         return -1;
     }
