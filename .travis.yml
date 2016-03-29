@@ -1,0 +1,10 @@
+language: c
+sudo: false
+
+
+install:
+
+script:
+  - autoreconf -fvi
+  - ./configure 
+  - make distcheck
