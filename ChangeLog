@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.10 - 2016-??-??
+Version 1.2.10 - 2016-03-30
 - make compatible with older versions of GnuTLS which require
   libgcrypt
 - improve example sender/receiver code
