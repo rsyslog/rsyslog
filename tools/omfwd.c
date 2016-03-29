@@ -760,7 +760,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		pWrkrData->f_addr = res;
 		pWrkrData->bIsConnected = 1;
 		if(pWrkrData->pSockArray == NULL) {
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0);
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pWrkrData));

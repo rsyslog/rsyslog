@@ -39,6 +39,11 @@ typedef enum _TCPFRAMINGMODE {
 #define ADDR_NAME 0x01 /* address is hostname wildcard) */
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
 
+/* defines for IP_FREEBIND, currently being used in imudp */
+#define IPFREEBIND_DISABLED 0x00 /* don't enable IP_FREEBIND in  sock option */
+#define IPFREEBIND_ENABLED_NO_LOG 0x01 /* enable IP_FREEBIND but no warn on success */
+#define IPFREEBIND_ENABLED_WITH_LOG 0x02 /* enable IP_FREEBIND and warn on success */
+
 #ifdef OS_BSD
 #	ifndef _KERNEL
 #		define s6_addr32 __u6_addr.__u6_addr32
@@ -137,7 +142,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*PrintAllowedSenders)(int iListToPrint);
 	void (*clearAllowedSenders)(uchar*);
 	void (*debugListenInfo)(int fd, char *type);
-	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf);
+	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int ipfreebind);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
 	rsRetVal (*getLocalHostname)(uchar**);
