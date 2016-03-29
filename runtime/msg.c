@@ -3926,7 +3926,15 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			if(iTo > 0)
 				--iTo;
 		}
-		if(iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
+		if(iFrom >= bufLen) {
+			DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n",
+				iFrom, bufLen);
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = (uchar*) "";
+			*pbMustBeFreed = 0;
+			bufLen = 0;
+		} else if(iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
 			/* in this case, the requested string is a superset of what we already have,
 			 * so there is no need to do any processing. This is a frequent case for size-limited
 			 * fields like TAG in the default forwarding template (so it is a useful optimization
