@@ -1,6 +1,6 @@
 /* This implements the relp mapping onto TCP.
  *
- * Copyright 2008-2014 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -1265,6 +1265,10 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
+	#if GNUTLS_VERSION_NUMBER <= 0x020b00
+	/* gcry_control must be called first, so that the thread system is correctly set up */
+	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+	#endif
 	gnutls_global_init();
 	/* uncomment for (very intense) debug help
 	 * gnutls_global_set_log_function(logFunction);
@@ -1598,6 +1602,10 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	RELPOBJ_assert(pThis, Tcp);
 
 	if(!called_gnutls_global_init) {
+		#if GNUTLS_VERSION_NUMBER <= 0x020b00
+		/* gcry_control must be called first, so that the thread system is correctly set up */
+		gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+		#endif
 		gnutls_global_init();
 		/* uncomment for (very intense) debug help
 		 * gnutls_global_set_log_function(logFunction);

@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.2.10 - 2016-??-??
+- make compatible with older versions of GnuTLS which require
+  libgcrypt
 ----------------------------------------------------------------------
 Version 1.2.9 - 2015-12-15
 - bugfix: Ignoring return status when handling syslog frames now.
