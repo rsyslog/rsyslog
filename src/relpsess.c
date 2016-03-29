@@ -677,6 +677,11 @@ relpSessTryReestablish(relpSess_t *pThis)
 								   - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
+		/* Sometimes only part of large buffer is sent before
+		 * connection was closed and bufPtr is set to non-zero value,
+		 * resulting in partial transfer. We always want to send full
+		 * buffer in new connection hence this bufPtr value reset. */
+		pUnackedEtry->pSendbuf->bufPtr = 0;
 		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis, 0));
 		pUnackedEtry = pUnackedEtry->pNext;
 	}
