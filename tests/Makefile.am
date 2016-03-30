@@ -370,8 +370,8 @@ if ENABLE_GNUTLS
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	sndrcv_tls_anon.sh \
-	imtcp-tls-basic.sh
-#sndrcv_tls_anon_rebind.sh \
+	imtcp-tls-basic.sh \
+	sndrcv_tls_anon_rebind.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-basic-vg.sh \
