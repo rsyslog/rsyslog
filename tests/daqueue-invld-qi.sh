@@ -26,5 +26,5 @@ echo "#" > work-delay.conf
 . $srcdir/diag.sh startup queue-persist.conf
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 9999
+. $srcdir/diag.sh seq-check 0 9999 -d
 . $srcdir/diag.sh exit

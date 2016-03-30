@@ -1613,7 +1613,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
  * malfunction will happen.
  */
 static inline rsRetVal
-DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSize)
+DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSize, int *const pSkippedMsgs)
 {
 	int nDequeued;
 	int nDiscarded;
@@ -1630,8 +1630,41 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 	if(pThis->qType == QUEUETYPE_DISK) {
 		pThis->tVars.disk.deqFileNumIn = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
 	}
+
 	while((iQueueSize = getLogicalQueueSize(pThis)) > 0 && nDequeued < pThis->iDeqBatchSize) {
-		CHKiRet(qqueueDeq(pThis, &pMsg));
+		int rd_fd = -1;
+		int64_t rd_offs = 0;
+		int wr_fd = -1;
+		int64_t wr_offs = 0;
+		if(pThis->tVars.disk.pReadDeq != NULL) {
+			rd_fd = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+			rd_offs = pThis->tVars.disk.pReadDeq->iCurrOffs;
+		}
+		if(pThis->tVars.disk.pWrite != NULL) {
+			wr_fd = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+			wr_offs = pThis->tVars.disk.pWrite->iCurrOffs;
+		}
+		if(rd_fd != -1 && rd_fd == wr_fd && rd_offs == wr_offs) {
+			DBGPRINTF("problem on disk queue '%s': "
+					"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%" PRId64 "\n",
+					obj.GetName((obj_t*) pThis), iQueueSize, pThis->iQueueSize,
+					rd_fd, rd_offs);
+			*pSkippedMsgs = iQueueSize;
+#			ifdef ENABLE_IMDIAG
+			iOverallQueueSize -= iQueueSize;
+#			endif
+			pThis->iQueueSize -= iQueueSize;
+			iQueueSize = 0;
+			break;
+		}
+
+		localRet = qqueueDeq(pThis, &pMsg);
+		if(localRet == RS_RET_FILE_NOT_FOUND) {
+			DBGPRINTF("fatal error on disk queue '%s': file '%s' "
+				"not found, queue size said to be %d",
+				obj.GetName((obj_t*) pThis), "...", iQueueSize);
+		}
+		CHKiRet(localRet);
 
 		/* check if we should discard this element */
 		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pMsg);
@@ -1672,13 +1705,18 @@ finalize_it:
  * rgerhards, 2009-04-22
  */
 static rsRetVal
-DequeueConsumable(qqueue_t *pThis, wti_t *pWti)
+DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 {
 	DEFiRet;
 	int iQueueSize = 0; /* keep the compiler happy... */
 
+	*pSkippedMsgs = 0;
 	/* dequeue element batch (still protected from mutex) */
-	iRet = DequeueConsumableElements(pThis, pWti, &iQueueSize);
+	iRet = DequeueConsumableElements(pThis, pWti, &iQueueSize, pSkippedMsgs);
+	if(*pSkippedMsgs > 0) {
+		DBGOPRINT((obj_t*) pThis, "lost %d messages from diskqueue (invalid .qi file)",
+			*pSkippedMsgs);
+	}
 
 	/* awake some flow-controlled sources if we can do this right now */
 	/* TODO: this could be done better from a performance point of view -- do it only if
@@ -1812,14 +1850,14 @@ RateLimiter(qqueue_t *pThis)
  * rgerhards, 2009-05-20
  */
 static inline rsRetVal
-DequeueForConsumer(qqueue_t *pThis, wti_t *pWti)
+DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	CHKiRet(DequeueConsumable(pThis, pWti));
+	CHKiRet(DequeueConsumable(pThis, pWti, pSkippedMsgs));
 
 	if(pWti->batch.nElem == 0)
 		ABORT_FINALIZE(RS_RET_IDLE);
@@ -1868,12 +1906,14 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 {
 	int iCancelStateSave;
 	int bNeedReLock = 0;	/**< do we need to lock the mutex again? */
+	int skippedMsgs = 0;	/**< did the queue loose any messages (can happen with 
+	                         ** disk queue if .qi file is corrupt */
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	iRet = DequeueForConsumer(pThis, pWti);
+	iRet = DequeueForConsumer(pThis, pWti, &skippedMsgs);
 	if(iRet == RS_RET_FILE_NOT_FOUND) {
 		/* This is a fatal condition and means the queue is almost unusable */
 		d_pthread_mutex_unlock(pThis->mut);
@@ -1889,6 +1929,14 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);
 	bNeedReLock = 1;
+
+	/* report errors, now that we are outside of queue lock */
+	if(skippedMsgs > 0) {
+		errmsg.LogError(0, 0, "problem on disk queue '%s': "
+				"queue files contain %d messages fewer than specified "
+				"in .qi file -- we lost those messages. That's all we know.",
+				obj.GetName((obj_t*) pThis), skippedMsgs);
+	}
 
 	/* at this spot, we may be cancelled */
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &iCancelStateSave);
@@ -1937,12 +1985,13 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 	int i;
 	int iCancelStateSave;
 	int bNeedReLock = 0;	/**< do we need to lock the mutex again? */
+	int skippedMsgs = 0;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ISOBJ_TYPE_assert(pWti, wti);
 
-	CHKiRet(DequeueForConsumer(pThis, pWti));
+	CHKiRet(DequeueForConsumer(pThis, pWti, &skippedMsgs));
 
 	/* we now have a non-idle batch of work, so we can release the queue mutex and process it */
 	d_pthread_mutex_unlock(pThis->mut);

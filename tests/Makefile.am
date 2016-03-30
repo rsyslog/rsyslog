@@ -105,7 +105,6 @@ TESTS +=  \
 	dynfile_invalid2.sh \
 	complex1.sh \
 	queue-persist.sh \
-	daqueue-invld-qi.sh \
 	pipeaction.sh \
 	execonlyonce.sh \
 	execonlywhenprevsuspended.sh \
@@ -800,6 +799,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	testsuites/rcvr_fail_restore_rcvr.conf \
 	testsuites/rcvr_fail_restore_sender.conf \
+	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
 	daqueue-persist-drvr.sh \
 	queue-persist.sh \
