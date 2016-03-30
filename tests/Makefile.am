@@ -271,7 +271,9 @@ TESTS +=  \
 	dynstats_ctr_reset.sh \
 	dynstats_nometric.sh \
 	no-dynstats-json.sh \
-	no-dynstats.sh
+	no-dynstats.sh \
+	stats-json.sh \
+	dynstats-json.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -1042,6 +1044,10 @@ EXTRA_DIST= \
 	testsuites/no-dynstats-json.conf \
 	no-dynstats.sh \
 	testsuites/no-dynstats.conf \
+	stats-json.sh \
+	testsuites/stats-json.conf \
+	dynstats-json.sh \
+	testsuites/dynstats-json.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
 	testsuites/mmnormalize_variable.conf \
