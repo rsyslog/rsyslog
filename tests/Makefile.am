@@ -65,6 +65,7 @@ TESTS +=  \
 	validation-run.sh \
 	empty-ruleset.sh \
 	imtcp-multiport.sh \
+	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
@@ -732,6 +733,7 @@ EXTRA_DIST= \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-vg.sh \
 	testsuites/imtcp-tls-basic.conf \
+	imtcp_incomplete_frame_at_end.sh \
 	imtcp-multiport.sh \
 	testsuites/imtcp-multiport.conf \
 	udp-msgreduc-orgmsg-vg.sh \
