@@ -368,8 +368,8 @@ endif
 if ENABLE_GNUTLS
 # TODO: re-enable in newer version
 TESTS +=  \
-	imtcp_conndrop_tls.sh
-#sndrcv_tls_anon.sh \
+	imtcp_conndrop_tls.sh \
+	sndrcv_tls_anon.sh
 #sndrcv_tls_anon_rebind.sh \
 #	imtcp-tls-basic.sh
 if HAVE_VALGRIND
@@ -1165,16 +1165,13 @@ EXTRA_DIST= \
 	ksi-verify-short-vg.sh \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
-	ksi-extract-verify-long-vg.sh 
-
-# TODO: re-enable
-#sndrcv_tls_anon_rebind.sh \
-#testsuites/sndrcv_tls_anon_rebind_sender.conf \
-#testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
-#sndrcv_tls_anon.sh \
-#testsuites/sndrcv_tls_anon_sender.conf \
-#testsuites/sndrcv_tls_anon_rcvr.conf \
-#
+	ksi-extract-verify-long-vg.sh \
+	sndrcv_tls_anon_rebind.sh \
+	testsuites/sndrcv_tls_anon_rebind_sender.conf \
+	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
+	sndrcv_tls_anon.sh \
+	testsuites/sndrcv_tls_anon_sender.conf \
+	testsuites/sndrcv_tls_anon_rcvr.conf
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
