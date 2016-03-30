@@ -252,7 +252,7 @@ dynstats_initNewBucketStats(dynstats_bucket_t *b) {
 	CHKiRet(statsobj.Construct(&b->stats));
 	CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
 	CHKiRet(statsobj.SetName(b->stats, b->name));
-	CHKiRet(statsobj.SetReportingNamespace(b->stats, "values"));
+	CHKiRet(statsobj.SetReportingNamespace(b->stats, UCHAR_CONSTANT("values")));
 	statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
 	CHKiRet(statsobj.ConstructFinalize(b->stats));
 	

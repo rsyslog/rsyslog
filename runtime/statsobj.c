@@ -274,7 +274,7 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 }
 
 static rsRetVal
-addCtrForReporting(json_object *obj, const char* field_name, intctr_t value) {
+addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
 	json_object *v = NULL;
 	DEFiRet;
 
@@ -283,7 +283,7 @@ addCtrForReporting(json_object *obj, const char* field_name, intctr_t value) {
 	  incorrect (as intctr_t is uint64)*/
 	CHKmalloc(v = json_object_new_int64((int64_t) value));
 
-	json_object_object_add(obj, field_name, v);
+	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (v != NULL) {
@@ -294,13 +294,13 @@ finalize_it:
 }
 
 static rsRetVal
-addContextForReporting(json_object *obj, const char* field_name, const char* value) {
+addContextForReporting(json_object *to, const uchar* field_name, const uchar* value) {
 	json_object *v = NULL;
 	DEFiRet;
 
-	CHKmalloc(v = json_object_new_string(value));
+	CHKmalloc(v = json_object_new_string((const char*) value));
 
-	json_object_object_add(obj, field_name, v);
+	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (v != NULL) {
@@ -340,17 +340,17 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	CHKmalloc(root = json_object_new_object());
 
-	CHKiRet(addContextForReporting(root, "name", pThis->name));
+	CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("name"), pThis->name));
 	
 	if(pThis->origin != NULL) {
-		CHKiRet(addContextForReporting(root, "origin", pThis->origin));
+		CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("origin"), pThis->origin));
 	}
 
 	if (pThis->reporting_ns == NULL) {
 		values = json_object_get(root);
 	} else {
 		CHKmalloc(values = json_object_new_object());
-		json_object_object_add(root, pThis->reporting_ns, json_object_get(values));
+		json_object_object_add(root, (const char*) pThis->reporting_ns, json_object_get(values));
 	}
 
 	/* now add all counters to this line */
@@ -375,7 +375,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 		resetResettableCtr(pCtr, bResetCtrs);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
-	CHKiRet(rsCStrAppendStr(pcstr, json_object_to_json_string(root)));
+	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
 	CHKiRet(cstrFinalize(pcstr));
 	*ppcstr = pcstr;
