@@ -280,7 +280,10 @@ if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
 	dynstats_reset-vg.sh \
-	dynstats_overflow-vg.sh
+	dynstats_overflow-vg.sh \
+	dynstats-json-vg.sh \
+	stats-json-vg.sh \
+	stats-cee-vg.sh
 endif
 endif
 
@@ -1047,12 +1050,15 @@ EXTRA_DIST= \
 	no-dynstats.sh \
 	testsuites/no-dynstats.conf \
 	stats-json.sh \
+	stats-json-vg.sh \
 	testsuites/stats-json.conf \
 	stats-cee.sh \
+	stats-cee-vg.sh \
 	testsuites/stats-cee.conf \
 	stats-json-es.sh \
 	testsuites/stats-json-es.conf \
 	dynstats-json.sh \
+	dynstats-json-vg.sh \
 	testsuites/dynstats-json.conf \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh \
