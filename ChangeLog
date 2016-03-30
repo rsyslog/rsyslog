@@ -31,6 +31,8 @@ Version 8.18.0 [v8-stable] 2016-04-19
   that might have some negative side effects. Also IP_FREEBIND is
   recommended by systemd documentation.
   Thanks to Nirmoy Das and Marius Tomaschewski for the patch.
+- new External plugin for sending metrics to SPM Monitoring SaaS
+  Thanks to Radu Gheorghe for the patch.
 - bugfix: memory misallocation if position.from and position.to is used
   a negative amount of memory is tried to be allocated if position.from
   is smaller than the buffer size (at least with json variables). This
