@@ -179,7 +179,7 @@ in "direct" mode (no real queue) if not explicitely specified otherwise.
 -  **$ActionQueueTimeoutActionCompletion** <number> [number is timeout in ms
    (1000ms is 1sec!), default 1000, 0 means immediate!]
 -  **$ActionQueueTimeoutEnqueue** <number> [number is timeout in ms (1000ms
-   is 1sec!), default 2000, 0 means indefinite]
+   is 1sec!), default 2000, 0 means discard immediately]
 -  **$ActionQueueTimeoutShutdown** <number> [number is timeout in ms (1000ms
    is 1sec!), default 0 (indefinite)]
 -  **$ActionQueueWorkerTimeoutThreadShutdown** <number> [number is timeout
