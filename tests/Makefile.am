@@ -366,7 +366,6 @@ TESTS +=  \
 endif
 
 if ENABLE_GNUTLS
-# TODO: re-enable in newer version
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	sndrcv_tls_anon.sh \
