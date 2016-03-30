@@ -10,5 +10,5 @@ echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh custom-content-check '{"name":"global","origin":"dynstats"}' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-content-check '{ "name": "global", "origin": "dynstats", "values": { } }' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh exit

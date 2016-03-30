@@ -72,6 +72,7 @@ struct statsobj_s {
 	BEGINobjInstance;		/* Data to implement generic object - MUST be the first data element! */
 	uchar *name;
 	uchar *origin;
+	uchar *reporting_ns;
     statsobj_read_notifier_t read_notifier;
     void *read_notifier_ctx;
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
@@ -98,6 +99,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetName)(statsobj_t *pThis, uchar *name);
 	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
     rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
+	rsRetVal (*SetReportingNamespace)(statsobj_t *pThis, uchar *ns);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);

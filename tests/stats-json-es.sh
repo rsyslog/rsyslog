@@ -12,6 +12,6 @@ echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh custom-content-check '{"name":"an_action_that_is_never_called","origin":"core.action","processed":0,"failed":0,"suspended":0,"suspended!duration":0,"resumed":0}' 'rsyslog.out.stats.log'
+. $srcdir/diag.sh custom-content-check '{ "name": "an_action_that_is_never_called", "origin": "core.action", "processed": 0, "failed": 0, "suspended": 0, "suspended!duration": 0, "resumed": 0 }' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh custom-assert-content-missing '@cee' 'rsyslog.out.stats.log'
 . $srcdir/diag.sh exit

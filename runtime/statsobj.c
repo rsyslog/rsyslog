@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <time.h>
 #include <assert.h>
+#include <json.h>
 
 #include "rsyslog.h"
 #include "unicode-helper.h"
@@ -168,6 +169,14 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+setReportingNamespace(statsobj_t *pThis, uchar *ns)
+{
+	DEFiRet;
+	CHKmalloc(pThis->reporting_ns = ustrdup(ns));
+finalize_it:
+	RETiRet;
+}
 
 /* add a counter to an object
  * ctrName is duplicated, caller must free it if requried
@@ -264,43 +273,89 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 	}
 }
 
+static rsRetVal
+addCtrForReporting(json_object *obj, const char* field_name, intctr_t value) {
+	json_object *v = NULL;
+	DEFiRet;
+
+	/*We should migrate libfastjson to support uint64_t in addition to int64_t.
+	  Although no counter is likely to grow to int64 max-value, this is theoritically
+	  incorrect (as intctr_t is uint64)*/
+	CHKmalloc(v = json_object_new_int64((int64_t) value));
+
+	json_object_object_add(obj, field_name, v);
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (v != NULL) {
+			json_object_put(v);
+		}
+	}
+	RETiRet;
+}
+
+static rsRetVal
+addContextForReporting(json_object *obj, const char* field_name, const char* value) {
+	json_object *v = NULL;
+	DEFiRet;
+
+	CHKmalloc(v = json_object_new_string(value));
+
+	json_object_object_add(obj, field_name, v);
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (v != NULL) {
+			json_object_put(v);
+		}
+	}
+	RETiRet;
+}
+
+static intctr_t
+accumulatedValue(ctr_t *pCtr) {
+	switch(pCtr->ctrType) {
+	case ctrType_IntCtr:
+		return *(pCtr->val.pIntCtr);
+	case ctrType_Int:
+		return *(pCtr->val.pInt);
+	}
+	return -1;
+}
+
+
 /* get all the object's countes together as CEE. */
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
+	json_object *root, *values;
 	DEFiRet;
+
+	root = values = NULL;
 
 	CHKiRet(cstrConstruct(&pcstr));
 
 	if (fmt == statsFmt_CEE)
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
-	
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStr(pcstr, pThis->name);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		CHKiRet(rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6));
 
+	CHKmalloc(root = json_object_new_object());
+
+	CHKiRet(addContextForReporting(root, "name", pThis->name));
+	
 	if(pThis->origin != NULL) {
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("origin"), 6);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStr(pcstr, pThis->origin);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
+		CHKiRet(addContextForReporting(root, "origin", pThis->origin));
+	}
+
+	if (pThis->reporting_ns == NULL) {
+		values = json_object_get(root);
+	} else {
+		CHKmalloc(values = json_object_new_object());
+		json_object_object_add(root, pThis->reporting_ns, json_object_get(values));
 	}
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(",\""), 2);
 		if (fmt == statsFmt_JSON_ES) {
 			/* work-around for broken Elasticsearch JSON implementation:
 			 * we need to replace dots by a different char, we use bang.
@@ -313,29 +368,26 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 				if(*c == '.')
 					*c = '!';
 			}
-			rsCStrAppendStr(pcstr, esbuf);
+			CHKiRet(addCtrForReporting(values, esbuf, accumulatedValue(pCtr)));
 		} else {
-			rsCStrAppendStr(pcstr, pCtr->name);
-		}
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		cstrAppendChar(pcstr, ':');
-		switch(pCtr->ctrType) {
-		case ctrType_IntCtr:
-			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
-			break;
-		case ctrType_Int:
-			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
-			break;
+			CHKiRet(addCtrForReporting(values, pCtr->name, accumulatedValue(pCtr)));
 		}
 		resetResettableCtr(pCtr, bResetCtrs);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
-	cstrAppendChar(pcstr, '}');
+	CHKiRet(rsCStrAppendStr(pcstr, json_object_to_json_string(root)));
 
 	CHKiRet(cstrFinalize(pcstr));
 	*ppcstr = pcstr;
 
 finalize_it:
+	if (root != NULL) {
+		json_object_put(root);
+	}
+	if (values != NULL) {
+		json_object_put(values);
+	}
+	
 	RETiRet;
 }
 
@@ -596,6 +648,7 @@ CODESTARTobjDestruct(statsobj)
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
 	free(pThis->origin);
+	free(pThis->reporting_ns);
 ENDobjDestruct(statsobj)
 
 
@@ -626,6 +679,7 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
 	pIf->SetReadNotifier = setReadNotifier;
+	pIf->SetReportingNamespace = setReportingNamespace;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;
