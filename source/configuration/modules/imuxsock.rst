@@ -89,8 +89,11 @@ Global Parameters
    option on, but the default is "off" to keep compatible with earlier
    versions of rsyslog.
 -  **SysSock.RateLimit.Interval** [number] - specifies the rate-limiting
-   interval in seconds. Default value is 5 seconds. Set it to 0 to turn
-   rate limiting off.
+   interval in seconds. Default value is 0, which turns off rate
+   limiting. Set it to a number of seconds (5 recommended) to activate
+   rate-limiting. The default of 0 has been chosen as people experienced
+   problems with this feature activated by default. Now it needs an
+   explicit opt-in by setting this parameter.
 -  **SysSock.RateLimit.Burst** [number] - specifies the rate-limiting
    burst in number of messages. Default is 200.
 -  **SysSock.RateLimit.Severity** [numerical severity] - specifies the
