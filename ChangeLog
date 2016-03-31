@@ -25,6 +25,11 @@ Version 8.18.0 [v8-stable] 2016-04-19
   - tests for priviledge drop statements
   - basic test for RELP with TLS
 - improvements to the CI environment
+- enhancement: queue subsystem is more robst in regard to some corruptions
+  It is now detected if a .qi file states that the queue contains more
+  records than there are actually inside the queue files. Previously this
+  resulted in an emergency switch to direct mode, now the problem is only
+  reported but processing continues.
 - enhancement: Allow rsyslog to bind UDP ports even w/out specific
   interface being up at the moment.
   Alternatively, rsyslog could be ordered after networking, however,
