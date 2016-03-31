@@ -73,6 +73,7 @@ tests/nettester
 tests/ourtail
 tests/randomgen
 tests/syslog_caller
+tests/omrelp_dflt_port
 tests/syslog_inject
 tests/tcpflood
 tests/uxsockrcvr

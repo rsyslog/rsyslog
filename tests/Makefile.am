@@ -358,11 +358,14 @@ TESTS +=  \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
+	json_object_looping.sh \
 	json_nonarray_looping.sh
 endif
 if HAVE_VALGRIND
 TESTS +=  \
 	json_null_array-vg.sh \
+	json_object_looping-vg.sh \
+	json_array_looping-vg.sh \
 	json_null-vg.sh
 endif
 TESTS +=  \
@@ -1088,10 +1091,15 @@ EXTRA_DIST= \
 	json_array_subscripting.sh \
 	testsuites/json_array_subscripting.conf \
 	testsuites/json_array_input \
+	testsuites/json_object_input \
 	testsuites/json_nonarray_input \
 	json_array_looping.sh \
+	json_object_looping.sh \
+	json_object_looping-vg.sh \
+	json_array_looping-vg.sh \
 	json_nonarray_looping.sh \
 	testsuites/json_array_looping.conf \
+	testsuites/json_object_looping.conf \
 	json_null.sh \
 	json_null-vg.sh \
 	testsuites/json_null.conf \
