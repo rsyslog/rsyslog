@@ -305,7 +305,7 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, msg_t *pMsg, wti_t *pW
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
-	CHKmalloc(keys = malloc(len * sizeof(char*)));
+	CHKmalloc(keys = calloc(len, sizeof(char*)));
 	char **curr_key = keys;
 	json_object_object_foreachC(arr, iter) {
 		*curr_key = iter.key;
