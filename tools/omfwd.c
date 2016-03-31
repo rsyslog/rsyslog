@@ -1289,11 +1289,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(pData->protocol == FORW_TCP) {
 		pData->bResendLastOnRecon = cs.bResendLastOnRecon;
 		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
-		if(cs.pszStrmDrvr != NULL)
-			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
-		if(cs.pszStrmDrvrAuthMode != NULL)
-			CHKmalloc(pData->pszStrmDrvrAuthMode =
-				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
 		if(cs.pPermPeers != NULL) {
 			pData->pPermPeers = cs.pPermPeers;
 			cs.pPermPeers = NULL;
