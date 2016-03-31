@@ -7,7 +7,8 @@ CLEANFILES = \
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
-	omrelp_dflt_port
+	omrelp_dflt_port \
+	mangle_qi
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -68,6 +69,7 @@ TESTS +=  \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
+	daqueue-invld-qi.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
@@ -811,6 +813,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	testsuites/rcvr_fail_restore_rcvr.conf \
 	testsuites/rcvr_fail_restore_sender.conf \
+	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
 	daqueue-persist-drvr.sh \
 	queue-persist.sh \
@@ -1183,6 +1186,7 @@ EXTRA_DIST= \
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
+mangle_qi_SOURCES = mangle_qi.c
 chkseq_SOURCES = chkseq.c
 
 uxsockrcvr_SOURCES = uxsockrcvr.c
