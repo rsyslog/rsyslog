@@ -275,7 +275,8 @@ TESTS +=  \
 	stats-json.sh \
 	dynstats-json.sh \
 	stats-cee.sh \
-	stats-json-es.sh
+	stats-json-es.sh \
+	dynstats_reset_without_pstats_reset.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -1025,6 +1026,7 @@ EXTRA_DIST= \
 	testsuites/mmpstrucdata-invalid.conf \
 	libdbi-basic-vg.sh \
 	dynstats_ctr_reset.sh \
+	dynstats_reset_without_pstats_reset.sh \
 	dynstats_nometric.sh \
 	dynstats_overflow.sh \
 	dynstats_overflow-vg.sh \
@@ -1034,6 +1036,7 @@ EXTRA_DIST= \
 	dynstats-vg.sh \
 	testsuites/dynstats.conf \
 	testsuites/dynstats_ctr_reset.conf \
+	testsuites/dynstats_reset_without_pstats_reset.conf \
 	testsuites/dynstats_empty_input \
 	testsuites/dynstats_input \
 	testsuites/dynstats_input_1 \

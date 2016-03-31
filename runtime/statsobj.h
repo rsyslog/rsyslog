@@ -54,6 +54,7 @@ typedef enum statsFmtType_e {
 /* counter flags */
 #define CTR_FLAG_NONE 0
 #define CTR_FLAG_RESETTABLE 1
+#define CTR_FLAG_MUST_RESET 2
 
 /* helper entity, the counter */
 typedef struct ctr_s {

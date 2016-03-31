@@ -440,7 +440,8 @@ dynstats_createCtr(dynstats_bucket_t *b, const uchar* metric, dynstats_ctr_t **c
 	CHKmalloc((*ctr)->metric = ustrdup(metric));
 	STATSCOUNTER_INIT((*ctr)->ctr, (*ctr)->mutCtr);
 	CHKiRet(statsobj.AddManagedCounter(b->stats, metric, ctrType_IntCtr,
-									   b->resettable, &(*ctr)->ctr, &(*ctr)->pCtr));
+									   b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
+									   &(*ctr)->ctr, &(*ctr)->pCtr));
 finalize_it:
 	if (iRet != RS_RET_OK) {
         if ((*ctr) != NULL) {

@@ -261,7 +261,8 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 static inline void
 resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 {
-	if(bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) {
+	if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) ||
+		(pCtr->flags & CTR_FLAG_MUST_RESET)) {
 		switch(pCtr->ctrType) {
 		case ctrType_IntCtr:
 			*(pCtr->val.pIntCtr) = 0;
