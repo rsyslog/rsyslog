@@ -301,16 +301,17 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, msg_t *pMsg, wti_t *pW
 	json_object *entry = NULL;
 	json_object *key = NULL;
 	char **keys = NULL;
+	json_object_iter iter;
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
 	CHKmalloc(keys = malloc(len * sizeof(char*)));
 	char **curr_key = keys;
-	json_object_object_foreach(arr, name, val) {
-		*curr_key = name;
+	json_object_object_foreachC(arr, iter) {
+		*curr_key = iter.key;
 		curr_key++;
 	}
-	json_object *curr;
+	json_object *curr = NULL;
 	CHKmalloc(entry = json_object_new_object());
 	for (int i = 0; i < len; i++) {
 		if (json_object_object_get_ex(arr, keys[i], &curr)) {
