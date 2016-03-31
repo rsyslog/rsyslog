@@ -37,6 +37,8 @@ cnum(expr)
 ----------
 
    converts expr to a number (integer)
+   Note: if the expression does not contain a numerical value,
+   behaviour is undefined.
 
 wrap(str, wrapper_str)
 ----------------------
