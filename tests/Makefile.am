@@ -16,6 +16,7 @@ TESTS +=  \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	omfwd-keepalive.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -601,6 +602,7 @@ EXTRA_DIST= \
 	testsuites/stop-localvar.conf \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
+	omfwd-keepalive.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \

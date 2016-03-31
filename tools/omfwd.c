@@ -1023,11 +1023,11 @@ CODESTARTnewActInst
 			pData->iRebindInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "keepalive")) {
 			pData->bKeepAlive = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepaliveprobes")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.probes")) {
 			pData->iKeepAliveProbes = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepaliveintvl")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.interval")) {
 			pData->iKeepAliveIntvl = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepalivetime")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.time")) {
 			pData->iKeepAliveTime = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
 			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1102,8 +1102,9 @@ CODESTARTnewActInst
 			}
 			free(cstr);
 		} else {
-			DBGPRINTF("omfwd: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+				"omfwd: program error, non-handled parameter '%s'\n",
+				actpblk.descr[i].name);
 		}
 	}
 
