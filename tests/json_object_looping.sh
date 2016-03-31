@@ -11,8 +11,11 @@ echo doing shutdown
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh content-check 'quux: { "key": "str1", "value": "abc0" }'
-. $srcdir/diag.sh content-check 'quux: { "key": "str2", "value": "def1" }'
+. $srcdir/diag.sh content-check 'quux: { "key": "str2", "value": "def1", "random_key": "str2" }'
 . $srcdir/diag.sh content-check 'quux: { "key": "str3", "value": "ghi2" }'
+. $srcdir/diag.sh assert-content-missing 'quux: { "key": "str4", "value": "jkl3" }'
+. $srcdir/diag.sh content-check 'new: jkl3'
+. $srcdir/diag.sh assert-content-missing 'deleted: ghi2'
 . $srcdir/diag.sh content-check 'quux: { "key": "obj", "value": { "bar": { "k1": "important_msg", "k2": "other_msg" } } }'
 . $srcdir/diag.sh custom-content-check 'corge: key: bar val: { "k1": "important_msg", "k2": "other_msg" }' 'rsyslog.out.async.log'
 . $srcdir/diag.sh custom-content-check 'prefixed_corge: { "key": "bar", "value": { "k1": "important_msg", "k2": "other_msg" } }' 'rsyslog.out.prefixed.log'
