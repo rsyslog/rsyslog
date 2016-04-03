@@ -341,6 +341,21 @@ Input Parameters
 
    This option can be used when ``readMode`` is 0 or 2.
 
+.. index::
+   single: imfile; freshStartTail
+.. function:: freshStartTail [on/off] (requires v8.18.0+)
+
+   **Default: off**
+
+   This is used to tell rsyslog to seek to the end/tail of input files
+   (discard old logs)**at its first start(freshStart)** and process only new 
+   log messages.
+   
+   When deploy rsyslog to a large number of servers, we may only care about 
+   new log messages generated after the deployment. set **freshstartTail**
+   to **on** will discard old logs. Otherwise, there may be vast useless
+   message burst on the remote central log receiver
+
 Caveats/Known Bugs
 ------------------
 
