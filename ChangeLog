@@ -37,6 +37,11 @@ Version 8.18.0 [v8-stable] 2016-04-19
   that might have some negative side effects. Also IP_FREEBIND is
   recommended by systemd documentation.
   Thanks to Nirmoy Das and Marius Tomaschewski for the patch.
+- cleanup: removed no longer needed json-c compatibility layer
+  as we now always use libfastjson, we do not need to support old
+  versions of json-c (libfastjson was based on the newest json-c
+  version at the time of the fork, which is the newest in regard
+  to the compatibility layer)
 - new External plugin for sending metrics to SPM Monitoring SaaS
   Thanks to Radu Gheorghe for the patch.
 - bugfix: memory misallocation if position.from and position.to is used
