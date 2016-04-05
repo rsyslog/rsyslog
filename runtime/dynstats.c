@@ -252,6 +252,7 @@ dynstats_initNewBucketStats(dynstats_bucket_t *b) {
 	CHKiRet(statsobj.Construct(&b->stats));
 	CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
 	CHKiRet(statsobj.SetName(b->stats, b->name));
+	CHKiRet(statsobj.SetReportingNamespace(b->stats, UCHAR_CONSTANT("values")));
 	statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
 	CHKiRet(statsobj.ConstructFinalize(b->stats));
 	
@@ -374,6 +375,7 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
 	CHKiRet(statsobj.SetName(bkts->global_stats, UCHAR_CONSTANT("global")));
+	CHKiRet(statsobj.SetReportingNamespace(bkts->global_stats, UCHAR_CONSTANT("values")));
 	CHKiRet(statsobj.ConstructFinalize(bkts->global_stats));
 	pthread_rwlock_init(&bkts->lock, NULL);
 
@@ -438,7 +440,8 @@ dynstats_createCtr(dynstats_bucket_t *b, const uchar* metric, dynstats_ctr_t **c
 	CHKmalloc((*ctr)->metric = ustrdup(metric));
 	STATSCOUNTER_INIT((*ctr)->ctr, (*ctr)->mutCtr);
 	CHKiRet(statsobj.AddManagedCounter(b->stats, metric, ctrType_IntCtr,
-									   b->resettable, &(*ctr)->ctr, &(*ctr)->pCtr));
+									   b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
+									   &(*ctr)->ctr, &(*ctr)->pCtr));
 finalize_it:
 	if (iRet != RS_RET_OK) {
         if ((*ctr) != NULL) {

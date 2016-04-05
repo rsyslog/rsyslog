@@ -265,7 +265,7 @@ finalize_it:
  * I optimized this function to use memcpy(), among others. Consider it a
  * rewrite (which may be good to know in case of bugs) -- rgerhards, 2008-01-07
  */
-rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen)
+rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 {
 	DEFiRet;
 
@@ -291,7 +291,7 @@ finalize_it:
  * need to change existing code.
  * rgerhards, 2007-07-03
  */
-rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
+rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar* psz)
 {
 	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*) psz));
 }
