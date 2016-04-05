@@ -25,6 +25,13 @@ Version 8.18.0 [v8-stable] 2016-04-19
   - tests for priviledge drop statements
   - basic test for RELP with TLS
   - some previously disabled tests have been re-enabled
+- dynamic stats subsystem: a couple of smaller changes
+  they also involve the format, which is slightly incompatible to
+  previous version. As this was out only very recently (last version),
+  we considered this as acceptable.
+  Thanks to Janmejay Singh for developing this.
+- foreach loop: now also iterates over objects (not just arrays)
+  Thanks to Janmejay Singh for developing this.
 - improvements to the CI environment
 - enhancement: queue subsystem is more robst in regard to some corruptions
   It is now detected if a .qi file states that the queue contains more
