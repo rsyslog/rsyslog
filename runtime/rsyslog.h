@@ -613,20 +613,6 @@ int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 
 
-/* our own support for breaking changes in json-c */
-#ifdef HAVE_JSON_OBJECT_OBJECT_GET_EX
-#	define RS_json_object_object_get_ex(obj, key, retobj) \
-		json_object_object_get_ex((obj), (key), (retobj))
-#else
-#	define RS_json_object_object_get_ex(obj, key, retobj) \
-		(!json_object_is_type(obj, json_type_object) || \
-				(*(retobj) = json_object_object_get((obj), (key))) == NULL) ? FALSE : TRUE
-#endif
-
-#ifndef HAVE_JSON_BOOL
-typedef int json_bool;
-#endif
-
 /* this define below is (later) intended to be used to implement empty
  * structs. TODO: check if compilers supports this and, if not, define
  * a dummy variable. This requires review of where in code empty structs

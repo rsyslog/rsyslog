@@ -3618,7 +3618,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			} else {
 				const char *jstr;
 				MsgLock(pMsg);
-#ifdef HAVE_JSON_OBJECT_TO_JSON_STRING_EXT
 				int jflag = 0;
 				if(pProp->id == PROP_CEE_ALL_JSON) {
 					jflag = JSON_C_TO_STRING_SPACED;
@@ -3626,9 +3625,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 					jflag = JSON_C_TO_STRING_PLAIN;
 				}
 				jstr = json_object_to_json_string_ext(pMsg->json, jflag);
-#else
-				jstr = json_object_to_json_string(pMsg->json);
-#endif
 				MsgUnlock(pMsg);
 				if(jstr == NULL) {
 					RET_OUT_OF_MEMORY;
@@ -4481,11 +4477,7 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 
 			err = tokener->err;
 			if(err != json_tokener_continue)
-#				if HAVE_JSON_TOKENER_ERROR_DESC
-					errMsg = json_tokener_error_desc(err);
-#				else
-					errMsg = json_tokener_errors[err];
-#				endif
+				errMsg = json_tokener_error_desc(err);
 			else
 				errMsg = "Unterminated input";
 		} else if(!json_object_is_type(json, json_type_object))
@@ -4556,7 +4548,7 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
         if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
             memcpy(namebuf, key, array_idx_start - key);
             namebuf[array_idx_start - key] = '\0';
-            json_bool found_obj = RS_json_object_object_get_ex(root, namebuf, &arr);
+            json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
             if (found_obj && json_object_is_type(arr, json_type_array)) {
                 int len = json_object_array_length(arr);
                 if (len > idx) {
@@ -4567,7 +4559,7 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
             }
         }
     }
-    return RS_json_object_object_get_ex(root, key, value);
+    return json_object_object_get_ex(root, key, value);
 }
 
 
@@ -4858,11 +4850,7 @@ jsonDeepCopy(struct json_object *src)
 		dst = json_object_new_double(json_object_get_double(src));
 		break;
 	case json_type_int:
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 		dst = json_object_new_int64(json_object_get_int64(src));
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-		dst = json_object_new_int(json_object_get_int(src));
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case json_type_string:
 		dst = json_object_new_string(json_object_get_string(src));
@@ -4905,11 +4893,7 @@ msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v, int force_r
 		free(cstr);
 		break;
 	case 'N':/* number (integer) */
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 		json = json_object_new_int64(v->d.n);
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-		json = json_object_new_int((int) v->d.n);
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case 'J':/* native JSON */
 		json = jsonDeepCopy(v->d.json);

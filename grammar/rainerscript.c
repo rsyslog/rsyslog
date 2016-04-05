@@ -1243,11 +1243,7 @@ var2Number(struct var *r, int *bSuccess)
 		n = str2num(r->d.estr, bSuccess);
 	} else {
 		if(r->datatype == 'J') {
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 			n = (r->d.json == NULL) ? 0 : json_object_get_int64(r->d.json);
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-			n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		} else {
 			n = r->d.n;
 		}
