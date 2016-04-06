@@ -18,6 +18,8 @@ Version 8.18.0 [v8-stable] 2016-04-19
   It defaults to on (for backward compatibility). Off allows user to
   ignore HUP as far as kafka-producer is concerned.
   Thanks to Janmejay Singh for implementing this feature
+- imfile: new "FreshStartTail" input parameter
+  Thanks to Curu Wong for implementing this.
 - testbench improvements (more tests and more thourough tests)
   among others:
   - tests for omjournal added
