@@ -22,6 +22,7 @@
 #include <libestr.h>
 #include <typedefs.h>
 #include <sys/types.h>
+#include <json.h>
 #include <regex.h>
 #include "typedefs.h"
 
