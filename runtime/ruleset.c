@@ -300,16 +300,18 @@ static rsRetVal
 callForeachObject(struct cnfstmt *stmt, json_object *arr, msg_t *pMsg, wti_t *pWti) {
 	json_object *entry = NULL;
 	json_object *key = NULL;
-	char **keys = NULL;
-	json_object_iter iter;
+	const char **keys = NULL;
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
 	CHKmalloc(keys = calloc(len, sizeof(char*)));
-	char **curr_key = keys;
-	json_object_object_foreachC(arr, iter) {
-		*curr_key = iter.key;
+	const char **curr_key = keys;
+	struct json_object_iterator it = json_object_iter_begin(arr);
+	struct json_object_iterator itEnd = json_object_iter_end(arr);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		*curr_key = json_object_iter_peek_name(&it);
 		curr_key++;
+		json_object_iter_next(&it);
 	}
 	json_object *curr = NULL;
 	CHKmalloc(entry = json_object_new_object());

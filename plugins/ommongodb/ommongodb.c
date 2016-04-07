@@ -464,15 +464,18 @@ static bson *
 BSONFromJSONObject(struct json_object *json)
 {
 	bson *doc = NULL;
-	struct json_object_iter it;
 
 	doc = bson_new();
 	if(doc == NULL)
 		goto error;
 
-	json_object_object_foreachC(json, it) {
-		if (BSONAppendJSONObject(doc, it.key, it.val) == FALSE)
+	struct json_object_iterator it = json_object_iter_begin(json);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		if (BSONAppendJSONObject(doc, json_object_iter_peek_name(&it),
+			json_object_iter_peek_value(&it)) == FALSE)
 			goto error;
+		json_object_iter_next(&it);
 	}
 
 	if(bson_finish(doc) == FALSE)

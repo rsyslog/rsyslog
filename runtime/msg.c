@@ -4491,8 +4491,12 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 	}
  
-	json_object_object_foreach(json, name, val) {
-		msgSetPropViaJSON(pMsg, name, val, 0);
+	struct json_object_iterator it = json_object_iter_begin(json);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
+			json_object_iter_peek_value(&it), 0);
+		json_object_iter_next(&it);
 	}
 	json_object_put(json);
 
@@ -4619,11 +4623,13 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 {
 	/* TODO: check & handle duplicate names */
 	DEFiRet;
-	struct json_object_iter it;
 
-	json_object_object_foreachC(json, it) {
-		json_object_object_add(existing, it.key,
-			json_object_get(it.val));
+	struct json_object_iterator it = json_object_iter_begin(json);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		json_object_object_add(existing, json_object_iter_peek_name(&it),
+			json_object_get(json_object_iter_peek_value(&it)));
+		json_object_iter_next(&it);
 	}
 	/* note: json-c does ref counting. We added all descandants refcounts
 	 * in the loop above. So when we now free(_put) the root object, only
@@ -4837,7 +4843,6 @@ static struct json_object *
 jsonDeepCopy(struct json_object *src)
 {
 	struct json_object *dst = NULL, *json;
-	struct json_object_iter it;
 	int arrayLen, i;
 
 	if(src == NULL) goto done;
@@ -4857,9 +4862,12 @@ jsonDeepCopy(struct json_object *src)
 		break;
 	case json_type_object:
 		dst = json_object_new_object();
-		json_object_object_foreachC(src, it) {
-			json = jsonDeepCopy(it.val);
-			json_object_object_add(dst, it.key, json);
+		struct json_object_iterator it = json_object_iter_begin(src);
+		struct json_object_iterator itEnd = json_object_iter_end(src);
+		while (!json_object_iter_equal(&it, &itEnd)) {
+			json = jsonDeepCopy(json_object_iter_peek_value(&it));
+			json_object_object_add(dst, json_object_iter_peek_name(&it), json);
+			json_object_iter_next(&it);
 		}
 		break;
 	case json_type_array:
