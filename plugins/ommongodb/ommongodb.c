@@ -408,8 +408,7 @@ BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json)
 	struct json_object_iterator it = json_object_iter_begin(json);
 
 	if (!json_object_iter_equal(&it, &itEnd)) {
-		const char *key;
-		key = json_object_iter_peek_name(&it);
+		const char *const key = json_object_iter_peek_name(&it);
 		if (strcmp(key, "$date") == 0) {
 			struct tm tm;
 			gint64 ts;
