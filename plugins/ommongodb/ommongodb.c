@@ -410,23 +410,20 @@ BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json)
 	if (!json_object_iter_equal(&it, &itEnd)) {
 		const char *key;
 		key = json_object_iter_peek_name(&it);
-        if (strcmp(key, "$date") == 0) {
-            struct tm tm;
-            gint64 ts;
-            struct json_object *val;
+		if (strcmp(key, "$date") == 0) {
+			struct tm tm;
+			gint64 ts;
+			struct json_object *val;
 
-            val = json_object_iter_peek_value(&it);
-
-            DBGPRINTF("ommongodb: extended json date detected %s", json_object_get_string(val));
-
-            tm.tm_isdst = -1;
-            strptime(json_object_get_string(val), "%Y-%m-%dT%H:%M:%S%z", &tm);
-            ts = 1000 * (gint64) mktime(&tm);
-            return bson_append_utc_datetime(doc, name, ts);
-        }
-    }
-
-    return FALSE;
+			val = json_object_iter_peek_value(&it);
+			DBGPRINTF("ommongodb: extended json date detected %s", json_object_get_string(val));
+			tm.tm_isdst = -1;
+			strptime(json_object_get_string(val), "%Y-%m-%dT%H:%M:%S%z", &tm);
+			ts = 1000 * (gint64) mktime(&tm);
+			return bson_append_utc_datetime(doc, name, ts);
+		}
+	}
+	return FALSE;
 }
 
 /* Return a BSON variant of json, which must be a json_type_array */
