@@ -181,7 +181,7 @@ ENDtryResume
 
 
 struct iovec *
-build_iovec(size_t *argc, struct json_object *json)
+build_iovec(size_t *retargc, struct json_object *json)
 {
 	struct iovec *iov;
 	const char *key;
@@ -191,10 +191,10 @@ build_iovec(size_t *argc, struct json_object *json)
 	size_t vec_len;
 	size_t i;
 
-	*argc = json_object_object_length(json);
-	if(*argc == 0)
+	const size_t argc = json_object_object_length(json);
+	if(argc == 0)
 		return NULL;
-	iov = malloc( sizeof(struct iovec) * *argc );
+	iov = malloc( sizeof(struct iovec) * argc );
 	if(NULL == iov)
 		goto fail;
 
@@ -204,7 +204,7 @@ build_iovec(size_t *argc, struct json_object *json)
 	 * complain and we need to avoid that.
 	 */
 	struct json_object_iterator it = json_object_iter_begin(json);
-	for(i = 0 ; i < *argc ; ++i) {
+	for(i = 0 ; i < argc ; ++i) {
 		key = json_object_iter_peek_name(&it);
 		val = json_object_get_string(json_object_iter_peek_value(&it));
 
@@ -226,6 +226,7 @@ build_iovec(size_t *argc, struct json_object *json)
 
 		json_object_iter_next(&it);
 	}
+	*retargc = argc;
 	return iov;
 
 fail:
