@@ -181,8 +181,8 @@ ENDtryResume
 
 
 struct iovec *
-build_iovec(size_t *argc, struct json_object *json) {
-
+build_iovec(size_t *argc, struct json_object *json)
+{
     struct lh_entry *entry ;
     struct iovec *iov;
     const char *key;
@@ -249,7 +249,8 @@ fail:
 
 
 void
-send_non_template_message(msg_t *pMsg) {
+send_non_template_message(msg_t *pMsg)
+{
   uchar *tag;
   int lenTag;
   int sev;  
@@ -257,8 +258,8 @@ send_non_template_message(msg_t *pMsg) {
   MsgGetSeverity(pMsg, &sev);
   getTAG(pMsg, &tag, &lenTag);
   /* we can use more properties here, but let's see if there
-   *   * is some real user interest. We can always add later...
-   *       */
+   * is some real user interest. We can always add later...
+   */
    sd_journal_send("MESSAGE=%s", getMSG(pMsg),
        "PRIORITY=%d", sev,
        "SYSLOG_FACILITY=%d", pMsg->iFacility,
@@ -268,8 +269,8 @@ send_non_template_message(msg_t *pMsg) {
 }
 
 void
-send_template_message(struct json_object* json){
-
+send_template_message(struct json_object* json)
+{
     size_t argc;
     struct iovec *iovec;
     size_t i;
