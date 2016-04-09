@@ -183,7 +183,6 @@ ENDtryResume
 struct iovec *
 build_iovec(size_t *argc, struct json_object *json)
 {
-	struct lh_entry *entry ;
 	struct iovec *iov;
 	const char *key;
 	const char *val;
@@ -194,22 +193,15 @@ build_iovec(size_t *argc, struct json_object *json)
 
 	*argc = json_object_object_length(json);
 	iov = malloc( sizeof(struct iovec) * *argc );
-	entry = json_object_get_object(json)->head;
-
 	if(NULL == iov)
 		goto fail;
 
-	/* 
-	* we have to avoid using json_object_object_foreachC because clang static analyzer doesn't believe
-	* that I've correct initialised all the elements of iov.
-	* I'm assuming that json_object_object_length isn't lying to me, and that the json object isn't
-	* changing under my feet so that we can do an explicit `for` iteration instead of just walking the
-	* the linked list.
-	*/
-
-	for(i = 0; i < *argc; i++) {
-		key = (char *)entry->k;
-		val = json_object_get_string((struct json_object*)entry->v);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	struct json_object_iterator it = json_object_iter_begin(json);
+	i = 0;
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		key = json_object_iter_peek_name(&it);
+		val = json_object_get_string(json_object_iter_peek_value(&it));
 
 		key_len = strlen(key);
 		val_len = strlen(val);
@@ -227,7 +219,8 @@ build_iovec(size_t *argc, struct json_object *json)
 		iov[i].iov_base = buf;
 		iov[i].iov_len = vec_len;
 
-		entry = entry->next;
+		++i;
+		json_object_iter_next(&it);
 	}
 	return iov;
 
