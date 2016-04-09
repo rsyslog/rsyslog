@@ -192,14 +192,19 @@ build_iovec(size_t *argc, struct json_object *json)
 	size_t i;
 
 	*argc = json_object_object_length(json);
+	if(*argc == 0)
+		return NULL;
 	iov = malloc( sizeof(struct iovec) * *argc );
 	if(NULL == iov)
 		goto fail;
 
-	struct json_object_iterator itEnd = json_object_iter_end(json);
+	/* note: as we know the number of subobjects, we use the for loop
+	 * to iterate over them instead of the _iter_ API. This is guaranteed
+	 * to work. The somewhat cleaner case causes clang static analyzer to
+	 * complain and we need to avoid that.
+	 */
 	struct json_object_iterator it = json_object_iter_begin(json);
-	i = 0;
-	while (!json_object_iter_equal(&it, &itEnd)) {
+	for(i = 0 ; i < *argc ; ++i) {
 		key = json_object_iter_peek_name(&it);
 		val = json_object_get_string(json_object_iter_peek_value(&it));
 
@@ -219,7 +224,6 @@ build_iovec(size_t *argc, struct json_object *json)
 		iov[i].iov_base = buf;
 		iov[i].iov_len = vec_len;
 
-		++i;
 		json_object_iter_next(&it);
 	}
 	return iov;
