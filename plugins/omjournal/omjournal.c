@@ -148,7 +148,7 @@ CODESTARTnewActInst
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
-    		continue;
+			continue;
 
         if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -156,7 +156,7 @@ CODESTARTnewActInst
 			dbgprintf("ommongodb: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
-    }
+	}
 
 	if(pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
@@ -183,110 +183,106 @@ ENDtryResume
 struct iovec *
 build_iovec(size_t *argc, struct json_object *json)
 {
-    struct lh_entry *entry ;
-    struct iovec *iov;
-    const char *key;
-    const char *val;
-    size_t key_len;
-    size_t val_len;
-    size_t vec_len;
-    size_t i;
+	struct lh_entry *entry ;
+	struct iovec *iov;
+	const char *key;
+	const char *val;
+	size_t key_len;
+	size_t val_len;
+	size_t vec_len;
+	size_t i;
 
-    *argc = json_object_object_length(json);
-    iov = malloc( sizeof(struct iovec) * *argc );
-    entry = json_object_get_object(json)->head;
+	*argc = json_object_object_length(json);
+	iov = malloc( sizeof(struct iovec) * *argc );
+	entry = json_object_get_object(json)->head;
 
-    if(NULL == iov)
-        goto fail;
+	if(NULL == iov)
+		goto fail;
 
-    /* 
-     * we have to avoid using json_object_object_foreachC because clang static analyzer doesn't believe
-     * that I've correct initialised all the elements of iov.
-     * I'm assuming that json_object_object_length isn't lying to me, and that the json object isn't
-     * changing under my feet so that we can do an explicit `for` iteration instead of just walking the
-     * the linked list.
-     */
+	/* 
+	* we have to avoid using json_object_object_foreachC because clang static analyzer doesn't believe
+	* that I've correct initialised all the elements of iov.
+	* I'm assuming that json_object_object_length isn't lying to me, and that the json object isn't
+	* changing under my feet so that we can do an explicit `for` iteration instead of just walking the
+	* the linked list.
+	*/
 
-    for(i = 0; i < *argc; i++)
-    {
-        key = (char *)entry->k;
-        val = json_object_get_string((struct json_object*)entry->v);
+	for(i = 0; i < *argc; i++) {
+		key = (char *)entry->k;
+		val = json_object_get_string((struct json_object*)entry->v);
 
-        key_len = strlen(key);
-        val_len = strlen(val);
-        // vec length is len(key=val)
-        vec_len = key_len + val_len + 1;
+		key_len = strlen(key);
+		val_len = strlen(val);
+		// vec length is len(key=val)
+		vec_len = key_len + val_len + 1;
 
-        char *buf = malloc(vec_len + 1);
-        if(NULL == buf) 
-            goto fail;
-       
-        memcpy(buf, key, key_len);
-        memcpy(buf + key_len, "=", 1);
-        memcpy(buf + key_len + 1, val, val_len+1);
+		char *buf = malloc(vec_len + 1);
+		if(NULL == buf) 
+			goto fail;
 
-        iov[i].iov_base = buf;
-        iov[i].iov_len = vec_len;
+		memcpy(buf, key, key_len);
+		memcpy(buf + key_len, "=", 1);
+		memcpy(buf + key_len + 1, val, val_len+1);
 
-        entry = entry->next;
-    }
-    return iov;
+		iov[i].iov_base = buf;
+		iov[i].iov_len = vec_len;
+
+		entry = entry->next;
+	}
+	return iov;
 
 fail:
-    if( NULL == iov)
-        return NULL;
+	if( NULL == iov)
+		return NULL;
 
-    size_t j;
-    // iterate over any iovecs that were initalised above and free them.
-    for(j = 0; j < i; j++)
-    {
-        free(iov[j].iov_base);
-    }
+	size_t j;
+	// iterate over any iovecs that were initalised above and free them.
+	for(j = 0; j < i; j++) {
+		free(iov[j].iov_base);
+	}
 
-    free(iov);
-    return NULL;
+	free(iov);
+	return NULL;
 }
 
 
 void
 send_non_template_message(msg_t *pMsg)
 {
-  uchar *tag;
-  int lenTag;
-  int sev;  
+	uchar *tag;
+	int lenTag;
+	int sev;  
 
-  MsgGetSeverity(pMsg, &sev);
-  getTAG(pMsg, &tag, &lenTag);
-  /* we can use more properties here, but let's see if there
-   * is some real user interest. We can always add later...
-   */
-   sd_journal_send("MESSAGE=%s", getMSG(pMsg),
-       "PRIORITY=%d", sev,
-       "SYSLOG_FACILITY=%d", pMsg->iFacility,
-       "SYSLOG_IDENTIFIER=%s", tag,
-       NULL);
-
+	MsgGetSeverity(pMsg, &sev);
+	getTAG(pMsg, &tag, &lenTag);
+	/* we can use more properties here, but let's see if there
+	* is some real user interest. We can always add later...
+	*/
+	sd_journal_send("MESSAGE=%s", getMSG(pMsg),
+		"PRIORITY=%d", sev,
+		"SYSLOG_FACILITY=%d", pMsg->iFacility,
+		"SYSLOG_IDENTIFIER=%s", tag,
+		NULL);
 }
 
 void
 send_template_message(struct json_object* json)
 {
-    size_t argc;
-    struct iovec *iovec;
-    size_t i;
+	size_t argc;
+	struct iovec *iovec;
+	size_t i;
 
-    iovec = build_iovec(&argc,  json);
-    if( NULL != iovec) {
-        sd_journal_sendv(iovec, argc);
-        for (i =0; i< argc; i++)
-            free(iovec[i].iov_base);
-        free(iovec);
-    }
-
+	iovec = build_iovec(&argc,  json);
+	if( NULL != iovec) {
+		sd_journal_sendv(iovec, argc);
+		for (i =0; i< argc; i++)
+			free(iovec[i].iov_base);
+		free(iovec);
+	}
 }
 
 BEGINdoAction_NoStrings
-    instanceData *pData;
+	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
 
@@ -295,7 +291,7 @@ CODESTARTdoAction
 	} else {
 		send_template_message((struct json_object*) ((void**)pMsgData)[0]);
 	}
- ENDdoAction
+ENDdoAction
 
 
 BEGINparseSelectorAct
