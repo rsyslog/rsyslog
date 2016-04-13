@@ -11,8 +11,8 @@ detailed semantics documentation.
 
 RainerScript supports following control structures:
 
-**if**:
-
+if
+-------
 ::
 
    if ($msg contains "important") then {
@@ -20,8 +20,8 @@ RainerScript supports following control structures:
       action(type="omfile" file="/var/log/important.log" template="outfmt")
    }
 
-**if/else-if/else**:
-
+if/else-if/else
+--------------------
 ::
 
    if ($msg contains "important") then {
@@ -34,7 +34,27 @@ RainerScript supports following control structures:
       action(type="omfile" file="/var/log/general.log" template="outfmt")
    }
 
-**foreach**:
+foreach
+-----------
+Foreach can iterate both arrays and objects. As opposed to array-iteration (which is ordered),
+object-iteration accesses key-values in arbitrary order (is unordered).
+
+For the foreach invocation below:
+
+::
+   
+   foreach ($.i in $.collection) do {
+      ...
+   }
+
+Say ``$.collection`` holds an array ``[1, "2", {"a": "b"}, 4]``, value of ``$.i`` across
+invocations would be ``1``, ``"2"``, ``{"a" : "b"}`` and ``4``.
+
+When ``$.collection`` holds an object ``{"a": "b", "c" : [1, 2, 3], "d" : {"foo": "bar"}}``, value of ``$.i`` across
+invocations would be ``{"key" : "a", "value" : "b"}``, ``{"key" : "c", "value" : [1, 2, 3]}`` and ``{"key" : "d", "value" : {"foo" : "bar"}}``
+(not necessarily in the that order). In this case key and value will need to be accessed as ``$.i!key`` and ``$.i!value`` respectively.
+
+Here is an example of a nested foreach statement:
 
 ::
 
@@ -50,8 +70,8 @@ RainerScript supports following control structures:
    }
 
 Please note that asynchronous-action calls in foreach-statement body should
-almost always set *action.copyMsg* to *on*. This is because action calls within foreach
-usually want to work with the variable loop populates(in the above example, $.quux and $.corge)
+almost always set ``action.copyMsg`` to ``on``. This is because action calls within foreach
+usually want to work with the variable loop populates(in the above example, ``$.quux`` and ``$.corge``)
 which causes message-mutation and async-action must see message as it was in
 a certain invocation of loop-body, so they must make a copy to keep it safe
 from further modification as iteration continues. For instance, an async-action
@@ -64,6 +84,10 @@ invocation with linked-list based queue would look like:
    }
 
 
-**call**: :doc:`rainerscript_call`
-   
-**continue**: a NOP, useful e.g. inside the then part of an if
+call
+--------
+Details here: :doc:`rainerscript_call`
+
+continue
+------------
+a NOP, useful e.g. inside the then part of an if
