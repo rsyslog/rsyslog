@@ -24,7 +24,7 @@ dyn_stats(name="<bucket>"...) (object)
 Parameters:
     **name** <string litteral, mandatory> : Name of the bucket.
 
-    **resettable** <on|off, default: on> : Whether or not counters should be reset every time they are reported
+    **resettable** <on|off, default: on> : Whether or not counters should be reset every time they are reported. This works independent of ``resetCounters`` config parameter in :doc:`modules/impstats`.
 
     **maxCardinality** <number, default: 2000> : Maximum number of unique counter-names to track.
 
@@ -58,9 +58,12 @@ A ``dyn_inc`` call looks like:
        ....
    }
 
+``$.inc`` captures the error-code. It has value ``0`` when increment operation is successful and non-zero when it fails. It uses Rsyslog error-codes.
 
 Reporting
 ^^^^^^^^^
+
+Legacy format:
 
 ::
 
@@ -69,6 +72,18 @@ Reporting
    ...
    msg_per_host: origin=dynstats.bucket foo=2 bar=1 baz=1
    ...
+
+Json(variants with the same structure are used in other Json based formats such as ``cee`` and ``json-elasticsearch``) format:
+
+::
+
+   ...
+   { "name": "global", "origin": "dynstats", "values": { "msg_per_host.ops_overflow": 1, "msg_per_host.new_metric_add": 3, "msg_per_host.no_metric": 0, "msg_per_host.metrics_purged": 0, "msg_per_host.ops_ignored": 0 } }
+   ...
+   { "name": "msg_per_host", "origin": "dynstats.bucket", "values": { "foo": 2, "bar": 1, "baz": 1 } }
+   ...
+
+In this case counters are encapsulated inside an object hanging off top-level-key ``values``.
 
 Fields
 ------
