@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
+- improved CI
 - templates: add option to convert timestamps to UTC
   closes https://github.com/rsyslog/rsyslog/issues/730
 - omjournal: fix segfault (regression in 8.17.0)
