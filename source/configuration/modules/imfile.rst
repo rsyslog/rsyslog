@@ -419,7 +419,7 @@ Legacy Configuration Directives
 
 .. index:: 
    single: imfile; $InputFileStateFile
-.. function:: $InputFileStateFile /path/to/state/file
+.. function:: $InputFileStateFile name-of-state-file
 
    equivalent to: "StateFile"
 
