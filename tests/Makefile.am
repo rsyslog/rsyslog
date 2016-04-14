@@ -280,7 +280,8 @@ TESTS +=  \
 	dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \
-	dynstats_reset_without_pstats_reset.sh
+	dynstats_reset_without_pstats_reset.sh \
+	dynstats_prevent_premature_eviction.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -288,7 +289,8 @@ TESTS +=  \
 	dynstats_overflow-vg.sh \
 	dynstats-json-vg.sh \
 	stats-json-vg.sh \
-	stats-cee-vg.sh
+	stats-cee-vg.sh \
+	dynstats_prevent_premature_eviction-vg.sh
 endif
 endif
 
