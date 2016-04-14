@@ -207,8 +207,6 @@ static rsRetVal  /* assumes exclusive access to bucket */
 dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	htable *survivor_table = NULL;
 	htable *new_table = NULL;
-	dynstats_ctr_t ctr;
-	uchar *metric = NULL;
 	size_t htab_sz;
 	DEFiRet;
 	
@@ -246,7 +244,6 @@ finalize_it:
 
 static rsRetVal
 dynstats_resetBucket(dynstats_bucket_t *b) {
-	htable *new_table = NULL;
 	DEFiRet;
 	pthread_rwlock_wrlock(&b->lock);
 	CHKiRet(dynstats_rebuildSurvivorTable(b));
@@ -527,7 +524,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 					b->survivor_ctrs = survivor_ctr->next;
 				}
 			}
-			if (created = hashtable_insert(b->table, copy_of_key, effective_ctr)) {
+			if ((created = hashtable_insert(b->table, copy_of_key, effective_ctr))) {
 				statsobj.AddPreCreatedCtr(b->stats, effective_ctr->pCtr);
 			}
 		}
