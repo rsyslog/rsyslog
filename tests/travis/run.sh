@@ -1,7 +1,7 @@
 # this script runs the travis CI testbench. It's easier and more
 # powerful this way than using .travis.yml (plus recommended by travis support)
 #
-set -o xtrace # we want to see the execution steps
+set -v  # we want to see the execution steps
 set -e  # abort on first failure
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
