@@ -70,7 +70,7 @@ finalize_it:
 }
 
 static inline void
-dynstats_destroyCtr(dynstats_bucket_t *b, dynstats_ctr_t *ctr) {
+dynstats_destroyCtr(dynstats_ctr_t *ctr) {
 	statsobj.DestructUnlinkedCounter(ctr->pCtr);
 	free(ctr->metric);
 	free(ctr);
@@ -84,7 +84,7 @@ dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *
 	while (ctrs != NULL) {
 		ctr = ctrs;
 		ctrs = ctrs->next;
-		dynstats_destroyCtr(b, ctr);
+		dynstats_destroyCtr(ctr);
 		ctrs_purged++;
 	}
 	STATSCOUNTER_ADD(b->ctrMetricsPurged, b->mutCtrMetricsPurged, ctrs_purged);
@@ -552,7 +552,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	
 finalize_it:
 	if (((! created) || (effective_ctr != ctr)) && (ctr != NULL)) {
-		dynstats_destroyCtr(b, ctr);
+		dynstats_destroyCtr(ctr);
 	}
 	RETiRet;
 }
