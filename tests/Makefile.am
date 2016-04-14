@@ -1046,6 +1046,8 @@ EXTRA_DIST= \
 	dynstats_reset-vg.sh \
 	dynstats.sh \
 	dynstats-vg.sh \
+	dynstats_prevent_premature_eviction.sh \
+	dynstats_prevent_premature_eviction-vg.sh \
 	testsuites/dynstats.conf \
 	testsuites/dynstats_ctr_reset.conf \
 	testsuites/dynstats_reset_without_pstats_reset.conf \
