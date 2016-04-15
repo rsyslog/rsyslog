@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
+- testbench: When running privdrop tests testbench tries to drop
+  user to "rsyslog", "syslog" or "daemon" when running as root and
+  you don't explict set RSYSLOG_TESTUSER environment variable.
+  Make sure the unprivileged testuser can write into tests/ dir!
 - templates: add option to convert timestamps to UTC
   closes https://github.com/rsyslog/rsyslog/issues/730
 - omjournal: fix segfault (regression in 8.17.0)

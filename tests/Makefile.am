@@ -634,6 +634,7 @@ EXTRA_DIST= \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
+	privdrop_common.sh \
 	privdropuser.sh \
 	privdropuserid.sh \
 	privdropgroup.sh \
