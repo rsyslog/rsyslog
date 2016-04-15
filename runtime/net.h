@@ -32,9 +32,9 @@ typedef enum _TCPFRAMINGMODE {
 		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
 	} TCPFRAMINGMODE;
 
-#define   F_SET(where, flag) (where)|=(flag)
-#define F_ISSET(where, flag) ((where)&(flag))==(flag)
-#define F_UNSET(where, flag) (where)&=~(flag)
+#define   F_SET(where, flag) ((where)|=(flag))
+#define F_ISSET(where, flag) (((where)&(flag))==(flag))
+#define F_UNSET(where, flag) ((where)&=~(flag))
 
 #define ADDR_NAME 0x01 /* address is hostname wildcard) */
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
