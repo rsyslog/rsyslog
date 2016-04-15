@@ -62,6 +62,10 @@ Version 8.18.0 [v8-stable] 2016-04-19
   is smaller than the buffer size (at least with json variables). This
   usually leads to a segfault.
   closes https://github.com/rsyslog/rsyslog/issues/915
+- bugfix: fix potential memleak in TCP allowed sender definition
+  depending on circumstances, a very small leak could happen on each
+  HUP. This was caused by an invalid macro definition which did not rule
+  out side effects.
 - bugfix: $PrivDropToGroupID actually did a name lookup
   ... instead of using the provided ID
 - bugfix: small memory leak in imfile
