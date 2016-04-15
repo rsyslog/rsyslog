@@ -124,7 +124,7 @@ Input Parameters
 
 -  **ruleset** [name]
    Binds specified ruleset to this input. If not set, the default
-   ruleset is bound.
+   ruleset is bound. (available since 8.17.0)
 -  **IgnoreTimestamp** [**on**/off]
    Ignore timestamps included in the message. Applies to the next socket
    being added.
