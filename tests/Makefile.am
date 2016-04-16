@@ -357,7 +357,8 @@ endif
 
 if ENABLE_MMJSONPARSE
 TESTS += \
-	mmjsonparse-w-o-cookie.sh
+	mmjsonparse-w-o-cookie.sh \
+	mmjsonparse-w-o-cookie-multi-spaces.sh
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
@@ -707,6 +708,7 @@ EXTRA_DIST= \
 	cee_diskqueue.sh \
 	testsuites/cee_diskqueue.conf \
 	mmjsonparse-w-o-cookie.sh \
+	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \

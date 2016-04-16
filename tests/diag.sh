@@ -260,7 +260,7 @@ case $1 in
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
-		eval ./tcpflood $* $TCPFLOOD_EXTRA_OPTS
+		eval ./tcpflood "$@" $TCPFLOOD_EXTRA_OPTS
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
