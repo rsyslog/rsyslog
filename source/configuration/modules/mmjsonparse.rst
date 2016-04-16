@@ -29,17 +29,31 @@ the format requirements.
 
 **Action specific Configuration Directives**:
 
-currently none
+- **cookie** [string] defaults to "@cee:"
+
+  Permits to set the cookie that must be present in front of the
+  JSON part of the message.
+
+  Most importantly, this can be set to the empty string ("") in order
+  to not require any cookie. In this case, leading spaces are permitted
+  in front of the JSON. No non-whitespace characters are permitted
+  after the JSON. If such is required, mmnormalize must be used.
 
 **Sample:**
 
-This activates the module and applies normalization to all messages:
+This activates the module and applies normalization to all messages::
 
-module(load="mmjsonparse") action(type="mmjsonparse")
+  module(load="mmjsonparse")
+  action(type="mmjsonparse")
 
-The same in legacy format:
+To permit parsing messages without cookie, use this action statement::
 
-$ModLoad mmjsonparse \*.\* :mmjsonparse:
+  action(type="mmjsonparse" cookie="")
+
+The same in legacy format::
+
+  $ModLoad mmjsonparse 
+  *.* :mmjsonparse:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
