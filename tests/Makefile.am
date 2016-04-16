@@ -280,7 +280,8 @@ TESTS +=  \
 	dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \
-	dynstats_reset_without_pstats_reset.sh
+	dynstats_reset_without_pstats_reset.sh \
+	dynstats_prevent_premature_eviction.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -288,7 +289,8 @@ TESTS +=  \
 	dynstats_overflow-vg.sh \
 	dynstats-json-vg.sh \
 	stats-json-vg.sh \
-	stats-cee-vg.sh
+	stats-cee-vg.sh \
+	dynstats_prevent_premature_eviction-vg.sh
 endif
 endif
 
@@ -1045,6 +1047,8 @@ EXTRA_DIST= \
 	dynstats_reset-vg.sh \
 	dynstats.sh \
 	dynstats-vg.sh \
+	dynstats_prevent_premature_eviction.sh \
+	dynstats_prevent_premature_eviction-vg.sh \
 	testsuites/dynstats.conf \
 	testsuites/dynstats_ctr_reset.conf \
 	testsuites/dynstats_reset_without_pstats_reset.conf \
@@ -1259,3 +1263,4 @@ nettester_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+
