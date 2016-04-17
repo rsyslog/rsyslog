@@ -105,6 +105,8 @@ typedef struct lstn_s {
 	uint32_t trimLineOverBytes;
 	int nRecords; /**< How many records did we process before persisting the stream? */
 	int iPersistStateInterval; /**< how often should state be persisted? (0=on close only) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 	sbool bRMStateOnDel;
 	sbool hasWildcard;
@@ -129,6 +131,8 @@ static struct configSettings_s {
 	uchar *pszBindRuleset;
 	int iPollInterval;
 	int iPersistStateInterval;	/* how often if state file to be persisted? (default 0->never) */
+	int ratelimitInterval;
+	int ratelimitBurst;
 	int iFacility; /* local0 */
 	int iSeverity;  /* notice, as of rfc 3164 */
 	int readMode;  /* mode to use for ReadMultiLine call */
@@ -145,6 +149,8 @@ struct instanceConf_s {
 	uchar *pszBindRuleset;
 	int nMultiSub;
 	int iPersistStateInterval;
+	int ratelimitInterval;
+	int ratelimitBurst;
 	int iFacility;
 	int iSeverity;
 	sbool bRMStateOnDel;
@@ -608,7 +614,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 	cstr_t *pCStr = NULL;
 	DEFiRet;
 
-	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
+	/* Note: we must do pthread_cleanup_push() immediately, because the POSIX macros
 	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
 	 */
 	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
@@ -672,6 +678,8 @@ createInstance(instanceConf_t **pinst)
 	inst->maxLinesAtOnce = 0;
 	inst->trimLineOverBytes = 0;
 	inst->iPersistStateInterval = 0;
+	inst->ratelimitInterval = 0;
+	inst->ratelimitBurst = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
 	inst->bRMStateOnDel = 1;
@@ -818,6 +826,8 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 	inst->trimLineOverBytes = cs.trimLineOverBytes;
 	inst->iPersistStateInterval = cs.iPersistStateInterval;
+	inst->ratelimitInterval = cs.ratelimitInterval;
+	inst->ratelimitBurst = cs.ratelimitBurst;
 	inst->readMode = cs.readMode;
 	inst->escapeLF = 0;
 	inst->reopenOnTruncate = 0;
@@ -829,6 +839,8 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 	/* reset legacy system */
 	cs.iPersistStateInterval = 0;
+	cs.ratelimitInterval = 0;
+	cs.ratelimitBurst = 0;
 	resetConfigVariables(NULL, NULL); /* values are both dummies */
 
 finalize_it:
@@ -914,7 +926,11 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
 
+	pThis->ratelimitInterval = existing->ratelimitInterval;
+	pThis->ratelimitBurst = existing->ratelimitBurst;
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
+	ratelimitSetLinuxLike(pThis->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+	ratelimitSetThreadSafe(pThis->ratelimiter);
 	pThis->multiSub.maxElem = existing->multiSub.maxElem;
 	pThis->multiSub.nElem = 0;
 	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
@@ -984,7 +1000,11 @@ addListner(instanceConf_t *inst)
 	pThis->lenTag = ustrlen(pThis->pszTag);
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
 
+	pThis->ratelimitInterval = inst->ratelimitInterval;
+	pThis->ratelimitBurst = inst->ratelimitBurst;
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
+	ratelimitSetLinuxLike(pThis->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+	ratelimitSetThreadSafe(pThis->ratelimiter);
 	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
 	pThis->multiSub.maxElem = inst->nMultiSub;
 	pThis->multiSub.nElem = 0;
@@ -1061,7 +1081,7 @@ CODESTARTnewInpInst
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
-		} else if (!strcmp(inppblk.descr[i].name, "addceetag")) {
+		} else if(!strcmp(inppblk.descr[i].name, "addceetag")) {
 			inst->addCeeTag = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "freshstarttail")) {
 			inst->freshStartTail = (sbool) pvals[i].val.d.n;
@@ -1082,6 +1102,10 @@ CODESTARTnewInpInst
 			inst->trimLineOverBytes = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "persiststateinterval")) {
 			inst->iPersistStateInterval = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimitinterval")) {
+			inst->ratelimitInterval = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimitburst")) {
+			inst->ratelimitBurst = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
 		} else {
@@ -1116,6 +1140,8 @@ CODESTARTbeginCnfLoad
 	cs.pszStateFile = NULL;
 	cs.iPollInterval = DFLT_PollInterval;
 	cs.iPersistStateInterval = 0;
+	cs.ratelimitInterval = 0;
+	cs.ratelimitBurst = 0;
 	cs.iFacility = 128;
 	cs.iSeverity = 5;
 	cs.readMode = 0;
@@ -2060,6 +2086,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 	/* set defaults... */
 	cs.iPollInterval = DFLT_PollInterval;
+	cs.ratelimitInterval = 0;
+	cs.ratelimitBurst = 0;
 	cs.iFacility = 128; /* local0 */
 	cs.iSeverity = 5;  /* notice, as of rfc 3164 */
 	cs.readMode = 0;
@@ -2098,23 +2126,27 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	DBGPRINTF("imfile: version %s initializing\n", VERSION);
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
-	  	NULL, &cs.pszFileName, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.pszFileName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,
-	  	NULL, &cs.pszFileTag, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.pszFileTag, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilestatefile", 0, eCmdHdlrGetWord,
-	  	NULL, &cs.pszStateFile, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.pszStateFile, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrSeverity,
-	  	NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.iSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrFacility,
-	  	NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.iFacility, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilereadmode", 0, eCmdHdlrInt,
-	  	NULL, &cs.readMode, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.readMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilemaxlinesatonce", 0, eCmdHdlrSize,
-	  	NULL, &cs.maxLinesAtOnce, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.maxLinesAtOnce, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletrimlineoverbytes", 0, eCmdHdlrSize,
-	  	NULL, &cs.trimLineOverBytes, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.trimLineOverBytes, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepersiststateinterval", 0, eCmdHdlrInt,
-	  	NULL, &cs.iPersistStateInterval, STD_LOADABLE_MODULE_ID));
+		NULL, &cs.iPersistStateInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileratelimitinterval", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitInterval, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileratelimitburst", 0, eCmdHdlrInt,
+		NULL, &cs.ratelimitBurst, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilebindruleset", 0, eCmdHdlrGetWord,
 		NULL, &cs.pszBindRuleset, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */
@@ -2124,7 +2156,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 * via module(...).
 	 */
 	CHKiRet(regCfSysLineHdlr2((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
-	  	NULL, &cs.iPollInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	 	NULL, &cs.iPollInterval, STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

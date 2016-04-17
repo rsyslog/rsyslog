@@ -467,6 +467,7 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-ratelimit.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
@@ -966,6 +967,8 @@ EXTRA_DIST= \
 	imfile-basic.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
+	imfile-ratelimit.sh \
+	testsuites/imfile-ratelimit.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \
