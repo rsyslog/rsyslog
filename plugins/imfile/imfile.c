@@ -468,11 +468,10 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetInputName(pMsg, pInputName);
 	if (pLstn->addCeeTag) {
 		size_t msgLen = cstrLen(cstrLine);
-		const char *const ceeToken = "@cee:";
-		size_t ceeMsgSize = msgLen + strlen(ceeToken) +1;
+		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
-		strcpy(ceeMsg, ceeToken);
+		strcpy(ceeMsg, CONST_CEE_COOKIE);
 		strcat(ceeMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine));
 		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
 		free(ceeMsg);

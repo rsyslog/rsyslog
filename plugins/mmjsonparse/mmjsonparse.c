@@ -118,8 +118,8 @@ ENDfreeCnf
 BEGINcreateInstance
 CODESTARTcreateInstance
 	CHKmalloc(pData->container = (uchar*)strdup("!"));
-	CHKmalloc(pData->cookie = strdup("@cee:"));
-	pData->lenCookie = strlen(pData->cookie);
+	CHKmalloc(pData->cookie = strdup(CONST_CEE_COOKIE));
+	pData->lenCookie = CONST_LEN_CEE_COOKIE;
 finalize_it:
 ENDcreateInstance
 
