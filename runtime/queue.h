@@ -160,7 +160,7 @@ struct queue_s {
 		} linklist;
 		struct {
 			int64 sizeOnDisk; /* current amount of disk space used */
-			int64 deqOffs; /* offset after dequeue batch - used for file deleter */
+			off64_t deqOffs; /* offset after dequeue batch - used for file deleter */
 			int deqFileNumIn; /* same for the circular file numbers, mainly for  */
 			int deqFileNumOut;/* deleting finished files */
 			strm_t *pWrite;   /* current file to be written */

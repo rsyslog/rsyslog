@@ -459,7 +459,7 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
  * not freed - this must be done by the caller.
  */
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
-                        cstr_t *const __restrict__ cstrLine)
+                        cstr_t *const __restrict__ cstrLine, int64 offset)
 {
 	DEFiRet;
 	msg_t *pMsg;
@@ -490,8 +490,12 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	if(pLstn->addMetadata)
+	if(pLstn->addMetadata) {
+		uchar sOffset[80];
 		msgAddMetadata(pMsg, (uchar*)"filename", pLstn->pszFileName);
+		snprintf((char*)sOffset, sizeof(sOffset), "%llu", offset);
+		msgAddMetadata(pMsg, (uchar*)"offset", sOffset);
+	}
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -625,17 +629,18 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(glbl.GetGlobalInputTermState() == 0) {
+		off64_t offset = 0;
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
 		if(pLstn->startRegex == NULL) {
-			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
+			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes, &offset));
 		} else {
-			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF));
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF, &offset));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
-		CHKiRet(enqLine(pLstn, pCStr)); /* process line */
+		CHKiRet(enqLine(pLstn, pCStr, offset)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 		if(pLstn->iPersistStateInterval > 0 && pLstn->nRecords++ >= pLstn->iPersistStateInterval) {
 			persistStrmState(pLstn);
