@@ -61,6 +61,8 @@ Version 8.18.0 [v8-stable] 2016-04-19
   to the compatibility layer)
 - new External plugin for sending metrics to SPM Monitoring SaaS
   Thanks to Radu Gheorghe for the patch.
+- bugfix imfile: fix memory corruption bug when appending @cee
+  Thanks to Brian Knox for the patch.
 - bugfix: memory misallocation if position.from and position.to is used
   a negative amount of memory is tried to be allocated if position.from
   is smaller than the buffer size (at least with json variables). This
