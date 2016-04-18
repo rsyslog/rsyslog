@@ -154,6 +154,9 @@ property or modifying it. It supports the following parameters:
 -  name - the name of the property to access
 -  outname - output field name (for structured outputs)
 -  dateformat - date format to use (only for date-related properties)
+-  date.inUTC - date shall be shown in UTC (please note that this
+   requires a bit more performance due to the necessary conversions)
+   Available since 8.18.0.
 -  caseconversion - permits to convert case of the text. Supported
    values are "lower" and "upper"
 -  controlcharacters - specifies how to handle control characters.
@@ -185,6 +188,11 @@ property or modifying it. It supports the following parameters:
    source string with spaces up to the value of position.to if the source
    string is shorter. "on" or "off" (default) (available since rsyslog
    v8.13.0)
+- compressspace - compresses multiple spaces (US-ASCII SP character) inside the
+   string to a single one. This compression happens at a very late
+   stage in processing. Most importantly, it happens after substring
+   extraction, so the **position.from** and **position.to** positions
+   are **NOT** affected by this option. (available since v8.18.0).
 -  field.number - obtain this field match
 -  field.delimiter - decimal value of delimiter character for field
    extraction

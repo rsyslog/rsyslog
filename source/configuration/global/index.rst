@@ -147,7 +147,7 @@ To understand queue parameters, read
 -  **$MainMsgQueueTimeoutActionCompletion** <number> [number is timeout in
    ms (1000ms is 1sec!), default 1000, 0 means immediate!]
 -  **$MainMsgQueueTimeoutEnqueue** <number> [number is timeout in ms (1000ms
-   is 1sec!), default 2000, 0 means indefinite]
+   is 1sec!), default 2000, 0 means discard immediately]
 -  **$MainMsgQueueTimeoutShutdown** <number> [number is timeout in ms
    (1000ms is 1sec!), default 0 (indefinite)]
 -  **$MainMsgQueueWorkerTimeoutThreadShutdown** <number> [number is timeout

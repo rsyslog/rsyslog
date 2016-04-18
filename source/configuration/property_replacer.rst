@@ -208,6 +208,9 @@ options are defined:
   The last LF in the message (if any), is dropped. Especially useful for
   PIX.
 
+**date-utc**
+  convert data to UTC prior to outputing it (available since 8.18.0)
+
 **date-mysql**
   format as mysql date
 
@@ -285,7 +288,7 @@ options are defined:
 
 **escape-cc**
   replace control characters (ASCII value 127 and values less then 32)
-  with an escape sequence. The sequnce is "#<charval>" where charval is
+  with an escape sequence. The sequence is "#<charval>" where charval is
   the 3-digit decimal value of the control character. For example, a
   tabulator would be replaced by "#009".
   Note: using this option requires that
@@ -305,6 +308,13 @@ options are defined:
   Note: using this option requires that
   `$EscapeControlCharactersOnReceive <rsconf1_escapecontrolcharactersonreceive.html>`_
   is set to off.
+
+**compressspace**
+  compresses multiple spaces (US-ASCII SP character) inside the
+  string to a single one. This compression happens at a very late
+  stage in processing. Most importantly, it happens after substring
+  extraction, so the **FromChar** and **ToChar** positions are **NOT**
+  affected by this option. (available since v8.18.0)
 
 **sp-if-no-1st-sp**
   This option looks scary and should probably not be used by a user. For

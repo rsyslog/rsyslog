@@ -360,9 +360,9 @@ selects whether a static or dynamic file (name) shall be written to.
    This is the same as FileCreateMode, but for directories
    automatically generated.
 
-.. function::  failOnChOwnFailuer [switch]
+.. function::  failOnChOwnFailure [switch]
 
-   *Default: equally-named module parameter*
+   *Default: on*
 
    This option modifies behaviour of file creation. If different owners
    or groups are specified for new files or directories and rsyslogd
