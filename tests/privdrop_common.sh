@@ -52,6 +52,7 @@ rsyslog_testbench_setup_testuser() {
 		if [ -z "${testgroupname}" ]; then
 			echo "Skipping ... please set RSYSLOG_TESTUSER or make sure the user running the testbench has a primary group!"
 			. $srcdir/diag.sh exit
+			exit 0
 		else
 			has_testuser="${EUID}"
 		fi
