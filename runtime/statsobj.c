@@ -68,12 +68,22 @@ static inline void
 addToObjList(statsobj_t *pThis)
 {
 	pthread_mutex_lock(&mutStats);
-	pThis->prev = objLast;
-	if(objLast != NULL)
-		objLast->next = pThis;
-	objLast = pThis;
-	if(objRoot == NULL)
+	if (pThis->flags && STATSOBJ_FLAG_DO_PREPEND) {
+		pThis->next = objRoot;
+		if (objRoot != NULL) {
+			objRoot->prev = pThis;
+		}
 		objRoot = pThis;
+		if (objLast == NULL)
+			objLast = pThis;
+	} else {
+		pThis->prev = objLast;
+		if(objLast != NULL)
+			objLast->next = pThis;
+		objLast = pThis;
+		if(objRoot == NULL)
+			objRoot = pThis;
+	}
 	pthread_mutex_unlock(&mutStats);
 }
 
@@ -117,6 +127,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
 	pThis->read_notifier = NULL;
+	pThis->flags = 0;
 ENDobjConstruct(statsobj)
 
 
@@ -167,6 +178,11 @@ setName(statsobj_t *pThis, uchar *name)
 	CHKmalloc(pThis->name = ustrdup(name));
 finalize_it:
 	RETiRet;
+}
+
+static void
+setStatsObjFlags(statsobj_t *pThis, int flags) {
+	pThis->flags = flags;
 }
 
 static rsRetVal
@@ -535,7 +551,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* Enable statistics gathering. currently there is no function to disable it
  * again, as this is right now not needed.
  */
@@ -694,6 +709,7 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->SetOrigin = setOrigin;
 	pIf->SetReadNotifier = setReadNotifier;
 	pIf->SetReportingNamespace = setReportingNamespace;
+	pIf->SetStatsObjFlags = setStatsObjFlags;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;

@@ -6,12 +6,13 @@ echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics ar
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup-vg dynstats_reset.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
-. $srcdir/diag.sh msleep 800
+. $srcdir/diag.sh block-stats-flush
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-. $srcdir/diag.sh msleep 400
+. $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-. $srcdir/diag.sh msleep 900
+. $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
+. $srcdir/diag.sh await-stats-flush-after-block
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh content-check "foo 001 0"
