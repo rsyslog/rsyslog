@@ -1490,6 +1490,14 @@ if test "x$enable_omkafka" = "xyes"; then
 	if test "x$enable_kafka_tests" = "xyes"; then
 		AX_PROG_JAVAC #we don't need javac, but macro documentation says JAVAC *must* be checked before JAVA
 		AX_PROG_JAVA
+		AC_CHECK_PROG(WGET, [wget], [yes], [no])
+		if test "x${WGET}" = "xno"; then
+			AC_MSG_FAILURE([wget, which is a kafka-tests dependency, not found])
+		fi
+		AC_CHECK_PROG(READLINK, [readlink], [yes], [no])
+		if test "x${READLINK}" = "xno"; then
+			AC_MSG_FAILURE([readlink, which is a kafka-tests dependency, not found])
+		fi
 	fi
 	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
 		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
