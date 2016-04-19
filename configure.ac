@@ -1476,7 +1476,7 @@ AC_ARG_ENABLE(omkafka,
         [enable_omkafka=no]
 )
 AC_ARG_ENABLE(kafka_tests,
-        [AS_HELP_STRING([--enable-kafka-tests],[enable Kafka specific tests in testbench @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_kafka_tests="yes" ;;
           no) enable_kafka_tests="no" ;;
