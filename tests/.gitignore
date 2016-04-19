@@ -1,3 +1,6 @@
 rscript
 rt_init
 tmp
+.dep_cache
+.dep_wrk
+mangle_qi

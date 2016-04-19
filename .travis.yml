@@ -38,6 +38,8 @@ addons:
     - flex
     - libcurl4-gnutls-dev
     - python-docutils 
+    - openjdk-7-jdk
+    - wget
     #- libgrok1
     #- libgrok-dev
     #- faketime
