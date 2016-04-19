@@ -383,25 +383,29 @@ wtiWorker(wti_t *__restrict__ const pThis)
 	for(i = 0 ; i < iActionNbr ; ++i) {
 		wrkrInfo = &(pThis->actWrkrInfo[i]);
 		dbgprintf("wti %p, action %d, ptr %p\n", pThis, i, wrkrInfo->actWrkrData);
+		pAction = wrkrInfo->pAction;
 		if(wrkrInfo->actWrkrData != NULL) {
-			pAction = wrkrInfo->pAction;
 			actionRemoveWorker(pAction, wrkrInfo->actWrkrData);
 			pAction->pMod->mod.om.freeWrkrInstance(wrkrInfo->actWrkrData);
-			if(pAction->isTransactional) {
-				/* free iparam "cache" - we need to go through to max! */
-				for(j = 0 ; j < wrkrInfo->p.tx.maxIParams ; ++j) {
-					for(k = 0 ; k < pAction->iNumTpls ; ++k) {
-						free(actParam(wrkrInfo->p.tx.iparams,
-							      pAction->iNumTpls, j, k).param);
-					}
-				}
-				free(wrkrInfo->p.tx.iparams);
-				wrkrInfo->p.tx.iparams = NULL;
-				wrkrInfo->p.tx.currIParam = 0;
-				wrkrInfo->p.tx.maxIParams = 0;
-			}
-			wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
 		}
+		if(pAction->isTransactional) {
+			/* free iparam "cache" - we need to go through to max! */
+			for(j = 0 ; j < wrkrInfo->p.tx.maxIParams ; ++j) {
+				for(k = 0 ; k < pAction->iNumTpls ; ++k) {
+					free(actParam(wrkrInfo->p.tx.iparams,
+						      pAction->iNumTpls, j, k).param);
+				}
+			}
+			free(wrkrInfo->p.tx.iparams);
+			wrkrInfo->p.tx.iparams = NULL;
+			wrkrInfo->p.tx.currIParam = 0;
+			wrkrInfo->p.tx.maxIParams = 0;
+		} else {
+			for(k = 0 ; k < pAction->iNumTpls ; ++k) {
+				free(wrkrInfo->p.nontx.actParams[k].param);
+			}
+		}
+		wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
 	}
 
 	/* indicate termination */
