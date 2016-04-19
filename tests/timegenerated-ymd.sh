@@ -19,7 +19,7 @@ template(name="outfmt" type="string"
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt"
 			         file="rsyslog.out.log")
 '
-faketime '2016-01-01 01:00:00' $srcdir/diag.sh startup
+FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
 . $srcdir/diag.sh tcpflood -m1
