@@ -57,7 +57,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
    The intent behind this setting is to leave some space in an almost-full 
    queue for non-delayable messages, which would be lost if the queue runs 
    out of space. Please note that if you use a DA queue, setting the 
-   fulldelaymark ABOVE the highwatermark makes the queue never activate 
+   fulldelaymark BELOW the highwatermark makes the queue never activate 
    disk mode for delayable inputs. So this is probably not what you want.
 -  **queue.lightdelaymark** number
 -  **queue.discardmark** number
