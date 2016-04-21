@@ -39,6 +39,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <netdb.h>
 #include <libpq-fe.h>
 #include "conf.h"
 #include "syslogd-types.h"
