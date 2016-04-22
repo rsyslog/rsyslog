@@ -104,11 +104,11 @@ the input they are specified with.
    turn it off, if you know this framing is not used and some senders
    emit multi-line messages into the message stream.
 
-.. function:: ServerNotifyOnConnectionClose on/off
+.. function:: NotifyOnConnectionClose on/off
 
    *Defaults to off*
 
-   instructs imptcp to emit a message if the remote peer closes a
+   instructs imptcp to emit a message if a remote peer closes the
    connection.
 
 .. function:: processOnPoller on/off
@@ -217,7 +217,7 @@ Legacy Configuration Directives
 
 .. function:: $InputPTCPServerNotifyOnConnectionClose on/off
 
-   Equivalent to: ServerNotifyOnConnectionClose.
+   Equivalent to: NotifyOnConnectionClose.
 
 .. function:: $InputPTCPServerKeepAlive <on/**off**>
 
