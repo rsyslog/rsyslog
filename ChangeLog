@@ -8,6 +8,10 @@ Version 8.19.0 [v8-stable] 2016-05-31
   * improvements on the non-raciness of some tests
   * omkafka has now dynamic tests
     Thanks to Janmejay Singh for implementing them.
+  * try to merge PR to master and run tests; this guards against cross-PR
+    regressions and wasn't caught previously. Note that we skip this test
+    if we cannot successfully merge. So this is not a replacement for a
+    daily full "all-project integration test run".
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
