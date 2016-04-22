@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <netdb.h>
 #include <mysql.h>
 #include "conf.h"
 #include "syslogd-types.h"
