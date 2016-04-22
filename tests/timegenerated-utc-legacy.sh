@@ -26,7 +26,7 @@ template(name="outfmt" type="string"
 
 echo "***SUBTEST: check 2016-03-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-faketime -f '2016-03-01 12:00:00' $srcdir/diag.sh startup
+FAKETIME='2016-03-01 12:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
