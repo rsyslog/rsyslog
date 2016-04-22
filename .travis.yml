@@ -38,6 +38,8 @@ addons:
     - flex
     - libcurl4-gnutls-dev
     - python-docutils 
+    - openjdk-7-jdk
+    - wget
     #- libgrok1
     #- libgrok-dev
     #- faketime
@@ -64,7 +66,7 @@ matrix:
        # functions (C99 semantics are really ugly...)
        dist: trusty
      - compiler: "gcc"
-       env: BUILD_FROM_TARBALL="YES", GROK="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all"
+       env: BUILD_FROM_TARBALL="YES", GROK="YES", KAFKA="YES", CHECK="YES", CFLAGS="-g -O2 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all"
        dist: trusty
      - compiler: "clang"
        env: CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"

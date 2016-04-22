@@ -1475,7 +1475,30 @@ AC_ARG_ENABLE(omkafka,
          esac],
         [enable_omkafka=no]
 )
+AC_ARG_ENABLE(kafka_tests,
+        [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_kafka_tests="yes" ;;
+          no) enable_kafka_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-kafka-tests) ;;
+         esac],
+        [enable_kafka_tests=no]
+)
+AM_CONDITIONAL(ENABLE_KAFKA_TESTS, test x$enable_kafka_tests = xyes)
+
 if test "x$enable_omkafka" = "xyes"; then
+	if test "x$enable_kafka_tests" = "xyes"; then
+		AX_PROG_JAVAC #we don't need javac, but macro documentation says JAVAC *must* be checked before JAVA
+		AX_PROG_JAVA
+		AC_CHECK_PROG(WGET, [wget], [yes], [no])
+		if test "x${WGET}" = "xno"; then
+			AC_MSG_FAILURE([wget, which is a kafka-tests dependency, not found])
+		fi
+		AC_CHECK_PROG(READLINK, [readlink], [yes], [no])
+		if test "x${READLINK}" = "xno"; then
+			AC_MSG_FAILURE([readlink, which is a kafka-tests dependency, not found])
+		fi
+	fi
 	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
 		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
 			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
@@ -1485,9 +1508,12 @@ if test "x$enable_omkafka" = "xyes"; then
 		])
 	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+else
+	if test "x$enable_kafka_tests" = "xyes"; then
+		AC_MSG_ERROR([kafka-tests can not be enabled while omkafka is disabled])
+	fi
 fi
 AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
-
 
 #MONGODB SUPPORT
 
@@ -1893,6 +1919,7 @@ echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
+echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    (total) debugless mode enabled:           $enable_debugless"

@@ -243,6 +243,13 @@ TESTS +=  \
 	omjournal-basic-no-template.sh
 endif
 
+if ENABLE_OMKAFKA
+if ENABLE_KAFKA_TESTS
+TESTS += \
+	omkafka_static.sh
+endif
+endif
+
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
@@ -1035,6 +1042,10 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
+	testsuites/kafka-server.properties \
+	testsuites/zoo.cfg \
+	omkafka_static.sh \
+	testsuites/omkafka_static.conf \
 	mmpstrucdata.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \

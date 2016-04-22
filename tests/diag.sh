@@ -37,6 +37,24 @@
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
+
+#START: ext dependency config
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
+dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
+
+dep_kafka_work_dir=$dep_work_dir/kafka
+dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
+
+dep_zk_work_dir=$dep_work_dir/zk
+dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
+
+dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+#END: ext dependency config
+
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		if [ -z $RS_SORTCMD ]; then
@@ -440,6 +458,88 @@ case $1 in
 		    echo "journalctl command missing, skipping test"
 		    exit 77
 		fi
+		;;
+	 'download-kafka')
+		if [ ! -d $dep_cache_dir ]; then
+				echo "Creating dependency cache dir"
+				mkdir $dep_cache_dir
+		fi
+		if [ ! -f $dep_zk_cached_file ]; then
+				echo "Downloading zookeeper"
+				wget $dep_zk_url -O $dep_zk_cached_file
+		fi
+		if [ ! -f $dep_kafka_cached_file ]; then
+				echo "Downloading kafka"
+				wget $dep_kafka_url -O $dep_kafka_cached_file
+		fi
+		;;
+	 'start-kafka')
+		if [ ! -f $dep_zk_cached_file ]; then
+				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
+				exit 1
+		fi
+		if [ ! -f $dep_kafka_cached_file ]; then
+				echo "Dependency-cache does not have kafka package, did you download dependencies?"
+				exit 1
+		fi
+		if [ ! -d $dep_work_dir ]; then
+				echo "Creating dependency working directory"
+				mkdir -p $dep_work_dir
+		fi
+		if [ -d $dep_kafka_work_dir ]; then
+				(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
+				./msleep 4000
+		fi
+		if [ -d $dep_zk_work_dir ]; then
+				(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+				./msleep 2000
+		fi
+		rm -rf $dep_kafka_work_dir
+		rm -rf $dep_zk_work_dir
+		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names)
+		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names)
+		cp $srcdir/testsuites/zoo.cfg $dep_zk_work_dir/conf/
+		(cd $dep_zk_work_dir && ./bin/zkServer.sh start)
+		./msleep 4000
+		cp $srcdir/testsuites/kafka-server.properties $dep_kafka_work_dir/config/
+		(cd $dep_kafka_work_dir && ./bin/kafka-server-start.sh -daemon ./config/kafka-server.properties)
+		./msleep 8000
+		;;
+	 'stop-kafka')
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
+		./msleep 4000
+		(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+		./msleep 2000
+		rm -rf $dep_kafka_work_dir
+		rm -rf $dep_zk_work_dir
+		;;
+	 'create-kafka-topic')
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		if [ "x$2" == "x" ]; then
+				echo "Topic-name not provided."
+				exit 1
+		fi
+		(cd $dep_kafka_work_dir && ./bin/kafka-topics.sh --create --zookeeper localhost:2181/kafka --topic $2 --partitions 2 --replication-factor 1)
+		;;
+	 'dump-kafka-topic')
+		echo "dumping kafka-topic $2"
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		if [ "x$2" == "x" ]; then
+				echo "Topic-name not provided."
+				exit 1
+		fi
+
+		(cd $dep_kafka_work_dir && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:2181/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
