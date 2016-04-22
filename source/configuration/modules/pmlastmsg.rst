@@ -42,12 +42,21 @@ RFC3164 parsers should be used. Note that when a parser is specified,
 the default parser chain is removed, so we need to specify all three
 parsers. We use this together with the default ruleset.
 
-$ModLoad pmlastmsg # this parser is NOT a built-in module # note that
-parser are tried in the # order they appear in rsyslog.conf, so put
-pmlastmsg first $RulesetParser rsyslog.lastline # as we have removed the
-default parser chain, we # need to add the default parsers as well.
-$RulesetParser rsyslog.rfc5424 $RulesetParser rsyslog.rfc3164 # now come
-the typical rules, like... \*.\* /path/to/file.log
+::
+
+   $ModLoad pmlastmsg   # This parser is not a built-in module.
+
+   # Note that parsers are tried in the order they appear in
+   # rsyslog.conf, so put pmlastmsg first.
+
+   $RulesetParser rsyslog.lastline
+
+   # As we have removed the default parser chain, we need to add the
+   # default parsers as well.
+   $RulesetParser rsyslog.rfc5424
+   $RulesetParser rsyslog.rfc3164
+
+   # Here come the typical rules, like... \*.\* /path/to/file.log
 
 **Caveats/Known Bugs:**
 
