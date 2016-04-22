@@ -11,7 +11,7 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
 Configuration Parameters
 ------------------------
 
-Global Parameters
+Module Parameters
 ^^^^^^^^^^^^^^^^^
 
 .. function:: AddtlFrameDelimiter <Delimiter>
@@ -138,8 +138,8 @@ Global Parameters
    Array of peers:
    PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]
 
-Action Parameters
-^^^^^^^^^^^^^^^^^
+Input Parameters
+^^^^^^^^^^^^^^^^
 
 .. function:: Port <port>
 
