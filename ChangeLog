@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- improvements to the CI environment
+  * omkafka has now dynamic tests
+    Thanks to Janmejay Singh for implementing them.
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
