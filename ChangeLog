@@ -1,6 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- bugfix: dynstats unusedMetricTtl bug
+  Thanks to Janmejay Singh for fixing this.
 - improvements to the CI environment
+  * improvements on the non-raciness of some tests
   * omkafka has now dynamic tests
     Thanks to Janmejay Singh for implementing them.
 ------------------------------------------------------------------------------
