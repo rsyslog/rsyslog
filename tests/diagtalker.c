@@ -132,6 +132,9 @@ doProcessing()
 		sendCmd(fd, line, len);
 		waitRsp(fd, line, sizeof(line));
 		printf("imdiag[%d]: %s", targetPort, line);
+		if (strstr(line, "imdiag::error") != NULL) {
+			exit(1);
+		}
 	}
 }
 

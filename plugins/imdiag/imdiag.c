@@ -36,6 +36,8 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <pthread.h>
+#include <semaphore.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -55,6 +57,7 @@
 #include "queue.h"
 #include "lookup.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
+#include "statsobj.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -68,6 +71,7 @@ DEFobjCurrIf(netstrm)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
+DEFobjCurrIf(statsobj)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -76,6 +80,18 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 static prop_t *pRcvDummy = NULL;
 static prop_t *pRcvIPDummy = NULL;
 
+statsobj_t *diagStats;
+STATSCOUNTER_DEF(potentialArtificialDelayMs, mutPotentialArtificialDelayMs)
+STATSCOUNTER_DEF(actualArtificialDelayMs, mutActualArtificialDelayMs)
+STATSCOUNTER_DEF(delayInvocationCount, mutDelayInvocationCount)
+
+static sem_t statsReportingBlocker;
+static long statsReportingBlockStartTimeMs = 0;
+static int allowOnlyOnce = 0;
+DEF_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
+pthread_mutex_t mutStatsReporterWatch;
+pthread_cond_t statsReporterWatch;
+int statsReported = 0;
 
 /* config settings */
 struct modConfData_s {
@@ -334,6 +350,96 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *ignore_stats,
+						   void __attribute__((unused)) *ignore_ctx) {
+	long waitStartTimeMs = currentTimeMills();
+	sem_wait(&statsReportingBlocker);
+	long delta = currentTimeMills() - waitStartTimeMs;
+	if (ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
+		sem_post(&statsReportingBlocker);
+	} else {
+		errmsg.LogError(0, RS_RET_OK, "imdiag(stats-read-callback): current stats-reporting "
+						"cycle will proceed now, next reporting cycle will again be blocked");
+	}
+
+	if (pthread_mutex_lock(&mutStatsReporterWatch) == 0) {
+		statsReported = 1;
+		pthread_cond_signal(&statsReporterWatch);
+		pthread_mutex_unlock(&mutStatsReporterWatch);
+	}
+	
+	if (delta > 0) {
+		STATSCOUNTER_ADD(actualArtificialDelayMs, mutActualArtificialDelayMs, delta);
+	}
+}
+
+static rsRetVal
+blockStatsReporting(tcps_sess_t *pSess) {
+	DEFiRet;
+
+	sem_wait(&statsReportingBlocker);
+	CHKiConcCtrl(pthread_mutex_lock(&mutStatsReporterWatch));
+	statsReported = 0;
+	CHKiConcCtrl(pthread_mutex_unlock(&mutStatsReporterWatch));
+	ATOMIC_STORE_0_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
+	statsReportingBlockStartTimeMs = currentTimeMills();
+	errmsg.LogError(0, RS_RET_OK, "imdiag: blocked stats reporting");
+	CHKiRet(sendResponse(pSess, "next stats reporting call will be blocked\n"));
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "imdiag: block-stats-reporting wasn't successful");
+		CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
+	}
+	RETiRet;
+}
+
+static rsRetVal
+awaitStatsReport(uchar *pszCmd, tcps_sess_t *pSess) {
+	uchar subCmd[1024];
+	int blockAgain = 0;
+	DEFiRet;
+
+	getFirstWord(&pszCmd, subCmd, sizeof(subCmd), TO_LOWERCASE);
+	blockAgain = (ustrcmp(UCHAR_CONSTANT("block_again"), subCmd) == 0);
+	if (statsReportingBlockStartTimeMs > 0) {
+		long delta = currentTimeMills() - statsReportingBlockStartTimeMs;
+		if (blockAgain) {
+			ATOMIC_STORE_1_TO_INT(&allowOnlyOnce, &mutAllowOnlyOnce);
+			errmsg.LogError(0, RS_RET_OK, "imdiag: un-blocking ONLY the next cycle of stats reporting");
+		} else {
+			statsReportingBlockStartTimeMs = 0;
+			errmsg.LogError(0, RS_RET_OK, "imdiag: un-blocking stats reporting");
+		}
+		sem_post(&statsReportingBlocker);
+		errmsg.LogError(0, RS_RET_OK, "imdiag: stats reporting unblocked");
+		STATSCOUNTER_ADD(potentialArtificialDelayMs, mutPotentialArtificialDelayMs, delta);
+		STATSCOUNTER_INC(delayInvocationCount, mutDelayInvocationCount);
+		errmsg.LogError(0, RS_RET_OK, "imdiag: will now await next reporting cycle");
+		CHKiConcCtrl(pthread_mutex_lock(&mutStatsReporterWatch));
+		while (! statsReported) {
+			CHKiConcCtrl(pthread_cond_wait(&statsReporterWatch, &mutStatsReporterWatch));
+		}
+		statsReported = 0;
+		CHKiConcCtrl(pthread_mutex_unlock(&mutStatsReporterWatch));
+		if (blockAgain) {
+			statsReportingBlockStartTimeMs = currentTimeMills();
+		}
+		errmsg.LogError(0, RS_RET_OK, "imdiag: stats were reported, wait complete, returning");
+		CHKiRet(sendResponse(pSess, "stats reporting was unblocked\n"));
+	} else {
+		CHKiRet(sendResponse(pSess, "imdiag::error : stats reporting was not blocked, bug?\n"));
+	}
+
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "imdiag: stats-reporting unblock + await-run wasn't successfully completed");
+		CHKiRet(sendResponse(pSess, "imdiag::error something went wrong\n"));
+	}
+	RETiRet;
+}
+
 /* Function to handle received messages. This is our core function!
  * rgerhards, 2009-05-24
  */
@@ -369,6 +475,10 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 		CHKiRet(awaitLookupTableReload(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("injectmsg"))) {
 		CHKiRet(injectMsg(pszMsg, pSess));
+	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("blockstatsreporting"))) {
+		CHKiRet(blockStatsReporting(pSess));
+	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
+		CHKiRet(awaitStatsReport(pszMsg, pSess));
 	} else {
 		dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
 		CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));
@@ -517,6 +627,12 @@ CODESTARTmodExit
 	/* free some globals to keep valgrind happy */
 	free(pszInputName);
 
+	statsobj.Destruct(&diagStats);
+	sem_destroy(&statsReportingBlocker);
+	DESTROY_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
+	pthread_cond_destroy(&statsReporterWatch);
+	pthread_mutex_destroy(&mutStatsReporterWatch);
+
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
@@ -525,6 +641,7 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -570,6 +687,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverrun"), 0, eCmdHdlrGetWord,
@@ -585,7 +703,28 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("imdiagserverinputname"), 0,
 				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+							   resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+
+	sem_init(&statsReportingBlocker, 0, 1);
+	INIT_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
+	CHKiConcCtrl(pthread_mutex_init(&mutStatsReporterWatch, NULL));
+	CHKiConcCtrl(pthread_cond_init(&statsReporterWatch, NULL));
+
+	CHKiRet(statsobj.Construct(&diagStats));
+	CHKiRet(statsobj.SetName(diagStats, UCHAR_CONSTANT("imdiag-stats-reporting-controller")));
+	CHKiRet(statsobj.SetOrigin(diagStats, UCHAR_CONSTANT("imdiag")));
+	statsobj.SetStatsObjFlags(diagStats, STATSOBJ_FLAG_DO_PREPEND);
+	STATSCOUNTER_INIT(potentialArtificialDelayMs, mutPotentialArtificialDelayMs);
+	CHKiRet(statsobj.AddCounter(diagStats, UCHAR_CONSTANT("potentialTotalArtificialDelayInMs"),
+								ctrType_IntCtr, CTR_FLAG_NONE, &potentialArtificialDelayMs));
+	STATSCOUNTER_INIT(actualArtificialDelayMs, mutActualArtificialDelayMs);
+	CHKiRet(statsobj.AddCounter(diagStats, UCHAR_CONSTANT("actualTotalArtificialDelayInMs"),
+							ctrType_IntCtr, CTR_FLAG_NONE, &actualArtificialDelayMs));
+	STATSCOUNTER_INIT(delayInvocationCount, mutDelayInvocationCount);
+	CHKiRet(statsobj.AddCounter(diagStats, UCHAR_CONSTANT("delayInvocationCount"),
+								ctrType_IntCtr, CTR_FLAG_NONE, &delayInvocationCount));
+	CHKiRet(statsobj.SetReadNotifier(diagStats, imdiag_statsReadCallback, NULL));
+	CHKiRet(statsobj.ConstructFinalize(diagStats));
 ENDmodInit
 
 

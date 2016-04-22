@@ -345,6 +345,18 @@ case $1 in
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+	 'block-stats-flush')
+		echo blocking stats flush
+		echo "blockStatsReporting" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		;;
+	 'await-stats-flush-after-block')
+		echo unblocking stats flush and waiting for it
+		echo "awaitStatsReport" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		;;
+	 'allow-single-stats-flush-after-block-and-wait-for-it')
+		echo blocking stats flush
+		echo "awaitStatsReport block_again" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		;;
 	 'wait-for-stats-flush')
 		echo "will wait for stats push"
 		while [[ ! -f $2 ]]; do
