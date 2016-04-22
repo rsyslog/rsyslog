@@ -104,6 +104,10 @@ Global Parameters
    Sets the maximum number of sessions supported. This must be set 
    before the first $InputTCPServerRun directive
 
+.. function:: StreamDriver.Name <string>
+
+   Selects `network stream driver <netstream.html>`_.
+
 .. function:: StreamDriver.Mode <number>
 
    Sets the driver mode for the currently selected `network stream
