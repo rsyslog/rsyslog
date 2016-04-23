@@ -100,6 +100,9 @@ used.
    subject common name. If the certificate contains multiple names, a
    match on any one of these names is considered good and permits the
    peer to talk to rsyslog.
+-  **tls.cacert** the CA certificate that can verify the machine certs
+-  **tls.mycert** the machine public certiificate
+-  **tls.myprivkey** the machine private key
 -  **tls.prioritystring** (not mandatory, string)
    This parameter permits to specify the so-called "priority string" to
    GnuTLS. This string gives complete control over all crypto
