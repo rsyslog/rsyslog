@@ -81,6 +81,11 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	} else {
 		pthread_join(pThis->thrdID, NULL);
 	}
+
+	/* call cleanup function, if any */
+	if(pThis->pAfterRun != NULL)
+		pThis->pAfterRun(pThis);
+
 	pthread_mutex_destroy(&pThis->mutThrd);
 	pthread_cond_destroy(&pThis->condThrdTerm);
 	free(pThis->name);
@@ -155,10 +160,6 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 		thrdTerminateNonCancel(pThis);
 	}
 	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
-
-	/* call cleanup function, if any */
-	if(pThis->pAfterRun != NULL)
-		pThis->pAfterRun(pThis);
 
 	RETiRet;
 }
