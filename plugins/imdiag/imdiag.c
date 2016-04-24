@@ -296,8 +296,11 @@ finalize_it:
 
 
 /* This function waits until all queues are drained (size = 0)
- * To make sure it really is drained, we check three times. Otherwise we
- * may just see races.
+ * To make sure it really is drained, we check multiple times. Otherwise we
+ * may just see races. Note: it is important to ensure that the size
+ * is zero multiple times in succession. Otherwise, we may just accidently
+ * hit a situation where the queue isn't filled for a while (we have seen
+ * this in practice, see https://github.com/rsyslog/rsyslog/issues/688).
  * Note: until 2014--07-13, this checked just the main queue. However,
  * the testbench was the sole user and checking all queues makes much more
  * sense. So we change function semantics instead of carrying the old
@@ -307,21 +310,21 @@ static rsRetVal
 waitMainQEmpty(tcps_sess_t *pSess)
 {
 	int iPrint = 0;
+	int nempty = 0;
 	DEFiRet;
 
 	while(1) {
-		if(iOverallQueueSize == 0) {
-			/* verify that queue is still empty (else it could just be a race!) */
-			srSleep(0,250000);/* wait a little bit */
-			if(iOverallQueueSize == 0) {
-				srSleep(0,500000);/* wait a little bit */
-			}
-		}
 		if(iOverallQueueSize == 0)
+			++nempty;
+		else
+			nempty = 0;
+		if(nempty > 10)
 			break;
-		if(iPrint++ % 500 == 0) 
-			dbgprintf("imdiag sleeping, wait queues drain, curr size %d\n", iOverallQueueSize);
-		srSleep(0,200000);/* wait a little bit */
+		if(iPrint++ % 500 == 0)
+			DBGPRINTF("imdiag sleeping, wait queues drain, "
+				"curr size %d, nempty %d\n",
+				iOverallQueueSize, nempty);
+		srSleep(0,100000);/* wait a little bit */
 	}
 
 	CHKiRet(sendResponse(pSess, "mainqueue empty\n"));
