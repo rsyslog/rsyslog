@@ -67,8 +67,9 @@ True Global Directives
    inputs to the provided *name* (the default default ruleset is named
    "RSYSLOG\_DefaultRuleset"). It is advised to also read our paper on
    :doc:`using multiple rule sets in rsyslog <../../concepts/multi_ruleset>`.
--  **$DefaultNetstreamDriver** <drivername>, the default `network stream
-   driver <netstream.html>`_ to use. Defaults to ptcp.
+- **$DefaultNetstreamDriver** <drivername>, the default
+  :doc:`network stream driver <../../concepts/netstrm_drvr>` to use.
+  Defaults to ptcp.
 -  **$DefaultNetstreamDriverCAFile** </path/to/cafile.pem>
 -  **$DefaultNetstreamDriverCertFile** </path/to/certfile.pem>
 -  **$DefaultNetstreamDriverKeyFile** </path/to/keyfile.pem>
