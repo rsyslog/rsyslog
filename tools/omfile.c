@@ -994,6 +994,8 @@ CODESTARTfreeInstance
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		closeFile(pData);
+	if(pData->stats != NULL)
+		statsobj.Destruct(&(pData->stats));
 	if(pData->useSigprov) {
 		pData->sigprov.Destruct(&pData->sigprovData);
 		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
