@@ -17,9 +17,14 @@ echo "running rsgtutil command with short options"
 valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsgtutil $RSYSLOG_KSI_DEBUG -t -s -P $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
-if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
-	echo "rsgtutil returned error: " $RSYSLOGD_EXIT
-	exit 1;
+if [ "$RSYSLOGD_EXIT" -ne "0" ]; then	# EX_OK
+	if [ "$RSYSLOGD_EXIT" -eq "69" ]; then	# EX_UNAVAILABLE
+		echo "[ksi-verify-short-vg.sh]: rsgtutil verify failed with service unavailable (does not generate an error)"
+		exit 77;
+	else
+		echo "[ksi-verify-short-vg.sh]: rsgtutil verify failed with error: " $RSYSLOGD_EXIT
+		exit 1;
+	fi 
 fi
 
 # Cleanup temp files

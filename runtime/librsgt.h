@@ -140,6 +140,9 @@ struct rsgtstatefile {
 #define RSGTE_HASH_CREATE 20 /* error creating a hash */
 #define RSGTE_END_OF_SIG 21 /* unexpected end of signature - more log line exist */
 #define RSGTE_END_OF_LOG 22 /* unexpected end of log file - more signatures exist */
+#define RSGTE_EXTRACT_HASH 23 /* error extracting hashes for record */
+#define RSGTE_CONFIG_ERROR 24 /* Configuration error */
+#define RSGTE_NETWORK_ERROR 25 /* Network error */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
