@@ -1248,7 +1248,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
+UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 {
 	DEFiRet;
 	objInfo_t *pObjInfo;
@@ -1306,7 +1306,7 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
+ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 {
 	DEFiRet;
 	objInfo_t *pObjInfo;

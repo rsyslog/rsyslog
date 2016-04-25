@@ -132,7 +132,7 @@ finalize_it:
 
 
 /* primarily a helper for debug purposes, get human-readble name of state */
-static inline char *
+static inline const char *
 batchState2String(const batch_state_t state) {
 	switch(state) {
 	case BATCH_STATE_RDY:

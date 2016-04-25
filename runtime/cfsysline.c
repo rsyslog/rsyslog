@@ -843,7 +843,7 @@ finalize_it:
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
  * rgerhards, 2012-06-26
  */
-rsRetVal regCfSysLineHdlr2(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
+rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
 	cslCmd_t *pThis;

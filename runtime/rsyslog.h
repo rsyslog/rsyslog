@@ -466,7 +466,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
  * Be sure to call the to-be-returned variable always "iRet" and
  * the function finalizer always "finalize_it".
  */
-#if HAVE_BUILTIN_EXCEPT
+#ifdef HAVE_BUILTIN_EXCEPT
 #	define CHKiRet(code) if(__builtin_expect(((iRet = code) != RS_RET_OK), 0)) goto finalize_it
 #else
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
@@ -555,7 +555,7 @@ extern int default_thr_sched_policy;
  * best to avoid this as well ;-)
  * rgerhards, 2013-12-04
  */
-struct __attribute__ ((__packed__)) actWrkrIParams {
+struct actWrkrIParams {
 	uchar *param;
 	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
 	uint32_t lenStr;  /* length of current string (if string ptr) */
@@ -588,7 +588,7 @@ struct __attribute__ ((__packed__)) actWrkrIParams {
 #define LOCK_MUTEX		1
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
-void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
 
 
 #include "debug.h"
@@ -607,7 +607,7 @@ extern uchar *glblModPath; /* module load path */
 extern void (*glblErrLogger)(const int, const int, const uchar*);
 
 /* some runtime prototypes */
-rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
+rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));

@@ -51,7 +51,7 @@ enum cnfobjType {
 	CNFOBJ_INVALID = 0
 };
 
-static inline char*
+static inline const char*
 cnfobjType2str(enum cnfobjType ot)
 {
 	switch(ot) {
@@ -83,6 +83,12 @@ cnfobjType2str(enum cnfobjType ot)
 		return "main_queue";
 	case CNFOBJ_LOOKUP_TABLE:
 		return "lookup_table";
+	case CNFOBJ_PARSER:
+		return "parser";
+		break;
+	case CNFOBJ_TIMEZONE:
+		return "timezone";
+		break;
 	case CNFOBJ_DYN_STATS:
 		return "dyn_stats";
 		break;
@@ -160,7 +166,7 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
-static inline char*
+static inline const char*
 cnfFiltType2str(enum cnfFiltType filttype)
 {
 	switch(filttype) {
@@ -312,7 +318,7 @@ struct x {
  * to care.
  */
 struct cnfparamdescr { /* first the param description */
-	char *name;	/**< not a es_str_t to ease definition in code */
+	const char *name;/**< not a es_str_t to ease definition in code */
 	ecslCmdHdrlType type;
 	unsigned flags;
 };

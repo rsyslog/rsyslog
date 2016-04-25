@@ -93,7 +93,7 @@ void dbgSetDebugFile(uchar *fn);
 void dbgSetDebugLevel(int level);
 void sigsegvHdlr(int signum);
 void dbgoprint(obj_t *pObj, char *fmt, ...) __attribute__((format(printf, 2, 3)));
-void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void dbgprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);

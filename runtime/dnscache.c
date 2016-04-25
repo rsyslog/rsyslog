@@ -76,7 +76,7 @@ static prop_t *staticErrValue;
 /* Our hash function.
  * TODO: check how well it performs on socket addresses!
  */
-unsigned int
+static unsigned int
 hash_from_key_fn(void *k) 
 {
     int len;
