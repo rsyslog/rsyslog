@@ -430,6 +430,7 @@ dynstats_destroyAllBuckets() {
 				dynstats_destroyBucket(b);
 			}
 		}
+		statsobj.Destruct(&bkts->global_stats);
 		pthread_rwlock_unlock(&bkts->lock);
 		pthread_rwlock_destroy(&bkts->lock);
 	}
