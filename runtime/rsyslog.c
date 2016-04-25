@@ -229,7 +229,9 @@ rsrtExit(void)
 		glblClassExit();
 		rulesetClassExit();
 		wtiClassExit();
+		wtpClassExit();
 		strgenClassExit();
+		propClassExit();
 		statsobjClassExit();
 
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
