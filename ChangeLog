@@ -4,6 +4,11 @@ Version 8.19.0 [v8-stable] 2016-05-31
   Thanks to Janmejay Singh for fixing this.
 - bugfix build system: build was broken on SunOS
   Thanks to Filip Hajny for the patch.
+- bugfix: afterRun entry point not correctly called
+  The entry point was called at the wrong spot, only when the thread
+  had not already terminated by itself. This could cause various
+  cleanup to not be done. This affected e.g. imjournal.
+  closes https://github.com/rsyslog/rsyslog/issues/882
 - improved wording: gnutls error message points to potential cause
   What GnutTLS returns us is very unspecific and somehwat misleading, so
   we point to what it most probably is (broken connect).
