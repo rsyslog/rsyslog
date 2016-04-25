@@ -172,7 +172,7 @@ static int octateCountFramed = 0;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
-static gnutls_certificate_credentials tlscred;
+static gnutls_certificate_credentials_t tlscred;
 #endif
 
 /* variables for managing multi-threaded operations */
