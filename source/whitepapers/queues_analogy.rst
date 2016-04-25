@@ -281,7 +281,7 @@ Now look at the overall picture from a slightly different angle:
    message processing in an rsyslog action queue in direct mode
 
 The number of all connected green and red arrows is four - one each for
-action 1, 2 and 3 (this one is dotted as action 4 was a special case)
+action 1, 2 and 4 (this one is dotted as action 4 was a special case)
 and one for the "main lane" as well as action 3 (this one contains the
 sole red arrow). **This number is the lower bound for the number of
 threads in rsyslog's output system ("right-hand part" of the main
