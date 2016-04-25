@@ -134,6 +134,7 @@ static struct cnfparamblk pblk =
 	};
 
 /* debug aid */
+#if 0
 static inline void displayBatchState(batch_t *pBatch)
 {
 	int i;
@@ -141,6 +142,7 @@ static inline void displayBatchState(batch_t *pBatch)
 		DBGPRINTF("displayBatchState %p[%d]: %d\n", pBatch, i, pBatch->eltState[i]);
 	}
 }
+#endif
 
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
