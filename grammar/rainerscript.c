@@ -1842,6 +1842,10 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 				key.k_str = (uchar*) var2CString(&r[1], &bMustFree);
 			} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
 				key.k_uint = var2Number(&r[1], NULL);
+			} else {
+				DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n",
+					__FILE__, __LINE__);
+				key.k_uint = 0;
 			}
 			ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
 			if(bMustFree) free(key.k_str);
