@@ -96,6 +96,7 @@ rsRetVal wtiWakeupThrd(wti_t * const pThis);
 sbool wtiGetState(wti_t * const pThis);
 wti_t *wtiGetDummy(void);
 PROTOTYPEObjClassInit(wti);
+PROTOTYPEObjClassExit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 

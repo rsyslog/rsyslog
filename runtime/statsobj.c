@@ -750,4 +750,5 @@ BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
 	/* release objects we no longer need */
 	pthread_mutex_destroy(&mutStats);
 	pthread_mutex_destroy(&mutSenders);
+	hashtable_destroy(stats_senders, 1);
 ENDObjClassExit(statsobj)
