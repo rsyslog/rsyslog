@@ -364,6 +364,8 @@ rsRetVal objName##ClassExit(void) \
 		RETiRet; \
 	} 
 
+#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pIf)
+
 
 /* the following macros should be used to define interfaces inside the
  * header files.
@@ -408,7 +410,8 @@ rsRetVal objName##ClassExit(void) \
  */
 #define PROTOTYPEObj(obj) \
 	PROTOTYPEObjClassInit(obj); \
-	PROTOTYPEObjClassExit(obj)
+	PROTOTYPEObjClassExit(obj); \
+	PROTOTYPEObjQueryInterface(obj)
 
 /* ------------------------------ end object loader system ------------------------------ */
 
