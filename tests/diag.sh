@@ -28,7 +28,7 @@
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 # **** use the line below for very hard to find leaks! *****
-#valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
+valgrind="valgrind --leak-check=full --show-leak-kinds=all --malloc-fill=ff --free-fill=fe --log-fd=1"
 
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"

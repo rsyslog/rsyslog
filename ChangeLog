@@ -13,6 +13,8 @@ Version 8.19.0 [v8-stable] 2016-05-31
   What GnutTLS returns us is very unspecific and somehwat misleading, so
   we point to what it most probably is (broken connect).
   see also https://github.com/rsyslog/rsyslog/issues/846
+- some general code improvements
+  * "fixed" cosmetic memory leaks at shutdown
 - improvements to the CI environment
   * improvements on the non-raciness of some tests
   * imdiag: avoid races in detecting queue empty status
