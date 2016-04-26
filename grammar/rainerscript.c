@@ -4291,7 +4291,7 @@ cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparam
  * stage the (considerable!) extra overhead is OK. -- rgerhards, 2011-07-19
  */
 int
-cnfparamGetIdx(struct cnfparamblk *params, char *name)
+cnfparamGetIdx(struct cnfparamblk *params, const char *name)
 {
 	int i;
 	for(i = 0 ; i < params->nParams ; ++i)

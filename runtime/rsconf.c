@@ -122,7 +122,7 @@ static struct cnfparamblk parserpblk =
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
-void cnfSetDefaults(rsconf_t *pThis)
+static void cnfSetDefaults(rsconf_t *pThis)
 {
 	pThis->globals.bAbortOnUncleanConfig = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
@@ -276,7 +276,7 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
-rsRetVal
+static rsRetVal
 parserProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
@@ -326,7 +326,7 @@ finalize_it:
 
 
 /* Process input() objects */
-rsRetVal
+static rsRetVal
 inputProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
@@ -363,7 +363,7 @@ finalize_it:
 extern int yylineno;
 
 void
-parser_warnmsg(char *fmt, ...)
+parser_warnmsg(const char *fmt, ...)
 {
 	va_list ap;
 	char errBuf[1024];
@@ -378,7 +378,7 @@ parser_warnmsg(char *fmt, ...)
 }
 
 void
-parser_errmsg(char *fmt, ...)
+parser_errmsg(const char *fmt, ...)
 {
 	va_list ap;
 	char errBuf[1024];
@@ -397,8 +397,9 @@ parser_errmsg(char *fmt, ...)
 	va_end(ap);
 }
 
+int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int
-yyerror(char *s)
+yyerror(const char *s)
 {
 	parser_errmsg("%s on token '%s'", s, yytext);
 	return 0;
@@ -448,6 +449,7 @@ void cnfDoObj(struct cnfobj *o)
 		/* these types are processed at a later stage */
 		bChkUnuse = 0;
 		break;
+	case CNFOBJ_ACTION:
 	default:
 		dbgprintf("cnfDoObj program error: unexpected object type %u\n",
 			 o->objType);
@@ -825,7 +827,7 @@ setUmask(int iUmask)
  * version of rsyslog does not support this. Future versions probably will.
  * Begun 2011-04-20, rgerhards
  */
-rsRetVal
+static rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
@@ -1277,7 +1279,7 @@ validateConf(void)
  * object that holds the currently-being-loaded config ptr.
  * Begun 2011-04-20, rgerhards
  */
-rsRetVal
+static rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
 	int iNbrActions = 0;
