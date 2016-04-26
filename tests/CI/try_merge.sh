@@ -35,6 +35,6 @@ if [ "$1" != "--merge-only" ]; then
     # on any error.
     set -v
     set -e
-    tests/CI/clang-check-sanitizer.sh
+    tests/CI/clang-build.sh
     git checkout ${oldbranch}
 fi
