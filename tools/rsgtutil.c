@@ -631,7 +631,7 @@ done:
 
 	rsgtExit();
 	rsgt_errctxExit(&ectx);
-	return 1;
+	return 0; /* Means success NOW */
 
 err:
 	if(r != 0)
@@ -652,7 +652,7 @@ err:
 		rsgtExit();
 		rsgt_errctxExit(&ectx);
 	}
-	return 0;
+	return RSGTE_IO; /* Return IO error here */
 }
 #endif
 
@@ -991,7 +991,7 @@ done:
 	}
 
 	rsksi_errctxExit(&ectx);
-	return 1;
+	return 0; /* NULL means SUCCESS now */
 err:
 	if(r != 0)
 		sprintf(errbuf, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
@@ -1003,7 +1003,19 @@ err:
 	if(nsigfp != NULL) { fclose(nsigfp); unlink(nsigfname); }
 
 	if(bInitDone) { rsksi_errctxExit(&ectx); }
-	return 0; 
+
+	if (ectx.ksistate == KSI_NETWORK_ERROR ||
+		ectx.ksistate == KSI_NETWORK_CONNECTION_TIMEOUT ||
+		ectx.ksistate == KSI_NETWORK_SEND_TIMEOUT ||
+		ectx.ksistate == KSI_NETWORK_RECIEVE_TIMEOUT ||
+		ectx.ksistate == KSI_HTTP_ERROR )
+	{
+		/* Return correct error code */
+		return RSGTE_NETWORK_ERROR; 
+	}
+	else
+		/* Default error return code */
+		return RSGTE_INVLD_SIGNATURE; 
 }
 
 /* EXTRACT Loglines Function using KSI API 
@@ -1023,7 +1035,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	int iLineNumbers = 0;
 	int* paiLineNumbers = NULL; 
 	int r = 0;
-	int iReturn = 1;
+	int iReturn = 0; /* NULL Means SUCCESS now! */ 
 	
 	/* KSI Signature related variables */
 	block_sig_t *bs = NULL;
@@ -1433,9 +1445,21 @@ done:
 	}
 
 done2: 
-	if(r != 0 && r != RSGTE_EOF) {
+	if(r != 0 && r != RSGTE_EOF && bInitDone /*Only check if KSI Init was done*/) {
 		sprintf(errbuf, "extractKSI:\t\t\t error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
-		iReturn = 0; 
+		
+		if (ectx.ksistate == KSI_NETWORK_ERROR ||
+			ectx.ksistate == KSI_NETWORK_CONNECTION_TIMEOUT ||
+			ectx.ksistate == KSI_NETWORK_SEND_TIMEOUT ||
+			ectx.ksistate == KSI_NETWORK_RECIEVE_TIMEOUT ||
+			ectx.ksistate == KSI_HTTP_ERROR )
+		{
+			/* Set correct error code */
+			iReturn = RSGTE_NETWORK_ERROR; 
+		}
+		else
+			/* Default error return code */
+			iReturn = RSGTE_INVLD_SIGNATURE; 
 	} else
 		errbuf[0] = '\0';
 
@@ -1532,7 +1556,7 @@ verifyGT:
 #ifdef ENABLEGT
 	iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
-	iSuccess = 0; 
+	iSuccess = RSGTE_CONFIG_ERROR; 
 	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime library, rsyslog need to be configured with --enable-guardtime.\n"); 
 #endif
 	goto done; 
@@ -1541,23 +1565,26 @@ verifyKSI:
 #ifdef ENABLEKSI
 	/* puburl is mandatory for KSI now! */
 	if (strlen(rsksi_read_puburl) <= 0) {
-		iSuccess = 0; 
+		iSuccess = RSGTE_CONFIG_ERROR; 
 		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when verifying KSI signatures.\n"); 
 		goto done; /* abort */
 	}
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
-	iSuccess = 0; 
+	iSuccess = RSGTE_CONFIG_ERROR; 
 	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n"); 
 #endif
-	goto done; 
+goto done; 
 
 err:
 done:
 	/* Output error if return was 0*/
-	if (iSuccess == 0) {
+	if (iSuccess != 0) {
 		fputs(errbuf, stderr); 
-		exit(EX_DATAERR); /* Return error */
+		if (iSuccess == RSGTE_NETWORK_ERROR)
+			exit(EX_UNAVAILABLE);	/* Return service unavailable error */
+		else
+			exit(EX_DATAERR);	/* Return default error */
 	}
 	return;
 }
@@ -1605,7 +1632,7 @@ extract(char *name, char *errbuf)
 
 extractGT:
 #ifdef ENABLEGT
-	iSuccess = 0; 
+	iSuccess = RSGTE_CONFIG_ERROR; 
 	sprintf(errbuf, "ERROR, extract loglines from old signature files is NOT supported.\n"); 
 #endif
 	goto done; 
@@ -1614,13 +1641,14 @@ extractKSI:
 #ifdef ENABLEKSI
 	/* puburl is mandatory for KSI now! */
 	if (strlen(rsksi_read_puburl) <= 0) {
-		iSuccess = 0; 
+		iSuccess = RSGTE_CONFIG_ERROR; 
 		sprintf(errbuf, "ERROR, missing --publications-server parameter is mandatory when extracting KSI signatures.\n"); 
 		goto done; /* abort */
 	} 
 	iSuccess = extractKSI(name, errbuf, sigfname, logfp, sigfp); 
+
 #else
-	iSuccess = 0; 
+	iSuccess = RSGTE_CONFIG_ERROR; 
 	sprintf(errbuf, "ERROR, unable to extract loglines from %s using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n", name); 
 #endif
 	goto done; 
@@ -1628,9 +1656,12 @@ extractKSI:
 err:
 done:
 	/* Output error if return was 0*/
-	if (iSuccess == 0) {
+	if (iSuccess != 0) {
 		fputs(errbuf, stderr); 
-		exit(EX_DATAERR); /* Return error */
+		if (iSuccess == RSGTE_NETWORK_ERROR)
+			exit(EX_UNAVAILABLE);	/* Return service unavailable error */
+		else
+			exit(EX_DATAERR);	/* Return error */
 	}
 	return;
 }

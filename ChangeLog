@@ -1,4 +1,32 @@
 ------------------------------------------------------------------------------
+Version 8.19.0 [v8-stable] 2016-05-31
+- bugfix: dynstats unusedMetricTtl bug
+  Thanks to Janmejay Singh for fixing this.
+- bugfix build system: build was broken on SunOS
+  Thanks to Filip Hajny for the patch.
+- bugfix: afterRun entry point not correctly called
+  The entry point was called at the wrong spot, only when the thread
+  had not already terminated by itself. This could cause various
+  cleanup to not be done. This affected e.g. imjournal.
+  closes https://github.com/rsyslog/rsyslog/issues/882
+- improved wording: gnutls error message points to potential cause
+  What GnutTLS returns us is very unspecific and somehwat misleading, so
+  we point to what it most probably is (broken connect).
+  see also https://github.com/rsyslog/rsyslog/issues/846
+- some general code improvements
+  * "fixed" cosmetic memory leaks at shutdown
+- improvements to the CI environment
+  * improvements on the non-raciness of some tests
+  * imdiag: avoid races in detecting queue empty status
+    This reslolves cases where the testbench terminated rsyslog too early,
+    resulting in potential message loss and test failure.
+  * omkafka has now dynamic tests
+    Thanks to Janmejay Singh for implementing them.
+  * try to merge PR to master and run tests; this guards against cross-PR
+    regressions and wasn't caught previously. Note that we skip this test
+    if we cannot successfully merge. So this is not a replacement for a
+    daily full "all-project integration test run".
+------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
   user to "rsyslog", "syslog" or "daemon" when running as root and

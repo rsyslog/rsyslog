@@ -12,4 +12,4 @@ if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 if [ "x$KAFKA" == "xYES" ]; then sudo apt-get install -qq librdkafka-dev ; fi
-if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka" ; fi
+if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-kafka-tests" ; fi

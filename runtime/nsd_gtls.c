@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1637,7 +1637,9 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
 			uchar *pErr = gtlsStrerror(iSent);
-			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", iSent, __FILE__, __LINE__, pErr);
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d - this "
+				"could be caused by a broken connection. GnuTLS reports: %s \n",
+				iSent, pErr);
 			free(pErr);
 			gnutls_perror(iSent);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);

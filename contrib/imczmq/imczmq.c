@@ -380,7 +380,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-			char *server_key = zcert_public_txt(pData->serverCert);
+			const char *server_key = zcert_public_txt(pData->serverCert);
 			zsock_set_curve_serverkey (pData->sock, server_key);
 
 			DBGPRINTF("imczmq: CURVECLIENT: serverCertPath: '%s'\n", iconf->serverCertPath);

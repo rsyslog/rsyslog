@@ -250,7 +250,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-			char *server_key = zcert_public_txt(pData->serverCert);
+			const char *server_key = zcert_public_txt(pData->serverCert);
 			zsock_set_curve_serverkey (pData->sock, server_key);
 
 			DBGPRINTF("omczmq: CURVECLIENT: serverCertPath: '%s'\n", pData->serverCertPath);
@@ -263,12 +263,23 @@ static rsRetVal initCZMQ(instanceData* pData) {
 		}
 	}
 	
+	DBGPRINTF("omczmq: AUTH SET TO NULL");
+
 	switch (pData->sockType) {
 		case ZMQ_PUB:
+#if defined (ZMQ_RADIO)
+		case ZMQ_RADIO:
+#endif	
 			pData->serverish = true;
 			break;
 		case ZMQ_PUSH:
 		case ZMQ_DEALER:
+#if defined (ZMQ_SCATTER)
+		case ZMQ_SCATTER:
+#endif
+#if defined (ZMQ_CLIENT)
+		case ZMQ_CLIENT:
+#endif
 			pData->serverish = false;
 			break;
 	}
@@ -314,7 +325,36 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 			}
 			topic = zlist_next(pData->topics);
 		}
-	} 
+	}
+
+#if defined (ZMQ_RADIO)
+	else if (pData->sockType == ZMQ_RADIO) { 
+		DBGPRINTF("omczmq: ZMQ_RADIO socket found");
+		if (pData->topics) {
+			DBGPRINTF("omczmq: ZMQ_RADIO socket found and we have topics");
+			char *topic = zlist_first(pData->topics);
+
+			while (topic) {
+				zframe_t *frame = zframe_from((const char*)msg);
+				int rc = zframe_set_group(frame, topic);
+				if (rc != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+				rc = zframe_send(&frame, pData->sock, 0);
+				if (rc != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+				topic = zlist_next(pData->topics);
+			}
+		}
+		else {
+			// TODO: should specify a way to construct a topic from the message from a template
+		}
+	}
+#endif
+
 	/* otherwise do a normal send */
 	else {
 		int rc = zstr_send(pData->sock, (char*)msg);
@@ -475,6 +515,21 @@ CODESTARTnewActInst
 				else if (!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 				}
+#if defined (ZMQ_RADIO)
+				else if (!strcmp("RADIO", stringType)) {
+					pData->sockType = ZMQ_RADIO;
+				}
+#endif
+#if defined (ZMQ_SCATTER)
+				else if (!strcmp("SCATTER", stringType)) {
+					pData->sockType = ZMQ_SCATTER;
+				}
+#endif
+#if defined (ZMQ_CLIENT)
+				else if (!strcmp("CLIENT", stringType)) {
+					pData->sockType = ZMQ_CLIENT;
+				}
+#endif
 				else {
 					free(stringType);
 					errmsg.LogError(0, RS_RET_CONFIG_ERROR,
@@ -526,7 +581,11 @@ CODESTARTnewActInst
 			}
 		}
 		else if(!strcmp(actpblk.descr[i].name, "topics")) {
+#if defined (ZMQ_RADIO)
+			if (pData->sockType != ZMQ_PUB && pData->sockType != ZMQ_RADIO) {
+#else
 			if (pData->sockType != ZMQ_PUB) {
+#endif
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 						"topics is invalid unless socktype is PUB");
 				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);

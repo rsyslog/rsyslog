@@ -3,6 +3,7 @@
 #
 set -v  # we want to see the execution steps
 set -e  # abort on first failure
+#set -x  # debug aid
 
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 source tests/travis/install.sh
@@ -10,6 +11,15 @@ source /etc/lsb-release
 
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
+
+if [ "$MERGE" == "YES" ]; then
+    # we need to use source as we must exit on inability to merge!
+    set +v
+    set +e
+    source tests/CI/try_merge.sh --merge-only
+    set -v
+    set -e
+fi
 
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then SCAN_BUILD="scan-build-3.6"; else SCAN_BUILD="scan-build"; fi
 if [ "x$BUILD_FROM_TARBALL" == "xYES" ]; then autoreconf -fvi && ./configure && make dist && mv *.tar.gz rsyslog.tar.gz && mkdir unpack && cd unpack && tar xzf ../rsyslog.tar.gz && ls -ld rsyslog* && cd rsyslog* ; fi
@@ -30,8 +40,6 @@ then
     set +e  # begin testbench, here we do not want to abort
     make check
     ALL_OK=$?
-    cat tests/omjournal-abort-template.sh.log 
-    cat tests/omjournal-abort-no-template.sh.log 
     if [ -f tests/test-suite.log ]
     then
         cat tests/test-suite.log

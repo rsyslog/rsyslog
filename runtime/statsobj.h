@@ -56,6 +56,10 @@ typedef enum statsFmtType_e {
 #define CTR_FLAG_RESETTABLE 1
 #define CTR_FLAG_MUST_RESET 2
 
+/* statsobj flags */
+#define STATSOBJ_FLAG_NONE 0
+#define STATSOBJ_FLAG_DO_PREPEND 1
+
 /* helper entity, the counter */
 typedef struct ctr_s {
 	uchar *name;
@@ -79,6 +83,7 @@ struct statsobj_s {
 	pthread_mutex_t mutCtr;		/* to guard counter linked-list ops */
 	ctr_t *ctrRoot;			/* doubly-linked list of statsobj counters */
 	ctr_t *ctrLast;
+	int flags;
 	/* used to link ourselves together */
 	statsobj_t *prev;
 	statsobj_t *next;
@@ -101,12 +106,15 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetOrigin)(statsobj_t *pThis, uchar *name); /* added v12, 2014-09-08 */
     rsRetVal (*SetReadNotifier)(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx);
 	rsRetVal (*SetReportingNamespace)(statsobj_t *pThis, uchar *ns);
+	void (*SetStatsObjFlags)(statsobj_t *pThis, int flags);
 	//rsRetVal (*GetStatsLine)(statsobj_t *pThis, cstr_t **ppcstr);
 	rsRetVal (*GetAllStatsLines)(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, int8_t bResetCtr);
 	rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
-	rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **ref);
-	rsRetVal (*DestructCounter)(statsobj_t *pThis, ctr_t *ref);
-	rsRetVal (*DestructAllCounters)(statsobj_t *pThis);
+	rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **ref, int8_t linked);
+	void (*AddPreCreatedCtr)(statsobj_t *pThis, ctr_t *ctr);
+	void (*DestructCounter)(statsobj_t *pThis, ctr_t *ref);
+	void (*DestructUnlinkedCounter)(ctr_t *ctr);
+	ctr_t* (*UnlinkAllCounters)(statsobj_t *pThis);
 	rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
 #define statsobjCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
@@ -173,7 +181,7 @@ void checkGoneAwaySenders(time_t);
 	if(GatherStats) \
 		ATOMIC_INC_uint64(&ctr, &mut);
 
-#define STATSCOUNTER_BUMP(ctr, mut, delta) \
+#define STATSCOUNTER_ADD(ctr, mut, delta) \
 	if(GatherStats) \
 		ATOMIC_ADD_uint64(&ctr, &mut, delta);
 
