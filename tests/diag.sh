@@ -60,6 +60,7 @@ case $1 in
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		if [ "x$2" != "x" ]; then
 			echo "------------------------------------------------------------"
 			echo "Test: $0"
