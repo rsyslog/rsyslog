@@ -207,7 +207,7 @@ case $1 in
 			if [ $? -ne 0 ]
 			then
 			   echo "ABORT! rsyslog pid no longer active during startup!"
-			   . $srcdir/diag.sh error-exit 1
+			   . $srcdir/diag.sh error-exit 1 stacktrace
 			fi
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -595,9 +595,8 @@ case $1 in
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
-		# our $2 is the to-be-used exit code.
-		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
-			touch IN_AUTO_DEBUG
+		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
+		if [[ "$3" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 			if [ -e core* ]
 			then
 				echo trying to analyze core for main rsyslogd binary
@@ -612,7 +611,9 @@ case $1 in
 				CORE=
 				rm gdb.in
 			fi
-
+		fi
+		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
+			touch IN_AUTO_DEBUG
 			# OK, we have the testname and can re-run under valgrind
 			echo re-running under valgrind control
 			current_test="./$(basename $0)" # this path is probably wrong -- theinric
