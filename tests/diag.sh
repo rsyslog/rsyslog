@@ -203,6 +203,12 @@ case $1 in
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
+			ps -p `cat rsyslog$2.pid` &> /dev/null
+			if [ $? -ne 0 ]
+			then
+			   echo "ABORT! rsyslog pid no longer active during startup!"
+			   . $srcdir/diag.sh error-exit 1
+			fi
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
