@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- default stack size for inputs has been explicitely set to 4MiB
+  for most platforms, this means a reduction from the default of 10MiB, hower
+  it may mean an increas for micro-libc's (some may have as low as 80KiB by
+  default).
 - bugfix: dynstats unusedMetricTtl bug
   Thanks to Janmejay Singh for fixing this.
 - bugfix build system: build was broken on SunOS
