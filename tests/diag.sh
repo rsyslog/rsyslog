@@ -95,7 +95,23 @@ case $1 in
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
 		;;
-   'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
+   'exit')	# cleanup
+		# detect any left-over hanging instance
+		nhanging=0
+		for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		do
+			echo "ERROR: left-over instance $pid, killing it"
+			ps -fp $pid
+			kill -9 $pid
+			let "nhanging++"
+		done
+		if test $nhanging -ne 0
+		then
+		   echo "ABORT! hanging instances left at exit"
+		   . $srcdir/diag.sh error-exit 1
+		fi
+		# now real cleanup
+		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
