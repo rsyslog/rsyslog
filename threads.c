@@ -235,7 +235,6 @@ static void* thrdStarter(void *arg)
 	ENDfunc
 	pthread_exit(0);
 }
-
 /* Start a new thread and add it to the list of currently
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
@@ -253,13 +252,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
 	pThis->name = ustrdup(name);
-	pthread_create(&pThis->thrdID,
-#ifdef HAVE_PTHREAD_SETSCHEDPARAM
-			   &default_thread_attr,
-#else
-			   NULL,
-#endif
-			   thrdStarter, pThis);
+	pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
