@@ -215,7 +215,20 @@ case $1 in
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		i=0
-		while test -f rsyslog$2.pid; do
+		ls -l rsyslog*
+		out_pid=`cat rsyslog$2.pid.save`
+		if [[ "x$out_pid" == "x" ]]
+		then
+			terminated=1
+		else
+			terminated=0
+		fi
+		while [[ $terminated -eq 0 ]]; do
+			ps -p $out_pid
+			if [[ $? != 0 ]]
+			then
+				terminated=1
+			fi
 			./msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -226,6 +239,8 @@ case $1 in
 			   exit 1
 			fi
 		done
+		unset terminated
+		unset out_pid
 		if [ -e core.* ]
 		then
 		   echo "ABORT! core file exists"
@@ -234,7 +249,7 @@ case $1 in
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
-		wait `cat rsyslog.pid`
+		wait `cat rsyslog$2.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
 		if [ -e vgcore.* ]
@@ -284,11 +299,13 @@ case $1 in
 		   echo Shutting down instance 2
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
+		cp -v rsyslog$2.pid rsyslog$2.pid.save
 		./msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
+		cp rsyslog$2.pid rsyslog$2.pid.save
 		kill `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
