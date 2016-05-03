@@ -302,6 +302,7 @@ case $1 in
 		./msleep 1000
 		;;
    'shutdown-when-empty') # shut rsyslogd down when main queue is empty. $2 is the instance.
+   		set -x
 		if [ "$2" == "2" ]
 		then
 		   echo Shutting down instance 2
