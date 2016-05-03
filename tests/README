@@ -22,3 +22,26 @@ openSUSE
 To configure system properties like hostname and firewall, use the
 graphical "yast2" administration tool. Note the ssh-access by default
 is disable in the firewall!
+
+Core Dump Analysis
+==================
+The testbench contains some limited (yet useful) support for automatically
+anaylzing core dumps. In order for this to work, obviously core files need
+to be generated. This often doesn't work as intended. If you hit this problem,
+check
+
+1. ulimit -c unlimited (or a reasonable limit)
+   Note that root may need to increase a system-wide limit, which is
+   usually recorded in /etc/security/limits.conf
+   You need:
+   *     soft    core      unlimited
+
+2. cat  /proc/sys/kernel/core_pattern"
+   On systemd systems (and some others), the pattern is changed to save
+   core files so that systemd can import them -- with the result that the
+   testbench doesn't see them any longer. We require classic format, which
+   can be set via
+   $ sudo bash -c "echo \"core\" > /proc/sys/kernel/core_pattern"
+
+Note that you probably want to do neither of these changes to a production
+system.
