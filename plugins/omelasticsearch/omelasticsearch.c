@@ -280,6 +280,8 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	/* Bodypart of request not needed, so set curl opt to nobody and httpget, otherwise lib-curl could sigsegv */
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, TRUE);
+
 	/* Only enable for debugging 
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
 
@@ -1153,6 +1155,7 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
 	curl_easy_setopt(handle, CURLOPT_POST, 1);
+	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 
 	curl_easy_setopt(handle, CURLOPT_FAILONERROR, TRUE);
 
