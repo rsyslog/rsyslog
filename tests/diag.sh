@@ -257,6 +257,7 @@ case $1 in
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
+		sleep 1
 		wait `cat rsyslog$2.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
