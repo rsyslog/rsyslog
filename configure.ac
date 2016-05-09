@@ -235,12 +235,18 @@ AC_ARG_ENABLE(gssapi_krb5,
          esac],
 	[enable_gssapi_krb5=no]
 )
+
+case "${os_type}" in
+solaris) GSSLIB=gss ;;
+*)       GSSLIB=gssapi_krb5 ;;
+esac
+  
 if test $enable_gssapi_krb5 = yes; then
-	AC_CHECK_LIB(gssapi_krb5, gss_acquire_cred, [
+	AC_CHECK_LIB($GSSLIB, gss_acquire_cred, [
 		AC_CHECK_HEADER(gssapi/gssapi.h, [
 			AC_DEFINE(USE_GSSAPI,,
 				  Define if you want to use GSSAPI)
-			GSS_LIBS="-lgssapi_krb5"
+			GSS_LIBS="-l$GSSLIB"
 			AC_SUBST(GSS_LIBS)
 		])
 	])
