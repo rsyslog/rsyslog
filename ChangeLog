@@ -25,6 +25,8 @@ Version 8.19.0 [v8-stable] 2016-05-31
   see also https://github.com/rsyslog/rsyslog/issues/846
 - some general code improvements
   * "fixed" cosmetic memory leaks at shutdown
+- build system bugfix: configure can't find gss_acquire_cred on Solaris
+  Thanks to github user vlmarek for the patch.
 - improvements to the CI environment
   * improvements on the non-raciness of some tests
   * imdiag: avoid races in detecting queue empty status
