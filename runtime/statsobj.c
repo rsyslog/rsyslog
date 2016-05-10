@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <time.h>
 #include <assert.h>
+#include <json.h>
 
 #include "rsyslog.h"
 #include "unicode-helper.h"
@@ -67,12 +68,22 @@ static inline void
 addToObjList(statsobj_t *pThis)
 {
 	pthread_mutex_lock(&mutStats);
-	pThis->prev = objLast;
-	if(objLast != NULL)
-		objLast->next = pThis;
-	objLast = pThis;
-	if(objRoot == NULL)
+	if (pThis->flags && STATSOBJ_FLAG_DO_PREPEND) {
+		pThis->next = objRoot;
+		if (objRoot != NULL) {
+			objRoot->prev = pThis;
+		}
 		objRoot = pThis;
+		if (objLast == NULL)
+			objLast = pThis;
+	} else {
+		pThis->prev = objLast;
+		if(objLast != NULL)
+			objLast->next = pThis;
+		objLast = pThis;
+		if(objRoot == NULL)
+			objRoot = pThis;
+	}
 	pthread_mutex_unlock(&mutStats);
 }
 
@@ -116,6 +127,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
 	pThis->read_notifier = NULL;
+	pThis->flags = 0;
 ENDobjConstruct(statsobj)
 
 
@@ -168,6 +180,19 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+setStatsObjFlags(statsobj_t *pThis, int flags) {
+	pThis->flags = flags;
+}
+
+static rsRetVal
+setReportingNamespace(statsobj_t *pThis, uchar *ns)
+{
+	DEFiRet;
+	CHKmalloc(pThis->reporting_ns = ustrdup(ns));
+finalize_it:
+	RETiRet;
+}
 
 /* add a counter to an object
  * ctrName is duplicated, caller must free it if requried
@@ -177,7 +202,7 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef, int8_t linked)
 {
 	ctr_t *ctr;
 	DEFiRet;
@@ -201,7 +226,9 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 		ctr->val.pInt = (int*) pCtr;
 		break;
 	}
-	addCtrToList(pThis, ctr);
+	if (linked) {
+		addCtrToList(pThis, ctr);
+	}
 	*entryRef = ctr;
 
 finalize_it:
@@ -214,21 +241,33 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr)
+{
+	pCtr->next = NULL;
+	pCtr->prev = NULL;
+	addCtrToList(pThis, pCtr);
+}
+
 static rsRetVal
 addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
 {
 	ctr_t *ctr;
 	DEFiRet;
-	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr));
+	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1));
 finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
+static void
+destructUnlinkedCounter(ctr_t *ctr) {
+	free(ctr->name);
+	free(ctr);
+}
+
+static void
 destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 {
-    DEFiRet;
-
     pthread_mutex_lock(&pThis->mutCtr);
 	if (pCtr->prev != NULL) {
 		pCtr->prev->next = pCtr->next;
@@ -243,16 +282,14 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 		pThis->ctrRoot = pCtr->next;
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
-	free(pCtr->name);
-	free(pCtr);
-    
-    RETiRet;
+	destructUnlinkedCounter(pCtr);
 }
 
 static inline void
 resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 {
-	if(bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) {
+	if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) ||
+		(pCtr->flags & CTR_FLAG_MUST_RESET)) {
 		switch(pCtr->ctrType) {
 		case ctrType_IntCtr:
 			*(pCtr->val.pIntCtr) = 0;
@@ -264,44 +301,89 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 	}
 }
 
+static rsRetVal
+addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
+	json_object *v = NULL;
+	DEFiRet;
+
+	/*We should migrate libfastjson to support uint64_t in addition to int64_t.
+	  Although no counter is likely to grow to int64 max-value, this is theoritically
+	  incorrect (as intctr_t is uint64)*/
+	CHKmalloc(v = json_object_new_int64((int64_t) value));
+
+	json_object_object_add(to, (const char*) field_name, v);
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (v != NULL) {
+			json_object_put(v);
+		}
+	}
+	RETiRet;
+}
+
+static rsRetVal
+addContextForReporting(json_object *to, const uchar* field_name, const uchar* value) {
+	json_object *v = NULL;
+	DEFiRet;
+
+	CHKmalloc(v = json_object_new_string((const char*) value));
+
+	json_object_object_add(to, (const char*) field_name, v);
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (v != NULL) {
+			json_object_put(v);
+		}
+	}
+	RETiRet;
+}
+
+static intctr_t
+accumulatedValue(ctr_t *pCtr) {
+	switch(pCtr->ctrType) {
+	case ctrType_IntCtr:
+		return *(pCtr->val.pIntCtr);
+	case ctrType_Int:
+		return *(pCtr->val.pInt);
+	}
+	return -1;
+}
+
+
 /* get all the object's countes together as CEE. */
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
+	json_object *root, *values;
 	DEFiRet;
+
+	root = values = NULL;
 
 	CHKiRet(cstrConstruct(&pcstr));
 
 	if (fmt == statsFmt_CEE)
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6);
-	
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("{"), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("name"), 4);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStr(pcstr, pThis->name);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-	rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
+		CHKiRet(rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6));
 
+	CHKmalloc(root = json_object_new_object());
+
+	CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("name"), pThis->name));
+	
 	if(pThis->origin != NULL) {
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("origin"), 6);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(":"), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStr(pcstr, pThis->origin);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(","), 1);
+		CHKiRet(addContextForReporting(root, UCHAR_CONSTANT("origin"), pThis->origin));
+	}
+
+	if (pThis->reporting_ns == NULL) {
+		values = json_object_get(root);
+	} else {
+		CHKmalloc(values = json_object_new_object());
+		json_object_object_add(root, (const char*) pThis->reporting_ns, json_object_get(values));
 	}
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
 		if (fmt == statsFmt_JSON_ES) {
 			/* work-around for broken Elasticsearch JSON implementation:
 			 * we need to replace dots by a different char, we use bang.
@@ -314,33 +396,26 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 				if(*c == '.')
 					*c = '!';
 			}
-			rsCStrAppendStr(pcstr, esbuf);
+			CHKiRet(addCtrForReporting(values, esbuf, accumulatedValue(pCtr)));
 		} else {
-			rsCStrAppendStr(pcstr, pCtr->name);
-		}
-		rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("\""), 1);
-		cstrAppendChar(pcstr, ':');
-		switch(pCtr->ctrType) {
-		case ctrType_IntCtr:
-			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
-			break;
-		case ctrType_Int:
-			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
-			break;
-		}
-		if (pCtr->next != NULL) {
-			cstrAppendChar(pcstr, ',');
-		} else {
-			cstrAppendChar(pcstr, '}');
+			CHKiRet(addCtrForReporting(values, pCtr->name, accumulatedValue(pCtr)));
 		}
 		resetResettableCtr(pCtr, bResetCtrs);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
+	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
 	CHKiRet(cstrFinalize(pcstr));
 	*ppcstr = pcstr;
 
 finalize_it:
+	if (root != NULL) {
+		json_object_put(root);
+	}
+	if (values != NULL) {
+		json_object_put(values);
+	}
+	
 	RETiRet;
 }
 
@@ -476,7 +551,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* Enable statistics gathering. currently there is no function to disable it
  * again, as this is right now not needed.
  */
@@ -530,24 +604,26 @@ finalize_it:
 	RETiRet;
 }
 
-
-static rsRetVal
-destructAllCounters(statsobj_t *pThis) {
-	DEFiRet;
-	ctr_t *ctr, *ctrToDel;
-
+static ctr_t*
+unlinkAllCounters(statsobj_t *pThis) {
+	ctr_t *ctr;
+	pthread_mutex_lock(&pThis->mutCtr);
 	ctr = pThis->ctrRoot;
+	pThis->ctrLast = NULL;
+	pThis->ctrRoot = NULL;
+	pthread_mutex_unlock(&pThis->mutCtr);
+	return ctr;
+}
+
+static void
+destructUnlinkedCounters(ctr_t *ctr) {
+	ctr_t *ctrToDel;
+
 	while(ctr != NULL) {
 		ctrToDel = ctr;
 		ctr = ctr->next;
-		free(ctrToDel->name);
-		free(ctrToDel);
+		destructUnlinkedCounter(ctrToDel);
 	}
-
-	pThis->ctrLast = NULL;
-	pThis->ctrRoot = NULL;
-	
-	RETiRet;
 }
 
 /* check if a sender has not sent info to us for an extended period
@@ -596,11 +672,12 @@ CODESTARTobjDestruct(statsobj)
 	removeFromObjList(pThis);
 
 	/* destruct counters */
-	CHKiRet(destructAllCounters(pThis));
+	destructUnlinkedCounters(unlinkAllCounters(pThis));
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
 	free(pThis->origin);
+	free(pThis->reporting_ns);
 ENDobjDestruct(statsobj)
 
 
@@ -631,11 +708,15 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->SetName = setName;
 	pIf->SetOrigin = setOrigin;
 	pIf->SetReadNotifier = setReadNotifier;
+	pIf->SetReportingNamespace = setReportingNamespace;
+	pIf->SetStatsObjFlags = setStatsObjFlags;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;
+	pIf->AddPreCreatedCtr = addPreCreatedCounter;
 	pIf->DestructCounter = destructCounter;
-	pIf->DestructAllCounters = destructAllCounters;
+	pIf->DestructUnlinkedCounter = destructUnlinkedCounter;
+	pIf->UnlinkAllCounters = unlinkAllCounters;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)
@@ -669,4 +750,5 @@ BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
 	/* release objects we no longer need */
 	pthread_mutex_destroy(&mutStats);
 	pthread_mutex_destroy(&mutSenders);
+	hashtable_destroy(stats_senders, 1);
 ENDObjClassExit(statsobj)

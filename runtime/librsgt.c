@@ -417,7 +417,7 @@ readStateFile(gtfile gf)
 	}
 
 	if(read(fd, gf->x_prev->data, gf->x_prev->len)
-		!= gf->x_prev->len) {
+		!= (ssize_t) gf->x_prev->len) {
 		rsgtimprintDel(gf->x_prev);
 		gf->x_prev = NULL;
 		goto err;

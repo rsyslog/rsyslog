@@ -760,7 +760,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		pWrkrData->f_addr = res;
 		pWrkrData->bIsConnected = 1;
 		if(pWrkrData->pSockArray == NULL) {
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0);
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pWrkrData));
@@ -1023,11 +1023,11 @@ CODESTARTnewActInst
 			pData->iRebindInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "keepalive")) {
 			pData->bKeepAlive = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepaliveprobes")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.probes")) {
 			pData->iKeepAliveProbes = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepaliveintvl")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.interval")) {
 			pData->iKeepAliveIntvl = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "keepalivetime")) {
+		} else if(!strcmp(actpblk.descr[i].name, "keepalive.time")) {
 			pData->iKeepAliveTime = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
 			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1102,8 +1102,9 @@ CODESTARTnewActInst
 			}
 			free(cstr);
 		} else {
-			DBGPRINTF("omfwd: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+				"omfwd: program error, non-handled parameter '%s'\n",
+				actpblk.descr[i].name);
 		}
 	}
 
@@ -1288,11 +1289,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(pData->protocol == FORW_TCP) {
 		pData->bResendLastOnRecon = cs.bResendLastOnRecon;
 		pData->iStrmDrvrMode = cs.iStrmDrvrMode;
-		if(cs.pszStrmDrvr != NULL)
-			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
-		if(cs.pszStrmDrvrAuthMode != NULL)
-			CHKmalloc(pData->pszStrmDrvrAuthMode =
-				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
 		if(cs.pPermPeers != NULL) {
 			pData->pPermPeers = cs.pPermPeers;
 			cs.pPermPeers = NULL;

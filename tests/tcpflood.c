@@ -172,7 +172,7 @@ static int octateCountFramed = 0;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
-static gnutls_certificate_credentials tlscred;
+static gnutls_certificate_credentials_t tlscred;
 #endif
 
 /* variables for managing multi-threaded operations */
@@ -557,6 +557,18 @@ int sendMessages(struct instdata *inst)
 			 * are a victim
 			 */
 			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
+#if 1
+				if(transport == TP_TLS && offsSendBuf != 0) {
+					/* send remaining buffer */
+					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
+					if(lenSend != offsSendBuf) {
+						fprintf(stderr, "tcpflood: error in send function causes potential data loss "
+						"lenSend %d, offsSendBuf %d\n",
+						lenSend, offsSendBuf);
+					}
+					offsSendBuf = 0;
+				}
+#endif
 				++nConnDrops;
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;

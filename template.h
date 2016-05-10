@@ -116,6 +116,7 @@ struct templateEntry {
 				unsigned bDropCC: 1;		/* drop control characters? */
 				unsigned bSpaceCC: 1;		/* change control characters to spaceescape? */
 				unsigned bEscapeCC: 1;		/* escape control characters? */
+				unsigned bCompressSP: 1;	/* compress multiple spaces to a single one? */
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 				unsigned bSecPathDrop: 1;	/* drop slashes, replace dots, empty string */
 				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
@@ -128,6 +129,7 @@ struct templateEntry {
 				unsigned bMandatory: 1;		/* mandatory field - emit even if empty */
 				unsigned bFromPosEndRelative: 1;/* is From/To-Pos relative to end of string? */
 				unsigned bFixedWidth: 1;	/* space pad to toChar if string is shorter */
+				unsigned bDateInUTC: 1;		/* should date be expressed in UTC? */
 			} options;		/* options as bit fields */
 		} field;
 	} data;

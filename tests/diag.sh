@@ -37,11 +37,30 @@
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
+
+#START: ext dependency config
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
+dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
+
+dep_kafka_work_dir=$dep_work_dir/kafka
+dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
+
+dep_zk_work_dir=$dep_work_dir/zk
+dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
+
+dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+#END: ext dependency config
+
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		if [ "x$2" != "x" ]; then
 			echo "------------------------------------------------------------"
 			echo "Test: $0"
@@ -56,7 +75,7 @@ case $1 in
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
 		rm -f testconf.conf
-		rm -f rsyslog.errorfile
+		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
@@ -77,14 +96,30 @@ case $1 in
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
 		;;
-   'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
+   'exit')	# cleanup
+		# detect any left-over hanging instance
+		nhanging=0
+		for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		do
+			echo "ERROR: left-over instance $pid, killing it"
+			ps -fp $pid
+			kill -9 $pid
+			let "nhanging++"
+		done
+		if test $nhanging -ne 0
+		then
+		   echo "ABORT! hanging instances left at exit"
+		   . $srcdir/diag.sh error-exit 1
+		fi
+		# now real cleanup
+		rm -f rsyslogd.started work-*.conf diag-common.conf
    		rm -f rsyslogd2.started diag-common2.conf rsyslog.action.*.include
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
 		rm -f testconf.conf
-		rm -f rsyslog.errorfile
+		rm -f rsyslog.errorfile tmp.qi
 		rm -f HOSTNAME imfile-state:.-rsyslog.input
 		unset TCPFLOOD_EXTRA_OPTS
 		echo  -------------------------------------------------------------------------------
@@ -158,6 +193,7 @@ case $1 in
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
+			echo startup: pid file not yet found
 			./msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -169,6 +205,12 @@ case $1 in
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
+			ps -p `cat rsyslog$2.pid`
+			if [ $? -ne 0 ]
+			then
+			   echo "ABORT! rsyslog pid no longer active during startup!"
+			   . $srcdir/diag.sh error-exit 1 stacktrace
+			fi
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
@@ -181,7 +223,20 @@ case $1 in
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		i=0
-		while test -f rsyslog$2.pid; do
+		ls -l rsyslog*
+		out_pid=`cat rsyslog$2.pid.save`
+		if [[ "x$out_pid" == "x" ]]
+		then
+			terminated=1
+		else
+			terminated=0
+		fi
+		while [[ $terminated -eq 0 ]]; do
+			ps -p $out_pid
+			if [[ $? != 0 ]]
+			then
+				terminated=1
+			fi
 			./msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -192,6 +247,8 @@ case $1 in
 			   exit 1
 			fi
 		done
+		unset terminated
+		unset out_pid
 		if [ -e core.* ]
 		then
 		   echo "ABORT! core file exists"
@@ -200,7 +257,7 @@ case $1 in
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
-		wait `cat rsyslog.pid`
+		wait `cat rsyslog$2.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
 		if [ -e vgcore.* ]
@@ -250,17 +307,19 @@ case $1 in
 		   echo Shutting down instance 2
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
+		cp -v rsyslog$2.pid rsyslog$2.pid.save
 		./msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
+		cp rsyslog$2.pid rsyslog$2.pid.save
 		kill `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
-		eval ./tcpflood $* $TCPFLOOD_EXTRA_OPTS
+		eval ./tcpflood "$@" $TCPFLOOD_EXTRA_OPTS
 		if [ "$?" -ne "0" ]; then
 		  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
 		  cp rsyslog.out.log rsyslog.out.log.save
@@ -326,6 +385,18 @@ case $1 in
 		    echo content-check failed, expected $2 to occure $3 times, but found it $count times
 		    . $srcdir/diag.sh error-exit 1
 		fi
+		;;
+	 'block-stats-flush')
+		echo blocking stats flush
+		echo "blockStatsReporting" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		;;
+	 'await-stats-flush-after-block')
+		echo unblocking stats flush and waiting for it
+		echo "awaitStatsReport" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
+		;;
+	 'allow-single-stats-flush-after-block-and-wait-for-it')
+		echo blocking stats flush
+		echo "awaitStatsReport block_again" | ./diagtalker || . $srcdir/diag.sh error-exit  $?
 		;;
 	 'wait-for-stats-flush')
 		echo "will wait for stats push"
@@ -435,12 +506,99 @@ case $1 in
    'add-conf')   # start a standard test rsyslog.conf
 		echo "$2" >> testconf.conf
 		;;
+   'require-journalctl')   # check if journalctl exists on the system
+		if ! hash journalctl 2>/dev/null ; then
+		    echo "journalctl command missing, skipping test"
+		    exit 77
+		fi
+		;;
+	 'download-kafka')
+		if [ ! -d $dep_cache_dir ]; then
+				echo "Creating dependency cache dir"
+				mkdir $dep_cache_dir
+		fi
+		if [ ! -f $dep_zk_cached_file ]; then
+				echo "Downloading zookeeper"
+				wget $dep_zk_url -O $dep_zk_cached_file
+		fi
+		if [ ! -f $dep_kafka_cached_file ]; then
+				echo "Downloading kafka"
+				wget $dep_kafka_url -O $dep_kafka_cached_file
+		fi
+		;;
+	 'start-kafka')
+		if [ ! -f $dep_zk_cached_file ]; then
+				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
+				exit 1
+		fi
+		if [ ! -f $dep_kafka_cached_file ]; then
+				echo "Dependency-cache does not have kafka package, did you download dependencies?"
+				exit 1
+		fi
+		if [ ! -d $dep_work_dir ]; then
+				echo "Creating dependency working directory"
+				mkdir -p $dep_work_dir
+		fi
+		if [ -d $dep_kafka_work_dir ]; then
+				(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
+				./msleep 4000
+		fi
+		if [ -d $dep_zk_work_dir ]; then
+				(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+				./msleep 2000
+		fi
+		rm -rf $dep_kafka_work_dir
+		rm -rf $dep_zk_work_dir
+		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names)
+		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names)
+		cp $srcdir/testsuites/zoo.cfg $dep_zk_work_dir/conf/
+		(cd $dep_zk_work_dir && ./bin/zkServer.sh start)
+		./msleep 4000
+		cp $srcdir/testsuites/kafka-server.properties $dep_kafka_work_dir/config/
+		(cd $dep_kafka_work_dir && ./bin/kafka-server-start.sh -daemon ./config/kafka-server.properties)
+		./msleep 8000
+		;;
+	 'stop-kafka')
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
+		./msleep 4000
+		(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+		./msleep 2000
+		rm -rf $dep_kafka_work_dir
+		rm -rf $dep_zk_work_dir
+		;;
+	 'create-kafka-topic')
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		if [ "x$2" == "x" ]; then
+				echo "Topic-name not provided."
+				exit 1
+		fi
+		(cd $dep_kafka_work_dir && ./bin/kafka-topics.sh --create --zookeeper localhost:2181/kafka --topic $2 --partitions 2 --replication-factor 1)
+		;;
+	 'dump-kafka-topic')
+		echo "dumping kafka-topic $2"
+		if [ ! -d $dep_kafka_work_dir ]; then
+				echo "Kafka work-dir does not exist, did you start kafka?"
+				exit 1
+		fi
+		if [ "x$2" == "x" ]; then
+				echo "Topic-name not provided."
+				exit 1
+		fi
+
+		(cd $dep_kafka_work_dir && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:2181/kafka --topic $2 > $dep_kafka_log_dump)
+		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
-		# our $2 is the to-be-used exit code.
-		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
-			touch IN_AUTO_DEBUG
+		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
+		if [[ "$3" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 			if [ -e core* ]
 			then
 				echo trying to analyze core for main rsyslogd binary
@@ -455,7 +613,9 @@ case $1 in
 				CORE=
 				rm gdb.in
 			fi
-
+		fi
+		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
+			touch IN_AUTO_DEBUG
 			# OK, we have the testname and can re-run under valgrind
 			echo re-running under valgrind control
 			current_test="./$(basename $0)" # this path is probably wrong -- theinric

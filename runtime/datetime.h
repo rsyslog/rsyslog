@@ -46,7 +46,7 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t, const int inUTC);
 	/* v7, 2012-03-29 */
 	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
-	time_t (*syslogTime2time_t)(struct syslogTime *ts);
+	time_t (*syslogTime2time_t)(const struct syslogTime *ts);
 ENDinterface(datetime)
 #define datetimeCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 /* interface changes:
@@ -82,5 +82,6 @@ void applyDfltTZ(struct syslogTime *pTime, char *tz);
 int getWeekdayNbr(struct syslogTime *ts);
 int getOrdinal(struct syslogTime *ts);
 int getWeek(struct syslogTime *ts);
+void timeConvertToUTC(const struct syslogTime *const __restrict__ local, struct syslogTime *const __restrict__ utc);
 
 #endif /* #ifndef INCLUDED_DATETIME_H */

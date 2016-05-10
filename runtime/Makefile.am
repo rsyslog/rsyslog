@@ -109,7 +109,7 @@ else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
 librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
 
 #
@@ -254,6 +254,7 @@ lmtcpclt_la_LIBADD =
 if ENABLE_GT_KSI
    noinst_LTLIBRARIES +=  librsksi.la
    librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h librsgt_common.h
+   librsksi_la_CPPFLAGS =  $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
    pkglib_LTLIBRARIES += lmsig_ksi.la
    lmsig_ksi_la_SOURCES = lmsig_ksi.c lmsig_ksi.h
    lmsig_ksi_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)

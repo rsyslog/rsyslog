@@ -968,6 +968,9 @@ finalize_it:
 }
 
 
+/* the #pragmas can go away when we have disable array-passing mode */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
 static void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti)
 {
@@ -980,6 +983,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 	for(j = 0 ; j < pAction->iNumTpls ; ++j) {
 		switch(pAction->peParamPassing[j]) {
 		case ACT_ARRAY_PASSING:
+
 			ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
 			/* if we every use array passing mode again, we need to check
 			 * this code. It hasn't been used since refactoring for v7.
@@ -1011,6 +1015,8 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	return;
 }
+#pragma GCC diagnostic pop
+
 
 /* This is used in resume processing. We only finally know that a resume
  * worked when we have been able to actually process a messages. As such,
@@ -1078,7 +1084,7 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 	actWrkrIParams_t *__restrict__ const iparams,
 	wti_t *__restrict__ const pWti)
 {
-	uchar *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 	int i;
 	DEFiRet;
 

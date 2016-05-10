@@ -94,6 +94,8 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		switch(stmt->nodetype) {
 		case S_NOP:
 		case S_STOP:
+		case S_SET:
+		case S_UNSET:
 		case S_CALL:/* call does not need to do anything - done in called ruleset! */
 			break;
 		case S_ACT:
@@ -108,7 +110,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 				scriptIterateAllActions(stmt->d.s_if.t_else,
 							pFunc, pParam);
 			break;
-        case S_FOREACH:
+		case S_FOREACH:
 			if(stmt->d.s_foreach.body != NULL)
 				scriptIterateAllActions(stmt->d.s_foreach.body,
                                         pFunc, pParam);
@@ -268,29 +270,93 @@ finalize_it:
 	RETiRet;
 }
 
+static inline rsRetVal
+invokeForeachBodyWith(struct cnfstmt *stmt, json_object *o, msg_t *pMsg, wti_t *pWti) {
+	struct var v;
+	v.datatype = 'J';
+	v.d.json = o;
+	DEFiRet;
+	CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
+	CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+callForeachArray(struct cnfstmt *stmt, json_object *arr, msg_t *pMsg, wti_t *pWti) {
+	DEFiRet;
+	int len = json_object_array_length(arr);
+	json_object *curr;
+	for (int i = 0; i < len; i++) {
+		curr = json_object_array_get_idx(arr, i);
+		CHKiRet(invokeForeachBodyWith(stmt, curr, pMsg, pWti));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+callForeachObject(struct cnfstmt *stmt, json_object *arr, msg_t *pMsg, wti_t *pWti) {
+	json_object *entry = NULL;
+	json_object *key = NULL;
+	const char **keys = NULL;
+	DEFiRet;
+
+	int len = json_object_object_length(arr);
+	CHKmalloc(keys = calloc(len, sizeof(char*)));
+	const char **curr_key = keys;
+	struct json_object_iterator it = json_object_iter_begin(arr);
+	struct json_object_iterator itEnd = json_object_iter_end(arr);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		*curr_key = json_object_iter_peek_name(&it);
+		curr_key++;
+		json_object_iter_next(&it);
+	}
+	json_object *curr = NULL;
+	CHKmalloc(entry = json_object_new_object());
+	for (int i = 0; i < len; i++) {
+		if (json_object_object_get_ex(arr, keys[i], &curr)) {
+			CHKmalloc(key = json_object_new_string(keys[i]));
+			json_object_object_add(entry, "key", key);
+			key = NULL;
+			json_object_object_add(entry, "value", json_object_get(curr));
+			CHKiRet(invokeForeachBodyWith(stmt, entry, pMsg, pWti));
+		}
+	}
+finalize_it:
+	if (keys != NULL) free(keys);
+	if (entry != NULL) json_object_put(entry);
+	if (key != NULL) json_object_put(key);
+	
+	RETiRet;
+}
+
 static rsRetVal
 execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
 {
 	json_object *arr = NULL;
 	DEFiRet;
+
+	/* arr can either be an array or an associative-array (obj) */
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
-	if (arr == NULL || !json_object_is_type(arr, json_type_array)) {
-		DBGPRINTF("foreach loop skipped, as object to iterate upon is either empty or not an array\n");
+	
+	if (arr == NULL) {
+		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty\n");
+		FINALIZE;
+	} else if (json_object_is_type(arr, json_type_array)) {
+		CHKiRet(callForeachArray(stmt, arr, pMsg, pWti));
+	} else if (json_object_is_type(arr, json_type_object)) {
+		CHKiRet(callForeachObject(stmt, arr, pMsg, pWti));
+	} else {
+		DBGPRINTF("foreach loop skipped, as object to iterate upon is not an array\n");
 		FINALIZE;
 	}
-	int len = json_object_array_length(arr);
-	json_object *curr;
-	for (int i = 0; i < len; i++) {
-		curr = json_object_array_get_idx(arr, i);
-		struct var v;
-		v.d.json = curr;
-		v.datatype = 'J';
-		CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
-		CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
-	}
 	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
+
 finalize_it:
 	if (arr != NULL) json_object_put(arr);
+
 	RETiRet;
 }
 

@@ -873,6 +873,7 @@ finalize_it:
 
 
 /* De-Serialize an object, with known constructur and destructor. Params like Deserialize().
+ * Note: this is for the queue subsystem, and optimized for its use.
  * rgerhards, 2012-11-03
  */
 rsRetVal

@@ -116,6 +116,7 @@ typedef struct lstn_s {
 	sbool reopenOnTruncate;
 	sbool addMetadata;
 	sbool addCeeTag;
+	sbool freshStartTail; /* read from tail of file on fresh start? */
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
@@ -153,6 +154,7 @@ struct instanceConf_s {
 	sbool reopenOnTruncate;
 	sbool addCeeTag;
 	sbool addMetadata;
+	sbool freshStartTail;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -275,7 +277,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
-	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED }
+	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
+	{ "freshstarttail", eCmdHdlrBinary, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -466,7 +469,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	if (pLstn->addCeeTag) {
 		size_t msgLen = cstrLen(cstrLine);
 		char *ceeToken = "@cee:";
-		size_t ceeMsgSize = msgLen + strlen(ceeToken);
+		size_t ceeMsgSize = msgLen + strlen(ceeToken) +1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
 		strcpy(ceeMsg, ceeToken);
@@ -501,6 +504,7 @@ openFile(lstn_t *pLstn)
 	size_t lenSFNam;
 	struct stat stat_buf;
 	uchar statefile[MAXFNAME];
+	sbool isFreshStart = 0;
 
 	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
@@ -513,6 +517,7 @@ openFile(lstn_t *pLstn)
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
 			DBGPRINTF("imfile: clean startup, state file for '%s'\n", pLstn->pszFileName);
+			isFreshStart = 1;
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
@@ -566,6 +571,16 @@ finalize_it:
 		CHKiRet(strm.SetsType(pLstn->pStrm, STREAMTYPE_FILE_MONITOR));
 		CHKiRet(strm.SetFName(pLstn->pStrm, pLstn->pszFileName, strlen((char*) pLstn->pszFileName)));
 		CHKiRet(strm.ConstructFinalize(pLstn->pStrm));
+
+		/* If state file not exist, this is a fresh start. seek to file end
+		 * when freshStartTail is on.
+		 */
+		if(pLstn->freshStartTail && isFreshStart){
+			if(stat((char*) pLstn->pszFileName, &stat_buf) != -1) {
+				pLstn->pStrm->iCurrOffs = stat_buf.st_size;
+				CHKiRet(strm.SeekCurrOffs(pLstn->pStrm));
+			}
+		}
 	}
 
 	RETiRet;
@@ -664,6 +679,7 @@ createInstance(instanceConf_t **pinst)
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 	inst->addCeeTag = 0;
+	inst->freshStartTail = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -686,10 +702,12 @@ static int
 getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 {
 	int i;
+	int found = 0;
 	const int lenName = ustrlen(path);
 	for(i = lenName ; i >= 0 ; --i) {
 		if(path[i] == '/') {
 			/* found basename component */
+			found = 1;
 			if(i == lenName)
 				basen[0] = '\0';
 			else {
@@ -698,7 +716,11 @@ getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 			break;
 		}
 	}
-	return i;
+	if (found == 1)
+		return i;
+	else {
+		return -1;
+	}
 }
 
 /* this function checks instance parameters and does some required pre-processing
@@ -724,6 +746,12 @@ checkInstance(instanceConf_t *inst)
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 
 	i = getBasename(basen, inst->pszFileName);
+	if (i == -1) {
+		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile: file path '%s' does not include a basename component",
+			inst->pszFileName);
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
 	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
@@ -908,6 +936,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->reopenOnTruncate = existing->reopenOnTruncate;
 	pThis->addMetadata = existing->addMetadata;
 	pThis->addCeeTag = existing->addCeeTag;
+	pThis->freshStartTail = existing->freshStartTail;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -977,6 +1006,7 @@ addListner(instanceConf_t *inst)
 	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
 			       hasWildcard : inst->addMetadata;
 	pThis->addCeeTag = inst->addCeeTag;
+	pThis->freshStartTail = inst->freshStartTail;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -1033,6 +1063,8 @@ CODESTARTnewInpInst
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
 		} else if (!strcmp(inppblk.descr[i].name, "addceetag")) {
 			inst->addCeeTag = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "freshstarttail")) {
+			inst->freshStartTail = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
@@ -1589,6 +1621,7 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 				getBasename(basen, file);
 				in_setupFileWatchDynamic(pLstn, basen);
 			}
+			globfree(&files);
 		}
 	} else {
 		/* Duplicate static object as well, otherwise the configobject could be deleted later! */

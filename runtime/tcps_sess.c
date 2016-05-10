@@ -67,7 +67,7 @@ static rsRetVal Close(tcps_sess_t *pThis);
 /* Standard-Constructor */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
 		pThis->iMsg = 0; /* just make sure... */
-		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
+		pThis->inputState = eAtStrtFram; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 		/* now allocate the message reception buffer */
 		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(glbl.GetMaxLine() + 1));
@@ -266,7 +266,6 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 finalize_it:
 	/* reset status variables */
-	pThis->bAtStrtOfFram = 1;
 	pThis->iMsg = 0;
 
 	RETiRet;
@@ -294,7 +293,7 @@ PrepareClose(tcps_sess_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	
-	if(pThis->bAtStrtOfFram == 1) {
+	if(pThis->inputState == eAtStrtFram) {
 		/* this is how it should be. There is no unprocessed
 		 * data left and such we have nothing to do. For simplicity
 		 * reasons, we immediately return in that case.

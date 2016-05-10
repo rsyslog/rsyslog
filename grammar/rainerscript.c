@@ -1243,11 +1243,7 @@ var2Number(struct var *r, int *bSuccess)
 		n = str2num(r->d.estr, bSuccess);
 	} else {
 		if(r->datatype == 'J') {
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 			n = (r->d.json == NULL) ? 0 : json_object_get_int64(r->d.json);
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-			n = (r->d.json == NULL) ? 0 : json_object_get_int(r->d.json);
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		} else {
 			n = r->d.n;
 		}
@@ -1846,6 +1842,10 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 				key.k_str = (uchar*) var2CString(&r[1], &bMustFree);
 			} else if (lookup_key_type == LOOKUP_KEY_TYPE_UINT) {
 				key.k_uint = var2Number(&r[1], NULL);
+			} else {
+				DBGPRINTF("program error in %s:%d: lookup_key_type unknown\n",
+					__FILE__, __LINE__);
+				key.k_uint = 0;
 			}
 			ret->d.estr = lookupKey((lookup_ref_t*)func->funcdata, key);
 			if(bMustFree) free(key.k_str);

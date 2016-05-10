@@ -428,6 +428,25 @@ timeoutComp(struct timespec *pt, long iTimeout)
 	return RS_RET_OK; /* so far, this is static... */
 }
 
+long long
+currentTimeMills() {
+#	if _POSIX_TIMERS > 0
+	struct timespec tm;
+#   else
+	struct timeval tv;
+#	endif
+
+#	if _POSIX_TIMERS > 0
+	clock_gettime(CLOCK_REALTIME, &tm);
+#	else
+	gettimeofday(&tv, NULL);
+	tm.tv_sec = tv.tv_sec;
+	tm.tv_nsec = tv.tv_usec * 1000;
+#	endif
+
+	return ((long long) tm.tv_sec) * 1000 + (tm.tv_nsec / 1000000);
+}
+
 
 /* This function is kind of the reverse of timeoutComp() - it takes an absolute
  * timeout value and computes how far this is in the future. If the value is already

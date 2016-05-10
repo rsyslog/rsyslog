@@ -198,30 +198,30 @@ httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
         es_addBuf(url_buf, "http://", sizeof("http://")-1);
     }
 
-    // host
+    /* host */
     es_addBuf(url_buf, (char* )pWrkrData->pData->host, strlen((char*)pWrkrData->pData->host));
 
-    // port
+    /* port */
     es_addChar(url_buf, ':');
     char portBuf[6];
     snprintf(portBuf, sizeof(portBuf), "%d", pWrkrData->pData->port);
     es_addBuf(url_buf, portBuf, strlen(portBuf));
 
-    // prefix
+    /* prefix */
     es_addBuf(url_buf, HTTPFS_URL_PREFIX_V1, sizeof(HTTPFS_URL_PREFIX_V1)-1);
 
-    // path
+    /* path */
     if (pWrkrData->file[0] != '/') {
         es_addChar(url_buf, '/');
     }
     es_addBuf(url_buf, (char* )pWrkrData->file, strlen((char* )pWrkrData->file));
 
-    // queries
-    // user
+    /* queries */
+    /* user */
     es_addBuf(url_buf, "?user.name=", sizeof("?user.name=")-1);
     es_addBuf(url_buf, (char* )pWrkrData->pData->user, strlen((char* )pWrkrData->pData->user));
 
-    // extra parameters
+    /* extra parameters */
     es_addBuf(url_buf, op, strlen(op));
 
     return RS_RET_OK;
@@ -313,7 +313,7 @@ httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 
         if (hdr != NULL
                 && hdr[0] != 0) {
-            // non-empty string
+            /* non-empty string */
             headers = curl_slist_append(headers, hdr);
         } else {
             break;
@@ -323,8 +323,6 @@ httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 
     headers = curl_slist_append(headers, "Expect:");
     headers = curl_slist_append(headers, "Transfer-Encoding:");
-
-    //char* host_header = "Host: ";
 
     return headers;
 }
@@ -445,7 +443,7 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
     }
 
-    if (!RS_json_object_object_get_ex(json, "RemoteException", &json)) {
+    if (!json_object_object_get_ex(json, "RemoteException", &json)) {
 	ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
     }
 
@@ -456,17 +454,17 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     const char *str;
     size_t len;
 
-    RS_json_object_object_get_ex(json, "javaClassName", &jobj);
+    json_object_object_get_ex(json, "javaClassName", &jobj);
     str = json_object_get_string(jobj);
     len = strlen(str);
     strncpy(jre->class, str, len);
 
-    RS_json_object_object_get_ex(json, "exception", &jobj);
+    json_object_object_get_ex(json, "exception", &jobj);
     str = json_object_get_string(jobj);
     len = strlen(str);
     strncpy(jre->exception, str, len);
 
-    RS_json_object_object_get_ex(json, "message", &jobj);
+    json_object_object_get_ex(json, "message", &jobj);
     str = json_object_get_string(jobj);
     len = strlen(str);
     strncpy(jre->message, str, len);
@@ -480,45 +478,6 @@ finalize_it:
 }	
 
 
-#if 0
-/**
- * Make a new directory
- * op=MKDIR
- *
- * @param wrkrInstanceData_t *pWrkrData
- * @return rsRetVal
- */
-static rsRetVal
-httpfs_mkdir(wrkrInstanceData_t *pWrkrData)
-{
-    /* 
-    curl -b /tmp/c.tmp -c /tmp/c.tmp 'http://172.16.3.20:14000/webhdfs/v1/tmp/a/a/a/a?user.name=hdfs&recursive=true&op=mkdirs' -X PUT
-    */
-    httpfs_curl_set_put(pWrkrData->curl);
-HTTPFS_CURL_VARS_INIT
-
-    httpfs_set_url(pWrkrData, "&op=mkdirs");
-
-    headers = httpfs_curl_add_header(headers, 0);
-    curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);
-
-    int success = 0;
-
-HTTPFS_CURL_EXEC
-
-    if (response_code == 200) {
-        //&& !strncmp(result->buf, HTTPFS_JSON_BOOLEAN_TRUE, strlen(HTTPFS_JSON_BOOLEAN_TRUE))) {
-        success = 1;
-    }
-
-HTTPFS_CURL_VARS_RELEASE
-    if (success) {
-        return RS_RET_OK;
-    } else {
-        return RS_RET_FALSE;
-    }
-}
-#endif
 
 /**
  * Create a file
@@ -618,46 +577,6 @@ HTTPFS_CURL_VARS_RELEASE
     }
 }
 
-#if 0
-/**
- * Get file content
- * op=OPEN
- *
- * @param wrkrInstanceData_t *pWrkrData
- * @return rsRetVal
- */
-static rsRetVal
-httpfs_get_file(wrkrInstanceData_t *pWrkrData)
-{
-    httpfs_curl_set_get(pWrkrData->curl);
-
-HTTPFS_CURL_VARS_INIT
-
-    httpfs_set_url(pWrkrData, "&op=open");
-
-    headers = httpfs_curl_add_header(headers, 0);
-    curl_easy_setopt(pWrkrData->curl, CURLOPT_HTTPHEADER, headers);
-
-HTTPFS_CURL_EXEC
-
-    int success = 0;
-    if (response_code == 200) {
-        success = 1;
-    } else if (response_code == 404) {
-        /* TODO: 404 ? */
-
-    }
-
-    /* TODO: not success? */
-
-HTTPFS_CURL_VARS_RELEASE
-    if (success) {
-        return RS_RET_OK;
-    } else {
-        return RS_RET_FALSE;
-    }
-}
-#endif
 
 /**
  * httpfs log 
@@ -959,5 +878,3 @@ CODEmodInit_QueryRegCFSLineHdlr
     DBGPRINTF("omhttpfs version %s is initializing\n", OMHTTPFS_VERSION);
 
 ENDmodInit
-
-

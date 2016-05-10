@@ -42,8 +42,6 @@
 #include <netdb.h>
 #include <libestr.h>
 #include <json.h>
-/* For struct json_object_iter, should not be necessary in future versions */
-#include <json_object_private.h>
 #if HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
@@ -1798,9 +1796,115 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
+
+
+static char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
+	const enum tplFormatTypes eFmt,
+	unsigned short *const __restrict__ pbMustBeFreed)
+{
+	struct syslogTime tUTC;
+	char *retbuf = NULL;
+	BEGINfunc
+
+	timeConvertToUTC(pTmIn, &tUTC);
+	struct syslogTime *const pTm = &tUTC;
+
+	switch(eFmt) {
+	case tplFmtDefault:
+		if((retbuf = MALLOC(16)) != NULL) {
+			datetime.formatTimestamp3164(pTm, retbuf, 0);
+		}
+		break;
+	case tplFmtMySQLDate:
+		if((retbuf = MALLOC(15)) != NULL) {
+			datetime.formatTimestampToMySQL(pTm, retbuf);
+		}
+		break;
+        case tplFmtPgSQLDate:
+		if((retbuf = MALLOC(21)) != NULL) {
+                        datetime.formatTimestampToPgSQL(pTm, retbuf);
+                }
+                break;
+	case tplFmtRFC3164Date:
+	case tplFmtRFC3164BuggyDate:
+		if((retbuf = MALLOC(16)) != NULL) {
+			datetime.formatTimestamp3164(pTm, retbuf, (eFmt == tplFmtRFC3164BuggyDate));
+		}
+		break;
+	case tplFmtRFC3339Date:
+		if((retbuf = MALLOC(33)) != NULL) {
+			datetime.formatTimestamp3339(pTm, retbuf);
+		}
+		break;
+	case tplFmtUnixDate:
+		if((retbuf = MALLOC(12)) != NULL) {
+			datetime.formatTimestampUnix(pTm, retbuf);
+		}
+		break;
+	case tplFmtSecFrac:
+		if((retbuf = MALLOC(7)) != NULL) {
+			datetime.formatTimestampSecFrac(pTm, retbuf);
+		}
+		break;
+	case tplFmtWDayName:
+		retbuf = strdup(wdayNames[getWeekdayNbr(pTm)]);
+		break;
+	case tplFmtWDay:
+		retbuf = strdup(one_digit[getWeekdayNbr(pTm)]);
+		break;
+	case tplFmtMonth:
+		retbuf = strdup(two_digits[(int)pTm->month]);
+		break;
+	case tplFmtYear:
+		if(pTm->year >= 1967 && pTm->year <= 2099)
+			retbuf = strdup(years[pTm->year - 1967]);
+		else
+			retbuf = strdup("YEAR OUT OF RANGE(1967-2099)");
+		break;
+	case tplFmtDay:
+		retbuf = strdup(two_digits[(int)pTm->day]);
+		break;
+	case tplFmtHour:
+		retbuf = strdup(two_digits[(int)pTm->hour]);
+		break;
+	case tplFmtMinute:
+		retbuf = strdup(two_digits[(int)pTm->minute]);
+		break;
+	case tplFmtSecond:
+		retbuf = strdup(two_digits[(int)pTm->second]);
+		break;
+	case tplFmtTZOffsHour:
+		retbuf = strdup(two_digits[(int)pTm->OffsetHour]);
+		break;
+	case tplFmtTZOffsMin:
+		retbuf = strdup(two_digits[(int)pTm->OffsetMinute]);
+		break;
+	case tplFmtTZOffsDirection:
+		retbuf = strdup((pTm->OffsetMode == '+')? "+" : "-");
+		break;
+	case tplFmtOrdinal:
+		retbuf = strdup(daysInYear[getOrdinal(pTm)]);
+		break;
+	case tplFmtWeek:
+		retbuf = strdup(two_digits[getWeek(pTm)]);
+		break;
+	}
+
+	if(retbuf == NULL) {
+		retbuf = "internal error: invalid eFmt option or malloc problem";
+		*pbMustBeFreed = 0;
+	} else {
+		*pbMustBeFreed = 1;
+	}
+	ENDfunc
+	return retbuf;
+}
+
+static char *getTimeGenerated(msg_t *const __restrict__ pM,
+	const enum tplFormatTypes eFmt)
 {
 	BEGINfunc
+	struct syslogTime *const pTm = &pM->tRcvdAt;
 	if(pM == NULL)
 		return "";
 
@@ -1812,7 +1916,7 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 0);
+			datetime.formatTimestamp3164(pTm, pM->pszRcvdAt3164, 0);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1823,7 +1927,7 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL);
+			datetime.formatTimestampToMySQL(pTm, pM->pszRcvdAt_MySQL);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_MySQL);
@@ -1834,7 +1938,7 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
                                 MsgUnlock(pM);
                                 return "";
                         }
-                        datetime.formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL);
+                        datetime.formatTimestampToPgSQL(pTm, pM->pszRcvdAt_PgSQL);
                 }
                 MsgUnlock(pM);
                 return(pM->pszRcvdAt_PgSQL);
@@ -1846,7 +1950,7 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 					MsgUnlock(pM);
 					return "";
 				}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164,
+			datetime.formatTimestamp3164(pTm, pM->pszRcvdAt3164,
 						     (eFmt == tplFmtRFC3164BuggyDate));
 		}
 		MsgUnlock(pM);
@@ -1858,14 +1962,14 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339);
+			datetime.formatTimestamp3339(pTm, pM->pszRcvdAt3339);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
 	case tplFmtUnixDate:
 		MsgLock(pM);
 		if(pM->pszRcvdAt_Unix[0] == '\0') {
-			datetime.formatTimestampUnix(&pM->tRcvdAt, pM->pszRcvdAt_Unix);
+			datetime.formatTimestampUnix(pTm, pM->pszRcvdAt_Unix);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_Unix);
@@ -1874,40 +1978,40 @@ static char *getTimeGenerated(msg_t * const pM, enum tplFormatTypes eFmt)
 			MsgLock(pM);
 			/* re-check, may have changed while we did not hold lock */
 			if(pM->pszRcvdAt_SecFrac[0] == '\0') {
-				datetime.formatTimestampSecFrac(&pM->tRcvdAt, pM->pszRcvdAt_SecFrac);
+				datetime.formatTimestampSecFrac(pTm, pM->pszRcvdAt_SecFrac);
 			}
 			MsgUnlock(pM);
 		}
 		return(pM->pszRcvdAt_SecFrac);
 	case tplFmtWDayName:
-		return wdayNames[getWeekdayNbr(&pM->tRcvdAt)];
+		return wdayNames[getWeekdayNbr(pTm)];
 	case tplFmtWDay:
-		return one_digit[getWeekdayNbr(&pM->tRcvdAt)];
+		return one_digit[getWeekdayNbr(pTm)];
 	case tplFmtMonth:
-		return two_digits[(int)pM->tRcvdAt.month];
+		return two_digits[(int)pTm->month];
 	case tplFmtYear:
-		if(pM->tRcvdAt.year >= 1967 && pM->tRcvdAt.year <= 2099)
-			return years[pM->tRcvdAt.year - 1967];
+		if(pTm->year >= 1967 && pTm->year <= 2099)
+			return years[pTm->year - 1967];
 		else
 			return "YEAR OUT OF RANGE(1967-2099)";
 	case tplFmtDay:
-		return two_digits[(int)pM->tRcvdAt.day];
+		return two_digits[(int)pTm->day];
 	case tplFmtHour:
-		return two_digits[(int)pM->tRcvdAt.hour];
+		return two_digits[(int)pTm->hour];
 	case tplFmtMinute:
-		return two_digits[(int)pM->tRcvdAt.minute];
+		return two_digits[(int)pTm->minute];
 	case tplFmtSecond:
-		return two_digits[(int)pM->tRcvdAt.second];
+		return two_digits[(int)pTm->second];
 	case tplFmtTZOffsHour:
-		return two_digits[(int)pM->tRcvdAt.OffsetHour];
+		return two_digits[(int)pTm->OffsetHour];
 	case tplFmtTZOffsMin:
-		return two_digits[(int)pM->tRcvdAt.OffsetMinute];
+		return two_digits[(int)pTm->OffsetMinute];
 	case tplFmtTZOffsDirection:
-		return (pM->tRcvdAt.OffsetMode == '+')? "+" : "-";
+		return (pTm->OffsetMode == '+')? "+" : "-";
 	case tplFmtOrdinal:
-		return daysInYear[getOrdinal(&pM->tRcvdAt)];
+		return daysInYear[getOrdinal(pTm)];
 	case tplFmtWeek:
-		return two_digits[getWeek(&pM->tRcvdAt)];
+		return two_digits[getWeek(pTm)];
 	}
 	ENDfunc
 	return "INVALID eFmt OPTION!";
@@ -2233,7 +2337,7 @@ msgGetJSONMESG(msg_t *__restrict__ const pMsg)
 	json_object_object_add(json, "uuid", jval);
 #endif
 
-	json_object_object_add(json, "$!", pMsg->json);
+	json_object_object_add(json, "$!", json_object_get(pMsg->json));
 
 	pRes = (uchar*) strdup(json_object_get_string(json));
 	json_object_put(json);
@@ -2932,7 +3036,7 @@ msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct jso
 		jroot = global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
 	} else {
-		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
+		DBGPRINTF("msgGetJSONPropJSONorString; invalid property id %d\n",
 			  pProp->id);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
@@ -3248,6 +3352,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 	int iLen;
 	short iOffs;
 	enum tplFormatTypes datefmt;
+	int bDateInUTC;
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -3267,11 +3372,18 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			bufLen = getMSGLen(pMsg);
 			break;
 		case PROP_TIMESTAMP:
-			if (pTpe != NULL)
+			if(pTpe != NULL) {
 				datefmt = pTpe->data.field.eDateFormat;
-			else
+				bDateInUTC = pTpe->data.field.options.bDateInUTC;
+			} else {
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeReported(pMsg, datefmt);
+				bDateInUTC = 0;
+			}
+			if(bDateInUTC) {
+				pRes = (uchar*)getTimeUTC(&pMsg->tTIMESTAMP, datefmt, pbMustBeFreed);
+			} else {
+				pRes = (uchar*)getTimeReported(pMsg, datefmt);
+			}
 			break;
 		case PROP_HOSTNAME:
 			pRes = (uchar*)getHOSTNAME(pMsg);
@@ -3321,11 +3433,18 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			pRes = (uchar*)getSeverityStr(pMsg);
 			break;
 		case PROP_TIMEGENERATED:
-			if (pTpe != NULL)
+			if(pTpe != NULL) {
 				datefmt = pTpe->data.field.eDateFormat;
-			else
+				bDateInUTC = pTpe->data.field.options.bDateInUTC;
+			} else {
 				datefmt = tplFmtDefault;
-			pRes = (uchar*)getTimeGenerated(pMsg, datefmt);
+				bDateInUTC = 0;
+			}
+			if(bDateInUTC) {
+				pRes = (uchar*)getTimeUTC(&pMsg->tRcvdAt, datefmt, pbMustBeFreed);
+			} else {
+				pRes = (uchar*)getTimeGenerated(pMsg, datefmt);
+			}
 			break;
 		case PROP_PROGRAMNAME:
 			pRes = getProgramName(pMsg, LOCK_MUTEX);
@@ -3497,7 +3616,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			} else {
 				const char *jstr;
 				MsgLock(pMsg);
-#ifdef HAVE_JSON_OBJECT_TO_JSON_STRING_EXT
 				int jflag = 0;
 				if(pProp->id == PROP_CEE_ALL_JSON) {
 					jflag = JSON_C_TO_STRING_SPACED;
@@ -3505,9 +3623,6 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 					jflag = JSON_C_TO_STRING_PLAIN;
 				}
 				jstr = json_object_to_json_string_ext(pMsg->json, jflag);
-#else
-				jstr = json_object_to_json_string(pMsg->json);
-#endif
 				MsgUnlock(pMsg);
 				if(jstr == NULL) {
 					RET_OUT_OF_MEMORY;
@@ -3805,7 +3920,15 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 			if(iTo > 0)
 				--iTo;
 		}
-		if(iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
+		if(iFrom >= bufLen) {
+			DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n",
+				iFrom, bufLen);
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = (uchar*) "";
+			*pbMustBeFreed = 0;
+			bufLen = 0;
+		} else if(iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
 			/* in this case, the requested string is a superset of what we already have,
 			 * so there is no need to do any processing. This is a frequent case for size-limited
 			 * fields like TAG in the default forwarding template (so it is a useful optimization
@@ -4145,6 +4268,65 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 		}
 	}
 
+	/* Now everything is squased as much as possible and more or less ready to
+	 * go. This is the perfect place to compress any remaining spaces, if so
+	 * instructed by the user/config.
+	 */
+	if(pTpe->data.field.options.bCompressSP) {
+		int needCompress = 0;
+		int hadSP = 0;
+		uchar *pB;
+		if(*pbMustBeFreed == 0) {
+			for(pB = pRes ; *pB && needCompress == 0 ; ++pB) {
+				if(*pB == ' ') {
+					if(hadSP) {
+						uchar *const tmp = ustrdup(pRes);
+						if(tmp == NULL)
+							/* better not compress than
+							 * loose message. */
+							break;
+						*pbMustBeFreed = 1;
+						pRes = tmp;
+						needCompress = 1;
+					} else {
+						hadSP = 1;
+					}
+				}
+			}
+		} else {
+			/* If we can modify the buffer in any case, we
+			 * do NOT check if we actually need to compress,
+			 * but "just do it" - that's the quickest way
+			 * to get it done.
+			 */
+			needCompress = 1;
+		}
+		if(needCompress) {
+			hadSP = 0;
+			uchar *pDst = pRes;
+			int needCopy = 0;
+			for(pB = pRes ; *pB ; ++pB) {
+				if(*pB == ' ') {
+					if(hadSP) {
+						needCopy = 1;
+					}  else {
+						hadSP = 1;
+						if(needCopy)
+							*pDst = *pB;
+						++pDst;
+					}
+				} else {
+					hadSP = 0;
+					if(needCopy)
+						*pDst = *pB;
+					++pDst;
+				}
+			}
+			*pDst = '\0';
+			bufLen = pDst - pRes;
+		}
+	}
+
 	/* finally, we need to check if the property should be formatted in CSV or JSON.
 	 * For CSV we use RFC 4180, and always use double quotes. As of this writing,
 	 * this should be the last action carried out on the property, but in the
@@ -4293,11 +4475,7 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 
 			err = tokener->err;
 			if(err != json_tokener_continue)
-#				if HAVE_JSON_TOKENER_ERROR_DESC
-					errMsg = json_tokener_error_desc(err);
-#				else
-					errMsg = json_tokener_errors[err];
-#				endif
+				errMsg = json_tokener_error_desc(err);
 			else
 				errMsg = "Unterminated input";
 		} else if(!json_object_is_type(json, json_type_object))
@@ -4311,8 +4489,12 @@ MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ con
 		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 	}
  
-	json_object_object_foreach(json, name, val) {
-		msgSetPropViaJSON(pMsg, name, val, 0);
+	struct json_object_iterator it = json_object_iter_begin(json);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		msgSetPropViaJSON(pMsg, json_object_iter_peek_name(&it),
+			json_object_iter_peek_value(&it), 0);
+		json_object_iter_next(&it);
 	}
 	json_object_put(json);
 
@@ -4368,7 +4550,7 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
         if (errno == 0 && array_idx_num_end_discovered == array_idx_end) {
             memcpy(namebuf, key, array_idx_start - key);
             namebuf[array_idx_start - key] = '\0';
-            json_bool found_obj = RS_json_object_object_get_ex(root, namebuf, &arr);
+            json_bool found_obj = json_object_object_get_ex(root, namebuf, &arr);
             if (found_obj && json_object_is_type(arr, json_type_array)) {
                 int len = json_object_array_length(arr);
                 if (len > idx) {
@@ -4379,7 +4561,7 @@ static json_bool jsonVarExtract(struct json_object* root, const char *key, struc
             }
         }
     }
-    return RS_json_object_object_get_ex(root, key, value);
+    return json_object_object_get_ex(root, key, value);
 }
 
 
@@ -4439,11 +4621,13 @@ jsonMerge(struct json_object *existing, struct json_object *json)
 {
 	/* TODO: check & handle duplicate names */
 	DEFiRet;
-	struct json_object_iter it;
 
-	json_object_object_foreachC(json, it) {
-		json_object_object_add(existing, it.key,
-			json_object_get(it.val));
+	struct json_object_iterator it = json_object_iter_begin(json);
+	struct json_object_iterator itEnd = json_object_iter_end(json);
+	while (!json_object_iter_equal(&it, &itEnd)) {
+		json_object_object_add(existing, json_object_iter_peek_name(&it),
+			json_object_get(json_object_iter_peek_value(&it)));
+		json_object_iter_next(&it);
 	}
 	/* note: json-c does ref counting. We added all descandants refcounts
 	 * in the loop above. So when we now free(_put) the root object, only
@@ -4657,7 +4841,6 @@ static struct json_object *
 jsonDeepCopy(struct json_object *src)
 {
 	struct json_object *dst = NULL, *json;
-	struct json_object_iter it;
 	int arrayLen, i;
 
 	if(src == NULL) goto done;
@@ -4670,20 +4853,19 @@ jsonDeepCopy(struct json_object *src)
 		dst = json_object_new_double(json_object_get_double(src));
 		break;
 	case json_type_int:
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 		dst = json_object_new_int64(json_object_get_int64(src));
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-		dst = json_object_new_int(json_object_get_int(src));
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case json_type_string:
 		dst = json_object_new_string(json_object_get_string(src));
 		break;
 	case json_type_object:
 		dst = json_object_new_object();
-		json_object_object_foreachC(src, it) {
-			json = jsonDeepCopy(it.val);
-			json_object_object_add(dst, it.key, json);
+		struct json_object_iterator it = json_object_iter_begin(src);
+		struct json_object_iterator itEnd = json_object_iter_end(src);
+		while (!json_object_iter_equal(&it, &itEnd)) {
+			json = jsonDeepCopy(json_object_iter_peek_value(&it));
+			json_object_object_add(dst, json_object_iter_peek_name(&it), json);
+			json_object_iter_next(&it);
 		}
 		break;
 	case json_type_array:
@@ -4717,11 +4899,7 @@ msgSetJSONFromVar(msg_t * const pMsg, uchar *varname, struct var *v, int force_r
 		free(cstr);
 		break;
 	case 'N':/* number (integer) */
-#ifdef HAVE_JSON_OBJECT_NEW_INT64
 		json = json_object_new_int64(v->d.n);
-#else /* HAVE_JSON_OBJECT_NEW_INT64 */
-		json = json_object_new_int((int) v->d.n);
-#endif /* HAVE_JSON_OBJECT_NEW_INT64 */
 		break;
 	case 'J':/* native JSON */
 		json = jsonDeepCopy(v->d.json);

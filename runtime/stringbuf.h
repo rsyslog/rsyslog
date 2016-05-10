@@ -163,7 +163,7 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis);
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
-rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz);
+rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar* psz);
 
 /**
  * Append a string to the buffer.
@@ -171,7 +171,7 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz);
  * \param psz pointer to string to be appended. Must not be NULL.
  * \param iStrLen the length of the string pointed to by psz
  */
-rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen);
+rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen);
 
 /**
  * Append a printf-style formated string to the buffer.

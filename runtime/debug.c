@@ -496,52 +496,6 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 }
 
 
-/* report trylock on a mutex and add it to the mutex log */
-static inline void dbgMutexPreTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
-{
-   dbgMutLog_t *pHolder;
-   char pszBuf[128];
-   char pszHolderThrdName[64];
-   char *pszHolder;
-
-   pthread_mutex_lock(&mutMutLog);
-   pHolder = dbgMutLogFindHolder(pmut);
-   dbgMutLogAddEntry(pmut, MUTOP_TRYLOCK, pFuncDB, ln);
-
-   if(pHolder == NULL)
-      pszHolder = "[NONE]";
-   else {
-      dbgGetThrdName(pszHolderThrdName, sizeof(pszHolderThrdName), pHolder->thrd, 1);
-      snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
-      pszHolder = pszBuf;
-   }
-
-   if(bPrintMutexAction)
-      dbgprintf("%s:%d:%s: mutex %p trying to get lock, held by %s\n", pFuncDB->file, ln, pFuncDB->func, (void*)pmut, pszHolder);
-   pthread_mutex_unlock(&mutMutLog);
-}
-
-
-/* report attempted mutex lock */
-static inline void dbgMutexTryLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
-{
-   dbgMutLog_t *pLog;
-
-   pthread_mutex_lock(&mutMutLog);
-
-   /* find and delete "trylock" entry */
-   pLog = dbgMutLogFindSpecific(pmut, MUTOP_TRYLOCK, pFuncDB);
-   assert(pLog != NULL);
-   dbgMutLogDelEntry(pLog);
-
-   /* add "lock" entry */
-   dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
-   dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
-   pthread_mutex_unlock(&mutMutLog);
-   if(bPrintMutexAction)
-      dbgprintf("%s:%d:%s: mutex %p aquired\n", pFuncDB->file, lockLn, pFuncDB->func, (void*)pmut);
-}
-
 
 /* if we unlock, we just remove the lock aquired entry from the log list */
 static inline void dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
