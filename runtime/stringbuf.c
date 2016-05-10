@@ -281,6 +281,10 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 	memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
 	pThis->iStrLen += iStrLen;
 
+	/* reset any cached sz string */
+	free(pThis->pszBuf);
+	pThis->pszBuf = NULL;
+
 finalize_it:
 	RETiRet;
 }
