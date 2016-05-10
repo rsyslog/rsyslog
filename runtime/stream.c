@@ -873,12 +873,12 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 		} else {
 			if(pThis->prevMsgSegment != NULL) {
 				/* may be NULL in initial poll! */
-				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 				if(bEscapeLF) {
 					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
 				} else {
 					cstrAppendChar(pThis->prevMsgSegment, '\n');
 				}
+				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 				/* we could do this faster, but for now keep it simple */
 
 			}
