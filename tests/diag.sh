@@ -60,6 +60,7 @@ case $1 in
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		if [ "x$2" != "x" ]; then
 			echo "------------------------------------------------------------"
 			echo "Test: $0"
@@ -192,6 +193,7 @@ case $1 in
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
+			echo startup: pid file not yet found
 			./msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
@@ -203,6 +205,12 @@ case $1 in
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
+			ps -p `cat rsyslog$2.pid`
+			if [ $? -ne 0 ]
+			then
+			   echo "ABORT! rsyslog pid no longer active during startup!"
+			   . $srcdir/diag.sh error-exit 1 stacktrace
+			fi
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
 			then
@@ -589,9 +597,8 @@ case $1 in
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
-		# our $2 is the to-be-used exit code.
-		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
-			touch IN_AUTO_DEBUG
+		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
+		if [[ "$3" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
 			if [ -e core* ]
 			then
 				echo trying to analyze core for main rsyslogd binary
@@ -606,7 +613,9 @@ case $1 in
 				CORE=
 				rm gdb.in
 			fi
-
+		fi
+		if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
+			touch IN_AUTO_DEBUG
 			# OK, we have the testname and can re-run under valgrind
 			echo re-running under valgrind control
 			current_test="./$(basename $0)" # this path is probably wrong -- theinric
