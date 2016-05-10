@@ -193,7 +193,6 @@ case $1 in
    'wait-startup') # wait for rsyslogd startup ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
-			echo startup: pid file not yet found
 			./msleep 100 # wait 100 milliseconds
 			let "i++"
 			if test $i -gt $TB_TIMEOUT_STARTSTOP
