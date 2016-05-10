@@ -96,7 +96,7 @@ int containsGlobWildcard(char *str);
 void seedRandomNumber();
 #define MAX_RANDOM_NUMBER RAND_MAX
 long int randomNumber();
-long currentTimeMills();
+long long currentTimeMills();
 
 /* mutex operations */
 /* some useful constants */

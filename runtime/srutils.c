@@ -428,7 +428,7 @@ timeoutComp(struct timespec *pt, long iTimeout)
 	return RS_RET_OK; /* so far, this is static... */
 }
 
-long
+long long
 currentTimeMills() {
 #	if _POSIX_TIMERS > 0
 	struct timespec tm;
@@ -444,7 +444,7 @@ currentTimeMills() {
 	tm.tv_nsec = tv.tv_usec * 1000;
 #	endif
 
-	return tm.tv_sec * 1000 + (tm.tv_sec / 1000000);
+	return ((long long) tm.tv_sec) * 1000 + (tm.tv_nsec / 1000000);
 }
 
 

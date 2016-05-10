@@ -86,7 +86,7 @@ STATSCOUNTER_DEF(actualArtificialDelayMs, mutActualArtificialDelayMs)
 STATSCOUNTER_DEF(delayInvocationCount, mutDelayInvocationCount)
 
 static sem_t statsReportingBlocker;
-static long statsReportingBlockStartTimeMs = 0;
+static long long statsReportingBlockStartTimeMs = 0;
 static int allowOnlyOnce = 0;
 DEF_ATOMIC_HELPER_MUT(mutAllowOnlyOnce);
 pthread_mutex_t mutStatsReporterWatch;
@@ -356,7 +356,7 @@ finalize_it:
 static void
 imdiag_statsReadCallback(statsobj_t __attribute__((unused)) *ignore_stats,
 						   void __attribute__((unused)) *ignore_ctx) {
-	long waitStartTimeMs = currentTimeMills();
+	long long waitStartTimeMs = currentTimeMills();
 	sem_wait(&statsReportingBlocker);
 	long delta = currentTimeMills() - waitStartTimeMs;
 	if (ATOMIC_DEC_AND_FETCH(&allowOnlyOnce, &mutAllowOnlyOnce) < 0) {
