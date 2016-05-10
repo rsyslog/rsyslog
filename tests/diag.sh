@@ -257,6 +257,7 @@ case $1 in
 		;;
    'wait-shutdown-vg')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
+		sleep 1
 		wait `cat rsyslog$2.pid`
 		export RSYSLOGD_EXIT=$?
 		echo rsyslogd run exited with $RSYSLOGD_EXIT
@@ -308,7 +309,6 @@ case $1 in
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
 		cp -v rsyslog$2.pid rsyslog$2.pid.save
-		./msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
