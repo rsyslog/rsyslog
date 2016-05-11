@@ -29,6 +29,8 @@ used.
 -  **timeout** (not mandatory, default 90)
    Timeout for relp sessions. If set too low, valid sessions may be
    considered dead and tried to recover.
+-  **conn.timeout** (not mandatory, default 10)
+   Timeout for the socket connection.
 -  **windowSize** (not mandatory, default 0)
    This is an **expert parameter**. It permits to override the RELP
    window size being used by the client. Changing the window size has
