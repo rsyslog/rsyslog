@@ -3,8 +3,11 @@ source /etc/lsb-release
 # the following packages are not yet available via travis package
 sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
-sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev liblognorm1-dev 
+sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev liblognorm1-dev \
+	libcurl4-gnutls-dev
 sudo apt-get install -qq python-docutils
+
+if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
 sudo apt-get install -qq --force-yes libqpid-proton3-dev
