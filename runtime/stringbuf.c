@@ -505,7 +505,7 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 	
 	pThis->iStrLen -= nTrunc;
 
-	if(pThis->pszBuf != NULL) {
+	if(pThis->pszBuf != NULL && pThis->szStale == 0) {
 		/* in this case, we adjust the psz representation
 		 * by writing a new \0 terminator - this is by far
 		 * the fastest way and outweights the additional memory
@@ -537,6 +537,15 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	if(i != (int) pThis->iStrLen) {
 		pThis->iStrLen = i;
 		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
+
+		if(pThis->pszBuf != NULL && pThis->szStale == 0) {
+			/* in this case, we adjust the psz representation
+			 * by writing a new \0 terminator - this is by far
+			 * the fastest way and outweights the additional memory
+			 * required.
+			 */
+			 pThis->pszBuf[pThis->iStrLen] = '\0';
+		}
 	}
 
 done:	return RS_RET_OK;
