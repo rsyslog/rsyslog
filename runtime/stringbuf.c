@@ -281,6 +281,10 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 	memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
 	pThis->iStrLen += iStrLen;
 
+	/* reset any cached sz string */
+	free(pThis->pszBuf);
+	pThis->pszBuf = NULL;
+
 finalize_it:
 	RETiRet;
 }
@@ -530,6 +534,15 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	if(i != (int) pThis->iStrLen) {
 		pThis->iStrLen = i;
 		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
+
+		if(pThis->pszBuf != NULL) {
+			/* in this case, we adjust the psz representation
+			 * by writing a new \0 terminator - this is by far
+			 * the fastest way and outweights the additional memory
+			 * required.
+			 */
+			 pThis->pszBuf[pThis->iStrLen] = '\0';
+		}
 	}
 
 done:	return RS_RET_OK;

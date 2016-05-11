@@ -32,6 +32,7 @@
 #ifndef _STRINGBUF_H_INCLUDED__
 #define _STRINGBUF_H_INCLUDED__ 1
 
+#include <stdlib.h>
 #include <assert.h>
 #include <libestr.h>
 
@@ -82,6 +83,10 @@ static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 
 	/* ok, when we reach this, we have sufficient memory */
 	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+	/* reset any cached sz string */
+	free(pThis->pszBuf);
+	pThis->pszBuf = NULL;
 
 finalize_it:
 	return iRet;
