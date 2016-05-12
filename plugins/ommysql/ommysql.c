@@ -224,7 +224,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		/* check unix socket */
 		if (pData->dbsrv[0] == '/') {
 			size_t pathlen = strlen(pData->dbsrv);
-			memset(pData->dbusock, 0, _DB_MAXFILEAPTH+1)
+			memset(pData->dbusock, 0, _DB_MAXFILEAPTH+1);
 
 				if (pathlen > _DB_MAXFILEAPTH)
 					strncpy(pData->dbusock, pData->dbsrv, _DB_MAXFILEAPTH);
