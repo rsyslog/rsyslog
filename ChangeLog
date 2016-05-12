@@ -15,6 +15,8 @@ Version 8.19.0 [v8-stable] 2016-05-31
   had not already terminated by itself. This could cause various
   cleanup to not be done. This affected e.g. imjournal.
   closes https://github.com/rsyslog/rsyslog/issues/882
+- bugfix dynstats: do not leak file handles
+  Thanks to Janmejay Singh for the patch.
 - bugfix omelasticsearch: disable libCURL signal handling
   previously, this could lead to segfaults on connection timeout
   see also https://github.com/rsyslog/rsyslog/pull/1007
