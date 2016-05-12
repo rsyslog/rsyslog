@@ -229,7 +229,7 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 				if (pathlen > _DB_MAXFILEAPTH)
 					strncpy(pData->dbusock, pData->dbsrv, _DB_MAXFILEAPTH);
 				else
-					strncpy(pData->dbusock, pData->dbsrv);
+					strcpy(pData->dbusock, pData->dbsrv);
 			memset(pData->dbsrv, 0, MAXHOSTNAMELEN+1);
 			strcpy(pData->dbsrv, "localhost");
 		}
