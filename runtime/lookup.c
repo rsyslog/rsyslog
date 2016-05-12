@@ -828,7 +828,7 @@ lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
 	int eno;
 	char errStr[1024];
 	char *iobuf = NULL;
-	int fd;
+	int fd = -1;
 	ssize_t nread;
 	struct stat sb;
 	DEFiRet;
@@ -876,6 +876,9 @@ lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
 	CHKiRet(lookupBuildTable(pThis, json, name));
 
 finalize_it:
+	if (fd != -1) {
+		close(fd);
+	}
 	free(iobuf);
 	if(tokener != NULL)
 		json_tokener_free(tokener);
