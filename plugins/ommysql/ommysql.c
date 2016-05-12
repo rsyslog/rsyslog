@@ -60,6 +60,7 @@ typedef struct _instanceData {
 	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+	char	dbusock[_DB_MAXFILEAPTH+1];	/* DB Unix socket path */
 	uchar   *configfile;			/* MySQL Client Configuration File */
 	uchar   *configsection;		/* MySQL Client Configuration Section */
 	uchar	*tplName;			/* format template to use */
@@ -219,6 +220,20 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 			}
 		}
 		/* Connect to database */
+
+		/* check unix socket */
+		if (pData->dbsrv[0] == '/') {
+			size_t pathlen = strlen(pData->dbsrv);
+			memset(pData->dbusock, 0, _DB_MAXFILEAPTH+1)
+
+				if (pathlen > _DB_MAXFILEAPTH)
+					strncpy(pData->dbusock, pData->dbsrv, _DB_MAXFILEAPTH);
+				else
+					strncpy(pData->dbusock, pData->dbsrv);
+			memset(pData->dbsrv, 0, MAXHOSTNAMELEN+1);
+			strcpy(pData->dbsrv, "localhost");
+		}
+
 		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
 				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);

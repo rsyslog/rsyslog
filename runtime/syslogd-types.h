@@ -43,6 +43,7 @@
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
 #define	_DB_MAXPWDLEN	128 	/* maximum number of user's pass */
+#define	_DB_MAXFILEAPTH	2048	/* maximun size of file path */
 #define _DB_DELAYTIMEONERROR	20	/* If an error occur we stop logging until
 					   a delayed time is over */
 
