@@ -104,20 +104,20 @@ static struct cnfparamblk actpblk = {
 
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
-    putenv ("ZSYS_SIGHANDLER=false");
+    putenv("ZSYS_SIGHANDLER=false");
 	pData->sock = zsock_new(pData->sockType);
-	if (!pData->sock) {
+	if(!pData->sock) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
 				"omczmq: new socket failed for endpoints: %s",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
-	zsock_set_sndtimeo (pData->sock, pData->sendTimeout);
+	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
 	if(runModConf->authType) {	
 		if (!strcmp((const char *)runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
-			if (!serverCert) {
+			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -127,9 +127,9 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
 		} 
-		else if (!strcmp((const char *)runModConf->authType, "CURVECLIENT")) {
+		else if(!strcmp((const char *)runModConf->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
-			if (!serverCert) {
+			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -137,19 +137,20 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			const char *server_key = zcert_public_txt(serverCert);
 			zcert_destroy(&serverCert);
 			zsock_set_curve_serverkey(pData->sock, server_key);
-
+			
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
-			if (!clientCert) {
+			if(!clientCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
 					runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
+			
 			zcert_apply(clientCert, pData->sock);
 			zcert_destroy(&clientCert);
 		}
 	}
 
-	switch (pData->sockType) {
+	switch(pData->sockType) {
 		case ZMQ_PUB:
 #if defined(ZMQ_RADIO)
 		case ZMQ_RADIO:
@@ -169,7 +170,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 
 	int rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);
-	if (rc == -1) {
+	if(rc == -1) {
 		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -187,16 +188,16 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 	}
 
 #if defined(ZMQ_RADIO)
-	if ((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
+	if((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
 #else
-	if (pData->sockType == ZMQ_PUB && pData->topics) {
+	if(pData->sockType == ZMQ_PUB && pData->topics) {
 #endif
 		char *topic = zlist_first(pData->topics);
 
-		while (topic) {
-			if (pData->topicFrame && pData->sockType == ZMQ_SUB) {
+		while(topic) {
+			if(pData->topicFrame && pData->sockType == ZMQ_SUB) {
 				int rc = zstr_sendx(pData->sock, topic, (char*)msg, NULL);
-				if (rc != 0) {
+				if(rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
@@ -204,17 +205,17 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 #if defined(ZMQ_RADIO)
 			else if(pData->sockType == ZMQ_RADIO) {
 				zframe_t *frame = zframe_from((char*)msg);
-				if (!frame) {
+				if(!frame) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
 				int rc = zframe_set_group(frame, topic);
-				if (rc != 0) {
+				if(rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
 				rc = zframe_send(&frame, pData->sock, 0);
-				if (rc != 0) {
+				if(rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
@@ -222,7 +223,7 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 #endif
 			else {
 				int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)msg);
-				if (rc != 0) {
+				if(rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
@@ -233,7 +234,7 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 	}
 	else {
 		int rc = zstr_send(pData->sock, (char*)msg);
-		if (rc != 0) {
+		if(rc != 0) {
 			pData->sendError = true;
 			DBGPRINTF("imczmq send error: %d", rc);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -316,11 +317,11 @@ ENDcheckCnf
 BEGINactivateCnf
 CODESTARTactivateCnf
 	runModConf = pModConf;
-	if (runModConf->authenticator == 1) {
-		if (!authActor) {
+	if(runModConf->authenticator == 1) {
+		if(!authActor) {
 			DBGPRINTF("imczmq: starting authActor\n");
 			authActor = zactor_new(zauth, NULL);
-			if (!strcmp((const char *)runModConf->clientCertPath, "*")) {
+			if(!strcmp((const char *)runModConf->clientCertPath, "*")) {
 				zstr_sendx(authActor, "CURVE", CURVE_ALLOW_ANY, NULL);
 			}
 			else {
@@ -352,22 +353,22 @@ CODESTARTsetModCnf
 	}
 
 	for (i=0; i<modpblk.nParams; ++i) {
-		if (!pvals[i].bUsed) {
+		if(!pvals[i].bUsed) {
 			DBGPRINTF("imczmq: pvals[i].bUSed continuing\n");
 			continue;
 		}
-		if (!strcmp(modpblk.descr[i].name, "authenticator")) {
+		if(!strcmp(modpblk.descr[i].name, "authenticator")) {
 			runModConf->authenticator = (int)pvals[i].val.d.n;
 		}
-		else if (!strcmp(modpblk.descr[i].name, "authtype")) {
+		else if(!strcmp(modpblk.descr[i].name, "authtype")) {
 			runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: authtype set to %s\n", runModConf->authType);
 		}
-		else if (!strcmp(modpblk.descr[i].name, "servercertpath")) {
+		else if(!strcmp(modpblk.descr[i].name, "servercertpath")) {
 			runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: serverCertPath set to %s\n", runModConf->serverCertPath);
 		}
-		else if (!strcmp(modpblk.descr[i].name, "clientcertpath")) {
+		else if(!strcmp(modpblk.descr[i].name, "clientcertpath")) {
 			runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 		}
@@ -418,44 +419,44 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 
-	for (i = 0; i < actpblk.nParams; ++i) {
-		if (!pvals[i].bUsed) {
+	for(i = 0; i < actpblk.nParams; ++i) {
+		if(!pvals[i].bUsed) {
 			continue;
 		}
 
-		if (!strcmp(actpblk.descr[i].name, "endpoints")) {
+		if(!strcmp(actpblk.descr[i].name, "endpoints")) {
 			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} 
-		else if (!strcmp(actpblk.descr[i].name, "template")) {
+		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-		else if (!strcmp(actpblk.descr[i].name, "sendtimeout")) {
+		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 		}
-		else if (!strcmp(actpblk.descr[i].name, "socktype")){
+		else if(!strcmp(actpblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(stringType != NULL){
-				if (!strcmp("PUB", stringType)) {
+				if(!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
 				}
 #if defined(ZMQ_RADIO)
-				else if (!strcmp("RADIO", stringType)) {
+				else if(!strcmp("RADIO", stringType)) {
 					pData->sockType = ZMQ_RADIO;
 				}
 #endif
-				else if (!strcmp("PUSH", stringType)) {
+				else if(!strcmp("PUSH", stringType)) {
 					pData->sockType = ZMQ_PUSH;
 				}
 #if defined(ZMQ_SCATTER)
-				else if (!strcmp("SCATTER", stringType)) {
+				else if(!strcmp("SCATTER", stringType)) {
 					pData->sockType = ZMQ_SCATTER;
 				}
 #endif
-				else if (!strcmp("DEALER", stringType)) {
+				else if(!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 				}
 #if defined(ZMQ_CLIENT)
-				else if (!strcmp("CLIENT", stringType)) {
+				else if(!strcmp("CLIENT", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 				}
 #endif
@@ -467,9 +468,9 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
 		} 
-		else if (!strcmp(actpblk.descr[i].name, "topicframe")) {
+		else if(!strcmp(actpblk.descr[i].name, "topicframe")) {
 			int tframe  = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
-			if (tframe == 1) {
+			if(tframe == 1) {
 				pData->topicFrame = true;
 			}
 			else {
@@ -487,7 +488,7 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
 			
-			while (*topics) {
+			while(*topics) {
 				char *delimiter = strchr(topics, ',');
 				if (!delimiter) {
 					delimiter = topics + strlen(topics);
@@ -496,7 +497,7 @@ CODESTARTnewActInst
 				topic[delimiter-topics] = 0;
 				char *current_topic = strdup(topic);
 				zlist_append (pData->topics, current_topic);
-				if (*delimiter == 0) {
+				if(*delimiter == 0) {
 					break;
 				}
 				topics = delimiter + 1;
@@ -528,7 +529,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
-	if (!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
+	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omczmq supports only v6 config format, use: "
 			"action(type=\"omczmq\" serverport=...)");
