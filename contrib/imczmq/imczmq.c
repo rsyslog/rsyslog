@@ -142,7 +142,6 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
 
-	DBGPRINTF("imczmq: creating socket of type %d..\n", iconf->sockType);
 	pData->sock = zsock_new(iconf->sockType);
 	if(!pData->sock) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
@@ -150,6 +149,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
+
 	DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);	
 
 	if(runModConf->authType) {	
@@ -221,18 +221,18 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	int rc = zsock_attach(pData->sock, (const char*)iconf->sockEndpoints,
 			iconf->serverish);
 	if (rc == -1) {
-		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s",
+		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
 				iconf->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	DBGPRINTF("imczmq: attached socket\n");
+
+	DBGPRINTF("imczmq: attached socket to %s\n", iconf->sockEndpoints);
 
 	rc = zlist_append(listenerList, (void *)pData);
 	if(rc != 0) {
-		errmsg.LogError(0, NO_ERRCODE, "could not add listener");
+		errmsg.LogError(0, NO_ERRCODE, "could not append listener");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	DBGPRINTF("imczmq: appended listener\n");
 finalize_it:
 	RETiRet;
 }
@@ -241,7 +241,6 @@ static rsRetVal rcvData(){
 	DEFiRet;
 	
 	if(!listenerList) {
-		DBGPRINTF ("imczmq: creating listenerList\n");
 		listenerList = zlist_new();
 		if(!listenerList) {
 			errmsg.LogError(0, NO_ERRCODE, "could not allocate list");
@@ -253,24 +252,21 @@ static rsRetVal rcvData(){
 	zcert_t *serverCert;
 
 	if(runModConf->authenticator == 1) {
-		DBGPRINTF("imczmq: we are an authenticator\n");
 		authActor = zactor_new(zauth, NULL);
 		zstr_sendx(authActor, "CURVE", runModConf->clientCertPath, NULL);
 		zsock_wait(authActor);
 	} 
-	else  {
-		DBGPRINTF("imczmq: we are not an authenticator\n");
-	}
 
 	instanceConf_t *inst;
-	DBGPRINTF("imczmq: walking configuration tree\n");
 	for(inst = runModConf->root; inst != NULL; inst=inst->next) {
-		DBGPRINTF("imczmq: adding a listener\n");
-		addListener(inst);
+		CHKiRet(addListener(inst));
 	}
-	DBGPRINTF("imczmq: finished adding listeners\n");
 	
 	zpoller_t *poller = zpoller_new(NULL);
+	if(!poller) {
+		errmsg.LogError(0, NO_ERRCODE, "could not create poller");
+			ABORT_FINALIZE(RS_RET_ERR);
+	}
 	DBGPRINTF("imczmq: created poller\n");
 
 	struct listener_t *pData;
@@ -283,14 +279,12 @@ static rsRetVal rcvData(){
 	}
 
 	while(pData) {
-		DBGPRINTF("imczmq: added socket to poller\n");
 		int rc = zpoller_add(poller, pData->sock);
 		if(rc != 0) {
 			errmsg.LogError(0, NO_ERRCODE, "imczmq: could not add "
 						"socket to poller, input not activated.\n");
 			ABORT_FINALIZE(RS_RET_NO_RUN);
 		}
-
 		pData = zlist_next(listenerList);
 	}
 
