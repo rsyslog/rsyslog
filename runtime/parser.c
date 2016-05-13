@@ -4,7 +4,7 @@
  *
  * Module begun 2008-10-09 by Rainer Gerhards (based on previous code from syslogd.c)
  *
- * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -226,18 +226,6 @@ SetModPtr(parser_t *pThis, modInfo_t *pMod)
 }
 
 
-/* Specify if we should do standard message sanitazion before we pass the data
- * down to the parser.
- */
-static rsRetVal
-SetDoSanitazion(parser_t *pThis, int bDoIt)
-{
-	ISOBJ_TYPE_assert(pThis, parser);
-	pThis->bDoSanitazion = bDoIt;
-	return RS_RET_OK;
-}
-
-
 /* Specify if we should do standard PRI parsing before we pass the data
  * down to the parser module.
  */
@@ -291,7 +279,7 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	/* check some features */
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
 	if(localRet == RS_RET_OK){
-		CHKiRet(SetDoSanitazion(pParser, RSTRUE));
+		pParser->bDoSanitazion = RSTRUE;
 	}
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
 	if(localRet == RS_RET_OK){
@@ -716,7 +704,6 @@ CODESTARTobjQueryInterface(parser)
 	pIf->Destruct = parserDestruct;
 	pIf->SetName = SetName;
 	pIf->SetModPtr = SetModPtr;
-	pIf->SetDoSanitazion = SetDoSanitazion;
 	pIf->SetDoPRIParsing = SetDoPRIParsing;
 	pIf->ParseMsg = ParseMsg;
 	pIf->SanitizeMsg = SanitizeMsg;

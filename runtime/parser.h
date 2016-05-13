@@ -1,6 +1,6 @@
 /* header for parser.c
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -49,7 +49,6 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(parser_t **ppThis);
 	rsRetVal (*SetName)(parser_t *pThis, uchar *name);
 	rsRetVal (*SetModPtr)(parser_t *pThis, modInfo_t *pMod);
-	rsRetVal (*SetDoSanitazion)(parser_t *pThis, int);
 	rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
 	rsRetVal (*FindParser)(parser_t **ppThis, uchar*name);
 	rsRetVal (*InitParserList)(parserList_t **pListRoot);
@@ -60,7 +59,10 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SanitizeMsg)(msg_t *pMsg);
 	rsRetVal (*AddDfltParser)(uchar *);
 ENDinterface(parser)
-#define parserCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
+#define parserCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
+/* version changes 
+   2       SetDoSanitization removed, no longer needed
+*/
 
 void printParserList(parserList_t *pList);
 
