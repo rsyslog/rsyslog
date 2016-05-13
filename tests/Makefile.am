@@ -316,6 +316,8 @@ TESTS +=  \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -783,6 +785,8 @@ EXTRA_DIST= \
 	testsuites/manytcp.conf \
 	manyptcp.sh \
 	testsuites/manyptcp.conf \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	imptcp_large.sh \
 	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \
