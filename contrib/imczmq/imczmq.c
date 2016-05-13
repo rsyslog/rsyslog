@@ -358,7 +358,8 @@ static rsRetVal rcvData(){
 
 		pData = zlist_next(listenerList);
 	}
-	
+
+	zframe_t *frame;
 	zsock_t *which = (zsock_t *)zpoller_wait(poller, -1);
 	while (which) {
 		pData = zlist_first(listenerList);
@@ -370,7 +371,9 @@ static rsRetVal rcvData(){
 			DBGPRINTF("imczmq: found matching socket\n");
 		}
 
-		char *buf = zstr_recv(which);
+		frame = zframe_recv(which);
+		char *buf = zframe_strdup(frame);
+
 		if (buf == NULL) {
 			DBGPRINTF("imczmq: null buffer\n");
 			continue;
@@ -389,10 +392,11 @@ static rsRetVal rcvData(){
 			submitMsg2(pMsg);
 		}
 
-		zstr_free(&buf);
+		free(buf);
 		which = (zsock_t *)zpoller_wait(poller, -1);
 	}
 finalize_it:
+	zframe_destroy(&frame);
 	zpoller_destroy(&poller);
 	pData = zlist_first(listenerList);
 	while(pData) {
