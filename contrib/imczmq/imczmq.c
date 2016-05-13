@@ -157,8 +157,8 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			DBGPRINTF("imczmq: we are a CURVESERVER\n");	
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
-				errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s",
-					iconf->sockEndpoints);
+				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+					runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 			zsock_set_zap_domain(pData->sock, "global");
@@ -166,8 +166,29 @@ static rsRetVal addListener(instanceConf_t* iconf){
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
 		}
-	} else {
-		DBGPRINTF("imczmq: we are a plain socket\n");
+		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
+			DBGPRINTF("imczmq: we are a CURVECLIENT\n");	
+			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
+			if(!serverCert) {
+				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+					runModConf->serverCertPath);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			const char *server_key = zcert_public_txt(serverCert);
+			zcert_destroy(&serverCert);
+			zsock_set_curve_serverkey(pData->sock, server_key);
+			
+			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
+			if(!clientCert) {
+				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
+					runModConf->clientCertPath);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			
+			zcert_apply(clientCert, pData->sock);
+			zcert_destroy(&clientCert);
+		}
+
 	}
 
 	switch(iconf->sockType) {
