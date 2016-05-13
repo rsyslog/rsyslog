@@ -134,70 +134,6 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal createListener(struct cnfparamvals* pvals) {
-	instanceConf_t* inst;
-	int i;
-	DEFiRet;
-	
-	CHKiRet(createInstance(&inst));
-	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed) {
-			continue;
-		}
-
-		if(!strcmp(inppblk.descr[i].name, "ruleset")) {
-			inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} 
-		else if(!strcmp(inppblk.descr[i].name, "endpoints")) {
-			inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} 
-		else if(!strcmp(inppblk.descr[i].name, "topics")) {
-			inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL);
-		}
-		else if(!strcmp(inppblk.descr[i].name, "socktype")){
-			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if( NULL == stringType ){
-				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
-					"imczmq: '%s' is invalid sockType", stringType);
-				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-			}
-
-			if(!strcmp("PULL", stringType)) {
-				inst->sockType = ZMQ_PULL;
-			}
-#if defined(ZMQ_GATHER)
-			else if(!strcmp("GATHER", stringType)) {
-				inst->sockType = ZMQ_GATHER;
-			}
-#endif
-			else if(!strcmp("SUB", stringType)) {
-				inst->sockType = ZMQ_SUB;
-			}
-#if defined(ZMQ_DISH)
-			else if(!strcmp("DISH", stringType)) {
-				inst->sockType = ZMQ_DISH;
-			}
-#endif
-			else if(!strcmp("ROUTER", stringType)) {
-				inst->sockType = ZMQ_ROUTER;
-			}
-#if defined(ZMQ_SERVER)
-			else if(!strcmp("SERVER", stringType)) {
-				inst->sockType = ZMQ_SERVER;
-			}
-#endif
-			free(stringType);
-		} 
-		else {
-			errmsg.LogError(0, NO_ERRCODE,
-					"imczmq: program error, non-handled "
-					"param '%s'\n", inppblk.descr[i].name);
-		}
-	}
-finalize_it:
-	RETiRet;
-}
-
 static rsRetVal addListener(instanceConf_t* iconf){
 	DEFiRet;
 	
@@ -206,7 +142,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
 
-	DBGPRINTF("imczmq: creating socket of type %d..\n", iconf->sockType);	
+	DBGPRINTF("imczmq: creating socket of type %d..\n", iconf->sockType);
 	pData->sock = zsock_new(iconf->sockType);
 	if(!pData->sock) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
@@ -291,15 +227,6 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 	DBGPRINTF("imczmq: attached socket\n");
 
-	if(!listenerList) {
-		DBGPRINTF ("imczmq: creating listenerList\n");
-		listenerList = zlist_new();
-		if(!listenerList) {
-			errmsg.LogError(0, NO_ERRCODE, "could not allocate list");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	}
-
 	rc = zlist_append(listenerList, (void *)pData);
 	if(rc != 0) {
 		errmsg.LogError(0, NO_ERRCODE, "could not add listener");
@@ -313,6 +240,15 @@ finalize_it:
 static rsRetVal rcvData(){
 	DEFiRet;
 	
+	if(!listenerList) {
+		DBGPRINTF ("imczmq: creating listenerList\n");
+		listenerList = zlist_new();
+		if(!listenerList) {
+			errmsg.LogError(0, NO_ERRCODE, "could not allocate list");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
 	zactor_t *authActor;
 	zcert_t *serverCert;
 
@@ -337,7 +273,8 @@ static rsRetVal rcvData(){
 	zpoller_t *poller = zpoller_new(NULL);
 	DBGPRINTF("imczmq: created poller\n");
 
-	struct listener_t *pData;	
+	struct listener_t *pData;
+
 	pData = zlist_first(listenerList);
 	if(!pData) {
 		errmsg.LogError(0, NO_ERRCODE, "imczmq: no listeners were "
@@ -569,22 +506,80 @@ ENDfreeCnf
 
 BEGINnewInpInst
 	struct cnfparamvals* pvals;
+	instanceConf_t* inst;
+	int i;
 CODESTARTnewInpInst
-
 	DBGPRINTF("newInpInst (imczmq)\n");
-	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	
+	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	if(NULL==pvals) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
 						"imczmq: required parameters are missing\n");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	DBGPRINTF("imczmq: input param blk:\n");
-	cnfparamsPrint(&inppblk, pvals);
+	if(Debug) {
+		DBGPRINTF("imczmq: input param blk:\n");
+		cnfparamsPrint(&inppblk, pvals);
+	}
 	
-	CHKiRet(createListener(pvals));
+	CHKiRet(createInstance(&inst));
+	
+	for(i = 0 ; i < inppblk.nParams ; ++i) {
+		if(!pvals[i].bUsed) {
+			continue;
+		}
 
+		if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+			inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} 
+		else if(!strcmp(inppblk.descr[i].name, "endpoints")) {
+			inst->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} 
+		else if(!strcmp(inppblk.descr[i].name, "topics")) {
+			inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+		else if(!strcmp(inppblk.descr[i].name, "socktype")){
+			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if( NULL == stringType ){
+				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+					"imczmq: '%s' is invalid sockType", stringType);
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
+
+			if(!strcmp("PULL", stringType)) {
+				inst->sockType = ZMQ_PULL;
+			}
+#if defined(ZMQ_GATHER)
+			else if(!strcmp("GATHER", stringType)) {
+				inst->sockType = ZMQ_GATHER;
+			}
+#endif
+			else if(!strcmp("SUB", stringType)) {
+				inst->sockType = ZMQ_SUB;
+			}
+#if defined(ZMQ_DISH)
+			else if(!strcmp("DISH", stringType)) {
+				inst->sockType = ZMQ_DISH;
+			}
+#endif
+			else if(!strcmp("ROUTER", stringType)) {
+				inst->sockType = ZMQ_ROUTER;
+			}
+#if defined(ZMQ_SERVER)
+			else if(!strcmp("SERVER", stringType)) {
+				inst->sockType = ZMQ_SERVER;
+			}
+#endif
+			free(stringType);
+
+		} 
+		else {
+			errmsg.LogError(0, NO_ERRCODE,
+					"imczmq: program error, non-handled "
+					"param '%s'\n", inppblk.descr[i].name);
+		}
+	}
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 	cnfparamvalsDestruct(pvals, &inppblk);
