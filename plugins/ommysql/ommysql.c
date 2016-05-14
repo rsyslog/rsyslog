@@ -224,9 +224,9 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 
 		/* check unix socket */
 		if (pData->dbsrv[0] == '/') {
-			strcpy(usock, pData->f_dbsrv);
+			strcpy(usock, pData->dbsrv);
 			usock_p = usock;
-			strcpy(pData->f_dbsrv, "localhost");
+			strcpy(pData->dbsrv, "localhost");
 		}
 
 		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
