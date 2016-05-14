@@ -399,17 +399,8 @@ uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 				 */
 			}
 			else { /* we can create the sz String */
-				/* now copy it while doing a sanity check. The string might contain a
-				 * \0 byte. There is no way how a sz string can handle this. For
-				 * the time being, we simply replace it with space - something that
-				 * could definitely be improved (TODO).
-				 * 2005-09-15 rgerhards
-				 */
 				for(i = 0 ; i < pThis->iStrLen ; ++i) {
-					if(pThis->pBuf[i] == '\0')
-						pThis->pszBuf[i] = ' ';
-					else
-						pThis->pszBuf[i] = pThis->pBuf[i];
+					pThis->pszBuf[i] = pThis->pBuf[i];
 				}
 				/* write terminator... */
 				pThis->pszBuf[i] = '\0';
