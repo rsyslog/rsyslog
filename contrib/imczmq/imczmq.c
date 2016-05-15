@@ -312,6 +312,9 @@ static rsRetVal rcvData(){
 	zframe_t *frame;
 	zsock_t *which = (zsock_t *)zpoller_wait(poller, -1);
 	while(which) {
+		if (zpoller_terminated(poller)) {
+				break;
+		}
 		pData = zlist_first(listenerList);
 		while(pData->sock != which) {
 			pData = zlist_next(listenerList);
@@ -372,8 +375,8 @@ BEGINwillRun
 CODESTARTwillRun
 	CHKiRet(prop.Construct(&s_namep));
 	CHKiRet(prop.SetString(s_namep,
-				UCHAR_CONSTANT("imczmq"),
-				   sizeof("imczmq") - 1));
+		UCHAR_CONSTANT("imczmq"),
+		sizeof("imczmq") - 1));
 
 	CHKiRet(prop.ConstructFinalize(s_namep));
 

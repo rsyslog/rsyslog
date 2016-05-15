@@ -115,7 +115,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
 	if(runModConf->authType) {	
-		if (!strcmp((const char *)runModConf->authType, "CURVESERVER")) {
+		if (!strcmp(runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -127,7 +127,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
 		} 
-		else if(!strcmp((const char *)runModConf->authType, "CURVECLIENT")) {
+		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -321,7 +321,7 @@ CODESTARTactivateCnf
 		if(!authActor) {
 			DBGPRINTF("imczmq: starting authActor\n");
 			authActor = zactor_new(zauth, NULL);
-			if(!strcmp((const char *)runModConf->clientCertPath, "*")) {
+			if(!strcmp(runModConf->clientCertPath, "*")) {
 				zstr_sendx(authActor, "CURVE", CURVE_ALLOW_ANY, NULL);
 			}
 			else {
