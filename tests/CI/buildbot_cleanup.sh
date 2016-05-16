@@ -3,4 +3,4 @@
 # make check. This is useful if make check is terminated due to timeout,
 # in which case autotools unfortunately does not provide us a way to
 # gather error information.
-ls tests/*.sh.log | xargs cat
+rm -f tests/*.sh.log
