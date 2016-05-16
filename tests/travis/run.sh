@@ -34,7 +34,7 @@ env
 export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1 --enable-omrelp-default-port=13515 $JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK $ES_TEST_CONFIGURE_OPT"
 ./configure  $CONFIG_FLAGS
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
-make
+make -j
 
 if [ "x$CHECK" == "xYES" ]
 then
@@ -55,10 +55,10 @@ then
 fi
 
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
-if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make && cd .. ; fi
+if [ "x$STAT_AN" == "xYES" ] ; then cd compat; $SCAN_BUILD --status-bugs make -j && cd .. ; fi
 # we now build those components that we know to need some more work
 # they will not be included in the later static analyzer run. But by
 # explicitely listing the modules which do not work, we automatically
 # get new modules/files covered.
-if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
-if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --status-bugs make ; fi
+if [ "x$STAT_AN" == "xYES" ] ; then cd runtime; make - lmnet_la-net.lo libgcry_la-libgcry.lo ; cd .. ;  fi
+if [ "x$STAT_AN" == "xYES" ] ; then $SCAN_BUILD --status-bugs make -j ; fi
