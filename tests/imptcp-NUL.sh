@@ -12,8 +12,9 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 			         file="rsyslog.out.log")
 '
 . $srcdir/diag.sh startup
-echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message' | tr X '\000' | nc 127.0.0.1 13514
-echo '<167>Mar  6 16:57:54 172.20.245.8 Xtest: msgnum:1 test message' | tr X '\000' | nc 127.0.0.1 13514
+echo '<167>Mar  6 16:57:54 172.20.245.8 test: msgnum:0 X test message
+<167>Mar  6 16:57:54 172.20.245.8 Xtest: msgnum:1 test message' | tr X '\000' > rsyslog.input
+. $srcdir/diag.sh tcpflood -B -I rsyslog.input
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh seq-check 0 1
