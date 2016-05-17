@@ -66,6 +66,9 @@ TESTS +=  \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	empty-ruleset.sh \
+	imtcp-basic.sh \
+	imtcp-NUL.sh \
+	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
@@ -313,6 +316,8 @@ TESTS +=  \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -761,6 +766,9 @@ EXTRA_DIST= \
 	testsuites/diskqueue-fsync.conf \
 	empty-ruleset.sh \
 	testsuites/empty-ruleset.conf \
+	imtcp-basic.sh \
+	imtcp-NUL.sh \
+	imtcp-NUL-rawmsg.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-vg.sh \
 	testsuites/imtcp-tls-basic.conf \
@@ -777,6 +785,8 @@ EXTRA_DIST= \
 	testsuites/manytcp.conf \
 	manyptcp.sh \
 	testsuites/manyptcp.conf \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	imptcp_large.sh \
 	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \

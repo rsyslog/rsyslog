@@ -61,11 +61,9 @@ case $1 in
 			RS_SORTCMD=sort
 		fi  
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
-		if [ "x$2" != "x" ]; then
-			echo "------------------------------------------------------------"
-			echo "Test: $0"
-			echo "------------------------------------------------------------"
-		fi
+		echo "------------------------------------------------------------"
+		echo "Test: $0"
+		echo "------------------------------------------------------------"
 		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
