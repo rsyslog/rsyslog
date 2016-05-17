@@ -1766,6 +1766,27 @@ AM_CONDITIONAL(ENABLE_OMAMQP1, test x$enable_omamqp1 = xyes)
 
 # END AMQP 1.0 PROTOCOL SUPPORT
 
+# TCL SUPPORT
+
+AC_ARG_ENABLE(omtcl,
+        [AS_HELP_STRING([--enable-omtcl],[Compiles omtcl output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtcl="yes" ;;
+          no) enable_omtcl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtcl) ;;
+         esac],
+        [enable_omtcl=no]
+)
+
+if test "x$enable_omtcl" = "xyes"; then
+	SC_PATH_TCLCONFIG
+	SC_LOAD_TCLCONFIG
+	AC_SUBST(TCL_INCLUDE_SPEC)
+fi
+AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
+
+# END TCL SUPPORT
+
 # man pages
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
@@ -1888,6 +1909,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
+		contrib/omtcl/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1938,6 +1960,7 @@ echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
+echo "    omtcl module will be compiled:            $enable_omtcl"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
