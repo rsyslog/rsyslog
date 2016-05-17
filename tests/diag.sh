@@ -222,7 +222,6 @@ case $1 in
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
 		i=0
-		ls -l rsyslog*
 		out_pid=`cat rsyslog$2.pid.save`
 		if [[ "x$out_pid" == "x" ]]
 		then
@@ -231,7 +230,7 @@ case $1 in
 			terminated=0
 		fi
 		while [[ $terminated -eq 0 ]]; do
-			ps -p $out_pid
+			ps -p $out_pid &> /dev/null
 			if [[ $? != 0 ]]
 			then
 				terminated=1
@@ -306,7 +305,7 @@ case $1 in
 		   echo Shutting down instance 2
 		fi
 		. $srcdir/diag.sh wait-queueempty $2
-		cp -v rsyslog$2.pid rsyslog$2.pid.save
+		cp rsyslog$2.pid rsyslog$2.pid.save
 		./msleep 1000 # wait a bit (think about slow testbench machines!)
 		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
