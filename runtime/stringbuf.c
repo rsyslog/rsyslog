@@ -69,6 +69,7 @@ rsRetVal cstrConstruct(cstr_t **ppThis)
 	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
+	pThis->szStale = 0;
 	*ppThis = pThis;
 
 finalize_it:
@@ -281,6 +282,9 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 	memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
 	pThis->iStrLen += iStrLen;
 
+	/* set flag to re-create sz string */
+	pThis->szStale = 1;
+
 finalize_it:
 	RETiRet;
 }
@@ -391,9 +395,9 @@ uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 		return (uchar*) "";
 
 	if(pThis->pBuf != NULL)
-		if(pThis->pszBuf == NULL) {
+		if(pThis->pszBuf == NULL || pThis->szStale == 1) {
 			/* we do not yet have a usable sz version - so create it... */
-			if((pThis->pszBuf = MALLOC(pThis->iStrLen + 1)) == NULL) {
+		  	if((pThis->pszBuf = (uchar*)realloc(pThis->pszBuf, pThis->iStrLen + 1)) == NULL) {
 				/* TODO: think about what to do - so far, I have no bright
 				 *       idea... rgerhards 2005-09-07
 				 */
@@ -413,6 +417,9 @@ uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 				}
 				/* write terminator... */
 				pThis->pszBuf[i] = '\0';
+
+				/* reset stale flag */
+				pThis->szStale = 0;
 			}
 		}
 
@@ -498,7 +505,7 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 	
 	pThis->iStrLen -= nTrunc;
 
-	if(pThis->pszBuf != NULL) {
+	if(pThis->pszBuf != NULL && pThis->szStale == 0) {
 		/* in this case, we adjust the psz representation
 		 * by writing a new \0 terminator - this is by far
 		 * the fastest way and outweights the additional memory
@@ -530,6 +537,15 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	if(i != (int) pThis->iStrLen) {
 		pThis->iStrLen = i;
 		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
+
+		if(pThis->pszBuf != NULL && pThis->szStale == 0) {
+			/* in this case, we adjust the psz representation
+			 * by writing a new \0 terminator - this is by far
+			 * the fastest way and outweights the additional memory
+			 * required.
+			 */
+			 pThis->pszBuf[pThis->iStrLen] = '\0';
+		}
 	}
 
 done:	return RS_RET_OK;

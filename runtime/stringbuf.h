@@ -43,10 +43,11 @@ typedef struct cstr_s
 #ifndef	NDEBUG
 	rsObjID OID;		/**< object ID */
 #endif
-	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
-	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
-	size_t iBufSize;	/**< current maximum size of the string buffer */
-	size_t iStrLen;		/**< length of the string in characters. */
+	uchar  *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
+	uchar  *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
+	size_t  iBufSize;	/**< current maximum size of the string buffer */
+	size_t  iStrLen;	/**< length of the string in characters. */
+	uint8_t szStale;	/**< flag that indicates that the sz version of the string needs to be re-created */
 } cstr_t;
 
 
@@ -83,6 +84,8 @@ static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 	/* ok, when we reach this, we have sufficient memory */
 	*(pThis->pBuf + pThis->iStrLen++) = c;
 
+	/* set flag to re-create sz string */
+	pThis->szStale = 1;
 finalize_it:
 	return iRet;
 }
