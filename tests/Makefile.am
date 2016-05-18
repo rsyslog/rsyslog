@@ -505,6 +505,11 @@ TESTS += \
 endif
 endif
 
+if ENABLE_OMTCL
+TESTS += \
+	 omtcl.sh
+endif
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1294,7 +1299,8 @@ EXTRA_DIST= \
 	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
 	sndrcv_tls_anon.sh \
 	testsuites/sndrcv_tls_anon_sender.conf \
-	testsuites/sndrcv_tls_anon_rcvr.conf
+	testsuites/sndrcv_tls_anon_rcvr.conf \
+	omtcl.tcl
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
