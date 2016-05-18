@@ -101,7 +101,7 @@ CODESTARTdoAction
 	objv[0] = pWrkrData->pData->cmdName;
 	objv[1] = Tcl_NewStringObj((char*) ppString[0], -1);
 	if (Tcl_EvalObjv(pWrkrData->pData->interp, 2, objv, 0) != TCL_OK) {
-		iRet = RS_RET_SUSPENDED;
+		iRet = RS_RET_ERR;
 		DBGPRINTF("omtcl: %s", Tcl_GetStringResult(pWrkrData->pData->interp));
 	}
 ENDdoAction
