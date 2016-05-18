@@ -42,10 +42,12 @@ Requirements for patches
 ------------------------
 In order to ensure good code quality, after applying the path the code must
 
+- no legacy configration statements ($someSetting) must be added,
+  all configuration must be in v6+ style (RainerScript)
 - compile cleanly without WARNING messages under both gcc and clang
 - pass clang static analyzer without any report
 - pass all CI tests
-- new functionality must have associated#
+- new functionality must have associated
   * testbench tests
   * doc additions in the rsyslog-doc sister project
 
