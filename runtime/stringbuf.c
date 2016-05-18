@@ -8,7 +8,7 @@
  * begun 2005-09-07 rgerhards
  * did some optimization (read: bugs!) rgerhards, 2009-06-16
  *
- * Copyright (C) 2007-2012 Adiscon GmbH
+ * Copyright (C) 2007-2016 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -66,7 +66,6 @@ rsRetVal cstrConstruct(cstr_t **ppThis)
 
 	rsSETOBJTYPE(pThis, OIDrsCStr);
 	pThis->pBuf = NULL;
-	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
 	*ppThis = pThis;
@@ -89,7 +88,8 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = strlen((char *) sz);
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
+	++pThis->iBufSize;
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -125,9 +125,10 @@ static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap
 
 	CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iBufSize = pThis->iStrLen = len;
+	pThis->iStrLen = len;
+	pThis->iBufSize = len + 1;
 	len++; /* account for the \0 written by vsnprintf */
-	if((pThis->pBuf = (uchar*) MALLOC(len)) == NULL) {
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -166,8 +167,9 @@ rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
 
 	CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iBufSize = pThis->iStrLen = es_strlen(str);
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
+	pThis->iStrLen = es_strlen(str);
+	pThis->iBufSize = pThis->iStrLen + 1;
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -195,8 +197,9 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
 
 	CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iBufSize = pThis->iStrLen = pFrom->iStrLen;
-	if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
+	pThis->iStrLen = pFrom->iStrLen;
+	pThis->iBufSize = pFrom->iStrLen + 1;
+	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -215,7 +218,6 @@ void rsCStrDestruct(cstr_t **ppThis)
 	cstr_t *pThis = *ppThis;
 
 	free(pThis->pBuf);
-	free(pThis->pszBuf);
 	RSFREEOBJ(pThis);
 	*ppThis = NULL;
 }
@@ -273,7 +275,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 	assert(psz != NULL);
 
 	/* does the string fit? */
-	if(pThis->iStrLen + iStrLen > pThis->iBufSize) {  
+	if(pThis->iStrLen + iStrLen >= pThis->iBufSize) {  
 		CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
 	}
 
@@ -353,19 +355,16 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	free(pThis->pBuf);
-	free(pThis->pszBuf);
 	if(pszNew == NULL) {
 		pThis->iStrLen = 0;
 		pThis->iBufSize = 0;
 		pThis->pBuf = NULL;
-		pThis->pszBuf = NULL;
 	} else {
 		pThis->iStrLen = strlen((char*)pszNew);
-		pThis->iBufSize = pThis->iStrLen;
-		pThis->pszBuf = NULL;
+		pThis->iBufSize = pThis->iStrLen + 1;
 
 		/* now save the new value */
-		if((pThis->pBuf = (uchar*) MALLOC(pThis->iStrLen)) == NULL) {
+		if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 			RSFREEOBJ(pThis);
 			return RS_RET_OUT_OF_MEMORY;
 		}
@@ -383,31 +382,15 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
  */
 uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 {
-	size_t i;
-
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	if(pThis->pBuf == NULL)
 		return (uchar*) "";
 
 	if(pThis->pBuf != NULL)
-		if(pThis->pszBuf == NULL) {
-			/* we do not yet have a usable sz version - so create it... */
-			if((pThis->pszBuf = MALLOC(pThis->iStrLen + 1)) == NULL) {
-				/* TODO: think about what to do - so far, I have no bright
-				 *       idea... rgerhards 2005-09-07
-				 */
-			}
-			else { /* we can create the sz String */
-				for(i = 0 ; i < pThis->iStrLen ; ++i) {
-					pThis->pszBuf[i] = pThis->pBuf[i];
-				}
-				/* write terminator... */
-				pThis->pszBuf[i] = '\0';
-			}
-		}
+		pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
 
-	return(pThis->pszBuf);
+	return(pThis->pBuf);
 }
 
 
@@ -446,8 +429,10 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
 		} else {
 			pRetBuf = NULL;
 		}
-	} else
+	} else {
+		pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
 		pRetBuf = pThis->pBuf;
+	}
 
 	*ppSz = pRetBuf;
 
@@ -489,15 +474,6 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 	
 	pThis->iStrLen -= nTrunc;
 
-	if(pThis->pszBuf != NULL) {
-		/* in this case, we adjust the psz representation
-		 * by writing a new \0 terminator - this is by far
-		 * the fastest way and outweights the additional memory
-		 * required. 2005-9-19 rgerhards.
-		 */
-		 pThis->pszBuf[pThis->iStrLen] = '\0';
-	}
-
 	return RS_RET_OK;
 }
 
@@ -520,7 +496,7 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 	/* i now is the new string length! */
 	if(i != (int) pThis->iStrLen) {
 		pThis->iStrLen = i;
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */
+		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */ //TODO: can we remove this?
 	}
 
 done:	return RS_RET_OK;
@@ -741,6 +717,7 @@ void rsCStrRegexDestruct(void *rc)
  */
 int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
 {
+//TODO: replace strcmp?
 	BEGINfunc
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(iOffset < pCS1->iStrLen);
