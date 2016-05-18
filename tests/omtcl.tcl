@@ -6,5 +6,4 @@ proc doAction {msg} {
   }
   puts $fd "  uppercase message: <<[string toupper [dict get $msg message]]>>"
   close $fd
-  fallo
 }
