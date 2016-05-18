@@ -387,9 +387,7 @@ uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 	if(pThis->pBuf == NULL)
 		return (uchar*) "";
 
-	if(pThis->pBuf != NULL)
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
-
+	pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
 	return(pThis->pBuf);
 }
 
