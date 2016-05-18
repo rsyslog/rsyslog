@@ -7,29 +7,34 @@ REQUIREMENTS:
 * czmq 3.x ( http://czmq.zeromq.org/ )
 
 -------------------------------------------------------------------------------
-module(load="omczmq")
+module(
+	load="omczmq"
+	servercertpath="/etc/curve.d/server"
+	clientcertpath="/etc/curve.d/"
+	authtype="CURVESERVER"
+	authenticator="on"
+)
 
 action(
-	name="curve_server_socket"
+	name="to_zeromq"
 	type="omczmq"
-	endpoints="tcp://some.server.com:24445"
+	endpoints="tcp://*:24445"
 	socktype="PUSH"
-	authtype="CURVECLIENT"
-	clientcertpath="/etc/curve.d/example_curve_client_cert"
-	servercertpath="/etc/curve.d/example_curve_server_cert"
 )
 -------------------------------------------------------------------------------
 
 Explanation of Options:
 
-name: name of this action
+Module
+------
+servercertpath: path to server cert if using CURVE
+clientcertpath: path to client cert(s) if using CURVE
+authtype: CURVESERVER, CURVECLIENT (omit for no auth)
+authenticator: whether to start an authenticator thread
+
+Action
+------
 type: type of action (omczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
-socktype: zeromq socket type (currently supports PUSH and PUB)
+socktype: zeromq socket type (currently supports PUSH, PUB, DEALER, RADIO, CLIENT)
 authtype: CURVECLIENT or CURVESERVER
-clientcertpath: 
-	if CURVECLIENT, this client's cert
-	if CURVESERVER, "*" for all, or a directory of allowed public certs
-servercertpath: 
-	if CURVECLIENT, the servers public cert you wish to connect to
-	if CURVESERVER, this servers cert
