@@ -569,7 +569,7 @@ doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
 	ASSERT(*pp != NULL);
 
 	CHKiRet(getWord(pp, &pStrB)); /* get word */
-	iNewVal = decodeSyslogName(cstrGetSzStr(pStrB), pNameTable);
+	iNewVal = decodeSyslogName(cstrGetSzStrNoNULL(pStrB), pNameTable);
 
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
