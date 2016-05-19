@@ -362,6 +362,7 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
 				RSFREEOBJ(pThis);
 				return RS_RET_OUT_OF_MEMORY;
 			}
+			pThis->pBuf = newbuf;
 			pThis->iBufSize = newlen + 1;
 		}
 		pThis->iStrLen = newlen;

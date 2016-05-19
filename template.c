@@ -1670,6 +1670,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			  "param '%s'\n", pblkProperty.descr[i].name);
 		}
 	}
+	if (name == NULL) {
+		CHKmalloc(name = (uchar*)strdup(""));
+	}
 	if(outname == NULL) {
 		/* we need to drop "$!" prefix, if present */
 		if(!strncmp((char*)name, "$!", 2))
