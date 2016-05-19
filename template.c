@@ -1762,6 +1762,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	pTpe->fieldName = outname;
 	if(outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
+	outname = NULL;
 	pTpe->bComplexProcessing = bComplexProcessing;
 	pTpe->data.field.eDateFormat = datefmt;
 	pTpe->data.field.options.bDateInUTC = bDateInUTC;
@@ -1807,6 +1808,7 @@ finalize_it:
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblkProperty);
 	free(name);
+	free(outname);
 	RETiRet;
 }
 
