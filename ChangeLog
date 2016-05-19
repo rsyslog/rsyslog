@@ -6,6 +6,19 @@ Version 8.19.0 [v8-stable] 2016-05-31
   default).
 - testbench: We are now using libfaketime instead of faketime command line
   tool. Make sure you have installed the library and not just the binary!
+- refactor stringbuf: use only a single string buffer
+  ... both for the internal representation as well as the C-String one.
+  The module originally tried to support embedded NUL characters, which
+  over time has prooven to be not necessary. Rsyslog always encodes
+  NUL into escape sequences.
+  Also, the dual buffers were used inconsistently, which could lead to
+  subtle bugs. With the single buffer, this does no longer happen and
+  we also get some improved performance (should be noticable)
+  and reduced memory use (a bit).
+  closes https://github.com/rsyslog/rsyslog/issues/1033
+- bugfix imfile: corrupted multi-line message when state data was persisted
+  see also https://github.com/rsyslog/rsyslog/issues/874
+  Thanks to Magnus Hyllander for the analysis and a patch suggestion.
 - bugfix imfile: missing newline after first line of multiline message
   see also https://github.com/rsyslog/rsyslog/issues/843
   Thanks to Magnus Hyllander for the patch.
