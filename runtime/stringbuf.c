@@ -58,15 +58,13 @@ DEFobjCurrIf(regexp)
  * ################################################################# */
 
 
-rsRetVal cstrConstruct(cstr_t **ppThis)
+rsRetVal
+cstrConstruct(cstr_t **ppThis)
 {
 	DEFiRet;
 	cstr_t *pThis;
 
-	ASSERT(ppThis != NULL);
-
-	CHKmalloc(pThis = (cstr_t*) calloc(1, sizeof(cstr_t)));
-
+	CHKmalloc(pThis = (cstr_t*) malloc(sizeof(cstr_t)));
 	rsSETOBJTYPE(pThis, OIDrsCStr);
 	pThis->pBuf = NULL;
 	pThis->iBufSize = 0;
@@ -81,17 +79,16 @@ finalize_it:
 /* construct from sz string
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
+rsRetVal
+rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 {
 	DEFiRet;
 	cstr_t *pThis;
 
-	assert(ppThis != NULL);
-
 	CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iBufSize = pThis->iStrLen = strlen((char *) sz);
-	++pThis->iBufSize;
+	pThis->iStrLen = strlen((char *) sz);
+	pThis->iBufSize = strlen((char *) sz) + 1;
 	if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -110,14 +107,13 @@ finalize_it:
 /* a helper function for rsCStr*Strf()
  */
 static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap) __attribute__((format(printf,2, 0)));
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
+static rsRetVal
+rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;
 	va_list ap2;
 	int len;
-
-	assert(ppThis != NULL);
 
 	va_copy(ap2, ap);
 	len = vsnprintf(NULL, 0, (char*)fmt, ap2);
@@ -145,7 +141,8 @@ finalize_it:
 
 /* construct from a printf-style formated string
  */
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
+rsRetVal
+rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -161,12 +158,11 @@ rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
 /* construct from es_str_t string
  * rgerhards 2010-12-03
  */
-rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
+rsRetVal
+cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
 {
 	DEFiRet;
 	cstr_t *pThis;
-
-	assert(ppThis != NULL);
 
 	CHKiRet(rsCStrConstruct(&pThis));
 
@@ -194,7 +190,6 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
 	DEFiRet;
 	cstr_t *pThis;
 
-	assert(ppThis != NULL);
 	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
 
 	CHKiRet(rsCStrConstruct(&pThis));
@@ -541,7 +536,8 @@ int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2)
  * sequence while -1 indicates it does not!
  * rgerhards 2005-10-19
  */
-int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
+int
+rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, const size_t iLenSz)
 {
 	register int i;
 	int iMax;
@@ -576,12 +572,10 @@ int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * sequence while -1 indicates it does not!
  * rgerhards 2005-09-26
  */
-int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
+int
+rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, const size_t iLenSz)
 {
-	register size_t i;
-
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(psz != NULL);
 	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
 	if(pCS1->iStrLen >= iLenSz) {
 		/* we are using iLenSz below, because we need to check
@@ -589,17 +583,11 @@ int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		 */
 		if(iLenSz == 0)
 			return 0; /* yes, it starts with a zero-sized string ;) */
-		else {  /* we now have something to compare, so let's do it... */
-			for(i = 0 ; i < iLenSz ; ++i) {
-				if(pCS1->pBuf[i] != psz[i])
-					return pCS1->pBuf[i] - psz[i];
-			}
-			/* if we arrive here, the string actually starts with psz */
-			return 0;
-		}
-	}
-	else
+		else
+			return memcmp(pCS1->pBuf, psz, iLenSz);
+	} else {
 		return -1; /* pCS1 is less then psz */
+	}
 }
 
 
