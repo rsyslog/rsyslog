@@ -197,9 +197,6 @@ void rsCStrRegexDestruct(void *rc);
 rsRetVal rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber);
 rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
 
-/* in migration */
-#define rsCStrAppendCStr(pThis, pstrAppend) cstrAppendCStr(pThis, pstrAppend)
-
 /* new calling interface */
 rsRetVal cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);

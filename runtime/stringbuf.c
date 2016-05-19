@@ -982,7 +982,3 @@ rsRetVal strInit()
 finalize_it:
 	RETiRet;
 }
-
-
-/* vi:set ai:
- */
