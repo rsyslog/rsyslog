@@ -42,7 +42,6 @@
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "regexp.h"
-#include "obj.h"
 
 
 /* ################################################################# *
