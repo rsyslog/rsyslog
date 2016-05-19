@@ -95,43 +95,6 @@ cstrFinalize(cstr_t *const __restrict__ pThis)
 }
 
 
-/* Returns the cstr data as a classical C sz string. We use that the 
- * Finalizer did properly terminate our string (but we may stil be NULL).
- * So it is vital that the finalizer is called BEFORe this function here!
- * The caller must not free or otherwise manipulate the returned string and must not
- * destroy the CStr object as long as the ascii string is used.
- * This function may return NULL, if the string is currently NULL. This
- * is a feature, not a bug. If you need non-NULL in any case, use
- * cstrGetSzStrNoNULL() instead.
- * Note that due to the new single-buffer interface this function almost does nothing!
- * rgerhards, 2006-09-16
- */
-static inline uchar*  cstrGetSzStr(cstr_t *const __restrict__ pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	return(pThis->pBuf);
-}
-
-
-/* Converts the CStr object to a classical sz string and returns that.
- * Same restrictions as in cstrGetSzStr() applies (see there!). This
- * function here guarantees that a valid string is returned, even if
- * the CStr object currently holds a NULL pointer string buffer. If so,
- * "" is returned.
- * rgerhards 2005-10-19
- * WARNING: The returned pointer MUST NOT be freed, as it may be
- *          obtained from that constant memory pool (in case of NULL!)
- */
-static inline uchar*  cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	if(pThis->pBuf == NULL)
-		return (uchar*) "";
-	else
-		return cstrGetSzStr(pThis);
-}
-
-
 /**
  * Truncate "n" number of characters from the end of the
  * string. The buffer remains unchanged, just the
@@ -173,7 +136,8 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
 rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
-uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis);
+uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
+#define rsCStrGetSzStrNoNULL(x) cstrGetSzStrNoNULL(x)
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
 int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2);
 int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz);

@@ -376,7 +376,8 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
  * and returns that string. The caller must not free it and must not
  * destroy the CStr object as long as the ascii string is used.
  */
-uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
+uchar*
+cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
