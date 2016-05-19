@@ -472,7 +472,8 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 
 /* Trim trailing whitespace from a given string
  */
-rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
+void
+cstrTrimTrailingWhiteSpace(cstr_t *const __restrict__ pThis)
 {
 	register int i;
 	register uchar *pC;
@@ -492,7 +493,7 @@ rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
 		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */ //TODO: can we remove this?
 	}
 
-done:	return RS_RET_OK;
+done:	return;
 }
 
 /* compare two string objects - works like strcmp(), but operates

@@ -140,7 +140,7 @@ static inline uchar*  cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
  */
 rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc);
 
-rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis);
+void cstrTrimTrailingWhiteSpace(cstr_t *pThis);
 
 /**
  * Append a string to the buffer. For performance reasons,

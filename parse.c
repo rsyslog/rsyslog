@@ -278,7 +278,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	cstrFinalize(pCStr);
 
 	if(bTrimTrailing) {
-		CHKiRet(cstrTrimTrailingWhiteSpace(pCStr));
+		cstrTrimTrailingWhiteSpace(pCStr);
 	}
 
 	/* done! */
