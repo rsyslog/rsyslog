@@ -1675,7 +1675,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 	if(outname == NULL) {
 		/* we need to drop "$!" prefix, if present */
-		if(!strncmp((char*)name, "$!", 2))
+		if(ustrlen(name) >= 2 && !strncmp((char*)name, "$!", 2))
 			outname = ustrdup(name + 2);
 		else
 			outname = ustrdup(name);
