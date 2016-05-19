@@ -1449,7 +1449,7 @@ static rsRetVal
 createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 {
 	struct templateEntry *pTpe;
-	cstr_t *name = NULL;
+	uchar *name = NULL;
 	uchar *outname = NULL;
 	int i;
 	int droplastlf = 0;
@@ -1485,10 +1485,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			uchar *tmpstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsCStrConstructFromszStr(&name, tmpstr);
-			cstrFinalize(name);
-			free(tmpstr);
+			name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 			bComplexProcessing = 1;
@@ -1674,12 +1671,11 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		}
 	}
 	if(outname == NULL) {
-		uchar *psz = cstrGetSzStrNoNULL(name);
 		/* we need to drop "$!" prefix, if present */
-		if(!strncmp((char*)psz, "$!", 2))
-			outname = ustrdup(psz + 2);
+		if(!strncmp((char*)name, "$!", 2))
+			outname = ustrdup(name + 2);
 		else
-			outname = ustrdup(psz);
+			outname = ustrdup(name);
 	}
 
 	/* sanity check */
@@ -1709,8 +1705,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
-	CHKiRet(msgPropDescrFill(&pTpe->data.field.msgProp, cstrGetSzStrNoNULL(name),
-		cstrLen(name)));
+	CHKiRet(msgPropDescrFill(&pTpe->data.field.msgProp, name, strlen((char*)name)));
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
 	pTpe->data.field.options.bMandatory = mandatory;
@@ -1808,8 +1803,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 finalize_it:
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblkProperty);
-	if(name != NULL)
-		rsCStrDestruct(&name);
+	free(name);
 	RETiRet;
 }
 
