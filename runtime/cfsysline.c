@@ -491,7 +491,7 @@ getWord(uchar **pp, cstr_t **ppStrB)
 	while(*p && !isspace((int) *p)) {
 		CHKiRet(cstrAppendChar(*ppStrB, *p++));
 	}
-	CHKiRet(cstrFinalize(*ppStrB));
+	cstrFinalize(*ppStrB);
 
 	*pp = p;
 

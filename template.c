@@ -490,7 +490,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 		CHKiRet(cstrAppendChar(pStrB, *p));
 		++p;
 	}
-	CHKiRet(cstrFinalize(pStrB));
+	cstrFinalize(pStrB);
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pszGenerated, 0));
 
 	if(*pbMustBeFreed)

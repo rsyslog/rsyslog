@@ -87,12 +87,11 @@ finalize_it:
  * but before that data is used.
  * rgerhards, 2009-06-16
  */
-static inline rsRetVal
+static inline void
 cstrFinalize(cstr_t *const __restrict__ pThis)
 {
 	if(pThis->iStrLen > 0)
 		pThis->pBuf[pThis->iStrLen] = '\0'; /* space is always reserved for this */
-	return RS_RET_OK;
 }
 
 
@@ -186,7 +185,7 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache)
 void rsCStrRegexDestruct(void *rc);
 
 /* new calling interface */
-rsRetVal cstrFinalize(cstr_t *pThis);
+void cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 

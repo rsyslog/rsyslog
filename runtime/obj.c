@@ -447,7 +447,7 @@ objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pStr, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 
 	*ppStr = pStr;
 
@@ -515,7 +515,7 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pCStr, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pCStr));
+	cstrFinalize(pCStr);
 
 	/* check terminator */
 	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
@@ -631,7 +631,7 @@ rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pProp->pcsName, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pProp->pcsName));
+	cstrFinalize(pProp->pcsName);
 	step = 1;
 
 	/* property type */

@@ -351,7 +351,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		gnutls_x509_crt_deinit(cert);
 	}
 
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 	*ppStr = pStr;
 
 finalize_it:
@@ -473,7 +473,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 
 	*ppStr = pStr;
 
@@ -746,7 +746,7 @@ gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 		}
 		++i; /* char processed */
 	}
-	CHKiRet(cstrFinalize(pstrCN));
+	cstrFinalize(pstrCN);
 
 	/* we got it - we ignore the rest of the DN string (if any). So we may
 	 * not detect if it contains more than one CN
@@ -907,7 +907,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	if(!bFoundPositiveMatch) {
 		dbgprintf("invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
-			CHKiRet(cstrFinalize(pStr));
+			cstrFinalize(pStr);
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",

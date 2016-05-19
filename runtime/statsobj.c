@@ -405,7 +405,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	pthread_mutex_unlock(&pThis->mutCtr);
 	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
@@ -456,7 +456,7 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
