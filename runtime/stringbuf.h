@@ -11,7 +11,7 @@
  * \date    2005-09-07
  *          Initial version  begun.
  *
- * Copyright 2005-2012 Adiscon GmbH. All Rights Reserved.
+ * Copyright 2005-2016 Adiscon GmbH. All Rights Reserved.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -44,7 +44,6 @@ typedef struct cstr_s
 	rsObjID OID;		/**< object ID */
 #endif
 	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
-	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
 } cstr_t;
@@ -76,7 +75,7 @@ static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 {
 	rsRetVal iRet = RS_RET_OK;
 
-	if(pThis->iStrLen >= pThis->iBufSize) {  
+	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
 		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
 	}
 
