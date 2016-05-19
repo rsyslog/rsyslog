@@ -1,14 +1,17 @@
-/* This is the byte-counted string class for rsyslog. It is a replacement
- * for classical \0 terminated string functions. We introduce it in
- * the hope it will make the program more secure, obtain some performance
- * and, most importantly, lay they foundation for syslog-protocol, which
- * requires strings to be able to handle embedded \0 characters.
- * Please see syslogd.c for license information.
- * All functions in this "class" start with rsCStr (rsyslog Counted String).
- * begun 2005-09-07 rgerhards
- * did some optimization (read: bugs!) rgerhards, 2009-06-16
+/* This is the byte-counted string class for rsyslog.
+ * This object has a lot of legacy. Among others, it was started to
+ * support embedded \0 bytes, which looked like they were needed to
+ * be supported by RFC developments at that time. Later, this was
+ * no longer a requirement, and we refactored the class in 2016
+ * to some simpler internals which make use of the fact that no
+ * NUL can ever occur in rsyslog strings (they are escaped at the
+ * input side of rsyslog).
+ * It now serves primarily to a) dynamic string creation, b) keep
+ * old interfaces supported, and c) some special functionality,
+ * e.g. search. Further refactoring and simplificytin may make
+ * sense.
  *
- * Copyright (C) 2007-2016 Adiscon GmbH
+ * Copyright (C) 2005-2016 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -183,8 +186,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* construct from CStr object. only the counted string is
- * copied, not the szString.
+/* construct from CStr object.
  * rgerhards 2005-10-18
  */
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
@@ -264,8 +266,6 @@ finalize_it:
 
 /* append a string of known length. In this case, we make sure we do at most
  * one additional memory allocation.
- * I optimized this function to use memcpy(), among others. Consider it a
- * rewrite (which may be good to know in case of bugs) -- rgerhards, 2008-01-07
  */
 rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
 {

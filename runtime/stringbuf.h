@@ -1,12 +1,6 @@
 /* stringbuf.h
  * The counted string object
  *
- * This is the byte-counted string class for rsyslog. It is a replacement
- * for classical \0 terminated string functions. We introduce it in
- * the hope it will make the program more secure, obtain some performance
- * and, most importantly, lay they foundation for syslog-protocol, which
- * requires strings to be able to handle embedded \0 characters.
- *
  * \author  Rainer Gerhards <rgerhards@adiscon.com>
  * \date    2005-09-07
  *          Initial version  begun.
