@@ -65,7 +65,7 @@ void rsCStrDestruct(cstr_t **ppThis);
  * rgerhards, 2009-06-16
  */
 rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded); /* our helper, NOT a public interface! */
-static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
+static inline rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c)
 {
 	rsRetVal iRet = RS_RET_OK;
 
@@ -88,18 +88,11 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 static inline rsRetVal
-cstrFinalize(cstr_t *pThis)
+cstrFinalize(cstr_t *const __restrict__ pThis)
 {
-	rsRetVal iRet = RS_RET_OK;
-	
-	if(pThis->iStrLen > 0) {
-		/* terminate string only if one exists */
-		CHKiRet(cstrAppendChar(pThis, '\0'));
-		--pThis->iStrLen;	/* do NOT count the \0 byte */
-	}
-
-finalize_it:
-	return iRet;
+	if(pThis->iStrLen > 0)
+		pThis->pBuf[pThis->iStrLen] = '\0'; /* space is always reserved for this */
+	return RS_RET_OK;
 }
 
 
@@ -114,7 +107,7 @@ finalize_it:
  * Note that due to the new single-buffer interface this function almost does nothing!
  * rgerhards, 2006-09-16
  */
-static inline uchar*  cstrGetSzStr(cstr_t *pThis)
+static inline uchar*  cstrGetSzStr(cstr_t *const __restrict__ pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	return(pThis->pBuf);
@@ -130,7 +123,7 @@ static inline uchar*  cstrGetSzStr(cstr_t *pThis)
  * WARNING: The returned pointer MUST NOT be freed, as it may be
  *          obtained from that constant memory pool (in case of NULL!)
  */
-static inline uchar*  cstrGetSzStrNoNULL(cstr_t *pThis)
+static inline uchar*  cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	if(pThis->pBuf == NULL)
@@ -188,14 +181,9 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz);
 int rsCStrLocateSzStr(cstr_t *pCStr, uchar *sz);
 int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz);
-int rsCStrCaseInsensitiveLocateInSzStr(cstr_t *pThis, uchar *sz);
-int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
-int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache);
 void rsCStrRegexDestruct(void *rc);
-rsRetVal rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber);
-rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
 
 /* new calling interface */
 rsRetVal cstrFinalize(cstr_t *pThis);

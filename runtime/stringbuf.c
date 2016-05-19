@@ -504,25 +504,16 @@ done:	return RS_RET_OK;
  * in equal-size strings.
  * rgerhards, 2005-09-26
  */
-int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2)
+int
+rsCStrCStrCmp(cstr_t *const __restrict__ pCS1, cstr_t *const __restrict__ pCS2)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	rsCHECKVALIDOBJECT(pCS2, OIDrsCStr);
 	if(pCS1->iStrLen == pCS2->iStrLen)
 		if(pCS1->iStrLen == 0)
 			return 0; /* zero-sized string are equal ;) */
-		else {  /* we now have two non-empty strings of equal
-			 * length, so we need to actually check if they
-			 * are equal.
-			 */
-			register size_t i;
-			for(i = 0 ; i < pCS1->iStrLen ; ++i) {
-				if(pCS1->pBuf[i] != pCS2->pBuf[i])
-					return pCS1->pBuf[i] - pCS2->pBuf[i];
-			}
-			/* if we arrive here, the strings are equal */
-			return 0;
-		}
+		else
+			return memcmp(pCS1->pBuf, pCS2->pBuf, pCS1->iStrLen);
 	else
 		return pCS1->iStrLen - pCS2->iStrLen;
 }
@@ -537,88 +528,21 @@ int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2)
  * rgerhards 2005-10-19
  */
 int
-rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, const size_t iLenSz)
+rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1,
+	uchar *const __restrict__ psz,
+	const size_t iLenSz)
 {
-	register int i;
-	int iMax;
-
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
 	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
 	if(iLenSz >= pCS1->iStrLen) {
-		/* we need to checkusing pCS1->iStrLen charactes at maximum, thus
-		 * we move it to iMax.
-		 */
-		iMax = pCS1->iStrLen;
-		if(iMax == 0)
-			return 0; /* yes, it starts with a zero-sized string ;) */
-		else {  /* we now have something to compare, so let's do it... */
-			for(i = 0 ; i < iMax ; ++i) {
-				if(psz[i] != pCS1->pBuf[i])
-					return psz[i] - pCS1->pBuf[i];
-			}
-			/* if we arrive here, the string actually starts with pCS1 */
-			return 0;
-		}
-	}
-	else
-		return -1; /* pCS1 is less then psz */
-}
-
-
-/* check if a CStr object starts with a sz-type string.
- * This functions is modelled after the strcmp() series, thus a
- * return value of 0 indicates that the string starts with the
- * sequence while -1 indicates it does not!
- * rgerhards 2005-09-26
- */
-int
-rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, const size_t iLenSz)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
-	if(pCS1->iStrLen >= iLenSz) {
-		/* we are using iLenSz below, because we need to check
-		 * iLenSz characters at maximum (start with!)
-		 */
-		if(iLenSz == 0)
+		if(pCS1->iStrLen == 0)
 			return 0; /* yes, it starts with a zero-sized string ;) */
 		else
-			return memcmp(pCS1->pBuf, psz, iLenSz);
+			return memcmp(psz, pCS1->pBuf, pCS1->iStrLen);
 	} else {
 		return -1; /* pCS1 is less then psz */
 	}
-}
-
-
-/* The same as rsCStrStartsWithSzStr(), but does a case-insensitive
- * comparison. TODO: consolidate the two.
- * rgerhards 2008-02-28
- */
-int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
-{
-	register size_t i;
-
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(psz != NULL);
-	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
-	if(pCS1->iStrLen >= iLenSz) {
-		/* we are using iLenSz below, because we need to check
-		 * iLenSz characters at maximum (start with!)
-		 */
-		if(iLenSz == 0)
-			return 0; /* yes, it starts with a zero-sized string ;) */
-		else {  /* we now have something to compare, so let's do it... */
-			for(i = 0 ; i < iLenSz ; ++i) {
-				if(tolower(pCS1->pBuf[i]) != tolower(psz[i]))
-					return tolower(pCS1->pBuf[i]) - tolower(psz[i]);
-			}
-			/* if we arrive here, the string actually starts with psz */
-			return 0;
-		}
-	}
-	else
-		return -1; /* pCS1 is less then psz */
 }
 
 
@@ -703,11 +627,8 @@ void rsCStrRegexDestruct(void *rc)
  */
 int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
 {
-//TODO: replace strcmp?
-	BEGINfunc
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(iOffset < pCS1->iStrLen);
-	assert(psz != NULL);
 	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
 	if((pCS1->iStrLen - iOffset) == iLenSz) {
 		/* we are using iLenSz below, because the lengths
@@ -715,122 +636,16 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
 		 */
 		if(iLenSz == 0) {
 			return 0; /* zero-sized strings are equal ;) */
-			ENDfunc
 		} else {  /* we now have two non-empty strings of equal
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register size_t i;
-			for(i = 0 ; i < iLenSz ; ++i) {
-				if(pCS1->pBuf[i+iOffset] != psz[i])
-					return pCS1->pBuf[i+iOffset] - psz[i];
-			}
-			/* if we arrive here, the strings are equal */
-			return 0;
-			ENDfunc
+			return memcmp(pCS1->pBuf+iOffset, psz, iLenSz);
 		}
 	}
 	else {
 		return pCS1->iStrLen - iOffset - iLenSz;
-		ENDfunc
 	}
-}
-
-
-/* Converts a string to a number. If the string dos not contain a number, 
- * RS_RET_NOT_A_NUMBER is returned and the contents of pNumber is undefined.
- * If all goes well, pNumber contains the number that the string was converted
- * to.
- */
-rsRetVal
-rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber)
-{
-	DEFiRet;
-	number_t n;
-	int bIsNegative;
-	size_t i;
-
-	ASSERT(pStr != NULL);
-	ASSERT(pNumber != NULL);
-
-	if(pStr->iStrLen == 0) {
-		/* can be converted to 0! (by convention) */
-		pNumber = 0;
-		FINALIZE;
-	}
-
-	/* first skip whitespace (if present) */
-	for(i = 0 ; i < pStr->iStrLen && isspace(pStr->pBuf[i]) ; ++i) {
-		/*DO NOTHING*/
-	}
-
-	/* we have a string, so let's check its syntax */
-	if(pStr->pBuf[i] == '+') {
-		++i; /* skip that char */
-		bIsNegative = 0;
-	} else if(pStr->pBuf[0] == '-') {
-		++i; /* skip that char */
-		bIsNegative = 1;
-	} else {
-		bIsNegative = 0;
-	}
-
-	/* TODO: octal? hex? */
-	n = 0;
-	while(i < pStr->iStrLen && isdigit(pStr->pBuf[i])) {
-		n = n * 10 + pStr->pBuf[i] - '0';
-		++i;
-	}
-	
-	if(i < pStr->iStrLen) /* non-digits before end of string? */
-		ABORT_FINALIZE(RS_RET_NOT_A_NUMBER);
-
-	if(bIsNegative)
-		n *= -1;
-
-	/* we got it, so return the number */
-	*pNumber = n;
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* Converts a string to a boolen. First tries to convert to a number. If
- * that succeeds, we are done (number is then used as boolean value). If
- * that fails, we look if the string is "yes" or "true". If so, a value
- * of 1 is returned. In all other cases, a value of 0 is returned. Please
- * note that we do not have a specific boolean type, so we return a number.
- * so, these are 
- * RS_RET_NOT_A_NUMBER is returned and the contents of pNumber is undefined.
- * If all goes well, pNumber contains the number that the string was converted
- * to.
- */
-rsRetVal
-rsCStrConvertToBool(cstr_t *pStr, number_t *pBool)
-{
-	DEFiRet;
-
-	ASSERT(pStr != NULL);
-	ASSERT(pBool != NULL);
-
-	iRet = rsCStrConvertToNumber(pStr, pBool);
-
-	if(iRet != RS_RET_NOT_A_NUMBER) {
-		FINALIZE; /* in any case, we have nothing left to do */
-	}
-
-	/* TODO: maybe we can do better than strcasecmp ;) -- overhead! */
-	if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "true")) {
-		*pBool = 1;
-	} else if(!strcasecmp((char*)rsCStrGetSzStrNoNULL(pStr), "yes")) {
-		*pBool = 1;
-	} else {
-		*pBool = 0;
-	}
-
-finalize_it:
-	RETiRet;
 }
 
 
@@ -853,17 +668,10 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 	assert(psz != NULL);
 	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
 	if(pCS1->iStrLen == iLenSz)
-		/* we are using iLenSz below, because the lengths
-		 * are equal and iLenSz is faster to access
-		 */
 		if(iLenSz == 0)
 			return 0; /* zero-sized strings are equal ;) */
-		else {  /* we now have two non-empty strings of equal
-			 * length, so we need to actually check if they
-			 * are equal.
-			 */
+		else
 			return strncmp((char*)pCS1->pBuf, (char*)psz, iLenSz);
-		}
 	else
 		return pCS1->iStrLen - iLenSz;
 }
@@ -898,46 +706,6 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 		uchar *pComp = sz + i;
 		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
 			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))
-				break;
-		if(iCheck == pThis->iStrLen)
-			bFound = 1; /* found! - else it wouldn't be equal */
-		else
-			++i; /* on to the next try */
-	}
-
-	return(bFound ? i : -1);
-}
-
-
-/* This is the same as rsCStrLocateInSzStr(), but does a case-insensitve
- * comparison.
- * TODO: over time, consolidate the two.
- * rgerhards, 2008-02-28
- */
-int rsCStrCaseInsensitiveLocateInSzStr(cstr_t *pThis, uchar *sz)
-{
-	int i;
-	int iMax;
-	int bFound;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	assert(sz != NULL);
-	
-	if(pThis->iStrLen == 0)
-		return 0;
-	
-	/* compute the largest index where a match could occur - after all,
-	 * the to-be-located string must be able to be present in the 
-	 * searched string (it needs its size ;)).
-	 */
-	iMax = strlen((char*)sz) - pThis->iStrLen;
-
-	bFound = 0;
-	i = 0;
-	while(i  <= iMax && !bFound) {
-		size_t iCheck;
-		uchar *pComp = sz + i;
-		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
-			if(tolower(*(pComp + iCheck)) != tolower(*(pThis->pBuf + iCheck)))
 				break;
 		if(iCheck == pThis->iStrLen)
 			bFound = 1; /* found! - else it wouldn't be equal */
