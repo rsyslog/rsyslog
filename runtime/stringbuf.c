@@ -345,26 +345,27 @@ finalize_it:
  * created (this is NOT an error!).
  * rgerhards, 2005-10-18
  */
-rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
+rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
+	uchar *const __restrict__ pszNew)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	free(pThis->pBuf);
 	if(pszNew == NULL) {
+		free(pThis->pBuf);
+		pThis->pBuf = NULL;
 		pThis->iStrLen = 0;
 		pThis->iBufSize = 0;
-		pThis->pBuf = NULL;
 	} else {
-		pThis->iStrLen = strlen((char*)pszNew);
-		pThis->iBufSize = pThis->iStrLen + 1;
-
-		/* now save the new value */
-		if((pThis->pBuf = (uchar*) MALLOC(pThis->iBufSize)) == NULL) {
-			RSFREEOBJ(pThis);
-			return RS_RET_OUT_OF_MEMORY;
+		const size_t newlen = strlen((char*)pszNew);
+		if(newlen > pThis->iBufSize) {
+			uchar *const newbuf = (uchar*) realloc(pThis->pBuf, newlen + 1);
+			if(newbuf == NULL) {
+				RSFREEOBJ(pThis);
+				return RS_RET_OUT_OF_MEMORY;
+			}
+			pThis->iBufSize = newlen + 1;
 		}
-
-		/* we do NOT need to copy the \0! */
+		pThis->iStrLen = newlen;
 		memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
 	}
 
