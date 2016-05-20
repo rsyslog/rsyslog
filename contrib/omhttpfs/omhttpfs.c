@@ -800,6 +800,15 @@ CODESTARTnewActInst
             DBGPRINTF("omhttpfs: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }
     }
+    if(pData->file == NULL) {
+	/* Note: this is primarily to make clang static analyzer happy, as we
+	 * request via pblk that file is a mandatory parameter. However, this is
+	 * also a guard against something going really wrong...
+	 */
+        errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "omhttpfs: file is not set "
+		"[this should not be possible]\n");
+	ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
     if(pData->user == NULL || pData->user[0] == '\0') {
         pData->user = ustrdup((uchar*) OMHTTPFS_DEFAULT_USER);
     }
