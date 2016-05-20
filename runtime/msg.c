@@ -1463,8 +1463,8 @@ static rsRetVal aquirePROCIDFromTAG(msg_t * const pM)
 		FINALIZE;
 	}
 
-	/* OK, finaally we could obtain a PROCID. So let's use it ;) */
-	CHKiRet(cstrFinalize(pM->pCSPROCID));
+	/* OK, finally we could obtain a PROCID. So let's use it ;) */
+	cstrFinalize(pM->pCSPROCID);
 
 finalize_it:
 	RETiRet;
@@ -2148,7 +2148,7 @@ rsRetVal MsgSetPROCID(msg_t *__restrict__ const pMsg, const char* pszPROCID)
 	}
 	/* if we reach this point, we have the object */
 	CHKiRet(rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID));
-	CHKiRet(cstrFinalize(pMsg->pCSPROCID));
+	cstrFinalize(pMsg->pCSPROCID);
 
 finalize_it:
 	RETiRet;

@@ -405,7 +405,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	pthread_mutex_unlock(&pThis->mutCtr);
 	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
@@ -456,7 +456,7 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
@@ -470,7 +470,7 @@ finalize_it:
  * (what could otherwise cause a segfault).
  */
 static void
-getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
+getSenderStats(rsRetVal(*cb)(void*, const char*),
 	void *usrptr,
 	statsFmtType_t fmt,
 	const int8_t bResetCtrs)
@@ -501,10 +501,7 @@ getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
 					stat->sender, stat->nMsgs);
 			}
 			fmtbuf[sizeof(fmtbuf)-1] = '\0';
-			cstr_t *cs;
-			rsCStrConstructFromszStr(&cs, (uchar*)fmtbuf);
-			cb(usrptr, cs);
-			rsCStrDestruct(&cs);
+			cb(usrptr, fmtbuf);
 			if(bResetCtrs)
 				stat->nMsgs = 0;
 		} while (hashtable_iterator_advance(itr));
@@ -521,7 +518,7 @@ getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
@@ -538,7 +535,7 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
 			break;
 		}
-		CHKiRet(cb(usrptr, cstr));
+		CHKiRet(cb(usrptr, (const char*)cstrGetSzStrNoNULL(cstr)));
 		rsCStrDestruct(&cstr);
 		if (o->read_notifier != NULL) {
 			o->read_notifier(o, o->read_notifier_ctx);

@@ -727,7 +727,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
 			cstrAppendChar(*ppCStr, '\n');
 		}
-        	CHKiRet(cstrFinalize(*ppCStr));
+		cstrFinalize(*ppCStr);
 	} else if(mode == 1) {
 		finished=0;
 		while(finished == 0){
@@ -754,7 +754,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 				}
 			}
 		}
-        	CHKiRet(cstrFinalize(*ppCStr));
+		cstrFinalize(*ppCStr);
 		pThis->bPrevWasNL = 0;
 	} else if(mode == 2) {
 		/* indented follow-up lines */
@@ -803,7 +803,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 			rsCStrTruncate(*ppCStr, cstrLen(*ppCStr) - trimLineOverBytes);
 			cstrAppendChar(*ppCStr, '\n');
 		}
-       		CHKiRet(cstrFinalize(*ppCStr));
+		cstrFinalize(*ppCStr);
 		pThis->bPrevWasNL = 0;
 	}
 
@@ -854,7 +854,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 			}
 			CHKiRet(readCharRet);
 		}
-		CHKiRet(cstrFinalize(thisLine));
+		cstrFinalize(thisLine);
 
 		/* we have a line, now let's assemble the message */
 		const int isMatch = !regexec(preg, (char*)rsCStrGetSzStrNoNULL(thisLine), 0, NULL, 0);

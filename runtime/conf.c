@@ -9,7 +9,7 @@
  * Please note that the original syslogd.c source was under BSD license
  * at the time of the rsyslog fork from sysklogd.
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -293,7 +293,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 			CHKiRet(cstrAppendChar(pStrB, *p));
 			++p;
 		}
-		CHKiRet(cstrFinalize(pStrB));
+		cstrFinalize(pStrB);
 		CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &tplName, 0));
 	}
 

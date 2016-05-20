@@ -6,7 +6,7 @@
  * Please see syslogd.c for license information.
  * begun 2005-06-21 rgerhards
  *
- * Copyright (C) 2005-2012 Adiscon GmbH
+ * Copyright (C) 2005-2016 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -109,7 +109,7 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	}
 
 	*pp = p;
-	CHKiRet(cstrFinalize(pStrB));
+	cstrFinalize(pStrB);
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pField, 0));
 
 finalize_it:
@@ -177,7 +177,7 @@ static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	}
 
 	*pp = p;
-	CHKiRet(cstrFinalize(pStrB));
+	cstrFinalize(pStrB);
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pBuf, 0));
 
 finalize_it:
