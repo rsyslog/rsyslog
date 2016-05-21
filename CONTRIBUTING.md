@@ -38,6 +38,11 @@ the PR thereafter. This prevents unnecessary cluttering of the open PR list.
 We will take the liberty to close such PRs if they are left open for more
 than a day or two.
 
+Please note, though, that the rsyslog repro is fully set up to use Travis CI.
+Travis covers about 95% of all essential testing. So we highly recommend
+that you use Travis to do initial checks on your work and create the PR
+only after this looks good. That saves both you and us some time.
+
 Requirements for patches
 ------------------------
 In order to ensure good code quality, after applying the path the code must
