@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------
 Version 1.2.11 - 2016-0?-??
+- bugfix: flush the current recv frame if it exists if the client
+  session is restarting
+  Thanks to Nate Brown for the patch.
+- API enhancement: add configurable connection timeout
+  Thanks to Nate Brown for the patch.
 ----------------------------------------------------------------------
 Version 1.2.10 - 2016-03-30
 - make compatible with older versions of GnuTLS which require
