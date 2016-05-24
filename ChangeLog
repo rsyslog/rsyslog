@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- imrelp: better error codes on unvailablity of TLS options
+  Most importantly, we will tell the user in clear words if specific TLS
+  options are not available due to too-old GnuTLS.
+  closes https://github.com/rsyslog/rsyslog/issues/1019
 - default stack size for inputs has been explicitely set to 4MiB
   for most platforms, this means a reduction from the default of 10MiB, hower
   it may mean an increas for micro-libc's (some may have as low as 80KiB by
