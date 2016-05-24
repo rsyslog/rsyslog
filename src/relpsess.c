@@ -826,7 +826,6 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine, RELP_CLT_CONN, pThis->pClt));
 	CHKRet(relpTcpSetUsrPtr(pThis->pTcp, pThis->pUsr));
-	CHKRet(relpTcpSetConnTimeout(pThis->pTcp, pThis->connTimeout));
 	if(pThis->bEnableTLS) {
 		CHKRet(relpTcpEnableTLS(pThis->pTcp));
 		if(pThis->bEnableTLSZip) {
@@ -932,15 +931,6 @@ relpSessSetTimeout(relpSess_t *pThis, unsigned timeout)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	pThis->timeout = timeout;
-	LEAVE_RELPFUNC;
-}
-
-relpRetVal
-relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sess);
-	pThis->connTimeout = connTimeout;
 	LEAVE_RELPFUNC;
 }
 

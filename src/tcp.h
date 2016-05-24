@@ -104,7 +104,6 @@ typedef struct relpTcp_s {
 	int dhBits;	/**< number of bits for Diffie-Hellman key */
 	char *pristring; /**< priority string for GnuTLS */
 	relpAuthMode_t authmode;
-	int connTimeout;
 #ifdef ENABLE_TLS
 	gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 	gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
@@ -155,7 +154,6 @@ relpRetVal relpTcpSetPrivKey(relpTcp_t *pThis, char *cert);
 relpRetVal relpTcpSetPermittedPeers(relpTcp_t *pThis, relpPermittedPeers_t *pPeers);
 relpRetVal relpTcpRtryHandshake(relpTcp_t *pThis);
 relpRetVal relpTcpSetUsrPtr(relpTcp_t *pThis, void *pUsr);
-relpRetVal relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout);
 relpRetVal relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode);
 void relpTcpHintBurstBegin(relpTcp_t *pThis);
 void relpTcpHintBurstEnd(relpTcp_t *pThis);
