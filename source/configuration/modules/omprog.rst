@@ -85,7 +85,7 @@ The following command writes all syslog messages into a file.
 
   module(load="omprog")
   action(type="omprog"
-         binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\"
+         binary="/pathto/omprog.py --parm1=\"value 1\" --parm2=\"value2\""
          template="RSYSLOG_TraditionalFileFormat")
 
 **Legacy Configuration Directives**:
