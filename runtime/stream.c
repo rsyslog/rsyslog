@@ -947,13 +947,14 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 		}
 	}
 
-	DBGPRINTF("file stream %s params: flush interval %d, async write %d\n",
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
-		  pThis->iFlushInterval, pThis->bAsyncWrite);
 	/* if we have a flush interval, we need to do async writes in any case */
 	if(pThis->iFlushInterval != 0) {
 		pThis->bAsyncWrite = 1;
 	}
+
+	DBGPRINTF("file stream %s params: flush interval %d, async write %d\n",
+		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  pThis->iFlushInterval, pThis->bAsyncWrite);
 
 	/* if we work asynchronously, we need a couple of synchronization objects */
 	if(pThis->bAsyncWrite) {
