@@ -1170,11 +1170,13 @@ finalize_it:
 /* write memory buffer to a stream object.
  */
 static inline rsRetVal
-doWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush)
+doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlush)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) doWriteInternal: bFlush %d\n",
+		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		bFlush);
 
 	if(pThis->iZipLevel) {
 		CHKiRet(doZipWrite(pThis, pBuf, lenBuf, bFlush));
@@ -1197,21 +1199,33 @@ finalize_it:
  * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
  */
 static inline rsRetVal
-doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
+doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at begin: "
+		"iCnt %d, iEnq %d, bFlushZip %d\n",
+		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->iCnt, pThis->iEnq, bFlushZip);
 	/* the -1 below is important, because we need one buffer for the main thread! */
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS - 1)
 		d_pthread_cond_wait(&pThis->notFull, &pThis->mut);
 
 	pThis->asyncBuf[pThis->iEnq % STREAM_ASYNC_NUMBUFS].lenBuf = lenBuf;
 	pThis->pIOBuf = pThis->asyncBuf[++pThis->iEnq % STREAM_ASYNC_NUMBUFS].pBuf;
+	if(!pThis->bFlushNow) /* if we already need to flush, do not overwrite */
+		pThis->bFlushNow = bFlushZip;
 
 	pThis->bDoTimedWait = 0; /* everything written, no need to timeout partial buffer writes */
-	if(++pThis->iCnt == 1)
+	if(++pThis->iCnt == 1) {
 		pthread_cond_signal(&pThis->notEmpty);
+		DBGOPRINT((obj_t*) pThis, "doAsyncWriteInternal signaled notEmpty\n");
+	}
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at exit: "
+		"iCnt %d, iEnq %d, bFlushZip %d\n",
+		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->iCnt, pThis->iEnq, bFlushZip);
 
 	RETiRet;
 }
@@ -1222,7 +1236,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf)
  * the background thread. -- rgerhards, 2009-07-07
  */
 static rsRetVal
-strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlushZip)
+strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip)
 {
 	DEFiRet;
 
@@ -1239,7 +1253,7 @@ strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlushZip)
 	 */
 	pThis->iBufPtr = 0; /* we are at the begin of a new buffer */
 	if(pThis->bAsyncWrite) {
-		CHKiRet(doAsyncWriteInternal(pThis, lenBuf));
+		CHKiRet(doAsyncWriteInternal(pThis, lenBuf, bFlushZip));
 	} else {
 		CHKiRet(doWriteInternal(pThis, pBuf, lenBuf, bFlushZip));
 	}
@@ -1277,6 +1291,10 @@ asyncWriterThread(void *pPtr)
 	d_pthread_mutex_lock(&pThis->mut);
 	while(1) { /* loop broken inside */
 		while(pThis->iCnt == 0) {
+			DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread new iteration, "
+				  "iCnt %d, bTimedOut %d, iFlushInterval %d\n", pThis->fd,
+				  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+				  pThis->iCnt, bTimedOut, pThis->iFlushInterval);
 			if(pThis->bStopWriter) {
 				pthread_cond_broadcast(&pThis->isEmpty);
 				d_pthread_mutex_unlock(&pThis->mut);
@@ -1285,7 +1303,7 @@ asyncWriterThread(void *pPtr)
 			if(bTimedOut && pThis->iBufPtr > 0) {
 				/* if we timed out, we need to flush pending data */
 				d_pthread_mutex_unlock(&pThis->mut);
-				strmFlushInternal(pThis, 0);
+				strmFlushInternal(pThis, 1);
 				bTimedOut = 0;
 				d_pthread_mutex_lock(&pThis->mut); 
 				continue;
@@ -1294,6 +1312,9 @@ asyncWriterThread(void *pPtr)
 			timeoutComp(&t, pThis->iFlushInterval * 1000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
 				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
+					DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread timed out\n",
+						  pThis->fd,
+						  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
 					bTimedOut = 1; /* simulate in any case */
 					if(err != ETIMEDOUT) {
 						char errStr[1024];
@@ -1307,13 +1328,19 @@ asyncWriterThread(void *pPtr)
 			}
 		}
 
+		DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread awoken, "
+			  "iCnt %d, bTimedOut %d\n", pThis->fd,
+			  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+			  pThis->iCnt, bTimedOut);
 		bTimedOut = 0; /* we may have timed out, but there *is* work to do... */
 
 		iDeq = pThis->iDeq++ % STREAM_ASYNC_NUMBUFS;
+		const int bFlush = (pThis->bFlushNow || bTimedOut) ? 1 : 0;
+		pThis->bFlushNow = 0;
 
 		/* now we can do the actual write in parallel */
 		d_pthread_mutex_unlock(&pThis->mut);
-		doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf, 0); // TODO: flush state
+		doWriteInternal(pThis, pThis->asyncBuf[iDeq].pBuf, pThis->asyncBuf[iDeq].lenBuf, bFlush);
 		// TODO: error check????? 2009-07-06
 		d_pthread_mutex_lock(&pThis->mut);
 
@@ -1432,7 +1459,7 @@ finalize_it:
  * rgerhards, 2009-06-04
  */
 static rsRetVal
-doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush)
+doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 {
 	int zRet;	/* zlib return state */
 	DEFiRet;
@@ -1459,12 +1486,14 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, int bFlush)
 	pThis->zstrm.avail_in = lenBuf;
 	/* run deflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in, pThis->zstrm.total_in);
+		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld, bFlush %d\n",
+			pThis->zstrm.avail_in, pThis->zstrm.total_in, bFlush);
 		pThis->zstrm.avail_out = pThis->sIOBufSize;
 		pThis->zstrm.next_out = pThis->pZipBuf;
 		zRet = zlibw.Deflate(&pThis->zstrm, bFlush ? Z_SYNC_FLUSH : Z_NO_FLUSH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
 		outavail =pThis->sIOBufSize - pThis->zstrm.avail_out;
+		DBGPRINTF("after deflate, ret %d, avail_out %d, to write %d\n",
+			zRet, pThis->zstrm.avail_out, outavail);
 		if(outavail != 0) {
 			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
 		}
@@ -1527,7 +1556,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	DBGOPRINT((obj_t*) pThis, "file %d(%s) flush, buflen %ld%s\n", pThis->fd,
+	DBGOPRINT((obj_t*) pThis, "strmFlushinternal: file %d(%s) flush, buflen %ld%s\n", pThis->fd,
 		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
 		  (long) pThis->iBufPtr, (pThis->iBufPtr == 0) ? " (no need to flush)" : "");
 
