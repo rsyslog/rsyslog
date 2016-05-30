@@ -35,6 +35,9 @@ Version 8.19.0 [v8-stable] 2016-05-31
   This could cause segfault on startup. Happens when template name shorter
   than two chars and outname is not set. Once we are over startup, things
   work reliably.
+- bugfix omfile: async output file writing does not respect flushing
+  neither parameter flushInterval nor flushOnTXEnd="on" was respected.
+  closes https://github.com/rsyslog/rsyslog/issues/1054
 - bugfix imfile: corrupted multi-line message when state data was persisted
   see also https://github.com/rsyslog/rsyslog/issues/874
   Thanks to Magnus Hyllander for the analysis and a patch suggestion.
@@ -84,6 +87,7 @@ Version 8.19.0 [v8-stable] 2016-05-31
     These were now discovered thanks to the new support on travis. Also, this
     guards against future regressions.
   * imfile has now additional tests and overall better coverage
+  * omfile has now additional tests
 ------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
