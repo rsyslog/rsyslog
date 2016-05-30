@@ -98,6 +98,7 @@ typedef struct _instanceData {
 	sbool bulkmode;
 	sbool asyncRepl;
         sbool useHttps;
+        sbool allowUnsignedCerts;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -138,6 +139,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
+	{ "allowunsignedcerts", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -224,6 +226,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
         dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
+	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
 	dbgprintf("\terroronly=%d\n", pData->errorOnly);
@@ -279,6 +282,8 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, TRUE);
+	if(pWrkrData->pData->allowUnsignedCerts)
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, FALSE);
 
 	/* Only enable for debugging 
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
@@ -1196,6 +1201,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->asyncRepl = 0;
         pData->useHttps = 0;
 	pData->bulkmode = 0;
+	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
 	pData->errorOnly=0;
@@ -1247,6 +1253,8 @@ CODESTARTnewActInst
 			pData->dynParent = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
 			pData->bulkmode = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
+			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {
