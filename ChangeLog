@@ -1,5 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- omelasticsearch: add option to permit unsigned certs (experimentally)
+  This adds plumbing as suggested by Joerg Heinemann and Radu Gheorghe,
+  but is otherwise untested. Chances are good it works. If you use it,
+  please let us know your experience and most importantly any bug
+  reports you may have.
+  closes https://github.com/rsyslog/rsyslog/issues/89
 - imrelp: better error codes on unvailablity of TLS options
   Most importantly, we will tell the user in clear words if specific TLS
   options are not available due to too-old GnuTLS.
