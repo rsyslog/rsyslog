@@ -81,6 +81,11 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	} else {
 		pthread_join(pThis->thrdID, NULL);
 	}
+
+	/* call cleanup function, if any */
+	if(pThis->pAfterRun != NULL)
+		pThis->pAfterRun(pThis);
+
 	pthread_mutex_destroy(&pThis->mutThrd);
 	pthread_cond_destroy(&pThis->condThrdTerm);
 	free(pThis->name);
@@ -156,10 +161,6 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	}
 	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
 
-	/* call cleanup function, if any */
-	if(pThis->pAfterRun != NULL)
-		pThis->pAfterRun(pThis);
-
 	RETiRet;
 }
 
@@ -234,7 +235,6 @@ static void* thrdStarter(void *arg)
 	ENDfunc
 	pthread_exit(0);
 }
-
 /* Start a new thread and add it to the list of currently
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
@@ -252,13 +252,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
 	pThis->name = ustrdup(name);
-	pthread_create(&pThis->thrdID,
-#ifdef HAVE_PTHREAD_SETSCHEDPARAM
-			   &default_thread_attr,
-#else
-			   NULL,
-#endif
-			   thrdStarter, pThis);
+	pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:

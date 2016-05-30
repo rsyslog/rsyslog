@@ -275,10 +275,10 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	/* We got the string, now take it and see if we need to
 	 * remove anything at its end.
 	 */
-	CHKiRet(cstrFinalize(pCStr));
+	cstrFinalize(pCStr);
 
 	if(bTrimTrailing) {
-		CHKiRet(cstrTrimTrailingWhiteSpace(pCStr));
+		cstrTrimTrailingWhiteSpace(pCStr);
 	}
 
 	/* done! */
@@ -350,8 +350,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
-	/* We got the string, let's finish it...  */
-	CHKiRet(cstrFinalize(pCStr));
+	cstrFinalize(pCStr);
 
 	/* done! */
 	*ppCStr = pCStr;
@@ -405,11 +404,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		++pC;
 	}
 	
-	/* We got the string, let's finish it...  */
-	if((iRet = cstrFinalize(pCStr)) != RS_RET_OK) {
-		cstrDestruct(&pCStr);
-		FINALIZE;
-	}
+	cstrFinalize(pCStr);
 
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.

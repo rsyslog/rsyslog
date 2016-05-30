@@ -97,7 +97,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
  			 * termination.
 			 */
-uchar *PidFile = (uchar*) PATH_PIDFILE;
+const char *PidFile = PATH_PIDFILE;
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
 int MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -177,15 +177,25 @@ rsRetVal writePidFile(void)
 	FILE *fp;
 	DEFiRet;
 	
-	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
-	if((fp = fopen((char*) PidFile, "w")) == NULL) {
-		fprintf(stderr, "rsyslogd: error writing pid file\n");
+	const char *tmpPidFile;
+	asprintf((char **)&tmpPidFile, "%s.tmp", PidFile);
+	if(tmpPidFile == NULL)
+		tmpPidFile = PidFile;
+	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
+	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
+		perror("rsyslogd: error writing pid file (creation stage)\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
 		errmsg.LogError(errno, iRet, "rsyslog: error writing pid file");
 	}
 	fclose(fp);
+	if(tmpPidFile != PidFile) {
+		if(rename(tmpPidFile, PidFile) != 0) {
+			perror("rsyslogd: error writing pid file (rename stage)");
+		}
+		free((void*)tmpPidFile);
+	}
 finalize_it:
 	RETiRet;
 }
@@ -1148,7 +1158,7 @@ initAll(int argc, char **argv)
 			ConfFile = (uchar*) arg;
 			break;
 		case 'i':		/* pid file name */
-			PidFile = (uchar*)arg;
+			PidFile = arg;
 			break;
 		case 'l':
 			fprintf (stderr, "rsyslogd: the -l command line option will go away "
@@ -1624,7 +1634,7 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	unlink((char*)PidFile);
+	unlink(PidFile);
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own

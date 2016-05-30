@@ -106,7 +106,7 @@ pthread_mutex_t mutObjGlobalOp;	/* mutex to guard global operations of the objec
 #define COOKIE_BLANKLINE '.'
 
 /* forward definitions */
-static rsRetVal FindObjInfo(cstr_t *pszObjName, objInfo_t **ppInfo);
+static rsRetVal FindObjInfo(const char *szObjName, objInfo_t **ppInfo);
 
 /* methods */
 
@@ -191,10 +191,7 @@ InfoDestruct(objInfo_t **ppThis)
 static rsRetVal
 InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*))
 {
-	assert(pThis != NULL);
-	assert(objMethod > 0 && objMethod < OBJ_NUM_METHODS);
 	pThis->objMethods[objMethod] = pHandler;
-
 	return RS_RET_OK;
 }
 
@@ -447,7 +444,7 @@ objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pStr, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 
 	*ppStr = pStr;
 
@@ -515,7 +512,7 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pCStr, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pCStr));
+	cstrFinalize(pCStr);
 
 	/* check terminator */
 	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
@@ -631,7 +628,7 @@ rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 		CHKiRet(cstrAppendChar(pProp->pcsName, c));
 		NEXTC;
 	}
-	CHKiRet(cstrFinalize(pProp->pcsName));
+	cstrFinalize(pProp->pcsName);
 	step = 1;
 
 	/* property type */
@@ -842,7 +839,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, ustrlen(pszTypeExpected))) /* TODO: optimize strlen() - caller shall provide */
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
-	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
 	CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCT](&pObj));
 
@@ -1004,7 +1001,7 @@ objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
-	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
 	/* we got the object, now we need to fill the properties */
 	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
@@ -1056,7 +1053,7 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
-	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
 	/* we got the object, now we need to fill the properties */
 	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
@@ -1130,19 +1127,16 @@ GetName(obj_t *pThis)
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-FindObjInfo(cstr_t *pstrOID, objInfo_t **ppInfo)
+FindObjInfo(const char *const __restrict__ strOID, objInfo_t **ppInfo)
 {
 	DEFiRet;
 	int bFound;
 	int i;
 
-	assert(pstrOID != NULL);
-	assert(ppInfo != NULL);
-
 	bFound = 0;
 	i = 0;
 	while(!bFound && i < OBJ_NUM_IDS) {
-		if(arrObjInfo[i] != NULL && !rsCStrSzStrCmp(pstrOID, arrObjInfo[i]->pszID, arrObjInfo[i]->lenID)) {
+		if(arrObjInfo[i] != NULL && !strcmp(strOID, (const char*)arrObjInfo[i]->pszID)) {
 			bFound = 1;
 			break;
 		}
@@ -1159,7 +1153,7 @@ finalize_it:
 		/* DEV DEBUG ONLY dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);*/
 		/*EMPTY BY INTENSION*/;
 	} else {
-		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStrNoNULL(pstrOID), iRet);
+		dbgprintf("caller requested object '%s', not found (iRet %d)\n", strOID, iRet);
 	}
 
 	RETiRet;
@@ -1257,7 +1251,6 @@ static rsRetVal
 UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 {
 	DEFiRet;
-	cstr_t *pStr = NULL;
 	objInfo_t *pObjInfo;
 
 
@@ -1279,8 +1272,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	 */
 	pIf->ifIsLoaded = 2;
 
-	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
-	iRet = FindObjInfo(pStr, &pObjInfo);
+	iRet = FindObjInfo((const char*)pObjName, &pObjInfo);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* in this case, we need to see if we can dynamically load the object */
 		if(pObjFile == NULL) {
@@ -1288,7 +1280,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		} else {
 			CHKiRet(module.Load(pObjFile, 0, NULL));
 			/* NOW, we must find it or we have a problem... */
-			CHKiRet(FindObjInfo(pStr, &pObjInfo));
+			CHKiRet(FindObjInfo((const char*)pObjName, &pObjInfo));
 		}
 	} else if(iRet != RS_RET_OK) {
 		FINALIZE; /* give up */
@@ -1304,10 +1296,6 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 
 finalize_it:
 	pthread_mutex_unlock(&mutObjGlobalOp);
-
-	if(pStr != NULL)
-		rsCStrDestruct(&pStr);
-
 	RETiRet;
 }
 
@@ -1321,9 +1309,7 @@ static rsRetVal
 ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 {
 	DEFiRet;
-	cstr_t *pStr = NULL;
 	objInfo_t *pObjInfo;
-
 
 	/* dev debug only dbgprintf("source file %s releasing object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
 	pthread_mutex_lock(&mutObjGlobalOp);
@@ -1338,8 +1324,7 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		FINALIZE; /* we had a load error and can not/must not continue */
 	}
 
-	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
-	CHKiRet(FindObjInfo(pStr, &pObjInfo));
+	CHKiRet(FindObjInfo((const char*)pObjName, &pObjInfo));
 
 	/* if we reach this point, we have a valid pObjInfo */
 	module.Release(srcFile, &pObjInfo->pModInfo); /* decrease refcount */
@@ -1348,9 +1333,6 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 
 finalize_it:
 	pthread_mutex_unlock(&mutObjGlobalOp);
-
-	if(pStr != NULL)
-		rsCStrDestruct(&pStr);
 
 	RETiRet;
 }

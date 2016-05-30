@@ -9,7 +9,7 @@ echo \[now-utc\]: test \$NOW-UTC
 export TZ=TEST-02:00
 
 . $srcdir/diag.sh init
-faketime '2016-01-01 01:00:00' $srcdir/diag.sh startup now-utc.conf
+FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup now-utc.conf
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
 . $srcdir/diag.sh tcpflood -m1

@@ -16,9 +16,14 @@ echo "running rsgtutil command with short options"
 ../tools/rsgtutil $RSYSLOG_KSI_DEBUG -t -P $RSYSLOG_KSI_BIN $srcdir/testsuites/$RSYSLOG_KSI_LOG
 
 RSYSLOGD_EXIT=$?
-if [ "$RSYSLOGD_EXIT" -ne "0" ]; then
-	echo "rsgtutil returned error: " $RSYSLOGD_EXIT
-	exit 1;
+if [ "$RSYSLOGD_EXIT" -ne "0" ]; then	# EX_OK
+	if [ "$RSYSLOGD_EXIT" -eq "69" ]; then	# EX_UNAVAILABLE
+		echo "[ksi-verify-short.sh]: rsgtutil verify failed with service unavailable (does not generate an error)"
+		exit 77;
+	else
+		echo "[ksi-verify-short.sh]: rsgtutil verify failed with error: " $RSYSLOGD_EXIT
+		exit 1;
+	fi 
 fi
 
 # Cleanup temp files

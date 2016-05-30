@@ -532,9 +532,9 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
 #endif
 
+extern pthread_attr_t default_thread_attr;
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 extern struct sched_param default_sched_param;
-extern pthread_attr_t default_thread_attr;
 extern int default_thr_sched_policy;
 #endif
 

@@ -9,7 +9,7 @@ echo \[now_family_utc\]: test \$NOW family of system properties
 export TZ=TEST+06:30
 
 . $srcdir/diag.sh init
-faketime '2016-01-01 01:00:00' $srcdir/diag.sh startup now_family_utc.conf
+FAKETIME='2016-01-01 01:00:00' $srcdir/diag.sh startup now_family_utc.conf
 # what we send actually is irrelevant, as we just use system properties.
 # but we need to send one message in order to gain output!
 . $srcdir/diag.sh tcpflood -m1

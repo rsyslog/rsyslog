@@ -21,13 +21,55 @@ These are many ways to contribute to the project:
 
 This list is not conclusive. There for sure are many more ways to contribute and if you find one, just let us know. We are very open to new suggestions and like to try out new things.
 
+When to submit Pull Requests?
+-----------------------------
+
+It is OK to submit PRs that are not yet fully ready for merging. You want to
+do this in order to get early CI system coverage for your patch. However,
+all patches should be reasonably complete and "work" in a sense.
+
+If you submit such PRs, please flag them as "work in progress" by adding
+"WiP:" in front of the title. We will NOT merge these PRs before you tell us
+they are now ready for merging.
+
+If you just want/need to do a temporary experiment, you may open a PR, flag it
+as "EXPERIMENT - DO NOT MERGE", let the CI tests run, check results and close
+the PR thereafter. This prevents unnecessary cluttering of the open PR list.
+We will take the liberty to close such PRs if they are left open for more
+than a day or two.
+
+Please note, though, that the rsyslog repro is fully set up to use Travis CI.
+Travis covers about 95% of all essential testing. So we highly recommend
+that you use Travis to do initial checks on your work and create the PR
+only after this looks good. That saves both you and us some time.
 
 Requirements for patches
 ------------------------
 In order to ensure good code quality, after applying the path the code must
 
+- no legacy configration statements ($someSetting) must be added,
+  all configuration must be in v6+ style (RainerScript)
 - compile cleanly without WARNING messages under both gcc and clang
 - pass clang static analyzer without any report
+- pass all CI tests
+- new functionality must have associated
+  * testbench tests
+  * doc additions in the rsyslog-doc sister project
+
+Testbench Coverage
+..................
+
+If you fix a bug that is not detected by the current testbench, it is
+appreciated if you also add testbench test to make sure the problem does
+not re-occur in the future.
+
+In contrast to new feature PRs, this is not a hard requirement, but it
+helps to speed up merging. If there is no testbench test added, the
+core rsyslog developers will try to add one based on the patch. That
+means merging needs to wait until we have time to do this.
+
+Compiler Diagnostics
+....................
 
 Note that both warning messages and static analyzer warnings may be false
 positives. We have decided to accept that fate and work around it (e.g. by
@@ -42,6 +84,14 @@ in question. We have done this in some few cases ourselfs, and if someone
 can fix the root cause, we would appreciate help. But, again, this is a
 last resort which should normally not be used.
 
+
+Continous Integration Testing
+.............................
+
+All patches are run though our continous integration system, which ensures
+no regressions are inside the code as well as rsyslog project policies are
+followed (as far as we can check in an automatted way).
+
 For pull requests submitted via github, these two conditions are 
 verified automatically. See the PR for potential failueres. For patches
 submitted otherwise, they will be verified semi-manually.
@@ -54,16 +104,24 @@ back and relax. The rsyslog core developer team reviews PRs regularly and
 restarts tests which we know to look racy. If the problem persists, we will
 contact you.
 
-Once all this has passed, a final integration test will be done via buildbot
-on a larger number of platforms. This is a semi-manual process. You will be
-contacted if a problem shows up during it (very unlikely, but occasionally
-happens).
+All PRs will be tested on a variety of systems, with the help of both Travis
+CI and buildbot. The core goal of this multi-platform testing is to find
+issues that surface only on some systems (e.g. 32bit related issues, etc).
+We continously strive to update the CI system coverage. If you can provide
+a buildbot slave for a not-yet-supported test platform, please let us know.
+We will gladly add it.
+
+Note that test coverage differs between platforms. For example, not all
+databases etc. are tested on each platform. Also note that due to resource
+constraints some very lengthy tests are only execute on some (maybe only
+a single) platform.
+
+Note that we always try to merge with the most recent master branch and
+try a build from that version (if automatic merging is possible). If this
+test fails but no other, chances are good that there is an inter-PR issue.
+If this happens, it is suggested to rebase to get master branch and update
+the PR.
 
 Note to developers
 ------------------
-Please adress pull requests against the master branch. The changes will at
-first be merged into another branch (master-candidate). There, the
-changes will be tested and merged into the master branch, should the test succeed.
-
-More information is available at:
-    http://www.rsyslog.com/how-to-contribute-to-rsyslog/
+Please adress pull requests against the master branch.

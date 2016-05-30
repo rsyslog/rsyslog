@@ -98,6 +98,7 @@ typedef struct _instanceData {
 	sbool bulkmode;
 	sbool asyncRepl;
         sbool useHttps;
+        sbool allowUnsignedCerts;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -138,6 +139,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "dynbulkid", eCmdHdlrBinary, 0 },
 	{ "bulkid", eCmdHdlrGetWord, 0 },
+	{ "allowunsignedcerts", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -224,6 +226,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
         dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
+	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
 	dbgprintf("\terroronly=%d\n", pData->errorOnly);
@@ -275,11 +278,13 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("omelasticsearch: checkConn() curl_easy_init() failed\n");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
-	/* Fail on HTTP error */
-	curl_easy_setopt(curl, CURLOPT_FAILONERROR, TRUE);
 	/* Bodypart of request not needed, so set curl opt to nobody and httpget, otherwise lib-curl could sigsegv */
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, TRUE);
+	if(pWrkrData->pData->allowUnsignedCerts)
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, FALSE);
+
 	/* Only enable for debugging 
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
 
@@ -314,13 +319,19 @@ ENDtryResume
 
 
 /* get the current index and type for this message */
-static inline void
+static void
 getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
-			  uchar **bulkId)
+		      uchar **bulkId)
 {
-	if(tpls == NULL)
-		return;
+	if(tpls == NULL) {
+		*srchIndex = pData->searchIndex;
+		*parent = pData->parent;
+		*srchType = pData->searchType;
+		*bulkId = NULL;
+		goto done;
+	}
+
 	if(pData->dynSrchIdx) {
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
@@ -356,30 +367,31 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 			*srchType = tpls[1];
 			if(pData->dynParent) {
 				*parent = tpls[2];
-                 if(pData->dynBulkId) {
-                    *bulkId = tpls[3];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[3];
+				}
 			} else {
 				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[2];
+				}
 			}
 		} else  {
 			*srchType = pData->searchType;
 			if(pData->dynParent) {
 				*parent = tpls[1];
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[2];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[2];
+				}
 			} else {
 				*parent = pData->parent;
-                if(pData->dynBulkId) {
-                    *bulkId = tpls[1];
-                }
+				if(pData->dynBulkId) {
+					*bulkId = tpls[1];
+				}
 			}
 		}
 	}
+done:	return;
 }
 
 
@@ -1053,7 +1065,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 		case CURLE_COULDNT_RESOLVE_PROXY:
 		case CURLE_COULDNT_CONNECT:
 		case CURLE_WRITE_ERROR:
-		case CURLE_HTTP_RETURNED_ERROR:
 			STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
 			indexHTTPFail += nmsgs;
 			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
@@ -1153,8 +1164,7 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
 	curl_easy_setopt(handle, CURLOPT_POST, 1);
-
-	curl_easy_setopt(handle, CURLOPT_FAILONERROR, TRUE);
+	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 
 	pWrkrData->curlHandle = handle;
 	pWrkrData->postHeader = header;
@@ -1191,6 +1201,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->asyncRepl = 0;
         pData->useHttps = 0;
 	pData->bulkmode = 0;
+	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
 	pData->errorOnly=0;
@@ -1242,6 +1253,8 @@ CODESTARTnewActInst
 			pData->dynParent = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
 			pData->bulkmode = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
+			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {

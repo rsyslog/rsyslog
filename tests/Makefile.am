@@ -66,6 +66,9 @@ TESTS +=  \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	empty-ruleset.sh \
+	imtcp-basic.sh \
+	imtcp-NUL.sh \
+	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
 	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
@@ -105,6 +108,9 @@ TESTS +=  \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	variable_leading_underscore.sh \
+	gzipwr_rscript.sh \
+	gzipwr_flushInterval.sh \
+	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -243,6 +249,13 @@ TESTS +=  \
 	omjournal-basic-no-template.sh
 endif
 
+if ENABLE_OMKAFKA
+if ENABLE_KAFKA_TESTS
+TESTS += \
+	omkafka_static.sh
+endif
+endif
+
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
@@ -280,7 +293,8 @@ TESTS +=  \
 	dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \
-	dynstats_reset_without_pstats_reset.sh
+	dynstats_reset_without_pstats_reset.sh \
+	dynstats_prevent_premature_eviction.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	dynstats-vg.sh \
@@ -288,7 +302,8 @@ TESTS +=  \
 	dynstats_overflow-vg.sh \
 	dynstats-json-vg.sh \
 	stats-json-vg.sh \
-	stats-cee-vg.sh
+	stats-cee-vg.sh \
+	dynstats_prevent_premature_eviction-vg.sh
 endif
 endif
 
@@ -304,6 +319,8 @@ TESTS +=  \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	rscript_random.sh \
 	rscript_replace.sh
 if HAVE_VALGRIND
@@ -452,7 +469,9 @@ TESTS += \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
-	imfile-endregex.sh
+	imfile-endregex.sh \
+	imfile-endregex-save-lf.sh \
+	imfile-endregex-save-lf-persist.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -751,6 +770,9 @@ EXTRA_DIST= \
 	testsuites/diskqueue-fsync.conf \
 	empty-ruleset.sh \
 	testsuites/empty-ruleset.conf \
+	imtcp-basic.sh \
+	imtcp-NUL.sh \
+	imtcp-NUL-rawmsg.sh \
 	imtcp-tls-basic.sh \
 	imtcp-tls-basic-vg.sh \
 	testsuites/imtcp-tls-basic.conf \
@@ -767,6 +789,8 @@ EXTRA_DIST= \
 	testsuites/manytcp.conf \
 	manyptcp.sh \
 	testsuites/manyptcp.conf \
+	imptcp-NUL.sh \
+	imptcp-NUL-rawmsg.sh \
 	imptcp_large.sh \
 	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \
@@ -914,6 +938,9 @@ EXTRA_DIST= \
 	testsuites/abort-uncleancfg-badcfg_1.conf \
 	variable_leading_underscore.sh \
 	testsuites/variable_leading_underscore.conf \
+	gzipwr_rscript.sh \
+	gzipwr_flushInterval.sh \
+	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	testsuites/gzipwr_large.conf \
 	gzipwr_large_dynfile.sh \
@@ -929,6 +956,8 @@ EXTRA_DIST= \
 	testsuites/imfile-readmode2.conf \
 	testsuites/imfile-readmode2-with-persists.conf \
 	testsuites/imfile-readmode2-with-persists-data-during-stop.conf \
+	imfile-endregex-save-lf.sh \
+	imfile-endregex-save-lf-persist.sh \
 	imfile-endregex.sh \
 	imfile-endregex-vg.sh \
 	testsuites/imfile-endregex.conf \
@@ -1035,6 +1064,10 @@ EXTRA_DIST= \
 	mysql-actq-mt-withpause.sh \
 	mysql-actq-mt-withpause-vg.sh \
 	testsuites/mysql-actq-mt.conf \
+	testsuites/kafka-server.properties \
+	testsuites/zoo.cfg \
+	omkafka_static.sh \
+	testsuites/omkafka_static.conf \
 	mmpstrucdata.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
@@ -1050,6 +1083,8 @@ EXTRA_DIST= \
 	dynstats_reset-vg.sh \
 	dynstats.sh \
 	dynstats-vg.sh \
+	dynstats_prevent_premature_eviction.sh \
+	dynstats_prevent_premature_eviction-vg.sh \
 	testsuites/dynstats.conf \
 	testsuites/dynstats_ctr_reset.conf \
 	testsuites/dynstats_reset_without_pstats_reset.conf \
@@ -1264,3 +1299,4 @@ nettester_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
+

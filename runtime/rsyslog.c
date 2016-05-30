@@ -35,7 +35,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -83,9 +83,9 @@
 #include "atomic.h"
 #include "srUtils.h"
 
+pthread_attr_t default_thread_attr;
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 struct sched_param default_sched_param;
-pthread_attr_t default_thread_attr;
 int default_thr_sched_policy;
 #endif
 
@@ -145,11 +145,12 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		stdlog_init(0);
 		stdlog_hdl = NULL;
 #endif
+		CHKiRet(pthread_attr_init(&default_thread_attr));
+		pthread_attr_setstacksize(&default_thread_attr, 4096*1024);
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	    	CHKiRet(pthread_getschedparam(pthread_self(),
 			    		      &default_thr_sched_policy,
 					      &default_sched_param));
-		CHKiRet(pthread_attr_init(&default_thread_attr));
 		CHKiRet(pthread_attr_setschedpolicy(&default_thread_attr,
 			    			    default_thr_sched_policy));
 		CHKiRet(pthread_attr_setschedparam(&default_thread_attr,
@@ -228,6 +229,11 @@ rsrtExit(void)
 		confClassExit();
 		glblClassExit();
 		rulesetClassExit();
+		wtiClassExit();
+		wtpClassExit();
+		strgenClassExit();
+		propClassExit();
+		statsobjClassExit();
 
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}

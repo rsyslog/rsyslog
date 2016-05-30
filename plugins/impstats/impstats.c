@@ -189,7 +189,7 @@ finalize_it:
 
 /* log stats message to file; limited error handling done */
 static inline void
-doLogToFile(uchar *ln, size_t lenLn)
+doLogToFile(const char *ln, const size_t lenLn)
 {
 	struct iovec iov[4];
 	ssize_t nwritten;
@@ -213,7 +213,7 @@ doLogToFile(uchar *ln, size_t lenLn)
 	iov[1].iov_base = ": ";
 	iov[1].iov_len = 2;
 	nexpect += 2;
-	iov[2].iov_base = ln;
+	iov[2].iov_base = (void*)ln;
 	iov[2].iov_len = lenLn;
 	nexpect += lenLn;
 	iov[3].iov_base = "\n";
@@ -233,11 +233,11 @@ done:	return;
  * required (but may be a simple verb like "BEGIN" and "END".
  */
 static rsRetVal
-submitLine(uchar *const ln, const size_t lenLn)
+submitLine(const char *const ln, const size_t lenLn)
 {
 	DEFiRet;
 	if(runModConf->bLogToSyslog)
-		doSubmitMsg(ln);
+		doSubmitMsg((uchar*)ln);
 	if(runModConf->logfile != NULL)
 		doLogToFile(ln, lenLn);
 	RETiRet;
@@ -247,10 +247,10 @@ submitLine(uchar *const ln, const size_t lenLn)
  * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
  */
 static rsRetVal
-doStatsLine(void __attribute__((unused)) *usrptr, cstr_t *cstr)
+doStatsLine(void __attribute__((unused)) *usrptr, const char *const str)
 {
 	DEFiRet;
-	iRet = submitLine(rsCStrGetSzStrNoNULL(cstr), cstrLen(cstr));
+	iRet = submitLine(str, strlen(str));
 	RETiRet;
 }
 
@@ -486,10 +486,10 @@ CODESTARTrunInput
 		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
 		DBGPRINTF("impstats: woke up, generating messages\n");
 		if(runModConf->bBracketing)
-			submitLine((uchar*)"BEGIN", sizeof("BEGIN")-1);
+			submitLine("BEGIN", sizeof("BEGIN")-1);
 		generateStatsMsgs();
 		if(runModConf->bBracketing)
-			submitLine((uchar*)"END", sizeof("END")-1);
+			submitLine("END", sizeof("END")-1);
 	}
 ENDrunInput
 

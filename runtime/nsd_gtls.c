@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright (C) 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -351,7 +351,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 		gnutls_x509_crt_deinit(cert);
 	}
 
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 	*ppStr = pStr;
 
 finalize_it:
@@ -473,7 +473,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
-	CHKiRet(cstrFinalize(pStr));
+	cstrFinalize(pStr);
 
 	*ppStr = pStr;
 
@@ -746,7 +746,7 @@ gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 		}
 		++i; /* char processed */
 	}
-	CHKiRet(cstrFinalize(pstrCN));
+	cstrFinalize(pstrCN);
 
 	/* we got it - we ignore the rest of the DN string (if any). So we may
 	 * not detect if it contains more than one CN
@@ -784,7 +784,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	size = sizeof(fingerprint);
 	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
-	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStr(pstrFingerprint));
+	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
@@ -802,7 +802,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
-					"not permitted to talk to it", cstrGetSzStr(pstrFingerprint));
+					"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -897,21 +897,21 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		/* if we did not succeed so far, we try the CN part of the DN... */
 		CHKiRet(gtlsGetCN(pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
-			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStr(pstrCN));
-			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStr(pstrCN));
+			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStrNoNULL(pstrCN));
+			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStrNoNULL(pstrCN));
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(gtlsChkOnePeerName(pThis, cstrGetSzStr(pstrCN), &bFoundPositiveMatch));
+			CHKiRet(gtlsChkOnePeerName(pThis, cstrGetSzStrNoNULL(pstrCN), &bFoundPositiveMatch));
 		}
 	}
 
 	if(!bFoundPositiveMatch) {
 		dbgprintf("invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
-			CHKiRet(cstrFinalize(pStr));
+			cstrFinalize(pStr);
 			errno = 0;
 			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
-					cstrGetSzStr(pStr));
+					cstrGetSzStrNoNULL(pStr));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -1033,7 +1033,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		errmsg.LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
 				pszErrCause);
 		gtlsGetCertInfo(pThis, &pStr);
-		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStr(pStr));
+		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 		cstrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
 	}
@@ -1055,7 +1055,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert > ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStr(pStr));
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
@@ -1066,7 +1066,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert < ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStr(pStr));
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 			cstrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		}
@@ -1637,7 +1637,9 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
 			uchar *pErr = gtlsStrerror(iSent);
-			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", iSent, __FILE__, __LINE__, pErr);
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d - this "
+				"could be caused by a broken connection. GnuTLS reports: %s \n",
+				iSent, pErr);
 			free(pErr);
 			gnutls_perror(iSent);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);

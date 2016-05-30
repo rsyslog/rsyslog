@@ -25,7 +25,7 @@ template(name="outfmt" type="string"
 
 echo "***SUBTEST: check 1800-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-faketime -f '1800-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='1800-01-01 00:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
@@ -40,7 +40,7 @@ fi;
 
 echo "***SUBTEST: check 1960-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-faketime -f '1960-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='1960-01-01 00:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
@@ -55,7 +55,7 @@ fi;
 
 echo "***SUBTEST: check 2101-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-faketime -f '2101-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='2101-01-01 00:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
@@ -70,7 +70,7 @@ fi;
 
 echo "***SUBTEST: check 2500-01-01"
 rm -f rsyslog.out.log	# do cleanup of previous subtest
-faketime -f '2500-01-01 00:00:00' $srcdir/diag.sh startup
+FAKETIME='2500-01-01 00:00:00' $srcdir/diag.sh startup
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown

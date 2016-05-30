@@ -32,6 +32,7 @@
 #include "config.h"
 #include "rsyslog.h"
 #include "srUtils.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 }
 
 %{
@@ -274,7 +275,7 @@ int fileno(FILE *stream);
 						yytext); }
 \$[a-z]+.*$			{ /* see comment on $IncludeConfig above */
 				  if(!strncasecmp(yytext, "$includeconfig ", 14)) {
-					yyless(14);
+					yyless((yy_size_t)14);
 				  	BEGIN INCL;
 				  } else if(!strncasecmp(yytext, "$ruleset ", 9)) {
 					yylval.s = strdup(yytext);

@@ -1,4 +1,94 @@
 ------------------------------------------------------------------------------
+Version 8.19.0 [v8-stable] 2016-05-31
+- omelasticsearch: add option to permit unsigned certs (experimentally)
+  This adds plumbing as suggested by Joerg Heinemann and Radu Gheorghe,
+  but is otherwise untested. Chances are good it works. If you use it,
+  please let us know your experience and most importantly any bug
+  reports you may have.
+  closes https://github.com/rsyslog/rsyslog/issues/89
+- imrelp: better error codes on unvailablity of TLS options
+  Most importantly, we will tell the user in clear words if specific TLS
+  options are not available due to too-old GnuTLS.
+  closes https://github.com/rsyslog/rsyslog/issues/1019
+- default stack size for inputs has been explicitely set to 4MiB
+  for most platforms, this means a reduction from the default of 10MiB, hower
+  it may mean an increas for micro-libc's (some may have as low as 80KiB by
+  default).
+- testbench: We are now using libfaketime instead of faketime command line
+  tool. Make sure you have installed the library and not just the binary!
+- refactor stringbuf
+  * use only a single string buffer
+    ... both for the internal representation as well as the C-String one.
+    The module originally tried to support embedded NUL characters, which
+    over time has prooven to be not necessary. Rsyslog always encodes
+    NUL into escape sequences.
+    Also, the dual buffers were used inconsistently, which could lead to
+    subtle bugs. With the single buffer, this does no longer happen and
+    we also get some improved performance (should be noticable)
+    and reduced memory use (a bit).
+    closes https://github.com/rsyslog/rsyslog/issues/1033
+  * removed no longer used code
+  * internal API changes to reflect new needs
+  * performance improvements
+  * miscellaneous minor cleanup
+- fix: potential misadressing in template config processing
+  This could cause segfault on startup. Happens when template name shorter
+  than two chars and outname is not set. Once we are over startup, things
+  work reliably.
+- bugfix omfile: async output file writing does not respect flushing
+  neither parameter flushInterval nor flushOnTXEnd="on" was respected.
+  closes https://github.com/rsyslog/rsyslog/issues/1054
+- bugfix imfile: corrupted multi-line message when state data was persisted
+  see also https://github.com/rsyslog/rsyslog/issues/874
+  Thanks to Magnus Hyllander for the analysis and a patch suggestion.
+- bugfix imfile: missing newline after first line of multiline message
+  see also https://github.com/rsyslog/rsyslog/issues/843
+  Thanks to Magnus Hyllander for the patch.
+- bugfix: dynstats unusedMetricTtl bug
+  Thanks to Janmejay Singh for fixing this.
+- bugfix build system: build was broken on SunOS
+  Thanks to Filip Hajny for the patch.
+- bugfix: afterRun entry point not correctly called
+  The entry point was called at the wrong spot, only when the thread
+  had not already terminated by itself. This could cause various
+  cleanup to not be done. This affected e.g. imjournal.
+  closes https://github.com/rsyslog/rsyslog/issues/882
+- bugfix dynstats: do not leak file handles
+  Thanks to Janmejay Singh for the patch.
+- bugfix omelasticsearch: disable libCURL signal handling
+  previously, this could lead to segfaults on connection timeout
+  see also https://github.com/rsyslog/rsyslog/pull/1007
+  Thanks to Sai Ke WANG for the patch.
+- bugfix omelasticsearc: some regressions were fixed
+  * error file was no longer written
+  * fix for some potential misaddressings
+- improved wording: gnutls error message points to potential cause
+  What GnutTLS returns us is very unspecific and somehwat misleading, so
+  we point to what it most probably is (broken connect).
+  see also https://github.com/rsyslog/rsyslog/issues/846
+- some general code improvements
+  * "fixed" cosmetic memory leaks at shutdown
+- build system bugfix: configure can't find gss_acquire_cred on Solaris
+  Thanks to github user vlmarek for the patch.
+- improvements to the CI environment
+  * improvements on the non-raciness of some tests
+  * imdiag: avoid races in detecting queue empty status
+    This reslolves cases where the testbench terminated rsyslog too early,
+    resulting in potential message loss and test failure.
+  * omkafka has now dynamic tests
+    Thanks to Janmejay Singh for implementing them.
+  * try to merge PR to master and run tests; this guards against cross-PR
+    regressions and wasn't caught previously. Note that we skip this test
+    if we cannot successfully merge. So this is not a replacement for a
+    daily full "all-project integration test run".
+  * travis has finally enabled elasticsearch tests
+    ES was unfortunately not being regularly tested for quite a while due to
+    missing environment. This lead to some regressions becoming undetected.
+    These were now discovered thanks to the new support on travis. Also, this
+    guards against future regressions.
+  * imfile has now additional tests and overall better coverage
+  * omfile has now additional tests
+------------------------------------------------------------------------------
 Version 8.18.0 [v8-stable] 2016-04-19
 - testbench: When running privdrop tests testbench tries to drop
   user to "rsyslog", "syslog" or "daemon" when running as root and

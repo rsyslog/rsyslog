@@ -26,7 +26,9 @@ struct dynstats_ctr_s {
 	STATSCOUNTER_DEF(ctr, mutCtr);
 	ctr_t *pCtr;
 	uchar *metric;
-	struct dynstats_ctr_s *next; /* linked list ptr */
+	/* linked list ptr */
+	struct dynstats_ctr_s *next;
+	struct dynstats_ctr_s *prev;
 };
 
 struct dynstats_bucket_s {
@@ -48,6 +50,11 @@ struct dynstats_bucket_s {
 	ctr_t *pPurgeTriggeredCtr;
 	struct dynstats_bucket_s *next; /* linked list ptr */
 	struct dynstats_ctr_s *ctrs;
+	/*survivor objects are used to keep counter values around for upto unused-ttl duration,
+	  so in case it is accessed within (ttl - 2 * ttl) time-period we can re-store the accumulator value from this */
+	struct dynstats_ctr_s *survivor_ctrs;
+	htable *survivor_table;
+	
 	uint32_t maxCardinality;
 	uint32_t metricCount;
 	pthread_mutex_t mutMetricCount;

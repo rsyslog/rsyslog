@@ -319,6 +319,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 		free(pEntry->pszPort);
 		prop.Destruct(&pEntry->pInputName);
 		ratelimitDestruct(pEntry->ratelimiter);
+		statsobj.Destruct(&(pEntry->stats));
 		pDel = pEntry;
 		pEntry = pEntry->pNext;
 		free(pDel);

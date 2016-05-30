@@ -68,12 +68,22 @@ static inline void
 addToObjList(statsobj_t *pThis)
 {
 	pthread_mutex_lock(&mutStats);
-	pThis->prev = objLast;
-	if(objLast != NULL)
-		objLast->next = pThis;
-	objLast = pThis;
-	if(objRoot == NULL)
+	if (pThis->flags && STATSOBJ_FLAG_DO_PREPEND) {
+		pThis->next = objRoot;
+		if (objRoot != NULL) {
+			objRoot->prev = pThis;
+		}
 		objRoot = pThis;
+		if (objLast == NULL)
+			objLast = pThis;
+	} else {
+		pThis->prev = objLast;
+		if(objLast != NULL)
+			objLast->next = pThis;
+		objLast = pThis;
+		if(objRoot == NULL)
+			objRoot = pThis;
+	}
 	pthread_mutex_unlock(&mutStats);
 }
 
@@ -117,6 +127,7 @@ BEGINobjConstruct(statsobj) /* be sure to specify the object type also in END ma
 	pThis->ctrLast = NULL;
 	pThis->ctrRoot = NULL;
 	pThis->read_notifier = NULL;
+	pThis->flags = 0;
 ENDobjConstruct(statsobj)
 
 
@@ -169,6 +180,11 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+setStatsObjFlags(statsobj_t *pThis, int flags) {
+	pThis->flags = flags;
+}
+
 static rsRetVal
 setReportingNamespace(statsobj_t *pThis, uchar *ns)
 {
@@ -186,7 +202,7 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef, int8_t linked)
 {
 	ctr_t *ctr;
 	DEFiRet;
@@ -210,7 +226,9 @@ addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrTyp
 		ctr->val.pInt = (int*) pCtr;
 		break;
 	}
-	addCtrToList(pThis, ctr);
+	if (linked) {
+		addCtrToList(pThis, ctr);
+	}
 	*entryRef = ctr;
 
 finalize_it:
@@ -223,21 +241,33 @@ finalize_it:
 	RETiRet;
 }
 
+static inline void
+addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr)
+{
+	pCtr->next = NULL;
+	pCtr->prev = NULL;
+	addCtrToList(pThis, pCtr);
+}
+
 static rsRetVal
 addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
 {
 	ctr_t *ctr;
 	DEFiRet;
-	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr));
+	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1));
 finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
+static void
+destructUnlinkedCounter(ctr_t *ctr) {
+	free(ctr->name);
+	free(ctr);
+}
+
+static void
 destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 {
-    DEFiRet;
-
     pthread_mutex_lock(&pThis->mutCtr);
 	if (pCtr->prev != NULL) {
 		pCtr->prev->next = pCtr->next;
@@ -252,10 +282,7 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 		pThis->ctrRoot = pCtr->next;
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
-	free(pCtr->name);
-	free(pCtr);
-    
-    RETiRet;
+	destructUnlinkedCounter(pCtr);
 }
 
 static inline void
@@ -378,7 +405,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	pthread_mutex_unlock(&pThis->mutCtr);
 	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
@@ -429,7 +456,7 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 
-	CHKiRet(cstrFinalize(pcstr));
+	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
@@ -443,7 +470,7 @@ finalize_it:
  * (what could otherwise cause a segfault).
  */
 static void
-getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
+getSenderStats(rsRetVal(*cb)(void*, const char*),
 	void *usrptr,
 	statsFmtType_t fmt,
 	const int8_t bResetCtrs)
@@ -474,10 +501,7 @@ getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
 					stat->sender, stat->nMsgs);
 			}
 			fmtbuf[sizeof(fmtbuf)-1] = '\0';
-			cstr_t *cs;
-			rsCStrConstructFromszStr(&cs, (uchar*)fmtbuf);
-			cb(usrptr, cs);
-			rsCStrDestruct(&cs);
+			cb(usrptr, fmtbuf);
 			if(bResetCtrs)
 				stat->nMsgs = 0;
 		} while (hashtable_iterator_advance(itr));
@@ -494,7 +518,7 @@ getSenderStats(rsRetVal(*cb)(void*, cstr_t*),
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
 	cstr_t *cstr;
@@ -511,7 +535,7 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 			CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
 			break;
 		}
-		CHKiRet(cb(usrptr, cstr));
+		CHKiRet(cb(usrptr, (const char*)cstrGetSzStrNoNULL(cstr)));
 		rsCStrDestruct(&cstr);
 		if (o->read_notifier != NULL) {
 			o->read_notifier(o, o->read_notifier_ctx);
@@ -523,7 +547,6 @@ getAllStatsLines(rsRetVal(*cb)(void*, cstr_t*), void *usrptr, statsFmtType_t fmt
 finalize_it:
 	RETiRet;
 }
-
 
 /* Enable statistics gathering. currently there is no function to disable it
  * again, as this is right now not needed.
@@ -578,24 +601,26 @@ finalize_it:
 	RETiRet;
 }
 
-
-static rsRetVal
-destructAllCounters(statsobj_t *pThis) {
-	DEFiRet;
-	ctr_t *ctr, *ctrToDel;
-
+static ctr_t*
+unlinkAllCounters(statsobj_t *pThis) {
+	ctr_t *ctr;
+	pthread_mutex_lock(&pThis->mutCtr);
 	ctr = pThis->ctrRoot;
+	pThis->ctrLast = NULL;
+	pThis->ctrRoot = NULL;
+	pthread_mutex_unlock(&pThis->mutCtr);
+	return ctr;
+}
+
+static void
+destructUnlinkedCounters(ctr_t *ctr) {
+	ctr_t *ctrToDel;
+
 	while(ctr != NULL) {
 		ctrToDel = ctr;
 		ctr = ctr->next;
-		free(ctrToDel->name);
-		free(ctrToDel);
+		destructUnlinkedCounter(ctrToDel);
 	}
-
-	pThis->ctrLast = NULL;
-	pThis->ctrRoot = NULL;
-	
-	RETiRet;
 }
 
 /* check if a sender has not sent info to us for an extended period
@@ -644,7 +669,7 @@ CODESTARTobjDestruct(statsobj)
 	removeFromObjList(pThis);
 
 	/* destruct counters */
-	CHKiRet(destructAllCounters(pThis));
+	destructUnlinkedCounters(unlinkAllCounters(pThis));
 
 	pthread_mutex_destroy(&pThis->mutCtr);
 	free(pThis->name);
@@ -681,11 +706,14 @@ CODESTARTobjQueryInterface(statsobj)
 	pIf->SetOrigin = setOrigin;
 	pIf->SetReadNotifier = setReadNotifier;
 	pIf->SetReportingNamespace = setReportingNamespace;
+	pIf->SetStatsObjFlags = setStatsObjFlags;
 	pIf->GetAllStatsLines = getAllStatsLines;
 	pIf->AddCounter = addCounter;
 	pIf->AddManagedCounter = addManagedCounter;
+	pIf->AddPreCreatedCtr = addPreCreatedCounter;
 	pIf->DestructCounter = destructCounter;
-	pIf->DestructAllCounters = destructAllCounters;
+	pIf->DestructUnlinkedCounter = destructUnlinkedCounter;
+	pIf->UnlinkAllCounters = unlinkAllCounters;
 	pIf->EnableStats = enableStats;
 finalize_it:
 ENDobjQueryInterface(statsobj)
@@ -719,4 +747,5 @@ BEGINObjClassExit(statsobj, OBJ_IS_CORE_MODULE) /* class, version */
 	/* release objects we no longer need */
 	pthread_mutex_destroy(&mutStats);
 	pthread_mutex_destroy(&mutSenders);
+	hashtable_destroy(stats_senders, 1);
 ENDObjClassExit(statsobj)
