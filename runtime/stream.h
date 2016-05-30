@@ -41,7 +41,7 @@
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
  * 
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -130,7 +130,8 @@ typedef struct strm_s {
 	sbool bAsyncWrite;	/* do asynchronous writes (always if a flush interval is given) */
 	sbool bStopWriter;	/* shall writer thread terminate? */
 	sbool bDoTimedWait;	/* instruct writer thread to do a times wait to support flush timeouts */
-	sbool bzInitDone; /* did we do an init of zstrm already? */
+	sbool bzInitDone;	/* did we do an init of zstrm already? */
+	sbool bFlushNow;	/* shall we flush with the next async write? */
 	sbool bVeryReliableZip; /* shall we write interim headers to create a very reliable ZIP file? */
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
 	pthread_mutex_t mut;/* mutex for flush in async mode */

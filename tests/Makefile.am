@@ -108,6 +108,9 @@ TESTS +=  \
 	abort-uncleancfg-badcfg-check.sh \
 	abort-uncleancfg-badcfg-check_1.sh \
 	variable_leading_underscore.sh \
+	gzipwr_rscript.sh \
+	gzipwr_flushInterval.sh \
+	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	gzipwr_large_dynfile.sh \
 	dynfile_invld_async.sh \
@@ -935,6 +938,9 @@ EXTRA_DIST= \
 	testsuites/abort-uncleancfg-badcfg_1.conf \
 	variable_leading_underscore.sh \
 	testsuites/variable_leading_underscore.conf \
+	gzipwr_rscript.sh \
+	gzipwr_flushInterval.sh \
+	gzipwr_flushOnTXEnd.sh \
 	gzipwr_large.sh \
 	testsuites/gzipwr_large.conf \
 	gzipwr_large_dynfile.sh \
