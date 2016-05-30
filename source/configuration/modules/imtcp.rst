@@ -11,7 +11,7 @@ alternative is the use the `imgssapi <imgssapi.html>`_ module).
 Configuration Parameters
 ------------------------
 
-Global Parameters
+Module Parameters
 ^^^^^^^^^^^^^^^^^
 
 .. function:: AddtlFrameDelimiter <Delimiter>
@@ -104,34 +104,42 @@ Global Parameters
    Sets the maximum number of sessions supported. This must be set 
    before the first $InputTCPServerRun directive
 
+.. function:: StreamDriver.Name <string>
+
+   Selects :doc:`network stream driver <../../concepts/netstrm_drvr>`
+   for all inputs using this module.
+
 .. function:: StreamDriver.Mode <number>
 
-   Sets the driver mode for the currently selected `network stream
-   driver <netstream.html>`_. <number> is driver specific.
+   Sets the driver mode for the currently selected
+   :doc:`network stream driver <../../concepts/netstrm_drvr>`.
+   <number> is driver specific.
 
 .. function:: StreamDriver.AuthMode <mode-string>
 
-   Sets permitted peer IDs. Only these peers are able to connect to the
-   listener. <id-string> semantics depend on the currently selected
-   AuthMode and  `network stream driver <netstream.html>`_.
+   Sets permitted peer IDs. Only these peers are able to connect to
+   the listener. <id-string> semantics depend on the currently
+   selected AuthMode and
+   :doc:`network stream driver <../../concepts/netstrm_drvr>`.
    PermittedPeers may not be set in anonymous modes.
 
 .. function:: PermittedPeer <id-string>
 
-   Sets permitted peer IDs. Only these peers are able to connect to the
-   listener. <id-string> semantics depend on the currently selected
-   AuthMode and  `network stream driver <netstream.html>`_.
-   PermittedPeer may not be set in anonymous modes.
-   PermittedPeer may be set either to a single peer or an array of peers
-   either of type IP or name, depending on the tls certificate.
+   Sets permitted peer IDs. Only these peers are able to connect to
+   the listener. <id-string> semantics depend on the currently
+   selected AuthMode and
+   :doc:`network stream driver <../../concepts/netstrm_drvr>`.
+   PermittedPeer may not be set in anonymous modes. PermittedPeer may
+   be set either to a single peer or an array of peers either of type
+   IP or name, depending on the tls certificate.
 
    Single peer: PermittedPeer="127.0.0.1"
 
    Array of peers:
    PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]
 
-Action Parameters
-^^^^^^^^^^^^^^^^^
+Input Parameters
+^^^^^^^^^^^^^^^^
 
 .. function:: Port <port>
 

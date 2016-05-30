@@ -45,7 +45,20 @@ the input they are specified with.
 
    *Mandatory*
 
-   Select a port to listen on.
+   Select a port to listen on. It is an error to specify
+   both `path` and `port`.
+
+.. function:: path <name>
+
+   A path on the filesystem for a unix domain socket. It is an error to specify
+   both `path` and `port`.
+
+.. function:: unlink on/off
+
+   *Default: off*
+
+   If a unix domain socket is being used this controls whether or not the socket
+   is unlinked before listening and after closing.
 
 .. function:: name <name>
 
@@ -104,11 +117,11 @@ the input they are specified with.
    turn it off, if you know this framing is not used and some senders
    emit multi-line messages into the message stream.
 
-.. function:: ServerNotifyOnConnectionClose on/off
+.. function:: NotifyOnConnectionClose on/off
 
    *Defaults to off*
 
-   instructs imptcp to emit a message if the remote peer closes a
+   instructs imptcp to emit a message if a remote peer closes the
    connection.
 
 .. function:: processOnPoller on/off
@@ -204,6 +217,13 @@ interface, only.
   module(load="imptcp") # needs to be done just once 
   input(type="imptcp" port="514" address="127.0.0.1")
 
+Create a unix domain socket:
+
+::
+
+  module(load="imptcp") # needs to be done just once
+  input(type="imptcp" path="/tmp/unix.sock" unlink="on")
+
 Legacy Configuration Directives
 -------------------------------
 
@@ -217,7 +237,7 @@ Legacy Configuration Directives
 
 .. function:: $InputPTCPServerNotifyOnConnectionClose on/off
 
-   Equivalent to: ServerNotifyOnConnectionClose.
+   Equivalent to: NotifyOnConnectionClose.
 
 .. function:: $InputPTCPServerKeepAlive <on/**off**>
 

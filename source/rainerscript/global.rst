@@ -77,7 +77,7 @@ The following parameters can be set:
 
 - **maxMessageSize**
 
-  The maximum message size rsyslog can process. Default is 4K. Anything
+  The maximum message size rsyslog can process. Default is 8K. Anything
   above the maximum size will be truncated.
 
 .. _global_janitorInterval:

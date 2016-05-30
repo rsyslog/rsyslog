@@ -1,4 +1,4 @@
-pmrfc3164: Parse RFC3161-formatted messages
+pmrfc3164: Parse RFC3164-formatted messages
 ===========================================
 
 Author: Rainer Gerhards
@@ -14,7 +14,7 @@ if they occur.
 Parser Parameters
 -----------------
 
-.. function:: permit.squareVracketsInHostname <boolean>
+.. function:: permit.squareBracketsInHostname <boolean>
 
    **Default**: off
 
