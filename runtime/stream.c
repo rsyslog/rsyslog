@@ -1309,8 +1309,8 @@ asyncWriterThread(void *pPtr)
 				continue;
 			}
 			bTimedOut = 0;
-			timeoutComp(&t, pThis->iFlushInterval * 1000); /* *1000 millisconds */
 			if(pThis->bDoTimedWait) {
+				timeoutComp(&t, pThis->iFlushInterval * 1000); /* 1000 *millisconds* */
 				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
 					DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread timed out\n",
 						  pThis->fd,
