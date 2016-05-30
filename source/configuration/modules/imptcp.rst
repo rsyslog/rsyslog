@@ -45,7 +45,20 @@ the input they are specified with.
 
    *Mandatory*
 
-   Select a port to listen on.
+   Select a port to listen on. It is an error to specify
+   both `path` and `port`.
+
+.. function:: path <name>
+
+   A path on the filesystem for a unix domain socket. It is an error to specify
+   both `path` and `port`.
+
+.. function:: unlink on/off
+
+   *Default: off*
+
+   If a unix domain socket is being used this controls whether or not the socket
+   is unlinked before listening and after closing.
 
 .. function:: name <name>
 
@@ -203,6 +216,13 @@ interface, only.
 
   module(load="imptcp") # needs to be done just once 
   input(type="imptcp" port="514" address="127.0.0.1")
+
+Create a unix domain socket:
+
+::
+
+  module(load="imptcp") # needs to be done just once
+  input(type="imptcp" path="/tmp/unix.sock" unlink="on")
 
 Legacy Configuration Directives
 -------------------------------
