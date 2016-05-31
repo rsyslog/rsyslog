@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.20.0 [v8-stable] 2016-07-12
+------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - omelasticsearch: add option to permit unsigned certs (experimentally)
   This adds plumbing as suggested by Joerg Heinemann and Radu Gheorghe,
