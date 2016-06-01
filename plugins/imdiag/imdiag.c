@@ -196,7 +196,7 @@ getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int options)
  * rgerhards, 2009-05-27
  */
 static rsRetVal __attribute__((format(printf, 2, 3)))
-sendResponse(tcps_sess_t *pSess, char *fmt, ...)
+sendResponse(tcps_sess_t *pSess, const char *const __restrict__ fmt, ...)
 {
 	va_list ap;
 	ssize_t len;
