@@ -1322,7 +1322,7 @@ SetModDir(uchar *pszModDir)
  * called by anyone interested in using a module. -- rgerhards, 20080-03-10
  */
 static rsRetVal
-Use(char *srcFile, modInfo_t *pThis)
+Use(const char *srcFile, modInfo_t *pThis)
 {
 	DEFiRet;
 
