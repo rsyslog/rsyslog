@@ -883,7 +883,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
 {
 	DEFiRet;
 	iRet = regCfSysLineHdlr2(pCmdName, bChainingPermitted, eType, pHdlr, pData, pOwnerCookie, NULL);
