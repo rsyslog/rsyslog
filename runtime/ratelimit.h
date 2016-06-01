@@ -1,6 +1,6 @@
 /* header for ratelimit.c
  *
- * Copyright 2012 Adiscon GmbH.
+ * Copyright 2012-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -40,7 +40,7 @@ struct ratelimit_s {
 };
 
 /* prototypes */
-rsRetVal ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname);
+rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst);
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);

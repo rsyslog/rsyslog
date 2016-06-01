@@ -2,7 +2,7 @@
  * support for rate-limiting sources, including "last message
  * repeated n times" processing.
  *
- * Copyright 2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2012-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -282,7 +282,7 @@ finalize_it:
  * Both values should be kept brief.
  */
 rsRetVal
-ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
+ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname)
 {
 	ratelimit_t *pThis;
 	char namebuf[256];
