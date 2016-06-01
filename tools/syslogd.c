@@ -106,7 +106,6 @@
 #include "ratelimit.h"
 
 /* forward defintions from rsyslogd.c (ASL 2.0 code) */
-extern rsRetVal queryLocalHostname(void);
 extern ratelimit_t *internalMsg_ratelimiter;
 extern uchar *ConfFile;
 extern ratelimit_t *dflt_ratelimiter;

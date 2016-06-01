@@ -118,7 +118,7 @@ static struct queuefilenames_s {
 } *queuefilenames = NULL;
 
 
-void
+static __attribute__((noreturn)) void
 rsyslogd_usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [options]\n"
@@ -140,7 +140,7 @@ setsid(void)
 #endif
 
 
-rsRetVal // TODO: make static
+static rsRetVal
 queryLocalHostname(void)
 {
 	uchar *LocalHostName = NULL;
@@ -172,7 +172,8 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writePidFile(void)
+static rsRetVal
+writePidFile(void)
 {
 	FILE *fp;
 	DEFiRet;
@@ -203,7 +204,8 @@ finalize_it:
 /* duplicate startup protection: check, based on pid file, if our instance
  * is already running. This MUST be called before we write our own pid file.
  */
-rsRetVal checkStartupOK(void)
+static rsRetVal
+checkStartupOK(void)
 {
 	FILE *fp = NULL;
 	DEFiRet;
@@ -294,7 +296,7 @@ prepareBackground(const int parentPipeFD)
  * return: file descriptor to which the child needs to write an "OK" or error
  * message.
  */
-int
+static int
 forkRsyslog(void)
 {
 	int pipefd[2];
@@ -372,7 +374,7 @@ forkRsyslog(void)
  * and the parent may terminate.
  */
 static void
-tellChildReady(int pipefd, char *const msg)
+tellChildReady(const int pipefd, const char *const msg)
 {
 	dbgprintf("rsyslogd: child signaling OK\n");
 	const int nWritten = write(pipefd, msg, strlen(msg));
@@ -436,7 +438,7 @@ printVersion(void)
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
 
-rsRetVal
+static rsRetVal
 rsyslogd_InitStdRatelimiters(void)
 {
 	DEFiRet;
@@ -454,11 +456,11 @@ finalize_it:
  * rgerhards, 2008-01-04
  * rgerhards, 2008-04-16: the actual initialization is now carried out by the runtime
  */
-rsRetVal
+static rsRetVal
 rsyslogd_InitGlobalClasses(void)
 {
 	DEFiRet;
-	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
+	const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
 	/* Intialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
@@ -991,7 +993,7 @@ hdlr_sigchld()
 	bChildDied = 1;
 }
 
-void
+static void
 rsyslogdDebugSwitch()
 {
 	time_t tTime;
@@ -1029,7 +1031,7 @@ rsyslogdDebugSwitch()
  * of a break-in is very low in the startup phase, we decide it is more important
  * to emit error messages.
  */
-void
+static void
 initAll(int argc, char **argv)
 {
 	rsRetVal localRet;
@@ -1542,7 +1544,7 @@ mainloop(void)
 
 /* Finalize and destruct all actions.
  */
-void
+static void
 rsyslogd_destructAllActions(void)
 {
 	ruleset.DestructAllActions(runConf);
