@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -52,6 +52,8 @@
 #include "wti.h"
 #include "unicode-helper.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
 
@@ -67,10 +69,10 @@ struct cnffunc * cnffuncNew_prifilt(int fac);
  * NOTE: This function MUST be updated if new tokens are defined in the
  *       grammar.
  */
-const char *
+static const char *
 tokenToString(const int token)
 {
-	char *tokstr;
+	const char *tokstr;
 	static char tokbuf[512];
 
 	switch(token) {
@@ -134,7 +136,7 @@ tokenToString(const int token)
 const char*
 getFIOPName(const unsigned iFIOP)
 {
-	char *pRet;
+	const char *pRet;
 	switch(iFIOP) {
 		case FIOP_CONTAINS:
 			pRet = "contains";
@@ -577,7 +579,7 @@ nvlstFindName(struct nvlst *lst, es_str_t *name)
  * uses C string constants.
  */
 static inline struct nvlst*
-nvlstFindNameCStr(struct nvlst *lst, char *name)
+nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name)
 {
 	es_size_t lenName = strlen(name);
 	while(lst != NULL && es_strcasebufcmp(lst->name, (uchar*)name, lenName))
@@ -1259,7 +1261,7 @@ static es_str_t *
 var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	es_str_t *estr;
-	char *cstr;
+	const char *cstr;
 	rs_size_t lenstr;
 	if(r->datatype == 'N') {
 		*bMustFree = 1;
@@ -4304,7 +4306,7 @@ cnfparamGetIdx(struct cnfparamblk *params, const char *name)
 
 
 void
-cstrPrint(char *text, es_str_t *estr)
+cstrPrint(const char *text, es_str_t *estr)
 {
 	char *str;
 	str = es_str2cstr(estr, NULL);
@@ -4469,8 +4471,8 @@ unescapeStr(uchar *s, int len)
 	}
 }
 
-char *
-tokenval2str(int tok)
+const char *
+tokenval2str(const int tok)
 {
 	if(tok < 256) return "";
 	switch(tok) {

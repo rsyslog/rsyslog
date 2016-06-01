@@ -7,7 +7,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -676,14 +676,16 @@ containsGlobWildcard(char *str)
 	return 0;
 }
 
-void seedRandomNumber() {
+void seedRandomNumber(void)
+{
 	struct timespec t;
 	timeoutComp(&t, 0);
 	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
 	srandom((unsigned int) x);
 }
 
-long int randomNumber() {
+long int randomNumber(void)
+{
 	return random();
 }
 

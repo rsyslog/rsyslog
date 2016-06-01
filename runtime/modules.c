@@ -1345,7 +1345,7 @@ Use(const char *srcFile, modInfo_t *pThis)
  * module is unloaded. -- rgerhards, 20080-03-10
  */
 static rsRetVal
-Release(char *srcFile, modInfo_t **ppThis)
+Release(const char *srcFile, modInfo_t **ppThis)
 {
 	DEFiRet;
 	modInfo_t *pThis;

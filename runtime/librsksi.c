@@ -63,7 +63,7 @@ int RSKSI_FLAG_TLV16_RUNTIME = RSGT_FLAG_TLV16;
 int RSKSI_FLAG_NONCRIT_RUNTIME = RSGT_FLAG_NONCRIT; 
 
 static void
-reportErr(rsksictx ctx, char *errmsg)
+reportErr(rsksictx ctx, const char *const errmsg)
 {
 	if(ctx->errFunc == NULL)
 		goto done;
@@ -72,7 +72,7 @@ done:	return;
 }
 
 void
-reportKSIAPIErr(rsksictx ctx, ksifile ksi, char *apiname, int ecode)
+reportKSIAPIErr(rsksictx ctx, ksifile ksi, const char *apiname, int ecode)
 {
 	char errbuf[4096];
 	snprintf(errbuf, sizeof(errbuf), "%s[%s:%d]: %s",
@@ -298,7 +298,7 @@ done:	return r;
 }
 
 
-int
+static int
 tlv8WriteKSI(ksifile ksi, int flags, int tlvtype, int len)
 {
 	int r;
@@ -310,7 +310,7 @@ tlv8WriteKSI(ksifile ksi, int flags, int tlvtype, int len)
 done:	return r;
 } 
 
-int
+static int
 tlv16WriteKSI(ksifile ksi, int flags, int tlvtype, uint16_t len)
 {
 	uint16_t typ;
@@ -328,13 +328,13 @@ tlv16WriteKSI(ksifile ksi, int flags, int tlvtype, uint16_t len)
 done:	return r;
 } 
 
-int
+static int
 tlvFlushKSI(ksifile ksi)
 {
 	return (ksi->tlvIdx == 0) ? 0 : tlvbufPhysWrite(ksi);
 }
 
-int
+static int
 tlvWriteHashKSI(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 {
 	unsigned tlvlen;
@@ -355,7 +355,7 @@ tlvWriteHashKSI(ksifile ksi, uint16_t tlvtype, KSI_DataHash *rec)
 done:	return r;
 }
 
-int
+static int
 tlvWriteBlockHdrKSI(ksifile ksi) {
 	unsigned tlvlen;
 	int r;
@@ -378,7 +378,7 @@ tlvWriteBlockHdrKSI(ksifile ksi) {
 done:	return r;
 }
 
-int
+static int
 tlvWriteBlockSigKSI(ksifile ksi, uchar *der, uint16_t lenDer)
 {
 	unsigned tlvlen;
@@ -482,7 +482,7 @@ done:	return;
 }
 
 
-int
+static int
 tlvCloseKSI(ksifile ksi)
 {
 	int r;
@@ -497,8 +497,8 @@ tlvCloseKSI(ksifile ksi)
 /* note: if file exists, the last hash for chaining must
  * be read from file.
  */
-int
-tlvOpenKSI(ksifile ksi, char *hdr, unsigned lenHdr)
+static int
+tlvOpenKSI(ksifile ksi, const char *const hdr, unsigned lenHdr)
 {
 	int r = 0;
 	ksi->fd = open((char*)ksi->sigfilename,
@@ -531,7 +531,7 @@ done:	return r;
  * (and he had good proof that I currently am not permitted to
  * reproduce). -- rgerhards, 2013-03-04
  */
-void
+static void
 seedIVKSI(ksifile ksi)
 {
 	int hashlen;

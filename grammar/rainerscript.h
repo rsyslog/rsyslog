@@ -406,8 +406,8 @@ void cnfarrayContentDestruct(struct cnfarray *ar);
 const char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
-char * tokenval2str(int tok);
+const char * tokenval2str(int tok);
 
 /* debug helper */
-void cstrPrint(char *text, es_str_t *estr);
+void cstrPrint(const char *text, es_str_t *estr);
 #endif

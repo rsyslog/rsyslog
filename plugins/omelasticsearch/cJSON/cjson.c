@@ -20,6 +20,13 @@
   THE SOFTWARE.
 */
 
+/* this code has several warnings, but we ignore them because
+ * this seems to work and we do not want to engage in that code body. If
+ * we really run into troubles, it is better to change to libfastjson, which
+ * we should do in the medium to long term anyhow...
+ */
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 /* cJSON */
 /* JSON parser in C. */
 

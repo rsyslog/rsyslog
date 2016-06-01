@@ -48,7 +48,7 @@
  *
  * File begun on 2008-01-04 by RGerhards
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -368,6 +368,7 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 			vType = VARTYPE_SYSLOGTIME;
 			pszBuf = szBuf;
 			break;
+		case PROPTYPE_NONE:
 		default:
 			dbgprintf("invalid PROPTYPE %d\n", propType);
 			break;
@@ -651,6 +652,7 @@ rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 		case VARTYPE_SYSLOGTIME:
 			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pStrm));
 			break;
+		case VARTYPE_NONE:
 		default:
 			dbgprintf("invalid VARTYPE %d\n", pProp->varType);
 			break;
@@ -688,6 +690,7 @@ finalize_it:
 					dbgprintf("syslog time was successfully parsed (but "
 					          "is not displayed\n");
 					break;
+				case VARTYPE_NONE:
 				default:
 					break;
 			}
@@ -971,7 +974,7 @@ finalize_it:
 /* De-Serialize an object, but treat it as property bag.
  * rgerhards, 2008-01-11
  */
-rsRetVal
+static rsRetVal
 objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 {
 	DEFiRet;
@@ -1341,6 +1344,7 @@ finalize_it:
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
+PROTOTYPEObjQueryInterface(obj);
 BEGINobjQueryInterface(obj)
 CODESTARTobjQueryInterface(obj)
 	if(pIf->ifVersion != objCURR_IF_VERSION) { /* check for current version, increment on each change */

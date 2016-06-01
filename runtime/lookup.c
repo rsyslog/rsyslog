@@ -77,7 +77,7 @@ lookupTableReloader(void *self);
 /* create a new lookup table object AND include it in our list of
  * lookup tables.
  */
-rsRetVal
+static rsRetVal
 lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
@@ -573,7 +573,7 @@ finalize_it:
 	RETiRet;	
 }
 
-rsRetVal
+static rsRetVal
 lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 {
 	struct json_object *jversion;
@@ -689,7 +689,7 @@ finalize_it:
 	RETiRet;
 }
 
-uint8_t
+static uint8_t
 lookupIsReloadPending(lookup_ref_t *pThis) {
 	uint8_t reload_pending;
 	pthread_mutex_lock(&pThis->reloader_mut);
@@ -750,7 +750,7 @@ finalize_it:
 	RETiRet;
 }
 
-static void *
+void *
 lookupTableReloader(void *self)
 {
 	lookup_ref_t *pThis = (lookup_ref_t*) self;
@@ -771,7 +771,7 @@ lookupTableReloader(void *self)
 
 /* reload all lookup tables on HUP */
 void
-lookupDoHUP()
+lookupDoHUP(void)
 {
 	lookup_ref_t *luref;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
@@ -782,7 +782,7 @@ lookupDoHUP()
 }
 
 uint
-lookupPendingReloadCount()
+lookupPendingReloadCount(void)
 {
 	uint pending_reload_count = 0;
 	lookup_ref_t *luref;

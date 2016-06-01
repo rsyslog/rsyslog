@@ -89,7 +89,7 @@ static const time_t yearInSecs[] = {
 /** 
  * Convert struct timeval to syslog_time
  */
-void
+static void
 timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 {
 	struct tm *tm;
@@ -116,7 +116,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 		t->OffsetMode = '+';
 		lBias = 0;
 	} else {
-#		if __sun
+#		if defined(__sun)
 			/* Solaris uses a different method of exporting the time zone.
 			 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
 			 */
@@ -782,7 +782,8 @@ applyDfltTZ(struct syslogTime *pTime, char *tz)
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
+static int
+formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
 {
 	/* currently we do not consider localtime/utc. This may later be
 	 * added. If so, I recommend using a property replacer option
@@ -812,7 +813,8 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
 
 }
 
-int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
+static int
+formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
 {
 	/* see note in formatTimestampToMySQL, applies here as well */
 	assert(ts != NULL);
@@ -851,7 +853,8 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
  * The buffer must be at least 7 bytes large.
  * rgerhards, 2008-06-06
  */
-int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
+static int
+formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
 {
 	int iBuf;
 	int power;
@@ -889,7 +892,8 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestamp3339(struct syslogTime *ts, char* pBuf)
+static int
+formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 {
 	int iBuf;
 	int power;
@@ -969,9 +973,11 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf)
  * day character if day < 10. syslog-ng seems to do that, and some
  * parsing scripts (in migration cases) rely on that.
  */
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
+static int
+formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 {
-	static char* monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	static const char* monthNames[12] =
+				      { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	int iDay;
 	assert(ts != NULL);
@@ -1017,7 +1023,8 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  * In conclusion, we keep our own code for generating the unix timestamp.
  * rgerhards, 2016-03-02
  */
-time_t syslogTime2time_t(const struct syslogTime *ts)
+static time_t
+syslogTime2time_t(const struct syslogTime *ts)
 {
 	long MonthInDays, NumberOfYears, NumberOfDays;
 	int utcOffset;
@@ -1118,7 +1125,8 @@ done:
  * Important: pBuf must point to a buffer of at least 11 bytes.
  * rgerhards, 2012-03-29
  */
-int formatTimestampUnix(struct syslogTime *ts, char *pBuf)
+static int
+formatTimestampUnix(struct syslogTime *ts, char *pBuf)
 {
 	snprintf(pBuf, 11, "%u", (unsigned) syslogTime2time_t(ts));
 	return 11;

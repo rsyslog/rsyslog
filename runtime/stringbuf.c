@@ -79,7 +79,7 @@ finalize_it:
  * rgerhards 2005-09-15
  */
 rsRetVal
-rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
+rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -141,7 +141,7 @@ finalize_it:
 /* construct from a printf-style formated string
  */
 rsRetVal
-rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
+rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -304,7 +304,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 
 /* append a printf-style formated string
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...)
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -723,7 +723,7 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 /* our exit function. TODO: remove once converted to a class
  * rgerhards, 2008-03-11
  */
-rsRetVal strExit()
+rsRetVal strExit(void)
 {
 	DEFiRet;
 	objRelease(regexp, LM_REGEXP_FILENAME);
@@ -733,7 +733,8 @@ rsRetVal strExit()
 
 /* our init function. TODO: remove once converted to a class
  */
-rsRetVal strInit()
+rsRetVal
+strInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));

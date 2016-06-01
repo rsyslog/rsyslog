@@ -595,7 +595,7 @@ finalize_it:
 /*
  * check the status of response from ES
  */
-int checkReplyStatus(cJSON* ok) {
+static int checkReplyStatus(cJSON* ok) {
 	return (ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299);
 }
 
@@ -1060,19 +1060,17 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
 	code = curl_easy_perform(curl);
-	switch (code) {
-		case CURLE_COULDNT_RESOLVE_HOST:
-		case CURLE_COULDNT_RESOLVE_PROXY:
-		case CURLE_COULDNT_CONNECT:
-		case CURLE_WRITE_ERROR:
-			STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
-			indexHTTPFail += nmsgs;
-			DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
-				  "to failure %lld of curl_easy_perform()\n",
-				  (long long) code);
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		default:
-			break;
+	if (   code == CURLE_COULDNT_RESOLVE_HOST
+	    || code == CURLE_COULDNT_RESOLVE_PROXY
+	    || code == CURLE_COULDNT_CONNECT
+	    || code == CURLE_WRITE_ERROR
+	   ) {
+		STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+		indexHTTPFail += nmsgs;
+		DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
+			  "to failure %lld of curl_easy_perform()\n",
+			  (long long) code);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 	DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
@@ -1128,7 +1126,7 @@ finalize_it:
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
-size_t
+static size_t
 curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
 	char *p = (char *)ptr;

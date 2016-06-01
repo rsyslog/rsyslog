@@ -992,7 +992,7 @@ static rsRetVal
 gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 {
 	DEFiRet;
-	char *pszErrCause;
+	const char *pszErrCause;
 	int gnuRet;
 	cstr_t *pStr;
 	unsigned stateCert;
@@ -1173,6 +1173,7 @@ ENDobjConstruct(nsd_gtls)
 
 
 /* destructor for the nsd_gtls object */
+PROTOTYPEobjDestruct(nsd_gtls);
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->iMode == 1) {
@@ -1673,7 +1674,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 #	endif
 	DEFiRet;
@@ -1711,7 +1712,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
-#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	/* The gnutls_certificate_type_set_priority function is deprecated
 	 * and not available in recent GnuTLS versions. However, there is no
 	 * doc how to properly replace it with gnutls_priority_set_direct.

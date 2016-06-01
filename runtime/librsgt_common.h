@@ -86,8 +86,8 @@ struct block_hashchain_s {
 };
 
 
-static inline char *
-sigTypeName(uint8_t sigID)
+static inline const char *
+sigTypeName(const uint8_t sigID)
 {
 	switch(sigID) {
 	case SIGID_RFC3161:

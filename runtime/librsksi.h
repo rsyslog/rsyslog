@@ -152,7 +152,7 @@ struct rsksistatefile {
  * Note: it is thread-safe to call this function, as it returns a pointer
  * into constant memory pool.
  */
-static inline char *
+static inline const char *
 RSKSIE2String(int err)
 {
 	switch(err) {
@@ -266,10 +266,11 @@ hashIdentifierKSI(KSI_HashAlgorithm hashID)
 		return 0x0a;
 	case KSI_HASHALG_SM3: /** The SM3 algorithm.*/
 		return 0x0b;
+	case KSI_NUMBER_OF_KNOWN_HASHALGS: /* TODO: what is this??? */
 	default:return 0xff;
 	}
 }
-static inline char *
+static inline const char *
 hashAlgNameKSI(uint8_t hashID)
 {
 	switch(hashID) {
@@ -355,7 +356,7 @@ int rsksiInit(char *usragent);
 void rsksiExit(void);
 rsksictx rsksiCtxNew(void);
 void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
-void reportKSIAPIErr(rsksictx ctx, ksifile ksi, char *apiname, int ecode); 
+void reportKSIAPIErr(rsksictx ctx, ksifile ksi, const char *apiname, int ecode); 
 ksifile rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn);
 int rsksifileDestruct(ksifile ksi);
 void rsksiCtxDel(rsksictx ctx);
@@ -397,16 +398,16 @@ int rsksi_tlvDecodeHASHCHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain);
 int verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot); 
 int verifySigblkFinishChain(ksifile ksi, block_hashchain_t *hashchain, KSI_DataHash **pRoot, ksierrctx_t *ectx); 
 void outputHash(FILE *fp, const char *hdr, const uint8_t *data, const uint16_t len, const uint8_t verbose); 
-void outputKSIHash(FILE *fp, char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose); 
+void outputKSIHash(FILE *fp, const char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose); 
 
 /* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);
 int hash_r_ksi(ksifile ksi, KSI_DataHash **r, const unsigned char *rec, const size_t len);
 int hash_node_ksi(ksifile ksi, KSI_DataHash **node, KSI_DataHash *m, KSI_DataHash *r, uint8_t level);
-extern char *rsksi_read_puburl;		/**< url of publication server */
-extern char *rsksi_extend_puburl;	/**< url of extension server */
-extern char *rsksi_userid;			/**< userid for extension server */
-extern char *rsksi_userkey;			/**< userkey for extension server */
+extern const char *rsksi_read_puburl;		/**< url of publication server */
+extern const char *rsksi_extend_puburl;	/**< url of extension server */
+extern const char *rsksi_userid;			/**< userid for extension server */
+extern const char *rsksi_userkey;			/**< userkey for extension server */
 extern uint8_t rsksi_read_showVerified;
 extern int RSKSI_FLAG_TLV16_RUNTIME;
 extern int RSKSI_FLAG_NONCRIT_RUNTIME; 

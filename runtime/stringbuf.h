@@ -49,9 +49,9 @@ typedef struct cstr_s
 rsRetVal cstrConstruct(cstr_t **ppThis);
 #define rsCStrConstruct(x) cstrConstruct((x))
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
-rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
+rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Destruct the string buffer object.
@@ -126,7 +126,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Append an integer to the string. No special formatting is
@@ -163,7 +163,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 
-rsRetVal strInit();
-rsRetVal strExit();
+rsRetVal strInit(void);
+rsRetVal strExit(void);
 
 #endif /* single include */
