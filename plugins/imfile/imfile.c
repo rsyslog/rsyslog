@@ -468,7 +468,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetInputName(pMsg, pInputName);
 	if (pLstn->addCeeTag) {
 		size_t msgLen = cstrLen(cstrLine);
-		char *ceeToken = "@cee:";
+		const char *const ceeToken = "@cee:";
 		size_t ceeMsgSize = msgLen + strlen(ceeToken) +1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
