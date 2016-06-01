@@ -232,7 +232,7 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2008-01-10
  */
 #define BEGINobjConstruct(obj) \
-	rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
+	static rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet;
 
@@ -240,6 +240,7 @@ rsRetVal objName##ClassExit(void) \
 		/* use finalize_it: before calling the macro (if you need it)! */ \
 		RETiRet; \
 	} \
+	rsRetVal obj##Construct(obj##_t **ppThis); \
 	rsRetVal obj##Construct(obj##_t **ppThis) \
 	{ \
 		DEFiRet; \
@@ -278,6 +279,8 @@ rsRetVal objName##ClassExit(void) \
  * processing.
  * rgerhards, 2008-01-30
  */
+#define PROTOTYPEobjDestruct(OBJ) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis)
 #define BEGINobjDestruct(OBJ) \
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \

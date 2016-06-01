@@ -177,7 +177,8 @@ ENDobjConstruct(rsconf)
 
 /* ConstructionFinalizer
  */
-rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
+static rsRetVal
+rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, rsconf);
@@ -206,6 +207,7 @@ freeCnf(rsconf_t *pThis)
 
 
 /* destructor for the rsconf object */
+PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
 	freeCnf(pThis);
@@ -219,6 +221,7 @@ ENDobjDestruct(rsconf)
 
 
 /* DebugPrint support for the rsconf object */
+PROTOTYPEObjDebugPrint(rsconf);
 BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 	cfgmodules_etry_t *modNode;
 
@@ -1363,8 +1366,6 @@ CODESTARTobjQueryInterface(rsconf)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = rsconfConstruct;
-	pIf->ConstructFinalize = rsconfConstructFinalize;
 	pIf->Destruct = rsconfDestruct;
 	pIf->DebugPrint = rsconfDebugPrint;
 	pIf->Load = load;

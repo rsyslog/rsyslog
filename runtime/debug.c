@@ -962,7 +962,7 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
  * WARNING: duplicate code, see dbgoprin above!
  */
 void
-dbgprintf(char *fmt, ...)
+dbgprintf(const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024];
