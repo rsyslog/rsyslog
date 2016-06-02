@@ -281,7 +281,12 @@ rsRetVal objName##ClassExit(void) \
  */
 #define PROTOTYPEobjDestruct(OBJ) \
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis)
+/* note: we generate a prototype in any case, as this does not hurt but
+ * many modules otherwise seem to miss one, which generates compiler
+ * warnings.
+ */
 #define BEGINobjDestruct(OBJ) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis);\
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
