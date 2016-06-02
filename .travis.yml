@@ -22,7 +22,7 @@ addons:
     - pkg-config
     - libtool
     - autoconf
-    - autoconf-archive
+    #- autoconf-archive
     - autotools-dev
     - gdb
     - valgrind
