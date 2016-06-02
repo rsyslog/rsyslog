@@ -135,7 +135,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((fo
 rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
-rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
+rsRetVal strExit(void);
 uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
 #define rsCStrGetSzStrNoNULL(x) cstrGetSzStrNoNULL(x)
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
@@ -149,7 +149,6 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache)
 void rsCStrRegexDestruct(void *rc);
 
 /* new calling interface */
-void cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
@@ -164,6 +163,5 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 
 rsRetVal strInit(void);
-rsRetVal strExit(void);
 
 #endif /* single include */
