@@ -136,13 +136,6 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 	}
 #define PROTOTYPEpropSetMethPTR(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType*)
-#define DEFpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
-	{ \
-		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
 #define DEFpropSetMethFP(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
 	{ \
@@ -153,6 +146,7 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #define PROTOTYPEpropSetMethFP(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
 	{ \
 		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
@@ -327,6 +321,7 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
+	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis);\
 	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet; \
@@ -361,6 +356,7 @@ rsRetVal objName##ClassExit(void) \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj) \
+	rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
 	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
 	{ \
 		DEFiRet; \

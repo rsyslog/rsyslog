@@ -7,7 +7,7 @@
  * Module begun 2008-02-20 by Rainer Gerhards, with some code taken
  * from the obj.c/.h files.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -51,7 +51,8 @@ ENDobjConstruct(var)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis)
+static rsRetVal
+varConstructFinalize(var_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 
@@ -83,6 +84,8 @@ CODESTARTobjDebugPrint(var)
 		case VARTYPE_NUMBER:
 			dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
 			break;
+		case VARTYPE_SYSLOGTIME:
+		case VARTYPE_NONE:
 		default:
 			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);
 			break;

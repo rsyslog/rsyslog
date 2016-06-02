@@ -430,6 +430,7 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 				  (unsigned char*) pszPropVal, 1, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
 			bRet = 1;
 		break;
+	case FIOP_NOP:
 	default:
 		/* here, it handles NOP (for performance reasons) */
 		assert(stmt->d.s_propfilt.operation == FIOP_NOP);

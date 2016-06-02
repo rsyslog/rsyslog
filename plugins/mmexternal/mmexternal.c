@@ -2,7 +2,7 @@
  * This core plugin is an interface module to message modification
  * modules written in languages other than C.
  *
- * Copyright 2014 by Rainer Gerhards
+ * Copyright 2014-2016 by Rainer Gerhards
  *
  * This file is part of rsyslog.
  *
@@ -264,7 +264,7 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *con
 /* execute the child process (must be called in child context
  * after fork).
  */
-static void
+static void __attribute__((noreturn))
 execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 {
 	int i, iRet;
@@ -473,7 +473,7 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict_
 			iov[0].iov_len = lenWrite - writeOffset;
 			++i_iov;
 		}
-		iov[i_iov].iov_base = "\n";
+		iov[i_iov].iov_base = (void*)"\n";
 		iov[i_iov].iov_len = 1;
 		lenWritten = writev(pWrkrData->fdPipeOut, iov, i_iov+1);
 		if(lenWritten == -1) {

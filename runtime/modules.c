@@ -125,7 +125,7 @@ dummynewActInst(uchar *modName, struct nvlst __attribute__((unused)) *dummy1,
 
 /* add a user to the current list of users (always at the root) */
 static void
-modUsrAdd(modInfo_t *pThis, char *pszUsr)
+modUsrAdd(modInfo_t *pThis, const char *pszUsr)
 {
 	modUsr_t *pUsr;
 
@@ -152,7 +152,7 @@ finalize_it:
  * rgerhards, 2008-03-11
  */
 static void
-modUsrDel(modInfo_t *pThis, char *pszUsr)
+modUsrDel(modInfo_t *pThis, const char *pszUsr)
 {
 	modUsr_t *pUsr;
 	modUsr_t *pPrev = NULL;
@@ -201,8 +201,7 @@ modUsrPrint(modInfo_t *pThis)
  * to be called at end of run to detect "module leaks" and who is causing them.
  * rgerhards, 2008-03-11
  */
-//static void
-void
+static void
 modUsrPrintAll(void)
 {
 	modInfo_t *pMod;

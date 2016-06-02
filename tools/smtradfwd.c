@@ -59,7 +59,7 @@ DEF_SMOD_STATIC_DATA
  */
 BEGINstrgen
 	register int iBuf;
-	char *pPRI;
+	const char *pPRI;
 	size_t lenPRI;
 	uchar *pTimeStamp;
 	uchar *pHOSTNAME;

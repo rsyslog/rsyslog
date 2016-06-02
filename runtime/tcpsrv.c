@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -75,6 +75,7 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP

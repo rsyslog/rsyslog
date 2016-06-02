@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -344,7 +344,7 @@ ENDdbgPrintInstInfo
  * is we do not permit this directive after the v2 config system has been used to set
  * the parameter.
  */
-rsRetVal
+static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 {
 	DEFiRet;
@@ -365,7 +365,7 @@ finalize_it:
 /* set the dynaFile cache size. Does some limit checking.
  * rgerhards, 2007-07-31
  */
-rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
+static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
 
@@ -926,7 +926,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 }
 
 /* callback for the janitor. This cleans out files (if so configured) */
-void
+static void
 janitorCB(void *pUsr)
 {
 	instanceData *__restrict__ const pData = (instanceData *) pUsr;

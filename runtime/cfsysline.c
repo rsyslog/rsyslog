@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-30 by RGerhards
  *
- * Copyright (C) 2007-2015 Adiscon GmbH.
+ * Copyright (C) 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -683,7 +683,7 @@ static int cslchKeyCompare(void *pKey1, void *pKey2)
 
 /* set data members for this object
  */
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
+static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
 {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
@@ -743,6 +743,13 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	case eCmdHdlrGoneAway:
 		pHdlr = doGoneAway;
 		break;
+	/* some non-legacy handler (used in v6+ solely) */
+	case eCmdHdlrInvalid:
+	case eCmdHdlrNonNegInt:
+	case eCmdHdlrPositiveInt:
+	case eCmdHdlrString:
+	case eCmdHdlrArray:
+	case eCmdHdlrQueueType:
 	default:
 		iRet = RS_RET_NOT_IMPLEMENTED;
 		goto finalize_it;

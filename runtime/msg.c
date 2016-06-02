@@ -4878,7 +4878,7 @@ jsonDeepCopy(struct json_object *src)
 			json_object_array_add(dst, json);
 		}
 		break;
-	case fjson_type_null:
+	case json_type_null:
 	default:DBGPRINTF("jsonDeepCopy(): error unknown type %d\n",
 			 json_object_get_type(src));
 		dst = NULL;

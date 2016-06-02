@@ -105,9 +105,9 @@ finalize_it:
 
 /* a helper function for rsCStr*Strf()
  */
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap) __attribute__((format(printf,2, 0)));
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap) __attribute__((format(printf,2, 0)));
 static rsRetVal
-rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
+rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;

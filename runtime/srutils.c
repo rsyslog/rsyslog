@@ -333,6 +333,8 @@ void skipWhiteSpace(uchar **pp)
  * to use as few space as possible.
  * rgerhards, 2008-01-03
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
 		     size_t lenFName, long lNum, int lNumDigits)
 {
@@ -376,6 +378,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 finalize_it:
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 /* get the number of digits required to represent a given number. We use an
  * iterative approach as we do not like to draw in the floating point

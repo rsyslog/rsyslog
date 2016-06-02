@@ -12,7 +12,7 @@
  *
  * Module begun 2009-06-17 by Rainer Gerhards
  *
- * Copyright 2009-2012 Adiscon GmbH.
+ * Copyright 2009-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -100,7 +100,7 @@ static int GetStringLen(prop_t *pThis)
 
 
 /* get string */
-rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
+static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);
@@ -170,7 +170,7 @@ finalize_it:
  * existing property).
  * rgerhards, 2009-07-01
  */
-rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len)
+static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len)
 {
 	uchar *pszPrev;
 	int lenPrev;

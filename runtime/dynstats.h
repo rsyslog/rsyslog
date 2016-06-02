@@ -75,7 +75,7 @@ rsRetVal dynstats_initCnf(dynstats_buckets_t *b);
 rsRetVal dynstats_processCnf(struct cnfobj *o);
 dynstats_bucket_t * dynstats_findBucket(const uchar* name);
 rsRetVal dynstats_inc(dynstats_bucket_t *bucket, uchar* metric);
-void dynstats_destroyAllBuckets();
+void dynstats_destroyAllBuckets(void);
 void dynstats_resetExpired();
 rsRetVal dynstatsClassInit(void);
 

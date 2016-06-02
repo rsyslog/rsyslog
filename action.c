@@ -111,6 +111,8 @@
 #include "parserif.h"
 #include "statsobj.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
@@ -1133,7 +1135,7 @@ actionCallCommitTransaction(action_t * const pThis,
  * this readies the action and then calls doAction()
  * rgerhards, 2008-01-28
  */
-rsRetVal
+static rsRetVal
 actionProcessMessage(action_t * const pThis, void *actParams, wti_t * const pWti)
 {
 	DEFiRet;

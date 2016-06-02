@@ -169,7 +169,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	    actWrkrIParams_t *__restrict const iparam,
 	    struct syslogTime *const ttNow);
 
-rsRetVal templateInit();
+rsRetVal templateInit(void);
 rsRetVal tplProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */

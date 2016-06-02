@@ -180,7 +180,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-struct iovec *
+static struct iovec *
 build_iovec(size_t *retargc, struct json_object *json)
 {
 	struct iovec *iov;
@@ -244,8 +244,8 @@ fail:
 }
 
 
-void
-send_non_template_message(msg_t *pMsg)
+static void
+send_non_template_message(msg_t *const __restrict__ pMsg)
 {
 	uchar *tag;
 	int lenTag;
@@ -263,8 +263,8 @@ send_non_template_message(msg_t *pMsg)
 		NULL);
 }
 
-void
-send_template_message(struct json_object* json)
+static void
+send_template_message(struct json_object *const __restrict__ json)
 {
 	size_t argc;
 	struct iovec *iovec;

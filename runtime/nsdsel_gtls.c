@@ -152,6 +152,7 @@ doRetry(nsd_gtls_t *pNsd)
 			pNsd->rtryCall = gtlsRtry_None; /* we are done */
 			gnuRet = 0;
 			break;
+		case gtlsRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
 			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);

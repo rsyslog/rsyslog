@@ -8,7 +8,7 @@
  * PRI filter) are very hard to beat in ease of use, at least for simpler
  * cases.
  *
- * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -38,6 +38,7 @@ extern int yylineno;
 /* keep compile rule clean of errors */
 extern int yylex(void);
 extern int yyerror(char*);
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
 %}
 
 %union {

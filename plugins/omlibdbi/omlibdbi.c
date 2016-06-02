@@ -10,7 +10,7 @@
  *
  * File begun on 2008-02-14 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2008-2014 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -301,7 +301,8 @@ finalize_it:
 /* The following function writes the current log entry
  * to an established database connection.
  */
-rsRetVal writeDB(uchar *psz, instanceData *pData)
+static rsRetVal
+writeDB(const uchar *psz, instanceData *const __restrict__ pData)
 {
 	DEFiRet;
 	dbi_result dbiRes = NULL;
@@ -352,7 +353,7 @@ CODESTARTbeginTransaction
 	if(pWrkrData->pData->conn == NULL) {
 		CHKiRet(initConn(pWrkrData->pData, 0));
 	}
-#	if HAVE_DBI_TXSUPP
+#	ifdef HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
 			const char *emsg;
@@ -372,7 +373,7 @@ BEGINdoAction
 CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
 	CHKiRet(writeDB(ppString[0], pWrkrData->pData));
-#	if HAVE_DBI_TXSUPP
+#	ifdef HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
 		iRet = RS_RET_DEFER_COMMIT;
 	}
@@ -384,7 +385,7 @@ ENDdoAction
 /* transaction support 2013-03 */
 BEGINendTransaction
 CODESTARTendTransaction
-#	if HAVE_DBI_TXSUPP
+#	ifdef HAVE_DBI_TXSUPP
 	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
 		const char *emsg;
 		dbi_conn_error(pData->conn, &emsg);

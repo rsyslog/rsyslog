@@ -247,7 +247,7 @@ ENDobjConstruct(parser)
  * to our global list of available parsers.
  * rgerhards, 2009-11-03
  */
-rsRetVal parserConstructFinalize(parser_t *pThis)
+static rsRetVal parserConstructFinalize(parser_t *pThis)
 {
 	DEFiRet;
 
