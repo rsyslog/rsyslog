@@ -103,7 +103,7 @@ struct modInfo_s {
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
 	sbool		bSetModCnfCalled;/* is setModCnf already called? Needed for built-in modules */
 	/* functions supported by all types of modules */
-	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
+	rsRetVal (*modInit)(int, int*, rsRetVal(**)(void*));		/* initialize the module */
 		/* be sure to support version handshake! */
 	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);

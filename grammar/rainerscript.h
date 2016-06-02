@@ -32,8 +32,6 @@
 	 *   others, this is used to size data structures).
 	 */
 
-extern int Debug; /* 1 if in debug mode, 0 otherwise -- to be enhanced */
-
 enum cnfobjType {
 	CNFOBJ_ACTION,
 	CNFOBJ_RULESET,

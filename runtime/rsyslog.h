@@ -26,6 +26,7 @@
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
 #include <pthread.h>
 #include "typedefs.h"
 
