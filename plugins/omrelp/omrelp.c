@@ -617,7 +617,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));

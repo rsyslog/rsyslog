@@ -4,7 +4,7 @@
  *
  * File begun on 2008-03-13 by RGerhards
  *
- * Copyright 2008-2015 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -323,7 +323,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
-		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));
