@@ -27,6 +27,8 @@
 #define INCLUDED_RSYSLOG_H
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 #pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
+#pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
+#pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
 #include <pthread.h>
 #include "typedefs.h"
 

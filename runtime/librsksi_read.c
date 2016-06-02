@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #include <ksi/ksi.h>
 
+#include "rsyslog.h"
 #include "librsgt_common.h"
 #include "librsksi.h"
 

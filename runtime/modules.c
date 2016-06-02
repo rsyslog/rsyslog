@@ -94,17 +94,17 @@ static struct cnfparamblk pblk =
  * if the transactional entry points exist.
  */
 static rsRetVal
-dummyBeginTransaction() 
+dummyBeginTransaction(void)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyEndTransaction() 
+dummyEndTransaction(void)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyIsCompatibleWithFeature() 
+dummyIsCompatibleWithFeature(void)
 {
 	return RS_RET_INCOMPATIBLE;
 }
