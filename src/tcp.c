@@ -1601,6 +1601,17 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
+	/* We expect a non blocking socket to establish a tls session */
+	if((sockflags = fcntl(pThis->sock, F_GETFL)) != -1) {
+		sockflags &= ~O_NONBLOCK;
+		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
+	}
+
+	if(sockflags == -1) {
+		pThis->pEngine->dbgprint("error %d unsetting fcntl(O_NONBLOCK) on relp socket", errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
 	if(!called_gnutls_global_init) {
 		#if GNUTLS_VERSION_NUMBER <= 0x020b00
 		/* gcry_control must be called first, so that the thread system is correctly set up */
