@@ -971,53 +971,6 @@ finalize_it:
 }
 
 
-/* De-Serialize an object, but treat it as property bag.
- * rgerhards, 2008-01-11
- */
-static rsRetVal
-objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
-{
-	DEFiRet;
-	rsRetVal iRetLocal;
-	cstr_t *pstrID = NULL;
-	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
-	objInfo_t *pObjInfo;
-
-	ISOBJ_assert(pObj);
-	ISOBJ_TYPE_assert(pStrm, strm);
-
-	/* we de-serialize the header. if all goes well, we are happy. However, if
-	 * we experience a problem, we try to recover. We do this by skipping to
-	 * the next object header. This is defined via the line-start cookies. In
-	 * worst case, we exhaust the queue, but then we receive EOF return state
-	 * from objDeserializeTryRecover(), what will cause us to ultimately give up.
-	 * rgerhards, 2008-07-08
-	 */
-	do {
-		iRetLocal = objDeserializeHeader((uchar*) "Obj", &pstrID, &oVers, pStrm);
-		if(iRetLocal != RS_RET_OK) {
-			dbgprintf("objDeserializeObjAsPropBag error %d during header - trying to recover\n", iRetLocal);
-			CHKiRet(objDeserializeTryRecover(pStrm));
-		}
-	} while(iRetLocal != RS_RET_OK);
-
-	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
-		ABORT_FINALIZE(RS_RET_INVALID_OID);
-
-	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
-
-	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
-
-finalize_it:
-	if(pstrID != NULL)
-		rsCStrDestruct(&pstrID);
-
-	RETiRet;
-}
-
-
-
 /* De-Serialize an object property bag. As a property bag contains only partial properties,
  * it is not instanciable. Thus, the caller must provide a pointer of an already-instanciated
  * object of the correct type.
