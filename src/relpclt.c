@@ -59,6 +59,7 @@ relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
 	pThis->pEngine = pEngine;
 	pThis->timeout = 90; /* 90-second timeout is the default */
+	pThis->connTimeout = 10;
 	pThis->pUsr = NULL;
 	pThis->authmode = eRelpAuthMode_None;
 	pThis->pristring = NULL;
@@ -117,6 +118,7 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, RELP_CLT_CONN, pThis));
 	CHKRet(relpSessSetTimeout(pThis->pSess, pThis->timeout));
+	CHKRet(relpSessSetConnTimeout(pThis->pSess, pThis->connTimeout));
 	CHKRet(relpSessSetWindowSize(pThis->pSess, pThis->sizeWindow));
 	CHKRet(relpSessSetClientIP(pThis->pSess, pThis->clientIP));
 	CHKRet(relpSessSetUsrPtr(pThis->pSess, pThis->pUsr));
@@ -190,6 +192,20 @@ relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout)
 	LEAVE_RELPFUNC;
 }
 
+/** Set the timeout value for this client socket connection.  */
+relpRetVal relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	if (connTimeout < 0) {
+		ABORT_FINALIZE(RELP_RET_ERR_INVAL);
+	}
+	if (connTimeout != 0) {
+		pThis->connTimeout = connTimeout;
+	}
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 /** Set the local IP address to be used when acting as a client.
  */
