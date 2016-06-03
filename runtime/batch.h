@@ -145,7 +145,8 @@ batchState2String(const batch_state_t state) {
 		return "BATCH_STATE_COMM";
 	case BATCH_STATE_DISC:
 		return "BATCH_STATE_DISC";
+	default:
+		return "ERROR, batch state not known!";
 	}
-	return "ERROR, batch state not known!";
 }
 #endif /* #ifndef BATCH_H_INCLUDED */

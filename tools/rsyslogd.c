@@ -526,7 +526,7 @@ finalize_it:
  * it helps us keep up the overall concurrency level.
  * rgerhards, 2010-06-09
  */
-static inline rsRetVal
+static rsRetVal
 preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
@@ -1433,7 +1433,7 @@ DEFFUNC_llExecFunc(doHUPActions)
  * but the sync would require some extra CPU for *each* message processed.
  * rgerhards, 2012-04-11
  */
-static inline void
+static void
 doHUP(void)
 {
 	char buf[512];
