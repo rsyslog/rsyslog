@@ -606,13 +606,13 @@ static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
-	int nProcessed = 0;
 	DEFiRet;
 
 	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
 	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
 	 */
 	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
+	int nProcessed = 0;
 	if(pLstn->pStrm == NULL) {
 		CHKiRet(openFile(pLstn)); /* open file */
 	}
