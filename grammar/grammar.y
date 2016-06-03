@@ -27,6 +27,12 @@
  * limitations under the License.
  */
 %{
+/* shut off warnings that we can't change anyhow */
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+
 #include "config.h"
 #include <stdio.h>
 #include <libestr.h>
@@ -38,8 +44,6 @@ extern int yylineno;
 /* keep compile rule clean of errors */
 extern int yylex(void);
 extern int yyerror(char*);
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
 %}
 
 %union {
