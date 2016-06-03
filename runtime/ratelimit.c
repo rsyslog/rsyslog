@@ -45,7 +45,7 @@ DEFobjCurrIf(parser)
 /* static data */
 
 /* generate a "repeated n times" message */
-static inline msg_t *
+static msg_t *
 ratelimitGenRepMsg(ratelimit_t *ratelimit)
 {
 	msg_t *repMsg;
@@ -112,7 +112,7 @@ finalize_it:
 
 
 /* helper: tell how many messages we lost due to linux-like ratelimiting */
-static inline void
+static void
 tellLostCnt(ratelimit_t *ratelimit)
 {
 	uchar msgbuf[1024];
@@ -131,7 +131,7 @@ tellLostCnt(ratelimit_t *ratelimit)
  * This implementation is NOT THREAD-SAFE and must not 
  * be called concurrently.
  */
-static inline int
+static int
 withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 {
 	int ret;

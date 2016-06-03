@@ -64,22 +64,7 @@ void rsCStrDestruct(cstr_t **ppThis);
  * cstrFinalize() is called.
  * rgerhards, 2009-06-16
  */
-rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded); /* our helper, NOT a public interface! */
-static inline rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c)
-{
-	rsRetVal iRet = RS_RET_OK;
-
-	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
-		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
-	}
-
-	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iStrLen++) = c;
-
-finalize_it:
-	return iRet;
-}
-
+rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
 
 /* some inline functions for things that are really frequently called... */
 

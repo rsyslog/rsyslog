@@ -1123,7 +1123,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
@@ -1165,7 +1165,7 @@ initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 done:	return;
 }
 
-static inline rsRetVal
+static rsRetVal
 initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];

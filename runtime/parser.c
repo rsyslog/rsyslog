@@ -376,7 +376,7 @@ finalize_it:
  * NULs in the debug log.
  * rgerhards, 2007-09-14
  */
-static inline rsRetVal
+static rsRetVal
 SanitizeMsg(msg_t *pMsg)
 {
 	DEFiRet;

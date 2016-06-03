@@ -1223,7 +1223,7 @@ finalize_it:
  * But as an interim help during refactoring let's introduce this function
  * here (and thus NOT as method of var object!). -- rgerhads, 2012-11-06
  */
-static inline void
+static void
 reinitVar(var_t *pVar)
 {
 	rsCStrDestruct(&pVar->pcsName); /* no longer needed */
@@ -2390,7 +2390,8 @@ void MsgSetTAG(msg_t *__restrict__ const pMsg, const uchar* pszBuf, const size_t
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static inline void tryEmulateTAG(msg_t * const pM, sbool bLockMutex)
+static void
+tryEmulateTAG(msg_t * const pM, sbool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];

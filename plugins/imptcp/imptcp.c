@@ -1095,7 +1095,7 @@ initConfigSettings(void)
 
 /* add socket to the epoll set
  */
-static inline rsRetVal
+static rsRetVal
 addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 {
 	DEFiRet;
@@ -1136,7 +1136,7 @@ finalize_it:
  * For simplicity, we supply the same pointer we had when we created the
  * event (it's simple because we have it at hand).
  */
-static inline rsRetVal
+static rsRetVal
 removeEPollSock(int sock, epolld_t *epd)
 {
 	DEFiRet;
@@ -1610,7 +1610,7 @@ finalize_it:
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
-static inline rsRetVal
+static rsRetVal
 sessActivity(ptcpsess_t *pSess, int *continue_polling)
 {
 	int lenRcv;

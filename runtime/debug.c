@@ -810,7 +810,7 @@ sigsegvHdlr(int signum)
  * interface otherwise is unsafe to use (generates compiler warnings at least).
  * 2009-05-20 rgerhards
  */
-static inline void
+static void
 do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 {
 	static pthread_t ptLastThrdID = 0;

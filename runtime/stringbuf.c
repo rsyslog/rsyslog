@@ -227,8 +227,8 @@ void rsCStrDestruct(cstr_t **ppThis)
  * rgerhards, 2008-01-07
  * changed to utilized realloc() -- rgerhards, 2009-06-16
  */
-rsRetVal
-rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
+static rsRetVal
+rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded)
 {
 	uchar *pNewBuf;
 	size_t iNewSize;
@@ -257,6 +257,24 @@ finalize_it:
 	RETiRet;
 }
 
+/* Append a character to the current string object. This may only be done until
+ * cstrFinalize() is called.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal cstrAppendChar(cstr_t *const __restrict__ pThis, const uchar c)
+{
+	rsRetVal iRet = RS_RET_OK;
+
+	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
+	}
+
+	/* ok, when we reach this, we have sufficient memory */
+	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+finalize_it:
+	return iRet;
+}
 
 /* append a string of known length. In this case, we make sure we do at most
  * one additional memory allocation.

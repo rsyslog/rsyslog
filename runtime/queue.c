@@ -2945,7 +2945,7 @@ queueCnfParamsSet(struct nvlst *lst)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 initCryprov(qqueue_t *pThis, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];

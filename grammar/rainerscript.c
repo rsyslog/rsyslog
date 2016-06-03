@@ -578,7 +578,7 @@ nvlstFindName(struct nvlst *lst, es_str_t *name)
  * for classical C strings. This is useful because the config system
  * uses C string constants.
  */
-static inline struct nvlst*
+static struct nvlst*
 nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name)
 {
 	es_size_t lenName = strlen(name);
@@ -591,7 +591,7 @@ nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name)
 /* check if there are duplicate names inside a nvlst and emit
  * an error message, if so.
  */
-static inline void
+static void
 nvlstChkDupes(struct nvlst *lst)
 {
 	char *cstr;
@@ -632,7 +632,7 @@ nvlstChkUnused(struct nvlst *lst)
 }
 
 
-static inline int
+static int
 doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -683,7 +683,7 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 }
 
 
-static inline int
+static int
 doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -702,7 +702,7 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 	return r;
 }
 
-static inline int
+static int
 doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -731,7 +731,7 @@ doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
 /* A file create-mode must be a four-digit octal number
  * starting with '0'.
  */
-static inline int
+static int
 doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -763,7 +763,7 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 	return fmtOK;
 }
 
-static inline int
+static int
 doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -790,7 +790,7 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	return r;
 }
 
-static inline int
+static int
 doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -820,7 +820,7 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
 /* note: we support all integer formats that es_str2num support,
  * so hex and octal representations are also valid.
  */
-static inline int
+static int
 doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -837,7 +837,7 @@ doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	return bSuccess;
 }
 
-static inline int
+static int
 doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -853,7 +853,7 @@ doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	return bSuccess;
 }
 
-static inline int
+static int
 doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -869,7 +869,7 @@ doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
 	return bSuccess;
 }
 
-static inline int
+static int
 doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -892,7 +892,7 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 	return r;
 }
 
-static inline int
+static int
 doGetArray(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -916,7 +916,7 @@ doGetArray(struct nvlst *valnode, struct cnfparamdescr *param,
 	return r;
 }
 
-static inline int
+static int
 doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
 	  struct cnfparamvals *val)
 {
@@ -935,7 +935,7 @@ doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
 /* get a single parameter according to its definition. Helper to
  * nvlstGetParams. returns 1 if success, 0 otherwise
  */
-static inline int
+static int
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
 	       struct cnfparamvals *val)
 {
@@ -1205,7 +1205,7 @@ done:
 }
 
 
-static inline int64_t
+static int64_t
 str2num(es_str_t *s, int *bSuccess)
 {
 	size_t i;
@@ -1421,7 +1421,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 {
 	size_t submatchnbr;
@@ -1542,7 +1542,7 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	return;
 }
 
-static inline es_str_t*
+static es_str_t*
 doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict__ const findVal, struct var *__restrict__ const replaceWithVal) {
     int freeOperand, freeFind, freeReplacement;
     es_str_t *str = var2String(operandVal, &freeOperand);
@@ -1599,7 +1599,7 @@ doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict_
     return res;
 }
 
-static inline es_str_t*
+static es_str_t*
 doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ const wrapperVal, struct var *__restrict__ const escaperVal) {
     int freeSource, freeWrapper;
     es_str_t *sourceStr;
@@ -1626,7 +1626,7 @@ doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ co
     return res;
 }
 
-static inline long long
+static long long
 doRandomGen(struct var *__restrict__ const sourceVal) {
 	int success = 0;
 	long long max = var2Number(sourceVal, &success);
@@ -1650,7 +1650,7 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
-static inline void
+static void
 doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ const ret,
 	   void *__restrict__ const usrptr)
 {
@@ -1880,7 +1880,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 	}
 }
 
-static inline void
+static void
 evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	struct var *__restrict__ const ret)
 {
@@ -2502,7 +2502,7 @@ cnfarrayContentDestruct(struct cnfarray *ar)
 	free(ar->arr);
 }
 
-static inline void
+static void
 cnffuncDestruct(struct cnffunc *func)
 {
 	unsigned short i;
@@ -3312,7 +3312,7 @@ getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
 
 
 /* constant folding for string concatenation */
-static inline void
+static void
 constFoldConcat(struct cnfexpr *expr)
 {
 	es_str_t *estr;
@@ -3365,7 +3365,7 @@ constFoldConcat(struct cnfexpr *expr)
 /* optimize comparisons with syslog severity/facility. This is a special
  * handler as the numerical values also support GT, LT, etc ops.
  */
-static inline struct cnfexpr*
+static struct cnfexpr*
 cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
@@ -3410,7 +3410,7 @@ finalize_it:
  * NOTE: Currently support CMP_EQ, CMP_NE only and code NEEDS 
  *       TO BE CHANGED fgr other comparisons!
  */
-static inline struct cnfexpr*
+static struct cnfexpr*
 cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
@@ -3456,7 +3456,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 	return expr;
 }
 
-static inline struct cnfexpr*
+static struct cnfexpr*
 cnfexprOptimize_NOT(struct cnfexpr *expr)
 {
 	struct cnffunc *func;
@@ -3474,7 +3474,7 @@ cnfexprOptimize_NOT(struct cnfexpr *expr)
 	return expr;
 }
 
-static inline struct cnfexpr*
+static struct cnfexpr*
 cnfexprOptimize_AND_OR(struct cnfexpr *expr)
 {
 	struct cnffunc *funcl, *funcr;
@@ -3618,7 +3618,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 /* removes NOPs from a statement list and returns the
  * first non-NOP entry.
  */
-static inline struct cnfstmt *
+static struct cnfstmt *
 removeNOPs(struct cnfstmt *root)
 {
 	struct cnfstmt *stmt, *toDel, *prevstmt = NULL;
@@ -3646,7 +3646,7 @@ removeNOPs(struct cnfstmt *root)
 done:	return newRoot;
 }
 
-static inline void
+static void
 cnfstmtOptimizeForeach(struct cnfstmt *stmt)
 {
 	stmt->d.s_foreach.iter->collection = cnfexprOptimize(stmt->d.s_foreach.iter->collection);
@@ -3655,7 +3655,7 @@ cnfstmtOptimizeForeach(struct cnfstmt *stmt)
 }
 
 
-static inline void
+static void
 cnfstmtOptimizeIf(struct cnfstmt *stmt)
 {
 	struct cnfstmt *t_then, *t_else;
@@ -3692,7 +3692,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 	}
 }
 
-static inline void
+static void
 cnfstmtOptimizeAct(struct cnfstmt *stmt)
 {
 	action_t *pAct;
@@ -3879,7 +3879,7 @@ static const char* const numInWords[] = {"zero", "one", "two", "three", "four", 
 /* Obtain function id from name AND number of params. Issues the
  * relevant error messages if errors are detected.
  */
-static inline enum cnffuncid
+static enum cnffuncid
 funcName2ID(es_str_t *fname, unsigned short nParams)
 {
 	if(FUNC_NAME("strlen")) {
@@ -3926,7 +3926,7 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 initFunc_re_match(struct cnffunc *func)
 {
 	rsRetVal localRet;
@@ -4000,7 +4000,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 initFunc_prifilt(struct cnffunc *func)
 {
 	struct funcData_prifilt *pData;
@@ -4029,7 +4029,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 resolveLookupTable(struct cnffunc *func)
 {
 	uchar *cstr = NULL;
@@ -4064,7 +4064,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 initFunc_dyn_stats(struct cnffunc *func)
 {
 	uchar *cstr = NULL;
@@ -4345,7 +4345,7 @@ isodigit(uchar c)
  * @param[in] c a character containing 0..9, A..Z, a..z anything else
  * is an (undetected) error.
  */
-static inline int
+static int
 hexDigitVal(char c)
 {
 	int r;
@@ -4361,7 +4361,7 @@ hexDigitVal(char c)
 /* Handle the actual unescaping.
  * a helper to unescapeStr(), to help make the function easier to read.
  */
-static inline void
+static void
 doUnescape(unsigned char *c, int len, int *iSrc, int iDst)
 {
 	if(c[*iSrc] == '\\') {

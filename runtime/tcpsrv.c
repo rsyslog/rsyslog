@@ -748,7 +748,7 @@ finalize_it:
  * that does not support epoll().
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
-static inline rsRetVal
+static rsRetVal
 RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 {
 	DEFiRet;

@@ -294,7 +294,7 @@ finalize_it:
 
 /* open socket to remote system
  */
-static inline rsRetVal
+static rsRetVal
 openSocket(instanceData *pData)
 {
 	DEFiRet;
