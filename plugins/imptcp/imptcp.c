@@ -1581,7 +1581,7 @@ startupServers(void)
 static inline rsRetVal
 lstnActivity(ptcplstn_t *pLstn)
 {
-	int newSock;
+	int newSock = -1;
 	prop_t *peerName;
 	prop_t *peerIP;
 	rsRetVal localRet;
