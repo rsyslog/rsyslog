@@ -41,21 +41,20 @@
 #include <fcntl.h>
 #include <ksi/ksi.h>
 
+#include "rsyslog.h"
 #include "librsgt_common.h"
 #include "librsksi.h"
 
 
-typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
-#define MAXFNAME 1024
 
 static int rsksi_read_debug = 0;
-char *rsksi_read_puburl = ""; /* old default http://verify.guardtime.com/gt-controlpublications.bin";*/
-char *rsksi_extend_puburl = ""; /* old default "http://verifier.guardtime.net/gt-extendingservice";*/
-char *rsksi_userid = "";
-char *rsksi_userkey = "";
+const char *rsksi_read_puburl = ""; /* old default http://verify.guardtime.com/gt-controlpublications.bin";*/
+const char *rsksi_extend_puburl = ""; /* old default "http://verifier.guardtime.net/gt-extendingservice";*/
+const char *rsksi_userid = "";
+const char *rsksi_userkey = "";
 uint8_t rsksi_read_showVerified = 0;
 
 /* macro to obtain next char from file including error tracking */
@@ -82,7 +81,7 @@ outputHexBlob(FILE *fp, const uint8_t *blob, const uint16_t len, const uint8_t v
 }
 
 void
-outputKSIHash(FILE *fp, char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose)
+outputKSIHash(FILE *fp, const char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose)
 {
 	const unsigned char *digest;
 	size_t digest_len;
@@ -611,7 +610,7 @@ done:
 	}
 	return r;
 }
-int 
+static int 
 rsksi_tlvDecodeHASH_CHAIN(tlvrecord_t *rec, block_hashchain_t **blhashchain)
 {
 	int r = 1;
@@ -961,7 +960,7 @@ blobIsZero(uint8_t *blob, uint16_t len)
 }
 
 static void
-rsksi_printIMPRINT(FILE *fp, char *name, imprint_t *imp, uint8_t verbose)
+rsksi_printIMPRINT(FILE *fp, const char *name, imprint_t *imp, uint8_t verbose)
 {
 	fprintf(fp, "%s", name);
 		outputHexBlob(fp, imp->data, imp->len, verbose);
@@ -1039,7 +1038,7 @@ rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose)
  * @param[in] bsig ponter to block_sig_t to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
-void
+static void
 rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose)
 {
 	fprintf(fp, "[0x0905]HashChain Start Record:\n");
@@ -1057,7 +1056,7 @@ rsksi_printHASHCHAIN(FILE *fp, block_sig_t *bs, uint8_t verbose)
  * @param[in] hashchain step ponter to block_hashstep_s to output
  * @param[in] verbose if 0, abbreviate blob hexdump, else complete
  */
-void
+static void
 rsksi_printHASHCHAINSTEP(FILE *fp, block_hashchain_t *hschain, uint8_t verbose)
 {
 	uint8_t j;
@@ -1161,7 +1160,7 @@ rsksi_objfree(uint16_t tlvtype, void *obj)
 	free(obj);
 }
 
-block_hashstep_t*
+static block_hashstep_t*
 rsksiHashstepFromKSI_DataHash(ksifile ksi, KSI_DataHash *hash)
 {
 	int r;

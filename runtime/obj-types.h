@@ -136,13 +136,6 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 	}
 #define PROTOTYPEpropSetMethPTR(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType*)
-#define DEFpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
-	{ \
-		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
 #define DEFpropSetMethFP(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
 	{ \
@@ -153,6 +146,7 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #define PROTOTYPEpropSetMethFP(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
 	{ \
 		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
@@ -232,7 +226,7 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2008-01-10
  */
 #define BEGINobjConstruct(obj) \
-	rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
+	static rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet;
 
@@ -240,6 +234,7 @@ rsRetVal objName##ClassExit(void) \
 		/* use finalize_it: before calling the macro (if you need it)! */ \
 		RETiRet; \
 	} \
+	rsRetVal obj##Construct(obj##_t **ppThis); \
 	rsRetVal obj##Construct(obj##_t **ppThis) \
 	{ \
 		DEFiRet; \
@@ -278,7 +273,14 @@ rsRetVal objName##ClassExit(void) \
  * processing.
  * rgerhards, 2008-01-30
  */
+#define PROTOTYPEobjDestruct(OBJ) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis)
+/* note: we generate a prototype in any case, as this does not hurt but
+ * many modules otherwise seem to miss one, which generates compiler
+ * warnings.
+ */
 #define BEGINobjDestruct(OBJ) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis);\
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
@@ -319,6 +321,7 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
+	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis);\
 	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet; \
@@ -353,6 +356,7 @@ rsRetVal objName##ClassExit(void) \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj) \
+	rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
 	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
 	{ \
 		DEFiRet; \
@@ -363,6 +367,8 @@ rsRetVal objName##ClassExit(void) \
 #define ENDobjQueryInterface(obj) \
 		RETiRet; \
 	} 
+
+#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pIf)
 
 
 /* the following macros should be used to define interfaces inside the
@@ -408,7 +414,8 @@ rsRetVal objName##ClassExit(void) \
  */
 #define PROTOTYPEObj(obj) \
 	PROTOTYPEObjClassInit(obj); \
-	PROTOTYPEObjClassExit(obj)
+	PROTOTYPEObjClassExit(obj); \
+	PROTOTYPEObjQueryInterface(obj)
 
 /* ------------------------------ end object loader system ------------------------------ */
 

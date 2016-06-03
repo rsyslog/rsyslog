@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-30 by RGerhards
  *
- * Copyright (C) 2007-2015 Adiscon GmbH.
+ * Copyright (C) 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -683,7 +683,7 @@ static int cslchKeyCompare(void *pKey1, void *pKey2)
 
 /* set data members for this object
  */
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
+static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
 {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
@@ -743,6 +743,13 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	case eCmdHdlrGoneAway:
 		pHdlr = doGoneAway;
 		break;
+	/* some non-legacy handler (used in v6+ solely) */
+	case eCmdHdlrInvalid:
+	case eCmdHdlrNonNegInt:
+	case eCmdHdlrPositiveInt:
+	case eCmdHdlrString:
+	case eCmdHdlrArray:
+	case eCmdHdlrQueueType:
 	default:
 		iRet = RS_RET_NOT_IMPLEMENTED;
 		goto finalize_it;
@@ -843,7 +850,7 @@ finalize_it:
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
  * rgerhards, 2012-06-26
  */
-rsRetVal regCfSysLineHdlr2(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
+rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
 	cslCmd_t *pThis;
@@ -883,7 +890,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
 {
 	DEFiRet;
 	iRet = regCfSysLineHdlr2(pCmdName, bChainingPermitted, eType, pHdlr, pData, pOwnerCookie, NULL);
@@ -1041,7 +1048,8 @@ void dbgPrintCfSysLineHandlers(void)
 
 /* our init function. TODO: remove once converted to a class
  */
-rsRetVal cfsyslineInit()
+rsRetVal
+cfsyslineInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));

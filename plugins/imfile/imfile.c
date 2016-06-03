@@ -468,7 +468,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetInputName(pMsg, pInputName);
 	if (pLstn->addCeeTag) {
 		size_t msgLen = cstrLen(cstrLine);
-		char *ceeToken = "@cee:";
+		const char *const ceeToken = "@cee:";
 		size_t ceeMsgSize = msgLen + strlen(ceeToken) +1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
@@ -606,13 +606,13 @@ static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
-	int nProcessed = 0;
 	DEFiRet;
 
 	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
 	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
 	 */
 	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
+	int nProcessed = 0;
 	if(pLstn->pStrm == NULL) {
 		CHKiRet(openFile(pLstn)); /* open file */
 	}
@@ -1636,7 +1636,7 @@ done:	return;
 
 /* setup our initial set of watches, based on user config */
 static void
-in_setupInitialWatches()
+in_setupInitialWatches(void)
 {
 	int i;
 	for(i = 0 ; i < currMaxDirs ; ++i) {
@@ -1853,7 +1853,7 @@ done:	return;
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
-do_inotify()
+do_inotify(void)
 {
 	char iobuf[8192];
 	struct inotify_event *ev;

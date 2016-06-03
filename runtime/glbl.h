@@ -123,7 +123,7 @@ void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
 void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
-void glblDestructMainqCnfObj();
+void glblDestructMainqCnfObj(void);
 void glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(void);
 tzinfo_t* glblFindTimezoneInfo(char *id);

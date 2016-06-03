@@ -8,7 +8,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -83,7 +83,7 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy(void) { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -98,10 +98,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 #endif
 	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
-	pThis->pfChkStopWrkr = NotImplementedDummy;
-	pThis->pfGetDeqBatchSize = NotImplementedDummy;
-	pThis->pfDoWork = NotImplementedDummy;
-	pThis->pfObjProcessed = NotImplementedDummy;
+	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy;
+	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy;
+	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy;
+	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy;
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
@@ -535,7 +535,7 @@ finalize_it:
 }
 
 /* dummy */
-rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* exit our class
  */

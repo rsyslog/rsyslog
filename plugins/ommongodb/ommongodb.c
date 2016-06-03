@@ -4,7 +4,7 @@
  * mongodb C interface is crap. Obtain the library here:
  * https://github.com/algernon/libmongo-client
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -176,10 +176,10 @@ reportMongoError(instanceData *pData)
  */
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 {
-	char *server;
+	const char *server;
 	DEFiRet;
 
-	server = (pData->server == NULL) ? "127.0.0.1" : (char*) pData->server;
+	server = (pData->server == NULL) ? "127.0.0.1" : (const char*) pData->server;
 	DBGPRINTF("ommongodb: trying connect to '%s' at port %d\n", server, pData->port);
 
 	pData->conn = mongo_sync_connect(server, pData->port, TRUE);
@@ -223,7 +223,7 @@ finalize_it:
  * TODO: consider moving this to msg.c - make some dirty "friend" references...
  * rgerhards, 2012-03-19
  */
-static  inline char *
+static inline const char *
 getLumberjackLevel(short severity)
 {
 	switch(severity) {

@@ -97,7 +97,7 @@ dynstats_destroyCounters(dynstats_bucket_t *b) {
 	dynstats_destroyCountersIn(b, b->table, b->ctrs);
 }
 
-void
+static void
 dynstats_destroyBucket(dynstats_bucket_t* b) {
 	dynstats_buckets_t *bkts;
 
@@ -415,7 +415,7 @@ finalize_it:
 }
 
 void
-dynstats_destroyAllBuckets() {
+dynstats_destroyAllBuckets(void) {
 	dynstats_buckets_t *bkts;
 	dynstats_bucket_t *b;
 	bkts = &loadConf->dynstats_buckets;

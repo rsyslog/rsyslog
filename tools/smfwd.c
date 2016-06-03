@@ -9,7 +9,7 @@
  *
  * File begun on 2010-06-01 by RGerhards
  *
- * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -59,7 +59,7 @@ DEF_SMOD_STATIC_DATA
  */
 BEGINstrgen
 	register int iBuf;
-	char *pPRI;
+	const char *pPRI;
 	size_t lenPRI;
 	uchar *pTimeStamp;
 	size_t lenTimeStamp;

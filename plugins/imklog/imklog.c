@@ -21,7 +21,7 @@
  * To test under Linux:
  * echo test1 > /dev/kmsg
  *
- * Copyright (C) 2008-2014 Adiscon GmbH
+ * Copyright (C) 2008-2016 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -199,7 +199,7 @@ finalize_it:
 /* log an imklog-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imklogLogIntMsg(syslog_pri_t priority, char *fmt, ...)
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;

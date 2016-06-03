@@ -5,7 +5,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -38,7 +38,7 @@
 #define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
 
 typedef struct syslogName_s {
-	char	*c_name;
+	const char	*c_name;
 	int	c_val;
 } syslogName_t;
 
@@ -93,10 +93,10 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 int containsGlobWildcard(char *str);
-void seedRandomNumber();
+void seedRandomNumber(void);
 #define MAX_RANDOM_NUMBER RAND_MAX
-long int randomNumber();
-long long currentTimeMills();
+long int randomNumber(void);
+long long currentTimeMills(void);
 
 /* mutex operations */
 /* some useful constants */

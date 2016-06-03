@@ -1012,7 +1012,7 @@ glblProcessMainQCnf(struct cnfobj *o)
  * also used to do some final checks.
  */
 void
-glblDestructMainqCnfObj()
+glblDestructMainqCnfObj(void)
 {
 	/* Only destruct if not NULL! */
 	if (mainqCnfObj != NULL) {

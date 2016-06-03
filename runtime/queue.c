@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -233,10 +233,10 @@ finalize_it:
 
 /* methods */
 
-static inline char *
+static inline const char *
 getQueueTypeName(queueType_t t)
 {
-	char *r;
+	const char *r;
 
 	switch(t) {
 	case QUEUETYPE_FIXED_ARRAY: 
@@ -2945,7 +2945,7 @@ queueCnfParamsSet(struct nvlst *lst)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 initCryprov(qqueue_t *pThis, struct nvlst *lst)
 {
 	uchar szDrvrName[1024];
@@ -3112,10 +3112,8 @@ DEFpropSetMeth(qqueue, toEnq, long)
 DEFpropSetMeth(qqueue, iHighWtrMrk, int)
 DEFpropSetMeth(qqueue, iLowWtrMrk, int)
 DEFpropSetMeth(qqueue, iDiscardMrk, int)
-DEFpropSetMeth(qqueue, iFullDlyMrk, int)
 DEFpropSetMeth(qqueue, iDiscardSeverity, int)
 DEFpropSetMeth(qqueue, iLightDlyMrk, int)
-DEFpropSetMeth(qqueue, bIsDA, int)
 DEFpropSetMeth(qqueue, iNumWorkerThreads, int)
 DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int)
 DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
@@ -3156,7 +3154,7 @@ finalize_it:
 #undef	isProp
 
 /* dummy */
-rsRetVal qqueueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal qqueueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.

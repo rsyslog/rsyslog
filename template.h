@@ -146,7 +146,7 @@ PROTOTYPEObj(tpl);
 
 
 //struct template* tplConstruct(void);
-struct template *tplAddLine(rsconf_t *conf, char* pName, unsigned char** pRestOfConfLine);
+struct template *tplAddLine(rsconf_t *conf, const char* pName, unsigned char** pRestOfConfLine);
 struct template *tplFind(rsconf_t *conf, char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);
 void tplDeleteAll(rsconf_t *conf);
@@ -169,7 +169,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	    actWrkrIParams_t *__restrict const iparam,
 	    struct syslogTime *const ttNow);
 
-rsRetVal templateInit();
+rsRetVal templateInit(void);
 rsRetVal tplProcessCnf(struct cnfobj *o);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */

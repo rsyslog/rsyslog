@@ -161,8 +161,8 @@ setInstParamDefaults(instanceData *pData)
 	pData->valueFrom = 0;
 	pData->valueTo = INT_MAX;
 	pData->step = 1;
-	pData->pszKey = "";
-	pData->pszVar = JSON_VAR_NAME;
+	pData->pszKey = (char*)"";
+	pData->pszVar = (char*)JSON_VAR_NAME;
 }
 
 BEGINnewActInst

@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -731,7 +731,7 @@ finalize_it:
  */
 #if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
-rsRetVal rcvMainLoop(struct wrkrInfo_s *pWrkr)
+static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 {
 	DEFiRet;
 	int nfds;

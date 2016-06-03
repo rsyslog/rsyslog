@@ -8,7 +8,7 @@
  * PRI filter) are very hard to beat in ease of use, at least for simpler
  * cases.
  *
- * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,6 +27,12 @@
  * limitations under the License.
  */
 %{
+/* shut off warnings that we can't change anyhow */
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+
 #include "config.h"
 #include <stdio.h>
 #include <libestr.h>

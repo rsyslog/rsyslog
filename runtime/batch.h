@@ -132,7 +132,7 @@ finalize_it:
 
 
 /* primarily a helper for debug purposes, get human-readble name of state */
-static inline char *
+static inline const char *
 batchState2String(const batch_state_t state) {
 	switch(state) {
 	case BATCH_STATE_RDY:
@@ -145,7 +145,8 @@ batchState2String(const batch_state_t state) {
 		return "BATCH_STATE_COMM";
 	case BATCH_STATE_DISC:
 		return "BATCH_STATE_DISC";
+	default:
+		return "ERROR, batch state not known!";
 	}
-	return "ERROR, batch state not known!";
 }
 #endif /* #ifndef BATCH_H_INCLUDED */
