@@ -181,13 +181,10 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues)
 }
 /* activate all ruleset queues */
 rsRetVal
-activateRulesetQueues()
+activateRulesetQueues(void)
 {
-	DEFiRet;
-
 	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
-
-	RETiRet;
+	return RS_RET_OK;
 }
 
 

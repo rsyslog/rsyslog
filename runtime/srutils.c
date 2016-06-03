@@ -432,7 +432,8 @@ timeoutComp(struct timespec *pt, long iTimeout)
 }
 
 long long
-currentTimeMills() {
+currentTimeMills(void)
+{
 #	if _POSIX_TIMERS > 0
 	struct timespec tm;
 #   else

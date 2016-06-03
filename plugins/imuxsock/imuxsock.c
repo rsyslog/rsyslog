@@ -1081,8 +1081,8 @@ finalize_it:
 
 
 /* activate current listeners */
-static inline rsRetVal
-activateListeners()
+static rsRetVal
+activateListeners(void)
 {
 	register int i;
 	int actSocks;

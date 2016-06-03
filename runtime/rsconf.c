@@ -783,8 +783,8 @@ startInputModules(void)
 
 
 /* activate the main queue */
-static inline rsRetVal
-activateMainQueue()
+static rsRetVal
+activateMainQueue(void)
 {
 	struct cnfobj *mainqCnfObj;
 	DEFiRet;
@@ -1034,7 +1034,7 @@ finalize_it:
  * very first version begun on 2007-07-23 by rgerhards
  */
 static rsRetVal
-loadBuildInModules()
+loadBuildInModules(void)
 {
 	DEFiRet;
 

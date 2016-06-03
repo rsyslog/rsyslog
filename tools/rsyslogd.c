@@ -963,7 +963,7 @@ finalize_it:
 
 
 static void
-hdlr_sigttin()
+hdlr_sigttin(void)
 {
 	/* this is just a dummy to care for our sigttin input
 	 * module cancel interface. The important point is that
@@ -982,19 +982,19 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 static void
-hdlr_sighup()
+hdlr_sighup(void)
 {
 	bHadHUP = 1;
 }
 
 static void
-hdlr_sigchld()
+hdlr_sigchld(void)
 {
 	bChildDied = 1;
 }
 
 static void
-rsyslogdDebugSwitch()
+rsyslogdDebugSwitch(void)
 {
 	time_t tTime;
 	struct tm tp;
@@ -1036,8 +1036,6 @@ initAll(int argc, char **argv)
 {
 	rsRetVal localRet;
 	int ch;
-	extern int optind;
-	extern char *optarg;
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */

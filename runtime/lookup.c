@@ -203,7 +203,8 @@ lookupInitCnf(lookup_tables_t *lu_tabs)
 }
 
 void
-lookupDestroyCnf() {
+lookupDestroyCnf(void)
+{
 	lookup_ref_t *luref, *luref_next;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; ) {
 		luref_next = luref->next;

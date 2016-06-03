@@ -218,7 +218,8 @@ finalize_it:
  * record of printk buffer.
  */
 static rsRetVal
-readjournal() {
+readjournal(void)
+{
 	DEFiRet;
 
 	struct timeval tv;
@@ -372,7 +373,8 @@ finalize_it:
 /* This function gets journal cursor and saves it into state file
  */
 static rsRetVal
-persistJournalState () {
+persistJournalState (void)
+{
 	DEFiRet;
 	FILE *sf; /* state file */
 	char *cursor;
@@ -408,7 +410,7 @@ persistJournalState () {
  * except for the special handling of EINTR.
  */
 static rsRetVal
-pollJournal()
+pollJournal(void)
 {
 	DEFiRet;
 	struct pollfd pollfd;
@@ -451,7 +453,8 @@ finalize_it:
 
 
 static rsRetVal
-skipOldMessages() {
+skipOldMessages(void)
+{
 	DEFiRet;
 
 	if (sd_journal_seek_tail(j) < 0) {
@@ -479,7 +482,7 @@ finalize_it:
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal
-loadJournalState()
+loadJournalState(void)
 {
 	DEFiRet;
 

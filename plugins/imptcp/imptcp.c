@@ -1546,7 +1546,7 @@ stopWorkerPool(void)
  * This is a one-time stop once the module is set to start.
  */
 static inline rsRetVal
-startupServers()
+startupServers(void)
 {
 	DEFiRet;
 	rsRetVal localRet, lastErr;
@@ -1690,7 +1690,8 @@ processWorkItem(epolld_t *epd)
 
 
 static rsRetVal
-initIoQ() {
+initIoQ(void)
+{
 	DEFiRet;
 	CHKiConcCtrl(pthread_mutex_init(&io_q.mut, NULL));
 	CHKiConcCtrl(pthread_cond_init(&io_q.wakeup_worker, NULL));
@@ -1711,7 +1712,8 @@ finalize_it:
 }
 
 static void
-destroyIoQ() {
+destroyIoQ(void)
+{
 	io_req_t *n;
 	if (io_q.stats != NULL) {
 		statsobj.Destruct(&io_q.stats);

@@ -1636,7 +1636,7 @@ done:	return;
 
 /* setup our initial set of watches, based on user config */
 static void
-in_setupInitialWatches()
+in_setupInitialWatches(void)
 {
 	int i;
 	for(i = 0 ; i < currMaxDirs ; ++i) {
@@ -1853,7 +1853,7 @@ done:	return;
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
-do_inotify()
+do_inotify(void)
 {
 	char iobuf[8192];
 	struct inotify_event *ev;
