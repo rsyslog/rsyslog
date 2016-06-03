@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.20.0 [v8-stable] 2016-07-12
+- refactored code to not emit compiler warnings in "strict mode"
+  We changed the compiler warning settings to be rather strict and cleaned up
+  the code to work without generating any warning messages.
+  This results in an overall even more improved code quality, which will now
+  also be enforced via our CI systems.
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - NEW BUILD REQUIREMENT: autoconf-archive
