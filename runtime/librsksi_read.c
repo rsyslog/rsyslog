@@ -46,7 +46,6 @@
 #include "librsksi.h"
 
 
-typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
