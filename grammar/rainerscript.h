@@ -176,8 +176,9 @@ cnfFiltType2str(enum cnfFiltType filttype)
 		return("filter:prop");
 	case CNFFILT_SCRIPT:
 		return("filter:script");
+	default:
+		return("error:invalid_filter_type");	/* should never be reached */
 	}
-	return("error:invalid_filter_type");	/* should never be reached */
 }
 
 
