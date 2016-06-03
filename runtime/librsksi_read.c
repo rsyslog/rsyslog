@@ -50,7 +50,6 @@ typedef unsigned char uchar;
 #ifndef VERSION
 #define VERSION "no-version"
 #endif
-#define MAXFNAME 1024
 
 static int rsksi_read_debug = 0;
 const char *rsksi_read_puburl = ""; /* old default http://verify.guardtime.com/gt-controlpublications.bin";*/
