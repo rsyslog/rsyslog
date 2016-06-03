@@ -94,17 +94,17 @@ static struct cnfparamblk pblk =
  * if the transactional entry points exist.
  */
 static rsRetVal
-dummyBeginTransaction(void * __attribute__((unused)) dummy)
+dummyBeginTransaction(__attribute__((unused)) void * dummy)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyEndTransaction(void * __attribute__((unused)) dummy)
+dummyEndTransaction(__attribute__((unused)) void * dummy)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyIsCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)
+dummyIsCompatibleWithFeature(__attribute__((unused)) syslogFeature eFeat)
 {
 	return RS_RET_INCOMPATIBLE;
 }
