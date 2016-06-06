@@ -17,6 +17,7 @@ TESTS +=  \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
@@ -490,6 +491,7 @@ EXTRA_DIST= \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
+	invalid_nested_include.sh \
 	validation-run.sh \
 	tls-certs/ca-key.pem \
 	tls-certs/ca.pem \
