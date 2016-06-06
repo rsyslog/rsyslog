@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.20.0 [v8-stable] 2016-07-12
+- config files recursively including themselfes are now detected
+  and an error message is emitted in that case; Previously, this
+  misconfiguration resulted in rsyslog loop and abort during startup.
+  closes https://github.com/rsyslog/rsyslog/issues/1058
 - refactored code to not emit compiler warnings in "strict mode"
   We changed the compiler warning settings to be rather strict and cleaned up
   the code to work without generating any warning messages.
