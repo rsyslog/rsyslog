@@ -425,7 +425,8 @@ endif
 
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
-         sndrcv_relp_tls.sh
+         sndrcv_relp_tls.sh \
+	 imrelp-basic.sh
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -874,6 +875,7 @@ EXTRA_DIST= \
 	sndrcv.sh \
 	testsuites/sndrcv_sender.conf \
 	testsuites/sndrcv_rcvr.conf \
+	imrelp-basic.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \
