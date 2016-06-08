@@ -690,6 +690,19 @@ done:
   	return;
 }
 
+/* a portable way to put the current thread asleep. Note that
+ * using the sleep() API family may result in the whole process
+ * to be put asleep on some platforms.
+ */
+static void
+doSleep(int iSeconds, int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+}
+
 /* accept an incoming connection request, sock provides the socket on which we can
  * accept the new session.
  * rgerhards, 2008-03-17
@@ -708,7 +721,12 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv)
 	assert(ppThis != NULL);
 
 	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	int errnosave = errno;
 	if(iNewSock < 0) {
+		pSrv->pEngine->dbgprint("error during accept, sleeping 20ms: %s\n",
+			strerror(errnosave));
+		doSleep(0, 20000);
+		pSrv->pEngine->dbgprint("END SLEEP\n");
 		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
 	}
 
@@ -1499,6 +1517,8 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	} else {
 #endif /* #ifdef ENABLE_TLS */
 		*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+		pThis->pEngine->dbgprint("relpTcpRcv: read %zd bytes from sock %d\n",
+			*pLenBuf, pThis->sock);
 #ifdef ENABLE_TLS
 	}
 #endif /* #ifdef ENABLE_TLS */
@@ -1571,7 +1591,7 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 #endif /* #ifdef ENABLE_TLS */
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
 		const int errno_save = errno;
-		pThis->pEngine->dbgprint("librelp: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
+		pThis->pEngine->dbgprint("relpTcpSend: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
 			(int)pThis->sock, *pLenBuf, (int) written, errno_save);
 		if(written == -1) {
 			switch(errno_save) {
