@@ -47,7 +47,7 @@
  *      each inidividual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
- * -T   transport to use. Currently supported: "udp", "tcp" (default)
+ * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain
  *      Note: UDP supports a single target port, only
  * -W	wait time between sending batches of messages, in microseconds (Default: 0)
  * -b   number of messages within a batch (default: 100,000,000 millions)
@@ -94,6 +94,7 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <librelp.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -144,6 +145,7 @@ static int numMsgsToSend; /* number of messages to send */
 static int numConnections = 1; /* number of connections to create */
 static int softLimitConnections  = 0; /* soft connection limit, see -c option description */
 static int *sockArray;  /* array of sockets to use */
+static relpClt_t **relpCltArray;  /* array of sockets to use */
 static int msgNum = 0;	/* initial message number to start with */
 static int bShowProgress = 1; /* show progress messages */
 static int bSilent = 0; /* completely silent operation */
@@ -203,12 +205,32 @@ struct runstats {
 static int udpsock;			/* socket for sending in UDP mode */
 static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
 
-static enum { TP_UDP, TP_TCP, TP_TLS } transport = TP_TCP;
+static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN } transport = TP_TCP;
 
 /* forward definitions */
 static void initTLSSess(int);
 static int sendTLS(int i, char *buf, int lenBuf);
 static void closeTLSSess(int __attribute__((unused)) i);
+
+/* RELP subsystem */
+static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+    printf(fmt);
+}
+#pragma GCC diagnostic pop
+
+static relpEngine_t *pRelpEngine;
+#define CHKRELP(f) if(f != RELP_RET_OK) { fprintf(stderr, "%s\n", #f); exit(1); }
+static void
+initRELP_PLAIN(void)
+{
+	CHKRELP(relpEngineConstruct(&pRelpEngine));
+	CHKRELP(relpEngineSetDbgprint(pRelpEngine, NULL));//relp_dbgprintf));
+	//CHKRELP(relpEngineSetDbgprint(pRelpEngine, relp_dbgprintf));
+	CHKRELP(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog",
+		eRelpCmdState_Required));
+}
 
 /* prepare send subsystem for UDP send */
 static inline int
@@ -231,18 +253,13 @@ setupUDP(void)
 
 /* open a single tcp connection
  */
-int openConn(int *fd)
+int openConn(int *fd, const int connIdx)
 {
 	int sock;
 	struct sockaddr_in addr;
 	int port;
 	int retries = 0;
 	int rnd;
-
-	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-		perror("\nsocket()");
-		return(1);
-	}
 
 	/* randomize port if required */
 	if(numTargetPorts > 1) {
@@ -251,28 +268,49 @@ int openConn(int *fd)
 	} else {
 		port = targetPort;
 	}
-	memset((char *) &addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	if(inet_aton(targetIP, &addr.sin_addr)==0) {
-		fprintf(stderr, "inet_aton() failed\n");
-		return(1);
-	}
-	while(1) { /* loop broken inside */
-		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
-			break;
-		} else {
-			if(retries++ == 50) {
-				perror("connect()");
-				fprintf(stderr, "connect() failed\n");
-				return(1);
-			} else {
-				usleep(100000); /* ms = 1000 us! */
-			}
+	if(transport == TP_RELP_PLAIN) {
+		relpRetVal relp_r;
+		relpClt_t *relpClt;
+		char relpPort[16];
+		snprintf(relpPort, sizeof(relpPort), "%d", port);
+		CHKRELP(relpEngineCltConstruct(pRelpEngine, &relpClt));
+		CHKRELP(relpCltSetTimeout(relpClt, 10)); /* we don't need a large timeout */
+		relpCltArray[connIdx] = relpClt;
+		relp_r = relpCltConnect(relpCltArray[connIdx], 2,
+			(unsigned char*)relpPort, (unsigned char*)targetIP);
+		if(relp_r != RELP_RET_OK) {
+			fprintf(stderr, "relp connect failed with return %d\n", relp_r);
+			return(1);
 		}
-	} 
+		*fd = 1; /* mimic "all ok" state */
+	} else { /* TCP, with or without TLS */
+		if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
+			perror("\nsocket()");
+			return(1);
+		}
+		memset((char *) &addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(port);
+		if(inet_aton(targetIP, &addr.sin_addr)==0) {
+			fprintf(stderr, "inet_aton() failed\n");
+			return(1);
+		}
+		while(1) { /* loop broken inside */
+			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+				break;
+			} else {
+				if(retries++ == 50) {
+					perror("connect()");
+					fprintf(stderr, "connect() failed\n");
+					return(1);
+				} else {
+					usleep(100000); /* ms = 1000 us! */
+				}
+			}
+		} 
 
-	*fd = sock;
+		*fd = sock;
+	}
 	return 0;
 }
 
@@ -295,12 +333,14 @@ int openConnections(void)
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
 	sockArray = calloc(numConnections, sizeof(int));
+	if(transport == TP_RELP_PLAIN)
+		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
 			if(bShowProgress)
 				printf("\r%5.5d", i);
 		}
-		if(openConn(&(sockArray[i])) != 0) {
+		if(openConn(&(sockArray[i]), i) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
 			if(softLimitConnections) {
 				numConnections = i - 1;
@@ -342,23 +382,34 @@ void closeConnections(void)
 
 	if(bShowProgress)
 		if(write(1, "      close connections", sizeof("      close connections")-1)){}
+	if(transport == TP_RELP_PLAIN)
+		sleep(1);	/* we need to let librelp settle a bit */
 	for(i = 0 ; i < numConnections ; ++i) {
-		if(i % 10 == 0) {
-			if(bShowProgress) {
-				lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-				if(write(1, msgBuf, lenMsg)){}
-			}
+		if(i % 10 == 0 && bShowProgress) {
+			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+			if(write(1, msgBuf, lenMsg)){}
 		}
-		if(sockArray[i] != -1) {
-			/* we try to not overrun the receiver by trying to flush buffers
-			 * *during* close(). -- rgerhards, 2010-08-10
-			 */
-			ling.l_onoff = 1;
-			ling.l_linger = 1;
-			setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
-			if(transport == TP_TLS)
-				closeTLSSess(i);
-			close(sockArray[i]);
+		if(transport == TP_RELP_PLAIN) {
+			relpRetVal relpr;
+			if(sockArray[i] == -1) {
+				relpr = relpEngineCltDestruct(pRelpEngine, relpCltArray+i);
+				if(relpr != RELP_RET_OK) {
+					fprintf(stderr, "relp error %d on close\n", relpr);
+				}
+				sockArray[i] = -1;
+			}
+		} else { /* TCP and TLS modes */
+			if(sockArray[i] != -1) {
+				/* we try to not overrun the receiver by trying to flush buffers
+				 * *during* close(). -- rgerhards, 2010-08-10
+				 */
+				ling.l_onoff = 1;
+				ling.l_linger = 1;
+				setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+				if(transport == TP_TLS)
+					closeTLSSess(i);
+				close(sockArray[i]);
+			}
 		}
 	}
 	if(bShowProgress) {
@@ -508,7 +559,7 @@ int sendMessages(struct instdata *inst)
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum])) != 0) {
+				if(openConn(&(sockArray[socknum]), socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
@@ -521,7 +572,7 @@ int sendMessages(struct instdata *inst)
 		} else if(transport == TP_TLS) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum])) != 0) {
+				if(openConn(&(sockArray[socknum]), socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
@@ -537,6 +588,19 @@ int sendMessages(struct instdata *inst)
 				memcpy(sendBuf, buf, lenBuf);
 				offsSendBuf = lenBuf;
 			}
+		} else if(transport == TP_RELP_PLAIN) {
+			if(sockArray[socknum] == -1) {
+				/* connection was dropped, need to re-establish */
+				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+					printf("error in trying to re-open connection %d\n", socknum);
+					exit(1);
+				}
+			}
+			if (relpCltSendSyslog(relpCltArray[socknum],
+				(unsigned char*)buf, lenBuf) == RELP_RET_OK)
+				lenSend = lenBuf; /* mimic ok */
+			else
+				lenSend = 0; /* mimic fail */
 		}
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -1010,6 +1074,14 @@ int main(int argc, char *argv[])
 							"\"-Ttls\" not supported!\n");
 						exit(1);
 #					endif
+				} else if(!strcmp(optarg, "relp-plain")) {
+#					if defined(ENABLE_RELP)
+						transport = TP_RELP_PLAIN;
+#					else
+						fprintf(stderr, "compiled without RELP support: "
+							"\"-Trelp-plain\" not supported!\n");
+						exit(1);
+#					endif
 				} else {
 					fprintf(stderr, "unknown transport '%s'\n", optarg);
 					exit(1);
@@ -1066,6 +1138,8 @@ int main(int argc, char *argv[])
 
 	if(transport == TP_TLS) {
 		initTLS();
+	} else if(transport == TP_RELP_PLAIN) {
+		initRELP_PLAIN();
 	}
 
 	if(openConnections() != 0) {
@@ -1086,5 +1160,8 @@ int main(int argc, char *argv[])
 	if(!bSilent)
 		printf("End of tcpflood Run\n");
 
+	if(transport == TP_TLS) {
+		CHKRELP(relpEngineDestruct(&pRelpEngine));
+	}
 	exit(ret);
 }
