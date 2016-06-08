@@ -140,20 +140,6 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-
-/* a portable way to put the current thread asleep. Note that
- * using the sleep() API family may result in the whole process
- * to be put asleep on some platforms.
- */
-static inline void
-doSleep(int iSeconds, int iuSeconds)
-{
-	struct timeval tvSelectTimeout;
-	tvSelectTimeout.tv_sec = iSeconds;
-	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
-	select(0, NULL, NULL, NULL, &tvSelectTimeout);
-}
-
 /* This functions sends a complete sendbuf (a blocking call). It
  * is intended for use by clients. Do NOT use it on servers as
  * that will block other activity. bAddToUnacked specifies if the
