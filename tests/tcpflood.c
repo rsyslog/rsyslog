@@ -59,10 +59,12 @@
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
  * -O	Use octate-count framing
+ * -v   verbose output, possibly useful for troubleshooting. Most importantly,
+ *      this gives insight into librelp actions (if relp is selected as protocol).
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009, 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -137,6 +139,7 @@ static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
 static int targetPort = 13514;
 static int numTargetPorts = 1;
+static int verbose = 0;
 static int dynFileIDs = 0;
 static int extraDataLen = 0; /* amount of extra data to add to message */
 static int useRFC5424Format = 0; /* should the test message be in RFC5424 format? */
@@ -226,8 +229,8 @@ static void
 initRELP_PLAIN(void)
 {
 	CHKRELP(relpEngineConstruct(&pRelpEngine));
-	CHKRELP(relpEngineSetDbgprint(pRelpEngine, NULL));//relp_dbgprintf));
-	//CHKRELP(relpEngineSetDbgprint(pRelpEngine, relp_dbgprintf));
+	CHKRELP(relpEngineSetDbgprint(pRelpEngine,
+		verbose ? relp_dbgprintf : NULL));
 	CHKRELP(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog",
 		eRelpCmdState_Required));
 }
@@ -274,7 +277,6 @@ int openConn(int *fd, const int connIdx)
 		char relpPort[16];
 		snprintf(relpPort, sizeof(relpPort), "%d", port);
 		CHKRELP(relpEngineCltConstruct(pRelpEngine, &relpClt));
-		CHKRELP(relpCltSetTimeout(relpClt, 10)); /* we don't need a large timeout */
 		relpCltArray[connIdx] = relpClt;
 		relp_r = relpCltConnect(relpCltArray[connIdx], 2,
 			(unsigned char*)relpPort, (unsigned char*)targetIP);
@@ -343,9 +345,27 @@ int openConnections(void)
 		if(openConn(&(sockArray[i]), i) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
 			if(softLimitConnections) {
+				printf("Connection limit is soft, continuing with fewer connections\n");
 				numConnections = i - 1;
-				printf("Connection limit is soft, continuing with only %d "
-				       "connections.\n", numConnections);
+				int close_conn = 10;
+				for(i -= 1 ; close_conn > 0 && i > 1 ; --i, --close_conn) {
+					printf("closing connection %d to make some room\n", i);
+					/* close at least some connections so that
+					 * other functionality has a chance to do
+					 * at least something.
+					 */
+					if(transport == TP_RELP_PLAIN) {
+						CHKRELP(relpEngineCltDestruct(pRelpEngine,
+							relpCltArray+i));
+					} else { /* TCP and TLS modes */
+						if(transport == TP_TLS)
+							closeTLSSess(i);
+						close(sockArray[i]);
+					}
+					sockArray[i] = -1;
+				}
+				numConnections = i;
+				printf("continuing with %d connections.\n", numConnections);
 				break;
 			}
 			return 1;
@@ -382,8 +402,8 @@ void closeConnections(void)
 
 	if(bShowProgress)
 		if(write(1, "      close connections", sizeof("      close connections")-1)){}
-	if(transport == TP_RELP_PLAIN)
-		sleep(1);	/* we need to let librelp settle a bit */
+	//if(transport == TP_RELP_PLAIN)
+		//sleep(10);	/* we need to let librelp settle a bit */
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0 && bShowProgress) {
 			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
@@ -391,7 +411,7 @@ void closeConnections(void)
 		}
 		if(transport == TP_RELP_PLAIN) {
 			relpRetVal relpr;
-			if(sockArray[i] == -1) {
+			if(sockArray[i] != -1) {
 				relpr = relpEngineCltDestruct(pRelpEngine, relpCltArray+i);
 				if(relpr != RELP_RET_OK) {
 					fprintf(stderr, "relp error %d on close\n", relpr);
@@ -589,6 +609,7 @@ int sendMessages(struct instdata *inst)
 				offsSendBuf = lenBuf;
 			}
 		} else if(transport == TP_RELP_PLAIN) {
+			relpRetVal relp_ret;
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
 				if(openConn(&(sockArray[socknum]), socknum) != 0) {
@@ -596,11 +617,15 @@ int sendMessages(struct instdata *inst)
 					exit(1);
 				}
 			}
-			if (relpCltSendSyslog(relpCltArray[socknum],
-				(unsigned char*)buf, lenBuf) == RELP_RET_OK)
+			relp_ret = relpCltSendSyslog(relpCltArray[socknum],
+					(unsigned char*)buf, lenBuf);
+			if (relp_ret == RELP_RET_OK) {
 				lenSend = lenBuf; /* mimic ok */
-			else
+			} else {
 				lenSend = 0; /* mimic fail */
+				printf("\nrelpCltSendSyslog() failed with relp error code %d\n",
+					   relp_ret);
+			}
 		}
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
@@ -995,7 +1020,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:O")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:Ov")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1099,6 +1124,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'O':	octateCountFramed = 1;
 				break;				
+		case 'v':	verbose = 1;
+				break;
 		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
 				exit (1);
 				break;
