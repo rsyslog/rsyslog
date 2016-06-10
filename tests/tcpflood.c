@@ -216,9 +216,9 @@ static int sendTLS(int i, char *buf, int lenBuf);
 static void closeTLSSess(int __attribute__((unused)) i);
 
 /* RELP subsystem */
-static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
+static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
     printf(fmt);
 }
 #pragma GCC diagnostic pop
