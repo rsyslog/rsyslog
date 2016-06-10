@@ -232,12 +232,18 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 	dbgprintf("omhiredis: endTransaction called\n");
+    redisReply* reply;
 	int i;
 	pWrkrData->replies = malloc ( sizeof ( redisReply* ) * pWrkrData->count );
 	for ( i = 0; i < pWrkrData->count; i++ ) {
 		redisGetReply ( pWrkrData->conn, (void *)&pWrkrData->replies[i] );
-		/*  TODO: add error checking here! */
-		freeReplyObject ( pWrkrData->replies[i] );
+        reply = (void *)&pWrkrData->replies[i];
+        if( pWrkrData->conn->err ){
+            dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
+        }
+        else {
+            freeReplyObject(reply);
+        }
 	}
 	free ( pWrkrData->replies );
 ENDendTransaction
