@@ -120,7 +120,7 @@ typedef struct _instanceData {
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+        instanceData *pData;
 } wrkrInstanceData_t;
 
 
@@ -825,9 +825,13 @@ static void *amqp1_thread(void *arg)
 
     while (!ps->stopped) {
         // setup a connection:
+        char host_addr[300];
+        const char *port = pn_url_get_port(cfg->url);
         ps->conn = pn_reactor_connection(ps->reactor, handler);
         pn_connection_set_container(ps->conn, "rsyslogd-omamqp1");
-        pn_connection_set_hostname(ps->conn, pn_url_get_host(cfg->url));
+        snprintf(host_addr, sizeof(host_addr), "%s:%s", 
+                 pn_url_get_host(cfg->url), port ? port : "5672");
+        pn_connection_set_hostname(ps->conn, host_addr);
 
 #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 10
         // proton version <= 0.9 did not support Cyrus SASL
