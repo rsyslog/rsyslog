@@ -825,13 +825,25 @@ static void *amqp1_thread(void *arg)
 
     while (!ps->stopped) {
         // setup a connection:
-        char host_addr[300];
+        const char *host = pn_url_get_host(cfg->url);
         const char *port = pn_url_get_port(cfg->url);
-        ps->conn = pn_reactor_connection(ps->reactor, handler);
+        if (!port) port = "5672";
+
+#if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 13
+        ps->conn = pn_reactor_connection_to_host(ps->reactor,
+                                                 host,
+                                                 port,
+                                                 handler);
+        pn_connection_set_hostname(ps->conn, host);
+#else
+        {
+            char host_addr[300];
+            ps->conn = pn_reactor_connection(ps->reactor, handler);
+            snprintf(host_addr, sizeof(host_addr), "%s:%s", host, port);
+            pn_connection_set_hostname(ps->conn, host_addr);
+        }
+#endif
         pn_connection_set_container(ps->conn, "rsyslogd-omamqp1");
-        snprintf(host_addr, sizeof(host_addr), "%s:%s", 
-                 pn_url_get_host(cfg->url), port ? port : "5672");
-        pn_connection_set_hostname(ps->conn, host_addr);
 
 #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR >= 10
         // proton version <= 0.9 did not support Cyrus SASL
