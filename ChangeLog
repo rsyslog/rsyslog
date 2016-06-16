@@ -9,6 +9,9 @@ Version 8.20.0 [v8-stable] 2016-07-12
   the code to work without generating any warning messages.
   This results in an overall even more improved code quality, which will now
   also be enforced via our CI systems.
+- bugfix omqmqp1: connecting to the message bus fails on nonstandard port
+  Thanks to Ken Giusti for the patch.
+  see also: https://github.com/rsyslog/rsyslog/pull/1064
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - NEW BUILD REQUIREMENT: autoconf-archive
