@@ -1181,14 +1181,15 @@ int main(int argc, char *argv[])
 
 	closeConnections(); /* this is important so that we do not finish too early! */
 
+	if(transport == TP_RELP_PLAIN) {
+		CHKRELP(relpEngineDestruct(&pRelpEngine));
+	}
+
 	if(nConnDrops > 0 && !bSilent)
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
 
 	if(!bSilent)
 		printf("End of tcpflood Run\n");
 
-	if(transport == TP_TLS) {
-		CHKRELP(relpEngineDestruct(&pRelpEngine));
-	}
 	exit(ret);
 }
