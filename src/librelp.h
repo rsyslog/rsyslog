@@ -154,6 +154,7 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_WRN_NO_KEEPALIVE RELPERR_BASE + 44	/**< KEEPALIVE cannot be enabled */
 #define RELP_RET_ERR_NO_TLS	RELPERR_BASE + 45	/**< librelp compiled without TLS support */
 #define RELP_RET_ERR_NO_TLS_AUTH RELPERR_BASE + 46	/**< platform does not provide TLS auth support */
+#define RELP_RET_SESSION_OPEN	RELPERR_BASE + 47	/**< RELP session is (already) open */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
