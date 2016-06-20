@@ -1570,8 +1570,11 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 	} else {
 #endif /* #ifdef ENABLE_TLS */
 		written = send(pThis->sock, pBuf, *pLenBuf, 0);
+		const int errno_save = errno;
+		pThis->pEngine->dbgprint("librelp: sock %d, lenbuf %zd, send returned %d [errno %d]\n",
+			(int)pThis->sock, *pLenBuf, (int) written, errno_save);
 		if(written == -1) {
-			switch(errno) {
+			switch(errno_save) {
 				case EAGAIN:
 				case EINTR:
 					/* this is fine, just retry... */
