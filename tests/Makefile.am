@@ -63,6 +63,7 @@ TESTS +=  \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
+	tcp_forwarding_retries.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	da-mainmsg-q.sh \
@@ -589,6 +590,7 @@ EXTRA_DIST= \
 	testsuites/tcp_forwarding_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
+	tcp_forwarding_retries.sh \
 	killrsyslog.sh \
 	parsertest.sh \
 	fieldtest.sh \
