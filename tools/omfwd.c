@@ -766,7 +766,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	}
 
 finalize_it:
-	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pData->target, iRet);
+	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pWrkrData->pData->target, iRet);
 	if(iRet != RS_RET_OK) {
 		if(pWrkrData->f_addr != NULL) {
 			freeaddrinfo(pWrkrData->f_addr);
