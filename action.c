@@ -1280,8 +1280,11 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		} else if(iRet == RS_RET_SUSPENDED) {
 			iRet = actionDoRetry(pThis, pWti);
-			if(iRet != RS_RET_OK)
+			if(iRet != RS_RET_OK) {
 				actionWriteErrorFile(pThis, pWti);
+				bDone = 1;
+			}
+			continue;
 		}
 		if(iRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
