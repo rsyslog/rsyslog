@@ -16,7 +16,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -224,7 +224,10 @@ breakIF:
 		printf("info: had %d duplicates (this is no error)\n", nDups);
 
 	if(!reachedEOF) {
-		printf("end of processing, but NOT end of file!\n");
+		printf("end of processing, but NOT end of file! First line of extra data is:\n");
+		for(c = fgetc(fp) ; c != '\n' && c != EOF ; c = fgetc(fp))
+			putchar(c);
+		putchar('\n');
 		exit(1);
 	}
 
