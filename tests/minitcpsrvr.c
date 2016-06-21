@@ -102,8 +102,11 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	if(sleeptime)
+	if(sleeptime) {
+		printf("minitcpsrv: deliberate sleep of %d seconds\n", sleeptime);
 		sleep(sleeptime);
+		printf("minitcpsrv: end sleep\n");
+	}
 
 	fds = socket(AF_INET, SOCK_STREAM, 0);
 	srvAddr.sin_family = AF_INET;
