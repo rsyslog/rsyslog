@@ -1173,6 +1173,8 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 		}
 	}
 finalize_it:
+	if(iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
+		iRet = RS_RET_OK; /* this is expected for transactional action! */
 	RETiRet;
 }
 
@@ -1183,9 +1185,10 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 {
 	DEFiRet;
 
+	CHKiRet(actionPrepare(pThis, pWti));
+
 	CHKiRet(doTransaction(pThis, pWti));
 
-	CHKiRet(actionPrepare(pThis, pWti));
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
