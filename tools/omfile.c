@@ -1050,6 +1050,9 @@ CODESTARTcommitTransaction
 	}
 
 finalize_it:
+	if (pData->bDynamicName &&
+	    (iRet == RS_RET_FILE_OPEN_ERROR || iRet == RS_RET_FILE_NOT_FOUND) )
+		iRet = RS_RET_OK;
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDcommitTransaction
 
