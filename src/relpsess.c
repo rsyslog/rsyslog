@@ -488,7 +488,6 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	int nfds;
 	struct timespec tCurr; /* current time */
 	struct timespec tTimeout; /* absolute timeout value */
-	struct timespec tTimeoutEnd; /* absolute timeout value */
 	relpRetVal localRet;
 
 	ENTER_RELPFUNC;
@@ -516,8 +515,8 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 	}
 
 	/* ok, looks like we actually need to do a wait... */
-	clock_gettime(CLOCK_REALTIME, &tTimeout);
-	memcpy(&tTimeoutEnd, &tCurr, sizeof(struct timespec));
+	clock_gettime(CLOCK_REALTIME, &tCurr);
+	memcpy(&tTimeout, &tCurr, sizeof(struct timespec));
 	tTimeout.tv_sec += timeout;
 
 	while(!relpEngineShouldStop(pThis->pEngine)) {
