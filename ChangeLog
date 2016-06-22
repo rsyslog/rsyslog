@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------
 Version 1.2.11 - 2016-0?-??
+- bugfix: potential segfault when high-numbered fd is used in sender
+  When a fd (socket) with value >= 1024 was used by the client sender
+  process, the library could segfault in select(). This depended a bit
+  on the platform.
+  This patch solves the issue by replacing the select() call with
+  poll(). Note that we do not changed to epoll(), because
+  (a) we only wait on a single fd
+  (b) poll() is more portable
+  see also https://github.com/rsyslog/librelp/issues/38
 - bugfix: flush the current recv frame if it exists if the client
   session is restarting
   Thanks to Nate Brown for the patch.
