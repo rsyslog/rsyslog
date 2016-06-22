@@ -54,8 +54,8 @@ General Parser Parameters
    name is "pmciscoios", whereas it's default parser name is
    "rsyslog.pmciscoios".
 
-Sample
-------
+Samples
+-------
 The following example creates a custom parser definition and uses it within a ruleset:
 
 ::
@@ -66,6 +66,19 @@ The following example creates a custom parser definition and uses it within a ru
   ruleset(name="myRuleset" parser="custom.pmciscoios.with_origin") {
      ... do something here ...
   }
+
+The following example uses multiple parsers within a ruleset without a parser object (the order is important):
+
+::
+
+  load(module="pmaixforwardedfrom")
+  load(module="pmlastmsg")
+  
+  ruleset(name="myRuleset" parser=["rsyslog.lastline","rsyslog.aixforwardedfrom","rsyslog.rfc5424","rsyslog.rfc3164"]) {
+     ... do something here ...
+  }
+
+
 
 A more elaborate example can also be found in the
 :doc:`Cisco IOS message parser module <modules/pmciscoios>` documentation.
