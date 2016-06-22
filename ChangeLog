@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-Version 1.2.11 - 2016-0?-??
+Version 1.2.11 - 2016-06-22
 - bugfix: do not accept more than one "open" verb on a connection
   closes https://github.com/rsyslog/librelp/issues/37
 - bugfix: potential segfault when high-numbered fd is used in sender
