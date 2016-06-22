@@ -41,7 +41,6 @@ AC_TYPE_SIZE_T
 AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
 
 # Checks for library functions.
-AC_FUNC_MALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STRERROR_R
 AC_TYPE_SIGNAL

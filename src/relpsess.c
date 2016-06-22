@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
-#include <sys/select.h>
+#include <poll.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
@@ -481,14 +481,14 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 static relpRetVal
-relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
+relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, const int timeout)
 {
-	fd_set readfds;
+	struct pollfd pfd;
 	int sock;
 	int nfds;
 	struct timespec tCurr; /* current time */
 	struct timespec tTimeout; /* absolute timeout value */
-	struct timeval tvSelect;
+	struct timespec tTimeoutEnd; /* absolute timeout value */
 	relpRetVal localRet;
 
 	ENTER_RELPFUNC;
@@ -516,28 +516,21 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	}
 
 	/* ok, looks like we actually need to do a wait... */
-	clock_gettime(CLOCK_REALTIME, &tCurr);
-	memcpy(&tTimeout, &tCurr, sizeof(struct timespec));
+	clock_gettime(CLOCK_REALTIME, &tTimeout);
+	memcpy(&tTimeoutEnd, &tCurr, sizeof(struct timespec));
 	tTimeout.tv_sec += timeout;
 
 	while(!relpEngineShouldStop(pThis->pEngine)) {
 		sock = relpSessGetSock(pThis);
-		tvSelect.tv_sec = tTimeout.tv_sec - tCurr.tv_sec;
-		tvSelect.tv_usec = (tTimeout.tv_nsec - tCurr.tv_nsec) / 1000000;
-		if(tvSelect.tv_usec < 0) {
-			tvSelect.tv_usec += 1000000;
-			tvSelect.tv_sec--;
-		}
-		if(tvSelect.tv_sec < 0) {
+		if(tCurr.tv_sec >= tTimeout.tv_sec) {
 			ABORT_FINALIZE(RELP_RET_TIMED_OUT);
 		}
 
-		FD_ZERO(&readfds);
-		FD_SET(sock, &readfds);
+		pfd.fd = sock;
+		pfd.events = POLLIN;
 		pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on "
-			"fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec,
-			(int) tvSelect.tv_usec);
-		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
+			"fd %d, timeout %d\n", sock, timeout);
+		nfds = poll(&pfd, 1, timeout*1000);
 		if(nfds == -1) {
 			if(errno == EINTR) {
 				pThis->pEngine->dbgprint("relpSessWaitRsp select interrupted, continue\n");
@@ -547,7 +540,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 			}
 		}
 		else 
-			pThis->pEngine->dbgprint("relpSessWaitRsp select returns, "
+			pThis->pEngine->dbgprint("relpSessWaitRsp poll returns, "
 				"nfds %d, errno %d\n", nfds, errno);
 		if(relpEngineShouldStop(pThis->pEngine))
 			break;
