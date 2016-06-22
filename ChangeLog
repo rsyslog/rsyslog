@@ -11,6 +11,28 @@ Version 1.2.11 - 2016-0?-??
   (a) we only wait on a single fd
   (b) poll() is more portable
   closes https://github.com/rsyslog/librelp/issues/38
+- bugfix: make librelp not run in thight loop when out of sockets
+  If the process can no longer accept new connections (via accept)
+  because it has reached its file handle maximum, librelp runs in
+  a thight loop until either the client connection request is aborted
+  or a file handle becomes available.
+  This happens due to the fact that we get event notifications on
+  connection requests. As we can't satisfy it, we librelp always
+  retries. Unfortunately, there is no socket call to cancel a
+  connection request, so we cannot push the client request out.
+  An alternative solution would be to close and re-open the
+  listening socket, but in that case it is uncertain if we ever can
+  re-aquire a socket (an easy DoS). So the best thing we can
+  probably do is delay retries a bit. We must be careful, however,
+  not to use a too long delay, as that would also affect other
+  connections. We could address that problem via a dedicated thread
+  for the listening process, but librelp is designed so that it can
+  be used by callers with any threading library and threading model,
+  and that would violate this design principle.
+  Judging the alternatives, a slight delay probably is the best
+  solution, especially as the situation is uncommon and will hopefully
+  not last too long. This patch implements that solution.
+  closes https://github.com/rsyslog/librelp/issues/34
 - bugfix: flush the current recv frame if it exists if the client
   session is restarting
   Thanks to Nate Brown for the patch.
