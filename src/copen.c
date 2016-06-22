@@ -133,12 +133,19 @@ BEGINcommand(S, Init)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in open command handler\n");
 
+	if(pSess->bServerConnOpen) {
+		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 connection already open", 20);
+		ABORT_FINALIZE(RELP_RET_SESSION_OPEN);
+	}
+
 	CHKRet(relpOffersConstructFromFrame(&pCltOffers, pFrame));
 	CHKRet(selectOffers(pSess, pCltOffers, &pSrvOffers));
 
 	/* we got our offers together, so we now can send the response */
 	CHKRet(relpOffersToString(pSrvOffers, (unsigned char*)"200 OK\n", 7, &pszSrvOffers, &lenSrvOffers));
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, pszSrvOffers, lenSrvOffers));
+
+	pSess->bServerConnOpen = 1;
 
 finalize_it:
 	if(pszSrvOffers != NULL)

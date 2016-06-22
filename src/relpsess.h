@@ -1,6 +1,6 @@
 /* The RELPSESS object.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -70,6 +70,7 @@ struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpSessType_t sessType;	/**< session type: 0 - server, 1 - client */
+	int bServerConnOpen;	/**< server part: is connection established? */
 	void *pUsr;		/**< user provided pointer (opaque data) */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
