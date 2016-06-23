@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.20.0 [v8-stable] 2016-07-12
+- omfile now better conveys status of unwritable files back to core
 - config files recursively including themselfes are now detected
   and an error message is emitted in that case; Previously, this
   misconfiguration resulted in rsyslog loop and abort during startup.
@@ -9,11 +10,21 @@ Version 8.20.0 [v8-stable] 2016-07-12
   the code to work without generating any warning messages.
   This results in an overall even more improved code quality, which will now
   also be enforced via our CI systems.
+- bugfix: fix some issues with action CommitTransaction() handling
+  An action that returns an error from CommitTransaction() caused a
+  loop in rsyslog action processing. Similarly, retry processing was not
+  properly handled in regard to CommitTransaction().
+  This is a first shot at fixing the situation. It solves the
+  immediate problems, but does not implement the full desired
+  functionality (like error file).
+  see also https://github.com/rsyslog/rsyslog/issues/974
+  see also https://github.com/rsyslog/rsyslog/issues/500
 - bugfix omqmqp1: connecting to the message bus fails on nonstandard port
   Thanks to Ken Giusti for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/1064
 - testbench enhancements
   * new tests for RELP components
+  * new tests for core action processing and retry
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - NEW BUILD REQUIREMENT: autoconf-archive
