@@ -1097,6 +1097,7 @@ AC_ARG_ENABLE(relp,
 )
 if test "x$enable_relp" = "xyes"; then
 	PKG_CHECK_MODULES(RELP, relp >= 1.2.5)
+	AC_DEFINE([ENABLE_RELP], [1], [Indicator that RELP is present])
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 

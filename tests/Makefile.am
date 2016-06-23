@@ -425,7 +425,9 @@ endif
 
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
-         sndrcv_relp_tls.sh
+         sndrcv_relp_tls.sh \
+	 imrelp-basic.sh \
+	 imrelp-manyconn.sh
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -874,6 +876,8 @@ EXTRA_DIST= \
 	sndrcv.sh \
 	testsuites/sndrcv_sender.conf \
 	testsuites/sndrcv_rcvr.conf \
+	imrelp-basic.sh \
+	imrelp-manyconn.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \
@@ -1264,8 +1268,8 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS)
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(RELP_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS) $(RELP_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif
