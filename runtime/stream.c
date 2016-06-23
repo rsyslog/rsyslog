@@ -237,7 +237,7 @@ doPhysOpen(strm_t *pThis)
 		if(err == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {

@@ -718,12 +718,14 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 
 	iRetries = 0;
 	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
-		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d\n", pThis->pszName, iRetries);
+		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n",
+			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
 		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
 		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			setActionResumeInRow(pWti, pThis, 0);
+			iRet = RS_RET_SUSPENDED;
 		} else {
 			bTreatOKasSusp = 0;
 		}
@@ -1060,21 +1062,16 @@ handleActionExecResult(action_t *__restrict__ const pThis,
 			pThis->bHadAutoCommit = 1;
 			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
 			break;
-		case RS_RET_SUSPENDED:
-			actionRetry(pThis, pWti);
-			break;
 		case RS_RET_DISABLE_ACTION:
 			actionDisable(pThis);
 			break;
-		default:/* permanent failure of this message - no sense in retrying. This is
-			 * not yet handled (but easy TODO)
-			 */
-			iRet = ret;
-			FINALIZE;
+		case RS_RET_SUSPENDED:
+		default:/* error happened - if it hits us here, we treat it as suspension */
+			actionRetry(pThis, pWti);
+			break;
 	}
 	iRet = getReturnCode(pThis, pWti);
 
-finalize_it:
 	RETiRet;
 }
 
@@ -1176,6 +1173,8 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 		}
 	}
 finalize_it:
+	if(iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
+		iRet = RS_RET_OK; /* this is expected for transactional action! */
 	RETiRet;
 }
 
@@ -1186,9 +1185,10 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 {
 	DEFiRet;
 
-	doTransaction(pThis, pWti);
-
 	CHKiRet(actionPrepare(pThis, pWti));
+
+	CHKiRet(doTransaction(pThis, pWti));
+
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
@@ -1222,6 +1222,26 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 finalize_it:
 	RETiRet;
 }
+
+/* If a transcation failed, we write the error file (if configured).
+ * TODO: implement
+ */
+static void
+actionWriteErrorFile(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
+{
+	unsigned i;
+	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
+	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
+
+	DBGPRINTF("action %d commit failed, writing %u messages to error file\n",
+		pThis->iActionNbr, nMsgs);
+	for(i = 0 ; i < nMsgs ; ++i) {
+		// TODO: get actual param count!
+		dbgprintf("msg %d: '%s'\n", i,
+			actParam(wrkrInfo->p.tx.iparams, 1, i, 0).param);
+	}
+}
+
 
 /* Note: we currently need to return an iRet, as this is used in 
  * direct mode. TODO: However, it may be worth further investigating this,
@@ -1257,11 +1277,21 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	bDone = 0;
 	do {
 		iRet = actionTryCommit(pThis, pWti);
-		DBGPRINTF("actionCommit, in retry loop, iRet %d\n", iRet);
+		DBGPRINTF("actionCommit, action %d, in retry loop, iRet %d\n",
+			pThis->iActionNbr, iRet);
 		if(iRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		} else if(iRet == RS_RET_SUSPENDED) {
+			iRet = actionDoRetry(pThis, pWti);
+			if(iRet == RS_RET_FORCE_TERM) {
+				ABORT_FINALIZE(RS_RET_FORCE_TERM);
+			} else if(iRet != RS_RET_OK) {
+				actionWriteErrorFile(pThis, pWti);
+				bDone = 1;
+			}
+			continue;
 		} else if(iRet == RS_RET_OK ||
-			  iRet == RS_RET_SUSPENDED ||
+		          iRet == RS_RET_SUSPENDED ||
 			  iRet == RS_RET_ACTION_FAILED) {
 			bDone = 1;
 		}
@@ -1286,7 +1316,7 @@ actionCommitAllDirect(wti_t *__restrict__ const pWti)
 		pAction = pWti->actWrkrInfo[i].pAction;
 		if(pAction == NULL)
 			continue;
-		DBGPRINTF("actionCommitAll: action %d, state %u, nbr to commit %d "
+		DBGPRINTF("actionCommitAllDirect: action %d, state %u, nbr to commit %d "
 			  "isTransactional %d\n",
 			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam,
 			  pAction->isTransactional);

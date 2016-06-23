@@ -19,6 +19,7 @@ TESTS +=  \
 	glbl-invld-param.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
+	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -62,6 +63,7 @@ TESTS +=  \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
+	tcp_forwarding_retries.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	da-mainmsg-q.sh \
@@ -590,6 +592,7 @@ EXTRA_DIST= \
 	testsuites/tcp_forwarding_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
+	tcp_forwarding_retries.sh \
 	killrsyslog.sh \
 	parsertest.sh \
 	fieldtest.sh \
@@ -642,6 +645,7 @@ EXTRA_DIST= \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
+	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \

@@ -341,6 +341,13 @@ case $1 in
 		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+   'presort')	# sort the output file just like we normally do it, but do not call
+		# seqchk. This is needed for some operations where we need the sort
+		# result for some preprocessing. Note that a later seqchk will sort
+		# again, but that's not an issue.
+		rm -f work
+		$RS_SORTCMD -g < rsyslog.out.log > work
+		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		cp rsyslog.out.log work-presort
