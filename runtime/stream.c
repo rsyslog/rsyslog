@@ -934,8 +934,10 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 				} else {
 					cstrAppendChar(pThis->prevMsgSegment, '\n');
 				}
-				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-				/* we could do this faster, but for now keep it simple */
+				if(thisLine->iStrLen > 0) {
+					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+					/* we could do this faster, but for now keep it simple */
+				}
 
 			}
 		}
