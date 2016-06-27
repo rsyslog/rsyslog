@@ -1701,7 +1701,7 @@ finalize_it:
  * rgerhards, 2012-11-07
  */
 rsRetVal
-strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
+strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel)
 {
 	struct stat statBuf;
 	DEFiRet;
