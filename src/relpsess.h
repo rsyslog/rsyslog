@@ -106,6 +106,7 @@ struct relpSess_s {
 	int bAutoRetry;	/**< automatically try (once) to reestablish a broken session? */
 	int sizeWindow;	/**< size of our app-level communications window */
 	unsigned timeout; /**< timeout after which session is to be considered broken */
+	int connTimeout; /**< connection timeout */
 	relpSessState_t sessState; /**< state of our session */
 	/* linked list of frames with outstanding "rsp" */
 	relpSessUnacked_t *pUnackedLstRoot;
@@ -145,6 +146,7 @@ relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relp
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessSetTimeout(relpSess_t *pThis, unsigned timeout);
+relpRetVal relpSessSetConnTimeout(relpSess_t *pThis, int connTimeout);
 relpRetVal relpSessSetWindowSize(relpSess_t *pThis, int sizeWindow);
 relpRetVal relpSessSetClientIP(relpSess_t *pThis, unsigned char *ip);
 relpRetVal relpSessEnableTLS(relpSess_t *pThis);
