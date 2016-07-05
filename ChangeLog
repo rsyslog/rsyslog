@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------
 Version 1.2.12 - 2016-0?-??
+- API enhancement: permit to set connection timeout
+  Thanks to Nathan Brown for the patch.
 ----------------------------------------------------------------------
 Version 1.2.11 - 2016-06-22
 - bugfix: do not accept more than one "open" verb on a connection
