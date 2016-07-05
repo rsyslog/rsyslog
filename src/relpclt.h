@@ -55,6 +55,7 @@ struct relpClt_s {
 	unsigned char *host;	/**< host(name) to connect to */
 	unsigned char *clientIP;/**< ip to bind to, or NULL if irrelevant */
 	unsigned timeout;	/**< session timeout */
+	int connTimeout;	/**< connection timeout */
 };
 
 

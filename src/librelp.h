@@ -209,6 +209,7 @@ relpRetVal relpSrvAddPermittedPeer(relpSrv_t *pThis, char *peer);
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
 relpRetVal relpCltSetTimeout(relpClt_t *pThis, unsigned timeout);
+relpRetVal relpCltSetConnTimeout(relpClt_t *pThis, int connTimeout);
 relpRetVal relpCltSetWindowSize(relpClt_t *pThis, int sizeWindow);
 relpRetVal relpCltSetClientIP(relpClt_t *pThis, unsigned char *ipAddr);
 relpRetVal relpCltEnableTLS(relpClt_t *pThis);

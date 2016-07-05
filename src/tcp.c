@@ -421,6 +421,15 @@ relpTcpSetAuthMode(relpTcp_t *pThis, relpAuthMode_t authmode)
 }
 
 relpRetVal
+relpTcpSetConnTimeout(relpTcp_t *pThis, int connTimeout)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pThis->connTimeout = connTimeout;
+	LEAVE_RELPFUNC;
+}
+
+relpRetVal
 relpTcpSetGnuTLSPriString(relpTcp_t *pThis, char *pristr)
 {
 	ENTER_RELPFUNC;
@@ -1624,6 +1633,17 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
+	/* We expect a non blocking socket to establish a tls session */
+	if((sockflags = fcntl(pThis->sock, F_GETFL)) != -1) {
+		sockflags &= ~O_NONBLOCK;
+		sockflags = fcntl(pThis->sock, F_SETFL, sockflags);
+	}
+
+	if(sockflags == -1) {
+		pThis->pEngine->dbgprint("error %d unsetting fcntl(O_NONBLOCK) on relp socket", errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
 	if(!called_gnutls_global_init) {
 		#if GNUTLS_VERSION_NUMBER <= 0x020b00
 		/* gcry_control must be called first, so that the thread system is correctly set up */
@@ -1729,6 +1749,8 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	struct addrinfo *reslocal = NULL;
+	fd_set fdset;
+	struct timeval tv;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1758,9 +1780,28 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 		}
 	}
 
-	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+	fcntl(pThis->sock, F_SETFL, O_NONBLOCK);
+	connect(pThis->sock, res->ai_addr, res->ai_addrlen);
+
+	FD_ZERO(&fdset);
+	FD_SET(pThis->sock, &fdset);
+	tv.tv_sec = pThis->connTimeout;
+	tv.tv_usec = 0;
+
+	if (select(pThis->sock + 1, NULL, &fdset, NULL, &tv) != 1) {
+		pThis->pEngine->dbgprint("connection timed out after %d seconds\n", pThis->connTimeout);
+		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
+	}
+
+	int so_error;
+	socklen_t len = sizeof so_error;
+
+	getsockopt(pThis->sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+	if (so_error != 0) {
+		pThis->pEngine->dbgprint("socket has an error %d\n", so_error);
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
+
 
 #ifdef ENABLE_TLS
 	if(pThis->bEnableTLS) {
