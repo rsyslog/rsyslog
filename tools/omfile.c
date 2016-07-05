@@ -556,6 +556,7 @@ static rsRetVal
 prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
 {
 	int fd;
+	char errStr[1024]; /* buffer for strerr() */
 	DEFiRet;
 
 	pData->pStrm = NULL;
@@ -569,6 +570,10 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 			if(makeFileParentDirs(newFileName, ustrlen(newFileName),
 			     pData->fDirCreateMode, pData->dirUID,
 			     pData->dirGID, pData->bFailOnChown) != 0) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_ERR, "omfile: creating parent "
+					"directories for file  '%s' failed: %s",
+					errStr, newFileName);
 			     	ABORT_FINALIZE(RS_RET_ERR); /* we give up */
 			}
 		}
@@ -582,11 +587,13 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 				/* we need to set owner/group */
 				if(fchown(fd, pData->fileUID, pData->fileGID) != 0) {
+					rs_strerror_r(errno, errStr, sizeof(errStr));
+					errmsg.LogError(0, RS_RET_FILE_CHOWN_ERROR,
+						"omfile: chown for file '%s' failed: %s",
+						errStr, newFileName);
 					if(pData->bFailOnChown) {
-						int eSave = errno;
 						close(fd);
-						fd = -1;
-						errno = eSave;
+						ABORT_FINALIZE(RS_RET_ERR); /* we give up */
 					}
 					/* we will silently ignore the chown() failure
 					 * if configured to do so.
