@@ -27,9 +27,11 @@ Version 8.20.0 [v8-stable] 2016-07-12
 - bugfix omqmqp1: connecting to the message bus fails on nonstandard port
   Thanks to Ken Giusti for the patch.
   see also: https://github.com/rsyslog/rsyslog/pull/1064
-- testbench enhancements
+- testbench/CI enhancements
   * new tests for RELP components
   * new tests for core action processing and retry
+  * travis tests now also run against all unstable versions of supporting
+    libraries. This helps to track interdependency problems early.
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - NEW BUILD REQUIREMENT: autoconf-archive
