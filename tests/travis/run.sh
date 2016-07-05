@@ -12,6 +12,13 @@ source /etc/lsb-release
 echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
 echo "CLANG:            $CLANG"
 
+# we turn off leak sanitizer at this time because it reports some
+# pretty irrelevant problems in startup code. In the longer term,
+# we should clean these up, but we also have a lot of other leak
+# tests, so this is not our priority at the moment (much more
+# important things are on the TODO list).
+export ASAN_OPTIONS=detect_leaks=0
+
 if [ "$MERGE" == "YES" ]; then
     # we need to use source as we must exit on inability to merge!
     set +v
