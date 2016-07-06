@@ -806,7 +806,7 @@ GenFingerprintStr(char *pFingerprint, int sizeFingerprint, char *fpBuf)
 
 /* Check the peer's ID in fingerprint auth mode. */
 static int
-relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt cert)
+relpTcpChkPeerFingerprint(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int i;
@@ -1098,7 +1098,7 @@ relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatc
  * Note that non-0 is also returned if no CN is found.
  */
 static int
-relpTcpGetCN(relpTcp_t *pThis, gnutls_x509_crt cert, char *namebuf, int lenNamebuf)
+relpTcpGetCN(relpTcp_t *pThis, gnutls_x509_crt_t cert, char *namebuf, int lenNamebuf)
 {
 	int r;
 	int gnuRet;
@@ -1157,7 +1157,7 @@ done:
 
 /* Check the peer's ID in name auth mode. */
 static int
-relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt cert)
+relpTcpChkPeerName(relpTcp_t *pThis, gnutls_x509_crt_t cert)
 {
 	int r = 0;
 	int ret;
@@ -1231,9 +1231,9 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 {
 	int r = 0;
 	relpTcp_t *pThis;
-	const gnutls_datum *cert_list;
+	const gnutls_datum_t *cert_list;
 	unsigned int list_size = 0;
-	gnutls_x509_crt cert;
+	gnutls_x509_crt_t cert;
 	int bMustDeinitCert = 0;
 
 	pThis = (relpTcp_t*) gnutls_session_get_ptr(session);
