@@ -573,7 +573,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-
+#pragma GCC diagnostic push
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 {
@@ -627,6 +627,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 finalize_it:
   	LEAVE_RELPFUNC;
 }
+#pragma GCC diagnostic pop
 #endif /* #ifdef ENABLE_TLS */
 
 /* Enable KEEPALIVE handling on the socket.  */
@@ -1627,6 +1628,7 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
+#pragma GCC diagnostic push /* we need to disable a warning below */
 /* this is only called for client-initiated sessions */
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
@@ -1742,6 +1744,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#pragma GCC diagnostic pop
 #endif /* #ifdef ENABLE_TLS */
 
 /* open a connection to a remote host (server).
