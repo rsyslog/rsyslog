@@ -2,6 +2,11 @@
 Version 1.2.12 - 2016-0?-??
 - API enhancement: permit to set connection timeout
   Thanks to Nathan Brown for the patch.
+- bugfix: potential segfault when high-numbered fd is used in sender
+  commit d0326b63e56fcdefbf3d97833edf32bcba669eae was incomplete
+  and did not cover some places where high-numbered fd's caused
+  problems in select. This fixes those remaining issues.
+- cleanup: replace deprecated GnuTLS data types by current ones
 ----------------------------------------------------------------------
 Version 1.2.11 - 2016-06-22
 - bugfix: do not accept more than one "open" verb on a connection
