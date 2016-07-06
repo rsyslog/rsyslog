@@ -573,7 +573,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-
+#pragma GCC diagnostic push
 static relpRetVal
 relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 {
@@ -610,6 +610,8 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 	gnutls_dh_set_prime_bits(pThis->session, pThis->dhBits);
 	gnutls_certificate_server_set_request(pThis->session, GNUTLS_CERT_REQUEST);
 
+	/* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
+	#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	r = gnutls_handshake(pThis->session);
 	if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
@@ -625,6 +627,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 finalize_it:
   	LEAVE_RELPFUNC;
 }
+#pragma GCC diagnostic pop
 #endif /* #ifdef ENABLE_TLS */
 
 /* Enable KEEPALIVE handling on the socket.  */
@@ -1625,6 +1628,7 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
+#pragma GCC diagnostic push /* we need to disable a warning below */
 /* this is only called for client-initiated sessions */
 static relpRetVal
 relpTcpConnectTLSInit(relpTcp_t *pThis)
@@ -1710,6 +1714,8 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 #		endif /* #ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION   */
 	}
 
+	/* per https://lists.gnupg.org/pipermail/gnutls-help/2004-August/000154.html This is expected */
+	#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 	gnutls_transport_set_ptr(pThis->session, (gnutls_transport_ptr_t) pThis->sock);
 	//gnutls_handshake_set_timeout(pThis->session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
@@ -1738,6 +1744,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+#pragma GCC diagnostic pop
 #endif /* #ifdef ENABLE_TLS */
 
 /* open a connection to a remote host (server).
