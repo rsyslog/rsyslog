@@ -46,6 +46,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <poll.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -1749,8 +1750,7 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	struct addrinfo *reslocal = NULL;
-	fd_set fdset;
-	struct timeval tv;
+	struct pollfd pfd;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
@@ -1783,12 +1783,10 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	fcntl(pThis->sock, F_SETFL, O_NONBLOCK);
 	connect(pThis->sock, res->ai_addr, res->ai_addrlen);
 
-	FD_ZERO(&fdset);
-	FD_SET(pThis->sock, &fdset);
-	tv.tv_sec = pThis->connTimeout;
-	tv.tv_usec = 0;
+	pfd.fd = pThis->sock;
+	pfd.events = POLLOUT;
 
-	if (select(pThis->sock + 1, NULL, &fdset, NULL, &tv) != 1) {
+	if (poll(&pfd, 1, pThis->connTimeout * 1000) != 1) {
 		pThis->pEngine->dbgprint("connection timed out after %d seconds\n", pThis->connTimeout);
 		ABORT_FINALIZE(RELP_RET_TIMED_OUT);
 	}
@@ -1867,29 +1865,24 @@ finalize_it:
  * otherwise.
  */
 int
-relpTcpWaitWriteable(relpTcp_t *pThis, struct timespec *tTimeout)
+relpTcpWaitWriteable(relpTcp_t *const pThis, struct timespec *const tTimeout)
 {
 	int r;
-	fd_set writefds;
 	struct timespec tCurr; /* current time */
-	struct timeval tvSelect;
+	struct pollfd pfd;
 
 	clock_gettime(CLOCK_REALTIME, &tCurr);
-	tvSelect.tv_sec = tTimeout->tv_sec - tCurr.tv_sec;
-	tvSelect.tv_usec = (tTimeout->tv_nsec - tCurr.tv_nsec) / 1000000;
-	if(tvSelect.tv_usec < 0) {
-		tvSelect.tv_usec += 1000000;
-		tvSelect.tv_sec--;
-	}
-	if(tvSelect.tv_sec < 0) {
+	const int timeout =   (tTimeout->tv_sec - tCurr.tv_sec) * 1000
+			    + (tTimeout->tv_nsec - tCurr.tv_nsec) / 1000000000;
+	if(timeout < 0) {
 		r = 0; goto done;
 	}
 
-	FD_ZERO(&writefds);
-	FD_SET(pThis->sock, &writefds);
-	pThis->pEngine->dbgprint("librelp: telpTcpWaitWritable doing select() "
-		"on fd %d, timoeut %lld.%lld\n", pThis->sock,
-		(long long) tTimeout->tv_sec, (long long) tTimeout->tv_nsec);
-	r = select(pThis->sock+1, NULL, &writefds, NULL, &tvSelect);
+	pThis->pEngine->dbgprint("librelp: telpTcpWaitWritable doing poll() "
+		"on fd %d, timoeut %d\n", pThis->sock, timeout);
+
+	pfd.fd = pThis->sock;
+	pfd.events = POLLOUT;
+	r = poll(&pfd, 1, timeout);
 done:	return r;
 }
