@@ -1,10 +1,51 @@
 language: c
-sudo: false
+sudo: true
+compiler: clang
+dist: trusty
+
+addons:
+  apt:
+    packages:
+    - build-essential
+    - automake
+    - autoconf-archive
+    - pkg-config
+    - libtool
+    - autoconf
+    - autotools-dev
+    - gdb
+    - valgrind
+    - uuid-dev
+    - bison
+    - flex
+    - python-docutils 
 
 
+# now come those components that we need to install via sudo
 install:
+  - sudo add-apt-repository ppa:adiscon/v8-stable -y
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq clang
+  - sudo apt-get install -qq --force-yes libestr-dev libfastjson-dev liblogging-stdlog-dev
 
 script:
+  - $CC --version
+  - export CFLAGS="-g -fsanitize=address"
   - autoreconf -fvi
-  - ./configure 
+  - ./configure --enable-tls
+  - make
   - make distcheck
+  - sudo make install
+# now we use the rsyslog testbench for testing. This also means we need to
+# build a basic rsyslog instance
+  - mkdir rsyslog-temp
+  - cd rsyslog-temp
+  - git clone https://github.com/rsyslog/rsyslog.git
+  - cd rsyslog
+  - autoreconf -fvi
+  - ./configure --enable-testbench --enable-relp --enable-omrelp-default-port=13515 --enable-imdiag
+  - make
+  - cd tests
+  - export LD_LIBRARY_PATH=/usr/local/lib
+  - make check TESTS="imrelp-basic.sh  imrelp-manyconn.sh  sndrcv_relp.sh sndrcv_relp_dflt_pt.sh sndrcv_relp_tls.sh"
+  - cat test-suite.log
