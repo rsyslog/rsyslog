@@ -3,6 +3,9 @@ Version 1.2.12 - 2016-07-07
 - API enhancement: permit to set connection timeout
   Thanks to Nathan Brown for the patch.
 - cleanup: replace deprecated GnuTLS data types by current ones
+- CI improvements: added dynamic tests
+  we now use the rsyslog testbench to do dynamic librelp tests. This
+  currently happens only under Travis CI.
 ----------------------------------------------------------------------
 Version 1.2.11 - 2016-06-22
 - bugfix: do not accept more than one "open" verb on a connection
