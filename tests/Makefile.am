@@ -428,6 +428,7 @@ endif
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
          sndrcv_relp_tls.sh \
+         sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh
 endif
@@ -888,6 +889,9 @@ EXTRA_DIST= \
 	sndrcv_relp_tls.sh \
 	testsuites/sndrcv_relp_tls_sender.conf \
 	testsuites/sndrcv_relp_tls_rcvr.conf \
+	sndrcv_relp_dflt_pt.sh \
+	testsuites/sndrcv_relp_dflt_pt_rcvr.conf \
+	testsuites/sndrcv_relp_dflt_pt_sender.conf \
 	sndrcv_udp.sh \
 	testsuites/sndrcv_udp_sender.conf \
 	testsuites/sndrcv_udp_rcvr.conf \
