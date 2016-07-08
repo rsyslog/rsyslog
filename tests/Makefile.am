@@ -184,6 +184,7 @@ TESTS +=  \
 	rscript_lt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
+	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -1259,6 +1260,7 @@ EXTRA_DIST= \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
 	ksi-extract-verify-long-vg.sh \
+	empty-prop-comparison.sh \
 	sndrcv_tls_anon_rebind.sh \
 	testsuites/sndrcv_tls_anon_rebind_sender.conf \
 	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
