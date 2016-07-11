@@ -64,7 +64,8 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
 	{ "detect.yearaftertimestamp", eCmdHdlrBinary, 0 },
-	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 }
+	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 },
+	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -73,8 +74,9 @@ static struct cnfparamblk parserpblk =
 	};
 
 struct instanceConf_s {
-	int bDetectYearAfterTimestamp; /* is ORIGIN field present? */
-	int bPermitSquareBracketsInHostname; /* is ORIGIN field present? */
+	int bDetectYearAfterTimestamp;
+	int bPermitSquareBracketsInHostname;
+	int bPermitSlashesInHostname;
 };
 
 
@@ -98,6 +100,7 @@ createInstance(instanceConf_t **pinst)
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
 	inst->bDetectYearAfterTimestamp = 0;
 	inst->bPermitSquareBracketsInHostname = 0;
+	inst->bPermitSlashesInHostname = 0;
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -131,6 +134,8 @@ CODESTARTnewParserInst
 			inst->bDetectYearAfterTimestamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "permit.squarebracketsinhostname")) {
 			inst->bPermitSquareBracketsInHostname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "permit.slashesinhostname")) {
+			inst->bPermitSlashesInHostname = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
@@ -239,7 +244,8 @@ CODESTARTparse
 			while(i < lenMsg
 			        && (isalnum(p2parse[i]) || p2parse[i] == '.'
 					|| p2parse[i] == '_' || p2parse[i] == '-'
-					|| (p2parse[i] == ']' && bHadSBracket) )
+					|| (p2parse[i] == ']' && bHadSBracket)
+					|| (p2parse[i] == '/' && pInst->bPermitSlashesInHostname) )
 				&& i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
