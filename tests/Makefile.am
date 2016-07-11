@@ -13,6 +13,10 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
+	hostname-with-slash-pmrfc5424.sh \
+	hostname-with-slash-pmrfc3164.sh \
+	hostname-with-slash-dflt-invld.sh \
+	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
@@ -493,6 +497,10 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	hostname-with-slash-pmrfc5424.sh \
+	hostname-with-slash-pmrfc3164.sh \
+	hostname-with-slash-dflt-invld.sh \
+	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
