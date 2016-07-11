@@ -72,7 +72,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
-		rm -f testconf.conf
+		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
