@@ -5,6 +5,10 @@ Version 8.20.0 [v8-stable] 2016-07-12
   to support the new timeout parameter in omrelp.
 - omrelp: add configurable connection timeout
   Thanks to Nathan Brown for implementing this feature.
+- pmrfc3164: add support for slashes in hostname
+  added parameter "permit.slashesinhostname" to support this, off by default
+  [Note that the RFC5424 always supported this, as 5424 is a different
+  standard]
 - bugfix omfile: handle chown() failure correctly
   If the file creation succeeds, but chown() failed, the file was
   still writen, even if the user requested that this should be treated
