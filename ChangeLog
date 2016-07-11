@@ -3,6 +3,11 @@ Version 8.20.0 [v8-stable] 2016-07-12
 - NEW BUILD REQUIREMENT: librelp, was 1.2.5, now is 1.2.12
   This is only needed if --enable-relp is used. The new version is needed
   to support the new timeout parameter in omrelp.
+- NEW BUILD SUGGESTION: libfastjson 0.99.3
+  while not strictly necessary, previous versions of libfastjson have a bug
+  in unicode processing that can result in non US-ASCII characters to be
+  improperly encoded and may (very unlikely) also cause a segfault.
+  This version will become mandatory in rsyslog 8.20.1.
 - omrelp: add configurable connection timeout
   Thanks to Nathan Brown for implementing this feature.
 - pmrfc3164: add support for slashes in hostname
@@ -41,6 +46,8 @@ Version 8.20.0 [v8-stable] 2016-07-12
   * new tests for core action processing and retry
   * travis tests now also run against all unstable versions of supporting
     libraries. This helps to track interdependency problems early.
+  * new tests for hostname parsing
+  * new tests for RainerScript comparisons
 ------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
 - NEW BUILD REQUIREMENT: autoconf-archive
