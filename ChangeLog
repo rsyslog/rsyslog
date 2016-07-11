@@ -2,7 +2,9 @@
 Version 8.20.0 [v8-stable] 2016-07-12
 - NEW BUILD REQUIREMENT: librelp, was 1.2.5, now is 1.2.12
   This is only needed if --enable-relp is used. The new version is needed
-  to support the new timeout parameter.
+  to support the new timeout parameter in omrelp.
+- omrelp: add configurable connection timeout
+  Thanks to Nathan Brown for implementing this feature.
 - bugfix omfile: handle chown() failure correctly
   If the file creation succeeds, but chown() failed, the file was
   still writen, even if the user requested that this should be treated
