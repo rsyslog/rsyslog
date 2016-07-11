@@ -21,6 +21,17 @@ Parser Parameters
    This setting tells the parser that hostnames that are enclosed by brackets
    should omit the brackets.
 
+.. function:: permit.slashesInHostname <boolean>
+
+   **Default**: off
+
+   Available since: 8.20.0
+
+   This setting tells the parser that hostnames may contain slashes. This
+   is useful when messages e.g. from a syslog-ng releay chain are received.
+   Syslog-ng puts the various relay hosts via slashes into the hostname
+   field.
+
 .. function:: detect.YearAfterTimestamp <boolean>
 
    **Default**: off
