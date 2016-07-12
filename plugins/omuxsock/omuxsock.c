@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2010-2015 Adiscon GmbH.
+ * Copyright 2010-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -126,7 +126,7 @@ getDfltTpl(void)
  * is we do not permit this directive after the v2 config system has been used to set
  * the parameter.
  */
-rsRetVal
+static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 {
 	DEFiRet;
@@ -294,7 +294,7 @@ finalize_it:
 
 /* open socket to remote system
  */
-static inline rsRetVal
+static rsRetVal
 openSocket(instanceData *pData)
 {
 	DEFiRet;

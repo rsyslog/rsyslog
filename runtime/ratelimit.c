@@ -2,7 +2,7 @@
  * support for rate-limiting sources, including "last message
  * repeated n times" processing.
  *
- * Copyright 2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2012-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -45,7 +45,7 @@ DEFobjCurrIf(parser)
 /* static data */
 
 /* generate a "repeated n times" message */
-static inline msg_t *
+static msg_t *
 ratelimitGenRepMsg(ratelimit_t *ratelimit)
 {
 	msg_t *repMsg;
@@ -112,7 +112,7 @@ finalize_it:
 
 
 /* helper: tell how many messages we lost due to linux-like ratelimiting */
-static inline void
+static void
 tellLostCnt(ratelimit_t *ratelimit)
 {
 	uchar msgbuf[1024];
@@ -131,7 +131,7 @@ tellLostCnt(ratelimit_t *ratelimit)
  * This implementation is NOT THREAD-SAFE and must not 
  * be called concurrently.
  */
-static inline int
+static int
 withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 {
 	int ret;
@@ -282,7 +282,7 @@ finalize_it:
  * Both values should be kept brief.
  */
 rsRetVal
-ratelimitNew(ratelimit_t **ppThis, char *modname, char *dynname)
+ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname)
 {
 	ratelimit_t *pThis;
 	char namebuf[256];

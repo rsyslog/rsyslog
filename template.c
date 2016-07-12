@@ -48,6 +48,8 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
@@ -515,7 +517,7 @@ finalize_it:
  * or NULL (if it fails). Pointer to associated template list entry 
  * must be provided.
  */
-struct templateEntry* tpeConstruct(struct template *pTpl)
+static struct templateEntry* tpeConstruct(struct template *pTpl)
 {
 	struct templateEntry *pTpe;
 
@@ -1260,7 +1262,7 @@ finalize_it:
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(rsconf_t *conf, char* pName, uchar** ppRestOfConfLine)
+struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine)
 {
 	struct template *pTpl;
  	unsigned char *p;
@@ -2349,7 +2351,7 @@ int tplGetEntryCount(struct template *pTpl)
 	return(pTpl->tpenElements);
 }
 
-rsRetVal templateInit()
+rsRetVal templateInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));

@@ -134,7 +134,7 @@ rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*))
  * rgerhards, 2008-04-16
  */
 rsRetVal
-rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
+rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 {
 	DEFiRet;
 

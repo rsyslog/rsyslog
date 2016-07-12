@@ -225,7 +225,7 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;

@@ -247,7 +247,7 @@ ENDobjConstruct(parser)
  * to our global list of available parsers.
  * rgerhards, 2009-11-03
  */
-rsRetVal parserConstructFinalize(parser_t *pThis)
+static rsRetVal parserConstructFinalize(parser_t *pThis)
 {
 	DEFiRet;
 
@@ -376,7 +376,7 @@ finalize_it:
  * NULs in the debug log.
  * rgerhards, 2007-09-14
  */
-static inline rsRetVal
+static rsRetVal
 SanitizeMsg(msg_t *pMsg)
 {
 	DEFiRet;

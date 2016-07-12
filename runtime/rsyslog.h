@@ -25,6 +25,10 @@
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
+#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
+#pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
+#pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
+#pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
 #include <pthread.h>
 #include "typedefs.h"
 
@@ -448,6 +452,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SENDER_APPEARED = -2430,/**< info: new sender appeared */
 	RS_RET_FILE_ALREADY_IN_TABLE = -2431,/**< in imfile: table already contains to be added file */
 	RS_RET_ERR_DROP_PRIV = -2432,/**< error droping privileges */
+	RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occured during open() */
+	RS_RET_FILE_CHOWN_ERROR = -2434, /**< error during chown() */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -466,7 +472,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
  * Be sure to call the to-be-returned variable always "iRet" and
  * the function finalizer always "finalize_it".
  */
-#if HAVE_BUILTIN_EXCEPT
+#ifdef HAVE_BUILTIN_EXCEPT
 #	define CHKiRet(code) if(__builtin_expect(((iRet = code) != RS_RET_OK), 0)) goto finalize_it
 #else
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
@@ -555,7 +561,7 @@ extern int default_thr_sched_policy;
  * best to avoid this as well ;-)
  * rgerhards, 2013-12-04
  */
-struct __attribute__ ((__packed__)) actWrkrIParams {
+struct actWrkrIParams {
 	uchar *param;
 	uint32_t lenBuf;  /* length of string buffer (if string ptr) */
 	uint32_t lenStr;  /* length of current string (if string ptr) */
@@ -588,7 +594,7 @@ struct __attribute__ ((__packed__)) actWrkrIParams {
 #define LOCK_MUTEX		1
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
-void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
 
 
 #include "debug.h"
@@ -607,7 +613,7 @@ extern uchar *glblModPath; /* module load path */
 extern void (*glblErrLogger)(const int, const int, const uchar*);
 
 /* some runtime prototypes */
-rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
+rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));

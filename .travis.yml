@@ -22,6 +22,7 @@ addons:
     - pkg-config
     - libtool
     - autoconf
+    #- autoconf-archive
     - autotools-dev
     - gdb
     - valgrind
@@ -75,13 +76,17 @@ matrix:
        dist: trusty
      - compiler: "clang"
        env: CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
+     - compiler: "clang"
+       dist: trusty
+       env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
 services:
   - elasticsearch
 
 
 before_install:
-  - sudo add-apt-repository ppa:adiscon/v8-stable -y
+  - if [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
+  - sudo add-apt-repository ppa:adiscon/$AD_PPA -y
   - sudo add-apt-repository ppa:qpid/released -y
   - sudo apt-get update -qq
   - mysql -u root -e "CREATE USER 'rsyslog'@'localhost' IDENTIFIED BY 'testbench';"

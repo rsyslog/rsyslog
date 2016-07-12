@@ -301,7 +301,7 @@ done:	return r;
 }
 
 static void
-decrypt(char *name)
+decrypt(const char *name)
 {
 	FILE *logfp = NULL, *eifp = NULL;
 	int r = 0;
@@ -396,7 +396,7 @@ getRandomKey(void)
 
 
 static void
-setKey()
+setKey(void)
 {
 	if(randomKeyLen != -1)
 		getRandomKey();

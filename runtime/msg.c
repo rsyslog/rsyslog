@@ -81,9 +81,9 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 DEFobjCurrIf(var)
 
-static char *one_digit[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+static const char *one_digit[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-static char *two_digits[100] = {
+static const char *two_digits[100] = {
 	"00", "01", "02", "03", "04", "05", "06", "07", "08", "09",
 	"10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
 	"20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
@@ -95,10 +95,10 @@ static char *two_digits[100] = {
 	"80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
 	"90", "91", "92", "93", "94", "95", "96", "97", "98", "99"};
 
-static char *wdayNames[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+static const char *wdayNames[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
 
 /* Table of days in a year, needed for getYearDay */
-static char *daysInYear[366] = {
+static const char *daysInYear[366] = {
 	       "001", "002", "003", "004", "005", "006", "007", "008", "009",
 	"010", "011", "012", "013", "014", "015", "016", "017", "018", "019",
 	"020", "021", "022", "023", "024", "025", "026", "027", "028", "029",
@@ -142,7 +142,7 @@ static char *daysInYear[366] = {
  * algos need to be upgraded after the year 2099 in any case.
  * Quite honestly, I don't expect that this is a real problem ;)
  */
-static char *years[] = {
+static const char *years[] = {
 	"1967", "1968", "1969", "1970", "1971", "1972", "1973", "1974",
 	"1975", "1976", "1977", "1978", "1979", "1980", "1981", "1982",
 	"1983", "1984", "1985", "1986", "1987", "1988", "1989", "1990",
@@ -371,7 +371,7 @@ static char hexdigit[16] =
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 /*syslog facility names (as of RFC5424) */
-static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
 			    	      "alert", "clock", "local0", "local1", "local2", "local3",
 			    	      "local4", "local5", "local6", "local7", "invld" };
@@ -382,14 +382,14 @@ static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 			    	          6, 6, 6, 6, 5 };
 
 /* table of severity names (in numerical order)*/
-static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
+static const char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
 static short len_syslog_severity_names[8] = { 5, 5, 4, 3, 7, 6, 4, 5 };
 
 /* numerical values as string - this is the most efficient approach to convert severity
  * and facility values to a numerical string... -- rgerhars, 2009-06-17
  */
 
-static char *syslog_number_names[LOG_NFACILITIES] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+static const char *syslog_number_names[LOG_NFACILITIES] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 					 "15", "16", "17", "18", "19", "20", "21", "22", "23", "24" };
 
 /* global variables */
@@ -436,7 +436,7 @@ MsgSetRcvFromIPWithoutAddRef(msg_t *pThis, prop_t *new)
 /* set RcvFrom name in msg object WITHOUT calling AddRef.
  * rgerhards, 2013-01-22
  */
-void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
+static void MsgSetRcvFromWithoutAddRef(msg_t *pThis, prop_t *new)
 {
 	assert(pThis != NULL);
 
@@ -1223,7 +1223,7 @@ finalize_it:
  * But as an interim help during refactoring let's introduce this function
  * here (and thus NOT as method of var object!). -- rgerhads, 2012-11-06
  */
-static inline void
+static void
 reinitVar(var_t *pVar)
 {
 	rsCStrDestruct(&pVar->pcsName); /* no longer needed */
@@ -1527,7 +1527,7 @@ void setProtocolVersion(msg_t * const pM, int iNewVersion)
 }
 
 /* note: string is taken from constant pool, do NOT free */
-char *getProtocolVersionString(msg_t * const pM)
+static const char *getProtocolVersionString(msg_t * const pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion ? "1" : "0");
@@ -1565,7 +1565,7 @@ static void msgSetUUID(msg_t * const pM)
 	dbgprintf("[MsgSetUUID] END\n");
 }
 
-void getUUID(msg_t * const pM, uchar **pBuf, int *piLen)
+static void getUUID(msg_t * const pM, uchar **pBuf, int *piLen)
 {
 	dbgprintf("[getUUID] START\n");
 	if(pM == NULL) {
@@ -1680,7 +1680,7 @@ static int getPRIi(msg_t * const pM)
 
 /* Get PRI value in text form
  */
-char *
+const char *
 getPRI(msg_t * const pM)
 {
 	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
@@ -1696,7 +1696,7 @@ getPRI(msg_t * const pM)
 }
 
 
-char *
+const char *
 getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
@@ -1798,7 +1798,7 @@ getTimeReported(msg_t * const pM, enum tplFormatTypes eFmt)
 
 
 
-static char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
+static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 	const enum tplFormatTypes eFmt,
 	unsigned short *const __restrict__ pbMustBeFreed)
 {
@@ -1891,7 +1891,7 @@ static char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 	}
 
 	if(retbuf == NULL) {
-		retbuf = "internal error: invalid eFmt option or malloc problem";
+		retbuf = (char*)"internal error: invalid eFmt option or malloc problem";
 		*pbMustBeFreed = 0;
 	} else {
 		*pbMustBeFreed = 1;
@@ -1900,7 +1900,8 @@ static char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 	return retbuf;
 }
 
-static char *getTimeGenerated(msg_t *const __restrict__ pM,
+static const char *
+getTimeGenerated(msg_t *const __restrict__ pM,
 	const enum tplFormatTypes eFmt)
 {
 	BEGINfunc
@@ -2018,9 +2019,9 @@ static char *getTimeGenerated(msg_t *const __restrict__ pM,
 }
 
 
-static inline char *getSeverity(msg_t * const pM)
+static const char *getSeverity(msg_t * const pM)
 {
-	char *name = NULL;
+	const char *name = NULL;
 
 	if(pM == NULL)
 		return "";
@@ -2035,9 +2036,9 @@ static inline char *getSeverity(msg_t * const pM)
 }
 
 
-static inline char *getSeverityStr(msg_t * const pM)
+static const char *getSeverityStr(msg_t * const pM)
 {
-	char *name = NULL;
+	const char *name = NULL;
 
 	if(pM == NULL)
 		return "";
@@ -2051,9 +2052,9 @@ static inline char *getSeverityStr(msg_t * const pM)
 	return name;
 }
 
-static inline char *getFacility(msg_t * const pM)
+static const char *getFacility(msg_t * const pM)
 {
-	char *name = NULL;
+	const char *name = NULL;
 
 	if(pM == NULL)
 		return "";
@@ -2067,9 +2068,9 @@ static inline char *getFacility(msg_t * const pM)
 	return name;
 }
 
-static inline char *getFacilityStr(msg_t * const pM)
+static const char *getFacilityStr(msg_t * const pM)
 {
-        char *name = NULL;
+        const char *name = NULL;
 
         if(pM == NULL)
                 return "";
@@ -2226,7 +2227,7 @@ finalize_it:
 /* Return state of last parser. If it had success, "OK" is returned, else
  * "FAIL". All from the constant pool.
  */
-static inline char *getParseSuccess(msg_t * const pM)
+static const char *getParseSuccess(msg_t * const pM)
 {
 	return (pM->bParseSuccess) ? "OK" : "FAIL";
 }
@@ -2234,7 +2235,7 @@ static inline char *getParseSuccess(msg_t * const pM)
 
 /* al, 2011-07-26: LockMsg to avoid race conditions
  */
-static inline char *getMSGID(msg_t * const pM)
+static const char *getMSGID(msg_t * const pM)
 {
 	if (pM->pCSMSGID == NULL) {
 		return "-"; 
@@ -2389,7 +2390,8 @@ void MsgSetTAG(msg_t *__restrict__ const pMsg, const uchar* pszBuf, const size_t
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static inline void tryEmulateTAG(msg_t * const pM, sbool bLockMutex)
+static void
+tryEmulateTAG(msg_t * const pM, sbool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];
@@ -2456,7 +2458,7 @@ int getHOSTNAMELen(msg_t * const pM)
 }
 
 
-char *getHOSTNAME(msg_t * const pM)
+const char *getHOSTNAME(msg_t * const pM)
 {
 	if(pM == NULL)
 		return "";
@@ -4877,6 +4879,7 @@ jsonDeepCopy(struct json_object *src)
 			json_object_array_add(dst, json);
 		}
 		break;
+	case json_type_null:
 	default:DBGPRINTF("jsonDeepCopy(): error unknown type %d\n",
 			 json_object_get_type(src));
 		dst = NULL;
@@ -4979,7 +4982,7 @@ msgPropDescrDestruct(msgPropDescr_t *pProp)
 
 
 /* dummy */
-rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.

@@ -96,7 +96,7 @@ cstr_t *pDfltProgNameCmp = NULL;
 
 
 /* process a $ModLoad config line.  */
-rsRetVal
+static rsRetVal
 doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
@@ -154,7 +154,7 @@ ltrim(char *src)
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-rsRetVal
+static rsRetVal
 doNameLine(uchar **pp, void* pVal)
 {
 	DEFiRet;
@@ -214,7 +214,7 @@ finalize_it:
  * extended configuration parameters.
  * 2004-11-17 rgerhards
  */
-rsRetVal
+static rsRetVal
 cfsysline(uchar *p)
 {
 	DEFiRet;

@@ -163,8 +163,6 @@ struct rsconf_s {
 /* interfaces */
 BEGINinterface(rsconf) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(rsconf);
-	rsRetVal (*Construct)(rsconf_t **ppThis);
-	rsRetVal (*ConstructFinalize)(rsconf_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(rsconf_t **ppThis);
 	rsRetVal (*Load)(rsconf_t **ppThis, uchar *confFile);
 	rsRetVal (*Activate)(rsconf_t *ppThis);

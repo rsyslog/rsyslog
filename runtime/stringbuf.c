@@ -79,7 +79,7 @@ finalize_it:
  * rgerhards 2005-09-15
  */
 rsRetVal
-rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
+rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -105,9 +105,9 @@ finalize_it:
 
 /* a helper function for rsCStr*Strf()
  */
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap) __attribute__((format(printf,2, 0)));
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap) __attribute__((format(printf,2, 0)));
 static rsRetVal
-rsCStrConstructFromszStrv(cstr_t **ppThis, char *fmt, va_list ap)
+rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -141,7 +141,7 @@ finalize_it:
 /* construct from a printf-style formated string
  */
 rsRetVal
-rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...)
+rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -227,8 +227,8 @@ void rsCStrDestruct(cstr_t **ppThis)
  * rgerhards, 2008-01-07
  * changed to utilized realloc() -- rgerhards, 2009-06-16
  */
-rsRetVal
-rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
+static rsRetVal
+rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded)
 {
 	uchar *pNewBuf;
 	size_t iNewSize;
@@ -257,6 +257,24 @@ finalize_it:
 	RETiRet;
 }
 
+/* Append a character to the current string object. This may only be done until
+ * cstrFinalize() is called.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal cstrAppendChar(cstr_t *const __restrict__ pThis, const uchar c)
+{
+	rsRetVal iRet = RS_RET_OK;
+
+	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
+	}
+
+	/* ok, when we reach this, we have sufficient memory */
+	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+finalize_it:
+	return iRet;
+}
 
 /* append a string of known length. In this case, we make sure we do at most
  * one additional memory allocation.
@@ -304,7 +322,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 
 /* append a printf-style formated string
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...)
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
@@ -723,7 +741,7 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 /* our exit function. TODO: remove once converted to a class
  * rgerhards, 2008-03-11
  */
-rsRetVal strExit()
+rsRetVal strExit(void)
 {
 	DEFiRet;
 	objRelease(regexp, LM_REGEXP_FILENAME);
@@ -733,7 +751,8 @@ rsRetVal strExit()
 
 /* our init function. TODO: remove once converted to a class
  */
-rsRetVal strInit()
+rsRetVal
+strInit(void)
 {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));

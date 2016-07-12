@@ -1,5 +1,56 @@
 ------------------------------------------------------------------------------
+Version 8.20.0 [v8-stable] 2016-07-12
+- NEW BUILD REQUIREMENT: librelp, was 1.2.5, now is 1.2.12
+  This is only needed if --enable-relp is used. The new version is needed
+  to support the new timeout parameter in omrelp.
+- NEW BUILD SUGGESTION: libfastjson 0.99.3
+  while not strictly necessary, previous versions of libfastjson have a bug
+  in unicode processing that can result in non US-ASCII characters to be
+  improperly encoded and may (very unlikely) also cause a segfault.
+  This version will become mandatory in rsyslog 8.20.1.
+- omrelp: add configurable connection timeout
+  Thanks to Nathan Brown for implementing this feature.
+- pmrfc3164: add support for slashes in hostname
+  added parameter "permit.slashesinhostname" to support this, off by default
+  [Note that the RFC5424 always supported this, as 5424 is a different
+  standard]
+- bugfix omfile: handle chown() failure correctly
+  If the file creation succeeds, but chown() failed, the file was
+  still writen, even if the user requested that this should be treated
+  as a failure case. This is corrected now.
+  Also, some refactoring was done to create better error messages.
+- omfile now better conveys status of unwritable files back to core
+- config files recursively including themselfes are now detected
+  and an error message is emitted in that case; Previously, this
+  misconfiguration resulted in rsyslog loop and abort during startup.
+  closes https://github.com/rsyslog/rsyslog/issues/1058
+- refactored code to not emit compiler warnings in "strict mode"
+  We changed the compiler warning settings to be rather strict and cleaned up
+  the code to work without generating any warning messages.
+  This results in an overall even more improved code quality, which will now
+  also be enforced via our CI systems.
+- bugfix: fix some issues with action CommitTransaction() handling
+  An action that returns an error from CommitTransaction() caused a
+  loop in rsyslog action processing. Similarly, retry processing was not
+  properly handled in regard to CommitTransaction().
+  This is a first shot at fixing the situation. It solves the
+  immediate problems, but does not implement the full desired
+  functionality (like error file).
+  see also https://github.com/rsyslog/rsyslog/issues/974
+  see also https://github.com/rsyslog/rsyslog/issues/500
+- bugfix omqmqp1: connecting to the message bus fails on nonstandard port
+  Thanks to Ken Giusti for the patch.
+  see also: https://github.com/rsyslog/rsyslog/pull/1064
+- testbench/CI enhancements
+  * new tests for RELP components
+  * new tests for core action processing and retry
+  * travis tests now also run against all unstable versions of supporting
+    libraries. This helps to track interdependency problems early.
+  * new tests for hostname parsing
+  * new tests for RainerScript comparisons
+------------------------------------------------------------------------------
 Version 8.19.0 [v8-stable] 2016-05-31
+- NEW BUILD REQUIREMENT: autoconf-archive
 - omelasticsearch: add option to permit unsigned certs (experimentally)
   This adds plumbing as suggested by Joerg Heinemann and Radu Gheorghe,
   but is otherwise untested. Chances are good it works. If you use it,

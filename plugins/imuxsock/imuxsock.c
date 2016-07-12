@@ -58,6 +58,8 @@
 #include "hashtable.h"
 #include "ratelimit.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imuxsock")
@@ -666,7 +668,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
  * journald. Currently works with Linux /proc filesystem, only.
  */
 static rsRetVal
-getTrustedProp(struct ucred *cred, char *propName, uchar *buf, size_t lenBuf, int *lenProp)
+getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenBuf, int *lenProp)
 {
 	int fd;
 	int i;
@@ -1079,8 +1081,8 @@ finalize_it:
 
 
 /* activate current listeners */
-static inline rsRetVal
-activateListeners()
+static rsRetVal
+activateListeners(void)
 {
 	register int i;
 	int actSocks;

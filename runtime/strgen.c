@@ -154,7 +154,8 @@ ENDobjConstruct(strgen)
  * to our global list of available strgens.
  * rgerhards, 2009-11-03
  */
-rsRetVal strgenConstructFinalize(strgen_t *pThis)
+static rsRetVal
+strgenConstructFinalize(strgen_t *pThis)
 {
 	DEFiRet;
 
@@ -166,6 +167,7 @@ finalize_it:
 	RETiRet;
 }
 
+PROTOTYPEobjDestruct(strgen);
 BEGINobjDestruct(strgen) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(strgen)
 	dbgprintf("destructing strgen '%s'\n", pThis->pName);

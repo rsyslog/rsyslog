@@ -2,7 +2,7 @@
  *
  * An implementation of the sigprov interface for KSI.
  * 
- * Copyright 2013-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2013-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -84,7 +84,7 @@ ENDobjDestruct(lmsig_ksi)
  * after construction, but before the OnFileOpen() entry point.
  * Defaults are expected to have been set during construction.
  */
-rsRetVal
+static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
 	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;

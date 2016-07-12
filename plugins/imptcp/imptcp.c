@@ -1095,7 +1095,7 @@ initConfigSettings(void)
 
 /* add socket to the epoll set
  */
-static inline rsRetVal
+static rsRetVal
 addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 {
 	DEFiRet;
@@ -1136,7 +1136,7 @@ finalize_it:
  * For simplicity, we supply the same pointer we had when we created the
  * event (it's simple because we have it at hand).
  */
-static inline rsRetVal
+static rsRetVal
 removeEPollSock(int sock, epolld_t *epd)
 {
 	DEFiRet;
@@ -1546,7 +1546,7 @@ stopWorkerPool(void)
  * This is a one-time stop once the module is set to start.
  */
 static inline rsRetVal
-startupServers()
+startupServers(void)
 {
 	DEFiRet;
 	rsRetVal localRet, lastErr;
@@ -1581,7 +1581,7 @@ startupServers()
 static inline rsRetVal
 lstnActivity(ptcplstn_t *pLstn)
 {
-	int newSock;
+	int newSock = -1;
 	prop_t *peerName;
 	prop_t *peerIP;
 	rsRetVal localRet;
@@ -1610,7 +1610,7 @@ finalize_it:
 /* process new activity on session. This means we need to accept data
  * or close the session.
  */
-static inline rsRetVal
+static rsRetVal
 sessActivity(ptcpsess_t *pSess, int *continue_polling)
 {
 	int lenRcv;
@@ -1690,7 +1690,8 @@ processWorkItem(epolld_t *epd)
 
 
 static rsRetVal
-initIoQ() {
+initIoQ(void)
+{
 	DEFiRet;
 	CHKiConcCtrl(pthread_mutex_init(&io_q.mut, NULL));
 	CHKiConcCtrl(pthread_cond_init(&io_q.wakeup_worker, NULL));
@@ -1711,7 +1712,8 @@ finalize_it:
 }
 
 static void
-destroyIoQ() {
+destroyIoQ(void)
+{
 	io_req_t *n;
 	if (io_q.stats != NULL) {
 		statsobj.Destruct(&io_q.stats);

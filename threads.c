@@ -99,7 +99,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
  * This is a separate function as it involves a bit more of code.
  * rgerhads, 2009-10-15
  */
-static inline rsRetVal
+static rsRetVal
 thrdTerminateNonCancel(thrdInfo_t *pThis)
 {
 	struct timespec tTimeout;

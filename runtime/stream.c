@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -217,6 +217,7 @@ doPhysOpen(strm_t *pThis)
 		case STREAMMODE_WRITE_APPEND:
 			iFlags = O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT | O_APPEND;
 			break;
+		case STREAMMMODE_INVALID:
 		default:assert(0);
 			break;
 	}
@@ -236,7 +237,7 @@ doPhysOpen(strm_t *pThis)
 		if(err == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -2025,8 +2026,8 @@ finalize_it:
  * properties before finalizing things.
  * rgerhards, 2009-05-26
  */
-rsRetVal
-strmDup(strm_t *pThis, strm_t **ppNew)
+static rsRetVal
+strmDup(strm_t *const pThis, strm_t **ppNew)
 {
 	strm_t *pNew = NULL;
 	DEFiRet;

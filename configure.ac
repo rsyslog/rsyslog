@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.19.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.20.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -21,6 +21,8 @@ AC_PROG_CC_C99
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
+
+AX_COMPILER_FLAGS
 
 PKG_PROG_PKG_CONFIG
 
@@ -831,6 +833,7 @@ if test "$GCC" = "yes"; then
     RSRT_CFLAGS="$RSRT_CFLAGS -g"
   fi
 fi
+RSRT_CFLAGS="$RSRT_CFLAGS $WARN_CFLAGS"
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
@@ -1093,7 +1096,8 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.2.5)
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.12)
+	AC_DEFINE([ENABLE_RELP], [1], [Indicator that RELP is present])
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 

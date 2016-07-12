@@ -188,7 +188,7 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
+httpfs_build_url(wrkrInstanceData_t *pWrkrData, const char* op, es_str_t** url_buf)
 {
     *url_buf = es_newStr(HTTPFS_URL_BUFFER_LENGTH);
 
@@ -234,7 +234,7 @@ httpfs_build_url(wrkrInstanceData_t *pWrkrData, char* op, es_str_t** url_buf)
  * @param char* op
  * @return void
  */
-void httpfs_set_url(wrkrInstanceData_t *pWrkrData, char* op)
+static void httpfs_set_url(wrkrInstanceData_t *pWrkrData, const char* op)
 {
     es_str_t* url;
     char* url_cstr;
@@ -250,7 +250,7 @@ void httpfs_set_url(wrkrInstanceData_t *pWrkrData, char* op)
  * @param CURL* curl
  * @return void
  */
-void httpfs_curl_set_put(CURL* curl)
+static void httpfs_curl_set_put(CURL* curl)
 {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
@@ -261,28 +261,12 @@ void httpfs_curl_set_put(CURL* curl)
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 }
 /**
- * Set http method to GET
- *
- * @param CURL* curl
- * @return void
- */
-void httpfs_curl_set_get(CURL* curl)
-{
-    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
-    curl_easy_setopt(curl, CURLOPT_POST, 0L);
-    curl_easy_setopt(curl, CURLOPT_PUT, 0L);
-    curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
-
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
-}
-/**
  * Set http method to POST
  *
  * @param CURL* curl
  * @return void
  */
-void httpfs_curl_set_post(CURL* curl)
+static void httpfs_curl_set_post(CURL* curl)
 {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
@@ -301,7 +285,7 @@ void httpfs_curl_set_post(CURL* curl)
  * @param ...
  * @return struct curl_slist* 
  */
-struct curl_slist* 
+static struct curl_slist* 
 httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
 {
     const char* hdr;
@@ -404,18 +388,6 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
 	errmsg.LogError(0, RS_RET_ERR, "CURL request fail, code=%d, error string=%s\n", res, curl_easy_strerror(res)); \
         return -1; \
     }
-
-/**
- * convert integer permission to string
- *
- * @param int     permission
- * @param char*   perm_string
- * @return int
- */
-int httpfs_permission_to_string(int permission, char* perm_string)
-{
-    return sprintf(perm_string, "%04o", permission);
-}
 
 /**
  * Parse remote exception json string

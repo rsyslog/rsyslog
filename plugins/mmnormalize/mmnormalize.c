@@ -111,7 +111,7 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 /* callback for liblognorm error messages */
-void
+static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
 	    size_t __attribute__((unused)) lenMsg)
 {

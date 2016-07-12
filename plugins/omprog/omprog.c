@@ -219,7 +219,7 @@ done:	return;
 /* execute the child process (must be called in child context
  * after fork).
  */
-static void
+static __attribute__((noreturn)) void
 execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
 {
 	int i, iRet;

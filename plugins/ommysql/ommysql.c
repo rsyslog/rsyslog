@@ -237,7 +237,7 @@ finalize_it:
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
+static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
 {
 	DEFiRet;
 

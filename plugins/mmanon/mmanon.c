@@ -284,7 +284,7 @@ writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
 }
 
 /* currently works for IPv4 only! */
-void
+static void
 anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 {
 	int i = *idx;
