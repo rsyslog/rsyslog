@@ -101,7 +101,7 @@ resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
 	uchar *pParams;
 	uchar *pCmd;
 	uchar *p;
-	off_t actualFileSize;
+	off64_t actualFileSize;
 	rsRetVal localRet;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
@@ -340,7 +340,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	pThis->iCurrOffs = 0;
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
 		/* we need to obtain the current offset */
-		off_t offset;
+		off64_t offset;
 		CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 		pThis->iCurrOffs = offset;
 	}
@@ -693,17 +693,20 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes, off64_t *offset)
 {
         uchar c;
 	uchar finished;
+	off64_t beginning_offset;
 	rsRetVal readCharRet;
         DEFiRet;
 
         ASSERT(pThis != NULL);
         ASSERT(ppCStr != NULL);
+	ASSERT(mode >= 0 && mode <= 2);
 
         CHKiRet(cstrConstruct(ppCStr));
+	beginning_offset = pThis->iCurrOffs;
         CHKiRet(strmReadChar(pThis, &c));
 
 	/* append previous message to current message if necessary */
@@ -729,6 +732,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 			cstrAppendChar(*ppCStr, '\n');
 		}
 		cstrFinalize(*ppCStr);
+		*offset = beginning_offset;
 	} else if(mode == 1) {
 		finished=0;
 		while(finished == 0){
@@ -756,6 +760,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 			}
 		}
 		cstrFinalize(*ppCStr);
+		*offset = beginning_offset;
 		pThis->bPrevWasNL = 0;
 	} else if(mode == 2) {
 		/* indented follow-up lines */
@@ -805,6 +810,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 			cstrAppendChar(*ppCStr, '\n');
 		}
 		cstrFinalize(*ppCStr);
+		*offset = beginning_offset;
 		pThis->bPrevWasNL = 0;
 	}
 
@@ -827,11 +833,12 @@ finalize_it:
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF, off64_t *offset)
 {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
+	off64_t thisLine_offset;
 	rsRetVal readCharRet;
         DEFiRet;
 
@@ -839,6 +846,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
         ASSERT(ppCStr != NULL);
 
 	do {
+		thisLine_offset = pThis->iCurrOffs;
 		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
 		CHKiRet(cstrConstruct(&thisLine));
 		/* append previous message to current message if necessary */
@@ -868,8 +876,10 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 				/* may be NULL in initial poll! */
 				finished = 1;
 				*ppCStr = pThis->prevMsgSegment;
+				*offset = pThis->prevMsgSegment_offset;
 			}
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+			pThis->prevMsgSegment_offset = thisLine_offset;
 			
 		} else {
 			if(pThis->prevMsgSegment != NULL) {
@@ -881,7 +891,6 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 				}
 				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
 				/* we could do this faster, but for now keep it simple */
-
 			}
 		}
 		cstrDestruct(&thisLine);
@@ -905,6 +914,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
+	pThis->prevMsgSegment_offset = 0;
 	pThis->bPrevWasNL = 0;
 ENDobjConstruct(strm)
 
@@ -1058,8 +1068,8 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 	strmWaitAsyncWriterDone(pThis);
 
 	if(pThis->iCurrOffs >= pThis->iMaxFileSize) {
-		DBGOPRINT((obj_t*) pThis, "max file size %ld reached for %d, now %ld - starting new file\n",
-			  (long) pThis->iMaxFileSize, pThis->fd, (long) pThis->iCurrOffs);
+		DBGOPRINT((obj_t*) pThis, "max file size %llu reached for %d, now %llu - starting new file\n",
+			  (long long unsigned) pThis->iMaxFileSize, pThis->fd, (long long unsigned) pThis->iCurrOffs);
 		CHKiRet(strmNextFile(pThis));
 	}
 
@@ -1613,7 +1623,7 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 	DBGOPRINT((obj_t*) pThis, "file %d seek, pos %llu\n", pThis->fd, (long long unsigned) offs);
 	i = lseek64(pThis->fd, offs, SEEK_SET);
 	if(i != offs) {
-		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, (long long) offs);
+		DBGPRINTF("strmSeek: error %lld seeking to offset %llu\n", i, (long long unsigned) offs);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
@@ -1657,8 +1667,8 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 		stat((char*)pThis->pszCurrFName, &statBuf);
 		*bytesDel = statBuf.st_size;
 		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %d, new %d, "
-			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
-			  pThis->pszCurrFName, (long long) *bytesDel);
+			  "deleting '%s' (%llu bytes)\n", pThis->iCurrFNum, FNum,
+			  pThis->pszCurrFName, (long long unsigned) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
 		if(pThis->cryprov != NULL)
 			pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
@@ -1826,7 +1836,7 @@ finalize_it:
 
 /* property set methods */
 /* simple ones first */
-DEFpropSetMeth(strm, iMaxFileSize, int64)
+DEFpropSetMeth(strm, iMaxFileSize, off64_t)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
@@ -1836,7 +1846,7 @@ DEFpropSetMeth(strm, bVeryReliableZip, int)
 DEFpropSetMeth(strm, bSync, int)
 DEFpropSetMeth(strm, bReopenOnTruncate, int)
 DEFpropSetMeth(strm, sIOBufSize, size_t)
-DEFpropSetMeth(strm, iSizeLimit, off_t)
+DEFpropSetMeth(strm, iSizeLimit, off64_t)
 DEFpropSetMeth(strm, iFlushInterval, int)
 DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
@@ -2007,6 +2017,8 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	if(pThis->prevMsgSegment != NULL) {
 		cstrFinalize(pThis->prevMsgSegment);
 		objSerializePTR(pStrm, prevMsgSegment, CSTR);
+		l = pThis->prevMsgSegment_offset;
+		objSerializeSCALAR_VAR(pStrm, prevMsgSegment_offset, INT64, l);
 	}
 
 	i = pThis->bPrevWasNL;
@@ -2123,6 +2135,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, pProp->val.pStr));
  	} else if(isProp("prevMsgSegment")) {
 		CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, pProp->val.pStr));
+ 	} else if(isProp("prevMsgSegment_offset")) {
+		pThis->prevMsgSegment_offset = pProp->val.num;
  	} else if(isProp("bPrevWasNL")) {
 		pThis->bPrevWasNL = (sbool) pProp->val.num;
 	}
@@ -2138,7 +2152,7 @@ finalize_it:
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */
 static rsRetVal
-strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
+strmGetCurrOffset(strm_t *pThis, off64_t *pOffs)
 {
 	DEFiRet;
 

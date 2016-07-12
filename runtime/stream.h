@@ -101,11 +101,11 @@ typedef struct strm_s {
 	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
-	int64 iMaxFileSize;/* maximum size a file may grow to */
+	off64_t iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	sbool bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
-	int64 iCurrOffs;/* current offset */
+	off64_t iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	sbool bPrevWasNL; /* used for readLine() when reading multi-line messages */
 	/* dynamic properties, valid only during file open, not to be persistet */
@@ -151,11 +151,12 @@ typedef struct strm_s {
 	} asyncBuf[STREAM_ASYNC_NUMBUFS];
 	pthread_t writerThreadID;
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
-	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
+	off64_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	sbool	bIsTTY;		/* is this a tty file? */
 	cstr_t *prevLineSegment; /* for ReadLine, previous, unprocessed part of file */
 	cstr_t *prevMsgSegment; /* for ReadMultiLine, previous, yet unprocessed part of msg */
+	off64_t prevMsgSegment_offset;
 } strm_t;
 
 
@@ -177,11 +178,11 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*RecordBegin)(strm_t *pThis);
 	rsRetVal (*RecordEnd)(strm_t *pThis);
 	rsRetVal (*Serialize)(strm_t *pThis, strm_t *pStrm);
-	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
+	rsRetVal (*GetCurrOffset)(strm_t *pThis, off64_t *pOffs);
 	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
 	rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
 	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
-	INTERFACEpropSetMeth(strm, iMaxFileSize, int64);
+	INTERFACEpropSetMeth(strm, iMaxFileSize, off64_t);
 	INTERFACEpropSetMeth(strm, iMaxFiles, int);
 	INTERFACEpropSetMeth(strm, iFileNumDigits, int);
 	INTERFACEpropSetMeth(strm, tOperationsMode, int);
@@ -191,11 +192,11 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, bSync, int);
 	INTERFACEpropSetMeth(strm, bReopenOnTruncate, int);
 	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
-	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
+	INTERFACEpropSetMeth(strm, iSizeLimit, off64_t);
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 	/* v6 added */
-	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes);
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes, off64_t *offset);
 	/* v7 added  2012-09-14 */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
 	/* v8 added  2013-03-21 */
@@ -217,6 +218,6 @@ strmGetCurrFileNum(strm_t *pStrm) {
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, int fileNum, off64_t offs, off64_t *bytesDel);
-rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF);
+rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF, off64_t *offset);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
