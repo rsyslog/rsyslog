@@ -17,9 +17,9 @@ ompgsql uses the "old style" configuration, with everything on the action line i
 
 **Action parameters**
 
-   ***:ompgsql:database-server,database-name,database-userid,database-password***
+**:ompgsql:database-server,database-name,database-userid,database-password**
    
-   All parameters should be filled in for a successful connect.
+All parameters should be filled in for a successful connect.
 
 Note rsyslog contains a canned default template to write to the Postgres
 database. This template is:
