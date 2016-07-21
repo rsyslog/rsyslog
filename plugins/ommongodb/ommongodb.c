@@ -513,9 +513,9 @@ CODESTARTdoAction
 	}
 
 	if(pData->tplName == NULL) {
-		doc = getDefaultBSON((smsg_t*)pMsgData);
+		doc = getDefaultBSON(*(smsg_t**)pMsgData);
 	} else {
-		doc = BSONFromJSONObject((struct json_object *)pMsgData);
+		doc = BSONFromJSONObject(*(struct json_object **)pMsgData);
 	}
 	if(doc == NULL) {
 		dbgprintf("ommongodb: error creating BSON doc\n");
