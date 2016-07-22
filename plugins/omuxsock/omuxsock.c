@@ -278,7 +278,7 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 		 * call fails. Then, lsent has the error status, even though
 		 * the sendto() succeeded. -- rgerhards, 2007-06-22
 		 */
-		lenSent = sendto(pData->sock, msg, len, 0, &pData->addr, sizeof(pData->addr));
+		lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, sizeof(pData->addr));
 		if(lenSent == len) {
 			int eno = errno;
 			char errStr[1024];

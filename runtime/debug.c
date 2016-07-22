@@ -888,7 +888,9 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
 
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wempty-body"
+#pragma GCC diagnostic ignored "-Wclobbered"
 /* write the debug message. This is a helper to dbgprintf and dbgoprint which
  * contains common code. added 2008-09-26 rgerhards
  */
@@ -915,6 +917,7 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	pthread_cleanup_pop(1);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
+#pragma GCC diagnostic warning "-Wclobbered"
 
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it

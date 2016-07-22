@@ -183,7 +183,7 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
-#if HAVE_INOTIFY_INIT
+#ifdef HAVE_INOTIFY_INIT
 /* support for inotify mode */
 
 /* we need to track directories */
@@ -289,7 +289,7 @@ static struct cnfparamblk inppblk =
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 
-#if HAVE_INOTIFY_INIT
+#ifdef HAVE_INOTIFY_INIT
 /* support for inotify mode */
 
 #if 0 /* enable if you need this for debugging */
@@ -892,61 +892,6 @@ lstnDel(lstn_t *pLstn)
 	free(pLstn);
 }
 
-/* Duplicate an existing listener. This is called when a new file is to
- * be monitored due to wildcard detection. Returns the new pLstn in
- * the ppExisting parameter.
- */
-static rsRetVal
-lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
-{
-	DEFiRet;
-	lstn_t *const existing = *ppExisting;
-	lstn_t *pThis;
-
-	CHKiRet(lstnAdd(&pThis));
-	pThis->pszDirName = existing->pszDirName; /* read-only */
-	pThis->pszBaseName = (uchar*)strdup((char*)newname);
-	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
-		DBGPRINTF("imfile/lstnDup: asprintf failed, malfunction can happen\n");
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
-	pThis->lenTag = ustrlen(pThis->pszTag);
-	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
-
-	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
-	pThis->multiSub.maxElem = existing->multiSub.maxElem;
-	pThis->multiSub.nElem = 0;
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
-	pThis->iSeverity = existing->iSeverity;
-	pThis->iFacility = existing->iFacility;
-	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
-	pThis->trimLineOverBytes = existing->trimLineOverBytes;
-	pThis->iPersistStateInterval = existing->iPersistStateInterval;
-	pThis->readMode = existing->readMode;
-	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
-	if(pThis->startRegex != NULL) // TODO: make this a single function with better error handling
-		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
-			DBGPRINTF("imfile: error regex compile\n");
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	pThis->bRMStateOnDel = existing->bRMStateOnDel;
-	pThis->hasWildcard = existing->hasWildcard;
-	pThis->escapeLF = existing->escapeLF;
-	pThis->reopenOnTruncate = existing->reopenOnTruncate;
-	pThis->addMetadata = existing->addMetadata;
-	pThis->addCeeTag = existing->addCeeTag;
-	pThis->freshStartTail = existing->freshStartTail;
-	pThis->pRuleset = existing->pRuleset;
-	pThis->nRecords = 0;
-	pThis->pStrm = NULL;
-	pThis->prevLineSegment = NULL;
-	pThis->masterLstn = existing;
-	*ppExisting = pThis;
-finalize_it:
-	RETiRet;
-}
-
 /* This function is called when a new listener shall be added.
  * It also does some late stage error checking on the config
  * and reports issues it finds.
@@ -1297,7 +1242,7 @@ doPolling(void)
 }
 
 
-#if HAVE_INOTIFY_INIT
+#ifdef HAVE_INOTIFY_INIT
 static rsRetVal
 fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
 {
@@ -1561,6 +1506,61 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 	dirsAddFile(pLstn, ACTIVE_FILE);
 	pollFile(pLstn, NULL);
 done:	return;
+}
+
+/* Duplicate an existing listener. This is called when a new file is to
+ * be monitored due to wildcard detection. Returns the new pLstn in
+ * the ppExisting parameter.
+ */
+static rsRetVal
+lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
+{
+	DEFiRet;
+	lstn_t *const existing = *ppExisting;
+	lstn_t *pThis;
+
+	CHKiRet(lstnAdd(&pThis));
+	pThis->pszDirName = existing->pszDirName; /* read-only */
+	pThis->pszBaseName = (uchar*)strdup((char*)newname);
+	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
+		DBGPRINTF("imfile/lstnDup: asprintf failed, malfunction can happen\n");
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+	pThis->pszTag = (uchar*) strdup((char*) existing->pszTag);
+	pThis->lenTag = ustrlen(pThis->pszTag);
+	pThis->pszStateFile = existing->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) existing->pszStateFile);
+
+	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
+	pThis->multiSub.maxElem = existing->multiSub.maxElem;
+	pThis->multiSub.nElem = 0;
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
+	pThis->iSeverity = existing->iSeverity;
+	pThis->iFacility = existing->iFacility;
+	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
+	pThis->trimLineOverBytes = existing->trimLineOverBytes;
+	pThis->iPersistStateInterval = existing->iPersistStateInterval;
+	pThis->readMode = existing->readMode;
+	pThis->startRegex = existing->startRegex; /* no strdup, as it is read-only */
+	if(pThis->startRegex != NULL) // TODO: make this a single function with better error handling
+		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
+			DBGPRINTF("imfile: error regex compile\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	pThis->bRMStateOnDel = existing->bRMStateOnDel;
+	pThis->hasWildcard = existing->hasWildcard;
+	pThis->escapeLF = existing->escapeLF;
+	pThis->reopenOnTruncate = existing->reopenOnTruncate;
+	pThis->addMetadata = existing->addMetadata;
+	pThis->addCeeTag = existing->addCeeTag;
+	pThis->freshStartTail = existing->freshStartTail;
+	pThis->pRuleset = existing->pRuleset;
+	pThis->nRecords = 0;
+	pThis->pStrm = NULL;
+	pThis->prevLineSegment = NULL;
+	pThis->masterLstn = existing;
+	*ppExisting = pThis;
+finalize_it:
+	RETiRet;
 }
 
 /* Setup a new file watch for dynamically discovered files (via wildcards).
@@ -1895,7 +1895,7 @@ finalize_it:
 
 #else /* #if HAVE_INOTIFY_INIT */
 static rsRetVal
-do_inotify()
+do_inotify(void)
 {
 	errmsg.LogError(0, RS_RET_NOT_IMPLEMENTED, "imfile: mode set to inotify, but the "
 			"platform does not support inotify");
@@ -2018,7 +2018,7 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
-#if HAVE_INOTIFY_INIT
+#ifdef HAVE_INOTIFY_INIT
 	/* we use these vars only in inotify mode */
 	if(dirs != NULL) {
 		free(dirs->active.listeners);

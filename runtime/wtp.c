@@ -40,7 +40,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <atomic.h>
-#if HAVE_SYS_PRCTL_H
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -296,7 +296,7 @@ wtpCancelAll(wtp_t *pThis)
  * as this introduces a race in the debug system (RETiRet system).
  * rgerhards, 2009-10-26
  */
-static inline void
+static void
 wtpWrkrExecCleanup(wti_t *pWti)
 {
 	wtp_t *pThis;
@@ -356,7 +356,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 	sigset_t sigSet;
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
 #	endif
@@ -375,7 +375,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	sigaddset(&sigSet, SIGTTIN);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	pszDbgHdr = wtpGetDbgHdr(pThis);
 	ustrncpy(thrdName+3, pszDbgHdr, 20);

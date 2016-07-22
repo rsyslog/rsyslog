@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
-#if HAVE_SYS_EPOLL_H
+#ifdef HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
 

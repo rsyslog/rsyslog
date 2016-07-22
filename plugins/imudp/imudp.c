@@ -34,7 +34,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <signal.h>
-#if HAVE_SYS_EPOLL_H
+#ifdef HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
 #ifdef HAVE_SCHED_H
@@ -545,7 +545,7 @@ finalize_it:
  * matter where the actual loss occurs - it is always random, because we depend
  * on scheduling order. -- rgerhards, 2008-10-02
  */
-static inline rsRetVal
+static rsRetVal
 processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
 	int iNbrTimeUsed;
@@ -623,9 +623,8 @@ checkSchedulingPriority(modConfData_t *modConf)
 			modConf->pszSchedPolicy);
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 	}
-#endif
-
 finalize_it:
+#endif
 	RETiRet;
 }
 
@@ -717,9 +716,9 @@ setSchedParams(modConfData_t *modConf)
 	if(err != 0) {
 		errmsg.LogError(err, NO_ERRCODE, "imudp: pthread_setschedparam() failed - ignoring");
 	}
+finalize_it:
 #	endif
 
-finalize_it:
 	RETiRet;
 }
 
@@ -731,7 +730,8 @@ finalize_it:
  */
 #if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
-static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
+static rsRetVal
+rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 {
 	DEFiRet;
 	int nfds;
@@ -819,7 +819,8 @@ finalize_it:
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
-rsRetVal rcvMainLoop(thrdInfo_t *pWrkr)
+static rsRetVal
+rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 {
 	DEFiRet;
 	int maxfds;
@@ -846,7 +847,7 @@ rsRetVal rcvMainLoop(thrdInfo_t *pWrkr)
 		for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
 			if (lstn->sock != -1) {
 				if(Debug)
-					net.debugListenInfo(lstn->sock, "UDP");
+					net.debugListenInfo(lstn->sock, (char*)"UDP");
 				FD_SET(lstn->sock, &readfds);
 				if(lstn->sock>maxfds) maxfds=lstn->sock;
 			}
@@ -1150,13 +1151,13 @@ static void *
 wrkr(void *myself)
 {
 	struct wrkrInfo_s *pWrkr = (struct wrkrInfo_s*) myself;
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar *pszDbgHdr;
 #	endif
 	uchar thrdName[32];
 
 	snprintf((char*)thrdName, sizeof(thrdName), "imudp(w%d)", pWrkr->id);
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
