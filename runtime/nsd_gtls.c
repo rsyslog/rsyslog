@@ -187,7 +187,12 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 	/* try load certificate */
 	CHKiRet(readFile(certFile, &data));
+#if HAVE_GNUTLS_X509_CRT_LIST_IMPORT2
 	CHKgnutls(gnutls_x509_crt_list_import2(&pThis->ourCerts, &pThis->nCerts, &data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED));
+#else
+	gnuRet = gnutls_x509_crt_list_import(pThis->ourCerts, &pThis->nCerts, &data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+	if (gnuRet < 0) CHKgnutls(gnuRet);
+#endif
 	pThis->bOurCertIsInit = 1;
 	free(data.data);
 	data.data = NULL;
@@ -633,7 +638,9 @@ gtlsInitSession(nsd_gtls_t *pThis)
 
 	gnutls_init(&session, GNUTLS_SERVER);
 	pThis->nCerts = NSD_GTLS_MAX_CERTS;
+#if HAVE_GNUTLS_X509_CRT_LIST_IMPORT2
 	pThis->ourCerts = NULL;
+#endif
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 0;
 
