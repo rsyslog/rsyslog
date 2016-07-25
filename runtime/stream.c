@@ -58,7 +58,7 @@
 #include "unicode-helper.h"
 #include "module-template.h"
 #include "cryprov.h"
-#if HAVE_SYS_PRCTL_H
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -1283,7 +1283,7 @@ asyncWriterThread(void *pPtr)
 	BEGINfunc
 	ustrncpy(thrdName+3, pThis->pszFName, sizeof(thrdName)-4);
 	dbgOutputTID((char*)thrdName);
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	if(prctl(PR_SET_NAME, (char*)thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", "stream writer");
 	}
@@ -1368,7 +1368,7 @@ finalize_it:
  * have it). -- rgerhards, 2009-06-08
  */
 #undef SYNCCALL
-#if HAVE_FDATASYNC
+#ifdef HAVE_FDATASYNC
 #	define SYNCCALL(x) fdatasync(x)
 #else
 #	define SYNCCALL(x) fsync(x)

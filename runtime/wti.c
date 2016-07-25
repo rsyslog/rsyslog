@@ -124,7 +124,7 @@ wtiWakeupThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		DBGPRINTF("sent SIGTTIN to worker thread 0x%x\n", (unsigned) pThis->thrdID);
+		DBGPRINTF("sent SIGTTIN to worker thread %p\n", (void*) pThis->thrdID);
 	}
 
 	RETiRet;
@@ -151,7 +151,7 @@ wtiCancelThrd(wti_t *pThis)
 	if(wtiGetState(pThis)) {
 		/* we first try the cooperative "cancel" interface */
 		pthread_kill(pThis->thrdID, SIGTTIN);
-		DBGPRINTF("sent SIGTTIN to worker thread 0x%x, giving it a chance to terminate\n", (unsigned) pThis->thrdID);
+		DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n", (void *) pThis->thrdID);
 		srSleep(0, 10000);
 	}
 

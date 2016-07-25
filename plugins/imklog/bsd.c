@@ -167,7 +167,6 @@ rsRetVal
 klogWillRunPrePrivDrop(modConfData_t *pModConf)
 {
 	char errmsg[2048];
-	int r;
 	DEFiRet;
 
 	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
@@ -180,7 +179,7 @@ klogWillRunPrePrivDrop(modConfData_t *pModConf)
 #	ifdef OS_LINUX
 	/* Set level of kernel console messaging.. */
 	if(pModConf->console_log_level != -1) {
-		r = klogctl(8, NULL, pModConf->console_log_level);
+		int r = klogctl(8, NULL, pModConf->console_log_level);
 		if(r != 0) {
 			imklogLogIntMsg(LOG_WARNING, "imklog: cannot set console log level: %s",
 				rs_strerror_r(errno, errmsg, sizeof(errmsg)));
