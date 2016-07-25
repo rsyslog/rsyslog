@@ -409,6 +409,11 @@ TESTS +=  \
 	json_var_case.sh
 endif
 
+if ENABLE_MMDBLOOKUP
+TESTS += \
+    mmdb.sh
+endif
+
 if ENABLE_GNUTLS
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
@@ -751,6 +756,9 @@ EXTRA_DIST= \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \
+	mmdb.sh \
+	test.mmdb \
+	testsuites/mmdb.conf \
 	incltest.sh \
 	testsuites/incltest.conf \
 	incltest_dir.sh \

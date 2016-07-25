@@ -1041,6 +1041,25 @@ AC_ARG_ENABLE(mmsequence,
 AM_CONDITIONAL(ENABLE_MMSEQUENCE, test x$enable_mmsequence = xyes)
 
 
+
+# mmdblookup
+AC_ARG_ENABLE(mmdblookup,
+        [AS_HELP_STRING([--enable-mmdblookup],[Enable mmdb lookup helper @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmdblookup="yes" ;;
+          no) enable_mmdblookup="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmdblookup) ;;
+         esac],
+        [enable_mmdblookup=no]
+)
+if test "x$enable_mmdblookup"; then
+        #PKG_CHECK_MODULES(LIBMAXMINDDB, libmaxminddb)
+        AC_CHECK_HEADERS([maxminddb.h])
+fi
+AM_CONDITIONAL(ENABLE_MMDBLOOKUP, test x$enable_mmdblookup = xyes)
+
+
+
 # mmfields
 AC_ARG_ENABLE(mmfields,
         [AS_HELP_STRING([--enable-mmfields],[Enable building mmfields support @<:@default=no@:>@])],
@@ -1838,6 +1857,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/imzmq3/Makefile \
 		contrib/imczmq/Makefile \
 		contrib/mmsequence/Makefile \
+		contrib/mmdblookup/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
@@ -1911,6 +1931,7 @@ echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
+echo "    mmdblookup enabled:                       $enable_mmdblookup"
 echo
 echo "---{ database support }---"
 echo "    MySql support enabled:                    $enable_mysql"
