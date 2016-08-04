@@ -76,9 +76,9 @@ matrix:
        dist: trusty
      - compiler: "clang"
        env: CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
-     #- compiler: "clang"
-     #  dist: trusty
-     #  env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
+     - compiler: "clang"
+       dist: trusty
+       env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
 
 services:
   - elasticsearch
