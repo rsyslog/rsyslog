@@ -36,6 +36,7 @@
 #include "ruleset.h"
 #include "srUtils.h"
 #include "unicode-helper.h"
+#include "statsobj.h"
 #include <czmq.h>
 
 MODULE_TYPE_INPUT
@@ -47,6 +48,7 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
+DEFobjCurrIf(statsobj)
 
 static struct cnfparamdescr modpdescr[] = {
 	{ "authenticator", eCmdHdlrBinary, 0 },
@@ -84,6 +86,8 @@ struct instanceConf_s {
 struct listener_t {
 	zsock_t *sock;
 	ruleset_t *ruleset;
+    statsobj_t *imczmqStats;
+    STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit);
 };
 
 static zlist_t *listenerList;
@@ -151,6 +155,10 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);	
+
+	CHKiRet(statsobj.AddCounter(pData->imczmqStats, UCHAR_CONSTANT("submitted"),
+				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->ctrSubmit)));
+	CHKiRet(statsobj.ConstructFinalize(pData->imczmqStats));
 
 	if(runModConf->authType) {	
 		if(!strcmp(runModConf->authType, "CURVESERVER")) {
@@ -346,6 +354,8 @@ static rsRetVal rcvData(){
 		}
 
 		free(buf);
+		STATSCOUNTER_INC(pData->ctrSubmit, pData->mutCtrSubmit);
+
 		which = (zsock_t *)zpoller_wait(poller, -1);
 	}
 finalize_it:

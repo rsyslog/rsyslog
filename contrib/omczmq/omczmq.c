@@ -35,6 +35,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "statsobj.h"
 #include <czmq.h>
 
 MODULE_TYPE_OUTPUT
@@ -43,6 +44,12 @@ MODULE_CNFNAME("omczmq")
 
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(statsobj)
+
+statsobj_t *omczmqStats;
+STATSCOUNTER_DEF(processed, mutProcessed);
+STATSCOUNTER_DEF(failed, mutFailed);
+
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -195,7 +202,7 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 		char *topic = zlist_first(pData->topics);
 
 		while(topic) {
-			if(pData->topicFrame && pData->sockType == ZMQ_SUB) {
+			if(pData->topicFrame && pData->sockType == ZMQ_PUB) {
 				int rc = zstr_sendx(pData->sock, topic, (char*)msg, NULL);
 				if(rc != 0) {
 					pData->sendError = true;
@@ -219,6 +226,7 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
+				STATSCOUNTER_INC(processed, mutProcessed);
 			}
 #endif
 			else {
@@ -227,6 +235,7 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
+				STATSCOUNTER_INC(processed, mutProcessed);
 
 			}
 			topic = zlist_next(pData->topics);
@@ -239,8 +248,10 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 			DBGPRINTF("imczmq send error: %d", rc);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
+		STATSCOUNTER_INC(processed, mutProcessed);
 	}
 finalize_it:
+	STATSCOUNTER_INC(failed, mutFailed);
 	RETiRet;
 }
 
@@ -546,6 +557,9 @@ ENDinitConfVars
 
 BEGINmodExit
 CODESTARTmodExit
+	statsobj.Destruct(&omczmqStats);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(statsobj, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
@@ -565,6 +579,16 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omczmq: module compiled with rsyslog version %s.\n", VERSION);
+
+	CHKiRet(statsobj.Construct(&omczmqStats));
+	CHKiRet(statsobj.SetName(omczmqStats, (uchar *)"omczmq"));
+	CHKiRet(statsobj.SetOrigin(omczmqStats, (uchar *)"omczmq"));
+	STATSCOUNTER_INIT(processed, mutProcessed);
+	CHKiRet(statsobj.AddCounter(omczmqStats, (uchar *)"processed",
+				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &processed));
+	STATSCOUNTER_INIT(failed, mutFailed);
+	CHKiRet(statsobj.AddCounter(omczmqStats, (uchar *)"failed",
+				ctrType_IntCtr, CTR_FLAG_RESETTABLE, &failed));
 
 	INITLegCnfVars
 ENDmodInit
