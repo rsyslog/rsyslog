@@ -527,6 +527,8 @@ CODESTARTdoAction
 	} else {
 		dbgprintf("ommongodb: insert error\n");
 		reportMongoError(pData);
+		/* close on insert error to permit resume */
+		closeMongoDB(pData);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
