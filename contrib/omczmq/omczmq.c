@@ -55,7 +55,6 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 static struct cnfparamdescr modpdescr[] = {
 	{ "authenticator", eCmdHdlrBinary, 0 },
-	{ "authtype", eCmdHdlrGetWord, 0 },
 	{ "clientcertpath", eCmdHdlrGetWord, 0 },
 	{ "servercertpath", eCmdHdlrGetWord, 0 }
 };
@@ -70,7 +69,6 @@ struct modConfData_s {
 	rsconf_t *pConf;
 	uchar *tplName;
 	int authenticator;
-	char *authType;
 	char *serverCertPath;
 	char *clientCertPath;
 };
@@ -80,6 +78,7 @@ static zactor_t *authActor;
 
 typedef struct _instanceData {
 	zsock_t *sock;
+	char *authType;
 	bool serverish;
 	int sendTimeout;
 	zlist_t *topics;
@@ -97,6 +96,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
+    { "authtype", eCmdHdlrGetWord, 0 },
 	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "topics", eCmdHdlrGetWord, 0 },
@@ -121,8 +121,8 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
-	if(runModConf->authType) {	
-		if (!strcmp(runModConf->authType, "CURVESERVER")) {
+	if(pData->authType) {	
+		if (!strcmp(pData->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -134,7 +134,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
 		} 
-		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
+		else if(!strcmp(pData->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
@@ -259,6 +259,7 @@ static inline void
 setInstParamDefaults(instanceData* pData) {
 	pData->sockEndpoints = NULL;
 	pData->sock = NULL;
+	pData->authType = NULL;
 	pData->sendError = false;
 	pData->serverish = false;
 	pData->tplName = NULL;
@@ -292,6 +293,7 @@ CODESTARTfreeInstance
 	zlist_destroy(&pData->topics);
 	zsock_destroy(&pData->sock);
 	free(pData->sockEndpoints);
+	free(pData->authType);
 	free(pData->tplName);
 ENDfreeInstance
 
@@ -316,7 +318,6 @@ CODESTARTbeginCnfLoad
 	runModConf = pModConf;
 	runModConf->pConf = pConf;
 	runModConf->authenticator = 0;
-	runModConf->authType = NULL;
 	runModConf->serverCertPath = NULL;
 	runModConf->clientCertPath = NULL;
 ENDbeginCnfLoad
@@ -346,7 +347,6 @@ ENDactivateCnf
 BEGINfreeCnf
 CODESTARTfreeCnf
 	free(pModConf->tplName);
-	free(pModConf->authType);
 	free(pModConf->serverCertPath);
 	free(pModConf->clientCertPath);
 	DBGPRINTF("imczmq: stopping authActor\n");
@@ -371,10 +371,6 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "authenticator")) {
 			runModConf->authenticator = (int)pvals[i].val.d.n;
 		}
-		else if(!strcmp(modpblk.descr[i].name, "authtype")) {
-			runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
-			DBGPRINTF("omczmq: authtype set to %s\n", runModConf->authType);
-		}
 		else if(!strcmp(modpblk.descr[i].name, "servercertpath")) {
 			runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: serverCertPath set to %s\n", runModConf->serverCertPath);
@@ -392,7 +388,6 @@ CODESTARTsetModCnf
 	}	
 
 	DBGPRINTF("omczmq: authenticator set to %d\n", runModConf->authenticator);
-	DBGPRINTF("omczmq: authType set to %s\n", runModConf->authType);
 	DBGPRINTF("omczmq: serverCertPath set to %s\n", runModConf->serverCertPath);
 	DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 
@@ -440,6 +435,9 @@ CODESTARTnewActInst
 		} 
 		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+		else if(!strcmp(actpblk.descr[i].name, "authtype")) {
+			pData->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
