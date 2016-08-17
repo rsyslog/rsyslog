@@ -2559,6 +2559,15 @@ DoSaveOnShutdown(qqueue_t *pThis)
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
+	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
+	if(pThis->qType == QUEUETYPE_DISK) {
+		DBGOPRINT((obj_t*) pThis, "doing a safety persist right on shutdown\n");
+		qqueuePersist(pThis, QUEUE_CHECKPOINT);
+	}
+	if(pThis->pqDA != NULL) {
+		DBGOPRINT((obj_t*) pThis->pqDA, "doing a safety persist right on shutdown\n");
+		qqueuePersist(pThis->pqDA, QUEUE_CHECKPOINT);
+	}
 	if(pThis->bQueueStarted) {
 		/* shut down all workers
 		 * We do not need to shutdown workers when we are in enqueue-only mode or we are a
