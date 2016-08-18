@@ -955,9 +955,9 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 	const int newfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 	if(newfile != oldfile) {
 		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
-			"number %d to number %d - doing a .qi write for robustness\n",
+			"number %d to number %d - requiring a .qi write for robustness\n",
 			oldfile, newfile);
-		qqueuePersist(pThis, QUEUE_CHECKPOINT);
+		pThis->tVars.disk.nForcePersist = 2;
 	}
 
 finalize_it:
@@ -1533,6 +1533,10 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 	DBGPRINTF("doDeleteBatch: delete batch from store, new sizes: log %d, phys %d\n",
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	++pThis->deqIDDel; /* one more batch dequeued */
+
+	if((pThis->qType == QUEUETYPE_DISK) && (bytesDel != 0)) {
+		qqueuePersist(pThis, QUEUE_CHECKPOINT); /* robustness persist .qi file */
+	}
 
 	RETiRet;
 }
@@ -2847,6 +2851,19 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pMsg));
 	STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
+
+	/* check if we had a file rollover and need to persist
+	 * the .qi file for robustness reasons.
+	 * Note: the n=2 write is required for closing the old file and
+	 * the n=1 write is required after opening and writing to the new
+	 * file.
+	 */
+	if(pThis->tVars.disk.nForcePersist > 0) {
+		DBGOPRINT((obj_t*) pThis, ".qi file write required for robustness reasons (n=%d)\n",
+			pThis->tVars.disk.nForcePersist);
+		pThis->tVars.disk.nForcePersist--;
+		qqueuePersist(pThis, QUEUE_CHECKPOINT);
+	}
 
 finalize_it:
 	RETiRet;
