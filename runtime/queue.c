@@ -2426,7 +2426,8 @@ finalize_it:
  * and 0 otherwise.
  * rgerhards, 2008-01-10
  */
-static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
+static rsRetVal
+qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 {
 	DEFiRet;
 	strm_t *psQIF = NULL; /* Queue Info File */
