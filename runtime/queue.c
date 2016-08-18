@@ -143,6 +143,7 @@ static inline void displayBatchState(batch_t *pBatch)
 	}
 }
 #endif
+static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint);
 
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
@@ -927,6 +928,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 {
 	DEFiRet;
 	number_t nWriteCount;
+	const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 
 	ASSERT(pThis != NULL);
 
@@ -945,6 +947,18 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 
 	DBGOPRINT((obj_t*) pThis, "write wrote %lld octets to disk, queue disk size now %lld octets, EnqOnly:%d\n",
 		   nWriteCount, pThis->tVars.disk.sizeOnDisk, pThis->bEnqOnly);
+
+	/* Did we have a change in the on-disk file? If so, we
+	 * should do a "robustness sync" of the .qi file to guard
+	 * against the most harsh consequences of kill -9 and power off.
+	 */
+	const int newfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+	if(newfile != oldfile) {
+		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
+			"number %d to number %d - doing a .qi write for robustness\n",
+			oldfile, newfile);
+		qqueuePersist(pThis, QUEUE_CHECKPOINT);
+	}
 
 finalize_it:
 	RETiRet;
