@@ -2434,7 +2434,9 @@ static rsRetVal
 qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 {
 	DEFiRet;
+	char *tmpQIFName = NULL;
 	strm_t *psQIF = NULL; /* Queue Info File */
+	char errStr[1024];
 
 	ASSERT(pThis != NULL);
 
@@ -2463,11 +2465,15 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
+	const int lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
+	if(tmpQIFName == NULL)
+		tmpQIFName = (char*)pThis->pszQIFNam;
+
 	CHKiRet(strm.Construct(&psQIF));
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, (uchar*) tmpQIFName, lentmpQIFName));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, write the property bag for ourselfs
@@ -2486,6 +2492,17 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
 	if(pThis->tVars.disk.pReadDel != NULL)
 		CHKiRet(strm.Serialize(pThis->tVars.disk.pReadDel, psQIF));
+
+	strm.Destruct(&psQIF);
+	if(tmpQIFName != (char*)pThis->pszQIFNam) { /* pointer, not string comparison! */
+		if(rename(tmpQIFName, (char*)pThis->pszQIFNam) != 0) {
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			DBGOPRINT((obj_t*) pThis,
+				"FATAL error: renaming temporary .qi file failed: %s\n",
+				errStr);
+			ABORT_FINALIZE(RS_RET_RENAME_TMP_QI_ERROR);
+		}
+	}
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
@@ -2501,6 +2518,8 @@ qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	pThis->bNeedDelQIF = 1;
 
 finalize_it:
+	if(tmpQIFName != (char*)pThis->pszQIFNam) /* pointer, not string comparison! */
+		free(tmpQIFName);
 	if(psQIF != NULL)
 		strm.Destruct(&psQIF);
 
