@@ -323,6 +323,7 @@ finalize_it:
 static rsRetVal strmOpenFile(strm_t *pThis)
 {
 	DEFiRet;
+	off_t offset;
 
 	ASSERT(pThis != NULL);
 
@@ -338,11 +339,20 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	CHKiRet(doPhysOpen(pThis));
 
 	pThis->iCurrOffs = 0;
+	CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
-		/* we need to obtain the current offset */
-		off_t offset;
-		CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 		pThis->iCurrOffs = offset;
+	} else {
+		if(offset != 0) {
+			DBGOPRINT((obj_t*) pThis, "file '%s' opened for non-append write, but "
+				"already contains %zd bytes\n", pThis->pszCurrFName, offset);
+			/*
+			errmsg.LogError(0, 0, "problem on disk queue '%s': "
+					"queue files contain %d messages fewer than specified "
+				"in .qi file -- we lost those messages. That's all we know.",
+				obj.GetName((obj_t*) pThis), skippedMsgs);
+			*/
+		}
 	}
 
 	DBGOPRINT((obj_t*) pThis, "opened file '%s' for %s as %d\n", pThis->pszCurrFName,
