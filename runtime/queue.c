@@ -914,8 +914,17 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	free(pThis->pszQIFNam);
-	if(pThis->tVars.disk.pWrite != NULL)
+	if(pThis->tVars.disk.pWrite != NULL) {
+		int64 currOffs;
+		strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
+		if(currOffs == 0) {
+			/* if no data is present, we can (and must!) delete this
+			 * file. Else we can leave garbagge after termination.
+			 */
+			strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 1);
+		}
 		strm.Destruct(&pThis->tVars.disk.pWrite);
+	}
 	if(pThis->tVars.disk.pReadDeq != NULL)
 		strm.Destruct(&pThis->tVars.disk.pReadDeq);
 	if(pThis->tVars.disk.pReadDel != NULL)
@@ -957,7 +966,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
 			"number %d to number %d - requiring a .qi write for robustness\n",
 			oldfile, newfile);
-		pThis->tVars.disk.nForcePersist = 1;
+		pThis->tVars.disk.nForcePersist = 2;
 	}
 
 finalize_it:
