@@ -80,6 +80,7 @@ TESTS +=  \
 	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
+	daqueue-dirty-shutdown.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
@@ -872,6 +873,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	testsuites/rcvr_fail_restore_rcvr.conf \
 	testsuites/rcvr_fail_restore_sender.conf \
+	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
 	daqueue-persist-drvr.sh \

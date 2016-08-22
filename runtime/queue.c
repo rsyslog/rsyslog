@@ -143,6 +143,7 @@ static inline void displayBatchState(batch_t *pBatch)
 	}
 }
 #endif
+static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint);
 
 /***********************************************************************
  * we need a private data structure, the "to-delete" list. As C does
@@ -913,8 +914,17 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	free(pThis->pszQIFNam);
-	if(pThis->tVars.disk.pWrite != NULL)
+	if(pThis->tVars.disk.pWrite != NULL) {
+		int64 currOffs;
+		strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
+		if(currOffs == 0) {
+			/* if no data is present, we can (and must!) delete this
+			 * file. Else we can leave garbagge after termination.
+			 */
+			strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 1);
+		}
 		strm.Destruct(&pThis->tVars.disk.pWrite);
+	}
 	if(pThis->tVars.disk.pReadDeq != NULL)
 		strm.Destruct(&pThis->tVars.disk.pReadDeq);
 	if(pThis->tVars.disk.pReadDel != NULL)
@@ -927,6 +937,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 {
 	DEFiRet;
 	number_t nWriteCount;
+	const int oldfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
 
 	ASSERT(pThis != NULL);
 
@@ -945,6 +956,18 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 
 	DBGOPRINT((obj_t*) pThis, "write wrote %lld octets to disk, queue disk size now %lld octets, EnqOnly:%d\n",
 		   nWriteCount, pThis->tVars.disk.sizeOnDisk, pThis->bEnqOnly);
+
+	/* Did we have a change in the on-disk file? If so, we
+	 * should do a "robustness sync" of the .qi file to guard
+	 * against the most harsh consequences of kill -9 and power off.
+	 */
+	const int newfile = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+	if(newfile != oldfile) {
+		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
+			"number %d to number %d - requiring a .qi write for robustness\n",
+			oldfile, newfile);
+		pThis->tVars.disk.nForcePersist = 2;
+	}
 
 finalize_it:
 	RETiRet;
@@ -1477,7 +1500,7 @@ static inline rsRetVal
 DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 {
 	int i;
-	off64_t bytesDel;
+	off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
@@ -1519,6 +1542,10 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 	DBGPRINTF("doDeleteBatch: delete batch from store, new sizes: log %d, phys %d\n",
 		  getLogicalQueueSize(pThis), getPhysicalQueueSize(pThis));
 	++pThis->deqIDDel; /* one more batch dequeued */
+
+	if((pThis->qType == QUEUETYPE_DISK) && (bytesDel != 0)) {
+		qqueuePersist(pThis, QUEUE_CHECKPOINT); /* robustness persist .qi file */
+	}
 
 	RETiRet;
 }
@@ -1740,7 +1767,14 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 
 	if(iRet != RS_RET_OK && iRet != RS_RET_DISCARDMSG) {
 		DBGOPRINT((obj_t*) pThis, "error %d dequeueing element - ignoring, but strange things "
-			  "may happen\n", iRet);
+					  "may happen\n", iRet);
+#if 0	// This does not work when we run on the main queue
+	// TODO: find better work-around
+		errmsg.LogError(0, iRet, "problem on disk queue '%s': "
+				"error dequeueing element - we ignore this for now, but it "
+				"may cause future trouble.",
+				obj.GetName((obj_t*) pThis));
+#endif
 	}
 
 	RETiRet;
@@ -2412,10 +2446,13 @@ finalize_it:
  * and 0 otherwise.
  * rgerhards, 2008-01-10
  */
-static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
+static rsRetVal
+qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 {
 	DEFiRet;
+	char *tmpQIFName = NULL;
 	strm_t *psQIF = NULL; /* Queue Info File */
+	char errStr[1024];
 
 	ASSERT(pThis != NULL);
 
@@ -2444,11 +2481,15 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
+	const int lentmpQIFName = asprintf((char **)&tmpQIFName, "%s.tmp", pThis->pszQIFNam);
+	if(tmpQIFName == NULL)
+		tmpQIFName = (char*)pThis->pszQIFNam;
+
 	CHKiRet(strm.Construct(&psQIF));
 	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
+	CHKiRet(strm.SetFName(psQIF, (uchar*) tmpQIFName, lentmpQIFName));
 	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, write the property bag for ourselfs
@@ -2467,6 +2508,17 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 		CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
 	if(pThis->tVars.disk.pReadDel != NULL)
 		CHKiRet(strm.Serialize(pThis->tVars.disk.pReadDel, psQIF));
+
+	strm.Destruct(&psQIF);
+	if(tmpQIFName != (char*)pThis->pszQIFNam) { /* pointer, not string comparison! */
+		if(rename(tmpQIFName, (char*)pThis->pszQIFNam) != 0) {
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			DBGOPRINT((obj_t*) pThis,
+				"FATAL error: renaming temporary .qi file failed: %s\n",
+				errStr);
+			ABORT_FINALIZE(RS_RET_RENAME_TMP_QI_ERROR);
+		}
+	}
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
@@ -2482,6 +2534,8 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	pThis->bNeedDelQIF = 1;
 
 finalize_it:
+	if(tmpQIFName != (char*)pThis->pszQIFNam) /* pointer, not string comparison! */
+		free(tmpQIFName);
 	if(psQIF != NULL)
 		strm.Destruct(&psQIF);
 
@@ -2559,6 +2613,7 @@ DoSaveOnShutdown(qqueue_t *pThis)
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
+	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
 	if(pThis->bQueueStarted) {
 		/* shut down all workers
 		 * We do not need to shutdown workers when we are in enqueue-only mode or we are a
@@ -2823,6 +2878,19 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pMsg));
 	STATSCOUNTER_SETMAX_NOMUT(pThis->ctrMaxqsize, pThis->iQueueSize);
+
+	/* check if we had a file rollover and need to persist
+	 * the .qi file for robustness reasons.
+	 * Note: the n=2 write is required for closing the old file and
+	 * the n=1 write is required after opening and writing to the new
+	 * file.
+	 */
+	if(pThis->tVars.disk.nForcePersist > 0) {
+		DBGOPRINT((obj_t*) pThis, ".qi file write required for robustness reasons (n=%d)\n",
+			pThis->tVars.disk.nForcePersist);
+		pThis->tVars.disk.nForcePersist--;
+		qqueuePersist(pThis, QUEUE_CHECKPOINT);
+	}
 
 finalize_it:
 	RETiRet;

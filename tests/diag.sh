@@ -313,6 +313,10 @@ case $1 in
 		kill `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
+   'kill-immediate') # kill rsyslog unconditionally
+		kill -9 `cat rsyslog.pid`
+		# note: we do not wait for the actual termination!
+		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
 		eval ./tcpflood "$@" $TCPFLOOD_EXTRA_OPTS
