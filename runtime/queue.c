@@ -957,7 +957,7 @@ static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
 		DBGOPRINT((obj_t*) pThis, "current to-be-written-to file has changed from "
 			"number %d to number %d - requiring a .qi write for robustness\n",
 			oldfile, newfile);
-		pThis->tVars.disk.nForcePersist = 2;
+		pThis->tVars.disk.nForcePersist = 1;
 	}
 
 finalize_it:
@@ -1758,7 +1758,14 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 
 	if(iRet != RS_RET_OK && iRet != RS_RET_DISCARDMSG) {
 		DBGOPRINT((obj_t*) pThis, "error %d dequeueing element - ignoring, but strange things "
-			  "may happen\n", iRet);
+					  "may happen\n", iRet);
+#if 0	// This does not work when we run on the main queue
+	// TODO: find better work-around
+		errmsg.LogError(0, iRet, "problem on disk queue '%s': "
+				"error dequeueing element - we ignore this for now, but it "
+				"may cause future trouble.",
+				obj.GetName((obj_t*) pThis));
+#endif
 	}
 
 	RETiRet;
@@ -2598,14 +2605,6 @@ DoSaveOnShutdown(qqueue_t *pThis)
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(qqueue)
 	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
-	if(pThis->qType == QUEUETYPE_DISK) {
-		DBGOPRINT((obj_t*) pThis, "doing a safety persist right on shutdown\n");
-		qqueuePersist(pThis, QUEUE_CHECKPOINT);
-	}
-	if(pThis->pqDA != NULL) {
-		DBGOPRINT((obj_t*) pThis->pqDA, "doing a safety persist right on shutdown\n");
-		qqueuePersist(pThis->pqDA, QUEUE_CHECKPOINT);
-	}
 	if(pThis->bQueueStarted) {
 		/* shut down all workers
 		 * We do not need to shutdown workers when we are in enqueue-only mode or we are a
