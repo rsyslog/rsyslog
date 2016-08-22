@@ -218,5 +218,6 @@ strmGetCurrFileNum(strm_t *pStrm) {
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, int fileNum, off64_t offs, off64_t *bytesDel);
 rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF);
+void strmDebugOutBuf(const strm_t *const pThis);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

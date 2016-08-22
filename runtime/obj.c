@@ -668,6 +668,7 @@ finalize_it:
 		strm.GetCurrOffset(pStrm, &offs);
 		dbgprintf("error %d deserializing property name, offset %lld, step %d\n",
 			  iRet, offs, step);
+		strmDebugOutBuf(pStrm);
 		if(step >= 1) {
 			dbgprintf("error property name: '%s'\n", rsCStrGetSzStrNoNULL(pProp->pcsName));
 		}
