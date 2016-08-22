@@ -20,7 +20,11 @@
 # Copyright (C) 2016 by Rainer Gerhards
 # Released under ASL 2.0
 echo ===============================================================================
-# uncomment for debugging support:
+
+#uncomment the following if you want a log for step 1 of this test
+#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+#export RSYSLOG_DEBUGLOG="log"
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -49,6 +53,7 @@ ls test-spool
 
 
 . $srcdir/diag.sh kill-immediate   # do not give it sufficient time to shutdown
+. $srcdir/diag.sh wait-shutdown
 echo spool files after kill:
 ls test-spool
 
@@ -57,14 +62,19 @@ if [ ! -f test-spool/mainq.qi ]; then
     . $srcdir/diag.sh error-exit 1
 fi
 
-exit
+echo .qi file contents:
+cat test-spool/mainq.qi
 
 
-# We leave this inside the test -- maybe we can later improve our success predicate
-# Note that the problem is that we *do have* some data loss because we unconditionally
-# kill rsyslog, so we really don't know the number we need to check after restart.
-# This means the test is probably as good as possible
-./msleep 1000
+# We now restart rsyslog and make sure it'll clean up the disk queue.
+# So far, we cannot reliably detect if the data is properly shuffled
+# over, but that's a moot point anyhow because we expect to loss
+# (large) amounts of the data. In later stages, we however may verify
+
+#uncomment the following if you want a log for step 2 of this test
+#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+#export RSYSLOG_DEBUGLOG="log2"
+
 echo RSYSLOG RESTART
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
@@ -80,11 +90,29 @@ main_queue(queue.filename="mainq" queue.saveonshutdown="on"
 $template outfmt,"%msg:F,58:2%\n"
 $template dynfile,"rsyslog.out.log" # trick to use relative path names!
 :msg, contains, "msgnum:" ?dynfile;outfmt
-*.* ./all.log
 '
 . $srcdir/diag.sh startup
+#. $srcdir/diag.sh wait-queueempty
+#echo existing queue empty, injecting new data
+#$srcdir/diag.sh injectmsg  1000000 1000
 . $srcdir/diag.sh shutdown-when-empty 
 . $srcdir/diag.sh wait-shutdown
-. $srcdir/diag.sh seq-check 0 19999
+
+# now the spool directory must be empty
+spoolFiles=`ls test-spool/`
+
+if [[ ! -z $spoolFiles ]]; then
+    echo "FAIL: spool directory is not empty!"
+    ls -l test-spool
+    . $srcdir/diag.sh error-exit 1
+fi
+
+# check if we got at least some data
+if [ ! -f rsyslog.out.log ]; then
+    echo "FAIL: no output data gathered (no rsyslog.out.log)!"
+    . $srcdir/diag.sh error-exit 1
+fi
+
+#. $srcdir/diag.sh seq-check 0 19999 # so far this does not look doable (see comment above)
 
 . $srcdir/diag.sh exit
