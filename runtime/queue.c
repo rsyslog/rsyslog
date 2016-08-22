@@ -1500,7 +1500,7 @@ static inline rsRetVal
 DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 {
 	int i;
-	off64_t bytesDel;
+	off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
