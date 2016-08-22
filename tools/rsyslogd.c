@@ -25,9 +25,12 @@
 #include "rsyslog.h"
 
 #include <signal.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
+#else
+#  include <syslog.h>
 #endif
 #ifdef OS_SOLARIS
 #	include <errno.h>
@@ -786,10 +789,12 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));
-#ifdef HAVE_LIBLOGGING_STDLOG
 	} else {
+#ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_log(stdlog_hdl, pri2sev(pri), "%s",
 			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+#else
+		syslog(pri, "%s", msg);
 #endif
 	}
 
@@ -1647,6 +1652,9 @@ main(int argc, char **argv)
 {
 	/* use faster hash function inside json lib */
 	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
+	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
+	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");

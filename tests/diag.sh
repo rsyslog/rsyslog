@@ -93,6 +93,7 @@ case $1 in
 		if [ -e IN_AUTO_DEBUG ]; then
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
+		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		;;
    'exit')	# cleanup
 		# detect any left-over hanging instance
