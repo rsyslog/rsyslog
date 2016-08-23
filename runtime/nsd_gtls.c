@@ -75,13 +75,18 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 /* a macro to check GnuTLS calls against unexpected errors */
-#define CHKgnutls(x) \
-	if((gnuRet = (x)) != 0) { \
+#define CHKgnutls(x) { \
+	gnuRet = (x); \
+	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the file  does not exist"); \
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+	} else if(gnuRet != 0) { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
-	}
+	} \
+}
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
@@ -605,7 +610,12 @@ gtlsGlblInit(void)
 	}
 	dbgprintf("GTLS CA file: '%s'\n", cafile);
 	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
-	if(gnuRet < 0) {
+	if(gnuRet == GNUTLS_E_FILE_ERROR) {
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR,
+			"error reading certificate file '%s' - a common cause is that the "
+			"file  does not exist", cafile);
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	} else if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
