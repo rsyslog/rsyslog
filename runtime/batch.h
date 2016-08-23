@@ -27,6 +27,7 @@
 #define BATCH_H_INCLUDED
 
 #include <string.h>
+#include <stdlib.h>
 #include "msg.h"
 
 /* enum for batch states. Actually, we violate a layer here, in that we assume that a batch is used
