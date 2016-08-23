@@ -1,4 +1,32 @@
 ------------------------------------------------------------------------------
+Version 8.21.0 [v8-stable] 2016-08-23
+- CHANGE OF BEHAVIOUR:
+  by default, internal messages are no longer logged via the internal
+  bridge to rsyslog but via the syslog() API call [either directly or
+  via liblogging). For the typical single-rsyslogd-instance installation this
+  is mostly unnoticable (except for some additional latency). If multiple
+  instances are run, only the "main" (the one processing system log messages)
+  will see all messages. To return to the old behaviour, do either of those
+  two:
+  1) add in rsyslog.conf:
+     global(processInternalMessages="on")
+  2) export the environment variable RSYSLOG_DFLT_LOG_INTERNAL=1 
+     This will set a new default - the value can still be overwritten via
+     rsyslog.conf (method 1). Note that the environment variable must be
+     set in your **startup script**.
+  For more information, please visit
+  http://www.rsyslog.com/rsyslog-error-reporting-improved/
+- slightly improved TLS syslog error messages
+- queue subsystem: improved robustness
+  The .qi file is now persisted whenever an existing queue file is fully
+  written and a new file is begun. This helps with rsyslog aborts, including
+  the common case where the OS issues kill -9 because of insufficiently
+  configured termination timout (this is an OS config error, but a frequent
+  one). Also, a situation where an orphaned empty file could be left in the
+  queue work directory has been fixed. We expect that this change causes
+  fewer permanent queue failures.
+- bugfix: build failed on some platforms due to missing include files
+------------------------------------------------------------------------------
 Version 8.20.0 [v8-stable] 2016-07-12
 - NEW BUILD REQUIREMENT: librelp, was 1.2.5, now is 1.2.12
   This is only needed if --enable-relp is used. The new version is needed

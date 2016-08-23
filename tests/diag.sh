@@ -93,6 +93,7 @@ case $1 in
 		if [ -e IN_AUTO_DEBUG ]; then
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
+		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		;;
    'exit')	# cleanup
 		# detect any left-over hanging instance
@@ -311,6 +312,10 @@ case $1 in
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
 		cp rsyslog$2.pid rsyslog$2.pid.save
 		kill `cat rsyslog.pid`
+		# note: we do not wait for the actual termination!
+		;;
+   'kill-immediate') # kill rsyslog unconditionally
+		kill -9 `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood

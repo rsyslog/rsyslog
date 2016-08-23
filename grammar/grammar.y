@@ -43,7 +43,7 @@ extern int yylineno;
 
 /* keep compile rule clean of errors */
 extern int yylex(void);
-extern int yyerror(char*);
+extern int yyerror(const char*);
 %}
 
 %union {

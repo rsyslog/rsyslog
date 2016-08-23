@@ -438,8 +438,8 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
 	int secfracPrecision;
 	char tzstring[16];
 	char OffsetMode = '\0';	/* UTC offset: \0 -> indicate no update */
-	char OffsetHour;	/* UTC offset in hours */
-	int OffsetMinute;	/* UTC offset in minutes */
+	char OffsetHour = 0;	/* UTC offset in hours */
+	int OffsetMinute = 0;	/* UTC offset in minutes */
 	/* end variables to temporarily hold time information while we parse */
 	int lenStr;
 	uchar *pszTS;

@@ -73,9 +73,9 @@ stdlog_channel_t stdlog_hdl = NULL;	/* handle to be used for stdlog */
 #endif
 
 static struct cnfobj *mainqCnfObj = NULL;/* main queue object, to be used later in startup sequence */
-int bProcessInternalMessages = 1;	/* Should rsyslog itself process internal messages?
+int bProcessInternalMessages = 0;	/* Should rsyslog itself process internal messages?
 					 * 1 - yes
-					 * 0 - send them to libstdlog (e.g. to push to journal)
+					 * 0 - send them to libstdlog (e.g. to push to journal) or syslog()
 					 */
 static uchar *pszWorkDir = NULL;
 #ifdef HAVE_LIBLOGGING_STDLOG
@@ -968,21 +968,12 @@ glblProcessCnf(struct cnfobj *o)
 			continue;
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
-#ifndef HAVE_LIBLOGGING_STDLOG
-			if(bProcessInternalMessages != 1) {
-				bProcessInternalMessages = 1;
-				errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
-					"compiled with liblogging-stdlog support. "
-					"The 'ProcessInternalMessages' parameter "
-					"is ignored.\n");
-			}
-#endif
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
 #ifndef HAVE_LIBLOGGING_STDLOG
 			errmsg.LogError(0, RS_RET_ERR, "rsyslog wasn't "
 				"compiled with liblogging-stdlog support. "
 				"The 'stdlog.channelspec' parameter "
-				"is ignored.\n");
+				"is ignored. Note: the syslog API is used instead.\n");
 #else
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);

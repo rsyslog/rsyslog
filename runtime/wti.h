@@ -23,6 +23,7 @@
 #define WTI_H_INCLUDED
 
 #include <pthread.h>
+#include <stdlib.h>
 #include "wtp.h"
 #include "obj.h"
 #include "batch.h"

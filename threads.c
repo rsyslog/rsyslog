@@ -5,7 +5,7 @@
  *
  * File begun on 2007-12-14 by RGerhards
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
-#if HAVE_SYS_PRCTL_H
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -108,8 +108,8 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	DEFiRet;
 	assert(pThis != NULL);
 
-	DBGPRINTF("request term via SIGTTIN for input thread '%s' 0x%x\n",
-		  pThis->name, (unsigned) pThis->thrdID);
+	DBGPRINTF("request term via SIGTTIN for input thread '%s' %p\n",
+		  pThis->name, (void*) pThis->thrdID);
 
 	pThis->bShallStop = RSTRUE;
 	timeoutComp(&tTimeout, 1000); /* a fixed 1sec timeout */
@@ -135,11 +135,11 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 	d_pthread_mutex_unlock(&pThis->mutThrd);
 
 	if(was_active) {
-		DBGPRINTF("non-cancel input thread termination FAILED for thread %s 0x%x\n",
-			  pThis->name, (unsigned) pThis->thrdID);
+		DBGPRINTF("non-cancel input thread termination FAILED for thread %s %p\n",
+			  pThis->name, (void*) pThis->thrdID);
 	} else {
-		DBGPRINTF("non-cancel input thread termination succeeded for thread %s 0x%x\n",
-			  pThis->name, (unsigned) pThis->thrdID);
+		DBGPRINTF("non-cancel input thread termination succeeded for thread %s %p\n",
+			  pThis->name, (void*) pThis->thrdID);
 	}
 
 	RETiRet;
@@ -154,7 +154,7 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	assert(pThis != NULL);
 
 	if(pThis->bNeedsCancel) {
-		DBGPRINTF("request term via canceling for input thread 0x%x\n", (unsigned) pThis->thrdID);
+		DBGPRINTF("request term via canceling for input thread %p\n", (void*) pThis->thrdID);
 		pthread_cancel(pThis->thrdID);
 	} else {
 		thrdTerminateNonCancel(pThis);
@@ -185,14 +185,14 @@ static void* thrdStarter(void *arg)
 {
 	DEFiRet;
 	thrdInfo_t *pThis = (thrdInfo_t*) arg;
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar thrdName[32] = "in:";
 #	endif
 
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
 
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	ustrncpy(thrdName+3, pThis->name, 20);
 	dbgOutputTID((char*)thrdName);
 

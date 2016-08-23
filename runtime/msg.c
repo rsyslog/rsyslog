@@ -36,13 +36,13 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/socket.h>
-#if HAVE_SYSINFO_UPTIME
+#ifdef HAVE_SYSINFO_UPTIME
 #include <sys/sysinfo.h>
 #endif
 #include <netdb.h>
 #include <libestr.h>
 #include <json.h>
-#if HAVE_MALLOC_H
+#ifdef HAVE_MALLOC_H
 #  include <malloc.h>
 #endif
 #ifdef USE_LIBUUID
@@ -926,7 +926,7 @@ static inline void freeHOSTNAME(msg_t *pThis)
 
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
-#	if HAVE_MALLOC_TRIM
+#	ifdef HAVE_MALLOC_TRIM
 	int currCnt;
 #	endif
 CODESTARTobjDestruct(msg)
@@ -987,7 +987,7 @@ CODESTARTobjDestruct(msg)
 		 * 100,000 messages (which is an approximation, as we do not work with atomic
 		 * operations on the counter. --- rgerhards, 2009-06-22.
 		 */
-#		if HAVE_MALLOC_TRIM
+#		ifdef HAVE_MALLOC_TRIM
 		{	/* standard C requires a new block for a new variable definition!
 			 * To simplify matters, we use modulo arithmetic and live with the fact
 			 * that we trim too often when the counter wraps.
@@ -5000,7 +5000,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	/* some more inits */
-#	if HAVE_MALLOC_TRIM
+#	ifdef HAVE_MALLOC_TRIM
 	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);
 #	endif
 ENDObjClassInit(msg)

@@ -166,6 +166,7 @@ struct queue_s {
 			strm_t *pWrite;   /* current file to be written */
 			strm_t *pReadDeq; /* current file for dequeueing */
 			strm_t *pReadDel; /* current file for deleting */
+			int nForcePersist;/* force persist of .qi file the next "n" times */
 		} disk;
 	} tVars;
 	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */

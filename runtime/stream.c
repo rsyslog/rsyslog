@@ -57,8 +57,9 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "module-template.h"
+#include "errmsg.h"
 #include "cryprov.h"
-#if HAVE_SYS_PRCTL_H
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -72,6 +73,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 DEFobjCurrIf(zlibw)
 
 /* forward definitions */
@@ -86,6 +88,17 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
+
+/* output (current) file name for debug log purposes. Falls back to various
+ * levels of impreciseness if more precise name is not known.
+ */
+static const char *
+getFileDebugName(const strm_t *const pThis)
+{
+	  return (pThis->pszCurrFName == NULL) ?
+		  ((pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName)
+		: (const char*) pThis->pszCurrFName;
+}
 
 /* Try to resolve a size limit situation. This is used to support custom-file size handlers
  * for omfile. It first runs the command, and then checks if we are still above the size
@@ -323,6 +336,7 @@ finalize_it:
 static rsRetVal strmOpenFile(strm_t *pThis)
 {
 	DEFiRet;
+	off_t offset;
 
 	ASSERT(pThis != NULL);
 
@@ -338,11 +352,22 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	CHKiRet(doPhysOpen(pThis));
 
 	pThis->iCurrOffs = 0;
+	CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
-		/* we need to obtain the current offset */
-		off_t offset;
-		CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 		pThis->iCurrOffs = offset;
+	} else if(pThis->tOperationsMode == STREAMMODE_WRITE) {
+		if(offset != 0) {
+			// TODO: check the exact condition under which this occurs. It
+			// looks OK, seems like the queue code uses a side-effect that makes
+			// this a valid sequence!
+			/*errmsg.LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
+				"already contains %zd bytes\n",
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+			*/
+			DBGPRINTF("queue '%s', file '%s' opened for non-append write, but "
+				"already contains %zd bytes\n",
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+		}
 	}
 
 	DBGOPRINT((obj_t*) pThis, "opened file '%s' for %s as %d\n", pThis->pszCurrFName,
@@ -396,8 +421,8 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing\n", pThis->fd,
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing, bDeleteOnClose %d\n", pThis->fd,
+		getFileDebugName(pThis), pThis->bDeleteOnClose);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlushInternal(pThis, 0);
@@ -623,6 +648,18 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* debug output of current buffer */
+void
+strmDebugOutBuf(const strm_t *const pThis)
+{
+	int strtIdx = pThis->iBufPtr - 50;
+	if(strtIdx < 0)
+		strtIdx = 0;
+	DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd, buf '%.*s'\n",
+		pThis->iBufPtr, pThis->iBufPtrMax, (int) pThis->iBufPtrMax - strtIdx,
+		pThis->pIOBuf+strtIdx);
+}
 
 /* logically "read" a character from a file. What actually happens is that
  * data is taken from the buffer. Only if the buffer is full, data is read 
@@ -954,7 +991,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 	}
 
 	DBGPRINTF("file stream %s params: flush interval %d, async write %d\n",
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  getFileDebugName(pThis),
 		  pThis->iFlushInterval, pThis->bAsyncWrite);
 
 	/* if we work asynchronously, we need a couple of synchronization objects */
@@ -1176,8 +1213,7 @@ doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlus
 	DEFiRet;
 
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doWriteInternal: bFlush %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
-		bFlush);
+		pThis->fd, getFileDebugName(pThis), bFlush);
 
 	if(pThis->iZipLevel) {
 		CHKiRet(doZipWrite(pThis, pBuf, lenBuf, bFlush));
@@ -1207,7 +1243,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at begin: "
 		"iCnt %d, iEnq %d, bFlushZip %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->fd, getFileDebugName(pThis),
 		pThis->iCnt, pThis->iEnq, bFlushZip);
 	/* the -1 below is important, because we need one buffer for the main thread! */
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS - 1)
@@ -1225,7 +1261,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 	}
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at exit: "
 		"iCnt %d, iEnq %d, bFlushZip %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->fd, getFileDebugName(pThis),
 		pThis->iCnt, pThis->iEnq, bFlushZip);
 
 	RETiRet;
@@ -1283,7 +1319,7 @@ asyncWriterThread(void *pPtr)
 	BEGINfunc
 	ustrncpy(thrdName+3, pThis->pszFName, sizeof(thrdName)-4);
 	dbgOutputTID((char*)thrdName);
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	if(prctl(PR_SET_NAME, (char*)thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", "stream writer");
 	}
@@ -1294,7 +1330,7 @@ asyncWriterThread(void *pPtr)
 		while(pThis->iCnt == 0) {
 			DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread new iteration, "
 				  "iCnt %d, bTimedOut %d, iFlushInterval %d\n", pThis->fd,
-				  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+				  getFileDebugName(pThis),
 				  pThis->iCnt, bTimedOut, pThis->iFlushInterval);
 			if(pThis->bStopWriter) {
 				pthread_cond_broadcast(&pThis->isEmpty);
@@ -1314,8 +1350,7 @@ asyncWriterThread(void *pPtr)
 				timeoutComp(&t, pThis->iFlushInterval * 1000); /* 1000 *millisconds* */
 				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
 					DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread timed out\n",
-						  pThis->fd,
-						  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
+						  pThis->fd, getFileDebugName(pThis));
 					bTimedOut = 1; /* simulate in any case */
 					if(err != ETIMEDOUT) {
 						char errStr[1024];
@@ -1330,8 +1365,7 @@ asyncWriterThread(void *pPtr)
 		}
 
 		DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread awoken, "
-			  "iCnt %d, bTimedOut %d\n", pThis->fd,
-			  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+			  "iCnt %d, bTimedOut %d\n", pThis->fd, getFileDebugName(pThis),
 			  pThis->iCnt, bTimedOut);
 		bTimedOut = 0; /* we may have timed out, but there *is* work to do... */
 
@@ -1368,7 +1402,7 @@ finalize_it:
  * have it). -- rgerhards, 2009-06-08
  */
 #undef SYNCCALL
-#if HAVE_FDATASYNC
+#ifdef HAVE_FDATASYNC
 #	define SYNCCALL(x) fdatasync(x)
 #else
 #	define SYNCCALL(x) fsync(x)
@@ -1558,7 +1592,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 
 	ASSERT(pThis != NULL);
 	DBGOPRINT((obj_t*) pThis, "strmFlushinternal: file %d(%s) flush, buflen %ld%s\n", pThis->fd,
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  getFileDebugName(pThis),
 		  (long) pThis->iBufPtr, (pThis->iBufPtr == 0) ? " (no need to flush)" : "");
 
 	if(pThis->tOperationsMode != STREAMMODE_READ && pThis->iBufPtr > 0) {
@@ -2213,6 +2247,7 @@ ENDobjQueryInterface(strm)
  */
 BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
