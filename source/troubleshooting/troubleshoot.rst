@@ -84,6 +84,115 @@ If you would like to check just an include file, instead use:
  $ /path/to/rsyslogd -f/path/to/config-file -N3
 
 
+Checking Connection Problems
+----------------------------
+
+If a client cannot connect via the network to the rsyslog server, you
+can do a connection check via netcat. That will verify if the sender
+is able to deliver to an application running on the receiver. Netcat
+is a very simple receiver, so we can be sure that no netcat problem
+will interfere with this test.
+
+With netcat, you can test UDP and TCP syslog connections, but not TLS.
+
+To do this test, you need to
+
+* on the client
+
+  - stop the syslog sender process, if possible. If the sender is 
+    rsyslog, you can use the same procedure described below for the
+    server.
+
+* on the rsyslog server
+
+  - stop and/or disable rsyslog
+    On systemd systems (newer distro versions), systemd might
+    automatically restart rsyslog when data is written to the system
+    log socket. To be sure, we recommend to disable the service on
+    those systems. This sequence should work:
+    $ systemctl disable rsyslog.service
+    $ systemctl stop rsyslog.service
+
+  - open a terminal session, and start a netcat listener **on the same
+    listening port** that you have configured inside rsyslog. Note that
+    if you use a privileged port, you need to execute nc as root.
+    We assume port 13515 is used for rsyslog, so do this:
+    $ nc -k -l <ip-of-server> 13515  # [FOR TCP] OR sudo nc ...
+    $ nc -u -l <ip-of-server> 13515  # [FOR UDP] OR sudo nc ...
+
+* on the syslog client
+
+  - send a test message via netcat:
+    $ echo "test message 1" | nc <ip-of-server> 13515 # [FOR TCP]
+    $ echo "test message 1" | nc <ip-of-server> 13515 # [FOR UDP]
+
+* on the server
+
+  - check if you received the test message. Note that you might also
+    have received additional messages if the original sender process
+    was not stopped. If you see garbagge, most probably some sender
+    tries to send via TLS.
+  - you can stop nc by <ctl>-c
+
+If you did not see the test message arrive at the centeral server,
+the problem is most probably rooted in the network configuration
+or other parts of the system configuration. Things to check are
+- firewall settings
+
+- for UDP: does the sender have a route back to the original sender?
+  This is often required by modern systems to prevent spoofing; if the
+  sender cannot be reached, UDP messages are discarded AFTER they have
+  been received by the OS (an app like netcat or rsyslog will never
+  see them)
+
+- if that doesn't help, you a network monitor (or tcpdump, Wireshark, ...)
+  to verify that the network packet at least reaches the system.
+
+If you saw the test message arrive at the central server, the problem
+most probably is related to the rsyslog configuration or the system
+configuration that affects rsyslog (SELinux, AppArmor, ...).
+
+A good next test is to run rsyslog interactively, just like you did
+with netcat:
+
+* on the server
+  - make sure the rsyslog service is still stopped
+
+  - run
+    $ sudo /usr/sbin/rsyslogd -n
+
+* on the client
+
+  - send a test message
+
+* on the server
+  - check if the message arrived
+
+  - terminate rsyslog by pressing <ctl>-c
+
+If the test message arrived, you definitely have a problem with the
+system configuration, most probably in SELinux, AppArmor or a similar
+subsystem. Note that your interactive security context is quite different
+from the rsyslog system service context.
+
+If the test message did not arrive, it is time to generate a debug
+log to see exactly what rsyslog does. A full description is in this file
+a bit down below, but in essence you need to do
+
+* on the server
+  - make sure the rsyslog service is still stopped
+  - run
+
+    $ sudo /usr/sbin/rsyslogd -nd 2> rsyslog-debug.log
+
+* on the client
+  - send a test message
+
+* on the server
+  - stop rsyslog by pressing <ctl>-
+  - review debug log
+   
+
 Asking for Help
 ---------------
 
