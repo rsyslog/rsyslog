@@ -209,10 +209,7 @@ ENDinterface(strm)
 /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
 /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
 
-static inline int
-strmGetCurrFileNum(strm_t *pStrm) {
-	return pStrm->iCurrFNum;
-}
+#define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);

@@ -12,7 +12,7 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -77,6 +77,9 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
+#ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
+extern size_t SALEN(struct sockaddr *sa);
+#endif
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
  * list roots, one for UDP and one for TCP.

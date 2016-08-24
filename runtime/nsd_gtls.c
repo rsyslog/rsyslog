@@ -70,6 +70,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
+
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 
 static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */

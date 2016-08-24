@@ -1,6 +1,6 @@
 /* rsyslog rainerscript definitions
  *
- * Copyright 2011-2014 Rainer Gerhards
+ * Copyright 2011-2016 Rainer Gerhards
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,52 +49,7 @@ enum cnfobjType {
 	CNFOBJ_INVALID = 0
 };
 
-static inline const char*
-cnfobjType2str(enum cnfobjType ot)
-{
-	switch(ot) {
-	case CNFOBJ_ACTION:
-		return "action";
-		break;
-	case CNFOBJ_RULESET:
-		return "ruleset";
-		break;
-	case CNFOBJ_GLOBAL:
-		return "global";
-		break;
-	case CNFOBJ_INPUT:
-		return "input";
-		break;
-	case CNFOBJ_MODULE:
-		return "module";
-		break;
-	case CNFOBJ_TPL:
-		return "template";
-		break;
-	case CNFOBJ_PROPERTY:
-		return "property";
-		break;
-	case CNFOBJ_CONSTANT:
-		return "constant";
-		break;
-	case CNFOBJ_MAINQ:
-		return "main_queue";
-	case CNFOBJ_LOOKUP_TABLE:
-		return "lookup_table";
-	case CNFOBJ_PARSER:
-		return "parser";
-		break;
-	case CNFOBJ_TIMEZONE:
-		return "timezone";
-		break;
-	case CNFOBJ_DYN_STATS:
-		return "dyn_stats";
-		break;
-	default:return "error: invalid cnfobjType";
-	}
-}
-
-enum cnfactType { CNFACT_V2, CNFACT_LEGACY };
+const char* cnfobjType2str(enum cnfobjType ot);
 
 /* a variant type, for example used for expression evaluation
  * 2011-07-15/rger: note that there exists a "legacy" object var_t,
@@ -164,22 +119,7 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
-static inline const char*
-cnfFiltType2str(enum cnfFiltType filttype)
-{
-	switch(filttype) {
-	case CNFFILT_NONE:
-		return("filter:none");
-	case CNFFILT_PRI:
-		return("filter:pri");
-	case CNFFILT_PROP:
-		return("filter:prop");
-	case CNFFILT_SCRIPT:
-		return("filter:script");
-	default:
-		return("error:invalid_filter_type");	/* should never be reached */
-	}
-}
+const char* cnfFiltType2str(const enum cnfFiltType filttype);
 
 
 struct cnfstmt {

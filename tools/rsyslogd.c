@@ -182,7 +182,9 @@ writePidFile(void)
 	DEFiRet;
 	
 	const char *tmpPidFile;
-	asprintf((char **)&tmpPidFile, "%s.tmp", PidFile);
+	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);

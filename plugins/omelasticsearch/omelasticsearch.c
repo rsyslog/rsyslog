@@ -263,7 +263,7 @@ setBaseURL(instanceData *pData, es_str_t **url)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 checkConn(wrkrInstanceData_t *pWrkrData)
 {
 	es_str_t *url;
@@ -517,7 +517,7 @@ finalize_it:
 /*
  * Dumps entire bulk request and response in error log
  */
-static inline rsRetVal
+static rsRetVal
 getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,char **rendered)
 {
 	DEFiRet;
@@ -548,7 +548,7 @@ getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqm
  * Sets bulkRequestNextSectionStart pointer to next sections start in the buffer pointed by bulkRequest.
  * Sections are marked by { and }
  */
-static inline rsRetVal
+static rsRetVal
 getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 {
 		DEFiRet;
@@ -571,7 +571,7 @@ getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
  * Sets the new string in singleRequest for one request in bulkRequest
  * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
  */
-static inline rsRetVal
+static rsRetVal
 getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
 {
 	DEFiRet;
@@ -613,7 +613,7 @@ typedef struct exeContext{
 /*
  * get content to be written in error file using context passed
  */
-static inline rsRetVal
+static rsRetVal
 parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx)
 {
 	DEFiRet;
@@ -712,7 +712,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 /*
  * Dumps only failed requests of bulk insert
  */
-static inline rsRetVal
+static rsRetVal
 getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
 {
 	DEFiRet;
@@ -783,7 +783,7 @@ getDataInterleaved(context *ctx,
  * Dumps only failed requests of bulk insert interleaved with request and response
  */
 
-static inline rsRetVal
+static rsRetVal
 getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *response)
 {
 	DEFiRet;
@@ -800,7 +800,7 @@ getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *resp
 /*
  * get erroronly context
  */
-static inline rsRetVal
+static rsRetVal
 initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
@@ -831,7 +831,7 @@ initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 /*
  * get interleaved context
  */
-static inline rsRetVal
+static rsRetVal
 initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
@@ -853,7 +853,7 @@ initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 }
 
 /*get interleaved context*/
-static inline rsRetVal
+static rsRetVal
 initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
@@ -879,7 +879,7 @@ initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * Note: we open the file but never close it before exit. If it
  * needs to be closed, HUP must be sent.
  */
-static inline rsRetVal
+static rsRetVal
 writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
 {
 	char *rendered = NULL;
@@ -982,7 +982,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
 {
 	DEFiRet;
@@ -1000,7 +1000,7 @@ checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
 	cJSON *root;
@@ -1182,7 +1182,7 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 	return RS_RET_OK;
 }
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;

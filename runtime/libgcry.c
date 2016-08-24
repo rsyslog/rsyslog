@@ -50,12 +50,51 @@
 
 #include "rsyslog.h"
 #include "srUtils.h"
+#include "debug.h"
 #include "libgcry.h"
 
 #define READBUF_SIZE 4096	/* size of the read buffer */
 
 static rsRetVal rsgcryBlkBegin(gcryfile gf);
 
+int
+rsgcryAlgoname2Algo(char *const __restrict__ algoname)
+{
+	if(!strcmp((char*)algoname, "3DES")) return GCRY_CIPHER_3DES;
+	if(!strcmp((char*)algoname, "CAST5")) return GCRY_CIPHER_CAST5;
+	if(!strcmp((char*)algoname, "BLOWFISH")) return GCRY_CIPHER_BLOWFISH;
+	if(!strcmp((char*)algoname, "AES128")) return GCRY_CIPHER_AES128;
+	if(!strcmp((char*)algoname, "AES192")) return GCRY_CIPHER_AES192;
+	if(!strcmp((char*)algoname, "AES256")) return GCRY_CIPHER_AES256;
+	if(!strcmp((char*)algoname, "TWOFISH")) return GCRY_CIPHER_TWOFISH;
+	if(!strcmp((char*)algoname, "TWOFISH128")) return GCRY_CIPHER_TWOFISH128;
+	if(!strcmp((char*)algoname, "ARCFOUR")) return GCRY_CIPHER_ARCFOUR;
+	if(!strcmp((char*)algoname, "DES")) return GCRY_CIPHER_DES;
+	if(!strcmp((char*)algoname, "SERPENT128")) return GCRY_CIPHER_SERPENT128;
+	if(!strcmp((char*)algoname, "SERPENT192")) return GCRY_CIPHER_SERPENT192;
+	if(!strcmp((char*)algoname, "SERPENT256")) return GCRY_CIPHER_SERPENT256;
+	if(!strcmp((char*)algoname, "RFC2268_40")) return GCRY_CIPHER_RFC2268_40;
+	if(!strcmp((char*)algoname, "SEED")) return GCRY_CIPHER_SEED;
+	if(!strcmp((char*)algoname, "CAMELLIA128")) return GCRY_CIPHER_CAMELLIA128;
+	if(!strcmp((char*)algoname, "CAMELLIA192")) return GCRY_CIPHER_CAMELLIA192;
+	if(!strcmp((char*)algoname, "CAMELLIA256")) return GCRY_CIPHER_CAMELLIA256;
+	return GCRY_CIPHER_NONE;
+}
+
+int
+rsgcryModename2Mode(char *const __restrict__ modename)
+{
+	if(!strcmp((char*)modename, "ECB")) return GCRY_CIPHER_MODE_ECB;
+	if(!strcmp((char*)modename, "CFB")) return GCRY_CIPHER_MODE_CFB;
+	if(!strcmp((char*)modename, "CBC")) return GCRY_CIPHER_MODE_CBC;
+	if(!strcmp((char*)modename, "STREAM")) return GCRY_CIPHER_MODE_STREAM;
+	if(!strcmp((char*)modename, "OFB")) return GCRY_CIPHER_MODE_OFB;
+	if(!strcmp((char*)modename, "CTR")) return GCRY_CIPHER_MODE_CTR;
+#	ifdef GCRY_CIPHER_MODE_AESWRAP
+	if(!strcmp((char*)modename, "AESWRAP")) return GCRY_CIPHER_MODE_AESWRAP;
+#	endif
+	return GCRY_CIPHER_MODE_NONE;
+}
 static rsRetVal
 eiWriteRec(gcryfile gf, const char *recHdr, size_t lenRecHdr, const char *buf, size_t lenBuf)
 {

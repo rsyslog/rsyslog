@@ -199,6 +199,29 @@ static struct cnfparamblk pblk =
 	  cnfparamdescr
 	};
 
+
+/* primarily a helper for debug purposes, get human-readble name of state */
+/* currently not needed, but may be useful in the future!
+static const char *
+batchState2String(const batch_state_t state)
+{
+	switch(state) {
+	case BATCH_STATE_RDY:
+		return "BATCH_STATE_RDY";
+	case BATCH_STATE_BAD:
+		return "BATCH_STATE_BAD";
+	case BATCH_STATE_SUB:
+		return "BATCH_STATE_SUB";
+	case BATCH_STATE_COMM:
+		return "BATCH_STATE_COMM";
+	case BATCH_STATE_DISC:
+		return "BATCH_STATE_DISC";
+	default:
+		return "ERROR, batch state not known!";
+	}
+}
+*/
+
 /* ------------------------------ methods ------------------------------ */ 
 
 /* This function returns the "current" time for this action. Current time

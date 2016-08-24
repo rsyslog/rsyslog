@@ -86,15 +86,7 @@ struct block_hashchain_s {
 };
 
 
-static inline const char *
-sigTypeName(const uint8_t sigID)
-{
-	switch(sigID) {
-	case SIGID_RFC3161:
-		return "RFC3161";
-	default:return "[unknown]";
-	}
-}
+#define sigTypeName(sigID) ( ((sigID) == SIGID_RFC3161) ? "RFC3161" : "[unknown]" )
 
 /* Flags and record types for TLV handling */
 #define RSGT_FLAG_NONCRIT 0x20

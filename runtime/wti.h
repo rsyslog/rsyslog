@@ -101,110 +101,25 @@ PROTOTYPEObjClassExit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
 PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 
-static inline uint8_t
-getActionStateByNbr(wti_t * const pWti, const int iActNbr)
-{
-	return((uint8_t) pWti->actWrkrInfo[iActNbr].flags.actState);
-}
+#define getActionStateByNbr(pWti, iActNbr) ((uint8_t) ((pWti)->actWrkrInfo[(iActNbr)].flags.actState))
+#define getActionState(pWti, pAction) (((uint8_t) (pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
+#define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = (newState))
+#define getActionJustResumed(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed))
+#define setActionJustResumed(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed = (val))
+#define getActionResumeInRow(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow))
+#define setActionResumeInRow(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow = (val))
+#define incActionResumeInRow(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow++)
+#define getActionNbrResRtry(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].iNbrResRtry))
+#define setActionNbrResRtry(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].iNbrResRtry = (val))
+#define incActionNbrResRtry(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].iNbrResRtry++)
+#define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
-static inline uint8_t
-getActionState(wti_t * const pWti, action_t * const pAction)
-{
-	return((uint8_t) pWti->actWrkrInfo[pAction->iActionNbr].flags.actState);
-}
-
-static inline void
-setActionState(wti_t * const pWti, action_t * const pAction, uint8_t newState)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].flags.actState = newState;
-}
-
-static inline int
-getActionJustResumed(wti_t * const pWti, action_t * const pAction)
-{
-	return(pWti->actWrkrInfo[pAction->iActionNbr].flags.bJustResumed);
-}
-
-static inline void
-setActionJustResumed(wti_t * const pWti, action_t * const pAction, int val)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].flags.bJustResumed = val;
-}
-
-
-static inline uint16_t
-getActionResumeInRow(wti_t * const pWti, action_t * const pAction)
-{
-	return(pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow);
-}
-
-static inline void
-setActionResumeInRow(wti_t * const pWti, action_t * const pAction, uint16_t val)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow = val;
-}
-
-static inline void
-incActionResumeInRow(wti_t * const pWti, action_t * const pAction)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].uResumeOKinRow++;
-}
-
-static inline int
-getActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
-{
-	return(pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry);
-}
-
-static inline void
-setActionNbrResRtry(wti_t * const pWti, action_t * const pAction, const uint16_t val)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry = val;
-}
-
-static inline void
-incActionNbrResRtry(wti_t * const pWti, action_t * const pAction)
-{
-	pWti->actWrkrInfo[pAction->iActionNbr].iNbrResRtry++;
-}
-
-/* note: this function is only called once in action.c */
-static inline rsRetVal
-wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams)
-{
-	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
-	actWrkrIParams_t *iparams;
-	int newMax;
-	DEFiRet;
-
-	if(wrkrInfo->p.tx.currIParam == wrkrInfo->p.tx.maxIParams) {
-		/* we need to extend */
-		newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE
-							  : 2 * wrkrInfo->p.tx.maxIParams;
-		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams,
-					    sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax));
-		memset(iparams + (wrkrInfo->p.tx.currIParam * pAction->iNumTpls), 0,
-		       sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
-		wrkrInfo->p.tx.iparams = iparams;
-		wrkrInfo->p.tx.maxIParams = newMax;
-	}
-	*piparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam * pAction->iNumTpls;
-	++wrkrInfo->p.tx.currIParam;
-
-finalize_it:
-	RETiRet;
-}
-
-static inline void
-wtiInitIParam(actWrkrIParams_t *piparams)
-{
-	memset(piparams, 0, sizeof(actWrkrIParams_t));
-}
-
-static inline void
+static inline void __attribute__((unused))
 wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
 {
 	pWti->execState.bPrevWasSuspended = 0;
 	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
 }
+
+rsRetVal wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams);
 #endif /* #ifndef WTI_H_INCLUDED */
