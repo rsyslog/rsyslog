@@ -32,6 +32,7 @@
 #pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#pragma GCC diagnostic ignored "-Wswitch-default"
 
 #include "config.h"
 #include <stdio.h>
@@ -40,6 +41,7 @@
 #include "parserif.h"
 #define YYDEBUG 1
 extern int yylineno;
+extern char *yytext;
 
 /* keep compile rule clean of errors */
 extern int yylex(void);
@@ -181,6 +183,7 @@ stmt:	  actlst			{ $$ = $1; }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
 	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' fparams ')' { $$ = cnfstmtNewReloadLookupTable($3);}
+	| BEGINOBJ			{ $$ = NULL; parser_errmsg("declarative object '%s' not permitted in action block [stmt]", yytext);}
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }
