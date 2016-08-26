@@ -538,7 +538,6 @@ openFile(lstn_t *pLstn)
 
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pLstn->pStrm, (uchar*) "strm", psSF, NULL, pLstn));
-	CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
 	DBGPRINTF("imfile: deserialized state file, state file base name '%s', "
 		  "configured base name '%s'\n", pLstn->pStrm->pszFName,
 		  pLstn->pszFileName);
@@ -567,6 +566,7 @@ finalize_it:
 		if(pLstn->pStrm != NULL)
 			strm.Destruct(&pLstn->pStrm);
 		CHKiRet(strm.Construct(&pLstn->pStrm));
+		CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
 		CHKiRet(strm.SettOperationsMode(pLstn->pStrm, STREAMMODE_READ));
 		CHKiRet(strm.SetsType(pLstn->pStrm, STREAMTYPE_FILE_MONITOR));
 		CHKiRet(strm.SetFName(pLstn->pStrm, pLstn->pszFileName, strlen((char*) pLstn->pszFileName)));
