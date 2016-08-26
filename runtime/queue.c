@@ -1563,6 +1563,7 @@ static inline rsRetVal
 DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 {
 	int i;
+	sbool bReenqueueAndDelete = 0;
 	msg_t *pMsg;
 	int nEnqueued = 0;
 	rsRetVal localRet;
@@ -1571,10 +1572,19 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	assert(pBatch != NULL);
 
+	for (i = 0; i < pBatch->nElem; ++i)
+		if (pBatch->eltState[i] == BATCH_STATE_BAD ||
+		    pBatch->eltState[i] == BATCH_STATE_COMM ||
+		    pBatch->eltState[i] == BATCH_STATE_DISC)
+		{
+			bReenqueueAndDelete = 1;
+			break;
+		}
+
 	for(i = 0 ; i < pBatch->nElem ; ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
-		if(   pBatch->eltState[i] == BATCH_STATE_RDY
-		   || pBatch->eltState[i] == BATCH_STATE_SUB) {
+		if(bReenqueueAndDelete && (pBatch->eltState[i] == BATCH_STATE_RDY
+		   || pBatch->eltState[i] == BATCH_STATE_SUB)) {
 			localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
 			++nEnqueued;
 			if(localRet != RS_RET_OK) {
@@ -1589,7 +1599,10 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 	if(nEnqueued > 0)
 		qqueueChkPersist(pThis, nEnqueued);
 
-	iRet = DeleteBatchFromQStore(pThis, pBatch);
+	if (bReenqueueAndDelete)
+		iRet = DeleteBatchFromQStore(pThis, pBatch);
+	else
+		iRet = RS_RET_OK;
 
 	pBatch->nElem = pBatch->nElemDeq = 0; /* reset batch */ // TODO: more fine init, new fields! 2010-06-14
 
