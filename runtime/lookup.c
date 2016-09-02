@@ -9,9 +9,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ *		 http://www.apache.org/licenses/LICENSE-2.0
+ *		 -or-
+ *		 see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -74,6 +74,9 @@ const char * reloader_prefix = "lkp_tbl_reloader:";
 static void *
 lookupTableReloader(void *self);
 
+static void
+lookupStopReloader(lookup_ref_t *pThis);
+
 /* create a new lookup table object AND include it in our list of
  * lookup tables.
  */
@@ -82,17 +85,23 @@ lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
+	int initialized = 0;
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
 	CHKmalloc(t = calloc(1, sizeof(lookup_t)));
-	pthread_rwlock_init(&pThis->rwlock, NULL);
-	pthread_mutex_init(&pThis->reloader_mut, NULL);
-	pthread_cond_init(&pThis->run_reloader, NULL);
-	pthread_attr_init(&pThis->reloader_thd_attr);
+	CHKiConcCtrl(pthread_rwlock_init(&pThis->rwlock, NULL));
+	initialized++; /*1*/
+	CHKiConcCtrl(pthread_mutex_init(&pThis->reloader_mut, NULL));
+	initialized++; /*2*/
+	CHKiConcCtrl(pthread_cond_init(&pThis->run_reloader, NULL));
+	initialized++; /*3*/
+	CHKiConcCtrl(pthread_attr_init(&pThis->reloader_thd_attr));
+	initialized++; /*4*/
 	pThis->do_reload = pThis->do_stop = 0;
 	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
-	pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis);
+	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis));
+	initialized++; /*5*/
 
 	pThis->next = NULL;
 	if(loadConf->lu_tabs.root == NULL) {
@@ -107,6 +116,12 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d (please enable debug logs for details)", initialized);
+		if (initialized > 4) lookupStopReloader(pThis);
+		if (initialized > 3) pthread_attr_destroy(&pThis->reloader_thd_attr);
+		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
+		if (initialized > 1) pthread_mutex_destroy(&pThis->reloader_mut);
+		if (initialized > 0) pthread_rwlock_destroy(&pThis->rwlock);
 		free(t);
 		free(pThis);
 	}
