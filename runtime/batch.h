@@ -80,17 +80,14 @@ struct batch_s {
 
 
 /* get number of msgs for this batch */
-static inline int
-batchNumMsgs(const batch_t * const pBatch) {
-	return pBatch->nElem;
-}
+#define batchNumMsgs(pBatch) ((pBatch)->nElem)
 
 
 /* set the status of the i-th batch element. Note that once the status is
  * DISC, it will never be reset. So this function can NOT be used to initialize
  * the state table. -- rgerhards, 2010-06-10
  */
-static inline void
+static inline void __attribute__((unused))
 batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newState) {
 	if(pBatch->eltState[i] != BATCH_STATE_DISC)
 		pBatch->eltState[i] = newState;
@@ -100,17 +97,14 @@ batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newSt
 /* check if an element is a valid entry. We do NOT verify if the
  * element index is valid. -- rgerhards, 2010-06-10
  */
-static inline int
-batchIsValidElem(const batch_t * const pBatch, const int i) {
-	return(pBatch->eltState[i] != BATCH_STATE_DISC);
-}
+#define batchIsValidElem(pBatch, i) ((pBatch)->eltState[(i)] != BATCH_STATE_DISC)
 
 
 /* free members of a batch "object". Note that we can not do the usual
  * destruction as the object typically is allocated on the stack and so the
  * object itself cannot be freed! -- rgerhards, 2010-06-15
  */
-static inline void
+static inline void __attribute__((unused))
 batchFree(batch_t * const pBatch) {
 	free(pBatch->pElem);
 	free(pBatch->eltState);
@@ -121,8 +115,9 @@ batchFree(batch_t * const pBatch) {
  * we "just" initialize it. The max number of elements must be
  * provided. -- rgerhards, 2010-06-15
  */
-static inline rsRetVal
-batchInit(batch_t *const pBatch, const int maxElem) {
+static inline rsRetVal __attribute__((unused))
+batchInit(batch_t *const pBatch, const int maxElem)
+{
 	DEFiRet;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
@@ -131,23 +126,4 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* primarily a helper for debug purposes, get human-readble name of state */
-static inline const char *
-batchState2String(const batch_state_t state) {
-	switch(state) {
-	case BATCH_STATE_RDY:
-		return "BATCH_STATE_RDY";
-	case BATCH_STATE_BAD:
-		return "BATCH_STATE_BAD";
-	case BATCH_STATE_SUB:
-		return "BATCH_STATE_SUB";
-	case BATCH_STATE_COMM:
-		return "BATCH_STATE_COMM";
-	case BATCH_STATE_DISC:
-		return "BATCH_STATE_DISC";
-	default:
-		return "ERROR, batch state not known!";
-	}
-}
 #endif /* #ifndef BATCH_H_INCLUDED */

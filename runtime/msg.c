@@ -66,6 +66,10 @@
 #include "parserif.h"
 #include <errno.h>
 
+
+/* inlines */
+extern void msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri);
+
 /* TODO: move the global variable root to the config object - had no time to to it
  * right now before vacation -- rgerhards, 2013-07-22
  */
@@ -1201,7 +1205,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszUUID, PSZ);
 
 	if(pThis->pRuleset != NULL) {
-		rulesetGetName(pThis->pRuleset);
 		CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszRuleset"), PROPTYPE_PSZ,
 			rulesetGetName(pThis->pRuleset)));
 	}
@@ -1531,6 +1534,15 @@ static const char *getProtocolVersionString(msg_t * const pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion ? "1" : "0");
+}
+
+void
+msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri)
+{
+	if(pri > LOG_MAXPRI)
+		pri = LOG_PRI_INVLD;
+	pMsg->iFacility = pri2fac(pri),
+	pMsg->iSeverity = pri2sev(pri);
 }
 
 #ifdef USE_LIBUUID
@@ -3242,7 +3254,7 @@ jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escap
 	DEFiRet;
 
 	pSrc = *ppRes;
-	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	buflen = (*pBufLen == -1) ? (int) ustrlen(pSrc) : *pBufLen;
 	CHKiRet(jsonAddVal(pSrc, buflen, &dst, escapeAll));
 
 	if(dst != NULL) {
@@ -3280,7 +3292,7 @@ jsonField(struct templateEntry *pTpe, uchar **ppRes, unsigned short *pbMustBeFre
 	DEFiRet;
 
 	pSrc = *ppRes;
-	buflen = (*pBufLen == -1) ? ustrlen(pSrc) : *pBufLen;
+	buflen = (*pBufLen == -1) ? (int) ustrlen(pSrc) : *pBufLen;
 	/* we hope we have only few escapes... */
 	dst = es_newStr(buflen+pTpe->lenFieldName+15);
 	es_addChar(&dst, '"');
@@ -3706,7 +3718,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL || !pTpe->bComplexProcessing) {
-		*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
+		*pPropLen = (bufLen == -1) ? (int) ustrlen(pRes) : bufLen;
 		return pRes;
 	}
 	
@@ -4374,7 +4386,7 @@ uchar *MsgGetProp(msg_t *__restrict__ const pMsg, struct templateEntry *__restri
 		jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSFALSE);
 	}
 
-	*pPropLen = (bufLen == -1) ? ustrlen(pRes) : bufLen;
+	*pPropLen = (bufLen == -1) ? (int) ustrlen(pRes) : bufLen;
 
 	ENDfunc
 	return(pRes);

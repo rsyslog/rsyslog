@@ -1,6 +1,6 @@
 /* librsgt.h - rsyslog's guardtime support library
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -149,140 +149,11 @@ struct rsgtstatefile {
  * Note: it is thread-safe to call this function, as it returns a pointer
  * into constant memory pool.
  */
-static inline char *
-RSGTE2String(int err)
-{
-	switch(err) {
-	case 0:
-		return "success";
-	case RSGTE_IO:
-		return "i/o error";
-	case RSGTE_FMT:
-		return "data format error";
-	case RSGTE_INVLTYP:
-		return "invalid/unexpected tlv record type";
-	case RSGTE_OOM:
-		return "out of memory";
-	case RSGTE_LEN:
-		return "length record problem";
-	case RSGTE_TS_EXTEND:
-		return "error extending timestamp";
-	case RSGTE_INVLD_RECCNT:
-		return "mismatch between actual record count and number in block signature record";
-	case RSGTE_INVLHDR:
-		return "invalid file header";
-	case RSGTE_EOF:
-		return "EOF";
-	case RSGTE_MISS_REC_HASH:
-		return "record hash missing";
-	case RSGTE_MISS_TREE_HASH:
-		return "tree hash missing";
-	case RSGTE_INVLD_REC_HASH:
-		return "record hash mismatch";
-	case RSGTE_INVLD_TREE_HASH:
-		return "tree hash mismatch";
-	case RSGTE_INVLD_REC_HASHID:
-		return "invalid record hash ID";
-	case RSGTE_INVLD_TREE_HASHID:
-		return "invalid tree hash ID";
-	case RSGTE_MISS_BLOCKSIG:
-		return "missing block signature record";
-	case RSGTE_INVLD_TIMESTAMP:
-		return "RFC3161 timestamp invalid";
-	case RSGTE_TS_DERDECODE:
-		return "error DER-decoding RFC3161 timestamp";
-	case RSGTE_TS_DERENCODE:
-		return "error DER-encoding RFC3161 timestamp";
-	case RSGTE_HASH_CREATE:
-		return "error creating hash";
-	case RSGTE_END_OF_SIG:
-		return "unexpected end of signature";
-	case RSGTE_END_OF_LOG:
-		return "unexpected end of log";
-	default:
-		return "unknown error";
-	}
-}
-
-
-static inline uint16_t
-hashOutputLengthOctets(uint8_t hashID)
-{
-	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
-		return 20;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 20;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
-		return 28;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
-		return 32;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
-		return 48;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
-		return 64;
-	default:return 32;
-	}
-}
-
-static inline uint8_t
-hashIdentifier(enum GTHashAlgorithm hashID)
-{
-	switch(hashID) {
-	case GT_HASHALG_SHA1:	/* paper: SHA1 */
-		return 0x00;
-	case GT_HASHALG_RIPEMD160: /* paper: RIPEMD-160 */
-		return 0x02;
-	case GT_HASHALG_SHA224:	/* paper: SHA2-224 */
-		return 0x03;
-	case GT_HASHALG_SHA256: /* paper: SHA2-256 */
-		return 0x01;
-	case GT_HASHALG_SHA384: /* paper: SHA2-384 */
-		return 0x04;
-	case GT_HASHALG_SHA512:	/* paper: SHA2-512 */
-		return 0x05;
-	default:return 0xff;
-	}
-}
-static inline char *
-hashAlgName(uint8_t hashID)
-{
-	switch(hashID) {
-	case GT_HASHALG_SHA1:
-		return "SHA1";
-	case GT_HASHALG_RIPEMD160:
-		return "RIPEMD-160";
-	case GT_HASHALG_SHA224:
-		return "SHA2-224";
-	case GT_HASHALG_SHA256:
-		return "SHA2-256";
-	case GT_HASHALG_SHA384:
-		return "SHA2-384";
-	case GT_HASHALG_SHA512:
-		return "SHA2-512";
-	default:return "[unknown]";
-	}
-}
-static inline enum GTHashAlgorithm
-hashID2Alg(uint8_t hashID)
-{
-	switch(hashID) {
-	case 0x00:
-		return GT_HASHALG_SHA1;
-	case 0x02:
-		return GT_HASHALG_RIPEMD160;
-	case 0x03:
-		return GT_HASHALG_SHA224;
-	case 0x01:
-		return GT_HASHALG_SHA256;
-	case 0x04:
-		return GT_HASHALG_SHA384;
-	case 0x05:
-		return GT_HASHALG_SHA512;
-	default:
-		return 0xff;
-	}
-}
+const char * RSGTE2String(int err);
+uint16_t hashOutputLengthOctets(uint8_t hashID);
+uint8_t hashIdentifier(enum GTHashAlgorithm hashID);
+const char * hashAlgName(uint8_t hashID);
+enum GTHashAlgorithm hashID2Alg(uint8_t hashID);
 
 static inline uint16_t
 getIVLen(block_hdr_t *bh)

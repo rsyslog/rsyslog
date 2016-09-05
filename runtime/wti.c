@@ -53,6 +53,7 @@ DEFobjCurrIf(glbl)
 
 pthread_key_t thrd_wti_key;
 
+
 /* forward-definitions */
 
 /* methods */
@@ -167,6 +168,34 @@ wtiCancelThrd(wti_t *pThis)
 
 	RETiRet;
 }
+
+/* note: this function is only called once in action.c */
+rsRetVal
+wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams)
+{
+	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
+	actWrkrIParams_t *iparams;
+	int newMax;
+	DEFiRet;
+
+	if(wrkrInfo->p.tx.currIParam == wrkrInfo->p.tx.maxIParams) {
+		/* we need to extend */
+		newMax = (wrkrInfo->p.tx.maxIParams == 0) ? CONF_IPARAMS_BUFSIZE
+							  : 2 * wrkrInfo->p.tx.maxIParams;
+		CHKmalloc(iparams = realloc(wrkrInfo->p.tx.iparams,
+					    sizeof(actWrkrIParams_t) * pAction->iNumTpls * newMax));
+		memset(iparams + (wrkrInfo->p.tx.currIParam * pAction->iNumTpls), 0,
+		       sizeof(actWrkrIParams_t) * pAction->iNumTpls * (newMax - wrkrInfo->p.tx.maxIParams));
+		wrkrInfo->p.tx.iparams = iparams;
+		wrkrInfo->p.tx.maxIParams = newMax;
+	}
+	*piparams = wrkrInfo->p.tx.iparams + wrkrInfo->p.tx.currIParam * pAction->iNumTpls;
+	++wrkrInfo->p.tx.currIParam;
+
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* Destructor */

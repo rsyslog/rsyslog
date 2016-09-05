@@ -85,18 +85,10 @@ rsRetVal rulesetKeyDestruct(void __attribute__((unused)) *pData);
  * pointer is read-only.
  * rgerhards, 2012-04-18
  */
-static inline uchar*
-rulesetGetName(ruleset_t *pRuleset)
-{
-	return pRuleset->pszName;
-}
+#define rulesetGetName(pRuleset) ((pRuleset)->pszName)
 
 /* returns 1 if the ruleset has a queue associtated, 0 if not */
-static inline int
-rulesetHasQueue(ruleset_t *pRuleset)
-{
-	return pRuleset->pQueue == NULL ? 0 : 1;
-}
+#define rulesetHasQueue(pRuleset) ((pRuleset)->pQueue == NULL ? 0 : 1)
 
 
 /* we will most probably convert this module back to traditional C
@@ -108,8 +100,6 @@ rsRetVal rulesetProcessCnf(struct cnfobj *o);
 rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */
-static inline void
-rulesetSetCurrRulesetPtr(ruleset_t *pRuleset) {
-	loadConf->rulesets.pCurr = pRuleset;
-}
+#define rulesetSetCurrRulesetPtr(pRuleset) (loadConf->rulesets.pCurr = (pRuleset))
+
 #endif /* #ifndef INCLUDED_RULESET_H */

@@ -64,6 +64,8 @@ rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
 int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen);
 rsRetVal gcryfileDeleteState(uchar *fn);
 rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
+int rsgcryModename2Mode(char *const __restrict__ modename);
+int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
@@ -75,47 +77,11 @@ rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
 #define ENCINFO_SUFFIX ".encinfo"
 
 /* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
-static inline void
-gcryfileSetDeleteOnClose(gcryfile gf, int val)
+static inline void __attribute__((unused))
+gcryfileSetDeleteOnClose(gcryfile gf, const int val)
 {
 	if(gf != NULL)
 		gf->bDeleteOnClose = val;
 }
 
-static inline int
-rsgcryAlgoname2Algo(char *algoname) {
-	if(!strcmp((char*)algoname, "3DES")) return GCRY_CIPHER_3DES;
-	if(!strcmp((char*)algoname, "CAST5")) return GCRY_CIPHER_CAST5;
-	if(!strcmp((char*)algoname, "BLOWFISH")) return GCRY_CIPHER_BLOWFISH;
-	if(!strcmp((char*)algoname, "AES128")) return GCRY_CIPHER_AES128;
-	if(!strcmp((char*)algoname, "AES192")) return GCRY_CIPHER_AES192;
-	if(!strcmp((char*)algoname, "AES256")) return GCRY_CIPHER_AES256;
-	if(!strcmp((char*)algoname, "TWOFISH")) return GCRY_CIPHER_TWOFISH;
-	if(!strcmp((char*)algoname, "TWOFISH128")) return GCRY_CIPHER_TWOFISH128;
-	if(!strcmp((char*)algoname, "ARCFOUR")) return GCRY_CIPHER_ARCFOUR;
-	if(!strcmp((char*)algoname, "DES")) return GCRY_CIPHER_DES;
-	if(!strcmp((char*)algoname, "SERPENT128")) return GCRY_CIPHER_SERPENT128;
-	if(!strcmp((char*)algoname, "SERPENT192")) return GCRY_CIPHER_SERPENT192;
-	if(!strcmp((char*)algoname, "SERPENT256")) return GCRY_CIPHER_SERPENT256;
-	if(!strcmp((char*)algoname, "RFC2268_40")) return GCRY_CIPHER_RFC2268_40;
-	if(!strcmp((char*)algoname, "SEED")) return GCRY_CIPHER_SEED;
-	if(!strcmp((char*)algoname, "CAMELLIA128")) return GCRY_CIPHER_CAMELLIA128;
-	if(!strcmp((char*)algoname, "CAMELLIA192")) return GCRY_CIPHER_CAMELLIA192;
-	if(!strcmp((char*)algoname, "CAMELLIA256")) return GCRY_CIPHER_CAMELLIA256;
-	return GCRY_CIPHER_NONE;
-}
-
-static inline int
-rsgcryModename2Mode(char *modename) {
-	if(!strcmp((char*)modename, "ECB")) return GCRY_CIPHER_MODE_ECB;
-	if(!strcmp((char*)modename, "CFB")) return GCRY_CIPHER_MODE_CFB;
-	if(!strcmp((char*)modename, "CBC")) return GCRY_CIPHER_MODE_CBC;
-	if(!strcmp((char*)modename, "STREAM")) return GCRY_CIPHER_MODE_STREAM;
-	if(!strcmp((char*)modename, "OFB")) return GCRY_CIPHER_MODE_OFB;
-	if(!strcmp((char*)modename, "CTR")) return GCRY_CIPHER_MODE_CTR;
-#	ifdef GCRY_CIPHER_MODE_AESWRAP
-	if(!strcmp((char*)modename, "AESWRAP")) return GCRY_CIPHER_MODE_AESWRAP;
-#	endif
-	return GCRY_CIPHER_MODE_NONE;
-}
 #endif  /* #ifndef INCLUDED_LIBGCRY_H */

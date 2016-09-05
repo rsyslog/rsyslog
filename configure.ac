@@ -22,7 +22,23 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
-AX_COMPILER_FLAGS
+m4_ifdef([AX_IS_RELEASE], [
+	AX_IS_RELEASE([git-directory])
+	m4_ifdef([AX_COMPILER_FLAGS], [
+		AX_COMPILER_FLAGS()
+	], [
+		if test "$GCC" = "yes"
+		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		fi
+		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+	])
+], [
+	if test "$GCC" = "yes"
+	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+	fi
+	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
+])
+
 
 PKG_PROG_PKG_CONFIG
 

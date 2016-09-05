@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for GnuTLS.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -74,15 +74,6 @@ PROTOTYPEObj(nsd_gtls);
 uchar *gtlsStrerror(int error);
 rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);
 rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis);
-static inline rsRetVal gtlsHasRcvInBuffer(nsd_gtls_t *pThis) {
-	/* we have a valid receive buffer one such is allocated and 
-	 * NOT exhausted!
-	 */
-	dbgprintf("hasRcvInBuffer on nsd %p: pszRcvBuf %p, lenRcvBuf %d\n", pThis,
-		pThis->pszRcvBuf, pThis->lenRcvBuf);
-	return(pThis->pszRcvBuf != NULL && pThis->lenRcvBuf != -1);
-	}
-
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"

@@ -5,7 +5,7 @@
  *
  * File begun on 2011-05-04 by RGerhards
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -60,6 +60,3 @@ finalize_it:
 }
 
 #endif /* #ifndef IM_HELPER_H_INCLUDED */
-
-/* vim:set ai:
- */

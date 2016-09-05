@@ -52,6 +52,16 @@ static int cry_algo = GCRY_CIPHER_AES128;
 static int cry_mode = GCRY_CIPHER_MODE_CBC;
 static int optionForce = 0;
 
+/* We use some common code which expects rsyslog runtime to be
+ * present, most importantly for debug output. As a stand-alone
+ * tool, we do not really have this. So we do some dummy defines
+ * in order to satisfy the needs of the common code.
+ */
+int Debug = 0;
+void dbgprintf(const char *fmt __attribute__((unused)), ...) {};
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused))); /* prototype (avoid compiler warning) */
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {}; /* this is not really needed by any of our code */
+
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
  * returns 0 on success or something else on error/EOF
  */

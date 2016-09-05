@@ -121,18 +121,23 @@
 #define LOG_FAC_INVLD   24
 #define	LOG_INVLD	(LOG_FAC_INVLD<<3)	/* invalid facility/PRI code */
 
-/* we need to use a function to avoid side-effects. This MUST guard
- * against invalid facility values. rgerhards, 2014-09-16
+/* we need to evaluate our argument only once, as otherwise we may
+ * have side-effects (this was seen in some version).
+ * Note: I know that "static inline" is not the right thing from a C99
+ * PoV, but some environments treat, even in C99 mode, compile
+ * non-static inline into the source even if not defined as "extern". This
+ * obviously results in linker errors. Using "static inline" as below together
+ * with "__attribute__((unused))" works in all cases. Note also that we
+ * cannot work around this in pri2fac, as we would otherwise need to evaluate
+ * pri more than once.
  */
-static inline syslog_pri_t pri2fac(const syslog_pri_t pri)
+static inline syslog_pri_t __attribute__((unused))
+pri2fac(const syslog_pri_t pri)
 {
-	unsigned fac = pri >> 3;
-	return (fac > 23) ? LOG_FAC_INVLD : fac;
+       unsigned fac = pri >> 3;
+       return (fac > 23) ? LOG_FAC_INVLD : fac;
 }
-static inline syslog_pri_t pri2sev(const syslog_pri_t pri)
-{
-	return pri & 0x07;
-}
+#define pri2sev(pri) ((pri) & 0x07)
 
 /* the rsyslog core provides information about present feature to plugins
  * asking it. Below are feature-test macros which must be used to query

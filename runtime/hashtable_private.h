@@ -30,22 +30,11 @@ hash(struct hashtable *h, void *k);
 
 /*****************************************************************************/
 /* indexFor */
-static inline unsigned int
-indexFor(unsigned int tablelength, unsigned int hashvalue) {
-    return (hashvalue % tablelength);
-};
+#define indexFor(tablelength, hashvalue) ((hashvalue) % (tablelength))
 
-/* Only works if tablelength == 2^N */
-/*static inline unsigned int
-indexFor(unsigned int tablelength, unsigned int hashvalue)
-{
-    return (hashvalue & (tablelength - 1u));
-}
-*/
 
 /*****************************************************************************/
 #define freekey(X) free(X)
-/*define freekey(X) ; */
 
 
 /*****************************************************************************/
