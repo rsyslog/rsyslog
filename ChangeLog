@@ -1,5 +1,7 @@
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
+- ompgsql: add template support
+  Thanks to Radu Gheorghe for implementing this.
 - generate somewhat better error message on config file syntax error
   a common case (object at invalid location) has received it's own error
   message; for the rest we still rely on the generic flex/bison handler
