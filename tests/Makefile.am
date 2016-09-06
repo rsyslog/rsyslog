@@ -265,6 +265,14 @@ TESTS += \
 endif
 endif
 
+if ENABLE_PGSQL
+if ENABLE_PGSQL_TESTS
+TESTS += \
+	pgsql-basic.sh \
+	pgsql-template.sh
+endif
+endif
+
 if ENABLE_MYSQL_TESTS
 TESTS +=  \
 	mysql-basic.sh \
