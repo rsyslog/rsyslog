@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <glob.h>
+#include <poll.h>
 #include <fnmatch.h>
 #ifdef HAVE_SYS_INOTIFY_H
 #include <sys/inotify.h>
@@ -50,7 +51,6 @@
 #include "stream.h"
 #include "errmsg.h"
 #include "glbl.h"
-#include "datetime.h"
 #include "unicode-helper.h"
 #include "prop.h"
 #include "stringbuf.h"
@@ -69,7 +69,6 @@ MODULE_CNFNAME("imfile")
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -99,6 +98,7 @@ typedef struct lstn_s {
 	uchar *pszTag;
 	size_t lenTag;
 	uchar *pszStateFile; /* file in which state between runs is to be stored (dynamic if NULL) */
+	int readTimeout;
 	int iFacility;
 	int iSeverity;
 	int maxLinesAtOnce;
@@ -147,6 +147,7 @@ struct instanceConf_s {
 	int iPersistStateInterval;
 	int iFacility;
 	int iSeverity;
+	int readTimeout;
 	sbool bRMStateOnDel;
 	uint8_t readMode;
 	uchar *startRegex;
@@ -174,11 +175,13 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 	int iPollInterval;	/* number of seconds to sleep when there was no file activity */
+	int readTimeout;
 	instanceConf_t *root, *tail;
 	lstn_t *pRootLstn;
 	lstn_t *pTailLstn;
 	uint8_t opMode;
 	sbool configSetViaV2Method;
+	sbool haveReadTimeouts;	/* use special processing if read timeouts exist */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -236,6 +239,7 @@ struct wd_map_s {
 	int wd;		/* ascending sort key */
 	lstn_t *pLstn;	/* NULL, if this is a dir entry, otherwise pointer into listener(file) table */
 	int dirIdx;	/* index into dirs table, undefined if pLstn == NULL */
+	time_t timeoutBase; /* what time to calculate the timeout against? */
 };
 typedef struct wd_map_s wd_map_t;
 static wd_map_t *wdmap = NULL;
@@ -250,6 +254,7 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
+	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -278,6 +283,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
+	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
 	{ "freshstarttail", eCmdHdlrBinary, 0}
 };
 static struct cnfparamblk inppblk =
@@ -591,6 +597,7 @@ openFileWithoutStateFile(lstn_t *const __restrict__ pLstn)
 			CHKiRet(strm.SeekCurrOffs(pLstn->pStrm));
 		}
 	}
+	strmSetReadTimeout(pLstn->pStrm, pLstn->readTimeout);
 
 finalize_it:
 	RETiRet;
@@ -709,6 +716,7 @@ createInstance(instanceConf_t **pinst)
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 	inst->addCeeTag = 0;
 	inst->freshStartTail = 0;
+	inst->readTimeout = loadModConf->readTimeout;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -853,6 +861,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->addMetadata = 0;
 	inst->addCeeTag = 0;
 	inst->bRMStateOnDel = 0;
+	inst->readTimeout = loadModConf->readTimeout;
 
 	CHKiRet(checkInstance(inst));
 
@@ -980,6 +989,7 @@ addListner(instanceConf_t *inst)
 	pThis->addMetadata = (inst->addMetadata == ADD_METADATA_UNSPECIFIED) ?
 			       hasWildcard : inst->addMetadata;
 	pThis->addCeeTag = inst->addCeeTag;
+	pThis->readTimeout = inst->readTimeout;
 	pThis->freshStartTail = inst->freshStartTail;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
@@ -1058,6 +1068,8 @@ CODESTARTnewInpInst
 			inst->iPersistStateInterval = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxsubmitatonce")) {
 			inst->nMultiSub = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "readtimeout")) {
+			inst->readTimeout = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("imfile: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -1069,6 +1081,8 @@ CODESTARTnewInpInst
 			"at the same time --- remove one of them");
 			ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
 	}
+	if(inst->readTimeout != 0)
+		loadModConf->haveReadTimeouts = 1;
 	CHKiRet(checkInstance(inst));
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
@@ -1083,6 +1097,8 @@ CODESTARTbeginCnfLoad
 	loadModConf->opMode = OPMODE_POLLING;
 	loadModConf->iPollInterval = DFLT_PollInterval;
 	loadModConf->configSetViaV2Method = 0;
+	loadModConf->readTimeout = 0; /* default: no timeout */
+	loadModConf->haveReadTimeouts = 0; /* default: no timeout */
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
 	cs.pszFileName = NULL;
@@ -1120,6 +1136,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
 			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "readtimeout")) {
+			loadModConf->readTimeout = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
 			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
 				loadModConf->opMode = OPMODE_POLLING;
@@ -1581,6 +1599,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	pThis->reopenOnTruncate = existing->reopenOnTruncate;
 	pThis->addMetadata = existing->addMetadata;
 	pThis->addCeeTag = existing->addCeeTag;
+	pThis->readTimeout = existing->readTimeout;
 	pThis->freshStartTail = existing->freshStartTail;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
@@ -1877,6 +1896,24 @@ in_processEvent(struct inotify_event *ev)
 done:	return;
 }
 
+static void
+in_do_timeout_processing(void)
+{
+	int i;
+	DBGPRINTF("imfile: readTimeouts are configured, checking if some apply\n");
+
+	for(i = 0 ; i < nWdmap ; ++i) {
+		dbgprintf("imfile: wdmap %d, plstn %p\n", i, wdmap[i].pLstn);
+		lstn_t *const pLstn = wdmap[i].pLstn;
+		if(pLstn != NULL && strmReadMultiLine_isTimedOut(pLstn->pStrm)) {
+			dbgprintf("imfile: wdmap %d, timeout occured\n", i);
+			pollFile(pLstn, NULL);
+		}
+	}
+
+}
+
+
 /* Monitor files in inotify mode */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
@@ -1901,6 +1938,29 @@ do_inotify(void)
 	in_setupInitialWatches();
 
 	while(glbl.GetGlobalInputTermState() == 0) {
+		if(runModConf->haveReadTimeouts) {
+			int r;
+			struct pollfd pollfd;
+			pollfd.fd = ino_fd;
+			pollfd.events = POLLIN;
+			do {
+				r = poll(&pollfd, 1, 1000);
+			} while(r  == -1 && errno == EINTR);
+			if(r == 0) {
+				in_do_timeout_processing();
+				continue;
+			} else if (r == -1) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				DBGPRINTF("%s:%d: unexpected error during poll timeout wait: %s\n",
+					__FILE__, __LINE__, errStr);
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
+			} else if(r != 1) {
+				DBGPRINTF("%s:%d: ERROR: poll returned %d, but we had only one fd!\n",
+					__FILE__, __LINE__, r);
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
+			}
+		}
 		rd = read(ino_fd, iobuf, sizeof(iobuf));
 		if(rd < 0 && Debug) {
 			char errStr[1024];
@@ -2042,7 +2102,6 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
 	objRelease(strm, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -2120,7 +2179,6 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
