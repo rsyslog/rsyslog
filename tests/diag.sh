@@ -134,6 +134,9 @@ case $1 in
 		curl localhost:9200/rsyslog_testbench/_search?size=$2 > work
 		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
 		;;
+   'getpid')
+		pid=$(cat rsyslog$2.pid)
+		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		if [ "x$2" == "x" ]; then
@@ -352,6 +355,18 @@ case $1 in
 		# again, but that's not an issue.
 		rm -f work
 		$RS_SORTCMD -g < rsyslog.out.log > work
+		;;
+   'assert-equal')
+		if [ "x$4" == "x" ]; then
+			tolerance=0
+		else
+			tolerance=$4
+		fi
+		result=$(echo $2 $3 $tolerance | awk 'function abs(v) { return v > 0 ? v : -v } { print (abs($1 - $2) <= $3) ? "PASSED" : "FAILED" }')
+		if [ $result != 'PASSED' ]; then
+				echo "Value '$2' != '$3' (within tolerance of $tolerance)"
+		  . $srcdir/diag.sh error-exit 1
+		fi
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work

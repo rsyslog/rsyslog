@@ -275,6 +275,12 @@ TESTS +=  \
 	omjournal-basic-no-template.sh
 endif
 
+if ENABLE_OMPROG
+TESTS +=  \
+	omprog-cleanup.sh \
+	omprog-cleanup-with-outfile.sh
+endif
+
 if ENABLE_OMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
@@ -971,6 +977,11 @@ EXTRA_DIST= \
 	testsuites/sndrcv_gzip_rcvr.conf \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
+	omprog-cleanup.sh \
+	omprog-cleanup-with-outfile.sh \
+	testsuites/omprog-cleanup.conf \
+	testsuites/omprog-cleanup-outfile.conf \
+	testsuites/omprog-test-bin.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \

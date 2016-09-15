@@ -275,7 +275,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 		++pszCmd; /* ignore following space */
 		CHKiRet(doInjectMsg(pszCmd, ratelimit));
 		nMsgs = 1;
-	} else { /* assume 2 args, (from_idx, to_idx) */
+	} else { /* assume 2 args, (from_idx, count) */
 		iFrom = atoi((char*)wordBuf);
 		getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
 		nMsgs = atoi((char*)wordBuf);

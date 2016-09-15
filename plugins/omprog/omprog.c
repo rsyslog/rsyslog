@@ -143,11 +143,6 @@ CODESTARTfreeInstance
 	}
 ENDfreeInstance
 
-BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
-ENDfreeWrkrInstance
-
-
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
@@ -332,13 +327,14 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 
 	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
 	if(pWrkrData->pData->outputFileName != NULL) {
-		pWrkrData->fdPipeIn = dup(pipestdout[0]);
+		pWrkrData->fdPipeIn = pipestdout[0];
 		/* we need to set our fd to be non-blocking! */
 		flags = fcntl(pWrkrData->fdPipeIn, F_GETFL);
 		flags |= O_NONBLOCK;
 		fcntl(pWrkrData->fdPipeIn, F_SETFL, flags);
 	} else {
 		pWrkrData->fdPipeIn = -1;
+		close(pipestdout[0]);
 	}
 	close(pipestdin[0]);
 	close(pipestdout[1]);
@@ -398,6 +394,14 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 	RETiRet;
 }
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+	if (pWrkrData->bIsRunning) {
+		kill(pWrkrData->pid, SIGTERM);
+		CHKiRet(cleanup(pWrkrData));
+	}
+finalize_it:
+ENDfreeWrkrInstance
 
 /* try to restart the binary when it has stopped.
  */
