@@ -6,7 +6,7 @@ named central.example.net. These server is being reported to by two
 Linux machines with name zuse.example.net and turing.example.net. Also,
 there is a third client - ada.example.net - which send both its own
 messages to the central server but also forwards messages receive from
-an UDP-only capable router. We hav decided to use ada.example.net
+an UDP-only capable router. We have decided to use ada.example.net
 because it is in the same local network segment as the router and so we
 enjoy TLS' security benefits for forwarding the router messages inside
 the corporate network. All systems (except the router) use
