@@ -316,10 +316,14 @@ AC_CHECK_LIB(
 		 [1],
 		 [Can set thread-name.])])
 
-AC_CHECK_FUNCS(
+AC_SEARCH_LIBS(
     [pthread_setschedparam],
+    [pthread],
     [
       rsyslog_have_pthread_setschedparam=yes
+      AC_DEFINE([HAVE_PTHREAD_SETSCHEDPARAM],
+	[1],
+	[Can set thread scheduling parameters])
     ],
     [
       rsyslog_have_pthread_setschedparam=no
