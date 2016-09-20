@@ -266,7 +266,7 @@ actually needed.
 
 The water marks can be set via the "*$<object>QueueHighWatermark*\ "
 and  "*$<object>QueueLowWatermark*\ " configuration file directives.
-Note that these are actual numbers, not precentages. Be sure they make
+Note that these are actual numbers, not percentages. Be sure they make
 sense (also in respect to "*$<object>QueueSize*\ "), as rsyslodg does
 currently not perform any checks on the numbers provided. It is easy to
 screw up the system here (yes, a feature enhancement request is filed
@@ -297,7 +297,7 @@ on the limit would be a performance hurt, and thus the design decision
 was to favour performance. If you don't like that policy, simply specify
 a slightly lower limit (e.g. 999,999K instead of 1G).
 
-In general, it is a good idea to limit the pysical disk space even if
+In general, it is a good idea to limit the physical disk space even if
 you dedicate a whole disk to rsyslog. That way, you prevent it from
 running out of space (future version will have an auto-size-limit logic,
 that then kicks in in such situations).
@@ -313,7 +313,7 @@ to the relevant output queues (actions).
 
 Worker threads are started and stopped on an as-needed basis. On a
 system without activity, there may be no worker at all running. One is
-automatically started when a message comes in. Similarily, additional
+automatically started when a message comes in. Similarly, additional
 workers are started if the queue grows above a specific size. The
 "*$<object>QueueWorkerThreadMinimumMessages*\ "  config parameter
 controls worker startup. If it is set to the minimum number of elements
@@ -321,7 +321,7 @@ that must be enqueued in order to justify a new worker startup. For
 example, let's assume it is set to 100. As long as no more than 100
 messages are in the queue, a single worker will be used. When more than
 100 messages arrive, a new worker thread is automatically started.
-Similarily, a third worker will be started when there are at least 300
+Similarly, a third worker will be started when there are at least 300
 messages, a forth when reaching 400 and so on.
 
 It, however, does not make sense to have too many worker threads running
@@ -401,21 +401,21 @@ element submitter. If that, for example, is a reliable input (TCP, local
 log socket), that will slow down the message originator which is a good
 resolution for this scenario.
 
-During throtteling, a disk-assisted queue continues to write to disk and
+During throttling, a disk-assisted queue continues to write to disk and
 messages are also discarded based on severity as well as regular
 dequeuing and processing continues. So chances are good the situation
-will be resolved by simply throttling. Note, though, that throtteling is
+will be resolved by simply throttling. Note, though, that throttling is
 highly undesirable for unreliable sources, like UDP message reception.
-So it is not a good thing to run into throtteling mode at all.
+So it is not a good thing to run into throttling mode at all.
 
-We can not hold processing infinitely, not even when throtteling. For
-example, throtteling the local log socket too long would cause the
+We can not hold processing infinitely, not even when throttling. For
+example, throttling the local log socket too long would cause the
 system at whole come to a standstill. To prevent this, rsyslogd times
 out after a configured period ("*$<object>QueueTimeoutEnqueue*\ ",
 specified in milliseconds) if no space becomes available. As a last
 resort, it then discards the newly arrived message.
 
-If you do not like throtteling, set the timeout to 0 - the message will
+If you do not like throttling, set the timeout to 0 - the message will
 then immediately be discarded. If you use a high timeout, be sure you
 know what you do. If a high main message queue enqueue timeout is set,
 it can lead to something like a complete hang of the system. The same
@@ -425,7 +425,7 @@ Rate Limiting
 ~~~~~~~~~~~~~
 
 Rate limiting provides a way to prevent rsyslogd from processing things
-too fast. It can, for example, prevent overruning a receiver system.
+too fast. It can, for example, prevent overrunning a receiver system.
 
 Currently, there are only limited rate-limiting features available. The
 "*$<object>QueueDequeueSlowdown*\ "  directive allows to specify how
