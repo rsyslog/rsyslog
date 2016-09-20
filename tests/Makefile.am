@@ -279,6 +279,10 @@ if ENABLE_OMPROG
 TESTS +=  \
 	omprog-cleanup.sh \
 	omprog-cleanup-with-outfile.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive.sh
+endif
 endif
 
 if ENABLE_OMKAFKA
@@ -979,9 +983,12 @@ EXTRA_DIST= \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
 	omprog-cleanup-with-outfile.sh \
+  omprog-cleanup-when-unresponsive.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-cleanup-outfile.conf \
+	testsuites/omprog-cleanup-unresponsive.conf \
 	testsuites/omprog-test-bin.sh \
+  testsuites/term-ignoring-script.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \

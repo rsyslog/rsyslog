@@ -41,6 +41,10 @@
 #else
 #include <wait.h>
 #endif
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#include <sys/syscall.h>
+#include <sys/types.h>
+#endif
 #include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -345,19 +349,107 @@ finalize_it:
 	RETiRet;
 }
 
+#if defined(__linux__) && defined(_GNU_SOURCE)
+typedef struct subprocess_timeout_desc_s {
+	pthread_attr_t thd_attr;
+	pthread_t thd;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+	int timeout_armed;
+	pid_t waiter_tid;
+	long timeout_ms;
+	struct timespec timeout;
+} subprocess_timeout_desc_t;
+
+static void * killSubprocessOnTimeout(void *_subpTimeOut_p) {
+	subprocess_timeout_desc_t *subpTimeOut = (subprocess_timeout_desc_t *) _subpTimeOut_p;
+	if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
+		while (subpTimeOut->timeout_armed) {
+			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock, &subpTimeOut->timeout);
+			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout) == 0))) {
+				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't reaped within timeout "
+								"(%ld ms) preparing to force-kill.", subpTimeOut->timeout_ms);
+				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
+					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
+									"which was waiting to reap child-process.", subpTimeOut->waiter_tid);
+				}
+			}
+		}
+		pthread_mutex_unlock(&subpTimeOut->lock);
+	}
+	return NULL;
+}
+
+static inline rsRetVal
+setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms) {
+	int attr_initialized = 0, mutex_initialized = 0, cond_initialized = 0;
+	DEFiRet;
+	CHKiConcCtrl(pthread_attr_init(&subpTimeOut->thd_attr));
+	attr_initialized = 1;
+	CHKiConcCtrl(pthread_mutex_init(&subpTimeOut->lock, NULL));
+	mutex_initialized = 1;
+	CHKiConcCtrl(pthread_cond_init(&subpTimeOut->cond, NULL));
+	cond_initialized = 1;
+	subpTimeOut->timeout_armed = 1;
+	subpTimeOut->waiter_tid = syscall(SYS_gettid);
+	subpTimeOut->timeout_ms = timeout_ms;
+	CHKiRet(timeoutComp(&subpTimeOut->timeout, timeout_ms));
+	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, &subpTimeOut));
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (attr_initialized) pthread_attr_destroy(&subpTimeOut->thd_attr);
+		if (mutex_initialized) pthread_mutex_destroy(&subpTimeOut->lock);
+		if (cond_initialized) pthread_cond_destroy(&subpTimeOut->cond);
+	}
+	RETiRet;
+}
+
+static inline void
+doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t pid) {
+	if (do_kill) {
+		if (kill(pid, 9) == 0) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE, "omprog: child-process FORCE-killed");
+		} else {
+			errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: child-process cound't be FORCE-killed");
+		}
+	}
+	pthread_join(subpTimeOut->thd, NULL);
+	pthread_cond_destroy(&subpTimeOut->cond);
+	pthread_mutex_destroy(&subpTimeOut->lock);
+	pthread_attr_destroy(&subpTimeOut->thd_attr);
+}
+#endif
+
 
 /* clean up after a terminated child
  */
 static rsRetVal
-cleanup(wrkrInstanceData_t *pWrkrData)
+cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 {
 	int status;
 	int ret;
 	char errStr[1024];
+
+#if defined(__linux__) && defined(_GNU_SOURCE)
+	subprocess_timeout_desc_t subpTimeOut;
+	int timeoutSetupStatus;
+	int waitpid_interrupted;
+#endif
 	DEFiRet;
 
 	assert(pWrkrData->bIsRunning == 1);
+	
+#if defined(__linux__) && defined(_GNU_SOURCE)
+	if (timeout_ms > 0) timeoutSetupStatus = setupSubprocessTimeout(&subpTimeOut, timeout_ms);
+#endif
+
 	ret = waitpid(pWrkrData->pid, &status, 0);
+
+#if defined(__linux__) && defined(_GNU_SOURCE)
+	waitpid_interrupted = (ret != pWrkrData->pid) && (errno == EINTR);
+	if ((timeout_ms > 0) && (timeoutSetupStatus == RS_RET_OK)) doForceKillSubprocess(&subpTimeOut, waitpid_interrupted, pWrkrData->pid);
+	if (waitpid_interrupted) return cleanup(pWrkrData, -1);
+#endif
 	if(ret != pWrkrData->pid) {
 		/* if waitpid() fails, we can not do much - try to ignore it... */
 		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
@@ -398,7 +490,7 @@ BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 	if (pWrkrData->bIsRunning) {
 		kill(pWrkrData->pid, SIGTERM);
-		CHKiRet(cleanup(pWrkrData));
+		CHKiRet(cleanup(pWrkrData, 5000));
 	}
 finalize_it:
 ENDfreeWrkrInstance
@@ -440,7 +532,7 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 			case EPIPE:
 				DBGPRINTF("omprog: program '%s' terminated, trying to restart\n",
 					  pWrkrData->pData->szBinary);
-				CHKiRet(cleanup(pWrkrData));
+				CHKiRet(cleanup(pWrkrData, 0));
 				CHKiRet(tryRestart(pWrkrData));
 				break;
 			default:

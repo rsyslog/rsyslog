@@ -368,6 +368,13 @@ case $1 in
 		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
+   'ensure-no-process-exists')
+    ps -ef | grep -v grep | grep -qF "$2"
+    if [ "x$?" == "x0" ]; then
+      echo "assertion failed: process with name-fragment matching '$2' found"
+		  . $srcdir/diag.sh error-exit 1
+    fi
+    ;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work
 		cp rsyslog.out.log work-presort
