@@ -10,7 +10,7 @@ configuration. This step configures the server central.example.net.
    :align: center
    :alt: 
 
-***Important:** Keep in mind that the order of configuration directives
+**Important:** *Keep in mind that the order of configuration directives
 is very important in rsyslog. As such, the samples given below do only
 work if the given order is preserved. Re-ordering the directives can
 break configurations and has broken them in practice. If you intend to
