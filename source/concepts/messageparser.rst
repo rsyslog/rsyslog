@@ -120,7 +120,7 @@ implementation...).
 How are message parsers used?
 -----------------------------
 
-In a simlified view, rsyslog
+In a simplified view, rsyslog
 
 #. first receives messages (via the input module),
 #. *then parses them (at the message level!)* and
@@ -184,7 +184,7 @@ If we reversed the parser order, RFC5424 messages would incorrectly
 parsed. Why? Because the RFC3164 parser will always parse every message,
 so if it were asked first, it would parse (and misinterpret) the
 5424-formatted message, return it did so and the rsyslog engine would
-never call the 5424 parser. So oder of sequence is very important.
+never call the 5424 parser. So order of sequence is very important.
 
 What happens if no parser in the chain could parse a message? Well, then
 we could not obtain the in-memory representation that is needed to
@@ -204,7 +204,7 @@ Where are parser chains used?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We now know what parser chains are and how they operate. The question is
-now how many parser chains can be active and how it is decicded which
+now how many parser chains can be active and how it is decided which
 parser chain is used on which message. This is controlled via
 :doc:`rsyslog's rulesets <multi_ruleset>`. In short, multiple rulesets can be
 defined and there always exist at least one ruleset.
@@ -251,8 +251,8 @@ some time to implement.
 The cookbook recipe for using different parsers for different devices
 is given as an actual in-depth example in the
 `$RulesetParser` configuration directive
-doc page. In short, it is acomplished by defining specific rulesets for
-the required parser chains, definining different listener ports for each
+doc page. In short, it is accomplished by defining specific rulesets for
+the required parser chains, defining different listener ports for each
 of the devices with different format and binding these listeners to the
 correct ruleset (and thus parser chains). Using that approach, a variety
 of different message formats can be supported via a single rsyslog

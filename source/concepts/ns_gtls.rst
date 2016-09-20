@@ -33,7 +33,7 @@ unauthorized access. It is recommended NOT to use this mode.
 x509/certvalid is a nonstandard mode. It validates the remote peers
 certificate, but does not check the subject name. This is weak
 authentication that may be useful in scenarios where multiple devices
-are deployed and it is sufficient proof of authenticy when their
+are deployed and it is sufficient proof of authenticity when their
 certificates are signed by the CA the server trusts. This is better than
 anon authentication, but still not recommended. **Known Problems**
 

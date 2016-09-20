@@ -17,7 +17,7 @@ rsyslog command line. That will enable native mode.
 
 Please note that rsyslogd helps you during that process by logging
 appropriate messages about compatibility mode and
-backwards-compatibility statemtents automatically generated. You may
+backwards-compatibility statements automatically generated. You may
 want your syslogd log for those. They immediately follow rsyslogd's
 startup message.
 
@@ -67,7 +67,7 @@ compatible to sysklogd.
 
 Please note that rsyslogd issues warning messages if the -c3 command
 line option is not given. This is to alert you that your are running in
-compatibility mode. Compatibility mode interfers with you rsyslog.conf
+compatibility mode. Compatibility mode interferes with your rsyslog.conf
 commands and may cause some undesired side-effects. It is meant to be
 used with a plain old rsyslog.conf - if you use new features, things
 become messy. So the best advise is to work through this document,
@@ -83,7 +83,7 @@ This option is no longer supported, as the "last message repeated n
 times" feature is now turned off by default. We changed this default
 because this feature is causing a lot of trouble and we need to make it
 either go away or change the way it works. For more information, please
-see our dedicted `forum thread on "last message repeated n
+see our dedicated `forum thread on "last message repeated n
 times" <http://www.rsyslog.com/PNphpBB2-viewtopic-p-1130.phtml>`_. This
 thread also contains information on how to configure rsyslogd so that it
 continues to support this feature (as long as it is not totally
@@ -92,7 +92,7 @@ removed).
 -m Option
 ---------
 
-The -m command line option is emulated in compatibiltiy mode. To replace
+The -m command line option is emulated in compatibility mode. To replace
 it, use the following config directives (compatibility mode
 auto-generates them):
 
@@ -143,7 +143,7 @@ Please note that with pre-v3 rsyslogd, a service database lookup was
 made when a UDP server was started and no port was configured. Only if
 that failed, the IANA default of 514 was used. For TCP servers, this
 lookup was never done and 514 always used if no specific port was
-configured. For consitency, both TCP and UDP now use port 514 as
+configured. For consistency, both TCP and UDP now use port 514 as
 default. If a lookup is desired, you need to specify it in the "Run"
 directive, e.g. "*$UDPServerRun syslog*\ ".
 
@@ -158,7 +158,7 @@ klogd functionality, do
   $ModLoad imklog
 
 Note that this can not be handled by the compatibility layer, as klogd
-was a separate binary.A limited set of klogd command line settings is
+was a separate binary. A limited set of klogd command line settings is
 now supported via rsyslog.conf. That set of configuration directives is
 to be expanded. 
 
@@ -170,7 +170,7 @@ such, it retained stock syslogd's default of syncing every file write if
 not specified otherwise (by placing a dash in front of the output file
 name). While this was a useful feature in past days where hardware was
 much less reliable and UPS seldom, this no longer is useful in today's
-world. Instead, the syncing is a high performace hit. With it, rsyslogd
+world. Instead, the syncing is a high performance hit. With it, rsyslogd
 writes files around 50 **times** slower than without it. It also affects
 overall system performance due to the high IO activity. In rsyslog v3,
 syncing has been turned off by default. This is done via a specific
@@ -193,7 +193,7 @@ Output File Format
 
 Rsyslog supports high precision RFC 3339 timestamps and puts these into
 local log files by default. This is a departure from previous syslogd
-behaviour. We decided to sacrify some backward-compatibility in an
+behaviour. We decided to sacrifice some backward-compatibility in an
 effort to provide a better logging solution. Rsyslog has been supporting
 the high-precision timestamps for over three years as of this writing,
 but nobody used them because they were not default (one may also assume
@@ -208,7 +208,7 @@ them off by placing
 
 right at the start of your rsyslog.conf. This will use the previous
 format. Please note that the name is case-sensitive and must be
-specificed exactly as shown above. Please also note that you can of
+specified exactly as shown above. Please also note that you can of
 course use any other format of your liking. To do so, simply specify the
 template to use or set a new default template via the
 $ActionFileDefaultTemplate directive. Keep in mind, though, that
@@ -228,7 +228,7 @@ uses the plain old syslog format with second-level resolution inside the
 timestamps. We could have made it emit high precision timestamps.
 However, that would have broken almost all receivers, including earlier
 versions of rsyslog. To avoid this hassle, high-precision timestamps
-need to be explicitely enabled. To make this as painless as possible,
+need to be explicitly enabled. To make this as painless as possible,
 rsyslog comes with a canned template that contains everything necessary.
  To enable high-precision timestamps, just use:
 
@@ -243,12 +243,12 @@ specifying the right template.
 If you are running in a system with only rsyslog 3.12.5 and above in the
 receiver roles, it is suggested to add one (or both) of the above
 statements to the top of your rsyslog.conf (but after the $ModLoad's!) -
-that will enable you to use the best in timestamp support availble.
+that will enable you to use the best in timestamp support available.
 Please note that when you use this format with other receivers, they
 will probably become pretty confused and not detect the timestamp at
 all. In earlier rsyslog versions, for example, that leads to duplication
 of timestamp and hostname fields and disables the detection of the
-orignal hostname in a relayed/NATed environment. So use the new format
+original hostname in a relayed/NATed environment. So use the new format
 with care.
 
 Queue Modes for the Main Message Queue

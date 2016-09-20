@@ -95,7 +95,7 @@ Retries of output plugins that do not do proper replies
 Some output plugins may not be able to detect if their target is capable of
 accepting data again after an error (technically, they always return OK when
 TryResume is called). Previously, the rsyslog core engine suspended such an action
-after 1000 succesive failures. This lead to potentially a large amount of
+after 1000 successive failures. This lead to potentially a large amount of
 errors and error messages. Starting with 7.2.1, this has been reduced to 10
 successive failures. This still gives the plugin a chance to recover. In extreme
 cases, a plugin may now enter suspend mode where it previously did not do so.
@@ -129,7 +129,7 @@ User-Noticable Changes
 ......................
 The code works almost as before, with two exceptions:
 
-* The supression amount can be different, as the new algorithm
+* The suppression amount can be different, as the new algorithm
   precisely check's a single source, and while that source is being
   read. The previous algorithm worked on a set of mixed messages
   from multiple sources.
@@ -147,7 +147,7 @@ complex code - for a case that most probably would never happen).
 
 Performance Implications
 ........................
-In general, the new method enables far faster output procesing. However, it
+In general, the new method enables far faster output processing. However, it
 needs to be noted that the "last message repeated n" processing needs parsed
 messages in order to detect duplicated. Consequently, if it is enabled the
 parser step cannot be deferred to the main queue processing thread and

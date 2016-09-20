@@ -42,7 +42,7 @@ changes must be made to plugin code. All project-supported plugins have been
 upgraded, so this compatibility issue is only of interest for you if you have
 custom plugins or use some user-contributed plugins from the rsyslog project
 that are not maintained by the project itself (omoracle is an example). Please
-expect some further plugin instablity during the initial v6 releases.
+expect some further plugin instability during the initial v6 releases.
 
 RainerScript based rsyslog.conf
 -------------------------------
@@ -81,7 +81,7 @@ These features will come up with rsyslog v7, which will have even better flow co
 capabilities inside the core engine. Note that v7 will fully support v6 RainerScript.
 Let us also say that the v6 version is not a low-end quick hack: it offers full-fledged
 syslog message processing control, capable of doing the best you can find inside the
-industry. We just say that v7 will come up with even more advanced capabilites.
+industry. We just say that v7 will come up with even more advanced capabilities.
 
 Please note that we tried hard to make the RainerScript parser compatible with
 all legacy config files. However, we may have failed in one case or another. So if you
@@ -173,14 +173,14 @@ phase.
 omusrmsg
 --------
 The omusrmsg module is used to send messages to users. In legacy-legacy
-config format (that is the very old sysklogd style), it was suffucient to use
+config format (that is the very old sysklogd style), it was sufficient to use
 just the user name to call this action, like in this example:
 
 ::
 
   *.* rgerhards
 
-This format is very ambigious and causes headache (see
+This format is very ambiguous and causes headache (see
 `blog post on omusrmsg <http://blog.gerhards.net/2011/07/why-omusrmsg-is-evil-and-how-it-is.html>`_
 for details). Thus the format has been superseded by this syntax
 (which is legacy format ;-)):
