@@ -133,14 +133,18 @@ static pthread_key_t keyCallStack;
  * rgerhards, 2008-01-23
  */
 #define DLL_Del(type, pThis) \
-	if(pThis->pPrev != NULL) \
+	if(pThis->pPrev != NULL) {\
 		pThis->pPrev->pNext = pThis->pNext; \
-	if(pThis->pNext != NULL) \
+	}\
+	if(pThis->pNext != NULL) {\
 		pThis->pNext->pPrev = pThis->pPrev; \
-	if(pThis == dbg##type##ListRoot) \
+	}\
+	if(pThis == dbg##type##ListRoot) {\
 		dbg##type##ListRoot = pThis->pNext; \
-	if(pThis == dbg##type##ListLast) \
+	}\
+	if(pThis == dbg##type##ListLast) {\
 		dbg##type##ListLast = pThis->pPrev; \
+	}\
 	free(pThis);
 
 #define DLL_Add(type, pThis) \
@@ -304,9 +308,10 @@ void
 dbgOutputTID(char* name)
 {
 #	if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
-	if(bOutputTidToStderr)
+	if(bOutputTidToStderr) {
 		fprintf(stderr, "thread tid %u, name '%s'\n",
 			(unsigned)syscall(SYS_gettid), name);
+	}
 	DBGPRINTF("thread created, tid %u, name '%s'\n",
 	          (unsigned)syscall(SYS_gettid), name);
 #	endif
@@ -385,8 +390,9 @@ static void dbgMutLogPrintAll(void)
 	dbgMutLog_t *pLog;
 
 	dbgprintf("Mutex log for all known mutex operations:\n");
-	for(pLog = dbgMutLogListRoot ; pLog != NULL ; pLog = pLog->pNext)
+	for(pLog = dbgMutLogListRoot ; pLog != NULL ; pLog = pLog->pNext) {
 		dbgMutLogPrintOne(pLog);
+	}
 	
 }
 
@@ -404,8 +410,9 @@ static dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, db
 	pLog = dbgMutLogListLast;
 	while(pLog != NULL) {
 		if(   pLog->mut == pmut && pLog->thrd == mythrd && pLog->mutexOp == mutop
-		   && (pFuncDB == NULL || pLog->pFuncDB == pFuncDB))
+		   && (pFuncDB == NULL || pLog->pFuncDB == pFuncDB)) {
 			break;
+		   }
 		pLog = pLog->pPrev;
 	}
 
@@ -418,11 +425,11 @@ static dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pL
 {
 	dbgMutLog_t *pLog;
 	
-	if(pLast == NULL)
+	if(pLast == NULL) { 
 		pLog = dbgMutLogListLast;
-	else
+	} else {
 		pLog = pLast->pPrev; /* if we get the last processed one, we need to go one before it, else its an endless loop */
-
+	}
 	while(pLog != NULL) {
 		if(pLog->mut == pmut) {
 			break;
@@ -441,8 +448,9 @@ static dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 
 	pLog = dbgMutLogFindFromBack(pmut, NULL);
 	while(pLog != NULL) {
-		if(pLog->mutexOp == MUTOP_LOCK)
+		if(pLog->mutexOp == MUTOP_LOCK) {
 			break;
+		}
 		pLog = dbgMutLogFindFromBack(pmut, pLog);
 	}
 
@@ -461,16 +469,17 @@ static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 	pHolder = dbgMutLogFindHolder(pmut);
 	dbgMutLogAddEntry(pmut, MUTOP_LOCKWAIT, pFuncDB, ln);
 
-	if(pHolder == NULL)
+	if(pHolder == NULL) {
 		pszHolder = "[NONE]";
-	else {
+	} else {
 		dbgGetThrdName(pszHolderThrdName, sizeof(pszHolderThrdName), pHolder->thrd, 1);
 		snprintf(pszBuf, sizeof(pszBuf), "%s:%d [%s]", pHolder->pFuncDB->file, pHolder->lockLn, pszHolderThrdName);
 		pszHolder = pszBuf;
 	}
 
-	if(bPrintMutexAction)
+	if(bPrintMutexAction) {
 		dbgprintf("%s:%d:%s: mutex %p waiting on lock, held by %s\n", pFuncDB->file, ln, pFuncDB->func, (void*)pmut, pszHolder);
+	}
 	pthread_mutex_unlock(&mutMutLog);
 }
 
@@ -491,8 +500,9 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 	dbgMutLogAddEntry(pmut, MUTOP_LOCK, pFuncDB, lockLn);
 	dbgFuncDBAddMutexLock(pFuncDB, pmut, lockLn);
 	pthread_mutex_unlock(&mutMutLog);
-	if(bPrintMutexAction)
+	if(bPrintMutexAction) {
 		dbgprintf("%s:%d:%s: mutex %p aquired\n", pFuncDB->file, lockLn, pFuncDB->func, (void*)pmut); 
+	}
 }
 
 
@@ -532,8 +542,9 @@ if(pLog == NULL) {
 	dbgMutLogDelEntry(pLog);
 
 	pthread_mutex_unlock(&mutMutLog);
-	if(bPrintMutexAction)
+	if(bPrintMutexAction) {
 		dbgprintf("%s:%d:%s: mutex %p UNlocked\n", pFuncDB->file, unlockLn, pFuncDB->func, (void*)pmut);
+	}
 }
 
 
@@ -668,8 +679,9 @@ static inline dbgThrdInfo_t *dbgFindThrd(pthread_t thrd)
 	dbgThrdInfo_t *pThrd;
 
 	for(pThrd = dbgCallStackListRoot ; pThrd != NULL ; pThrd = pThrd->pNext) {
-		if(pThrd->thrd == thrd)
+		if(pThrd->thrd == thrd) {
 			break;
+		}
 	}
 	return pThrd;
 }
@@ -710,8 +722,9 @@ void dbgSetThrdName(uchar *pszName)
 {
 	pthread_mutex_lock(&mutdbgprint);
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
-	if(pThrd->pszThrdName != NULL)
+	if(pThrd->pszThrdName != NULL) {
 		free(pThrd->pszThrdName);
+	}
 	pThrd->pszThrdName = strdup((char*)pszName);
 	pthread_mutex_unlock(&mutdbgprint);
 }
@@ -872,10 +885,11 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 		}
 	}
 #endif
-	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf) 
+	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf) {
 		lenCopy = sizeof(pszWriteBuf) - offsWriteBuf;
-	else
+	} else {
 		lenCopy = lenMsg;
+	}
 	memcpy(pszWriteBuf + offsWriteBuf, pszMsg, lenCopy);
 	offsWriteBuf += lenCopy;
 	/* the write is included in an "if" just to silence compiler
@@ -932,8 +946,9 @@ dbgoprint(obj_t *pObj, const char *fmt, ...)
 	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
-	if(!(Debug && debugging_on))
+	if(!(Debug && debugging_on)) {
 		return;
+	}
 	
 	/* a quick and very dirty hack to enable us to display just from those objects
 	 * that we are interested in. So far, this must be changed at compile time (and
@@ -941,8 +956,9 @@ dbgoprint(obj_t *pObj, const char *fmt, ...)
 	 * be selectable via the environment. -- rgerhards, 2008-02-20
 	 */
 #if 0
-	if(objGetObjID(pObj) != OBJexpr)
+	if(objGetObjID(pObj) != OBJexpr) {
 		return;
+	}
 #endif
 
 	va_start(ap, fmt);
@@ -971,8 +987,9 @@ dbgprintf(const char *fmt, ...)
 	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
-	if(!(Debug && debugging_on))
+	if(!(Debug && debugging_on)) {
 		return;
+	}
 	
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
@@ -1053,10 +1070,12 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 		if(pFuncDB->file == NULL || pFuncDB->func == NULL) {
 			dbgprintf("Error %d allocating memory for FuncDB, not adding\n", errno);
 			/* do a little bit of cleanup */
-			if(pFuncDB->file != NULL)
+			if(pFuncDB->file != NULL) {
 				free(pFuncDB->file);
-			if(pFuncDB->func != NULL)
+			}
+			if(pFuncDB->func != NULL) {
 				free(pFuncDB->func);
+			}
 			free(pFuncDB);
 			free(pFuncDBListEntry);
 			pthread_mutex_unlock(&mutFuncDBList);
@@ -1081,8 +1100,9 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 		iStackPtr = pThrd->stackPtr;
 	} else {
 		iStackPtr = pThrd->stackPtr++;
-		if(pThrd->stackPtr > pThrd->stackPtrMax)
+		if(pThrd->stackPtr > pThrd->stackPtrMax) {
 			pThrd->stackPtrMax = pThrd->stackPtr;
+		}
 		pThrd->callStack[iStackPtr] = pFuncDB;
 		pThrd->lastLine[iStackPtr] = line;
 	}
@@ -1105,10 +1125,11 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
 		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
-			if(iRet == RS_RET_NO_IRET)
+			if(iRet == RS_RET_NO_IRET) {
 				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
-			else 
+			} else {
 				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+			}
 		}
 	}
 	pThrd->stackPtr = iStackPtrRestore;
@@ -1133,8 +1154,9 @@ void dbgPrintAllDebugInfo(void)
 {
 	dbgCallStackPrintAll();
 	dbgMutLogPrintAll();
-	if(bPrintFuncDBOnExit)
+	if(bPrintFuncDBOnExit) {
 		dbgFuncDBPrintAll();
+	}
 }
 
 
@@ -1172,8 +1194,9 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 
 	p = *ppszOpt;
 	/* skip whitespace */
-	while(*p && isspace(*p))
+	while(*p && isspace(*p)) {
 		++p;
+	}
 
 	/* name - up until '=' or whitespace */
 	i = 0;
@@ -1240,8 +1263,9 @@ dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot)
 	int bFound = 0;
 	dbgPrintName_t *pEntry = pRoot;
 
-	if(pRoot == NULL)
+	if(pRoot == NULL) {
 		bFound = 1;
+	}
 
 	while(pEntry != NULL && !bFound) {
 		if(!strcasecmp((char*)pEntry->pName, (char*)pName)) {
@@ -1263,8 +1287,9 @@ dbgmalloc(size_t size)
 {
 	void *pRet;
 	pRet = malloc(size);
-	if(pRet != NULL)
+	if(pRet != NULL) {
 		memset(pRet, 0xff, size);
+	}
 	return pRet;
 }
 
@@ -1440,11 +1465,13 @@ rsRetVal dbgClassExit(void)
 	dbgFuncDBListEntry_t *pFuncDBListEtry, *pToDel;
 	pthread_key_delete(keyCallStack);
 
-	if(bPrintAllDebugOnExit)
+	if(bPrintAllDebugOnExit) {
 		dbgPrintAllDebugInfo();
+	}
 
-	if(altdbg != -1)
+	if(altdbg != -1) {
 		close(altdbg);
+	}
 
 	/* now free all of our memory to make the memory debugger happy... */
 	pFuncDBListEtry = pFuncDBListRoot;
