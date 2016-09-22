@@ -185,8 +185,9 @@ writePidFile(void)
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	if(tmpPidFile == NULL)
+	if(tmpPidFile == NULL) {
 		tmpPidFile = PidFile;
+	}
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
@@ -216,8 +217,9 @@ checkStartupOK(void)
 	DEFiRet;
 
 	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
-	if((fp = fopen((char*) PidFile, "r")) == NULL)
+	if((fp = fopen((char*) PidFile, "r")) == NULL) {
 		FINALIZE; /* all well, no pid file yet */
+	}
 
 	int pf_pid;
 	if(fscanf(fp, "%d", &pf_pid) != 1) {
@@ -237,8 +239,9 @@ checkStartupOK(void)
 	}
 
 finalize_it:
-	if(fp != NULL)
+	if(fp != NULL) {
 		fclose(fp);
+	}
 	RETiRet;
 }
 
@@ -343,10 +346,11 @@ forkRsyslog(void)
 	tv.tv_usec = 0;
 
 	retval = select(pipefd[0]+1, &rfds, NULL, NULL, &tv);
-	if(retval == -1)
+	if(retval == -1) {
 		rs_strerror_r(errno, err, sizeof(err));
-	else
+	} else {
 		strcpy(err, "OK");
+	}
 	dbgprintf("rsyslogd: select() returns %d: %s\n", retval, err);
 	if(retval == -1) {
 		fprintf(stderr,"rsyslog startup failure, select() failed: %s\n", err);
@@ -548,8 +552,9 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
-			if(net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK)
+			if(net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK) {
 				continue;
+			}
 			bIsPermitted = net.isAllowedSender2((uchar*)"UDP",
 			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)propGetSzStr(fqdn), 1);
 			if(!bIsPermitted) {
@@ -572,10 +577,12 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	}
 
 finalize_it:
-	if(propFromHost != NULL)
+	if(propFromHost != NULL) {
 		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
+	}
+	if(propFromHostIP != NULL) {
 		prop.Destruct(&propFromHostIP);
+	}
 	RETiRet;
 }
 
@@ -649,8 +656,9 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 					break;
 				}
 			}
-			if(qfname == NULL)
+			if(qfname == NULL) {
 				qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+			}
 			qfn = malloc(sizeof(struct queuefilenames_s));
 			qfn->name = qfname;
 			qfn->next = queuefilenames;
@@ -809,8 +817,9 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * supressor statement.
 	 */
 	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
-		if(pri2sev(pri) == LOG_ERR)
+		if(pri2sev(pri) == LOG_ERR) {
 			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+		}
 	}
 
 finalize_it:
@@ -865,8 +874,9 @@ multiSubmitMsg2(multi_submit_t *pMultiSub)
 	DEFiRet;
 	assert(pMultiSub != NULL);
 
-	if(pMultiSub->nElem == 0)
+	if(pMultiSub->nElem == 0) {
 		FINALIZE;
+	}
 
 	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
@@ -925,8 +935,9 @@ bufOptAdd(char opt, char *arg)
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL)
+	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	pBuf->optchar = opt;
 	pBuf->arg = arg;
@@ -954,8 +965,9 @@ bufOptRemove(int *opt, char **arg)
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if(bufOptRoot == NULL)
+	if(bufOptRoot == NULL) {
 		ABORT_FINALIZE(RS_RET_END_OF_LINKEDLIST);
+	}
 	pBuf = bufOptRoot;
 
 	*opt = pBuf->optchar;
@@ -1102,8 +1114,9 @@ initAll(int argc, char **argv)
 		}
 	}
 
-	if(argc - optind)
+	if(argc - optind) {
 		rsyslogd_usage();
+	}
 
 	DBGPRINTF("rsyslogd %s startup, module path '%s', cwd:%s\n",
 		  VERSION, glblModPath == NULL ? "" : (char*)glblModPath,
@@ -1228,11 +1241,12 @@ initAll(int argc, char **argv)
 					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
 			}
-			if(iHelperUOpt & 0x02)
+			if(iHelperUOpt & 0x02) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
 					 "soon.\n"
 					 "For the 0x02 bit, please use the -C option instead.");
 				bChDirRoot = 0;
+			}
 			break;
 		case 'C':
 			bChDirRoot = 0;
@@ -1255,8 +1269,9 @@ initAll(int argc, char **argv)
 		}
 	}
 
-	if(iRet != RS_RET_END_OF_LINKEDLIST)
+	if(iRet != RS_RET_END_OF_LINKEDLIST) {
 		FINALIZE;
+	}
 
 	if(iConfigVerify) {
 		doFork = 0;
@@ -1287,12 +1302,14 @@ initAll(int argc, char **argv)
 	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
-		if(chdir("/") != 0)
+		if(chdir("/") != 0) {
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+		}
 	}
 
-	if(iConfigVerify)
+	if(iConfigVerify) {
 		FINALIZE;
+	}
 	/* after this point, we are in a "real" startup */
 
 	thrdInit();
@@ -1399,8 +1416,9 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	} else {
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
-	if(pInputName != NULL)
+	if(pInputName != NULL) {
 		MsgSetInputName(pMsg, pInputName);
+	}
 	MsgSetRawMsg(pMsg, (char*)msg, len);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRuleset(pMsg, pRuleset);
@@ -1530,8 +1548,9 @@ mainloop(void)
 			bChildDied = 0;
 		}
 
-		if(bFinished)
+		if(bFinished) {
 			break;	/* exit as quickly as possible */
+		}
 
 		janitorRun();
 
@@ -1615,8 +1634,9 @@ deinitAll(void)
 
 	modExitIminternal();
 
-	if(pInternalInputName != NULL)
+	if(pInternalInputName != NULL) {
 		prop.Destruct(&pInternalInputName);
+	}
 
 	/* the following line cleans up CfSysLineHandlers that were not based on loadable
 	 * modules. As such, they are not yet cleared.  */
@@ -1655,8 +1675,9 @@ main(int argc, char **argv)
 	/* use faster hash function inside json lib */
 	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
-	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+	if(log_dflt != NULL && !strcmp(log_dflt, "1")) {
 		bProcessInternalMessages = 1;
+	}
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");
