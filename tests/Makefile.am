@@ -286,6 +286,10 @@ endif
 if HAVE_VALGRIND
 TESTS +=  \
 	omprog-cleanup-vg.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive-vg.sh
+endif
 endif
 endif
 
@@ -988,7 +992,8 @@ EXTRA_DIST= \
 	omprog-cleanup.sh \
 	omprog-cleanup-vg.sh \
 	omprog-cleanup-with-outfile.sh \
-  omprog-cleanup-when-unresponsive.sh \
+	omprog-cleanup-when-unresponsive.sh \
+	omprog-cleanup-when-unresponsive-vg.sh \
 	testsuites/omprog-cleanup.conf \
 	testsuites/omprog-cleanup-outfile.conf \
 	testsuites/omprog-cleanup-unresponsive.conf \
