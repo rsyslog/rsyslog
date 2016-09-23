@@ -1584,6 +1584,8 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
+	rsrtSetErrLogger(dfltErrLogger);
+	
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */

@@ -283,6 +283,10 @@ if OS_LINUX
 TESTS += \
 	omprog-cleanup-when-unresponsive.sh
 endif
+if HAVE_VALGRIND
+TESTS +=  \
+	omprog-cleanup-vg.sh
+endif
 endif
 
 if ENABLE_OMKAFKA
@@ -982,6 +986,7 @@ EXTRA_DIST= \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
+	omprog-cleanup-vg.sh \
 	omprog-cleanup-with-outfile.sh \
   omprog-cleanup-when-unresponsive.sh \
 	testsuites/omprog-cleanup.conf \

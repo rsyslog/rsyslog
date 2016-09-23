@@ -89,9 +89,6 @@ struct sched_param default_sched_param;
 int default_thr_sched_policy;
 #endif
 
-/* forward definitions */
-static void dfltErrLogger(const int, const int, const uchar *errMsg);
-
 /* globally visible static data - see comment in rsyslog.h for details */
 uchar *glblModPath; /* module load path */
 void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger; /* the error logger to use by the errmsg module */
@@ -106,7 +103,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
  * default so that we can log errors during the intial phase, most importantly
  * during initialization. -- rgerhards. 2008-04-17
  */
-static void
+void
 dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
 {
 	fprintf(stderr, "rsyslog runtime error(%d,%d): %s\n", severity, iErr, errMsg);

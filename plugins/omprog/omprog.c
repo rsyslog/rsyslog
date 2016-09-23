@@ -139,6 +139,7 @@ CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mut);
 	free(pData->szBinary);
 	free(pData->outputFileName);
+	free(pData->tplName);
 	if(pData->aParams != NULL) {
 		for (i = 0; i < pData->iParams; i++) {
 			free(pData->aParams[i]);
@@ -394,7 +395,7 @@ setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms) 
 	subpTimeOut->waiter_tid = syscall(SYS_gettid);
 	subpTimeOut->timeout_ms = timeout_ms;
 	CHKiRet(timeoutComp(&subpTimeOut->timeout, timeout_ms));
-	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, &subpTimeOut));
+	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, subpTimeOut));
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (attr_initialized) pthread_attr_destroy(&subpTimeOut->thd_attr);
@@ -406,6 +407,12 @@ finalize_it:
 
 static inline void
 doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t pid) {
+    if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
+        subpTimeOut->timeout_armed = 0;
+        pthread_cond_signal(&subpTimeOut->cond);
+        pthread_mutex_unlock(&subpTimeOut->lock);
+    }
+	pthread_join(subpTimeOut->thd, NULL);
 	if (do_kill) {
 		if (kill(pid, 9) == 0) {
 			errmsg.LogError(0, RS_RET_NO_ERRCODE, "omprog: child-process FORCE-killed");
@@ -413,7 +420,6 @@ doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t
 			errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: child-process cound't be FORCE-killed");
 		}
 	}
-	pthread_join(subpTimeOut->thd, NULL);
 	pthread_cond_destroy(&subpTimeOut->cond);
 	pthread_mutex_destroy(&subpTimeOut->lock);
 	pthread_attr_destroy(&subpTimeOut->thd_attr);
