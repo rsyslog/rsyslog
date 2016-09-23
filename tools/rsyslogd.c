@@ -705,7 +705,11 @@ startMainQueue(qqueue_t *pQueue)
 void
 rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
-	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
+	if (glbl.GetGlobalInputTermState() == 1) {
+		dfltErrLogger(severity, iErr, msg);
+	} else {
+		logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
+	}
 }
 
 static inline rsRetVal
@@ -1584,7 +1588,6 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
-	rsrtSetErrLogger(dfltErrLogger);
 	
 	thrdTerminateAll();
 
