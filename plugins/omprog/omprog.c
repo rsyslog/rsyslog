@@ -434,7 +434,6 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 {
 	int status;
 	int ret;
-	char errStr[1024];
 
 #if defined(__linux__) && defined(_GNU_SOURCE)
 	subprocess_timeout_desc_t subpTimeOut;
@@ -457,9 +456,12 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 	if (waitpid_interrupted) return cleanup(pWrkrData, -1);
 #endif
 	if(ret != pWrkrData->pid) {
-		/* if waitpid() fails, we can not do much - try to ignore it... */
-		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
-			   rs_strerror_r(errno, errStr, sizeof(errStr)));
+		if (errno == ECHILD) {
+			errmsg.LogError(errno, RS_RET_OK_WARN, "Child %d doesn't seem to exist, "
+							"hence couldn't be reaped (reaped by main-loop?)", pWrkrData->pid);
+		} else {
+			errmsg.LogError(errno, RS_RET_SYS_ERR, "Cleanup failed for child %d", pWrkrData->pid);
+		}
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",

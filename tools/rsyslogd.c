@@ -26,6 +26,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
@@ -1530,10 +1531,13 @@ mainloop(void)
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 
 		if(bChildDied) {
-			int child;
+			pid_t child;
 			do {
 				child = waitpid(-1, NULL, WNOHANG);
 				DBGPRINTF("rsyslogd: child %d has terminated\n", child);
+				if (child != -1) {
+					errmsg.LogError(0, RS_RET_OK, "Child %d has terminated, reaped by main-loop.", child);
+				}
 			} while(child > 0);
 			bChildDied = 0;
 		}
