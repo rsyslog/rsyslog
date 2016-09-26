@@ -254,7 +254,7 @@ rsgtimprintDel(imprint_t *imp)
 }
 
 int
-rsgtInit(char *usragent)
+rsgtInit(const char *usragent)
 {
 	int r = 0;
 	int ret = GT_OK;
