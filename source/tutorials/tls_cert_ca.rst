@@ -5,11 +5,10 @@ The first step is to set up a certificate authority (CA). It must be
 maintained by a trustworthy person (or group) and approves the
 indentities of all machines. It does so by issuing their certificates.
 In a small setup, the administrator can provide the CA function. What is
-important is the the CA's
-
-private key is well-protocted and machine certificates are only issued
-if it is know they are valid (in a single-admin case that means the
-admin should not issue certificates to anyone else except himself).
+important is the the CA's private key is well-protocted and machine 
+certificates are only issued if it is know they are valid (in a 
+single-admin case that means the admin should not issue certificates to 
+anyone else except himself).
 
 The CA creates a so-called self-signed certificate. That is, it approves
 its own authenticy. This sounds useless, but the key point to understand
