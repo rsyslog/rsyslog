@@ -46,7 +46,7 @@ If private keys have become known to third parties, the system does not
 provide any security at all. Also, our solution bases on X.509
 certificates and a (very limited) chain of trust. We have one instance
 (the CA) that issues all machine certificates. The machine certificate
-indentifies a particular machine. hile in theory (and practice), there
+indentifies a particular machine. While in theory (and practice), there
 could be several "sub-CA" that issues machine certificates for a
 specific adminitrative domain, we do not include this in our "simple yet
 secure" setup. If you intend to use this, rsyslog supports it, but then
