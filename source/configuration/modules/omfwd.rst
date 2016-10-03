@@ -160,7 +160,7 @@ Action Parameters
    Enable or disable keep-alive packets at the tcp socket layer. The
    default is to disable them.
 
--  **KeepAliveProbes** integer
+-  **KeepAlive.Probes** integer
 
    The number of unacknowledged probes to send before considering the
    connection dead and notifying the application layer. The default, 0,
@@ -168,7 +168,7 @@ Action Parameters
    effect if keep-alive is enabled. The functionality may not be
    available on all platforms.
 
--   **KeepAliveIntvl** integer
+-   **KeepAlive.Interval** integer
 
    The interval between subsequential keepalive probes, regardless of
    what the connection has exchanged in the meantime. The default, 0,
@@ -176,7 +176,7 @@ Action Parameters
    effect if keep-alive is enabled. The functionality may not be
    available on all platforms.
 
--   **KeepAliveTime** integer
+-   **KeepAlive.Time** integer
 
    The interval between the last data packet sent (simple ACKs are not
    considered data) and the first keepalive probe; after the connection
