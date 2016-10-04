@@ -1,4 +1,17 @@
 ------------------------------------------------------------------------------
+Version 8.22.0 [v8-stable] 2016-10-04
+- ompgsql: add template support
+  Thanks to Radu Gheorghe for implementing this.
+- generate somewhat better error message on config file syntax error
+  a common case (object at invalid location) has received it's own error
+  message; for the rest we still rely on the generic flex/bison handler
+- bugfix:omhiredis reconnects after failure
+  previously it could loose messages under such conditions.
+  Thanks to Bob Gregory for the patch.
+- general cleanup and code improvement
+  mostly guided by compiler warnings induced by newer opensuse builbot
+  environment
+------------------------------------------------------------------------------
 Version 8.21.0 [v8-stable] 2016-08-23
 - CHANGE OF BEHAVIOUR:
   by default, internal messages are no longer logged via the internal

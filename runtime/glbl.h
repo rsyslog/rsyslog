@@ -116,8 +116,8 @@ extern int glblSenderKeepTrack;
 extern int glblUnloadModules;
 extern short janitorInterval;
 
-static inline pid_t glblGetOurPid(void) { return glbl_ourpid; }
-static inline void glblSetOurPid(pid_t pid) { glbl_ourpid = pid; }
+#define glblGetOurPid() glbl_ourpid
+#define glblSetOurPid(pid) { glbl_ourpid = (pid); }
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);

@@ -211,7 +211,7 @@ reportVerifySuccess(ksierrctx_t *ectx) /*OLD CODE , GTVerificationInfo *vrfyInf)
 }
 
 /* return the actual length in to-be-written octets of an integer */
-static inline uint8_t rsksi_tlvGetInt64OctetSize(uint64_t val)
+static uint8_t rsksi_tlvGetInt64OctetSize(uint64_t val)
 {
 	if(val >> 56)
 		return 8;
@@ -230,7 +230,7 @@ static inline uint8_t rsksi_tlvGetInt64OctetSize(uint64_t val)
 	return 1;
 }
 
-static inline int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
+static int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 {
 	/* Directory write into file */
 	int r = 0;
@@ -238,7 +238,7 @@ static inline int rsksi_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 		r = RSGTE_IO; 
 	return r;
 }
-static inline int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
+static int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
 {
 	int i, r = 0;
 	for(i = 0 ; i < size ; ++i) {
@@ -247,7 +247,7 @@ static inline int rsksi_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, in
 	}
 done:	return r;
 }
-static inline int rsksi_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
+static int rsksi_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
 {
 	uint8_t doWrite = 0;
 	int r;
@@ -949,7 +949,7 @@ done:
 
 
 /* return if a blob is all zero */
-static inline int
+static int
 blobIsZero(uint8_t *blob, uint16_t len)
 {
 	int i;
@@ -2022,7 +2022,7 @@ return r;
 	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
 	iWr += subrec.tlvlen;
 
-static inline int
+static int
 rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *ectx)
 {
 	KSI_Signature *extended = NULL;

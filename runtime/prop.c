@@ -46,6 +46,7 @@
 /* static data */
 DEFobjStaticHelpers
 
+//extern uchar *propGetSzStr(prop_t *pThis); /* expand inline function here */
 
 /* Standard-Constructor
  */

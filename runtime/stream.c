@@ -365,8 +365,8 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
 			*/
 			DBGPRINTF("queue '%s', file '%s' opened for non-append write, but "
-				"already contains %zd bytes\n",
-				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+				"already contains %lld bytes\n",
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, (long long) offset);
 		}
 	}
 

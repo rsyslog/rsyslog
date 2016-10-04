@@ -53,7 +53,15 @@ ENDinterface(prop)
 
 
 /* get classic c-style string */
-static inline uchar *
+/* Note: I know that "static inline" is not the right thing from a C99
+ * PoV, but some environments treat, even in C99 mode, compile
+ * non-static inline into the source even if not defined as "extern". This
+ * obviously results in linker errors. Using "static inline" as below together
+ * with "__attribute__((unused))" works in all cases. Note also that we
+ * cannot work around this as we would otherwise need to evaluate
+ * pThis more than once.
+ */
+static inline uchar * __attribute__((unused))
 propGetSzStr(prop_t *pThis)
 {
 	return(pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;

@@ -163,6 +163,67 @@ getFIOPName(const unsigned iFIOP)
 	return pRet;
 }
 
+const char*
+cnfFiltType2str(const enum cnfFiltType filttype)
+{
+	switch(filttype) {
+	case CNFFILT_NONE:
+		return("filter:none");
+	case CNFFILT_PRI:
+		return("filter:pri");
+	case CNFFILT_PROP:
+		return("filter:prop");
+	case CNFFILT_SCRIPT:
+		return("filter:script");
+	default:
+		return("error:invalid_filter_type");	/* should never be reached */
+	}
+}
+
+const char*
+cnfobjType2str(const enum cnfobjType ot)
+{
+	switch(ot) {
+	case CNFOBJ_ACTION:
+		return "action";
+		break;
+	case CNFOBJ_RULESET:
+		return "ruleset";
+		break;
+	case CNFOBJ_GLOBAL:
+		return "global";
+		break;
+	case CNFOBJ_INPUT:
+		return "input";
+		break;
+	case CNFOBJ_MODULE:
+		return "module";
+		break;
+	case CNFOBJ_TPL:
+		return "template";
+		break;
+	case CNFOBJ_PROPERTY:
+		return "property";
+		break;
+	case CNFOBJ_CONSTANT:
+		return "constant";
+		break;
+	case CNFOBJ_MAINQ:
+		return "main_queue";
+	case CNFOBJ_LOOKUP_TABLE:
+		return "lookup_table";
+	case CNFOBJ_PARSER:
+		return "parser";
+		break;
+	case CNFOBJ_TIMEZONE:
+		return "timezone";
+		break;
+	case CNFOBJ_DYN_STATS:
+		return "dyn_stats";
+		break;
+	default:return "error: invalid cnfobjType";
+	}
+}
 
 /* This function takes the filter part of a property
  * based filter and decodes it. It processes the line up to the beginning

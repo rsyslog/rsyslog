@@ -66,17 +66,13 @@ void rsCStrDestruct(cstr_t **ppThis);
  */
 rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
 
-/* some inline functions for things that are really frequently called... */
-
 /* Finalize the string object. This must be called after all data is added to it
  * but before that data is used.
  * rgerhards, 2009-06-16
  */
-static inline void
-cstrFinalize(cstr_t *const __restrict__ pThis)
-{
-	if(pThis->iStrLen > 0)
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* space is always reserved for this */
+#define cstrFinalize(pThis) { \
+	if((pThis)->iStrLen > 0) \
+		(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
 }
 
 

@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2015 Adiscon GmbH.
+ * Copyright 2011-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -121,6 +121,11 @@ static struct cnfparamblk parserpblk =
 
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
+
+int rsconfNeedDropPriv(rsconf_t *const cnf)
+{
+	return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
+}
 
 static void cnfSetDefaults(rsconf_t *pThis)
 {

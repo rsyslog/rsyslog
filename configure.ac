@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.21.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.22.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -21,6 +21,23 @@ AC_PROG_CC_C99
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
+
+m4_ifdef([AX_IS_RELEASE], [
+	AX_IS_RELEASE([git-directory])
+	m4_ifdef([AX_COMPILER_FLAGS], [
+		AX_COMPILER_FLAGS()
+	], [
+		if test "$GCC" = "yes"
+		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		fi
+		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+	])
+], [
+	if test "$GCC" = "yes"
+	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+	fi
+	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
+])
 
 
 PKG_PROG_PKG_CONFIG
@@ -885,6 +902,23 @@ AC_ARG_ENABLE(mysql_tests,
         [enable_mysql_tests=no]
 )
 AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
+
+
+# capability to enable PostgreSQL testbench tests. This requries that a Syslog database
+# with the default schema (see plugins/ompgsql/createDB.sql) has been created on the
+# local (127.0.0.1) PostgreSQL server and a user "rsyslog" with password "testbench"
+# exists, is able to login with default parameters and has sufficient (read: all)
+# privileges on that database
+AC_ARG_ENABLE(pgsql_tests,
+        [AS_HELP_STRING([--enable-pgsql-tests],[enable PostgreSQL specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pgsql_tests="yes" ;;
+          no) enable_pgsql_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pgsql-tests) ;;
+         esac],
+        [enable_pgsql_tests=no]
+)
+AM_CONDITIONAL(ENABLE_PGSQL_TESTS, test x$enable_pgsql_tests = xyes)
 
 
 # Mail support (so far we do not need a library, but we need to turn this on and off)
@@ -1928,6 +1962,7 @@ echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
+echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"

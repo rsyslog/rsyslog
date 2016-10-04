@@ -17,7 +17,7 @@
  * information (most importantly last block hash) and sigblkConstruct
  * reads (or initilizes if not present) it.
  *
- * Copyright 2013-2015 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -62,6 +62,187 @@ typedef unsigned char uchar;
 int RSKSI_FLAG_TLV16_RUNTIME = RSGT_FLAG_TLV16;
 int RSKSI_FLAG_NONCRIT_RUNTIME = RSGT_FLAG_NONCRIT; 
 
+/* the following function maps RSGTE_* state to a string - must be updated
+ * whenever a new state is added.
+ * Note: it is thread-safe to call this function, as it returns a pointer
+ * into constant memory pool.
+ */
+const char *
+RSKSIE2String(int err)
+{
+	switch(err) {
+	case RSGTE_SUCCESS:
+		return "success";
+	case RSGTE_IO:
+		return "i/o error";
+	case RSGTE_FMT:
+		return "data format error";
+	case RSGTE_INVLTYP:
+		return "invalid/unexpected tlv record type";
+	case RSGTE_OOM:
+		return "out of memory";
+	case RSGTE_LEN:
+		return "length record problem";
+	case RSGTE_SIG_EXTEND:
+		return "error extending signature";
+	case RSGTE_INVLD_RECCNT:
+		return "mismatch between actual record count and number in block signature record";
+	case RSGTE_INVLHDR:
+		return "invalid file header";
+	case RSGTE_EOF:
+		return "EOF";
+	case RSGTE_MISS_REC_HASH:
+		return "record hash missing";
+	case RSGTE_MISS_TREE_HASH:
+		return "tree hash missing";
+	case RSGTE_INVLD_REC_HASH:
+		return "record hash mismatch";
+	case RSGTE_INVLD_TREE_HASH:
+		return "tree hash mismatch";
+	case RSGTE_INVLD_REC_HASHID:
+		return "invalid record hash ID";
+	case RSGTE_INVLD_TREE_HASHID:
+		return "invalid tree hash ID";
+	case RSGTE_MISS_BLOCKSIG:
+		return "missing block signature record";
+	case RSGTE_INVLD_SIGNATURE:
+		return "Signature invalid";
+	case RSGTE_TS_CREATEHASH:
+		return "error creating HASH";
+	case RSGTE_TS_DERENCODE:
+		return "error DER-encoding RFC3161 timestamp";
+	case RSGTE_HASH_CREATE:
+		return "error creating hash";
+	case RSGTE_END_OF_SIG:
+		return "unexpected end of signature";
+	case RSGTE_END_OF_LOG:
+		return "unexpected end of log";
+	case RSGTE_EXTRACT_HASH:
+		return "either record-hash, left-hash or right-hash was empty";
+	default:
+		return "unknown error";
+	}
+}
+
+uint16_t
+hashOutputLengthOctetsKSI(uint8_t hashID)
+{
+	switch(hashID) {
+	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
+		return 20;
+	case KSI_HASHALG_SHA2_256: /** The SHA-256 algorithm. */
+		return 32;
+	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
+		return 20;
+	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
+		return 28;
+	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
+		return 48;
+	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
+		return 64;
+	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
+		return 28;
+	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
+		return 32;
+	case KSI_HASHALG_SHA3_384: /** The SHA3-384 algorithm. */
+		return 48;
+	case KSI_HASHALG_SHA3_512: /** The SHA3-512 algorithm */
+		return 64;
+	case KSI_HASHALG_SM3: /** The SM3 algorithm.*/
+		return 32;
+	default:return 32;
+	}
+}
+
+uint8_t
+hashIdentifierKSI(KSI_HashAlgorithm hashID)
+{
+	switch(hashID) {
+	case KSI_HASHALG_SHA1: /** The SHA-1 algorithm. */
+		return 0x00;
+	case KSI_HASHALG_SHA2_256: /** The SHA-256 algorithm. */
+		return 0x01;
+	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
+		return 0x02;
+	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
+		return 0x03;
+	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
+		return 0x04;
+	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
+		return 0x05;
+	case KSI_HASHALG_SHA3_244: /** The SHA3-244 algorithm. */
+		return 0x07;
+	case KSI_HASHALG_SHA3_256: /** The SHA3-256 algorithm. */
+		return 0x08;
+	case KSI_HASHALG_SHA3_384: /** The SHA3-384 algorithm. */
+		return 0x09;
+	case KSI_HASHALG_SHA3_512: /** The SHA3-512 algorithm */
+		return 0x0a;
+	case KSI_HASHALG_SM3: /** The SM3 algorithm.*/
+		return 0x0b;
+	case KSI_NUMBER_OF_KNOWN_HASHALGS: /* TODO: what is this??? */
+	default:return 0xff;
+	}
+}
+const char *
+hashAlgNameKSI(uint8_t hashID)
+{
+	switch(hashID) {
+	case KSI_HASHALG_SHA1:
+		return "SHA1";
+	case KSI_HASHALG_SHA2_256:
+		return "SHA2-256";
+	case KSI_HASHALG_RIPEMD160:
+		return "RIPEMD-160";
+	case KSI_HASHALG_SHA2_224:
+		return "SHA2-224";
+	case KSI_HASHALG_SHA2_384:
+		return "SHA2-384";
+	case KSI_HASHALG_SHA2_512:
+		return "SHA2-512";
+	case KSI_HASHALG_SHA3_244:
+		return "SHA3-224";
+	case KSI_HASHALG_SHA3_256:
+		return "SHA3-256";
+	case KSI_HASHALG_SHA3_384:
+		return "SHA3-384";
+	case KSI_HASHALG_SHA3_512:
+		return "SHA3-512";
+	case KSI_HASHALG_SM3:
+		return "SM3";
+	default:return "[unknown]";
+	}
+}
+KSI_HashAlgorithm
+hashID2AlgKSI(uint8_t hashID)
+{
+	switch(hashID) {
+	case 0x00:
+		return KSI_HASHALG_SHA1;
+	case 0x01:
+		return KSI_HASHALG_SHA2_256;
+	case 0x02:
+		return KSI_HASHALG_RIPEMD160;
+	case 0x03:
+		return KSI_HASHALG_SHA2_224;
+	case 0x04:
+		return KSI_HASHALG_SHA2_384;
+	case 0x05:
+		return KSI_HASHALG_SHA2_512;
+	case 0x07:
+		return KSI_HASHALG_SHA3_244;
+	case 0x08:
+		return KSI_HASHALG_SHA3_256;
+	case 0x09:
+		return KSI_HASHALG_SHA3_384;
+	case 0x0a:
+		return KSI_HASHALG_SHA3_512;
+	case 0x0b:
+		return KSI_HASHALG_SM3;
+	default:
+		return 0xff;
+	}
+}
 static void
 reportErr(rsksictx ctx, const char *const errmsg)
 {
@@ -157,7 +338,7 @@ rsksiExit(void)
 	return; 
 }
 
-static inline ksifile
+static ksifile
 rsksifileConstruct(rsksictx ctx)
 {
 	ksifile ksi = NULL;
@@ -173,7 +354,7 @@ rsksifileConstruct(rsksictx ctx)
 done:	return ksi;
 }
 
-static inline size_t 
+static size_t 
 tlvbufPhysWrite(ksifile ksi)
 {
 	ssize_t lenBuf;
@@ -208,7 +389,7 @@ finalize_it:
 	return r;
 }
 
-static inline size_t 
+static size_t 
 tlvbufChkWrite(ksifile ksi)
 {
 	if(ksi->tlvIdx == sizeof(ksi->tlvBuf)) {
@@ -221,7 +402,7 @@ tlvbufChkWrite(ksifile ksi)
 /* write to TLV file buffer. If buffer is full, an actual call occurs. Else
  * output is written only on flush or close.
  */
-static inline size_t
+static size_t
 tlvbufAddOctet(ksifile ksi, int8_t octet)
 {
 	size_t r;
@@ -230,7 +411,7 @@ tlvbufAddOctet(ksifile ksi, int8_t octet)
 	ksi->tlvBuf[ksi->tlvIdx++] = octet;
 done:	return r;
 }
-static inline size_t 
+static size_t 
 tlvbufAddOctetString(ksifile ksi, uint8_t *octet, size_t size)
 {
 	size_t i, r = 0;
@@ -241,7 +422,7 @@ tlvbufAddOctetString(ksifile ksi, uint8_t *octet, size_t size)
 done:	return r;
 }
 /* return the actual length in to-be-written octets of an integer */
-static inline uint8_t
+static uint8_t
 tlvbufGetInt64OctetSize(uint64_t val)
 {
 	if(val >> 56)
@@ -260,7 +441,7 @@ tlvbufGetInt64OctetSize(uint64_t val)
 		return 2;
 	return 1;
 }
-static inline int
+static int
 tlvbufAddInt64(ksifile ksi, uint64_t val)
 {
 	uint8_t doWrite = 0;
@@ -670,7 +851,7 @@ done:	return;
 
 
 /* concat: add IV to buffer */
-static inline void
+static void
 bufAddIV(ksifile ksi, uchar *buf, size_t *len)
 {
 	int hashlen;
@@ -683,7 +864,7 @@ bufAddIV(ksifile ksi, uchar *buf, size_t *len)
 
 
 /* concat: add imprint to buffer */
-static inline void
+static void
 bufAddImprint(uchar *buf, size_t *len, imprint_t *imp)
 {
 	buf[*len] = imp->hashID;
@@ -693,7 +874,7 @@ bufAddImprint(uchar *buf, size_t *len, imprint_t *imp)
 }
 
 /* concat: add hash to buffer */
-static inline void
+static void
 bufAddHash(ksifile ksi, uchar *buf, size_t *len, KSI_DataHash *hash)
 {
 	int r; 
