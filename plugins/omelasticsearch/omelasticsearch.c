@@ -75,7 +75,7 @@ STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 #	define META_STRT "{\"index\":{\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
 #	define META_PARENT "\",\"_parent\":\""
-#   define META_ID "\", \"_id\":\""
+#	define META_ID "\", \"_id\":\""
 #	define META_END  "\"}}\n"
 
 /* REST API for elasticsearch hits this URL:
@@ -1154,11 +1154,10 @@ CODESTARTdoAction
 	
 	if(pWrkrData->pData->bulkmode) {
 		size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
-		dbgprintf("new message size %lu. Current data length %d with %d elements. MaxBytes: %lu\n",
-		 nBytes, es_strlen(pWrkrData->batch.data), pWrkrData->batch.nmemb, pWrkrData->pData->maxbytes);;
+		
 		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
 		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
-			dbgprintf("submitting batch in transaction for %d elements\n", pWrkrData->batch.nmemb);
+			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d elements.\n", pWrkrData->batch.nmemb);
 			CHKiRet(submitBatch(pWrkrData));
 			initializeBatch(pWrkrData);
 		}
