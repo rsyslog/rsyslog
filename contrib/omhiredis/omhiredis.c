@@ -69,7 +69,6 @@ typedef struct _instanceData {
 typedef struct wrkrInstanceData {
 	instanceData *pData; /* instanc data */
 	redisContext *conn; /* redis connection */
-	redisReply **replies; /* array to hold replies from redis */
 	int count; /* count of command sent for current batch */
 } wrkrInstanceData_t;
 
@@ -112,8 +111,7 @@ static void closeHiredis(wrkrInstanceData_t *pWrkrData)
 	}
 }
 
-/*  Free our instance data.
- *  TODO: free **replies */
+/*  Free our instance data. */
 BEGINfreeInstance
 CODESTARTfreeInstance
 	if (pData->server != NULL) {
@@ -248,14 +246,22 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 	dbgprintf("omhiredis: endTransaction called\n");
+    redisReply *reply;
 	int i;
-	pWrkrData->replies = malloc ( sizeof ( redisReply* ) * pWrkrData->count );
 	for ( i = 0; i < pWrkrData->count; i++ ) {
-		redisGetReply ( pWrkrData->conn, (void *)&pWrkrData->replies[i] );
-		/*  TODO: add error checking here! */
-		freeReplyObject ( pWrkrData->replies[i] );
+		redisGetReply ( pWrkrData->conn, (void*)&reply);
+        if( pWrkrData->conn->err ){
+            dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
+            closeHiredis(pWrkrData);
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        else {
+            freeReplyObject(reply);
+        }
 	}
-	free ( pWrkrData->replies );
+
+finalize_it:
+	RETiRet;
 ENDendTransaction
 
 /*  set defaults. note server is set to NULL 
