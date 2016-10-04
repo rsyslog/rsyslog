@@ -71,6 +71,13 @@ STATSCOUNTER_DEF(indexHTTPFail, mutIndexHTTPFail)
 STATSCOUNTER_DEF(indexHTTPReqFail, mutIndexHTTPReqFail)
 STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 
+
+#	define META_STRT "{\"index\":{\"_index\": \""
+#	define META_TYPE "\",\"_type\":\""
+#	define META_PARENT "\",\"_parent\":\""
+#   define META_ID "\", \"_id\":\""
+#	define META_END  "\"}}\n"
+
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
  */
@@ -96,6 +103,7 @@ typedef struct _instanceData {
 	sbool dynParent;
 	sbool dynBulkId;
 	sbool bulkmode;
+	size_t maxbytes;
 	sbool asyncRepl;
         sbool useHttps;
         sbool allowUnsignedCerts;
@@ -130,6 +138,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
 	{ "dynparent", eCmdHdlrBinary, 0 },
 	{ "bulkmode", eCmdHdlrBinary, 0 },
+	{ "maxbytes", eCmdHdlrSize, 0 },
 	{ "asyncrepl", eCmdHdlrBinary, 0 },
         { "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
@@ -226,6 +235,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
         dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
+	dbgprintf("\tmaxbytes=%lu\n", pData->maxbytes);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
@@ -465,6 +475,33 @@ finalize_it:
 }
 
 
+/* this method computes the expected size of adding the next message into 
+ * the batched request to elasticsearch
+ */
+static size_t
+computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
+{
+	size_t r = sizeof(META_STRT)-1 + sizeof(META_TYPE)-1 + sizeof(META_END)-1 + sizeof("\n")-1;
+
+	uchar *searchIndex = 0;
+	uchar *searchType;
+	uchar *parent = NULL;
+	uchar *bulkId = NULL;
+
+	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
+	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
+
+	if(parent != NULL) {
+		r += sizeof(META_PARENT)-1 + ustrlen(parent);
+	}
+	if(bulkId != NULL) {
+		r += sizeof(META_ID)-1 + ustrlen(bulkId);
+	}
+
+	return r;
+}
+
+
 /* this method does not directly submit but builds a batch instead. It
  * may submit, if we have dynamic index/type and the current type or
  * index changes.
@@ -479,11 +516,6 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
 	DEFiRet;
-#	define META_STRT "{\"index\":{\"_index\": \""
-#	define META_TYPE "\",\"_type\":\""
-#	define META_PARENT "\",\"_parent\":\""
-#   define META_ID "\", \"_id\":\""
-#	define META_END  "\"}}\n"
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
 	r = es_addBuf(&pWrkrData->batch.data, META_STRT, sizeof(META_STRT)-1);
@@ -508,7 +540,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	++pWrkrData->batch.nmemb;
-	iRet = RS_RET_DEFER_COMMIT;
+	iRet = RS_RET_OK;
 
 finalize_it:
 	RETiRet;
@@ -1042,6 +1074,11 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+initializeBatch(wrkrInstanceData_t *pWrkrData) {
+	es_emptyStr(pWrkrData->batch.data);
+	pWrkrData->batch.nmemb = 0;
+}
 
 static rsRetVal
 curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, int nmsgs)
@@ -1085,23 +1122,52 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+submitBatch(wrkrInstanceData_t *pWrkrData)
+{
+	char *cstr = NULL;
+	DEFiRet;
+
+	cstr = es_str2cstr(pWrkrData->batch.data, NULL);
+	dbgprintf("omelasticsearch: submitBatch, batch: '%s'\n", cstr);
+
+	CHKiRet(curlPost(pWrkrData, (uchar*) cstr, strlen(cstr), NULL, pWrkrData->batch.nmemb));
+
+finalize_it:
+	free(cstr);
+	RETiRet;
+}
+
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
 
-	es_emptyStr(pWrkrData->batch.data);
-	pWrkrData->batch.nmemb = 0;
+	initializeBatch(pWrkrData);
 finalize_it:
 ENDbeginTransaction
-
 
 BEGINdoAction
 CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
+	
 	if(pWrkrData->pData->bulkmode) {
+		size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
+		dbgprintf("new message size %lu. Current data length %d with %d elements. MaxBytes: %lu\n",
+		 nBytes, es_strlen(pWrkrData->batch.data), pWrkrData->batch.nmemb, pWrkrData->pData->maxbytes);;
+		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
+		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
+			dbgprintf("submitting batch in transaction for %d elements\n", pWrkrData->batch.nmemb);
+			CHKiRet(submitBatch(pWrkrData));
+			initializeBatch(pWrkrData);
+		}
 		CHKiRet(buildBatch(pWrkrData, ppString[0], ppString));
+		
+		/* If there is only one item in the batch, all previous items have been submitted or this is the first item
+		   for this transaction. Return previous committed so that all items leading up to the current (exclusive) 
+		   are not replayed should a failure occur anywhere else in the transaction. */
+		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
 		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]),
 		                 ppString, 1));
@@ -1111,18 +1177,14 @@ ENDdoAction
 
 
 BEGINendTransaction
-	char *cstr = NULL;
 CODESTARTendTransaction
 	/* End Transaction only if batch data is not empty */
-	if (pWrkrData->batch.data != NULL ) {
-		cstr = es_str2cstr(pWrkrData->batch.data, NULL);
-		dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
-		CHKiRet(curlPost(pWrkrData, (uchar*) cstr, strlen(cstr), NULL, pWrkrData->batch.nmemb));
-	}
-	else
+	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
+		CHKiRet(submitBatch(pWrkrData));
+	} else {
 		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
+	}
 finalize_it:
-	free(cstr);
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
@@ -1199,6 +1261,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->asyncRepl = 0;
         pData->useHttps = 0;
 	pData->bulkmode = 0;
+	pData->maxbytes = 104857600; //100 MB Is the default max message size that ships with ElasticSearch
 	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
@@ -1251,6 +1314,8 @@ CODESTARTnewActInst
 			pData->dynParent = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "bulkmode")) {
 			pData->bulkmode = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "maxbytes")) {
+			pData->maxbytes = (size_t) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
