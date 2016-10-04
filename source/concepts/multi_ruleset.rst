@@ -119,15 +119,36 @@ did not explicitly bind to one. As such, the directive can not be used
 as a work-around to bind inputs to non-default rulesets that do not
 support ruleset binding.
 
-Rulesets and Main Queues
-------------------------
+Rulesets and Queues
+-------------------
 
 By default, rulesets do not have their own queue. It must be activated
 via the $RulesetCreateMainQueue directive, or if using rainerscript
 format, by specifying queue parameters on the ruleset directive, e.g.
-ruleset(name="whatever" queue.type="fixedArray" queue. ...) See
-:doc:`http://www.ryslog.com/doc/master/rainerscript/queue\_parameters.html <../rainerscript/queue_parameters>`
+
+::
+
+   ruleset(name="whatever" queue.type="fixedArray" queue. ...)
+
+See :doc:`http://www.ryslog.com/doc/master/rainerscript/queue\_parameters.html <../rainerscript/queue_parameters>`
 for more details.
+
+Please note that when a ruleset uses its own queue, processing of the ruleset
+happens **asynchronously** to the rest of processing. As such, any modifications
+made to the message object (e.g. message or local variables that are set) or
+discarding of the message object **have no effect outside that ruleset**. So
+if you want to modify the message object inside the ruleset, you **cannot**
+define a queue for it. Most importantly, you cannot call it and expect the
+modified properties to be present when the call returns. Even more so, the
+call will most probably return before the message is even begun to be processed
+by the ruleset in question.
+
+Note that in RainerScript format specifying any "queue.\*" can cause the
+creation of a dedicated queue and as such asynchronous processing. This is
+because queue parameters cannot be specified without a queue. Note, though,
+that the actual creation is **guaranteed** only if "queue.type" is specified
+as above. So if you intentionally want to assing a separate queue to the
+ruleset, do so as shown above.
 
 Examples
 --------
