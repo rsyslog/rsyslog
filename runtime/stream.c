@@ -493,9 +493,10 @@ strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->iMaxFiles != 0);
-	ASSERT(pThis->fd != -1);
+	assert(pThis != NULL);
+	assert(pThis->sType == STREAMTYPE_FILE_CIRCULAR);
+	assert(pThis->iMaxFiles != 0);
+	assert(pThis->fd != -1);
 
 	CHKiRet(strmCloseFile(pThis));
 
