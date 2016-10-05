@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.23.0 [v8-stable] 2016-11-15
+- pmaixforwardedfrom: support for AIX syslogd -s option
+  if syslog in AIX started with "-s" option, AIX syslog adds only "From "
+  instead of "Message forwarded from ". With this patch, both are now
+  detected.
+  Thanks to github user patelritesh for the patch.
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
