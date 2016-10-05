@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.23.0 [v8-stable] 2016-11-15
+------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
   Thanks to Radu Gheorghe for implementing this.
