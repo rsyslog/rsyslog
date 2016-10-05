@@ -480,7 +480,7 @@ strmNextFile(strm_t *pThis)
 	 * make sure their iMaxFiles is large enough. But it is well-desired for other
 	 * use cases, e.g. a circular output log file. -- rgerhards, 2008-01-10
 	 */
-	if((pThis->iCurrFNum + 1) == 0 || pThis->iMaxFiles == 0) {
+	if((pThis->iCurrFNum + 1) == 0) {
 		pThis->iCurrFNum = 0;
 	}
 	else {
