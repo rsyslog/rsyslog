@@ -5,7 +5,7 @@
  *
  * Work originally begun on 2008-02-01 by Rainer Gerhards
  *
- * Copyright 2008-2015 Adiscon GmbH.
+ * Copyright 2008-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -492,11 +492,11 @@ finalize_it:
 }
 
 
-/* try to open a file. This involves checking if there is a status file and,
- * if so, reading it in. Processing continues from the last know location.
+/* try to open a file which has a state file. If the state file does not
+ * exist or cannot be read, an error is returned.
  */
 static rsRetVal
-openFile(lstn_t *pLstn)
+openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 {
 	DEFiRet;
 	strm_t *psSF = NULL;
@@ -504,7 +504,6 @@ openFile(lstn_t *pLstn)
 	size_t lenSFNam;
 	struct stat stat_buf;
 	uchar statefile[MAXFNAME];
-	sbool isFreshStart = 0;
 
 	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
@@ -516,8 +515,7 @@ openFile(lstn_t *pLstn)
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("imfile: clean startup, state file for '%s'\n", pLstn->pszFileName);
-			isFreshStart = 1;
+			DBGPRINTF("imfile: NO state file exists for '%s'\n", pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
@@ -538,7 +536,6 @@ openFile(lstn_t *pLstn)
 
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pLstn->pStrm, (uchar*) "strm", psSF, NULL, pLstn));
-	CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
 	DBGPRINTF("imfile: deserialized state file, state file base name '%s', "
 		  "configured base name '%s'\n", pLstn->pStrm->pszFName,
 		  pLstn->pszFileName);
@@ -563,26 +560,58 @@ finalize_it:
 	if(psSF != NULL)
 		strm.Destruct(&psSF);
 
-	if(iRet != RS_RET_OK) {
-		if(pLstn->pStrm != NULL)
-			strm.Destruct(&pLstn->pStrm);
-		CHKiRet(strm.Construct(&pLstn->pStrm));
-		CHKiRet(strm.SettOperationsMode(pLstn->pStrm, STREAMMODE_READ));
-		CHKiRet(strm.SetsType(pLstn->pStrm, STREAMTYPE_FILE_MONITOR));
-		CHKiRet(strm.SetFName(pLstn->pStrm, pLstn->pszFileName, strlen((char*) pLstn->pszFileName)));
-		CHKiRet(strm.ConstructFinalize(pLstn->pStrm));
+	RETiRet;
+}
 
-		/* If state file not exist, this is a fresh start. seek to file end
-		 * when freshStartTail is on.
-		 */
-		if(pLstn->freshStartTail && isFreshStart){
-			if(stat((char*) pLstn->pszFileName, &stat_buf) != -1) {
-				pLstn->pStrm->iCurrOffs = stat_buf.st_size;
-				CHKiRet(strm.SeekCurrOffs(pLstn->pStrm));
-			}
+/* try to open a file for which no state file exists. This function does NOT
+ * check if a state file actually exists or not -- this must have been
+ * checked before calling it.
+ */
+static rsRetVal
+openFileWithoutStateFile(lstn_t *const __restrict__ pLstn)
+{
+	DEFiRet;
+	struct stat stat_buf;
+
+	DBGPRINTF("imfile: clean startup withOUT state file for '%s'\n", pLstn->pszFileName);
+	if(pLstn->pStrm != NULL)
+		strm.Destruct(&pLstn->pStrm);
+	CHKiRet(strm.Construct(&pLstn->pStrm));
+	CHKiRet(strm.SettOperationsMode(pLstn->pStrm, STREAMMODE_READ));
+	CHKiRet(strm.SetsType(pLstn->pStrm, STREAMTYPE_FILE_MONITOR));
+	CHKiRet(strm.SetFName(pLstn->pStrm, pLstn->pszFileName, strlen((char*) pLstn->pszFileName)));
+	CHKiRet(strm.ConstructFinalize(pLstn->pStrm));
+
+	/* As a state file not exist, this is a fresh start. seek to file end
+	 * when freshStartTail is on.
+	 */
+	if(pLstn->freshStartTail){
+		if(stat((char*) pLstn->pszFileName, &stat_buf) != -1) {
+			pLstn->pStrm->iCurrOffs = stat_buf.st_size;
+			CHKiRet(strm.SeekCurrOffs(pLstn->pStrm));
 		}
 	}
 
+finalize_it:
+	RETiRet;
+}
+/* try to open a file. This involves checking if there is a status file and,
+ * if so, reading it in. Processing continues from the last know location.
+ */
+static rsRetVal
+openFile(lstn_t *const __restrict__ pLstn)
+{
+	DEFiRet;
+
+	CHKiRet_Hdlr(openFileWithStateFile(pLstn)) {
+		CHKiRet(openFileWithoutStateFile(pLstn));
+	}
+
+	DBGPRINTF("imfile: breopenOnTruncate %d for '%s'\n",
+		pLstn->reopenOnTruncate, pLstn->pszFileName);
+	CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
+
+finalize_it:
 	RETiRet;
 }
 
