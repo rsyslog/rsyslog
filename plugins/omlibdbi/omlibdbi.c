@@ -38,6 +38,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <libgen.h>
 #include <dbi/dbi.h>
 #include "dirty.h"
 #include "syslogd-types.h"
@@ -282,7 +283,21 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		/* Connect to database */
 		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
 		dbi_conn_set_option(pData->conn, "username", (char*) pData->usrName);
-		dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
+
+		/* libdbi-driver-sqlite(2/3) requires to provide sqlite3_db dir which is absolute path, where database file lives,
+		 * and dbname, which is database file name itself. So in order to keep the config API unchanged,
+		 * we split the dbname to path and filename*/
+		if(!strcmp(pData->drvrName, "sqlite3")) {
+			char *dn = strdup((char*)pData->dbName);
+			dn = dirname(dn);
+			dbi_conn_set_option(pData->conn, "sqlite3_dbdir",dn);
+
+			char *bn = strdup((char*)pData->dbName);
+			bn = basename(bn);
+			dbi_conn_set_option(pData->conn, "dbname", bn);
+		} else {
+			dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
+		}
 		if(pData->pwd != NULL)
 			dbi_conn_set_option(pData->conn, "password", (char*) pData->pwd);
 		if(dbi_conn_connect(pData->conn) < 0) {
