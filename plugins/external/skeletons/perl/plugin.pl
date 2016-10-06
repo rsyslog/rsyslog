@@ -26,7 +26,7 @@ use IO::Select;
 
 # skeleton config parameters
 my $maxAtOnce = 1024;	# max nbr of messages that are processed within one batch
-
+my $pollPeriod = 10;	#timeout
 # App logic global variables
 my $OUTFILE;			# Output Filehandle
 
