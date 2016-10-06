@@ -198,8 +198,7 @@ static struct cnfparamblk inppblk =
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -235,8 +234,7 @@ finalize_it:
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	instanceConf_t *inst;
 	DEFiRet;
 
@@ -265,8 +263,7 @@ finalize_it:
  * succeeds, adds it to the list of existing listen sockets.
  */
 static inline rsRetVal
-addListner(instanceConf_t *inst)
-{
+addListner(instanceConf_t *inst) {
 	DEFiRet;
 	uchar *bindAddr;
 	int *newSocks;
@@ -280,12 +277,15 @@ addListner(instanceConf_t *inst)
 	/* check which address to bind to. We could do this more compact, but have not
 	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
 	 */
-	if(inst->pszBindAddr == NULL)
+	if (inst->pszBindAddr == NULL) {
 		bindAddr = NULL;
-	else if(inst->pszBindAddr[0] == '*' && inst->pszBindAddr[1] == '\0')
+	}
+	else if (inst->pszBindAddr[0] == '*' && inst->pszBindAddr[1] == '\0') {
 		bindAddr = NULL;
-	else
+	}
+	else {
 		bindAddr = inst->pszBindAddr;
+	}
 	bindName = (bindAddr == NULL) ? (uchar*)"*" : bindAddr;
 	port = (inst->pszBindPort == NULL || *inst->pszBindPort == '\0') ? (uchar*) "514" : inst->pszBindPort;
 
@@ -332,10 +332,12 @@ addListner(instanceConf_t *inst)
 			/* link to list. Order must be preserved to take care for 
 			 * conflicting matches.
 			 */
-			if(lcnfRoot == NULL)
+			if (lcnfRoot == NULL) {
 				lcnfRoot = newlcnfinfo;
-			if(lcnfLast == NULL)
+			}
+			if (lcnfLast == NULL) {
 				lcnfLast = newlcnfinfo;
+			}
 			else {
 				lcnfLast->next = newlcnfinfo;
 				lcnfLast = newlcnfinfo;
@@ -346,12 +348,15 @@ addListner(instanceConf_t *inst)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(newlcnfinfo != NULL) {
-			if(newlcnfinfo->ratelimiter != NULL)
+			if (newlcnfinfo->ratelimiter != NULL) {
 				ratelimitDestruct(newlcnfinfo->ratelimiter);
-			if(newlcnfinfo->pInputName != NULL)
+			}
+			if (newlcnfinfo->pInputName != NULL) {
 				prop.Destruct(&newlcnfinfo->pInputName);
-			if(newlcnfinfo->stats != NULL)
+			}
+			if (newlcnfinfo->stats != NULL) {
 				statsobj.Destruct(&newlcnfinfo->stats);
+			}
 			free(newlcnfinfo);
 		}
 		/* close the rest of the open sockets as there's
@@ -367,8 +372,7 @@ finalize_it:
 
 
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE, "imudp: ruleset '%s' for %s:%s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->pszBindAddr == NULL ? "*" : (char*) inst->pszBindAddr,
@@ -382,8 +386,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 static inline rsRetVal
 processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	uchar *rcvBuf, ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime,
-	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
-{
+	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub) {
 	DEFiRet;
 	msg_t *pMsg = NULL;
 
@@ -425,15 +428,16 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 
 	DBGPRINTF("recv(%d,%d),acl:%d,msg:%.*s\n", lstn->sock, (int) lenRcvBuf, *pbIsPermitted, (int)lenRcvBuf, rcvBuf);
 
-	if(*pbIsPermitted != 0)  {
+	if(*pbIsPermitted != 0) {
 		/* we now create our own message object and submit it to the queue */
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 		MsgSetRawMsg(pMsg, (char*)rcvBuf, lenRcvBuf);
 		MsgSetInputName(pMsg, lstn->pInputName);
 		MsgSetRuleset(pMsg, lstn->pRuleset);
 		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
-		if(lstn->dfltTZ != NULL)
+		if (lstn->dfltTZ != NULL) {
 			MsgSetDfltTZ(pMsg, (char*) lstn->dfltTZ);
+		}
 		pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME | NEEDS_DNSRESOL;
 		if(*pbIsPermitted == 2)
 			pMsg->msgFlags  |= NEEDS_ACLCHK_U; /* request ACL check after resolution */
@@ -461,8 +465,7 @@ finalize_it:
  */
 #ifdef HAVE_RECVMMSG
 static inline rsRetVal
-processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
-{
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted) {
 	DEFiRet;
 	int iNbrTimeUsed;
 	time_t ttGenTime = 0; /* to avoid clang static analyzer false positive */
@@ -480,8 +483,9 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a "bad" receive, done below in the body */
-		if(pWrkr->pThrd->bShallStop == RSTRUE)
+		if (pWrkr->pThrd->bShallStop == RSTRUE) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		}
 		memset(pWrkr->recvmsg_iov, 0, runModConf->batchSize * sizeof(struct iovec));
 		memset(pWrkr->recvmsg_mmh, 0, runModConf->batchSize * sizeof(struct mmsghdr));
 		for(i = 0 ; i < runModConf->batchSize ; ++i) {
@@ -546,8 +550,7 @@ finalize_it:
  * on scheduling order. -- rgerhards, 2008-10-02
  */
 static rsRetVal
-processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
-{
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted) {
 	int iNbrTimeUsed;
 	time_t ttGenTime;
 	struct syslogTime stTime;
@@ -565,8 +568,9 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 	multiSub.nElem = 0;
 	iNbrTimeUsed = 0;
 	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
-		if(pWrkr->pThrd->bShallStop == RSTRUE)
+		if (pWrkr->pThrd->bShallStop == RSTRUE) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
+		}
 		memset(iov, 0, sizeof(iov));
 		iov[0].iov_base = pWrkr->pRcvBuf;
 		iov[0].iov_len = iMaxLine;
@@ -607,8 +611,7 @@ finalize_it:
  * Precondition: iSchedPolicy must have been set
  */
 static inline rsRetVal
-checkSchedulingPriority(modConfData_t *modConf)
-{
+checkSchedulingPriority(modConfData_t *modConf) {
     	DEFiRet;
 
 #ifdef HAVE_SCHED_GET_PRIORITY_MAX
@@ -633,8 +636,7 @@ finalize_it:
  * numeric equivalent in current load config
  */
 static rsRetVal
-checkSchedulingPolicy(modConfData_t *modConf)
-{
+checkSchedulingPolicy(modConfData_t *modConf) {
 	DEFiRet;
 
 	if (0) { /* trick to use conditional compilation */
@@ -662,8 +664,7 @@ finalize_it:
 
 /* checks scheduling parameters during config check phase */
 static rsRetVal
-checkSchedParam(modConfData_t *modConf)
-{
+checkSchedParam(modConfData_t *modConf) {
 	DEFiRet;
 
 	if(modConf->pszSchedPolicy != NULL && modConf->iSchedPrio == SCHED_PRIO_UNSET) {
@@ -697,16 +698,16 @@ finalize_it:
 
 /* set the configured scheduling policy (if possible) */
 static rsRetVal
-setSchedParams(modConfData_t *modConf)
-{
+setSchedParams(modConfData_t *modConf) {
 	DEFiRet;
 
 #	ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	int err;
 	struct sched_param sparam;
 
-	if(modConf->iSchedPrio == SCHED_PRIO_UNSET)
+	if (modConf->iSchedPrio == SCHED_PRIO_UNSET) {
 		FINALIZE;
+	}
 
 	memset(&sparam, 0, sizeof sparam);
 	sparam.sched_priority = modConf->iSchedPrio;
@@ -731,8 +732,7 @@ finalize_it:
 #if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 #define NUM_EPOLL_EVENTS 10
 static rsRetVal
-rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
-{
+rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
 	DEFiRet;
 	int nfds;
 	int efd;
@@ -812,16 +812,16 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 	}
 
 finalize_it:
-	if(udpEPollEvt != NULL)
+	if (udpEPollEvt != NULL) {
 		free(udpEPollEvt);
+	}
 
 	RETiRet;
 }
 #else /* #if HAVE_EPOLL_CREATE1 */
 /* this is the code for the select() interface */
 static rsRetVal
-rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
-{
+rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
 	DEFiRet;
 	int maxfds;
 	int nfds;
@@ -846,8 +846,9 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 		/* Add the UDP listen sockets to the list of read descriptors. */
 		for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
 			if (lstn->sock != -1) {
-				if(Debug)
+				if (Debug) {
 					net.debugListenInfo(lstn->sock, (char*)"UDP");
+				}
 				FD_SET(lstn->sock, &readfds);
 				if(lstn->sock>maxfds) maxfds=lstn->sock;
 			}
@@ -855,8 +856,9 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 		if(Debug) {
 			dbgprintf("--------imUDP calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if(FD_ISSET(nfds, &readfds))
+				if (FD_ISSET(nfds, &readfds)) {
 					dbgprintf("%d ", nfds);
+				}
 			dbgprintf("\n");
 		}
 
@@ -880,8 +882,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 
 
 static inline rsRetVal
-createListner(es_str_t *port, struct cnfparamvals *pvals)
-{
+createListner(es_str_t *port, struct cnfparamvals *pvals) {
 	instanceConf_t *inst;
 	int i;
 	int bAppendPortUsed = 0;
@@ -890,8 +891,9 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 	CHKiRet(createInstance(&inst));
 	inst->pszBindPort = (uchar*)es_str2cstr(port, NULL);
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			continue;	/* array, handled by caller */
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
@@ -1018,8 +1020,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "timerequery")) {
 			loadModConf->iTimeRequery = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "batchsize")) {
@@ -1051,8 +1054,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -1148,8 +1152,7 @@ ENDfreeCnf
 
 
 static void *
-wrkr(void *myself)
-{
+wrkr(void *myself) {
 	struct wrkrInfo_s *pWrkr = (struct wrkrInfo_s*) myself;
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar *pszDbgHdr;
@@ -1276,8 +1279,9 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -1291,8 +1295,7 @@ CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	free(cs.pszBindAddr);
 	cs.pszBindAddr = NULL;
 	free(cs.pszSchedPolicy);

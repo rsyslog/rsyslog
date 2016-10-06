@@ -52,8 +52,7 @@ ENDobjConstruct(var)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-varConstructFinalize(var_t __attribute__((unused)) *pThis)
-{
+varConstructFinalize(var_t __attribute__((unused)) *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, var);
@@ -65,11 +64,13 @@ varConstructFinalize(var_t __attribute__((unused)) *pThis)
 /* destructor for the var object */
 BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(var)
-	if(pThis->pcsName != NULL)
+	if (pThis->pcsName != NULL) {
 		rsCStrDestruct(&pThis->pcsName);
+	}
 	if(pThis->varType == VARTYPE_STR) {
-		if(pThis->val.pStr != NULL)
+		if (pThis->val.pStr != NULL) {
 			rsCStrDestruct(&pThis->val.pStr);
+		}
 	}
 ENDobjDestruct(var)
 

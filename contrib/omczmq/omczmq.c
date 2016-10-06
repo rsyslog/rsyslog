@@ -114,7 +114,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	}
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
-	if(runModConf->authType) {	
+	if(runModConf->authType) {
 		if (!strcmp(runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
 			if(!serverCert) {
@@ -386,8 +386,9 @@ CODESTARTsetModCnf
 	DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 
 finalize_it:
-		if(pvals != NULL)
+		if (pvals != NULL) {
 			cnfparamvalsDestruct(pvals, &modpblk);
+		}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -433,9 +434,9 @@ CODESTARTnewActInst
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 		}
-		else if(!strcmp(actpblk.descr[i].name, "socktype")){
+		else if(!strcmp(actpblk.descr[i].name, "socktype")) {
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(stringType != NULL){
+			if(stringType != NULL) {
 				if(!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
 				}
@@ -482,7 +483,7 @@ CODESTARTnewActInst
 			char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
 			char *topics_org = topics;
 			char topic[256];
-			if(topics == NULL){
+			if(topics == NULL) {
 				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
 					"out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -529,7 +530,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
-	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
+	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"omczmq supports only v6 config format, use: "
 			"action(type=\"omczmq\" serverport=...)");

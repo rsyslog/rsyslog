@@ -118,14 +118,12 @@ STATSCOUNTER_DEF(ctrNumRatelimiters, mutCtrNumRatelimiters)
  * collision list.
  */
 static unsigned int
-hash_from_key_fn(void *k)
-{
+hash_from_key_fn(void *k) {
 	return((unsigned) *((pid_t*) k));
 }
 
 static int
-key_equals_fn(void *key1, void *key2)
-{
+key_equals_fn(void *key1, void *key2) {
 	return *((pid_t*) key1) == *((pid_t*) key2);
 }
 
@@ -300,8 +298,7 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -344,16 +341,16 @@ finalize_it:
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-12
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	instanceConf_t *inst;
 	DEFiRet;
 
 	if(pNewVal == NULL || pNewVal[0] == '\0') {
 		errmsg.LogError(0, RS_RET_SOCKNAME_MISSING , "imuxsock: socket name must be specified, "
 			        "but is not - listener not created\n");
-		if(pNewVal != NULL)
+		if (pNewVal != NULL) {
 			free(pNewVal);
+		}
 		ABORT_FINALIZE(RS_RET_SOCKNAME_MISSING);
 	}
 
@@ -385,8 +382,7 @@ finalize_it:
  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal
-addListner(instanceConf_t *inst)
-{
+addListner(instanceConf_t *inst) {
 	DEFiRet;
 
 	if(inst->bParseHost == UNSET) {
@@ -445,8 +441,7 @@ finalize_it:
 }
 
 
-static rsRetVal discardLogSockets(void)
-{
+static rsRetVal discardLogSockets(void) {
 	int i;
 
 	/* Check whether the system socket is in use */
@@ -480,13 +475,13 @@ static rsRetVal discardLogSockets(void)
 /* used to create a log socket if NOT passed in via systemd. 
  */
 static inline rsRetVal
-createLogSocket(lstn_t *pLstn)
-{
+createLogSocket(lstn_t *pLstn) {
 	struct sockaddr_un sunx;
 	DEFiRet;
 
-	if(pLstn->bUnlink)
+	if (pLstn->bUnlink) {
 		unlink((char*)pLstn->sockName);
+	}
 	memset(&sunx, 0, sizeof(sunx));
 	sunx.sun_family = AF_UNIX;
 	if(pLstn->bCreatePath) {
@@ -498,8 +493,9 @@ createLogSocket(lstn_t *pLstn)
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
 		DBGPRINTF("cannot create %s (%d).\n", pLstn->sockName, errno);
-		if(pLstn->fd != -1)
+		if (pLstn->fd != -1) {
 			close(pLstn->fd);
+		}
 		pLstn->fd = -1;
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
 	}
@@ -509,15 +505,15 @@ finalize_it:
 
 
 static inline rsRetVal
-openLogSocket(lstn_t *pLstn)
-{
+openLogSocket(lstn_t *pLstn) {
 	DEFiRet;
 #	ifdef HAVE_SCM_CREDENTIALS
 	int one;
 #	endif /* HAVE_SCM_CREDENTIALS */
 
-	if(pLstn->sockName[0] == '\0')
+	if (pLstn->sockName[0] == '\0') {
 		return -1;
+	}
 
 	pLstn->fd = -1;
 
@@ -583,16 +579,16 @@ finalize_it:
  * listener (the latter being a performance enhancement).
  */
 static inline rsRetVal
-findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
-{
+findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl) {
 	ratelimit_t *rl = NULL;
 	int r;
 	pid_t *keybuf;
 	char pidbuf[256];
 	DEFiRet;
 
-	if(cred == NULL)
+	if (cred == NULL) {
 		FINALIZE;
+	}
 #if 0 // TODO: check deactivated?
 	if(pLstn->ratelimitInterval == 0) {
 		*prl = NULL;
@@ -619,18 +615,21 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
 		*keybuf = cred->pid;
 		r = hashtable_insert(pLstn->ht, keybuf, rl);
-		if(r == 0)
+		if (r == 0) {
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
 	}
 
 	*prl = rl;
 	rl = NULL;
 
 finalize_it:
-	if(rl != NULL)
+	if (rl != NULL) {
 		ratelimitDestruct(rl);
-	if(*prl == NULL)
+	}
+	if (*prl == NULL) {
 		*prl = pLstn->dflt_ratelimiter;
+	}
 	RETiRet;
 }
 
@@ -638,14 +637,14 @@ finalize_it:
 /* patch correct pid into tag. bufTAG MUST be CONF_TAG_MAXSIZE long!
  */
 static inline void
-fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
-{
+fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred) {
 	int i;
 	char bufPID[16];
 	int lenPID;
 
-	if(cred == NULL)
+	if (cred == NULL) {
 		return;
+	}
 	
 	lenPID = snprintf(bufPID, sizeof(bufPID), "[%lu]:", (unsigned long) cred->pid);
 
@@ -668,8 +667,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
  * journald. Currently works with Linux /proc filesystem, only.
  */
 static rsRetVal
-getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenBuf, int *lenProp)
-{
+getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenBuf, int *lenProp) {
 	int fd;
 	int i;
 	int lenRead;
@@ -693,10 +691,12 @@ getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenB
 	
 	/* we strip after the first \n */
 	for(i = 0 ; i < lenRead ; ++i) {
-		if(buf[i] == '\n')
+		if (buf[i] == '\n') {
 			break;
-		else if(iscntrl(buf[i]))
+		}
+		else if (iscntrl(buf[i])) {
 			buf[i] = ' ';
+		}
 	}
 	buf[i] = '\0';
 	*lenProp = i;
@@ -711,8 +711,7 @@ finalize_it:
 /* read the exe trusted property path (so far, /proc fs only)
  */
 static rsRetVal
-getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp)
-{
+getTrustedExe(struct ucred *cred, uchar *buf, size_t lenBuf, int* lenProp) {
 	int lenRead;
 	char namebuf[1024];
 	DEFiRet;
@@ -741,8 +740,7 @@ finalize_it:
  * characters added.
  */
 static inline int
-copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
-{
+copyescaped(uchar *dstbuf, uchar *inbuf, int inlen) {
 	int iDst, iSrc;
 
 	*dstbuf = '"';
@@ -762,8 +760,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
  * can also mangle it if necessary.
  */
 static inline rsRetVal
-SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
-{
+SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts) {
 	msg_t *pMsg = NULL;
 	int lenMsg;
 	int offs;
@@ -962,8 +959,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 			--lenMsg;
 		}
 		bufParseTAG[i] = '\0';	/* terminate string */
-		if(pLstn->bWritePid)
+		if (pLstn->bWritePid) {
 			fixPID(bufParseTAG, &i, cred);
+		}
 		MsgSetTAG(pMsg, bufParseTAG, i);
 		MsgSetMSGoffs(pMsg, pMsg->iLenRawMsg - lenMsg);
 	} else { /* we are configured to use regular parser chain */
@@ -977,8 +975,9 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pMsg != NULL)
+		if (pMsg != NULL) {
 			msgDestruct(&pMsg);
+		}
 	}
 	RETiRet;
 }
@@ -994,8 +993,7 @@ finalize_it:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
-static rsRetVal readSocket(lstn_t *pLstn)
-{
+static rsRetVal readSocket(lstn_t *pLstn) {
 	DEFiRet;
 	int iRcvd;
 	int iMaxLine;
@@ -1072,8 +1070,9 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	}
 
 finalize_it:
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+	if (pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1) {
 		free(pRcv);
+	}
 
 	RETiRet;
 }
@@ -1082,8 +1081,7 @@ finalize_it:
 
 /* activate current listeners */
 static rsRetVal
-activateListeners(void)
-{
+activateListeners(void) {
 	register int i;
 	int actSocks;
 	DEFiRet;
@@ -1092,8 +1090,9 @@ activateListeners(void)
 	if(startIndexUxLocalSockets == 0) {
 		/* first apply some config settings */
 		listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
-		if(runModConf->pLogSockName != NULL)
+		if (runModConf->pLogSockName != NULL) {
 			listeners[0].sockName = runModConf->pLogSockName;
+		}
 		else if(sd_booted()) {
 			struct stat st;
 			if(stat(SYSTEMD_PATH_LOG, &st) != -1 && S_ISSOCK(st.st_mode)) {
@@ -1206,8 +1205,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "syssock.use")) {
 			loadModConf->bOmitLocalLogging = ((int) pvals[i].val.d.n) ? 0 : 1;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.name")) {
@@ -1249,8 +1249,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -1276,8 +1277,9 @@ CODESTARTnewInpInst
 	CHKiRet(createInstance(&inst));
 
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(inppblk.descr[i].name, "socket")) {
 			inst->sockName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "createpath")) {
@@ -1351,8 +1353,7 @@ ENDendCnfLoad
 
 /* function to generate error message if framework does not find requested ruleset */
 static void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE, "imuxsock: ruleset '%s' for socket %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->sockName);
@@ -1462,16 +1463,18 @@ CODESTARTrunInput
 		for (i = startIndexUxLocalSockets; i < nfd; i++) {
 			if (listeners[i].fd!= -1) {
 				FD_SET(listeners[i].fd, pReadfds);
-				if(listeners[i].fd > maxfds)
+				if (listeners[i].fd > maxfds) {
 					maxfds=listeners[i].fd;
+				}
 			}
 		}
 
 		if(Debug) {
 			dbgprintf("--------imuxsock calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, pReadfds) )
+				if ( FD_ISSET(nfds, pReadfds) ) {
 					dbgprintf("%d ", nfds);
+				}
 			dbgprintf("\n");
 		}
 
@@ -1506,8 +1509,9 @@ CODESTARTafterRun
 	/* do cleanup here */
 	/* Close the UNIX sockets. */
        for (i = 0; i < nfd; i++)
-		if (listeners[i].fd != -1)
+		if (listeners[i].fd != -1) {
 			close(listeners[i].fd);
+		}
 
        /* Clean-up files. */
        for(i = startIndexUxLocalSockets; i < nfd; i++)
@@ -1535,8 +1539,9 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	free(listeners);
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
+	}
 
 	statsobj.Destruct(&modStats);
 
@@ -1552,8 +1557,9 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -1567,8 +1573,7 @@ CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	free(cs.pLogSockName);
 	cs.pLogSockName = NULL;
 	free(cs.pLogHostName);

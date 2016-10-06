@@ -106,17 +106,19 @@ int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it
  * rgerhards, 2008-12-01
  */
 static inline rsRetVal
-setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
-{
+setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType) {
 	DEFiRet;
 
-	if(!strcmp((char*)pszType, "UDP"))
+	if (!strcmp((char*)pszType, "UDP")) {
 		*ppAllowRoot = pAllowedSenders_UDP;
-	else if(!strcmp((char*)pszType, "TCP"))
+	}
+	else if (!strcmp((char*)pszType, "TCP")) {
 		*ppAllowRoot = pAllowedSenders_TCP;
+	}
 #ifdef USE_GSSAPI
-	else if(!strcmp((char*)pszType, "GSS"))
+	else if (!strcmp((char*)pszType, "GSS")) {
 		*ppAllowRoot = pAllowedSenders_GSS;
+	}
 #endif
 	else {
 		dbgprintf("program error: invalid allowed sender ID '%s', denying...\n", pszType);
@@ -130,17 +132,19 @@ finalize_it:
  * rgerhards, 2009-01-12
  */
 static inline rsRetVal
-reinitAllowRoot(uchar *pszType)
-{
+reinitAllowRoot(uchar *pszType) {
 	DEFiRet;
 
-	if(!strcmp((char*)pszType, "UDP"))
+	if (!strcmp((char*)pszType, "UDP")) {
 		pAllowedSenders_UDP = NULL;
-	else if(!strcmp((char*)pszType, "TCP"))
+	}
+	else if (!strcmp((char*)pszType, "TCP")) {
 		pAllowedSenders_TCP = NULL;
+	}
 #ifdef USE_GSSAPI
-	else if(!strcmp((char*)pszType, "GSS"))
+	else if (!strcmp((char*)pszType, "GSS")) {
 		pAllowedSenders_GSS = NULL;
+	}
 #endif
 	else {
 		dbgprintf("program error: invalid allowed sender ID '%s', denying...\n", pszType);
@@ -159,8 +163,7 @@ finalize_it:
  * rgerhards, 2008-05-27
  */
 static rsRetVal
-AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
-{
+AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr) {
 	permittedPeerWildcard_t *pNew = NULL;
 	size_t iSrc;
 	size_t iDst;
@@ -188,7 +191,7 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 		iSrc = 0;
 	}
 
-	for(iDst = 0 ; iSrc < lenStr && pszStr[iSrc] != '*' ; ++iSrc, ++iDst)  {
+	for(iDst = 0 ; iSrc < lenStr && pszStr[iSrc] != '*' ; ++iSrc, ++iDst) {
 		pNew->pszDomainPart[iDst] = pszStr[iSrc];
 	}
 
@@ -218,8 +221,9 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL) {
-			if(pNew->pszDomainPart != NULL)
+			if (pNew->pszDomainPart != NULL) {
 				free(pNew->pszDomainPart);
+			}
 			free(pNew);
 		}
 	} else {
@@ -239,8 +243,7 @@ finalize_it:
 
 /* Destruct a permitted peer's wildcard list -- rgerhards, 2008-05-27 */
 static rsRetVal
-DestructPermittedPeerWildcards(permittedPeers_t *pPeer)
-{
+DestructPermittedPeerWildcards(permittedPeers_t *pPeer) {
 	permittedPeerWildcard_t *pCurr;
 	permittedPeerWildcard_t *pDel;
 	DEFiRet;
@@ -267,8 +270,7 @@ DestructPermittedPeerWildcards(permittedPeers_t *pPeer)
  * no longer access it. -- rgerhards, 2008-05-19
  */
 static rsRetVal
-AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
-{
+AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID) {
 	permittedPeers_t *pNew = NULL;
 	DEFiRet;
 
@@ -285,8 +287,9 @@ AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
 		
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
+		if (pNew != NULL) {
 			free(pNew);
+		}
 	}
 	RETiRet;
 }
@@ -294,8 +297,7 @@ finalize_it:
 
 /* Destruct a permitted peers list -- rgerhards, 2008-05-19 */
 static rsRetVal
-DestructPermittedPeers(permittedPeers_t **ppRootPeer)
-{
+DestructPermittedPeers(permittedPeers_t **ppRootPeer) {
 	permittedPeers_t *pCurr;
 	permittedPeers_t *pDel;
 	DEFiRet;
@@ -322,8 +324,7 @@ DestructPermittedPeers(permittedPeers_t **ppRootPeer)
  * rgerhards, 2008-05-27
  */
 static rsRetVal
-PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
-{
+PermittedPeerWildcardCompile(permittedPeers_t *pPeer) {
 	uchar *pC;
 	uchar *pStart;
 	DEFiRet;
@@ -360,8 +361,9 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 			/* pStart is a dummy, it is not used if length is 0 */
 			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0)); 
 		}
-		if(*pC != '\0')
+		if (*pC != '\0') {
 			++pC;
+		}
 	}
 
 finalize_it:
@@ -379,8 +381,7 @@ finalize_it:
  * *pbIsMatching is set to 0 if there is no match and something else otherwise.
  * rgerhards, 2008-05-27 */
 static rsRetVal
-PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching)
-{
+PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching) {
 	permittedPeerWildcard_t *pWildcard;
 	uchar *pC;
 	uchar *pStart; /* start of current domain component */
@@ -463,8 +464,9 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 		pWildcard =  pWildcard->pNext; /* we processed this entry */
 
 		/* skip '.' if we had it and so prepare for next iteration */
-		if(*pC == '.')
+		if (*pC == '.') {
 			++pC;
+		}
 	}
 
 	if(pWildcard != NULL) {
@@ -494,8 +496,9 @@ static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 	assert (bits <= 128);
 	
 	i = bits/32;
-	if (bits%32)
+	if (bits%32) {
 		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+	}
 	for (; i < (sizeof addr->s6_addr32)/4; i++)
 		addr->s6_addr32[i] = 0;
 }
@@ -520,8 +523,7 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 static inline int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
                        char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
-{
+                       char *serv, size_t servlen, int flags) {
 	int iCancelStateSave;
 	int i;
 
@@ -540,8 +542,7 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
  * rgerhards, 2007-07-17
  */
 static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     		      struct NetAddr *iAllow, uint8_t iSignificantBits)
-{
+		     		      struct NetAddr *iAllow, uint8_t iSignificantBits) {
 	struct AllowedSenders *pEntry = NULL;
 
 	assert(ppRoot != NULL);
@@ -573,8 +574,7 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
  * definition. Now an iterative algorithm is used.
  */
 static void
-clearAllowedSenders(uchar *pszType)
-{
+clearAllowedSenders(uchar *pszType) {
 	struct AllowedSenders *pPrev;
 	struct AllowedSenders *pCurr = NULL;
 
@@ -585,10 +585,12 @@ clearAllowedSenders(uchar *pszType)
 		pPrev = pCurr;
 		pCurr = pCurr->pNext;
 		/* now delete the entry we are right now processing */
-		if(F_ISSET(pPrev->allowedSender.flags, ADDR_NAME))
+		if (F_ISSET(pPrev->allowedSender.flags, ADDR_NAME)) {
 			free(pPrev->allowedSender.addr.HostWildcard);
-		else
+		}
+		else {
 			free(pPrev->allowedSender.addr.NetAddr);
+		}
 		free(pPrev);
 	}
 
@@ -610,8 +612,7 @@ clearAllowedSenders(uchar *pszType)
  * added (all addresses from that host).
  */
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
-{
+		     		 struct NetAddr *iAllow, uint8_t iSignificantBits) {
 	DEFiRet;
 
 	assert(ppRoot != NULL);
@@ -777,8 +778,7 @@ finalize_it:
  * rgerhards, 2005-09-27
  */
 static void
-PrintAllowedSenders(int iListToPrint)
-{
+PrintAllowedSenders(int iListToPrint) {
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
 	
@@ -804,8 +804,9 @@ PrintAllowedSenders(int iListToPrint)
 		dbgprintf("\tNo restrictions set.\n");
 	} else {
 		while(pSender != NULL) {
-			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
+			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME)) {
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
+			}
 			else {
 				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
@@ -831,8 +832,7 @@ PrintAllowedSenders(int iListToPrint)
  * rgerhards, 2005-09-27
  */
 static rsRetVal
-addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
-{
+addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine) {
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
 	rsParsObj *pPars;
@@ -911,14 +911,14 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
  * contributed 2007-07-16 by mildew@gmail.com
  */
 static inline int
-MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS)
-{
+MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS) {
 	assert(pAllow != NULL);
 	assert(pFrom != NULL);
 
 	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
-		if(bChkDNS == 0)
+		if (bChkDNS == 0) {
 			return 2;
+		}
 		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
 		
 #		if !defined(FNM_CASEFOLD)
@@ -933,8 +933,9 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 			if (AF_INET == pAllow->addr.NetAddr->sa_family)
 				return(( SIN(pFrom)->sin_addr.s_addr & htonl(0xffffffff << (32 - bits)) )
 				       == SIN(pAllow->addr.NetAddr)->sin_addr.s_addr);
-			else
+			else {
 				return 0;
+			}
 			break;
 		case AF_INET6:
 			switch (pAllow->addr.NetAddr->sa_family) {
@@ -946,8 +947,9 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 				memcpy (&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof (struct in6_addr));
 				
 				i = bits/32;
-				if (bits % 32)
+				if (bits % 32) {
 					ip.s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+				}
 				for (; i < (sizeof ip.s6_addr32)/4; i++)
 					ip.s6_addr32[i] = 0;
 				
@@ -967,8 +969,9 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 #endif
 				    (ip6->s6_addr32[1] == 0) && (ip6->s6_addr32[0] == 0))
 					return 1;
-				else
+				else {
 					return 0;
+				}
 			}
 			default:
 				/* Unsupported AF */
@@ -990,8 +993,7 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
  * (2 was added rgerhards, 2009-11-16).
  * rgerhards, 2005-09-26
  */
-static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS)
-{
+static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS) {
 	struct AllowedSenders *pAllow;
 	struct AllowedSenders *pAllowRoot = NULL;
 	int bNeededDNS = 0;	/* partial check because we could not resolve DNS? */
@@ -1013,10 +1015,12 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
 	 */
 	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
 		ret = MaskCmp (&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost, bChkDNS);
-		if(ret == 1)
+		if (ret == 1) {
 			return 1;
-		else if(ret == 2)
+		}
+		else if (ret == 2) {
 			bNeededDNS = 2;
+		}
 	}
 	return bNeededDNS;
 }
@@ -1039,8 +1043,7 @@ isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost)
  */
 #include <sys/utsname.h>
 static int
-should_use_so_bsdcompat(void)
-{
+should_use_so_bsdcompat(void) {
 #ifndef OS_BSD
     static int init_done = 0;
     static int so_bsdcompat_is_obsolete = 0;
@@ -1065,8 +1068,9 @@ should_use_so_bsdcompat(void)
 	}
 	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
 	   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
-	if (version > 2 || (version == 2 && patchlevel >= 5))
+	if (version > 2 || (version == 2 && patchlevel >= 5)) {
 	    so_bsdcompat_is_obsolete = 1;
+	}
     }
     return !so_bsdcompat_is_obsolete;
 #else	/* #ifndef OS_BSD */
@@ -1083,8 +1087,7 @@ should_use_so_bsdcompat(void)
  * a debug aid. rgerhards, 2007-07-02
  */
 static void
-debugListenInfo(int fd, char *type)
-{
+debugListenInfo(int fd, char *type) {
 	const char *szFamily;
 	int port;
 	struct sockaddr_storage sa;
@@ -1122,8 +1125,7 @@ debugListenInfo(int fd, char *type)
  * a parameter is NULL, it is not set.  rgerhards, 2013-01-22
  */
 static rsRetVal
-cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip)
-{
+cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip) {
 	DEFiRet;
 	assert(f != NULL);
 	iRet = dnscacheLookup(f, NULL, fqdn, localName, ip);
@@ -1142,8 +1144,7 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
  * reasons.
  */
 static rsRetVal
-getLocalHostname(uchar **ppName)
-{
+getLocalHostname(uchar **ppName) {
 	DEFiRet;
 	char hnbuf[8192];
 	uchar *fqdn = NULL;
@@ -1196,8 +1197,7 @@ finalize_it:
  * all dynamically assigned memory. 
  */
 static void
-closeUDPListenSockets(int *pSockArr)
-{
+closeUDPListenSockets(int *pSockArr) {
 	register int i;
 
 	assert(pSockArr != NULL);
@@ -1216,8 +1216,7 @@ closeUDPListenSockets(int *pSockArr)
  * param rcvbuf indicates desired rcvbuf size; 0 means OS default
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind)
-{
+create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind) {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
@@ -1227,10 +1226,12 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 
 	assert(!((pszPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));
-	if(bIsServer)
+	if (bIsServer) {
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-	else
+	}
+	else {
 		hints.ai_flags = AI_NUMERICSERV;
+	}
         hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_DGRAM;
         error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
@@ -1255,8 +1256,9 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 	for (r = res; r != NULL ; r = r->ai_next) {
                *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+			if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 				errmsg.LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
+			}
 				/* it is debateble if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -1376,8 +1378,9 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 					else if (bind(*s, r->ai_addr, r->ai_addrlen) < 0) {
 						errmsg.LogError(errno, NO_ERRCODE, "bind with IP_FREEBIND");
 					} else {
-						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
+						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG) {
 							errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "bound address %s IP free", hostname);
+						}
 						continue;
 					}
 				}
@@ -1391,8 +1394,9 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
                 s++;
 	}
 
-        if(res != NULL)
+        if (res != NULL) {
                freeaddrinfo(res);
+        }
 
 	if(Debug && *socks != maxs)
 		dbgprintf("We could initialize %d UDP listen sockets out of %d we received "
@@ -1423,8 +1427,7 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
  * (the order relation may be a bit arbritrary, but at least it is consistent).
  * rgerhards, 2009-09-03
  */
-static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, size_t socklen)
-{
+static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, size_t socklen) {
 	int ret;
 
 	if(((struct sockaddr*) s1)->sa_family != ((struct sockaddr*) s2)->sa_family) {
@@ -1489,8 +1492,7 @@ finalize_it:
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
-getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
-{
+getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf) {
 	struct ifaddrs * ifaddrs = NULL;
 	struct ifaddrs * ifa;
 	void * pAddr;
@@ -1501,8 +1503,9 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 	}
 
 	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
-		if(strcmp(ifa->ifa_name, (char*)szif))
+		if (strcmp(ifa->ifa_name, (char*)szif)) {
 			continue;
+		}
 		if(   (family == AF_INET6 || family == AF_UNSPEC)
 		   && ifa->ifa_addr->sa_family == AF_INET6) {
 			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
@@ -1516,11 +1519,13 @@ getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 		} 
 	}
 
-	if(ifaddrs != NULL)
+	if (ifaddrs != NULL) {
 		freeifaddrs(ifaddrs);
+	}
 
-	if(ifa == NULL)
+	if (ifa == NULL) {
 		iRet = RS_RET_NOT_FOUND;
+	}
 
 finalize_it:
 	RETiRet;

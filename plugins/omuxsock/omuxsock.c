@@ -110,14 +110,16 @@ static rsRetVal doTryResume(instanceData *pData);
  * old-style and new-style configuration parts.
  */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else if(cs.tplName == NULL)
+	}
+	else if (cs.tplName == NULL) {
 		return (uchar*)"RSYSLOG_TraditionalForwardFormat";
-	else
+	}
+	else {
 		return cs.tplName;
+	}
 }
 
 /* set the default template to be used
@@ -127,8 +129,7 @@ getDfltTpl(void)
  * the parameter.
  */
 static rsRetVal
-setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
-{
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal) {
 	DEFiRet;
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
@@ -145,8 +146,7 @@ finalize_it:
 
 
 static inline rsRetVal
-closeSocket(instanceData *pData)
-{
+closeSocket(instanceData *pData) {
 	DEFiRet;
 	if(pData->sock != INVLD_SOCK) {
 		close(pData->sock);
@@ -182,8 +182,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.tplName != NULL) {
@@ -197,8 +198,9 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -235,8 +237,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -261,8 +264,7 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
-static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
-{
+static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
 	DEFiRet;
 	unsigned lenSent = 0;
 
@@ -295,8 +297,7 @@ finalize_it:
 /* open socket to remote system
  */
 static rsRetVal
-openSocket(instanceData *pData)
-{
+openSocket(instanceData *pData) {
 	DEFiRet;
 	assert(pData->sock == INVLD_SOCK);
 
@@ -326,8 +327,7 @@ finalize_it:
 
 /* try to resume connection if it is not ready
  */
-static rsRetVal doTryResume(instanceData *pData)
-{
+static rsRetVal doTryResume(instanceData *pData) {
 	DEFiRet;
 
 	DBGPRINTF("omuxsock trying to resume\n");
@@ -361,8 +361,9 @@ CODESTARTdoAction
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
-	if((int) l > iMaxLine)
+	if ((int) l > iMaxLine) {
 		l = iMaxLine;
+	}
 
 	CHKiRet(sendMsg(pWrkrData->pData, psz, l));
 
@@ -385,8 +386,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, getDfltTpl()));
 	
 	if(cs.sockName == NULL) {
@@ -405,8 +407,7 @@ ENDparseSelectorAct
  * and on $ResetConfig processing. -- rgerhards, 2008-05-16
  */
 static inline void
-freeConfigVars(void)
-{
+freeConfigVars(void) {
 	free(cs.tplName);
 	cs.tplName = NULL;
 	free(cs.sockName);
@@ -436,8 +437,7 @@ ENDqueryEtryPt
 /* Reset config variables for this module to default values.
  * rgerhards, 2008-03-28
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	freeConfigVars();
 	return RS_RET_OK;
 }

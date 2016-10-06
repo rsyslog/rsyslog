@@ -114,8 +114,7 @@ static sd_journal *j;
  * derived from names need to be eight times smaller,
  * i.e.: 0..23
  */
-static rsRetVal facilityHdlr(uchar **pp, void *pVal)
-{
+static rsRetVal facilityHdlr(uchar **pp, void *pVal) {
 	DEFiRet;
 	char *p;
 
@@ -148,8 +147,7 @@ static rsRetVal facilityHdlr(uchar **pp, void *pVal)
  * string.
  */
 static rsRetVal
-sanitizeValue(const char *in, size_t len, char **out)
-{
+sanitizeValue(const char *in, size_t len, char **out) {
 	char *buf, *p;
 	DEFiRet;
 
@@ -173,8 +171,7 @@ finalize_it:
  * by the caller.
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
-{
+enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties) {
 	struct syslogTime st;
 	msg_t *pMsg;
 	size_t len;
@@ -193,8 +190,9 @@ enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *
 	MsgSetInputName(pMsg, pInputName);
 	len = strlen((char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg, len);
-	if(len > 0)
+	if (len > 0) {
 		parser.SanitizeMsg(pMsg);
+	}
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
@@ -218,8 +216,7 @@ finalize_it:
  * record of printk buffer.
  */
 static rsRetVal
-readjournal(void)
-{
+readjournal(void) {
 	DEFiRet;
 
 	struct timeval tv;
@@ -362,10 +359,12 @@ readjournal(void)
 	enqMsg((uchar *)message, (uchar *) sys_iden_help, facility, severity, &tv, json, 0);
 
 finalize_it:
-	if (sys_iden_help != NULL)
+	if (sys_iden_help != NULL) {
 		free(sys_iden_help);
-	if (message != NULL)
+	}
+	if (message != NULL) {
 		free(message);
+	}
 	RETiRet;
 }
 
@@ -373,8 +372,7 @@ finalize_it:
 /* This function gets journal cursor and saves it into state file
  */
 static rsRetVal
-persistJournalState (void)
-{
+persistJournalState (void) {
 	DEFiRet;
 	FILE *sf; /* state file */
 	char *cursor;
@@ -410,8 +408,7 @@ persistJournalState (void)
  * except for the special handling of EINTR.
  */
 static rsRetVal
-pollJournal(void)
-{
+pollJournal(void) {
 	DEFiRet;
 	struct pollfd pollfd;
 	int r;
@@ -453,8 +450,7 @@ finalize_it:
 
 
 static rsRetVal
-skipOldMessages(void)
-{
+skipOldMessages(void) {
 	DEFiRet;
 
 	if (sd_journal_seek_tail(j) < 0) {
@@ -482,8 +478,7 @@ finalize_it:
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal
-loadJournalState(void)
-{
+loadJournalState(void) {
 	DEFiRet;
 
 	if (cs.stateFile[0] != '/') {
@@ -653,10 +648,12 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
-	if(pLocalHostIP != NULL)
+	}
+	if (pLocalHostIP != NULL) {
 		prop.Destruct(&pLocalHostIP);
+	}
 
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
@@ -685,8 +682,9 @@ CODESTARTsetModCnf
 	}
 
 	for (i = 0 ; i < modpblk.nParams ; ++i) {
-		if (!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if (!strcmp(modpblk.descr[i].name, "persiststateinterval")) {
 			cs.iPersistStateInterval = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "statefile")) {
@@ -718,15 +716,17 @@ CODESTARTsetModCnf
 
 
 finalize_it:
-	if (pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 

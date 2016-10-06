@@ -127,8 +127,7 @@ struct results
 
 
 
-void formater(struct ofields *fields)
-{
+void formater(struct ofields *fields) {
 	time_t rtime;
 	rtime = (time_t) (fields->date_r / 1000);
 	char str[N];
@@ -137,8 +136,7 @@ void formater(struct ofields *fields)
 
 }
 
-struct ofields* get_data(struct results *res)
-{
+struct ofields* get_data(struct results *res) {
 	struct ofields *fields;
 	const char *msg;
 	const char *prog;
@@ -149,32 +147,28 @@ struct ofields* get_data(struct results *res)
 	fields = malloc(sizeof(struct ofields));
 		
 	c = bson_find (res->result, "msg");		 
-	if (!bson_cursor_get_string (c, &msg))
-     	{
+	if (!bson_cursor_get_string (c, &msg)) {
 		perror ("bson_cursor_get_string()");
 		exit (1);
         }	
       	bson_cursor_free (c); 
 
 	c = bson_find (res->result, "sys");
-	if (!bson_cursor_get_string (c, &prog))
-        {	 	
+	if (!bson_cursor_get_string (c, &prog)) {
          	perror ("bson_cursor_get_string()");
          	exit (1);
         }
       	bson_cursor_free (c);   
 
 	c = bson_find (res->result, "syslog_tag");
-     	if (!bson_cursor_get_string (c, &syslog_tag))
-        {		
+     	if (!bson_cursor_get_string (c, &syslog_tag)) {
           	perror ("bson_cursor_get_string()");
           	exit (1);
         }
       	bson_cursor_free (c); 
 
 	c = bson_find (res->result, "time_rcvd");
-     	if (!bson_cursor_get_utc_datetime (c, &date_r))
-        {
+     	if (!bson_cursor_get_utc_datetime (c, &date_r)) {
           	perror ("bson_cursor_get_utc_datetime()");
           	exit (1);
         }
@@ -189,14 +183,11 @@ struct ofields* get_data(struct results *res)
 		
 }
 
-void getoptions(int argc, char *argv[], struct queryopt *opt)
-{
+void getoptions(int argc, char *argv[], struct queryopt *opt) {
 	int iarg;
-	while ((iarg = getopt_long(argc, argv, "l:s:r:k:y:f:u:m:", long_options, NULL)) != -1) 
-	{ 
+	while ((iarg = getopt_long(argc, argv, "l:s:r:k:y:f:u:m:", long_options, NULL)) != -1) {
     	// check to see if a single character or long option came through 
-   	switch (iarg) 
-    		{ 
+   	switch (iarg) {
 		 // short option 's' 
          		case 's': 
 			opt->bsever = 1;
@@ -258,8 +249,7 @@ struct select_doc* create_select()
 	return s_doc;
 } 
 
-struct query_doc* create_query(struct queryopt *opt)
-{
+struct query_doc* create_query(struct queryopt *opt) {
 	struct query_doc *qu_doc;
 	bson  *query_what, *order_what, *msg_what, *date_what;
 	struct tm tm;
@@ -269,17 +259,14 @@ struct query_doc* create_query(struct queryopt *opt)
 	qu_doc->query = bson_new ();
 	
 	query_what = bson_new ();
-	if (opt->bsever == 1)
-	{
+	if (opt->bsever == 1) {
 		bson_append_int32 (query_what, "syslog_sever",  opt->e_sever);
 	}
-	if (opt->blevel == 1)
-	{
+	if (opt->blevel == 1) {
 		bson_append_string (query_what, "level", opt->e_level, -1);
 	}
 
-	if (opt->bmsg == 1)
-	{
+	if (opt->bmsg == 1) {
 		msg_what = bson_new ();
 		bson_append_string (msg_what, "$regex",  opt->e_msg, -1);
 		bson_append_string (msg_what, "$options",  "i", -1);
@@ -287,11 +274,9 @@ struct query_doc* create_query(struct queryopt *opt)
 		bson_append_document (query_what, "msg", msg_what); 	
 	}
 
-	if (opt->bdate == 1)
-	{
+	if (opt->bdate == 1) {
 		date_what = bson_new ();
-		if (opt->bdatef == 1)
-		{
+		if (opt->bdatef == 1) {
 			tm.tm_isdst = -1;
 			strptime(opt->e_date, "%d/%m/%Y-%H:%M:%S", &tm);
 			tm.tm_hour = tm.tm_hour + 1;
@@ -301,8 +286,7 @@ struct query_doc* create_query(struct queryopt *opt)
 			bson_append_utc_datetime (date_what,"$gt", ts) ;
 		}
 
-		if (opt->bdateu == 1)
-		{
+		if (opt->bdateu == 1) {
 			tm.tm_isdst = -1;
 			strptime(opt->e_dateu, "%d/%m/%Y-%H:%M:%S", &tm);
 			tm.tm_hour = tm.tm_hour +1;
@@ -315,8 +299,7 @@ struct query_doc* create_query(struct queryopt *opt)
 		bson_append_document (query_what, "time_rcvd", date_what);
 	}
 
-	if (opt->bsys == 1)
-	{
+	if (opt->bsys == 1) {
 		bson_append_string (query_what, "sys", opt->e_sys, -1);
 	}
 
@@ -333,42 +316,36 @@ struct query_doc* create_query(struct queryopt *opt)
 	return qu_doc;
 } 
 
-struct db_connect* create_conn()
-{
+struct db_connect* create_conn() {
 	struct db_connect *db_conn;
 	db_conn = malloc(sizeof(struct db_connect));
 	db_conn->conn = mongo_sync_connect ("localhost", 27017, TRUE);
 
-	if (!db_conn->conn)
-	{
+	if (!db_conn->conn) {
         	perror ("mongo_sync_connect()");
     		exit (1);
    	}
 	return db_conn;
 } 
 
-void close_conn(struct db_connect *db_conn)
-{
+void close_conn(struct db_connect *db_conn) {
 	mongo_sync_disconnect (db_conn->conn);
 	free(db_conn);
 }
 
-void free_cursor(struct db_cursor *db_c)
-{
+void free_cursor(struct db_cursor *db_c) {
 	mongo_sync_cursor_free (db_c->cursor);
 	free(db_c);
 }
 
 struct output* launch_query(struct queryopt *opt, struct select_doc *s_doc,
 				struct query_doc *qu_doc,
-				struct db_connect *db_conn)
-{
+				struct db_connect *db_conn) {
 	struct output *out;
 	out = malloc(sizeof(struct output));
 	out->p = mongo_sync_cmd_query (db_conn->conn, "syslog.log", 0,
 			    opt->e_skip, opt->e_ret, qu_doc->query, s_doc->select); 
-	if (!out->p)
-	{
+	if (!out->p) {
 	 	perror ("mongo_sync_cmd_query()");
      	  	printf("no records found\n");
 	    	exit (1);
@@ -376,44 +353,40 @@ struct output* launch_query(struct queryopt *opt, struct select_doc *s_doc,
 	return out;
 } 
 
-struct db_cursor* open_cursor(struct db_connect *db_conn, struct output *out)
-{
+struct db_cursor* open_cursor(struct db_connect *db_conn, struct output *out) {
 	struct db_cursor *db_c;
 	db_c = malloc(sizeof(struct db_cursor));
 	
 	db_c->cursor = mongo_sync_cursor_new (db_conn->conn, "syslog.log", out->p);
-	if (!db_c->cursor)
-	{
+	if (!db_c->cursor) {
  	     	perror ("mongo_sync_cursor_new()");
              	exit (1);
   	}
 	return db_c;
 } 
 
-struct results* read_data(struct db_cursor *db_c)
-{
+struct results* read_data(struct db_cursor *db_c) {
 	struct results *res;
 	res = malloc(sizeof(struct results));
 	res->result = mongo_sync_cursor_get_data (db_c->cursor);
-	if (!res->result)
-	{
+	if (!res->result) {
 	   	perror ("mongo_sync_cursor_get_data()");
 	   	exit (1);
 	}
 	return res;
 } 
 
-gboolean cursor_next (struct db_cursor *db_c)
-{
-	if (!mongo_sync_cursor_next (db_c->cursor))
+gboolean cursor_next (struct db_cursor *db_c) {
+	if (!mongo_sync_cursor_next (db_c->cursor)) {
 		return FALSE;
-	else
+	}
+	else {
 		return TRUE;
+	}
 
 }
 
-int main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
 	
 	struct queryopt opt;
 	struct ofields *fields;
@@ -442,8 +415,7 @@ int main (int argc, char *argv[])
 	out = launch_query(&opt, s_doc, qu_doc, db_conn);	// launch the query 
 	db_c = open_cursor(db_conn, out);			// open cursor
 	
-	while (cursor_next(db_c))
-	{
+	while (cursor_next(db_c)) {
 		res = read_data(db_c);
 		fields = get_data(res);
         	formater(fields);				// formate output

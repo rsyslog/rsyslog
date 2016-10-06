@@ -85,8 +85,7 @@ static prop_t *pInputName = NULL;       /* there is only one global inputName fo
  * best solution, but real-world experience might tell us a
  * different truth ;)
  */
-void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
-{
+void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG) {
 	uchar *pszRawMsg;
 	uchar *fromHost = (uchar*) "[unset]"; /* TODO: get hostname */
 	uchar *fromHostIP = (uchar*) "[unset]"; /* TODO: get hostname */
@@ -176,8 +175,9 @@ BEGINmodExit
 CODESTARTmodExit
 	srAPIExitLib(pAPI); /* terminate liblogging */
 	/* global variable cleanup */
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
+	}
 	/* release objects we used */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -189,8 +189,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	listenPort = 601;
 	return RS_RET_OK;
 }

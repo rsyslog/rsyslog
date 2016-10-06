@@ -58,8 +58,7 @@
 static rsRetVal rsgcryBlkBegin(gcryfile gf);
 
 int
-rsgcryAlgoname2Algo(char *const __restrict__ algoname)
-{
+rsgcryAlgoname2Algo(char *const __restrict__ algoname) {
 	if(!strcmp((char*)algoname, "3DES")) return GCRY_CIPHER_3DES;
 	if(!strcmp((char*)algoname, "CAST5")) return GCRY_CIPHER_CAST5;
 	if(!strcmp((char*)algoname, "BLOWFISH")) return GCRY_CIPHER_BLOWFISH;
@@ -82,8 +81,7 @@ rsgcryAlgoname2Algo(char *const __restrict__ algoname)
 }
 
 int
-rsgcryModename2Mode(char *const __restrict__ modename)
-{
+rsgcryModename2Mode(char *const __restrict__ modename) {
 	if(!strcmp((char*)modename, "ECB")) return GCRY_CIPHER_MODE_ECB;
 	if(!strcmp((char*)modename, "CFB")) return GCRY_CIPHER_MODE_CFB;
 	if(!strcmp((char*)modename, "CBC")) return GCRY_CIPHER_MODE_CBC;
@@ -96,8 +94,7 @@ rsgcryModename2Mode(char *const __restrict__ modename)
 	return GCRY_CIPHER_MODE_NONE;
 }
 static rsRetVal
-eiWriteRec(gcryfile gf, const char *recHdr, size_t lenRecHdr, const char *buf, size_t lenBuf)
-{
+eiWriteRec(gcryfile gf, const char *recHdr, size_t lenRecHdr, const char *buf, size_t lenBuf) {
 	struct iovec iov[3];
 	ssize_t nwritten, towrite;
 	DEFiRet;
@@ -122,8 +119,7 @@ finalize_it:
 }
 
 static rsRetVal
-eiOpenRead(gcryfile gf)
-{
+eiOpenRead(gcryfile gf) {
 	DEFiRet;
 	gf->fd = open((char*)gf->eiName, O_RDONLY|O_NOCTTY|O_CLOEXEC);
 	if(gf->fd == -1) {
@@ -134,8 +130,7 @@ finalize_it:
 }
 
 static rsRetVal
-eiRead(gcryfile gf)
-{
+eiRead(gcryfile gf) {
 	ssize_t nRead;
 	DEFiRet;
 
@@ -157,8 +152,7 @@ finalize_it:
 
 /* returns EOF on any kind of error */
 static int
-eiReadChar(gcryfile gf)
-{
+eiReadChar(gcryfile gf) {
 	int c;
 
 	if(gf->readBufIdx >= gf->readBufMaxIdx) {
@@ -174,8 +168,7 @@ finalize_it:
 
 
 static rsRetVal
-eiCheckFiletype(gcryfile gf)
-{
+eiCheckFiletype(gcryfile gf) {
 	char hdrBuf[128];
 	size_t toRead, didRead;
 	sbool bNeedClose = 0;
@@ -205,8 +198,7 @@ finalize_it:
  * returns 0 on success or something else on error/EOF
  */
 static rsRetVal
-eiGetRecord(gcryfile gf, char *rectype, char *value)
-{
+eiGetRecord(gcryfile gf, char *rectype, char *value) {
 	unsigned short i, j;
 	int c;
 	DEFiRet;
@@ -214,8 +206,9 @@ eiGetRecord(gcryfile gf, char *rectype, char *value)
 	c = eiReadChar(gf);
 	if(c == EOF) { ABORT_FINALIZE(RS_RET_NO_DATA); }
 	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN ; ++i) {
-		if(c == ':' || c == EOF)
+		if (c == ':' || c == EOF) {
 			break;
+		}
 		rectype[i] = c;
 		c = eiReadChar(gf);
 	}
@@ -224,8 +217,9 @@ eiGetRecord(gcryfile gf, char *rectype, char *value)
 	j = 0;
 	for(++i ; i < EIF_MAX_VALUE_LEN ; ++i, ++j) {
 		c = eiReadChar(gf);
-		if(c == '\n' || c == EOF)
+		if (c == '\n' || c == EOF) {
 			break;
+		}
 		value[j] = c;
 	}
 	if(c != '\n') { ABORT_FINALIZE(RS_RET_ERR); }
@@ -235,8 +229,7 @@ finalize_it:
 }
 
 static rsRetVal
-eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
-{
+eiGetIV(gcryfile gf, uchar *iv, size_t leniv) {
 	char rectype[EIF_MAX_RECTYPE_LEN+1];
 	char value[EIF_MAX_VALUE_LEN+1];
 	size_t valueLen;
@@ -258,26 +251,29 @@ eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
 	}
 
 	for(i = j = 0 ; i < valueLen ; ++i) {
-		if(value[i] >= '0' && value[i] <= '9')
+		if (value[i] >= '0' && value[i] <= '9') {
 			nibble = value[i] - '0';
-		else if(value[i] >= 'a' && value[i] <= 'f')
+		}
+		else if (value[i] >= 'a' && value[i] <= 'f') {
 			nibble = value[i] - 'a' + 10;
+		}
 		else {
 			DBGPRINTF("invalid IV '%s'\n", value);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		if(i % 2 == 0)
+		if (i % 2 == 0) {
 			iv[j] = nibble << 4;
-		else
+		}
+		else {
 			iv[j++] |= nibble;
+		}
 	}
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-eiGetEND(gcryfile gf, off64_t *offs)
-{
+eiGetEND(gcryfile gf, off64_t *offs) {
 	char rectype[EIF_MAX_RECTYPE_LEN+1];
 	char value[EIF_MAX_VALUE_LEN+1];
 	DEFiRet;
@@ -294,8 +290,7 @@ finalize_it:
 }
 
 static rsRetVal
-eiOpenAppend(gcryfile gf)
-{
+eiOpenAppend(gcryfile gf) {
 	rsRetVal localRet;
 	DEFiRet;
 	localRet = eiCheckFiletype(gf);
@@ -325,8 +320,7 @@ finalize_it:
 }
 
 static rsRetVal __attribute__((nonnull(2)))
-eiWriteIV(gcryfile gf, const uchar *const iv)
-{
+eiWriteIV(gcryfile gf, const uchar *const iv) {
 	static const char hexchars[16] =
 	   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 	unsigned iSrc, iDst;
@@ -353,12 +347,12 @@ finalize_it:
  * no matter what happens.
  */
 static void
-eiClose(gcryfile gf, off64_t offsLogfile)
-{
+eiClose(gcryfile gf, off64_t offsLogfile) {
 	char offs[21];
 	size_t len;
-	if(gf->fd == -1)
+	if (gf->fd == -1) {
 		return;
+	}
 	if(gf->openMode == 'w') {
 		/* 2^64 is 20 digits, so the snprintf buffer is large enough */
 		len = snprintf(offs, sizeof(offs), "%lld", (long long) offsLogfile);
@@ -376,8 +370,7 @@ eiClose(gcryfile gf, off64_t offsLogfile)
  * to read the next block in this case.
  */
 rsRetVal
-gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left)
-{
+gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left) {
 	DEFiRet;
 	if(gf->bytesToBlkEnd == 0) {
 		DBGPRINTF("libgcry: end of current crypto block\n");
@@ -397,8 +390,7 @@ finalize_it:
  * of "all" state files, which currently happens to be a single one.
  */
 rsRetVal
-gcryfileDeleteState(uchar *logfn)
-{
+gcryfileDeleteState(uchar *logfn) {
 	char fn[MAXFNAME+1];
 	DEFiRet;
 	snprintf(fn, sizeof(fn), "%s%s", logfn, ENCINFO_SUFFIX);
@@ -409,8 +401,7 @@ gcryfileDeleteState(uchar *logfn)
 }
 
 static rsRetVal
-gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn)
-{
+gcryfileConstruct(gcryctx ctx, gcryfile *pgf, uchar *logfn) {
 	char fn[MAXFNAME+1];
 	gcryfile gf;
 	DEFiRet;
@@ -428,8 +419,7 @@ finalize_it:
 
 
 gcryctx
-gcryCtxNew(void)
-{
+gcryCtxNew(void) {
 	gcryctx ctx;
 	ctx = calloc(1, sizeof(struct gcryctx_s));
 	ctx->algo = GCRY_CIPHER_AES128;
@@ -438,11 +428,11 @@ gcryCtxNew(void)
 }
 
 int
-gcryfileDestruct(gcryfile gf, off64_t offsLogfile)
-{
+gcryfileDestruct(gcryfile gf, off64_t offsLogfile) {
 	int r = 0;
-	if(gf == NULL)
+	if (gf == NULL) {
 		goto done;
+	}
 
 	DBGPRINTF("libgcry: close file %s\n", gf->eiName);
 	eiClose(gf, offsLogfile);
@@ -455,16 +445,14 @@ gcryfileDestruct(gcryfile gf, off64_t offsLogfile)
 done:	return r;
 }
 void
-rsgcryCtxDel(gcryctx ctx)
-{
+rsgcryCtxDel(gcryctx ctx) {
 	if(ctx != NULL) {
 		free(ctx);
 	}
 }
 
 static inline void
-addPadding(gcryfile pF, uchar *buf, size_t *plen)
-{
+addPadding(gcryfile pF, uchar *buf, size_t *plen) {
 	unsigned i;
 	size_t nPad;
 	nPad = (pF->blkLength - *plen % pF->blkLength) % pF->blkLength;
@@ -476,20 +464,21 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 }
 
 static inline void
-removePadding(uchar *buf, size_t *plen)
-{
+removePadding(uchar *buf, size_t *plen) {
 	unsigned len = (unsigned) *plen;
 	unsigned iSrc, iDst;
 	uchar *frstNUL;
 
 	frstNUL = (uchar*)strchr((char*)buf, 0x00);
-	if(frstNUL == NULL)
+	if (frstNUL == NULL) {
 		goto done;
+	}
 	iDst = iSrc = frstNUL - buf;
 
 	while(iSrc < len) {
-		if(buf[iSrc] != 0x00)
+		if (buf[iSrc] != 0x00) {
 			buf[iDst++] = buf[iSrc];
+		}
 		++iSrc;
 	}
 
@@ -501,8 +490,7 @@ done:	return;
  * of return value size is required.
  */
 int
-rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen)
-{
+rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen) {
 	uint16_t reqKeyLen;
 	int r;
 
@@ -519,8 +507,7 @@ done:	return r;
 }
 
 rsRetVal
-rsgcrySetMode(gcryctx ctx, uchar *modename)
-{
+rsgcrySetMode(gcryctx ctx, uchar *modename) {
 	int mode;
 	DEFiRet;
 
@@ -534,8 +521,7 @@ finalize_it:
 }
 
 rsRetVal
-rsgcrySetAlgo(gcryctx ctx, uchar *algoname)
-{
+rsgcrySetAlgo(gcryctx ctx, uchar *algoname) {
 	int algo;
 	DEFiRet;
 
@@ -555,8 +541,7 @@ finalize_it:
  * reproduce). -- rgerhards, 2013-03-04
  */
 static void
-seedIV(gcryfile gf, uchar **iv)
-{
+seedIV(gcryfile gf, uchar **iv) {
 	int fd;
 
 	#ifdef __clang_analyzer__
@@ -584,8 +569,7 @@ seedIV(gcryfile gf, uchar **iv)
 }
 
 static inline rsRetVal
-readIV(gcryfile gf, uchar **iv)
-{
+readIV(gcryfile gf, uchar **iv) {
 	rsRetVal localRet;
 	DEFiRet;
 
@@ -616,8 +600,7 @@ finalize_it:
  * implementations. -- gerhards, 2013-05-16
  */
 static inline rsRetVal
-readBlkEnd(gcryfile gf)
-{
+readBlkEnd(gcryfile gf) {
 	off64_t blkEnd;
 	DEFiRet;
 
@@ -639,8 +622,7 @@ finalize_it:
  * be used to init the first block in write case.
  */
 static rsRetVal
-rsgcryBlkBegin(gcryfile gf)
-{
+rsgcryBlkBegin(gcryfile gf) {
 	gcry_error_t gcryError;
 	uchar *iv = NULL;
 	DEFiRet;
@@ -684,8 +666,7 @@ finalize_it:
 }
 
 rsRetVal
-rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
-{
+rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode) {
 	gcryfile gf = NULL;
 	DEFiRet;
 
@@ -695,19 +676,20 @@ rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode)
 	CHKiRet(rsgcryBlkBegin(gf));
 	*pgf = gf;
 finalize_it:
-	if(iRet != RS_RET_OK && gf != NULL)
+	if (iRet != RS_RET_OK && gf != NULL) {
 		gcryfileDestruct(gf, -1);
+	}
 	RETiRet;
 }
 
 rsRetVal
-rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len)
-{
+rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len) {
 	int gcryError;
 	DEFiRet;
 	
-	if(*len == 0)
+	if (*len == 0) {
 		FINALIZE;
+	}
 
 	addPadding(pF, buf, len);
 	gcryError = gcry_cipher_encrypt(pF->chd, buf, *len, NULL, 0);
@@ -727,13 +709,13 @@ finalize_it:
  * second one.
  */
 rsRetVal
-rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
-{
+rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len) {
 	gcry_error_t gcryError;
 	DEFiRet;
 	
-	if(pF->bytesToBlkEnd != -1)
+	if (pF->bytesToBlkEnd != -1) {
 		pF->bytesToBlkEnd -= *len;
+	}
 	gcryError = gcry_cipher_decrypt(pF->chd, buf, *len, NULL, 0);
 	if(gcryError) {
 		DBGPRINTF("gcry_cipher_decrypt failed:  %s/%s\n",
@@ -753,14 +735,12 @@ finalize_it:
 
 /* module-init dummy for potential later use */
 int
-rsgcryInit(void)
-{
+rsgcryInit(void) {
 	return 0;
 }
 
 /* module-deinit dummy for potential later use */
 void
-rsgcryExit(void)
-{
+rsgcryExit(void) {
 	return;
 }

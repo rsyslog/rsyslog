@@ -123,8 +123,7 @@ static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" 
 /* helper to tplToString and strgen's, extends buffer */
 #define ALLOC_INC 128
 rsRetVal
-ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMinSize)
-{
+ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMinSize) {
 	uchar *pNewBuf;
 	size_t iNewSize;
 	DEFiRet;
@@ -153,8 +152,7 @@ rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
 	    msg_t *__restrict__ const pMsg,
 	    actWrkrIParams_t *__restrict const iparam,
-	    struct syslogTime *const ttNow)
-{
+	    struct syslogTime *const ttNow) {
 	DEFiRet;
 	struct templateEntry *__restrict__ pTpe;
 	size_t iBuf;
@@ -177,8 +175,9 @@ tplToString(struct template *__restrict__ const pTpl,
 		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(iparam, iLenVal + 1));
 		memcpy(iparam->param, pVal, iLenVal+1);
-		if(bMustBeFreed)
+		if (bMustBeFreed) {
 			free(pVal);
+		}
 		FINALIZE;
 	}
 	
@@ -205,12 +204,15 @@ tplToString(struct template *__restrict__ const pTpl,
 			 * but they are handled in this way because of legacy (don't break any
 			 * existing thing).
 			 */
-			if(pTpl->optFormatEscape == SQL_ESCAPE)
+			if (pTpl->optFormatEscape == SQL_ESCAPE) {
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, SQL_ESCAPE);
-			else if(pTpl->optFormatEscape == JSON_ESCAPE)
+			}
+			else if (pTpl->optFormatEscape == JSON_ESCAPE) {
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
-			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+			}
+			else if (pTpl->optFormatEscape == STDSQL_ESCAPE) {
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
+			}
 		} else {
 			DBGPRINTF("TplToString: invalid entry type %d\n", pTpe->eEntryType);
 			pVal = (uchar*) "*LOGIC ERROR*";
@@ -227,8 +229,9 @@ tplToString(struct template *__restrict__ const pTpl,
 			iBuf += iLenVal;
 		}
 
-		if(bMustBeFreed)
+		if (bMustBeFreed) {
 			free(pVal);
+		}
 
 		pTpe = pTpe->pNext;
 	}
@@ -259,8 +262,7 @@ finalize_it:
  * rgerhards, 2009-04-03
  */
 rsRetVal
-tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow)
-{
+tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow) {
 	DEFiRet;
 	struct templateEntry *pTpe;
 	uchar **pArr;
@@ -330,8 +332,7 @@ finalize_it:
  * rgerhards, 2012-08-29
  */
 rsRetVal
-tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct syslogTime *ttNow)
-{
+tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct syslogTime *ttNow) {
 	struct templateEntry *pTpe;
 	rs_size_t propLen;
 	unsigned short bMustBeFreed;
@@ -340,9 +341,10 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	rsRetVal localRet;
 	DEFiRet;
 
-	if(pTpl->bHaveSubtree){
-		if(jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
+	if(pTpl->bHaveSubtree) {
+		if (jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK) {
 			*pjson = NULL;
+		}
 		if(*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
@@ -355,8 +357,9 @@ tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct
 	json = json_object_new_object();
 	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
 		if(pTpe->eEntryType == CONSTANT) {
-			if(pTpe->fieldName == NULL)
+			if (pTpe->fieldName == NULL) {
 				continue;
+			}
 			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
 			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
 		} else 	if(pTpe->eEntryType == FIELD) {
@@ -408,15 +411,17 @@ finalize_it:
  * if mode = SQL_ESCAPE, then backslashes are changed to slashes.
  * rgerhards 2005-09-22
  */
-static void doEmergencyEscape(register uchar *p, int mode)
-{
+static void doEmergencyEscape(register uchar *p, int mode) {
 	while(*p) {
-		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'')
+		if ((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'') {
 			*p = '"';
-		else if((mode == JSON_ESCAPE) && *p == '"')
+		}
+		else if ((mode == JSON_ESCAPE) && *p == '"') {
 			*p = '\'';
-		else if((mode == SQL_ESCAPE) && *p == '\\')
+		}
+		else if ((mode == SQL_ESCAPE) && *p == '\\') {
 			*p = '/';
+		}
 		++p;
 	}
 }
@@ -446,8 +451,7 @@ static void doEmergencyEscape(register uchar *p, int mode)
  * 2005-09-22 rgerhards
  */
 rsRetVal
-doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
-{
+doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode) {
 	DEFiRet;
 	uchar *p = NULL;
 	int iLen;
@@ -505,8 +509,9 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		doEmergencyEscape(*pp, mode);
-		if(pStrB != NULL)
+		if (pStrB != NULL) {
 			cstrDestruct(&pStrB);
+		}
 	}
 
 	RETiRet;
@@ -517,19 +522,19 @@ finalize_it:
  * or NULL (if it fails). Pointer to associated template list entry 
  * must be provided.
  */
-static struct templateEntry* tpeConstruct(struct template *pTpl)
-{
+static struct templateEntry* tpeConstruct(struct template *pTpl) {
 	struct templateEntry *pTpe;
 
 	assert(pTpl != NULL);
 
-	if((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
+	if ((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL) {
 		return NULL;
+	}
 	
 	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(pTpl->pEntryLast == NULL){
+	if(pTpl->pEntryLast == NULL) {
 		/* we are the first element! */
 		pTpl->pEntryRoot = pTpl->pEntryLast  = pTpe;
 	} else {
@@ -545,8 +550,7 @@ static struct templateEntry* tpeConstruct(struct template *pTpl)
 /* Helper function to apply case-sensitivity to templates.
  */
 static void
-apply_case_sensitivity(struct template *pTpl)
-{
+apply_case_sensitivity(struct template *pTpl) {
 	if(pTpl->optCaseSensitive) return;
 
 	struct templateEntry *pTpe;
@@ -571,16 +575,16 @@ apply_case_sensitivity(struct template *pTpl)
  * or NULL (if it fails).
  */
 static struct template*
-tplConstruct(rsconf_t *conf)
-{
+tplConstruct(rsconf_t *conf) {
 	struct template *pTpl;
-	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
+	if ((pTpl = calloc(1, sizeof(struct template))) == NULL) {
 		return NULL;
+	}
 	
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(conf->templates.last == NULL)	{
+	if(conf->templates.last == NULL) {
 		/* we are the first element! */
 		conf->templates.root = conf->templates.last = pTpl;
 	} else {
@@ -601,8 +605,7 @@ tplConstruct(rsconf_t *conf)
  * quotes (") are just a regular character and do NOT terminate the constant!
  */
 static rsRetVal
-do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
-{
+do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes) {
 	register unsigned char *p;
 	cstr_t *pStrB;
 	struct templateEntry *pTpe;
@@ -663,8 +666,9 @@ do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 					break;
 			}
 		}
-		else
+		else {
 			cstrAppendChar(pStrB, *p++);
+		}
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -703,8 +707,7 @@ static int hasFormat(struct templateEntry *pTpe) {
  * specified in a template variable. It returns the passed-in pointer
  * updated to the next processed character.
  */
-static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
-{
+static void doOptions(unsigned char **pp, struct templateEntry *pTpe) {
 	register unsigned char *p;
 	unsigned char Buf[64];
 	size_t i;
@@ -849,8 +852,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
  * the necessary structure.
  */
 static rsRetVal
-do_Parameter(uchar **pp, struct template *pTpl)
-{
+do_Parameter(uchar **pp, struct template *pTpl) {
 	uchar *p;
 	cstr_t *pStrProp = NULL;
 	cstr_t *pStrField = NULL;
@@ -1205,8 +1207,9 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	if(*p) ++p; /* eat '%' */
 	*pp = p;
 finalize_it:
-	if(pStrProp != NULL)
+	if (pStrProp != NULL) {
 		cstrDestruct(&pStrProp);
+	}
 	RETiRet;
 }
 
@@ -1216,8 +1219,7 @@ finalize_it:
  * rgerhards, 2010-05-31
  */
 static rsRetVal
-tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
-{
+tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine) {
 	uchar *pSrc;
 	uchar szMod[2048];
 	unsigned lenMod;
@@ -1262,8 +1264,7 @@ finalize_it:
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine)
-{
+struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine) {
 	struct template *pTpl;
  	unsigned char *p;
 	int bDone;
@@ -1272,8 +1273,9 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
-	if((pTpl = tplConstruct(conf)) == NULL)
+	if ((pTpl = tplConstruct(conf)) == NULL) {
 		return NULL;
+	}
 	
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
@@ -1358,8 +1360,9 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 		while(isspace((int)*p))/* skip whitespace */
 			++p;
 		
-		if(*p != ',')
+		if (*p != ',') {
 			break;
+		}
 		++p; /* eat ',' */
 
 		while(isspace((int)*p))/* skip whitespace */
@@ -1375,8 +1378,9 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 		}
 		optBuf[i] = '\0';
 
-		if(*p == '\n')
+		if (*p == '\n') {
 			++p;
+		}
 
 		/* as of now, the no form is nonsense... but I do include
 		 * it anyhow... ;) rgerhards 2004-11-22
@@ -1403,8 +1407,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 }
 
 static rsRetVal
-createConstantTpe(struct template *pTpl, struct cnfobj *o)
-{
+createConstantTpe(struct template *pTpl, struct cnfobj *o) {
 	struct templateEntry *pTpe;
 	es_str_t *value = NULL; /* init just to keep compiler happy - mandatory parameter */
 	int i;
@@ -1417,8 +1420,9 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	cnfparamsPrint(&pblkConstant, pvals);
 	
 	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(pblkConstant.descr[i].name, "value")) {
 			value = pvals[i].val.d.estr;
 		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
@@ -1436,20 +1440,21 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	es_unescapeStr(value);
 	pTpe->eEntryType = CONSTANT;
 	pTpe->fieldName = outname;
-	if(outname != NULL)
+	if (outname != NULL) {
 		pTpe->lenFieldName = ustrlen(outname);
+	}
 	pTpe->data.constant.iLenConstant = es_strlen(value);
 	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &pblkConstant);
+	}
 	RETiRet;
 }
 
 static rsRetVal
-createPropertyTpe(struct template *pTpl, struct cnfobj *o)
-{
+createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
 	struct templateEntry *pTpe;
 	uchar *name = NULL;
 	uchar *outname = NULL;
@@ -1484,8 +1489,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	cnfparamsPrint(&pblkProperty, pvals);
 	
 	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(pblkProperty.descr[i].name, "name")) {
 			name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
@@ -1677,17 +1683,20 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 	if(outname == NULL) {
 		/* we need to drop "$!" prefix, if present */
-		if(ustrlen(name) >= 2 && !strncmp((char*)name, "$!", 2))
+		if (ustrlen(name) >= 2 && !strncmp((char*)name, "$!", 2)) {
 			outname = ustrdup(name + 2);
-		else
+		}
+		else {
 			outname = ustrdup(name);
+		}
 	}
 
 	/* sanity check */
 	if(topos == -1 && frompos != -1)
 		topos = 2000000000; /* large enough ;) */
-	if(frompos == -1 && topos != -1)
+	if (frompos == -1 && topos != -1) {
 		frompos = 0;
+	}
 	if(bPosRelativeToEnd) {
 		if(topos > frompos) {
 			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d in 'relativeToEnd' mode\n",
@@ -1762,8 +1771,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		break;
 	}
 	pTpe->fieldName = outname;
-	if(outname != NULL)
+	if (outname != NULL) {
 		pTpe->lenFieldName = ustrlen(outname);
+	}
 	outname = NULL;
 	pTpe->bComplexProcessing = bComplexProcessing;
 	pTpe->data.field.eDateFormat = datefmt;
@@ -1807,8 +1817,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &pblkProperty);
+	}
 	free(name);
 	free(outname);
 	RETiRet;
@@ -1816,8 +1827,7 @@ finalize_it:
 
 /* create a template in list mode, is build from sub-objects */
 static rsRetVal
-createListTpl(struct template *pTpl, struct cnfobj *o)
-{
+createListTpl(struct template *pTpl, struct cnfobj *o) {
 	struct objlst *lst;
 	DEFiRet;
 
@@ -1844,8 +1854,7 @@ finalize_it:
 
 /* Add a new template via the v6 config system.  */
 rsRetVal
-tplProcessCnf(struct cnfobj *o)
-{
+tplProcessCnf(struct cnfobj *o) {
 	struct template *pTpl = NULL;
 	struct cnfparamvals *pvals = NULL;
 	int lenName = 0; /* init just to keep compiler happy: mandatory parameter */
@@ -1867,8 +1876,9 @@ tplProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&pblk, pvals);
 	
 	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(pblk.descr[i].name, "name")) {
 			lenName = es_strlen(pvals[i].val.d.estr);
 			name = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -2036,21 +2046,26 @@ tplProcessCnf(struct cnfobj *o)
 	}
 	
 	pTpl->optFormatEscape = NO_ESCAPE;
-	if(o_stdsql)
+	if (o_stdsql) {
 		pTpl->optFormatEscape = STDSQL_ESCAPE;
-	else if(o_sql)
+	}
+	else if (o_sql) {
 		pTpl->optFormatEscape = SQL_ESCAPE;
-	else if(o_json)
+	}
+	else if (o_json) {
 		pTpl->optFormatEscape = JSON_ESCAPE;
+	}
 
-	if(o_casesensitive)
+	if (o_casesensitive) {
 		pTpl->optCaseSensitive = 1;
+	}
 	apply_case_sensitivity(pTpl);
 finalize_it:
 	free(tplStr);
 	free(plugin);
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &pblk);
+	}
 	if(iRet != RS_RET_OK) {
 		if(pTpl != NULL) {
 			/* we simply make the template defunct in this case by setting
@@ -2072,8 +2087,7 @@ finalize_it:
  * NULL otherwise.
  * rgerhards 2004-11-17
  */
-struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
-{
+struct template *tplFind(rsconf_t *conf, char *pName, int iLenName) {
 	struct template *pTpl;
 
 	assert(pName != NULL);
@@ -2082,8 +2096,7 @@ struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 	while(pTpl != NULL &&
 	      !(pTpl->iLenName == iLenName &&
 	        !strcmp(pTpl->pszName, pName)
-	        ))
-		{
+	        )) {
 			pTpl = pTpl->pNext;
 		}
 	return(pTpl);
@@ -2096,8 +2109,7 @@ struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
  * "normal" debugging. Uncomment them, if they are needed.
  * rgerhards, 2007-07-05
  */
-void tplDeleteAll(rsconf_t *conf)
-{
+void tplDeleteAll(rsconf_t *conf) {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 	BEGINfunc
@@ -2138,8 +2150,9 @@ void tplDeleteAll(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->bHaveSubtree)
+		if (pTplDel->bHaveSubtree) {
 			msgPropDescrDestruct(&pTplDel->subtree);
+		}
 		free(pTplDel);
 	}
 	ENDfunc
@@ -2149,15 +2162,15 @@ void tplDeleteAll(rsconf_t *conf)
 /* Destroy all templates obtained from conf file
  * preserving hardcoded ones. This is called from init().
  */
-void tplDeleteNew(rsconf_t *conf)
-{
+void tplDeleteNew(rsconf_t *conf) {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
 
 	BEGINfunc
 
-	if(conf->templates.root == NULL || conf->templates.lastStatic == NULL)
+	if (conf->templates.root == NULL || conf->templates.lastStatic == NULL) {
 		return;
+	}
 
 	pTpl = conf->templates.lastStatic->pNext;
 	conf->templates.lastStatic->pNext = NULL;
@@ -2196,38 +2209,41 @@ void tplDeleteNew(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->bHaveSubtree)
+		if (pTplDel->bHaveSubtree) {
 			msgPropDescrDestruct(&pTplDel->subtree);
+		}
 		free(pTplDel);
 	}
 	ENDfunc
 }
 
 /* Store the pointer to the last hardcoded teplate */
-void tplLastStaticInit(rsconf_t *conf, struct template *tpl)
-{
+void tplLastStaticInit(rsconf_t *conf, struct template *tpl) {
 	conf->templates.lastStatic = tpl;
 }
 
 /* Print the template structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
  */
-void tplPrintList(rsconf_t *conf)
-{
+void tplPrintList(rsconf_t *conf) {
 	struct template *pTpl;
 	struct templateEntry *pTpe;
 
 	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatEscape == SQL_ESCAPE)
+		if (pTpl->optFormatEscape == SQL_ESCAPE) {
 			dbgprintf("[SQL-Format (MySQL)] ");
-		else if(pTpl->optFormatEscape == JSON_ESCAPE)
+		}
+		else if (pTpl->optFormatEscape == JSON_ESCAPE) {
 			dbgprintf("[JSON-Escaped Format] ");
-		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+		}
+		else if (pTpl->optFormatEscape == STDSQL_ESCAPE) {
 			dbgprintf("[SQL-Format (standard SQL)] ");
-		if(pTpl->optCaseSensitive)
+		}
+		if (pTpl->optCaseSensitive) {
 			dbgprintf("[Case Sensitive Vars] ");
+		}
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
@@ -2336,8 +2352,9 @@ void tplPrintList(rsconf_t *conf)
 				}
 				break;
 			}
-			if(pTpe->bComplexProcessing)
+			if (pTpe->bComplexProcessing) {
 				dbgprintf("[COMPLEX]");
+			}
 			dbgprintf("\n");
 			pTpe = pTpe->pNext;
 		}
@@ -2345,14 +2362,12 @@ void tplPrintList(rsconf_t *conf)
 	}
 }
 
-int tplGetEntryCount(struct template *pTpl)
-{
+int tplGetEntryCount(struct template *pTpl) {
 	assert(pTpl != NULL);
 	return(pTpl->tpenElements);
 }
 
-rsRetVal templateInit(void)
-{
+rsRetVal templateInit(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

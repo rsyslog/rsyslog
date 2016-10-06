@@ -62,14 +62,14 @@ pthread_key_t thrd_wti_key;
  * The caller must NOT free or otherwise modify the returned string!
  */
 static inline uchar *
-wtiGetDbgHdr(wti_t *pThis)
-{
+wtiGetDbgHdr(wti_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, wti);
 
 	if(pThis->pszDbgHdr == NULL)
 		return (uchar*) "wti"; /* should not normally happen */
-	else
+	else {
 		return pThis->pszDbgHdr;
+	}
 }
 
 
@@ -77,8 +77,7 @@ wtiGetDbgHdr(wti_t *pThis)
  * simplicity, we do not use the iRet interface. -- rgerhards, 2009-07-17
  */
 sbool
-wtiGetState(wti_t *pThis)
-{
+wtiGetState(wti_t *pThis) {
 	return ATOMIC_FETCH_32BIT(&pThis->bIsRunning, &pThis->mutIsRunning);
 }
 
@@ -87,8 +86,7 @@ wtiGetState(wti_t *pThis)
  * rgerhards, 2009-07-20
  */
 rsRetVal
-wtiSetAlwaysRunning(wti_t *pThis)
-{
+wtiSetAlwaysRunning(wti_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, wti);
 	pThis->bAlwaysRunning = RSTRUE;
 	return RS_RET_OK;
@@ -99,8 +97,7 @@ wtiSetAlwaysRunning(wti_t *pThis)
  * is inside wti). -- rgerhards, 2009-07-17
  */
 rsRetVal
-wtiSetState(wti_t *pThis, sbool bNewVal)
-{
+wtiSetState(wti_t *pThis, sbool bNewVal) {
 	ISOBJ_TYPE_assert(pThis, wti);
 	if(bNewVal) {
 		ATOMIC_STORE_1_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning);
@@ -115,8 +112,7 @@ wtiSetState(wti_t *pThis, sbool bNewVal)
  * calls.
  */
 rsRetVal
-wtiWakeupThrd(wti_t *pThis)
-{
+wtiWakeupThrd(wti_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -142,8 +138,7 @@ wtiWakeupThrd(wti_t *pThis)
  * rgerhards, 2008-02-26
  */
 rsRetVal
-wtiCancelThrd(wti_t *pThis)
-{
+wtiCancelThrd(wti_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -171,8 +166,7 @@ wtiCancelThrd(wti_t *pThis)
 
 /* note: this function is only called once in action.c */
 rsRetVal
-wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams)
-{
+wtiNewIParam(wti_t *const pWti, action_t *const pAction, actWrkrIParams_t **piparams) {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	actWrkrIParams_t *iparams;
 	int newMax;
@@ -222,8 +216,7 @@ ENDobjConstruct(wti)
  * rgerhards, 2008-01-17
  */
 rsRetVal
-wtiConstructFinalize(wti_t *pThis)
-{
+wtiConstructFinalize(wti_t *pThis) {
 	DEFiRet;
 	int iDeqBatchSize;
 
@@ -259,8 +252,7 @@ finalize_it:
  * rgerhards, 2008-01-16
  */
 static void
-wtiWorkerCancelCleanup(void *arg)
-{
+wtiWorkerCancelCleanup(void *arg) {
 	wti_t *pThis = (wti_t*) arg;
 	wtp_t *pWtp;
 
@@ -283,8 +275,7 @@ wtiWorkerCancelCleanup(void *arg)
  * rgerhards, 2009-05-20
  */
 static inline void
-doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
-{
+doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured) {
 	struct timespec t;
 
 	BEGINfunc
@@ -313,8 +304,7 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
-wtiWorker(wti_t *__restrict__ const pThis)
-{
+wtiWorker(wti_t *__restrict__ const pThis) {
 	wtp_t *__restrict__ const pWtp = pThis->pWtp; /* our worker thread pool -- shortcut */
 	action_t *__restrict__ pAction;
 	int bInactivityTOOccured = 0;
@@ -423,22 +413,23 @@ DEFpropSetMeth(wti, pWtp, wtp_t*)
  * rgerhards, 2008-01-09
  */
 rsRetVal
-wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg)
-{
+wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 	assert(pszMsg != NULL);
 	
-	if(lenMsg < 1)
+	if (lenMsg < 1) {
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
 
 	if(pThis->pszDbgHdr != NULL) {
 		free(pThis->pszDbgHdr);
 	}
 
-	if((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
+	if ((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	memcpy(pThis->pszDbgHdr, pszMsg, lenMsg + 1); /* always think about the \0! */
 
@@ -459,15 +450,15 @@ finalize_it:
  * don't care -- it's just not nice in valgrind, but that's it.
  */
 wti_t *
-wtiGetDummy(void)
-{
+wtiGetDummy(void) {
 	wti_t *pWti;
 
 	pWti = (wti_t*) pthread_getspecific(thrd_wti_key);
 	if(pWti == NULL) {
 		wtiConstruct(&pWti);
-		if(pWti != NULL)
+		if (pWti != NULL) {
 			wtiConstructFinalize(pWti);
+		}
 		if(pthread_setspecific(thrd_wti_key, pWti) != 0) {
 			DBGPRINTF("wtiGetDummy: error setspecific thrd_wti_key\n");
 		}

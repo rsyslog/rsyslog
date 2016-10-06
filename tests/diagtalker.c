@@ -38,8 +38,7 @@ static int targetPort = 13500;
 
 /* open a single tcp connection
  */
-int openConn(int *fd)
-{
+int openConn(int *fd) {
 	int sock;
 	struct sockaddr_in addr;
 	int port;
@@ -84,8 +83,7 @@ int openConn(int *fd)
 /* send a string
  */
 static void
-sendCmd(int fd, char *buf, int len)
-{
+sendCmd(int fd, char *buf, int len) {
 	int lenSend;
 
 	lenSend = send(fd, buf, len, 0);
@@ -99,8 +97,7 @@ sendCmd(int fd, char *buf, int len)
 /* wait for a response from remote system
  */
 static void
-waitRsp(int fd, char *buf, int len)
-{
+waitRsp(int fd, char *buf, int len) {
 	int ret;
 
 	ret = recv(fd, buf, len - 1, 0);
@@ -118,16 +115,16 @@ waitRsp(int fd, char *buf, int len)
 /* do the actual processing
  */
 static void
-doProcessing()
-{
+doProcessing() {
 	int fd;
 	int len;
 	char line[2048];
 
 	openConn(&fd);
 	while(!feof(stdin)) {
-		if(fgets(line, sizeof(line) - 1, stdin) == NULL)
+		if (fgets(line, sizeof(line) - 1, stdin) == NULL) {
 			break;
+		}
 		len = strlen(line);
 		sendCmd(fd, line, len);
 		waitRsp(fd, line, sizeof(line));
@@ -142,8 +139,7 @@ doProcessing()
 /* Run the test.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int ret = 0;
 	int opt;
 

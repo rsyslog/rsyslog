@@ -74,8 +74,7 @@ static struct pollfd Pfd;		/* Pollfd for local the log device */
  *	len - the length of the buffer
  */
 size_t
-findnl_bkwd(const char *buf, const size_t len)
-{
+findnl_bkwd(const char *buf, const size_t len) {
 	const char *p;
 	size_t	mb_cur_max;
 
@@ -144,8 +143,7 @@ findnl_bkwd(const char *buf, const size_t len)
  * and return a file descriptor.
  */
 int
-sun_openklog(char *name, int mode)
-{
+sun_openklog(char *name, int mode) {
 	int fd;
 	struct strioctl str;
 
@@ -173,8 +171,7 @@ sun_openklog(char *name, int mode)
  * Pull up one message from log driver.
  */
 void
-sun_getkmsg()
-{
+sun_getkmsg() {
 	int flags = 0, i;
 	char *lastline;
 	struct strbuf ctl, dat;
@@ -255,8 +252,7 @@ sun_getkmsg()
  */
 /*ARGSUSED*/
 void *
-sun_sys_poll()
-{
+sun_sys_poll() {
 	int nfds;
 
 	dbgprintf("klog:sys_poll: sys_thread started\n");
@@ -266,12 +262,14 @@ sun_sys_poll()
 
 		nfds = poll(&Pfd, 1, INFTIM);
 
-		if (nfds == 0)
+		if (nfds == 0) {
 			continue;
+		}
 
 		if (nfds < 0) {
-			if (errno != EINTR)
+			if (errno != EINTR) {
 				dbgprintf("klog:poll error");
+			}
 			continue;
 		}
 		if (Pfd.revents & POLLIN) {

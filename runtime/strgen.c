@@ -61,8 +61,7 @@ strgenList_t *pStrgenLstRoot = NULL;
  * it to NULL.
  */
 static rsRetVal
-InitStrgenList(strgenList_t **pListRoot)
-{
+InitStrgenList(strgenList_t **pListRoot) {
 	*pListRoot = NULL;
 	return RS_RET_OK;
 }
@@ -73,8 +72,7 @@ InitStrgenList(strgenList_t **pListRoot)
  * shutdown and need not be considered here.)
  */
 static rsRetVal
-DestructStrgenList(strgenList_t **ppListRoot)
-{
+DestructStrgenList(strgenList_t **ppListRoot) {
 	strgenList_t *pStrgenLst;
 	strgenList_t *pStrgenLstDel;
 
@@ -97,8 +95,7 @@ DestructStrgenList(strgenList_t **ppListRoot)
  * when adding elements...
  */
 static rsRetVal
-AddStrgenToList(strgenList_t **ppListRoot, strgen_t *pStrgen)
-{
+AddStrgenToList(strgenList_t **ppListRoot, strgen_t *pStrgen) {
 	strgenList_t *pThis;
 	strgenList_t *pTail;
 	DEFiRet;
@@ -125,8 +122,7 @@ finalize_it:
 
 /* find a strgen based on the provided name */
 static rsRetVal
-FindStrgen(strgen_t **ppStrgen, uchar *pName)
-{
+FindStrgen(strgen_t **ppStrgen, uchar *pName) {
 	strgenList_t *pThis;
 	DEFiRet;
 	
@@ -155,8 +151,7 @@ ENDobjConstruct(strgen)
  * rgerhards, 2009-11-03
  */
 static rsRetVal
-strgenConstructFinalize(strgen_t *pThis)
-{
+strgenConstructFinalize(strgen_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strgen);
@@ -178,8 +173,7 @@ ENDobjDestruct(strgen)
  * but must free it if desired.
  */
 static rsRetVal
-SetName(strgen_t *pThis, uchar *name)
-{
+SetName(strgen_t *pThis, uchar *name) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strgen);
@@ -201,8 +195,7 @@ finalize_it:
  * pointer must already be set.
  */
 static rsRetVal
-SetModPtr(strgen_t *pThis, modInfo_t *pMod)
-{
+SetModPtr(strgen_t *pThis, modInfo_t *pMod) {
 	ISOBJ_TYPE_assert(pThis, strgen);
 	assert(pMod != NULL);
 	assert(pThis->pModule == NULL);
@@ -242,8 +235,7 @@ ENDobjQueryInterface(strgen)
  * does that at a later stage for all dynamically loaded modules.
  */
 static void
-destroyMasterStrgenList(void)
-{
+destroyMasterStrgenList(void) {
 	strgenList_t *pStrgenLst;
 	strgenList_t *pStrgenLstDel;
 

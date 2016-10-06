@@ -75,8 +75,7 @@ parserList_t *pDfltParsLst = NULL;
  * it to NULL.
  */
 static rsRetVal
-InitParserList(parserList_t **pListRoot)
-{
+InitParserList(parserList_t **pListRoot) {
 	*pListRoot = NULL;
 	return RS_RET_OK;
 }
@@ -87,8 +86,7 @@ InitParserList(parserList_t **pListRoot)
  * shutdown and need not be considered here.)
  */
 static rsRetVal
-DestructParserList(parserList_t **ppListRoot)
-{
+DestructParserList(parserList_t **ppListRoot) {
 	parserList_t *pParsLst;
 	parserList_t *pParsLstDel;
 
@@ -112,8 +110,7 @@ DestructParserList(parserList_t **ppListRoot)
  * rgerhards, 2009-11-03
  */
 static rsRetVal
-AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
-{
+AddParserToList(parserList_t **ppListRoot, parser_t *pParser) {
 	parserList_t *pThis;
 	parserList_t *pTail;
 	DEFiRet;
@@ -138,8 +135,7 @@ finalize_it:
 }
 
 void
-printParserList(parserList_t *pList)
-{
+printParserList(parserList_t *pList) {
 	while(pList != NULL) {
 		dbgprintf("parser: %s\n", pList->pParser->pName);
 		pList = pList->pNext;
@@ -148,8 +144,7 @@ printParserList(parserList_t *pList)
 
 /* find a parser based on the provided name */
 static rsRetVal
-FindParser(parser_t **ppParser, uchar *pName)
-{
+FindParser(parser_t **ppParser, uchar *pName) {
 	parserList_t *pThis;
 	DEFiRet;
 	
@@ -175,8 +170,7 @@ finalize_it:
  * rgerhards, 2009-11-04
  */
 static rsRetVal
-AddDfltParser(uchar *pName)
-{
+AddDfltParser(uchar *pName) {
 	parser_t *pParser;
 	DEFiRet;
 
@@ -193,8 +187,7 @@ finalize_it:
  * but must free it if desired.
  */
 static rsRetVal
-SetName(parser_t *pThis, uchar *name)
-{
+SetName(parser_t *pThis, uchar *name) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, parser);
@@ -216,8 +209,7 @@ finalize_it:
  * pointer must already be set.
  */
 static rsRetVal
-SetModPtr(parser_t *pThis, modInfo_t *pMod)
-{
+SetModPtr(parser_t *pThis, modInfo_t *pMod) {
 	ISOBJ_TYPE_assert(pThis, parser);
 	assert(pMod != NULL);
 	assert(pThis->pModule == NULL);
@@ -230,8 +222,7 @@ SetModPtr(parser_t *pThis, modInfo_t *pMod)
  * down to the parser module.
  */
 static rsRetVal
-SetDoPRIParsing(parser_t *pThis, int bDoIt)
-{
+SetDoPRIParsing(parser_t *pThis, int bDoIt) {
 	ISOBJ_TYPE_assert(pThis, parser);
 	pThis->bDoPRIParsing = bDoIt;
 	return RS_RET_OK;
@@ -247,8 +238,7 @@ ENDobjConstruct(parser)
  * to our global list of available parsers.
  * rgerhards, 2009-11-03
  */
-static rsRetVal parserConstructFinalize(parser_t *pThis)
-{
+static rsRetVal parserConstructFinalize(parser_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, parser);
@@ -265,8 +255,7 @@ finalize_it:
  * in multiple spots inside the code.
  */
 rsRetVal
-parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restrict__ pName, void *pInst)
-{
+parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restrict__ pName, void *pInst) {
 	rsRetVal localRet;
 	parser_t *pParser = NULL;
 	DEFiRet;
@@ -278,11 +267,11 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	CHKiRet(parserConstruct(&pParser));
 	/* check some features */
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
-	if(localRet == RS_RET_OK){
+	if(localRet == RS_RET_OK) {
 		pParser->bDoSanitazion = RSTRUE;
 	}
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
-	if(localRet == RS_RET_OK){
+	if(localRet == RS_RET_OK) {
 		CHKiRet(SetDoPRIParsing(pParser, RSTRUE));
 	}
 
@@ -291,8 +280,9 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	pParser->pInst = pInst;
 	CHKiRet(parserConstructFinalize(pParser));
 finalize_it:
-	if(iRet != RS_RET_OK)
+	if (iRet != RS_RET_OK) {
 		free(pParser);
+	}
 	RETiRet;
 }
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
@@ -309,8 +299,7 @@ ENDobjDestruct(parser)
  * pMsg->pszRawMsg buffer is updated.
  * rgerhards, 2008-10-09
  */
-static inline rsRetVal uncompressMessage(msg_t *pMsg)
-{
+static inline rsRetVal uncompressMessage(msg_t *pMsg) {
 	DEFiRet;
 	uchar *deflateBuf = NULL;
 	uLongf iLenDefBuf;
@@ -355,8 +344,9 @@ static inline rsRetVal uncompressMessage(msg_t *pMsg)
 		MsgSetRawMsg(pMsg, (char*)deflateBuf, iLenDefBuf);
 	}
 finalize_it:
-	if(deflateBuf != NULL)
+	if (deflateBuf != NULL) {
 		free(deflateBuf);
+	}
 
 	RETiRet;
 }
@@ -377,8 +367,7 @@ finalize_it:
  * rgerhards, 2007-09-14
  */
 static rsRetVal
-SanitizeMsg(msg_t *pMsg)
-{
+SanitizeMsg(msg_t *pMsg) {
 	DEFiRet;
 	uchar *pszMsg;
 	uchar *pDst; /* destination for copy job */
@@ -448,8 +437,9 @@ SanitizeMsg(msg_t *pMsg)
 	}
 
 	if(!bNeedSanitize) {
-		if(bUpdatedLen == RSTRUE)
+		if (bUpdatedLen == RSTRUE) {
 			MsgSetRawMsgSize(pMsg, lenMsg);
+		}
 		FINALIZE;
 	}
 
@@ -461,10 +451,12 @@ SanitizeMsg(msg_t *pMsg)
 
 	if(maxDest > iMaxLine)
 		maxDest = iMaxLine;	/* but not more than the max size! */
-	if(maxDest < sizeof(szSanBuf))
+	if (maxDest < sizeof(szSanBuf)) {
 		pDst = szSanBuf;
-	else 
+	}
+	else {
 		CHKmalloc(pDst = MALLOC(iMaxLine + 1));
+	}
 	if(iSrc > 0) {
 		iSrc--; /* go back to where everything is OK */
 		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
@@ -556,8 +548,9 @@ SanitizeMsg(msg_t *pMsg)
 
 	MsgSetRawMsg(pMsg, (char*)pDst, iDst); /* save sanitized string */
 
-	if(pDst != szSanBuf)
+	if (pDst != szSanBuf) {
 		free(pDst);
+	}
 
 finalize_it:
 	RETiRet;
@@ -568,8 +561,7 @@ finalize_it:
  * that functionality and so they do not need to implement it themsleves.
  */
 static inline rsRetVal
-ParsePRI(msg_t *pMsg)
-{
+ParsePRI(msg_t *pMsg) {
 	syslog_pri_t pri;
 	uchar *msg;
 	int lenMsg;
@@ -593,8 +585,9 @@ ParsePRI(msg_t *pMsg)
 			} else {
 				pri = LOG_PRI_INVLD;
 			}
-			if(pri > LOG_MAXPRI)
+			if (pri > LOG_MAXPRI) {
 				pri = LOG_PRI_INVLD;
+			}
 		}
 		msgSetPRI(pMsg, pri);
 		MsgSetAfterPRIOffs(pMsg, (pri == LOG_PRI_INVLD) ? 0 : msg - pMsg->pszRawMsg);
@@ -609,8 +602,7 @@ ParsePRI(msg_t *pMsg)
  * rgerhards, 2008-10-09
  */
 static rsRetVal
-ParseMsg(msg_t *pMsg)
-{
+ParseMsg(msg_t *pMsg) {
 	rsRetVal localRet = RS_RET_ERR;
 	parserList_t *pParserList;
 	parser_t *pParser;
@@ -619,8 +611,9 @@ ParseMsg(msg_t *pMsg)
 	static int iErrMsgRateLimiter = 0;
 	DEFiRet;
 
-	if(pMsg->iLenRawMsg == 0)
+	if (pMsg->iLenRawMsg == 0) {
 		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
+	}
 
 	CHKiRet(uncompressMessage(pMsg));
 
@@ -655,13 +648,16 @@ ParseMsg(msg_t *pMsg)
 			}
 			bIsSanitized = RSTRUE;
 		}
-		if(pParser->pModule->mod.pm.parse2 == NULL)
+		if (pParser->pModule->mod.pm.parse2 == NULL) {
 			localRet = pParser->pModule->mod.pm.parse(pMsg);
-		else
+		}
+		else {
 			localRet = pParser->pModule->mod.pm.parse2(pParser->pInst, pMsg);
+		}
 		DBGPRINTF("Parser '%s' returned %d\n", pParser->pName, localRet);
-		if(localRet != RS_RET_COULD_NOT_PARSE)
+		if (localRet != RS_RET_COULD_NOT_PARSE) {
 			break;
+		}
 		pParserList = pParserList->pNext;
 	}
 
@@ -720,8 +716,7 @@ ENDobjQueryInterface(parser)
  * does that at a later stage for all dynamically loaded modules.
  */
 static void
-destroyMasterParserList(void)
-{
+destroyMasterParserList(void) {
 	parserList_t *pParsLst;
 	parserList_t *pParsLstDel;
 

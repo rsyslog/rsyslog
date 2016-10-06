@@ -133,8 +133,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->mode = MODE_UTF8;
 	pData->replChar = ' ';
 }
@@ -154,8 +153,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "mode")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"utf-8",
 					 sizeof("utf-8")-1)) {
@@ -194,8 +194,7 @@ ENDtryResume
 
 
 static inline void
-doCC(instanceData *pData, uchar *msg, int lenMsg)
-{
+doCC(instanceData *pData, uchar *msg, int lenMsg) {
 	int i;
 
 	for(i = 0 ; i < lenMsg ; ++i) {
@@ -207,22 +206,21 @@ doCC(instanceData *pData, uchar *msg, int lenMsg)
 
 /* fix an invalid multibyte sequence */
 static inline void
-fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *endIdx, int8_t seqLen)
-{
+fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *endIdx, int8_t seqLen) {
 	int i;
 
 	/* startIdx and seqLen always set if bytesLeft is set,
 	   which is required before this function is called */
 	*endIdx = strtIdx + seqLen;
-	if(*endIdx > lenMsg)
+	if (*endIdx > lenMsg) {
 		*endIdx = lenMsg;
+	}
 	for(i = strtIdx ; i < *endIdx ; ++i)
 		msg[i] = pData->replChar;
 }
 
 static inline void
-doUTF8(instanceData *pData, uchar *msg, int lenMsg)
-{
+doUTF8(instanceData *pData, uchar *msg, int lenMsg) {
 	uchar c;
 	int8_t seqLen = 0, bytesLeft = 0;
 	uint32_t codepoint;

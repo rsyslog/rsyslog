@@ -31,8 +31,7 @@
  * rgerhards, 2009-03-31
  */
 #ifndef HAVE_GETLINE
-ssize_t getline(char **lineptr, size_t *n, FILE *fp)
-{
+ssize_t getline(char **lineptr, size_t *n, FILE *fp) {
 	int c;
 	int len = 0;
 

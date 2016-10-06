@@ -156,30 +156,25 @@ const char * hashAlgName(uint8_t hashID);
 enum GTHashAlgorithm hashID2Alg(uint8_t hashID);
 
 static inline uint16_t
-getIVLen(block_hdr_t *bh)
-{
+getIVLen(block_hdr_t *bh) {
 	return hashOutputLengthOctets(bh->hashID);
 }
 
 static inline void
-rsgtSetTimestamper(gtctx ctx, char *timestamper)
-{
+rsgtSetTimestamper(gtctx ctx, char *timestamper) {
 	free(ctx->timestamper);
 	ctx->timestamper = strdup(timestamper);
 }
 static inline void
-rsgtSetBlockSizeLimit(gtctx ctx, uint64_t limit)
-{
+rsgtSetBlockSizeLimit(gtctx ctx, uint64_t limit) {
 	ctx->blockSizeLimit = limit;
 }
 static inline void
-rsgtSetKeepRecordHashes(gtctx ctx, int val)
-{
+rsgtSetKeepRecordHashes(gtctx ctx, int val) {
 	ctx->bKeepRecordHashes = val;
 }
 static inline void
-rsgtSetKeepTreeHashes(gtctx ctx, int val)
-{
+rsgtSetKeepTreeHashes(gtctx ctx, int val) {
 	ctx->bKeepTreeHashes = val;
 }
 

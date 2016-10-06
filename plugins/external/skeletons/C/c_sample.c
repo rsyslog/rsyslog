@@ -6,8 +6,7 @@
 #include <stdlib.h>
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	FILE *fpout;
 	char *mode;
 	char buf[64*1024];
@@ -17,8 +16,9 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if(argc != 3)
+	if (argc != 3) {
 		mode = "a+";
+	}
 
 	fpout = fopen(argv[1], mode);
 	while(1) {

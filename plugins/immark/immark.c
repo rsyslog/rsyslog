@@ -80,8 +80,9 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -118,8 +119,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "interval")) {
 			loadModConf->iMarkMessagePeriod = (int) pvals[i].val.d.n;
 		} else {
@@ -133,8 +135,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -217,8 +220,7 @@ CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 	return RS_RET_OK;
 }

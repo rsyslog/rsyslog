@@ -22,8 +22,7 @@
 #include <stdio.h>
 #include <syslog.h>
 
-int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
-{
+int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[]) {
 	int i;
 
 	openlog("msggen", 0 , LOG_LOCAL0);

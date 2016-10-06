@@ -58,8 +58,7 @@ linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
  * HINT: check if char is ' and, if so, use 'c' where c may also be things
  * like \t etc.
  */
-static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
+static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal) {
 	DEFiRet;
 
 	assert(pp != NULL);
@@ -91,8 +90,7 @@ finalize_it:
  * a shell to call the custom handler.
  * rgerhards, 2007-07-31
  */
-static rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal)
-{
+static rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal) {
 	DEFiRet;
 
 	assert(pp != NULL);
@@ -110,8 +108,7 @@ finalize_it:
  * for INTERNAL USE by other parse functions!
  * rgerhards, 2008-01-08
  */
-static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
-{
+static rsRetVal parseIntVal(uchar **pp, int64 *pVal) {
 	DEFiRet;
 	uchar *p;
 	int64 i;	
@@ -144,8 +141,9 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 		}
 	}
 
-	if(bWasNegative)
+	if (bWasNegative) {
 		i *= -1;
+	}
 
 	*pVal = i;
 	*pp = p;
@@ -161,8 +159,7 @@ finalize_it:
  * param value must be int64!
  * rgerhards, 2008-01-09
  */
-static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *pVal)
-{
+static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *pVal) {
 	DEFiRet;
 	int64 i;
 
@@ -211,8 +208,7 @@ finalize_it:
 /* Parse a number from the configuration line.
  * rgerhards, 2007-07-31
  */
-static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
+static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal) {
 	uchar *p;
 	DEFiRet;
 	int64 i;	
@@ -255,8 +251,7 @@ finalize_it:
  * Parameter **pp has a pointer to the current config line.
  * On exit, it will be updated to the processed position.
  */
-static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
+static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal) {
 	uchar *p;
 	DEFiRet;
 	int iVal;	
@@ -308,8 +303,7 @@ finalize_it:
  * 1 if it is on and another value if there was an error.
  * rgerhards, 2007-07-15
  */
-static int doParseOnOffOption(uchar **pp)
-{
+static int doParseOnOffOption(uchar **pp) {
 	uchar *pOptStart;
 	uchar szOpt[32];
 
@@ -338,8 +332,7 @@ static int doParseOnOffOption(uchar **pp)
 /* extract a groupname and return its gid.
  * rgerhards, 2007-07-17
  */
-static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
+static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal) {
 	struct group *pgBuf = NULL;
 	struct group gBuf;
 	DEFiRet;
@@ -396,8 +389,7 @@ finalize_it:
 /* extract a username and return its uid.
  * rgerhards, 2007-07-17
  */
-static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
-{
+static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal) {
 	struct passwd *ppwBuf;
 	struct passwd pwBuf;
 	DEFiRet;
@@ -440,8 +432,7 @@ finalize_it:
  * value.
  * rgerhards, 2007-07-15
  */
-static rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
-{
+static rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal) {
 	int iOption;
 	DEFiRet;
 
@@ -472,8 +463,7 @@ finalize_it:
  * rgerhards, 2008-02-14
  */
 static rsRetVal
-getWord(uchar **pp, cstr_t **ppStrB)
-{
+getWord(uchar **pp, cstr_t **ppStrB) {
 	DEFiRet;
 	uchar *p;
 
@@ -515,8 +505,7 @@ finalize_it:
  * Just to clarify: if pVal is parsed to a custom handler, this handler
  * is responsible for freeing pVal. -- rgerhards, 2008-03-20
  */
-static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
-{
+static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal) {
 	DEFiRet;
 	cstr_t *pStrB = NULL;
 	uchar *pNewVal;
@@ -544,8 +533,9 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStrB != NULL)
+		if (pStrB != NULL) {
 			cstrDestruct(&pStrB);
+		}
 	}
 
 	RETiRet;
@@ -559,8 +549,7 @@ finalize_it:
  */
 static rsRetVal
 doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
-	  	    void *pVal, syslogName_t *pNameTable)
-{
+	  	    void *pVal, syslogName_t *pNameTable) {
 	DEFiRet;
 	cstr_t *pStrB;
 	int iNewVal;
@@ -582,8 +571,9 @@ doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
-	if(pStrB != NULL)
+	if (pStrB != NULL) {
 		rsCStrDestruct(&pStrB);
+	}
 
 	RETiRet;
 }
@@ -593,8 +583,7 @@ finalize_it:
  * rgerhards, 2008-02-14
  */
 static rsRetVal
-doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
-{
+doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal) {
 	DEFiRet;
 	iRet = doSyslogName(pp, pSetHdlr, pVal, syslogFacNames);
 	RETiRet;
@@ -604,8 +593,7 @@ doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 static rsRetVal
 doGoneAway(__attribute__((unused)) uchar **pp,
 	   __attribute__((unused)) rsRetVal (*pSetHdlr)(void*, int),
-	   __attribute__((unused)) void *pVal)
-{
+	   __attribute__((unused)) void *pVal) {
 	errmsg.LogError(0, RS_RET_CMD_GONE_AWAY, "config directive is no longer supported -- ignored");
 	return RS_RET_CMD_GONE_AWAY;
 }
@@ -614,8 +602,7 @@ doGoneAway(__attribute__((unused)) uchar **pp,
  * rgerhards, 2008-02-14
  */
 static rsRetVal
-doSeverity(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
-{
+doSeverity(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal) {
 	DEFiRet;
 	iRet = doSyslogName(pp, pSetHdlr, pVal, syslogPriNames);
 	RETiRet;
@@ -628,8 +615,7 @@ doSeverity(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
  * pThis is actually a cslCmdHdlr_t, but we do not cast it as all we currently
  * need to do is free it.
  */
-static rsRetVal cslchDestruct(void *pThis)
-{
+static rsRetVal cslchDestruct(void *pThis) {
 	ASSERT(pThis != NULL);
 	free(pThis);
 	
@@ -639,8 +625,7 @@ static rsRetVal cslchDestruct(void *pThis)
 
 /* constructor for cslCmdHdlr
  */
-static rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
-{
+static rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis) {
 	cslCmdHdlr_t *pThis;
 	DEFiRet;
 
@@ -659,8 +644,7 @@ finalize_it:
  * linkedList class to make sure we have not forgotten a destructor.
  * rgerhards, 2007-11-21
  */
-static rsRetVal cslchKeyDestruct(void __attribute__((unused)) *pData)
-{
+static rsRetVal cslchKeyDestruct(void __attribute__((unused)) *pData) {
 	return RS_RET_OK;
 }
 
@@ -669,22 +653,23 @@ static rsRetVal cslchKeyDestruct(void __attribute__((unused)) *pData)
  * owner cookies (void *).
  * rgerhards, 2007-11-21
  */
-static int cslchKeyCompare(void *pKey1, void *pKey2)
-{
-	if(pKey1 == pKey2)
+static int cslchKeyCompare(void *pKey1, void *pKey2) {
+	if (pKey1 == pKey2) {
 		return 0;
+	}
 	else
-		if(pKey1 < pKey2)
+		if (pKey1 < pKey2) {
 			return -1;
-		else
+		}
+		else {
 			return 1;
+		}
 }
 
 
 /* set data members for this object
  */
-static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted)
-{
+static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, int *permitted) {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
 
@@ -699,8 +684,7 @@ static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetV
 
 /* call the specified handler
  */
-static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
-{
+static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
 	DEFiRet;
 	rsRetVal (*pHdlr)() = NULL;
 	assert(pThis != NULL);
@@ -770,16 +754,14 @@ finalize_it:
 
 /* destructor for a cslCmd list key (a string as of now)
  */
-static rsRetVal cslcKeyDestruct(void *pData)
-{
+static rsRetVal cslcKeyDestruct(void *pData) {
 	free(pData); /* we do not need to cast as all we do is free it anyway... */
 	return RS_RET_OK;
 }
 
 /* destructor for cslCmd
  */
-static rsRetVal cslcDestruct(void *pData)
-{
+static rsRetVal cslcDestruct(void *pData) {
 	cslCmd_t *pThis = (cslCmd_t*) pData;
 
 	assert(pThis != NULL);
@@ -793,8 +775,7 @@ static rsRetVal cslcDestruct(void *pData)
 
 /* constructor for cslCmd
  */
-static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted)
-{
+static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted) {
 	cslCmd_t *pThis;
 	DEFiRet;
 
@@ -815,8 +796,7 @@ finalize_it:
 
 /* add a handler entry to a known command
  */
-static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
-{
+static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted) {
 	DEFiRet;
 	cslCmdHdlr_t *pCmdHdlr = NULL;
 
@@ -828,8 +808,9 @@ static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*p
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pHdlr != NULL)
+		if (pHdlr != NULL) {
 			cslchDestruct(pCmdHdlr);
+		}
 	}
 
 	RETiRet;
@@ -850,8 +831,7 @@ finalize_it:
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
  * rgerhards, 2012-06-26
  */
-rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted)
-{
+rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie, int *permitted) {
 	DEFiRet;
 	cslCmd_t *pThis;
 	uchar *pMyCmdName;
@@ -890,16 +870,14 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
-{
+rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie) {
 	DEFiRet;
 	iRet = regCfSysLineHdlr2(pCmdName, bChainingPermitted, eType, pHdlr, pData, pOwnerCookie, NULL);
 	RETiRet;
 }
 
 
-rsRetVal unregCfSysLineHdlrs(void)
-{
+rsRetVal unregCfSysLineHdlrs(void) {
 	return llDestroy(&llCmdList);
 }
 
@@ -910,8 +888,7 @@ rsRetVal unregCfSysLineHdlrs(void)
  * remove an entry from the list.
  * rgerhards, 2007-11-21
  */
-DEFFUNC_llExecFunc(unregHdlrsHeadExec)
-{
+DEFFUNC_llExecFunc(unregHdlrsHeadExec) {
 	DEFiRet;
 	cslCmd_t *pListHdr = (cslCmd_t*) pData;
 	int iNumElts;
@@ -936,8 +913,7 @@ finalize_it:
  * handler for a directive name, the directive header, too, is deleted.
  * rgerhards, 2007-11-21
  */
-rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie)
-{
+rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie) {
 	DEFiRet;
 	/* we need to walk through all directive names, as the linked list
 	 * class does not provide a way to just search the lower-level handlers.
@@ -957,8 +933,7 @@ rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie)
  * param "p" is a pointer to the command line after the command. Should be
  * updated.
  */
-rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
-{
+rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p) {
 	DEFiRet;
 	rsRetVal iRetLL; /* for linked list handling */
 	cslCmd_t *pCmd;
@@ -976,8 +951,9 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 			"have you forgotten to load a module?", pCmdName);
 	}
 
-	if(iRet != RS_RET_OK)
+	if (iRet != RS_RET_OK) {
 		goto finalize_it;
+	}
 
 	llCookieCmdHdlr = NULL;
 	bWasOnceOK = 0;
@@ -1006,8 +982,9 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		iRet = RS_RET_OK;
 	}
 
-	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
+	if (iRetLL != RS_RET_END_OF_LINKEDLIST) {
 		iRet = iRetLL;
+	}
 
 	if(bHadScopingErr) {
 		iRet = RS_RET_CONF_INVLD_SCOPE;
@@ -1020,8 +997,7 @@ finalize_it:
 
 /* debug print the command handler structure
  */
-void dbgPrintCfSysLineHandlers(void)
-{
+void dbgPrintCfSysLineHandlers(void) {
 	cslCmd_t *pCmd;
 	cslCmdHdlr_t *pCmdHdlr;
 	linkedListCookie_t llCookieCmd;
@@ -1049,8 +1025,7 @@ void dbgPrintCfSysLineHandlers(void)
 /* our init function. TODO: remove once converted to a class
  */
 rsRetVal
-cfsyslineInit(void)
-{
+cfsyslineInit(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

@@ -114,8 +114,7 @@ static struct cnfparamblk actpblk =
  * Report general error
  */
 static int
-die_on_error(int x, char const *context)
-{
+die_on_error(int x, char const *context) {
 	int retVal = 0; // false
 
 	if (x < 0) {
@@ -133,8 +132,7 @@ die_on_error(int x, char const *context)
  * Report AMQP specific error
  */
 static int
-die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
-{
+die_on_amqp_error(amqp_rpc_reply_t x, char const *context) {
 	int retVal = 1; // true
 
 	switch (x.reply_type) {
@@ -181,15 +179,13 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 
 
 static amqp_bytes_t
-cstring_bytes(const char *str)
-{
+cstring_bytes(const char *str) {
 	return str ? amqp_cstring_bytes(str) : amqp_empty_bytes;
 }
 
 
 static void
-closeAMQPConnection(instanceData *pData)
-{
+closeAMQPConnection(instanceData *pData) {
 	if (pData->conn != NULL) {
 		die_on_amqp_error(amqp_channel_close(pData->conn, 1, AMQP_REPLY_SUCCESS), "amqp_channel_close");
 		die_on_amqp_error(amqp_connection_close(pData->conn, AMQP_REPLY_SUCCESS), "amqp_connection_close");
@@ -204,8 +200,7 @@ closeAMQPConnection(instanceData *pData)
  * Initialize RabbitMQ connection
  */
 static rsRetVal
-initRabbitMQ(instanceData *pData)
-{
+initRabbitMQ(instanceData *pData) {
 	amqp_socket_t *asocket;
 	amqp_exchange_declare_t edReq;
 	DEFiRet;
@@ -278,8 +273,9 @@ CODESTARTisCompatibleWithFeature
 	 * plugin. If not, the framework will handle that. Currently, only
 	 * RepeatedMsgReduction ("last message repeated n times") is optional.
 	 */
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -395,8 +391,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->host = NULL;
 	pData->port = 5672;
 	pData->vhost = NULL;
@@ -427,8 +422,9 @@ CODESTARTnewActInst
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if (!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if (!strcmp(actpblk.descr[i].name, "host")) {
 			pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "port")) {

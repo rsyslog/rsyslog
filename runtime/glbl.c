@@ -192,14 +192,12 @@ static struct cnfparamvals *cnfparamvals = NULL;
  */
 
 static int
-GetMaxLine(void)
-{
+GetMaxLine(void) {
 	return(iMaxLine);
 }
 
 int
-GetGnuTLSLoglevel(void)
-{
+GetGnuTLSLoglevel(void) {
 	return(iGnuTLSLoglevel);
 }
 
@@ -252,8 +250,7 @@ SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) /* TO
 /* return global input termination status
  * rgerhards, 2009-07-20
  */
-static int GetGlobalInputTermState(void)
-{
+static int GetGlobalInputTermState(void) {
 	return ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
 }
 
@@ -261,8 +258,7 @@ static int GetGlobalInputTermState(void)
 /* set global termination state to "terminate". Note that this is a
  * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
  */
-static void SetGlobalInputTermination(void)
-{
+static void SetGlobalInputTermination(void) {
 	ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
 }
 
@@ -273,8 +269,7 @@ static void SetGlobalInputTermination(void)
  * been set. -- rgerhards, 2012-03-21
  */
 static inline rsRetVal
-storeLocalHostIPIF(uchar *myIP)
-{
+storeLocalHostIPIF(uchar *myIP) {
 	DEFiRet;
 	CHKiRet(prop.Construct(&propLocalIPIF));
 	CHKiRet(prop.SetString(propLocalIPIF, myIP, ustrlen(myIP)));
@@ -292,8 +287,7 @@ finalize_it:
  * rgerhards, 2012-03-21
  */
 static rsRetVal
-setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+setLocalHostIPIF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	uchar myIP[128];
 	rsRetVal localRet;
 	DEFiRet;
@@ -326,8 +320,7 @@ finalize_it:
  * emits an error message if not.
  * rgerhards, 2011-02-16
  */
-static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal setWorkDir(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	size_t lenDir;
 	int i;
 	struct stat sb;
@@ -374,8 +367,7 @@ finalize_it:
 
 /* This function is used both by legacy and RainerScript conf. It is a real setter. */
 static void
-setMaxLine(const int64_t iNew)
-{
+setMaxLine(const int64_t iNew) {
 	if(iNew < 128) {
 		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
 				"to %lld, but cannot be less than 128 - set to 128 "
@@ -391,15 +383,13 @@ setMaxLine(const int64_t iNew)
 }
 
 static rsRetVal
-legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
-{
+legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew) {
 	setMaxLine(iNew);
 	return RS_RET_OK;
 }
 
 static rsRetVal
-setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	dbgSetDebugFile(pNewVal);
 	free(pNewVal);
@@ -407,8 +397,7 @@ setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
 }
 
 static rsRetVal
-setDebugLevel(void __attribute__((unused)) *pVal, int level)
-{
+setDebugLevel(void __attribute__((unused)) *pVal, int level) {
 	DEFiRet;
 	dbgSetDebugLevel(level);
 	dbgprintf("debug level %d set via config file\n", level);
@@ -417,55 +406,47 @@ setDebugLevel(void __attribute__((unused)) *pVal, int level)
 }
 
 static rsRetVal
-setDisableDNS(int val)
-{
+setDisableDNS(int val) {
 	bDisableDNS = val;
 	return RS_RET_OK;
 }
 
 static int
-getDisableDNS(void)
-{
+getDisableDNS(void) {
 	return bDisableDNS;
 }
 
 static rsRetVal
-setOption_DisallowWarning(int val)
-{
+setOption_DisallowWarning(int val) {
 	option_DisallowWarning = val;
 	return RS_RET_OK;
 }
 
 static int
-getOption_DisallowWarning(void)
-{
+getOption_DisallowWarning(void) {
 	return option_DisallowWarning;
 }
 
 static rsRetVal
-setParseHOSTNAMEandTAG(int val)
-{
+setParseHOSTNAMEandTAG(int val) {
 	bParseHOSTNAMEandTAG = val;
 	return RS_RET_OK;
 }
 
 static int
-getParseHOSTNAMEandTAG(void)
-{
+getParseHOSTNAMEandTAG(void) {
 	return bParseHOSTNAMEandTAG;
 }
 
 static rsRetVal
-setDefPFFamily(int level)
-{
+setDefPFFamily(int level) {
 	DEFiRet;
 	iDefPFFamily = level;
 	RETiRet;
 }
 
 static int
-getDefPFFamily(void)
-{
+getDefPFFamily(void) {
 	return iDefPFFamily;
 }
 
@@ -478,10 +459,10 @@ getDefPFFamily(void)
  * rgerhards, 2012-03-21
  */
 static prop_t*
-GetLocalHostIP(void)
-{
-	if(propLocalIPIF == NULL)
+GetLocalHostIP(void) {
+	if (propLocalIPIF == NULL) {
 		storeLocalHostIPIF((uchar*)"127.0.0.1");
+	}
 	return(propLocalIPIF);
 }
 
@@ -491,8 +472,7 @@ GetLocalHostIP(void)
  * "once in a lifetime" action which can not be undone. -- gerhards, 2009-07-20
  */
 static rsRetVal
-SetLocalHostName(uchar *newname)
-{
+SetLocalHostName(uchar *newname) {
 	free(LocalHostName);
 	LocalHostName = newname;
 	return RS_RET_OK;
@@ -502,8 +482,7 @@ SetLocalHostName(uchar *newname)
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
 static uchar*
-GetLocalHostName(void)
-{
+GetLocalHostName(void) {
 	uchar *pszRet;
 
 	if(LocalHostNameOverride != NULL) {
@@ -511,13 +490,16 @@ GetLocalHostName(void)
 		goto done;
 	}
 
-	if(LocalHostName == NULL)
+	if (LocalHostName == NULL) {
 		pszRet = (uchar*) "[localhost]";
+	}
 	else {
-		if(GetPreserveFQDN() == 1)
+		if (GetPreserveFQDN() == 1) {
 			pszRet = LocalFQDNName;
-		else
+		}
+		else {
 			pszRet = LocalHostName;
+		}
 	}
 done:
 	return(pszRet);
@@ -527,8 +509,7 @@ done:
 /* set our local domain name. Free previous domain, if it was already set.
  */
 static rsRetVal
-SetLocalDomain(uchar *newname)
-{
+SetLocalDomain(uchar *newname) {
 	free(LocalDomain);
 	LocalDomain = newname;
 	return RS_RET_OK;
@@ -538,8 +519,7 @@ SetLocalDomain(uchar *newname)
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
 static uchar*
-GetLocalDomain(void)
-{
+GetLocalDomain(void) {
 	return LocalDomain;
 }
 
@@ -561,25 +541,28 @@ GetLocalDomain(void)
  * rgerhards, 2013-10-28
  */
 static rsRetVal
-GenerateLocalHostNameProperty(void)
-{
+GenerateLocalHostNameProperty(void) {
 	uchar *pszPrev;
 	int lenPrev;
 	prop_t *hostnameNew;
 	uchar *pszName;
 	DEFiRet;
 
-	if(propLocalHostNameToDelete != NULL)
+	if (propLocalHostNameToDelete != NULL) {
 		prop.Destruct(&propLocalHostNameToDelete);
+	}
 
 	if(LocalHostNameOverride == NULL) {
-		if(LocalHostName == NULL)
+		if (LocalHostName == NULL) {
 			pszName = (uchar*) "[localhost]";
+		}
 		else {
-			if(GetPreserveFQDN() == 1)
+			if (GetPreserveFQDN() == 1) {
 				pszName = LocalFQDNName;
-			else
+			}
+			else {
 				pszName = LocalHostName;
+			}
 		}
 	} else { /* local hostname is overriden via config */
 		pszName = LocalHostNameOverride;
@@ -588,8 +571,9 @@ GenerateLocalHostNameProperty(void)
 
 	if(propLocalHostName == NULL)
 		pszPrev = (uchar*)""; /* make sure strcmp() below does not match */
-	else
+	else {
 		prop.GetString(propLocalHostName, &pszPrev, &lenPrev);
+	}
 
 	if(ustrcmp(pszPrev, pszName)) {
 		/* we need to update */
@@ -608,15 +592,13 @@ finalize_it:
 /* return our local hostname as a string property
  */
 static prop_t*
-GetLocalHostNameProp(void)
-{
+GetLocalHostNameProp(void) {
 	return(propLocalHostName);
 }
 
 
 static rsRetVal
-SetLocalFQDNName(uchar *newname)
-{
+SetLocalFQDNName(uchar *newname) {
 	free(LocalFQDNName);
 	LocalFQDNName = newname;
 	return RS_RET_OK;
@@ -626,16 +608,14 @@ SetLocalFQDNName(uchar *newname)
  * TODO: we should set the FQDN ourselfs in here!
  */
 static uchar*
-GetLocalFQDNName(void)
-{
+GetLocalFQDNName(void) {
 	return(LocalFQDNName == NULL ? (uchar*) "[localhost]" : LocalFQDNName);
 }
 
 
 /* return the current working directory */
 static uchar*
-GetWorkDir(void)
-{
+GetWorkDir(void) {
 	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
 }
 
@@ -643,47 +623,41 @@ GetWorkDir(void)
  * NULL if unset.
  */
 const uchar *
-glblGetWorkDirRaw(void)
-{
+glblGetWorkDirRaw(void) {
 	return pszWorkDir;
 }
 
 /* return the current default netstream driver */
 static uchar*
-GetDfltNetstrmDrvr(void)
-{
+GetDfltNetstrmDrvr(void) {
 	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszDfltNetstrmDrvr);
 }
 
 
 /* return the current default netstream driver CA File */
 static uchar*
-GetDfltNetstrmDrvrCAF(void)
-{
+GetDfltNetstrmDrvrCAF(void) {
 	return(pszDfltNetstrmDrvrCAF);
 }
 
 
 /* return the current default netstream driver key File */
 static uchar*
-GetDfltNetstrmDrvrKeyFile(void)
-{
+GetDfltNetstrmDrvrKeyFile(void) {
 	return(pszDfltNetstrmDrvrKeyFile);
 }
 
 
 /* return the current default netstream driver certificate File */
 static uchar*
-GetDfltNetstrmDrvrCertFile(void)
-{
+GetDfltNetstrmDrvrCertFile(void) {
 	return(pszDfltNetstrmDrvrCertFile);
 }
 
 
 /* [ar] Source IP for local client to be used on multihomed host */
 static rsRetVal
-SetSourceIPofLocalClient(uchar *newname)
-{
+SetSourceIPofLocalClient(uchar *newname) {
 	if(SourceIPofLocalClient != NULL) {
 		free(SourceIPofLocalClient); }
 	SourceIPofLocalClient = newname;
@@ -691,8 +665,7 @@ SetSourceIPofLocalClient(uchar *newname)
 }
 
 static uchar*
-GetSourceIPofLocalClient(void)
-{
+GetSourceIPofLocalClient(void) {
 	return(SourceIPofLocalClient);
 }
 
@@ -761,8 +734,7 @@ ENDobjQueryInterface(glbl)
 /* Reset config variables to default values.
  * rgerhards, 2008-04-17
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	free(pszDfltNetstrmDrvr);
 	pszDfltNetstrmDrvr = NULL;
 	free(pszDfltNetstrmDrvrCAF);
@@ -796,8 +768,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 /* Prepare for new config
  */
 void
-glblPrepCnf(void)
-{
+glblPrepCnf(void) {
 	free(mainqCnfObj);
 	mainqCnfObj = NULL;
 	free(cnfparamvals);
@@ -806,8 +777,7 @@ glblPrepCnf(void)
 
 
 static void
-freeTimezoneInfo(void)
-{
+freeTimezoneInfo(void) {
 	int i;
 	for(i = 0 ; i < ntzinfos ; ++i)
 		free(tzinfos[i].id);
@@ -816,11 +786,11 @@ freeTimezoneInfo(void)
 }
 
 static void
-displayTzinfos(void)
-{
+displayTzinfos(void) {
 	int i;
-	if(!Debug)
+	if (!Debug) {
 		return;
+	}
 	for(i = 0 ; i < ntzinfos ; ++i)
 		dbgprintf("tzinfo: '%s':%c%2.2d:%2.2d\n",
 			tzinfos[i].id, tzinfos[i].offsMode,
@@ -833,8 +803,7 @@ displayTzinfos(void)
  * initialization.
  */
 static inline rsRetVal
-addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
-{
+addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin) {
 	DEFiRet;
 	tzinfo_t *newti;
 	CHKmalloc(newti = realloc(tzinfos, (ntzinfos+1)*sizeof(tzinfo_t)));
@@ -853,14 +822,12 @@ finalize_it:
 
 
 static int
-bs_arrcmp_tzinfo(const void *s1, const void *s2)
-{
+bs_arrcmp_tzinfo(const void *s1, const void *s2) {
 	return strcmp((char*)s1, (char*)((tzinfo_t*)s2)->id);
 }
 /* returns matching timezone info or NULL if no entry exists */
 tzinfo_t*
-glblFindTimezoneInfo(char *id)
-{
+glblFindTimezoneInfo(char *id) {
 	return (tzinfo_t*) bsearch(id, tzinfos, ntzinfos, sizeof(tzinfo_t), bs_arrcmp_tzinfo);
 }
 
@@ -868,8 +835,7 @@ glblFindTimezoneInfo(char *id)
  * zone info to the global table of time zones.
  */
 void
-glblProcessTimezone(struct cnfobj *o)
-{
+glblProcessTimezone(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	uchar *id = NULL;
 	uchar *offset = NULL;
@@ -885,8 +851,9 @@ glblProcessTimezone(struct cnfobj *o)
 	}
 
 	for(i = 0 ; i < timezonepblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(timezonepblk.descr[i].name, "id")) {
 			id = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(timezonepblk.descr[i].name, "offset")) {
@@ -944,8 +911,7 @@ done:
  * rgerhards, 2011-07-19
  */
 void
-glblProcessCnf(struct cnfobj *o)
-{
+glblProcessCnf(struct cnfobj *o) {
 	int i;
 
 	cnfparamvals = nvlstGetParams(o->nvlst, &paramblk, cnfparamvals);
@@ -964,8 +930,9 @@ glblProcessCnf(struct cnfobj *o)
 	 * act on immediately. These are processed here.
 	 */
 	for(i = 0 ; i < paramblk.nParams ; ++i) {
-		if(!cnfparamvals[i].bUsed)
+		if (!cnfparamvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(paramblk.descr[i].name, "processinternalmessages")) {
 			bProcessInternalMessages = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "stdlog.channelspec")) {
@@ -989,8 +956,7 @@ done:	return;
  * legacy parameter config. mainq parameters can only be set once.
  */
 void
-glblProcessMainQCnf(struct cnfobj *o)
-{
+glblProcessMainQCnf(struct cnfobj *o) {
 	if(mainqCnfObj == NULL) {
 		mainqCnfObj = o;
 	} else {
@@ -1003,8 +969,7 @@ glblProcessMainQCnf(struct cnfobj *o)
  * also used to do some final checks.
  */
 void
-glblDestructMainqCnfObj(void)
-{
+glblDestructMainqCnfObj(void) {
 	/* Only destruct if not NULL! */
 	if (mainqCnfObj != NULL) {
 		nvlstChkUnused(mainqCnfObj->nvlst);
@@ -1017,8 +982,7 @@ glblDestructMainqCnfObj(void)
  * this is for the string lookup table type
  */
 static int
-qs_arrcmp_tzinfo(const void *s1, const void *s2)
-{
+qs_arrcmp_tzinfo(const void *s1, const void *s2) {
 	return strcmp(((tzinfo_t*)s1)->id, ((tzinfo_t*)s2)->id);
 }
 
@@ -1026,8 +990,7 @@ qs_arrcmp_tzinfo(const void *s1, const void *s2)
  * config has been fully loaded.
  */
 void
-glblDoneLoadCnf(void)
-{
+glblDoneLoadCnf(void) {
 	int i;
 	unsigned char *cstr;
 
@@ -1035,12 +998,14 @@ glblDoneLoadCnf(void)
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
 	displayTzinfos();
 
-	if(cnfparamvals == NULL)
+	if (cnfparamvals == NULL) {
 		goto finalize_it;
+	}
 
 	for(i = 0 ; i < paramblk.nParams ; ++i) {
-		if(!cnfparamvals[i].bUsed)
+		if (!cnfparamvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setWorkDir(NULL, cstr);
@@ -1207,8 +1172,9 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	free(LocalFQDNName);
 	freeTimezoneInfo();
 	objRelease(prop, CORE_COMPONENT);
-	if(propLocalHostNameToDelete != NULL)
+	if (propLocalHostNameToDelete != NULL) {
 		prop.Destruct(&propLocalHostNameToDelete);
+	}
 	DESTROY_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassExit(glbl)
 

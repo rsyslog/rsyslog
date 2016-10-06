@@ -70,8 +70,7 @@ ENDobjDestruct(nsdsel_ptcp)
 
 /* Add a socket to the select set */
 static rsRetVal
-Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
-{
+Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp) {
 	DEFiRet;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
@@ -99,8 +98,9 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 			break;
 	}
 
-	if(pSock->sock > pThis->maxfds)
+	if (pSock->sock > pThis->maxfds) {
 		pThis->maxfds = pSock->sock;
+	}
 
 	RETiRet;
 }
@@ -110,8 +110,7 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
  * TODO: add timeout!
  */
 static rsRetVal
-Select(nsdsel_t *pNsdsel, int *piNumReady)
-{
+Select(nsdsel_t *pNsdsel, int *piNumReady) {
 	DEFiRet;
 	int i;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
@@ -130,8 +129,9 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 		// TODO: name in dbgprintf!
 		dbgprintf("--------<NSDSEL_PTCP> calling select, active fds (max %d): ", pThis->maxfds);
 		for(i = 0; i <= pThis->maxfds; ++i)
-			if(FD_ISSET(i, pReadfds) || FD_ISSET(i, pWritefds))
+			if (FD_ISSET(i, pReadfds) || FD_ISSET(i, pWritefds)) {
 				dbgprintf("%d ", i);
+			}
 		dbgprintf("\n");
 	}
 
@@ -144,8 +144,7 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 
 /* check if a socket is ready for IO */
 static rsRetVal
-IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
-{
+IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady) {
 	DEFiRet;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;

@@ -41,11 +41,11 @@
 /* Constructs a outchannel list object. Returns pointer to it
  * or NULL (if it fails).
  */
-struct outchannel* ochConstruct(void)
-{
+struct outchannel* ochConstruct(void) {
 	struct outchannel *pOch;
-	if((pOch = calloc(1, sizeof(struct outchannel))) == NULL)
+	if ((pOch = calloc(1, sizeof(struct outchannel))) == NULL) {
 		return NULL;
+	}
 	
 	/* basic initialisaion is done via calloc() - need to
 	 * initialize only values != 0. */
@@ -67,8 +67,7 @@ struct outchannel* ochConstruct(void)
 /* skips the next comma and any whitespace
  * in front and after it.
  */
-static void skip_Comma(char **pp)
-{
+static void skip_Comma(char **pp) {
 	register char *p;
 
 	assert(pp != NULL);
@@ -77,8 +76,9 @@ static void skip_Comma(char **pp)
 	p = *pp;
 	while(isspace((int)*p))
 		++p;
-	if(*p == ',')
+	if (*p == ',') {
 		++p;
+	}
 	while(isspace((int)*p))
 		++p;
 	*pp = p;
@@ -88,8 +88,7 @@ static void skip_Comma(char **pp)
  * The field is delimited by SP or comma. Leading whitespace
  * is "eaten" and does not become part of the field content.
  */
-static rsRetVal get_Field(uchar **pp, uchar **pField)
-{
+static rsRetVal get_Field(uchar **pp, uchar **pField) {
 	DEFiRet;
 	register uchar *p;
 	cstr_t *pStrB = NULL;
@@ -114,8 +113,9 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStrB != NULL)
+		if (pStrB != NULL) {
 			cstrDestruct(&pStrB);
+		}
 	}
 
 	RETiRet;
@@ -126,8 +126,7 @@ finalize_it:
  * input line.
  * returns: 0 - ok, 1 - failure
  */
-static int get_off_t(uchar **pp, off_t *pOff_t)
-{
+static int get_off_t(uchar **pp, off_t *pOff_t) {
 	register uchar *p;
 	off_t val;
 
@@ -156,8 +155,7 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
  * to the caller. Leading white space is removed, but
  * not trailing.
  */
-static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
-{
+static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf) {
 	DEFiRet;
 	register uchar *p;
 	cstr_t *pStrB = NULL;
@@ -182,8 +180,9 @@ static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStrB != NULL)
+		if (pStrB != NULL) {
 			cstrDestruct(&pStrB);
+		}
 	}
 
 	RETiRet;
@@ -196,16 +195,16 @@ finalize_it:
  * There might be some whitespace between the field (but not within)
  * and the commas. This can be removed.
  */
-struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
-{
+struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine) {
 	struct outchannel *pOch;
  	uchar *p;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
 
-	if((pOch = ochConstruct()) == NULL)
+	if ((pOch = ochConstruct()) == NULL) {
 		return NULL;
+	}
 	
 	pOch->iLenName = strlen(pName);
 	pOch->pszName = (char*) MALLOC(pOch->iLenName + 1);
@@ -240,8 +239,7 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
  * NULL otherwise.
  * rgerhards 2004-11-17
  */
-struct outchannel *ochFind(char *pName, int iLenName)
-{
+struct outchannel *ochFind(char *pName, int iLenName) {
 	struct outchannel *pOch;
 
 	assert(pName != NULL);
@@ -250,8 +248,7 @@ struct outchannel *ochFind(char *pName, int iLenName)
 	while(pOch != NULL &&
 	      !(pOch->iLenName == iLenName &&
 	        !strcmp(pOch->pszName, pName)
-	        ))
-		{
+	        )) {
 			pOch = pOch->pNext;
 		}
 	return(pOch);
@@ -261,8 +258,7 @@ struct outchannel *ochFind(char *pName, int iLenName)
  * at program end. Everything is deleted.
  * rgerhards 2005-02-22
  */
-void ochDeleteAll(void)
-{
+void ochDeleteAll(void) {
 	struct outchannel *pOch, *pOchDel;
 
 	pOch = loadConf->och.ochRoot;
@@ -270,8 +266,9 @@ void ochDeleteAll(void)
 		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		pOchDel = pOch;
 		pOch = pOch->pNext;
-		if(pOchDel->pszName != NULL)
+		if (pOchDel->pszName != NULL) {
 			free(pOchDel->pszName);
+		}
 		free(pOchDel);
 	}
 }
@@ -280,8 +277,7 @@ void ochDeleteAll(void)
 /* Print the outchannel structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
  */
-void ochPrintList(void)
-{
+void ochPrintList(void) {
 	struct outchannel *pOch;
 
 	pOch = loadConf->och.ochRoot;

@@ -8,8 +8,7 @@
 /* hashtable_iterator    - iterator constructor */
 
 struct hashtable_itr *
-hashtable_iterator(struct hashtable *h)
-{
+hashtable_iterator(struct hashtable *h) {
     unsigned int i, tablelength;
     struct hashtable_itr *itr = (struct hashtable_itr *)
         malloc(sizeof(struct hashtable_itr));
@@ -21,10 +20,8 @@ hashtable_iterator(struct hashtable *h)
     itr->index = tablelength;
     if (0 == h->entrycount) return itr;
 
-    for (i = 0; i < tablelength; i++)
-    {
-        if (NULL != h->table[i])
-        {
+    for (i = 0; i < tablelength; i++) {
+        if (NULL != h->table[i]) {
             itr->e = h->table[i];
             itr->index = i;
             break;
@@ -52,32 +49,27 @@ hashtable_iterator_value(struct hashtable_itr *i)
  *           returns zero if advanced to end of table */
 
 int
-hashtable_iterator_advance(struct hashtable_itr *itr)
-{
+hashtable_iterator_advance(struct hashtable_itr *itr) {
     unsigned int j,tablelength;
     struct entry **table;
     struct entry *next;
     if (NULL == itr->e) return 0; /* stupidity check */
 
     next = itr->e->next;
-    if (NULL != next)
-    {
+    if (NULL != next) {
         itr->parent = itr->e;
         itr->e = next;
         return -1;
     }
     tablelength = itr->h->tablelength;
     itr->parent = NULL;
-    if (tablelength <= (j = ++(itr->index)))
-    {
+    if (tablelength <= (j = ++(itr->index))) {
         itr->e = NULL;
         return 0;
     }
     table = itr->h->table;
-    while (NULL == (next = table[j]))
-    {
-        if (++j >= tablelength)
-        {
+    while (NULL == (next = table[j])) {
+        if (++j >= tablelength) {
             itr->index = tablelength;
             itr->e = NULL;
             return 0;
@@ -97,14 +89,12 @@ hashtable_iterator_advance(struct hashtable_itr *itr)
  *          Returns zero if end of iteration. */
 
 int
-hashtable_iterator_remove(struct hashtable_itr *itr)
-{
+hashtable_iterator_remove(struct hashtable_itr *itr) {
     struct entry *remember_e, *remember_parent;
     int ret;
 
     /* Do the removal */
-    if (NULL == (itr->parent))
-    {
+    if (NULL == (itr->parent)) {
         /* element is head of a chain */
         itr->h->table[itr->index] = itr->e->next;
     } else {
@@ -127,8 +117,7 @@ hashtable_iterator_remove(struct hashtable_itr *itr)
 /*****************************************************************************/
 int /* returns zero if not found */
 hashtable_iterator_search(struct hashtable_itr *itr,
-                          struct hashtable *h, void *k)
-{
+                          struct hashtable *h, void *k) {
     struct entry *e, *parent;
     unsigned int hashvalue, index;
 
@@ -137,11 +126,9 @@ hashtable_iterator_search(struct hashtable_itr *itr,
 
     e = h->table[index];
     parent = NULL;
-    while (NULL != e)
-    {
+    while (NULL != e) {
         /* Check hash value to short circuit heavier comparison */
-        if ((hashvalue == e->h) && (h->eqfn(k, e->k)))
-        {
+        if ((hashvalue == e->h) && (h->eqfn(k, e->k))) {
             itr->index = index;
             itr->e = e;
             itr->parent = parent;

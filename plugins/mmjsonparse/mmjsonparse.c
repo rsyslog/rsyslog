@@ -148,8 +148,9 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	if(pWrkrData->tokener != NULL)
+	if (pWrkrData->tokener != NULL) {
 		json_tokener_free(pWrkrData->tokener);
+	}
 ENDfreeWrkrInstance
 
 
@@ -165,8 +166,7 @@ ENDtryResume
 
 
 static rsRetVal
-processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf)
-{
+processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf) {
 	struct json_object *json;
 	const char *errMsg;
 	DEFiRet;
@@ -182,14 +182,17 @@ processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf
 			enum json_tokener_error err;
 
 			err = pWrkrData->tokener->err;
-			if(err != json_tokener_continue)
+			if (err != json_tokener_continue) {
 				errMsg = json_tokener_error_desc(err);
-			else
+			}
+			else {
 				errMsg = "Unterminated input";
+			}
 		} else if((size_t)pWrkrData->tokener->char_offset < lenBuf)
 			errMsg = "Extra characters after JSON object";
-		else if(!json_object_is_type(json, json_type_object))
+		else if (!json_object_is_type(json, json_type_object)) {
 			errMsg = "JSON value is not an object";
+		}
 		if(errMsg != NULL) {
 			DBGPRINTF("mmjsonparse: Error parsing JSON '%s': %s\n",
 					buf, errMsg);
@@ -225,10 +228,12 @@ CODESTARTdoAction
 	 * requires changes to the libraries. For now, we accept message
 	 * duplication. -- rgerhards, 2010-12-01
 	 */
-	if(pWrkrData->pData->bUseRawMsg)
+	if (pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
-	else
+	}
+	else {
 		buf = getMSG(pMsg);
+	}
 
 	while(*buf && isspace(*buf)) {
 		++buf;
@@ -254,8 +259,7 @@ finalize_it:
 ENDdoAction
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->bUseRawMsg = 0;
 }
 
@@ -275,8 +279,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "cookie")) {
 			free(pData->cookie);
 			pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -290,8 +295,9 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->container == NULL)
+	if (pData->container == NULL) {
 		CHKmalloc(pData->container = (uchar*) strdup("!"));
+	}
 	pData->lenCookie = strlen(pData->cookie);
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -310,8 +316,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
@@ -338,8 +345,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	RETiRet;
 }
@@ -362,8 +368,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG) {
 			bMsgPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

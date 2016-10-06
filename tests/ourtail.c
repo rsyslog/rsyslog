@@ -29,15 +29,15 @@
 #include "config.h"
 #include <stdio.h>
 
-int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
-{
+int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[]) {
 	int c;
 
 	for(c = getchar() ; c != EOF && c != '\n' ; c = getchar())
 		/*skip to newline*/;
 
-	if(c == '\n')
+	if (c == '\n') {
 		c = getchar();
+	}
 
 	for( ; c != EOF ; c = getchar())
 		putchar(c);

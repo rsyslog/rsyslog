@@ -63,8 +63,7 @@ DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 
-static void display_status_(char *m, OM_uint32 code, int type)
-{
+static void display_status_(char *m, OM_uint32 code, int type) {
 	OM_uint32 maj_stat, min_stat, msg_ctx = 0;
 	gss_buffer_desc msg;
 
@@ -79,46 +78,51 @@ static void display_status_(char *m, OM_uint32 code, int type)
 			buf[sizeof(buf) - 1] = '\0';
 			errmsg.LogError(0, NO_ERRCODE, "%s", buf);
 		}
-		if (msg.length != 0)
+		if (msg.length != 0) {
 			gss_release_buffer(&min_stat, &msg);
+		}
 	} while (msg_ctx);
 }
 
 
-static void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat)
-{
+static void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat) {
 	display_status_(m, maj_stat, GSS_C_GSS_CODE);
 	display_status_(m, min_stat, GSS_C_MECH_CODE);
 }
 
 
-static void display_ctx_flags(OM_uint32 flags)
-{
-    if (flags & GSS_C_DELEG_FLAG)
+static void display_ctx_flags(OM_uint32 flags) {
+    if (flags & GSS_C_DELEG_FLAG) {
 	dbgprintf("GSS_C_DELEG_FLAG\n");
-    if (flags & GSS_C_MUTUAL_FLAG)
+    }
+    if (flags & GSS_C_MUTUAL_FLAG) {
 	dbgprintf("GSS_C_MUTUAL_FLAG\n");
-    if (flags & GSS_C_REPLAY_FLAG)
+    }
+    if (flags & GSS_C_REPLAY_FLAG) {
 	dbgprintf("GSS_C_REPLAY_FLAG\n");
-    if (flags & GSS_C_SEQUENCE_FLAG)
+    }
+    if (flags & GSS_C_SEQUENCE_FLAG) {
 	dbgprintf("GSS_C_SEQUENCE_FLAG\n");
-    if (flags & GSS_C_CONF_FLAG)
+    }
+    if (flags & GSS_C_CONF_FLAG) {
 	dbgprintf("GSS_C_CONF_FLAG\n");
-    if (flags & GSS_C_INTEG_FLAG)
+    }
+    if (flags & GSS_C_INTEG_FLAG) {
 	dbgprintf("GSS_C_INTEG_FLAG\n");
+    }
 }
 
 
-static int read_all(int fd, char *buf, unsigned int nbyte)
-{
+static int read_all(int fd, char *buf, unsigned int nbyte) {
     int     ret;
     char   *ptr;
     struct timeval tv;
 #ifdef USE_UNLIMITED_SELECT
     fd_set  *pRfds = malloc(glbl.GetFdSetSize());
 
-    if (pRfds == NULL)
+    if (pRfds == NULL) {
 	    return -1;
+    }
 #else
     fd_set  rfds;
     fd_set *pRfds = &rfds;
@@ -137,8 +141,9 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
             }
 	    ret = recv(fd, ptr, nbyte, 0);
 	    if (ret < 0) {
-		    if (errno == EINTR)
+		    if (errno == EINTR) {
 			    continue;
+		    }
                     freeFdSet(pRfds);
 		    return (ret);
 	    } else if (ret == 0) {
@@ -152,16 +157,16 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
 }
 
 
-static int write_all(int fd, char *buf, unsigned int nbyte)
-{
+static int write_all(int fd, char *buf, unsigned int nbyte) {
     int     ret;
     char   *ptr;
 
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
 	ret = send(fd, ptr, nbyte, 0);
 	if (ret < 0) {
-	    if (errno == EINTR)
+	    if (errno == EINTR) {
 		continue;
+	    }
 	    return (ret);
 	} else if (ret == 0) {
 	    return (ptr - buf);
@@ -172,8 +177,7 @@ static int write_all(int fd, char *buf, unsigned int nbyte)
 }
 
 
-static int recv_token(int s, gss_buffer_t tok)
-{
+static int recv_token(int s, gss_buffer_t tok) {
 	int ret;
 	unsigned char lenbuf[4];
 	unsigned int len;
@@ -216,8 +220,7 @@ static int recv_token(int s, gss_buffer_t tok)
 }
 
 
-static int send_token(int s, gss_buffer_t tok)
-{
+static int send_token(int s, gss_buffer_t tok) {
 	int     ret;
 	unsigned char lenbuf[4];
 	unsigned int len;

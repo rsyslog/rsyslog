@@ -264,8 +264,9 @@ rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
 	DEFiRet;
 
     /* initialize if necessary */
-    if(NULL == pData->socket)
+    if (NULL == pData->socket) {
 		CHKiRet(initZMQ(pData));
+    }
     
     /* send it */
     int result = zstr_send(pData->socket, (char*)msg);
@@ -321,8 +322,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -347,8 +349,9 @@ ENDfreeWrkrInstance
 BEGINtryResume
 CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
-	if(NULL == pWrkrData->pData->socket)
+	if (NULL == pWrkrData->pData->socket) {
 		iRet = initZMQ(pWrkrData->pData);
+	}
 	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
 
@@ -374,21 +377,22 @@ CODESTARTnewActInst
 
     CODE_STD_STRING_REQUESTnewActInst(1)
     for (i = 0; i < actpblk.nParams; ++i) {
-        if (!pvals[i].bUsed)
+        if (!pvals[i].bUsed) {
             continue;
+        }
         if (!strcmp(actpblk.descr[i].name, "description")) {
             pData->description = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
             pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "sockType")){
+        } else if (!strcmp(actpblk.descr[i].name, "sockType")) {
             pData->type = getSocketType(es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if (!strcmp(actpblk.descr[i].name, "action")){
+        } else if (!strcmp(actpblk.descr[i].name, "action")) {
             pData->action = getSocketAction(es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(actpblk.descr[i].name, "sndHWM")) {
             pData->sndHWM = (int) pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "rcvHWM")) {
             pData->rcvHWM = (int) pvals[i].val.d.n;
-        } else if (!strcmp(actpblk.descr[i].name, "identity")){
+        } else if (!strcmp(actpblk.descr[i].name, "identity")) {
             pData->identity = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "sndBuf")) {
             pData->sndBuf = (int) pvals[i].val.d.n;

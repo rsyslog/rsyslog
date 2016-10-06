@@ -97,8 +97,7 @@ cstr_t *pDfltProgNameCmp = NULL;
 
 /* process a $ModLoad config line.  */
 static rsRetVal
-doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
-{
+doModLoad(uchar **pp, __attribute__((unused)) void* pVal) {
 	DEFiRet;
 	uchar szName[512];
 	uchar *pModName;
@@ -117,10 +116,12 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	 * $ModLoad MySQL forward compatibility statement. This needs to be supported
 	 * for legacy format.
 	 */
-	if(!strcmp((char*) szName, "MySQL"))
+	if (!strcmp((char*) szName, "MySQL")) {
 		pModName = (uchar*) "ommysql.so";
-	else
+	}
+	else {
 		pModName = szName;
+	}
 
 	CHKiRet(module.Load(pModName, 1, NULL));
 
@@ -134,8 +135,7 @@ finalize_it:
  * it has many other callers... -- rgerhards, 2013-05-27
  */
 static inline void
-ltrim(char *src)
-{
+ltrim(char *src) {
 	char *dst = src;
 	while(isspace(*src))
 		++src; /*SKIP*/;
@@ -155,8 +155,7 @@ ltrim(char *src)
  *    generalized.
  */
 static rsRetVal
-doNameLine(uchar **pp, void* pVal)
-{
+doNameLine(uchar **pp, void* pVal) {
 	DEFiRet;
 	uchar *p;
 	enum eDirective eDir;
@@ -215,8 +214,7 @@ finalize_it:
  * 2004-11-17 rgerhards
  */
 static rsRetVal
-cfsysline(uchar *p)
-{
+cfsysline(uchar *p) {
 	DEFiRet;
 	uchar szCmd[64];
 
@@ -257,8 +255,7 @@ finalize_it:
  * changed function to work with OMSR. -- rgerhards, 2007-07-27
  * the default template is to be used when no template is specified.
  */
-rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName)
-{
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName) {
 	uchar *p;
 	uchar *tplName = NULL;
 	cstr_t *pStrB = NULL;
@@ -302,8 +299,9 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		free(tplName);
-		if(pStrB != NULL)
+		if (pStrB != NULL) {
 			cstrDestruct(&pStrB);
+		}
 	}
 
 	*pp = p;
@@ -323,8 +321,7 @@ finalize_it:
  * rgerhards, 2010-01-19: file names end at the first space
  */
 rsRetVal
-cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl)
-{
+cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl) {
 	register uchar *pName;
 	int i;
 	DEFiRet;
@@ -347,8 +344,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 
 /* Decode a traditional PRI filter */
 /* GPLv3 - stems back to sysklogd */
-rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
-{
+rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]) {
 	uchar *p;
 	register uchar *q;
 	register int i, i2;
@@ -417,22 +413,28 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 			if (*buf == '*') {
 				for (i = 0; i <= LOG_NFACILITIES; i++) {
 					if ( pri == INTERNAL_NOPRI ) {
-						if ( ignorepri )
+						if ( ignorepri ) {
 							pmask[i] = TABLE_ALLPRI;
-						else
+						}
+						else {
 							pmask[i] = TABLE_NOPRI;
+						}
 					}
 					else if ( singlpri ) {
-						if ( ignorepri )
+						if ( ignorepri ) {
 				  			pmask[i] &= ~(1<<pri);
-						else
+						}
+						else {
 				  			pmask[i] |= (1<<pri);
+						}
 					} else {
 						if ( pri == TABLE_ALLPRI ) {
-							if ( ignorepri )
+							if ( ignorepri ) {
 								pmask[i] = TABLE_NOPRI;
-							else
+							}
+							else {
 								pmask[i] = TABLE_ALLPRI;
+							}
 						} else {
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
@@ -453,21 +455,27 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 				}
 
 				if ( pri == INTERNAL_NOPRI ) {
-					if ( ignorepri )
+					if ( ignorepri ) {
 						pmask[i >> 3] = TABLE_ALLPRI;
-					else
+					}
+					else {
 						pmask[i >> 3] = TABLE_NOPRI;
+					}
 				} else if ( singlpri ) {
-					if ( ignorepri )
+					if ( ignorepri ) {
 						pmask[i >> 3] &= ~(1<<pri);
-					else
+					}
+					else {
 						pmask[i >> 3] |= (1<<pri);
+					}
 				} else {
 					if ( pri == TABLE_ALLPRI ) {
-						if ( ignorepri )
+						if ( ignorepri ) {
 							pmask[i >> 3] = TABLE_NOPRI;
-						else
+						}
+						else {
 							pmask[i >> 3] = TABLE_ALLPRI;
+						}
 					} else {
 						if ( ignorepri )
 							for (i2= 0; i2 <= pri; ++i2)
@@ -492,8 +500,7 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 /* process the action part of a selector line
  * rgerhards, 2007-08-01
  */
-rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
-{
+rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction) {
 	modInfo_t *pMod;
 	cfgmodules_etry_t *node;
 	omodStringRequest_t *pOMSR;
@@ -542,8 +549,9 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 	}
 
 	*ppAction = pAction;
-	if(iRet == RS_RET_OK && bHadWarning)
+	if (iRet == RS_RET_OK && bHadWarning) {
 		iRet = RS_RET_OK_WARN;
+	}
 	RETiRet;
 }
 
@@ -552,8 +560,7 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
  * rgerhards, 2008-07-28
  */
 static rsRetVal
-GetNbrActActions(rsconf_t *conf, int *piNbrActions)
-{
+GetNbrActActions(rsconf_t *conf, int *piNbrActions) {
 	DEFiRet;
 	assert(piNbrActions != NULL);
 	*piNbrActions = conf->actions.nbrActions;
@@ -588,8 +595,7 @@ ENDobjQueryInterface(conf)
  * rgerhards, 2010-07-23
  */
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	bConfStrictScoping = 0;
 	return RS_RET_OK;
 }

@@ -78,8 +78,7 @@ lookupTableReloader(void *self);
  * lookup tables.
  */
 static rsRetVal
-lookupNew(lookup_ref_t **ppThis)
-{
+lookupNew(lookup_ref_t **ppThis) {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
 	DEFiRet;
@@ -133,8 +132,7 @@ lookupStopReloader(lookup_ref_t *pThis) {
 }
 
 static void
-lookupRefDestruct(lookup_ref_t *pThis)
-{
+lookupRefDestruct(lookup_ref_t *pThis) {
 	lookupStopReloader(pThis);
 	pthread_mutex_destroy(&pThis->reloader_mut);
 	pthread_cond_destroy(&pThis->run_reloader);
@@ -196,15 +194,13 @@ lookupDestruct(lookup_t *pThis) {
 }
 
 void
-lookupInitCnf(lookup_tables_t *lu_tabs)
-{
+lookupInitCnf(lookup_tables_t *lu_tabs) {
 	lu_tabs->root = NULL;
 	lu_tabs->last = NULL;
 }
 
 void
-lookupDestroyCnf(void)
-{
+lookupDestroyCnf(void) {
 	lookup_ref_t *luref, *luref_next;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; ) {
 		luref_next = luref->next;
@@ -215,26 +211,22 @@ lookupDestroyCnf(void)
 
 /* comparison function for qsort() */
 static int
-qs_arrcmp_strtab(const void *s1, const void *s2)
-{
+qs_arrcmp_strtab(const void *s1, const void *s2) {
 	return ustrcmp(((lookup_string_tab_entry_t*)s1)->key, ((lookup_string_tab_entry_t*)s2)->key);
 }
 
 static int
-qs_arrcmp_ustrs(const void *s1, const void *s2)
-{
+qs_arrcmp_ustrs(const void *s1, const void *s2) {
 	return ustrcmp(*(uchar**)s1, *(uchar**)s2);
 }
 
 static int
-qs_arrcmp_uint32_index_val(const void *s1, const void *s2)
-{
+qs_arrcmp_uint32_index_val(const void *s1, const void *s2) {
 	return ((uint32_index_val_t*)s1)->index - ((uint32_index_val_t*)s2)->index;
 }
 
 static int
-qs_arrcmp_sprsArrtab(const void *s1, const void *s2)
-{
+qs_arrcmp_sprsArrtab(const void *s1, const void *s2) {
 	return ((lookup_sparseArray_tab_entry_t*)s1)->key - ((lookup_sparseArray_tab_entry_t*)s2)->key;
 }
 
@@ -242,20 +234,17 @@ qs_arrcmp_sprsArrtab(const void *s1, const void *s2)
  * this is for the string lookup table type
  */
 static int
-bs_arrcmp_strtab(const void *s1, const void *s2)
-{
+bs_arrcmp_strtab(const void *s1, const void *s2) {
 	return strcmp((char*)s1, (char*)((lookup_string_tab_entry_t*)s2)->key);
 }
 
 static int
-bs_arrcmp_str(const void *s1, const void *s2)
-{
+bs_arrcmp_str(const void *s1, const void *s2) {
 	return ustrcmp((uchar*)s1, *(uchar**)s2);
 }
 
 static int
-bs_arrcmp_sprsArrtab(const void *s1, const void *s2)
-{
+bs_arrcmp_sprsArrtab(const void *s1, const void *s2) {
 	return *(uint32_t*)s1 - ((lookup_sparseArray_tab_entry_t*)s2)->key;
 }
 
@@ -300,8 +289,7 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 typedef int (comp_fn_t)(const void *s1, const void *s2);
 
 static inline void *
-bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_fn_t *comp_fn)
-{
+bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_fn_t *comp_fn) {
 	size_t l, u, idx;
 	const void *p;
 	int comparison;
@@ -315,12 +303,15 @@ bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_f
 		idx = (l + u) / 2;
 		p = (void *) (((const char *) base) + (idx * size));
 		comparison = (*comp_fn)(key, p);
-		if (comparison < 0)
+		if (comparison < 0) {
 			u = idx;
-		else if (comparison > 0)
+		}
+		else if (comparison > 0) {
 			l = idx + 1;
-		else
+		}
+		else {
 			return (void *) p;
+		}
 	}
 	if (comparison < 0) {
 		if (idx == 0) {
@@ -536,7 +527,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		}
 	}
 
-	if (pThis->nmemb > 0)  {
+	if (pThis->nmemb > 0) {
 		CHKmalloc(pThis->interned_vals = malloc(uniq_values * sizeof(uchar*)));
 		j = 0;
 		CHKmalloc(pThis->interned_vals[j++] = ustrdup(all_values[0]));
@@ -575,8 +566,7 @@ finalize_it:
 }
 
 static rsRetVal
-lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
-{
+lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name) {
 	struct json_object *jversion;
 	int version = 1;
 
@@ -606,13 +596,13 @@ finalize_it:
  * table or NULL, if not found.
  */
 lookup_ref_t *
-lookupFindTable(uchar *name)
-{
+lookupFindTable(uchar *name) {
 	lookup_ref_t *curr;
 
 	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) {
-		if(!ustrcmp(curr->name, name))
+		if (!ustrcmp(curr->name, name)) {
 			break;
+		}
 	}
 	return curr;
 }
@@ -669,8 +659,7 @@ finalize_it:
 }
 
 static rsRetVal
-lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val)
-{
+lookupDoStub(lookup_ref_t *pThis, const uchar* stub_val) {
 	int already_stubbed = 0;
 	DEFiRet;
 	pthread_rwlock_rdlock(&pThis->rwlock);
@@ -700,8 +689,7 @@ lookupIsReloadPending(lookup_ref_t *pThis) {
 }
 
 rsRetVal
-lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
-{
+lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails) {
 	uint8_t locked = 0;
 	uint8_t duplicated_stub_value = 0;
 	int lock_errno = 0;
@@ -738,8 +726,7 @@ finalize_it:
 }
 
 static rsRetVal
-lookupDoReload(lookup_ref_t *pThis)
-{
+lookupDoReload(lookup_ref_t *pThis) {
 	DEFiRet;
 	CHKiRet(lookupReloadOrStub(pThis, NULL));
 finalize_it:
@@ -752,8 +739,7 @@ finalize_it:
 }
 
 void *
-lookupTableReloader(void *self)
-{
+lookupTableReloader(void *self) {
 	lookup_ref_t *pThis = (lookup_ref_t*) self;
 	pthread_mutex_lock(&pThis->reloader_mut);
 	while(1) {
@@ -772,8 +758,7 @@ lookupTableReloader(void *self)
 
 /* reload all lookup tables on HUP */
 void
-lookupDoHUP(void)
-{
+lookupDoHUP(void) {
 	lookup_ref_t *luref;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
 		if (luref->reload_on_hup) {
@@ -783,8 +768,7 @@ lookupDoHUP(void)
 }
 
 uint
-lookupPendingReloadCount(void)
-{
+lookupPendingReloadCount(void) {
 	uint pending_reload_count = 0;
 	lookup_ref_t *luref;
 	for(luref = loadConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
@@ -802,8 +786,7 @@ lookupPendingReloadCount(void)
  * responsible for freeing it.
  */
 es_str_t *
-lookupKey(lookup_ref_t *pThis, lookup_key_t key)
-{
+lookupKey(lookup_ref_t *pThis, lookup_key_t key) {
 	es_str_t *estr;
 	lookup_t *t;
 	pthread_rwlock_rdlock(&pThis->rwlock);
@@ -822,8 +805,7 @@ lookupKey(lookup_ref_t *pThis, lookup_key_t key)
  * will probably have other issues as well...).
  */
 static rsRetVal
-lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename)
-{
+lookupReadFile(lookup_t *pThis, const uchar *name, const uchar *filename) {
 	struct json_tokener *tokener = NULL;
 	struct json_object *json = NULL;
 	int eno;
@@ -881,17 +863,18 @@ finalize_it:
 		close(fd);
 	}
 	free(iobuf);
-	if(tokener != NULL)
+	if (tokener != NULL) {
 		json_tokener_free(tokener);
-	if(json != NULL)
+	}
+	if (json != NULL) {
 		json_object_put(json);
+	}
 	RETiRet;
 }
 
 
 rsRetVal
-lookupTableDefProcessCnf(struct cnfobj *o)
-{
+lookupTableDefProcessCnf(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	lookup_ref_t *lu;
 	short i;
@@ -912,8 +895,9 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	CHKiRet(lookupNew(&lu));
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "file")) {
 			CHKmalloc(lu->filename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "name")) {
@@ -951,15 +935,13 @@ finalize_it:
 }
 
 void
-lookupClassExit(void)
-{
+lookupClassExit(void) {
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 }
 
 rsRetVal
-lookupClassInit(void)
-{
+lookupClassInit(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

@@ -57,8 +57,7 @@ static struct cnfparamblk pblk =
 
 
 static void
-errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
-{
+errfunc(__attribute__((unused)) void *usrptr, uchar *emsg) {
 	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "Signature Provider"
 		"Error: %s - disabling signatures", emsg);
 }
@@ -83,8 +82,7 @@ ENDobjDestruct(lmsig_gt)
  * Defaults are expected to have been set during construction.
  */
 static rsRetVal
-SetCnfParam(void *pT, struct nvlst *lst)
-{
+SetCnfParam(void *pT, struct nvlst *lst) {
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	int i;
 	uchar *cstr;
@@ -100,8 +98,9 @@ SetCnfParam(void *pT, struct nvlst *lst)
 	}
 
 	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(rsgtSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
@@ -125,15 +124,15 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &pblk);
+	}
 	RETiRet;
 }
 
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn, void *pGF)
-{
+OnFileOpen(void *pT, uchar *fn, void *pGF) {
 	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
 	gtfile *pgf = (gtfile*) pGF;
 	DEFiRet;
@@ -153,8 +152,7 @@ OnFileOpen(void *pT, uchar *fn, void *pGF)
  * rgerhards, 2013-03-17
  */
 static rsRetVal
-OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
-{
+OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec) {
 	DEFiRet;
 	DBGPRINTF("lmsig_gt: onRecordWrite (%d): %s\n", lenRec-1, rec);
 	sigblkAddRecord(pF, rec, lenRec-1);
@@ -163,8 +161,7 @@ OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 }
 
 static rsRetVal
-OnFileClose(void *pF)
-{
+OnFileClose(void *pF) {
 	DEFiRet;
 	DBGPRINTF("lmsig_gt: onFileClose\n");
 	rsgtfileDestruct(pF);

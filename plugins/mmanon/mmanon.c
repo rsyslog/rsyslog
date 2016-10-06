@@ -144,8 +144,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->mode = REWRITE_MODE;
 	pData->replChar = 'x';
 	pData->ipv4.bits = 16;
@@ -167,8 +166,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "mode")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"simple",
 					 sizeof("simple")-1)) {
@@ -244,8 +244,7 @@ ENDtryResume
 
 
 static int
-getnum(uchar *msg, int lenMsg, int *idx)
-{
+getnum(uchar *msg, int lenMsg, int *idx) {
 	int num = 0;
 	int i = *idx;
 
@@ -261,8 +260,7 @@ getnum(uchar *msg, int lenMsg, int *idx)
 
 /* write an IP address octet to the output position */
 static int
-writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
-{
+writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet) {
 	if(octet > 99) {
 		msg[idx++] = '0' + octet / 100;
 		octet = octet % 100;
@@ -285,8 +283,7 @@ writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
 
 /* currently works for IPv4 only! */
 static void
-anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
-{
+anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx) {
 	int i = *idx;
 	int octet;
 	uint32_t ipv4addr;
@@ -298,8 +295,9 @@ anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 	while(i < lenMsg && (msg[i] <= '0' || msg[i] > '9')) {
 		++i; /* skip to first number */
 	}
-	if(i >= lenMsg)
+	if (i >= lenMsg) {
 		goto done;
+	}
 	
 	/* got digit, let's see if ip */
 	ipstart[0] = i;
@@ -324,27 +322,34 @@ anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
 
 	/* OK, we now found an ip address */
 	if(pData->mode == SIMPLE_MODE) {
-		if(pData->ipv4.bits == 8)
+		if (pData->ipv4.bits == 8) {
 			j = ipstart[3];
-		else if(pData->ipv4.bits == 16)
+		}
+		else if (pData->ipv4.bits == 16) {
 			j = ipstart[2];
-		else if(pData->ipv4.bits == 24)
+		}
+		else if (pData->ipv4.bits == 24) {
 			j = ipstart[1];
+		}
 		else /* due to our checks, this *must* be 32 */
 			j = ipstart[0];
 		while(j < i) {
-			if(msg[j] != '.')
+			if (msg[j] != '.') {
 				msg[j] = pData->replChar;
+			}
 			++j;
 		}
 	} else { /* REWRITE_MODE */
 		ipv4addr &= ipv4masks[pData->ipv4.bits];
-		if(pData->ipv4.bits > 24)
+		if (pData->ipv4.bits > 24) {
 			writeOctet(msg, ipstart[0], &(ipstart[1]), ipv4addr >> 24);
-		if(pData->ipv4.bits > 16)
+		}
+		if (pData->ipv4.bits > 16) {
 			writeOctet(msg, ipstart[1], &(ipstart[2]), (ipv4addr >> 16) & 0xff);
-		if(pData->ipv4.bits > 8)
+		}
+		if (pData->ipv4.bits > 8) {
 			writeOctet(msg, ipstart[2], &(ipstart[3]), (ipv4addr >> 8) & 0xff);
+		}
 		endpos = writeOctet(msg, ipstart[3], NULL, ipv4addr & 0xff);
 		/* if we had truncation, we need to shrink the msg */
 		dbgprintf("existing i %d, endpos %d\n", i, endpos);
@@ -373,8 +378,9 @@ CODESTARTdoAction
 	for(i = 0 ; i < lenMsg ; ++i) {
 		anonip(pWrkrData->pData, msg, &lenMsg, &i);
 	}
-	if(lenMsg != getMSGLen(pMsg))
+	if (lenMsg != getMSGLen(pMsg)) {
 		setMSGLen(pMsg, lenMsg);
+	}
 ENDdoAction
 
 

@@ -24,14 +24,15 @@
 #include <stdlib.h>
 #include <string.h>
 char *
-strndup(const char *s, size_t n)
-{
+strndup(const char *s, size_t n) {
 	const size_t len = strlen(s);
-	if(len <= n)
+	if (len <= n) {
 		return strdup(s);
+	}
 	char *const new_s = malloc(len+1);
-	if(new_s == NULL)
+	if (new_s == NULL) {
 		return NULL;
+	}
 	memcpy(new_s, s, len);
 	new_s[len] = '\0';
 	return new_s;

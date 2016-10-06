@@ -65,8 +65,7 @@ static struct hashtable *stats_senders = NULL;
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
 static inline void
-addToObjList(statsobj_t *pThis)
-{
+addToObjList(statsobj_t *pThis) {
 	pthread_mutex_lock(&mutStats);
 	if (pThis->flags && STATSOBJ_FLAG_DO_PREPEND) {
 		pThis->next = objRoot;
@@ -74,46 +73,53 @@ addToObjList(statsobj_t *pThis)
 			objRoot->prev = pThis;
 		}
 		objRoot = pThis;
-		if (objLast == NULL)
+		if (objLast == NULL) {
 			objLast = pThis;
+		}
 	} else {
 		pThis->prev = objLast;
-		if(objLast != NULL)
+		if (objLast != NULL) {
 			objLast->next = pThis;
+		}
 		objLast = pThis;
-		if(objRoot == NULL)
+		if (objRoot == NULL) {
 			objRoot = pThis;
+		}
 	}
 	pthread_mutex_unlock(&mutStats);
 }
 
 
 static inline void
-removeFromObjList(statsobj_t *pThis)
-{
+removeFromObjList(statsobj_t *pThis) {
 	pthread_mutex_lock(&mutStats);
-	if(pThis->prev != NULL)
+	if (pThis->prev != NULL) {
 		pThis->prev->next = pThis->next;
-	if(pThis->next != NULL)
+	}
+	if (pThis->next != NULL) {
 		pThis->next->prev = pThis->prev;
-	if(objLast == pThis)
+	}
+	if (objLast == pThis) {
 		objLast = pThis->prev;
-	if(objRoot == pThis)
+	}
+	if (objRoot == pThis) {
 		objRoot = pThis->next;
+	}
 	pthread_mutex_unlock(&mutStats);
 }
 
 
 static inline void
-addCtrToList(statsobj_t *pThis, ctr_t *pCtr)
-{
+addCtrToList(statsobj_t *pThis, ctr_t *pCtr) {
 	pthread_mutex_lock(&pThis->mutCtr);
 	pCtr->prev = pThis->ctrLast;
-	if(pThis->ctrLast != NULL)
+	if (pThis->ctrLast != NULL) {
 		pThis->ctrLast->next = pCtr;
+	}
 	pThis->ctrLast = pCtr;
-	if(pThis->ctrRoot == NULL)
+	if (pThis->ctrRoot == NULL) {
 		pThis->ctrRoot = pCtr;
+	}
 	pthread_mutex_unlock(&pThis->mutCtr);
 }
 
@@ -134,8 +140,7 @@ ENDobjConstruct(statsobj)
 /* ConstructionFinalizer
  */
 static rsRetVal
-statsobjConstructFinalize(statsobj_t *pThis)
-{
+statsobjConstructFinalize(statsobj_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, statsobj);
 	addToObjList(pThis);
@@ -145,8 +150,7 @@ statsobjConstructFinalize(statsobj_t *pThis)
 /* set read_notifier (a function which is invoked after stats are read).
  */
 static rsRetVal
-setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
-{
+setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx) {
 	DEFiRet;
 	pThis->read_notifier = notifier;
 	pThis->read_notifier_ctx = ctx;
@@ -159,8 +163,7 @@ setReadNotifier(statsobj_t *pThis, statsobj_read_notifier_t notifier, void* ctx)
  * responsible to free up name it passes in (if required).
  */
 static rsRetVal
-setOrigin(statsobj_t *pThis, uchar *origin)
-{
+setOrigin(statsobj_t *pThis, uchar *origin) {
 	DEFiRet;
 	CHKmalloc(pThis->origin = ustrdup(origin));
 finalize_it:
@@ -172,8 +175,7 @@ finalize_it:
  * responsible to free up name it passes in (if required).
  */
 static rsRetVal
-setName(statsobj_t *pThis, uchar *name)
-{
+setName(statsobj_t *pThis, uchar *name) {
 	DEFiRet;
 	CHKmalloc(pThis->name = ustrdup(name));
 finalize_it:
@@ -186,8 +188,7 @@ setStatsObjFlags(statsobj_t *pThis, int flags) {
 }
 
 static rsRetVal
-setReportingNamespace(statsobj_t *pThis, uchar *ns)
-{
+setReportingNamespace(statsobj_t *pThis, uchar *ns) {
 	DEFiRet;
 	CHKmalloc(pThis->reporting_ns = ustrdup(ns));
 finalize_it:
@@ -202,8 +203,7 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef, int8_t linked)
-{
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef, int8_t linked) {
 	ctr_t *ctr;
 	DEFiRet;
 
@@ -242,16 +242,14 @@ finalize_it:
 }
 
 static inline void
-addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr)
-{
+addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr) {
 	pCtr->next = NULL;
 	pCtr->prev = NULL;
 	addCtrToList(pThis, pCtr);
 }
 
 static rsRetVal
-addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr)
-{
+addCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr) {
 	ctr_t *ctr;
 	DEFiRet;
 	CHKiRet(addManagedCounter(pThis, ctrName, ctrType, flags, pCtr, &ctr, 1));
@@ -266,8 +264,7 @@ destructUnlinkedCounter(ctr_t *ctr) {
 }
 
 static void
-destructCounter(statsobj_t *pThis, ctr_t *pCtr)
-{
+destructCounter(statsobj_t *pThis, ctr_t *pCtr) {
     pthread_mutex_lock(&pThis->mutCtr);
 	if (pCtr->prev != NULL) {
 		pCtr->prev->next = pCtr->next;
@@ -286,8 +283,7 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 }
 
 static inline void
-resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
-{
+resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs) {
 	if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) ||
 		(pCtr->flags & CTR_FLAG_MUST_RESET)) {
 		switch(pCtr->ctrType) {
@@ -352,8 +348,7 @@ accumulatedValue(ctr_t *pCtr) {
 
 /* get all the object's countes together as CEE. */
 static rsRetVal
-getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
-{
+getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs) {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
 	json_object *root, *values;
@@ -363,8 +358,9 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	CHKiRet(cstrConstruct(&pcstr));
 
-	if (fmt == statsFmt_CEE)
+	if (fmt == statsFmt_CEE) {
 		CHKiRet(rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6));
+	}
 
 	CHKmalloc(root = json_object_new_object());
 
@@ -393,8 +389,9 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 			strncpy((char*)esbuf, (char*)pCtr->name, sizeof(esbuf)-1);
 			esbuf[sizeof(esbuf)-1] = '\0';
 			for(uchar *c = esbuf ; *c ; ++c) {
-				if(*c == '.')
+				if (*c == '.') {
 					*c = '!';
+				}
 			}
 			CHKiRet(addCtrForReporting(values, esbuf, accumulatedValue(pCtr)));
 		} else {
@@ -422,8 +419,7 @@ finalize_it:
 /* get all the object's countes together with object name as one line.
  */
 static rsRetVal
-getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
-{
+getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs) {
 	cstr_t *pcstr;
 	ctr_t *pCtr;
 	DEFiRet;
@@ -473,8 +469,7 @@ static void
 getSenderStats(rsRetVal(*cb)(void*, const char*),
 	void *usrptr,
 	statsFmtType_t fmt,
-	const int8_t bResetCtrs)
-{
+	const int8_t bResetCtrs) {
 	struct hashtable_itr *itr;
 	struct sender_stats *stat;
 	char fmtbuf[2048];
@@ -502,8 +497,9 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 			}
 			fmtbuf[sizeof(fmtbuf)-1] = '\0';
 			cb(usrptr, fmtbuf);
-			if(bResetCtrs)
+			if (bResetCtrs) {
 				stat->nMsgs = 0;
+			}
 		} while (hashtable_iterator_advance(itr));
 	}
 
@@ -518,8 +514,7 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
-{
+getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs) {
 	statsobj_t *o;
 	cstr_t *cstr;
 	DEFiRet;
@@ -552,16 +547,14 @@ finalize_it:
  * again, as this is right now not needed.
  */
 static rsRetVal
-enableStats(void)
-{
+enableStats(void) {
 	GatherStats = 1;
 	return RS_RET_OK;
 }
 
 
 rsRetVal
-statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
-{
+statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen) {
 	struct sender_stats *stat;
 	int mustUnlock = 0;
 	DEFiRet;
@@ -596,8 +589,9 @@ statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 	DBGPRINTF("DDDDD: statsRecordSender: '%s', nmsgs %u [%llu], lastSeen %llu\n", sender, nMsgs, (long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
 
 finalize_it:
-	if(mustUnlock)
+	if (mustUnlock) {
 		pthread_mutex_unlock(&mutSenders);
+	}
 	RETiRet;
 }
 
@@ -627,8 +621,7 @@ destructUnlinkedCounters(ctr_t *ctr) {
  * of time.
  */
 void
-checkGoneAwaySenders(const time_t tCurr)
-{
+checkGoneAwaySenders(const time_t tCurr) {
 	struct hashtable_itr *itr;
 	struct sender_stats *stat;
 	const time_t rqdLast = tCurr - glblSenderStatsTimeout;

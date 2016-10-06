@@ -145,18 +145,18 @@ ENDinitConfVars
  * if it is unspecified. So far, we use 514 as default (what probably
  * is not a really bright idea, but kept for backward compatibility).
  */
-static uchar *getRelpPt(instanceData *pData)
-{
+static uchar *getRelpPt(instanceData *pData) {
 	assert(pData != NULL);
-	if(pData->port == NULL)
+	if (pData->port == NULL) {
 		return((uchar*)RELP_DFLT_PT);
-	else
+	}
+	else {
 		return(pData->port);
+	}
 }
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) pUsr;
 	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: error '%s', object "
 			" '%s' - action may not work as intended",
@@ -164,16 +164,14 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	errmsg.LogError(0, RS_RET_RELP_ERR, "omrelp: librelp error '%s', object "
 			"'%s' - action may not work as intended",
 			errmesg, objinfo);
 }
 
 static void
-onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	instanceData *pData = ((wrkrInstanceData_t*) pUsr)->pData;
 	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "omrelp[%s:%s]: authentication error '%s', peer "
 			"is '%s' - DISABLING action", pData->target, pData->port, errmesg, authinfo);
@@ -181,51 +179,61 @@ onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) rel
 }
 
 static rsRetVal
-doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
-{
+doCreateRelpClient(wrkrInstanceData_t *pWrkrData) {
 	int i;
 	instanceData *pData;
 	DEFiRet;
 
 	pData = pWrkrData->pData;
-	if(relpEngineCltConstruct(pRelpEngine, &pWrkrData->pRelpClt) != RELP_RET_OK)
+	if (relpEngineCltConstruct(pRelpEngine, &pWrkrData->pRelpClt) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
-	if(relpCltSetTimeout(pWrkrData->pRelpClt, pData->timeout) != RELP_RET_OK)
+	}
+	if (relpCltSetTimeout(pWrkrData->pRelpClt, pData->timeout) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	}
 	if(relpCltSetConnTimeout(pWrkrData->pRelpClt, pData->connTimeout) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	}
-	if(relpCltSetWindowSize(pWrkrData->pRelpClt, pData->sizeWindow) != RELP_RET_OK)
+	if (relpCltSetWindowSize(pWrkrData->pRelpClt, pData->sizeWindow) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
-	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
+	}
+	if (relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK) {
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	}
 	if(pData->bEnableTLS) {
-		if(relpCltEnableTLS(pWrkrData->pRelpClt) != RELP_RET_OK)
+		if (relpCltEnableTLS(pWrkrData->pRelpClt) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(pData->bEnableTLSZip) {
-			if(relpCltEnableTLSZip(pWrkrData->pRelpClt) != RELP_RET_OK)
-				ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
-		if(relpCltSetGnuTLSPriString(pWrkrData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK)
+		if(pData->bEnableTLSZip) {
+			if (relpCltEnableTLSZip(pWrkrData->pRelpClt) != RELP_RET_OK) {
+				ABORT_FINALIZE(RS_RET_RELP_ERR);
+			}
+		}
+		if (relpCltSetGnuTLSPriString(pWrkrData->pRelpClt, (char*) pData->pristring) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		if(relpCltSetAuthMode(pWrkrData->pRelpClt, (char*) pData->authmode) != RELP_RET_OK) {
 			errmsg.LogError(0, RS_RET_RELP_ERR,
 					"omrelp: invalid auth mode '%s'\n", pData->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
-		if(relpCltSetCACert(pWrkrData->pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK)
+		if (relpCltSetCACert(pWrkrData->pRelpClt, (char*) pData->caCertFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetOwnCert(pWrkrData->pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK)
+		}
+		if (relpCltSetOwnCert(pWrkrData->pRelpClt, (char*) pData->myCertFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpCltSetPrivKey(pWrkrData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK)
+		}
+		if (relpCltSetPrivKey(pWrkrData->pRelpClt, (char*) pData->myPrivKeyFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		for(i = 0 ; i <  pData->permittedPeers.nmemb ; ++i) {
 			relpCltAddPermittedPeer(pWrkrData->pRelpClt, (char*)pData->permittedPeers.name[i]);
 		}
 	}
 	if(pData->localClientIP != NULL) {
-		if(relpCltSetClientIP(pWrkrData->pRelpClt, pData->localClientIP) != RELP_RET_OK)
+		if (relpCltSetClientIP(pWrkrData->pRelpClt, pData->localClientIP) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 	}
 	pWrkrData->bInitialConnect = 1;
 	pWrkrData->nSent = 0;
@@ -278,13 +286,13 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	if(pWrkrData->pRelpClt != NULL)
+	if (pWrkrData->pRelpClt != NULL) {
 		relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt);
+	}
 ENDfreeWrkrInstance
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->target = NULL;
 	pData->port = NULL;
 	pData->tplName = NULL;
@@ -296,10 +304,12 @@ setInstParamDefaults(instanceData *pData)
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
 	pData->pristring = NULL;
 	pData->authmode = NULL;
-	if(glbl.GetSourceIPofLocalClient() == NULL)
+	if (glbl.GetSourceIPofLocalClient() == NULL) {
 		pData->localClientIP = NULL;
-	else
+	}
+	else {
 		pData->localClientIP = (uchar*)strdup((char*)glbl.GetSourceIPofLocalClient());
+	}
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
 	pData->myPrivKeyFile = NULL;
@@ -320,8 +330,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->target = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -372,14 +383,16 @@ CODESTARTnewActInst
 	   		    OMSR_NO_RQD_TPL_OPTS));
 
 CODE_STD_FINALIZERnewActInst
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &actpblk);
+	}
 ENDnewActInst
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 BEGINSetShutdownImmdtPtr
@@ -398,15 +411,15 @@ ENDdbgPrintInstInfo
 /* try to connect to server
  * rgerhards, 2008-03-21
  */
-static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
-{
+static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 
 	if(pWrkrData->bInitialConnect) {
 		iRet = relpCltConnect(pWrkrData->pRelpClt, glbl.GetDefPFFamily(),
 				      getRelpPt(pWrkrData->pData), pWrkrData->pData->target);
-		if(iRet == RELP_RET_OK)
+		if (iRet == RELP_RET_OK) {
 			pWrkrData->bInitialConnect = 0;
+		}
 	} else {
 		iRet = relpCltReconnect(pWrkrData->pRelpClt);
 	}
@@ -445,8 +458,7 @@ finalize_it:
 ENDtryResume
 
 static inline rsRetVal
-doRebind(wrkrInstanceData_t *pWrkrData)
-{
+doRebind(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	DBGPRINTF("omrelp: destructing relp client due to rebindInterval\n");
 	CHKiRet(relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt));
@@ -483,8 +495,9 @@ CODESTARTdoAction
 	lenMsg = strlen((char*) pMsg); /* TODO: don't we get this? */
 
 	/* we need to truncate oversize msgs - no way around that... */
-	if((int) lenMsg > glbl.GetMaxLine())
+	if ((int) lenMsg > glbl.GetMaxLine()) {
 		lenMsg = glbl.GetMaxLine();
+	}
 
 	/* forward */
 	ret = relpCltSendSyslog(pWrkrData->pRelpClt, (uchar*) pMsg, lenMsg);
@@ -499,8 +512,9 @@ CODESTARTdoAction
 	   	doRebind(pWrkrData);
 	}
 finalize_it:
-	if(pData->bHadAuthFail)
+	if (pData->bHadAuthFail) {
 		iRet = RS_RET_DISABLE_ACTION;
+	}
 	if(iRet == RS_RET_OK) {
 		/* we mimic non-commit, as otherwise our endTransaction handler
 		 * will not get called. While this is not 100% correct, the worst
@@ -531,8 +545,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		FINALIZE;
+	}
 
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06

@@ -56,8 +56,7 @@ static long long fileSize = 1024*1024;	/* file size in K, 1MB default */
  * when available)
  */
 static inline void
-genFile()
-{
+genFile() {
 	long i;
 	FILE *fp;
 	FILE *rfp = NULL;
@@ -71,8 +70,9 @@ genFile()
 	}
 
 	/* try to use /dev/urandom, if available */
-	if(tryUseURandom)
+	if (tryUseURandom) {
 		rfp = fopen("/dev/urandom", "r");
+	}
 
 	if(rfp == NULL) {
 		/* fallback, use libc random number generator */
@@ -93,16 +93,16 @@ genFile()
 		}
 	}
 
-	if(fileName != NULL)
+	if (fileName != NULL) {
 		fclose(fp);
+	}
 }
 
 
 /* Run the test.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int ret = 0;
 	int opt;
 

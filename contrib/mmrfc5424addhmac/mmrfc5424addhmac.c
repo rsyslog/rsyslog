@@ -154,8 +154,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->key = NULL;
 }
 
@@ -175,8 +174,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "key")) {
 			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			pData->keylen = es_strlen(pvals[i].val.d.estr);
@@ -219,8 +219,7 @@ ENDtryResume
  * printable hex string. "print" must be 2*len+1 (for \0)
  */
 static inline void
-hexify(uchar *bin, int len, uchar *print)
-{
+hexify(uchar *bin, int len, uchar *print) {
 	static const char hexchars[16] =
 	   {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 	int iSrc, iDst;
@@ -239,8 +238,7 @@ hexify(uchar *bin, int len, uchar *print)
  * to be superior.
  */
 static inline void
-skipSDID(uchar *sdbuf, int sdlen, int *rootIdx)
-{
+skipSDID(uchar *sdbuf, int sdlen, int *rootIdx) {
 	int i;
 	i = *rootIdx;
 	while(i < sdlen) {
@@ -258,8 +256,7 @@ skipSDID(uchar *sdbuf, int sdlen, int *rootIdx)
 }
 
 static inline void
-getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid)
-{
+getSDID(uchar *sdbuf, int sdlen, int *rootIdx, uchar *sdid) {
 	int i, j;
 	i = *rootIdx;
 	j = 0;
@@ -281,8 +278,7 @@ done:
 
 /* check if "our" hmac is already present */
 static inline sbool
-isHmacPresent(instanceData *pData, msg_t *pMsg)
-{
+isHmacPresent(instanceData *pData, msg_t *pMsg) {
 	uchar *sdbuf;
 	rs_size_t sdlen;
 	sbool found;
@@ -310,8 +306,7 @@ done:
 }
 
 static inline rsRetVal
-hashMsg(instanceData *pData, msg_t *pMsg)
-{
+hashMsg(instanceData *pData, msg_t *pMsg) {
 	uchar *pRawMsg;
 	int lenRawMsg;
 	uchar *sdbuf;

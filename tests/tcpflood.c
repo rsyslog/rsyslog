@@ -226,8 +226,7 @@ static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
 static relpEngine_t *pRelpEngine;
 #define CHKRELP(f) if(f != RELP_RET_OK) { fprintf(stderr, "%s\n", #f); exit(1); }
 static void
-initRELP_PLAIN(void)
-{
+initRELP_PLAIN(void) {
 	CHKRELP(relpEngineConstruct(&pRelpEngine));
 	CHKRELP(relpEngineSetDbgprint(pRelpEngine,
 		verbose ? relp_dbgprintf : NULL));
@@ -237,10 +236,10 @@ initRELP_PLAIN(void)
 
 /* prepare send subsystem for UDP send */
 static inline int
-setupUDP(void)
-{
-	if((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+setupUDP(void) {
+	if ((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		return 1;
+	}
 
 	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
 	udpRcvr.sin_family = AF_INET;
@@ -256,8 +255,7 @@ setupUDP(void)
 
 /* open a single tcp connection
  */
-int openConn(int *fd, const int connIdx)
-{
+int openConn(int *fd, const int connIdx) {
 	int sock;
 	struct sockaddr_in addr;
 	int port;
@@ -320,14 +318,14 @@ int openConn(int *fd, const int connIdx)
 /* open all requested tcp connections
  * this includes allocating the connection array
  */
-int openConnections(void)
-{
+int openConnections(void) {
 	int i;
 	char msgBuf[128];
 	size_t lenMsg;
 
-	if(transport == TP_UDP)
+	if (transport == TP_UDP) {
 		return setupUDP();
+	}
 
 	if(bShowProgress)
 		if(write(1, "      open connections", sizeof("      open connections")-1)){}
@@ -335,12 +333,14 @@ int openConnections(void)
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
 	sockArray = calloc(numConnections, sizeof(int));
-	if(transport == TP_RELP_PLAIN)
+	if (transport == TP_RELP_PLAIN) {
 		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
+	}
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			if(bShowProgress)
+			if (bShowProgress) {
 				printf("\r%5.5d", i);
+			}
 		}
 		if(openConn(&(sockArray[i]), i) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
@@ -358,8 +358,9 @@ int openConnections(void)
 						CHKRELP(relpEngineCltDestruct(pRelpEngine,
 							relpCltArray+i));
 					} else { /* TCP and TLS modes */
-						if(transport == TP_TLS)
+						if (transport == TP_TLS) {
 							closeTLSSess(i);
+						}
 						close(sockArray[i]);
 					}
 					sockArray[i] = -1;
@@ -390,15 +391,15 @@ int openConnections(void)
  * at the syslogd level, too
  * rgerhards, 2009-04-14
  */
-void closeConnections(void)
-{
+void closeConnections(void) {
 	int i;
 	size_t lenMsg;
 	struct linger ling;
 	char msgBuf[128];
 
-	if(transport == TP_UDP)
+	if (transport == TP_UDP) {
 		return;
+	}
 
 	if(bShowProgress)
 		if(write(1, "      close connections", sizeof("      close connections")-1)){}
@@ -426,8 +427,9 @@ void closeConnections(void)
 				ling.l_onoff = 1;
 				ling.l_linger = 1;
 				setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
-				if(transport == TP_TLS)
+				if (transport == TP_TLS) {
 					closeTLSSess(i);
+				}
 				close(sockArray[i]);
 			}
 		}
@@ -445,8 +447,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static inline void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
-{
+genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst) {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
 	char dynFileIDBuf[128] = "";
@@ -460,7 +461,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 			done = 1;
 			*pLenBuf = fread(buf, 1, MAX_EXTRADATA_LEN + 1024, dataFP);
 			if(*pLenBuf == 0) {
-				if(--numFileIterations > 0)  {
+				if(--numFileIterations > 0) {
 					rewind(dataFP);
 					done = 0; /* need new iteration */
 				} else {
@@ -492,10 +493,12 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 						       msgPRI, dynFileIDBuf, msgNum, frameDelim);
 			}
 		} else {
-			if(bRandomizeExtraData)
+			if (bRandomizeExtraData) {
 				edLen = ((unsigned long) rand() + extraDataLen) % extraDataLen + 1;
-			else
+			}
+			else {
 				edLen = extraDataLen;
+			}
 			memset(extraData, 'X', edLen);
 			extraData[edLen] = '\0';
 			if(useRFC5424Format) {
@@ -531,8 +534,7 @@ finalize_it: /*EMPTY to keep the compiler happy */;
  * last. All messages in between are sent over random connections.
  * Note that message numbers start at 0.
  */
-int sendMessages(struct instdata *inst)
-{
+int sendMessages(struct instdata *inst) {
 	unsigned i = 0;
 	int socknum;
 	int lenBuf;
@@ -558,14 +560,16 @@ int sendMessages(struct instdata *inst)
 			statusText = "kb";
 		}
 	}
-	if(bShowProgress)
+	if (bShowProgress) {
 		printf("\r%8.8d %s sent", 0, statusText);
+	}
 	while(i < inst->numMsgs) {
 		if(runMultithreaded) {
 			socknum = inst->idx;
 		} else {
-			if((int) i < numConnections)
+			if ((int) i < numConnections) {
 				socknum = i;
+			}
 			else if(i >= inst->numMsgs - numConnections) {
 				socknum = i - (inst->numMsgs - numConnections);
 			} else {
@@ -638,8 +642,9 @@ int sendMessages(struct instdata *inst)
 			return(1);
 		}
 		if(i % show_progress_interval == 0) {
-			if(bShowProgress)
+			if (bShowProgress) {
 				printf("\r%8.8d", i);
+			}
 		}
 		if(!runMultithreaded && bRandConnDrop) {
 			/* if we need to randomly drop connections, see if we 
@@ -673,8 +678,9 @@ int sendMessages(struct instdata *inst)
 		/* send remaining buffer */
 		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 	}
-	if(!bSilent)
+	if (!bSilent) {
 		printf("\r%8.8d %s sent\n", i, statusText);
+	}
 
 	return 0;
 }
@@ -683,8 +689,7 @@ int sendMessages(struct instdata *inst)
 /* this is the thread that starts a generator
  */
 static void *
-thrdStarter(void *arg)
-{
+thrdStarter(void *arg) {
 	struct instdata *inst = (struct instdata*) arg;
 	pthread_mutex_lock(&thrdMgmt);
 	runningThreads++;
@@ -705,8 +710,7 @@ thrdStarter(void *arg)
  * and the main task must just enable them.
  */
 static inline void
-prepareGenerators()
-{
+prepareGenerators() {
 	int i;
 	long long msgsThrd;
 	long long starting = 0;
@@ -730,7 +734,7 @@ prepareGenerators()
 	instarray = calloc(numThrds, sizeof(struct instdata));
 	msgsThrd = numMsgsToSend / numThrds;
 
-	for(i = 0 ; i < numThrds ; ++i)  {
+	for(i = 0 ; i < numThrds ; ++i) {
 		instarray[i].lower = starting;
 		instarray[i].numMsgs = msgsThrd;
 		instarray[i].numSent = 0;
@@ -745,10 +749,9 @@ prepareGenerators()
  * all threads are initialized and then broadcast that they can begin to run.
  */
 static inline void
-runGenerators()
-{
+runGenerators() {
 	pthread_mutex_lock(&thrdMgmt);
-	while(runningThreads != numThrds){
+	while(runningThreads != numThrds) {
 		pthread_cond_wait(&condStarted, &thrdMgmt);
 	}
 	doRun = 1;
@@ -760,10 +763,9 @@ runGenerators()
 /* Wait for all traffic generators to stop.
  */
 static inline void
-waitGenerators()
-{
+waitGenerators() {
 	int i;
-	for(i = 0 ; i < numThrds ; ++i)  {
+	for(i = 0 ; i < numThrds ; ++i) {
 		pthread_join(instarray[i].thread, NULL);
 		/*printf("thread %x stopped\n", (unsigned) instarray[i].thread);*/
 	}
@@ -777,8 +779,7 @@ waitGenerators()
  * rgerhards, 2010-12-08
  */
 static inline void
-endTiming(struct timeval *tvStart, struct runstats *stats)
-{
+endTiming(struct timeval *tvStart, struct runstats *stats) {
 	long sec, usec;
 	unsigned long runtime;
 	struct timeval tvEnd;
@@ -794,10 +795,12 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 
 	runtime = sec * 1000 + (usec / 1000);
 	stats->totalRuntime += runtime;
-	if(runtime < stats->minRuntime)
+	if (runtime < stats->minRuntime) {
 		stats->minRuntime = runtime;
-	if(runtime > stats->maxRuntime)
+	}
+	if (runtime > stats->maxRuntime) {
 		stats->maxRuntime = runtime;
+	}
 
 	if(!bSilent || bStatsRecords) {
 		if(bCSVoutput) {
@@ -812,8 +815,7 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 /* generate stats summary record at end of run
  */
 static inline void
-genStats(struct runstats *stats)
-{
+genStats(struct runstats *stats) {
 	long unsigned avg;
 	avg = stats->totalRuntime / stats->numRuns;
 
@@ -843,8 +845,7 @@ genStats(struct runstats *stats)
  * rgerhards, 2010-12-08
  */
 static int
-runTests(void)
-{
+runTests(void) {
 	struct timeval tvStart;
 	struct runstats stats;
 	int run;
@@ -855,17 +856,20 @@ runTests(void)
 	stats.numRuns = numRuns;
 	run = 1;
 	while(1) { /* loop broken inside */
-		if(!bSilent)
+		if (!bSilent) {
 			printf("starting run %d\n", run);
+		}
 		prepareGenerators();
 		gettimeofday(&tvStart, NULL);
 		runGenerators();
 		waitGenerators();
 		endTiming(&tvStart, &stats);
-		if(run == numRuns)
+		if (run == numRuns) {
 			break;
-		if(!bSilent)
+		}
+		if (!bSilent) {
 			printf("sleeping %d seconds before next run\n", sleepBetweenRuns);
+		}
 		sleep(sleepBetweenRuns);
 		++run;
 	}
@@ -882,8 +886,7 @@ runTests(void)
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
  */
-static void tlsLogFunction(int level, const char *msg)
-{
+static void tlsLogFunction(int level, const char *msg) {
 	printf("GnuTLS (level %d): %s", level, msg);
 
 }
@@ -892,8 +895,7 @@ static void tlsLogFunction(int level, const char *msg)
 /* global init GnuTLS
  */
 static void
-initTLS(void)
-{
+initTLS(void) {
 	int r;
 
 	/* order of gcry_control and gnutls_global_init matters! */
@@ -935,8 +937,7 @@ initTLS(void)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static void
-initTLSSess(int i)
-{
+initTLSSess(int i) {
 	int r;
 	gnutls_init(sessArray + i, GNUTLS_CLIENT);
 
@@ -968,16 +969,16 @@ initTLSSess(int i)
 
 
 static int
-sendTLS(int i, char *buf, int lenBuf)
-{
+sendTLS(int i, char *buf, int lenBuf) {
 	int lenSent;
 	int r;
 
 	lenSent = 0;
 	while(lenSent != lenBuf) {
 		r = gnutls_record_send(sessArray[i], buf + lenSent, lenBuf - lenSent);
-		if(r < 0)
+		if (r < 0) {
 			break;
+		}
 		lenSent += r;
 	}
 
@@ -985,8 +986,7 @@ sendTLS(int i, char *buf, int lenBuf)
 }
 
 static void
-closeTLSSess(int i)
-{
+closeTLSSess(int i) {
 	gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
 	gnutls_deinit(sessArray[i]);
 }
@@ -1000,8 +1000,7 @@ static void closeTLSSess(int __attribute__((unused)) i) {}
 /* Run the test.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int ret = 0;
 	int opt;
 	struct sigaction sigAct;
@@ -1137,8 +1136,9 @@ int main(int argc, char *argv[])
 				"is somewhat contradictory!\n");
 	}
 
-	if(!isatty(1) || bSilent)
+	if (!isatty(1) || bSilent) {
 		bShowProgress = 0;
+	}
 
 	if(numConnections > 20) {
 		/* if we use many (whatever this means, 20 is randomly picked)
@@ -1185,11 +1185,13 @@ int main(int argc, char *argv[])
 		CHKRELP(relpEngineDestruct(&pRelpEngine));
 	}
 
-	if(nConnDrops > 0 && !bSilent)
+	if (nConnDrops > 0 && !bSilent) {
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
+	}
 
-	if(!bSilent)
+	if (!bSilent) {
 		printf("End of tcpflood Run\n");
+	}
 
 	exit(ret);
 }

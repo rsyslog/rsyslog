@@ -122,13 +122,11 @@ static struct cnfparamblk parserpblk =
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
-int rsconfNeedDropPriv(rsconf_t *const cnf)
-{
+int rsconfNeedDropPriv(rsconf_t *const cnf) {
 	return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
 }
 
-static void cnfSetDefaults(rsconf_t *pThis)
-{
+static void cnfSetDefaults(rsconf_t *pThis) {
 	pThis->globals.bAbortOnUncleanConfig = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
 	pThis->globals.bDebugPrintTemplateList = 1;
@@ -183,8 +181,7 @@ ENDobjConstruct(rsconf)
 /* ConstructionFinalizer
  */
 static rsRetVal
-rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
-{
+rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, rsconf);
 	RETiRet;
@@ -194,8 +191,7 @@ rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 /* call freeCnf() module entry points AND free the module entries themselfes.
  */
 static inline void
-freeCnf(rsconf_t *pThis)
-{
+freeCnf(rsconf_t *pThis) {
 	cfgmodules_etry_t *etry, *del;
 	etry = pThis->modules.root;
 	while(etry != NULL) {
@@ -246,12 +242,15 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 		  glbl.GetDropMalPTRMsgs());
 	ruleset.DebugPrintAll(pThis);
 	dbgprintf("\n");
-	if(pThis->globals.bDebugPrintTemplateList)
+	if (pThis->globals.bDebugPrintTemplateList) {
 		tplPrintList(pThis);
-	if(pThis->globals.bDebugPrintModuleList)
+	}
+	if (pThis->globals.bDebugPrintModuleList) {
 		module.PrintList();
-	if(pThis->globals.bDebugPrintCfSysLineHandlerList)
+	}
+	if (pThis->globals.bDebugPrintCfSysLineHandlerList) {
 		dbgPrintCfSysLineHandlers();
+	}
 	// TODO: The following code needs to be "streamlined", so far just moved over...
 	dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
 	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
@@ -285,8 +284,7 @@ ENDobjDebugPrint(rsconf)
 
 
 static rsRetVal
-parserProcessCnf(struct cnfobj *o)
-{
+parserProcessCnf(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	modInfo_t *pMod;
 	uchar *cnfModName = NULL;
@@ -335,8 +333,7 @@ finalize_it:
 
 /* Process input() objects */
 static rsRetVal
-inputProcessCnf(struct cnfobj *o)
-{
+inputProcessCnf(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	modInfo_t *pMod;
 	uchar *cnfModName = NULL;
@@ -371,14 +368,14 @@ finalize_it:
 extern int yylineno;
 
 void
-parser_warnmsg(const char *fmt, ...)
-{
+parser_warnmsg(const char *fmt, ...) {
 	va_list ap;
 	char errBuf[1024];
 
 	va_start(ap, fmt);
-	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+	if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) {
 		errBuf[sizeof(errBuf)-1] = '\0';
+	}
 	errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
 			"warning during parsing file %s, on or before line %d: %s",
 			cnfcurrfn, yylineno, errBuf);
@@ -386,14 +383,14 @@ parser_warnmsg(const char *fmt, ...)
 }
 
 void
-parser_errmsg(const char *fmt, ...)
-{
+parser_errmsg(const char *fmt, ...) {
 	va_list ap;
 	char errBuf[1024];
 
 	va_start(ap, fmt);
-	if(vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf))
+	if (vsnprintf(errBuf, sizeof(errBuf), fmt, ap) == sizeof(errBuf)) {
 		errBuf[sizeof(errBuf)-1] = '\0';
+	}
 	if(cnfcurrfn == NULL) {
 		errmsg.LogError(0, RS_RET_CONF_PARSE_ERROR,
 				"error during config processing: %s", errBuf);
@@ -407,13 +404,11 @@ parser_errmsg(const char *fmt, ...)
 
 int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int
-yyerror(const char *s)
-{
+yyerror(const char *s) {
 	parser_errmsg("%s on token '%s'", s, yytext);
 	return 0;
 }
-void cnfDoObj(struct cnfobj *o)
-{
+void cnfDoObj(struct cnfobj *o) {
 	int bDestructObj = 1;
 	int bChkUnuse = 1;
 
@@ -446,8 +441,9 @@ void cnfDoObj(struct cnfobj *o)
 		parserProcessCnf(o);
 		break;
 	case CNFOBJ_TPL:
-		if(tplProcessCnf(o) != RS_RET_OK)
+		if (tplProcessCnf(o) != RS_RET_OK) {
 			parser_errmsg("error processing template object");
+		}
 		break;
 	case CNFOBJ_RULESET:
 		rulesetProcessCnf(o);
@@ -464,28 +460,26 @@ void cnfDoObj(struct cnfobj *o)
 		break;
 	}
 	if(bDestructObj) {
-		if(bChkUnuse)
+		if (bChkUnuse) {
 			nvlstChkUnused(o->nvlst);
+		}
 		cnfobjDestruct(o);
 	 }
 }
 
-void cnfDoScript(struct cnfstmt *script)
-{
+void cnfDoScript(struct cnfstmt *script) {
 	dbgprintf("cnf:global:script\n");
 	ruleset.AddScript(ruleset.GetCurrent(loadConf), script);
 }
 
-void cnfDoCfsysline(char *ln)
-{
+void cnfDoCfsysline(char *ln) {
 	DBGPRINTF("cnf:global:cfsysline: %s\n", ln);
 	/* the legacy system needs the "$" stripped */
 	conf.cfsysline((uchar*) ln+1);
 	free(ln);
 }
 
-void cnfDoBSDTag(char *ln)
-{
+void cnfDoBSDTag(char *ln) {
 	DBGPRINTF("cnf:global:BSD tag: %s\n", ln);
 	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
@@ -494,8 +488,7 @@ void cnfDoBSDTag(char *ln)
 	free(ln);
 }
 
-void cnfDoBSDHost(char *ln)
-{
+void cnfDoBSDHost(char *ln) {
 	DBGPRINTF("cnf:global:BSD host: %s\n", ln);
 	errmsg.LogError(0, RS_RET_BSD_BLOCKS_UNSUPPORTED,
 			"BSD-style blocks are no longer supported in rsyslog, "
@@ -511,8 +504,7 @@ void cnfDoBSDHost(char *ln)
  * if something goes wrong, the function never returns
  */
 static
-rsRetVal doDropPrivGid(void)
-{
+rsRetVal doDropPrivGid(void) {
 	int res;
 	uchar szBuf[1024];
 	DEFiRet;
@@ -548,8 +540,7 @@ finalize_it:
  * Note that such an abort can cause damage to on-disk structures, so we should
  * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
  */
-static void doDropPrivUid(int iUid)
-{
+static void doDropPrivUid(int iUid) {
 	int res;
 	uchar szBuf[1024];
 	struct passwd *pw;
@@ -588,8 +579,7 @@ static void doDropPrivUid(int iUid)
  * privileges can no be re-gained.
  */
 static inline rsRetVal
-dropPrivileges(rsconf_t *cnf)
-{
+dropPrivileges(rsconf_t *cnf) {
 	DEFiRet;
 
 	if(cnf->globals.gidDropPriv != 0) {
@@ -613,8 +603,7 @@ finalize_it:
  * we need to prepare to move over to activate mode.
  */
 static inline void
-tellCoreConfigLoadDone(void)
-{
+tellCoreConfigLoadDone(void) {
 	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
 	glblDoneLoadCnf();
 }
@@ -622,8 +611,7 @@ tellCoreConfigLoadDone(void)
 
 /* Tell input modules that the config parsing stage is over.  */
 static rsRetVal
-tellModulesConfigLoadDone(void)
-{
+tellModulesConfigLoadDone(void) {
 	cfgmodules_etry_t *node;
 
 	BEGINfunc
@@ -645,8 +633,7 @@ tellModulesConfigLoadDone(void)
 
 /* Tell input modules to verify config object */
 static rsRetVal
-tellModulesCheckConfig(void)
-{
+tellModulesCheckConfig(void) {
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
 
@@ -674,8 +661,7 @@ tellModulesCheckConfig(void)
 
 /* Tell modules to activate current running config (pre privilege drop) */
 static rsRetVal
-tellModulesActivateConfigPrePrivDrop(void)
-{
+tellModulesActivateConfigPrePrivDrop(void) {
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
 
@@ -705,8 +691,7 @@ tellModulesActivateConfigPrePrivDrop(void)
 
 /* Tell modules to activate current running config */
 static rsRetVal
-tellModulesActivateConfig(void)
-{
+tellModulesActivateConfig(void) {
 	cfgmodules_etry_t *node;
 	rsRetVal localRet;
 
@@ -736,8 +721,7 @@ tellModulesActivateConfig(void)
  * if that is requested.
  */
 static rsRetVal
-runInputModules(void)
-{
+runInputModules(void) {
 	cfgmodules_etry_t *node;
 	int bNeedsCancel;
 
@@ -763,8 +747,7 @@ runInputModules(void)
 /* Make the modules check if they are ready to start.
  */
 static rsRetVal
-startInputModules(void)
-{
+startInputModules(void) {
 	DEFiRet;
 	cfgmodules_etry_t *node;
 
@@ -789,8 +772,7 @@ startInputModules(void)
 
 /* activate the main queue */
 static rsRetVal
-activateMainQueue(void)
-{
+activateMainQueue(void) {
 	struct cnfobj *mainqCnfObj;
 	DEFiRet;
 
@@ -818,8 +800,7 @@ finalize_it:
 
 /* set the processes umask (upon configuration request) */
 static inline rsRetVal
-setUmask(int iUmask)
-{
+setUmask(int iUmask) {
 	if(iUmask != -1) {
 		umask(iUmask);
 		DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
@@ -836,8 +817,7 @@ setUmask(int iUmask)
  * Begun 2011-04-20, rgerhards
  */
 static rsRetVal
-activate(rsconf_t *cnf)
-{
+activate(rsconf_t *cnf) {
 	DEFiRet;
 
 	/* at this point, we "switch" over to the running conf */
@@ -845,8 +825,9 @@ activate(rsconf_t *cnf)
 #	if	0 /* currently the DAG is not supported -- code missing! */
 	/* TODO: re-enable this functionality some time later! */
 	/* check if we need to generate a config DAG and, if so, do that */
-	if(ourConf->globals.pszConfDAGFile != NULL)
+	if (ourConf->globals.pszConfDAGFile != NULL) {
 		generateConfigDAG(ourConf->globals.pszConfDAGFile);
+	}
 #	endif
 	setUmask(cnf->globals.umask);
 
@@ -882,8 +863,7 @@ finalize_it:
  */
 
 /* legacy config system: set the action resume interval */
-static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
-{
+static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal) {
 	return actionSetGlobalResumeInterval(iNewVal);
 }
 
@@ -893,8 +873,7 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
  * rgerhards, 2009-06-12
  */
 static rsRetVal
-setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
-{
+setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName) {
 	DEFiRet;
 
 	CHKiRet(ruleset.SetDefaultRuleset(ourConf, pszName));
@@ -911,8 +890,7 @@ finalize_it:
  * rgerhards, 2009-06-12
  */
 static rsRetVal
-setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
-{
+setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName) {
 	ruleset_t *pRuleset;
 	rsRetVal localRet;
 	DEFiRet;
@@ -938,8 +916,7 @@ finalize_it:
 /* set the main message queue mode
  * rgerhards, 2008-01-03
  */
-static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *pszType)
-{
+static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *pszType) {
 	DEFiRet;
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
@@ -970,8 +947,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 /* set the processes max number ob files (upon configuration request)
  * 2009-04-14 rgerhards
  */
-static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
-{
+static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles) {
 // TODO this must use a local var, then carry out action during activate!
 	struct rlimit maxFiles;
 	char errStr[1024];
@@ -998,8 +974,7 @@ finalize_it:
 
 
 /* legacy config system: reset config variables to default values.  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	free(loadConf->globals.mainQ.pszMainMsgQFName);
 
 	cnfSetDefaults(loadConf);
@@ -1010,8 +985,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* legacy config system: set the action resume interval */
 static rsRetVal
-setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
-{
+setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal) {
 	DEFiRet;
 	iRet = module.SetModDir(pszNewVal);
 	free(pszNewVal);
@@ -1021,8 +995,7 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 
 /* "load" a build in module and register it for the current load config */
 static rsRetVal
-regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
-{
+regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr) {
 	cfgmodules_etry_t *pNew;
 	cfgmodules_etry_t *pLast;
 	modInfo_t *pMod;
@@ -1039,8 +1012,7 @@ finalize_it:
  * very first version begun on 2007-07-23 by rgerhards
  */
 static rsRetVal
-loadBuildInModules(void)
-{
+loadBuildInModules(void) {
 	DEFiRet;
 
 	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin:omfile"), NULL));
@@ -1091,8 +1063,7 @@ finalize_it:
 
 /* intialize the legacy config system */
 static inline rsRetVal 
-initLegacyConf(void)
-{
+initLegacyConf(void) {
 	DEFiRet;
 	uchar *pTmp;
 	ruleset_t *pRuleset;
@@ -1253,8 +1224,7 @@ finalize_it:
  * optimizations, etc, etc,...
  */
 static inline rsRetVal
-validateConf(void)
-{
+validateConf(void) {
 	DEFiRet;
 
 	/* some checks */
@@ -1288,8 +1258,7 @@ validateConf(void)
  * Begun 2011-04-20, rgerhards
  */
 static rsRetVal
-load(rsconf_t **cnf, uchar *confFile)
-{
+load(rsconf_t **cnf, uchar *confFile) {
 	int iNbrActions = 0;
 	int r;
 	DEFiRet;
@@ -1341,8 +1310,9 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	 * TODO: iConfigVerify -- should it be pulled from the config, or leave as is (option)?
 	 */
 	if(iConfigVerify) {
-		if(iRet == RS_RET_OK)
+		if (iRet == RS_RET_OK) {
 			iRet = RS_RET_VALIDATION_RUN;
+		}
 		FINALIZE;
 	}
 

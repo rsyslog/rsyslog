@@ -70,8 +70,7 @@ struct cnffunc * cnffuncNew_prifilt(int fac);
  *       grammar.
  */
 static const char *
-tokenToString(const int token)
-{
+tokenToString(const int token) {
 	const char *tokstr;
 	static char tokbuf[512];
 
@@ -134,8 +133,7 @@ tokenToString(const int token)
 
 
 const char*
-getFIOPName(const unsigned iFIOP)
-{
+getFIOPName(const unsigned iFIOP) {
 	const char *pRet;
 	switch(iFIOP) {
 		case FIOP_CONTAINS:
@@ -164,8 +162,7 @@ getFIOPName(const unsigned iFIOP)
 }
 
 const char*
-cnfFiltType2str(const enum cnfFiltType filttype)
-{
+cnfFiltType2str(const enum cnfFiltType filttype) {
 	switch(filttype) {
 	case CNFFILT_NONE:
 		return("filter:none");
@@ -181,8 +178,7 @@ cnfFiltType2str(const enum cnfFiltType filttype)
 }
 
 const char*
-cnfobjType2str(const enum cnfobjType ot)
-{
+cnfobjType2str(const enum cnfobjType ot) {
 	switch(ot) {
 	case CNFOBJ_ACTION:
 		return "action";
@@ -230,8 +226,7 @@ cnfobjType2str(const enum cnfobjType ot)
  * of the action part.
  */
 static rsRetVal
-DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
-{
+DecodePropFilter(uchar *pline, struct cnfstmt *stmt) {
 	rsParsObj *pPars = NULL;
 	cstr_t *pCSCompOp = NULL;
 	cstr_t *pCSPropName = NULL;
@@ -313,18 +308,20 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	}
 
 finalize_it:
-	if(pPars != NULL)
+	if (pPars != NULL) {
 		rsParsDestruct(pPars);
-	if(pCSCompOp != NULL)
+	}
+	if (pCSCompOp != NULL) {
 		rsCStrDestruct(&pCSCompOp);
-	if(pCSPropName != NULL)
+	}
+	if (pCSPropName != NULL) {
 		cstrDestruct(&pCSPropName);
+	}
 	RETiRet;
 }
 
 static void
-prifiltInvert(struct funcData_prifilt *__restrict__ const prifilt)
-{
+prifiltInvert(struct funcData_prifilt *__restrict__ const prifilt) {
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
 		prifilt->pmask[i] = ~prifilt->pmask[i];
@@ -336,27 +333,32 @@ prifiltInvert(struct funcData_prifilt *__restrict__ const prifilt)
  * CMP_GE, CMP_NE.
  */
 static void
-prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
-{
+prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode) {
 	static int lessthanmasks[] = { 0x00, 0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff };
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
-		if(mode == CMP_EQ || mode == CMP_NE)
+		if (mode == CMP_EQ || mode == CMP_NE) {
 			prifilt->pmask[i] = 1 << sev;
-		else if(mode == CMP_LT)
+		}
+		else if (mode == CMP_LT) {
 			prifilt->pmask[i] = lessthanmasks[sev];
-		else if(mode == CMP_LE)
+		}
+		else if (mode == CMP_LE) {
 			prifilt->pmask[i] = lessthanmasks[sev+1];
-		else if(mode == CMP_GT)
+		}
+		else if (mode == CMP_GT) {
 			prifilt->pmask[i] = ~lessthanmasks[sev+1];
-		else if(mode == CMP_GE)
+		}
+		else if (mode == CMP_GE) {
 			prifilt->pmask[i] = ~lessthanmasks[sev];
+		}
 		else
 			DBGPRINTF("prifiltSetSeverity: program error, invalid mode %s\n",
 				  tokenToString(mode));
 	}
-	if(mode == CMP_NE)
+	if (mode == CMP_NE) {
 		prifiltInvert(prifilt);
+	}
 }
 
 /* set prifilt so that it matches for some facilities, fac is its numerical
@@ -365,8 +367,7 @@ prifiltSetSeverity(struct funcData_prifilt *prifilt, int sev, int mode)
  * NOTE: fac MUST be in the range 0..24 (not multiplied by 8)!
  */
 static void
-prifiltSetFacility(struct funcData_prifilt *__restrict__ const prifilt, const int fac, const int mode)
-{
+prifiltSetFacility(struct funcData_prifilt *__restrict__ const prifilt, const int fac, const int mode) {
 	int i;
 
 	memset(prifilt->pmask, 0, sizeof(prifilt->pmask));
@@ -404,21 +405,21 @@ prifiltSetFacility(struct funcData_prifilt *__restrict__ const prifilt, const in
 static void
 prifiltCombine(struct funcData_prifilt *__restrict__ const prifilt,
 	       struct funcData_prifilt *__restrict__ const prifilt2,
-	       const int mode)
-{
+	       const int mode) {
 	int i;
 	for(i = 0 ; i < LOG_NFACILITIES+1 ; ++i) {
-		if(mode == AND)
+		if (mode == AND) {
 			prifilt->pmask[i] = prifilt->pmask[i] & prifilt2->pmask[i];
-		else
+		}
+		else {
 			prifilt->pmask[i] = prifilt->pmask[i] | prifilt2->pmask[i];
+		}
 	}
 }
 
 
 void
-readConfFile(FILE * const fp, es_str_t **str)
-{
+readConfFile(FILE * const fp, es_str_t **str) {
 	char ln[10240];
 	char buf[512];
 	int lenBuf;
@@ -459,8 +460,9 @@ readConfFile(FILE * const fp, es_str_t **str)
 			/* add relevant data to buffer */
 			es_addBuf(str, ln+start, i+1 - start);
 		}
-		if(!bContLine)
+		if (!bContLine) {
 			es_addChar(str, '\n');
+		}
 	}
 	/* indicate end of buffer to flex */
 	es_addChar(str, '\0');
@@ -469,15 +471,13 @@ readConfFile(FILE * const fp, es_str_t **str)
 
 /* comparison function for qsort() and bsearch() string array compare */
 static int
-qs_arrcmp(const void *s1, const void *s2)
-{
+qs_arrcmp(const void *s1, const void *s2) {
 	return es_strcmp(*((es_str_t**)s1), *((es_str_t**)s2));
 }
 
 
 struct objlst*
-objlstNew(struct cnfobj *o)
-{
+objlstNew(struct cnfobj *o) {
 	struct objlst *lst;
 
 	if((lst = malloc(sizeof(struct objlst))) != NULL) {
@@ -491,8 +491,7 @@ cnfobjPrint(o);
 
 /* add object to end of object list, always returns pointer to root object */
 struct objlst*
-objlstAdd(struct objlst *root, struct cnfobj *o)
-{
+objlstAdd(struct objlst *root, struct cnfobj *o) {
 	struct objlst *l;
 	struct objlst *newl;
 	
@@ -509,8 +508,7 @@ objlstAdd(struct objlst *root, struct cnfobj *o)
 
 /* add stmt to current script, always return root stmt pointer */
 struct cnfstmt*
-scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
-{
+scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s) {
 	struct cnfstmt *l;
 	
 	if(root == NULL) {
@@ -524,8 +522,7 @@ scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s)
 }
 
 void
-objlstDestruct(struct objlst *lst)
-{
+objlstDestruct(struct objlst *lst) {
 	struct objlst *toDel;
 
 	while(lst != NULL) {
@@ -537,8 +534,7 @@ objlstDestruct(struct objlst *lst)
 }
 
 void
-objlstPrint(struct objlst *lst)
-{
+objlstPrint(struct objlst *lst) {
 	dbgprintf("objlst %p:\n", lst);
 	while(lst != NULL) {
 		cnfobjPrint(lst->obj);
@@ -547,8 +543,7 @@ objlstPrint(struct objlst *lst)
 }
 
 struct nvlst*
-nvlstNewStr(es_str_t *value)
-{
+nvlstNewStr(es_str_t *value) {
 	struct nvlst *lst;
 
 	if((lst = malloc(sizeof(struct nvlst))) != NULL) {
@@ -562,8 +557,7 @@ nvlstNewStr(es_str_t *value)
 }
 
 struct nvlst*
-nvlstNewArray(struct cnfarray *ar)
-{
+nvlstNewArray(struct cnfarray *ar) {
 	struct nvlst *lst;
 
 	if((lst = malloc(sizeof(struct nvlst))) != NULL) {
@@ -577,15 +571,13 @@ nvlstNewArray(struct cnfarray *ar)
 }
 
 struct nvlst*
-nvlstSetName(struct nvlst *lst, es_str_t *name)
-{
+nvlstSetName(struct nvlst *lst, es_str_t *name) {
 	lst->name = name;
 	return lst;
 }
 
 void
-nvlstDestruct(struct nvlst *lst)
-{
+nvlstDestruct(struct nvlst *lst) {
 	struct nvlst *toDel;
 
 	while(lst != NULL) {
@@ -598,8 +590,7 @@ nvlstDestruct(struct nvlst *lst)
 }
 
 void
-nvlstPrint(struct nvlst *lst)
-{
+nvlstPrint(struct nvlst *lst) {
 	char *name, *value;
 	dbgprintf("nvlst %p:\n", lst);
 	while(lst != NULL) {
@@ -627,8 +618,7 @@ nvlstPrint(struct nvlst *lst)
  * name or NULL, if none found.
  */
 struct nvlst*
-nvlstFindName(struct nvlst *lst, es_str_t *name)
-{
+nvlstFindName(struct nvlst *lst, es_str_t *name) {
 	while(lst != NULL && es_strcmp(lst->name, name))
 		lst = lst->next;
 	return lst;
@@ -640,8 +630,7 @@ nvlstFindName(struct nvlst *lst, es_str_t *name)
  * uses C string constants.
  */
 static struct nvlst*
-nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name)
-{
+nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name) {
 	es_size_t lenName = strlen(name);
 	while(lst != NULL && es_strcasebufcmp(lst->name, (uchar*)name, lenName))
 		lst = lst->next;
@@ -653,8 +642,7 @@ nvlstFindNameCStr(struct nvlst *lst, const char *const __restrict__ name)
  * an error message, if so.
  */
 static void
-nvlstChkDupes(struct nvlst *lst)
-{
+nvlstChkDupes(struct nvlst *lst) {
 	char *cstr;
 
 	while(lst != NULL) {
@@ -676,8 +664,7 @@ nvlstChkDupes(struct nvlst *lst)
  * (otherwise the flags are not correctly set).
  */
 void
-nvlstChkUnused(struct nvlst *lst)
-{
+nvlstChkUnused(struct nvlst *lst) {
 	char *cstr;
 
 	while(lst != NULL) {
@@ -695,8 +682,7 @@ nvlstChkUnused(struct nvlst *lst)
 
 static int
 doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	unsigned char *c;
 	es_size_t i;
 	long long n;
@@ -746,8 +732,7 @@ doGetSize(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int r = 1;
 	val->val.datatype = 'N';
 	if(!es_strbufcmp(valnode->val.d.estr, (unsigned char*) "on", 2)) {
@@ -765,8 +750,7 @@ doGetBinary(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	char *cstr;
 	int r = 1;
 	if(!es_strcasebufcmp(valnode->val.d.estr, (uchar*)"fixedarray", 10)) {
@@ -794,8 +778,7 @@ doGetQueueType(struct nvlst *valnode, struct cnfparamdescr *param,
  */
 static int
 doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int fmtOK = 0;
 	char *cstr;
 	uchar *c;
@@ -805,7 +788,7 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 		if(    (c[0] == '0')
 		    && (c[1] >= '0' && c[1] <= '7')
 		    && (c[2] >= '0' && c[2] <= '7')
-		    && (c[3] >= '0' && c[3] <= '7')  )  {
+		    && (c[3] >= '0' && c[3] <= '7')  ) {
 			fmtOK = 1;
 		}
 	}
@@ -826,8 +809,7 @@ doGetFileCreateMode(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	char *cstr;
 	int r;
 	struct group *resultBuf;
@@ -853,8 +835,7 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	char *cstr;
 	int r;
 	struct passwd *resultBuf;
@@ -883,8 +864,7 @@ doGetUID(struct nvlst *valnode, struct cnfparamdescr *param,
  */
 static int
 doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	long long n;
 	int bSuccess;
 
@@ -900,8 +880,7 @@ doGetInt(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int bSuccess;
 
 	if((bSuccess = doGetInt(valnode, param, val))) {
@@ -916,8 +895,7 @@ doGetNonNegInt(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int bSuccess;
 
 	if((bSuccess = doGetInt(valnode, param, val))) {
@@ -932,8 +910,7 @@ doGetPositiveInt(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	es_size_t i;
 	int r = 1;
 	unsigned char *c;
@@ -955,8 +932,7 @@ doGetWord(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetArray(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int r = 1;
 
 	switch(valnode->val.datatype) {
@@ -979,8 +955,7 @@ doGetArray(struct nvlst *valnode, struct cnfparamdescr *param,
 
 static int
 doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
-	  struct cnfparamvals *val)
-{
+	  struct cnfparamvals *val) {
 	int r = 1;
 	if(es_strlen(valnode->val.d.estr) != 1) {
 		parser_errmsg("parameter '%s' must contain exactly one character "
@@ -998,8 +973,7 @@ doGetChar(struct nvlst *valnode, struct cnfparamdescr *param,
  */
 static int
 nvlstGetParam(struct nvlst *valnode, struct cnfparamdescr *param,
-	       struct cnfparamvals *val)
-{
+	       struct cnfparamvals *val) {
 	uchar *cstr;
 	int r;
 
@@ -1092,8 +1066,7 @@ done:	return r;
  */
 struct cnfparamvals*
 nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
-	       struct cnfparamvals *vals)
-{
+	       struct cnfparamvals *vals) {
 	int i;
 	int bValsWasNULL;
 	int bInError = 0;
@@ -1141,8 +1114,9 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	}
 
 	if(bInError) {
-		if(bValsWasNULL)
+		if (bValsWasNULL) {
 			cnfparamvalsDestruct(vals, params);
+		}
 		vals = NULL;
 	}
 
@@ -1154,12 +1128,12 @@ nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
  * returns 1 if so, 0 otherwise
  */
 int
-cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
-{
+cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals) {
 	int i;
 
-	if(vals == NULL)
+	if (vals == NULL) {
 		return 0;
+	}
 	if(params->version != CNFPARAMBLK_VERSION) {
 		DBGPRINTF("nvlstGetParams: invalid param block version "
 			  "%d, expected %d\n",
@@ -1167,21 +1141,22 @@ cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals)
 		return 0;
 	}
 	for(i = 0 ; i < params->nParams ; ++i) {
-		if(vals[i].bUsed)
+		if (vals[i].bUsed) {
 			return 1;
+		}
 	}
 	return 0;
 }
 
 
 void
-cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals)
-{
+cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals) {
 	int i;
 	char *cstr;
 
-	if(!Debug)
+	if (!Debug) {
 		return;
+	}
 
 	for(i = 0 ; i < params->nParams ; ++i) {
 		dbgprintf("%s: ", params->descr[i].name);
@@ -1211,8 +1186,7 @@ cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals
 }
 
 struct cnfobj*
-cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
-{
+cnfobjNew(enum cnfobjType objType, struct nvlst *lst) {
 	struct cnfobj *o;
 
 	if((o = malloc(sizeof(struct cnfobj))) != NULL) {
@@ -1227,8 +1201,7 @@ cnfobjNew(enum cnfobjType objType, struct nvlst *lst)
 }
 
 void
-cnfobjDestruct(struct cnfobj *o)
-{
+cnfobjDestruct(struct cnfobj *o) {
 	if(o != NULL) {
 		nvlstDestruct(o->nvlst);
 		objlstDestruct(o->subobjs);
@@ -1237,16 +1210,14 @@ cnfobjDestruct(struct cnfobj *o)
 }
 
 void
-cnfobjPrint(struct cnfobj *o)
-{
+cnfobjPrint(struct cnfobj *o) {
 	dbgprintf("obj: '%s'\n", cnfobjType2str(o->objType));
 	nvlstPrint(o->nvlst);
 }
 
 
 struct cnfexpr*
-cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r)
-{
+cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r) {
 	struct cnfexpr *expr;
 
 	/* optimize some constructs during parsing */
@@ -1267,8 +1238,7 @@ done:
 
 
 static int64_t
-str2num(es_str_t *s, int *bSuccess)
-{
+str2num(es_str_t *s, int *bSuccess) {
 	size_t i;
 	int neg;
 	int64_t num = 0;
@@ -1286,8 +1256,9 @@ str2num(es_str_t *s, int *bSuccess)
 		++i;
 	}
 	num *= neg;
-	if(bSuccess != NULL)
+	if (bSuccess != NULL) {
 		*bSuccess = (i == s->lenStr) ? 1 : 0;
+	}
 	return num;
 }
 
@@ -1299,8 +1270,7 @@ str2num(es_str_t *s, int *bSuccess)
  * rgerhards, 2015-11-12
  */
 static long long
-var2Number(struct var *r, int *bSuccess)
-{
+var2Number(struct var *r, int *bSuccess) {
 	long long n = 0;
 	if(r->datatype == 'S') {
 		n = str2num(r->d.estr, bSuccess);
@@ -1310,8 +1280,9 @@ var2Number(struct var *r, int *bSuccess)
 		} else {
 			n = r->d.n;
 		}
-		if(bSuccess != NULL)
+		if (bSuccess != NULL) {
 			*bSuccess = 1;
+		}
 	}
 	return n;
 }
@@ -1319,8 +1290,7 @@ var2Number(struct var *r, int *bSuccess)
 /* ensure that retval is a string
  */
 static es_str_t *
-var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
-{
+var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree) {
 	es_str_t *estr;
 	const char *cstr;
 	rs_size_t lenstr;
@@ -1345,14 +1315,14 @@ var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 }
 
 static uchar*
-var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
-{
+var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree) {
 	uchar *cstr;
 	es_str_t *estr;
 	estr = var2String(r, bMustFree);
 	cstr = (uchar*) es_str2cstr(estr, NULL);
-	if(*bMustFree)
+	if (*bMustFree) {
 		es_deleteStr(estr);
+	}
 	*bMustFree = 1;
 	return cstr;
 }
@@ -1366,8 +1336,7 @@ int SKIP_NOTHING = 0x0;
 int SKIP_STRING = 0x1;
 
 static void
-varFreeMembersSelectively(const struct var *r, const int skipMask)
-{
+varFreeMembersSelectively(const struct var *r, const int skipMask) {
 	if(r->datatype == 'J') {
 		json_object_put(r->d.json);
 	} else if( !(skipMask & SKIP_STRING) && (r->datatype == 'S')) {
@@ -1376,15 +1345,13 @@ varFreeMembersSelectively(const struct var *r, const int skipMask)
 }
 
 static void
-varFreeMembers(const struct var *r)
-{
+varFreeMembers(const struct var *r) {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
 }
 
 
 static rsRetVal
-doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr)
-{
+doExtractFieldByChar(uchar *str, uchar delim, const int matchnbr, uchar **resstr) {
 	int iCurrFld;
     int allocLen;
 	int iLen;
@@ -1436,8 +1403,7 @@ finalize_it:
 
 
 static rsRetVal
-doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int matchnbr, uchar **resstr)
-{
+doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int matchnbr, uchar **resstr) {
 	int iCurrFld;
 	int iLen;
 	uchar *pBuf;
@@ -1445,8 +1411,9 @@ doExtractFieldByStr(uchar *str, char *delim, const rs_size_t lenDelim, const int
 	uchar *pFldEnd;
 	DEFiRet;
 
-	if (str == NULL || delim == NULL)
+	if (str == NULL || delim == NULL) {
 		ABORT_FINALIZE(RS_RET_FIELD_NOT_FOUND);
+	}
 
 	/* first, skip to the field in question */
 	iCurrFld = 1;
@@ -1483,8 +1450,7 @@ finalize_it:
 }
 
 static void
-doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
-{
+doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr) {
 	size_t submatchnbr;
 	short matchnbr;
 	regmatch_t pmatch[50];
@@ -1585,8 +1551,7 @@ finalize_it:
 static void
 doFunc_exec_template(struct cnffunc *__restrict__ const func,
 	struct var *__restrict__ const ret,
-	msg_t *const pMsg)
-{
+	msg_t *const pMsg) {
 	rsRetVal localRet;
 	actWrkrIParams_t iparam;
 
@@ -1713,8 +1678,7 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
  */
 static void
 doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ const ret,
-	   void *__restrict__ const usrptr)
-{
+	   void *__restrict__ const usrptr) {
 	char *envvar;
 	int bMustFree;
 	es_str_t *estr;
@@ -1830,8 +1794,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		cnfexprEval(func->expr[0], &r[0], usrptr);
 		str = (char*) var2CString(&r[0], &bMustFree);
 		retval = regexp.regexec(func->funcdata, str, 0, NULL, 0);
-		if(retval == 0)
+		if (retval == 0) {
 			ret->d.n = 1;
+		}
 		else {
 			ret->d.n = 0;
 			if(retval != REG_NOMATCH) {
@@ -1886,8 +1851,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		   ((pPrifilt->pmask[((msg_t*)usrptr)->iFacility]
 			    & (1<<((msg_t*)usrptr)->iSeverity)) == 0) )
 			ret->d.n = 0;
-		else
+		else {
 			ret->d.n = 1;
+		}
 		ret->datatype = 'N';
 		break;
 	case CNFFUNC_LOOKUP:
@@ -1943,8 +1909,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 
 static void
 evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
-	struct var *__restrict__ const ret)
-{
+	struct var *__restrict__ const ret) {
 	rs_size_t propLen;
 	uchar *pszProp = NULL;
 	unsigned short bMustBeFreed = 0;
@@ -1975,8 +1940,9 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
 		DBGPRINTF("rainerscript: (string) var %d: '%s'\n", var->prop.id, pszProp);
-		if(bMustBeFreed)
+		if (bMustBeFreed) {
 			free(pszProp);
+		}
 	}
 
 }
@@ -1991,8 +1957,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 static int
 evalStrArrayCmp(es_str_t *const estr_l,
 		const struct cnfarray *__restrict__ const ar,
-		const int cmpop)
-{
+		const int cmpop) {
 	int i;
 	int r = 0;
 	es_str_t **res;
@@ -2079,8 +2044,7 @@ evalStrArrayCmp(es_str_t *const estr_l,
  */
 void
 cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
-	    void *__restrict__ const usrptr)
-{
+	    void *__restrict__ const usrptr) {
 	struct var r, l; /* memory for subexpression results */
 	es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
 	int convok_r, convok_l;
@@ -2457,10 +2421,12 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 			ret->d.n = 1ll;
 		} else {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(var2Number(&r, &convok_r))
+			if (var2Number(&r, &convok_r)) {
 				ret->d.n = 1ll;
-			else 
+			}
+			else {
 				ret->d.n = 0ll;
+			}
 			varFreeMembers(&r);
 		}
 		varFreeMembers(&l);
@@ -2470,10 +2436,12 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 		ret->datatype = 'N';
 		if(var2Number(&l, &convok_l)) {
 			cnfexprEval(expr->r, &r, usrptr);
-			if(var2Number(&r, &convok_r))
+			if (var2Number(&r, &convok_r)) {
 				ret->d.n = 1ll;
-			else 
+			}
+			else {
 				ret->d.n = 0ll;
+			}
 			varFreeMembers(&r);
 		} else {
 			ret->d.n = 0ll;
@@ -2554,8 +2522,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restric
 //---------------------------------------------------------
 
 void
-cnfarrayContentDestruct(struct cnfarray *ar)
-{
+cnfarrayContentDestruct(struct cnfarray *ar) {
 	unsigned short i;
 	for(i = 0 ; i < ar->nmemb ; ++i) {
 		es_deleteStr(ar->arr[i]);
@@ -2564,8 +2531,7 @@ cnfarrayContentDestruct(struct cnfarray *ar)
 }
 
 static void
-cnffuncDestruct(struct cnffunc *func)
-{
+cnffuncDestruct(struct cnffunc *func) {
 	unsigned short i;
 
 	for(i = 0 ; i < func->nParams ; ++i) {
@@ -2575,8 +2541,9 @@ cnffuncDestruct(struct cnffunc *func)
 	switch(func->fID) {
 		case CNFFUNC_RE_MATCH:
 		case CNFFUNC_RE_EXTRACT:
-			if(func->funcdata != NULL)
+			if (func->funcdata != NULL) {
 				regexp.regfree(func->funcdata);
+			}
 			break;
 		default:break;
 	}
@@ -2589,8 +2556,7 @@ cnffuncDestruct(struct cnffunc *func)
 /* Destruct an expression and all sub-expressions contained in it.
  */
 void
-cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
-{
+cnfexprDestruct(struct cnfexpr *__restrict__ const expr) {
 
 	if(expr == NULL) {
 		/* this is valid and can happen during optimizer run! */
@@ -2653,8 +2619,7 @@ cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
  * important.
  */
 int
-cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
-{
+cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr) {
 	int convok;
 	struct var ret;
 	cnfexprEval(expr, &ret, usrptr);
@@ -2664,8 +2629,7 @@ cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ cons
 }
 
 struct json_object*
-cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
-{
+cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr) {
 	struct var ret;
 	void *retptr;
 	cnfexprEval(expr, &ret, usrptr);
@@ -2679,30 +2643,29 @@ cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict_
 }
 
 inline static void
-doIndent(int indent)
-{
+doIndent(int indent) {
 	int i;
 	for(i = 0 ; i < indent ; ++i)
 		dbgprintf("  ");
 }
 
 static void
-pmaskPrint(uchar *pmask, int indent)
-{
+pmaskPrint(uchar *pmask, int indent) {
 	int i;
 	doIndent(indent);
 	dbgprintf("pmask: ");
 	for (i = 0; i <= LOG_NFACILITIES; i++)
-		if (pmask[i] == TABLE_NOPRI)
+		if (pmask[i] == TABLE_NOPRI) {
 			dbgprintf(" X ");
-		else
+		}
+		else {
 			dbgprintf("%2X ", pmask[i]);
+		}
 	dbgprintf("\n");
 }
 
 static void
-cnfarrayPrint(struct cnfarray *ar, int indent)
-{
+cnfarrayPrint(struct cnfarray *ar, int indent) {
 	int i;
 	doIndent(indent); dbgprintf("ARRAY:\n");
 	for(i = 0 ; i < ar->nmemb ; ++i) {
@@ -2713,8 +2676,7 @@ cnfarrayPrint(struct cnfarray *ar, int indent)
 }
 
 void
-cnfexprPrint(struct cnfexpr *expr, int indent)
-{
+cnfexprPrint(struct cnfexpr *expr, int indent) {
 	struct cnffunc *func;
 	int i;
 
@@ -2833,8 +2795,9 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 	case '/':
 	case '%':
 	case 'M':
-		if(expr->l != NULL)
+		if (expr->l != NULL) {
 			cnfexprPrint(expr->l, indent+1);
+		}
 		doIndent(indent);
 		dbgprintf("%c\n", (char) expr->nodetype);
 		cnfexprPrint(expr->r, indent+1);
@@ -2850,8 +2813,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
  * really only the statement.
  */
 void
-cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
-{
+cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree) {
 	char *cstr;
 	switch(stmt->nodetype) {
 	case S_NOP:
@@ -2931,8 +2893,9 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 			dbgprintf("\tCEE-Prop.: '%s'\n", stmt->d.s_propfilt.prop.name);
 		}
 		doIndent(indent); dbgprintf("\tOperation: ");
-		if(stmt->d.s_propfilt.isNegated)
+		if (stmt->d.s_propfilt.isNegated) {
 			dbgprintf("NOT ");
+		}
 		dbgprintf("'%s'\n", getFIOPName(stmt->d.s_propfilt.operation));
 		if(stmt->d.s_propfilt.pCSCompValue != NULL) {
 			doIndent(indent); dbgprintf("\tValue....: '%s'\n",
@@ -2951,8 +2914,7 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 	}
 }
 void
-cnfstmtPrint(struct cnfstmt *root, int indent)
-{
+cnfstmtPrint(struct cnfstmt *root, int indent) {
 	struct cnfstmt *stmt;
 	//dbgprintf("stmt %p, indent %d, type '%c'\n", expr, indent, expr->nodetype);
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
@@ -2961,8 +2923,7 @@ cnfstmtPrint(struct cnfstmt *root, int indent)
 }
 
 struct cnfnumval*
-cnfnumvalNew(const long long val)
-{
+cnfnumvalNew(const long long val) {
 	struct cnfnumval *numval;
 	if((numval = malloc(sizeof(struct cnfnumval))) != NULL) {
 		numval->nodetype = 'N';
@@ -2972,8 +2933,7 @@ cnfnumvalNew(const long long val)
 }
 
 struct cnfstringval*
-cnfstringvalNew(es_str_t *const estr)
-{
+cnfstringvalNew(es_str_t *const estr) {
 	struct cnfstringval *strval;
 	if((strval = malloc(sizeof(struct cnfstringval))) != NULL) {
 		strval->nodetype = 'S';
@@ -2984,8 +2944,7 @@ cnfstringvalNew(es_str_t *const estr)
 
 /* creates array AND adds first element to it */
 struct cnfarray*
-cnfarrayNew(es_str_t *val)
-{
+cnfarrayNew(es_str_t *val) {
 	struct cnfarray *ar;
 	if((ar = malloc(sizeof(struct cnfarray))) != NULL) {
 		ar->nodetype = 'A';
@@ -3001,8 +2960,7 @@ done:	return ar;
 }
 
 struct cnfarray*
-cnfarrayAdd(struct cnfarray *__restrict__ const ar, es_str_t *__restrict__ val)
-{
+cnfarrayAdd(struct cnfarray *__restrict__ const ar, es_str_t *__restrict__ val) {
 	es_str_t **newptr;
 	if((newptr = realloc(ar->arr, (ar->nmemb+1)*sizeof(es_str_t*))) == NULL) {
 		DBGPRINTF("cnfarrayAdd: realloc failed, item ignored, ar->arr=%p\n", ar->arr);
@@ -3017,8 +2975,7 @@ done:	return ar;
 
 /* duplicate an array (deep copy) */
 struct cnfarray*
-cnfarrayDup(struct cnfarray *old)
-{
+cnfarrayDup(struct cnfarray *old) {
 	int i;
 	struct cnfarray *ar;
 	ar = cnfarrayNew(es_strdup(old->arr[0]));
@@ -3029,8 +2986,7 @@ cnfarrayDup(struct cnfarray *old)
 }
 
 struct cnfvar*
-cnfvarNew(char *name)
-{
+cnfvarNew(char *name) {
 	struct cnfvar *var;
 	if((var = malloc(sizeof(struct cnfvar))) != NULL) {
 		var->nodetype = 'V';
@@ -3041,8 +2997,7 @@ cnfvarNew(char *name)
 }
 
 struct cnfstmt *
-cnfstmtNew(unsigned s_type)
-{
+cnfstmtNew(unsigned s_type) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = malloc(sizeof(struct cnfstmt))) != NULL) {
 		cnfstmt->nodetype = s_type;
@@ -3058,8 +3013,7 @@ static void cnfIteratorDestruct(struct cnfitr *itr);
 
 /* delete a single stmt */
 static void
-cnfstmtDestruct(struct cnfstmt *stmt)
-{
+cnfstmtDestruct(struct cnfstmt *stmt) {
 	switch(stmt->nodetype) {
 	case S_NOP:
 	case S_STOP:
@@ -3096,10 +3050,12 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		break;
 	case S_PROPFILT:
 		msgPropDescrDestruct(&stmt->d.s_propfilt.prop);
-		if(stmt->d.s_propfilt.regex_cache != NULL)
+		if (stmt->d.s_propfilt.regex_cache != NULL) {
 			rsCStrRegexDestruct(&stmt->d.s_propfilt.regex_cache);
-		if(stmt->d.s_propfilt.pCSCompValue != NULL)
+		}
+		if (stmt->d.s_propfilt.pCSCompValue != NULL) {
 			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
+		}
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
     case S_RELOAD_LOOKUP_TABLE:
@@ -3120,8 +3076,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 
 /* delete a stmt and all others following it */
 void
-cnfstmtDestructLst(struct cnfstmt *root)
-{
+cnfstmtDestructLst(struct cnfstmt *root) {
 	struct cnfstmt *stmt, *todel;
 	for(stmt = root ; stmt != NULL ; ) {
 		todel = stmt;
@@ -3131,8 +3086,7 @@ cnfstmtDestructLst(struct cnfstmt *root)
 }
 
 struct cnfitr *
-cnfNewIterator(char *var, struct cnfexpr *collection)
-{
+cnfNewIterator(char *var, struct cnfexpr *collection) {
 	struct cnfitr* itr;
 	if ((itr = malloc(sizeof(struct cnfitr))) != NULL) {
 		itr->var = var;
@@ -3142,17 +3096,16 @@ cnfNewIterator(char *var, struct cnfexpr *collection)
 }
 
 static void
-cnfIteratorDestruct(struct cnfitr *itr)
-{
+cnfIteratorDestruct(struct cnfitr *itr) {
 	free(itr->var);
-	if(itr->collection != NULL)
+	if (itr->collection != NULL) {
 		cnfexprDestruct(itr->collection);
+	}
 	free(itr);
 }
 
 struct cnfstmt *
-cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset)
-{
+cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_SET)) != NULL) {
 		cnfstmt->d.s_set.varname = (uchar*) var;
@@ -3163,8 +3116,7 @@ cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset)
 }
 
 struct cnfstmt *
-cnfstmtNewCall(es_str_t *name)
-{
+cnfstmtNewCall(es_str_t *name) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_CALL)) != NULL) {
 		cnfstmt->d.s_call.name = name;
@@ -3173,8 +3125,7 @@ cnfstmtNewCall(es_str_t *name)
 }
 
 struct cnfstmt *
-cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
-{
+cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams) {
 	int nParams;
 	struct cnffparamlst *param, *nxt;
 	struct cnfstmt* cnfstmt;
@@ -3235,8 +3186,7 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 }
 
 struct cnfstmt *
-cnfstmtNewUnset(char *var)
-{
+cnfstmtNewUnset(char *var) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_UNSET)) != NULL) {
 		cnfstmt->d.s_unset.varname = (uchar*) var;
@@ -3245,14 +3195,12 @@ cnfstmtNewUnset(char *var)
 }
 
 struct cnfstmt *
-cnfstmtNewContinue(void)
-{
+cnfstmtNewContinue(void) {
 	return cnfstmtNew(S_NOP);
 }
 
 struct cnfstmt *
-cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
-{
+cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_PRIFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)prifilt;
@@ -3264,8 +3212,7 @@ cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then)
 }
 
 struct cnfstmt *
-cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
-{
+cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then) {
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_PROPFILT)) != NULL) {
 		cnfstmt->printable = (uchar*)propfilt;
@@ -3281,13 +3228,13 @@ cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then)
 }
 
 struct cnfstmt *
-cnfstmtNewAct(struct nvlst *lst)
-{
+cnfstmtNewAct(struct nvlst *lst) {
 	struct cnfstmt* cnfstmt;
 	char namebuf[256];
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) {
 		goto done;
+	}
 	localRet = actionNewInst(lst, &cnfstmt->d.act);
 	if(localRet == RS_RET_OK_WARN) {
 		parser_errmsg("warnings occured in file '%s' around line %d",
@@ -3308,12 +3255,12 @@ done:	return cnfstmt;
 }
 
 struct cnfstmt *
-cnfstmtNewLegaAct(char *actline)
-{
+cnfstmtNewLegaAct(char *actline) {
 	struct cnfstmt* cnfstmt;
 	rsRetVal localRet;
-	if((cnfstmt = cnfstmtNew(S_ACT)) == NULL) 
+	if ((cnfstmt = cnfstmtNew(S_ACT)) == NULL) {
 		goto done;
+	}
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
 	if(localRet != RS_RET_OK) {
@@ -3334,8 +3281,7 @@ done:	return cnfstmt;
  * (this is an aid for constant folding optimizing) 
  */
 static int
-getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
-{
+getConstNumber(struct cnfexpr *expr, long long *l, long long *r) {
 	int ret = 0;
 	cnfexprOptimize(expr->l);
 	cnfexprOptimize(expr->r);
@@ -3374,8 +3320,7 @@ getConstNumber(struct cnfexpr *expr, long long *l, long long *r)
 
 /* constant folding for string concatenation */
 static void
-constFoldConcat(struct cnfexpr *expr)
-{
+constFoldConcat(struct cnfexpr *expr) {
 	es_str_t *estr;
 	cnfexprOptimize(expr->l);
 	cnfexprOptimize(expr->r);
@@ -3427,12 +3372,12 @@ constFoldConcat(struct cnfexpr *expr)
  * handler as the numerical values also support GT, LT, etc ops.
  */
 static struct cnfexpr*
-cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr)
-{
+cnfexprOptimize_CMP_severity_facility(struct cnfexpr *expr) {
 	struct cnffunc *func;
 
-	if(expr->l->nodetype != 'V')
+	if (expr->l->nodetype != 'V') {
 		FINALIZE;
+	}
 
 	if(!strcmp("syslogseverity", ((struct cnfvar*)expr->l)->name)) {
 		if(expr->r->nodetype == 'N') {
@@ -3472,8 +3417,7 @@ finalize_it:
  *       TO BE CHANGED fgr other comparisons!
  */
 static struct cnfexpr*
-cnfexprOptimize_CMP_var(struct cnfexpr *expr)
-{
+cnfexprOptimize_CMP_var(struct cnfexpr *expr) {
 	struct cnffunc *func;
 
 	if(!strcmp("syslogfacility-text", ((struct cnfvar*)expr->l)->name)) {
@@ -3487,8 +3431,9 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 				/* we can actually optimize! */
 				DBGPRINTF("optimizer: change comparison OP to FUNC prifilt()\n");
 				func = cnffuncNew_prifilt(fac);
-				if(expr->nodetype == CMP_NE)
+				if (expr->nodetype == CMP_NE) {
 					prifiltInvert(func->funcdata);
+				}
 				cnfexprDestruct(expr);
 				expr = (struct cnfexpr*) func;
 			}
@@ -3518,8 +3463,7 @@ cnfexprOptimize_CMP_var(struct cnfexpr *expr)
 }
 
 static struct cnfexpr*
-cnfexprOptimize_NOT(struct cnfexpr *expr)
-{
+cnfexprOptimize_NOT(struct cnfexpr *expr) {
 	struct cnffunc *func;
 
 	if(expr->r->nodetype == 'F') {
@@ -3536,8 +3480,7 @@ cnfexprOptimize_NOT(struct cnfexpr *expr)
 }
 
 static struct cnfexpr*
-cnfexprOptimize_AND_OR(struct cnfexpr *expr)
-{
+cnfexprOptimize_AND_OR(struct cnfexpr *expr) {
 	struct cnffunc *funcl, *funcr;
 
 	if(expr->l->nodetype == 'F') {
@@ -3561,8 +3504,7 @@ cnfexprOptimize_AND_OR(struct cnfexpr *expr)
  * this case so that we can apply binary search later on.
  */
 static inline void
-cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
-{
+cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr) {
 	DBGPRINTF("optimizer: sorting array of %d members for CMP_EQ/NEQ comparison\n", arr->nmemb);
 	qsort(arr->arr, arr->nmemb, sizeof(es_str_t*), qs_arrcmp);
 }
@@ -3570,8 +3512,7 @@ cnfexprOptimize_CMPEQ_arr(struct cnfarray *arr)
 
 /* (recursively) optimize an expression */
 struct cnfexpr*
-cnfexprOptimize(struct cnfexpr *expr)
-{
+cnfexprOptimize(struct cnfexpr *expr) {
 	long long ln, rn;
 	struct cnfexpr *exprswap;
 
@@ -3581,25 +3522,25 @@ cnfexprOptimize(struct cnfexpr *expr)
 		constFoldConcat(expr);
 		break;
 	case '+':
-		if(getConstNumber(expr, &ln, &rn))  {
+		if(getConstNumber(expr, &ln, &rn)) {
 			expr->nodetype = 'N';
 			((struct cnfnumval*)expr)->val = ln + rn;
 		}
 		break;
 	case '-':
-		if(getConstNumber(expr, &ln, &rn))  {
+		if(getConstNumber(expr, &ln, &rn)) {
 			expr->nodetype = 'N';
 			((struct cnfnumval*)expr)->val = ln - rn;
 		}
 		break;
 	case '*':
-		if(getConstNumber(expr, &ln, &rn))  {
+		if(getConstNumber(expr, &ln, &rn)) {
 			expr->nodetype = 'N';
 			((struct cnfnumval*)expr)->val = ln * rn;
 		}
 		break;
 	case '/':
-		if(getConstNumber(expr, &ln, &rn))  {
+		if(getConstNumber(expr, &ln, &rn)) {
 			expr->nodetype = 'N';
 			if(rn == 0) {
 				/* division by zero */
@@ -3610,7 +3551,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 		}
 		break;
 	case '%':
-		if(getConstNumber(expr, &ln, &rn))  {
+		if(getConstNumber(expr, &ln, &rn)) {
 			expr->nodetype = 'N';
 			if(rn == 0) {
 				/* division by zero */
@@ -3680,8 +3621,7 @@ cnfexprOptimize(struct cnfexpr *expr)
  * first non-NOP entry.
  */
 static struct cnfstmt *
-removeNOPs(struct cnfstmt *root)
-{
+removeNOPs(struct cnfstmt *root) {
 	struct cnfstmt *stmt, *toDel, *prevstmt = NULL;
 	struct cnfstmt *newRoot = NULL;
 	
@@ -3696,10 +3636,12 @@ removeNOPs(struct cnfstmt *root)
 			stmt = stmt->next;
 			cnfstmtDestruct(toDel);
 		} else {
-			if(newRoot == NULL)
+			if (newRoot == NULL) {
 				newRoot = stmt;
-			if(prevstmt != NULL)
+			}
+			if (prevstmt != NULL) {
 				prevstmt->next = stmt;
+			}
 			prevstmt = stmt;
 			stmt = stmt->next;
 		}
@@ -3708,8 +3650,7 @@ done:	return newRoot;
 }
 
 static void
-cnfstmtOptimizeForeach(struct cnfstmt *stmt)
-{
+cnfstmtOptimizeForeach(struct cnfstmt *stmt) {
 	stmt->d.s_foreach.iter->collection = cnfexprOptimize(stmt->d.s_foreach.iter->collection);
 	stmt->d.s_foreach.body = removeNOPs(stmt->d.s_foreach.body);
 	cnfstmtOptimize(stmt->d.s_foreach.body);
@@ -3717,8 +3658,7 @@ cnfstmtOptimizeForeach(struct cnfstmt *stmt)
 
 
 static void
-cnfstmtOptimizeIf(struct cnfstmt *stmt)
-{
+cnfstmtOptimizeIf(struct cnfstmt *stmt) {
 	struct cnfstmt *t_then, *t_else;
 	struct cnfexpr *expr;
 	struct cnffunc *func;
@@ -3742,8 +3682,9 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 				sizeof(prifilt->pmask));
 			stmt->d.s_prifilt.t_then = t_then;
 			stmt->d.s_prifilt.t_else = t_else;
-			if(func->nParams == 0)
+			if (func->nParams == 0) {
 				stmt->printable = (uchar*)strdup("[Optimizer Result]");
+			}
 			else
 				stmt->printable = (uchar*)
 					es_str2cstr(((struct cnfstringval*)func->expr[0])->estr, NULL);
@@ -3754,8 +3695,7 @@ cnfstmtOptimizeIf(struct cnfstmt *stmt)
 }
 
 static void
-cnfstmtOptimizeAct(struct cnfstmt *stmt)
-{
+cnfstmtOptimizeAct(struct cnfstmt *stmt) {
 	action_t *pAct;
 
 	pAct = stmt->d.act;
@@ -3767,8 +3707,7 @@ cnfstmtOptimizeAct(struct cnfstmt *stmt)
 }
 
 static void
-cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
-{
+cnfstmtOptimizePRIFilt(struct cnfstmt *stmt) {
 	int i;
 	int isAlways = 1;
 	struct cnfstmt *subroot, *last;
@@ -3781,8 +3720,9 @@ cnfstmtOptimizePRIFilt(struct cnfstmt *stmt)
 			isAlways = 0;
 			break;
 		}
-	if(!isAlways)
+	if (!isAlways) {
 		goto done;
+	}
 
 	DBGPRINTF("optimizer: removing always-true PRIFILT %p\n", stmt);
 	if(stmt->d.s_prifilt.t_else != NULL) {
@@ -3819,8 +3759,7 @@ cnfstmtOptimizeReloadLookupTable(struct cnfstmt *stmt) {
  * all rulesets are only known later in the process (now!).
  */
 static void
-cnfstmtOptimizeCall(struct cnfstmt *stmt)
-{
+cnfstmtOptimizeCall(struct cnfstmt *stmt) {
 	ruleset_t *pRuleset;
 	rsRetVal localRet;
 	uchar *rsName;
@@ -3848,8 +3787,7 @@ done:
 }
 /* (recursively) optimize a statement */
 void
-cnfstmtOptimize(struct cnfstmt *root)
-{
+cnfstmtOptimize(struct cnfstmt *root) {
 	struct cnfstmt *stmt;
 	if(root == NULL) goto done;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
@@ -3877,8 +3815,9 @@ cnfstmtOptimize(struct cnfstmt *root)
 			cnfstmtOptimizeCall(stmt);
 			break;
 		case S_STOP:
-			if(stmt->next != NULL)
+			if (stmt->next != NULL) {
 				parser_errmsg("STOP is followed by unreachable statements!\n");
+			}
 			break;
 		case S_UNSET: /* nothing to do */
 			break;
@@ -3899,8 +3838,7 @@ done:	return;
 
 
 struct cnffparamlst *
-cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next)
-{
+cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next) {
 	struct cnffparamlst* lst;
 	if((lst = malloc(sizeof(struct cnffparamlst))) != NULL) {
 		lst->nodetype = 'P';
@@ -3941,8 +3879,7 @@ static const char* const numInWords[] = {"zero", "one", "two", "three", "four", 
  * relevant error messages if errors are detected.
  */
 static enum cnffuncid
-funcName2ID(es_str_t *fname, unsigned short nParams)
-{
+funcName2ID(es_str_t *fname, unsigned short nParams) {
 	if(FUNC_NAME("strlen")) {
 		GENERATE_FUNC("strlen", 1, CNFFUNC_STRLEN);
 	} else if(FUNC_NAME("getenv")) {
@@ -3988,8 +3925,7 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 
 
 static rsRetVal
-initFunc_re_match(struct cnffunc *func)
-{
+initFunc_re_match(struct cnffunc *func) {
 	rsRetVal localRet;
 	char *regex = NULL;
 	regex_t *re;
@@ -4029,8 +3965,7 @@ finalize_it:
 
 
 static rsRetVal
-initFunc_exec_template(struct cnffunc *func)
-{
+initFunc_exec_template(struct cnffunc *func) {
 	char *tplName = NULL;
 	DEFiRet;
 
@@ -4062,8 +3997,7 @@ finalize_it:
 
 
 static rsRetVal
-initFunc_prifilt(struct cnffunc *func)
-{
+initFunc_prifilt(struct cnffunc *func) {
 	struct funcData_prifilt *pData;
 	uchar *cstr;
 	DEFiRet;
@@ -4091,8 +4025,7 @@ finalize_it:
 
 
 static rsRetVal
-resolveLookupTable(struct cnffunc *func)
-{
+resolveLookupTable(struct cnffunc *func) {
 	uchar *cstr = NULL;
 	char *fn_name = NULL;
 	DEFiRet;
@@ -4126,8 +4059,7 @@ finalize_it:
 }
 
 static rsRetVal
-initFunc_dyn_stats(struct cnffunc *func)
-{
+initFunc_dyn_stats(struct cnffunc *func) {
 	uchar *cstr = NULL;
 	DEFiRet;
 
@@ -4157,8 +4089,7 @@ finalize_it:
 }
 
 struct cnffunc *
-cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
-{
+cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst) {
 	struct cnffunc* func;
 	struct cnffparamlst *param, *toDel;
 	unsigned short i;
@@ -4214,13 +4145,13 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
  * phase.
  */
 struct cnffunc *
-cnffuncNew_prifilt(int fac)
-{
+cnffuncNew_prifilt(int fac) {
 	struct cnffunc* func;
 
 	fac >>= 3;
-	if (fac >= LOG_NFACILITIES + 1 || fac < 0)
+	if (fac >= LOG_NFACILITIES + 1 || fac < 0) {
 		return NULL;
+	}
 
 	if((func = malloc(sizeof(struct cnffunc))) != NULL) {
 		if ((func->funcdata = calloc(1, sizeof(struct funcData_prifilt))) == NULL) {
@@ -4241,8 +4172,7 @@ cnffuncNew_prifilt(int fac)
  * and 1 if things are so wrong that config parsing shall be aborted.
  */
 int
-cnfDoInclude(char *name)
-{
+cnfDoInclude(char *name) {
 	char *cfgFile;
 	char *finalName;
 	int i;
@@ -4278,8 +4208,9 @@ cnfDoInclude(char *name)
 	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+		if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) {
 			strcpy(cwdBuf, "??getcwd() failed??");
+		}
 		parser_errmsg("error accessing config file or directory '%s' [cwd:%s]: %s",
 				finalName, cwdBuf, errStr);
 		return 1;
@@ -4295,8 +4226,9 @@ cnfDoInclude(char *name)
 		if(stat(cfgFile, &fileInfo) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			if(getcwd(cwdBuf, sizeof(cwdBuf)) == NULL)
+			if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) {
 				strcpy(cwdBuf, "??getcwd() failed??");
+			}
 			parser_errmsg("error accessing config file or directory '%s' "
 					"[cwd: %s]: %s", cfgFile, cwdBuf, errStr);
 			return 1;
@@ -4318,8 +4250,7 @@ cnfDoInclude(char *name)
 }
 
 void
-varDelete(const struct var *v)
-{
+varDelete(const struct var *v) {
 	switch(v->datatype) {
 	case 'S':
 	case 'J':
@@ -4334,11 +4265,11 @@ varDelete(const struct var *v)
 }
 
 void
-cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk)
-{
+cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk) {
 	int i;
-	if(paramvals == NULL)
+	if (paramvals == NULL) {
 		return;
+	}
 	for(i = 0 ; i < blk->nParams ; ++i) {
 		if(paramvals[i].bUsed) {
 			varDelete(&paramvals[i].val);
@@ -4354,12 +4285,12 @@ cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparam
  * stage the (considerable!) extra overhead is OK. -- rgerhards, 2011-07-19
  */
 int
-cnfparamGetIdx(struct cnfparamblk *params, const char *name)
-{
+cnfparamGetIdx(struct cnfparamblk *params, const char *name) {
 	int i;
 	for(i = 0 ; i < params->nParams ; ++i)
-		if(!strcmp(params->descr[i].name, name))
+		if (!strcmp(params->descr[i].name, name)) {
 			break;
+		}
 	if(i == params->nParams)
 		i = -1; /* not found */
 	return i;
@@ -4367,8 +4298,7 @@ cnfparamGetIdx(struct cnfparamblk *params, const char *name)
 
 
 void
-cstrPrint(const char *text, es_str_t *estr)
-{
+cstrPrint(const char *text, es_str_t *estr) {
 	char *str;
 	str = es_str2cstr(estr, NULL);
 	dbgprintf("%s%s", text, str);
@@ -4376,8 +4306,7 @@ cstrPrint(const char *text, es_str_t *estr)
 }
 
 char *
-rmLeadingSpace(char *s)
-{
+rmLeadingSpace(char *s) {
 	char *p;
 	for(p = s ; *p && isspace(*p) ; ++p)
 		;
@@ -4386,8 +4315,7 @@ rmLeadingSpace(char *s)
 
 /* init must be called once before any parsing of the script files start */
 rsRetVal
-initRainerscript(void)
-{
+initRainerscript(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 finalize_it:
@@ -4396,8 +4324,7 @@ finalize_it:
 
 /* we need a function to check for octal digits */
 static inline int
-isodigit(uchar c)
-{
+isodigit(uchar c) {
 	return(c >= '0' && c <= '7');
 }
 
@@ -4407,15 +4334,17 @@ isodigit(uchar c)
  * is an (undetected) error.
  */
 static int
-hexDigitVal(char c)
-{
+hexDigitVal(char c) {
 	int r;
-	if(c < 'A')
+	if (c < 'A') {
 		r = c - '0';
-	else if(c < 'a')
+	}
+	else if (c < 'a') {
 		r = c - 'A' + 10;
-	else
+	}
+	else {
 		r = c - 'a' + 10;
+	}
 	return r;
 }
 
@@ -4423,8 +4352,7 @@ hexDigitVal(char c)
  * a helper to unescapeStr(), to help make the function easier to read.
  */
 static void
-doUnescape(unsigned char *c, int len, int *iSrc, int iDst)
-{
+doUnescape(unsigned char *c, int len, int *iSrc, int iDst) {
 	if(c[*iSrc] == '\\') {
 		if(++(*iSrc) == len) {
 			/* error, incomplete escape, treat as single char */
@@ -4509,8 +4437,7 @@ doUnescape(unsigned char *c, int len, int *iSrc, int iDst)
 }
 
 void
-unescapeStr(uchar *s, int len)
-{
+unescapeStr(uchar *s, int len) {
 	int iSrc, iDst;
 	assert(s != NULL);
 
@@ -4533,8 +4460,7 @@ unescapeStr(uchar *s, int len)
 }
 
 const char *
-tokenval2str(const int tok)
-{
+tokenval2str(const int tok) {
 	if(tok < 256) return "";
 	switch(tok) {
 	case NAME: return "NAME";

@@ -28,8 +28,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
-{
+int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[]) {
 	char hostname[4096]; /* this should always be sufficient ;) */
 	int err;
 

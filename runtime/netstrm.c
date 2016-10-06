@@ -65,15 +65,15 @@ ENDobjConstruct(netstrm)
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrm)
 //printf("destruct driver data %p\n", pThis->pDrvrData);
-	if(pThis->pDrvrData != NULL)
+	if (pThis->pDrvrData != NULL) {
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
+	}
 ENDobjDestruct(netstrm)
 
 
 /* ConstructionFinalizer */
 static rsRetVal
-netstrmConstructFinalize(netstrm_t *pThis)
-{
+netstrmConstructFinalize(netstrm_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
@@ -85,8 +85,7 @@ finalize_it:
  * to discard any unsent data. -- rgerhards, 2008-03-24
  */
 static rsRetVal
-AbortDestruct(netstrm_t **ppThis)
-{
+AbortDestruct(netstrm_t **ppThis) {
 	DEFiRet;
 	assert(ppThis != NULL);
 	ISOBJ_TYPE_assert((*ppThis), netstrm);
@@ -107,8 +106,7 @@ AbortDestruct(netstrm_t **ppThis)
  * rgerhards, 2008-04-21
  */
 static rsRetVal
-AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
-{
+AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew) {
 	nsd_t *pNewNsd = NULL;
 	DEFiRet;
 
@@ -125,8 +123,9 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* the close may be redundant, but that doesn't hurt... */
-		if(pNewNsd != NULL)
+		if (pNewNsd != NULL) {
 			pThis->Drvr.Destruct(&pNewNsd);
+		}
 	}
 
 	RETiRet;
@@ -141,8 +140,7 @@ finalize_it:
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
-{
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
@@ -166,8 +164,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
-{
+Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 //printf("Rcv %p\n", pThis);
@@ -184,8 +181,7 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetDrvrMode(netstrm_t *pThis, int iMode)
-{
+SetDrvrMode(netstrm_t *pThis, int iMode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
@@ -196,8 +192,7 @@ SetDrvrMode(netstrm_t *pThis, int iMode)
 /* set the driver authentication mode -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
-{
+SetDrvrAuthMode(netstrm_t *pThis, uchar *mode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetAuthMode(pThis->pDrvrData, mode);
@@ -207,8 +202,7 @@ SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
-{
+SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetPermPeers(pThis->pDrvrData, pPermPeers);
@@ -227,8 +221,7 @@ SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
-{
+Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.Send(pThis->pDrvrData, pBuf, pLenBuf);
@@ -239,8 +232,7 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
  * rgerhards, 2009-06-02
  */
 static rsRetVal
-EnableKeepAlive(netstrm_t *pThis)
-{
+EnableKeepAlive(netstrm_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
@@ -250,8 +242,7 @@ EnableKeepAlive(netstrm_t *pThis)
 /* Keep-Alive options
  */
 static rsRetVal
-SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes)
-{
+SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetKeepAliveProbes(pThis->pDrvrData, keepAliveProbes);
@@ -261,8 +252,7 @@ SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes)
 /* Keep-Alive options
  */
 static rsRetVal
-SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime)
-{
+SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetKeepAliveTime(pThis->pDrvrData, keepAliveTime);
@@ -272,8 +262,7 @@ SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime)
 /* Keep-Alive options
  */
 static rsRetVal
-SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
-{
+SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
@@ -282,8 +271,7 @@ SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
 
 /* check connection - slim wrapper for NSD driver function */
 static rsRetVal
-CheckConnection(netstrm_t *pThis)
-{
+CheckConnection(netstrm_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	return pThis->Drvr.CheckConnection(pThis->pDrvrData);
 }
@@ -291,8 +279,7 @@ CheckConnection(netstrm_t *pThis)
 
 /* get remote hname - slim wrapper for NSD driver function */
 static rsRetVal
-GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
-{
+GetRemoteHName(netstrm_t *pThis, uchar **ppsz) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
@@ -302,8 +289,7 @@ GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
 
 /* get remote IP - slim wrapper for NSD driver function */
 static rsRetVal
-GetRemoteIP(netstrm_t *pThis, prop_t **ip)
-{
+GetRemoteIP(netstrm_t *pThis, prop_t **ip) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ip);
@@ -313,8 +299,7 @@ GetRemoteIP(netstrm_t *pThis, prop_t **ip)
 
 /* get remote addr - slim wrapper for NSD driver function */
 static rsRetVal
-GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
-{
+GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.GetRemAddr(pThis->pDrvrData, ppAddr);
@@ -326,8 +311,7 @@ GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
-{
+Connect(netstrm_t *pThis, int family, uchar *port, uchar *host) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(port != NULL);
@@ -343,8 +327,7 @@ Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
  * rgerhards, 2008-05-05
  */
 static rsRetVal
-GetSock(netstrm_t *pThis, int *pSock)
-{
+GetSock(netstrm_t *pThis, int *pSock) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(pSock != NULL);

@@ -63,8 +63,9 @@ CODESTARTobjDestruct(prop)
 	currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
 	if(currRefCount == 0) {
 		/* (only) in this case we need to actually destruct the object */
-		if(pThis->len >= CONF_PROP_BUFSIZE)
+		if (pThis->len >= CONF_PROP_BUFSIZE) {
 			free(pThis->szVal.psz);
+		}
 		DESTROY_ATOMIC_HELPER_MUT(pThis->mutRefCount);
 	} else {
 		pThis = NULL; /* tell framework NOT to destructing the object! */
@@ -74,12 +75,12 @@ ENDobjDestruct(prop)
 /* set string, we make our own private copy! This MUST only be called BEFORE
  * ConstructFinalize()!
  */
-static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
-{
+static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len >= CONF_PROP_BUFSIZE)
+	if (pThis->len >= CONF_PROP_BUFSIZE) {
 		free(pThis->szVal.psz);
+	}
 	pThis->len = len;
 	if(len < CONF_PROP_BUFSIZE) {
 		memcpy(pThis->szVal.sz, psz, len + 1);
@@ -94,15 +95,13 @@ finalize_it:
 
 
 /* get string length */
-static int GetStringLen(prop_t *pThis)
-{
+static int GetStringLen(prop_t *pThis) {
 	return pThis->len;
 }
 
 
 /* get string */
-static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
-{
+static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen) {
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);
 	if(pThis->len < CONF_PROP_BUFSIZE) {
@@ -120,8 +119,7 @@ static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-propConstructFinalize(prop_t __attribute__((unused)) *pThis)
-{
+propConstructFinalize(prop_t __attribute__((unused)) *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
 	RETiRet;
@@ -131,8 +129,7 @@ propConstructFinalize(prop_t __attribute__((unused)) *pThis)
 /* add a new reference. It is VERY IMPORTANT to call this function whenever
  * the property is handed over to some entitiy that later call Destruct() on it.
  */
-static rsRetVal AddRef(prop_t *pThis)
-{
+static rsRetVal AddRef(prop_t *pThis) {
 	ATOMIC_INC(&pThis->iRefCount, &pThis->mutRefCount);
 	return RS_RET_OK;
 }
@@ -143,8 +140,7 @@ static rsRetVal AddRef(prop_t *pThis)
  * convenience, it is also (very, very) slightly faster.
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len)
-{
+static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len) {
 	prop_t *pThis = NULL;
 	DEFiRet;
 
@@ -154,8 +150,9 @@ static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int le
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
+		if (pThis != NULL) {
 			propDestruct(&pThis);
+		}
 	}
 
 	RETiRet;
@@ -171,8 +168,7 @@ finalize_it:
  * existing property).
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len)
-{
+static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len) {
 	uchar *pszPrev;
 	int lenPrev;
 	DEFiRet;

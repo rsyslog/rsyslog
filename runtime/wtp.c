@@ -70,14 +70,14 @@ DEFobjCurrIf(glbl)
  * The caller must NOT free or otherwise modify the returned string!
  */
 static inline uchar *
-wtpGetDbgHdr(wtp_t *pThis)
-{
+wtpGetDbgHdr(wtp_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	if(pThis->pszDbgHdr == NULL)
 		return (uchar*) "wtp"; /* should not normally happen */
-	else
+	else {
 		return pThis->pszDbgHdr;
+	}
 }
 
 
@@ -111,8 +111,7 @@ ENDobjConstruct(wtp)
  * rgerhards, 2008-01-17
  */
 rsRetVal
-wtpConstructFinalize(wtp_t *pThis)
-{
+wtpConstructFinalize(wtp_t *pThis) {
 	DEFiRet;
 	int i;
 	uchar pszBuf[64];
@@ -174,8 +173,7 @@ ENDobjDestruct(wtp)
  * they are awoken in any case). -- rgerhards, 2009-07-20
  */
 rsRetVal
-wtpSetState(wtp_t *pThis, wtpState_t iNewState)
-{
+wtpSetState(wtp_t *pThis, wtpState_t iNewState) {
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->wtpState = iNewState; // TODO: do we need a mutex here? 2010-04-26
 	return RS_RET_OK;
@@ -188,8 +186,7 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
  * rgerhards, 2008-01-21
  */
 rsRetVal
-wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex)
-{
+wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex) {
 	DEFiRet;
 	wtpState_t wtpState;
 
@@ -223,8 +220,7 @@ finalize_it:
  * rgerhards, 2008-01-14
  */
 rsRetVal
-wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout)
-{
+wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout) {
 	DEFiRet;
 	int bTimedOut;
 	int i;
@@ -263,8 +259,9 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	}
 	pthread_cleanup_pop(1);
 
-	if(bTimedOut)
+	if (bTimedOut) {
 		iRet = RS_RET_TIMED_OUT;
+	}
 	
 	RETiRet;
 }
@@ -275,8 +272,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
  * rgerhards, 2008-01-14
  */
 rsRetVal
-wtpCancelAll(wtp_t *pThis)
-{
+wtpCancelAll(wtp_t *pThis) {
 	DEFiRet;
 	int i;
 
@@ -297,8 +293,7 @@ wtpCancelAll(wtp_t *pThis)
  * rgerhards, 2009-10-26
  */
 static void
-wtpWrkrExecCleanup(wti_t *pWti)
-{
+wtpWrkrExecCleanup(wti_t *pWti) {
 	wtp_t *pThis;
 
 	BEGINfunc
@@ -322,8 +317,7 @@ wtpWrkrExecCleanup(wti_t *pWti)
  * rgerhards, 2009-07-20
  */
 static void
-wtpWrkrExecCancelCleanup(void *arg)
-{
+wtpWrkrExecCancelCleanup(void *arg) {
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 
@@ -403,8 +397,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 /* start a new worker */
 static rsRetVal
-wtpStartWrkr(wtp_t *pThis)
-{
+wtpStartWrkr(wtp_t *pThis) {
 	wti_t *pWti;
 	int i;
 	int iState;
@@ -421,8 +414,9 @@ wtpStartWrkr(wtp_t *pThis)
 		}
 	}
 
-	if(i == pThis->iNumWorkerThreads)
+	if (i == pThis->iNumWorkerThreads) {
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
+	}
 
 	if(i == 0 || pThis->toWrkShutdown == -1) {
 		wtiSetAlwaysRunning(pThis->pWrkr[i]);
@@ -452,16 +446,16 @@ finalize_it:
  * rgerhards, 2008-01-21
  */
 rsRetVal
-wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
-{
+wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr) {
 	DEFiRet;
 	int nMissing; /* number workers missing to run */
 	int i, nRunning;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	if(nMaxWrkr == 0)
+	if (nMaxWrkr == 0) {
 		FINALIZE;
+	}
 
 	if(nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
 		nMaxWrkr = pThis->iNumWorkerThreads;
@@ -510,23 +504,24 @@ DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
  * rgerhards, 2008-01-09
  */
 rsRetVal
-wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
-{
+wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 	assert(pszMsg != NULL);
 	
-	if(lenMsg < 1)
+	if (lenMsg < 1) {
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
 
 	if(pThis->pszDbgHdr != NULL) {
 		free(pThis->pszDbgHdr);
 		pThis->pszDbgHdr = NULL;
 	}
 
-	if((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
+	if ((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	memcpy(pThis->pszDbgHdr, pszMsg, lenMsg + 1); /* always think about the \0! */
 

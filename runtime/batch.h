@@ -89,8 +89,9 @@ struct batch_s {
  */
 static inline void __attribute__((unused))
 batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newState) {
-	if(pBatch->eltState[i] != BATCH_STATE_DISC)
+	if (pBatch->eltState[i] != BATCH_STATE_DISC) {
 		pBatch->eltState[i] = newState;
+	}
 }
 
 
@@ -116,8 +117,7 @@ batchFree(batch_t * const pBatch) {
  * provided. -- rgerhards, 2010-06-15
  */
 static inline rsRetVal __attribute__((unused))
-batchInit(batch_t *const pBatch, const int maxElem)
-{
+batchInit(batch_t *const pBatch, const int maxElem) {
 	DEFiRet;
 	pBatch->maxElem = maxElem;
 	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));

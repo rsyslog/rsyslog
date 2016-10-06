@@ -37,16 +37,16 @@
  */
 static inline void std_checkRuleset_genErrMsg(modConfData_t *modConf, instanceConf_t *inst);
 static inline rsRetVal
-std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst) {
 	ruleset_t *pRuleset;
 	rsRetVal localRet;
 	DEFiRet;
 
 	inst->pBindRuleset = NULL;	/* assume default ruleset */
 
-	if(inst->pszBindRuleset == NULL)
+	if (inst->pszBindRuleset == NULL) {
 		FINALIZE;
+	}
 
 	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
 	if(localRet == RS_RET_NOT_FOUND) {

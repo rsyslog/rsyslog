@@ -135,8 +135,7 @@ void rsyslogdDoDie(int sig);
  * Probably it is best just to rewrite this code.
  */
 char **syslogd_crunch_list(char *list);
-char **syslogd_crunch_list(char *list)
-{
+char **syslogd_crunch_list(char *list) {
 	int count, i;
 	char *p, *q;
 	char **result = NULL;
@@ -175,7 +174,8 @@ char **syslogd_crunch_list(char *list)
 		}
 		strncpy(result[count], p, q - p);
 		result[count][q - p] = '\0';
-		p = q; p++;
+		p = q;
+		p++;
 		count++;
 	}
 	if ((result[count] = \
@@ -192,8 +192,7 @@ char **syslogd_crunch_list(char *list)
 
 #ifndef HAVE_SETSID
 /* stems back to sysklogd in whole */
-void untty(void)
-{
+void untty(void) {
 	int i;
 	pid_t pid;
 

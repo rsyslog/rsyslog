@@ -70,8 +70,7 @@ static int	fklog = -1;	/* kernel log fd */
  * rgerhards, 2011-06-24
  */
 static void
-submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
-{
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) {
 	long secs;
 	long usecs;
 	long secOffs;
@@ -82,11 +81,13 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	struct timeval tv;
 	struct timeval *tp = NULL;
 
-	if(!pModConf->bParseKernelStamp)
+	if (!pModConf->bParseKernelStamp) {
 		goto done;
+	}
 
-	if(buf[3] != '[')
+	if (buf[3] != '[') {
 		goto done;
+	}
 	DBGPRINTF("imklog: kernel timestamp detected, extracting it\n");
 
 	/* we now try to parse the timestamp. iff it parses, we assume
@@ -148,15 +149,13 @@ done:
 }
 #else	/* now comes the BSD "code" (just a shim) */
 static void
-submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
-{
+submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf) {
 	Syslog(pri, buf, NULL);
 }
 #endif	/* #ifdef LINUX */
 
 
-static uchar *GetPath(modConfData_t *pModConf)
-{
+static uchar *GetPath(modConfData_t *pModConf) {
 	return pModConf->pszPath ? pModConf->pszPath : (uchar*) _PATH_KLOG;
 }
 
@@ -164,8 +163,7 @@ static uchar *GetPath(modConfData_t *pModConf)
  * entry point. -- rgerhards, 2008-04-09
  */
 rsRetVal
-klogWillRunPrePrivDrop(modConfData_t *pModConf)
-{
+klogWillRunPrePrivDrop(modConfData_t *pModConf) {
 	char errmsg[2048];
 	DEFiRet;
 
@@ -196,8 +194,7 @@ finalize_it:
 /* make sure the kernel log is readable after dropping privileges
  */
 rsRetVal
-klogWillRunPostPrivDrop(modConfData_t *pModConf)
-{
+klogWillRunPostPrivDrop(modConfData_t *pModConf) {
 	char errmsg[2048];
 	int r;
 	DEFiRet;
@@ -220,8 +217,7 @@ finalize_it:
 /* Read kernel log while data are available, split into lines.
  */
 static void
-readklog(modConfData_t *pModConf)
-{
+readklog(modConfData_t *pModConf) {
 	char *p, *q;
 	int len, i;
 	int iMaxLine;
@@ -271,29 +267,33 @@ readklog(modConfData_t *pModConf)
 			submitSyslog(pModConf, LOG_INFO, (uchar*)p);
 			len = 0;
 		}
-		if(len > 0)
+		if (len > 0) {
 			memmove(pRcv, p, len + 1);
+		}
 	}
-	if (len > 0)
+	if (len > 0) {
 		submitSyslog(pModConf, LOG_INFO, pRcv);
+	}
 
-	if(pRcv != bufRcv)
+	if (pRcv != bufRcv) {
 		free(pRcv);
+	}
 }
 
 
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(modConfData_t *pModConf)
-{
+rsRetVal klogAfterRun(modConfData_t *pModConf) {
         DEFiRet;
-	if(fklog != -1)
+	if (fklog != -1) {
 		close(fklog);
+	}
 #	ifdef OS_LINUX
 	/* Turn on logging of messages to console, but only if a log level was speficied */
-	if(pModConf->console_log_level != -1)
+	if (pModConf->console_log_level != -1) {
 		klogctl(7, NULL, 0);
+	}
 #	endif
         RETiRet;
 }
@@ -304,8 +304,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t *pModConf)
-{
+rsRetVal klogLogKMsg(modConfData_t *pModConf) {
         DEFiRet;
 	readklog(pModConf);
 	RETiRet;
@@ -316,7 +315,6 @@ rsRetVal klogLogKMsg(modConfData_t *pModConf)
  * rgerhards, 2008-04-14
  */
 int
-klogFacilIntMsg(void)
-{
+klogFacilIntMsg(void) {
 	return LOG_SYSLOG;
 }

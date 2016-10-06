@@ -126,8 +126,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -164,8 +165,7 @@ ENDdbgPrintInstInfo
 #  define endutent(void) endutxent(void)
 #else
 static FILE *BSD_uf = NULL;
-void setutent(void)
-{
+void setutent(void) {
 	assert(BSD_uf == NULL);
 	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
 		errmsg.LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
@@ -173,18 +173,17 @@ void setutent(void)
 	}
 }
 
-STRUCTUTMP* getutent(void)
-{
+STRUCTUTMP* getutent(void) {
 	static STRUCTUTMP st_utmp;
 
-	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
+	if (fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1) {
 		return NULL;
+	}
 
 	return(&st_utmp);
 }
 
-void endutent(void)
-{
+void endutent(void) {
 	fclose(BSD_uf);
 	BSD_uf = NULL;
 }
@@ -204,8 +203,7 @@ void endutent(void)
  * rgerhards, 2008-07-04: changing the function to no longer use fork() but
  * 	continue run on its thread instead.
  */
-static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
-{
+static rsRetVal wallmsg(uchar* pMsg, instanceData *pData) {
   
 	uchar szErr[512];
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -227,11 +225,13 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	while((uptr = getutent())) {
 		memcpy(&ut, uptr, sizeof(ut));
 		/* is this slot used? */
-		if(ut.UTNAME[0] == '\0')
+		if (ut.UTNAME[0] == '\0') {
 			continue;
+		}
 #ifndef OS_BSD
-		if(ut.ut_type != USER_PROCESS)
+		if (ut.ut_type != USER_PROCESS) {
 			continue;
+		}
 #endif
 		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
 			continue;
@@ -243,8 +243,9 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 					i = MAXUNAMES;
 					break;
 				}
-				if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
+				if (strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0) {
 					break;
+				}
 			}
 			if(i == MAXUNAMES) /* user not found? */
 				continue; /* on to next user! */
@@ -295,8 +296,7 @@ ENDdoAction
 
 
 static inline void
-populateUsers(instanceData *pData, es_str_t *usrs)
-{
+populateUsers(instanceData *pData, es_str_t *usrs) {
 	int i;
 	int iDst;
 	es_size_t iUsr;
@@ -345,8 +345,7 @@ populateUsers(instanceData *pData, es_str_t *usrs)
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->bIsWall = 0;
 	pData->tplName = NULL;
 }
@@ -364,8 +363,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "users")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"*", 1)) {
 				pData->bIsWall = 1;
@@ -436,8 +436,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			!= RS_RET_OK)
 			goto finalize_it;
 	}
-	if(iRet == RS_RET_OK && bHadWarning)
+	if (iRet == RS_RET_OK && bHadWarning) {
 		iRet = RS_RET_OK_WARN;
+	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

@@ -34,8 +34,7 @@
 
 /* destructor
  */
-rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
-{
+rsRetVal OMSRdestruct(omodStringRequest_t *pThis) {
 	int i;
 
 	assert(pThis != NULL);
@@ -46,8 +45,9 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 		}
 		free(pThis->ppTplName);
 	}
-	if(pThis->piTplOpts != NULL)
+	if (pThis->piTplOpts != NULL) {
 		free(pThis->piTplOpts);
+	}
 	free(pThis);
 	
 	return RS_RET_OK;
@@ -56,8 +56,7 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 
 /* constructor
  */
-rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
-{
+rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries) {
 	omodStringRequest_t *pThis = NULL;
 	DEFiRet;
 
@@ -92,13 +91,13 @@ finalize_it:
 /* set a template name and option to the object. Index must be given. The pTplName must be
  * pointing to memory that can be freed. If in doubt, the caller must strdup() the value.
  */
-rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts)
-{
+rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts) {
 	assert(pThis != NULL);
 	assert(iEntry < pThis->iNumEntries);
 
-	if(pThis->ppTplName[iEntry] != NULL)
+	if (pThis->ppTplName[iEntry] != NULL) {
 		free(pThis->ppTplName[iEntry]);
+	}
 	pThis->ppTplName[iEntry] = pTplName;
 	pThis->piTplOpts[iEntry] = iTplOpts;
 
@@ -108,8 +107,7 @@ rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, i
 
 /* get number of entries for this object
  */
-int OMSRgetEntryCount(omodStringRequest_t *pThis)
-{
+int OMSRgetEntryCount(omodStringRequest_t *pThis) {
 	assert(pThis != NULL);
 	return pThis->iNumEntries;
 }
@@ -121,8 +119,7 @@ int OMSRgetEntryCount(omodStringRequest_t *pThis)
  * strings. Please note that the string pointer may be NULL, which is the
  * case when it was never set.
  */
-int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int *piTplOpts)
-{
+int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int *piTplOpts) {
 	assert(pThis != NULL);
 	assert(ppTplName != NULL);
 	assert(piTplOpts != NULL);
@@ -143,8 +140,7 @@ int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int 
  * rgerhards, 2009-04-03
  */
 rsRetVal
-OMSRgetSupportedTplOpts(unsigned long *pOpts)
-{
+OMSRgetSupportedTplOpts(unsigned long *pOpts) {
 	DEFiRet;
 	assert(pOpts != NULL);
 	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG

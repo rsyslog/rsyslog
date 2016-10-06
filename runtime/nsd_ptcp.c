@@ -71,8 +71,7 @@ DEFobjCurrIf(prop)
 
 /* close socket if open (may always be called) */
 static void
-sockClose(int *pSock)
-{
+sockClose(int *pSock) {
 	if(*pSock >= 0) {
 		close(*pSock);
 		*pSock = -1;
@@ -90,8 +89,9 @@ ENDobjConstruct(nsd_ptcp)
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_ptcp)
 	sockClose(&pThis->sock);
-	if(pThis->remoteIP != NULL)
+	if (pThis->remoteIP != NULL) {
 		prop.Destruct(&pThis->remoteIP);
+	}
 	free(pThis->pRemHostName);
 ENDobjDestruct(nsd_ptcp)
 
@@ -100,8 +100,7 @@ ENDobjDestruct(nsd_ptcp)
  * is needed by the legacy ACL system. --- gerhards, 2008-12-01
  */
 static rsRetVal
-GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
-{
+GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -119,8 +118,7 @@ GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal
-GetSock(nsd_t *pNsd, int *pSock)
-{
+GetSock(nsd_t *pNsd, int *pSock) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -139,8 +137,7 @@ GetSock(nsd_t *pNsd, int *pSock)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
-{
+SetMode(nsd_t __attribute__((unused)) *pNsd, int mode) {
 	DEFiRet;
 	if(mode != 0) {
 		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
@@ -162,8 +159,7 @@ finalize_it:
  * rgerhards, 2008-05-17
  */
 static rsRetVal
-SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
-{
+SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode) {
 	DEFiRet;
 	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
 		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
@@ -181,8 +177,7 @@ finalize_it:
  * rgerhards, 2008-05-17
  */
 static rsRetVal
-SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__((unused)) *pPermPeers)
-{
+SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__((unused)) *pPermPeers) {
 	DEFiRet;
 
 	if(pPermPeers != NULL) {
@@ -203,8 +198,7 @@ finalize_it:
  * This function sets the socket -- rgerhards, 2008-04-25
  */
 static rsRetVal
-SetSock(nsd_t *pNsd, int sock)
-{
+SetSock(nsd_t *pNsd, int sock) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -219,8 +213,7 @@ SetSock(nsd_t *pNsd, int sock)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
-{
+SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -234,8 +227,7 @@ SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
-{
+SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -249,8 +241,7 @@ SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
-{
+SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
@@ -265,8 +256,7 @@ SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
 static rsRetVal
-Abort(nsd_t *pNsd)
-{
+Abort(nsd_t *pNsd) {
 	struct linger ling;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 
@@ -295,8 +285,7 @@ Abort(nsd_t *pNsd)
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
-{
+FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr) {
 	prop_t *fqdn;
 	
 	DEFiRet;
@@ -309,8 +298,9 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	if((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn)+1)) == NULL)
+	if ((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn)+1)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn)+1);
 	prop.Destruct(&fqdn);
 
@@ -323,8 +313,7 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
-{
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew) {
 	int sockflags;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	struct sockaddr_storage addr;
@@ -376,8 +365,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
+		if (pNew != NULL) {
 			nsd_ptcpDestruct(&pNew);
+		}
 		/* the close may be redundant, but that doesn't hurt... */
 		sockClose(&iNewSock);
 	}
@@ -395,8 +385,7 @@ finalize_it:
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
-{
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax) {
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
@@ -432,8 +421,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	for(r = res; r != NULL ; r = r->ai_next) {
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if(sock < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+			if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT)) {
 				dbgprintf("error %d creating tcp listen socket", errno);
+			}
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -548,16 +538,20 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	}
 
 finalize_it:
-	if(res != NULL)
+	if (res != NULL) {
 		freeaddrinfo(res);
+	}
 
 	if(iRet != RS_RET_OK) {
-		if(sock != -1)
+		if (sock != -1) {
 			close(sock);
-		if(pNewStrm != NULL)
+		}
+		if (pNewStrm != NULL) {
 			netstrm.Destruct(&pNewStrm);
-		if(pNewNsd != NULL)
+		}
+		if (pNewNsd != NULL) {
 			pNS->Drvr.Destruct(&pNewNsd);
+		}
 	}
 
 	RETiRet;
@@ -574,8 +568,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
-{
+Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf) {
 	char errStr[1024];
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
@@ -603,8 +596,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
-{
+Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ssize_t written;
 	DEFiRet;
@@ -635,8 +627,7 @@ finalize_it:
  * rgerhards, 2009-06-02
  */
 static rsRetVal
-EnableKeepAlive(nsd_t *pNsd)
-{
+EnableKeepAlive(nsd_t *pNsd) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	int ret;
 	int optval;
@@ -709,8 +700,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
-{
+Connect(nsd_t *pNsd, int family, uchar *port, uchar *host) {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
@@ -738,8 +728,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	}
 
 finalize_it:
-	if(res != NULL)
+	if (res != NULL) {
                freeaddrinfo(res);
+	}
 		
 	if(iRet != RS_RET_OK) {
 		sockClose(&pThis->sock);
@@ -754,8 +745,7 @@ finalize_it:
  * rgerhards, 2008-04-24
  */
 static rsRetVal
-GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
-{
+GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
@@ -779,8 +769,7 @@ finalize_it:
  * rgerhards, 2008-06-09
  */
 static rsRetVal
-CheckConnection(nsd_t *pNsd)
-{
+CheckConnection(nsd_t *pNsd) {
 	DEFiRet;
 	int rc;
 	char msgbuf[1]; /* dummy */
@@ -804,8 +793,7 @@ finalize_it:
 /* get the remote host's IP address. Caller must Destruct the object.
  */
 static rsRetVal
-GetRemoteIP(nsd_t *pNsd, prop_t **ip)
-{
+GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);

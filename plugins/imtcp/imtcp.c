@@ -195,23 +195,20 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 /* this shall go into a specific ACL module! */
 static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
-	        void __attribute__((unused)) *pUsrSess)
-{
+	        void __attribute__((unused)) *pUsrSess) {
 	return net.isAllowedSender2(UCHAR_CONSTANT("TCP"), addr, fromHostFQDN, 1);
 }
 
 
 static rsRetVal
-doOpenLstnSocks(tcpsrv_t *pSrv)
-{
+doOpenLstnSocks(tcpsrv_t *pSrv) {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
 	return tcpsrv.create_tcp_socket(pSrv);
 }
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
-{
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd) {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
@@ -223,8 +220,7 @@ finalize_it:
 }
 
 static rsRetVal
-onRegularClose(tcps_sess_t *pSess)
-{
+onRegularClose(tcps_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -237,8 +233,7 @@ onRegularClose(tcps_sess_t *pSess)
 
 
 static rsRetVal
-onErrClose(tcps_sess_t *pSess)
-{
+onErrClose(tcps_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -252,8 +247,7 @@ onErrClose(tcps_sess_t *pSess)
 /* set permitted peer -- rgerhards, 2008-05-19
  */
 static rsRetVal
-setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
-{
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID) {
 	DEFiRet;
 	CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
 	free(pszID); /* no longer needed, but we need to free as of interface def */
@@ -266,8 +260,7 @@ finalize_it:
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -300,8 +293,7 @@ finalize_it:
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	instanceConf_t *inst;
 	DEFiRet;
 
@@ -334,8 +326,7 @@ finalize_it:
 
 
 static rsRetVal
-addListner(modConfData_t *modConf, instanceConf_t *inst)
-{
+addListner(modConfData_t *modConf, instanceConf_t *inst) {
 	DEFiRet;
 
 	if(pOurTcpsrv == NULL) {
@@ -411,8 +402,9 @@ CODESTARTnewInpInst
 	CHKiRet(createInstance(&inst));
 
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
                 } else if(!strcmp(inppblk.descr[i].name, "address")) {
@@ -487,8 +479,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "flowcontrol")) {
 			loadModConf->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
@@ -533,8 +526,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -570,8 +564,7 @@ ENDendCnfLoad
 
 /* function to generate error message if framework does not find requested ruleset */
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE, "imtcp: ruleset '%s' for port %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->pszBindPort);
@@ -582,8 +575,9 @@ BEGINcheckCnf
 CODESTARTcheckCnf
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
-		if(inst->bSuppOctetFram == FRAMING_UNSET)
+		if (inst->bSuppOctetFram == FRAMING_UNSET) {
 			inst->bSuppOctetFram = pModConf->bSuppOctetFram;
+		}
 	}
 	if(pModConf->root == NULL) {
 		errmsg.LogError(0, RS_RET_NO_LISTNERS , "imtcp: module loaded, but "
@@ -607,8 +601,9 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(pModConf, inst);
 	}
-	if(pOurTcpsrv == NULL)
+	if (pOurTcpsrv == NULL) {
 		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
 	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 finalize_it:
 ENDactivateCnfPrePrivDrop
@@ -657,8 +652,9 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
-	if(pOurTcpsrv != NULL)
+	if (pOurTcpsrv != NULL) {
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+	}
 
 	net.clearAllowedSenders(UCHAR_CONSTANT("TCP"));
 ENDafterRun
@@ -666,8 +662,9 @@ ENDafterRun
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -688,8 +685,7 @@ ENDmodExit
 
 
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.iTCPSessMax = 200;
 	cs.iTCPLstnMax = 20;
 	cs.bSuppOctetFram = 1;

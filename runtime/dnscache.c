@@ -77,8 +77,7 @@ static prop_t *staticErrValue;
  * TODO: check how well it performs on socket addresses!
  */
 static unsigned int
-hash_from_key_fn(void *k) 
-{
+hash_from_key_fn(void *k) {
     int len;
     uchar *rkey = (uchar*) k; /* we treat this as opaque bytes */
     unsigned hashval = 1;
@@ -91,8 +90,7 @@ hash_from_key_fn(void *k)
 }
 
 static int
-key_equals_fn(void *key1, void *key2)
-{
+key_equals_fn(void *key1, void *key2) {
 	return (SALEN((struct sockaddr*)key1) == SALEN((struct sockaddr*) key2) 
 		   && !memcmp(key1, key2, SALEN((struct sockaddr*) key1)));
 }
@@ -101,23 +99,25 @@ key_equals_fn(void *key1, void *key2)
  * Precondition: entry must already be unlinked from list
  */
 static void
-entryDestruct(dnscache_entry_t *etry)
-{
-	if(etry->fqdn != NULL)
+entryDestruct(dnscache_entry_t *etry) {
+	if (etry->fqdn != NULL) {
 		prop.Destruct(&etry->fqdn);
-	if(etry->fqdnLowerCase != NULL)
+	}
+	if (etry->fqdnLowerCase != NULL) {
 		prop.Destruct(&etry->fqdnLowerCase);
-	if(etry->localName != NULL)
+	}
+	if (etry->localName != NULL) {
 		prop.Destruct(&etry->localName);
-	if(etry->ip != NULL)
+	}
+	if (etry->ip != NULL) {
 		prop.Destruct(&etry->ip);
+	}
 	free(etry);
 }
 
 /* init function (must be called once) */
 rsRetVal
-dnscacheInit(void)
-{
+dnscacheInit(void) {
 	DEFiRet;
 	if((dnsCache.ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
 				(void(*)(void*))entryDestruct)) == NULL) {
@@ -140,8 +140,7 @@ finalize_it:
 
 /* deinit function (must be called once) */
 rsRetVal
-dnscacheDeinit(void)
-{
+dnscacheDeinit(void) {
 	DEFiRet;
 	prop.Destruct(&staticErrValue);
 	hashtable_destroy(dnsCache.ht, 1); /* 1 => free all values automatically */
@@ -154,8 +153,7 @@ dnscacheDeinit(void)
 
 
 static inline dnscache_entry_t*
-findEntry(struct sockaddr_storage *addr)
-{
+findEntry(struct sockaddr_storage *addr) {
 	return((dnscache_entry_t*) hashtable_search(dnsCache.ht, addr));
 }
 
@@ -168,8 +166,7 @@ findEntry(struct sockaddr_storage *addr)
 static inline int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
                        char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
-{
+                       char *serv, size_t servlen, int flags) {
 	int iCancelStateSave;
 	int i;
 
@@ -182,8 +179,7 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
 
 /* get only the local part of the hostname and set it in cache entry */
 static inline void
-setLocalHostName(dnscache_entry_t *etry)
-{
+setLocalHostName(dnscache_entry_t *etry) {
 	uchar *fqdnLower;
 	uchar *p;
 	int count;
@@ -258,8 +254,7 @@ done:	return;
  * message should be processed (1) or discarded (0).
  */
 static rsRetVal
-resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry)
-{
+resolveAddr(struct sockaddr_storage *addr, dnscache_entry_t *etry) {
 	DEFiRet;
 	int error;
 	sigset_t omask, nmask;
@@ -363,8 +358,7 @@ finalize_it:
 
 
 static inline rsRetVal
-addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
-{
+addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry) {
 	int r;
 	struct sockaddr_storage *keybuf;
 	dnscache_entry_t *etry = NULL;
@@ -402,8 +396,7 @@ finalize_it:
  * TODO: implement!
  */
 static inline rsRetVal
-validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_storage __attribute__((unused)) *addr)
-{
+validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_storage __attribute__((unused)) *addr) {
 	return RS_RET_OK;
 }
 
@@ -415,8 +408,7 @@ validateEntry(dnscache_entry_t __attribute__((unused)) *etry, struct sockaddr_st
  */
 rsRetVal
 dnscacheLookup(struct sockaddr_storage *addr, prop_t **fqdn, prop_t **fqdnLowerCase,
-	       prop_t **localName, prop_t **ip)
-{
+	       prop_t **localName, prop_t **ip) {
 	dnscache_entry_t *etry;
 	DEFiRet;
 

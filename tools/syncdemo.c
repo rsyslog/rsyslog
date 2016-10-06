@@ -98,8 +98,7 @@ static pthread_spinlock_t spin;
 static sem_t sem;
 
 static char*
-getSyncMethName(syncType_t st)
-{
+getSyncMethName(syncType_t st) {
 	switch(st) {
 	case part     : return "partition";
 	case none     : return "none";
@@ -113,14 +112,12 @@ getSyncMethName(syncType_t st)
 
 
 static pid_t
-gettid()
-{
+gettid() {
 	return syscall( __NR_gettid );
 }
 
 
-void *workerThread( void *arg )
-{
+void *workerThread( void *arg ) {
 	int i, j;
 	volatile int partval = 0; /* use volatile so that gcc generates code similar to global var */
 	int *partptr;
@@ -203,8 +200,7 @@ void *workerThread( void *arg )
 }
 
 
-static void beginTiming(void)
-{
+static void beginTiming(void) {
 	if(!(bCSV || bAllSyncTypes)) {
 		printf("Test Parameters:\n");
 		printf("\tNumber of Cores.........: %d\n", procs);
@@ -219,8 +215,7 @@ static void beginTiming(void)
 }
 
 
-static void endTiming(void)
-{
+static void endTiming(void) {
 	unsigned delta;
 	long sec, usec;
 	long runtime;
@@ -257,16 +252,17 @@ static void endTiming(void)
 
 	runtime = sec * 1000 + (usec / 1000);
 	totalRuntime += runtime;
-	if(runtime < minRuntime)
+	if (runtime < minRuntime) {
 		minRuntime = runtime;
-	if(runtime > maxRuntime)
+	}
+	if (runtime > maxRuntime) {
 		maxRuntime = runtime;
+	}
 }
 
 
 static void
-usage(void)
-{
+usage(void) {
 	fprintf(stderr, "Usage: syncdemo -a -c<num> -t<num>\n");
 	fprintf(stderr, "\t-a        set CPU affinity\n");
 	fprintf(stderr, "\t-i        number of iterations\n");
@@ -283,8 +279,7 @@ usage(void)
 /* carry out the actual test (one iteration)
  */
 static void
-singleTest(void)
-{
+singleTest(void) {
 	int i;
 	pthread_t *thrs;
 
@@ -325,8 +320,7 @@ singleTest(void)
  * must free to prevent a memory leak.
  */
 char *
-dispRuntime(unsigned rt)
-{
+dispRuntime(unsigned rt) {
 	static char *fmtbuf;
 
 	fmtbuf = malloc(32);
@@ -336,8 +330,7 @@ dispRuntime(unsigned rt)
 }
 
 
-doTest(syncType_t st)
-{
+doTest(syncType_t st) {
 	int i;
 
 	syncType = st;
@@ -362,8 +355,7 @@ doTest(syncType_t st)
 
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int i;
 	int opt;
 
@@ -391,14 +383,18 @@ main(int argc, char *argv[])
 			bCSV = 1;
 			break;
 		case 's':
-			if(!strcmp(optarg, "none"))
+			if (!strcmp(optarg, "none")) {
 				syncType = none;
-			else if(!strcmp(optarg, "part"))
+			}
+			else if (!strcmp(optarg, "part")) {
 				syncType = part;
-			else if(!strcmp(optarg, "atomic"))
+			}
+			else if (!strcmp(optarg, "atomic")) {
 				syncType = atomic;
-			else if(!strcmp(optarg, "cas"))
+			}
+			else if (!strcmp(optarg, "cas")) {
 				syncType = cas;
+			}
 			else if(!strcmp(optarg, "mutex")) {
 				syncType = mutex;
 				pthread_mutex_init(&mut, NULL);

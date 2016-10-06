@@ -74,27 +74,28 @@ int iTests = 0;
 
 /* provide user-friednly name of input mode
  */
-static char *inputMode2Str(inputMode_t mode)
-{
+static char *inputMode2Str(inputMode_t mode) {
 	char *pszMode;
 
-	if(mode == inputUDP)
+	if (mode == inputUDP) {
 		pszMode = "udp";
-	else
+	}
+	else {
 		pszMode = "tcp";
+	}
 
 	return pszMode;
 }
 
 
-void readLine(int fd, char *ln)
-{
+void readLine(int fd, char *ln) {
 	char *orig = ln;
 	char c;
 	int lenRead;
 
-	if(verbose)
+	if (verbose) {
 		fprintf(stderr, "begin readLine\n");
+	}
 	lenRead = read(fd, &c, 1);
 
 	while(lenRead == 1 && c != '\n') {
@@ -114,8 +115,9 @@ void readLine(int fd, char *ln)
 		exit(1);
 	}
 
-	if(verbose)
+	if (verbose) {
 		fprintf(stderr, "end readLine, val read '%s'\n", orig);
+	}
 }
 
 
@@ -133,8 +135,7 @@ void readLine(int fd, char *ln)
  * -- rgerhards, 2010-04-12
  */
 int
-tcpSend(char *buf, int lenBuf)
-{
+tcpSend(char *buf, int lenBuf) {
 	static int sock = INVALID_SOCKET;
 	struct sockaddr_in addr;
 	int retries;
@@ -207,8 +208,7 @@ finalize_it:
  * returns 0 if ok, something else otherwise.
  */
 int
-udpSend(char *buf, int lenBuf)
-{
+udpSend(char *buf, int lenBuf) {
 	struct sockaddr_in si_other;
 	int s, slen=sizeof(si_other);
 
@@ -241,8 +241,7 @@ udpSend(char *buf, int lenBuf)
  * change this. Returns 0 if ok, something else otherwise.
  * rgerhards, 2009-03-31
  */
-int openPipe(char *configFile, pid_t *pid, int *pfd)
-{
+int openPipe(char *configFile, pid_t *pid, int *pfd) {
 	int pipefd[2];
 	pid_t cpid;
 	char *newargv[] = {"../tools/rsyslogd", "dummy", "-C", "-n", "-irsyslog.pid",
@@ -253,8 +252,9 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		(pszCustomConf == NULL) ? configFile : pszCustomConf);
 	newargv[1] = confFile;
 
-	if(IPv4Only)
+	if (IPv4Only) {
 		newargv[(sizeof(newargv)/sizeof(char*)) - 2] = "-4";
+	}
 
 	if (pipe(pipefd) == -1) {
 		perror("pipe");
@@ -304,8 +304,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
  * copy this code into something that must be!). Also note that we do in-memory
  * unescaping and assume that the string gets shorter but NEVER longer!
  */
-void unescapeTestdata(char *testdata)
-{
+void unescapeTestdata(char *testdata) {
 	char *pDst;
 	char *pSrc;
 	int i;
@@ -351,8 +350,7 @@ void unescapeTestdata(char *testdata)
  * to make the compiler happy.
  */
 static void
-getline_abort(char **lineptr, size_t *const n, FILE *stream)
-{
+getline_abort(char **lineptr, size_t *const n, FILE *stream) {
 	if(getline(lineptr, n, stream) == -1) {
 		int e = errno;
 		if(!feof(stream)) {
@@ -371,8 +369,7 @@ getline_abort(char **lineptr, size_t *const n, FILE *stream)
  * quick and dirty test program, NOT intended to be used in any production!
  */
 static void
-doVarsInExpected(char **pe)
-{
+doVarsInExpected(char **pe) {
 	char *n, *newBase;
 	char *e = *pe;
 	n = newBase = malloc(strlen(e) + 1024); /* we simply say "sufficient" */
@@ -404,8 +401,7 @@ doVarsInExpected(char **pe)
  * Needs to return 0 if all is OK, something else otherwise.
  */
 int
-processTestFile(int fd, char *pszFileName)
-{
+processTestFile(int fd, char *pszFileName) {
 	FILE *fp;
 	char *testdata = NULL;
 	char *expected = NULL;
@@ -423,15 +419,17 @@ processTestFile(int fd, char *pszFileName)
 	while(!feof(fp)) {
 		getline_abort(&testdata, &lenLn, fp);
 		while(!feof(fp)) {
-			if(*testdata == '#')
+			if (*testdata == '#') {
 				getline_abort(&testdata, &lenLn, fp);
+			}
 			else
 				break; /* first non-comment */
 		}
 
 		/* this is not perfect, but works ;) */
-		if(feof(fp))
+		if (feof(fp)) {
 			break;
+		}
 
 		++iTests; /* increment test count, we now do one! */
 
@@ -439,11 +437,13 @@ processTestFile(int fd, char *pszFileName)
 		/* now we have the test data to send (we could use function pointers here...) */
 		unescapeTestdata(testdata);
 		if(inputMode == inputUDP) {
-			if(udpSend(testdata, strlen(testdata)) != 0)
+			if (udpSend(testdata, strlen(testdata)) != 0) {
 				return(2);
+			}
 		} else {
-			if(tcpSend(testdata, strlen(testdata)) != 0)
+			if (tcpSend(testdata, strlen(testdata)) != 0) {
 				return(2);
+			}
 		}
 
 		/* next line is expected output 
@@ -486,8 +486,7 @@ processTestFile(int fd, char *pszFileName)
  * success.
  */
 int
-doTests(int fd, char *files)
-{
+doTests(int fd, char *files) {
 	int ret;
 	char *testFile;
 	glob_t testFiles;
@@ -509,8 +508,9 @@ doTests(int fd, char *files)
 			if(ret == 0) {
 				if(verbose) fprintf(stderr, "successfully completed\n");
 			} else {
-				if(!verbose)
+				if (!verbose) {
 					fprintf(stderr, "test '%s' ", testFile);
+				}
 				fprintf(stderr, "failed!\n");
 			}
 		}
@@ -531,16 +531,14 @@ doTests(int fd, char *files)
 
 /* indicate that our child has died (where it is not permitted to!).
  */
-void childDied(__attribute__((unused)) int sig)
-{
+void childDied(__attribute__((unused)) int sig) {
 	fprintf(stderr, "ERROR: child died unexpectedly (maybe a segfault?)!\n");
 	exit(1);
 }
 
 
 /* cleanup */
-void doAtExit(void)
-{
+void doAtExit(void) {
 	int status;
 
 	/* disarm died-child handler */
@@ -557,8 +555,7 @@ void doAtExit(void)
 
 /* Note: the HOSTNAME file must have been pre-generated */
 static void
-getHostname(void)
-{
+getHostname(void) {
 	size_t dummy;
 	FILE *fp;
 	if((fp = fopen("HOSTNAME", "r")) == NULL) {
@@ -576,8 +573,7 @@ getHostname(void)
  * of this file.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[], char *envp[])
-{
+int main(int argc, char *argv[], char *envp[]) {
 	int fd;
 	int opt;
 	int ret = 0;
@@ -597,10 +593,12 @@ int main(int argc, char *argv[], char *envp[])
 			pszCustomConf = optarg;
 			break;
                 case 'i':
-			if(!strcmp(optarg, "udp"))
+			if (!strcmp(optarg, "udp")) {
 				inputMode = inputUDP;
-			else if(!strcmp(optarg, "tcp"))
+			}
+			else if (!strcmp(optarg, "tcp")) {
 				inputMode = inputTCP;
+			}
 			else {
 				fprintf(stderr, "error: unsupported input mode '%s'\n", optarg);
 				exit(1);
@@ -628,8 +626,9 @@ int main(int argc, char *argv[], char *envp[])
 
 	atexit(doAtExit);
 
-	if((srcdir = getenv("srcdir")) == NULL)
+	if ((srcdir = getenv("srcdir")) == NULL) {
 		srcdir = ".";
+	}
 
 	if(verbose) fprintf(stderr, "Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
 		srcdir, testSuite, inputMode2Str(inputMode), iPort);
@@ -663,8 +662,9 @@ int main(int argc, char *argv[], char *envp[])
 
 	/* generate filename */
 	sprintf(testcases, "%s/testsuites/*.%s", srcdir, testSuite);
-	if(doTests(fd, testcases) != 0)
+	if (doTests(fd, testcases) != 0) {
 		ret = 1;
+	}
 
 	if(verbose) fprintf(stderr, "End of nettester run (%d).\n", ret);
 

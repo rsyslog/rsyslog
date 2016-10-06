@@ -44,10 +44,14 @@ DEFobjCurrIf(vmprg)
 
 BEGINInit
 CODESTARTInit
-	pErrObj = "expr"; CHKiRet(objUse(expr, CORE_COMPONENT));
-	pErrObj = "ctok"; CHKiRet(objUse(ctok, CORE_COMPONENT));
-	pErrObj = "ctok_token"; CHKiRet(objUse(ctok_token, CORE_COMPONENT));
-	pErrObj = "vmprg"; CHKiRet(objUse(vmprg, CORE_COMPONENT));
+	pErrObj = "expr";
+	CHKiRet(objUse(expr, CORE_COMPONENT));
+	pErrObj = "ctok";
+	CHKiRet(objUse(ctok, CORE_COMPONENT));
+	pErrObj = "ctok_token";
+	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
+	pErrObj = "vmprg";
+	CHKiRet(objUse(vmprg, CORE_COMPONENT));
 ENDInit
 
 BEGINExit
@@ -64,8 +68,7 @@ ENDExit
  * rgerhards, 2008-07--07
  */
 static rsRetVal
-PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
-{
+PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut) {
 	cstr_t *pstrPrg = NULL;
 	ctok_t *tok = NULL;
 	ctok_token_t *pToken = NULL;
@@ -114,10 +117,12 @@ finalize_it:
 	/* we are done, so we now need to restore things */
 	if(pToken != NULL)
 		ctok_token.Destruct(&pToken); /* no longer needed */
-	if(pstrPrg != NULL)
+	if (pstrPrg != NULL) {
 		rsCStrDestruct(&pstrPrg);
-	if(tok != NULL)
+	}
+	if (tok != NULL) {
 		ctok.Destruct(&tok);
+	}
 	RETiRet;
 }
 
@@ -134,8 +139,7 @@ finalize_it:
  * rgerhards, 2008-07-07
  */
 static rsRetVal
-ProcessTestFile(uchar *pszFileName)
-{
+ProcessTestFile(uchar *pszFileName) {
 	FILE *fp;
 	char *lnptr = NULL;
 	size_t lenLn;
@@ -154,8 +158,9 @@ ProcessTestFile(uchar *pszFileName)
 
 	getline(&lnptr, &lenLn, fp);
 	while(!feof(fp)) {
-		if(*lnptr == '#')
+		if (*lnptr == '#') {
 			getline(&lnptr, &lenLn, fp);
+		}
 		else
 			break; /* first non-comment */
 	}
@@ -169,7 +174,8 @@ ProcessTestFile(uchar *pszFileName)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	iRetExpected = iParse;
-	getline(&lnptr, &lenLn, fp); CHKEOF;
+	getline(&lnptr, &lenLn, fp);
+	CHKEOF;
 
 	/* and now we look for "in:" (and again ignore the rest...) */
 	if(strncmp(lnptr, "in:", 3)) {
@@ -180,10 +186,12 @@ ProcessTestFile(uchar *pszFileName)
 	 * terminated by a line with three sole $ ($$$\n)
 	 */
 	CHKiRet(rsCStrConstruct(&pstrIn));
-	getline(&lnptr, &lenLn, fp); CHKEOF;
+	getline(&lnptr, &lenLn, fp);
+	CHKEOF;
 	while(strncmp(lnptr, "$$$\n", 4)) {
 		CHKiRet(rsCStrAppendStr(pstrIn, (uchar*)lnptr));
-		getline(&lnptr, &lenLn, fp); CHKEOF;
+		getline(&lnptr, &lenLn, fp);
+		CHKEOF;
 	}
 	getline(&lnptr, &lenLn, fp); CHKEOF; /* skip $$$-line */
 
@@ -196,10 +204,12 @@ ProcessTestFile(uchar *pszFileName)
 	 * terminated by a line with three sole $ ($$$\n)
 	 */
 	CHKiRet(rsCStrConstruct(&pstrOut));
-	getline(&lnptr, &lenLn, fp); CHKEOF;
+	getline(&lnptr, &lenLn, fp);
+	CHKEOF;
 	while(strncmp(lnptr, "$$$\n", 4)) {
 		CHKiRet(rsCStrAppendStr(pstrOut, (uchar*)lnptr));
-		getline(&lnptr, &lenLn, fp); CHKEOF;
+		getline(&lnptr, &lenLn, fp);
+		CHKEOF;
 	}
 
 	/* un-comment for testing:
@@ -217,10 +227,12 @@ ProcessTestFile(uchar *pszFileName)
 	CHKiRet(PerformTest(pstrIn, iRetExpected, pstrOut));
 
 finalize_it:
-	if(pstrIn != NULL)
+	if (pstrIn != NULL) {
 		rsCStrDestruct(&pstrIn);
-	if(pstrOut != NULL)
+	}
+	if (pstrOut != NULL) {
 		rsCStrDestruct(&pstrOut);
+	}
 	RETiRet;
 }
 

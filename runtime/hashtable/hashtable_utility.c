@@ -16,18 +16,15 @@
  * 
  *  */
 int
-hashtable_change(struct hashtable *h, void *k, void *v)
-{
+hashtable_change(struct hashtable *h, void *k, void *v) {
     struct entry *e;
     unsigned int hashvalue, index;
     hashvalue = hash(h,k);
     index = indexFor(h->tablelength,hashvalue);
     e = h->table[index];
-    while (NULL != e)
-    {
+    while (NULL != e) {
         /* Check hash value to short circuit heavier comparison */
-        if ((hashvalue == e->h) && (h->eqfn(k, e->k)))
-        {
+        if ((hashvalue == e->h) && (h->eqfn(k, e->k))) {
             free(e->v);
             e->v = v;
             return -1;

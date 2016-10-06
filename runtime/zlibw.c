@@ -45,23 +45,19 @@ DEFobjStaticHelpers
  * the relevant entry points.
  */
 
-static int myDeflateInit(z_streamp strm, int level)
-{
+static int myDeflateInit(z_streamp strm, int level) {
 	return deflateInit(strm, level);
 }
 
-static int myDeflateInit2(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy)
-{
+static int myDeflateInit2(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy) {
 	return deflateInit2(strm, level, method, windowBits, memLevel, strategy);
 }
 
-static int myDeflateEnd(z_streamp strm)
-{
+static int myDeflateEnd(z_streamp strm) {
 	return deflateEnd(strm);
 }
 
-static int myDeflate(z_streamp strm, int flush)
-{
+static int myDeflate(z_streamp strm, int flush) {
 	return deflate(strm, flush);
 }
 

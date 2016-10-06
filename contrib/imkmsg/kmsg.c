@@ -54,8 +54,7 @@ static int	fklog = -1;	/* kernel log fd */
  * from the rest.
  */
 static void
-submitSyslog(uchar *buf)
-{
+submitSyslog(uchar *buf) {
 	long offs = 0;
 	struct timeval tv;
 	struct sysinfo info;
@@ -114,7 +113,7 @@ submitSyslog(uchar *buf)
 			name[offs] = *buf;
 		}
 		name[offs] = '\0';
-		buf++; /* skip = or ' ' */;
+		buf++; /* skip = or ' ' */
 
 		offs = 0;
 		for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
@@ -156,8 +155,7 @@ submitSyslog(uchar *buf)
 /* open the kernel log - will be called inside the willRun() imkmsg entry point
  */
 rsRetVal
-klogWillRunPrePrivDrop(modConfData_t *pModConf)
-{
+klogWillRunPrePrivDrop(modConfData_t *pModConf) {
 	char errmsg[2048];
 	DEFiRet;
 
@@ -175,8 +173,7 @@ finalize_it:
 /* make sure the kernel log is readable after dropping privileges
  */
 rsRetVal
-klogWillRunPostPrivDrop(modConfData_t *pModConf)
-{
+klogWillRunPostPrivDrop(modConfData_t *pModConf) {
 	char errmsg[2048];
 	int r;
 	DEFiRet;
@@ -199,8 +196,7 @@ finalize_it:
  * record of printk buffer.
  */
 static void
-readkmsg(void)
-{
+readkmsg(void) {
 	int i;
 	uchar pRcv[8192+1];
 	char errmsg[2048];
@@ -238,14 +234,15 @@ readkmsg(void)
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(modConfData_t *pModConf)
-{
+rsRetVal klogAfterRun(modConfData_t *pModConf) {
 	DEFiRet;
-	if(fklog != -1)
+	if (fklog != -1) {
 		close(fklog);
+	}
 	/* Turn on logging of messages to console, but only if a log level was speficied */
-	if(pModConf->console_log_level != -1)
+	if (pModConf->console_log_level != -1) {
 		klogctl(7, NULL, 0);
+	}
 	RETiRet;
 }
 
@@ -254,8 +251,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
-{
+rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf) {
 	DEFiRet;
 	readkmsg();
 	RETiRet;
@@ -266,8 +262,7 @@ rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
  * rgerhards, 2008-04-14
  */
 int
-klogFacilIntMsg(void)
-{
+klogFacilIntMsg(void) {
 	return LOG_SYSLOG;
 }
 

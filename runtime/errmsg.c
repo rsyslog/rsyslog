@@ -53,14 +53,12 @@ static int bHadErrMsgs; /* indicates if we had error messages since reset of thi
  * files.
  */
 void
-resetErrMsgsFlag(void)
-{
+resetErrMsgsFlag(void) {
 	bHadErrMsgs = 0;
 }
 
 int
-hadErrMsgs(void)
-{
+hadErrMsgs(void) {
 	return bHadErrMsgs;
 }
 
@@ -75,8 +73,7 @@ hadErrMsgs(void)
  * rgerhards, 2008-06-27
  */
 static void
-doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *msg)
-{
+doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *msg) {
 	char buf[2048];
 	char errStr[1024];
 	
@@ -101,8 +98,9 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	
 	glblErrLogger(severity, iErrCode, (uchar*)buf);
 
-	if(severity == LOG_ERR)
+	if (severity == LOG_ERR) {
 		bHadErrMsgs = 1;
+	}
 }
 
 /* We now receive three parameters: one is the internal error code
@@ -116,8 +114,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
  * rgerhards, 2008-06-27
  */
 static void __attribute__((format(printf, 3, 4)))
-LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
-{
+LogError(const int iErrno, const int iErrCode, const char *fmt, ... ) {
 	va_list ap;
 	char buf[2048];
 	size_t lenBuf;
@@ -145,8 +142,7 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
  * rgerhards, 2008-06-27
  */
 static void __attribute__((format(printf, 4, 5)))
-LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... )
-{
+LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... ) {
 	va_list ap;
 	char buf[2048];
 	size_t lenBuf;

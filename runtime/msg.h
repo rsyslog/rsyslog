@@ -243,8 +243,7 @@ void msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri);
  * rgerhards, 2009-08-26
  */
 static inline void __attribute__((unused))
-MsgSetRawMsgSize(msg_t *const __restrict__ pMsg, const size_t newLen)
-{
+MsgSetRawMsgSize(msg_t *const __restrict__ pMsg, const size_t newLen) {
 	assert(newLen <= (size_t) pMsg->iLenRawMsg);
 	pMsg->iLenRawMsg = newLen;
 	pMsg->pszRawMsg[newLen] = '\0';

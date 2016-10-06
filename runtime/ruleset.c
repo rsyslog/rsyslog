@@ -77,8 +77,7 @@ static rsRetVal scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti);
 /* destructor for linked list keys.
  */
 rsRetVal
-rulesetKeyDestruct(void __attribute__((unused)) *pData)
-{
+rulesetKeyDestruct(void __attribute__((unused)) *pData) {
 	free(pData);
 	return RS_RET_OK;
 }
@@ -87,8 +86,7 @@ rulesetKeyDestruct(void __attribute__((unused)) *pData)
 
 /* iterate over all actions in a script (stmt subtree) */
 static void
-scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), void* pParam)
-{
+scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), void* pParam) {
 	struct cnfstmt *stmt;
 	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
 		switch(stmt->nodetype) {
@@ -141,8 +139,7 @@ typedef struct iterateAllActions_s {
 	void *pParam;
 } iterateAllActions_t;
 /* driver to iterate over all actions */
-DEFFUNC_llExecFunc(doIterateAllActions)
-{
+DEFFUNC_llExecFunc(doIterateAllActions) {
 	DEFiRet;
 	ruleset_t* pThis = (ruleset_t*) pData;
 	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
@@ -154,8 +151,7 @@ DEFFUNC_llExecFunc(doIterateAllActions)
  * must be done or a shutdown is pending.
  */
 static rsRetVal
-iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam)
-{
+iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam) {
 	iterateAllActions_t params;
 	DEFiRet;
 	assert(pFunc != NULL);
@@ -169,28 +165,26 @@ finalize_it:
 }
 
 /* driver to iterate over all rulesets */
-DEFFUNC_llExecFunc(doActivateRulesetQueues)
-{
+DEFFUNC_llExecFunc(doActivateRulesetQueues) {
 	DEFiRet;
 	ruleset_t* pThis = (ruleset_t*) pData;
 	dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n",
 		  pThis->pQueue, pThis->pszName);
-	if(pThis->pQueue != NULL)
+	if (pThis->pQueue != NULL) {
 		startMainQueue(pThis->pQueue);
+	}
 	RETiRet;
 }
 /* activate all ruleset queues */
 rsRetVal
-activateRulesetQueues(void)
-{
+activateRulesetQueues(void) {
 	llExecFunc(&(runConf->rulesets.llRulesets), doActivateRulesetQueues, NULL);
 	return RS_RET_OK;
 }
 
 
 static rsRetVal
-execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execAct(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	DEFiRet;
 	if(stmt->d.act->bDisabled) {
 		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
@@ -210,8 +204,7 @@ finalize_it:
 }
 
 static rsRetVal
-execSet(struct cnfstmt *stmt, msg_t *pMsg)
-{
+execSet(struct cnfstmt *stmt, msg_t *pMsg) {
 	struct var result;
 	DEFiRet;
 	cnfexprEval(stmt->d.s_set.expr, &result, pMsg);
@@ -221,16 +214,14 @@ execSet(struct cnfstmt *stmt, msg_t *pMsg)
 }
 
 static rsRetVal
-execUnset(struct cnfstmt *stmt, msg_t *pMsg)
-{
+execUnset(struct cnfstmt *stmt, msg_t *pMsg) {
 	DEFiRet;
 	msgDelJSON(pMsg, stmt->d.s_unset.varname);
 	RETiRet;
 }
 
 static rsRetVal
-execCall(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execCall(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	DEFiRet;
 	if(stmt->d.s_call.ruleset == NULL) {
 		CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
@@ -250,18 +241,19 @@ finalize_it:
 }
 
 static rsRetVal
-execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execIf(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	sbool bRet;
 	DEFiRet;
 	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg);
 	DBGPRINTF("if condition result is %d\n", bRet);
 	if(bRet) {
-		if(stmt->d.s_if.t_then != NULL)
+		if (stmt->d.s_if.t_then != NULL) {
 			CHKiRet(scriptExec(stmt->d.s_if.t_then, pMsg, pWti));
+		}
 	} else {
-		if(stmt->d.s_if.t_else != NULL)
+		if (stmt->d.s_if.t_else != NULL) {
 			CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
+		}
 	}
 finalize_it:
 	RETiRet;
@@ -330,8 +322,7 @@ finalize_it:
 }
 
 static rsRetVal
-execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execForeach(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	json_object *arr = NULL;
 	DEFiRet;
 
@@ -358,24 +349,26 @@ finalize_it:
 }
 
 static rsRetVal
-execPRIFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execPRIFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	int bRet;
 	DEFiRet;
 	if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
 	   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
 		    & (1<<pMsg->iSeverity)) == 0) )
 		bRet = 0;
-	else
+	else {
 		bRet = 1;
+	}
 
 	DBGPRINTF("PRIFILT condition result is %d\n", bRet);
 	if(bRet) {
-		if(stmt->d.s_prifilt.t_then != NULL)
+		if (stmt->d.s_prifilt.t_then != NULL) {
 			CHKiRet(scriptExec(stmt->d.s_prifilt.t_then, pMsg, pWti));
+		}
 	} else {
-		if(stmt->d.s_prifilt.t_else != NULL)
+		if (stmt->d.s_prifilt.t_else != NULL) {
 			CHKiRet(scriptExec(stmt->d.s_prifilt.t_else, pMsg, pWti));
+		}
 	}
 finalize_it:
 	RETiRet;
@@ -384,15 +377,15 @@ finalize_it:
 
 /* helper to execPROPFILT(), as the evaluation itself is quite lengthy */
 static int
-evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
-{
+evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg) {
 	unsigned short pbMustBeFreed;
 	uchar *pszPropVal;
 	int bRet = 0;
 	rs_size_t propLen;
 
-	if(stmt->d.s_propfilt.prop.id == PROP_INVALID)
+	if (stmt->d.s_propfilt.prop.id == PROP_INVALID) {
 		goto done;
+	}
 
 	pszPropVal = MsgGetProp(pMsg, NULL, &stmt->d.s_propfilt.prop,
 				&propLen, &pbMustBeFreed, NULL);
@@ -400,8 +393,9 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	/* Now do the compares (short list currently ;)) */
 	switch(stmt->d.s_propfilt.operation ) {
 	case FIOP_CONTAINS:
-		if(rsCStrLocateInSzStr(stmt->d.s_propfilt.pCSCompValue, (uchar*) pszPropVal) != -1)
+		if (rsCStrLocateInSzStr(stmt->d.s_propfilt.pCSCompValue, (uchar*) pszPropVal) != -1) {
 			bRet = 1;
+		}
 		break;
 	case FIOP_ISEMPTY:
 		if(propLen == 0)
@@ -436,8 +430,9 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	}
 
 	/* now check if the value must be negated */
-	if(stmt->d.s_propfilt.isNegated)
+	if (stmt->d.s_propfilt.isNegated) {
 		bRet = (bRet == 1) ?  0 : 1;
+	}
 
 	if(Debug) {
 		if(stmt->d.s_propfilt.prop.id == PROP_CEE) {
@@ -453,8 +448,9 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
 				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
 		}
-		if(stmt->d.s_propfilt.isNegated)
+		if (stmt->d.s_propfilt.isNegated) {
 			DBGPRINTF("NOT ");
+		}
 		if(stmt->d.s_propfilt.operation == FIOP_ISEMPTY) {
 			DBGPRINTF("%s : %s\n",
 			       getFIOPName(stmt->d.s_propfilt.operation),
@@ -468,22 +464,23 @@ evalPROPFILT(struct cnfstmt *stmt, msg_t *pMsg)
 	}
 
 	/* cleanup */
-	if(pbMustBeFreed)
+	if (pbMustBeFreed) {
 		free(pszPropVal);
+	}
 done:
 	return bRet;
 }
 
 static rsRetVal
-execPROPFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti)
-{
+execPROPFILT(struct cnfstmt *stmt, msg_t *pMsg, wti_t *pWti) {
 	sbool bRet;
 	DEFiRet;
 
 	bRet = evalPROPFILT(stmt, pMsg);
 	DBGPRINTF("PROPFILT condition result is %d\n", bRet);
-	if(bRet)
+	if (bRet) {
 		CHKiRet(scriptExec(stmt->d.s_propfilt.t_then, pMsg, pWti));
+	}
 finalize_it:
 	RETiRet;
 }
@@ -513,8 +510,7 @@ finalize_it:
  * rgerhards, 2012-09-04
  */
 static rsRetVal
-scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti)
-{
+scriptExec(struct cnfstmt *root, msg_t *pMsg, wti_t *pWti) {
 	struct cnfstmt *stmt;
 	DEFiRet;
 
@@ -575,8 +571,7 @@ finalize_it:
  * This is called by MAIN queues.
  */
 static rsRetVal
-processBatch(batch_t *pBatch, wti_t *pWti)
-{
+processBatch(batch_t *pBatch, wti_t *pWti) {
 	int i;
 	msg_t *pMsg;
 	ruleset_t *pRuleset;
@@ -598,8 +593,9 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		 * message as committed. If we would do so, the message would
 		 * potentially be lost.
 		 */
-		if(localRet == RS_RET_OK)
+		if (localRet == RS_RET_OK) {
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+		}
 	}
 
 	/* commit phase */
@@ -617,18 +613,17 @@ processBatch(batch_t *pBatch, wti_t *pWti)
  * rgerhards, 2009-11-04
  */
 static parserList_t*
-GetParserList(rsconf_t *conf, msg_t *pMsg)
-{
+GetParserList(rsconf_t *conf, msg_t *pMsg) {
 	return (pMsg->pRuleset == NULL) ? conf->rulesets.pDflt->pParserLst : pMsg->pRuleset->pParserLst;
 }
 
 
 /* Add a script block to the current ruleset */
 static void
-addScript(ruleset_t *pThis, struct cnfstmt *script)
-{
-	if(pThis->last == NULL)
+addScript(ruleset_t *pThis, struct cnfstmt *script) {
+	if (pThis->last == NULL) {
 		pThis->root = pThis->last = script;
+	}
 	else {
 		pThis->last->next = script;
 		pThis->last = script;
@@ -637,8 +632,7 @@ addScript(ruleset_t *pThis, struct cnfstmt *script)
 
 
 /* set name for ruleset */
-static rsRetVal rulesetSetName(ruleset_t *pThis, uchar *pszName)
-{
+static rsRetVal rulesetSetName(ruleset_t *pThis, uchar *pszName) {
 	DEFiRet;
 	free(pThis->pszName);
 	CHKmalloc(pThis->pszName = ustrdup(pszName));
@@ -653,8 +647,7 @@ finalize_it:
  * is really much more natural to return the pointer directly.
  */
 static ruleset_t*
-GetCurrent(rsconf_t *conf)
-{
+GetCurrent(rsconf_t *conf) {
 	return conf->rulesets.pCurr;
 }
 
@@ -665,8 +658,7 @@ GetCurrent(rsconf_t *conf)
  * is really much more natural to return the pointer directly.
  */
 static qqueue_t*
-GetRulesetQueue(ruleset_t *pThis)
-{
+GetRulesetQueue(ruleset_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, ruleset);
 	return (pThis->pQueue == NULL) ? pMsgQueue : pThis->pQueue;
 }
@@ -675,8 +667,7 @@ GetRulesetQueue(ruleset_t *pThis)
 /* Find the ruleset with the given name and return a pointer to its object.
  */
 rsRetVal
-rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName)
-{
+rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName) {
 	DEFiRet;
 	assert(ppRuleset != NULL);
 	assert(pszName != NULL);
@@ -691,8 +682,7 @@ finalize_it:
 /* Set a new default rule set. If the default can not be found, no change happens.
  */
 static rsRetVal
-SetDefaultRuleset(rsconf_t *conf, uchar *pszName)
-{
+SetDefaultRuleset(rsconf_t *conf, uchar *pszName) {
 	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pszName != NULL);
@@ -708,8 +698,7 @@ finalize_it:
 
 /* Set a new current rule set. If the ruleset can not be found, no change happens */
 static rsRetVal
-SetCurrRuleset(rsconf_t *conf, uchar *pszName)
-{
+SetCurrRuleset(rsconf_t *conf, uchar *pszName) {
 	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pszName != NULL);
@@ -735,8 +724,7 @@ ENDobjConstruct(ruleset)
  * This also adds the rule set to the list of all known rulesets.
  */
 static rsRetVal
-rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
-{
+rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis) {
 	uchar *keyName;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, ruleset);
@@ -749,8 +737,9 @@ rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 	CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
 
 	/* and also the default, if so far none has been set */
-	if(conf->rulesets.pDflt == NULL)
+	if (conf->rulesets.pDflt == NULL) {
 		conf->rulesets.pDflt = pThis;
+	}
 
 finalize_it:
 	RETiRet;
@@ -779,8 +768,7 @@ ENDobjDestruct(ruleset)
  * everything runs stable again. -- rgerhards, 2009-06-10
  */
 static rsRetVal
-destructAllActions(rsconf_t *conf)
-{
+destructAllActions(rsconf_t *conf) {
 	DEFiRet;
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
@@ -796,8 +784,7 @@ finalize_it:
  * must map this, otherwise the destructor will abort.
  */
 rsRetVal
-rulesetDestructForLinkedList(void *pData)
-{
+rulesetDestructForLinkedList(void *pData) {
 	ruleset_t *pThis = (ruleset_t*) pData;
 	return rulesetDestruct(&pThis);
 }
@@ -813,15 +800,13 @@ ENDobjDebugPrint(ruleset)
 
 
 /* helper for debugPrintAll(), prints a single ruleset */
-DEFFUNC_llExecFunc(doDebugPrintAll)
-{
+DEFFUNC_llExecFunc(doDebugPrintAll) {
 	return rulesetDebugPrint((ruleset_t*) pData);
 }
 /* debug print all rulesets
  */
 static rsRetVal
-debugPrintAll(rsconf_t *conf)
-{
+debugPrintAll(rsconf_t *conf) {
 	DEFiRet;
 	dbgprintf("All Rulesets:\n");
 	llExecFunc(&(conf->rulesets.llRulesets), doDebugPrintAll, NULL);
@@ -830,8 +815,7 @@ debugPrintAll(rsconf_t *conf)
 }
 
 static inline void
-rulesetOptimize(ruleset_t *pRuleset)
-{
+rulesetOptimize(ruleset_t *pRuleset) {
 	if(Debug) {
 		dbgprintf("ruleset '%s' before optimization:\n",
 			  pRuleset->pszName);
@@ -846,16 +830,14 @@ rulesetOptimize(ruleset_t *pRuleset)
 }
 
 /* helper for rulsetOptimizeAll(), optimizes a single ruleset */
-DEFFUNC_llExecFunc(doRulesetOptimizeAll)
-{
+DEFFUNC_llExecFunc(doRulesetOptimizeAll) {
 	rulesetOptimize((ruleset_t*) pData);
 	return RS_RET_OK;
 }
 /* optimize all rulesets
  */
 rsRetVal
-rulesetOptimizeAll(rsconf_t *conf)
-{
+rulesetOptimizeAll(rsconf_t *conf) {
 	DEFiRet;
 	dbgprintf("begin ruleset optimization phase\n");
 	llExecFunc(&(conf->rulesets.llRulesets), doRulesetOptimizeAll, NULL);
@@ -872,8 +854,7 @@ rulesetOptimizeAll(rsconf_t *conf)
  * rgerhards, 2009-10-27
  */
 static inline rsRetVal
-doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
-{
+doRulesetCreateQueue(rsconf_t *conf, int *pNewVal) {
 	uchar *rsname;
 	DEFiRet;
 
@@ -901,8 +882,7 @@ finalize_it:
 }
 
 static rsRetVal
-rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
-{
+rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal) {
 	return doRulesetCreateQueue(ourConf, pNewVal);
 }
 
@@ -916,8 +896,7 @@ rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
  * rgerhards, 2009-11-04
  */
 static rsRetVal
-doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
-{
+doRulesetAddParser(ruleset_t *pRuleset, uchar *pName) {
 	parser_t *pParser;
 	DEFiRet;
 
@@ -943,16 +922,14 @@ finalize_it:
 }
 
 static rsRetVal
-rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
-{
+rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName) {
 	return doRulesetAddParser(ourConf->rulesets.pCurr, pName);
 }
 
 
 /* Process ruleset() objects */
 rsRetVal
-rulesetProcessCnf(struct cnfobj *o)
-{
+rulesetProcessCnf(struct cnfobj *o) {
 	struct cnfparamvals *pvals;
 	rsRetVal localRet;
 	uchar *rsName = NULL;

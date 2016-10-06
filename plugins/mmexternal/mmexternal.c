@@ -128,8 +128,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -170,13 +171,13 @@ ENDtryResume
 static void
 writeOutputDebug(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	const char *__restrict__ const buf,
-	const ssize_t lenBuf)
-{
+	const ssize_t lenBuf) {
 	char errStr[1024];
 	ssize_t r;
 
-	if(pWrkrData->pData->outputFileName == NULL)
+	if (pWrkrData->pData->outputFileName == NULL) {
 		goto done;
+	}
 
 	if(pWrkrData->fdOutput == -1) {
 		pWrkrData->fdOutput = open((char*)pWrkrData->pData->outputFileName,
@@ -209,8 +210,7 @@ done:	return;
  * not handle those border-cases that are describe to cannot exist!
  */
 static void
-processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
-{
+processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg) {
 	rsRetVal iRet;
 	char errStr[1024];
 	ssize_t r;
@@ -265,8 +265,7 @@ processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *con
  * after fork).
  */
 static void __attribute__((noreturn))
-execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
-{
+execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr) {
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
@@ -332,8 +331,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
  * rgerhards, 2009-04-01
  */
 static rsRetVal
-openPipe(wrkrInstanceData_t *pWrkrData)
-{
+openPipe(wrkrInstanceData_t *pWrkrData) {
 	int pipestdin[2];
 	int pipestdout[2];
 	pid_t cpid;
@@ -357,7 +355,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 	}
 	pWrkrData->pid = cpid;
 
-	if(cpid == 0) {    
+	if(cpid == 0) {
 		/* we are now the child, just exec the binary. */
 		close(pipestdin[1]); /* close those pipe "ports" that */
 		close(pipestdout[0]); /* we don't need */
@@ -380,8 +378,7 @@ finalize_it:
 /* clean up after a terminated child
  */
 static inline rsRetVal
-cleanup(wrkrInstanceData_t *pWrkrData)
-{
+cleanup(wrkrInstanceData_t *pWrkrData) {
 	int status;
 	int ret;
 	char errStr[1024];
@@ -427,8 +424,7 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 /* try to restart the binary when it has stopped.
  */
 static inline rsRetVal
-tryRestart(wrkrInstanceData_t *pWrkrData)
-{
+tryRestart(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	assert(pWrkrData->bIsRunning == 0);
 
@@ -442,8 +438,7 @@ tryRestart(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict__ const pMsg)
-{
+callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict__ const pMsg) {
 	int lenWritten;
 	int lenWrite;
 	int writeOffset;
@@ -502,8 +497,9 @@ finalize_it:
 	/* we need to free json input strings, only. All others point to memory
 	 * inside the msg object, which is destroyed when the msg is destroyed.
 	 */
-	if(pWrkrData->pData->inputProp == INPUT_JSON)
+	if (pWrkrData->pData->inputProp == INPUT_JSON) {
 		free((void*)inputstr);
+	}
 	RETiRet;
 }
 
@@ -514,24 +510,26 @@ BEGINdoAction_NoStrings
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	if(pData->bForceSingleInst)
+	if (pData->bForceSingleInst) {
 		pthread_mutex_lock(&pData->mut);
+	}
 	if(pWrkrData->bIsRunning == 0) {
 		openPipe(pWrkrData);
 	}
 	
 	iRet = callExtProg(pWrkrData, pMsg);
 
-	if(iRet != RS_RET_OK)
+	if (iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
-	if(pData->bForceSingleInst)
+	}
+	if (pData->bForceSingleInst) {
 		pthread_mutex_unlock(&pData->mut);
+	}
 ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->szBinary = NULL;
 	pData->aParams = NULL;
 	pData->outputFileName = NULL;
@@ -561,8 +559,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
 			estrBinary = pvals[i].val.d.estr;
 			estrParams = NULL;
@@ -595,8 +594,9 @@ CODESTARTnewActInst
 				pData->iParams = 2; /* Set default to 2, first parameter for binary and second parameter at least from config*/
 				iCnt = 0;
 				while(iCnt < es_strlen(estrParams) ) {
-					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
+					if (c[iCnt] == ' ' && c[iCnt-1] != '\\') {
 						 pData->iParams++;
+					}
 					iCnt++;
 				}
 				DBGPRINTF("mmexternal: iParams = '%d'\n", pData->iParams);
@@ -649,12 +649,15 @@ CODESTARTnewActInst
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "interface.input")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(!strcmp(cstr, "msg"))
+			if (!strcmp(cstr, "msg")) {
 				pData->inputProp = INPUT_MSG;
-			else if(!strcmp(cstr, "rawmsg"))
+			}
+			else if (!strcmp(cstr, "rawmsg")) {
 				pData->inputProp = INPUT_RAWMSG;
-			else if(!strcmp(cstr, "fulljson"))
+			}
+			else if (!strcmp(cstr, "fulljson")) {
 				pData->inputProp = INPUT_JSON;
+			}
 			else {
 				errmsg.LogError(0, RS_RET_INVLD_INTERFACE_INPUT,
 					"mmexternal: invalid interface.input parameter '%s'",

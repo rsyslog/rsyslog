@@ -72,10 +72,12 @@ const log_type_t log_types[] = {
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-    if(eFeat == sFEATUREAutomaticSanitazion)
+    if (eFeat == sFEATUREAutomaticSanitazion) {
         iRet = RS_RET_OK;
-    if(eFeat == sFEATUREAutomaticPRIParsing)
+    }
+    if (eFeat == sFEATUREAutomaticPRIParsing) {
         iRet = RS_RET_OK;
+    }
 ENDisCompatibleWithFeature
 
 
@@ -138,8 +140,9 @@ CODESTARTparse
     /* check log type */
     log_type = *((uint64 *)p2parse);
     for(j = 0; j < NUM_LOG_TYPES; j++) {
-        if ((log_type & log_types[j].mask) == log_types[j].value)
+        if ((log_type & log_types[j].mask) == log_types[j].value) {
             break;
+        }
     }
     if (j == NUM_LOG_TYPES) {
         dbgprintf("not a PAN-OS syslog message, log type: %llx\n", log_type);

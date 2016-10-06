@@ -33,22 +33,19 @@
 #endif
 
 static void
-errout(char *reason)
-{
+errout(char *reason) {
 	perror(reason);
 	exit(1);
 }
 
 static void
-usage(void)
-{
+usage(void) {
 	fprintf(stderr, "usage: minitcpsrvr -t ip-addr -p port -f outfile\n");
 	exit (1);
 }
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int fds;
 	int fdc;
 	int fdf = -1;
@@ -113,17 +110,19 @@ main(int argc, char *argv[])
 	srvAddr.sin_addr.s_addr = inet_addr(targetIP);
 	srvAddr.sin_port = htons(targetPort);
 	srvAddrLen = sizeof(srvAddr);
-	if(bind(fds, (struct sockaddr *)&srvAddr, srvAddrLen) != 0)
+	if (bind(fds, (struct sockaddr *)&srvAddr, srvAddrLen) != 0) {
 		errout("bind");
+	}
 	if(listen(fds, 20) != 0) errout("listen");
 	cliAddrLen = sizeof(cliAddr);
 
 	fdc = accept(fds, (struct sockaddr *)&cliAddr, &cliAddrLen);
-	while(1) {       
+	while(1) {
 		nRead = read(fdc, wrkBuf, sizeof(wrkBuf));
 		if(nRead == 0) break;
-		if(write(fdf, wrkBuf, nRead) != nRead)
+		if (write(fdf, wrkBuf, nRead) != nRead) {
 			errout("write");
+		}
 	}
 	/* let the OS do the cleanup */
 	return 0;

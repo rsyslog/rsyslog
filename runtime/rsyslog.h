@@ -132,8 +132,7 @@
  * pri more than once.
  */
 static inline syslog_pri_t __attribute__((unused))
-pri2fac(const syslog_pri_t pri)
-{
+pri2fac(const syslog_pri_t pri) {
        unsigned fac = pri >> 3;
        return (fac > 23) ? LOG_FAC_INVLD : fac;
 }

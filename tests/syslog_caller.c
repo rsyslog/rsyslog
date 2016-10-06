@@ -41,8 +41,7 @@
 static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C
 	} fmt = FMT_NATIVE;
 
-static void usage(void)
-{
+static void usage(void) {
 	fprintf(stderr, "usage: syslog_caller num-messages\n");
 	exit(1);
 }
@@ -51,8 +50,7 @@ static void usage(void)
 #ifdef HAVE_LIBLOGGING_STDLOG
 /* buffer must be large "enough" [4K?] */
 static void
-genMsg(char *buf, const int sev, const int iRun)
-{
+genMsg(char *buf, const int sev, const int iRun) {
 	switch(fmt) {
 	case FMT_NATIVE:
 		sprintf(buf, "test message nbr %d, severity=%d", iRun, sev);
@@ -67,8 +65,7 @@ genMsg(char *buf, const int sev, const int iRun)
 }
 #endif
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int i;
 	int opt;
 	int bRollingSev = 0;
@@ -104,10 +101,12 @@ int main(int argc, char *argv[])
 				break;
 		case 'f':	if(!strcmp(optarg, "syslog_inject-l"))
 					fmt = FMT_SYSLOG_INJECT_L;
-				else if(!strcmp(optarg, "syslog_inject-c"))
+				else if (!strcmp(optarg, "syslog_inject-c")) {
 					fmt = FMT_SYSLOG_INJECT_C;
-				else
+				}
+				else {
 					usage();
+				}
 				break;
 #endif
 		default:	usage();

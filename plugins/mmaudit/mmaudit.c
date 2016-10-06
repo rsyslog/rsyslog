@@ -114,16 +114,14 @@ ENDtryResume
 
 
 static inline void
-skipWhitespace(uchar **buf)
-{
+skipWhitespace(uchar **buf) {
 	while(**buf && isspace(**buf))
 		++(*buf);
 }
 
 
 static inline rsRetVal
-parseName(uchar **buf, char *name, unsigned lenName)
-{
+parseName(uchar **buf, char *name, unsigned lenName) {
 	unsigned i;
 	skipWhitespace(buf);
 	--lenName; /* reserve space for '\0' */
@@ -139,8 +137,7 @@ parseName(uchar **buf, char *name, unsigned lenName)
 
 
 static inline rsRetVal
-parseValue(uchar **buf, char *val, unsigned lenval)
-{
+parseValue(uchar **buf, char *val, unsigned lenval) {
 	char termc;
 	unsigned i;
 	DEFiRet;
@@ -174,8 +171,7 @@ finalize_it:
 /* parse the audit record and create libee structure
  */
 static rsRetVal
-audit_parse(uchar *buf, struct json_object **jsonRoot)
-{
+audit_parse(uchar *buf, struct json_object **jsonRoot) {
 	struct json_object *json;
 	struct json_object *jval;
 	char name[1024];
@@ -292,8 +288,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
@@ -318,8 +315,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	RETiRet;
 }
@@ -342,8 +338,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG) {
 			bMsgPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

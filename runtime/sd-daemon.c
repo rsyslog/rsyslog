@@ -128,8 +128,9 @@ _sd_export_ int sd_listen_fds(int unset_environment) {
                         goto finish;
                 }
 
-                if (flags & FD_CLOEXEC)
+                if (flags & FD_CLOEXEC) {
                         continue;
+                }
 
                 if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0) {
                         r = -errno;
@@ -152,22 +153,26 @@ finish:
 _sd_export_ int sd_is_fifo(int fd, const char *path) {
         struct stat st_fd;
 
-        if (fd < 0)
+        if (fd < 0) {
                 return -EINVAL;
+        }
 
-        if (fstat(fd, &st_fd) < 0)
+        if (fstat(fd, &st_fd) < 0) {
                 return -errno;
+        }
 
-        if (!S_ISFIFO(st_fd.st_mode))
+        if (!S_ISFIFO(st_fd.st_mode)) {
                 return 0;
+        }
 
         if (path) {
                 struct stat st_path;
 
                 if (stat(path, &st_path) < 0) {
 
-                        if (errno == ENOENT || errno == ENOTDIR)
+                        if (errno == ENOENT || errno == ENOTDIR) {
                                 return 0;
+                        }
 
                         return -errno;
                 }
@@ -183,22 +188,26 @@ _sd_export_ int sd_is_fifo(int fd, const char *path) {
 _sd_export_ int sd_is_special(int fd, const char *path) {
         struct stat st_fd;
 
-        if (fd < 0)
+        if (fd < 0) {
                 return -EINVAL;
+        }
 
-        if (fstat(fd, &st_fd) < 0)
+        if (fstat(fd, &st_fd) < 0) {
                 return -errno;
+        }
 
-        if (!S_ISREG(st_fd.st_mode) && !S_ISCHR(st_fd.st_mode))
+        if (!S_ISREG(st_fd.st_mode) && !S_ISCHR(st_fd.st_mode)) {
                 return 0;
+        }
 
         if (path) {
                 struct stat st_path;
 
                 if (stat(path, &st_path) < 0) {
 
-                        if (errno == ENOENT || errno == ENOTDIR)
+                        if (errno == ENOENT || errno == ENOTDIR) {
                                 return 0;
+                        }
 
                         return -errno;
                 }
@@ -207,10 +216,12 @@ _sd_export_ int sd_is_special(int fd, const char *path) {
                         return
                                 st_path.st_dev == st_fd.st_dev &&
                                 st_path.st_ino == st_fd.st_ino;
-                else if (S_ISCHR(st_fd.st_mode) && S_ISCHR(st_path.st_mode))
+                else if (S_ISCHR(st_fd.st_mode) && S_ISCHR(st_path.st_mode)) {
                         return st_path.st_rdev == st_fd.st_rdev;
-                else
+                }
+                else {
                         return 0;
+                }
         }
 
         return 1;
@@ -219,41 +230,50 @@ _sd_export_ int sd_is_special(int fd, const char *path) {
 static int sd_is_socket_internal(int fd, int type, int listening) {
         struct stat st_fd;
 
-        if (fd < 0 || type < 0)
+        if (fd < 0 || type < 0) {
                 return -EINVAL;
+        }
 
-        if (fstat(fd, &st_fd) < 0)
+        if (fstat(fd, &st_fd) < 0) {
                 return -errno;
+        }
 
-        if (!S_ISSOCK(st_fd.st_mode))
+        if (!S_ISSOCK(st_fd.st_mode)) {
                 return 0;
+        }
 
         if (type != 0) {
                 int other_type = 0;
                 socklen_t l = sizeof(other_type);
 
-                if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &other_type, &l) < 0)
+                if (getsockopt(fd, SOL_SOCKET, SO_TYPE, &other_type, &l) < 0) {
                         return -errno;
+                }
 
-                if (l != sizeof(other_type))
+                if (l != sizeof(other_type)) {
                         return -EINVAL;
+                }
 
-                if (other_type != type)
+                if (other_type != type) {
                         return 0;
+                }
         }
 
         if (listening >= 0) {
                 int accepting = 0;
                 socklen_t l = sizeof(accepting);
 
-                if (getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &accepting, &l) < 0)
+                if (getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &accepting, &l) < 0) {
                         return -errno;
+                }
 
-                if (l != sizeof(accepting))
+                if (l != sizeof(accepting)) {
                         return -EINVAL;
+                }
 
-                if (!accepting != !listening)
+                if (!accepting != !listening) {
                         return 0;
+                }
         }
 
         return 1;
@@ -270,12 +290,14 @@ union sockaddr_union {
 _sd_export_ int sd_is_socket(int fd, int family, int type, int listening) {
         int r;
 
-        if (family < 0)
+        if (family < 0) {
                 return -EINVAL;
+        }
 
         r = sd_is_socket_internal(fd, type, listening);
-        if (r <= 0)
+        if (r <= 0) {
                 return r;
+        }
 
         if (family > 0) {
                 union sockaddr_union sockaddr;
@@ -284,11 +306,13 @@ _sd_export_ int sd_is_socket(int fd, int family, int type, int listening) {
                 memset(&sockaddr, 0, sizeof(sockaddr));
                 l = sizeof(sockaddr);
 
-                if (getsockname(fd, &sockaddr.sa, &l) < 0)
+                if (getsockname(fd, &sockaddr.sa, &l) < 0) {
                         return -errno;
+                }
 
-                if (l < sizeof(sa_family_t))
+                if (l < sizeof(sa_family_t)) {
                         return -EINVAL;
+                }
 
                 return sockaddr.sa.sa_family == family;
         }
@@ -301,39 +325,46 @@ _sd_export_ int sd_is_socket_inet(int fd, int family, int type, int listening, u
         socklen_t l;
         int r;
 
-        if (family != 0 && family != AF_INET && family != AF_INET6)
+        if (family != 0 && family != AF_INET && family != AF_INET6) {
                 return -EINVAL;
+        }
 
         r = sd_is_socket_internal(fd, type, listening);
-        if (r <= 0)
+        if (r <= 0) {
                 return r;
+        }
 
         memset(&sockaddr, 0, sizeof(sockaddr));
         l = sizeof(sockaddr);
 
-        if (getsockname(fd, &sockaddr.sa, &l) < 0)
+        if (getsockname(fd, &sockaddr.sa, &l) < 0) {
                 return -errno;
+        }
 
-        if (l < sizeof(sa_family_t))
+        if (l < sizeof(sa_family_t)) {
                 return -EINVAL;
+        }
 
         if (sockaddr.sa.sa_family != AF_INET &&
             sockaddr.sa.sa_family != AF_INET6)
                 return 0;
 
         if (family > 0)
-                if (sockaddr.sa.sa_family != family)
+                if (sockaddr.sa.sa_family != family) {
                         return 0;
+                }
 
         if (port > 0) {
                 if (sockaddr.sa.sa_family == AF_INET) {
-                        if (l < sizeof(struct sockaddr_in))
+                        if (l < sizeof(struct sockaddr_in)) {
                                 return -EINVAL;
+                        }
 
                         return htons(port) == sockaddr.in4.sin_port;
                 } else {
-                        if (l < sizeof(struct sockaddr_in6))
+                        if (l < sizeof(struct sockaddr_in6)) {
                                 return -EINVAL;
+                        }
 
                         return htons(port) == sockaddr.in6.sin6_port;
                 }
@@ -348,24 +379,29 @@ _sd_export_ int sd_is_socket_unix(int fd, int type, int listening, const char *p
         int r;
 
         r = sd_is_socket_internal(fd, type, listening);
-        if (r <= 0)
+        if (r <= 0) {
                 return r;
+        }
 
         memset(&sockaddr, 0, sizeof(sockaddr));
         l = sizeof(sockaddr);
 
-        if (getsockname(fd, &sockaddr.sa, &l) < 0)
+        if (getsockname(fd, &sockaddr.sa, &l) < 0) {
                 return -errno;
+        }
 
-        if (l < sizeof(sa_family_t))
+        if (l < sizeof(sa_family_t)) {
                 return -EINVAL;
+        }
 
-        if (sockaddr.sa.sa_family != AF_UNIX)
+        if (sockaddr.sa.sa_family != AF_UNIX) {
                 return 0;
+        }
 
         if (path) {
-                if (length == 0)
+                if (length == 0) {
                         length = strlen(path);
+                }
 
                 if (length == 0)
                         /* Unnamed socket */
@@ -392,27 +428,32 @@ _sd_export_ int sd_is_mq(int fd, const char *path) {
 #else
         struct mq_attr attr;
 
-        if (fd < 0)
+        if (fd < 0) {
                 return -EINVAL;
+        }
 
-        if (mq_getattr(fd, &attr) < 0)
+        if (mq_getattr(fd, &attr) < 0) {
                 return -errno;
+        }
 
         if (path) {
                 char fpath[PATH_MAX];
                 struct stat a, b;
 
-                if (path[0] != '/')
+                if (path[0] != '/') {
                         return -EINVAL;
+                }
 
-                if (fstat(fd, &a) < 0)
+                if (fstat(fd, &a) < 0) {
                         return -errno;
+                }
 
                 strncpy(stpcpy(fpath, "/dev/mqueue"), path, sizeof(fpath) - 12);
                 fpath[sizeof(fpath)-1] = 0;
 
-                if (stat(fpath, &b) < 0)
+                if (stat(fpath, &b) < 0) {
                         return -errno;
+                }
 
                 if (a.st_dev != b.st_dev ||
                     a.st_ino != b.st_ino)
@@ -439,8 +480,9 @@ _sd_export_ int sd_notify(int unset_environment, const char *state) {
         }
 
         e = getenv("NOTIFY_SOCKET");
-        if (!e)
+        if (!e) {
                 return 0;
+        }
 
         /* Must be an abstract socket, or an absolute path */
         if ((e[0] != '@' && e[0] != '/') || e[1] == 0) {
@@ -458,8 +500,9 @@ _sd_export_ int sd_notify(int unset_environment, const char *state) {
         sockaddr.sa.sa_family = AF_UNIX;
         strncpy(sockaddr.un.sun_path, e, sizeof(sockaddr.un.sun_path));
 
-        if (sockaddr.un.sun_path[0] == '@')
+        if (sockaddr.un.sun_path[0] == '@') {
                 sockaddr.un.sun_path[0] = 0;
+        }
 
         memset(&iovec, 0, sizeof(iovec));
         iovec.iov_base = (char*) state;
@@ -469,8 +512,9 @@ _sd_export_ int sd_notify(int unset_environment, const char *state) {
         msghdr.msg_name = &sockaddr;
         msghdr.msg_namelen = offsetof(struct sockaddr_un, sun_path) + strlen(e);
 
-        if (msghdr.msg_namelen > sizeof(struct sockaddr_un))
+        if (msghdr.msg_namelen > sizeof(struct sockaddr_un)) {
                 msghdr.msg_namelen = sizeof(struct sockaddr_un);
+        }
 
         msghdr.msg_iov = &iovec;
         msghdr.msg_iovlen = 1;
@@ -483,11 +527,13 @@ _sd_export_ int sd_notify(int unset_environment, const char *state) {
         r = 1;
 
 finish:
-        if (unset_environment)
+        if (unset_environment) {
                 unsetenv("NOTIFY_SOCKET");
+        }
 
-        if (fd >= 0)
+        if (fd >= 0) {
                 close(fd);
+        }
 
         return r;
 #endif
@@ -505,8 +551,9 @@ _sd_export_ int sd_notifyf(int unset_environment, const char *format, ...) {
         r = vasprintf(&p, format, ap);
         va_end(ap);
 
-        if (r < 0 || !p)
+        if (r < 0 || !p) {
                 return -ENOMEM;
+        }
 
         r = sd_notify(unset_environment, p);
         free(p);
@@ -525,8 +572,9 @@ _sd_export_ int sd_booted(void) {
          * created. This takes place in mount-setup.c, so is
          * guaranteed to happen very early during boot. */
 
-        if (lstat("/run/systemd/system/", &st) < 0)
+        if (lstat("/run/systemd/system/", &st) < 0) {
                 return 0;
+        }
 
         return !!S_ISDIR(st.st_mode);
 #endif
