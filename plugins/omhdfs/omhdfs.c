@@ -101,8 +101,9 @@ static inline rsRetVal fileClose(file_t *pFile);
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -118,8 +119,7 @@ ENDdbgPrintInstInfo
  * we can also check a directroy (if that matters...)
  */
 static int
-HDFSFileExists(hdfsFS fs, uchar *name)
-{
+HDFSFileExists(hdfsFS fs, uchar *name) {
 	int r;
 	hdfsFileInfo *info;
 
@@ -137,11 +137,11 @@ HDFSFileExists(hdfsFS fs, uchar *name)
 }
 
 static inline rsRetVal
-HDFSmkdir(hdfsFS fs, uchar *name)
-{
+HDFSmkdir(hdfsFS fs, uchar *name) {
 	DEFiRet;
-	if(hdfsCreateDirectory(fs, (char*)name) == -1)
+	if (hdfsCreateDirectory(fs, (char*)name) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 finalize_it:
 	RETiRet;
@@ -157,8 +157,7 @@ finalize_it:
  */
 
 static inline rsRetVal
-fileObjConstruct(file_t **ppFile)
-{
+fileObjConstruct(file_t **ppFile) {
 	file_t *pFile;
 	DEFiRet;
 
@@ -174,21 +173,21 @@ finalize_it:
 }
 
 static inline void
-fileObjAddUser(file_t *pFile)
-{
+fileObjAddUser(file_t *pFile) {
 	/* init mutex only when second user is added */
 	++pFile->nUsers;
-	if(pFile->nUsers == 2)
+	if (pFile->nUsers == 2) {
 		pthread_mutex_init(&pFile->mut, NULL);
+	}
 	DBGPRINTF("omhdfs: file %s now being used by %d actions\n", pFile->name, pFile->nUsers);
 }
 
 static rsRetVal
-fileObjDestruct(file_t **ppFile)
-{
+fileObjDestruct(file_t **ppFile) {
 	file_t *pFile = *ppFile;
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		pthread_mutex_destroy(&pFile->mut);
+	}
 	fileClose(pFile);
 	free(pFile->name);
 	free((char*)pFile->hdfsHost);
@@ -200,15 +199,15 @@ fileObjDestruct(file_t **ppFile)
 
 /* check, and potentially create, all names inside a path */
 static rsRetVal
-filePrepare(file_t *pFile)
-{
+filePrepare(file_t *pFile) {
 	uchar *p;
 	uchar *pszWork;
 	size_t len;
 	DEFiRet;
 
-	if(HDFSFileExists(pFile->fs, pFile->name))
+	if (HDFSFileExists(pFile->fs, pFile->name)) {
 		FINALIZE;
+	}
 
 	/* file does not exist, create it (and eventually parent directories */
 	if(1) { // check if bCreateDirs
@@ -237,21 +236,20 @@ finalize_it:
  * hash table code.
  */
 static void
-fileObjDestruct4Hashtable(void *ptr)
-{
+fileObjDestruct4Hashtable(void *ptr) {
 	file_t *pFile = (file_t*) ptr;
 	fileObjDestruct(&pFile);
 }
 
 
 static inline rsRetVal
-fileOpen(file_t *pFile)
-{
+fileOpen(file_t *pFile) {
 	DEFiRet;
 
 	assert(pFile->fh == NULL);
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		d_pthread_mutex_lock(&pFile->mut);
+	}
 
 	DBGPRINTF("omhdfs: try to connect to HDFS at host '%s', port %d\n",
 		  pFile->hdfsHost, pFile->hdfsPort);
@@ -284,23 +282,25 @@ fileOpen(file_t *pFile)
 	}
 
 finalize_it:
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		d_pthread_mutex_unlock(&pFile->mut);
+	}
 	RETiRet;
 }
 
 
 /* Note: lenWrite is reset to zero on successful write! */
 static inline rsRetVal
-fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite)
-{
+fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite) {
 	DEFiRet;
 
-	if(*lenWrite == 0)
+	if (*lenWrite == 0) {
 		FINALIZE;
+	}
 
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		d_pthread_mutex_lock(&pFile->mut);
+	}
 
 	/* open file if not open. This must be done *here* and while mutex-protected
 	 * because of HUP handling (which is async to normal processing!).
@@ -328,21 +328,23 @@ finalize_it:
 
 
 static inline rsRetVal
-fileClose(file_t *pFile)
-{
+fileClose(file_t *pFile) {
 	DEFiRet;
 
-	if(pFile->fh == NULL)
+	if (pFile->fh == NULL) {
 		FINALIZE;
+	}
 
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		d_pthread_mutex_lock(&pFile->mut);
+	}
 
 	hdfsCloseFile(pFile->fs, pFile->fh);
 	pFile->fh = NULL;
 
-	if(pFile->nUsers > 1)
+	if (pFile->nUsers > 1) {
 		d_pthread_mutex_unlock(&pFile->mut);
+	}
 
 finalize_it:
 	RETiRet;
@@ -359,8 +361,7 @@ finalize_it:
  * write operation.
  */
 static inline rsRetVal
-addData(instanceData *pData, uchar *buf)
-{
+addData(instanceData *pData, uchar *buf) {
 	unsigned len;
 	DEFiRet;
 
@@ -397,8 +398,9 @@ ENDcreateWrkrInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pData->pFile != NULL)
+	if (pData->pFile != NULL) {
 		fileObjDestruct(&pData->pFile);
+	}
 ENDfreeInstance
 
 
@@ -413,7 +415,7 @@ CODESTARTtryResume
 	pthread_mutex_lock(&mutDoAct);
 	fileClose(pData->pFile);
 	fileOpen(pData->pFile);
-	if(pData->pFile->fh == NULL){
+	if(pData->pFile->fh == NULL) {
 		dbgprintf("omhdfs: tried to resume file %s, but still no luck...\n",
 			  pData->pFile->name);
 		iRet = RS_RET_SUSPENDED;
@@ -485,14 +487,15 @@ CODESTARTparseSelectorAct
 		CHKmalloc(pFile->hdfsHost = strdup((cs.hdfsHost == NULL) ? "default" : (char*) cs.hdfsHost));
 		pFile->hdfsPort = cs.hdfsPort;
 		fileOpen(pFile);
-		if(pFile->fh == NULL){
+		if(pFile->fh == NULL) {
 			errmsg.LogError(0, RS_RET_ERR_HDFS_OPEN, "omhdfs: failed to open %s - "
 				    	"retrying later", pFile->name);
 			iRet = RS_RET_SUSPENDED;
 		}
 		r = hashtable_insert(files, keybuf, pFile);
-		if(r == 0)
+		if (r == 0) {
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
 	}
 	fileObjAddUser(pFile);
 	pData->pFile = pFile;
@@ -510,8 +513,7 @@ CODESTARTdoHUP
 	/* Iterator constructor only returns a valid iterator if
 	* the hashtable is not empty */
 	itr = hashtable_iterator(files);
-	if(hashtable_count(files) > 0)
-	{
+	if(hashtable_count(files) > 0) {
 		do {
 			pFile = (file_t *) hashtable_iterator_value(itr);
 			fileClose(pFile);
@@ -524,8 +526,7 @@ ENDdoHUP
 /* Reset config variables for this module to default values.
  * rgerhards, 2007-07-17
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.hdfsHost = NULL;
 	cs.hdfsPort = 0;
 	free(cs.fileName);

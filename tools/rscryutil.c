@@ -66,27 +66,29 @@ void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {}; /
  * returns 0 on success or something else on error/EOF
  */
 static int
-eiGetRecord(FILE *eifp, char *rectype, char *value)
-{
+eiGetRecord(FILE *eifp, char *rectype, char *value) {
 	int r;
 	unsigned short i, j;
 	char buf[EIF_MAX_RECTYPE_LEN+EIF_MAX_VALUE_LEN+128];
 	     /* large enough for any valid record */
 
 	if(fgets(buf, sizeof(buf), eifp) == NULL) {
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 
 	for(i = 0 ; i < EIF_MAX_RECTYPE_LEN && buf[i] != ':' ; ++i)
 		if(buf[i] == '\0') {
-			r = 2; goto done;
+			r = 2;
+			goto done;
 		} else 
 			rectype[i] = buf[i];
 	rectype[i] = '\0';
 	j = 0;
 	for(++i ; i < EIF_MAX_VALUE_LEN && buf[i] != '\n' ; ++i, ++j)
 		if(buf[i] == '\0') {
-			r = 3; goto done;
+			r = 3;
+			goto done;
 		} else 
 			value[j] = buf[i];
 	value[j] = '\0';
@@ -95,8 +97,7 @@ done:	return r;
 }
 
 static int
-eiCheckFiletype(FILE *eifp)
-{
+eiCheckFiletype(FILE *eifp) {
 	char rectype[EIF_MAX_RECTYPE_LEN+1];
 	char value[EIF_MAX_VALUE_LEN+1];
 	int r;
@@ -106,15 +107,15 @@ eiCheckFiletype(FILE *eifp)
 		fprintf(stderr, "invalid filetype \"cookie\" in encryption "
 			"info file\n");
 		fprintf(stderr, "\trectype: '%s', value: '%s'\n", rectype, value);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 	r = 0;
 done:	return r;
 }
 
 static int
-eiGetIV(FILE *eifp, char *iv, size_t leniv)
-{
+eiGetIV(FILE *eifp, char *iv, size_t leniv) {
 	char rectype[EIF_MAX_RECTYPE_LEN+1];
 	char value[EIF_MAX_VALUE_LEN+1];
 	size_t valueLen;
@@ -126,36 +127,42 @@ eiGetIV(FILE *eifp, char *iv, size_t leniv)
 	if(strcmp(rectype, "IV")) {
 		fprintf(stderr, "no IV record found when expected, record type "
 			"seen is '%s'\n", rectype);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 	valueLen = strlen(value);
 	if(valueLen/2 != leniv) {
 		fprintf(stderr, "length of IV is %lld, expected %lld\n",
 			(long long) valueLen/2, (long long) leniv);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 
 	for(i = j = 0 ; i < valueLen ; ++i) {
-		if(value[i] >= '0' && value[i] <= '9')
+		if (value[i] >= '0' && value[i] <= '9') {
 			nibble = value[i] - '0';
-		else if(value[i] >= 'a' && value[i] <= 'f')
+		}
+		else if (value[i] >= 'a' && value[i] <= 'f') {
 			nibble = value[i] - 'a' + 10;
+		}
 		else {
 			fprintf(stderr, "invalid IV '%s'\n", value);
-			r = 1; goto done;
+			r = 1;
+			goto done;
 		}
-		if(i % 2 == 0)
+		if (i % 2 == 0) {
 			iv[j] = nibble << 4;
-		else
+		}
+		else {
 			iv[j++] |= nibble;
+		}
 	}
 	r = 0;
 done:	return r;
 }
 
 static int
-eiGetEND(FILE *eifp, off64_t *offs)
-{
+eiGetEND(FILE *eifp, off64_t *offs) {
 	char rectype[EIF_MAX_RECTYPE_LEN+1] = "";
 	char value[EIF_MAX_VALUE_LEN+1];
 	int r;
@@ -164,7 +171,8 @@ eiGetEND(FILE *eifp, off64_t *offs)
 	if(strcmp(rectype, "END")) {
 		fprintf(stderr, "no END record found when expected, record type "
 			"seen is '%s'\n", rectype);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 	*offs = atoll(value);
 	r = 0;
@@ -172,8 +180,7 @@ done:	return r;
 }
 
 static int
-initCrypt(FILE *eifp)
-{
+initCrypt(FILE *eifp) {
  	int r = 0;
 	gcry_error_t gcryError;
 	char iv[4096];
@@ -182,7 +189,8 @@ initCrypt(FILE *eifp)
 	if(blkLength > sizeof(iv)) {
 		fprintf(stderr, "internal error[%s:%d]: block length %lld too large for "
 			"iv buffer\n", __FILE__, __LINE__, (long long) blkLength);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
 
@@ -191,7 +199,8 @@ initCrypt(FILE *eifp)
 		fprintf(stderr, "invalid key length; key is %u characters, but "
 			"exactly %llu characters are required\n", cry_keylen,
 			(long long unsigned) keyLength);
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 
 	gcryError = gcry_cipher_open(&gcry_chd, cry_algo, cry_mode, 0);
@@ -199,7 +208,8 @@ initCrypt(FILE *eifp)
 		printf("gcry_cipher_open failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 
 	gcryError = gcry_cipher_setkey(gcry_chd, cry_key, keyLength);
@@ -207,7 +217,8 @@ initCrypt(FILE *eifp)
 		printf("gcry_cipher_setkey failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 
 	gcryError = gcry_cipher_setiv(gcry_chd, iv, blkLength);
@@ -215,26 +226,28 @@ initCrypt(FILE *eifp)
 		printf("gcry_cipher_setiv failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
-		r = 1; goto done;
+		r = 1;
+		goto done;
 	}
 done: return r;
 }
 
 static inline void
-removePadding(char *buf, size_t *plen)
-{
+removePadding(char *buf, size_t *plen) {
 	unsigned len = (unsigned) *plen;
 	unsigned iSrc, iDst;
 	char *frstNUL;
 
 	frstNUL = memchr(buf, 0x00, *plen);
-	if(frstNUL == NULL)
+	if (frstNUL == NULL) {
 		goto done;
+	}
 	iDst = iSrc = frstNUL - buf;
 
 	while(iSrc < len) {
-		if(buf[iSrc] != 0x00)
+		if (buf[iSrc] != 0x00) {
 			buf[iDst++] = buf[iSrc];
+		}
 		++iSrc;
 	}
 
@@ -243,8 +256,7 @@ done:	return;
 }
 
 static void
-decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
-{
+decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs) {
 	gcry_error_t gcryError;
 	size_t nRead, nWritten;
 	size_t toRead;
@@ -256,8 +268,9 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 		toRead = sizeof(buf) <= leftTillBlkEnd ? sizeof(buf) : leftTillBlkEnd;
 		toRead = toRead - toRead % blkLength;
 		nRead = fread(buf, 1, toRead, fpin);
-		if(nRead == 0)
+		if (nRead == 0) {
 			break;
+		}
 		leftTillBlkEnd -= nRead, *pCurrOffs += nRead;
 		gcryError = gcry_cipher_decrypt(
 				gcry_chd, // gcry_cipher_hd_t
@@ -282,8 +295,7 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 
 
 static int
-doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
-{
+doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp) {
 	off64_t blkEnd;
 	off64_t currOffs = 0;
 	int r = 1;
@@ -292,8 +304,9 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 
 	while(1) {
 		/* process block */
-		if(initCrypt(eifp) != 0)
+		if (initCrypt(eifp) != 0) {
 			goto done;
+		}
 		/* set blkEnd to size of logfp and proceed. */
                 if((fd = fileno(logfp)) == -1) {
                         r = -1;
@@ -311,8 +324,7 @@ done:	return r;
 }
 
 static void
-decrypt(const char *name)
-{
+decrypt(const char *name) {
 	FILE *logfp = NULL, *eifp = NULL;
 	int r = 0;
 	char eifname[4096];
@@ -331,32 +343,36 @@ decrypt(const char *name)
 			perror(eifname);
 			goto err;
 		}
-		if(eiCheckFiletype(eifp) != 0)
+		if (eiCheckFiletype(eifp) != 0) {
 			goto err;
+		}
 	}
 
 	doDecrypt(logfp, eifp, stdout);
 
-	fclose(logfp); logfp = NULL;
-	fclose(eifp); eifp = NULL;
+	fclose(logfp);
+	logfp = NULL;
+	fclose(eifp);
+	eifp = NULL;
 	return;
 
 err:
 	fprintf(stderr, "error %d processing file %s\n", r, name);
-	if(logfp != NULL)
+	if (logfp != NULL) {
 		fclose(logfp);
+	}
 }
 
 static void
-write_keyfile(char *fn)
-{
+write_keyfile(char *fn) {
 	int fd;
 	int r;
 	mode_t fmode;
 
 	fmode = O_WRONLY|O_CREAT;
-	if(!optionForce)
+	if (!optionForce) {
 		fmode |= O_EXCL;
+	}
 	if(fn == NULL) {
 		fprintf(stderr, "program error: keyfile is NULL");
 		exit(1);
@@ -375,8 +391,7 @@ write_keyfile(char *fn)
 }
 
 static void
-getKeyFromFile(char *fn)
-{
+getKeyFromFile(char *fn) {
 	int r;
 	r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
 	if(r != 0) {
@@ -386,8 +401,7 @@ getKeyFromFile(char *fn)
 }
 
 static void
-getRandomKey(void)
-{
+getRandomKey(void) {
 	int fd;
 	cry_keylen = randomKeyLen;
 	cry_key = malloc(randomKeyLen); /* do NOT zero-out! */
@@ -406,14 +420,16 @@ getRandomKey(void)
 
 
 static void
-setKey(void)
-{
-	if(randomKeyLen != -1)
+setKey(void) {
+	if (randomKeyLen != -1) {
 		getRandomKey();
-	else if(keyfile != NULL)
+	}
+	else if (keyfile != NULL) {
 		getKeyFromFile(keyfile);
-	else if(keyprog != NULL)
+	}
+	else if (keyprog != NULL) {
 		gcryGetKeyFromProg(keyprog, &cry_key, &cry_keylen);
+	}
 	if(cry_key == NULL) {
 		fprintf(stderr, "ERROR: key must be set via some method\n");
 		exit(1);
@@ -437,8 +453,7 @@ static struct option long_options[] =
 }; 
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int i;
 	int opt;
 	int temp;
@@ -446,8 +461,9 @@ main(int argc, char *argv[])
 
 	while(1) {
 		opt = getopt_long(argc, argv, "a:dfk:K:m:p:r:vVW:", long_options, NULL);
-		if(opt == -1)
+		if (opt == -1) {
 			break;
+		}
 		switch(opt) {
 		case 'd':
 			mode = MD_DECRYPT;
@@ -522,8 +538,9 @@ main(int argc, char *argv[])
 		}
 		write_keyfile(newKeyFile);
 	} else {
-		if(optind == argc)
+		if (optind == argc) {
 			decrypt("-");
+		}
 		else {
 			for(i = optind ; i < argc ; ++i)
 				decrypt(argv[i]);

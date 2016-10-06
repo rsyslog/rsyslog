@@ -122,8 +122,7 @@ static struct queuefilenames_s {
 
 
 static __attribute__((noreturn)) void
-rsyslogd_usage(void)
-{
+rsyslogd_usage(void) {
 	fprintf(stderr, "usage: rsyslogd [options]\n"
 			"use \"man rsyslogd\" for details. To run rsyslog "
 			"interactively, use \"rsyslogd -n\""
@@ -135,8 +134,7 @@ rsyslogd_usage(void)
 #ifndef HAVE_SETSID
 extern void untty(void); /* in syslogd.c, GPLv3 */
 static int
-setsid(void)
-{
+setsid(void) {
 	untty();
 	return 0;
 }
@@ -144,8 +142,7 @@ setsid(void)
 
 
 static rsRetVal
-queryLocalHostname(void)
-{
+queryLocalHostname(void) {
 	uchar *LocalHostName = NULL;
 	uchar *LocalDomain = NULL;
 	uchar *LocalFQDNName;
@@ -176,8 +173,7 @@ finalize_it:
 }
 
 static rsRetVal
-writePidFile(void)
-{
+writePidFile(void) {
 	FILE *fp;
 	DEFiRet;
 	
@@ -185,8 +181,9 @@ writePidFile(void)
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	if(tmpPidFile == NULL)
+	if (tmpPidFile == NULL) {
 		tmpPidFile = PidFile;
+	}
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
@@ -210,8 +207,7 @@ finalize_it:
  * is already running. This MUST be called before we write our own pid file.
  */
 static rsRetVal
-checkStartupOK(void)
-{
+checkStartupOK(void) {
 	FILE *fp = NULL;
 	DEFiRet;
 
@@ -237,8 +233,9 @@ checkStartupOK(void)
 	}
 
 finalize_it:
-	if(fp != NULL)
+	if (fp != NULL) {
 		fclose(fp);
+	}
 	RETiRet;
 }
 
@@ -246,8 +243,7 @@ finalize_it:
  * operation.
  */
 static void
-prepareBackground(const int parentPipeFD)
-{
+prepareBackground(const int parentPipeFD) {
 	DBGPRINTF("rsyslogd: in child, finalizing initialization\n");
 
 	int r = setsid();
@@ -302,8 +298,7 @@ prepareBackground(const int parentPipeFD)
  * message.
  */
 static int
-forkRsyslog(void)
-{
+forkRsyslog(void) {
 	int pipefd[2];
 	pid_t cpid;
 	char err[1024];
@@ -321,7 +316,7 @@ forkRsyslog(void)
 		exit(1);
 	}
 
-	if(cpid == 0) {    
+	if(cpid == 0) {
 		prepareBackground(pipefd[1]);
 		close(pipefd[0]);
 		return pipefd[1];
@@ -343,10 +338,12 @@ forkRsyslog(void)
 	tv.tv_usec = 0;
 
 	retval = select(pipefd[0]+1, &rfds, NULL, NULL, &tv);
-	if(retval == -1)
+	if (retval == -1) {
 		rs_strerror_r(errno, err, sizeof(err));
-	else
+	}
+	else {
 		strcpy(err, "OK");
+	}
 	dbgprintf("rsyslogd: select() returns %d: %s\n", retval, err);
 	if(retval == -1) {
 		fprintf(stderr,"rsyslog startup failure, select() failed: %s\n", err);
@@ -379,8 +376,7 @@ forkRsyslog(void)
  * and the parent may terminate.
  */
 static void
-tellChildReady(const int pipefd, const char *const msg)
-{
+tellChildReady(const int pipefd, const char *const msg) {
 	dbgprintf("rsyslogd: child signaling OK\n");
 	const int nWritten = write(pipefd, msg, strlen(msg));
 	dbgprintf("rsyslogd: child signalled OK, nWritten %d\n", (int) nWritten);
@@ -390,8 +386,7 @@ tellChildReady(const int pipefd, const char *const msg)
 
 /* print version and compile-time setting information */
 static void
-printVersion(void)
-{
+printVersion(void) {
 	printf("rsyslogd %s, ", VERSION);
 	printf("compiled with:\n");
 	printf("\tPLATFORM:\t\t\t\t%s\n", PLATFORM_ID);
@@ -444,8 +439,7 @@ printVersion(void)
 }
 
 static rsRetVal
-rsyslogd_InitStdRatelimiters(void)
-{
+rsyslogd_InitStdRatelimiters(void) {
 	DEFiRet;
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	/* TODO: add linux-type limiting capability */
@@ -462,8 +456,7 @@ finalize_it:
  * rgerhards, 2008-04-16: the actual initialization is now carried out by the runtime
  */
 static rsRetVal
-rsyslogd_InitGlobalClasses(void)
-{
+rsyslogd_InitGlobalClasses(void) {
 	DEFiRet;
 	const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
@@ -548,8 +541,9 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 		pMsg = pBatch->pElem[i].pMsg;
 		if((pMsg->msgFlags & NEEDS_ACLCHK_U) != 0) {
 			DBGPRINTF("msgConsumer: UDP ACL must be checked for message (hostname-based)\n");
-			if(net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK)
+			if (net.cvthname(pMsg->rcvFrom.pfrominet, &localName, &fqdn, &ip) != RS_RET_OK) {
 				continue;
+			}
 			bIsPermitted = net.isAllowedSender2((uchar*)"UDP",
 			    (struct sockaddr *)pMsg->rcvFrom.pfrominet, (char*)propGetSzStr(fqdn), 1);
 			if(!bIsPermitted) {
@@ -564,7 +558,7 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 			}
 		}
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+			if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
 				DBGPRINTF("Message discarded, parsing error %d\n", localRet);
 				pBatch->eltState[i] = BATCH_STATE_DISC;
 			}
@@ -572,10 +566,12 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	}
 
 finalize_it:
-	if(propFromHost != NULL)
+	if (propFromHost != NULL) {
 		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
+	}
+	if (propFromHostIP != NULL) {
 		prop.Destruct(&propFromHostIP);
+	}
 	RETiRet;
 }
 
@@ -587,8 +583,7 @@ finalize_it:
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWti)
-{
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch, wti_t *pWti) {
 	DEFiRet;
 	assert(pBatch != NULL);
 	preprocessBatch(pBatch, pWti->pbShutdownImmediate);
@@ -608,8 +603,7 @@ int i;
  * the time being (remember that we want to restructure config processing at large!).
  * rgerhards, 2009-10-27
  */
-rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst)
-{
+rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst) {
 	struct queuefilenames_s *qfn;
 	uchar *qfname = NULL;
 	static int qfn_renamenum = 0;
@@ -649,8 +643,9 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 					break;
 				}
 			}
-			if(qfname == NULL)
+			if (qfname == NULL) {
 				qfname = ustrdup(ourConf->globals.mainQ.pszMainMsgQFName);
+			}
 			qfn = malloc(sizeof(struct queuefilenames_s));
 			qfn->name = qfname;
 			qfn->next = queuefilenames;
@@ -687,8 +682,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 }
 
 rsRetVal
-startMainQueue(qqueue_t *pQueue)
-{
+startMainQueue(qqueue_t *pQueue) {
 	DEFiRet;
 	CHKiRet_Hdlr(qqueueStart(pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
@@ -703,14 +697,12 @@ startMainQueue(qqueue_t *pQueue)
  * message handler. -- rgerhards, 2008-04-17
  */
 void
-rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
-{
+rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg) {
 	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
 }
 
 static inline rsRetVal
-submitMsgWithDfltRatelimiter(msg_t *pMsg)
-{
+submitMsgWithDfltRatelimiter(msg_t *pMsg) {
 	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 }
 
@@ -721,8 +713,7 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
  */
 static rsRetVal
 logmsgInternalSelf(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
-	const char *__restrict__ const msg, int flags)
-{
+	const char *__restrict__ const msg, int flags) {
 	uchar pszTag[33];
 	msg_t *pMsg;
 	DEFiRet;
@@ -766,8 +757,7 @@ finalize_it:
  * to log a message orginating from the syslogd itself.
  */
 rsRetVal
-logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags)
-{
+logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int flags) {
 	size_t lenMsg;
 	unsigned i;
 	char *bufModMsg = NULL; /* buffer for modified message, should we need to modify */
@@ -809,8 +799,9 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * supressor statement.
 	 */
 	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
-		if(pri2sev(pri) == LOG_ERR)
+		if (pri2sev(pri) == LOG_ERR) {
 			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+		}
 	}
 
 finalize_it:
@@ -819,8 +810,7 @@ finalize_it:
 }
 
 rsRetVal
-submitMsg(msg_t *pMsg)
-{
+submitMsg(msg_t *pMsg) {
 	return submitMsgWithDfltRatelimiter(pMsg);
 }
 
@@ -829,8 +819,7 @@ submitMsg(msg_t *pMsg)
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg2(msg_t *pMsg)
-{
+submitMsg2(msg_t *pMsg) {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
 	DEFiRet;
@@ -858,15 +847,15 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 rsRetVal
-multiSubmitMsg2(multi_submit_t *pMultiSub)
-{
+multiSubmitMsg2(multi_submit_t *pMultiSub) {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
 	DEFiRet;
 	assert(pMultiSub != NULL);
 
-	if(pMultiSub->nElem == 0)
+	if (pMultiSub->nElem == 0) {
 		FINALIZE;
+	}
 
 	pRuleset = MsgGetRuleset(pMultiSub->ppMsgs[0]);
 	pQueue = (pRuleset == NULL) ? pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
@@ -893,8 +882,7 @@ multiSubmitMsg(multi_submit_t *pMultiSub) /* backward compat. level */
 
 /* flush multiSubmit, e.g. at end of read records */
 rsRetVal
-multiSubmitFlush(multi_submit_t *pMultiSub)
-{
+multiSubmitFlush(multi_submit_t *pMultiSub) {
 	DEFiRet;
 	if(pMultiSub->nElem > 0) {
 		iRet = multiSubmitMsg2(pMultiSub);
@@ -920,13 +908,13 @@ static bufOpt_t *bufOptLast = NULL;
 
 /* add option buffer */
 static rsRetVal
-bufOptAdd(char opt, char *arg)
-{
+bufOptAdd(char opt, char *arg) {
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL)
+	if ((pBuf = MALLOC(sizeof(bufOpt_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	pBuf->optchar = opt;
 	pBuf->arg = arg;
@@ -949,13 +937,13 @@ finalize_it:
  * (we use int *opt instead of char *opt to keep consistent with getopt())
  */
 static rsRetVal
-bufOptRemove(int *opt, char **arg)
-{
+bufOptRemove(int *opt, char **arg) {
 	DEFiRet;
 	bufOpt_t *pBuf;
 
-	if(bufOptRoot == NULL)
+	if (bufOptRoot == NULL) {
 		ABORT_FINALIZE(RS_RET_END_OF_LINKEDLIST);
+	}
 	pBuf = bufOptRoot;
 
 	*opt = pBuf->optchar;
@@ -970,8 +958,7 @@ finalize_it:
 
 
 static void
-hdlr_sigttin(void)
-{
+hdlr_sigttin(void) {
 	/* this is just a dummy to care for our sigttin input
 	 * module cancel interface. The important point is that
 	 * it actually does *NOTHING*.
@@ -979,8 +966,7 @@ hdlr_sigttin(void)
 }
 
 static void
-hdlr_enable(int sig, void (*hdlr)())
-{
+hdlr_enable(int sig, void (*hdlr)()) {
 	struct sigaction sigAct;
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -989,20 +975,17 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 static void
-hdlr_sighup(void)
-{
+hdlr_sighup(void) {
 	bHadHUP = 1;
 }
 
 static void
-hdlr_sigchld(void)
-{
+hdlr_sigchld(void) {
 	bChildDied = 1;
 }
 
 static void
-rsyslogdDebugSwitch(void)
-{
+rsyslogdDebugSwitch(void) {
 	time_t tTime;
 	struct tm tp;
 
@@ -1039,8 +1022,7 @@ rsyslogdDebugSwitch(void)
  * to emit error messages.
  */
 static void
-initAll(int argc, char **argv)
-{
+initAll(int argc, char **argv) {
 	rsRetVal localRet;
 	int ch;
 	int iHelperUOpt;
@@ -1102,8 +1084,9 @@ initAll(int argc, char **argv)
 		}
 	}
 
-	if(argc - optind)
+	if (argc - optind) {
 		rsyslogd_usage();
+	}
 
 	DBGPRINTF("rsyslogd %s startup, module path '%s', cwd:%s\n",
 		  VERSION, glblModPath == NULL ? "" : (char*)glblModPath,
@@ -1255,8 +1238,9 @@ initAll(int argc, char **argv)
 		}
 	}
 
-	if(iRet != RS_RET_END_OF_LINKEDLIST)
+	if (iRet != RS_RET_END_OF_LINKEDLIST) {
 		FINALIZE;
+	}
 
 	if(iConfigVerify) {
 		doFork = 0;
@@ -1287,12 +1271,14 @@ initAll(int argc, char **argv)
 	CHKiRet(rsyslogd_InitStdRatelimiters());
 
 	if(bChDirRoot) {
-		if(chdir("/") != 0)
+		if (chdir("/") != 0) {
 			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+		}
 	}
 
-	if(iConfigVerify)
+	if (iConfigVerify) {
 		FINALIZE;
+	}
 	/* after this point, we are in a "real" startup */
 
 	thrdInit();
@@ -1369,8 +1355,7 @@ finalize_it:
  * really help us. TODO: add error messages?
  * rgerhards, 2007-08-03
  */
-static inline void processImInternal(void)
-{
+static inline void processImInternal(void) {
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
@@ -1387,8 +1372,7 @@ static inline void processImInternal(void)
  */
 rsRetVal
 parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
-{
+	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset) {
 	prop_t *pProp = NULL;
 	msg_t *pMsg;
 	DEFiRet;
@@ -1399,8 +1383,9 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	} else {
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		MsgSetInputName(pMsg, pInputName);
+	}
 	MsgSetRawMsg(pMsg, (char*)msg, len);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRuleset(pMsg, pRuleset);
@@ -1421,8 +1406,7 @@ finalize_it:
  * is done inside the action class and nothing we need to take care of.
  * rgerhards, 2008-10-22
  */
-DEFFUNC_llExecFunc(doHUPActions)
-{
+DEFFUNC_llExecFunc(doHUPActions) {
 	BEGINfunc
 	actionCallHUPHdlr((action_t*) pData);
 	ENDfunc
@@ -1441,8 +1425,7 @@ DEFFUNC_llExecFunc(doHUPActions)
  * rgerhards, 2012-04-11
  */
 static void
-doHUP(void)
-{
+doHUP(void) {
 	char buf[512];
 
 	if(ourConf->globals.bLogStatusMsgs) {
@@ -1473,8 +1456,7 @@ doHUP(void)
  *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
  */
 void
-rsyslogdDoDie(int sig)
-{
+rsyslogdDoDie(int sig) {
 #	define MSG1 "DoDie called.\n"
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
@@ -1507,8 +1489,7 @@ rsyslogdDoDie(int sig)
  * by the other threads spawned.
  */
 static void
-mainloop(void)
-{
+mainloop(void) {
 	struct timeval tvSelectTimeout;
 	time_t tTime;
 
@@ -1516,7 +1497,7 @@ mainloop(void)
 	/* first check if we have any internal messages queued and spit them out. */
 	processImInternal();
 
-	while(!bFinished){
+	while(!bFinished) {
 		tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
@@ -1550,8 +1531,7 @@ mainloop(void)
 /* Finalize and destruct all actions.
  */
 static void
-rsyslogd_destructAllActions(void)
-{
+rsyslogd_destructAllActions(void) {
 	ruleset.DestructAllActions(runConf);
 	bHaveMainQueue = 0; /* flag that internal messages need to be temporarily stored */
 }
@@ -1559,8 +1539,7 @@ rsyslogd_destructAllActions(void)
 
 /* de-initialize everything, make ready for termination */
 static void
-deinitAll(void)
-{
+deinitAll(void) {
 	char buf[256];
 
 	DBGPRINTF("exiting on signal %d\n", bFinished);
@@ -1615,8 +1594,9 @@ deinitAll(void)
 
 	modExitIminternal();
 
-	if(pInternalInputName != NULL)
+	if (pInternalInputName != NULL) {
 		prop.Destruct(&pInternalInputName);
+	}
 
 	/* the following line cleans up CfSysLineHandlers that were not based on loadable
 	 * modules. As such, they are not yet cleared.  */
@@ -1650,13 +1630,13 @@ deinitAll(void)
  * rgerhards, 20080-01-28
  */
 int
-main(int argc, char **argv)
-{
+main(int argc, char **argv) {
 	/* use faster hash function inside json lib */
 	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
-	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+	if (log_dflt != NULL && !strcmp(log_dflt, "1")) {
 		bProcessInternalMessages = 1;
+	}
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");

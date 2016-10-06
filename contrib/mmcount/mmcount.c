@@ -136,8 +136,7 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	int i;
 
 	pData->pszAppName = NULL;
@@ -150,14 +149,12 @@ setInstParamDefaults(instanceData *pData)
 }
 
 static unsigned int
-hash_from_key_fn(void *k)
-{
+hash_from_key_fn(void *k) {
 	return *(unsigned int *)k;
 }
 
 static int
-key_equals_fn(void *k1, void *k2)
-{
+key_equals_fn(void *k1, void *k2) {
 	return (*(unsigned int *)k1 == *(unsigned int *)k2);
 }
 
@@ -176,8 +173,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "appname")) {
 			pData->pszAppName = es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;

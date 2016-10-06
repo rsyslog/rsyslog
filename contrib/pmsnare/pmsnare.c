@@ -75,10 +75,12 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
+	if (eFeat == sFEATUREAutomaticSanitazion) {
 		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	}
+	if (eFeat == sFEATUREAutomaticPRIParsing) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -168,7 +170,7 @@ CODESTARTparse
 			--lenMsg;
 			++p2parse;
 		}
-		if (lenMsg){
+		if (lenMsg) {
 			--lenMsg;
 			++p2parse;
 		}

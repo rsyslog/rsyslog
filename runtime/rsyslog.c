@@ -107,8 +107,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
  * during initialization. -- rgerhards. 2008-04-17
  */
 static void
-dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
-{
+dfltErrLogger(const int severity, const int iErr, const uchar *errMsg) {
 	fprintf(stderr, "rsyslog runtime error(%d,%d): %s\n", severity, iErr, errMsg);
 }
 
@@ -117,8 +116,7 @@ dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
  * rgerhards, 2008-04-18
  */
 void
-rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*))
-{
+rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*)) {
 	assert(errLogger != NULL);
 	glblErrLogger = errLogger;
 }
@@ -134,8 +132,7 @@ rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*))
  * rgerhards, 2008-04-16
  */
 rsRetVal
-rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
-{
+rsrtInit(const char **ppErrObj, obj_if_t *pObjIF) {
 	DEFiRet;
 
 	if(iRefCount == 0) {
@@ -220,8 +217,7 @@ finalize_it:
  * rgerhards, 2008-04-16
  */
 rsRetVal
-rsrtExit(void)
-{
+rsrtExit(void) {
 	DEFiRet;
 
 	if(iRefCount == 1) {
@@ -256,8 +252,7 @@ rsrtExit(void)
  * call rsrtInit() and rsrtExit(), which can be called by multiple callers.
  * rgerhards, 2008-04-16
  */
-int rsrtIsInit(void)
-{
+int rsrtIsInit(void) {
 	return iRefCount;
 }
 

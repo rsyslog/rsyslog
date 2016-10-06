@@ -104,8 +104,7 @@ static unsigned clockFileAccess = 0;
 static pthread_mutex_t mutClock;
 #endif
 static inline uint64
-getClockFileAccess(void)
-{
+getClockFileAccess(void) {
 #if HAVE_ATOMIC_BUILTINS64
 	return ATOMIC_INC_AND_FETCH_uint64(&clockFileAccess, &mutClock);
 #else
@@ -289,14 +288,16 @@ static struct cnfparamblk actpblk =
  * old-style and new-style configuration parts.
  */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else if(pszFileDfltTplName == NULL)
+	}
+	else if (pszFileDfltTplName == NULL) {
 		return (uchar*)"RSYSLOG_FileFormat";
-	else
+	}
+	else {
 		return pszFileDfltTplName;
+	}
 }
 
 
@@ -308,8 +309,9 @@ ENDinitConfVars
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -345,8 +347,7 @@ ENDdbgPrintInstInfo
  * the parameter.
  */
 static rsRetVal
-setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
-{
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal) {
 	DEFiRet;
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
@@ -365,8 +366,7 @@ finalize_it:
 /* set the dynaFile cache size. Does some limit checking.
  * rgerhards, 2007-07-31
  */
-static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
-{
+static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal) {
 	DEFiRet;
 
 	if(iNewVal < 1) {
@@ -398,8 +398,7 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
  * removed.
  * rgerhards 2005-06-21
  */
-static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
-{
+static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts) {
 	DEFiRet;
 	size_t i;
 	struct outchannel *pOch;
@@ -455,14 +454,14 @@ finalize_it:
  * if the entry should be d_free()ed and 0 if not.
  */
 static rsRetVal
-dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry)
-{
+dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry) {
 	dynaFileCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
 	ASSERT(pCache != NULL);
 
-	if(pCache[iEntry] == NULL)
+	if (pCache[iEntry] == NULL) {
 		FINALIZE;
+	}
 
 	DBGPRINTF("Removing entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
@@ -495,8 +494,7 @@ finalize_it:
  * rgerhards, 2008-10-23
  */
 static inline void
-dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
-{
+dynaFileFreeCacheEntries(instanceData *__restrict__ const pData) {
 	register int i;
 	ASSERT(pData != NULL);
 
@@ -511,22 +509,21 @@ dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 
 /* This function frees the dynamic file name cache.
  */
-static void dynaFileFreeCache(instanceData *__restrict__ const pData)
-{
+static void dynaFileFreeCache(instanceData *__restrict__ const pData) {
 	ASSERT(pData != NULL);
 
 	BEGINfunc;
 	dynaFileFreeCacheEntries(pData);
-	if(pData->dynCache != NULL)
+	if (pData->dynCache != NULL) {
 		d_free(pData->dynCache);
+	}
 	ENDfunc;
 }
 
 
 /* close current file */
 static rsRetVal
-closeFile(instanceData *__restrict__ const pData)
-{
+closeFile(instanceData *__restrict__ const pData) {
 	DEFiRet;
 	if(pData->useSigprov) {
 		pData->sigprov.OnFileClose(pData->sigprovFileData);
@@ -539,8 +536,7 @@ closeFile(instanceData *__restrict__ const pData)
 
 /* This prepares the signature provider to process a file */
 static rsRetVal
-sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const fn)
-{
+sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const fn) {
 	DEFiRet;
 	pData->sigprov.OnFileOpen(pData->sigprovData, fn, &pData->sigprovFileData);
 	RETiRet;
@@ -553,8 +549,7 @@ sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const
  * changed to iRet interface - 2009-03-19
  */
 static rsRetVal
-prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
-{
+prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName) {
 	int fd;
 	char errStr[1024]; /* buffer for strerr() */
 	DEFiRet;
@@ -634,14 +629,17 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 	 * async processing, which is a real performance waste if we do not do buffered
 	 * writes! -- rgerhards, 2009-07-06
 	 */
-	if(pData->bUseAsyncWriter)
+	if (pData->bUseAsyncWriter) {
 		CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
-	if(pData->pszSizeLimitCmd != NULL)
+	}
+	if (pData->pszSizeLimitCmd != NULL) {
 		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
+	}
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 
-	if(pData->useSigprov)
+	if (pData->useSigprov) {
 		sigprovPrepare(pData, szNameBuf);
+	}
 	
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -662,8 +660,7 @@ finalize_it:
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
 static inline rsRetVal
-prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
-{
+prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName) {
 	uint64 ctOldest; /* "timestamp" of oldest element */
 	int iOldest;
 	int i;
@@ -696,14 +693,16 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 	ctOldest = getClockFileAccess(); /* there must always be an older one */
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		if(pCache[i] == NULL || pCache[i]->pName == NULL) {
-			if(iFirstFree == -1)
+			if (iFirstFree == -1) {
 				iFirstFree = i;
+			}
 		} else { /* got an element, let's see if it matches */
 			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
 				pData->pStrm = pCache[i]->pStrm;
-				if(pData->useSigprov)
+				if (pData->useSigprov) {
 					pData->sigprovFileData = pCache[i]->sigprovFileData;
+				}
 				pData->iCurrElt = i;
 				pCache[i]->clkTickAccessed = getClockFileAccess(); /* update "timestamp" for LRU */
 				FINALIZE;
@@ -762,15 +761,17 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	pCache[iFirstFree]->pStrm = pData->pStrm;
-	if(pData->useSigprov)
+	if (pData->useSigprov) {
 		pCache[iFirstFree]->sigprovFileData = pData->sigprovFileData;
+	}
 	pCache[iFirstFree]->clkTickAccessed = getClockFileAccess();
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
 finalize_it:
-	if(iRet == RS_RET_OK)
+	if (iRet == RS_RET_OK) {
 		pCache[pData->iCurrElt]->nInactive = 0;
+	}
 	RETiRet;
 }
 
@@ -781,15 +782,14 @@ finalize_it:
  * rgerhards, 2009-06-03
  */
 static  rsRetVal
-doWrite(instanceData *__restrict__ const pData, uchar *__restrict__ const pszBuf, const int lenBuf)
-{
+doWrite(instanceData *__restrict__ const pData, uchar *__restrict__ const pszBuf, const int lenBuf) {
 	DEFiRet;
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
 	DBGPRINTF("omfile: write to stream, pData->pStrm %p, lenBuf %d, strt data %.128s\n",
 		  pData->pStrm, lenBuf, pszBuf);
-	if(pData->pStrm != NULL){
+	if(pData->pStrm != NULL) {
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
 		if(pData->useSigprov) {
 			CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
@@ -805,8 +805,7 @@ finalize_it:
 static rsRetVal
 writeFile(instanceData *__restrict__ const pData,
 	  const actWrkrIParams_t *__restrict__ const pParam,
-	  const int iMsg)
-{
+	  const int iMsg) {
 	DEFiRet;
 
 	STATSCOUNTER_INC(pData->ctrRequests, pData->mutCtrRequests);
@@ -904,20 +903,21 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 /* This function checks dynafile cache for janitor action */
 static inline void
-janitorChkDynaFiles(instanceData *__restrict__ const pData)
-{
+janitorChkDynaFiles(instanceData *__restrict__ const pData) {
 	int i;
 	dynaFileCacheEntry **pCache = pData->dynCache;
 
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
-		if(pCache[i] == NULL)
+		if (pCache[i] == NULL) {
 			continue;
+		}
 		DBGPRINTF("omfile janitor: checking dynafile %d:%s, inactive since %d\n", i,
 			pCache[i]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[i]->pName,
 			(int) pCache[i]->nInactive);
@@ -934,8 +934,7 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 
 /* callback for the janitor. This cleans out files (if so configured) */
 static void
-janitorCB(void *pUsr)
-{
+janitorCB(void *pUsr) {
 	instanceData *__restrict__ const pData = (instanceData *) pUsr;
 	pthread_mutex_lock(&pData->mutWrite);
 	if(pData->bDynamicName) {
@@ -995,14 +994,16 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->tplName);
 	free(pData->fname);
-	if(pData->iCloseTimeout > 0)
+	if (pData->iCloseTimeout > 0) {
 		janitorDelEtry(pData->janitorID);
+	}
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		closeFile(pData);
-	if(pData->stats != NULL)
+	if (pData->stats != NULL) {
 		statsobj.Destruct(&(pData->stats));
+	}
 	if(pData->useSigprov) {
 		pData->sigprov.Destruct(&pData->sigprovData);
 		obj.ReleaseObj(__FILE__, pData->sigprovNameFull+2, pData->sigprovNameFull,
@@ -1065,8 +1066,7 @@ ENDcommitTransaction
 
 
 static inline void
-setInstParamDefaults(instanceData *__restrict__ const pData)
-{
+setInstParamDefaults(instanceData *__restrict__ const pData) {
 	pData->fname = NULL;
 	pData->tplName = NULL;
 	pData->fileUID = loadModConf->fileUID;
@@ -1094,8 +1094,7 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 
 
 static rsRetVal
-setupInstStatsCtrs(instanceData *__restrict__ const pData)
-{
+setupInstStatsCtrs(instanceData *__restrict__ const pData) {
 	uchar ctrName[512];
 	DEFiRet;
 
@@ -1134,8 +1133,7 @@ finalize_it:
 }
 
 static void
-initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
-{
+initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst) {
 	uchar szDrvrName[1024];
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmsig_%s", pData->sigprovName)
@@ -1176,8 +1174,7 @@ done:	return;
 }
 
 static rsRetVal
-initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
-{
+initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst) {
 	uchar szDrvrName[1024];
 	DEFiRet;
 
@@ -1242,8 +1239,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "dynafilecachesize")) {
 			pData->iDynaFileCacheSize = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
@@ -1347,8 +1345,9 @@ CODESTARTnewActInst
 		(pData->bDynamicName) ? "dyna" : "", pData->fname, pData);
 	pData->janitorID[sizeof(pData->janitorID)-1] = '\0'; /* just in case... */
 
-	if(pData->iCloseTimeout > 0)
+	if (pData->iCloseTimeout > 0) {
 		janitorAddEtry(janitorCB, pData->janitorID, pData);
+	}
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
@@ -1366,8 +1365,9 @@ CODESTARTparseSelectorAct
 	if(!strncmp((char*) p, ":omfile:", sizeof(":omfile:") - 1)) {
 		p += sizeof(":omfile:") - 1;
 	} 
-	if(!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-'))
+	if (!(*p == '$' || *p == '?' || *p == '/' || *p == '.' || *p == '-')) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	}
 
 	CHKiRet(createInstance(&pData));
 
@@ -1450,8 +1450,7 @@ ENDparseSelectorAct
 /* Reset config variables for this module to default values.
  * rgerhards, 2007-07-17
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.fileUID = -1;
 	cs.fileGID = -1;
 	cs.dirUID = -1;

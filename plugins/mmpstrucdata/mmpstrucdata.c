@@ -124,8 +124,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->jsonRoot = NULL;
 }
 
@@ -144,8 +143,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
 			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -173,8 +173,7 @@ ENDtryResume
 
 
 static inline rsRetVal
-parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
-{
+parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf) {
 	int i, j;
 	DEFiRet;
 	i = *curridx;
@@ -207,8 +206,7 @@ parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
 
 
 static rsRetVal
-parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
-{
+parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf) {
 	int i, j;
 	DEFiRet;
 	i = *curridx;
@@ -226,8 +224,7 @@ parseSD_NAME(uchar *sdbuf, int lenbuf, int *curridx, uchar *namebuf)
 
 
 static rsRetVal
-parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
-{
+parseSD_PARAM(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot) {
 	int i;
 	uchar pName[33];
 	uchar pVal[32*1024];
@@ -260,8 +257,7 @@ finalize_it:
 
 
 static inline rsRetVal
-parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
-{
+parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot) {
 	int i;
 	uchar sd_id[33];
 	struct json_object *json = NULL;
@@ -297,14 +293,14 @@ parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroo
 	*curridx = i;
 	json_object_object_add(jroot, (char*)sd_id, json);
 finalize_it:
-	if(iRet != RS_RET_OK && json != NULL)
+	if (iRet != RS_RET_OK && json != NULL) {
 		json_object_put(json);
+	}
 	RETiRet;
 }
 
 static inline rsRetVal
-parse_sd(instanceData *pData, msg_t *pMsg)
-{
+parse_sd(instanceData *pData, msg_t *pMsg) {
 	struct json_object *json, *jroot;
 	uchar *sdbuf;
 	int lenbuf;
@@ -327,8 +323,9 @@ parse_sd(instanceData *pData, msg_t *pMsg)
 	json_object_object_add(jroot, "rfc5424-sd", json);
  	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
 finalize_it:
-	if(iRet != RS_RET_OK && json != NULL)
+	if (iRet != RS_RET_OK && json != NULL) {
 		json_object_put(json);
+	}
 	RETiRet;
 }
 

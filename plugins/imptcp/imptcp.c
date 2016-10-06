@@ -332,8 +332,7 @@ static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6);
 
 /* some simple constructors/destructors */
 static void
-destructSess(ptcpsess_t *pSess)
-{
+destructSess(ptcpsess_t *pSess) {
 	free(pSess->pMsg);
 	free(pSess->epd);
 	prop.Destruct(&pSess->peerName);
@@ -345,21 +344,26 @@ destructSess(ptcpsess_t *pSess)
 }
 
 static void
-destructSrv(ptcpsrv_t *pSrv)
-{
-	if(pSrv->ratelimiter != NULL)
+destructSrv(ptcpsrv_t *pSrv) {
+	if (pSrv->ratelimiter != NULL) {
 		ratelimitDestruct(pSrv->ratelimiter);
-	if(pSrv->pInputName != NULL)
+	}
+	if (pSrv->pInputName != NULL) {
 		prop.Destruct(&pSrv->pInputName);
+	}
 	pthread_mutex_destroy(&pSrv->mutSessLst);
-	if(pSrv->pszInputName != NULL)
+	if (pSrv->pszInputName != NULL) {
 		free(pSrv->pszInputName);
-	if(pSrv->port != NULL)
+	}
+	if (pSrv->port != NULL) {
 		free(pSrv->port);
-	if(pSrv->path != NULL)
+	}
+	if (pSrv->path != NULL) {
 		free(pSrv->path);
-	if(pSrv->lstnIP != NULL)
+	}
+	if (pSrv->lstnIP != NULL) {
 		free(pSrv->lstnIP);
+	}
 	free(pSrv);
 }
 
@@ -428,8 +432,7 @@ finalize_it:
  * code is to be executed before dropping privileges.
  */
 static rsRetVal
-startupSrv(ptcpsrv_t *pSrv)
-{
+startupSrv(ptcpsrv_t *pSrv) {
 	DEFiRet;
 	int error, maxs, on = 1;
 	int sock = -1;
@@ -592,8 +595,7 @@ finalize_it:
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer)
-{
+getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer) {
 	int error;
 	uchar szIP[NI_MAXHOST] = "";
 	uchar szHname[NI_MAXHOST] = "";
@@ -652,21 +654,23 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool b
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(*peerName != NULL)
+		if (*peerName != NULL) {
 			prop.Destruct(peerName);
-		if(*peerIP != NULL)
+		}
+		if (*peerIP != NULL) {
 			prop.Destruct(peerIP);
+		}
 	}
-	if(bMaliciousHName)
+	if (bMaliciousHName) {
 		iRet = RS_RET_MALICIOUS_HNAME;
+	}
 	RETiRet;
 }
 
 
 /* Enable KEEPALIVE handling on the socket.  */
 static inline rsRetVal
-EnableKeepAlive(ptcplstn_t *pLstn, int sock)
-{
+EnableKeepAlive(ptcplstn_t *pLstn, int sock) {
 	int ret;
 	int optval;
 	socklen_t optlen;
@@ -736,8 +740,7 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerIP)
-{
+AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerIP) {
 	int sockflags;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -747,8 +750,9 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 
 	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
-		if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE)
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE) {
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
+		}
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
@@ -777,8 +781,9 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* the close may be redundant, but that doesn't hurt... */
-		if(iNewSock != -1)
+		if (iNewSock != -1) {
 			close(iNewSock);
+		}
 	}
 
 	RETiRet;
@@ -797,8 +802,7 @@ finalize_it:
  * EXTRACT from tcps_sess.c
  */
 static rsRetVal
-doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
-{
+doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub) {
 	msg_t *pMsg;
 	ptcpsrv_t *pSrv;
 	DEFiRet;
@@ -814,8 +818,9 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pSrv->pInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
-	if(pSrv->dfltTZ != NULL)
+	if (pSrv->dfltTZ != NULL) {
 		MsgSetDfltTZ(pMsg, (char*) pSrv->dfltTZ);
+	}
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pThis->peerName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
@@ -847,8 +852,7 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 	struct syslogTime *stTime,
 	const time_t ttGenTime,
 	multi_submit_t *pMultiSub,
-	unsigned *const __restrict__ pnMsgs)
-{
+	unsigned *const __restrict__ pnMsgs) {
 	DEFiRet;
 	char c = **buff;
 	int octatesToCopy, octatesToDiscard;
@@ -976,8 +980,7 @@ finalize_it:
  * EXTRACT from tcps_sess.c
  */
 static rsRetVal
-DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogTime *stTime, time_t ttGenTime)
-{
+DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogTime *stTime, time_t ttGenTime) {
 	multi_submit_t multiSub;
 	msg_t *pMsgs[CONF_NUM_MULTISUB];
 	char *pEnd;
@@ -987,8 +990,9 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 	assert(pData != NULL);
 	assert(iLen > 0);
 
-	if(ttGenTime == 0)
+	if (ttGenTime == 0) {
 		datetime.getCurrTime(stTime, &ttGenTime, TIME_IN_LOCALTIME);
+	}
 	multiSub.ppMsgs = pMsgs;
 	multiSub.maxElem = CONF_NUM_MULTISUB;
 	multiSub.nElem = 0;
@@ -1003,16 +1007,16 @@ DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogT
 
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if (glblSenderKeepTrack) {
 		statsRecordSender(propGetSzStr(pThis->peerName), nMsgs, ttGenTime);
+	}
 
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len)
-{
+DataRcvdCompressed(ptcpsess_t *pThis, char *buf, size_t len) {
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	int zRet;	/* zlib return state */
@@ -1063,15 +1067,16 @@ finalize_it:
 }
 
 static rsRetVal
-DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
-{
+DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen) {
 	struct syslogTime stTime;
 	DEFiRet;
 	pThis->pLstn->rcvdBytes += iLen;
-	if(pThis->compressionMode >= COMPRESS_STREAM_ALWAYS)
+	if (pThis->compressionMode >= COMPRESS_STREAM_ALWAYS) {
 		iRet =  DataRcvdCompressed(pThis, pData, iLen);
-	else
+	}
+	else {
 		iRet =  DataRcvdUncompressed(pThis, pData, iLen, &stTime, 0);
+	}
 	RETiRet;
 }
 
@@ -1080,8 +1085,7 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 
 
 static inline void
-initConfigSettings(void)
-{
+initConfigSettings(void) {
 	cs.bEmitMsgOnClose = 0;
 	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bSuppOctetFram = 1;
@@ -1096,8 +1100,7 @@ initConfigSettings(void)
 /* add socket to the epoll set
  */
 static rsRetVal
-addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
-{
+addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd) {
 	DEFiRet;
 	epolld_t *epd = NULL;
 
@@ -1137,8 +1140,7 @@ finalize_it:
  * event (it's simple because we have it at hand).
  */
 static rsRetVal
-removeEPollSock(int sock, epolld_t *epd)
-{
+removeEPollSock(int sock, epolld_t *epd) {
 	DEFiRet;
 
 	DBGPRINTF("imptcp: removing socket %d from epoll[%d] set\n", sock, epollfd);
@@ -1159,8 +1161,7 @@ finalize_it:
 /* add a listener to the server 
  */
 static rsRetVal
-addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
-{
+addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6) {
 	DEFiRet;
 	ptcplstn_t *pLstn = NULL;
 	uchar statname[64];
@@ -1202,15 +1203,17 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	/* add to start of server's listener list */
 	pLstn->prev = NULL;
 	pLstn->next = pSrv->pLstn;
-	if(pSrv->pLstn != NULL)
+	if (pSrv->pLstn != NULL) {
 		pSrv->pLstn->prev = pLstn;
+	}
 	pSrv->pLstn = pLstn;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pLstn != NULL) {
-			if(pLstn->stats != NULL)
+			if (pLstn->stats != NULL) {
 				statsobj.Destruct(&(pLstn->stats));
+			}
 			free(pLstn);
 		}
 	}
@@ -1222,8 +1225,7 @@ finalize_it:
 /* add a session to the server 
  */
 static rsRetVal
-addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
-{
+addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP) {
 	DEFiRet;
 	ptcpsess_t *pSess = NULL;
 	ptcpsrv_t *pSrv = pLstn->pSrv;
@@ -1246,8 +1248,9 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->prev = NULL;
 	pthread_mutex_lock(&pSrv->mutSessLst);
 	pSess->next = pSrv->pSess;
-	if(pSrv->pSess != NULL)
+	if (pSrv->pSess != NULL) {
 		pSrv->pSess->prev = pSess;
+	}
 	pSrv->pSess = pSess;
 	pthread_mutex_unlock(&pSrv->mutSessLst);
 
@@ -1256,8 +1259,9 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pSess != NULL) {
-			if(pSess->pMsg != NULL)
+			if (pSess->pMsg != NULL) {
 				free(pSess->pMsg);
+			}
 			free(pSess);
 		}
 	}
@@ -1269,16 +1273,16 @@ finalize_it:
 /* finish zlib buffer, to be called before closing the session.
  */
 static rsRetVal
-doZipFinish(ptcpsess_t *pSess)
-{
+doZipFinish(ptcpsess_t *pSess) {
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
 	struct syslogTime stTime;
 	uchar zipBuf[32*1024]; // TODO: use "global" one from pSess
 
-	if(!pSess->bzInitDone)
+	if (!pSess->bzInitDone) {
 		goto done;
+	}
 
 	pSess->zstrm.avail_in = 0;
 	/* run inflate() on buffer until everything has been compressed */
@@ -1310,13 +1314,13 @@ done:	RETiRet;
  * get an error "bad file descriptor" from epoll.
  */
 static rsRetVal
-closeSess(ptcpsess_t *pSess)
-{
+closeSess(ptcpsess_t *pSess) {
 	int sock;
 	DEFiRet;
 	
-	if(pSess->compressionMode >= COMPRESS_STREAM_ALWAYS)
+	if (pSess->compressionMode >= COMPRESS_STREAM_ALWAYS) {
 		doZipFinish(pSess);
+	}
 
 	sock = pSess->sock;
 	CHKiRet(removeEPollSock(sock, pSess->epd));
@@ -1324,8 +1328,9 @@ closeSess(ptcpsess_t *pSess)
 
 	pthread_mutex_lock(&pSess->pLstn->pSrv->mutSessLst);
 	/* finally unlink session from structures */
-	if(pSess->next != NULL)
+	if (pSess->next != NULL) {
 		pSess->next->prev = pSess->prev;
+	}
 	if(pSess->prev == NULL) {
 		/* need to update root! */
 		pSess->pLstn->pSrv->pSess = pSess->next;
@@ -1347,8 +1352,7 @@ finalize_it:
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -1392,8 +1396,7 @@ finalize_it:
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	instanceConf_t *inst;
 	DEFiRet;
 
@@ -1437,8 +1440,7 @@ finalize_it:
 
 
 static inline rsRetVal
-addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
-{
+addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst) {
 	DEFiRet;
 	ptcpsrv_t *pSrv = NULL;
 
@@ -1505,8 +1507,7 @@ finalize_it:
 /* destroy worker pool structures and wait for workers to terminate
  */
 static inline void
-startWorkerPool(void)
-{
+startWorkerPool(void) {
 	int i;
 	wrkrRunning = 0;
 	DBGPRINTF("imptcp: starting worker pool, %d workers\n", runModConf->wrkrMax);
@@ -1526,8 +1527,7 @@ startWorkerPool(void)
 /* destroy worker pool structures and wait for workers to terminate
  */
 static inline void
-stopWorkerPool(void)
-{
+stopWorkerPool(void) {
 	int i;
 	DBGPRINTF("imptcp: stoping worker pool\n");
 	pthread_mutex_lock(&io_q.mut);
@@ -1546,8 +1546,7 @@ stopWorkerPool(void)
  * This is a one-time stop once the module is set to start.
  */
 static inline rsRetVal
-startupServers(void)
-{
+startupServers(void) {
 	DEFiRet;
 	rsRetVal localRet, lastErr;
 	int iOK;
@@ -1560,10 +1559,12 @@ startupServers(void)
 	while(pSrv != NULL) {
 		DBGPRINTF("imptcp: starting up server for port %s, name '%s'\n", pSrv->port, pSrv->pszInputName);
 		localRet = startupSrv(pSrv);
-		if(localRet == RS_RET_OK)
+		if (localRet == RS_RET_OK) {
 			iOK++;
-		else
+		}
+		else {
 			lastErr = localRet;
+		}
 		++iAll;
 		pSrv = pSrv->pNext;
 	}
@@ -1579,8 +1580,7 @@ startupServers(void)
  * connection.
  */
 static inline rsRetVal
-lstnActivity(ptcplstn_t *pLstn)
-{
+lstnActivity(ptcplstn_t *pLstn) {
 	int newSock = -1;
 	prop_t *peerName;
 	prop_t *peerIP;
@@ -1611,8 +1611,7 @@ finalize_it:
  * or close the session.
  */
 static rsRetVal
-sessActivity(ptcpsess_t *pSess, int *continue_polling)
-{
+sessActivity(ptcpsess_t *pSess, int *continue_polling) {
 	int lenRcv;
 	int lenBuf;
 	uchar *peerName;
@@ -1647,8 +1646,9 @@ sessActivity(ptcpsess_t *pSess, int *continue_polling)
 			}
 			break;
 		} else {
-			if(errno == EAGAIN || errno == EWOULDBLOCK)
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				break;
+			}
 			DBGPRINTF("imptcp: error on session socket %d - closed.\n", pSess->sock);
 			*continue_polling = 0;
 			closeSess(pSess); /* try clean-up by dropping session */
@@ -1666,8 +1666,7 @@ finalize_it:
  * concurrently.
  */
 static inline void
-processWorkItem(epolld_t *epd)
-{
+processWorkItem(epolld_t *epd) {
 	int continue_polling = 1;
 
 	switch(epd->typ) {
@@ -1690,8 +1689,7 @@ processWorkItem(epolld_t *epd)
 
 
 static rsRetVal
-initIoQ(void)
-{
+initIoQ(void) {
 	DEFiRet;
 	CHKiConcCtrl(pthread_mutex_init(&io_q.mut, NULL));
 	CHKiConcCtrl(pthread_cond_init(&io_q.wakeup_worker, NULL));
@@ -1712,8 +1710,7 @@ finalize_it:
 }
 
 static void
-destroyIoQ(void)
-{
+destroyIoQ(void) {
 	io_req_t *n;
 	if (io_q.stats != NULL) {
 		statsobj.Destruct(&io_q.stats);
@@ -1772,8 +1769,7 @@ finalize_it:
  * is a set of events returned from epoll.
  */
 static inline void
-processWorkSet(int nEvents, struct epoll_event events[])
-{
+processWorkSet(int nEvents, struct epoll_event events[]) {
 	int iEvt;
 	int remainEvents;
 	remainEvents = nEvents;
@@ -1795,8 +1791,7 @@ processWorkSet(int nEvents, struct epoll_event events[])
 /* worker to process incoming requests
  */
 static void *
-wrkr(void *myself)
-{
+wrkr(void *myself) {
 	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
 	pthread_mutex_lock(&io_q.mut);
 	++wrkrRunning;
@@ -1853,8 +1848,9 @@ CODESTARTnewInpInst
 	CHKiRet(createInstance(&inst));
 
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
@@ -1951,8 +1947,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "threads")) {
 			loadModConf->wrkrMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "processOnPoller")) {
@@ -1970,8 +1967,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -1993,8 +1991,7 @@ ENDendCnfLoad
 
 /* function to generate error message if framework does not find requested ruleset */
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE, "imptcp: ruleset '%s' for port %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
 			inst->pszBindPort);
@@ -2102,8 +2099,7 @@ ENDwillRun
  * listeners and sessions.
  */
 static inline void
-shutdownSrv(ptcpsrv_t *pSrv)
-{
+shutdownSrv(ptcpsrv_t *pSrv) {
 	ptcplstn_t *pLstn, *lstnDel;
 	ptcpsess_t *pSess, *sessDel;
 
@@ -2172,8 +2168,7 @@ ENDmodExit
 
 
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.bEmitMsgOnClose = 0;
 	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bKeepAlive = 0;
@@ -2192,8 +2187,9 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 

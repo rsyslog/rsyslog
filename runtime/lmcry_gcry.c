@@ -72,8 +72,7 @@ static struct cnfparamblk pblkQueue =
 
 #if 0
 static void
-errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
-{
+errfunc(__attribute__((unused)) void *usrptr, uchar *emsg) {
 	errmsg.LogError(0, RS_RET_CRYPROV_ERR, "Crypto Provider"
 		"Error: %s - disabling encryption", emsg);
 }
@@ -98,8 +97,7 @@ ENDobjDestruct(lmcry_gcry)
  * Defaults are expected to have been set during construction.
  */
 static rsRetVal
-SetCnfParam(void *pT, struct nvlst *lst, int paramType)
-{
+SetCnfParam(void *pT, struct nvlst *lst, int paramType) {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	int i, r;
 	unsigned keylen = 0;
@@ -122,8 +120,9 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	}
 
 	for(i = 0 ; i < pblk->nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(pblk->descr[i].name, "cry.key") || 
 		   !strcmp(pblk->descr[i].name, "queue.cry.key")) {
 			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -200,45 +199,46 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	cnfparamvalsDestruct(pvals, pblk);
 
 finalize_it:
-    if (key != NULL)
+    if (key != NULL) {
         free(key);
+    }
     
-    if (keyfile != NULL)
+    if (keyfile != NULL) {
         free(keyfile);
+    }
     
-    if (algo != NULL)
+    if (algo != NULL) {
         free(algo);
+    }
     
-    if (keyprogram != NULL)
+    if (keyprogram != NULL) {
         free(keyprogram);
+    }
     
-    if (mode != NULL)
+    if (mode != NULL) {
         free(mode);
+    }
     
 	RETiRet;
 }
 
 static void
-SetDeleteOnClose(void *pF, int val)
-{
+SetDeleteOnClose(void *pF, int val) {
 	gcryfileSetDeleteOnClose(pF, val);
 }
 
 static rsRetVal
-GetBytesLeftInBlock(void *pF, ssize_t *left)
-{
+GetBytesLeftInBlock(void *pF, ssize_t *left) {
 	return gcryfileGetBytesLeftInBlock((gcryfile) pF, left);
 }
 
 static rsRetVal
-DeleteStateFiles(uchar *logfn)
-{
+DeleteStateFiles(uchar *logfn) {
 	return gcryfileDeleteState(logfn);
 }
 
 static rsRetVal
-OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
-{
+OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode) {
 	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
 	gcryfile *pgf = (gcryfile*) pGF;
 	DEFiRet;
@@ -254,8 +254,7 @@ finalize_it:
 }
 
 static rsRetVal
-Decrypt(void *pF, uchar *rec, size_t *lenRec)
-{
+Decrypt(void *pF, uchar *rec, size_t *lenRec) {
 	DEFiRet;
 	iRet = rsgcryDecrypt(pF, rec, lenRec);
 
@@ -264,8 +263,7 @@ Decrypt(void *pF, uchar *rec, size_t *lenRec)
 
 
 static rsRetVal
-Encrypt(void *pF, uchar *rec, size_t *lenRec)
-{
+Encrypt(void *pF, uchar *rec, size_t *lenRec) {
 	DEFiRet;
 	iRet = rsgcryEncrypt(pF, rec, lenRec);
 
@@ -273,8 +271,7 @@ Encrypt(void *pF, uchar *rec, size_t *lenRec)
 }
 
 static rsRetVal
-OnFileClose(void *pF, off64_t offsLogfile)
-{
+OnFileClose(void *pF, off64_t offsLogfile) {
 	DEFiRet;
 	gcryfileDestruct(pF, offsLogfile);
 

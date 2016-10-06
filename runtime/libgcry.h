@@ -78,10 +78,10 @@ int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 /* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
 static inline void __attribute__((unused))
-gcryfileSetDeleteOnClose(gcryfile gf, const int val)
-{
-	if(gf != NULL)
+gcryfileSetDeleteOnClose(gcryfile gf, const int val) {
+	if (gf != NULL) {
 		gf->bDeleteOnClose = val;
+	}
 }
 
 #endif  /* #ifndef INCLUDED_LIBGCRY_H */

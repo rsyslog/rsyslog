@@ -39,8 +39,7 @@ static struct janitorEtry *janitorRoot = NULL; /* TODO: move to runConf? */
 static pthread_mutex_t janitorMut = PTHREAD_MUTEX_INITIALIZER;
 
 rsRetVal
-janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr)
-{
+janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr) {
 	struct janitorEtry *etry = NULL;
 	DEFiRet;
 	CHKmalloc(etry = malloc(sizeof(struct janitorEtry)));
@@ -53,14 +52,14 @@ janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr)
 	pthread_mutex_unlock(&janitorMut);
 	DBGPRINTF("janitor: entry %p, id '%s' added\n", etry, id);
 finalize_it:
-	if(iRet != RS_RET_OK && etry != NULL)
+	if (iRet != RS_RET_OK && etry != NULL) {
 		free(etry);
+	}
 	RETiRet;
 }
 
 rsRetVal
-janitorDelEtry(const char *__restrict__ const id)
-{
+janitorDelEtry(const char *__restrict__ const id) {
 	struct janitorEtry *curr, *prev = NULL;
 	DEFiRet;
 
@@ -88,8 +87,7 @@ finalize_it:
 
 /* run the janitor; all entries are processed */
 void
-janitorRun(void)
-{
+janitorRun(void) {
 	struct janitorEtry *curr;
 
 	dbgprintf("janitorRun() called\n");

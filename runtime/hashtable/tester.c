@@ -30,23 +30,20 @@ DEFINE_HASHTABLE_ITERATOR_SEARCH(search_itr_some, struct key);
 
 /*****************************************************************************/
 static unsigned int
-hashfromkey(void *ky)
-{
+hashfromkey(void *ky) {
     struct key *k = (struct key *)ky;
     return (((k->one_ip << 17) | (k->one_ip >> 15)) ^ k->two_ip) +
             (k->one_port * 17) + (k->two_port * 13 * 29);
 }
 
 static int
-equalkeys(void *k1, void *k2)
-{
+equalkeys(void *k1, void *k2) {
     return (0 == memcmp(k1,k2,sizeof(struct key)));
 }
 
 /*****************************************************************************/
 int
-main(int argc, char **argv)
-{
+main(int argc, char **argv) {
     struct key *k, *kk;
     struct value *v, *found;
     struct hashtable *h;
@@ -59,8 +56,7 @@ main(int argc, char **argv)
 
 /*****************************************************************************/
 /* Insertion */
-    for (i = 0; i < ITEM_COUNT; i++)
-    {
+    for (i = 0; i < ITEM_COUNT; i++) {
         k = (struct key *)malloc(sizeof(struct key));
         if (NULL == k) {
             printf("ran out of memory allocating a key\n");
@@ -87,8 +83,7 @@ main(int argc, char **argv)
         return 1;
     }
     
-    for (i = 0; i < ITEM_COUNT; i++)
-    {
+    for (i = 0; i < ITEM_COUNT; i++) {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
@@ -105,8 +100,7 @@ main(int argc, char **argv)
      * the hashtable is not empty */
     itr = hashtable_iterator(h);
     i = 0;
-    if (hashtable_count(h) > 0)
-    {
+    if (hashtable_count(h) > 0) {
         do {
             kk = hashtable_iterator_key(itr);
             v = hashtable_iterator_value(itr);
@@ -125,8 +119,7 @@ main(int argc, char **argv)
 /* Hashtable iterator search */
 
     /* Try the search some method */
-    for (i = 0; i < ITEM_COUNT; i++)
-    {
+    for (i = 0; i < ITEM_COUNT; i++) {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
@@ -140,8 +133,7 @@ main(int argc, char **argv)
 /*****************************************************************************/
 /* Hashtable removal */
 
-    for (i = 0; i < ITEM_COUNT; i++)
-    {
+    for (i = 0; i < ITEM_COUNT; i++) {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);
@@ -170,8 +162,7 @@ main(int argc, char **argv)
 /*****************************************************************************/
 /* Hashtable insertion */
 
-    for (i = 0; i < ITEM_COUNT; i++)
-    {
+    for (i = 0; i < ITEM_COUNT; i++) {
         k = (struct key *)malloc(sizeof(struct key));
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
@@ -181,8 +172,7 @@ main(int argc, char **argv)
         v = (struct value *)malloc(sizeof(struct value));
         v->id = "a value";
         
-        if (!insert_some(h,k,v))
-        {
+        if (!insert_some(h,k,v)) {
             printf("out of memory inserting into second hashtable\n");
             return 1;
         }
@@ -199,8 +189,7 @@ main(int argc, char **argv)
         return 1;
     }
     
-    for (i = ITEM_COUNT - 1; i >= 0; i = i - 7)
-    {
+    for (i = ITEM_COUNT - 1; i >= 0; i = i - 7) {
         k->one_ip = 0xcfccee40 + i;
         k->two_ip = 0xcf0cee67 - (5 * i);
         k->one_port = 22 + (7 * i);

@@ -97,8 +97,7 @@ static gnutls_certificate_credentials_t xcred;
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
  */
-static void logFunction(int level, const char *msg)
-{
+static void logFunction(int level, const char *msg) {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
 
@@ -110,8 +109,7 @@ static void logFunction(int level, const char *msg)
  * rgerhards, 2008-05-26
  */
 static rsRetVal
-readFile(uchar *pszFile, gnutls_datum_t *pBuf)
-{
+readFile(uchar *pszFile, gnutls_datum_t *pBuf) {
 	int fd;
 	struct stat stat_st;
 	DEFiRet;
@@ -145,8 +143,9 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	}
 
 finalize_it:
-	if(fd != -1)
+	if (fd != -1) {
 		close(fd);
+	}
 	if(iRet != RS_RET_OK) {
 		if(pBuf->data != NULL) {
 			free(pBuf->data);
@@ -166,8 +165,7 @@ finalize_it:
  * rgerhards, 2008-05-26
  */
 static rsRetVal
-gtlsLoadOurCertKey(nsd_gtls_t *pThis)
-{
+gtlsLoadOurCertKey(nsd_gtls_t *pThis) {
 	DEFiRet;
 	int gnuRet;
 	gnutls_datum_t data = { NULL, 0 };
@@ -207,8 +205,9 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(data.data != NULL)
+		if (data.data != NULL) {
 			free(data.data);
+		}
 		if(pThis->bOurCertIsInit) {
 			gnutls_x509_crt_deinit(pThis->ourCert);
 			pThis->bOurCertIsInit = 0;
@@ -244,8 +243,7 @@ gtlsClientCertCallback(gnutls_session_t session,
 #else
         gnutls_retr_st *st
 #endif
-	)
-{
+	) {
 	nsd_gtls_t *pThis;
 
 	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
@@ -271,8 +269,7 @@ gtlsClientCertCallback(gnutls_session_t session,
  * rgerhards, 2008-05-21
  */
 static rsRetVal
-gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
-{
+gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr) {
 	uchar szBufA[1024];
 	uchar *szBuf = szBufA;
 	size_t szBufLen = sizeof(szBufA), tmp;
@@ -289,8 +286,9 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	assert(ppStr != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+	if (gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509) {
 		return RS_RET_TLS_CERT_ERR;
+	}
 
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	CHKiRet(rsCStrConstructFromszStrf(&pStr, "peer provided %d certificate(s). ", cert_list_size));
@@ -362,11 +360,13 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStr != NULL)
+		if (pStr != NULL) {
 			rsCStrDestruct(&pStr);
+		}
 	}
-	if(szBuf != szBufA)
+	if (szBuf != szBufA) {
 		free(szBuf);
+	}
 
 	RETiRet;
 }
@@ -378,8 +378,7 @@ finalize_it:
  * given pThis->sess.
  */
 static rsRetVal
-print_info(nsd_gtls_t *pThis)
-{
+print_info(nsd_gtls_t *pThis) {
 	const char *tmp;
 	gnutls_credentials_type cred;
 	gnutls_kx_algorithm kx;
@@ -466,8 +465,7 @@ print_info(nsd_gtls_t *pThis)
  * rgerhards, 2008-05-08
  */
 static rsRetVal
-GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
-{
+GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr) {
 	cstr_t *pStr = NULL;
 	uchar buf[4];
 	size_t i;
@@ -485,8 +483,9 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStr != NULL)
+		if (pStr != NULL) {
 			rsCStrDestruct(&pStr);
+		}
 	}
 	RETiRet;
 }
@@ -496,8 +495,7 @@ finalize_it:
  * The caller must free the returned string.
  * rgerhards, 2008-04-30
  */
-uchar *gtlsStrerror(int error)
-{
+uchar *gtlsStrerror(int error) {
 	uchar *pErr;
 
 	pthread_mutex_lock(&mutGtlsStrerror);
@@ -517,8 +515,7 @@ uchar *gtlsStrerror(int error)
  * rgerhards, 2008-06-24
  */
 rsRetVal
-gtlsRecordRecv(nsd_gtls_t *pThis)
-{
+gtlsRecordRecv(nsd_gtls_t *pThis) {
 	ssize_t lenRcvd;
 	DEFiRet;
 
@@ -549,8 +546,7 @@ finalize_it:
  * rgerhards, 2008-05-15
  */
 static rsRetVal
-gtlsAddOurCert(void)
-{
+gtlsAddOurCert(void) {
 	int gnuRet;
 	uchar *keyFile;
 	uchar *certFile;
@@ -587,8 +583,7 @@ finalize_it:
 
 /* globally initialize GnuTLS */
 static rsRetVal
-gtlsGlblInit(void)
-{
+gtlsGlblInit(void) {
 	int gnuRet;
 	uchar *cafile;
 	DEFiRet;
@@ -624,7 +619,7 @@ gtlsGlblInit(void)
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
 
-	if(GetGnuTLSLoglevel() > 0){
+	if(GetGnuTLSLoglevel() > 0) {
 		gnutls_global_set_log_function(logFunction);
 		gnutls_global_set_log_level(GetGnuTLSLoglevel()); 
 		/* 0 (no) to 9 (most), 10 everything */
@@ -635,8 +630,7 @@ finalize_it:
 }
 
 static rsRetVal
-gtlsInitSession(nsd_gtls_t *pThis)
-{
+gtlsInitSession(nsd_gtls_t *pThis) {
 	DEFiRet;
 	int gnuRet;
 	gnutls_session_t session;
@@ -674,8 +668,7 @@ finalize_it:
  * rgerhards, 2008-04-30
  */
 static rsRetVal
-gtlsGlblInitLstn(void)
-{
+gtlsGlblInitLstn(void) {
 	DEFiRet;
 
 	if(bGlblSrvrInitDone == 0) {
@@ -705,8 +698,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
-{
+gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN) {
 	DEFiRet;
 	int gnuRet;
 	int i;
@@ -749,8 +741,9 @@ gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 		if(szDN[i] == '\\') {
 			/* hex escapes are not implemented */
 			++i; /* escape char processed */
-			if(szDN[i] == '\0')
+			if (szDN[i] == '\0') {
 				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
+			}
 			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
 		} else {
 			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
@@ -767,8 +760,9 @@ gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pstrCN != NULL)
+		if (pstrCN != NULL) {
 			cstrDestruct(&pstrCN);
+		}
 	}
 
 	RETiRet;
@@ -779,8 +773,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
-{
+gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
 	uchar fingerprint[20];
 	size_t size;
 	cstr_t *pstrFingerprint = NULL;
@@ -820,8 +813,9 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	}
 
 finalize_it:
-	if(pstrFingerprint != NULL)
+	if (pstrFingerprint != NULL) {
 		cstrDestruct(&pstrFingerprint);
+	}
 	RETiRet;
 }
 
@@ -835,8 +829,7 @@ finalize_it:
  * rgerhards, 2008-05-26
  */
 static rsRetVal
-gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch)
-{
+gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch) {
 	permittedPeers_t *pPeer;
 	DEFiRet;
 
@@ -848,8 +841,9 @@ gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatc
 		pPeer = pThis->pPermPeers;
 		while(pPeer != NULL) {
 			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
-			if(*pbFoundPositiveMatch)
+			if (*pbFoundPositiveMatch) {
 				break;
+			}
 			pPeer = pPeer->pNext;
 		}
 	} else {
@@ -869,8 +863,7 @@ finalize_it:
  * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
-{
+gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
 	uchar lnBuf[256];
 	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
 	int iAltName;
@@ -892,8 +885,9 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 		szAltNameLen = sizeof(szAltName);
 		gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName,
 				szAltName, &szAltNameLen, NULL);
-		if(gnuRet < 0)
+		if (gnuRet < 0) {
 			break;
+		}
 		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
 			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
 			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
@@ -929,10 +923,12 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	}
 
 finalize_it:
-	if(pStr != NULL)
+	if (pStr != NULL) {
 		rsCStrDestruct(&pStr);
-	if(pstrCN != NULL)
+	}
+	if (pstrCN != NULL) {
 		rsCStrDestruct(&pstrCN);
+	}
 	RETiRet;
 }
 
@@ -943,8 +939,7 @@ finalize_it:
  * rgerhards, 2008-05-08
  */
 static rsRetVal
-gtlsChkPeerID(nsd_gtls_t *pThis)
-{
+gtlsChkPeerID(nsd_gtls_t *pThis) {
 	const gnutls_datum_t *cert_list;
 	unsigned int list_size = 0;
 	gnutls_x509_crt_t cert;
@@ -955,8 +950,9 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
 	/* This function only works for X.509 certificates.  */
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+	if (gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509) {
 		return RS_RET_TLS_CERT_ERR;
+	}
 
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
 
@@ -989,8 +985,9 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 	}
 
 finalize_it:
-	if(bMustDeinitCert)
+	if (bMustDeinitCert) {
 		gnutls_x509_crt_deinit(cert);
+	}
 
 	RETiRet;
 }
@@ -1000,8 +997,7 @@ finalize_it:
  * rgerhards, 2008-05-21
  */
 static rsRetVal
-gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
-{
+gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
 	DEFiRet;
 	const char *pszErrCause;
 	int gnuRet;
@@ -1050,8 +1046,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	}
 
 	/* get current time for certificate validation */
-	if(datetime.GetTime(&ttNow) == -1)
+	if (datetime.GetTime(&ttNow) == -1) {
 		ABORT_FINALIZE(RS_RET_SYS_ERR);
+	}
 
 	/* as it looks, we need to validate the expiration dates ourselves...
 	 * We need to loop through all certificates as we need to make sure the
@@ -1061,8 +1058,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		CHKgnutls(gnutls_x509_crt_init(&cert));
 		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
 		ttCert = gnutls_x509_crt_get_activation_time(cert);
-		if(ttCert == -1)
+		if (ttCert == -1) {
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		}
 		else if(ttCert > ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
@@ -1072,8 +1070,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		}
 
 		ttCert = gnutls_x509_crt_get_expiration_time(cert);
-		if(ttCert == -1)
+		if (ttCert == -1) {
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		}
 		else if(ttCert < ttNow) {
 			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
@@ -1093,8 +1092,7 @@ finalize_it:
  * rgerhards, 2008-05-21
  */
 rsRetVal
-gtlsChkPeerAuth(nsd_gtls_t *pThis)
-{
+gtlsChkPeerAuth(nsd_gtls_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1124,8 +1122,7 @@ finalize_it:
 
 /* globally de-initialize GnuTLS */
 static rsRetVal
-gtlsGlblExit(void)
-{
+gtlsGlblExit(void) {
 	DEFiRet;
 	/* X509 stuff */
 	gnutls_certificate_free_credentials(xcred);
@@ -1139,8 +1136,7 @@ gtlsGlblExit(void)
  * always be called, even if there currently is no session.
  */
 static rsRetVal
-gtlsEndSess(nsd_gtls_t *pThis)
-{
+gtlsEndSess(nsd_gtls_t *pThis) {
 	int gnuRet;
 	DEFiRet;
 
@@ -1166,8 +1162,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
  */
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static inline void
-gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
-{
+gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock) {
 	/* Note: the compiler warning for the next line is OK - see header comment! */
 	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t) sock);
 }
@@ -1203,12 +1198,15 @@ CODESTARTobjDestruct(nsd_gtls)
 		free(pThis->pszRcvBuf);
 	}
 
-	if(pThis->bOurCertIsInit)
+	if (pThis->bOurCertIsInit) {
 		gnutls_x509_crt_deinit(pThis->ourCert);
-	if(pThis->bOurKeyIsInit)
+	}
+	if (pThis->bOurKeyIsInit) {
 		gnutls_x509_privkey_deinit(pThis->ourKey);
-	if(pThis->bHaveSess)
+	}
+	if (pThis->bHaveSess) {
 		gnutls_deinit(pThis->sess);
+	}
 ENDobjDestruct(nsd_gtls)
 
 
@@ -1218,8 +1216,7 @@ ENDobjDestruct(nsd_gtls)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t *pNsd, int mode)
-{
+SetMode(nsd_t *pNsd, int mode) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1246,8 +1243,7 @@ finalize_it:
  * rgerhards, 2008-05-16
  */
 static rsRetVal
-SetAuthMode(nsd_t *pNsd, uchar *mode)
-{
+SetAuthMode(nsd_t *pNsd, uchar *mode) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1277,14 +1273,14 @@ finalize_it:
  * fingerprints or names. -- rgerhards, 2008-05-19
  */
 static rsRetVal
-SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
-{
+SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pPermPeers == NULL)
+	if (pPermPeers == NULL) {
 		FINALIZE;
+	}
 
 	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
 		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
@@ -1304,8 +1300,7 @@ finalize_it:
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal
-SetSock(nsd_t *pNsd, int sock)
-{
+SetSock(nsd_t *pNsd, int sock) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1321,8 +1316,7 @@ SetSock(nsd_t *pNsd, int sock)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
-{
+SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1338,8 +1332,7 @@ SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
-{
+SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1355,8 +1348,7 @@ SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
 /* Keep Alive Options
  */
 static rsRetVal
-SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
-{
+SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
@@ -1373,8 +1365,7 @@ SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
 static rsRetVal
-Abort(nsd_t *pNsd)
-{
+Abort(nsd_t *pNsd) {
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 
@@ -1397,8 +1388,7 @@ Abort(nsd_t *pNsd)
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
-{
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax) {
 	DEFiRet;
 	CHKiRet(gtlsGlblInitLstn());
 	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
@@ -1412,8 +1402,7 @@ finalize_it:
  * rgerhards, 2008-06-09
  */
 static rsRetVal
-CheckConnection(nsd_t __attribute__((unused)) *pNsd)
-{
+CheckConnection(nsd_t __attribute__((unused)) *pNsd) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1428,8 +1417,7 @@ finalize_it:
  * rgerhards, 2008-04-25
  */
 static rsRetVal
-GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
-{
+GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1442,8 +1430,7 @@ GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
  * is needed by the legacy ACL system. --- gerhards, 2008-12-01
  */
 static rsRetVal
-GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
-{
+GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1454,8 +1441,7 @@ GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
 
 /* get the remote host's IP address. Caller must Destruct the object. */
 static rsRetVal
-GetRemoteIP(nsd_t *pNsd, prop_t **ip)
-{
+GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1470,8 +1456,7 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
  * rgerhards, 2008-04-25
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
-{
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew) {
 	DEFiRet;
 	int gnuRet;
 	nsd_gtls_t *pNew = NULL;
@@ -1519,8 +1504,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
+		if (pNew != NULL) {
 			nsd_gtlsDestruct(&pNew);
+		}
 	}
 	RETiRet;
 }
@@ -1549,15 +1535,15 @@ finalize_it:
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
-{
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(pThis->bAbortConn)
+	if (pThis->bAbortConn) {
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+	}
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
@@ -1625,15 +1611,15 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
-{
+Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
 	int iSent;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(pThis->bAbortConn)
+	if (pThis->bAbortConn) {
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+	}
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
@@ -1666,8 +1652,7 @@ finalize_it:
  * rgerhards, 2009-06-02
  */
 static rsRetVal
-EnableKeepAlive(nsd_t *pNsd)
-{
+EnableKeepAlive(nsd_t *pNsd) {
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
@@ -1680,8 +1665,7 @@ EnableKeepAlive(nsd_t *pNsd)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
-Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
-{
+Connect(nsd_t *pNsd, int family, uchar *port, uchar *host) {
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
@@ -1696,8 +1680,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host));
 
-	if(pThis->iMode == 0)
+	if (pThis->iMode == 0) {
 		FINALIZE;
+	}
 	
 	/* we reach this point if in TLS mode */
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));

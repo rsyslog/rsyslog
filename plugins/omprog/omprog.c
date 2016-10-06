@@ -124,8 +124,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -165,8 +166,7 @@ ENDtryResume
 static void
 writeProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	const char *__restrict__ const buf,
-	const ssize_t lenBuf)
-{
+	const ssize_t lenBuf) {
 	char errStr[1024];
 	ssize_t r;
 
@@ -197,18 +197,19 @@ done:	return;
  * if so, properly handle it.
  */
 static void
-checkProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData)
-{
+checkProgramOutput(wrkrInstanceData_t *__restrict__ const pWrkrData) {
 	char buf[4096];
 	ssize_t r;
 
-	if(pWrkrData->fdPipeIn == -1)
+	if (pWrkrData->fdPipeIn == -1) {
 		goto done;
+	}
 
 	do {
 		r = read(pWrkrData->fdPipeIn, buf, sizeof(buf));
-		if(r > 0)
+		if (r > 0) {
 			writeProgramOutput(pWrkrData, buf, r);
+		}
 	} while(r > 0);
 
 done:	return;
@@ -220,8 +221,7 @@ done:	return;
  * after fork).
  */
 static __attribute__((noreturn)) void
-execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
-{
+execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr) {
 	int i, iRet;
 	struct sigaction sigAct;
 	sigset_t set;
@@ -296,8 +296,7 @@ execBinary(wrkrInstanceData_t *pWrkrData, int fdStdin, int fdStdOutErr)
  * rgerhards, 2009-04-01
  */
 static rsRetVal
-openPipe(wrkrInstanceData_t *pWrkrData)
-{
+openPipe(wrkrInstanceData_t *pWrkrData) {
 	int pipestdin[2];
 	int pipestdout[2];
 	pid_t cpid;
@@ -322,7 +321,7 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 	}
 	pWrkrData->pid = cpid;
 
-	if(cpid == 0) {    
+	if(cpid == 0) {
 		/* we are now the child, just exec the binary. */
 		close(pipestdin[1]); /* close those pipe "ports" that */
 		close(pipestdout[0]); /* we don't need */
@@ -353,8 +352,7 @@ finalize_it:
 /* clean up after a terminated child
  */
 static inline rsRetVal
-cleanup(wrkrInstanceData_t *pWrkrData)
-{
+cleanup(wrkrInstanceData_t *pWrkrData) {
 	int status;
 	int ret;
 	char errStr[1024];
@@ -402,8 +400,7 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 /* try to restart the binary when it has stopped.
  */
 static inline rsRetVal
-tryRestart(wrkrInstanceData_t *pWrkrData)
-{
+tryRestart(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	assert(pWrkrData->bIsRunning == 0);
 
@@ -417,8 +414,7 @@ tryRestart(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
-{
+writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg) {
 	int lenWritten;
 	int lenWrite;
 	int writeOffset;
@@ -461,24 +457,26 @@ BEGINdoAction
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	if(pData->bForceSingleInst)
+	if (pData->bForceSingleInst) {
 		pthread_mutex_lock(&pData->mut);
+	}
 	if(pWrkrData->bIsRunning == 0) {
 		openPipe(pWrkrData);
 	}
 	
 	iRet = writePipe(pWrkrData, ppString[0]);
 
-	if(iRet != RS_RET_OK)
+	if (iRet != RS_RET_OK) {
 		iRet = RS_RET_SUSPENDED;
-	if(pData->bForceSingleInst)
+	}
+	if (pData->bForceSingleInst) {
 		pthread_mutex_unlock(&pData->mut);
+	}
 ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->szBinary = NULL;
 	pData->aParams = NULL;
 	pData->outputFileName = NULL;
@@ -508,8 +506,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "binary")) {
 			estrBinary = pvals[i].val.d.estr;
 			estrParams = NULL;
@@ -542,8 +541,9 @@ CODESTARTnewActInst
 				pData->iParams = 2; /* Set default to 2, first parameter for binary and second parameter at least from config*/
 				iCnt = 0;
 				while(iCnt < es_strlen(estrParams) ) {
-					if (c[iCnt] == ' ' && c[iCnt-1] != '\\')
+					if (c[iCnt] == ' ' && c[iCnt-1] != '\\') {
 						 pData->iParams++;
+					}
 					iCnt++;
 				}
 				DBGPRINTF("omprog: iParams = '%d'\n", pData->iParams);
@@ -596,16 +596,21 @@ CODESTARTnewActInst
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "hup.signal")) {
 			const char *const sig = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(!strcmp(sig, "HUP"))
+			if (!strcmp(sig, "HUP")) {
 				pData->iHUPForward = SIGHUP;
-			else if(!strcmp(sig, "USR1"))
+			}
+			else if (!strcmp(sig, "USR1")) {
 				pData->iHUPForward = SIGUSR1;
-			else if(!strcmp(sig, "USR2"))
+			}
+			else if (!strcmp(sig, "USR2")) {
 				pData->iHUPForward = SIGUSR2;
-			else if(!strcmp(sig, "INT"))
+			}
+			else if (!strcmp(sig, "INT")) {
 				pData->iHUPForward = SIGINT;
-			else if(!strcmp(sig, "TERM"))
+			}
+			else if (!strcmp(sig, "TERM")) {
 				pData->iHUPForward = SIGTERM;
+			}
 			else {
 				errmsg.LogError(0, RS_RET_CONF_PARAM_INVLD,
 					"omprog: hup.signal '%s' in hup.signal parameter", sig);
@@ -653,8 +658,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	CHKmalloc(pData->szBinary = (uchar*) strdup((char*)cs.szBinary));
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -664,8 +670,9 @@ BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
 	DBGPRINTF("omprog: processing HUP for work instance %p, pid %d, forward: %d\n",
 		pWrkrData, (int) pWrkrData->pid, pWrkrData->pData->iHUPForward);
-	if(pWrkrData->pData->iHUPForward != NO_HUP_FORWARD)
+	if (pWrkrData->pData->iHUPForward != NO_HUP_FORWARD) {
 		kill(pWrkrData->pid, pWrkrData->pData->iHUPForward);
+	}
 ENDdoHUPWrkr
 
 
@@ -691,8 +698,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	free(cs.szBinary);
 	cs.szBinary = NULL;

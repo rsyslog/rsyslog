@@ -214,14 +214,16 @@ static rsRetVal doZipFinish(wrkrInstanceData_t *);
  * old-style and new-style configuration parts.
  */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else if(cs.pszTplName == NULL)
+	}
+	else if (cs.pszTplName == NULL) {
 		return (uchar*)"RSYSLOG_TraditionalForwardFormat";
-	else
+	}
+	else {
 		return cs.pszTplName;
+	}
 }
 
 
@@ -232,8 +234,7 @@ getDfltTpl(void)
  * the parameter.
  */
 static rsRetVal
-setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
-{
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal) {
 	DEFiRet;
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
@@ -252,8 +253,7 @@ finalize_it:
  * rgerhards, 2009-05-29
  */
 static rsRetVal
-closeUDPSockets(wrkrInstanceData_t *pWrkrData)
-{
+closeUDPSockets(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	if(pWrkrData->pSockArray != NULL) {
 		net.closeUDPListenSockets(pWrkrData->pSockArray);
@@ -276,13 +276,14 @@ pWrkrData->bIsConnected = 0; // TODO: remove this variable altogether
  * loose data.
  */
 static inline void
-DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
-{
+DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData) {
 	doZipFinish(pWrkrData);
-	if(pWrkrData->pNetstrm != NULL)
+	if (pWrkrData->pNetstrm != NULL) {
 		netstrm.Destruct(&pWrkrData->pNetstrm);
-	if(pWrkrData->pNS != NULL)
+	}
+	if (pWrkrData->pNS != NULL) {
 		netstrms.Destruct(&pWrkrData->pNS);
+	}
 }
 
 
@@ -307,8 +308,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.pszTplName != NULL) {
@@ -322,8 +324,9 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -351,8 +354,9 @@ ENDfreeCnf
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->errsToReport = 5;
-	if(cs.pszStrmDrvr != NULL)
+	if (cs.pszStrmDrvr != NULL) {
 		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
+	}
 	if(cs.pszStrmDrvrAuthMode != NULL)
 		CHKmalloc(pData->pszStrmDrvrAuthMode =
 				     (uchar*)strdup((char*)cs.pszStrmDrvrAuthMode));
@@ -371,8 +375,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -408,8 +413,7 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	uchar *__restrict__ const msg,
-	const size_t len)
-{
+	const size_t len) {
 	DEFiRet;
 	struct addrinfo *r;
 	int i;
@@ -450,8 +454,9 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
 				}
 			}
-			if (lsent == len && !pWrkrData->pData->bSendToAll)
+			if (lsent == len && !pWrkrData->pData->bSendToAll) {
 			       break;
+			}
 		}
 		/* finished looping */
 		if(bSendSuccess == RSTRUE) {
@@ -485,8 +490,7 @@ finalize_it:
 /* set the permitted peers -- rgerhards, 2008-05-19
  */
 static rsRetVal
-setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
-{
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID) {
 	DEFiRet;
 	CHKiRet(net.AddPermittedPeer(&cs.pPermPeers, pszID));
 	free(pszID); /* no longer needed, but we must free it as of interface def */
@@ -499,8 +503,7 @@ finalize_it:
 /* CODE FOR SENDING TCP MESSAGES */
 
 static rsRetVal
-TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
-{
+TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len) {
 	DEFiRet;
 	unsigned alreadySent;
 	ssize_t lenSend;
@@ -526,8 +529,7 @@ finalize_it:
 }
 
 static rsRetVal
-TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush)
-{
+TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush) {
 	int zRet;	/* zlib return state */
 	unsigned outavail;
 	uchar zipBuf[32*1024];
@@ -551,10 +553,12 @@ TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sb
 	/* now doing the compression */
 	pWrkrData->zstrm.next_in = (Bytef*) buf;
 	pWrkrData->zstrm.avail_in = len;
-	if(pWrkrData->pData->strmCompFlushOnTxEnd && bIsFlush)
+	if (pWrkrData->pData->strmCompFlushOnTxEnd && bIsFlush) {
 		op = Z_SYNC_FLUSH;
-	else
+	}
+	else {
 		op = Z_NO_FLUSH;
+	}
 	/* run deflate() on buffer until everything has been compressed */
 	do {
 		DBGPRINTF("omfwd: in deflate() loop, avail_in %d, total_in %ld, isFlush %d\n", pWrkrData->zstrm.avail_in, pWrkrData->zstrm.total_in, bIsFlush);
@@ -573,13 +577,14 @@ finalize_it:
 }
 
 static rsRetVal
-TCPSendBuf(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush)
-{
+TCPSendBuf(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlush) {
 	DEFiRet;
-	if(pWrkrData->pData->compressionMode >= COMPRESS_STREAM_ALWAYS)
+	if (pWrkrData->pData->compressionMode >= COMPRESS_STREAM_ALWAYS) {
 		iRet = TCPSendBufCompressed(pWrkrData, buf, len, bIsFlush);
-	else
+	}
+	else {
 		iRet = TCPSendBufUncompressed(pWrkrData, buf, len);
+	}
 	RETiRet;
 }
 
@@ -587,15 +592,15 @@ TCPSendBuf(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sbool bIsFlu
  * running in stream mode).
  */
 static rsRetVal
-doZipFinish(wrkrInstanceData_t *pWrkrData)
-{
+doZipFinish(wrkrInstanceData_t *pWrkrData) {
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
 	uchar zipBuf[32*1024];
 
-	if(!pWrkrData->bzInitDone)
+	if (!pWrkrData->bzInitDone) {
 		goto done;
+	}
 
 	// TODO: can we get this into a single common function?
 	pWrkrData->zstrm.avail_in = 0;
@@ -625,8 +630,7 @@ done:	RETiRet;
 
 /* Add frame to send buffer (or send, if requried)
  */
-static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
-{
+static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len) {
 	DEFiRet;
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
 
@@ -664,8 +668,7 @@ finalize_it:
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendPrepRetry(void *pvData)
-{
+static rsRetVal TCPSendPrepRetry(void *pvData) {
 	DEFiRet;
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
 
@@ -678,8 +681,7 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 /* initializes everything so that TCPSend can work.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendInit(void *pvData)
-{
+static rsRetVal TCPSendInit(void *pvData) {
 	DEFiRet;
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pvData;
 	instanceData *pData;
@@ -731,16 +733,16 @@ finalize_it:
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
-static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
-{
+static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData) {
 	int iErr;
 	struct addrinfo *res;
 	struct addrinfo hints;
 	instanceData *pData;
 	DEFiRet;
 
-	if(pWrkrData->bIsConnected)
+	if (pWrkrData->bIsConnected) {
 		FINALIZE;
+	}
 	pData = pWrkrData->pData;
 
 	/* The remote address is not yet known and needs to be obtained */
@@ -795,8 +797,7 @@ ENDbeginTransaction
 
 static rsRetVal
 processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
-	actWrkrIParams_t *__restrict__ const iparam)
-{
+	actWrkrIParams_t *__restrict__ const iparam) {
 	uchar *psz; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
@@ -808,8 +809,9 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 
 	psz = iparam->param;
 	l = iparam->lenStr;
-	if((int) l > iMaxLine)
+	if ((int) l > iMaxLine) {
 		l = iMaxLine;
+	}
 
 	/* Check if we should compress and, if so, do it. We also
 	 * check if the message is large enough to justify compression.
@@ -876,8 +878,9 @@ CODESTARTcommitTransaction
 
 	for(i = 0 ; i < nParams ; ++i) {
 		iRet = processMsg(pWrkrData, &actParam(pParams, 1, i, 0));
-		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)
+		if (iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			FINALIZE;
+		}
 	}
 
 	if(pWrkrData->offsSndBuf != 0) {
@@ -893,8 +896,7 @@ ENDcommitTransaction
  * be loaded if it actually is used. -- rgerhard, 2008-04-17
  */
 static rsRetVal
-loadTCPSupport(void)
-{
+loadTCPSupport(void) {
 	DEFiRet;
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
@@ -909,8 +911,7 @@ finalize_it:
  * created.
  */
 static rsRetVal
-initTCP(wrkrInstanceData_t *pWrkrData)
-{
+initTCP(wrkrInstanceData_t *pWrkrData) {
 	instanceData *pData;
 	DEFiRet;
 
@@ -932,8 +933,7 @@ finalize_it:
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 	pData->protocol = FORW_UDP;
 	pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -981,8 +981,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->target = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -1059,8 +1060,9 @@ CODESTARTnewActInst
 					CHKiRet(net.AddPermittedPeer(&(pData->pPermPeers), start));
 				}
 				start = p+1;
-				if(lenStr)
+				if (lenStr) {
 					--lenStr;
+				}
 				*(p+1) = save;
 			}
 			free(str);
@@ -1144,8 +1146,9 @@ BEGINparseSelectorAct
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(*p != '@')
+	if (*p != '@') {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	}
 
 	CHKiRet(createInstance(&pData));
 
@@ -1302,8 +1305,7 @@ ENDparseSelectorAct
  * and on $ResetConfig processing. -- rgerhards, 2008-05-16
  */
 static void
-freeConfigVars(void)
-{
+freeConfigVars(void) {
 	free(cs.pszStrmDrvr);
 	cs.pszStrmDrvr = NULL;
 	free(cs.pszStrmDrvrAuthMode);
@@ -1339,8 +1341,7 @@ ENDqueryEtryPt
 /* Reset config variables for this module to default values.
  * rgerhards, 2008-03-28
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	freeConfigVars();
 
 	/* we now must reset all non-string values */

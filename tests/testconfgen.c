@@ -16,8 +16,7 @@ static int arr[128];
 static char *name[128];
 static char *stmt[128];
 
-void output(int n)
-{
+void output(int n) {
 	int i;
 
 	printf("name:");
@@ -29,8 +28,7 @@ void output(int n)
 	printf("\n");
 }
 
-void pows(int n, int i)
-{
+void pows(int n, int i) {
 	if(i == 0) {
 		output(n);
 	} else {
@@ -43,8 +41,7 @@ void pows(int n, int i)
 }
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	int n;
 	char iname[512];
 	char istmt[2048];
@@ -53,8 +50,9 @@ int main(int argc, char *argv[])
 	n = 0;
 	while(!feof(stdin)) {
 		nscanned = scanf("%s %[^\n]s\n", iname, istmt);
-		if(nscanned == EOF)
+		if (nscanned == EOF) {
 			break;
+		}
 		else if(nscanned != 2) {
 			fprintf(stderr, "problem scanning entry %d, scanned %d\n",
 				n, nscanned);

@@ -134,14 +134,16 @@ static struct cnfparamblk actpblk =
  * old-style and new-style configuration parts.
  */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else if(pszFileDfltTplName == NULL)
+	}
+	else if (pszFileDfltTplName == NULL) {
 		return (uchar*)" StdDBFmt";
-	else
+	}
+	else {
 		return pszFileDfltTplName;
+	}
 }
 
 
@@ -180,8 +182,7 @@ ENDisCompatibleWithFeature
 /* The following function is responsible for closing a
  * database connection.
  */
-static void closeConn(instanceData *pData)
-{
+static void closeConn(instanceData *pData) {
 	ASSERT(pData != NULL);
 	if(pData->conn != NULL) {	/* just to be on the safe side... */
 		dbi_conn_close(pData->conn);
@@ -214,8 +215,7 @@ ENDdbgPrintInstInfo
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
 static void
-reportDBError(instanceData *pData, int bSilent)
-{
+reportDBError(instanceData *pData, int bSilent) {
 	unsigned uDBErrno;
 	char errMsg[1024];
 	const char *pszDbiErr;
@@ -230,8 +230,9 @@ reportDBError(instanceData *pData, int bSilent)
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
-		if(bSilent || uDBErrno == pData->uLastDBErrno)
+		if (bSilent || uDBErrno == pData->uLastDBErrno) {
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
+		}
 		else {
 			pData->uLastDBErrno = uDBErrno;
 			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
@@ -244,8 +245,7 @@ reportDBError(instanceData *pData, int bSilent)
 
 /* The following function is responsible for initializing a connection
  */
-static rsRetVal initConn(instanceData *pData, int bSilent)
-{
+static rsRetVal initConn(instanceData *pData, int bSilent) {
 	DEFiRet;
 	int iDrvrsLoaded;
 
@@ -283,8 +283,9 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
 		dbi_conn_set_option(pData->conn, "username", (char*) pData->usrName);
 		dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
-		if(pData->pwd != NULL)
+		if (pData->pwd != NULL) {
 			dbi_conn_set_option(pData->conn, "password", (char*) pData->pwd);
+		}
 		if(dbi_conn_connect(pData->conn) < 0) {
 			reportDBError(pData, bSilent);
 			closeConn(pData); /* ignore any error we may get */
@@ -302,8 +303,7 @@ finalize_it:
  * to an established database connection.
  */
 static rsRetVal
-writeDB(const uchar *psz, instanceData *const __restrict__ pData)
-{
+writeDB(const uchar *psz, instanceData *const __restrict__ pData) {
 	DEFiRet;
 	dbi_result dbiRes = NULL;
 
@@ -333,8 +333,9 @@ finalize_it:
 		pData->uLastDBErrno = 0; /* reset error for error supression */
 	}
 
-	if(dbiRes != NULL)
+	if (dbiRes != NULL) {
 		dbi_result_free(dbiRes);
+	}
 
 	RETiRet;
 }
@@ -355,7 +356,7 @@ CODESTARTbeginTransaction
 	}
 #	ifdef HAVE_DBI_TXSUPP
 	if (pData->txSupport == 1) {
-		if (dbi_conn_transaction_begin(pData->conn) != 0) {	
+		if (dbi_conn_transaction_begin(pData->conn) != 0) {
 			const char *emsg;
 			dbi_conn_error(pData->conn, &emsg);
 			dbgprintf("libdbi server error: begin transaction "
@@ -386,7 +387,7 @@ ENDdoAction
 BEGINendTransaction
 CODESTARTendTransaction
 #	ifdef HAVE_DBI_TXSUPP
-	if (dbi_conn_transaction_commit(pData->conn) != 0) {	
+	if (dbi_conn_transaction_commit(pData->conn) != 0) {
 		const char *emsg;
 		dbi_conn_error(pData->conn, &emsg);
 		dbgprintf("libdbi server error: transaction not committed: %s\n",
@@ -423,8 +424,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
@@ -441,8 +443,9 @@ CODESTARTsetModCnf
 	}
 	bLegacyCnfModGlobalsPermitted = 0;
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -484,8 +487,7 @@ ENDfreeCnf
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 }
 
@@ -503,8 +505,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "db")) {
@@ -551,16 +554,21 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* NULL values are supported because drivers have different needs.
 	 * They will err out on connect. -- rgerhards, 2008-02-15
 	 */
-	if(cs.host != NULL)
+	if (cs.host != NULL) {
 		CHKmalloc(pData->host = (uchar*) strdup((char*)cs.host));
-	if(cs.usrName != NULL)
+	}
+	if (cs.usrName != NULL) {
 		CHKmalloc(pData->usrName = (uchar*) strdup((char*)cs.usrName));
-	if(cs.dbName != NULL)
+	}
+	if (cs.dbName != NULL) {
 		CHKmalloc(pData->dbName = (uchar*) strdup((char*)cs.dbName));
-	if(cs.pwd != NULL)
+	}
+	if (cs.pwd != NULL) {
 		CHKmalloc(pData->pwd = (uchar*) strdup((char*)cs.pwd));
-	if(cs.dbiDrvrDir != NULL)
+	}
+	if (cs.dbiDrvrDir != NULL) {
 		CHKmalloc(loadModConf->dbiDrvrDir = (uchar*) strdup((char*)cs.dbiDrvrDir));
+	}
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, getDfltTpl()));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -592,8 +600,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	free(cs.dbiDrvrDir);
 	cs.dbiDrvrDir = NULL;

@@ -122,8 +122,7 @@ ENDisCompatibleWithFeature
 
 
 /* implement "fail" command in retry processing */
-static rsRetVal doFailOnResume(instanceData *pData)
-{
+static rsRetVal doFailOnResume(instanceData *pData) {
 	DEFiRet;
 
 	dbgprintf("fail retry curr %d, max %d\n", pData->iCurrRetries, pData->iResumeAfter);
@@ -139,8 +138,7 @@ static rsRetVal doFailOnResume(instanceData *pData)
 
 
 /* implement "fail" command */
-static rsRetVal doFail(instanceData *pData)
-{
+static rsRetVal doFail(instanceData *pData) {
 	DEFiRet;
 
 	dbgprintf("fail curr %d, frequency %d, bFailed %d\n", pData->iCurrCallNbr,
@@ -160,8 +158,7 @@ finalize_it:
 
 
 /* implement "sleep" command */
-static rsRetVal doSleep(instanceData *pData)
-{
+static rsRetVal doSleep(instanceData *pData) {
 	DEFiRet;
 	struct timeval tvSelectTimeout;
 
@@ -174,8 +171,7 @@ static rsRetVal doSleep(instanceData *pData)
 
 
 /* implement "randomfail" command */
-static rsRetVal doRandFail(void)
-{
+static rsRetVal doRandFail(void) {
 	DEFiRet;
 	if((rand() >> 4) < (RAND_MAX >> 5)) { /* rougly same probability */
 		iRet = RS_RET_OK;
@@ -265,16 +261,18 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		goto finalize_it;
+	}
 	
 	/* check mode */
 	for(i = 0 ; *p && !isspace((char) *p) && ((unsigned) i < sizeof(szBuf) - 1) ; ++i) {
 		szBuf[i] = (uchar) *p++;
 	}
 	szBuf[i] = '\0';
-	if(isspace(*p))
+	if (isspace(*p)) {
 		++p;
+	}
 
 	dbgprintf("omtesting command: '%s'\n", szBuf);
 	if(!strcmp((char*) szBuf, "sleep")) {
@@ -283,16 +281,18 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			szBuf[i] = *p++;
 		}
 		szBuf[i] = '\0';
-		if(isspace(*p))
+		if (isspace(*p)) {
 			++p;
+		}
 		pData->iWaitSeconds = atoi((char*) szBuf);
 		/* parse microseconds */
 		for(i = 0 ; *p && !isspace(*p) && ((unsigned) i < sizeof(szBuf) - 1) ; ++i) {
 			szBuf[i] = *p++;
 		}
 		szBuf[i] = '\0';
-		if(isspace(*p))
+		if (isspace(*p)) {
 			++p;
+		}
 		pData->iWaitUSeconds = atoi((char*) szBuf);
 		pData->mode = MD_SLEEP;
 	} else if(!strcmp((char*) szBuf, "fail")) {
@@ -306,16 +306,18 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			szBuf[i] = *p++;
 		}
 		szBuf[i] = '\0';
-		if(isspace(*p))
+		if (isspace(*p)) {
 			++p;
+		}
 		pData->iFailFrequency = atoi((char*) szBuf);
 		/* parse resume-after */
 		for(i = 0 ; *p && !isspace(*p) && ((unsigned) i < sizeof(szBuf) - 1) ; ++i) {
 			szBuf[i] = *p++;
 		}
 		szBuf[i] = '\0';
-		if(isspace(*p))
+		if (isspace(*p)) {
 			++p;
+		}
 		pData->iResumeAfter = atoi((char*) szBuf);
 		pData->iCurrCallNbr = 1;
 		pData->mode = MD_FAIL;

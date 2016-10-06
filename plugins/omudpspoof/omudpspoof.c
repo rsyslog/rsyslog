@@ -180,14 +180,16 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData);
  * old-style and new-style configuration parts.
  */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else if(cs.tplName == NULL)
+	}
+	else if (cs.tplName == NULL) {
 		return (uchar*)"RSYSLOG_TraditionalForwardFormat";
-	else
+	}
+	else {
 		return cs.tplName;
+	}
 }
 
 
@@ -198,8 +200,7 @@ getDfltTpl(void)
  * the parameter.
  */
 rsRetVal
-setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
-{
+setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal) {
 	DEFiRet;
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
@@ -218,8 +219,7 @@ finalize_it:
  * rgerhards, 2009-05-29
  */
 static rsRetVal
-closeUDPSockets(wrkrInstanceData_t *pWrkrData)
-{
+closeUDPSockets(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	if(pWrkrData->pSockArray != NULL) {
 		net.closeUDPListenSockets(pWrkrData->pSockArray);
@@ -236,8 +236,7 @@ closeUDPSockets(wrkrInstanceData_t *pWrkrData)
  * if it is unspecified. So far, we use the IANA default auf 514.
  * rgerhards, 2007-06-28
  */
-static inline uchar *getFwdPt(instanceData *pData)
-{
+static inline uchar *getFwdPt(instanceData *pData) {
 	return (pData->port == NULL) ? UCHAR_CONSTANT("514") : pData->port;
 }
 
@@ -266,8 +265,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.tplName != NULL) {
@@ -281,8 +281,9 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -323,8 +324,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -340,8 +342,9 @@ ENDfreeInstance
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 	closeUDPSockets(pWrkrData);
-	if(pWrkrData->libnet_handle != NULL)
+	if (pWrkrData->libnet_handle != NULL) {
 		libnet_destroy(pWrkrData->libnet_handle);
+	}
 ENDfreeWrkrInstance
 
 
@@ -357,8 +360,7 @@ ENDdbgPrintInstInfo
  * rgehards, 2007-12-20
  */
 static inline rsRetVal
-UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
-{
+UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len) {
 	struct addrinfo *r;
 	int lsent = 0;
 	int bSendSuccess;
@@ -385,7 +387,7 @@ UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t l
 	}
 
 	ip = ipo = udp = 0;
-	if(pWrkrData->sourcePort++ >= pData->sourcePortEnd){
+	if(pWrkrData->sourcePort++ >= pData->sourcePortEnd) {
 		pWrkrData->sourcePort = pData->sourcePortStart;
 	}
 
@@ -526,16 +528,16 @@ finalize_it:
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
-static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
-{
+static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData) {
 	int iErr;
 	struct addrinfo *res;
 	struct addrinfo hints;
 	instanceData *pData;
 	DEFiRet;
 
-	if(pWrkrData->pSockArray != NULL)
+	if (pWrkrData->pSockArray != NULL) {
 		FINALIZE;
+	}
 	pData = pWrkrData->pData;
 
 	if(pWrkrData->libnet_handle == NULL) {
@@ -606,8 +608,9 @@ CODESTARTdoAction
 	iMaxLine = glbl.GetMaxLine();
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
-	if((int) l > iMaxLine)
+	if ((int) l > iMaxLine) {
 		l = iMaxLine;
+	}
 
 	CHKiRet(UDPSend(pWrkrData, ppString[1], psz, l));
 
@@ -616,8 +619,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 	pData->sourcePortStart = DFLT_SOURCE_PORT_START;
 	pData->sourcePortEnd = DFLT_SOURCE_PORT_END;
@@ -650,8 +652,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->host = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -706,10 +709,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(2)
 
 	/* fill instance properties */
 	CHKmalloc(pData->host = ustrdup(cs.pszTargetHost));
-	if(cs.pszTargetPort == NULL)
+	if (cs.pszTargetPort == NULL) {
 		pData->port = NULL;
-	else 
+	}
+	else {
 		CHKmalloc(pData->port = ustrdup(cs.pszTargetPort));
+	}
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 	pData->sourcePortStart = cs.iSourcePortStart;
 	pData->sourcePortEnd = cs.iSourcePortEnd;
@@ -726,8 +731,7 @@ ENDparseSelectorAct
  * and on $ResetConfig processing. -- rgerhards, 2008-05-16
  */
 static void
-freeConfigVars(void)
-{
+freeConfigVars(void) {
 	free(cs.tplName);
 	cs.tplName = NULL;
 	free(cs.pszTargetHost);
@@ -762,8 +766,7 @@ ENDqueryEtryPt
 /* Reset config variables for this module to default values.
  * rgerhards, 2008-03-28
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	freeConfigVars();
 	/* we now must reset all non-string values */
 	cs.iSourcePortStart = DFLT_SOURCE_PORT_START;

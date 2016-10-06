@@ -62,8 +62,7 @@ ENDinterface(prop)
  * pThis more than once.
  */
 static inline uchar * __attribute__((unused))
-propGetSzStr(prop_t *pThis)
-{
+propGetSzStr(prop_t *pThis) {
 	return(pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;
 }
 

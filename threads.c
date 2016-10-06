@@ -50,8 +50,7 @@ static linkedList_t llThrds;
 /* Construct a new thread object
  */
 static rsRetVal
-thrdConstruct(thrdInfo_t **ppThis)
-{
+thrdConstruct(thrdInfo_t **ppThis) {
 	DEFiRet;
 	thrdInfo_t *pThis;
 
@@ -71,8 +70,7 @@ finalize_it:
  * linked list of threads. Please note that the thread should have been
  * stopped before. If not, we try to do it.
  */
-static rsRetVal thrdDestruct(thrdInfo_t *pThis)
-{
+static rsRetVal thrdDestruct(thrdInfo_t *pThis) {
 	DEFiRet;
 	assert(pThis != NULL);
 
@@ -83,8 +81,9 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	}
 
 	/* call cleanup function, if any */
-	if(pThis->pAfterRun != NULL)
+	if (pThis->pAfterRun != NULL) {
 		pThis->pAfterRun(pThis);
+	}
 
 	pthread_mutex_destroy(&pThis->mutThrd);
 	pthread_cond_destroy(&pThis->condThrdTerm);
@@ -100,8 +99,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
  * rgerhads, 2009-10-15
  */
 static rsRetVal
-thrdTerminateNonCancel(thrdInfo_t *pThis)
-{
+thrdTerminateNonCancel(thrdInfo_t *pThis) {
 	struct timespec tTimeout;
 	int ret;
 	int was_active;
@@ -148,8 +146,7 @@ thrdTerminateNonCancel(thrdInfo_t *pThis)
 
 /* terminate a thread gracefully.
  */
-rsRetVal thrdTerminate(thrdInfo_t *pThis)
-{
+rsRetVal thrdTerminate(thrdInfo_t *pThis) {
 	DEFiRet;
 	assert(pThis != NULL);
 
@@ -167,8 +164,7 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 
 /* terminate all known threads gracefully.
  */
-rsRetVal thrdTerminateAll(void)
-{
+rsRetVal thrdTerminateAll(void) {
 	DEFiRet;
 	llDestroy(&llThrds);
 	RETiRet;
@@ -181,8 +177,7 @@ rsRetVal thrdTerminateAll(void)
  * function call has just "normal", non-threading semantics.
  * rgerhards, 2007-12-17
  */
-static void* thrdStarter(void *arg)
-{
+static void* thrdStarter(void *arg) {
 	DEFiRet;
 	thrdInfo_t *pThis = (thrdInfo_t*) arg;
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
@@ -239,8 +234,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool bNeedsCancel, uchar *name)
-{
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool bNeedsCancel, uchar *name) {
 	DEFiRet;
 	thrdInfo_t *pThis;
 
@@ -263,8 +257,7 @@ finalize_it:
 /* initialize the thread-support subsystem
  * must be called once at the start of the program
  */
-rsRetVal thrdInit(void)
-{
+rsRetVal thrdInit(void) {
 	DEFiRet;
 	iRet = llInit(&llThrds, thrdDestruct, NULL, NULL);
 	RETiRet;
@@ -274,8 +267,7 @@ rsRetVal thrdInit(void)
 /* de-initialize the thread subsystem
  * must be called once at the end of the program
  */
-rsRetVal thrdExit(void)
-{
+rsRetVal thrdExit(void) {
 	DEFiRet;
 	iRet = llDestroy(&llThrds);
 	RETiRet;

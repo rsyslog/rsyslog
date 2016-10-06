@@ -13,16 +13,14 @@
 static int debug = 0;
 
 void
-usage(void)
-{
+usage(void) {
 	fprintf(stderr, "mangle_qi -d -q <.qi-file>\n"
 		"-d enables debug messages\n");
 	exit(1);
 }
 
 void
-processQI(FILE *const __restrict__ qi)
-{
+processQI(FILE *const __restrict__ qi) {
 	char lnbuf[4096];
 	char propname[64];
 	int rectype;
@@ -72,8 +70,9 @@ processQI(FILE *const __restrict__ qi)
 	}
 	 
 	queuesize += 1; /* fake invalid queue size */
-	if(queuesize > maxval_for_length)
+	if (queuesize > maxval_for_length) {
 		++length;
+	}
 
 	/* ready to go, write mangled queue size */
 	printf("+%s:%d:%d:%d:", propname, rectype, length, queuesize);
@@ -83,8 +82,7 @@ processQI(FILE *const __restrict__ qi)
 }
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	char *qifile;
 	FILE *qi;
 	int opt;

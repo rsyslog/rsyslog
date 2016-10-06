@@ -155,8 +155,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->mode = mmSequencePerInstance;
 	pData->valueFrom = 0;
 	pData->valueTo = INT_MAX;
@@ -181,8 +180,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "mode")) {
 			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"random",
 					 sizeof("random")-1)) {

@@ -95,16 +95,16 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
 /* The following function is responsible for closing a
  * PgSQL connection.
  */
-static void closePgSQL(instanceData *pData)
-{
+static void closePgSQL(instanceData *pData) {
 	assert(pData != NULL);
 
 	if(pData->f_hpgsql != NULL) {	/* just to be on the safe side... */
@@ -133,8 +133,7 @@ ENDdbgPrintInstInfo
  * We check if we have a valid handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void reportDBError(instanceData *pData, int bSilent)
-{
+static void reportDBError(instanceData *pData, int bSilent) {
 	char errMsg[512];
 	ConnStatusType ePgSQLStatus;
 
@@ -149,8 +148,9 @@ static void reportDBError(instanceData *pData, int bSilent)
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
 				PQerrorMessage(pData->f_hpgsql));
-		if(bSilent || ePgSQLStatus == pData->eLastPgSQLStatus)
+		if (bSilent || ePgSQLStatus == pData->eLastPgSQLStatus) {
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
+		}
 		else {
 			pData->eLastPgSQLStatus = ePgSQLStatus;
 			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
@@ -164,8 +164,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 /* The following function is responsible for initializing a
  * PgSQL connection.
  */
-static rsRetVal initPgSQL(instanceData *pData, int bSilent)
-{
+static rsRetVal initPgSQL(instanceData *pData, int bSilent) {
 	DEFiRet;
 
 	assert(pData != NULL);
@@ -195,8 +194,7 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
  * rgerhards, 2009-04-17
  */
 static inline int
-tryExec(uchar *pszCmd, instanceData *pData)
-{
+tryExec(uchar *pszCmd, instanceData *pData) {
 	PGresult *pgRet;
 	ExecStatusType execState;
 	int bHadError = 0;
@@ -222,8 +220,7 @@ tryExec(uchar *pszCmd, instanceData *pData)
  * before my patch. -- rgerhards, 2009-04-17
  */
 static rsRetVal
-writePgSQL(uchar *psz, instanceData *pData)
-{
+writePgSQL(uchar *psz, instanceData *pData) {
 	int bHadError = 0;
 	DEFiRet;
 
@@ -290,8 +287,9 @@ ENDtryResume
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 	dbgprintf("ompgsql: beginTransaction\n");
-	if(pWrkrData->pData->f_hpgsql == NULL)
+	if (pWrkrData->pData->f_hpgsql == NULL) {
 	       initPgSQL(pWrkrData->pData, 0);
+	}
 	iRet = writePgSQL((uchar*) "begin", pWrkrData->pData); /* TODO: make user-configurable */
 ENDbeginTransaction
 #endif
@@ -302,8 +300,9 @@ CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
 	dbgprintf("\n");
 	CHKiRet(writePgSQL(ppString[0], pWrkrData->pData));
-	if(bCoreSupportsBatching)
+	if (bCoreSupportsBatching) {
 		iRet = RS_RET_DEFER_COMMIT;
+	}
 finalize_it:
 	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
@@ -337,8 +336,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		goto finalize_it;
+	}
 
 
 	/* sur5r 2007-10-18: added support for PgSQL
@@ -346,21 +346,28 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Now we read the PgSQL connection properties 
 	 * and verify that the properties are valid.
 	 */
-	if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
+	if (getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ',')) {
 		iPgSQLPropErr++;
+	}
 	dbgprintf("%p:%s\n",p,p);
-	if(*pData->f_dbsrv == '\0')
+	if (*pData->f_dbsrv == '\0') {
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
+	}
+	if (getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ',')) {
 		iPgSQLPropErr++;
-	if(*pData->f_dbname == '\0')
+	}
+	if (*pData->f_dbname == '\0') {
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ','))
+	}
+	if (getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ',')) {
 		iPgSQLPropErr++;
-	if(*pData->f_dbuid == '\0')
+	}
+	if (*pData->f_dbuid == '\0') {
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+	}
+	if (getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';')) {
 		iPgSQLPropErr++;
+	}
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
@@ -372,14 +379,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 */
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) pData->tplName));
 	}
-	else
+	else {
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
+	}
 	
 	/* If we detect invalid properties, we disable logging, 
 	 * because right properties are vital at this place.  
 	 * Retries make no sense. 
 	 */
-	if (iPgSQLPropErr) { 
+	if (iPgSQLPropErr) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}

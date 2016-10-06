@@ -114,12 +114,13 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 
 /* this function gets the default template */
 static inline uchar*
-getDfltTpl(void)
-{
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
+getDfltTpl(void) {
+	if (loadModConf != NULL && loadModConf->tplName != NULL) {
 		return loadModConf->tplName;
-	else
+	}
+	else {
 		return (uchar*)"RSYSLOG_FileFormat";
+	}
 }
 
 
@@ -130,16 +131,18 @@ ENDinitConfVars
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("pipe %s", pData->pipe);
-	if (pData->fd == -1)
+	if (pData->fd == -1) {
 		dbgprintf(" (unused)");
+	}
 ENDdbgPrintInstInfo
 
 
@@ -150,8 +153,7 @@ ENDdbgPrintInstInfo
  * changed to iRet interface - 2009-03-19
  */
 static inline rsRetVal
-preparePipe(instanceData *pData)
-{
+preparePipe(instanceData *pData) {
 	DEFiRet;
 	pData->fd = open((char*) pData->pipe, O_RDWR|O_NONBLOCK|O_CLOEXEC);
 	if(pData->fd < 0 ) {
@@ -171,8 +173,7 @@ preparePipe(instanceData *pData)
  * will be called for all outputs using pipe semantics,
  * for example also for pipes.
  */
-static rsRetVal writePipe(uchar **ppString, instanceData *pData)
-{
+static rsRetVal writePipe(uchar **ppString, instanceData *pData) {
 	int iLenWritten;
 	DEFiRet;
 
@@ -190,8 +191,9 @@ static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 	if(iLenWritten < 0) {
 		const int e = errno;
 		/* If a named pipe is full, we suspend this action for a while */
-		if(e == EAGAIN)
+		if (e == EAGAIN) {
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
 
 		close(pData->fd);
 		pData->fd = -1; /* tell that fd is no longer open! */
@@ -228,8 +230,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
@@ -243,8 +246,9 @@ CODESTARTsetModCnf
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -287,8 +291,9 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mutWrite);
 	free(pData->pipe);
-	if(pData->fd != -1)
+	if (pData->fd != -1) {
 		close(pData->fd);
+	}
 ENDfreeInstance
 
 
@@ -306,8 +311,9 @@ CODESTARTtryResume
 	if(pData->fd == -1) {
 		rsRetVal iRetLocal;
 		iRetLocal = preparePipe(pData);
-		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+		if ((iRetLocal != RS_RET_OK) || (pData->fd == -1)) {
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
 	} else {
 		/* we can reach this if the pipe is full, so we need
 		 * to check if we can write again. /dev/xconsole is the
@@ -319,8 +325,9 @@ CODESTARTtryResume
 		tv.tv_usec = 0;
 		ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
 		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", pData->fd, ready);
-		if(ready != 1)
+		if (ready != 1) {
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
 	}
 finalize_it:
 ENDtryResume
@@ -338,8 +345,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 }
 
@@ -356,8 +362,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "pipe")) {
 			pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {

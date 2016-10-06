@@ -99,16 +99,14 @@ server(	void __attribute__((unused)) *cookie,
 	char __attribute__((unused)) *argp,
 	size_t __attribute__((unused)) arg_size,
 	door_desc_t __attribute__((unused)) *dp,
-	__attribute__((unused)) uint_t n          )
-{
+	__attribute__((unused)) uint_t n          ) {
 	(void) door_return(NULL, 0, NULL, 0);
 	/* NOTREACHED */
 }
 
 /*ARGSUSED*/
 static void *
-create_door_thr(void __attribute__((unused)) *arg)
-{
+create_door_thr(void __attribute__((unused)) *arg) {
 	(void) pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 	(void) door_return(NULL, 0, NULL, 0);
 
@@ -126,8 +124,7 @@ create_door_thr(void __attribute__((unused)) *arg)
  */
 /*ARGSUSED*/
 static void
-door_server_pool(door_info_t __attribute__((unused)) *dip)
-{
+door_server_pool(door_info_t __attribute__((unused)) *dip) {
 	(void) pthread_mutex_lock(&door_server_cnt_lock);
 	if (door_server_cnt <= MAX_DOOR_SERVER_THR &&
 	    pthread_create(NULL, &door_thr_attr, create_door_thr, NULL) == 0) {
@@ -140,8 +137,7 @@ door_server_pool(door_info_t __attribute__((unused)) *dip)
 }
 
 void
-sun_delete_doorfiles(void)
-{
+sun_delete_doorfiles(void) {
 	struct stat sb;
 	int err;
 	char line[ERRMSG_LEN+1];
@@ -203,8 +199,7 @@ sun_delete_doorfiles(void)
  * /etc/.syslog_door directly.
  */
 void
-sun_open_door(void)
-{
+sun_open_door(void) {
 	struct stat buf;
 	door_info_t info;
 	char line[ERRMSG_LEN+1];
@@ -388,8 +383,7 @@ sun_open_door(void)
  * and return a file descriptor.
  */
 rsRetVal
-sun_openklog(char *name)
-{
+sun_openklog(char *name) {
 	DEFiRet;
 	int fd;
 	struct strioctl str;

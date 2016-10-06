@@ -173,8 +173,9 @@ static struct cnfparamblk actpblk = {
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 {
-    if (eFeat == sFEATURERepeatedMsgReduction)
+    if (eFeat == sFEATURERepeatedMsgReduction) {
         iRet = RS_RET_OK;
+    }
 }
 ENDisCompatibleWithFeature
 
@@ -312,8 +313,9 @@ CODESTARTnewActInst
     CODE_STD_STRING_REQUESTnewActInst(1);
 
     for(i = 0 ; i < actpblk.nParams ; ++i) {
-        if (!pvals[i].bUsed)
+        if (!pvals[i].bUsed) {
             continue;
+        }
         if (!strcmp(actpblk.descr[i].name, "host")) {
             char *u = es_str2cstr(pvals[i].val.d.estr, NULL);
             cs->url = pn_url_parse(u);
@@ -437,16 +439,14 @@ typedef struct {
 #define PROTOCOL_STATE(eh) ((protocolState_t *) pn_handler_mem(eh))
 
 
-static void _init_config_settings(configSettings_t *pConfig)
-{
+static void _init_config_settings(configSettings_t *pConfig) {
     memset(pConfig, 0, sizeof(configSettings_t));
     pConfig->reconnectDelay = 5;
     pConfig->maxRetries = 10;
 }
 
 
-static void _clean_config_settings(configSettings_t *pConfig)
-{
+static void _clean_config_settings(configSettings_t *pConfig) {
     if (pConfig->url) pn_url_free(pConfig->url);
     if (pConfig->username) free(pConfig->username);
     if (pConfig->password) free(pConfig->password);
@@ -456,8 +456,7 @@ static void _clean_config_settings(configSettings_t *pConfig)
 }
 
 
-static void _init_thread_ipc(threadIPC_t *pIPC)
-{
+static void _init_thread_ipc(threadIPC_t *pIPC) {
     memset(pIPC, 0, sizeof(threadIPC_t));
     pthread_mutex_init(&pIPC->lock, NULL);
     pthread_cond_init(&pIPC->condition, NULL);
@@ -465,8 +464,7 @@ static void _init_thread_ipc(threadIPC_t *pIPC)
     pIPC->result = RS_RET_OK;
 }
 
-static void _clean_thread_ipc(threadIPC_t *ipc)
-{
+static void _clean_thread_ipc(threadIPC_t *ipc) {
     pthread_cond_destroy(&ipc->condition);
     pthread_mutex_destroy(&ipc->lock);
 }
@@ -477,8 +475,7 @@ static rsRetVal _new_handler(pn_handler_t **handler,
                              pn_reactor_t *reactor,
                              dispatch_t *dispatch,
                              configSettings_t *config,
-                             threadIPC_t *ipc)
-{
+                             threadIPC_t *ipc) {
     DEFiRet;
     *handler = pn_handler_new(dispatch, sizeof(protocolState_t), _del_handler);
     CHKmalloc(*handler);
@@ -500,8 +497,7 @@ static rsRetVal _new_handler(pn_handler_t **handler,
 
 
 // in case existing buffer too small
-static rsRetVal _grow_buffer(protocolState_t *pState)
-{
+static rsRetVal _grow_buffer(protocolState_t *pState) {
     DEFiRet;
     pState->buffer_size *= 2;
     free(pState->encode_buffer);
@@ -517,16 +513,14 @@ static rsRetVal _grow_buffer(protocolState_t *pState)
  * it will be called by the reactor when all references to the
  * handler have been released.
  */
-static void _del_handler(pn_handler_t *handler)
-{
+static void _del_handler(pn_handler_t *handler) {
     protocolState_t *pState = PROTOCOL_STATE(handler);
     if (pState->encode_buffer) free(pState->encode_buffer);
 }
 
 
 // Close the sender and its parent session and connection
-static void _close_connection(protocolState_t *ps)
-{
+static void _close_connection(protocolState_t *ps) {
   if (ps->sender) {
       pn_link_close(ps->sender);
       pn_session_close(pn_link_session(ps->sender));
@@ -534,8 +528,7 @@ static void _close_connection(protocolState_t *ps)
   if (ps->conn) pn_connection_close(ps->conn);
 }
 
-static void _abort_command(protocolState_t *ps)
-{
+static void _abort_command(protocolState_t *ps) {
     threadIPC_t *ipc = ps->ipc;
 
     pthread_mutex_lock(&ipc->lock);
@@ -557,8 +550,7 @@ static void _abort_command(protocolState_t *ps)
 
 
 // log a protocol error received from the message bus
-static void _log_error(const char *message, pn_condition_t *cond)
-{
+static void _log_error(const char *message, pn_condition_t *cond) {
     const char *name = pn_condition_get_name(cond);
     const char *desc = pn_condition_get_description(cond);
     dbgprintf("omamqp1: %s %s:%s\n",
@@ -569,8 +561,7 @@ static void _log_error(const char *message, pn_condition_t *cond)
 
 
 /* is the link ready to send messages? */
-static sbool _is_ready(pn_link_t *link)
-{
+static sbool _is_ready(pn_link_t *link) {
     return (link
             && pn_link_state(link) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)
             && pn_link_credit(link) > 0);
@@ -578,8 +569,7 @@ static sbool _is_ready(pn_link_t *link)
 
 
 /* Process each event emitted by the protocol engine */
-static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type)
-{
+static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
     protocolState_t *ps = PROTOCOL_STATE(handler);
     const configSettings_t *cfg = ps->config;
 
@@ -710,8 +700,7 @@ static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t
 static rsRetVal _issue_command(threadIPC_t *ipc,
                                pn_reactor_t *reactor,
                                commands_t command,
-                               pn_message_t *message)
-{
+                               pn_message_t *message) {
     DEFiRet;
 
     DBGPRINTF("omamqp1: Sending command %d to protocol thread\n", command);
@@ -742,8 +731,7 @@ static rsRetVal _issue_command(threadIPC_t *ipc,
 
 
 // check if a command needs processing
-static void _poll_command(protocolState_t *ps)
-{
+static void _poll_command(protocolState_t *ps) {
     if (ps->stopped) return;
 
     threadIPC_t *ipc = ps->ipc;
@@ -811,8 +799,7 @@ static void _poll_command(protocolState_t *ps)
 /* runs the protocol engine, allowing it to handle TCP socket I/O and timer
  * events in the background.
 */
-static void *amqp1_thread(void *arg)
-{
+static void *amqp1_thread(void *arg) {
     DBGPRINTF("omamqp1: Protocol thread started\n");
 
     pn_handler_t *handler = (pn_handler_t *)arg;
@@ -850,14 +837,16 @@ static void *amqp1_thread(void *arg)
         const char *user = cfg->username
             ? (char *)cfg->username
             : pn_url_get_username(cfg->url);
-        if (user)
+        if (user) {
             pn_connection_set_user(ps->conn, user);
+        }
 
         const char *pword = cfg->password
             ? (char *) cfg->password
             : pn_url_get_password(cfg->url);
-        if (pword)
+        if (pword) {
             pn_connection_set_password(ps->conn, pword);
+        }
 #endif
         pn_connection_open(ps->conn);
         pn_session_t *ssn = pn_session(ps->conn);
@@ -903,8 +892,7 @@ static void *amqp1_thread(void *arg)
 }
 
 
-static rsRetVal _launch_protocol_thread(instanceData *pData)
-{
+static rsRetVal _launch_protocol_thread(instanceData *pData) {
     int rc;
     DBGPRINTF("omamqp1: Starting protocol thread\n");
     do {
@@ -918,8 +906,7 @@ static rsRetVal _launch_protocol_thread(instanceData *pData)
     return RS_RET_SYS_ERR;
 }
 
-static rsRetVal _shutdown_thread(instanceData *pData)
-{
+static rsRetVal _shutdown_thread(instanceData *pData) {
     DEFiRet;
 
     if (pData->bThreadRunning) {

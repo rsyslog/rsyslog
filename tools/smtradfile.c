@@ -82,8 +82,9 @@ CODESTARTstrgen
 		++lenTotal; /* then we need to introduce one additional space */
 
 	/* now make sure buffer is large enough */
-	if(lenTotal  >= iparam->lenBuf)
+	if (lenTotal  >= iparam->lenBuf) {
 		CHKiRet(ExtendBuf(iparam, lenTotal));
+	}
 
 	/* and concatenate the resulting string */
 	memcpy(iparam->param, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
@@ -96,8 +97,9 @@ CODESTARTstrgen
 	memcpy(iparam->param + iBuf, pTAG, lenTAG);
 	iBuf += lenTAG;
 
-	if(pMSG[0] != ' ')
+	if (pMSG[0] != ' ') {
 		iparam->param[iBuf++] = ' ';
+	}
 	memcpy(iparam->param + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
 

@@ -128,8 +128,7 @@ ENDfreeWrkrInstance
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->separator = ',';
 	pData->jsonRoot = NULL;
 }
@@ -149,8 +148,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "separator")) {
 			pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
@@ -180,8 +180,7 @@ ENDtryResume
 
 
 static inline rsRetVal
-extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf)
-{
+extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf) {
 	int i, j;
 	DEFiRet;
 	i = *curridx;
@@ -190,8 +189,9 @@ extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, ucha
 		fieldbuf[j++] = msgtext[i++];
 	}
 	fieldbuf[j] = '\0';
-	if(i < lenMsg)
+	if (i < lenMsg) {
 		++i;
+	}
 	*curridx = i;
 
 	RETiRet;
@@ -199,8 +199,7 @@ extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, ucha
 
 
 static rsRetVal
-parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
-{
+parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg) {
 	uchar fieldbuf[32*1024];
 	uchar fieldname[512];
 	struct json_object *json;
@@ -232,8 +231,9 @@ parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 	}
  	msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
 finalize_it:
-	if(buf != fieldbuf)
+	if (buf != fieldbuf) {
 		free(buf);
+	}
 	RETiRet;
 }
 

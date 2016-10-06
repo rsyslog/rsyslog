@@ -149,8 +149,7 @@ static struct cnfparamblk actpblk = {
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
-{
+httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData) {
     CURL *curl = NULL;
 
     curl = curl_easy_init();
@@ -188,8 +187,7 @@ httpfs_init_curl(wrkrInstanceData_t *pWrkrData, instanceData *pData)
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_build_url(wrkrInstanceData_t *pWrkrData, const char* op, es_str_t** url_buf)
-{
+httpfs_build_url(wrkrInstanceData_t *pWrkrData, const char* op, es_str_t** url_buf) {
     *url_buf = es_newStr(HTTPFS_URL_BUFFER_LENGTH);
 
     if (pWrkrData->pData->https) {
@@ -234,8 +232,7 @@ httpfs_build_url(wrkrInstanceData_t *pWrkrData, const char* op, es_str_t** url_b
  * @param char* op
  * @return void
  */
-static void httpfs_set_url(wrkrInstanceData_t *pWrkrData, const char* op)
-{
+static void httpfs_set_url(wrkrInstanceData_t *pWrkrData, const char* op) {
     es_str_t* url;
     char* url_cstr;
     httpfs_build_url(pWrkrData, op, &url);
@@ -250,8 +247,7 @@ static void httpfs_set_url(wrkrInstanceData_t *pWrkrData, const char* op)
  * @param CURL* curl
  * @return void
  */
-static void httpfs_curl_set_put(CURL* curl)
-{
+static void httpfs_curl_set_put(CURL* curl) {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
     curl_easy_setopt(curl, CURLOPT_POST, 0L);
@@ -266,8 +262,7 @@ static void httpfs_curl_set_put(CURL* curl)
  * @param CURL* curl
  * @return void
  */
-static void httpfs_curl_set_post(CURL* curl)
-{
+static void httpfs_curl_set_post(CURL* curl) {
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
     curl_easy_setopt(curl, CURLOPT_PUT, 0L);
@@ -286,8 +281,7 @@ static void httpfs_curl_set_post(CURL* curl)
  * @return struct curl_slist* 
  */
 static struct curl_slist* 
-httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
-{
+httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...) {
     const char* hdr;
 
     va_list ar;
@@ -321,8 +315,7 @@ httpfs_curl_add_header(struct curl_slist* headers, int hdr_count, ...)
  * @return size_t
  */
 static size_t
-httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *userp)
-{
+httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     char *newreply = NULL;
     wrkrInstanceData_t *mem = (wrkrInstanceData_t *)userp;
@@ -332,8 +325,9 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
         /* out of memory! */
         dbgprintf("not enough memory (realloc returned NULL)\n");
         
-        if (mem->reply != NULL) 
+        if (mem->reply != NULL) {
             free(mem->reply);
+        }
         
         mem->reply = NULL;
         mem->replyLen = 0;
@@ -398,8 +392,7 @@ httpfs_curl_result_callback(void *contents, size_t size, size_t nmemb, void *use
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
-{	
+httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre) {
 	DEFiRet;
 	
     if (!length) {
@@ -442,8 +435,9 @@ httpfs_parse_exception(char* buf, int length, httpfs_json_remote_exception* jre)
     strncpy(jre->message, str, len);
 
 finalize_it:
-	if(jt != NULL)
+	if (jt != NULL) {
 		json_tokener_free(jt);
+	}
 	if(json != NULL)
 		json_object_put(json); 
 	RETiRet;
@@ -461,8 +455,7 @@ finalize_it:
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
-{
+httpfs_create_file(wrkrInstanceData_t *pWrkrData, uchar* buf) {
     /* httpfs.create automatically create folders, no mkdirs needed. */
 
     /* 
@@ -513,8 +506,7 @@ HTTPFS_CURL_VARS_RELEASE
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_append_file(wrkrInstanceData_t *pWrkrData, uchar* buf)
-{
+httpfs_append_file(wrkrInstanceData_t *pWrkrData, uchar* buf) {
     /*
     curl -b /tmp/c.tmp -c /tmp/c.tmp  -d 'aaaaabbbbb' -i -H 'Content-Type: application/octet-stream' \
            'http://172.16.3.20:14000/webhdfs/v1/tmp/a/b?user.name=hdfs&op=append&data=true'
@@ -558,8 +550,7 @@ HTTPFS_CURL_VARS_RELEASE
  * @return rsRetVal
  */
 static rsRetVal
-httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
-{
+httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf) {
     /**
     append ? 200/end : (404 || ?)
         create & ~overwrite ? 201/200/end :
@@ -648,8 +639,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-    if(eFeat == sFEATURERepeatedMsgReduction)
+    if (eFeat == sFEATURERepeatedMsgReduction) {
         iRet = RS_RET_OK;
+    }
 ENDisCompatibleWithFeature
 
 
@@ -722,8 +714,7 @@ ENDdoAction
  * @return void
  */
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
     pData->host = (uchar*) strdup(OMHTTPFS_DEFAULT_HOST);
     pData->port = OMHTTPFS_DEFAULT_PORT;
     pData->user = (uchar*) strdup(OMHTTPFS_DEFAULT_USER);
@@ -748,8 +739,9 @@ CODESTARTnewActInst
     setInstParamDefaults(pData);
 
     for(i = 0 ; i < actpblk.nParams ; ++i) {
-        if(!pvals[i].bUsed)
+        if (!pvals[i].bUsed) {
             continue;
+        }
         if(!strcmp(actpblk.descr[i].name, "host")) {
             pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(actpblk.descr[i].name, "port")) {

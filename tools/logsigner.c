@@ -41,8 +41,7 @@
 
 #if 0
 void
-outputhash(GTDataHash *hash)
-{
+outputhash(GTDataHash *hash) {
 	int i;
 	for(i = 0 ; i < hash->digest_length ; ++i)
 		printf("%2.2x", hash->digest[i]);
@@ -50,8 +49,7 @@ outputhash(GTDataHash *hash)
 }
 
 void
-timestampIt(GTDataHash *hash)
-{
+timestampIt(GTDataHash *hash) {
 	int r = GT_OK;
 	GTTimestamp *timestamp = NULL;
 	unsigned char *der = NULL;
@@ -94,8 +92,7 @@ done:
 
 
 void
-sign(const char *buf, const size_t len)
-{
+sign(const char *buf, const size_t len) {
 	int r;
 	GTDataHash *hash = NULL;
 
@@ -113,8 +110,7 @@ done:	GTDataHash_free(hash);
 #endif
 
 void
-processFile(char *name)
-{
+processFile(char *name) {
 	FILE *fp;
 	size_t len;
 	char line[64*1024+1];
@@ -122,15 +118,18 @@ processFile(char *name)
 	
 	ctx = rsgtCtxNew((unsigned char*)"SIGFILE", GT_HASHALG_SHA256);
 	sigblkInit(ctx);
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
-	else
+	}
+	else {
 		fp = fopen(name, "r");
+	}
 
 	while(1) {
 		if(fgets(line, sizeof(line), fp) == NULL) {
-			if(!feof(fp))
+			if (!feof(fp)) {
 				perror(name);
+			}
 			break;
 		}
 		len = strlen(line);
@@ -142,16 +141,16 @@ processFile(char *name)
 		sigblkAddRecord(ctx, (unsigned char*)line, len);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	sigblkFinish(ctx);
 	rsgtCtxDel(ctx);
 }
 
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	rsgtInit("rsyslog logsigner " VERSION);
 	processFile("-");
 	rsgtExit();

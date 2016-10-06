@@ -55,8 +55,7 @@ static int batchsize = 1000;
 /* read the input file and create in-memory representation
  */
 static inline void
-readFile()
-{
+readFile() {
 	char *r;
 	char lnBuf[10240];
 	struct line *node;
@@ -92,31 +91,32 @@ readFile()
 
 
 static void
-genCopies()
-{
+genCopies() {
 	long long i;
 	long long unsigned lnnbr;
 	struct line *node;
 
 	lnnbr = 1;
 	for(i = 0 ; i < nCopies ; ++i) {
-		if(i % 10000 == 0)
+		if (i % 10000 == 0) {
 			fprintf(stderr, "copyrun %d\n", i);
+		}
 		if(waitusecs && (i % batchsize == 0)) {
 			usleep(waitusecs);
 		}
 		for(node = root ; node != NULL ; node = node->next) {
-			if(linenbrs)
+			if (linenbrs) {
 				fprintf(fpOut, "%12.12llu:%s", lnnbr, node->ln);
-			else
+			}
+			else {
 				fprintf(fpOut, "%s", node->ln);
+			}
 			++lnnbr;
 		}
 	}
 }
 
-void main(int argc, char *argv[])
-{
+void main(int argc, char *argv[]) {
 	int opt;
 	fpIn = stdin;
 	fpOut = stdout;

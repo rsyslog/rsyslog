@@ -62,16 +62,16 @@ const char *linenumbers = "";
 
 #ifdef ENABLEGT
 static void
-dumpFile(const char *name)
-{
+dumpFile(const char *name) {
 	FILE *fp;
 	char hdr[9];
 	void *obj;
 	tlvrecord_t rec;
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		printf("Processing file %s:\n", name);
 		if((fp = fopen(name, "r")) == NULL) {
@@ -80,34 +80,39 @@ dumpFile(const char *name)
 		}
 	}
 	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
-	if(!strcmp(hdr, "LOGSIG10"))
+	if (!strcmp(hdr, "LOGSIG10")) {
 		printf("File Header: Version 10 (deprecated) - conversion needed.\n");
-	else if(!strcmp(hdr, "LOGSIG11"))
+	}
+	else if (!strcmp(hdr, "LOGSIG11")) {
 		printf("File Header: Version 11\n");
-	else
+	}
+	else {
 		printf("File Header: '%s'\n", hdr);
+	}
 
 	while(1) { /* we will err out on EOF */
 		if((r = rsgt_tlvrd(fp, &rec, &obj)) != 0) {
-			if(feof(fp))
+			if (feof(fp)) {
 				break;
-			else
+			}
+			else {
 				goto err;
+			}
 		}
 		rsgt_tlvprint(stdout, rec.tlvtype, obj, verbose);
 		rsgt_objfree(rec.tlvtype, obj);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:	
 	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static void
-showSigblkParams(const char *name)
-{
+showSigblkParams(const char *name) {
 	FILE *fp;
 	block_sig_t *bs;
 	block_hdr_t *bh;
@@ -115,8 +120,9 @@ showSigblkParams(const char *name)
 	uint64_t blkCnt = 0;
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		if((fp = fopen(name, "r")) == NULL) {
 			perror(name);
@@ -138,25 +144,27 @@ showSigblkParams(const char *name)
 		printf("\tHas Tree Hashes.....: %d\n", bHasIntermedHashes);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:
-	if(r != RSGTE_EOF)
+	if (r != RSGTE_EOF) {
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
+	}
 }
 
 static void
-convertFile(const char *name)
-{
+convertFile(const char *name) {
 	FILE *oldsigfp = NULL, *newsigfp = NULL;
 	char hdr[9];
 	int r = -1;
 	char newsigfname[4096];
 	char oldsigfname[4096];
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		oldsigfp = stdin;
+	}
 	else {
 		printf("Processing file %s:\n", name);
 		if((oldsigfp = fopen(name, "r")) == NULL) {
@@ -179,12 +187,14 @@ convertFile(const char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsgt_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsgt_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0) {
 			goto err;
+		}
 		else {
 			/* Close FILES */
-			if(oldsigfp != stdin)
+			if (oldsigfp != stdin) {
 				fclose(oldsigfp);
+			}
 			if (newsigfp != NULL)	
 				fclose(newsigfp); 
 
@@ -230,8 +240,9 @@ convertFile(const char *name)
 			printf("File %s was converted to Version 11.\n", name);
 		}
 	}
-	else
+	else {
 		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
+	}
 	return;
 err:	
 	fprintf(stderr, "error %d (%s) converting file %s\n", r, RSGTE2String(r), name);
@@ -241,16 +252,16 @@ err:
 
 #ifdef ENABLEKSI
 static void
-dumpFileKSI(const char *name)
-{
+dumpFileKSI(const char *name) {
 	FILE *fp;
 	char hdr[9];
 	void *obj;
 	tlvrecord_t rec;
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		printf("Processing file %s:\n", name);
 		if((fp = fopen(name, "r")) == NULL) {
@@ -259,34 +270,40 @@ dumpFileKSI(const char *name)
 		}
 	}
 	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
-	if(!strcmp(hdr, "LOGSIG10"))
+	if (!strcmp(hdr, "LOGSIG10")) {
 		printf("File Header: Version 10 (deprecated) - conversion needed.\n");
-	else if(!strcmp(hdr, "LOGSIG11"))
+	}
+	else if (!strcmp(hdr, "LOGSIG11")) {
 		printf("File Header: Log Signature File Version 11\n");
-	else if(!strcmp(hdr, "RECSIG11"))
+	}
+	else if (!strcmp(hdr, "RECSIG11")) {
 		printf("File Header: Record Integrity Proof File Version 11\n");
-	else
+	}
+	else {
 		printf("File Header: '%s'\n", hdr);
+	}
 	while(1) { /* we will err out on EOF */
 		if((r = rsksi_tlvrd(fp, &rec, &obj)) != 0) {
-			if(feof(fp))
+			if (feof(fp)) {
 				break;
-			else
+			}
+			else {
 				goto err;
+			}
 		}
 		rsksi_tlvprint(stdout, rec.tlvtype, obj, verbose);
 		rsksi_objfree(rec.tlvtype, obj);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
 }
 
 static void
-showSigblkParamsKSI(const char *name)
-{
+showSigblkParamsKSI(const char *name) {
 	FILE *fp;
 	block_sig_t *bs;
 	block_hdr_t *bh;
@@ -294,8 +311,9 @@ showSigblkParamsKSI(const char *name)
 	uint64_t blkCnt = 0;
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		if((fp = fopen(name, "r")) == NULL) {
 			perror(name);
@@ -317,25 +335,27 @@ showSigblkParamsKSI(const char *name)
 		printf("\tHas Tree Hashes.....: %d\n", bHasIntermedHashes);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:
-	if(r != RSGTE_EOF)
+	if (r != RSGTE_EOF) {
 		fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
+	}
 }
 
 static void
-convertFileKSI(const char *name)
-{
+convertFileKSI(const char *name) {
 	FILE *oldsigfp = NULL, *newsigfp = NULL;
 	char hdr[9];
 	int r = -1;
 	char newsigfname[4096];
 	char oldsigfname[4096];
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		oldsigfp = stdin;
+	}
 	else {
 		printf("Processing file %s:\n", name);
 		if((oldsigfp = fopen(name, "r")) == NULL) {
@@ -358,12 +378,14 @@ convertFileKSI(const char *name)
 			if ( fwrite(LOGSIGHDR, sizeof(LOGSIGHDR)-1, 1, newsigfp) != 1) goto err;
 		}
 
-		if ((r = rsksi_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0)
+		if ((r = rsksi_ConvertSigFile(oldsigfp, newsigfp, verbose)) != 0) {
 			goto err;
+		}
 		else {
 			/* Close FILES */
-			if(oldsigfp != stdin)
+			if (oldsigfp != stdin) {
 				fclose(oldsigfp);
+			}
 			if (newsigfp != NULL)	
 				fclose(newsigfp); 
 
@@ -409,8 +431,9 @@ convertFileKSI(const char *name)
 			printf("File %s was converted to Version 11.\n", name);
 		}
 	}
-	else
+	else {
 		printf("File does not need to be converted, File Header is: '%s'\n", hdr);
+	}
 	return;
 err:	
 	fprintf(stderr, "error %d (%s) converting file %s\n", r, RSKSIE2String(r), name);
@@ -420,15 +443,15 @@ err:
 
 #ifdef ENABLEGT
 static void
-detectFileType(const char *name)
-{
+detectFileType(const char *name) {
 	FILE *fp;
 	const char *typeName;
 	char hdr[9];
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		if((fp = fopen(name, "r")) == NULL) {
 			perror(name);
@@ -436,27 +459,31 @@ detectFileType(const char *name)
 		}
 	}
 	if((r = rsgt_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
-	if(!strcmp(hdr, "LOGSIG10"))
+	if (!strcmp(hdr, "LOGSIG10")) {
 		typeName = "Log Signature File, Version 10 (deprecated)";
-	else if(!strcmp(hdr, "LOGSIG11"))
+	}
+	else if (!strcmp(hdr, "LOGSIG11")) {
 		typeName = "Log Signature File, Version 11";
-	else if(!strcmp(hdr, "GTSTAT10"))
+	}
+	else if (!strcmp(hdr, "GTSTAT10")) {
 		typeName = "rsyslog GuardTime Signature State File, Version 10";
-	else
+	}
+	else {
 		typeName = "unknown";
+	}
 
 	printf("%s: %s [%s]\n", name, hdr, typeName);
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
 static int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
-	    gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
-{
+	    gtfile gf, gterrctx_t *ectx, uint8_t bInBlock) {
 	int r;
 	size_t lenRec;
 	char line[128*1024];
@@ -480,8 +507,9 @@ doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	/* we need to preserve the first line (record) of each block for
 	 * error-reporting purposes (bInBlock==0 meanst start of block)
 	 */
-	if(bInBlock == 0)
+	if (bInBlock == 0) {
 		rsgt_errctxFrstRecInBlk(ectx, line);
+	}
 
 	r = rsgt_vrfy_nextRec(gf, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
@@ -495,8 +523,7 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
-{
+verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp) {
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
 	gtfile gf;
@@ -538,10 +565,12 @@ verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char
 
 	while(!feof(logfp)) {
 		if(bInBlock == 0) {
-			if(bs != NULL)
+			if (bs != NULL) {
 				rsgt_objfree(0x0904, bs);
-			if (bh != NULL)
+			}
+			if (bh != NULL) {
 				rsgt_objfree(0x0901, bh);
+			}
 			if((r = rsgt_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes,
 							&bHasIntermedHashes)) != 0) {
 				if(ectx.blkNum == 0) {
@@ -562,8 +591,9 @@ verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char
 			++ectx.blkNum;
 		}
 		++ectx.recNum, ++ectx.recNumInFile;
-		if((r = doVerifyRec(logfp, sigfp, nsigfp, gf, &ectx, bInBlock)) != 0)
+		if ((r = doVerifyRec(logfp, sigfp, nsigfp, gf, &ectx, bInBlock)) != 0) {
 			goto done;
+		}
 		if(ectx.recNum == bs->recCount) {
 			if((r = verifyBLOCK_SIG(bs, gf, sigfp, nsigfp, 
 			    (mode == MD_EXTEND) ? 1 : 0, &ectx)) != 0)
@@ -572,8 +602,9 @@ verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char
 		} else	bInBlock = 1;
 	}
 done:
-	if(r != RSGTE_EOF)
+	if (r != RSGTE_EOF) {
 		goto err;
+	}
 
 	/* Make sure we've reached the end of file in both log and signature file */
 	if (fgetc(logfp) != EOF) {
@@ -639,13 +670,16 @@ err:
 	if(r != 0)
 		sprintf(errbuf, "error %d (%s) processing file %s\n",
 			r, RSGTE2String(r), name);
-	else
+	else {
 		errbuf[0] = '\0';
+	}
 
-	if(logfp != NULL)
+	if (logfp != NULL) {
 		fclose(logfp);
-	if(sigfp != NULL)
+	}
+	if (sigfp != NULL) {
 		fclose(sigfp);
+	}
 	if(nsigfp != NULL) {
 		fclose(nsigfp);
 		unlink(nsigfname);
@@ -660,15 +694,15 @@ err:
 
 #ifdef ENABLEKSI
 static void
-detectFileTypeKSI(const char *name)
-{
+detectFileTypeKSI(const char *name) {
 	FILE *fp;
 	const char *typeName;
 	char hdr[9];
 	int r = -1;
 	
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-")) {
 		fp = stdin;
+	}
 	else {
 		if((fp = fopen(name, "r")) == NULL) {
 			perror(name);
@@ -676,27 +710,31 @@ detectFileTypeKSI(const char *name)
 		}
 	}
 	if((r = rsksi_tlvrdHeader(fp, (uchar*)hdr)) != 0) goto err;
-	if(!strcmp(hdr, "LOGSIG10"))
+	if (!strcmp(hdr, "LOGSIG10")) {
 		typeName = "Log Signature File, Version 10 (deprecated)";
-	else if(!strcmp(hdr, "LOGSIG11"))
+	}
+	else if (!strcmp(hdr, "LOGSIG11")) {
 		typeName = "Log Signature File, Version 11";
-	else if(!strcmp(hdr, "GTSTAT10"))
+	}
+	else if (!strcmp(hdr, "GTSTAT10")) {
 		typeName = "rsyslog GuardTime Signature State File, Version 10";
-	else
+	}
+	else {
 		typeName = "unknown";
+	}
 
 	printf("%s: %s [%s]\n", name, hdr, typeName);
 
-	if(fp != stdin)
+	if (fp != stdin) {
 		fclose(fp);
+	}
 	return;
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
 }
 
 static int
 doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
-		ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
-{
+		ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock) {
 	int r;
 	size_t lenRec;
 	char line[128*1024];
@@ -720,8 +758,9 @@ doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	/* we need to preserve the first line (record) of each block for
 	 * error-reporting purposes (bInBlock==0 meanst start of block)
 	 */
-	if(bInBlock == 0)
+	if (bInBlock == 0) {
 		rsksi_errctxFrstRecInBlk(ectx, line);
+	}
 
 	r = rsksi_vrfy_nextRec(ksi, sigfp, nsigfp, (unsigned char*)line, lenRec, ectx);
 done:
@@ -735,8 +774,7 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
-{
+verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp) {
 	filemode = FILEMODE_LOGSIG; /* Default FileMode */ 
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
@@ -810,12 +848,14 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				++ectx.blkNum;
 			}
 			++ectx.recNum, ++ectx.recNumInFile;
-			if((r = doVerifyRecKSI(logfp, sigfp, nsigfp, ksi, &ectx, bInBlock)) != 0)
+			if ((r = doVerifyRecKSI(logfp, sigfp, nsigfp, ksi, &ectx, bInBlock)) != 0) {
 				goto done;
+			}
 			if(ectx.recNum == bs->recCount) {
 				/* And Verify Block signature */
-				if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx)) != 0)
+				if ((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx)) != 0) {
 					goto done;
+				}
 				bInBlock = 0;
 			} else	bInBlock = 1;
 		}
@@ -934,8 +974,9 @@ done:
 		free(ksi);
 	}
 
-	if(r != RSGTE_EOF)
+	if (r != RSGTE_EOF) {
 		goto err;
+	}
 
 	/* Make sure we've reached the end of file in both log and signature file */
 	if (fgetc(logfp) != EOF) {
@@ -995,10 +1036,12 @@ done:
 	rsksi_errctxExit(&ectx);
 	return 0; /* NULL means SUCCESS now */
 err:
-	if(r != 0)
+	if (r != 0) {
 		sprintf(errbuf, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
-	else
+	}
+	else {
 		errbuf[0] = '\0';
+	}
 	/* Close File handles */
 	if(logfp != NULL) fclose(logfp);
 	if(sigfp != NULL) fclose(sigfp);
@@ -1010,8 +1053,7 @@ err:
 		ectx.ksistate == KSI_NETWORK_CONNECTION_TIMEOUT ||
 		ectx.ksistate == KSI_NETWORK_SEND_TIMEOUT ||
 		ectx.ksistate == KSI_NETWORK_RECIEVE_TIMEOUT ||
-		ectx.ksistate == KSI_HTTP_ERROR )
-	{
+		ectx.ksistate == KSI_HTTP_ERROR ) {
 		/* Return correct error code */
 		return RSGTE_NETWORK_ERROR; 
 	}
@@ -1025,8 +1067,7 @@ err:
  * Input: logfilename and open file handles
  */
 static int
-extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
-{
+extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp) {
 	char newsigfname[4096];
 	FILE *newsigfp = NULL; 
 	FILE *newlogfp = NULL; 
@@ -1064,7 +1105,7 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 	}
 
 	/* Check/set User output writemode */
-	if (append > 0 ) { 
+	if (append > 0 ) {
 		writeMode[0] = 'a'; 
 	}
 
@@ -1106,8 +1147,9 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 		while(pszBegin != NULL) {
 			/* Cut number from string */
 			pszEnd = strchr(pszBegin, ',');
-			if (pszEnd != NULL )
+			if (pszEnd != NULL ) {
 				iNumLength = (pszEnd-pszBegin);
+			}
 			else /* Rest of string is last number */
 				iNumLength = strlen(pszBegin);
 			
@@ -1303,8 +1345,9 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 						fprintf(stderr, "extractKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
 						r = RSGTE_IO;
 					} else {
-						if(verbose)
+						if (verbose) {
 							fprintf(stderr, "extractKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
+						}
 						r = RSGTE_EOF;
 					}
 					perror(sigfname);
@@ -1395,8 +1438,9 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 
 done:
 	/* Free mem */
-	if (lineRec != NULL)
+	if (lineRec != NULL) {
 		free(lineRec);
+	}
 	if (paiLineNumbers != NULL)
 		free(paiLineNumbers); 
 
@@ -1454,8 +1498,7 @@ done2:
 			ectx.ksistate == KSI_NETWORK_CONNECTION_TIMEOUT ||
 			ectx.ksistate == KSI_NETWORK_SEND_TIMEOUT ||
 			ectx.ksistate == KSI_NETWORK_RECIEVE_TIMEOUT ||
-			ectx.ksistate == KSI_HTTP_ERROR )
-		{
+			ectx.ksistate == KSI_HTTP_ERROR ) {
 			/* Set correct error code */
 			iReturn = RSGTE_NETWORK_ERROR; 
 		}
@@ -1480,8 +1523,9 @@ done2:
 	}
 	
 	/* Deinit KSI stuff */
-	if(bInitDone)
+	if (bInitDone) {
 		rsksi_errctxExit(&ectx);
+	}
 	return iReturn;
 }
 #endif
@@ -1489,8 +1533,7 @@ done2:
 /* VERIFY if logfile has a Guardtime Signfile 
 */
 static void
-verify(const char *name, char *errbuf)
-{
+verify(const char *name, char *errbuf) {
 	int iSuccess = 1; 
 	char sigfname[4096];
 	char oldsigfname[4096];
@@ -1594,8 +1637,7 @@ done:
 /* EXTRACT loglines including their signatures from a logfile 
 */
 static void
-extract(const char *name, char *errbuf)
-{
+extract(const char *name, char *errbuf) {
 	int iSuccess = 1; 
 	char sigfname[4096];
 	FILE *logfp = NULL, *sigfp = NULL;
@@ -1669,8 +1711,7 @@ done:
 }
 
 static void
-processFile(const char *name)
-{
+processFile(const char *name) {
 	char errbuf[4096];
 
 	switch(mode) {
@@ -1678,12 +1719,14 @@ processFile(const char *name)
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Detect Filetype\n"); 
 #ifdef ENABLEGT
-		if (apimode == API_GT)
+		if (apimode == API_GT) {
 			detectFileType(name);
+		}
 #endif
 #ifdef ENABLEKSI
-		if (apimode == API_KSI)
+		if (apimode == API_KSI) {
 			detectFileTypeKSI(name);
+		}
 #endif
 		break;
 	case MD_DUMP:
@@ -1707,22 +1750,26 @@ processFile(const char *name)
 		if(verbose)
 			fprintf(stdout, "ProcessMode: Show SigBlk Params\n"); 
 #ifdef ENABLEGT
-		if (apimode == API_GT)
+		if (apimode == API_GT) {
 			showSigblkParams(name);
+		}
 #endif
 #ifdef ENABLEKSI
-		if (apimode == API_KSI)
+		if (apimode == API_KSI) {
 			showSigblkParamsKSI(name);
+		}
 #endif
 		break;
 	case MD_CONVERT:
 #ifdef ENABLEGT
-		if (apimode == API_GT)
+		if (apimode == API_GT) {
 			convertFile(name);
+		}
 #endif
 #ifdef ENABLEKSI
-		if (apimode == API_KSI)
+		if (apimode == API_KSI) {
 			convertFileKSI(name);
+		}
 #endif
 		break;
 	case MD_VERIFY:
@@ -1769,8 +1816,7 @@ static struct option long_options[] =
 
 /* Helper function to show some HELP */
 static void
-rsgtutil_usage(void)
-{
+rsgtutil_usage(void) {
 	fprintf(stderr, "usage: rsgtutil [options]\n"
 			"Use \"man rsgtutil\" for more details.\n\n"
 			"\t-h, --help \t\t\t Show this help.\n"
@@ -1799,15 +1845,15 @@ rsgtutil_usage(void)
 }
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int i;
 	int opt;
 
 	while(1) {
 		opt = getopt_long(argc, argv, "a:ABcdDeE:hk:o:P:stTu:vVx:", long_options, NULL);
-		if(opt == -1)
+		if (opt == -1) {
 			break;
+		}
 		switch(opt) {
 		case 'v':
 			verbose = 1;
@@ -1914,8 +1960,9 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if(optind == argc)
+	if (optind == argc) {
 		processFile("-");
+	}
 	else {
 		for(i = optind ; i < argc ; ++i)
 			processFile(argv[i]);

@@ -53,8 +53,7 @@ static int fklog; // TODO: remove
 #endif
 
 
-static uchar *GetPath(void)
-{
+static uchar *GetPath(void) {
 	return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
 }
 
@@ -62,8 +61,7 @@ static uchar *GetPath(void)
  * entry point. -- rgerhards, 2008-04-09
  */
 rsRetVal
-klogWillRun(void)
-{
+klogWillRun(void) {
 	DEFiRet;
 
 	fklog = sun_openklog((char*) GetPath(), O_RDONLY);
@@ -83,11 +81,11 @@ klogWillRun(void)
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(void)
-{
+rsRetVal klogAfterRun(void) {
         DEFiRet;
-	if(fklog != -1)
+	if (fklog != -1) {
 		close(fklog);
+	}
         RETiRet;
 }
 
@@ -97,8 +95,7 @@ rsRetVal klogAfterRun(void)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(void)
-{
+rsRetVal klogLogKMsg(void) {
         DEFiRet;
 	sun_sys_poll();
 	RETiRet;
@@ -109,8 +106,7 @@ rsRetVal klogLogKMsg(void)
  * rgerhards, 2008-04-14
  */
 int
-klogFacilIntMsg(void)
-{
+klogFacilIntMsg(void) {
 	return LOG_SYSLOG;
 }
 

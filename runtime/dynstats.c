@@ -366,8 +366,9 @@ dynstats_processCnf(struct cnfobj *o) {
 	}
 	
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_NAME)) {
 			CHKmalloc(name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if (!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_RESETTABLE)) {

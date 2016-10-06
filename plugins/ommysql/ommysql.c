@@ -116,8 +116,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -125,8 +126,7 @@ ENDisCompatibleWithFeature
  * MySQL connection.
  * Initially added 2004-10-28
  */
-static void closeMySQL(wrkrInstanceData_t *pWrkrData)
-{
+static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
 	if(pWrkrData->hmysql != NULL) {	/* just to be on the safe side... */
 		mysql_close(pWrkrData->hmysql);	
 		pWrkrData->hmysql = NULL;
@@ -158,8 +158,7 @@ ENDdbgPrintInstInfo
  * We check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
-{
+static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent) {
 	char errMsg[512];
 	unsigned uMySQLErrno;
 
@@ -171,8 +170,9 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 		uMySQLErrno = mysql_errno(pWrkrData->hmysql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uMySQLErrno,
 			mysql_error(pWrkrData->hmysql));
-		if(bSilent || uMySQLErrno == pWrkrData->uLastMySQLErrno)
+		if (bSilent || uMySQLErrno == pWrkrData->uLastMySQLErrno) {
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
+		}
 		else {
 			pWrkrData->uLastMySQLErrno = uMySQLErrno;
 			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
@@ -187,8 +187,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
-{
+static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
 	instanceData *pData;
 	DEFiRet;
 
@@ -200,11 +199,11 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
 		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,((pData->configsection!=NULL)?(char*)pData->configsection:"client"));
-		if(pData->configfile!=NULL){
+		if(pData->configfile!=NULL) {
 			FILE * fp;
 			fp=fopen((char*)pData->configfile,"r");
 			int err=errno;
-			if(fp==NULL){
+			if(fp==NULL) {
 				char msg[512];
 				snprintf(msg,sizeof(msg),"Could not open '%s' for reading",pData->configfile);
 				if(bSilent) {
@@ -237,8 +236,7 @@ finalize_it:
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
-{
+static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz) {
 	DEFiRet;
 
 	/* see if we are ready to proceed */
@@ -292,7 +290,7 @@ ENDdoAction
 
 BEGINendTransaction
 CODESTARTendTransaction
-	if(mysql_commit(pWrkrData->hmysql) != 0)	{	
+	if(mysql_commit(pWrkrData->hmysql) != 0) {
 		dbgprintf("mysql server error: transaction not committed\n");		
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -300,8 +298,7 @@ ENDendTransaction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->dbsrvPort = 0;
 	pData->configfile = NULL;
 	pData->configsection = NULL;
@@ -326,8 +323,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			strncpy(pData->dbsrv, cstr, sizeof(pData->dbsrv));
@@ -399,20 +397,27 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Now we read the MySQL connection properties 
 	 * and verify that the properties are valid.
 	 */
-	if(getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ','))
+	if (getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ',')) {
 		iMySQLPropErr++;
-	if(*pData->dbsrv == '\0')
+	}
+	if (*pData->dbsrv == '\0') {
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ','))
+	}
+	if (getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ',')) {
 		iMySQLPropErr++;
-	if(*pData->dbname == '\0')
+	}
+	if (*pData->dbname == '\0') {
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbuid, _DB_MAXUNAMELEN+1, ','))
+	}
+	if (getSubString(&p, pData->dbuid, _DB_MAXUNAMELEN+1, ',')) {
 		iMySQLPropErr++;
-	if(*pData->dbuid == '\0')
+	}
+	if (*pData->dbuid == '\0') {
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbpwd, _DB_MAXPWDLEN+1, ';'))
+	}
+	if (getSubString(&p, pData->dbpwd, _DB_MAXPWDLEN+1, ';')) {
 		iMySQLPropErr++;
+	}
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
@@ -427,7 +432,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * because right properties are vital at this place.  
 	 * Retries make no sense. 
 	 */
-	if (iMySQLPropErr) { 
+	if (iMySQLPropErr) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
@@ -461,8 +466,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	cs.iSrvPort = 0; /* zero is the default port */
 	free(cs.pszMySQLConfigFile);
@@ -479,7 +483,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if(!bCoreSupportsBatching) {	
+	if(!bCoreSupportsBatching) {
 		errmsg.LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

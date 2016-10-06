@@ -173,14 +173,16 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pData->fdErrFile != -1)
+	if (pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
+	}
 	pthread_mutex_destroy(&pData->mutErrFile);
 	free(pData->server);
 	free(pData->uid);
@@ -241,8 +243,7 @@ ENDdbgPrintInstInfo
  * Newly creates an estr for this purpose.
  */
 static rsRetVal
-setBaseURL(instanceData *pData, es_str_t **url)
-{
+setBaseURL(instanceData *pData, es_str_t **url) {
 	char portBuf[64];
 	int r;
 	DEFiRet;
@@ -264,8 +265,7 @@ setBaseURL(instanceData *pData, es_str_t **url)
 
 
 static rsRetVal
-checkConn(wrkrInstanceData_t *pWrkrData)
-{
+checkConn(wrkrInstanceData_t *pWrkrData) {
 	es_str_t *url;
 	CURL *curl = NULL;
 	CURLcode res;
@@ -282,8 +282,9 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, TRUE);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, TRUE);
-	if(pWrkrData->pData->allowUnsignedCerts)
+	if (pWrkrData->pData->allowUnsignedCerts) {
 		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, FALSE);
+	}
 
 	/* Only enable for debugging 
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
@@ -305,8 +306,9 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	DBGPRINTF("omelasticsearch: checkConn() completed with success\n");
 
 finalize_it:
-	if(curl != NULL)
+	if (curl != NULL) {
 		curl_easy_cleanup(curl);
+	}
 	RETiRet;
 }
 
@@ -322,8 +324,7 @@ ENDtryResume
 static void
 getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 		      uchar **srchIndex, uchar **srchType, uchar **parent,
-		      uchar **bulkId)
-{
+		      uchar **bulkId) {
 	if(tpls == NULL) {
 		*srchIndex = pData->searchIndex;
 		*parent = pData->parent;
@@ -396,8 +397,7 @@ done:	return;
 
 
 static rsRetVal
-setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
-{
+setCurlURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls) {
 	char authBuf[1024];
 	uchar *searchIndex = 0;
 	uchar *searchType;
@@ -470,8 +470,7 @@ finalize_it:
  * index changes.
  */
 static rsRetVal
-buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
-{
+buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls) {
 	int length = strlen((char *)message);
 	int r;
 	uchar *searchIndex = 0;
@@ -518,8 +517,7 @@ finalize_it:
  * Dumps entire bulk request and response in error log
  */
 static rsRetVal
-getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,char **rendered)
-{
+getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,char **rendered) {
 	DEFiRet;
 	cJSON *req=0;
 	cJSON *errRoot=0;
@@ -549,8 +547,7 @@ getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqm
  * Sections are marked by { and }
  */
 static rsRetVal
-getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
-{
+getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart ) {
 		DEFiRet;
 		char* index =0;
 		if( (index = strchr(bulkRequest,'\n')) != 0)/*intermediate section*/
@@ -572,16 +569,17 @@ getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
  * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
  */
 static rsRetVal
-getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
-{
+getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation) {
 	DEFiRet;
 	const char *req = bulkRequest;
 	const char *start = bulkRequest;
-	if (getSection(req,&req)!=RS_RET_OK)
+	if (getSection(req,&req)!=RS_RET_OK) {
 		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
-	if (getSection(req,&req)!=RS_RET_OK)
+	if (getSection(req,&req)!=RS_RET_OK) {
 			ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	CHKmalloc(*singleRequest = (char*) calloc (req - start+ 1 + 1,1));
 	/* (req - start+ 1 == length of data + 1 for terminal char)*/
@@ -614,8 +612,7 @@ typedef struct exeContext{
  * get content to be written in error file using context passed
  */
 static rsRetVal
-parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx)
-{
+parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx) {
 	DEFiRet;
 	cJSON *replyRoot = *pReplyRoot;
 	int i;
@@ -645,7 +642,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 		cJSON *ok=0;
 		int itemStatus=0;
 		item = cJSON_GetArrayItem(items, i);
-		if(item == NULL)  {
+		if(item == NULL) {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
 				  "cannot obtain reply array item %d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
@@ -662,8 +659,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 
 		char *request =0;
 		char *response =0;
-		if(ctx->statusCheckOnly)
-		{
+		if(ctx->statusCheckOnly) {
 			if(itemStatus) {
 				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, ok->valueint);
 				DBGPRINTF("omelasticsearch: status check found error.\n");
@@ -673,16 +669,14 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 		}
 		else
 		{
-			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK)
-			{
+			if(getSingleRequest(lastReqRead,&request,&lastReqRead) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: Couldn't get post request\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
 			response = cJSON_PrintUnformatted(create);
 
-			if(response==NULL)
-			{
+			if(response==NULL) {
 				free(request);/*as its has been assigned.*/
 				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -695,8 +689,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 			free(request);
 			free(response);
 
-			if(ret != RS_RET_OK)
-			{
+			if(ret != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: Error in preparing errorfileContent. Cannot continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
@@ -713,23 +706,19 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
  * Dumps only failed requests of bulk insert
  */
 static rsRetVal
-getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
-{
+getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response) {
 	DEFiRet;
-	if(itemStatus)
-	{
+	if(itemStatus) {
 		cJSON *onlyErrorResponses =0;
 		cJSON *onlyErrorRequests=0;
 
-		if((onlyErrorResponses=cJSON_GetObjectItem(ctx->errRoot, "reply")) == NULL)
-		{
+		if((onlyErrorResponses=cJSON_GetObjectItem(ctx->errRoot, "reply")) == NULL) {
 			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		cJSON_AddItemToArray(onlyErrorResponses, cJSON_CreateString(response));
 
-		if((onlyErrorRequests=cJSON_GetObjectItem(ctx->errRoot, "request")) == NULL)
-		{
+		if((onlyErrorRequests=cJSON_GetObjectItem(ctx->errRoot, "request")) == NULL) {
 			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -750,20 +739,17 @@ static rsRetVal
 getDataInterleaved(context *ctx,
 	int __attribute__((unused)) itemStatus,
 	char *request,
-	char *response)
-{
+	char *response) {
 	DEFiRet;
 	cJSON *interleaved =0;
-	if((interleaved=cJSON_GetObjectItem(ctx->errRoot, "response")) == NULL)
-	{
+	if((interleaved=cJSON_GetObjectItem(ctx->errRoot, "response")) == NULL) {
 		DBGPRINTF("omelasticsearch: Failed to get response json array. Invalid context. Cannot continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	cJSON *interleavedNode=0;
 	/*create interleaved node that has req and response json data*/
-	if((interleavedNode=cJSON_CreateObject()) == NULL)
-	{
+	if((interleavedNode=cJSON_CreateObject()) == NULL) {
 		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -784,8 +770,7 @@ getDataInterleaved(context *ctx,
  */
 
 static rsRetVal
-getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *response)
-{
+getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *response) {
 	DEFiRet;
 	if (itemStatus) {
 		if(getDataInterleaved(ctx, itemStatus,request,response)!= RS_RET_OK) {
@@ -801,7 +786,7 @@ getDataErrorOnlyInterleaved(context *ctx,int itemStatus,char *request,char *resp
  * get erroronly context
  */
 static rsRetVal
-initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx) {
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	cJSON *errRoot=0;
@@ -832,7 +817,7 @@ initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * get interleaved context
  */
 static rsRetVal
-initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx) {
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	cJSON *errRoot=0;
@@ -854,7 +839,7 @@ initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 
 /*get interleaved context*/
 static rsRetVal
-initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
+initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx) {
 	DEFiRet;
 	ctx->statusCheckOnly=0;
 	cJSON *errRoot=0;
@@ -880,8 +865,7 @@ initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * needs to be closed, HUP must be sent.
  */
 static rsRetVal
-writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
-{
+writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg) {
 	char *rendered = NULL;
 	size_t toWrite;
 	ssize_t wrRet;
@@ -911,16 +895,14 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	else
 	{
 		/*get correct context.*/
-		if(pData->interleaved && pData->errorOnly)
-		{
+		if(pData->interleaved && pData->errorOnly) {
 			if(initializeErrorInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
 		}
-		else if(pData->errorOnly)
-		{
+		else if(pData->errorOnly) {
 
 			if(initializeErrorOnlyConext(pWrkrData,&ctx) != RS_RET_OK) {
 
@@ -928,8 +910,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		}
-		else if(pData->interleaved)
-		{
+		else if(pData->interleaved) {
 			if(initializeInterleavedConext(pWrkrData,&ctx) != RS_RET_OK) {
 				DBGPRINTF("omelasticsearch: error initializing error interleaved context.\n");
 				ABORT_FINALIZE(RS_RET_ERR);
@@ -974,8 +955,9 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 
 
 finalize_it:
-	if(bMutLocked)
+	if (bMutLocked) {
 		pthread_mutex_unlock(&pData->mutErrFile);
+	}
 	cJSON_Delete(ctx.errRoot);
 	free(rendered);
 	RETiRet;
@@ -983,14 +965,12 @@ finalize_it:
 
 
 static rsRetVal
-checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
-{
+checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root) {
 	DEFiRet;
 	context ctx;
 	ctx.statusCheckOnly=1;
 	ctx.errRoot = 0;
-	if(parseRequestAndResponseForContext(pWrkrData,&root,0,&ctx)!= RS_RET_OK)
-	{
+	if(parseRequestAndResponseForContext(pWrkrData,&root,0,&ctx)!= RS_RET_OK) {
 		DBGPRINTF("omelasticsearch: error found in elasticsearch reply\n");
 		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	}
@@ -1001,8 +981,7 @@ checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
 
 
 static rsRetVal
-checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
-{
+checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
 	cJSON *root;
 	cJSON *status;
 	DEFiRet;
@@ -1034,8 +1013,9 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	}
 
 finalize_it:
-	if(root != NULL)
+	if (root != NULL) {
 		cJSON_Delete(root);
+	}
 	if(iRet != RS_RET_OK) {
 		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
 	}
@@ -1044,8 +1024,7 @@ finalize_it:
 
 
 static rsRetVal
-curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, int nmsgs)
-{
+curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls, int nmsgs) {
 	CURLcode code;
 	CURL *curl = pWrkrData->curlHandle;
 	DEFiRet;
@@ -1053,8 +1032,9 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
 
-	if(pWrkrData->pData->dynSrchIdx || pWrkrData->pData->dynSrchType || pWrkrData->pData->dynParent)
+	if (pWrkrData->pData->dynSrchIdx || pWrkrData->pData->dynSrchType || pWrkrData->pData->dynParent) {
 		CHKiRet(setCurlURL(pWrkrData, pWrkrData->pData, tpls));
+	}
 
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, pWrkrData);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
@@ -1119,16 +1099,16 @@ CODESTARTendTransaction
 		dbgprintf("omelasticsearch: endTransaction, batch: '%s'\n", cstr);
 		CHKiRet(curlPost(pWrkrData, (uchar*) cstr, strlen(cstr), NULL, pWrkrData->batch.nmemb));
 	}
-	else
+	else {
 		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
+	}
 finalize_it:
 	free(cstr);
 ENDendTransaction
 
 /* elasticsearch POST result string ... useful for debugging */
 static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
+curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
 	char *p = (char *)ptr;
 	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
 	char *buf;
@@ -1147,8 +1127,7 @@ curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
 
 
 static rsRetVal
-curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
-{
+curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData) {
 	HEADER *header;
 	CURL *handle;
 
@@ -1174,17 +1153,18 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 	}
 
 	if(Debug) {
-		if(pData->dynSrchIdx == 0 && pData->dynSrchType == 0 && pData->dynParent == 0)
+		if (pData->dynSrchIdx == 0 && pData->dynSrchType == 0 && pData->dynParent == 0) {
 			dbgprintf("omelasticsearch setup, using static REST URL\n");
-		else
+		}
+		else {
 			dbgprintf("omelasticsearch setup, we have a dynamic REST URL\n");
+		}
 	}
 	return RS_RET_OK;
 }
 
 static void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->server = NULL;
 	pData->port = 9200;
 	pData->uid = NULL;
@@ -1221,8 +1201,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "errorfile")) {
@@ -1387,12 +1368,15 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->server == NULL)
+	if (pData->server == NULL) {
 		pData->server = (uchar*) strdup("localhost");
-	if(pData->searchIndex == NULL)
+	}
+	if (pData->searchIndex == NULL) {
 		pData->searchIndex = (uchar*) strdup("system");
-	if(pData->searchType == NULL)
+	}
+	if (pData->searchType == NULL) {
 		pData->searchType = (uchar*) strdup("events");
+	}
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

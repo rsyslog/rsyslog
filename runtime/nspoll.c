@@ -55,8 +55,7 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-loadDrvr(nspoll_t *pThis)
-{
+loadDrvr(nspoll_t *pThis) {
 	DEFiRet;
 	uchar *pBaseDrvrName;
 	uchar szDrvrName[48]; /* 48 shall be large enough */
@@ -64,8 +63,9 @@ loadDrvr(nspoll_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if (snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName)) {
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -79,8 +79,9 @@ loadDrvr(nspoll_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if (pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
+		}
 			pThis->pDrvrName = NULL;
 	}
 	RETiRet;
@@ -95,8 +96,9 @@ ENDobjConstruct(nspoll)
 /* destructor for the nspoll object */
 BEGINobjDestruct(nspoll) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nspoll)
-	if(pThis->pDrvrData != NULL)
+	if (pThis->pDrvrData != NULL) {
 		pThis->Drvr.Destruct(&pThis->pDrvrData);
+	}
 
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
@@ -112,8 +114,7 @@ ENDobjDestruct(nspoll)
 
 /* ConstructionFinalizer */
 static rsRetVal
-ConstructFinalize(nspoll_t *pThis)
-{
+ConstructFinalize(nspoll_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
 	CHKiRet(loadDrvr(pThis));
@@ -141,8 +142,7 @@ Wait(nspoll_t *pThis, int timeout, int *numEntries, nsd_epworkset_t workset[]) {
  * used)-- rgerhards, 2008-05-05
  */
 static rsRetVal
-SetDrvrName(nspoll_t *pThis, uchar *pszName)
-{
+SetDrvrName(nspoll_t *pThis, uchar *pszName) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	if(pThis->pBaseDrvrName != NULL) {

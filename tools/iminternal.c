@@ -41,14 +41,14 @@ static linkedList_t llMsgs;
 
 /* destructs an iminternal object
  */
-static rsRetVal iminternalDestruct(iminternal_t *pThis)
-{
+static rsRetVal iminternalDestruct(iminternal_t *pThis) {
 	DEFiRet;
 
 	assert(pThis != NULL);
 
-	if(pThis->pMsg != NULL)
+	if (pThis->pMsg != NULL) {
 		msgDestruct(&pThis->pMsg);
+	}
 
 	free(pThis);
 
@@ -58,8 +58,7 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
 
 /* Construct an iminternal object
  */
-static rsRetVal iminternalConstruct(iminternal_t **ppThis)
-{
+static rsRetVal iminternalConstruct(iminternal_t **ppThis) {
 	DEFiRet;
 	iminternal_t *pThis;
 
@@ -71,8 +70,9 @@ static rsRetVal iminternalConstruct(iminternal_t **ppThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
+		if (pThis != NULL) {
 			iminternalDestruct(pThis);
+		}
 	}
 
 	*ppThis = pThis;
@@ -88,8 +88,7 @@ finalize_it:
  * The interface of this function is modelled after syslogd/logmsg(),
  * for which it is an "replacement".
  */
-rsRetVal iminternalAddMsg(msg_t *pMsg)
-{
+rsRetVal iminternalAddMsg(msg_t *pMsg) {
 	DEFiRet;
 	iminternal_t *pThis;
 
@@ -104,8 +103,9 @@ rsRetVal iminternalAddMsg(msg_t *pMsg)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
-		if(pThis != NULL)
+		if (pThis != NULL) {
 			iminternalDestruct(pThis);
+		}
 	}
 
 	RETiRet;
@@ -116,8 +116,7 @@ finalize_it:
  * from the list and return it to the caller. The caller is
  * responsible for freeing the message!
  */
-rsRetVal iminternalRemoveMsg(msg_t **ppMsg)
-{
+rsRetVal iminternalRemoveMsg(msg_t **ppMsg) {
 	DEFiRet;
 	iminternal_t *pThis;
 	linkedListCookie_t llCookie = NULL;
@@ -142,8 +141,7 @@ finalize_it:
  * 0 means we have none, everything else means there is at least
  * one message ready.
  */
-rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
-{
+rsRetVal iminternalHaveMsgReady(int* pbHaveOne) {
 	assert(pbHaveOne != NULL);
 
 	return llGetNumElts(&llMsgs, pbHaveOne);
@@ -153,8 +151,7 @@ rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
 /* initialize the iminternal subsystem
  * must be called once at the start of the program
  */
-rsRetVal modInitIminternal(void)
-{
+rsRetVal modInitIminternal(void) {
 	DEFiRet;
 
 	iRet = llInit(&llMsgs, iminternalDestruct, NULL, NULL);
@@ -169,8 +166,7 @@ rsRetVal modInitIminternal(void)
  * NOT care if there are any errors left - we simply destroy
  * them.
  */
-rsRetVal modExitIminternal(void)
-{
+rsRetVal modExitIminternal(void) {
 	DEFiRet;
 
 	iRet = llDestroy(&llMsgs);

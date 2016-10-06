@@ -115,8 +115,7 @@ static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
  * want to do this effort. -- rgerhards, 2010-04-19
  */
 void
-imsolaris_logerror(int err, char *errStr)
-{
+imsolaris_logerror(int err, char *errStr) {
 	errmsg.LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
 }
 
@@ -129,8 +128,7 @@ imsolaris_logerror(int err, char *errStr)
  * rgerhards, 2010-04-19
  */
 static void
-tryRecover(void)
-{
+tryRecover(void) {
 	int tryNum = 1;
 	int waitsecs;
 	int waitusecs;
@@ -142,13 +140,13 @@ tryRecover(void)
 	while(1) { /* loop broken inside */
 		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
 		if(iRet == RS_RET_OK) {
-			if(tryNum > 1) {		
+			if(tryNum > 1) {
 				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
 			}	
 			break;
 		}	
 		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
-		if(tryNum == 1) {		
+		if(tryNum == 1) {
 			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
 		}	
 		waitusecs = tryNum * 10000;
@@ -175,8 +173,7 @@ tryRecover(void)
  * growing number of properties. -- rgerhards, 2008-08-01
  */
 static rsRetVal
-readLog(int fd, uchar *pRcv, int iMaxLine)
-{
+readLog(int fd, uchar *pRcv, int iMaxLine) {
 	DEFiRet;
 	struct strbuf data;
 	struct strbuf ctl;
@@ -228,8 +225,7 @@ finalize_it:
  * rgerhards, 2010-04-19
  */
 static inline rsRetVal
-getMsgs(thrdInfo_t *pThrd, int timeout)
-{
+getMsgs(thrdInfo_t *pThrd, int timeout) {
 	DEFiRet;
 	int nfds;
 	int iMaxLine;
@@ -299,8 +295,9 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 	}
 
 finalize_it:
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+	if (pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1) {
 		free(pRcv);
+	}
 
 	RETiRet;
 }
@@ -374,8 +371,9 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
+	}
 	free(LogName);	
 ENDafterRun
 
@@ -391,8 +389,9 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-        if(eFeat == sFEATURENonCancelInputTermination)
+        if (eFeat == sFEATURENonCancelInputTermination) {
                 iRet = RS_RET_OK;
+        }
 ENDisCompatibleWithFeature
 
 
@@ -403,8 +402,7 @@ CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
-				     void __attribute__((unused)) *pVal)
-{
+				     void __attribute__((unused)) *pVal) {
 	return RS_RET_OK;
 }
 

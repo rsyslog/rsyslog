@@ -55,8 +55,7 @@ int getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
  * only be properly freed by passing it to `freeifaddrs'.
  */
 int
-getifaddrs(struct ifaddrs **ifap)
-{
+getifaddrs(struct ifaddrs **ifap) {
 	int		err;
 	char		*cp;
 	struct ifaddrs	*curr;
@@ -69,16 +68,16 @@ getifaddrs(struct ifaddrs **ifap)
 	err = getallifaddrs(AF_UNSPEC, ifap, LIFC_ENABLED);
 	if (err == 0) {
 		for (curr = *ifap; curr != NULL; curr = curr->ifa_next) {
-			if ((cp = strchr(curr->ifa_name, ':')) != NULL)
+			if ((cp = strchr(curr->ifa_name, ':')) != NULL) {
 				*cp = '\0';
+			}
 		}
 	}
 	return (err);
 }
 
 void
-freeifaddrs(struct ifaddrs *ifa)
-{
+freeifaddrs(struct ifaddrs *ifa) {
 	struct ifaddrs *curr;
 
 	while (ifa != NULL) {
@@ -99,8 +98,7 @@ freeifaddrs(struct ifaddrs *ifa)
  * using freeifaddrs().
  */
 int
-getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags)
-{
+getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags) {
 	struct lifreq *buf = NULL;
 	struct lifreq *lifrp;
 	struct lifreq lifrl;
@@ -112,8 +110,9 @@ getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags)
 	int sock6;
 	int err;
 
-	if ((sock4 = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	if ((sock4 = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		return (-1);
+	}
 	if ((sock6 = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
 		err = errno;
 		close(sock4);
@@ -124,8 +123,9 @@ getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags)
 retry:
 	/* Get all interfaces from SIOCGLIFCONF */
 	ret = getallifs(sock4, af, &buf, &numifs, (flags & ~LIFC_ENABLED));
-	if (ret != 0)
+	if (ret != 0) {
 		goto fail;
+	}
 
 	/*
 	 * Loop through the interfaces obtained from SIOCGLIFCOMF
@@ -140,23 +140,27 @@ retry:
 		(void) strncpy(lifrl.lifr_name, lifrp->lifr_name,
 		    sizeof (lifrl.lifr_name));
 		lifr_af = lifrp->lifr_addr.ss_family;
-		if (af != AF_UNSPEC && lifr_af != af)
+		if (af != AF_UNSPEC && lifr_af != af) {
 			continue;
+		}
 
 		s = (lifr_af == AF_INET ? sock4 : sock6);
 
-		if (ioctl(s, SIOCGLIFFLAGS, (caddr_t)&lifrl) < 0)
+		if (ioctl(s, SIOCGLIFFLAGS, (caddr_t)&lifrl) < 0) {
 			goto fail;
-		if ((flags & LIFC_ENABLED) && !(lifrl.lifr_flags & IFF_UP))
+		}
+		if ((flags & LIFC_ENABLED) && !(lifrl.lifr_flags & IFF_UP)) {
 			continue;
+		}
 
 		/*
 		 * Allocate the current list node. Each node contains data
 		 * for one ifaddrs structure.
 		 */
 		curr = calloc(1, sizeof (struct ifaddrs));
-		if (curr == NULL)
+		if (curr == NULL) {
 			goto fail;
+		}
 
 		if (prev != NULL) {
 			prev->ifa_next = curr;
@@ -167,41 +171,49 @@ retry:
 		prev = curr;
 
 		curr->ifa_flags = lifrl.lifr_flags;
-		if ((curr->ifa_name = strdup(lifrp->lifr_name)) == NULL)
+		if ((curr->ifa_name = strdup(lifrp->lifr_name)) == NULL) {
 			goto fail;
+		}
 
 		curr->ifa_addr = malloc(sizeof (struct sockaddr_storage));
-		if (curr->ifa_addr == NULL)
+		if (curr->ifa_addr == NULL) {
 			goto fail;
+		}
 		(void) memcpy(curr->ifa_addr, &lifrp->lifr_addr,
 		    sizeof (struct sockaddr_storage));
 
 		/* Get the netmask */
-		if (ioctl(s, SIOCGLIFNETMASK, (caddr_t)&lifrl) < 0)
+		if (ioctl(s, SIOCGLIFNETMASK, (caddr_t)&lifrl) < 0) {
 			goto fail;
+		}
 		curr->ifa_netmask = malloc(sizeof (struct sockaddr_storage));
-		if (curr->ifa_netmask == NULL)
+		if (curr->ifa_netmask == NULL) {
 			goto fail;
+		}
 		(void) memcpy(curr->ifa_netmask, &lifrl.lifr_addr,
 		    sizeof (struct sockaddr_storage));
 
 		/* Get the destination for a pt-pt interface */
 		if (curr->ifa_flags & IFF_POINTOPOINT) {
-			if (ioctl(s, SIOCGLIFDSTADDR, (caddr_t)&lifrl) < 0)
+			if (ioctl(s, SIOCGLIFDSTADDR, (caddr_t)&lifrl) < 0) {
 				goto fail;
+			}
 			curr->ifa_dstaddr = malloc(
 			    sizeof (struct sockaddr_storage));
-			if (curr->ifa_dstaddr == NULL)
+			if (curr->ifa_dstaddr == NULL) {
 				goto fail;
+			}
 			(void) memcpy(curr->ifa_dstaddr, &lifrl.lifr_addr,
 			    sizeof (struct sockaddr_storage));
 		} else if (curr->ifa_flags & IFF_BROADCAST) {
-			if (ioctl(s, SIOCGLIFBRDADDR, (caddr_t)&lifrl) < 0)
+			if (ioctl(s, SIOCGLIFBRDADDR, (caddr_t)&lifrl) < 0) {
 				goto fail;
+			}
 			curr->ifa_broadaddr = malloc(
 			    sizeof (struct sockaddr_storage));
-			if (curr->ifa_broadaddr == NULL)
+			if (curr->ifa_broadaddr == NULL) {
 				goto fail;
+			}
 			(void) memcpy(curr->ifa_broadaddr, &lifrl.lifr_addr,
 			    sizeof (struct sockaddr_storage));
 		}
@@ -216,8 +228,9 @@ fail:
 	free(buf);
 	freeifaddrs(*ifap);
 	*ifap = NULL;
-	if (err == ENXIO)
+	if (err == ENXIO) {
 		goto retry;
+	}
 	close(sock4);
 	close(sock6);
 	errno = err;
@@ -229,8 +242,7 @@ fail:
  */
 int
 getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
-    int64_t lifc_flags)
-{
+    int64_t lifc_flags) {
 	struct lifnum lifn;
 	struct lifconf lifc;
 	size_t bufsize;
@@ -242,8 +254,9 @@ getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
 
 	*buf = NULL;
 retry:
-	if (ioctl(s, SIOCGLIFNUM, &lifn) < 0)
+	if (ioctl(s, SIOCGLIFNUM, &lifn) < 0) {
 		goto fail;
+	}
 
 	/*
 	 * When calculating the buffer size needed, add a small number
@@ -253,16 +266,18 @@ retry:
 	 */
 	bufsize = (lifn.lifn_count + 4) * sizeof (struct lifreq);
 
-	if ((tmp = realloc(*buf, bufsize)) == NULL)
+	if ((tmp = realloc(*buf, bufsize)) == NULL) {
 		goto fail;
+	}
 
 	*buf = tmp;
 	lifc.lifc_family = af;
 	lifc.lifc_flags = lifc_flags;
 	lifc.lifc_len = bufsize;
 	lifc.lifc_buf = *buf;
-	if (ioctl(s, SIOCGLIFCONF, (char *)&lifc) < 0)
+	if (ioctl(s, SIOCGLIFCONF, (char *)&lifc) < 0) {
 		goto fail;
+	}
 
 	*numifs = lifc.lifc_len / sizeof (struct lifreq);
 	if (*numifs >= (lifn.lifn_count + 4)) {

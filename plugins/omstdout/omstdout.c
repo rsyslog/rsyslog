@@ -87,8 +87,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -182,8 +183,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	iTplOpts = (cs.bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
 	pData->bUseArrayInterface = cs.bUseArrayInterface;
@@ -208,8 +210,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	cs.bUseArrayInterface = 0;
 	cs.bEnsureLFEnding = 1;
@@ -232,8 +233,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports array passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_ARRAY)
+		if (opts & OMSR_TPL_AS_ARRAY) {
 			bArrayPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, what is not acceptable */
 	}

@@ -115,8 +115,7 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
 static inline void __attribute__((unused))
-wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
-{
+wtiResetExecState(wti_t * const pWti, batch_t * const pBatch) {
 	pWti->execState.bPrevWasSuspended = 0;
 	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
 }

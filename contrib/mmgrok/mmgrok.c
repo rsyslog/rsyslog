@@ -124,8 +124,7 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
-static inline void setInstParamDefaults(instanceData *pData)
-{
+static inline void setInstParamDefaults(instanceData *pData) {
     pData->pszPatternDir= NULL;
     pData->pszMatch = NULL;
     pData->pszSource = NULL;
@@ -149,8 +148,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "patterndir")) {
 			pData->pszPatternDir= es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;
@@ -163,8 +163,7 @@ CODESTARTnewActInst
 			pData->pszSource= es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;
 		}
-		else  if(!strcmp(actpblk.descr[i].name,"target"))
-                {
+		else  if(!strcmp(actpblk.descr[i].name,"target")) {
                         pData->pszTarget=es_str2cstr(pvals[i].val.d.estr,NULL);
                         continue;
                 }
@@ -189,10 +188,9 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
         
-static inline grok_t *CreateGrok()
-{
+static inline grok_t *CreateGrok() {
     grok_t  *grok = grok_new();
-    if(grok == NULL){
+    if(grok == NULL) {
         DBGPRINTF("mmgrok: create a grok faile!");
         exit(1);
     }
@@ -202,8 +200,7 @@ static inline grok_t *CreateGrok()
 
 /* the parseing is complate message into json */
 static rsRetVal 
-msg_to_json(GList *list,instanceData *pData)
-{
+msg_to_json(GList *list,instanceData *pData) {
     GList *it= list;
 
     struct json_object *json;
@@ -212,12 +209,10 @@ msg_to_json(GList *list,instanceData *pData)
     DEFiRet;
     
     json = json_object_new_object();
-    if(json == NULL)
-    {
+    if(json == NULL) {
             ABORT_FINALIZE(RS_RET_ERR);
     }
-    for(;it;it= it->next)
-    {
+    for(;it;it= it->next) {
 	int key_len = ((result_t *)it->data)->key_len;
         char *key = (char *)malloc(key_len+1);
         snprintf(key,key_len+1,"%.*s",key_len,((result_t *)it->data)->key);
@@ -236,8 +231,7 @@ finalize_it:
 
 /* store parse result ,use list in glib*/
 static rsRetVal 
-parse_result_store(const grok_match_t gm,instanceData *pData)
-{
+parse_result_store(const grok_match_t gm,instanceData *pData) {
         GList *re_list = NULL;
         char  *pname;
         const char  *pdata;
@@ -249,13 +243,11 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
         	
         grok_match_walk_init(&gm); //grok API
         
-        while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0)
-        {
+        while(grok_match_walk_next(&gm,&pname,&pname_len,&pdata,&pdata_len) == 0) {
             /* parse key and value type from patterns */
             key = strchr(pname,':');
 	    
-            if(key!=NULL)
-            {
+            if(key!=NULL) {
                 int key_len;
                 result_t *result = g_new0(result_t,1);
                 key_len = pname_len - ((key+1) - pname);
@@ -263,8 +255,7 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
                 pname_len = key_len;
                 type = strchr(key,':');
                 int type_len;
-                if(type!=NULL)
-                {
+                if(type!=NULL) {
                     key_len = (type - key);
                     type = type+1;
                     type_len = pname_len - key_len -1;
@@ -289,20 +280,17 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
 
 /* motify message for per line */
 static rsRetVal
-MotifyLine(char *line,grok_t *grok,instanceData *pData)
-{
+MotifyLine(char *line,grok_t *grok,instanceData *pData) {
     grok_match_t  gm;
     DEFiRet;
     grok_patterns_import_from_file(grok,pData->pszPatternDir);
     int compile = grok_compile(grok,pData->pszMatch);
-    if(compile!=GROK_OK)
-    {
+    if(compile!=GROK_OK) {
         DBGPRINTF("mmgrok: grok_compile faile!exit code: %d\n",compile);
 	ABORT_FINALIZE(RS_RET_ERR);
     }
     int exe = grok_exec(grok,line,&gm);
-    if(exe!=GROK_OK)
-    {
+    if(exe!=GROK_OK) {
         DBGPRINTF("mmgrok: grok_exec faile!exit code: %d\n",exe);
 	ABORT_FINALIZE(RS_RET_ERR);
     }
@@ -313,19 +301,18 @@ finalize_it:
 
 /* motify rsyslog messages */
 static rsRetVal
-MotifyMessage(instanceData *pData)
-{
+MotifyMessage(instanceData *pData) {
     DEFiRet;
     grok_t  *grok = CreateGrok();
     char     *msg = strdup(pData->pszSource);
     char     *line = NULL;
     line = strtok(msg,"\n");
-    while(line!=NULL)
-    {
+    while(line!=NULL) {
         MotifyLine(line,grok,pData);
         line = strtok(NULL,"\n");
     }
-    free(msg);msg=NULL;
+    free(msg);
+    msg=NULL;
     RETiRet;
 }
 
@@ -364,8 +351,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	p += sizeof(":mmgrok:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	CHKiRet(createInstance(&pData));
 
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -384,8 +372,7 @@ CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	RETiRet;
 }
@@ -404,8 +391,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 			&pomsrGetSupportedTplOpts);
 	if(localRet == RS_RET_OK) {
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG) {
 			bMsgPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

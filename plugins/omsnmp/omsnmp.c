@@ -180,8 +180,7 @@ ENDisCompatibleWithFeature
  * alorbach, 2008-02-12
  */
 static rsRetVal
-omsnmp_exitSession(wrkrInstanceData_t *pWrkrData)
-{
+omsnmp_exitSession(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 
 	if(pWrkrData->snmpsession != NULL) {
@@ -198,16 +197,16 @@ omsnmp_exitSession(wrkrInstanceData_t *pWrkrData)
  * alorbach, 2008-02-12
  */
 static rsRetVal
-omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
-{
+omsnmp_initSession(wrkrInstanceData_t *pWrkrData) {
 	netsnmp_session session;
 	instanceData *pData;
 	char szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
 	DEFiRet;
 	
 	/* should not happen, but if session is not cleared yet - we do it now! */
-	if (pWrkrData->snmpsession != NULL)
+	if (pWrkrData->snmpsession != NULL) {
 		omsnmp_exitSession(pWrkrData);
+	}
 
 	pData = pWrkrData->pData;
 
@@ -217,8 +216,9 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 
 	dbgprintf( "omsnmp_initSession: ENTER - Target = '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
 
-	if (setenv("POSIXLY_CORRECT", "1", 1) == -1)
+	if (setenv("POSIXLY_CORRECT", "1", 1) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	
 	snmp_sess_init(&session);
 	session.version = pData->iSNMPVersion;
@@ -227,7 +227,7 @@ omsnmp_initSession(wrkrInstanceData_t *pWrkrData)
 	session.peername = (char*) szTargetAndPort;
 	
 	/* Set SNMP Community */
-	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {	
+	if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {
 		session.community = (unsigned char *) pData->szCommunity == NULL ? (uchar*)"public" : pData->szCommunity;
 		session.community_len = strlen((char*) session.community);
 	}
@@ -243,8 +243,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
-{
+static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz) {
 	DEFiRet;
 
 	netsnmp_pdu    *pdu = NULL;
@@ -293,8 +292,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 		pdu->time = get_uptime();
 	}
 	/* If SNMP Version2c is configured !*/
-	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c) 
-	{
+	else if (pWrkrData->snmpsession->version == SNMP_VERSION_2c) {
 		long sysuptime;
 		char csysuptime[20];
 		
@@ -339,8 +337,7 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz)
 
 	/* Send the TRAP */
 	status = snmp_send(pWrkrData->snmpsession, pdu) == 0;
-	if (status)
-	{
+	if (status) {
 		/* Debug Output! */
 		int iErrorCode = pWrkrData->snmpsession->s_snmp_errno;
 		errmsg.LogError(0, RS_RET_SUSPENDED,  "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
@@ -392,8 +389,7 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 	pData->szCommunity = NULL;
 	pData->szEnterpriseOID = NULL;
@@ -414,8 +410,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->szTarget = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -424,8 +421,9 @@ CODESTARTnewActInst
 			pData->szTransport = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "version")) {
 			pData->iSNMPVersion = pvals[i].val.d.n;
-			if(pData->iSNMPVersion < 0 || cs.iSNMPVersion > 1)
+			if (pData->iSNMPVersion < 0 || cs.iSNMPVersion > 1) {
 				pData->iSNMPVersion = 1;
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "community")) {
 			pData->szCommunity = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "enterpriseoid")) {
@@ -436,8 +434,9 @@ CODESTARTnewActInst
 			pData->szSyslogMessageOID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "traptype")) {
 			pData->iTrapType = pvals[i].val.d.n;
-			if(cs.iTrapType < 0 && cs.iTrapType >= 6)
+			if (cs.iTrapType < 0 && cs.iTrapType >= 6) {
 				pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "specifictype")) {
 			pData->iSpecificType = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
@@ -467,8 +466,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		FINALIZE;
+	}
 
 	/* Check Target */
 	if(cs.pszTarget == NULL) {
@@ -489,14 +489,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* Set SNMPVersion */
 	if ( cs.iSNMPVersion < 0 || cs.iSNMPVersion > 1)		/* Set default to 1 if out of range */
 		pData->iSNMPVersion = 1;
-	else
+	else {
 		pData->iSNMPVersion = cs.iSNMPVersion;
+	}
 
 	/* Copy TrapType */
 	if ( cs.iTrapType < 0 && cs.iTrapType >= 6)		/* Only allow values from 0 to 6 !*/
 		pData->iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
-	else
+	else {
 		pData->iTrapType = cs.iTrapType;
+	}
 
 	/* Print Debug info */
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
@@ -524,8 +526,7 @@ ENDparseSelectorAct
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	free(cs.pszTarget);
 	cs.pszTarget = NULL;

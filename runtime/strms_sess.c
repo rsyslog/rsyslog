@@ -64,8 +64,7 @@ ENDobjConstruct(strms_sess)
 /* ConstructionFinalizer
  */
 static rsRetVal
-strms_sessConstructFinalize(strms_sess_t *pThis)
-{
+strms_sessConstructFinalize(strms_sess_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
@@ -80,16 +79,18 @@ finalize_it:
 /* destructor for the strms_sess object */
 BEGINobjDestruct(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(strms_sess)
-	if(pThis->pStrm != NULL)
+	if (pThis->pStrm != NULL) {
 		netstrm.Destruct(&pThis->pStrm);
+	}
 
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
 	free(pThis->fromHost);
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL) {
 		prop.Destruct(&pThis->fromHostIP);
+	}
 ENDobjDestruct(strms_sess)
 
 
@@ -105,8 +106,7 @@ ENDobjDebugPrint(strms_sess)
  * the caller must not free it. -- rgerhards, 2008-04-24
  */
 static rsRetVal
-SetHost(strms_sess_t *pThis, uchar *pszHost)
-{
+SetHost(strms_sess_t *pThis, uchar *pszHost) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	free(pThis->fromHost);
@@ -119,19 +119,18 @@ SetHost(strms_sess_t *pThis, uchar *pszHost)
  * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetHostIP(strms_sess_t *pThis, prop_t *ip)
-{
+SetHostIP(strms_sess_t *pThis, prop_t *ip) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL) {
 		prop.Destruct(&pThis->fromHostIP);
+	}
 	pThis->fromHostIP = ip;
 	RETiRet;
 }
 
 static rsRetVal
-SetStrm(strms_sess_t *pThis, netstrm_t *pStrm)
-{
+SetStrm(strms_sess_t *pThis, netstrm_t *pStrm) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	pThis->pStrm = pStrm;
@@ -141,8 +140,7 @@ SetStrm(strms_sess_t *pThis, netstrm_t *pStrm)
 
 /* set our parent, the strmsrv object */
 static rsRetVal
-SetStrmsrv(strms_sess_t *pThis, strmsrv_t *pSrv)
-{
+SetStrmsrv(strms_sess_t *pThis, strmsrv_t *pSrv) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	ISOBJ_TYPE_assert(pSrv, strmsrv);
@@ -153,8 +151,7 @@ SetStrmsrv(strms_sess_t *pThis, strmsrv_t *pSrv)
 
 /* set our parent listener info*/
 static rsRetVal
-SetLstnInfo(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo)
-{
+SetLstnInfo(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	assert(pLstnInfo != NULL);
@@ -164,8 +161,7 @@ SetLstnInfo(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo)
 
 
 static rsRetVal
-SetUsrP(strms_sess_t *pThis, void *pUsr)
-{
+SetUsrP(strms_sess_t *pThis, void *pUsr) {
 	DEFiRet;
 	pThis->pUsr = pUsr;
 	RETiRet;
@@ -173,8 +169,7 @@ SetUsrP(strms_sess_t *pThis, void *pUsr)
 
 
 static void *
-GetUsrP(strms_sess_t *pThis)
-{
+GetUsrP(strms_sess_t *pThis) {
 	return pThis->pUsr;
 }
 
@@ -184,16 +179,16 @@ GetUsrP(strms_sess_t *pThis)
  * of close, so potential-double closes are not detected.
  */
 static rsRetVal
-Close(strms_sess_t *pThis)
-{
+Close(strms_sess_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strms_sess);
 	netstrm.Destruct(&pThis->pStrm);
 	free(pThis->fromHost);
 	pThis->fromHost = NULL; /* not really needed, but... */
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL) {
 		prop.Destruct(&pThis->fromHostIP);
+	}
 
 	RETiRet;
 }
@@ -213,8 +208,7 @@ Close(strms_sess_t *pThis)
  * rgerhards, 2008-03-01
  */
 static rsRetVal
-DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen)
-{
+DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen) {
 	DEFiRet;
 	char *pEnd;
 

@@ -107,12 +107,12 @@ CODESTARTisCompatibleWithFeature
 	 * plugin. If not, the framework will handle that. Currently, only
 	 * RepeatedMsgReduction ("last message repeated n times") is optional.
 	 */
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
-static void closeMongoDB(instanceData *pData)
-{
+static void closeMongoDB(instanceData *pData) {
 	if(pData->conn != NULL) {
                 mongo_sync_disconnect(pData->conn);
 		pData->conn = NULL;
@@ -123,8 +123,9 @@ static void closeMongoDB(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closeMongoDB(pData);
-	if (pData->json_tokener != NULL)
+	if (pData->json_tokener != NULL) {
 		json_tokener_free(pData->json_tokener);
+	}
 	free(pData->server);
 	free(pData->db);
 	free(pData->collection);
@@ -149,8 +150,7 @@ ENDdbgPrintInstInfo
 /* report error that occured during *last* operation
  */
 static void
-reportMongoError(instanceData *pData)
-{
+reportMongoError(instanceData *pData) {
 	char errStr[1024];
 	gchar *err;
 	int eno;
@@ -174,8 +174,7 @@ reportMongoError(instanceData *pData)
  * MongoDB connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal initMongoDB(instanceData *pData, int bSilent)
-{
+static rsRetVal initMongoDB(instanceData *pData, int bSilent) {
 	const char *server;
 	DEFiRet;
 
@@ -224,8 +223,7 @@ finalize_it:
  * rgerhards, 2012-03-19
  */
 static inline const char *
-getLumberjackLevel(short severity)
-{
+getLumberjackLevel(short severity) {
 	switch(severity) {
 		case 0: return "FATAL";
 		case 1:
@@ -243,8 +241,7 @@ getLumberjackLevel(short severity)
 
 /* small helper: get integer power of 10 */
 static inline int
-i10pow(int exp)
-{
+i10pow(int exp) {
 	int r = 1;
 	while(exp > 0) {
 		r *= 10;
@@ -259,8 +256,7 @@ i10pow(int exp)
  * backward compatibility, which we consider pretty important).
  */
 static bson *
-getDefaultBSON(msg_t *pMsg)
-{
+getDefaultBSON(msg_t *pMsg) {
 	bson *doc = NULL;
 	uchar *procid; short unsigned procid_free; rs_size_t procid_len;
 	uchar *tag; short unsigned tag_free; rs_size_t tag_len;
@@ -327,8 +323,9 @@ getDefaultBSON(msg_t *pMsg)
 	if(sys_free) free(sys);
 	if(msg_free) free(msg);
 
-	if(doc == NULL)
+	if (doc == NULL) {
 		return doc;
+	}
 	bson_finish(doc);
 	return doc;
 }
@@ -339,8 +336,7 @@ static gboolean BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json
 
 /* Append a BSON variant of json to doc using name.  Return TRUE on success */
 static gboolean
-BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
-{
+BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json) {
 	switch(json != NULL ? json_object_get_type(json) : json_type_null) {
 	case json_type_null:
 		return bson_append_null(doc, name);
@@ -354,22 +350,26 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 		int64_t i;
 
 		i = json_object_get_int64(json);
-		if (i >= INT32_MIN && i <= INT32_MAX)
+		if (i >= INT32_MIN && i <= INT32_MAX) {
 			return bson_append_int32(doc, name, i);
-		else
+		}
+		else {
 			return bson_append_int64(doc, name, i);
+		}
 	}
 	case json_type_object: {
 
-		if (BSONAppendExtendedJSON(doc, name, json) == TRUE)
+		if (BSONAppendExtendedJSON(doc, name, json) == TRUE) {
 		    return TRUE;
+		}
 
 		bson *sub;
 		gboolean ok;
 
 		sub = BSONFromJSONObject(json);
-		if (sub == NULL)
+		if (sub == NULL) {
 			return FALSE;
+		}
 		ok = bson_append_document(doc, name, sub);
 		bson_free(sub);
 		return ok;
@@ -379,8 +379,9 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
 		gboolean ok;
 
 		sub = BSONFromJSONArray(json);
-		if (sub == NULL)
+		if (sub == NULL) {
 			return FALSE;
+		}
 		ok = bson_append_document(doc, name, sub);
 		bson_free(sub);
 		return ok;
@@ -402,8 +403,7 @@ BSONAppendJSONObject(bson *doc, const gchar *name, struct json_object *json)
  * rgerhards, 2016-04-09
  */
 static gboolean
-BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json)
-{
+BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json) {
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	struct json_object_iterator it = json_object_iter_begin(json);
 
@@ -427,48 +427,51 @@ BSONAppendExtendedJSON(bson *doc, const gchar *name, struct json_object *json)
 
 /* Return a BSON variant of json, which must be a json_type_array */
 static bson *
-BSONFromJSONArray(struct json_object *json)
-{
+BSONFromJSONArray(struct json_object *json) {
 	/* Way more than necessary */
 	bson *doc = NULL;
 	size_t i, array_len;
 
 	doc = bson_new();
-	if(doc == NULL)
+	if (doc == NULL) {
 		goto error;
+	}
 
 	array_len = json_object_array_length(json);
 	for (i = 0; i < array_len; i++) {
 		char buf[sizeof(size_t) * CHAR_BIT + 1];
 
-		if ((size_t)snprintf(buf, sizeof(buf), "%zu", i) >= sizeof(buf))
+		if ((size_t)snprintf(buf, sizeof(buf), "%zu", i) >= sizeof(buf)) {
 			goto error;
+		}
 		if (BSONAppendJSONObject(doc, buf,
 					 json_object_array_get_idx(json, i))
 		    == FALSE)
 			goto error;
 	}
 
-	if(bson_finish(doc) == FALSE)
+	if (bson_finish(doc) == FALSE) {
 		goto error;
+	}
 
 	return doc;
 
 error:
-	if(doc != NULL)
+	if (doc != NULL) {
 		bson_free(doc);
+	}
 	return NULL;
 }
 
 /* Return a BSON variant of json, which must be a json_type_object */
 static bson *
-BSONFromJSONObject(struct json_object *json)
-{
+BSONFromJSONObject(struct json_object *json) {
 	bson *doc = NULL;
 
 	doc = bson_new();
-	if(doc == NULL)
+	if (doc == NULL) {
 		goto error;
+	}
 
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
@@ -479,14 +482,16 @@ BSONFromJSONObject(struct json_object *json)
 		json_object_iter_next(&it);
 	}
 
-	if(bson_finish(doc) == FALSE)
+	if (bson_finish(doc) == FALSE) {
 		goto error;
+	}
 
 	return doc;
 
 error:
-	if(doc != NULL)
+	if (doc != NULL) {
 		bson_free(doc);
+	}
 	return NULL;
 }
 
@@ -528,14 +533,14 @@ CODESTARTdoAction
 
 finalize_it:
 	pthread_mutex_unlock(&mutDoAct);
-	if(doc != NULL)
+	if (doc != NULL) {
 		bson_free(doc);
+	}
 ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->server = NULL;
 	pData->port = 27017;
 	pData->db = NULL;
@@ -559,8 +564,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
@@ -589,10 +595,12 @@ CODESTARTnewActInst
 		CHKmalloc(pData->json_tokener = json_tokener_new());
 	}
 
-	if(pData->db == NULL)
+	if (pData->db == NULL) {
 		CHKmalloc(pData->db = (uchar*)strdup("syslog"));
-	if(pData->collection == NULL)
+	}
+	if (pData->collection == NULL) {
 		 CHKmalloc(pData->collection = (uchar*)strdup("log"));
+	}
 
 	/* we now create a db+collection string as we need to pass this
 	 * into the API and we do not want to generate it each time ;)
@@ -658,8 +666,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_JSON)
+		if (opts & OMSR_TPL_AS_JSON) {
 			bJSONPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

@@ -113,8 +113,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* callback for liblognorm error messages */
 static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
-	    size_t __attribute__((unused)) lenMsg)
-{
+	    size_t __attribute__((unused)) lenMsg) {
 	errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
@@ -122,8 +121,7 @@ errCallBack(void __attribute__((unused)) *cookie, const char *msg,
  * (and set within pData!).
  */
 static rsRetVal
-buildInstance(instanceData *pData)
-{
+buildInstance(instanceData *pData) {
 	DEFiRet;
 	if((pData->ctxln = ln_initCtx()) == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
@@ -257,8 +255,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->rulebase = NULL;
 	pData->bUseRawMsg = 0;
 	pData->pszPath = strdup("$!");
@@ -282,8 +279,9 @@ CODESTARTsetModCnf
 	}
 	
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "allowregex")) {
 			loadModConf->allow_regex = (int) pvals[i].val.d.n;
 		} else {
@@ -293,8 +291,9 @@ CODESTARTsetModCnf
 	}
 	
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -325,8 +324,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "rulebase")) {
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
@@ -373,8 +373,9 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
 CODE_STD_FINALIZERnewActInst
-	if(bDestructPValsOnExit)
+	if (bDestructPValsOnExit) {
 		cnfparamvalsDestruct(pvals, &actpblk);
+	}
 ENDnewActInst
 
 
@@ -404,8 +405,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	cs.rulebase = NULL; /* we used it up! */
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
@@ -434,8 +436,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	cs.rulebase = NULL;
 	cs.bUseRawMsg = 0;
@@ -444,8 +445,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* set the rulebase name */
 static rsRetVal
-setRuleBase(void __attribute__((unused)) *pVal, uchar *pszName)
-{
+setRuleBase(void __attribute__((unused)) *pVal, uchar *pszName) {
 	DEFiRet;
 	cs.rulebase = pszName;
 	pszName = NULL;
@@ -470,8 +470,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG) {
 			bMsgPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

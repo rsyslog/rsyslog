@@ -216,8 +216,9 @@ static int getSocketType(char* name) {
     }
     
     /* whine if no match was found. */
-    if (type == -1) 
+    if (type == -1) {
         errmsg.LogError(0, NO_ERRCODE, "unknown type %s",name);
+    }
     
     return type;
 }
@@ -236,8 +237,9 @@ static int getSocketAction(char* name) {
     }
 
     /* whine if no matching action was found */
-    if (action == -1) 
+    if (action == -1) {
         errmsg.LogError(0, NO_ERRCODE, "unknown action %s",name);
+    }
     
     return action;
 }
@@ -273,7 +275,7 @@ static void setDefaults(instanceConf_t* info) {
 /* given a comma separated list of subscriptions, create a char* array of them
  * to set later 
  */
-static rsRetVal parseSubscriptions(char* subscribes, sublist** subList){
+static rsRetVal parseSubscriptions(char* subscribes, sublist** subList) {
     char* tok = strtok(subscribes, ",");
     sublist* currentSub;
     sublist* head;
@@ -466,9 +468,9 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(inppblk.descr[i].name, "description")) {
             inst->description = es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if(!strcmp(inppblk.descr[i].name, "sockType")){
+        } else if(!strcmp(inppblk.descr[i].name, "sockType")) {
             inst->type = getSocketType(es_str2cstr(pvals[i].val.d.estr, NULL));
-        } else if(!strcmp(inppblk.descr[i].name, "action")){
+        } else if(!strcmp(inppblk.descr[i].name, "action")) {
             inst->action = getSocketAction(es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if(!strcmp(inppblk.descr[i].name, "sndHWM")) {
             inst->sndHWM = (int) pvals[i].val.d.n;
@@ -479,7 +481,7 @@ static rsRetVal createListener(struct cnfparamvals* pvals) {
             rsRetVal ret = parseSubscriptions(subscribes, &inst->subscriptions);
             free(subscribes);
             CHKiRet(ret);
-        } else if(!strcmp(inppblk.descr[i].name, "identity")){
+        } else if(!strcmp(inppblk.descr[i].name, "identity")) {
             inst->identity = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if(!strcmp(inppblk.descr[i].name, "sndBuf")) {
             inst->sndBuf = (int) pvals[i].val.d.n;
@@ -519,7 +521,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal addListener(instanceConf_t* inst){
+static rsRetVal addListener(instanceConf_t* inst) {
     /* create the socket */
     void* sock;
     struct lstn_s* newcnfinfo;
@@ -581,7 +583,7 @@ static int handlePoll(zloop_t __attribute__((unused)) * loop, zmq_pollitem_t *po
 
 /* called when runInput is called by rsyslog 
  */
-static rsRetVal rcv_loop(thrdInfo_t* pThrd){
+static rsRetVal rcv_loop(thrdInfo_t* pThrd) {
     size_t          n_items = 0;
     size_t          i;
     int             rv;
@@ -674,8 +676,9 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
     /* do cleanup here */
-    if (s_namep != NULL)
+    if (s_namep != NULL) {
         prop.Destruct(&s_namep);
+    }
 ENDafterRun
 
 
@@ -691,8 +694,9 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-    if (eFeat == sFEATURENonCancelInputTermination)
+    if (eFeat == sFEATURENonCancelInputTermination) {
         iRet = RS_RET_OK;
+    }
 ENDisCompatibleWithFeature
 
 
@@ -721,8 +725,9 @@ CODESTARTsetModCnf
     }
  
     for (i=0; i < modpblk.nParams; ++i) {
-        if (!pvals[i].bUsed)
+        if (!pvals[i].bUsed) {
             continue;
+        }
         if (!strcmp(modpblk.descr[i].name, "ioThreads")) {
             runModConf->io_threads = (int)pvals[i].val.d.n;
         } else {
@@ -734,8 +739,9 @@ CODESTARTsetModCnf
     }
  
 finalize_it:
-    if (pvals != NULL)
+    if (pvals != NULL) {
         cnfparamvalsDestruct(pvals, &modpblk);
+    }
 ENDsetModCnf
 
 
@@ -754,8 +760,7 @@ ENDendCnfLoad
 
 /* function to generate error message if framework does not find requested ruleset */
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
     errmsg.LogError(0, NO_ERRCODE, "imzmq3: ruleset '%s' for socket %s not found - "
                     "using default ruleset instead", inst->pszBindRuleset,
                     inst->description);

@@ -141,13 +141,13 @@ ENDmodExit
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 static inline void
-initConfigSettings(void)
-{
+initConfigSettings(void) {
 	cs.iStatsInterval = DEFAULT_STATS_PERIOD;
 	cs.iFacility = DEFAULT_FACILITY;
 	cs.iSeverity = DEFAULT_SEVERITY;
@@ -159,12 +159,12 @@ initConfigSettings(void)
 /* actually submit a message to the rsyslog core
  */
 static inline void
-doSubmitMsg(uchar *line)
-{
+doSubmitMsg(uchar *line) {
 	msg_t *pMsg;
 
-	if(msgConstruct(&pMsg) != RS_RET_OK)
+	if (msgConstruct(&pMsg) != RS_RET_OK) {
 		goto finalize_it;
+	}
 	MsgSetInputName(pMsg, pInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)line);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
@@ -189,16 +189,16 @@ finalize_it:
 
 /* log stats message to file; limited error handling done */
 static inline void
-doLogToFile(const char *ln, const size_t lenLn)
-{
+doLogToFile(const char *ln, const size_t lenLn) {
 	struct iovec iov[4];
 	ssize_t nwritten;
 	ssize_t nexpect;
 	time_t t;
 	char timebuf[32];
 
-	if(lenLn == 0)
+	if (lenLn == 0) {
 		goto done;
+	}
 	if(runModConf->logfd == -1) {
 		runModConf->logfd = open(runModConf->logfile, O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC, S_IRUSR|S_IWUSR);
 		if(runModConf->logfd == -1) {
@@ -233,13 +233,14 @@ done:	return;
  * required (but may be a simple verb like "BEGIN" and "END".
  */
 static rsRetVal
-submitLine(const char *const ln, const size_t lenLn)
-{
+submitLine(const char *const ln, const size_t lenLn) {
 	DEFiRet;
-	if(runModConf->bLogToSyslog)
+	if (runModConf->bLogToSyslog) {
 		doSubmitMsg((uchar*)ln);
-	if(runModConf->logfile != NULL)
+	}
+	if (runModConf->logfile != NULL) {
 		doLogToFile(ln, lenLn);
+	}
 	RETiRet;
 }
 
@@ -247,8 +248,7 @@ submitLine(const char *const ln, const size_t lenLn)
  * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
  */
 static rsRetVal
-doStatsLine(void __attribute__((unused)) *usrptr, const char *const str)
-{
+doStatsLine(void __attribute__((unused)) *usrptr, const char *const str) {
 	DEFiRet;
 	iRet = submitLine(str, strlen(str));
 	RETiRet;
@@ -259,8 +259,7 @@ doStatsLine(void __attribute__((unused)) *usrptr, const char *const str)
  * rgerhards, 2010-09-09
  */
 static inline void
-generateStatsMsgs(void)
-{
+generateStatsMsgs(void) {
 	struct rusage ru;
 	int r;
 	r = getrusage(RUSAGE_SELF, &ru);
@@ -321,8 +320,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "interval")) {
 			loadModConf->iStatsInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "facility")) {
@@ -364,8 +364,9 @@ CODESTARTsetModCnf
 	bLegacyCnfModGlobalsPermitted = 0;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -389,16 +390,16 @@ ENDendCnfLoad
 
 /* we need our special version of checkRuleset(), as we do not have any instances */
 static inline rsRetVal
-checkRuleset(modConfData_t *modConf)
-{
+checkRuleset(modConfData_t *modConf) {
 	ruleset_t *pRuleset;
 	rsRetVal localRet;
 	DEFiRet;
 
 	modConf->pBindRuleset = NULL;	/* assume default ruleset */
 
-	if(modConf->pszBindRuleset == NULL)
+	if (modConf->pszBindRuleset == NULL) {
 		FINALIZE;
+	}
 
 	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
 	if(localRet == RS_RET_NOT_FOUND) {
@@ -467,8 +468,9 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
-	if(runModConf->logfd != -1)
+	if (runModConf->logfd != -1) {
 		close(runModConf->logfd);
+	}
 	free(runModConf->logfile);
 	free(runModConf->pszBindRuleset);
 ENDfreeCnf
@@ -485,11 +487,13 @@ CODESTARTrunInput
 	while(glbl.GetGlobalInputTermState() == 0) {
 		srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
 		DBGPRINTF("impstats: woke up, generating messages\n");
-		if(runModConf->bBracketing)
+		if (runModConf->bBracketing) {
 			submitLine("BEGIN", sizeof("BEGIN")-1);
+		}
 		generateStatsMsgs();
-		if(runModConf->bBracketing)
+		if (runModConf->bBracketing) {
 			submitLine("END", sizeof("END")-1);
+		}
 	}
 ENDrunInput
 
@@ -512,8 +516,7 @@ CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	initConfigSettings();
 	return RS_RET_OK;
 }

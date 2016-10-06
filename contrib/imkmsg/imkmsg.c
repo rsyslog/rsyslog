@@ -75,8 +75,7 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 static prop_t *pLocalHostIP = NULL;	/* a pseudo-constant propterty for 127.0.0.1 */
 
 static inline void
-initConfigSettings(void)
-{
+initConfigSettings(void) {
 	cs.iFacilIntMsg = klogFacilIntMsg();
 }
 
@@ -87,8 +86,7 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct json_object *json)
-{
+enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct json_object *json) {
 	struct syslogTime st;
 	msg_t *pMsg;
 	DEFiRet;
@@ -122,8 +120,7 @@ finalize_it:
 /* log an imkmsg-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...)
-{
+rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...) {
 	DEFiRet;
 	va_list ap;
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
@@ -140,8 +137,7 @@ rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, char *fmt, ...)
 
 /* log a message from /dev/kmsg
  */
-rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp, struct json_object *json)
-{
+rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp, struct json_object *json) {
 	DEFiRet;
 	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp, json);
 	RETiRet;
@@ -153,8 +149,7 @@ rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp, struct j
  * It would probably be a good idea to extend the interface to support it, but so far
  * we create a (sufficiently valid) work-around. -- rgerhards, 2008-11-24
  */
-int klog_getMaxLine(void)
-{
+int klog_getMaxLine(void) {
 	return glbl.GetMaxLine();
 }
 
@@ -236,10 +231,12 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
-	if(pLocalHostIP != NULL)
+	}
+	if (pLocalHostIP != NULL) {
 		prop.Destruct(&pLocalHostIP);
+	}
 
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
@@ -257,8 +254,7 @@ CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.iFacilIntMsg = klogFacilIntMsg();
 	return RS_RET_OK;
 }

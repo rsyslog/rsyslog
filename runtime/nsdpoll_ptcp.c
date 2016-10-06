@@ -72,10 +72,12 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	pNew->pSock = pSock;
 	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
 	//pNew->event.events = EPOLLET;
-	if(mode & NSDPOLL_IN)
+	if (mode & NSDPOLL_IN) {
 		pNew->event.events |= EPOLLIN;
-	if(mode & NSDPOLL_OUT)
+	}
+	if (mode & NSDPOLL_OUT) {
 		pNew->event.events |= EPOLLOUT;
+	}
 	pNew->event.data.ptr = pNew;
 	pthread_mutex_lock(&pThis->mutEvtLst);
 	pNew->pNext = pThis->pRoot;
@@ -103,16 +105,19 @@ unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **
 		pPrev = pEvtLst;
 		pEvtLst = pEvtLst->pNext;
 	}
-	if(pEvtLst == NULL)
+	if (pEvtLst == NULL) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
 
 	*ppEvtLst = pEvtLst;
 
 	/* unlink */
-	if(pPrev == NULL)
+	if (pPrev == NULL) {
 		pThis->pRoot = pEvtLst->pNext;
-	else
+	}
+	else {
 		pPrev->pNext = pEvtLst->pNext;
+	}
 
 finalize_it:
 	pthread_mutex_unlock(&pThis->mutEvtLst);
@@ -236,8 +241,9 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[
 
 	assert(workset != NULL);
 
-	if(*numEntries > 128)
+	if (*numEntries > 128) {
 		*numEntries = 128;
+	}
 	DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
 	nfds = epoll_wait(pThis->efd, event, *numEntries, timeout);
 	if(nfds == -1) {

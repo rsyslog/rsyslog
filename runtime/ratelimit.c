@@ -46,8 +46,7 @@ DEFobjCurrIf(parser)
 
 /* generate a "repeated n times" message */
 static msg_t *
-ratelimitGenRepMsg(ratelimit_t *ratelimit)
-{
+ratelimitGenRepMsg(ratelimit_t *ratelimit) {
 	msg_t *repMsg;
 	size_t lenRepMsg;
 	uchar szRepMsg[1024];
@@ -70,8 +69,7 @@ done:	return repMsg;
 }
 
 static inline rsRetVal
-doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
-{
+doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg) {
 	int bNeedUnlockMutex = 0;
 	DEFiRet;
 
@@ -105,16 +103,16 @@ doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMs
 	}
 
 finalize_it:
-	if(bNeedUnlockMutex)
+	if (bNeedUnlockMutex) {
 		pthread_mutex_unlock(&ratelimit->mut);
+	}
 	RETiRet;
 }
 
 
 /* helper: tell how many messages we lost due to linux-like ratelimiting */
 static void
-tellLostCnt(ratelimit_t *ratelimit)
-{
+tellLostCnt(ratelimit_t *ratelimit) {
 	uchar msgbuf[1024];
 	if(ratelimit->missed) {
 		snprintf((char*)msgbuf, sizeof(msgbuf),
@@ -132,8 +130,7 @@ tellLostCnt(ratelimit_t *ratelimit)
  * be called concurrently.
  */
 static int
-withinRatelimit(ratelimit_t *ratelimit, time_t tt)
-{
+withinRatelimit(ratelimit_t *ratelimit, time_t tt) {
 	int ret;
 	uchar msgbuf[1024];
 
@@ -148,13 +145,15 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 	 * message rate. To prevent this, we need to query local
 	 * system time ourselvs.
 	 */
-	if(ratelimit->bNoTimeCache)
+	if (ratelimit->bNoTimeCache) {
 		tt = time(NULL);
+	}
 
 	assert(ratelimit->burst != 0);
 
-	if(ratelimit->begin == 0)
+	if (ratelimit->begin == 0) {
 		ratelimit->begin = tt;
+	}
 
 	/* resume if we go out of time window */
 	if(tt > ratelimit->begin + ratelimit->interval) {
@@ -198,15 +197,14 @@ finalize_it:
  * message before the original message.
  */
 rsRetVal
-ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
-{
+ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg) {
 	DEFiRet;
 	rsRetVal localRet;
 
 	*ppRepMsg = NULL;
 
 	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
 			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 		}
@@ -225,16 +223,16 @@ ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 	}
 finalize_it:
 	if(Debug) {
-		if(iRet == RS_RET_DISCARDMSG)
+		if (iRet == RS_RET_DISCARDMSG) {
 			dbgprintf("message discarded by ratelimiting\n");
+		}
 	}
 	RETiRet;
 }
 
 /* returns 1, if the ratelimiter performs any checks and 0 otherwise */
 int
-ratelimitChecked(ratelimit_t *ratelimit)
-{
+ratelimitChecked(ratelimit_t *ratelimit) {
 	return ratelimit->interval || ratelimit->bReduceRepeatMsgs;
 }
 
@@ -245,29 +243,32 @@ ratelimitChecked(ratelimit_t *ratelimit)
  * if pMultiSub == NULL, a single-message enqueue happens (under reconsideration)
  */
 rsRetVal
-ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg)
-{
+ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg) {
 	rsRetVal localRet;
 	msg_t *repMsg;
 	DEFiRet;
 
 	if(pMultiSub == NULL) {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
-		if(repMsg != NULL)
+		if (repMsg != NULL) {
 			CHKiRet(submitMsg2(repMsg));
-		if(localRet == RS_RET_OK)
+		}
+		if (localRet == RS_RET_OK) {
 			CHKiRet(submitMsg2(pMsg));
+		}
 	} else {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
 		if(repMsg != NULL) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
-			if(pMultiSub->nElem == pMultiSub->maxElem)
+			if (pMultiSub->nElem == pMultiSub->maxElem) {
 				CHKiRet(multiSubmitMsg2(pMultiSub));
+			}
 		}
 		if(localRet == RS_RET_OK) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
-			if(pMultiSub->nElem == pMultiSub->maxElem)
+			if (pMultiSub->nElem == pMultiSub->maxElem) {
 				CHKiRet(multiSubmitMsg2(pMultiSub));
+			}
 		}
 	}
 
@@ -282,15 +283,15 @@ finalize_it:
  * Both values should be kept brief.
  */
 rsRetVal
-ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname)
-{
+ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname) {
 	ratelimit_t *pThis;
 	char namebuf[256];
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(ratelimit_t)));
-	if(modname == NULL)
+	if (modname == NULL) {
 		modname ="*ERROR:MODULE NAME MISSING*";
+	}
 
 	if(dynname == NULL) {
 		pThis->name = strdup(modname);
@@ -312,8 +313,7 @@ finalize_it:
 
 /* enable linux-like ratelimiting */
 void
-ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst)
-{
+ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst) {
 	ratelimit->interval = interval;
 	ratelimit->burst = burst;
 	ratelimit->done = 0;
@@ -329,14 +329,12 @@ ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned 
  * (think: why should one do that???)
  */
 void
-ratelimitSetThreadSafe(ratelimit_t *ratelimit)
-{
+ratelimitSetThreadSafe(ratelimit_t *ratelimit) {
 	ratelimit->bThreadSafe = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
 }
 void
-ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
-{
+ratelimitSetNoTimeCache(ratelimit_t *ratelimit) {
 	ratelimit->bNoTimeCache = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
 }
@@ -345,33 +343,32 @@ ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
  * ratelimiting. Default (no value set) is all messages.
  */
 void
-ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity)
-{
+ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity) {
 	ratelimit->severity = severity;
 }
 
 void
-ratelimitDestruct(ratelimit_t *ratelimit)
-{
+ratelimitDestruct(ratelimit_t *ratelimit) {
 	msg_t *pMsg;
 	if(ratelimit->pMsg != NULL) {
 		if(ratelimit->nsupp > 0) {
 			pMsg = ratelimitGenRepMsg(ratelimit);
-			if(pMsg != NULL)
+			if (pMsg != NULL) {
 				submitMsg2(pMsg);
+			}
 		}
 		msgDestruct(&ratelimit->pMsg);
 	}
 	tellLostCnt(ratelimit);
-	if(ratelimit->bThreadSafe)
+	if (ratelimit->bThreadSafe) {
 		pthread_mutex_destroy(&ratelimit->mut);
+	}
 	free(ratelimit->name);
 	free(ratelimit);
 }
 
 void
-ratelimitModExit(void)
-{
+ratelimitModExit(void) {
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -379,8 +376,7 @@ ratelimitModExit(void)
 }
 
 rsRetVal
-ratelimitModInit(void)
-{
+ratelimitModInit(void) {
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

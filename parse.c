@@ -52,12 +52,12 @@
  * Destruct a rsPars object and its associated string.
  * rgerhards, 2005-09-26
  */
-rsRetVal rsParsDestruct(rsParsObj *pThis)
-{
+rsRetVal rsParsDestruct(rsParsObj *pThis) {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if(pThis->pCStr != NULL)
+	if (pThis->pCStr != NULL) {
 		rsCStrDestruct(&pThis->pCStr);
+	}
 	RSFREEOBJ(pThis);
 	return RS_RET_OK;
 }
@@ -66,14 +66,14 @@ rsRetVal rsParsDestruct(rsParsObj *pThis)
 /**
  * Construct a rsPars object.
  */
-rsRetVal rsParsConstruct(rsParsObj **ppThis)
-{
+rsRetVal rsParsConstruct(rsParsObj **ppThis) {
 	rsParsObj *pThis;
 
 	assert(ppThis != NULL);
 
-	if((pThis = (rsParsObj*) calloc(1, sizeof(rsParsObj))) == NULL)
+	if ((pThis = (rsParsObj*) calloc(1, sizeof(rsParsObj))) == NULL) {
 		return RS_RET_OUT_OF_MEMORY;
+	}
 
 	rsSETOBJTYPE(pThis, OIDrsPars);
 
@@ -86,8 +86,7 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis)
  * classical zero-terinated C-String.
  * rgerhards, 2005-09-27
  */
-rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
-{
+rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz) {
 	DEFiRet;
 	rsParsObj *pThis;
 	cstr_t *pCS;
@@ -118,8 +117,7 @@ finalize_it:
 /**
  * Assign the to-be-parsed string.
  */
-rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr)
-{
+rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr) {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	rsCHECKVALIDOBJECT(pCStr, OIDrsCStr);
 	
@@ -138,8 +136,7 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr)
  * set (as in ASCII).
  * rgerhards 2005-09-27
  */
-rsRetVal parsInt(rsParsObj *pThis, int* pInt)
-{
+rsRetVal parsInt(rsParsObj *pThis, int* pInt) {
 	unsigned char *pC;
 	int iVal;
 
@@ -152,10 +149,12 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 	/* order of checks is important, else we might do
 	 * mis-addressing! (off by one)
 	 */
-	if(pThis->iCurrPos >= rsCStrLen(pThis->pCStr))
+	if (pThis->iCurrPos >= rsCStrLen(pThis->pCStr)) {
 		return RS_RET_NO_MORE_DATA;
-	if(!isdigit((int)*pC))
+	}
+	if (!isdigit((int)*pC)) {
 		return RS_RET_NO_DIGIT;
+	}
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit((int)*pC)) {
 		iVal = iVal * 10 + *pC - '0';
@@ -175,8 +174,7 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
  * last character of the string.
  * 2005-09-19 rgerhards
  */
-rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
-{
+rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c) {
 	register unsigned char *pC;
 	DEFiRet;
 
@@ -185,8 +183,9 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		if(pC[pThis->iCurrPos] == c)
+		if (pC[pThis->iCurrPos] == c) {
 			break;
+		}
 		++pThis->iCurrPos;
 	}
 
@@ -211,8 +210,7 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
  * If bRequireOne is set to true, at least one whitespace
  * must exist, else an error is returned.
  */
-rsRetVal parsSkipWhitespace(rsParsObj *pThis)
-{
+rsRetVal parsSkipWhitespace(rsParsObj *pThis) {
 	register unsigned char *pC;
 	int numSkipped;
 	DEFiRet;
@@ -224,8 +222,9 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 
 	numSkipped = 0;
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		if(!isspace((int)*(pC+pThis->iCurrPos)))
+		if (!isspace((int)*(pC+pThis->iCurrPos))) {
 			break;
+		}
 		++pThis->iCurrPos;
 		++numSkipped;
 	}
@@ -247,8 +246,7 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower)
-{
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower) {
 	DEFiRet;
 	register unsigned char *pC;
 	cstr_t *pCStr = NULL;
@@ -257,8 +255,9 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	CHKiRet(rsCStrConstruct(&pCStr));
 
-	if(bTrimLeading)
+	if (bTrimLeading) {
 		parsSkipWhitespace(pThis);
+	}
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
@@ -286,8 +285,9 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pCStr != NULL)
+		if (pCStr != NULL) {
 			rsCStrDestruct(&pCStr);
+		}
 	}
 
 	RETiRet;
@@ -308,8 +308,7 @@ finalize_it:
  *        does NOT include the quotes.
  * rgerhards, 2005-09-19
  */
-rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
-{
+rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr) {
 	register unsigned char *pC;
 	cstr_t *pCStr = NULL;
 	DEFiRet;
@@ -357,8 +356,9 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pCStr != NULL)
+		if (pCStr != NULL) {
 			cstrDestruct(&pCStr);
+		}
 	}
 
 	RETiRet;
@@ -373,8 +373,7 @@ finalize_it:
  * (e.g.: *.localdomain).
  */
 #ifdef SYSLOG_INET
-rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
-{
+rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits) {
 	register uchar *pC;
 	uchar *pszIP;
 	uchar *pszTmp;
@@ -411,8 +410,9 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	 */	
   	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
 
-	if((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL)
+	if ((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	
 	if (*((char*)pszIP) == '[') {
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
@@ -520,8 +520,7 @@ finalize_it:
  * to-be-parsed string. Returns 1, if so, 0
  * otherwise. rgerhards, 2005-09-27
  */
-int parsIsAtEndOfParseString(rsParsObj *pThis)
-{
+int parsIsAtEndOfParseString(rsParsObj *pThis) {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	return (pThis->iCurrPos < rsCStrLen(pThis->pCStr)) ? 0 : 1;
@@ -530,14 +529,15 @@ int parsIsAtEndOfParseString(rsParsObj *pThis)
 
 /* return the position of the parse pointer
  */
-int rsParsGetParsePointer(rsParsObj *pThis)
-{
+int rsParsGetParsePointer(rsParsObj *pThis) {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if(pThis->iCurrPos < rsCStrLen(pThis->pCStr))
+	if (pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
 		return pThis->iCurrPos;
-	else
+	}
+	else {
 		return rsCStrLen(pThis->pCStr) - 1;
+	}
 }
 
 /* peek at the character at the parse pointer
@@ -546,8 +546,7 @@ int rsParsGetParsePointer(rsParsObj *pThis)
  * parsIsAtEndOfParseString).
  * rgerhards, 2005-09-27
  */
-char parsPeekAtCharAtParsPtr(rsParsObj *pThis)
-{
+char parsPeekAtCharAtParsPtr(rsParsObj *pThis) {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	assert(pThis->iCurrPos < rsCStrLen(pThis->pCStr));
 	
@@ -557,8 +556,7 @@ char parsPeekAtCharAtParsPtr(rsParsObj *pThis)
 /* return the current position inside the parse object.
  * rgerhards, 2007-07-04
  */
-int parsGetCurrentPosition(rsParsObj *pThis)
-{
+int parsGetCurrentPosition(rsParsObj *pThis) {
 	return pThis->iCurrPos;
 }
 

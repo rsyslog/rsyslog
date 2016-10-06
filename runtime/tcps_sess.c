@@ -78,8 +78,7 @@ ENDobjConstruct(tcps_sess)
 /* ConstructionFinalizer
  */
 static rsRetVal
-tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis)
-{
+tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
@@ -95,17 +94,20 @@ finalize_it:
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
 //printf("sess %p destruct, pStrm %p\n", pThis, pThis->pStrm);
-	if(pThis->pStrm != NULL)
+	if (pThis->pStrm != NULL) {
 		netstrm.Destruct(&pThis->pStrm);
+	}
 
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
-	if(pThis->fromHost != NULL)
+	if (pThis->fromHost != NULL) {
 		CHKiRet(prop.Destruct(&pThis->fromHost));
-	if(pThis->fromHostIP != NULL)
+	}
+	if (pThis->fromHostIP != NULL) {
 		CHKiRet(prop.Destruct(&pThis->fromHostIP));
+	}
 	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
@@ -122,14 +124,14 @@ ENDobjDebugPrint(tcps_sess)
  * the caller must not free it. -- rgerhards, 2008-04-24
  */
 static rsRetVal
-SetHost(tcps_sess_t *pThis, uchar *pszHost)
-{
+SetHost(tcps_sess_t *pThis, uchar *pszHost) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHost == NULL)
+	if (pThis->fromHost == NULL) {
 		CHKiRet(prop.Construct(&pThis->fromHost));
+	}
 
 	CHKiRet(prop.SetString(pThis->fromHost, pszHost, ustrlen(pszHost)));
 
@@ -143,8 +145,7 @@ finalize_it:
  * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
 static rsRetVal
-SetHostIP(tcps_sess_t *pThis, prop_t *ip)
-{
+SetHostIP(tcps_sess_t *pThis, prop_t *ip) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
@@ -156,8 +157,7 @@ SetHostIP(tcps_sess_t *pThis, prop_t *ip)
 }
 
 static rsRetVal
-SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm)
-{
+SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	pThis->pStrm = pStrm;
@@ -166,8 +166,7 @@ SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm)
 
 
 static rsRetVal
-SetMsgIdx(tcps_sess_t *pThis, int idx)
-{
+SetMsgIdx(tcps_sess_t *pThis, int idx) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	pThis->iMsg = idx;
@@ -177,8 +176,7 @@ SetMsgIdx(tcps_sess_t *pThis, int idx)
 
 /* set our parent, the tcpsrv object */
 static rsRetVal
-SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
-{
+SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
@@ -189,8 +187,7 @@ SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
 
 /* set our parent listener info*/
 static rsRetVal
-SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
-{
+SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pLstnInfo != NULL);
@@ -203,8 +200,7 @@ SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
 
 
 static rsRetVal
-SetUsrP(tcps_sess_t *pThis, void *pUsr)
-{
+SetUsrP(tcps_sess_t *pThis, void *pUsr) {
 	DEFiRet;
 	pThis->pUsr = pUsr;
 	RETiRet;
@@ -212,8 +208,7 @@ SetUsrP(tcps_sess_t *pThis, void *pUsr)
 
 
 static rsRetVal
-SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
-{
+SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)) {
 	DEFiRet;
 	pThis->DoSubmitMessage = OnMsgReceive;
 	RETiRet;
@@ -231,8 +226,7 @@ SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar
  * rgerhards, 2009-04-23
  */
 static rsRetVal
-defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
-{
+defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub) {
 	msg_t *pMsg;
 	DEFiRet;
 
@@ -252,8 +246,9 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
-	if(pThis->pLstnInfo->dfltTZ[0] != '\0')
+	if (pThis->pLstnInfo->dfltTZ[0] != '\0') {
 		MsgSetDfltTZ(pMsg, (char*) pThis->pLstnInfo->dfltTZ);
+	}
 	MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl
 			            ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
@@ -285,8 +280,7 @@ finalize_it:
  * rgerhards, 2006-12-07
  */
 static rsRetVal
-PrepareClose(tcps_sess_t *pThis)
-{
+PrepareClose(tcps_sess_t *pThis) {
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	DEFiRet;
@@ -328,8 +322,7 @@ finalize_it:
  * of close, so potential-double closes are not detected.
  */
 static rsRetVal
-Close(tcps_sess_t *pThis)
-{
+Close(tcps_sess_t *pThis) {
 	DEFiRet;
 
 //printf("sess %p close\n", pThis);
@@ -338,8 +331,9 @@ Close(tcps_sess_t *pThis)
 	if(pThis->fromHost != NULL) {
 		prop.Destruct(&pThis->fromHost);
 	}
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL) {
 		prop.Destruct(&pThis->fromHostIP);
+	}
 
 	RETiRet;
 }
@@ -357,8 +351,7 @@ processDataRcvd(tcps_sess_t *pThis,
 	struct syslogTime *stTime,
 	const time_t ttGenTime,
 	multi_submit_t *pMultiSub,
-	unsigned *const __restrict__ pnMsgs)
-{
+	unsigned *const __restrict__ pnMsgs) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	int iMaxLine = glbl.GetMaxLine();
@@ -470,8 +463,7 @@ finalize_it:
  */
 #define NUM_MULTISUB 1024
 static rsRetVal
-DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
-{
+DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
 	multi_submit_t multiSub;
 	msg_t *pMsgs[NUM_MULTISUB];
 	struct syslogTime stTime;
@@ -497,8 +489,9 @@ DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 	}
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if (glblSenderKeepTrack) {
 		statsRecordSender(propGetSzStr(pThis->fromHost), nMsgs, ttGenTime);
+	}
 
 finalize_it:
 	RETiRet;

@@ -36,8 +36,7 @@ const unsigned int prime_table_length = sizeof(primes)/sizeof(primes[0]);
  * everything times 100, so that we do not need floats.
  */
 static inline unsigned
-getLoadLimit(unsigned size)
-{
+getLoadLimit(unsigned size) {
     return (unsigned int) ((unsigned long long) size * MAX_LOAD_FACTOR) / 100;
 }
 
@@ -45,8 +44,7 @@ getLoadLimit(unsigned size)
 struct hashtable *
 create_hashtable(unsigned int minsize,
                  unsigned int (*hashf) (void*),
-                 int (*eqf) (void*,void*), void (*dest)(void*))
-{
+                 int (*eqf) (void*,void*), void (*dest)(void*)) {
     struct hashtable *h;
     unsigned int pindex, size = primes[0];
     /* Check requested hashtable isn't too large */
@@ -72,8 +70,7 @@ create_hashtable(unsigned int minsize,
 
 /*****************************************************************************/
 unsigned int
-hash(struct hashtable *h, void *k)
-{
+hash(struct hashtable *h, void *k) {
     /* Aim to protect against poor hash functions by adding logic here
      * - logic taken from java 1.4 hashtable source */
     unsigned int i = h->hashfn(k);
@@ -86,8 +83,7 @@ hash(struct hashtable *h, void *k)
 
 /*****************************************************************************/
 static int
-hashtable_expand(struct hashtable *h)
-{
+hashtable_expand(struct hashtable *h) {
     /* Double the size of the table to accomodate more entries */
     struct entry **newtable;
     struct entry *e;
@@ -98,8 +94,7 @@ hashtable_expand(struct hashtable *h)
     newsize = primes[++(h->primeindex)];
 
     newtable = (struct entry **)malloc(sizeof(struct entry*) * newsize);
-    if (NULL != newtable)
-    {
+    if (NULL != newtable) {
         memset(newtable, 0, newsize * sizeof(struct entry *));
         /* This algorithm is not 'stable'. ie. it reverses the list
          * when it transfers entries between the tables */
@@ -125,8 +120,7 @@ hashtable_expand(struct hashtable *h)
         for (i = 0; i < h->tablelength; i++) {
             for (pE = &(newtable[i]), e = *pE; e != NULL; e = *pE) {
                 idx = indexFor(newsize,e->h);
-                if (idx == i)
-                {
+                if (idx == i) {
                     pE = &(e->next);
                 }
                 else
@@ -145,20 +139,17 @@ hashtable_expand(struct hashtable *h)
 
 /*****************************************************************************/
 unsigned int
-hashtable_count(struct hashtable *h)
-{
+hashtable_count(struct hashtable *h) {
     return h->entrycount;
 }
 
 /*****************************************************************************/
 int
-hashtable_insert(struct hashtable *h, void *k, void *v)
-{
+hashtable_insert(struct hashtable *h, void *k, void *v) {
     /* This method allows duplicate keys - but they shouldn't be used */
     unsigned int idx;
     struct entry *e;
-    if (++(h->entrycount) > h->loadlimit)
-    {
+    if (++(h->entrycount) > h->loadlimit) {
         /* Ignore the return value. If expand fails, we should
          * still try cramming just this value into the existing table
          * -- we may not have memory for a larger table, but one more
@@ -178,15 +169,13 @@ hashtable_insert(struct hashtable *h, void *k, void *v)
 
 /*****************************************************************************/
 void * /* returns value associated with key */
-hashtable_search(struct hashtable *h, void *k)
-{
+hashtable_search(struct hashtable *h, void *k) {
     struct entry *e;
     unsigned int hashvalue, idx;
     hashvalue = hash(h,k);
     idx = indexFor(h->tablelength,hashvalue);
     e = h->table[idx];
-    while (NULL != e)
-    {
+    while (NULL != e) {
         /* Check hash value to short circuit heavier comparison */
         if ((hashvalue == e->h) && (h->eqfn(k, e->k))) return e->v;
         e = e->next;
@@ -196,8 +185,7 @@ hashtable_search(struct hashtable *h, void *k)
 
 /*****************************************************************************/
 void * /* returns value associated with key */
-hashtable_remove(struct hashtable *h, void *k)
-{
+hashtable_remove(struct hashtable *h, void *k) {
     /* TODO: consider compacting the table when the load factor drops enough,
      *       or provide a 'compact' method. */
 
@@ -210,11 +198,9 @@ hashtable_remove(struct hashtable *h, void *k)
     idx = indexFor(h->tablelength,hash(h,k));
     pE = &(h->table[idx]);
     e = *pE;
-    while (NULL != e)
-    {
+    while (NULL != e) {
         /* Check hash value to short circuit heavier comparison */
-        if ((hashvalue == e->h) && (h->eqfn(k, e->k)))
-        {
+        if ((hashvalue == e->h) && (h->eqfn(k, e->k))) {
             *pE = e->next;
             h->entrycount--;
             v = e->v;
@@ -231,33 +217,30 @@ hashtable_remove(struct hashtable *h, void *k)
 /*****************************************************************************/
 /* destroy */
 void
-hashtable_destroy(struct hashtable *h, int free_values)
-{
+hashtable_destroy(struct hashtable *h, int free_values) {
     unsigned int i;
     struct entry *e, *f;
     struct entry **table = h->table;
-    if (free_values)
-    {
-        for (i = 0; i < h->tablelength; i++)
-        {
+    if (free_values) {
+        for (i = 0; i < h->tablelength; i++) {
             e = table[i];
-            while (NULL != e)
-            {
+            while (NULL != e) {
                 f = e;
 		e = e->next;
 		freekey(f->k);
-		if(h->dest == NULL)
+		if (h->dest == NULL) {
 			free(f->v);
-		else
+		}
+		else {
 			h->dest(f->v);
+		}
 		free(f);
 	    }
         }
     }
     else
     {
-        for (i = 0; i < h->tablelength; i++)
-        {
+        for (i = 0; i < h->tablelength; i++) {
             e = table[i];
             while (NULL != e)
             { f = e; e = e->next; freekey(f->k); free(f); }
@@ -273,8 +256,7 @@ hashtable_destroy(struct hashtable *h, int free_values)
  * (so probably pretty generic). Not for excessively large strings!
  */
 unsigned __attribute__((nonnull(1))) int
-hash_from_string(void *k) 
-{
+hash_from_string(void *k) {
     char *rkey = (char*) k;
     unsigned hashval = 1;
 
@@ -286,8 +268,7 @@ hash_from_string(void *k)
 
 
 int
-key_equals_string(void *key1, void *key2)
-{
+key_equals_string(void *key1, void *key2) {
 	/* we must return true IF the keys are equal! */
 	return !strcmp(key1, key2);
 }

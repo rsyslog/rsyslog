@@ -48,23 +48,20 @@ int addNL = 0;
 /* called to clean up on exit
  */
 void
-cleanup(void)
-{
+cleanup(void) {
         unlink(sockName);
 	close(sock);
 }
 
 
 void
-doTerm(int __attribute__((unused)) signum)
-{
+doTerm(int __attribute__((unused)) signum) {
 	exit(1);
 }
 
 
 void
-usage(void)
-{
+usage(void) {
 	fprintf(stderr, "usage: uxsockrcvr -s /socket/name -o /output/file -l\n"
 			"-l adds newline after each message received\n"
 			"-s MUST be specified\n"
@@ -74,8 +71,7 @@ usage(void)
 
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int opt;
         int rlen;
 	FILE *fp = stdout;
@@ -151,8 +147,9 @@ main(int argc, char *argv[])
 		       exit(1);
 		} else {
 		      fwrite(data, 1, rlen, fp);
-			if(addNL)
+			if (addNL) {
 				fputc('\n', fp);
+			}
 		}
         }
 

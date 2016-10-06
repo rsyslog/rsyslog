@@ -57,8 +57,7 @@ DEFobjCurrIf(netstrm)
  * rgerhards, 2008-04-18
  */
 static rsRetVal
-loadDrvr(netstrms_t *pThis)
-{
+loadDrvr(netstrms_t *pThis) {
 	DEFiRet;
 	uchar *pBaseDrvrName;
 	uchar szDrvrName[48]; /* 48 shall be large enough */
@@ -66,8 +65,9 @@ loadDrvr(netstrms_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if (snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName)) {
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -81,8 +81,9 @@ loadDrvr(netstrms_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if (pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
+		}
 			pThis->pDrvrName = NULL;
 	}
 	RETiRet;
@@ -118,8 +119,7 @@ ENDobjDestruct(netstrms)
 
 /* ConstructionFinalizer */
 static rsRetVal
-netstrmsConstructFinalize(netstrms_t *pThis)
-{
+netstrmsConstructFinalize(netstrms_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	CHKiRet(loadDrvr(pThis));
@@ -134,8 +134,7 @@ finalize_it:
  * used)-- rgerhards, 2008-05-05
  */
 static rsRetVal
-SetDrvrName(netstrms_t *pThis, uchar *pszName)
-{
+SetDrvrName(netstrms_t *pThis, uchar *pszName) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	if(pThis->pBaseDrvrName != NULL) {
@@ -153,8 +152,7 @@ finalize_it:
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
-{
+SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	pThis->pPermPeers = pPermPeers;
@@ -166,8 +164,7 @@ SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
  * rgerhards, 2008-05-19
  */
 static permittedPeers_t*
-GetDrvrPermPeers(netstrms_t *pThis)
-{
+GetDrvrPermPeers(netstrms_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	return pThis->pPermPeers;
 }
@@ -175,8 +172,7 @@ GetDrvrPermPeers(netstrms_t *pThis)
 
 /* set the driver auth mode -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
-{
+SetDrvrAuthMode(netstrms_t *pThis, uchar *mode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
@@ -189,8 +185,7 @@ finalize_it:
  * rgerhards, 2008-05-19
  */
 static uchar*
-GetDrvrAuthMode(netstrms_t *pThis)
-{
+GetDrvrAuthMode(netstrms_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	return pThis->pszDrvrAuthMode;
 }
@@ -198,8 +193,7 @@ GetDrvrAuthMode(netstrms_t *pThis)
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
-SetDrvrMode(netstrms_t *pThis, int iMode)
-{
+SetDrvrMode(netstrms_t *pThis, int iMode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	pThis->iDrvrMode = iMode;
@@ -213,8 +207,7 @@ SetDrvrMode(netstrms_t *pThis, int iMode)
  * rgerhards, 2008-04-30
  */
 static int
-GetDrvrMode(netstrms_t *pThis)
-{
+GetDrvrMode(netstrms_t *pThis) {
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	return pThis->iDrvrMode;
 }
@@ -225,8 +218,7 @@ GetDrvrMode(netstrms_t *pThis)
  * and must call ConstructFinalize().
  */
 static rsRetVal
-CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
-{
+CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm) {
 	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
@@ -244,8 +236,9 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pStrm != NULL)
+		if (pStrm != NULL) {
 			netstrm.Destruct(&pStrm);
+		}
 	}
 	RETiRet;
 }

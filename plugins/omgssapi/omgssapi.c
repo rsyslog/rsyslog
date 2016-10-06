@@ -111,13 +111,14 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(instanceData *pData)
-{
+static char *getFwdSyslogPt(instanceData *pData) {
 	assert(pData != NULL);
-	if(pData->port == NULL)
+	if (pData->port == NULL) {
 		return("514");
-	else
+	}
+	else {
 		return(pData->port);
+	}
 }
 
 BEGINcreateInstance
@@ -132,8 +133,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -146,15 +148,17 @@ CODESTARTfreeInstance
 			freeaddrinfo(pData->f_addr);
 			/* fall through */
 		case eDestFORW_UNKN:
-			if(pData->port != NULL)
+			if (pData->port != NULL) {
 				free(pData->port);
+			}
 			break;
 	}
 
 	if (pData->gss_context != GSS_C_NO_CONTEXT) {
 		maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
-		if (maj_stat != GSS_S_COMPLETE)
+		if (maj_stat != GSS_S_COMPLETE) {
 			gssutil.display_status("deleting context", maj_stat, min_stat);
+		}
 	}
 	/* this is meant to be done when module is unloaded,
 	   but since this module is static...
@@ -164,11 +168,13 @@ CODESTARTfreeInstance
 
 	/* final cleanup */
 	tcpclt.Destruct(&pData->pTCPClt);
-	if(pData->sock >= 0)
+	if (pData->sock >= 0) {
 		close(pData->sock);
+	}
 
-	if(pData->f_hname != NULL)
+	if (pData->f_hname != NULL) {
 		free(pData->f_hname);
+	}
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -185,15 +191,13 @@ ENDdbgPrintInstInfo
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) *pData)
-{
+static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) *pData) {
 	/* in case of TCP/GSS, there is nothing to do */
 	return RS_RET_OK;
 }
 
 
-static rsRetVal TCPSendGSSInit(void *pvData)
-{
+static rsRetVal TCPSendGSSInit(void *pvData) {
 	DEFiRet;
 	int s = -1;
 	char *base;
@@ -207,8 +211,9 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	assert(pData != NULL);
 
 	/* if the socket is already initialized, we are done */
-	if(pData->sock > 0)
+	if (pData->sock > 0) {
 		ABORT_FINALIZE(RS_RET_OK);
+	}
 
 	base = (cs.gss_base_service_name == NULL) ? "host" : cs.gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
@@ -247,8 +252,9 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 		maj_stat = gss_init_sec_context(&init_sec_min_stat, GSS_C_NO_CREDENTIAL, context,
 						target_name, GSS_C_NO_OID, *sess_flags, 0, NULL,
 						tok_ptr, NULL, &out_tok, &ret_flags, NULL);
-		if (tok_ptr != GSS_C_NO_BUFFER)
+		if (tok_ptr != GSS_C_NO_BUFFER) {
 			free(in_tok.value);
+		}
 
 		if (maj_stat != GSS_S_COMPLETE
 		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
@@ -257,8 +263,9 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 		}
 
 		if (s == -1)
-			if ((s = pData->sock = tcpclt.CreateSocket(pData->f_addr)) == -1)
+			if ((s = pData->sock = tcpclt.CreateSocket(pData->f_addr)) == -1) {
 				goto fail;
+			}
 
 		if (out_tok.length != 0) {
 			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long) out_tok.length);
@@ -295,15 +302,15 @@ finalize_it:
 		gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 		*context = GSS_C_NO_CONTEXT;
 	}
-	if (s != -1)
+	if (s != -1) {
 		close(s);
+	}
 	pData->sock = -1;
 	ABORT_FINALIZE(RS_RET_GSS_SENDINIT_ERROR);
 }
 
 
-static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
-{
+static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len) {
 	int s;
 	gss_ctx_id_t *context;
 	OM_uint32 maj_stat, min_stat;
@@ -346,8 +353,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
-static rsRetVal doTryResume(instanceData *pData)
-{
+static rsRetVal doTryResume(instanceData *pData) {
 	DEFiRet;
 	struct addrinfo *res;
 	struct addrinfo hints;
@@ -419,8 +425,9 @@ CODESTARTdoAction
 		iMaxLine = glbl.GetMaxLine();
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
-		if((int) l > iMaxLine)
+		if ((int) l > iMaxLine) {
 			l = iMaxLine;
+		}
 
 		/* Check if we should compress and, if so, do it. We also
 		 * check if the message is large enough to justify compression.
@@ -473,7 +480,7 @@ CODESTARTdoAction
 		break;
 	}
 finalize_it:
-	if((psz != NULL) && (psz != (char*) ppString[0]))  {
+	if((psz != NULL) && (psz != (char*) ppString[0])) {
 		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
 		free(psz);
 	}
@@ -506,8 +513,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		goto finalize_it;
+	}
 
 	/* we are now after the protocol indicator. Now check if we should
 	 * use compression. We begin to use a new option format for this:
@@ -669,8 +677,7 @@ ENDqueryEtryPt
 
 
 /* set a new GSSMODE based on config directive */
-static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
-{
+static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode) {
 	DEFiRet;
 
 	if (!strcmp((char *) mode, "integrity")) {
@@ -689,8 +696,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 }
 
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.gss_mode = GSSMODE_ENC;
 	free(cs.gss_base_service_name);
 	cs.gss_base_service_name = NULL;

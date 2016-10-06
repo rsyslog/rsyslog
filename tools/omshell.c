@@ -79,8 +79,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -107,8 +108,9 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	if(execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0)
+	if (execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0) {
 	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
+	}
 ENDdoAction
 
 
@@ -119,13 +121,13 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
 	if(*p == '^') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK)
+		if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 			goto finalize_it;
+		}
 	}
 
 
-	switch (*p)
-	{
+	switch (*p) {
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dbgprintf("exec\n");
 		++p;

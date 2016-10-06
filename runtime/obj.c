@@ -115,8 +115,7 @@ static rsRetVal FindObjInfo(const char *szObjName, objInfo_t **ppInfo);
  * jump table without any NULL pointer checks - which gains quite
  * some performance. -- rgerhards, 2008-01-04
  */
-static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
-{
+static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis) {
 	return RS_RET_NOT_IMPLEMENTED;
 }
 
@@ -135,16 +134,16 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
 static rsRetVal
 InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
               rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
-	      rsRetVal (*pQueryIF)(interface_t*), modInfo_t *pModInfo)
-{
+	      rsRetVal (*pQueryIF)(interface_t*), modInfo_t *pModInfo) {
 	DEFiRet;
 	int i;
 	objInfo_t *pThis;
 
 	assert(ppThis != NULL);
 
-	if((pThis = calloc(1, sizeof(objInfo_t))) == NULL)
+	if ((pThis = calloc(1, sizeof(objInfo_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	pThis->pszID = pszID;
 	pThis->lenID = ustrlen(pszID);
@@ -170,8 +169,7 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-InfoDestruct(objInfo_t **ppThis)
-{
+InfoDestruct(objInfo_t **ppThis) {
 	DEFiRet;
 	objInfo_t *pThis;
 
@@ -189,8 +187,7 @@ InfoDestruct(objInfo_t **ppThis)
 
 /* set a method handler */
 static rsRetVal
-InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*))
-{
+InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*)) {
 	pThis->objMethods[objMethod] = pHandler;
 	return RS_RET_OK;
 }
@@ -199,8 +196,7 @@ InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void
  * rgerhards, 2008-01-29
  */
 static rsRetVal
-DestructObjSelf(obj_t *pThis)
-{
+DestructObjSelf(obj_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_assert(pThis);
@@ -216,8 +212,7 @@ DestructObjSelf(obj_t *pThis)
 /* serialize the header of an object
  * pszRecType must be either "Obj" (Object) or "OPB" (Object Property Bag)
  */
-static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType)
-{
+static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -249,8 +244,7 @@ finalize_it:
  * rgerhards, 2008-01-06
  */
 static rsRetVal
-BeginSerialize(strm_t *pStrm, obj_t *pObj)
-{
+BeginSerialize(strm_t *pStrm, obj_t *pObj) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -274,8 +268,7 @@ finalize_it:
  * rgerhards, 2008-01-11
  */
 static rsRetVal
-BeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
-{
+BeginSerializePropBag(strm_t *pStrm, obj_t *pObj) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -292,8 +285,7 @@ finalize_it:
 /* append a property
  */
 static rsRetVal
-SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr)
-{
+SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr) {
 	DEFiRet;
 	uchar *pszBuf = NULL;
 	size_t lenBuf = 0;
@@ -363,8 +355,9 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 					  ((syslogTime_t*)pUsr)->OffsetMode,
 					  ((syslogTime_t*)pUsr)->OffsetHour,
 					  ((syslogTime_t*)pUsr)->OffsetMinute);
-			if(lenBuf > sizeof(szBuf) - 1)
+			if (lenBuf > sizeof(szBuf) - 1) {
 				ABORT_FINALIZE(RS_RET_PROVIDED_BUFFER_TOO_SMALL);
+			}
 			vType = VARTYPE_SYSLOGTIME;
 			pszBuf = szBuf;
 			break;
@@ -402,8 +395,7 @@ finalize_it:
  * standard C string, which he must free when no longer needed.
  */
 static rsRetVal
-EndSerialize(strm_t *pStrm)
-{
+EndSerialize(strm_t *pStrm) {
 	DEFiRet;
 
 	assert(pStrm != NULL);
@@ -430,8 +422,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
-{
+objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm) {
 	DEFiRet;
 	uchar c;
 	cstr_t *pStr = NULL;
@@ -450,16 +441,16 @@ objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
 	*ppStr = pStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK && pStr != NULL)
+	if (iRet != RS_RET_OK && pStr != NULL) {
 		cstrDestruct(&pStr);
+	}
 
 	RETiRet;
 }
 
 
 /* de-serialize a number */
-static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
-{
+static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm) {
 	DEFiRet;
 	number_t i;
 	int bIsNegative;
@@ -486,8 +477,9 @@ static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
 
 	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
 
-	if(bIsNegative)
+	if (bIsNegative) {
 		i *= -1;
+	}
 
 	*pNum = i;
 finalize_it:
@@ -496,8 +488,7 @@ finalize_it:
 
 
 /* de-serialize a string, length must be provided but may be 0 */
-static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
-{
+static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm) {
 	DEFiRet;
 	int i;
 	uchar c;
@@ -521,8 +512,9 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 	*ppCStr = pCStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK && pCStr != NULL)
+	if (iRet != RS_RET_OK && pCStr != NULL) {
 		cstrDestruct(&pCStr);
+	}
 
 	RETiRet;
 }
@@ -532,8 +524,7 @@ finalize_it:
 #define	GETVAL(var)  \
 	CHKiRet(objDeserializeNumber(&l, pStrm)); \
 	pTime->var = l;
-static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, strm_t *pStrm)
-{
+static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, strm_t *pStrm) {
 	DEFiRet;
 	number_t l;
 	uchar c;
@@ -563,8 +554,7 @@ finalize_it:
 /* de-serialize an object header
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeHeader(uchar *pszRecType, cstr_t **ppstrID, int* poVers, strm_t *pStrm)
-{
+static rsRetVal objDeserializeHeader(uchar *pszRecType, cstr_t **ppstrID, int* poVers, strm_t *pStrm) {
 	DEFiRet;
 	number_t oVers;
 	uchar c;
@@ -602,8 +592,7 @@ finalize_it:
 /* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
  * up until the \n is read.
  */
-rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
-{
+rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm) {
 	DEFiRet;
 	number_t i;
 	number_t iLen;
@@ -705,8 +694,7 @@ finalize_it:
  * format is ok.
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeTrailer(strm_t *pStrm)
-{
+static rsRetVal objDeserializeTrailer(strm_t *pStrm) {
 	DEFiRet;
 	uchar c;
 
@@ -733,8 +721,7 @@ finalize_it:
  * looks like a valid object or end of store.
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeTryRecover(strm_t *pStrm)
-{
+static rsRetVal objDeserializeTryRecover(strm_t *pStrm) {
 	DEFiRet;
 	uchar c;
 	int bWasNL;
@@ -746,13 +733,15 @@ static rsRetVal objDeserializeTryRecover(strm_t *pStrm)
 
 	while(bRun) {
 		NEXTC;
-		if(c == '\n')
+		if (c == '\n') {
 			bWasNL = 1;
+		}
 		else {
 			if(bWasNL == 1 && c == COOKIE_OBJLINE)
 				bRun = 0; /* we found it! */
-			else
+			else {
 				bWasNL = 0;
+			}
 		}
 	}
 
@@ -768,8 +757,7 @@ finalize_it:
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
  */
-static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(), strm_t *pStrm)
-{
+static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(), strm_t *pStrm) {
 	DEFiRet;
 	var_t *pVar = NULL;
 
@@ -785,19 +773,22 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)
 		/* re-init var object - TODO: method of var! */
 		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
 		if(pVar->varType == VARTYPE_STR) {
-			if(pVar->val.pStr != NULL)
+			if (pVar->val.pStr != NULL) {
 				rsCStrDestruct(&pVar->val.pStr);
+			}
 		}
 		iRet = objDeserializeProperty(pVar, pStrm);
 	}
 
-	if(iRet != RS_RET_NO_PROPLINE)
+	if (iRet != RS_RET_NO_PROPLINE) {
 		FINALIZE;
+	}
 
 	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
 finalize_it:
-	if(pVar != NULL)
+	if (pVar != NULL) {
 		var.Destruct(&pVar);
+	}
 
 	RETiRet;
 }
@@ -812,8 +803,7 @@ finalize_it:
  * rgerhards, 2008-01-07
  */
 static rsRetVal
-Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
-{
+Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr) {
 	DEFiRet;
 	rsRetVal iRetLocal;
 	obj_t *pObj = NULL;
@@ -853,12 +843,14 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
 	 */
-	if(fFixup != NULL)
+	if (fFixup != NULL) {
 		CHKiRet(fFixup(pObj, pUsr));
+	}
 
 	/* we have a valid object, let's finalize our work and return */
-	if(objInfoIsImplemented(pObjInfo, objMethod_CONSTRUCTION_FINALIZER))
+	if (objInfoIsImplemented(pObjInfo, objMethod_CONSTRUCTION_FINALIZER)) {
 		CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCTION_FINALIZER](pObj));
+	}
 
 	*((obj_t**) ppObj) = pObj;
 
@@ -866,8 +858,9 @@ finalize_it:
 	if(iRet != RS_RET_OK && pObj != NULL)
 		free(pObj); /* TODO: check if we can call destructor 2008-01-13 rger */
 
-	if(pstrID != NULL)
+	if (pstrID != NULL) {
 		rsCStrDestruct(&pstrID);
+	}
 
 	RETiRet;
 }
@@ -878,8 +871,7 @@ finalize_it:
  * rgerhards, 2012-11-03
  */
 rsRetVal
-objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)())
-{
+objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)()) {
 	DEFiRet;
 	rsRetVal iRetLocal;
 	obj_t *pObj = NULL;
@@ -906,8 +898,9 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpect
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, lenTypeExpected))
+	if (rsCStrSzStrCmp(pstrID, pszTypeExpected, lenTypeExpected)) {
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
+	}
 
 	CHKiRet(objConstruct(&pObj));
 
@@ -918,8 +911,9 @@ objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpect
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
 	 */
-	if(fFixup != NULL)
+	if (fFixup != NULL) {
 		CHKiRet(fFixup(pObj, pUsr));
+	}
 
 	/* we have a valid object, let's finalize our work and return */
 	if(objConstructFinalize != NULL) {
@@ -932,8 +926,9 @@ finalize_it:
 	if(iRet != RS_RET_OK && pObj != NULL)
 		free(pObj); /* TODO: check if we can call destructor 2008-01-13 rger */
 
-	if(pstrID != NULL)
+	if (pstrID != NULL) {
 		rsCStrDestruct(&pstrID);
+	}
 
 	RETiRet;
 }
@@ -944,8 +939,7 @@ finalize_it:
  * rgerhards, 2012-11-06
  */
 rsRetVal
-objDeserializeDummy(obj_t __attribute__((unused)) *pObj, strm_t *pStrm)
-{
+objDeserializeDummy(obj_t __attribute__((unused)) *pObj, strm_t *pStrm) {
 	DEFiRet;
 	var_t *pVar = NULL;
 
@@ -958,16 +952,18 @@ objDeserializeDummy(obj_t __attribute__((unused)) *pObj, strm_t *pStrm)
 		/* re-init var object - TODO: method of var! */
 		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
 		if(pVar->varType == VARTYPE_STR) {
-			if(pVar->val.pStr != NULL)
+			if (pVar->val.pStr != NULL) {
 				rsCStrDestruct(&pVar->val.pStr);
+			}
 		}
 		iRet = objDeserializeProperty(pVar, pStrm);
 	}
 finalize_it:
 	if(iRet == RS_RET_NO_PROPLINE)
 		iRet = RS_RET_OK; /* NO_PROPLINE is OK and a kind of EOF! */
-	if(pVar != NULL)
+	if (pVar != NULL) {
 		var.Destruct(&pVar);
+	}
 	RETiRet;
 }
 
@@ -981,8 +977,7 @@ finalize_it:
  * rgerhards, 2008-01-07
  */
 static rsRetVal
-DeserializePropBag(obj_t *pObj, strm_t *pStrm)
-{
+DeserializePropBag(obj_t *pObj, strm_t *pStrm) {
 	DEFiRet;
 	rsRetVal iRetLocal;
 	cstr_t *pstrID = NULL;
@@ -1007,8 +1002,9 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
+	if (rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID)) {
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
+	}
 
 	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
@@ -1016,8 +1012,9 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 finalize_it:
-	if(pstrID != NULL)
+	if (pstrID != NULL) {
 		rsCStrDestruct(&pstrID);
+	}
 
 	RETiRet;
 }
@@ -1033,8 +1030,7 @@ finalize_it:
  * TODO: change the naming to a rsCStr obj! (faster)
  */
 static rsRetVal
-SetName(obj_t *pThis, uchar *pszName)
-{
+SetName(obj_t *pThis, uchar *pszName) {
 	DEFiRet;
 
 	free(pThis->pszName);
@@ -1052,8 +1048,7 @@ finalize_it:
  * rgerhards, 2008-01-30
  */
 static uchar *
-GetName(obj_t *pThis)
-{
+GetName(obj_t *pThis) {
 	uchar *ret;
 	uchar szName[128];
 
@@ -1084,8 +1079,7 @@ GetName(obj_t *pThis)
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-FindObjInfo(const char *const __restrict__ strOID, objInfo_t **ppInfo)
-{
+FindObjInfo(const char *const __restrict__ strOID, objInfo_t **ppInfo) {
 	DEFiRet;
 	int bFound;
 	int i;
@@ -1100,8 +1094,9 @@ FindObjInfo(const char *const __restrict__ strOID, objInfo_t **ppInfo)
 		++i;
 	}
 
-	if(!bFound)
+	if (!bFound) {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
 
 	*ppInfo = arrObjInfo[i];
 
@@ -1125,8 +1120,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
-{
+RegisterObj(uchar *pszObjName, objInfo_t *pInfo) {
 	DEFiRet;
 	int bFound;
 	int i;
@@ -1165,8 +1159,7 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-UnregisterObj(uchar *pszObjName)
-{
+UnregisterObj(uchar *pszObjName) {
 	DEFiRet;
 	int bFound;
 	int i;
@@ -1184,8 +1177,9 @@ UnregisterObj(uchar *pszObjName)
 		++i;
 	}
 
-	if(!bFound)
+	if (!bFound) {
 		ABORT_FINALIZE(RS_RET_OBJ_NOT_REGISTERED);
+	}
 
 	InfoDestruct(&arrObjInfo[i]);
 	/* DEV debug only: dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i); */
@@ -1205,8 +1199,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
-{
+UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf) {
 	DEFiRet;
 	objInfo_t *pObjInfo;
 
@@ -1263,8 +1256,7 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
-{
+ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf) {
 	DEFiRet;
 	objInfo_t *pObjInfo;
 
@@ -1337,8 +1329,7 @@ ENDobjQueryInterface(obj)
  * rgerhards, 2008-02-29 [nice - will have that date the next time in 4 years ;)]
  */
 rsRetVal
-objGetObjInterface(obj_if_t *pIf)
-{
+objGetObjInterface(obj_if_t *pIf) {
 	DEFiRet;
 	assert(pIf != NULL);
 	objQueryInterface(pIf);
@@ -1350,8 +1341,7 @@ objGetObjInterface(obj_if_t *pIf)
  * rgerhards, 2008-03-11
  */
 rsRetVal
-objClassExit(void)
-{
+objClassExit(void) {
 	DEFiRet;
 	/* release objects we no longer need */
 	objRelease(strm, CORE_COMPONENT);
@@ -1379,8 +1369,7 @@ objClassExit(void)
  * rgerhards, 2008-02-29
  */
 rsRetVal
-objClassInit(modInfo_t *pModInfo)
-{
+objClassInit(modInfo_t *pModInfo) {
 	pthread_mutexattr_t mutAttr;
 	int i;
 	DEFiRet;

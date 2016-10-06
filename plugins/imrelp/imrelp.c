@@ -164,8 +164,7 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 /* ------------------------------ callbacks ------------------------------ */
 
 static void
-onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
 			" '%s' - input may not work as intended",
@@ -173,15 +172,13 @@ onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetV
 }
 
 static void
-onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onGenericErr(char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	errmsg.LogError(0, RS_RET_RELP_ERR, "imrelp: librelp error '%s', object "
 			" '%s' - input may not work as intended", errmesg, objinfo);
 }
 
 static void
-onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
-{
+onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode) {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	errmsg.LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: authentication error '%s', peer "
 			"is '%s'", inst->pszBindPort, errmesg, authinfo);
@@ -198,8 +195,7 @@ onAuthErr(void *pUsr, char *authinfo, char* errmesg, __attribute__((unused)) rel
  * we will only see the hostname (twice). -- rgerhards, 2009-10-14
  */
 static relpRetVal
-onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
-{
+onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg) {
 	prop_t *pProp = NULL;
 	msg_t *pMsg;
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
@@ -232,8 +228,7 @@ finalize_it:
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -273,8 +268,7 @@ finalize_it:
 
 /* function to generate an error message if the ruleset cannot be found */
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE, "imrelp[%s]: ruleset '%s' not found - "
 			"using default ruleset instead",
 			inst->pszBindPort, inst->pszBindRuleset);
@@ -286,8 +280,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	instanceConf_t *inst;
 	DEFiRet;
 
@@ -314,8 +307,7 @@ finalize_it:
 
 
 static rsRetVal
-addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
-{
+addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst) {
 	relpSrv_t *pSrv;
 	int relpRet;
 	uchar statname[64];
@@ -388,12 +380,15 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 					"imrelp: invalid auth mode '%s'", inst->authmode);
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
 		}
-		if(relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK)
+		if (relpSrvSetCACert(pSrv, (char*) inst->caCertFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK)
+		}
+		if (relpSrvSetOwnCert(pSrv, (char*) inst->myCertFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
-		if(relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK)
+		}
+		if (relpSrvSetPrivKey(pSrv, (char*) inst->myPrivKeyFile) != RELP_RET_OK) {
 			ABORT_FINALIZE(RS_RET_RELP_ERR);
+		}
 		for(i = 0 ; i <  inst->permittedPeers.nmemb ; ++i) {
 			relpSrvAddPermittedPeer(pSrv, (char*)inst->permittedPeers.name[i]);
 		}
@@ -447,8 +442,9 @@ CODESTARTnewInpInst
 	CHKiRet(createInstance(&inst));
 
 	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
@@ -525,8 +521,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "ruleset")) {
 			loadModConf->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -539,8 +536,9 @@ CODESTARTsetModCnf
 	 */
 	bLegacyCnfModGlobalsPermitted = 0;
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 BEGINendCnfLoad
@@ -623,8 +621,7 @@ ENDfreeCnf
  * only *after this function is done*. So we do not have a race!
  */
 static void
-doSIGTTIN(int __attribute__((unused)) sig)
-{
+doSIGTTIN(int __attribute__((unused)) sig) {
 	DBGPRINTF("imrelp: termination requested via SIGTTIN - telling RELP engine\n");
 	relpEngineSetStop(pRelpEngine);
 }
@@ -667,8 +664,9 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pRelpEngine != NULL)
+	if (pRelpEngine != NULL) {
 		iRet = relpEngineDestruct(&pRelpEngine);
+	}
 
 	/* release objects we used */
 	objRelease(statsobj, CORE_COMPONENT);
@@ -681,8 +679,7 @@ ENDmodExit
 
 
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	free(cs.pszBindRuleset);
 	cs.pszBindRuleset = NULL;
 	return RS_RET_OK;
@@ -691,8 +688,9 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 

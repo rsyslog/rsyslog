@@ -60,10 +60,12 @@ DEFobjCurrIf(datetime)
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
+	if (eFeat == sFEATUREAutomaticSanitazion) {
 		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	}
+	if (eFeat == sFEATUREAutomaticPRIParsing) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -78,8 +80,7 @@ ENDisCompatibleWithFeature
  * that it does not process more than that. The *pLenStr counter is
  * updated on exit. -- rgerhards, 2009-09-23
  */
-static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr)
-{
+static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr) {
 	uchar *p2parse;
 	int iRet = 0;
 
@@ -121,8 +122,7 @@ static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr)
  * that it does not process more than that. The *pLenStr counter is
  * updated on exit. -- rgerhards, 2009-09-23
  */
-static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr)
-{
+static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr) {
 	uchar *p2parse;
 	int bCont = 1;
 	int iRet = 0;
@@ -293,8 +293,9 @@ CODESTARTparse
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 
 finalize_it:
-	if(pBuf != NULL)
+	if (pBuf != NULL) {
 		free(pBuf);
+	}
 ENDparse
 
 

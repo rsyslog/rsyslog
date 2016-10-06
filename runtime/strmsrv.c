@@ -103,23 +103,20 @@ static rsRetVal create_strm_socket(strmsrv_t *pThis);
 /* this shall go into a specific ACL module! */
 static int
 isPermittedHost(struct sockaddr __attribute__((unused)) *addr, char __attribute__((unused)) *fromHostFQDN,
-		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess)
-{
+		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess) {
 	return 1;
 }
 
 
 static rsRetVal
-doOpenLstnSocks(strmsrv_t *pSrv)
-{
+doOpenLstnSocks(strmsrv_t *pSrv) {
 	ISOBJ_TYPE_assert(pSrv, strmsrv);
 	return create_strm_socket(pSrv);
 }
 
 
 static rsRetVal
-doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
-{
+doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd) {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
@@ -131,8 +128,7 @@ finalize_it:
 }
 
 static rsRetVal
-onRegularClose(strms_sess_t *pSess)
-{
+onRegularClose(strms_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -145,8 +141,7 @@ onRegularClose(strms_sess_t *pSess)
 
 
 static rsRetVal
-onErrClose(strms_sess_t *pSess)
-{
+onErrClose(strms_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -160,8 +155,7 @@ onErrClose(strms_sess_t *pSess)
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-addNewLstnPort(strmsrv_t *pThis, uchar *pszPort)
-{
+addNewLstnPort(strmsrv_t *pThis, uchar *pszPort) {
 	strmLstnPortList_t *pEntry;
 	DEFiRet;
 
@@ -191,8 +185,7 @@ finalize_it:
  * rgerhards, 2008-03-20
  */
 static rsRetVal
-configureSTRMListen(strmsrv_t *pThis, uchar *pszPort)
-{
+configureSTRMListen(strmsrv_t *pThis, uchar *pszPort) {
 	int i;
 	uchar *pPort = pszPort;
 	DEFiRet;
@@ -221,8 +214,7 @@ finalize_it:
  * returns 0 if OK, somewhat else otherwise
  */
 static rsRetVal
-STRMSessTblInit(strmsrv_t *pThis)
-{
+STRMSessTblInit(strmsrv_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
@@ -244,15 +236,15 @@ finalize_it:
  * entry (0 or higher).
  */
 static int
-STRMSessTblFindFreeSpot(strmsrv_t *pThis)
-{
+STRMSessTblFindFreeSpot(strmsrv_t *pThis) {
 	register int i;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	for(i = 0 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] == NULL)
+		if (pThis->pSessions[i] == NULL) {
 			break;
+		}
 	}
 
 	return((i < pThis->iSessMax) ? i : -1);
@@ -268,16 +260,16 @@ STRMSessTblFindFreeSpot(strmsrv_t *pThis)
  * session table.
  */
 static int
-STRMSessGetNxtSess(strmsrv_t *pThis, int iCurr)
-{
+STRMSessGetNxtSess(strmsrv_t *pThis, int iCurr) {
 	register int i;
 
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pThis->pSessions != NULL);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] != NULL)
+		if (pThis->pSessions[i] != NULL) {
 			break;
+		}
 	}
 
 	ENDfunc
@@ -291,8 +283,7 @@ STRMSessGetNxtSess(strmsrv_t *pThis, int iCurr)
  * unless the subsystem is reinitialized.
  * rgerhards, 2007-06-21
  */
-static void deinit_strm_listener(strmsrv_t *pThis)
-{
+static void deinit_strm_listener(strmsrv_t *pThis) {
 	int i;
 	strmLstnPortList_t *pEntry;
 	strmLstnPortList_t *pDel;
@@ -334,8 +325,7 @@ static void deinit_strm_listener(strmsrv_t *pThis)
  * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
 static rsRetVal
-addStrmLstn(void *pUsr, netstrm_t *pLstn)
-{
+addStrmLstn(void *pUsr, netstrm_t *pLstn) {
 	strmLstnPortList_t *pPortList = (strmLstnPortList_t *) pUsr;
 	strmsrv_t *pThis = pPortList->pSrv;
 	DEFiRet;
@@ -343,8 +333,9 @@ addStrmLstn(void *pUsr, netstrm_t *pLstn)
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnMax >= STRMLSTN_MAX_DEFAULT)
+	if (pThis->iLstnMax >= STRMLSTN_MAX_DEFAULT) {
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
+	}
 
 	pThis->ppLstn[pThis->iLstnMax] = pLstn;
 	pThis->ppLstnPort[pThis->iLstnMax] = pPortList;
@@ -359,8 +350,7 @@ finalize_it:
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-initSTRMListener(strmsrv_t *pThis, strmLstnPortList_t *pPortEntry)
-{
+initSTRMListener(strmsrv_t *pThis, strmLstnPortList_t *pPortEntry) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
@@ -376,8 +366,7 @@ finalize_it:
 
 /* Initialize STRM sockets (for listener) and listens on them */
 static rsRetVal
-create_strm_socket(strmsrv_t *pThis)
-{
+create_strm_socket(strmsrv_t *pThis) {
 	strmLstnPortList_t *pEntry;
 	DEFiRet;
 
@@ -418,8 +407,7 @@ finalize_it:
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSess, netstrm_t *pStrm)
-{
+SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSess, netstrm_t *pStrm) {
 	DEFiRet;
 	strms_sess_t *pSess = NULL;
 	netstrm_t *pNewStrm = NULL;
@@ -495,13 +483,16 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pSess != NULL)
+		if (pSess != NULL) {
 			strms_sess.Destruct(&pSess);
-		if(pNewStrm != NULL)
+		}
+		if (pNewStrm != NULL) {
 			netstrm.Destruct(&pNewStrm);
+		}
 		free(fromHostFQDN);
-		if(ip != NULL)
+		if (ip != NULL) {
 			prop.Destruct(&ip);
+		}
 	}
 
 	RETiRet;
@@ -509,20 +500,19 @@ finalize_it:
 
 
 static void
-RunCancelCleanup(void *arg)
-{
+RunCancelCleanup(void *arg) {
 	nssel_t **ppSel = (nssel_t**) arg;
 
-	if(*ppSel != NULL)
+	if (*ppSel != NULL) {
 		nssel.Destruct(ppSel);
+	}
 }
 
 
 /* This function is called to gather input. */
 #pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal
-Run(strmsrv_t *pThis)
-{
+Run(strmsrv_t *pThis) {
 	DEFiRet;
 	int nfds;
 	int i;
@@ -649,18 +639,19 @@ ENDobjConstruct(strmsrv)
 
 /* ConstructionFinalizer */
 static rsRetVal
-strmsrvConstructFinalize(strmsrv_t *pThis)
-{
+strmsrvConstructFinalize(strmsrv_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
-	if(pThis->pszDrvrAuthMode != NULL)
+	if (pThis->pszDrvrAuthMode != NULL) {
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
-	if(pThis->pPermPeers != NULL)
+	}
+	if (pThis->pPermPeers != NULL) {
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
+	}
 	// TODO: set driver!
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
@@ -671,8 +662,9 @@ strmsrvConstructFinalize(strmsrv_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pNS != NULL)
+		if (pThis->pNS != NULL) {
 			netstrms.Destruct(&pThis->pNS);
+		}
 	}
 	RETiRet;
 }
@@ -681,13 +673,15 @@ finalize_it:
 /* destructor for the strmsrv object */
 BEGINobjDestruct(strmsrv) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(strmsrv)
-	if(pThis->OnDestruct != NULL)
+	if (pThis->OnDestruct != NULL) {
 		pThis->OnDestruct(pThis->pUsr);
+	}
 
 	deinit_strm_listener(pThis);
 
-	if(pThis->pNS != NULL)
+	if (pThis->pNS != NULL) {
 		netstrms.Destruct(&pThis->pNS);
+	}
 	free(pThis->pszDrvrAuthMode);
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
@@ -702,80 +696,70 @@ ENDobjDebugPrint(strmsrv)
 
 /* set functions */
 static rsRetVal
-SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
-{
+SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*)) {
 	DEFiRet;
 	pThis->pIsPermittedHost = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*, strms_sess_t*))
-{
+SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*, strms_sess_t*)) {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
-{
+SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*)) {
 	DEFiRet;
 	pThis->OnDestruct = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
-{
+SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void*)) {
 	DEFiRet;
 	pThis->OnSessConstructFinalize = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
-{
+SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*)) {
 	DEFiRet;
 	pThis->pOnSessDestruct = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
-{
+SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*)) {
 	DEFiRet;
 	pThis->pOnRegularClose = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
-{
+SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*)) {
 	DEFiRet;
 	pThis->pOnErrClose = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetCBOpenLstnSocks(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*))
-{
+SetCBOpenLstnSocks(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*)) {
 	DEFiRet;
 	pThis->OpenLstnSocks = pCB;
 	RETiRet;
 }
 
 static rsRetVal
-SetUsrP(strmsrv_t *pThis, void *pUsr)
-{
+SetUsrP(strmsrv_t *pThis, void *pUsr) {
 	DEFiRet;
 	pThis->pUsr = pUsr;
 	RETiRet;
 }
 
 static rsRetVal
-SetKeepAlive(strmsrv_t *pThis, int iVal)
-{
+SetKeepAlive(strmsrv_t *pThis, int iVal) {
 	DEFiRet;
 	dbgprintf("strmsrv: keep-alive set to %d\n", iVal);
 	pThis->bUseKeepAlive = iVal;
@@ -783,8 +767,7 @@ SetKeepAlive(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
-SetKeepAliveIntvl(strmsrv_t *pThis, int iVal)
-{
+SetKeepAliveIntvl(strmsrv_t *pThis, int iVal) {
 	DEFiRet;
 	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
 	pThis->iKeepAliveIntvl = iVal;
@@ -792,8 +775,7 @@ SetKeepAliveIntvl(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
-SetKeepAliveProbes(strmsrv_t *pThis, int iVal)
-{
+SetKeepAliveProbes(strmsrv_t *pThis, int iVal) {
 	DEFiRet;
 	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
 	pThis->iKeepAliveProbes = iVal;
@@ -801,8 +783,7 @@ SetKeepAliveProbes(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
-SetKeepAliveTime(strmsrv_t *pThis, int iVal)
-{
+SetKeepAliveTime(strmsrv_t *pThis, int iVal) {
 	DEFiRet;
 	DBGPRINTF("strmsrv: keep-alive set to %d\n", iVal);
 	pThis->iKeepAliveTime = iVal;
@@ -810,8 +791,7 @@ SetKeepAliveTime(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
-SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
-{
+SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar)) {
 	DEFiRet;
 	assert(OnCharRcvd != NULL);
 	pThis->OnCharRcvd = OnCharRcvd;
@@ -820,15 +800,16 @@ SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(strmsrv_t *pThis, uchar *name)
-{
+SetInputName(strmsrv_t *pThis, uchar *name) {
 	uchar *pszName;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
-	if(name == NULL)
+	if (name == NULL) {
 		pszName = NULL;
-	else
+	}
+	else {
 		CHKmalloc(pszName = ustrdup(name));
+	}
 	free(pThis->pszInputName);
 	pThis->pszInputName = pszName;
 finalize_it:
@@ -843,8 +824,7 @@ finalize_it:
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
-SetDrvrMode(strmsrv_t *pThis, int iMode)
-{
+SetDrvrMode(strmsrv_t *pThis, int iMode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->iDrvrMode = iMode;
@@ -854,8 +834,7 @@ SetDrvrMode(strmsrv_t *pThis, int iMode)
 
 /* set the driver authentication mode -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrAuthMode(strmsrv_t *pThis, uchar *mode)
-{
+SetDrvrAuthMode(strmsrv_t *pThis, uchar *mode) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	CHKmalloc(pThis->pszDrvrAuthMode = ustrdup(mode));
@@ -866,8 +845,7 @@ finalize_it:
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrPermPeers(strmsrv_t *pThis, permittedPeers_t *pPermPeers)
-{
+SetDrvrPermPeers(strmsrv_t *pThis, permittedPeers_t *pPermPeers) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->pPermPeers = pPermPeers;
@@ -885,8 +863,7 @@ SetDrvrPermPeers(strmsrv_t *pThis, permittedPeers_t *pPermPeers)
  * rgerhards, 2009-04-09
  */
 static rsRetVal
-SetSessMax(strmsrv_t *pThis, int iMax)
-{
+SetSessMax(strmsrv_t *pThis, int iMax) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->iSessMax = iMax;

@@ -33,8 +33,7 @@ extern int yylineno;
 int Debug = 1;
 
 void
-parser_errmsg(char *fmt, ...)
-{
+parser_errmsg(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	printf("error on or before line %d: ", yylineno);
@@ -44,52 +43,44 @@ parser_errmsg(char *fmt, ...)
 }
 
 int
-yyerror(char *s)
-{
+yyerror(char *s) {
 	parser_errmsg("%s", s);
 	return 0;
 }
 
 void
-dbgprintf(char *fmt, ...)
-{
+dbgprintf(char *fmt, ...) {
 	va_list ap;
 	va_start(ap, fmt);
 	vfprintf(stdout, fmt, ap);
 	va_end(ap);
 }
 
-void cnfDoObj(struct cnfobj *o)
-{
+void cnfDoObj(struct cnfobj *o) {
 	dbgprintf("global:obj: ");
 	cnfobjPrint(o);
 	cnfobjDestruct(o);
 }
 
-void cnfDoRule(struct cnfrule *rule)
-{
+void cnfDoRule(struct cnfrule *rule) {
 	dbgprintf("global:rule processed\n");
 	cnfrulePrint(rule);
 }
 
-void cnfDoCfsysline(char *ln)
-{
+void cnfDoCfsysline(char *ln) {
 	 dbgprintf("global:cfsysline: %s\n", ln);
 }
 
-void cnfDoBSDTag(char *ln)
-{
+void cnfDoBSDTag(char *ln) {
 	 dbgprintf("global:BSD tag: %s\n", ln);
 }
 
-void cnfDoBSDHost(char *ln)
-{
+void cnfDoBSDHost(char *ln) {
 	 dbgprintf("global:BSD host: %s\n", ln);
 }
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
 	int r;
 
 	cnfSetLexFile(argc == 1 ? NULL : argv[1]);

@@ -41,8 +41,7 @@
 #include <string.h>
 #include <getopt.h>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	FILE *fp;
 	int val;
 	int i;
@@ -220,8 +219,9 @@ int main(int argc, char *argv[])
 	}
 
 breakIF:
-	if(nDups != 0)
+	if (nDups != 0) {
 		printf("info: had %d duplicates (this is no error)\n", nDups);
+	}
 
 	if(!reachedEOF) {
 		printf("end of processing, but NOT end of file! First line of extra data is:\n");

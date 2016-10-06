@@ -93,8 +93,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
  * levels of impreciseness if more precise name is not known.
  */
 static const char *
-getFileDebugName(const strm_t *const pThis)
-{
+getFileDebugName(const strm_t *const pThis) {
 	  return (pThis->pszCurrFName == NULL) ?
 		  ((pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName)
 		: (const char*) pThis->pszCurrFName;
@@ -109,8 +108,7 @@ getFileDebugName(const strm_t *const pThis)
  * initially wirtten 2005-06-21, moved to this class & updates 2009-06-01, both rgerhards
  */
 static rsRetVal
-resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
-{
+resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName) {
 	uchar *pParams;
 	uchar *pCmd;
 	uchar *p;
@@ -176,8 +174,7 @@ finalize_it:
  * and, if so, initiate processing.
  */
 static rsRetVal
-doSizeLimitProcessing(strm_t *pThis)
-{
+doSizeLimitProcessing(strm_t *pThis) {
 	uchar *pszCurrFName = NULL;
 	DEFiRet;
 
@@ -209,8 +206,7 @@ finalize_it:
 /* do the physical open() call on a file.
  */
 static rsRetVal
-doPhysOpen(strm_t *pThis)
-{
+doPhysOpen(strm_t *pThis) {
 	int iFlags = 0;
 	struct stat statOpen;
 	DEFiRet;
@@ -247,10 +243,12 @@ doPhysOpen(strm_t *pThis)
 		int err = errno;
 		rs_strerror_r(err, errStr, sizeof(errStr));
 		DBGOPRINT((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName, errStr);
-		if(err == ENOENT)
+		if (err == ENOENT) {
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-		else
+		}
+		else {
 			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+		}
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -280,8 +278,7 @@ finalize_it:
 
 
 static rsRetVal
-strmSetCurrFName(strm_t *pThis)
-{
+strmSetCurrFName(strm_t *pThis) {
 	DEFiRet;
 
 	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
@@ -289,8 +286,9 @@ strmSetCurrFName(strm_t *pThis)
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
 	} else {
 		if(pThis->pszDir == NULL) {
-			if((pThis->pszCurrFName = ustrdup(pThis->pszFName)) == NULL)
+			if ((pThis->pszCurrFName = ustrdup(pThis->pszFName)) == NULL) {
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
 		} else {
 			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 					    pThis->pszFName, pThis->lenFName, -1, 0));
@@ -306,14 +304,14 @@ finalize_it:
  * (most importantly not an open or seek!).
  */
 static rsRetVal
-CheckFileChange(strm_t *pThis)
-{
+CheckFileChange(strm_t *pThis) {
 	struct stat statName;
 	DEFiRet;
 
 	CHKiRet(strmSetCurrFName(pThis));
-	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
+	if (stat((char*) pThis->pszCurrFName, &statName) == -1) {
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
 	DBGPRINTF("stream/after deserialize checking for file change on '%s', "
 		"inode %u/%u, size/currOffs %llu/%llu\n",
 		pThis->pszCurrFName, (unsigned) pThis->inode,
@@ -333,19 +331,20 @@ finalize_it:
  * It is OK to call this function when the stream is already open. In that
  * case, it returns immediately with RS_RET_OK
  */
-static rsRetVal strmOpenFile(strm_t *pThis)
-{
+static rsRetVal strmOpenFile(strm_t *pThis) {
 	DEFiRet;
 	off_t offset;
 
 	ASSERT(pThis != NULL);
 
-	if(pThis->fd != -1)
+	if (pThis->fd != -1) {
 		ABORT_FINALIZE(RS_RET_OK);
+	}
 	pThis->pszCurrFName = NULL; /* used to prevent mem leak in case of error */
 
-	if(pThis->pszFName == NULL)
+	if (pThis->pszFName == NULL) {
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+	}
 
 	CHKiRet(strmSetCurrFName(pThis));
 	
@@ -393,8 +392,7 @@ finalize_it:
  * operation than. Must be called with the mutex locked.
  */
 static inline void
-strmWaitAsyncWriterDone(strm_t *pThis)
-{
+strmWaitAsyncWriterDone(strm_t *pThis) {
 	BEGINfunc
 	if(pThis->bAsyncWrite) {
 		/* awake writer thread and make it write out everything */
@@ -415,8 +413,7 @@ strmWaitAsyncWriterDone(strm_t *pThis)
  * (this may be the case) and, if so, will open the file, write the data, and then
  * close it again (this is done via strmFlushInternal and friends).
  */
-static rsRetVal strmCloseFile(strm_t *pThis)
-{
+static rsRetVal strmCloseFile(strm_t *pThis) {
 	off64_t currOffs;
 	DEFiRet;
 
@@ -489,8 +486,7 @@ finalize_it:
  * This method must only be called if we are in a multi-file mode!
  */
 static rsRetVal
-strmNextFile(strm_t *pThis)
-{
+strmNextFile(strm_t *pThis) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -524,14 +520,14 @@ finalize_it:
  * a file change is detected only if the inode changes. -- rgerhards, 2011-01-10
  */
 static rsRetVal
-strmHandleEOFMonitor(strm_t *pThis)
-{
+strmHandleEOFMonitor(strm_t *pThis) {
 	DEFiRet;
 	struct stat statName;
 
 	ISOBJ_TYPE_assert(pThis, strm);
-	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
+	if (stat((char*) pThis->pszCurrFName, &statName) == -1) {
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
 	DBGPRINTF("stream checking for file change on '%s', inode %u/%u\n",
 	  pThis->pszCurrFName, (unsigned) pThis->inode,
 	  (unsigned) statName.st_ino);
@@ -561,8 +557,7 @@ finalize_it:
  * rgerhards, 2008-02-13
  */
 static rsRetVal
-strmHandleEOF(strm_t *pThis)
-{
+strmHandleEOF(strm_t *pThis) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
@@ -590,8 +585,7 @@ finalize_it:
  * rgerhards, 2008-02-13
  */
 static rsRetVal
-strmReadBuf(strm_t *pThis, int *padBytes)
-{
+strmReadBuf(strm_t *pThis, int *padBytes) {
 	DEFiRet;
 	int bRun;
 	long iLenRead;
@@ -612,7 +606,7 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 			toRead = pThis->sIOBufSize;
 		} else {
 			CHKiRet(pThis->cryprov->GetBytesLeftInBlock(pThis->cryprovFileData, &bytesLeft));
-			if(bytesLeft == -1 || bytesLeft > (ssize_t) pThis->sIOBufSize)  {
+			if(bytesLeft == -1 || bytesLeft > (ssize_t) pThis->sIOBufSize) {
 				toRead = pThis->sIOBufSize;
 			} else {
 				toRead = (size_t) bytesLeft;
@@ -651,11 +645,11 @@ finalize_it:
 
 /* debug output of current buffer */
 void
-strmDebugOutBuf(const strm_t *const pThis)
-{
+strmDebugOutBuf(const strm_t *const pThis) {
 	int strtIdx = pThis->iBufPtr - 50;
-	if(strtIdx < 0)
+	if (strtIdx < 0) {
 		strtIdx = 0;
+	}
 	DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd, buf '%.*s'\n",
 		pThis->iBufPtr, pThis->iBufPtrMax, (int) pThis->iBufPtrMax - strtIdx,
 		pThis->pIOBuf+strtIdx);
@@ -668,8 +662,7 @@ strmDebugOutBuf(const strm_t *const pThis)
  * NOTE: needs to be enhanced to support sticking with a strm entry (if not
  * deleted).
  */
-static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
-{
+static rsRetVal strmReadChar(strm_t *pThis, uchar *pC) {
 	int padBytes = 0; /* in crypto mode, we may have some padding (non-data) bytes */
 	DEFiRet;
 	
@@ -704,8 +697,7 @@ finalize_it:
  * character buffering capability.
  * rgerhards, 2008-01-07
  */
-static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
-{
+static rsRetVal strmUnreadChar(strm_t *pThis, uchar c) {
 	ASSERT(pThis != NULL);
 	ASSERT(pThis->iUngetC == -1);
 	pThis->iUngetC = c;
@@ -730,8 +722,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes)
-{
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes) {
         uchar c;
 	uchar finished;
 	rsRetVal readCharRet;
@@ -768,13 +759,13 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 		cstrFinalize(*ppCStr);
 	} else if(mode == 1) {
 		finished=0;
-		while(finished == 0){
+		while(finished == 0) {
         		if(c != '\n') {
                 		CHKiRet(cstrAppendChar(*ppCStr, c));
                 		CHKiRet(strmReadChar(pThis, &c));
 				pThis->bPrevWasNL = 0;
 			} else {
-				if ((((*ppCStr)->iStrLen) > 0) ){
+				if ((((*ppCStr)->iStrLen) > 0) ) {
 					if(pThis->bPrevWasNL) {
 						rsCStrTruncate(*ppCStr, (bEscapeLF) ? 4 : 1); /* remove the prior newline */
 						finished=1;
@@ -797,8 +788,8 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 	} else if(mode == 2) {
 		/* indented follow-up lines */
 		finished=0;
-		while(finished == 0){
-			if ((*ppCStr)->iStrLen == 0){
+		while(finished == 0) {
+			if ((*ppCStr)->iStrLen == 0) {
         			if(c != '\n') {
 				/* nothing in the buffer, and it's not a newline, add it to the buffer */
                				CHKiRet(cstrAppendChar(*ppCStr, c));
@@ -808,7 +799,7 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 				}
 			} else {
 				if(pThis->bPrevWasNL) {
-					if ((c == ' ') || (c == '\t')){
+					if ((c == ' ') || (c == '\t')) {
                					CHKiRet(cstrAppendChar(*ppCStr, c));
                					CHKiRet(strmReadChar(pThis, &c));
 						pThis->bPrevWasNL = 0;
@@ -864,8 +855,7 @@ finalize_it:
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF)
-{
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF) {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
@@ -949,8 +939,7 @@ ENDobjConstruct(strm)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-static rsRetVal strmConstructFinalize(strm_t *pThis)
-{
+static rsRetVal strmConstructFinalize(strm_t *pThis) {
 	rsRetVal localRet;
 	int i;
 	DEFiRet;
@@ -1024,8 +1013,7 @@ finalize_it:
  * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
  */
 static inline void
-stopWriter(strm_t *pThis)
-{
+stopWriter(strm_t *pThis) {
 	BEGINfunc
 	pThis->bStopWriter = 1;
 	pthread_cond_signal(&pThis->notEmpty);
@@ -1066,10 +1054,12 @@ CODESTARTobjDestruct(strm)
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
-	if(pThis->prevLineSegment)
+	if (pThis->prevLineSegment) {
 		cstrDestruct(&pThis->prevLineSegment);
-	if(pThis->prevMsgSegment)
+	}
+	if (pThis->prevMsgSegment) {
 		cstrDestruct(&pThis->prevMsgSegment);
+	}
 	free(pThis->pszDir);
 	free(pThis->pZipBuf);
 	free(pThis->pszCurrFName);
@@ -1084,12 +1074,12 @@ ENDobjDestruct(strm)
  * This method may also be called on a closed file, in which case
  * it immediately returns.
  */
-static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
-{
+static rsRetVal strmCheckNextOutputFile(strm_t *pThis) {
 	DEFiRet;
 
-	if(pThis->fd == -1)
+	if (pThis->fd == -1) {
 		FINALIZE;
+	}
 
 	/* wait for output to be empty, so that our counts are correct */
 	strmWaitAsyncWriterDone(pThis);
@@ -1114,8 +1104,7 @@ finalize_it:
 #	define ERR_TTYHUP EBADF
 #endif
 static rsRetVal
-tryTTYRecover(strm_t *pThis, int err)
-{
+tryTTYRecover(strm_t *pThis, int err) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 #ifndef __FreeBSD__
@@ -1140,8 +1129,7 @@ finalize_it:
  * rgerhards, 2009-06-08
  */
 static rsRetVal
-doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
-{
+doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf) {
 	ssize_t lenBuf;
 	ssize_t iTotalWritten;
 	ssize_t iWritten;
@@ -1208,8 +1196,7 @@ finalize_it:
 /* write memory buffer to a stream object.
  */
 static inline rsRetVal
-doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlush)
-{
+doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlush) {
 	DEFiRet;
 
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doWriteInternal: bFlush %d\n",
@@ -1236,8 +1223,7 @@ finalize_it:
  * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
  */
 static inline rsRetVal
-doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
-{
+doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
@@ -1273,8 +1259,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
  * the background thread. -- rgerhards, 2009-07-07
  */
 static rsRetVal
-strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip)
-{
+strmSchedWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlushZip) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -1306,8 +1291,7 @@ finalize_it:
  * -- rgerhards, 2009-07-06
  */
 static void*
-asyncWriterThread(void *pPtr)
-{
+asyncWriterThread(void *pPtr) {
 	int iDeq;
 	struct timespec t;
 	sbool bTimedOut = 0;
@@ -1382,8 +1366,9 @@ asyncWriterThread(void *pPtr)
 		--pThis->iCnt;
 		if(pThis->iCnt < STREAM_ASYNC_NUMBUFS) {
 			pthread_cond_signal(&pThis->notFull);
-			if(pThis->iCnt == 0)
+			if (pThis->iCnt == 0) {
 				pthread_cond_broadcast(&pThis->isEmpty);
+			}
 		}
 	}
 	/* Not reached */	
@@ -1408,8 +1393,7 @@ finalize_it:
 #	define SYNCCALL(x) fsync(x)
 #endif
 static rsRetVal
-syncFile(strm_t *pThis)
-{
+syncFile(strm_t *pThis) {
 	int ret;
 	DEFiRet;
 
@@ -1427,8 +1411,9 @@ syncFile(strm_t *pThis)
 	}
 	
 	if(pThis->fdDir != -1) {
-		if(fsync(pThis->fdDir) != 0)
+		if (fsync(pThis->fdDir) != 0) {
 			DBGPRINTF("stream/syncFile: fsync returned error, ignoring\n");
+		}
 	}
 
 finalize_it:
@@ -1443,15 +1428,15 @@ finalize_it:
  * rgerhards, 2009-06-04
  */
 static rsRetVal
-strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
-{
+strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf) {
 	size_t iWritten;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	DBGPRINTF("strmPhysWrite, stream %p, len %u\n", pThis, (unsigned)lenBuf);
-	if(pThis->fd == -1)
+	if (pThis->fd == -1) {
 		CHKiRet(strmOpenFile(pThis));
+	}
 
 	/* here we place our crypto interface */
 	if(pThis->cryprov != NULL) {
@@ -1464,8 +1449,9 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 
 	pThis->iCurrOffs += iWritten;
 	/* update user counter, if provided */
-	if(pThis->pUsrWCntr != NULL)
+	if (pThis->pUsrWCntr != NULL) {
 		*pThis->pUsrWCntr += iWritten;
+	}
 
 	if(pThis->bSync) {
 		CHKiRet(syncFile(pThis));
@@ -1494,8 +1480,7 @@ finalize_it:
  * rgerhards, 2009-06-04
  */
 static rsRetVal
-doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
-{
+doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush) {
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
@@ -1547,15 +1532,15 @@ finalize_it:
  * running in stream mode).
  */
 static rsRetVal
-doZipFinish(strm_t *pThis)
-{
+doZipFinish(strm_t *pThis) {
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	unsigned outavail;
 	assert(pThis != NULL);
 
-	if(!pThis->bzInitDone)
+	if (!pThis->bzInitDone) {
 		goto done;
+	}
 
 	pThis->zstrm.avail_in = 0;
 	/* run deflate() on buffer until everything has been compressed */
@@ -1586,8 +1571,7 @@ done:	RETiRet;
  * rgerhards, 2008-01-10
  */
 static rsRetVal
-strmFlushInternal(strm_t *pThis, int bFlushZip)
-{
+strmFlushInternal(strm_t *pThis, int bFlushZip) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
@@ -1610,19 +1594,20 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
  * rgerhards, 2010-03-18
  */
 static rsRetVal
-strmFlush(strm_t *pThis)
-{
+strmFlush(strm_t *pThis) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 
-	if(pThis->bAsyncWrite)
+	if (pThis->bAsyncWrite) {
 		d_pthread_mutex_lock(&pThis->mut);
+	}
 	CHKiRet(strmFlushInternal(pThis, 1));
 
 finalize_it:
-	if(pThis->bAsyncWrite)
+	if (pThis->bAsyncWrite) {
 		d_pthread_mutex_unlock(&pThis->mut);
+	}
 
 	RETiRet;
 }
@@ -1632,8 +1617,7 @@ finalize_it:
  * is invalidated.
  * rgerhards, 2008-01-12
  */
-static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
-{
+static rsRetVal strmSeek(strm_t *pThis, off64_t offs) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
@@ -1668,8 +1652,7 @@ finalize_it:
  * rgerhards, 2012-11-07
  */
 rsRetVal
-strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
-{
+strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel) {
 	struct stat statBuf;
 	DEFiRet;
 
@@ -1694,8 +1677,9 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
-		if(pThis->cryprov != NULL)
+		if (pThis->cryprov != NULL) {
 			pThis->cryprov->DeleteStateFiles(pThis->pszCurrFName);
+		}
 		free(pThis->pszCurrFName);
 		pThis->pszCurrFName = NULL;
 		pThis->iCurrFNum = FNum;
@@ -1712,8 +1696,7 @@ finalize_it:
 /* seek to current offset. This is primarily a helper to readjust the OS file
  * pointer after a strm object has been deserialized.
  */
-static rsRetVal strmSeekCurrOffs(strm_t *pThis)
-{
+static rsRetVal strmSeekCurrOffs(strm_t *pThis) {
 	off64_t targetOffs;
 	uchar c;
 	DEFiRet;
@@ -1740,17 +1723,18 @@ finalize_it:
 
 /* write a *single* character to a stream object -- rgerhards, 2008-01-10
  */
-static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
-{
+static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 
-	if(pThis->bAsyncWrite)
+	if (pThis->bAsyncWrite) {
 		d_pthread_mutex_lock(&pThis->mut);
+	}
 
-	if(pThis->bDisabled)
+	if (pThis->bDisabled) {
 		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
+	}
 
 	/* if the buffer is full, we need to flush before we can write */
 	if(pThis->iBufPtr == pThis->sIOBufSize) {
@@ -1761,8 +1745,9 @@ static rsRetVal strmWriteChar(strm_t *__restrict__ const pThis, const uchar c)
 	pThis->iBufPtr++;
 
 finalize_it:
-	if(pThis->bAsyncWrite)
+	if (pThis->bAsyncWrite) {
 		d_pthread_mutex_unlock(&pThis->mut);
+	}
 
 	RETiRet;
 }
@@ -1773,8 +1758,7 @@ finalize_it:
  * strmWrite(), which does the lock (aka: we must not lock it, else we
  * would run into a recursive lock, resulting in a deadlock!)
  */
-static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i)
-{
+static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i) {
 	DEFiRet;
 	uchar szBuf[32];
 
@@ -1805,8 +1789,7 @@ finalize_it:
  * worth nothing. -- rgerhards, 2010-03-10
  */
 static rsRetVal
-strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, size_t lenBuf)
-{
+strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf, size_t lenBuf) {
 	DEFiRet;
 	size_t iWrite;
 	size_t iOffset;
@@ -1815,11 +1798,13 @@ strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf
 	ASSERT(pBuf != NULL);
 
 	/* DEV DEBUG ONLY DBGPRINTF("strmWrite(%p[%s], '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pThis->pszCurrFName, pBuf,(long) lenBuf, pThis->bDisabled, (long) pThis->iSizeLimit, (long long) pThis->iCurrOffs); */
-	if(pThis->bDisabled)
+	if (pThis->bDisabled) {
 		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
+	}
 
-	if(pThis->bAsyncWrite)
+	if (pThis->bAsyncWrite) {
 		d_pthread_mutex_lock(&pThis->mut);
+	}
 
 	iOffset = 0;
 	do {
@@ -1827,8 +1812,9 @@ strmWrite(strm_t *__restrict__ const pThis, const uchar *__restrict__ const pBuf
 			CHKiRet(strmFlushInternal(pThis, 0)); /* get a new buffer for rest of data */
 		}
 		iWrite = pThis->sIOBufSize - pThis->iBufPtr; /* this fits in current buf */
-		if(iWrite > lenBuf)
+		if (iWrite > lenBuf) {
 			iWrite = lenBuf;
+		}
 		memcpy(pThis->pIOBuf + pThis->iBufPtr, pBuf + iOffset, iWrite);
 		pThis->iBufPtr += iWrite;
 		iOffset += iWrite;
@@ -1876,8 +1862,7 @@ DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
 
-static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
-{
+static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val) {
 	pThis->bDeleteOnClose = val;
 	if(pThis->cryprov != NULL) {
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
@@ -1885,8 +1870,7 @@ static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
 	return RS_RET_OK;
 }
 
-static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
-{
+static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal) {
 	pThis->iMaxFiles = iNewVal;
 	pThis->iFileNumDigits = getNumberDigits(iNewVal);
 	return RS_RET_OK;
@@ -1899,21 +1883,23 @@ static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
-{
+strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 	ASSERT(pszName != NULL);
 	
-	if(iLenName < 1)
+	if (iLenName < 1) {
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+	}
 
-	if(pThis->pszFName != NULL)
+	if (pThis->pszFName != NULL) {
 		free(pThis->pszFName);
+	}
 
-	if((pThis->pszFName = MALLOC(iLenName + 1)) == NULL)
+	if ((pThis->pszFName = MALLOC(iLenName + 1)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	memcpy(pThis->pszFName, pszName, iLenName + 1); /* always think about the \0! */
 	pThis->lenFName = iLenName;
@@ -1929,15 +1915,15 @@ finalize_it:
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
-{
+strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir) {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 	ASSERT(pszDir != NULL);
 	
-	if(iLenDir < 1)
+	if (iLenDir < 1) {
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+	}
 
 	CHKmalloc(pThis->pszDir = MALLOC(iLenDir + 1));
 
@@ -1971,16 +1957,14 @@ finalize_it:
  *
  * rgerhards, 2008-01-10
  */
-static rsRetVal strmRecordBegin(strm_t *pThis)
-{
+static rsRetVal strmRecordBegin(strm_t *pThis) {
 	ASSERT(pThis != NULL);
 	ASSERT(pThis->bInRecord == 0);
 	pThis->bInRecord = 1;
 	return RS_RET_OK;
 }
 
-static rsRetVal strmRecordEnd(strm_t *pThis)
-{
+static rsRetVal strmRecordEnd(strm_t *pThis) {
 	DEFiRet;
 	ASSERT(pThis != NULL);
 	ASSERT(pThis->bInRecord == 1);
@@ -2001,8 +1985,7 @@ static rsRetVal strmRecordEnd(strm_t *pThis)
  * We do not serialize the dynamic properties. 
  * rgerhards, 2008-01-10
  */
-static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
-{
+static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm) {
 	DEFiRet;
 	int i;
 	int64 l;
@@ -2061,8 +2044,7 @@ finalize_it:
  * rgerhards, 2009-05-26
  */
 static rsRetVal
-strmDup(strm_t *const pThis, strm_t **ppNew)
-{
+strmDup(strm_t *const pThis, strm_t **ppNew) {
 	strm_t *pNew = NULL;
 	DEFiRet;
 
@@ -2088,8 +2070,9 @@ strmDup(strm_t *const pThis, strm_t **ppNew)
 	pNew = NULL;
 
 finalize_it:
-	if(pNew != NULL)
+	if (pNew != NULL) {
 		strmDestruct(&pNew);
+	}
 
 	RETiRet;
 }
@@ -2104,14 +2087,14 @@ finalize_it:
  * rgerhards, 2008-02-27
  */
 static rsRetVal
-strmSetWCntr(strm_t *pThis, number_t *pWCnt)
-{
+strmSetWCntr(strm_t *pThis, number_t *pWCnt) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	if(pWCnt != NULL)
+	if (pWCnt != NULL) {
 		*pWCnt = 0;
+	}
 	pThis->pUsrWCntr = pWCnt;
 
 	RETiRet;
@@ -2124,8 +2107,7 @@ strmSetWCntr(strm_t *pThis, number_t *pWCnt)
  * rgerhards, 2008-01-11
  */
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, UCHAR_CONSTANT(name), sizeof(name) - 1)
-static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
-{
+static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);
@@ -2172,8 +2154,7 @@ finalize_it:
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */
 static rsRetVal
-strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
-{
+strmGetCurrOffset(strm_t *pThis, int64 *pOffs) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strm);

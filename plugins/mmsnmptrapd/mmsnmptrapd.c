@@ -136,11 +136,11 @@ ENDtryResume
 
 /* check if a string is numeric (int) */
 static inline int
-isNumeric(uchar *str)
-{
+isNumeric(uchar *str) {
 	int r = 1;
-	if(*str == '-' || *str == '+')
+	if (*str == '-' || *str == '+') {
 		++str;
+	}
 	while(*str) {
 		if(!isdigit(*str)) {
 			r = 0;
@@ -160,8 +160,7 @@ done:
  * position.
  */
 static int
-getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
-{
+getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst) {
 	uchar *dstwrk = dst;
 	uchar *src = *psrc;
 	while(*src && isspace(*src)) {
@@ -176,8 +175,9 @@ getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
 	*++dstwrk = '\0';
 	
 	/* final results */
-	if(*src == delim)
+	if (*src == delim) {
 		++src;
+	}
 	*psrc = src;
 	return(dstwrk - dst);
 }
@@ -188,14 +188,14 @@ getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
  * max length on entry and actual length on exit.
  */
 static int
-getTagComponent(uchar *tag, uchar *dst, int *lenDst)
-{
+getTagComponent(uchar *tag, uchar *dst, int *lenDst) {
 	int end = *lenDst - 1; /* -1 for NUL-char! */
 	int i;
 
 	i = 0;
-	if(tag[i] != '/')
+	if (tag[i] != '/') {
 		goto done;
+	}
 	++tag;
 	while(i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
 		dst[i] = tag[i];
@@ -212,8 +212,7 @@ done:
  * returns -1 if severity could not be found.
  */
 static inline int
-lookupSeverityCode(instanceData *pData, uchar *sever)
-{
+lookupSeverityCode(instanceData *pData, uchar *sever) {
 	struct severMap_s *node;
 	int sevCode = -1;
 
@@ -271,8 +270,7 @@ ENDdoAction
  * settings.
  */
 static inline rsRetVal
-buildSeverityMapping(instanceData *pData)
-{
+buildSeverityMapping(instanceData *pData) {
 	uchar pszSev[512];
 	uchar pszSevCode[512];
 	int sevCode;
@@ -292,8 +290,9 @@ buildSeverityMapping(instanceData *pData)
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		sevCode = atoi((char*) pszSevCode);
-		if(!isNumeric(pszSevCode))
+		if (!isNumeric(pszSevCode)) {
 			sevCode = -1;
+		}
 		if(sevCode < 0 || sevCode > 7) {
 			errmsg.LogError(0, RS_RET_ERR, "error: severity code %d outside of valid "
 					"range 0..7 (was string '%s')\n", sevCode, pszSevCode);
@@ -311,8 +310,9 @@ buildSeverityMapping(instanceData *pData)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(node != NULL)
+		if (node != NULL) {
 			free(node);
+		}
 	}
 	RETiRet;
 }
@@ -331,8 +331,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p-1) == ';') {
 		--p;
+	}
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
@@ -384,8 +385,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	free(cs.pszTagName);
 	cs.pszTagName = NULL;
@@ -412,8 +412,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if(localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG) {
 			bMsgPassingSupported = 1;
+		}
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}

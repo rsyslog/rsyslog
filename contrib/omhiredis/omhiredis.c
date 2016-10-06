@@ -98,13 +98,13 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 /*  called when closing */
-static void closeHiredis(wrkrInstanceData_t *pWrkrData)
-{
+static void closeHiredis(wrkrInstanceData_t *pWrkrData) {
 	if(pWrkrData->conn != NULL) {
 		redisFree(pWrkrData->conn);
 		pWrkrData->conn = NULL;
@@ -130,8 +130,7 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 /*  establish our connection to redis */
-static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
-{
+static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
 	char *server;
 	char *serverpasswd;
 	DEFiRet;
@@ -167,14 +166,14 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writeHiredis(uchar *message, wrkrInstanceData_t *pWrkrData)
-{
+rsRetVal writeHiredis(uchar *message, wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 
 	/*  if we do not have a redis connection, call
 	 *  initHiredis and try to establish one */
-	if(pWrkrData->conn == NULL)
+	if (pWrkrData->conn == NULL) {
 		CHKiRet(initHiredis(pWrkrData, 0));
+	}
 
 	/*  try to append the command to the pipeline. 
 	 *  REDIS_ERR reply indicates something bad
@@ -213,8 +212,9 @@ finalize_it:
  *  try to restablish our connection to redis */
 BEGINtryResume
 CODESTARTtryResume
-	if(pWrkrData->conn == NULL)
+	if (pWrkrData->conn == NULL) {
 		iRet = initHiredis(pWrkrData, 0);
+	}
 ENDtryResume
 
 /*  begin a transaction.
@@ -250,7 +250,7 @@ CODESTARTendTransaction
 	int i;
 	for ( i = 0; i < pWrkrData->count; i++ ) {
 		redisGetReply ( pWrkrData->conn, (void*)&reply);
-        if( pWrkrData->conn->err ){
+        if( pWrkrData->conn->err ) {
             dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
             closeHiredis(pWrkrData);
             ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -269,8 +269,7 @@ ENDendTransaction
  *  it is still null when it's called - I should
  *  probable just set the default here instead */
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->server = NULL;
 	pData->port = 6379;
 	pData->serverpassword = NULL;
@@ -288,16 +287,18 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 	
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);

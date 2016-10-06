@@ -60,8 +60,7 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-loadDrvr(nssel_t *pThis)
-{
+loadDrvr(nssel_t *pThis) {
 	DEFiRet;
 	uchar *pBaseDrvrName;
 	uchar szDrvrName[48]; /* 48 shall be large enough */
@@ -69,8 +68,9 @@ loadDrvr(nssel_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if (snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName)) {
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -84,8 +84,9 @@ loadDrvr(nssel_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if (pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
+		}
 			pThis->pDrvrName = NULL;
 	}
 	RETiRet;
@@ -100,8 +101,9 @@ ENDobjConstruct(nssel)
 /* destructor for the nssel object */
 BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nssel)
-	if(pThis->pDrvrData != NULL)
+	if (pThis->pDrvrData != NULL) {
 		pThis->Drvr.Destruct(&pThis->pDrvrData);
+	}
 
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
@@ -117,8 +119,7 @@ ENDobjDestruct(nssel)
 
 /* ConstructionFinalizer */
 static rsRetVal
-ConstructFinalize(nssel_t *pThis)
-{
+ConstructFinalize(nssel_t *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nssel);
 	CHKiRet(loadDrvr(pThis));
@@ -134,8 +135,7 @@ finalize_it:
  * used)-- rgerhards, 2008-05-05
  */
 static rsRetVal
-SetDrvrName(nssel_t *pThis, uchar *pszName)
-{
+SetDrvrName(nssel_t *pThis, uchar *pszName) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	if(pThis->pBaseDrvrName != NULL) {
@@ -156,8 +156,7 @@ finalize_it:
  * it is a listener. If so, all of them are begin added.
  */
 static rsRetVal
-Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp)
-{
+Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp) {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nssel);
@@ -175,8 +174,7 @@ finalize_it:
  * until some are ready. EAGAIN is retried.
  */
 static rsRetVal
-Wait(nssel_t *pThis, int *piNumReady)
-{
+Wait(nssel_t *pThis, int *piNumReady) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nssel);
 	assert(piNumReady != NULL);
@@ -192,8 +190,7 @@ Wait(nssel_t *pThis, int *piNumReady)
  * rgerhards, 2008-04-23
  */
 static rsRetVal
-IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int __attribute__((unused)) *piNumReady)
-{
+IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int __attribute__((unused)) *piNumReady) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nssel);
 	ISOBJ_TYPE_assert(pStrm, netstrm);

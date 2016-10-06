@@ -71,10 +71,12 @@ struct instanceConf_s {
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
+	if (eFeat == sFEATUREAutomaticSanitazion) {
 		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	}
+	if (eFeat == sFEATUREAutomaticPRIParsing) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -82,8 +84,7 @@ ENDisCompatibleWithFeature
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -123,8 +124,9 @@ CODESTARTnewParserInst
 	}
 
 	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
 			inst->bOriginPresent = (int) pvals[i].val.d.n;
 		} else {
@@ -140,10 +142,12 @@ CODESTARTnewParserInst
 	}
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
+	if (lst != NULL) {
 		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
+	}
+	if (iRet != RS_RET_OK) {
 		freeParserInst(inst);
+	}
 ENDnewParserInst
 
 
@@ -215,8 +219,9 @@ CODESTARTparse2
 	/* TIMESTAMP */
 	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
 	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-		if(pMsg->dfltTZ[0] != '\0')
+		if (pMsg->dfltTZ[0] != '\0') {
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
+		}
 	} else {
 		DBGPRINTF("pmciscoios: fail at timestamp: '%s'\n", p2parse);
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
@@ -262,8 +267,9 @@ CODESTARTparse2
 	/* if we reach this point, we have a wellformed message and can persist the values */
 	MsgSetTAG(pMsg, bufParseTAG, i);
 	/* if bOriginPresent !=0 iHostname gets initialized */
-	if(pInst->bOriginPresent)
+	if (pInst->bOriginPresent) {
 		MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
+	}
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 finalize_it:

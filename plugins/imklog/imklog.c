@@ -108,8 +108,7 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 static prop_t *pLocalHostIP = NULL;
 
 static inline void
-initConfigSettings(void)
-{
+initConfigSettings(void) {
 	cs.bPermitNonKernel = 0;
 	cs.bParseKernelStamp = 0;
 	cs.bKeepKernelStamp = 0;
@@ -125,8 +124,7 @@ initConfigSettings(void)
  * rgerhards, 2008-04-12
  */
 static rsRetVal
-enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp)
-{
+enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp) {
 	struct syslogTime st;
 	msg_t *pMsg;
 	DEFiRet;
@@ -164,8 +162,7 @@ finalize_it:
  * rgerhards, 2008-04-14
  */
 static rsRetVal
-parsePRI(uchar **ppSz, syslog_pri_t *piPri)
-{
+parsePRI(uchar **ppSz, syslog_pri_t *piPri) {
 	DEFiRet;
 	syslog_pri_t i;
 	uchar *pSz;
@@ -175,8 +172,9 @@ parsePRI(uchar **ppSz, syslog_pri_t *piPri)
 	assert(pSz != NULL);
 	assert(piPri != NULL);
 
-	if(*pSz != '<' || !isdigit(*(pSz+1)))
+	if (*pSz != '<' || !isdigit(*(pSz+1))) {
 		ABORT_FINALIZE(RS_RET_INVALID_PRI);
+	}
 
 	++pSz;
 	i = 0;
@@ -184,8 +182,9 @@ parsePRI(uchar **ppSz, syslog_pri_t *piPri)
 		i = i * 10 + *pSz++ - '0';
 	}
 
-	if(*pSz != '>' || i > LOG_MAXPRI)
+	if (*pSz != '>' || i > LOG_MAXPRI) {
 		ABORT_FINALIZE(RS_RET_INVALID_PRI);
+	}
 
 	/* OK, we have a valid PRI */
 	*piPri = i;
@@ -199,8 +198,7 @@ finalize_it:
 /* log an imklog-internal message
  * rgerhards, 2008-04-14
  */
-rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...)
-{
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) {
 	DEFiRet;
 	va_list ap;
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
@@ -219,8 +217,7 @@ rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...)
  * time to use.
  * rgerhards, 2008-04-14
  */
-rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
-{
+rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp) {
 	syslog_pri_t pri;
 	int bPRISet = 0;
 	rsRetVal localRet;
@@ -242,8 +239,9 @@ rsRetVal Syslog(syslog_pri_t priority, uchar *pMsg, struct timeval *tp)
 	}
 	if(!bPRISet) {
 		localRet = parsePRI(&pMsg, &priority);
-		if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
+		if (localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK) {
 			FINALIZE;
+		}
 	}
 	/* if we don't get the pri, we use whatever we were supplied */
 
@@ -263,8 +261,7 @@ finalize_it:
  * It would probably be a good idea to extend the interface to support it, but so far
  * we create a (sufficiently valid) work-around. -- rgerhards, 2008-11-24
  */
-int klog_getMaxLine(void)
-{
+int klog_getMaxLine(void) {
 	return glbl.GetMaxLine();
 }
 
@@ -322,8 +319,9 @@ CODESTARTsetModCnf
 	}
 
 	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(modpblk.descr[i].name, "logpath")) {
 			loadModConf->pszPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "permitnonkernelfacility")) {
@@ -347,8 +345,9 @@ CODESTARTsetModCnf
 	loadModConf->configSetViaV2Method = 1;
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL) {
 		cnfparamvalsDestruct(pvals, &modpblk);
+	}
 ENDsetModCnf
 
 
@@ -363,8 +362,9 @@ CODESTARTendCnfLoad
 		loadModConf->console_log_level = cs.console_log_level;
 		if((cs.pszPath == NULL) || (cs.pszPath[0] == '\0')) {
 			loadModConf->pszPath = NULL;
-			if(cs.pszPath != NULL)
+			if (cs.pszPath != NULL) {
 				free(cs.pszPath);
+			}
 		} else {
 			loadModConf->pszPath = cs.pszPath;
 		}
@@ -411,10 +411,12 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
-	if(pLocalHostIP != NULL)
+	}
+	if (pLocalHostIP != NULL) {
 		prop.Destruct(&pLocalHostIP);
+	}
 
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
@@ -433,8 +435,7 @@ CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	cs.bPermitNonKernel = 0;
 	cs.bParseKernelStamp = 0;
 	cs.bKeepKernelStamp = 0;

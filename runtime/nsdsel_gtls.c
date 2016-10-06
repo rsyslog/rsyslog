@@ -46,8 +46,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsdsel_ptcp)
 
 static rsRetVal
-gtlsHasRcvInBuffer(nsd_gtls_t *pThis)
-{
+gtlsHasRcvInBuffer(nsd_gtls_t *pThis) {
 	/* we have a valid receive buffer one such is allocated and 
 	 * NOT exhausted!
 	 */
@@ -67,15 +66,15 @@ ENDobjConstruct(nsdsel_gtls)
 /* destructor for the nsdsel_gtls object */
 BEGINobjDestruct(nsdsel_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsdsel_gtls)
-	if(pThis->pTcp != NULL)
+	if (pThis->pTcp != NULL) {
 		nsdsel_ptcp.Destruct(&pThis->pTcp);
+	}
 ENDobjDestruct(nsdsel_gtls)
 
 
 /* Add a socket to the select set */
 static rsRetVal
-Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
-{
+Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp) {
 	DEFiRet;
 	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
 	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;
@@ -112,8 +111,7 @@ finalize_it:
  * TODO: add timeout!
  */
 static rsRetVal
-Select(nsdsel_t *pNsdsel, int *piNumReady)
-{
+Select(nsdsel_t *pNsdsel, int *piNumReady) {
 	DEFiRet;
 	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
 
@@ -134,8 +132,7 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
  * rgerhards, 2008-04-30
  */
 static rsRetVal
-doRetry(nsd_gtls_t *pNsd)
-{
+doRetry(nsd_gtls_t *pNsd) {
 	DEFiRet;
 	int gnuRet;
 
@@ -193,8 +190,7 @@ finalize_it:
 
 /* check if a socket is ready for IO */
 static rsRetVal
-IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
-{
+IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady) {
 	DEFiRet;
 	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
 	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;

@@ -149,8 +149,7 @@ static rsRetVal readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iE
 /* helpers for handling the recipient lists */
 
 /* destroy a complete recipient list */
-static void lstRcptDestruct(toRcpt_t *pRoot)
-{
+static void lstRcptDestruct(toRcpt_t *pRoot) {
 	toRcpt_t *pDel;
 
 	while(pRoot != NULL) {
@@ -167,8 +166,7 @@ static void lstRcptDestruct(toRcpt_t *pRoot)
  * The recipient address storage is handed over -- the caller must NOT delete it.
  */
 static rsRetVal
-addRcpt(toRcpt_t **ppLstRcpt, uchar *newRcpt)
-{
+addRcpt(toRcpt_t **ppLstRcpt, uchar *newRcpt) {
 	DEFiRet;
 	toRcpt_t *pNew = NULL;
 
@@ -193,8 +191,7 @@ finalize_it:
  * added. rgerhards, 2008-08-04
  */
 static rsRetVal
-legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	return addRcpt(&cs.lstRcpt, pNewVal);
 }
 
@@ -203,8 +200,7 @@ legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
  * iStatusToCheck < 0 means no checking should happen
  */
 static rsRetVal
-WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatusToCheck)
-{
+WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatusToCheck) {
 	toRcpt_t *pRcpt;
 	int iState;
 	DEFiRet;
@@ -217,8 +213,9 @@ WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatu
 		CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-		if(iStatusToCheck >= 0)
+		if (iStatusToCheck >= 0) {
 			CHKiRet(readResponse(pWrkrData, &iState, iStatusToCheck));
+		}
 	}
 
 finalize_it:
@@ -229,8 +226,7 @@ finalize_it:
 /* output the recipient list in rfc2822 format
  */
 static rsRetVal
-WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp)
-{
+WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp) {
 	toRcpt_t *pRcpt;
 	int iTos;
 	DEFiRet;
@@ -242,8 +238,9 @@ WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp)
 
 	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt, iTos = 0; pRcpt != NULL ; pRcpt = pRcpt->pNext, iTos++) {
 		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
-		if(iTos)
+		if (iTos) {
 			CHKiRet(Send(pWrkrData->md.smtp.sock, ", ", sizeof(", ") - 1));
+		}
 		CHKiRet(Send(pWrkrData->md.smtp.sock, "<", sizeof("<") - 1));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
 		CHKiRet(Send(pWrkrData->md.smtp.sock, ">", sizeof(">") - 1));
@@ -269,8 +266,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -306,8 +304,7 @@ ENDdbgPrintInstInfo
  * rgerhards, 2008-04-04
  */
 static rsRetVal
-getRcvChar(wrkrInstanceData_t *pWrkrData, char *pC)
-{
+getRcvChar(wrkrInstanceData_t *pWrkrData, char *pC) {
 	DEFiRet;
 	ssize_t lenBuf;
 
@@ -343,8 +340,7 @@ finalize_it:
  * rgerhards, 2008-04-08
  */
 static rsRetVal
-serverDisconnect(wrkrInstanceData_t *pWrkrData)
-{
+serverDisconnect(wrkrInstanceData_t *pWrkrData) {
 	DEFiRet;
 	assert(pWrkrData != NULL);
 
@@ -361,8 +357,7 @@ serverDisconnect(wrkrInstanceData_t *pWrkrData)
  * rgerhards, 2008-04-04
  */
 static rsRetVal
-serverConnect(wrkrInstanceData_t *pWrkrData)
-{
+serverConnect(wrkrInstanceData_t *pWrkrData) {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 	const char *smtpPort;
@@ -373,15 +368,19 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 
 	pData = pWrkrData->pData;
 
-	if(pData->md.smtp.pszSrv == NULL)
+	if (pData->md.smtp.pszSrv == NULL) {
 		smtpSrv = "127.0.0.1";
-	else
+	}
+	else {
 		smtpSrv = (char*)pData->md.smtp.pszSrv;
+	}
 
-	if(pData->md.smtp.pszSrvPort == NULL)
+	if (pData->md.smtp.pszSrvPort == NULL) {
 		smtpPort = "25";
-	else
+	}
+	else {
 		smtpPort = (char*)pData->md.smtp.pszSrvPort;
+	}
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
@@ -402,8 +401,9 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 	}
 
 finalize_it:
-	if(res != NULL)
+	if (res != NULL) {
                freeaddrinfo(res);
+	}
 		
 	if(iRet != RS_RET_OK) {
 		if(pWrkrData->md.smtp.sock != -1) {
@@ -418,8 +418,7 @@ finalize_it:
 
 /* send text to the server, blocking send */
 static rsRetVal
-Send(const int sock, const char *const __restrict__ msg, const size_t len)
-{
+Send(const int sock, const char *const __restrict__ msg, const size_t len) {
 	DEFiRet;
 	size_t offsBuf = 0;
 	ssize_t lenSend;
@@ -452,8 +451,7 @@ finalize_it:
  * The body is special in that we must escape a leading dot inside a line
  */
 static rsRetVal
-bodySend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len)
-{
+bodySend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len) {
 	DEFiRet;
 	char szBuf[2048];
 	size_t iSrc;
@@ -475,8 +473,9 @@ bodySend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len)
 				bHadCR = 1;
 				break;
 			case '\n':
-				if(bHadCR)
+				if (bHadCR) {
 					bInStartOfLine = 1;
+				}
 				bHadCR = 0;
 				break;
 			case '.':
@@ -502,8 +501,7 @@ finalize_it:
 /* read response line from server
  */
 static rsRetVal
-readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *const __restrict__ respLen)
-{
+readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *const __restrict__ respLen) {
 	DEFiRet;
 	size_t i = 0;
 	char c;
@@ -513,8 +511,9 @@ readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *c
 	
 	do {
 		CHKiRet(getRcvChar(pWrkrData, &c));
-		if(c == '\n')
+		if (c == '\n') {
 			break;
+		}
 		if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
 			pLn[i++] = c;
 	} while(1);
@@ -532,8 +531,7 @@ finalize_it:
  * rgerhards, 2008-04-07
  */
 static rsRetVal
-readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
-{
+readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected) {
 	DEFiRet;
 	int bCont;
 	char buf[128];
@@ -552,8 +550,9 @@ readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
 			*piState = buf[0] - '0';
 			*piState = *piState * 10 + buf[1] - '0';
 			*piState = *piState * 10 + buf[2] - '0';
-			if(*piState != iExpected)
+			if (*piState != iExpected) {
 				ABORT_FINALIZE(RS_RET_SMTP_ERROR);
+			}
 		}
 	} while(bCont);
 	
@@ -566,8 +565,7 @@ finalize_it:
  * rgerhards, 2008-04-08
  */
 static void
-mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
-{
+mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf) {
 	time_t tCurr;
 	struct tm tmCurr;
 	static const char szDay[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
@@ -584,8 +582,7 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
  * rgerhards, 2008-04-04
  */
 static rsRetVal
-sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
-{
+sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject) {
 	DEFiRet;
 	int iState; /* SMTP state */
 	instanceData *pData;
@@ -631,8 +628,9 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
 
 	/* body */
-	if(pData->bEnableBody)
+	if (pData->bEnableBody) {
 		CHKiRet(bodySend(pWrkrData, (char*)body, strlen((char*) body)));
+	}
 
 	/* end of data, back to envelope transaction */
 	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
@@ -665,8 +663,9 @@ CODESTARTtryResume
 	CHKiRet(serverConnect(pWrkrData));
 	CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
 finalize_it:
-	if(iRet == RS_RET_IO_ERROR)
+	if (iRet == RS_RET_IO_ERROR) {
 		iRet = RS_RET_SUSPENDED;
+	}
 ENDtryResume
 
 
@@ -676,12 +675,15 @@ BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF("ommail doAction()\n");
 
-	if(pData->constSubject != NULL)
+	if (pData->constSubject != NULL) {
 		subject = pData->constSubject;
-	else if(pData->bHaveSubject)
+	}
+	else if (pData->bHaveSubject) {
 		subject = ppString[1];
-	else
+	}
+	else {
 		subject = (uchar*)"message from rsyslog";
+	}
 
 	iRet = sendSMTP(pWrkrData, ppString[0], subject);
 	if(iRet != RS_RET_OK) {
@@ -693,8 +695,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 	pData->constSubject = NULL;
 }
@@ -713,8 +714,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "server")) {
 			pData->md.smtp.pszSrv = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
@@ -782,8 +784,9 @@ CODESTARTparseSelectorAct
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK) {
 		FINALIZE;
+	}
 
 	/* TODO: check strdup() result */
 
@@ -808,10 +811,12 @@ CODESTARTparseSelectorAct
 		pData->bHaveSubject = 1;
 		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) cs.pszSubject), OMSR_NO_RQD_TPL_OPTS));
 	}
-	if(cs.pszSrv != NULL)
+	if (cs.pszSrv != NULL) {
 		pData->md.smtp.pszSrv = (uchar*) strdup((char*)cs.pszSrv);
-	if(cs.pszSrvPort != NULL)
+	}
+	if (cs.pszSrvPort != NULL) {
 		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)cs.pszSrvPort);
+	}
 	pData->bEnableBody = cs.bEnableBody;
 
 	/* process template */
@@ -821,8 +826,7 @@ ENDparseSelectorAct
 
 
 /* Free string config variables and reset them to NULL (not necessarily the default!) */
-static rsRetVal freeConfigVariables(void)
-{
+static rsRetVal freeConfigVariables(void) {
 	DEFiRet;
 
 	free(cs.pszSrv);
@@ -861,8 +865,7 @@ ENDqueryEtryPt
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	DEFiRet;
 	cs.bEnableBody = 1;
 	iRet = freeConfigVariables();

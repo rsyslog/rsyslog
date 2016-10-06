@@ -53,8 +53,7 @@ DEFobjStaticHelpers
 /* Initialize TCP sockets (for sender)
  */
 static int
-CreateSocket(struct addrinfo *addrDest)
-{
+CreateSocket(struct addrinfo *addrDest) {
 	int fd;
 	struct addrinfo *r; 
 	
@@ -122,8 +121,7 @@ CreateSocket(struct addrinfo *addrDest)
  * rgerhards, 2006-12-07
  */
 static rsRetVal
-TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
-{
+TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed) {
 	DEFiRet;
 	TCPFRAMINGMODE framingToUse;
 	int bIsCompressed;
@@ -283,8 +281,7 @@ finalize_it:
  * support plain TCP and GSS via common code.
  */
 static int
-Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
-{
+Send(tcpclt_t *pThis, void *pData, char *msg, size_t len) {
 	DEFiRet;
 	int bDone = 0;
 	int retry = 0;
@@ -318,8 +315,9 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 			 * However, if not requested, we do NOT need to do all the stuff needed for it.
 			 */
 			if(pThis->bResendLastOnRecon == 1) {
-				if(pThis->prevMsg != NULL)
+				if (pThis->prevMsg != NULL) {
 					free(pThis->prevMsg);
+				}
 				/* if we can not alloc a new buffer, we silently ignore it. The worst that
 				 * happens is that we lose our message recovery buffer - anything else would
 				 * be worse, so don't try anything ;) -- rgerhards, 2008-03-12
@@ -352,51 +350,46 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 	}
 
 finalize_it:
-	if(bMsgMustBeFreed)
+	if (bMsgMustBeFreed) {
 		free(msg);
+	}
 	RETiRet;
 }
 
 
 /* set functions */
 static rsRetVal
-SetResendLastOnRecon(tcpclt_t *pThis, int bResendLastOnRecon)
-{
+SetResendLastOnRecon(tcpclt_t *pThis, int bResendLastOnRecon) {
 	DEFiRet;
 	pThis->bResendLastOnRecon = (short) bResendLastOnRecon;
 	RETiRet;
 }
 static rsRetVal
-SetSendInit(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
-{
+SetSendInit(tcpclt_t *pThis, rsRetVal (*pCB)(void*)) {
 	DEFiRet;
 	pThis->initFunc = pCB;
 	RETiRet;
 }
 static rsRetVal
-SetSendPrepRetry(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
-{
+SetSendPrepRetry(tcpclt_t *pThis, rsRetVal (*pCB)(void*)) {
 	DEFiRet;
 	pThis->prepRetryFunc = pCB;
 	RETiRet;
 }
 static rsRetVal
-SetSendFrame(tcpclt_t *pThis, rsRetVal (*pCB)(void*, char*, size_t))
-{
+SetSendFrame(tcpclt_t *pThis, rsRetVal (*pCB)(void*, char*, size_t)) {
 	DEFiRet;
 	pThis->sendFunc = pCB;
 	RETiRet;
 }
 static rsRetVal
-SetFraming(tcpclt_t *pThis, TCPFRAMINGMODE framing)
-{
+SetFraming(tcpclt_t *pThis, TCPFRAMINGMODE framing) {
 	DEFiRet;
 	pThis->tcp_framing = framing;
 	RETiRet;
 }
 static rsRetVal
-SetRebindInterval(tcpclt_t *pThis, int iRebindInterval)
-{
+SetRebindInterval(tcpclt_t *pThis, int iRebindInterval) {
 	DEFiRet;
 	pThis->iRebindInterval = iRebindInterval;
 	RETiRet;
@@ -412,8 +405,7 @@ ENDobjConstruct(tcpclt)
 /* ConstructionFinalizer
  */
 static rsRetVal
-tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis)
-{
+tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpclt);
 
@@ -424,8 +416,9 @@ tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis)
 /* destructor for the tcpclt object */
 BEGINobjDestruct(tcpclt) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcpclt)
-	if(pThis->prevMsg != NULL)
+	if (pThis->prevMsg != NULL) {
 		free(pThis->prevMsg);
+	}
 ENDobjDestruct(tcpclt)
 
 

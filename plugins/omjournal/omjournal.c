@@ -114,8 +114,9 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	if (eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -130,8 +131,7 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->tplName = NULL;
 }
 
@@ -147,8 +147,9 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 
         if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -181,8 +182,7 @@ ENDtryResume
 
 
 static struct iovec *
-build_iovec(size_t *retargc, struct json_object *json)
-{
+build_iovec(size_t *retargc, struct json_object *json) {
 	struct iovec *iov;
 	const char *key;
 	const char *val;
@@ -192,11 +192,13 @@ build_iovec(size_t *retargc, struct json_object *json)
 	size_t i;
 
 	const size_t argc = json_object_object_length(json);
-	if(argc == 0)
+	if (argc == 0) {
 		return NULL;
+	}
 	iov = malloc( sizeof(struct iovec) * argc );
-	if(NULL == iov)
+	if (NULL == iov) {
 		goto fail;
+	}
 
 	/* note: as we know the number of subobjects, we use the for loop
 	 * to iterate over them instead of the _iter_ API. This is guaranteed
@@ -214,8 +216,9 @@ build_iovec(size_t *retargc, struct json_object *json)
 		vec_len = key_len + val_len + 1;
 
 		char *buf = malloc(vec_len + 1);
-		if(NULL == buf) 
+		if (NULL == buf) {
 			goto fail;
+		}
 
 		memcpy(buf, key, key_len);
 		memcpy(buf + key_len, "=", 1);
@@ -230,8 +233,9 @@ build_iovec(size_t *retargc, struct json_object *json)
 	return iov;
 
 fail:
-	if( NULL == iov)
+	if ( NULL == iov) {
 		return NULL;
+	}
 
 	size_t j;
 	// iterate over any iovecs that were initalised above and free them.
@@ -245,8 +249,7 @@ fail:
 
 
 static void
-send_non_template_message(msg_t *const __restrict__ pMsg)
-{
+send_non_template_message(msg_t *const __restrict__ pMsg) {
 	uchar *tag;
 	int lenTag;
 	int sev;  
@@ -264,8 +267,7 @@ send_non_template_message(msg_t *const __restrict__ pMsg)
 }
 
 static void
-send_template_message(struct json_object *const __restrict__ json)
-{
+send_template_message(struct json_object *const __restrict__ json) {
 	size_t argc;
 	struct iovec *iovec;
 	size_t i;

@@ -78,8 +78,7 @@ static unsigned clockTopicAccess = 0;
 static pthread_mutex_t mutClock;
 #endif
 static inline uint64
-getClockTopicAccess(void)
-{
+getClockTopicAccess(void) {
 #if HAVE_ATOMIC_BUILTINS64
 	return ATOMIC_INC_AND_FETCH_uint64(&clockTopicAccess, &mutClock);
 #else
@@ -164,8 +163,7 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 static inline uint32_t
-getPartition(instanceData *const __restrict__ pData)
-{
+getPartition(instanceData *const __restrict__ pData) {
 	if (pData->autoPartition) {
 		return RD_KAFKA_PARTITION_UA;
 	} else {
@@ -178,8 +176,7 @@ getPartition(instanceData *const __restrict__ pData)
 
 /* must always be called with appropriate locks taken */
 static void
-d_free_topic(rd_kafka_topic_t **topic)
-{
+d_free_topic(rd_kafka_topic_t **topic) {
 	if (*topic != NULL) {
 		DBGPRINTF("omkafka: closing topic %s\n", rd_kafka_topic_name(*topic));
 		rd_kafka_topic_destroy(*topic);
@@ -190,8 +187,7 @@ d_free_topic(rd_kafka_topic_t **topic)
 /* destroy topic item */
 /* must be called with write(rkLock) */
 static void
-closeTopic(instanceData *__restrict__ const pData)
-{
+closeTopic(instanceData *__restrict__ const pData) {
 	d_free_topic(&pData->pTopic);
 }
 
@@ -203,14 +199,14 @@ closeTopic(instanceData *__restrict__ const pData)
 /* delete a cache entry from the dynamic topic cache */
 /* must be called with lock(mutDynCache) */
 static rsRetVal
-dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry)
-{
+dynaTopicDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry) {
 	dynaTopicCacheEntry **pCache = pData->dynCache;
 	DEFiRet;
 	ASSERT(pCache != NULL);
 
-	if(pCache[iEntry] == NULL)
+	if (pCache[iEntry] == NULL) {
 		FINALIZE;
+	}
 	pthread_rwlock_wrlock(&pCache[iEntry]->lock);
 
 	DBGPRINTF("Removing entry %d for topic '%s' from dynaCache.\n", iEntry,
@@ -235,8 +231,7 @@ finalize_it:
 
 /* clear the entire dynamic topic cache */
 static inline void
-dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
-{
+dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData) {
 	register int i;
 	ASSERT(pData != NULL);
 
@@ -298,8 +293,7 @@ finalize_it:
 /* create the topic object */
 /* must be called with write(rkLock) */
 static rsRetVal
-prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
-{
+prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName) {
 	DEFiRet;
 	CHKiRet(createTopic(pData, newTopicName, &pData->pTopic));
 finalize_it:
@@ -321,8 +315,7 @@ finalize_it:
  */
 static inline rsRetVal
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
-				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
-{
+				rd_kafka_topic_t** topic, pthread_rwlock_t** lock) {
 	uint64 ctOldest;
 	int iOldest;
 	int i;
@@ -357,8 +350,9 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	ctOldest = getClockTopicAccess();
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		if(pCache[i] == NULL || pCache[i]->pName == NULL) {
-			if(iFirstFree == -1)
+			if (iFirstFree == -1) {
 				iFirstFree = i;
+			}
 		} else { /*got an element, let's see if it matches */
 			if(!ustrcmp(newTopicName, pCache[i]->pName)) {
 				/* we found our element! */
@@ -442,8 +436,7 @@ static rsRetVal
 writeDataError(instanceData *const pData,
 	const char *const __restrict__ data,
 	const size_t lenData,
-	const int kafkaErr)
-{
+	const int kafkaErr) {
 	int bLocked = 0;
 	struct json_object *json = NULL;
 	DEFiRet;
@@ -495,10 +488,12 @@ writeDataError(instanceData *const pData,
 	}
 
 finalize_it:
-	if(bLocked)
+	if (bLocked) {
 		pthread_mutex_unlock(&pData->mutErrFile);
-	if(json != NULL)
+	}
+	if (json != NULL) {
 		json_object_put(json);
+	}
 	RETiRet;
 }
 
@@ -506,25 +501,23 @@ static void
 deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	   void *payload, size_t len,
 	   int error_code,
-	   void *opaque, void __attribute__((unused)) *msg_opaque)
-{
+	   void *opaque, void __attribute__((unused)) *msg_opaque) {
 	instanceData *const pData = (instanceData *) opaque;
-	if(error_code != 0)
+	if (error_code != 0) {
 		writeDataError(pData, (char*) payload, len, error_code);
+	}
 }
 
 static void
 kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
-	    const char *fac, const char *buf)
-{
+	    const char *fac, const char *buf) {
 	DBGPRINTF("omkafka: kafka log message [%d,%s]: %s\n",
 		  level, fac, buf);
 }
 
 /* should be called with write(rkLock) */
 static inline void
-do_rd_kafka_destroy(instanceData *const __restrict pData)
-{
+do_rd_kafka_destroy(instanceData *const __restrict pData) {
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: can't close, handle wasn't open\n");
 	} else {
@@ -559,8 +552,7 @@ do_rd_kafka_destroy(instanceData *const __restrict pData)
 
 /* should be called with write(rkLock) */
 static void
-closeKafka(instanceData *const __restrict__ pData)
-{
+closeKafka(instanceData *const __restrict__ pData) {
 	if(pData->bIsOpen) {
 		do_rd_kafka_destroy(pData);
 		pData->bIsOpen = 0;
@@ -571,8 +563,7 @@ static void
 errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 	int __attribute__((unused)) err,
 	const char *reason,
-	void __attribute__((unused)) *opaque)
-{
+	void __attribute__((unused)) *opaque) {
 	errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 		"omkafka: kafka message %s", reason);
 }
@@ -582,8 +573,7 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 #if 0 /* the stock librdkafka version in Ubuntu 14.04 LTS does NOT support metadata :-( */
 /* Note: this is a skeleton, with some code missing--> add it when it is actually implemented. */
 static int
-getConfiguredPartitions()
-{
+getConfiguredPartitions() {
 	struct rd_kafka_metadata *pMetadata;
 	if(rd_kafka_metadata(pData->rk, 0, rkt, &pMetadata, 8)
 		== RD_KAFKA_RESP_ERR_NO_ERROR) {
@@ -600,14 +590,14 @@ getConfiguredPartitions()
 
 /* should be called with write(rkLock) */
 static rsRetVal
-openKafka(instanceData *const __restrict__ pData)
-{
+openKafka(instanceData *const __restrict__ pData) {
 	char errstr[MAX_ERRMSG];
 	int nBrokers = 0;
 	DEFiRet;
 
-	if(pData->bIsOpen)
+	if (pData->bIsOpen) {
 		FINALIZE;
+	}
 
 	pData->pTopic = NULL;
 
@@ -667,8 +657,7 @@ finalize_it:
 }
 
 static rsRetVal
-setupKafkaHandle(instanceData *const __restrict__ pData, int recreate)
-{
+setupKafkaHandle(instanceData *const __restrict__ pData, int recreate) {
 	DEFiRet;
 	pthread_rwlock_wrlock(&pData->rkLock);
 	if (recreate) {
@@ -676,8 +665,9 @@ setupKafkaHandle(instanceData *const __restrict__ pData, int recreate)
 	}
 	CHKiRet(openKafka(pData));
 	if (! pData->dynaTopic) {
-		if( pData->pTopic == NULL)
+		if ( pData->pTopic == NULL) {
 			CHKiRet(prepareTopic(pData, pData->topic));
+		}
 	}
 finalize_it:
 	if (iRet != RS_RET_OK) {
@@ -742,8 +732,9 @@ CODESTARTfreeInstance
 		free((void*) pData->topicConfParams[i].name);
 		free((void*) pData->topicConfParams[i].val);
 	}
-	if(pData->fdErrFile != -1)
+	if (pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
+	}
 	pthread_rwlock_wrlock(&pData->rkLock);
 	closeKafka(pData);
 	if(pData->dynaTopic && pData->dynCache != NULL) {
@@ -791,8 +782,7 @@ ENDtryResume
 
 /* must be called with read(rkLock) */
 static rsRetVal
-writeKafka(instanceData *pData, uchar *msg, uchar *topic)
-{
+writeKafka(instanceData *pData, uchar *msg, uchar *topic) {
 	DEFiRet;
 	const int partition = getPartition(pData);
 	rd_kafka_topic_t *rkt = NULL;
@@ -848,16 +838,19 @@ finalize_it:
 BEGINdoAction
 CODESTARTdoAction
 	instanceData *const pData = pWrkrData->pData;
-	if (! pData->bIsOpen)
+	if (! pData->bIsOpen) {
 		CHKiRet(setupKafkaHandle(pData, 0));
+	}
 
 	pthread_rwlock_rdlock(&pData->rkLock);
 
 	/* support dynamic topic */
-	if(pData->dynaTopic)
+	if (pData->dynaTopic) {
 		iRet = writeKafka(pData, ppString[0], ppString[1]);
-	else
+	}
+	else {
 		iRet = writeKafka(pData, ppString[0], pData->topic);
+	}
 		
 	pthread_rwlock_unlock(&pData->rkLock);
 finalize_it:
@@ -865,8 +858,7 @@ ENDdoAction
 
 
 static inline void
-setInstParamDefaults(instanceData *pData)
-{
+setInstParamDefaults(instanceData *pData) {
 	pData->topic = NULL;
 	pData->dynaTopic = 0;
 	pData->iDynaTopicCacheSize = 50;
@@ -886,8 +878,7 @@ setInstParamDefaults(instanceData *pData)
 static rsRetVal
 processKafkaParam(char *const param,
 	const char **const name,
-	const char **const paramval)
-{
+	const char **const paramval) {
 	DEFiRet;
 	char *val = strstr(param, "=");
 	if(val == NULL) {
@@ -916,8 +907,9 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(actpblk.descr[i].name, "topic")) {
 			pData->topic = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynatopic")) {
@@ -936,8 +928,9 @@ CODESTARTnewActInst
 			es_str_t *es = es_newStr(128);
 			int bNeedComma = 0;
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-				if(bNeedComma)
+				if (bNeedComma) {
 					es_addChar(&es, ',');
+				}
 				es_addStr(&es, pvals[i].val.d.ar->arr[j]);
 				bNeedComma = 1;
 			}
@@ -978,8 +971,9 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->brokers == NULL)
+	if (pData->brokers == NULL) {
 		CHKmalloc(pData->brokers = strdup("localhost:9092"));
+	}
 
 	if(pData->dynaTopic && pData->topic == NULL) {
         errmsg.LogError(0, RS_RET_CONFIG_ERROR,

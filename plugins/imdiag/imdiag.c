@@ -108,23 +108,20 @@ static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK a
 /* this shall go into a specific ACL module! */
 static int
 isPermittedHost(struct sockaddr __attribute__((unused)) *addr, char __attribute__((unused)) *fromHostFQDN,
-		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess)
-{
+		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess) {
 	return 1;	/* TODO: implement ACLs ... or via some other way? */
 }
 
 
 static rsRetVal
-doOpenLstnSocks(tcpsrv_t *pSrv)
-{
+doOpenLstnSocks(tcpsrv_t *pSrv) {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
 	return tcpsrv.create_tcp_socket(pSrv);
 }
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
-{
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd) {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
@@ -136,8 +133,7 @@ finalize_it:
 }
 
 static rsRetVal
-onRegularClose(tcps_sess_t *pSess)
-{
+onRegularClose(tcps_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -150,8 +146,7 @@ onRegularClose(tcps_sess_t *pSess)
 
 
 static rsRetVal
-onErrClose(tcps_sess_t *pSess)
-{
+onErrClose(tcps_sess_t *pSess) {
 	DEFiRet;
 	assert(pSess != NULL);
 
@@ -171,8 +166,7 @@ onErrClose(tcps_sess_t *pSess)
 #define TO_LOWERCASE	1
 #define NO_MODIFY	0
 static void
-getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int options)
-{
+getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int options) {
 	uchar c;
 	uchar *pszSrc = *ppszSrc;
 
@@ -181,8 +175,9 @@ getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int options)
 
 	while(*pszSrc && *pszSrc != ' ' && lenBuf > 1) {
 		c = *pszSrc++;
-		if(options & TO_LOWERCASE)
+		if (options & TO_LOWERCASE) {
 			c = tolower(c);
+		}
 		*pszBuf++ = c;
 		lenBuf--;
 	}
@@ -196,8 +191,7 @@ getFirstWord(uchar **ppszSrc, uchar *pszBuf, size_t lenBuf, int options)
  * rgerhards, 2009-05-27
  */
 static rsRetVal __attribute__((format(printf, 2, 3)))
-sendResponse(tcps_sess_t *pSess, const char *const __restrict__ fmt, ...)
-{
+sendResponse(tcps_sess_t *pSess, const char *const __restrict__ fmt, ...) {
 	va_list ap;
 	ssize_t len;
 	uchar buf[1024];
@@ -215,8 +209,7 @@ finalize_it:
 /* submit a generated numeric-suffix message to the rsyslog core
  */
 static rsRetVal
-doInjectMsg(uchar *szMsg, ratelimit_t *ratelimiter)
-{
+doInjectMsg(uchar *szMsg, ratelimit_t *ratelimiter) {
 	msg_t *pMsg;
 	struct syslogTime stTime;
 	time_t ttGenTime;
@@ -240,8 +233,7 @@ finalize_it:
 /* submit a generated numeric-suffix message to the rsyslog core
  */
 static rsRetVal
-doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter)
-{
+doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter) {
 	uchar szMsg[1024];
 	DEFiRet;
 	snprintf((char*)szMsg, sizeof(szMsg)/sizeof(uchar),
@@ -256,8 +248,7 @@ finalize_it:
  * rgerhards, 2009-05-27
  */
 static rsRetVal
-injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
-{
+injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
 	uchar wordBuf[1024];
 	int iFrom, nMsgs;
 	uchar *litteralMsg;
@@ -288,8 +279,9 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 	DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
 
 finalize_it:
-	if(ratelimit != NULL)
+	if (ratelimit != NULL) {
 		ratelimitDestruct(ratelimit);
+	}
     free(litteralMsg);
 	RETiRet;
 }
@@ -307,19 +299,21 @@ finalize_it:
  * semantics over and crafting a new function. -- rgerhards
  */
 static rsRetVal
-waitMainQEmpty(tcps_sess_t *pSess)
-{
+waitMainQEmpty(tcps_sess_t *pSess) {
 	int iPrint = 0;
 	int nempty = 0;
 	DEFiRet;
 
 	while(1) {
-		if(iOverallQueueSize == 0)
+		if (iOverallQueueSize == 0) {
 			++nempty;
-		else
+		}
+		else {
 			nempty = 0;
-		if(nempty > 10)
+		}
+		if (nempty > 10) {
 			break;
+		}
 		if(iPrint++ % 500 == 0)
 			DBGPRINTF("imdiag sleeping, wait queues drain, "
 				"curr size %d, nempty %d\n",
@@ -335,8 +329,7 @@ finalize_it:
 }
 
 static rsRetVal
-awaitLookupTableReload(tcps_sess_t *pSess)
-{
+awaitLookupTableReload(tcps_sess_t *pSess) {
 	DEFiRet;
 
 	while(1) {
@@ -447,8 +440,7 @@ finalize_it:
  * rgerhards, 2009-05-24
  */
 static rsRetVal
-OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
-{
+OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg) {
 	uchar *pszMsg;
 	uchar *pToFree = NULL;
 	uchar cmdBuf[1024];
@@ -488,8 +480,9 @@ OnMsgReceived(tcps_sess_t *pSess, uchar *pRcv, int iLenMsg)
 	}
 
 finalize_it:
-	if(pToFree != NULL)
+	if (pToFree != NULL) {
 		free(pToFree);
+	}
 	RETiRet;
 }
 
@@ -497,8 +490,7 @@ finalize_it:
 /* set permitted peer -- rgerhards, 2008-05-19
  */
 static rsRetVal
-setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
-{
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID) {
 	DEFiRet;
 	CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
 	free(pszID); /* no longer needed, but we need to free as of interface def */
@@ -507,8 +499,7 @@ finalize_it:
 }
 
 
-static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
-{
+static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 
 	if(pOurTcpsrv == NULL) {
@@ -540,8 +531,9 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
-		if(pOurTcpsrv != NULL)
+		if (pOurTcpsrv != NULL) {
 			tcpsrv.Destruct(&pOurTcpsrv);
+		}
 	}
 	free(pNewVal);
 	RETiRet;
@@ -588,8 +580,9 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
-	if(pOurTcpsrv == NULL)
+	if (pOurTcpsrv == NULL) {
 		ABORT_FINALIZE(RS_RET_NO_RUN);
+	}
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imdiag"), sizeof("imdiag") - 1));
@@ -609,19 +602,23 @@ ENDwillRun
 
 BEGINafterRun
 CODESTARTafterRun
-	if(pInputName != NULL)
+	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
-	if(pRcvDummy != NULL)
+	}
+	if (pRcvDummy != NULL) {
 		prop.Destruct(&pRcvDummy);
-	if(pRcvIPDummy != NULL)
+	}
+	if (pRcvIPDummy != NULL) {
 		prop.Destruct(&pRcvIPDummy);
+	}
 ENDafterRun
 
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pOurTcpsrv != NULL)
+	if (pOurTcpsrv != NULL) {
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+	}
 
 	if(pPermPeersRoot != NULL) {
 		net.DestructPermittedPeers(&pPermPeersRoot);
@@ -649,8 +646,7 @@ ENDmodExit
 
 
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal) {
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
 	free(pszInputName);
@@ -665,8 +661,9 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
+	if (eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 

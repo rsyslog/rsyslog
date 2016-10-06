@@ -58,10 +58,12 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
+	if (eFeat == sFEATUREAutomaticSanitazion) {
 		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	}
+	if (eFeat == sFEATUREAutomaticPRIParsing) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -94,11 +96,13 @@ CODESTARTparse
 	lenMsg -=16;
 	p2parse +=16;
 	/* if there is the string "Message forwarded from " were the hostname should be */
-	if(!strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1))
+	if (!strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1)) {
 		skipLen = 23;
+	}
 	/* or "From " */
-	if(!strncasecmp((char*) p2parse, OpeningText2, sizeof(OpeningText2)-1))
+	if (!strncasecmp((char*) p2parse, OpeningText2, sizeof(OpeningText2)-1)) {
 		skipLen = 5;
+	}
 	DBGPRINTF("pmaixforwardedfrom: skipLen %d\n", skipLen);
 	if(!skipLen) {
 		/* wrong opening text */

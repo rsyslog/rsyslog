@@ -134,7 +134,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal addListener(instanceConf_t* iconf){
+static rsRetVal addListener(instanceConf_t* iconf) {
 	DEFiRet;
 	
 	DBGPRINTF("imczmq: addListener called..\n");	
@@ -152,7 +152,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 
 	DBGPRINTF("imczmq: created socket of type %d..\n", iconf->sockType);	
 
-	if(runModConf->authType) {	
+	if(runModConf->authType) {
 		if(!strcmp(runModConf->authType, "CURVESERVER")) {
 			DBGPRINTF("imczmq: we are a CURVESERVER\n");	
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
@@ -258,7 +258,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal rcvData(){
+static rsRetVal rcvData() {
 	DEFiRet;
 	
 	if(!listenerList) {
@@ -475,8 +475,7 @@ ENDendCnfLoad
 
 
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
-{
+std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst) {
 	errmsg.LogError(0, NO_ERRCODE,
 			"imczmq: ruleset '%s' for socket %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
@@ -557,9 +556,9 @@ CODESTARTnewInpInst
 		else if(!strcmp(inppblk.descr[i].name, "topics")) {
 			inst->topics = es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-		else if(!strcmp(inppblk.descr[i].name, "socktype")){
+		else if(!strcmp(inppblk.descr[i].name, "socktype")) {
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if( NULL == stringType ){
+			if( NULL == stringType ) {
 				errmsg.LogError(0, RS_RET_CONFIG_ERROR,
 					"imczmq: '%s' is invalid sockType", stringType);
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);

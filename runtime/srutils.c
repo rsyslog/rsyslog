@@ -122,8 +122,7 @@ syslogName_t	syslogFacNames[] = {
  * public members                                                    *
  * ################################################################# */
 
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
-{
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv) {
 	int i;
 	int bIsNegative;
 	char szBuf[64];	/* sufficiently large for my lifespan and those of my children... ;) */
@@ -131,13 +130,13 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 	assert(pBuf != NULL);
 	assert(iLenBuf > 1);	/* This is actually an app error and as thus checked for... */
 
-	if(iToConv < 0)
-	{
+	if(iToConv < 0) {
 		bIsNegative = RSTRUE;
 		iToConv *= -1;
 	}
-	else
+	else {
 		bIsNegative = RSFALSE;
+	}
 
 	/* first generate a string with the digits in the reverse direction */
 	i = 0;
@@ -153,8 +152,9 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 		return RS_RET_PROVIDED_BUFFER_TOO_SMALL;
 
 	/* then move it to the right direction... */
-	if(bIsNegative == RSTRUE)
+	if (bIsNegative == RSTRUE) {
 		*pBuf++ = '-';
+	}
 	while(i >= 0)
 		*pBuf++ = szBuf[i--];
 	*pBuf = '\0';	/* terminate it!!! */
@@ -162,14 +162,14 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 	return RS_RET_OK;
 }
 
-uchar *srUtilStrDup(uchar *pOld, size_t len)
-{
+uchar *srUtilStrDup(uchar *pOld, size_t len) {
 	uchar *pNew;
 
 	assert(pOld != NULL);
 	
-	if((pNew = MALLOC(len + 1)) != NULL)
+	if ((pNew = MALLOC(len + 1)) != NULL) {
 		memcpy(pNew, pOld, len + 1);
+	}
 
 	return pNew;
 }
@@ -194,8 +194,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * loop. -- rgerhards, 2010-03-25
  */
 int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
-		       uid_t uid, gid_t gid, int bFailOnChownFail)
-{
+		       uid_t uid, gid_t gid, int bFailOnChownFail) {
         uchar *p;
         uchar *pszWork;
         size_t len;
@@ -206,8 +205,9 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
 	assert(lenFile > 0);
 
         len = lenFile + 1; /* add one for '\0'-byte */
-	if((pszWork = MALLOC(len)) == NULL)
+	if ((pszWork = MALLOC(len)) == NULL) {
 		return -1;
+	}
         memcpy(pszWork, szFile, len);
         for(p = pszWork+1 ; *p ; p++)
                 if(*p == '/') {
@@ -220,8 +220,9 @@ again:
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(chown((char*)pszWork, uid, gid) != 0)
-							if(bFailOnChownFail)
+							if (bFailOnChownFail) {
 								bErr = 1;
+							}
 							/* silently ignore if configured
 							 * to do so.
 							 */
@@ -255,8 +256,7 @@ again:
  * a lot of time.
  * implemented 2007-07-20 rgerhards
  */
-int execProg(uchar *program, int bWait, uchar *arg)
-{
+int execProg(uchar *program, int bWait, uchar *arg) {
         int pid;
 	int sig;
 	struct sigaction sigAct;
@@ -309,8 +309,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
  * charater or the \0 byte, if there is none. It is never
  * moved past the \0.
  */
-void skipWhiteSpace(uchar **pp)
-{
+void skipWhiteSpace(uchar **pp) {
 	register uchar *p;
 
 	assert(pp != NULL);
@@ -336,8 +335,7 @@ void skipWhiteSpace(uchar **pp)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, long lNum, int lNumDigits)
-{
+		     size_t lenFName, long lNum, int lNumDigits) {
 	DEFiRet;
 	uchar *pName;
 	uchar *pNameWork;
@@ -358,8 +356,9 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 	}
 
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
-	if((pName = MALLOC(lenName)) == NULL)
+	if ((pName = MALLOC(lenName)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	
 	/* got memory, now construct string */
 	memcpy(pName, pDirName, lenDirName);
@@ -384,12 +383,12 @@ finalize_it:
  * iterative approach as we do not like to draw in the floating point
  * library just for log(). -- rgerhards, 2008-01-10
  */
-int getNumberDigits(long lNum)
-{
+int getNumberDigits(long lNum) {
 	int iDig;
 
-	if(lNum == 0)
+	if (lNum == 0) {
 		iDig = 1;
+	}
 	else
 		for(iDig = 0 ; lNum != 0 ; ++iDig)
 			lNum /= 10;
@@ -403,8 +402,7 @@ int getNumberDigits(long lNum)
  * rgerhards, 2008-01-14
  */
 rsRetVal
-timeoutComp(struct timespec *pt, long iTimeout)
-{
+timeoutComp(struct timespec *pt, long iTimeout) {
 #	if _POSIX_TIMERS <= 0
 	struct timeval tv;
 #	endif
@@ -432,8 +430,7 @@ timeoutComp(struct timespec *pt, long iTimeout)
 }
 
 long long
-currentTimeMills(void)
-{
+currentTimeMills(void) {
 #	if _POSIX_TIMERS > 0
 	struct timespec tm;
 #   else
@@ -458,8 +455,7 @@ currentTimeMills(void)
  * rgerhards, 2008-01-25
  */
 long
-timeoutVal(struct timespec *pt)
-{
+timeoutVal(struct timespec *pt) {
 	struct timespec t;
 	long iTimeout;
 #	if _POSIX_TIMERS <= 0
@@ -480,8 +476,9 @@ timeoutVal(struct timespec *pt)
 	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000000;
 	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
 
-	if(iTimeout < 0)
+	if (iTimeout < 0) {
 		iTimeout = 0;
+	}
 
 	ENDfunc
 	return iTimeout;
@@ -492,8 +489,7 @@ timeoutVal(struct timespec *pt)
  * rgerhards, 2008-01-14
  */
 void
-mutexCancelCleanup(void *arg)
-{
+mutexCancelCleanup(void *arg) {
 	BEGINfunc
 	assert(arg != NULL);
 	d_pthread_mutex_unlock((pthread_mutex_t*) arg);
@@ -507,8 +503,7 @@ mutexCancelCleanup(void *arg)
  * rgerhards, 2008-01-28
  */
 void
-srSleep(int iSeconds, int iuSeconds)
-{
+srSleep(int iSeconds, int iuSeconds) {
 	struct timeval tvSelectTimeout;
 
 	BEGINfunc
@@ -555,8 +550,7 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 
 
 /*  Decode a symbolic name to a numeric value */
-int decodeSyslogName(uchar *name, syslogName_t *codetab)
-{
+int decodeSyslogName(uchar *name, syslogName_t *codetab) {
 	register syslogName_t *c;
 	register uchar *p;
 	uchar buf[80];
@@ -571,8 +565,9 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	}
 	strncpy((char*) buf, (char*) name, 79);
 	for(p = buf; *p; p++) {
-		if (isupper((int) *p))
+		if (isupper((int) *p)) {
 			*p = tolower((int) *p);
+		}
 	}
 	for(c = codetab; c->c_name; c++) {
 		if(!strcmp((char*) buf, (char*) c->c_name)) {
@@ -605,8 +600,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
  * so that it treats ' ' as a request for whitespace. But in general, the function and its callers
  * should be changed over time, this is not really very good code...
  */
-int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
-{
+int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep) {
 	uchar *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
 	while((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
@@ -614,7 +608,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') {
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
@@ -623,8 +617,9 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		 * was returned in case of end-of-string. rgerhards 2005-07-29
 		 */
 		*ppSrc = pSrc;
-	else
+	else {
 		*ppSrc = pSrc+1;
+	}
 	*pDst = '\0';
 	return iErr;
 }
@@ -635,8 +630,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
  * rgerhards, 2009-06-12
  */
 rsRetVal
-getFileSize(uchar *pszName, off_t *pSize)
-{
+getFileSize(uchar *pszName, off_t *pSize) {
 	int ret;
 	struct stat statBuf;
 	DEFiRet;
@@ -661,8 +655,7 @@ finalize_it:
  * wildcard character and 0 otherwise (or if the string is empty).
  */
 int
-containsGlobWildcard(char *str)
-{
+containsGlobWildcard(char *str) {
 	char *p;
 	if(!str) {
 		return 0;
@@ -680,16 +673,14 @@ containsGlobWildcard(char *str)
 	return 0;
 }
 
-void seedRandomNumber(void)
-{
+void seedRandomNumber(void) {
 	struct timespec t;
 	timeoutComp(&t, 0);
 	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
 	srandom((unsigned int) x);
 }
 
-long int randomNumber(void)
-{
+long int randomNumber(void) {
 	return random();
 }
 

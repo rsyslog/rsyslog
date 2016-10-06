@@ -82,10 +82,12 @@ struct instanceConf_s {
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
+	if (eFeat == sFEATUREAutomaticSanitazion) {
 		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	}
+	if (eFeat == sFEATUREAutomaticPRIParsing) {
 		iRet = RS_RET_OK;
+	}
 ENDisCompatibleWithFeature
 
 
@@ -93,8 +95,7 @@ ENDisCompatibleWithFeature
  * add it to the list of instances.
  */
 static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
+createInstance(instanceConf_t **pinst) {
 	instanceConf_t *inst;
 	DEFiRet;
 	CHKmalloc(inst = MALLOC(sizeof(instanceConf_t)));
@@ -128,8 +129,9 @@ CODESTARTnewParserInst
 	}
 
 	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+		if (!pvals[i].bUsed) {
 			continue;
+		}
 		if(!strcmp(parserpblk.descr[i].name, "detect.yearaftertimestamp")) {
 			inst->bDetectYearAfterTimestamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "permit.squarebracketsinhostname")) {
@@ -143,10 +145,12 @@ CODESTARTnewParserInst
 	}
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
+	if (lst != NULL) {
 		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
+	}
+	if (iRet != RS_RET_OK) {
 		free(inst);
+	}
 ENDnewParserInst
 
 
@@ -184,8 +188,9 @@ CODESTARTparse
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
 	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING, pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
-		if(pMsg->dfltTZ[0] != '\0')
+		if (pMsg->dfltTZ[0] != '\0') {
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
+		}
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ' && lenMsg > 1) { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
@@ -275,8 +280,9 @@ CODESTARTparse
 							isHostName = 1;
 						}
 					}
-					if(p2parse[i] != ' ')
+					if (p2parse[i] != ' ') {
 						isHostName = 0;
+					}
 				}
 
 				if(isHostName) {
