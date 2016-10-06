@@ -30,11 +30,11 @@ msgnum:1' > rsyslog.input
 sleep 1
 
 # truncate and write some more lines (see https://github.com/rsyslog/rsyslog/issues/1090)
-echo 'msgnum:2
-msgnum:3' > rsyslog.input
+echo 'msgnum:2' > rsyslog.input
 # sleep some more
 sleep 1
-echo 'msgnum:4' >> rsyslog.input
+echo 'msgnum:3
+msgnum:4' >> rsyslog.input
 
 # give it time to finish
 sleep 1
@@ -42,5 +42,5 @@ sleep 1
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown
 
-. $srcdir/diag.sh seq-check 0 5
+. $srcdir/diag.sh seq-check 0 4
 . $srcdir/diag.sh exit
