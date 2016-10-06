@@ -15,6 +15,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   overall cleaner and easier-to-follow code.
   Thanks to Owen Smith for analyzing the problem and providing a
   prototype PR which greatly helped towards the final solution.
+- bugfix external module perl skeleton: did not work properly
+  Thanks to github user Igorjan666 for the patch.
 - testbench improvements
   * imfile ReopenOnTruncate option is now being tested
 ------------------------------------------------------------------------------
