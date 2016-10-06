@@ -5,6 +5,18 @@ Version 8.23.0 [v8-stable] 2016-11-15
   instead of "Message forwarded from ". With this patch, both are now
   detected.
   Thanks to github user patelritesh for the patch.
+- bugfix imfile: ReopenOnTruncate processing, file open processing
+  This fixes
+   * ReopenOnTrucate was only honored when a state file existed
+      see https://github.com/rsyslog/rsyslog/issues/1090
+    * open processing could run into a loop
+      see https://github.com/rsyslog/rsyslog/issues/1174
+  This is done via refactoring the open file handling, which provides
+  overall cleaner and easier-to-follow code.
+  Thanks to Owen Smith for analyzing the problem and providing a
+  prototype PR which greatly helped towards the final solution.
+- testbench improvements
+  * imfile ReopenOnTruncate option is now being tested
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
