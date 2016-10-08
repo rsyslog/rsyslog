@@ -786,7 +786,8 @@ uchar *propIDToName(propid_t propID)
  * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
-static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
+static rsRetVal
+msgBaseConstruct(msg_t **ppThis)
 {
 	DEFiRet;
 	msg_t *pM;
@@ -1488,7 +1489,7 @@ finalize_it:
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
-static inline rsRetVal
+static rsRetVal
 aquireProgramName(msg_t * const pM)
 {
 	int i;

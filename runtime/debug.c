@@ -210,7 +210,8 @@ static void dbgFuncDBPrintAll(void)
 /* find a mutex inside the FuncDB mutex table. Returns NULL if not found. Only mutexes from the same thread
  * are found.
  */
-static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
+static dbgFuncDBmutInfoEntry_t *
+dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 {
 	int i;
 	int iFound = -1;
@@ -249,7 +250,8 @@ dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, const char *pszHdrText, pthrea
 
 /* find a free mutex info spot in FuncDB. NULL is returned if table is full.
  */
-static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *pFuncDB)
+static dbgFuncDBmutInfoEntry_t *
+dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *pFuncDB)
 {
 	int i;
 	int iFound = -1;
@@ -271,7 +273,8 @@ static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *p
 
 /* add a mutex lock to the FuncDB. If the size is exhausted, info is discarded.
  */
-static inline void dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut, int lockLn)
+static void
+dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut, int lockLn)
 {
 	dbgFuncDBmutInfoEntry_t *pMutInfo;
 
@@ -285,7 +288,8 @@ static inline void dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *
 
 /* remove a locked mutex from the FuncDB (unlock case!).
  */
-static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
+static void
+dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 {
 	dbgFuncDBmutInfoEntry_t *pMutInfo;
 
@@ -450,7 +454,8 @@ static dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 }
 
 /* report wait on a mutex and add it to the mutex log */
-static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+static void
+dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
 	dbgMutLog_t *pHolder;
 	char pszBuf[128];
@@ -476,7 +481,8 @@ static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 
 
 /* report aquired mutex */
-static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
+static void
+dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -498,7 +504,8 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 
 
 /* if we unlock, we just remove the lock aquired entry from the log list */
-static inline void dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
+static void
+dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -663,7 +670,8 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void)
 
 /* find a specific thread ID. It must be present, else something is wrong
  */
-static inline dbgThrdInfo_t *dbgFindThrd(pthread_t thrd)
+static dbgThrdInfo_t *
+dbgFindThrd(pthread_t thrd)
 {
 	dbgThrdInfo_t *pThrd;
 
