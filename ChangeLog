@@ -19,8 +19,17 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Thanks to Chris Pilkington for the patch.
 - bugfix external module perl skeleton: did not work properly
   Thanks to github user Igorjan666 for the patch.
+- build environment: --enable-debug now defaults to new "auto" mode
+  previously, DEBUG mode (and thus assert() macros) was disabled by default
+  and explicitly needed to be enabled by providing the --enable-debug
+  ./configure switch. Now, a new --enable-debug=auto mode has been added
+  and made the default. It enables DEBUG mode if we build from git and only
+  disables it when a release build is done (from the release tarball). This
+  aims at better error checking during testbench runs and developer testing.
 - testbench improvements
   * imfile ReopenOnTruncate option is now being tested
+  * the CI environment now runs most tests in debug mode, but some in
+    release mode to cover potential release-mode races
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support

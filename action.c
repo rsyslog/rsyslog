@@ -246,7 +246,7 @@ batchState2String(const batch_state_t state)
  * because that would provide little to no benefit but complicate things
  * a lot. So we simply return the system time.
  */
-static inline time_t
+static time_t
 getActNow(action_t * const pThis)
 {
 	assert(pThis != NULL);
@@ -667,7 +667,7 @@ static void actionRetry(action_t * const pThis, wti_t * const pWti)
  * CPU time. TODO: maybe a config option for that?
  * rgerhards, 2007-08-02
  */
-static inline void
+static void
 actionSuspend(action_t * const pThis, wti_t * const pWti)
 {
 	time_t ttNow;
@@ -871,7 +871,7 @@ finalize_it:
  * depending on its current state.
  * rgerhards, 2009-05-07
  */
-static inline rsRetVal
+static rsRetVal
 actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	DEFiRet;
@@ -1923,7 +1923,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 /* initialize (current) config variables.
  * Used at program start and when a new scope is created.
  */
-static inline void
+static void
 initConfigVariables(void)
 {
 	cs.bActionWriteAllMarkMsgs = 1;
