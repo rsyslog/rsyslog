@@ -79,6 +79,10 @@ case "${host}" in
   ;;
 esac
 
+# Running from git source?
+in_git_src=no
+AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
+
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
 # Checks for libraries.
@@ -453,14 +457,23 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_sy
 
 # debug
 AC_ARG_ENABLE(debug,
-        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=auto@:>@])],
         [case "${enableval}" in
-         yes) enable_debug="yes" ;;
-          no) enable_debug="no" ;;
+          yes) enable_debug="yes" ;;
+           no) enable_debug="no" ;;
+         auto) enable_debug="auto" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
          esac],
-        [enable_debug="no"]
+        [enable_debug="auto"]
 )
+if test "$enable_debug" = "auto"; then
+	if test "x$in_git_src" = "xyes"; then
+		enable_debug="yes"
+	else
+		enable_debug="no"
+	fi
+	AC_MSG_NOTICE([enable-debug in auto mode, enable-debug is set to ${enable_debug}])
+fi
 if test "$enable_debug" = "yes"; then
         AC_DEFINE(DEBUG, 1, [Defined if debug mode is enabled (its easier to check).])
 fi
@@ -1776,10 +1789,6 @@ AC_ARG_ENABLE(distcheck-workaround,
 )
 AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
 
-
-# Running from git source?
-in_git_src=no
-AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
 
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
