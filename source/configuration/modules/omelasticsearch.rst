@@ -90,11 +90,21 @@ readability):
    Set it to "on" and it will use Elasticsearch's `Bulk
    API <http://www.elasticsearch.org/guide/reference/api/bulk.html>`_ to
    send multiple logs in the same request. The maximum number of logs
-   sent in a single bulk request depends on your queue settings -
+   sent in a single bulk request depends on your **maxbytes** (see below) 
+   and queue settings -
    usually limited by the `dequeue batch
    size <http://www.rsyslog.com/doc/node35.html>`_. More information
    about queues can be found
    `here <http://www.rsyslog.com/doc/node32.html>`_.
+-  **maxbytes** *(since v8.23.0)*
+   When shipping logs with bulkmode **on**, maxbytes specifies the maximum
+   size of the request body sent to Elasticsearch. Logs are batched until 
+   either the buffer reaches maxbytes or the the `dequeue batch
+   size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
+   ensure Elasticsearch does not reject requests due to content length, verify
+   this value is set accoring to the `http.max_content_length 
+   <https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
+   setting in Elasticsearch. Defaults to 100m. 
 -  **parent**
    Specifying a string here will index your logs with that string the
    parent ID of those logs. Please note that you need to define the
@@ -195,6 +205,7 @@ The following sample does the following:
            searchIndex="test-index"
            searchType="test-type"
            bulkmode="on"
+           maxbytes="100m"
            queue.type="linkedlist"
            queue.size="5000"
            queue.dequeuebatchsize="300"
