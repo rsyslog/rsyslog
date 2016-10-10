@@ -1208,6 +1208,10 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
 			if(err == EINTR) {
 				/*NO ERROR, just continue */;
+			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
+				/* Failure for network file system, thus file needs to be closed and reopened. */
+				close(pThis->fd);
+				CHKiRet(doPhysOpen(pThis));
 			} else {
 				if(pThis->bIsTTY) {
 					CHKiRet(tryTTYRecover(pThis, err));
