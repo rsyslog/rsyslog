@@ -5,6 +5,11 @@ Version 8.23.0 [v8-stable] 2016-11-15
   We now provide a "readTimeout" parameter family (see doc) to timeout such
   reads and ensure messages are not held for a very long time.
   see also https://github.com/rsyslog/rsyslog/issues/1133
+- omfile: improve robustness against network file system failures
+  in case of failure, a close and re-open is tried, which often solves the
+  issue (and wasn't handle before this patch).
+  see also https://github.com/rsyslog/rsyslog/pull/1161
+  Thanks to github user hese10 for the patch.
 - pmaixforwardedfrom: support for AIX syslogd -s option
   if syslog in AIX started with "-s" option, AIX syslog adds only "From "
   instead of "Message forwarded from ". With this patch, both are now
