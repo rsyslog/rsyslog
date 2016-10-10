@@ -492,7 +492,11 @@ TESTS += \
 	imfile-readmode2-with-persists.sh \
 	imfile-endregex.sh \
 	imfile-endregex-save-lf.sh \
-	imfile-endregex-save-lf-persist.sh
+	imfile-endregex-save-lf-persist.sh \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -998,6 +1002,10 @@ EXTRA_DIST= \
 	imfile-basic.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh \
 	imfile-truncate.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \

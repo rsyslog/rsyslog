@@ -83,5 +83,6 @@ int getWeekdayNbr(struct syslogTime *ts);
 int getOrdinal(struct syslogTime *ts);
 int getWeek(struct syslogTime *ts);
 void timeConvertToUTC(const struct syslogTime *const __restrict__ local, struct syslogTime *const __restrict__ utc);
+time_t getTime(time_t *ttSeconds);
 
 #endif /* #ifndef INCLUDED_DATETIME_H */
