@@ -10,7 +10,9 @@ fi
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
-module(load="../plugins/imfile/.libs/imfile")
+module(load="../plugins/imfile/.libs/imfile"
+       timeoutGranularity="5"
+      )
 input(type="imfile"
       File="./rsyslog.input"
       Tag="file:"

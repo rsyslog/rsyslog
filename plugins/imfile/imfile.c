@@ -176,6 +176,7 @@ struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 	int iPollInterval;	/* number of seconds to sleep when there was no file activity */
 	int readTimeout;
+	int timeoutGranularity;		/* value in ms */
 	instanceConf_t *root, *tail;
 	lstn_t *pRootLstn;
 	lstn_t *pTailLstn;
@@ -255,6 +256,7 @@ static prop_t *pInputName = NULL;	/* there is only one global inputName for all 
 static struct cnfparamdescr modpdescr[] = {
 	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
+	{ "timeoutgranularity", eCmdHdlrPositiveInt, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
@@ -1098,6 +1100,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iPollInterval = DFLT_PollInterval;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->readTimeout = 0; /* default: no timeout */
+	loadModConf->timeoutGranularity = 1000; /* default: 1 second */
 	loadModConf->haveReadTimeouts = 0; /* default: no timeout */
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
@@ -1138,6 +1141,9 @@ CODESTARTsetModCnf
 			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "readtimeout")) {
 			loadModConf->readTimeout = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "timeoutgranularity")) {
+			/* note: we need ms, thus "* 1000" */
+			loadModConf->timeoutGranularity = (int) pvals[i].val.d.n * 1000;
 		} else if(!strcmp(modpblk.descr[i].name, "mode")) {
 			if(!es_strconstcmp(pvals[i].val.d.estr, "polling"))
 				loadModConf->opMode = OPMODE_POLLING;
@@ -1944,7 +1950,7 @@ do_inotify(void)
 			pollfd.fd = ino_fd;
 			pollfd.events = POLLIN;
 			do {
-				r = poll(&pollfd, 1, 1000);
+				r = poll(&pollfd, 1, runModConf->timeoutGranularity);
 			} while(r  == -1 && errno == EINTR);
 			if(r == 0) {
 				in_do_timeout_processing();
