@@ -586,7 +586,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK) {
 		pNew = NULL;
-		ABORT_FINALIZE(iRet);
+		FINALIZE;
 	}
 
 	CHKiRet((*modInit)(CURR_MOD_IF_VERSION, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt, pNew));

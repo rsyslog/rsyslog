@@ -32,7 +32,11 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
 #include <mongo.h>
+#pragma GCC diagnostic pop
 #include <json.h>
 
 #include "rsyslog.h"
