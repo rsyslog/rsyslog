@@ -45,6 +45,7 @@
 #include <sys/stat.h>	 /* required for HP UX */
 #include <time.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "rsyslog.h"
 #include "queue.h"
@@ -1676,6 +1677,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		}
 		if(rd_fd != -1 && rd_fd == wr_fd && rd_offs == wr_offs) {
 			DBGPRINTF("problem on disk queue '%s': "
+					//"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%lld\n",
 					"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%" PRId64 "\n",
 					obj.GetName((obj_t*) pThis), iQueueSize, pThis->iQueueSize,
 					rd_fd, rd_offs);
