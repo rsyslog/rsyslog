@@ -1,6 +1,6 @@
 /* Definitions for network-related stuff.
  *
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,6 +24,7 @@
 #ifndef INCLUDED_NET_H
 #define INCLUDED_NET_H
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
 
@@ -84,7 +85,8 @@ struct NetAddr {
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 #define SALEN(sa) ((sa)->sa_len)
 #else
-static inline size_t SALEN(struct sockaddr *sa) {
+static inline size_t __attribute__((unused))
+SALEN(struct sockaddr *sa) {
 	switch (sa->sa_family) {
 	case AF_INET:  return (sizeof (struct sockaddr_in));
 	case AF_INET6: return (sizeof (struct sockaddr_in6));

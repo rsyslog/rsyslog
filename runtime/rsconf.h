@@ -1,6 +1,6 @@
 /* The rsconf object. It models a complete rsyslog configuration.
  *
- * Copyright 2011 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -163,8 +163,6 @@ struct rsconf_s {
 /* interfaces */
 BEGINinterface(rsconf) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(rsconf);
-	rsRetVal (*Construct)(rsconf_t **ppThis);
-	rsRetVal (*ConstructFinalize)(rsconf_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(rsconf_t **ppThis);
 	rsRetVal (*Load)(rsconf_t **ppThis, uchar *confFile);
 	rsRetVal (*Activate)(rsconf_t *ppThis);
@@ -181,9 +179,7 @@ extern rsconf_t *runConf;/* the currently running config */
 extern rsconf_t *loadConf;/* the config currently being loaded (no concurrent config load supported!) */
 
 
-static inline int rsconfNeedDropPriv(rsconf_t *const cnf) {
-	return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
-}
+int rsconfNeedDropPriv(rsconf_t *const cnf);
 
 /* some defaults (to be removed?) */
 #define DFLT_bLogStatusMsgs 1

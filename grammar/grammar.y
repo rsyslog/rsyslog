@@ -8,7 +8,7 @@
  * PRI filter) are very hard to beat in ease of use, at least for simpler
  * cases.
  *
- * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,6 +27,13 @@
  * limitations under the License.
  */
 %{
+/* shut off warnings that we can't change anyhow */
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+
 #include "config.h"
 #include <stdio.h>
 #include <libestr.h>
@@ -34,10 +41,11 @@
 #include "parserif.h"
 #define YYDEBUG 1
 extern int yylineno;
+extern char *yytext;
 
 /* keep compile rule clean of errors */
 extern int yylex(void);
-extern int yyerror(char*);
+extern int yyerror(const char*);
 %}
 
 %union {
@@ -175,6 +183,7 @@ stmt:	  actlst			{ $$ = $1; }
 	| PRIFILT block			{ $$ = cnfstmtNewPRIFILT($1, $2); }
 	| PROPFILT block		{ $$ = cnfstmtNewPROPFILT($1, $2); }
 	| RELOAD_LOOKUP_TABLE_PROCEDURE '(' fparams ')' { $$ = cnfstmtNewReloadLookupTable($3);}
+	| BEGINOBJ			{ $$ = NULL; parser_errmsg("declarative object '%s' not permitted in action block [stmt]", yytext);}
 block:    stmt				{ $$ = $1; }
 	| '{' script '}'		{ $$ = $2; }
 actlst:	  s_act				{ $$ = $1; }

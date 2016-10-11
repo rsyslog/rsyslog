@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -49,6 +49,7 @@
 #include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -57,8 +58,10 @@
 #include "stream.h"
 #include "unicode-helper.h"
 #include "module-template.h"
+#include "errmsg.h"
 #include "cryprov.h"
-#if HAVE_SYS_PRCTL_H
+#include "datetime.h"
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -72,6 +75,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 DEFobjCurrIf(zlibw)
 
 /* forward definitions */
@@ -86,6 +90,17 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
+
+/* output (current) file name for debug log purposes. Falls back to various
+ * levels of impreciseness if more precise name is not known.
+ */
+static const char *
+getFileDebugName(const strm_t *const pThis)
+{
+	  return (pThis->pszCurrFName == NULL) ?
+		  ((pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName)
+		: (const char*) pThis->pszCurrFName;
+}
 
 /* Try to resolve a size limit situation. This is used to support custom-file size handlers
  * for omfile. It first runs the command, and then checks if we are still above the size
@@ -217,6 +232,7 @@ doPhysOpen(strm_t *pThis)
 		case STREAMMODE_WRITE_APPEND:
 			iFlags = O_CLOEXEC | O_NOCTTY | O_WRONLY | O_CREAT | O_APPEND;
 			break;
+		case STREAMMMODE_INVALID:
 		default:assert(0);
 			break;
 	}
@@ -236,7 +252,7 @@ doPhysOpen(strm_t *pThis)
 		if(err == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -322,6 +338,7 @@ finalize_it:
 static rsRetVal strmOpenFile(strm_t *pThis)
 {
 	DEFiRet;
+	off_t offset;
 
 	ASSERT(pThis != NULL);
 
@@ -337,11 +354,22 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	CHKiRet(doPhysOpen(pThis));
 
 	pThis->iCurrOffs = 0;
+	CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
-		/* we need to obtain the current offset */
-		off_t offset;
-		CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 		pThis->iCurrOffs = offset;
+	} else if(pThis->tOperationsMode == STREAMMODE_WRITE) {
+		if(offset != 0) {
+			// TODO: check the exact condition under which this occurs. It
+			// looks OK, seems like the queue code uses a side-effect that makes
+			// this a valid sequence!
+			/*errmsg.LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
+				"already contains %zd bytes\n",
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+			*/
+			DBGPRINTF("queue '%s', file '%s' opened for non-append write, but "
+				"already contains %lld bytes\n",
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, (long long) offset);
+		}
 	}
 
 	DBGOPRINT((obj_t*) pThis, "opened file '%s' for %s as %d\n", pThis->pszCurrFName,
@@ -395,8 +423,8 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing\n", pThis->fd,
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
+	DBGOPRINT((obj_t*) pThis, "file %d(%s) closing, bDeleteOnClose %d\n", pThis->fd,
+		getFileDebugName(pThis), pThis->bDeleteOnClose);
 
 	if(pThis->tOperationsMode != STREAMMODE_READ) {
 		strmFlushInternal(pThis, 0);
@@ -623,6 +651,18 @@ finalize_it:
 }
 
 
+/* debug output of current buffer */
+void
+strmDebugOutBuf(const strm_t *const pThis)
+{
+	int strtIdx = pThis->iBufPtr - 50;
+	if(strtIdx < 0)
+		strtIdx = 0;
+	DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd, buf '%.*s'\n",
+		pThis->iBufPtr, pThis->iBufPtrMax, (int) pThis->iBufPtrMax - strtIdx,
+		pThis->pIOBuf+strtIdx);
+}
+
 /* logically "read" a character from a file. What actually happens is that
  * data is taken from the buffer. Only if the buffer is full, data is read 
  * directly from file. In that case, a read is performed blockwise.
@@ -714,9 +754,10 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 	}
         if(mode == 0) {
 		while(c != '\n') {
-                	CHKiRet(cstrAppendChar(*ppCStr, c));
-                	readCharRet = strmReadChar(pThis, &c);
-                	if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+			CHKiRet(cstrAppendChar(*ppCStr, c));
+			readCharRet = strmReadChar(pThis, &c);
+			if((readCharRet == RS_RET_TIMED_OUT) ||
+			   (readCharRet == RS_RET_EOF) ) { /* end reached without \n? */
 				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
                 	}
                 	CHKiRet(readCharRet);
@@ -819,6 +860,20 @@ finalize_it:
         RETiRet;
 }
 
+/* check if the current multi line read is timed out
+ * @return 0 - no timeout, something else - timeout
+ */
+int
+strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
+{
+	/* note: order of evaluation is choosen so that the most inexpensive
+	 * processing flow is used.
+	 */
+	return(   (pThis->readTimeout)
+	       && (pThis->prevMsgSegment != NULL)
+	       && (getTime(NULL) > pThis->lastRead + pThis->readTimeout) );
+}
+
 /* read a multi-line message from a strm file.
  * The multi-line message is terminated based on the user-provided
  * startRegex (Posix ERE). For performance reasons, the regex
@@ -826,19 +881,18 @@ finalize_it:
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF)
 {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
+	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
         DEFiRet;
-
-        ASSERT(pThis != NULL);
-        ASSERT(ppCStr != NULL);
 
 	do {
 		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
+		pThis->lastRead = tCurr;
 		CHKiRet(cstrConstruct(&thisLine));
 		/* append previous message to current message if necessary */
 		if(pThis->prevLineSegment != NULL) {
@@ -871,8 +925,10 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 			
 		} else {
-			if(pThis->prevMsgSegment != NULL) {
-				/* may be NULL in initial poll! */
+			if(pThis->prevMsgSegment == NULL) {
+				/* may be NULL in initial poll or after timeout! */
+				CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+			} else {
 				if(bEscapeLF) {
 					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
 				} else {
@@ -887,6 +943,17 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 	} while(finished == 0);
 
 finalize_it:
+	if(   pThis->readTimeout
+	   && (iRet != RS_RET_OK)
+	   && (pThis->prevMsgSegment != NULL)
+	   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
+		CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
+		cstrDestruct(&pThis->prevMsgSegment);
+		pThis->lastRead = tCurr;
+		dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
+			FINALIZE;
+		iRet = RS_RET_OK;
+	}
         RETiRet;
 }
 
@@ -953,7 +1020,7 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 	}
 
 	DBGPRINTF("file stream %s params: flush interval %d, async write %d\n",
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  getFileDebugName(pThis),
 		  pThis->iFlushInterval, pThis->bAsyncWrite);
 
 	/* if we work asynchronously, we need a couple of synchronization objects */
@@ -1141,6 +1208,10 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
 			if(err == EINTR) {
 				/*NO ERROR, just continue */;
+			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
+				/* Failure for network file system, thus file needs to be closed and reopened. */
+				close(pThis->fd);
+				CHKiRet(doPhysOpen(pThis));
 			} else {
 				if(pThis->bIsTTY) {
 					CHKiRet(tryTTYRecover(pThis, err));
@@ -1175,8 +1246,7 @@ doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlus
 	DEFiRet;
 
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doWriteInternal: bFlush %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
-		bFlush);
+		pThis->fd, getFileDebugName(pThis), bFlush);
 
 	if(pThis->iZipLevel) {
 		CHKiRet(doZipWrite(pThis, pBuf, lenBuf, bFlush));
@@ -1206,7 +1276,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at begin: "
 		"iCnt %d, iEnq %d, bFlushZip %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->fd, getFileDebugName(pThis),
 		pThis->iCnt, pThis->iEnq, bFlushZip);
 	/* the -1 below is important, because we need one buffer for the main thread! */
 	while(pThis->iCnt >= STREAM_ASYNC_NUMBUFS - 1)
@@ -1224,7 +1294,7 @@ doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 	}
 	DBGOPRINT((obj_t*) pThis, "file %d(%s) doAsyncWriteInternal at exit: "
 		"iCnt %d, iEnq %d, bFlushZip %d\n",
-		pThis->fd, (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		pThis->fd, getFileDebugName(pThis),
 		pThis->iCnt, pThis->iEnq, bFlushZip);
 
 	RETiRet;
@@ -1282,7 +1352,7 @@ asyncWriterThread(void *pPtr)
 	BEGINfunc
 	ustrncpy(thrdName+3, pThis->pszFName, sizeof(thrdName)-4);
 	dbgOutputTID((char*)thrdName);
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	if(prctl(PR_SET_NAME, (char*)thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", "stream writer");
 	}
@@ -1293,7 +1363,7 @@ asyncWriterThread(void *pPtr)
 		while(pThis->iCnt == 0) {
 			DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread new iteration, "
 				  "iCnt %d, bTimedOut %d, iFlushInterval %d\n", pThis->fd,
-				  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+				  getFileDebugName(pThis),
 				  pThis->iCnt, bTimedOut, pThis->iFlushInterval);
 			if(pThis->bStopWriter) {
 				pthread_cond_broadcast(&pThis->isEmpty);
@@ -1313,8 +1383,7 @@ asyncWriterThread(void *pPtr)
 				timeoutComp(&t, pThis->iFlushInterval * 1000); /* 1000 *millisconds* */
 				if((err = pthread_cond_timedwait(&pThis->notEmpty, &pThis->mut, &t)) != 0) {
 					DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread timed out\n",
-						  pThis->fd,
-						  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName);
+						  pThis->fd, getFileDebugName(pThis));
 					bTimedOut = 1; /* simulate in any case */
 					if(err != ETIMEDOUT) {
 						char errStr[1024];
@@ -1329,8 +1398,7 @@ asyncWriterThread(void *pPtr)
 		}
 
 		DBGOPRINT((obj_t*) pThis, "file %d(%s) asyncWriterThread awoken, "
-			  "iCnt %d, bTimedOut %d\n", pThis->fd,
-			  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+			  "iCnt %d, bTimedOut %d\n", pThis->fd, getFileDebugName(pThis),
 			  pThis->iCnt, bTimedOut);
 		bTimedOut = 0; /* we may have timed out, but there *is* work to do... */
 
@@ -1367,7 +1435,7 @@ finalize_it:
  * have it). -- rgerhards, 2009-06-08
  */
 #undef SYNCCALL
-#if HAVE_FDATASYNC
+#ifdef HAVE_FDATASYNC
 #	define SYNCCALL(x) fdatasync(x)
 #else
 #	define SYNCCALL(x) fsync(x)
@@ -1557,7 +1625,7 @@ strmFlushInternal(strm_t *pThis, int bFlushZip)
 
 	ASSERT(pThis != NULL);
 	DBGOPRINT((obj_t*) pThis, "strmFlushinternal: file %d(%s) flush, buflen %ld%s\n", pThis->fd,
-		  (pThis->pszFName == NULL) ? "N/A" : (char*)pThis->pszFName,
+		  getFileDebugName(pThis),
 		  (long) pThis->iBufPtr, (pThis->iBufPtr == 0) ? " (no need to flush)" : "");
 
 	if(pThis->tOperationsMode != STREAMMODE_READ && pThis->iBufPtr > 0) {
@@ -1841,6 +1909,13 @@ DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
 
+/* sets timeout in seconds */
+void
+strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val)
+{
+	pThis->readTimeout = val;
+}
+
 static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
 {
 	pThis->bDeleteOnClose = val;
@@ -2025,8 +2100,8 @@ finalize_it:
  * properties before finalizing things.
  * rgerhards, 2009-05-26
  */
-rsRetVal
-strmDup(strm_t *pThis, strm_t **ppNew)
+static rsRetVal
+strmDup(strm_t *const pThis, strm_t **ppNew)
 {
 	strm_t *pNew = NULL;
 	DEFiRet;
@@ -2212,6 +2287,7 @@ ENDobjQueryInterface(strm)
  */
 BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);

@@ -7,7 +7,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -333,6 +333,8 @@ void skipWhiteSpace(uchar **pp)
  * to use as few space as possible.
  * rgerhards, 2008-01-03
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
 		     size_t lenFName, long lNum, int lNumDigits)
 {
@@ -376,6 +378,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 finalize_it:
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 /* get the number of digits required to represent a given number. We use an
  * iterative approach as we do not like to draw in the floating point
@@ -429,7 +432,8 @@ timeoutComp(struct timespec *pt, long iTimeout)
 }
 
 long long
-currentTimeMills() {
+currentTimeMills(void)
+{
 #	if _POSIX_TIMERS > 0
 	struct timespec tm;
 #   else
@@ -676,14 +680,16 @@ containsGlobWildcard(char *str)
 	return 0;
 }
 
-void seedRandomNumber() {
+void seedRandomNumber(void)
+{
 	struct timespec t;
 	timeoutComp(&t, 0);
 	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
 	srandom((unsigned int) x);
 }
 
-long int randomNumber() {
+long int randomNumber(void)
+{
 	return random();
 }
 

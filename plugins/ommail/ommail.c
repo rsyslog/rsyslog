@@ -142,7 +142,7 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 /* forward definitions (as few as possible) */
-static rsRetVal Send(int sock, char *msg, size_t len);
+static rsRetVal Send(int sock, const char *msg, size_t len);
 static rsRetVal readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected);
 
 
@@ -365,8 +365,8 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
-	char *smtpPort;
-	char *smtpSrv;
+	const char *smtpPort;
+	const char *smtpSrv;
 	char errStr[1024];
 	instanceData *pData;
 	DEFiRet;
@@ -418,7 +418,7 @@ finalize_it:
 
 /* send text to the server, blocking send */
 static rsRetVal
-Send(int sock, char *msg, size_t len)
+Send(const int sock, const char *const __restrict__ msg, const size_t len)
 {
 	DEFiRet;
 	size_t offsBuf = 0;

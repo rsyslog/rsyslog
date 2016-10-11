@@ -744,7 +744,6 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	pData = pWrkrData->pData;
 
 	/* The remote address is not yet known and needs to be obtained */
-	dbgprintf(" %s\n", pData->target);
 	if(pData->protocol == FORW_UDP) {
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requires this */
@@ -767,6 +766,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	}
 
 finalize_it:
+	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pWrkrData->pData->target, iRet);
 	if(iRet != RS_RET_OK) {
 		if(pWrkrData->f_addr != NULL) {
 			freeaddrinfo(pWrkrData->f_addr);

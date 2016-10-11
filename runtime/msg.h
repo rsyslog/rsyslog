@@ -189,8 +189,8 @@ uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
-char *getPRI(msg_t *pMsg);
+const char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
+const char *getPRI(msg_t *pMsg);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);
@@ -201,13 +201,12 @@ const uchar* msgGetJSONMESG(msg_t *__restrict__ const pMsg);
 
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(msg_t *pM);
-char *getHOSTNAME(msg_t *pM);
+const char *getHOSTNAME(msg_t *pM);
 char *getPROCID(msg_t *pM, sbool bLockMutex);
 char *getAPPNAME(msg_t *pM, sbool bLockMutex);
 void setMSGLen(msg_t *pM, int lenMsg);
 int getMSGLen(msg_t *pM);
 
-char *getHOSTNAME(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
 uchar *getProgramName(msg_t *pM, sbool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
@@ -222,19 +221,12 @@ rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_
 
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);
+void msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri);
 
-static inline int
-msgGetProtocolVersion(msg_t *pM)
-{
-	return(pM->iProtocolVersion);
-}
+#define msgGetProtocolVersion(pM) ((pM)->iProtocolVersion)
 
 /* returns non-zero if the message has structured data, 0 otherwise */
-static inline sbool
-MsgHasStructuredData(msg_t *pM)
-{
-	return (pM->pszStrucData == NULL) ? 0 : 1;
-}
+#define MsgHasStructuredData(pM) (((pM)->pszStrucData == NULL) ? 0 : 1)
 
 /* ------------------------------ some inline functions ------------------------------ */
 
@@ -250,33 +242,17 @@ MsgHasStructuredData(msg_t *pM)
  * be extended, only shrunk!
  * rgerhards, 2009-08-26
  */
-static inline void
-MsgSetRawMsgSize(msg_t *pMsg, size_t newLen)
+static inline void __attribute__((unused))
+MsgSetRawMsgSize(msg_t *const __restrict__ pMsg, const size_t newLen)
 {
 	assert(newLen <= (size_t) pMsg->iLenRawMsg);
 	pMsg->iLenRawMsg = newLen;
 	pMsg->pszRawMsg[newLen] = '\0';
 }
 
-static inline void
-msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri)
-{
-	if(pri > LOG_MAXPRI)
-		pri = LOG_PRI_INVLD;
-	pMsg->iFacility = pri2fac(pri),
-	pMsg->iSeverity = pri2sev(pri);
-}
-
 /* get the ruleset that is associated with the ruleset.
  * May be NULL. -- rgerhards, 2009-10-27
  */
-static inline ruleset_t*
-MsgGetRuleset(msg_t *pMsg)
-{
-	return pMsg->pRuleset;
-}
-
+#define MsgGetRuleset(pMsg) ((pMsg)->pRuleset)
 
 #endif /* #ifndef MSG_H_INCLUDED */
-/* vim:set ai:
- */

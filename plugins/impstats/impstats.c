@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2013 Adiscon GmbH.
+ * Copyright 2010-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -210,13 +210,13 @@ doLogToFile(const char *ln, const size_t lenLn)
 	time(&t);
 	iov[0].iov_base = ctime_r(&t, timebuf);
 	iov[0].iov_len = nexpect = strlen(iov[0].iov_base) - 1; /* -1: strip \n */
-	iov[1].iov_base = ": ";
+	iov[1].iov_base = (void*)": ";
 	iov[1].iov_len = 2;
 	nexpect += 2;
 	iov[2].iov_base = (void*)ln;
 	iov[2].iov_len = lenLn;
 	nexpect += lenLn;
-	iov[3].iov_base = "\n";
+	iov[3].iov_base = (void*)"\n";
 	iov[3].iov_len = 1;
 	nexpect++;
 	nwritten = writev(runModConf->logfd, iov, 4);

@@ -13,7 +13,7 @@
  *
  * For details, visit doc/debug.html
  *
- * Copyright 2008-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -210,7 +210,8 @@ static void dbgFuncDBPrintAll(void)
 /* find a mutex inside the FuncDB mutex table. Returns NULL if not found. Only mutexes from the same thread
  * are found.
  */
-static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
+static dbgFuncDBmutInfoEntry_t *
+dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 {
 	int i;
 	int iFound = -1;
@@ -231,8 +232,8 @@ static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncD
  * "thrd" is the thread that is searched. If it is 0, mutexes for all threads
  * shall be printed.
  */
-static inline void
-dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, char *pszHdrText, pthread_t thrd)
+static void
+dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, const char *pszHdrText, pthread_t thrd)
 {
 	int i;
 	char pszThrdName[64];
@@ -249,7 +250,8 @@ dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, char *pszHdrText, pthread_t th
 
 /* find a free mutex info spot in FuncDB. NULL is returned if table is full.
  */
-static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *pFuncDB)
+static dbgFuncDBmutInfoEntry_t *
+dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *pFuncDB)
 {
 	int i;
 	int iFound = -1;
@@ -271,7 +273,8 @@ static inline dbgFuncDBmutInfoEntry_t *dbgFuncDBFindFreeMutexInfo(dbgFuncDB_t *p
 
 /* add a mutex lock to the FuncDB. If the size is exhausted, info is discarded.
  */
-static inline void dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut, int lockLn)
+static void
+dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut, int lockLn)
 {
 	dbgFuncDBmutInfoEntry_t *pMutInfo;
 
@@ -285,7 +288,8 @@ static inline void dbgFuncDBAddMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *
 
 /* remove a locked mutex from the FuncDB (unlock case!).
  */
-static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
+static void
+dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
 {
 	dbgFuncDBmutInfoEntry_t *pMutInfo;
 
@@ -322,7 +326,7 @@ dbgOutputTID(char* name)
 
 /* constructor & add new entry to list
  */
-dbgMutLog_t *dbgMutLogAddEntry(pthread_mutex_t *pmut, short mutexOp, dbgFuncDB_t *pFuncDB, int lockLn)
+static dbgMutLog_t *dbgMutLogAddEntry(pthread_mutex_t *pmut, short mutexOp, dbgFuncDB_t *pFuncDB, int lockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -344,7 +348,7 @@ dbgMutLog_t *dbgMutLogAddEntry(pthread_mutex_t *pmut, short mutexOp, dbgFuncDB_t
 
 /* destruct log entry
  */
-void dbgMutLogDelEntry(dbgMutLog_t *pLog)
+static void dbgMutLogDelEntry(dbgMutLog_t *pLog)
 {
 	assert(pLog != NULL);
 	DLL_Del(MutLog, pLog);
@@ -354,7 +358,7 @@ void dbgMutLogDelEntry(dbgMutLog_t *pLog)
 /* print a single mutex log entry */
 static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
 {
-	char *strmutop;
+	const char *strmutop;
 	char buf[64];
 	char pszThrdName[64];
 
@@ -396,7 +400,7 @@ static void dbgMutLogPrintAll(void)
  * The pFuncDB is optional and may be NULL to indicate no specific funciont is
  * reqested (aka "it is ignored" ;)). This is important for the unlock case.
  */
-dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, dbgFuncDB_t *pFuncDB)
+static dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, dbgFuncDB_t *pFuncDB)
 {
 	dbgMutLog_t *pLog;
 	pthread_t mythrd = pthread_self();
@@ -414,7 +418,7 @@ dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, dbgFuncDB
 
 
 /* find mutex object from the back of the list */
-dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pLast)
+static dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pLast)
 {
 	dbgMutLog_t *pLog;
 	
@@ -435,7 +439,7 @@ dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pLast)
 
 
 /* find lock aquire for mutex from back of list */
-dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
+static dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 {
 	dbgMutLog_t *pLog;
 
@@ -450,12 +454,13 @@ dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 }
 
 /* report wait on a mutex and add it to the mutex log */
-static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+static void
+dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 {
 	dbgMutLog_t *pHolder;
 	char pszBuf[128];
 	char pszHolderThrdName[64];
-	char *pszHolder;
+	const char *pszHolder;
 
 	pthread_mutex_lock(&mutMutLog);
 	pHolder = dbgMutLogFindHolder(pmut);
@@ -476,7 +481,8 @@ static inline void dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 
 
 /* report aquired mutex */
-static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
+static void
+dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -498,7 +504,8 @@ static inline void dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, 
 
 
 /* if we unlock, we just remove the lock aquired entry from the log list */
-static inline void dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
+static void
+dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -663,7 +670,8 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void)
 
 /* find a specific thread ID. It must be present, else something is wrong
  */
-static inline dbgThrdInfo_t *dbgFindThrd(pthread_t thrd)
+static dbgThrdInfo_t *
+dbgFindThrd(pthread_t thrd)
 {
 	dbgThrdInfo_t *pThrd;
 
@@ -754,7 +762,7 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 
 /* print all threads call stacks
  */
-void dbgCallStackPrintAll(void)
+static void dbgCallStackPrintAll(void)
 {
 	dbgThrdInfo_t *pThrd;
 	/* stack info */
@@ -768,10 +776,10 @@ void dbgCallStackPrintAll(void)
  * more meaningful way.
  * rgerhards, 2008-01-22
  */
-void
+void __attribute__((noreturn))
 sigsegvHdlr(int signum)
 {
-	char *signame;
+	const char *signame;
 	struct sigaction sigAct;
 
 	/* first, restore the default abort handler */
@@ -810,7 +818,7 @@ sigsegvHdlr(int signum)
  * interface otherwise is unsafe to use (generates compiler warnings at least).
  * 2009-05-20 rgerhards
  */
-static inline void
+static void
 do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 {
 	static pthread_t ptLastThrdID = 0;
@@ -888,7 +896,9 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
 
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wempty-body"
+#pragma GCC diagnostic ignored "-Wclobbered"
 /* write the debug message. This is a helper to dbgprintf and dbgoprint which
  * contains common code. added 2008-09-26 rgerhards
  */
@@ -915,6 +925,7 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	pthread_cleanup_pop(1);
 }
 #pragma GCC diagnostic warning "-Wempty-body"
+#pragma GCC diagnostic warning "-Wclobbered"
 
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it
@@ -923,7 +934,7 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
  * time being. -- rgerhards, 2008-01-29
  */
 void
-dbgoprint(obj_t *pObj, char *fmt, ...)
+dbgoprint(obj_t *pObj, const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024];
@@ -962,7 +973,7 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
  * WARNING: duplicate code, see dbgoprin above!
  */
 void
-dbgprintf(char *fmt, ...)
+dbgprintf(const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024];
@@ -984,12 +995,6 @@ dbgprintf(char *fmt, ...)
 		lenWriteBuf = sizeof(pszWriteBuf);
 	}
 	dbgprint(NULL, pszWriteBuf, lenWriteBuf);
-}
-
-void tester(void)
-{
-BEGINfunc
-ENDfunc
 }
 
 /* handler called when a function is entered. This function creates a new

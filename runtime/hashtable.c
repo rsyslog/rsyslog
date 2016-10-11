@@ -1,12 +1,18 @@
 /* Copyright (C) 2004 Christopher Clark <firstname.lastname@cl.cam.ac.uk> */
 /* taken from http://www.cl.cam.ac.uk/~cwc22/hashtable/ */
 
-#include "hashtable.h"
 #include "hashtable_private.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+
+/* this code has several warnings, but we ignore them because
+ * this seems to work and we do not want to engage in that code body. If
+ * we really run into troubles, it is better to change to libfastjson, which
+ * we should do in the medium to long term anyhow...
+ */
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 
 /*
 Credit for primes table: Aaron Krowne

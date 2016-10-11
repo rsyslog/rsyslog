@@ -25,9 +25,12 @@
 #include "rsyslog.h"
 
 #include <signal.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
+#else
+#  include <syslog.h>
 #endif
 #ifdef OS_SOLARIS
 #	include <errno.h>
@@ -118,7 +121,7 @@ static struct queuefilenames_s {
 } *queuefilenames = NULL;
 
 
-void
+static __attribute__((noreturn)) void
 rsyslogd_usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [options]\n"
@@ -140,7 +143,7 @@ setsid(void)
 #endif
 
 
-rsRetVal // TODO: make static
+static rsRetVal
 queryLocalHostname(void)
 {
 	uchar *LocalHostName = NULL;
@@ -172,13 +175,16 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writePidFile(void)
+static rsRetVal
+writePidFile(void)
 {
 	FILE *fp;
 	DEFiRet;
 	
 	const char *tmpPidFile;
-	asprintf((char **)&tmpPidFile, "%s.tmp", PidFile);
+	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
@@ -203,7 +209,8 @@ finalize_it:
 /* duplicate startup protection: check, based on pid file, if our instance
  * is already running. This MUST be called before we write our own pid file.
  */
-rsRetVal checkStartupOK(void)
+static rsRetVal
+checkStartupOK(void)
 {
 	FILE *fp = NULL;
 	DEFiRet;
@@ -294,7 +301,7 @@ prepareBackground(const int parentPipeFD)
  * return: file descriptor to which the child needs to write an "OK" or error
  * message.
  */
-int
+static int
 forkRsyslog(void)
 {
 	int pipefd[2];
@@ -372,7 +379,7 @@ forkRsyslog(void)
  * and the parent may terminate.
  */
 static void
-tellChildReady(int pipefd, char *const msg)
+tellChildReady(const int pipefd, const char *const msg)
 {
 	dbgprintf("rsyslogd: child signaling OK\n");
 	const int nWritten = write(pipefd, msg, strlen(msg));
@@ -436,7 +443,7 @@ printVersion(void)
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
 
-rsRetVal
+static rsRetVal
 rsyslogd_InitStdRatelimiters(void)
 {
 	DEFiRet;
@@ -454,11 +461,11 @@ finalize_it:
  * rgerhards, 2008-01-04
  * rgerhards, 2008-04-16: the actual initialization is now carried out by the runtime
  */
-rsRetVal
+static rsRetVal
 rsyslogd_InitGlobalClasses(void)
 {
 	DEFiRet;
-	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
+	const char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
 	/* Intialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
@@ -524,7 +531,7 @@ finalize_it:
  * it helps us keep up the overall concurrency level.
  * rgerhards, 2010-06-09
  */
-static inline rsRetVal
+static rsRetVal
 preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
@@ -784,10 +791,12 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
 					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
 					   flags));
-#ifdef HAVE_LIBLOGGING_STDLOG
 	} else {
+#ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_log(stdlog_hdl, pri2sev(pri), "%s",
 			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+#else
+		syslog(pri, "%s", msg);
 #endif
 	}
 
@@ -961,7 +970,7 @@ finalize_it:
 
 
 static void
-hdlr_sigttin()
+hdlr_sigttin(void)
 {
 	/* this is just a dummy to care for our sigttin input
 	 * module cancel interface. The important point is that
@@ -980,19 +989,19 @@ hdlr_enable(int sig, void (*hdlr)())
 }
 
 static void
-hdlr_sighup()
+hdlr_sighup(void)
 {
 	bHadHUP = 1;
 }
 
 static void
-hdlr_sigchld()
+hdlr_sigchld(void)
 {
 	bChildDied = 1;
 }
 
-void
-rsyslogdDebugSwitch()
+static void
+rsyslogdDebugSwitch(void)
 {
 	time_t tTime;
 	struct tm tp;
@@ -1029,13 +1038,11 @@ rsyslogdDebugSwitch()
  * of a break-in is very low in the startup phase, we decide it is more important
  * to emit error messages.
  */
-void
+static void
 initAll(int argc, char **argv)
 {
 	rsRetVal localRet;
 	int ch;
-	extern int optind;
-	extern char *optarg;
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
@@ -1433,7 +1440,7 @@ DEFFUNC_llExecFunc(doHUPActions)
  * but the sync would require some extra CPU for *each* message processed.
  * rgerhards, 2012-04-11
  */
-static inline void
+static void
 doHUP(void)
 {
 	char buf[512];
@@ -1542,7 +1549,7 @@ mainloop(void)
 
 /* Finalize and destruct all actions.
  */
-void
+static void
 rsyslogd_destructAllActions(void)
 {
 	ruleset.DestructAllActions(runConf);
@@ -1647,6 +1654,9 @@ main(int argc, char **argv)
 {
 	/* use faster hash function inside json lib */
 	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
+	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
+	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
+		bProcessInternalMessages = 1;
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");

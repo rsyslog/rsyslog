@@ -1,6 +1,6 @@
 /* rsyslog rainerscript definitions
  *
- * Copyright 2011-2014 Rainer Gerhards
+ * Copyright 2011-2016 Rainer Gerhards
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,6 @@
 	 *   others, this is used to size data structures).
 	 */
 
-extern int Debug; /* 1 if in debug mode, 0 otherwise -- to be enhanced */
-
 enum cnfobjType {
 	CNFOBJ_ACTION,
 	CNFOBJ_RULESET,
@@ -51,46 +49,7 @@ enum cnfobjType {
 	CNFOBJ_INVALID = 0
 };
 
-static inline char*
-cnfobjType2str(enum cnfobjType ot)
-{
-	switch(ot) {
-	case CNFOBJ_ACTION:
-		return "action";
-		break;
-	case CNFOBJ_RULESET:
-		return "ruleset";
-		break;
-	case CNFOBJ_GLOBAL:
-		return "global";
-		break;
-	case CNFOBJ_INPUT:
-		return "input";
-		break;
-	case CNFOBJ_MODULE:
-		return "module";
-		break;
-	case CNFOBJ_TPL:
-		return "template";
-		break;
-	case CNFOBJ_PROPERTY:
-		return "property";
-		break;
-	case CNFOBJ_CONSTANT:
-		return "constant";
-		break;
-	case CNFOBJ_MAINQ:
-		return "main_queue";
-	case CNFOBJ_LOOKUP_TABLE:
-		return "lookup_table";
-	case CNFOBJ_DYN_STATS:
-		return "dyn_stats";
-		break;
-	default:return "error: invalid cnfobjType";
-	}
-}
-
-enum cnfactType { CNFACT_V2, CNFACT_LEGACY };
+const char* cnfobjType2str(enum cnfobjType ot);
 
 /* a variant type, for example used for expression evaluation
  * 2011-07-15/rger: note that there exists a "legacy" object var_t,
@@ -160,21 +119,7 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
-static inline char*
-cnfFiltType2str(enum cnfFiltType filttype)
-{
-	switch(filttype) {
-	case CNFFILT_NONE:
-		return("filter:none");
-	case CNFFILT_PRI:
-		return("filter:pri");
-	case CNFFILT_PROP:
-		return("filter:prop");
-	case CNFFILT_SCRIPT:
-		return("filter:script");
-	}
-	return("error:invalid_filter_type");	/* should never be reached */
-}
+const char* cnfFiltType2str(const enum cnfFiltType filttype);
 
 
 struct cnfstmt {
@@ -312,7 +257,7 @@ struct x {
  * to care.
  */
 struct cnfparamdescr { /* first the param description */
-	char *name;	/**< not a es_str_t to ease definition in code */
+	const char *name;/**< not a es_str_t to ease definition in code */
 	ecslCmdHdrlType type;
 	unsigned flags;
 };
@@ -368,7 +313,7 @@ struct cnfvar* cnfvarNew(char *name);
 struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
 struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(char *name);
-int cnfparamGetIdx(struct cnfparamblk *params, char *name);
+int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
 	       struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
@@ -400,8 +345,8 @@ void cnfarrayContentDestruct(struct cnfarray *ar);
 const char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
-char * tokenval2str(int tok);
+const char * tokenval2str(int tok);
 
 /* debug helper */
-void cstrPrint(char *text, es_str_t *estr);
+void cstrPrint(const char *text, es_str_t *estr);
 #endif

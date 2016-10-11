@@ -8,7 +8,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -40,7 +40,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <atomic.h>
-#if HAVE_SYS_PRCTL_H
+#ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
 
@@ -69,7 +69,7 @@ DEFobjCurrIf(glbl)
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static inline uchar *
+static uchar *
 wtpGetDbgHdr(wtp_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wtp);
@@ -83,7 +83,7 @@ wtpGetDbgHdr(wtp_t *pThis)
 
 
 /* Not implemented dummy function for constructor */
-static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal NotImplementedDummy(void) { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
@@ -98,10 +98,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 #endif
 	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
-	pThis->pfChkStopWrkr = NotImplementedDummy;
-	pThis->pfGetDeqBatchSize = NotImplementedDummy;
-	pThis->pfDoWork = NotImplementedDummy;
-	pThis->pfObjProcessed = NotImplementedDummy;
+	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy;
+	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy;
+	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy;
+	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy;
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
@@ -296,7 +296,7 @@ wtpCancelAll(wtp_t *pThis)
  * as this introduces a race in the debug system (RETiRet system).
  * rgerhards, 2009-10-26
  */
-static inline void
+static void
 wtpWrkrExecCleanup(wti_t *pWti)
 {
 	wtp_t *pThis;
@@ -356,7 +356,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	wti_t *pWti = (wti_t*) arg;
 	wtp_t *pThis;
 	sigset_t sigSet;
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
 #	endif
@@ -375,7 +375,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	sigaddset(&sigSet, SIGTTIN);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
-#	if HAVE_PRCTL && defined PR_SET_NAME
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	pszDbgHdr = wtpGetDbgHdr(pThis);
 	ustrncpy(thrdName+3, pszDbgHdr, 20);
@@ -535,7 +535,7 @@ finalize_it:
 }
 
 /* dummy */
-rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+static rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
 /* exit our class
  */

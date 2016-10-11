@@ -72,7 +72,7 @@ case $1 in
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f rsyslog.input rsyslog.empty
-		rm -f testconf.conf
+		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
@@ -93,6 +93,7 @@ case $1 in
 		if [ -e IN_AUTO_DEBUG ]; then
 			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 		fi
+		export RSYSLOG_DFLT_LOG_INTERNAL=1 # testbench needs internal messages logged internally!
 		;;
    'exit')	# cleanup
 		# detect any left-over hanging instance
@@ -313,6 +314,10 @@ case $1 in
 		kill `cat rsyslog.pid`
 		# note: we do not wait for the actual termination!
 		;;
+   'kill-immediate') # kill rsyslog unconditionally
+		kill -9 `cat rsyslog.pid`
+		# note: we do not wait for the actual termination!
+		;;
    'tcpflood') # do a tcpflood run and check if it worked params are passed to tcpflood
 		shift 1
 		eval ./tcpflood "$@" $TCPFLOOD_EXTRA_OPTS
@@ -340,6 +345,13 @@ case $1 in
 		  ls -l test-spool
 		  . $srcdir/diag.sh error-exit 1
 		fi
+		;;
+   'presort')	# sort the output file just like we normally do it, but do not call
+		# seqchk. This is needed for some operations where we need the sort
+		# result for some preprocessing. Note that a later seqchk will sort
+		# again, but that's not an issue.
+		rm -f work
+		$RS_SORTCMD -g < rsyslog.out.log > work
 		;;
    'seq-check') # do the usual sequence check to see if everything was properly received. $2 is the instance.
 		rm -f work

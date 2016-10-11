@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2010-2015 Adiscon GmbH.
+ * Copyright 2010-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -126,7 +126,7 @@ getDfltTpl(void)
  * is we do not permit this directive after the v2 config system has been used to set
  * the parameter.
  */
-rsRetVal
+static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 {
 	DEFiRet;
@@ -278,7 +278,7 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 		 * call fails. Then, lsent has the error status, even though
 		 * the sendto() succeeded. -- rgerhards, 2007-06-22
 		 */
-		lenSent = sendto(pData->sock, msg, len, 0, &pData->addr, sizeof(pData->addr));
+		lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, sizeof(pData->addr));
 		if(lenSent == len) {
 			int eno = errno;
 			char errStr[1024];
@@ -294,7 +294,7 @@ finalize_it:
 
 /* open socket to remote system
  */
-static inline rsRetVal
+static rsRetVal
 openSocket(instanceData *pData)
 {
 	DEFiRet;

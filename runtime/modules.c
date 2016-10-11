@@ -94,17 +94,17 @@ static struct cnfparamblk pblk =
  * if the transactional entry points exist.
  */
 static rsRetVal
-dummyBeginTransaction() 
+dummyBeginTransaction(__attribute__((unused)) void * dummy)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyEndTransaction() 
+dummyEndTransaction(__attribute__((unused)) void * dummy)
 {
 	return RS_RET_OK;
 }
 static rsRetVal
-dummyIsCompatibleWithFeature() 
+dummyIsCompatibleWithFeature(__attribute__((unused)) syslogFeature eFeat)
 {
 	return RS_RET_INCOMPATIBLE;
 }
@@ -125,7 +125,7 @@ dummynewActInst(uchar *modName, struct nvlst __attribute__((unused)) *dummy1,
 
 /* add a user to the current list of users (always at the root) */
 static void
-modUsrAdd(modInfo_t *pThis, char *pszUsr)
+modUsrAdd(modInfo_t *pThis, const char *pszUsr)
 {
 	modUsr_t *pUsr;
 
@@ -152,7 +152,7 @@ finalize_it:
  * rgerhards, 2008-03-11
  */
 static void
-modUsrDel(modInfo_t *pThis, char *pszUsr)
+modUsrDel(modInfo_t *pThis, const char *pszUsr)
 {
 	modUsr_t *pUsr;
 	modUsr_t *pPrev = NULL;
@@ -201,8 +201,7 @@ modUsrPrint(modInfo_t *pThis)
  * to be called at end of run to detect "module leaks" and who is causing them.
  * rgerhards, 2008-03-11
  */
-//static void
-void
+static void
 modUsrPrintAll(void)
 {
 	modInfo_t *pMod;
@@ -1322,7 +1321,7 @@ SetModDir(uchar *pszModDir)
  * called by anyone interested in using a module. -- rgerhards, 20080-03-10
  */
 static rsRetVal
-Use(char *srcFile, modInfo_t *pThis)
+Use(const char *srcFile, modInfo_t *pThis)
 {
 	DEFiRet;
 
@@ -1345,7 +1344,7 @@ Use(char *srcFile, modInfo_t *pThis)
  * module is unloaded. -- rgerhards, 20080-03-10
  */
 static rsRetVal
-Release(char *srcFile, modInfo_t **ppThis)
+Release(const char *srcFile, modInfo_t **ppThis)
 {
 	DEFiRet;
 	modInfo_t *pThis;

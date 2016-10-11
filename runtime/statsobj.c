@@ -552,7 +552,7 @@ finalize_it:
  * again, as this is right now not needed.
  */
 static rsRetVal
-enableStats()
+enableStats(void)
 {
 	GatherStats = 1;
 	return RS_RET_OK;

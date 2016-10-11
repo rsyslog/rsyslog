@@ -45,6 +45,17 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsdsel_ptcp)
 
+static rsRetVal
+gtlsHasRcvInBuffer(nsd_gtls_t *pThis)
+{
+	/* we have a valid receive buffer one such is allocated and 
+	 * NOT exhausted!
+	 */
+	DBGPRINTF("hasRcvInBuffer on nsd %p: pszRcvBuf %p, lenRcvBuf %d\n", pThis,
+		pThis->pszRcvBuf, pThis->lenRcvBuf);
+	return(pThis->pszRcvBuf != NULL && pThis->lenRcvBuf != -1);
+	}
+
 
 /* Standard-Constructor
  */
@@ -152,6 +163,7 @@ doRetry(nsd_gtls_t *pNsd)
 			pNsd->rtryCall = gtlsRtry_None; /* we are done */
 			gnuRet = 0;
 			break;
+		case gtlsRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
 			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);

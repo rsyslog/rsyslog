@@ -68,6 +68,7 @@
 #include <regex.h> // TODO: fix via own module
 #include <pthread.h>
 #include <stdint.h>
+#include <time.h>
 #include "obj-types.h"
 #include "glbl.h"
 #include "stream.h"
@@ -117,6 +118,8 @@ typedef struct strm_s {
 	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
 	int fdDir;	/* the directory's descriptor, in case bSync is requested (-1 if closed) */
+	int readTimeout;/* 0: do not timeout */
+	time_t lastRead;/* for timeout processing */
 	ino_t inode;	/* current inode for files being monitored (undefined else) */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* the iobuffer currently in use to gather data */
@@ -209,14 +212,14 @@ ENDinterface(strm)
 /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
 /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
 
-static inline int
-strmGetCurrFileNum(strm_t *pStrm) {
-	return pStrm->iCurrFNum;
-}
+#define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, int fileNum, off64_t offs, off64_t *bytesDel);
 rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF);
+int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
+void strmDebugOutBuf(const strm_t *const pThis);
+void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

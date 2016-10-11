@@ -332,6 +332,16 @@ cnfSetLexFile(char *fname)
 	int r = 0;
 	struct bufstack *bs;
 
+	/* check for invalid recursive include */
+	for(bs = currbs ; bs != NULL ; bs = bs->prev) {
+		if(!strcmp(fname, bs->fn)) {
+			parser_errmsg("trying to include file '%s', "
+				"which is already included - ignored", fname);
+			r = 1;
+			goto done;
+		}
+	}
+
 	if(fname == NULL) {
 		fp = stdin;
 	} else {

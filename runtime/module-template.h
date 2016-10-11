@@ -770,7 +770,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * cached, left-in-memory copy of a previous incarnation.
  */
 #define BEGINmodInit(uniqName) \
-rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo)\
+rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo);\
+rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo)\
 {\
 	DEFiRet; \
 	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);

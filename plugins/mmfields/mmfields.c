@@ -198,7 +198,7 @@ extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, ucha
 }
 
 
-static inline rsRetVal
+static rsRetVal
 parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
 {
 	uchar fieldbuf[32*1024];

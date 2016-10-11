@@ -49,18 +49,20 @@ typedef unsigned char uchar;
 static enum { MD_DUMP, MD_DETECT_FILE_TYPE, MD_SHOW_SIGBLK_PARAMS,
               MD_VERIFY, MD_EXTEND, MD_CONVERT, MD_EXTRACT
 } mode = MD_DUMP;
+#ifdef ENABLEKSI
 static enum { FILEMODE_LOGSIG, FILEMODE_RECSIG } filemode = FILEMODE_LOGSIG; 
+#endif
 static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
 static int debug = 0; 
 /* Helper variables for EXTRACT Mode */
 static int append = 0;
 char *outputfile = NULL;
-char *linenumbers = "";
+const char *linenumbers = "";
 
 #ifdef ENABLEGT
 static void
-dumpFile(char *name)
+dumpFile(const char *name)
 {
 	FILE *fp;
 	char hdr[9];
@@ -104,7 +106,7 @@ err:
 }
 
 static void
-showSigblkParams(char *name)
+showSigblkParams(const char *name)
 {
 	FILE *fp;
 	block_sig_t *bs;
@@ -121,7 +123,7 @@ showSigblkParams(char *name)
 			goto err;
 		}
 	}
-	if((r = rsgt_chkFileHdr(fp, "LOGSIG11")) != 0) goto err;
+	if((r = rsgt_chkFileHdr(fp, (char*)"LOGSIG11")) != 0) goto err;
 
 	while(1) { /* we will err out on EOF */
 		if((r = rsgt_getBlockParams(fp, 0, &bs, &bh, &bHasRecHashes,
@@ -145,7 +147,7 @@ err:
 }
 
 static void
-convertFile(char *name)
+convertFile(const char *name)
 {
 	FILE *oldsigfp = NULL, *newsigfp = NULL;
 	char hdr[9];
@@ -239,7 +241,7 @@ err:
 
 #ifdef ENABLEKSI
 static void
-dumpFileKSI(char *name)
+dumpFileKSI(const char *name)
 {
 	FILE *fp;
 	char hdr[9];
@@ -283,7 +285,7 @@ err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), 
 }
 
 static void
-showSigblkParamsKSI(char *name)
+showSigblkParamsKSI(const char *name)
 {
 	FILE *fp;
 	block_sig_t *bs;
@@ -300,7 +302,7 @@ showSigblkParamsKSI(char *name)
 			goto err;
 		}
 	}
-	if((r = rsksi_chkFileHdr(fp, "LOGSIG11", verbose)) != 0) goto err;
+	if((r = rsksi_chkFileHdr(fp, (char*)"LOGSIG11", verbose)) != 0) goto err;
 
 	while(1) { /* we will err out on EOF */
 		if((r = rsksi_getBlockParams(fp, 0, &bs, &bh, &bHasRecHashes,
@@ -324,7 +326,7 @@ err:
 }
 
 static void
-convertFileKSI(char *name)
+convertFileKSI(const char *name)
 {
 	FILE *oldsigfp = NULL, *newsigfp = NULL;
 	char hdr[9];
@@ -418,10 +420,10 @@ err:
 
 #ifdef ENABLEGT
 static void
-detectFileType(char *name)
+detectFileType(const char *name)
 {
 	FILE *fp;
-	char *typeName;
+	const char *typeName;
 	char hdr[9];
 	int r = -1;
 	
@@ -451,7 +453,7 @@ detectFileType(char *name)
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSGTE2String(r), name);
 }
 
-static inline int
+static int
 doVerifyRec(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 	    gtfile gf, gterrctx_t *ectx, uint8_t bInBlock)
 {
@@ -493,7 +495,7 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
+verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
@@ -505,13 +507,13 @@ verifyGT(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsig
 	gterrctx_t ectx;
 	rsgt_errctxInit(&ectx);
 
-	rsgtInit("rsyslog rsgtutil " VERSION);
+	rsgtInit((char*)"rsyslog rsgtutil " VERSION);
 	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
 	ectx.filename = strdup(sigfname);
 
-	if((r = rsgt_chkFileHdr(sigfp, "LOGSIG11")) != 0) {
+	if((r = rsgt_chkFileHdr(sigfp, (char*)"LOGSIG11")) != 0) {
 		if (debug)
 			fprintf(stderr, "error %d in rsgt_chkFileHdr\n", r); 
 		goto done;
@@ -658,10 +660,10 @@ err:
 
 #ifdef ENABLEKSI
 static void
-detectFileTypeKSI(char *name)
+detectFileTypeKSI(const char *name)
 {
 	FILE *fp;
-	char *typeName;
+	const char *typeName;
 	char hdr[9];
 	int r = -1;
 	
@@ -691,7 +693,7 @@ detectFileTypeKSI(char *name)
 err:	fprintf(stderr, "error %d (%s) processing file %s\n", r, RSKSIE2String(r), name);
 }
 
-static inline int
+static int
 doVerifyRecKSI(FILE *logfp, FILE *sigfp, FILE *nsigfp,
 		ksifile ksi, ksierrctx_t *ectx, uint8_t bInBlock)
 {
@@ -733,7 +735,7 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
+verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	filemode = FILEMODE_LOGSIG; /* Default FileMode */ 
 	block_sig_t *bs = NULL;
@@ -755,7 +757,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 
 	/* Init KSI related variables */
 	rsksi_errctxInit(&ectx);
-	rsksiInit("rsyslog rsksiutil " VERSION);
+	rsksiInit((char*)"rsyslog rsksiutil " VERSION);
 	bInitDone = 1;
 	ectx.verbose = verbose;
 	ectx.fp = stderr;
@@ -768,7 +770,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 	}
 
 	/* Check if we have a logsignature file */
-	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11", 0)) == 0) {
+	if((r = rsksi_chkFileHdr(sigfp, (char*)"LOGSIG11", 0)) == 0) {
 		/* Verify Log signature */
 		if(debug) printf("debug: verifyKSI:\t\t\t Found log signature file ... \n");
 		if(mode == MD_EXTEND) {
@@ -817,7 +819,7 @@ verifyKSI(char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsi
 				bInBlock = 0;
 			} else	bInBlock = 1;
 		}
-	} else if((r = rsksi_chkFileHdr(sigfp, "RECSIG11", verbose)) == 0) {
+	} else if((r = rsksi_chkFileHdr(sigfp, (char*)"RECSIG11", verbose)) == 0) {
 		/* Verify Log Excerpts */
 		if(debug) printf("verifyKSI:\t\t\t Found record integrity proof file ... \n");
 		filemode = FILEMODE_RECSIG; 
@@ -1023,7 +1025,7 @@ err:
  * Input: logfilename and open file handles
  */
 static int
-extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
+extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 {
 	char newsigfname[4096];
 	FILE *newsigfp = NULL; 
@@ -1069,7 +1071,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	/* Count number of linenumbers */ 
 	if (strlen(linenumbers) > 0 ) {
 		/* Get count of line numbers */ 
-		char* pszTmp = linenumbers;
+		const char* pszTmp = linenumbers;
 		if (*(pszTmp) != ',')
 			iLineNumbers++; 
 		else
@@ -1099,7 +1101,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 		int iNumPos = 0; 
 		int iNumLength = 0; 
 		char szTmpNum[11]; 
-		char* pszBegin = linenumbers;
+		const char* pszBegin = linenumbers;
 		char* pszEnd; 
 		while(pszBegin != NULL) {
 			/* Cut number from string */
@@ -1137,7 +1139,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	/* Init KSI library */
 	ksierrctx_t ectx;
 	rsksi_errctxInit(&ectx);
-	rsksiInit("rsyslog rsksiutil " VERSION);
+	rsksiInit((char*)"rsyslog rsksiutil " VERSION);
 	bInitDone = 1;
 	/* Set defaults for KSI Signature extraction */
 	ectx.verbose = verbose;
@@ -1145,7 +1147,7 @@ extractKSI(char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *sigfp)
 	ectx.filename = strdup(sigfname);
 
 	/* Check for valid file header in sigfile */
-	if((r = rsksi_chkFileHdr(sigfp, "LOGSIG11", verbose)) != 0) {
+	if((r = rsksi_chkFileHdr(sigfp, (char*)"LOGSIG11", verbose)) != 0) {
 		if (debug) printf("debug: extractKSI:\t\t\t error %d in rsksi_chkFileHdr\n", r); 
 		goto done;
 	}	
@@ -1487,7 +1489,7 @@ done2:
 /* VERIFY if logfile has a Guardtime Signfile 
 */
 static void
-verify(char *name, char *errbuf)
+verify(const char *name, char *errbuf)
 {
 	int iSuccess = 1; 
 	char sigfname[4096];
@@ -1592,7 +1594,7 @@ done:
 /* EXTRACT loglines including their signatures from a logfile 
 */
 static void
-extract(char *name, char *errbuf)
+extract(const char *name, char *errbuf)
 {
 	int iSuccess = 1; 
 	char sigfname[4096];
@@ -1667,7 +1669,7 @@ done:
 }
 
 static void
-processFile(char *name)
+processFile(const char *name)
 {
 	char errbuf[4096];
 
@@ -1734,6 +1736,9 @@ processFile(char *name)
 			fprintf(stdout, "ProcessMode: Extract"); 
 		extract(name, errbuf);
 		break;
+	default:fprintf(stderr, "%s:%d: program error, invalid switch value\n", __FILE__, __LINE__);
+		abort();
+		break;
 	}
 }
 
@@ -1763,7 +1768,7 @@ static struct option long_options[] =
 }; 
 
 /* Helper function to show some HELP */
-void 
+static void
 rsgtutil_usage(void)
 {
 	fprintf(stderr, "usage: rsgtutil [options]\n"

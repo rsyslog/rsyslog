@@ -13,11 +13,17 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
+	hostname-with-slash-pmrfc5424.sh \
+	hostname-with-slash-pmrfc3164.sh \
+	hostname-with-slash-dflt-invld.sh \
+	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
+	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -61,6 +67,7 @@ TESTS +=  \
 	rfc5424parser.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
+	tcp_forwarding_retries.sh \
 	arrayqueue.sh \
 	global_vars.sh \
 	da-mainmsg-q.sh \
@@ -73,6 +80,7 @@ TESTS +=  \
 	imtcp_incomplete_frame_at_end.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
+	daqueue-dirty-shutdown.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
@@ -181,6 +189,7 @@ TESTS +=  \
 	rscript_lt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
+	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
 	cee_diskqueue.sh \
@@ -253,6 +262,14 @@ if ENABLE_OMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
 	omkafka_static.sh
+endif
+endif
+
+if ENABLE_PGSQL
+if ENABLE_PGSQL_TESTS
+TESTS += \
+	pgsql-basic.sh \
+	pgsql-template.sh
 endif
 endif
 
@@ -424,7 +441,10 @@ endif
 
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
-         sndrcv_relp_tls.sh
+         sndrcv_relp_tls.sh \
+         sndrcv_relp_dflt_pt.sh \
+	 imrelp-basic.sh \
+	 imrelp-manyconn.sh
 endif
 
 if ENABLE_OMUDPSPOOF
@@ -466,12 +486,17 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-truncate.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
 	imfile-endregex.sh \
 	imfile-endregex-save-lf.sh \
-	imfile-endregex-save-lf-persist.sh
+	imfile-endregex-save-lf-persist.sh \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -492,9 +517,14 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	hostname-with-slash-pmrfc5424.sh \
+	hostname-with-slash-pmrfc3164.sh \
+	hostname-with-slash-dflt-invld.sh \
+	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
+	invalid_nested_include.sh \
 	validation-run.sh \
 	tls-certs/ca-key.pem \
 	tls-certs/ca.pem \
@@ -591,6 +621,7 @@ EXTRA_DIST= \
 	testsuites/tcp_forwarding_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
+	tcp_forwarding_retries.sh \
 	killrsyslog.sh \
 	parsertest.sh \
 	fieldtest.sh \
@@ -643,6 +674,7 @@ EXTRA_DIST= \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
+	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \
@@ -859,6 +891,7 @@ EXTRA_DIST= \
 	rcvr_fail_restore.sh \
 	testsuites/rcvr_fail_restore_rcvr.conf \
 	testsuites/rcvr_fail_restore_sender.conf \
+	daqueue-dirty-shutdown.sh \
 	daqueue-invld-qi.sh \
 	daqueue-persist.sh \
 	daqueue-persist-drvr.sh \
@@ -877,12 +910,17 @@ EXTRA_DIST= \
 	sndrcv.sh \
 	testsuites/sndrcv_sender.conf \
 	testsuites/sndrcv_rcvr.conf \
+	imrelp-basic.sh \
+	imrelp-manyconn.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
 	testsuites/sndrcv_relp_rcvr.conf \
 	sndrcv_relp_tls.sh \
 	testsuites/sndrcv_relp_tls_sender.conf \
 	testsuites/sndrcv_relp_tls_rcvr.conf \
+	sndrcv_relp_dflt_pt.sh \
+	testsuites/sndrcv_relp_dflt_pt_rcvr.conf \
+	testsuites/sndrcv_relp_dflt_pt_sender.conf \
 	sndrcv_udp.sh \
 	testsuites/sndrcv_udp_sender.conf \
 	testsuites/sndrcv_udp_rcvr.conf \
@@ -969,6 +1007,11 @@ EXTRA_DIST= \
 	imfile-basic.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh \
+	imfile-truncate.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \
@@ -1250,12 +1293,14 @@ EXTRA_DIST= \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
 	ksi-extract-verify-long-vg.sh \
+	empty-prop-comparison.sh \
 	sndrcv_tls_anon_rebind.sh \
 	testsuites/sndrcv_tls_anon_rebind_sender.conf \
 	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
 	sndrcv_tls_anon.sh \
 	testsuites/sndrcv_tls_anon_sender.conf \
 	testsuites/sndrcv_tls_anon_rcvr.conf \
+	omtcl.sh \
 	omtcl.tcl
 
 ourtail_SOURCES = ourtail.c
@@ -1268,8 +1313,8 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS)
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(RELP_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS) $(RELP_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif

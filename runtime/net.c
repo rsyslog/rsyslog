@@ -12,7 +12,7 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -77,6 +77,9 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 
+#ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
+extern size_t SALEN(struct sockaddr *sa);
+#endif
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
  * list roots, one for UDP and one for TCP.
@@ -773,7 +776,8 @@ finalize_it:
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
  */
-void PrintAllowedSenders(int iListToPrint)
+static void
+PrintAllowedSenders(int iListToPrint)
 {
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
@@ -826,7 +830,8 @@ void PrintAllowedSenders(int iListToPrint)
  * (if the line is correct).
  * rgerhards, 2005-09-27
  */
-rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
+static rsRetVal
+addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 {
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
@@ -1077,9 +1082,10 @@ should_use_so_bsdcompat(void)
 /* print out which socket we are listening on. This is only
  * a debug aid. rgerhards, 2007-07-02
  */
-void debugListenInfo(int fd, char *type)
+static void
+debugListenInfo(int fd, char *type)
 {
-	char *szFamily;
+	const char *szFamily;
 	int port;
 	struct sockaddr_storage sa;
 	socklen_t saLen = sizeof(sa);
@@ -1115,7 +1121,7 @@ void debugListenInfo(int fd, char *type)
 /* Return a printable representation of a host addresses. If
  * a parameter is NULL, it is not set.  rgerhards, 2013-01-22
  */
-rsRetVal
+static rsRetVal
 cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t **ip)
 {
 	DEFiRet;
@@ -1189,7 +1195,8 @@ finalize_it:
 /* closes the UDP listen sockets (if they exist) and frees
  * all dynamically assigned memory. 
  */
-void closeUDPListenSockets(int *pSockArr)
+static void
+closeUDPListenSockets(int *pSockArr)
 {
 	register int i;
 
@@ -1208,7 +1215,8 @@ void closeUDPListenSockets(int *pSockArr)
  * 1 - server, 0 - client
  * param rcvbuf indicates desired rcvbuf size; 0 means OS default
  */
-int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind)
+static int *
+create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;

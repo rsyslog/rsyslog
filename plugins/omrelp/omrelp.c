@@ -78,6 +78,7 @@ typedef struct _instanceData {
 	uchar *port;
 	int sizeWindow;		/**< the RELP window size - 0=use default */
 	unsigned timeout;
+	int connTimeout;
 	unsigned rebindInterval;
 	sbool bEnableTLS;
 	sbool bEnableTLSZip;
@@ -126,6 +127,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "windowsize", eCmdHdlrInt, 0 },
 	{ "timeout", eCmdHdlrInt, 0 },
+	{ "conn.timeout", eCmdHdlrInt, 0 },
 	{ "localclientip", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
@@ -190,6 +192,9 @@ doCreateRelpClient(wrkrInstanceData_t *pWrkrData)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetTimeout(pWrkrData->pRelpClt, pData->timeout) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	if(relpCltSetConnTimeout(pWrkrData->pRelpClt, pData->connTimeout) != RELP_RET_OK) {
+		ABORT_FINALIZE(RS_RET_RELP_ERR);
+	}
 	if(relpCltSetWindowSize(pWrkrData->pRelpClt, pData->sizeWindow) != RELP_RET_OK)
 		ABORT_FINALIZE(RS_RET_RELP_ERR);
 	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
@@ -232,6 +237,7 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->sizeWindow = 0;
 	pData->timeout = 90;
+	pData->connTimeout = 10;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
 	pData->bEnableTLSZip = DFLT_ENABLE_TLSZIP;
@@ -283,6 +289,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->port = NULL;
 	pData->tplName = NULL;
 	pData->timeout = 90;
+	pData->connTimeout = 10;
 	pData->sizeWindow = 0;
 	pData->rebindInterval = 0;
 	pData->bEnableTLS = DFLT_ENABLE_TLS;
@@ -325,6 +332,8 @@ CODESTARTnewActInst
 			pData->localClientIP = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (unsigned) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "conn.timeout")) {
+			pData->connTimeout = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
 			pData->rebindInterval = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "windowsize")) {
@@ -405,13 +414,13 @@ static rsRetVal doConnect(wrkrInstanceData_t *pWrkrData)
 	if(iRet == RELP_RET_OK) {
 		pWrkrData->bIsConnected = 1;
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
-		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "Could not connect, librelp does NOT "
+		errmsg.LogError(0, RS_RET_RELP_NO_TLS, "omrelp: Could not connect, librelp does NOT "
 				"does not support TLS (most probably GnuTLS lib "
 				"is too old)!");
 		ABORT_FINALIZE(RS_RET_RELP_NO_TLS);
 	} else if(iRet == RELP_RET_ERR_NO_TLS) {
 		errmsg.LogError(0, RS_RET_RELP_NO_TLS_AUTH,
-				"imrelp: could not activate relp TLS with "
+				"omrelp: could not activate relp TLS with "
 				"authentication, librelp does not support it "
 				"(most probably GnuTLS lib is too old)! "
 				"Note: anonymous TLS is probably supported.");
@@ -617,7 +626,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));

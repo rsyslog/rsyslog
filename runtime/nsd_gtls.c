@@ -70,18 +70,24 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
+
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 
 static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 /* a macro to check GnuTLS calls against unexpected errors */
-#define CHKgnutls(x) \
-	if((gnuRet = (x)) != 0) { \
+#define CHKgnutls(x) { \
+	gnuRet = (x); \
+	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the file  does not exist"); \
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+	} else if(gnuRet != 0) { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
-	}
+	} \
+}
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
@@ -605,7 +611,12 @@ gtlsGlblInit(void)
 	}
 	dbgprintf("GTLS CA file: '%s'\n", cafile);
 	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
-	if(gnuRet < 0) {
+	if(gnuRet == GNUTLS_E_FILE_ERROR) {
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR,
+			"error reading certificate file '%s' - a common cause is that the "
+			"file  does not exist", cafile);
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	} else if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
 		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
@@ -992,7 +1003,7 @@ static rsRetVal
 gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 {
 	DEFiRet;
-	char *pszErrCause;
+	const char *pszErrCause;
 	int gnuRet;
 	cstr_t *pStr;
 	unsigned stateCert;
@@ -1173,6 +1184,7 @@ ENDobjConstruct(nsd_gtls)
 
 
 /* destructor for the nsd_gtls object */
+PROTOTYPEobjDestruct(nsd_gtls);
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->iMode == 1) {
@@ -1673,7 +1685,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 #	endif
 	DEFiRet;
@@ -1711,7 +1723,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
-#	if HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	/* The gnutls_certificate_type_set_priority function is deprecated
 	 * and not available in recent GnuTLS versions. However, there is no
 	 * doc how to properly replace it with gnutls_priority_set_direct.

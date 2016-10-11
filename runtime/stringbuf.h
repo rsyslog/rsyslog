@@ -49,9 +49,9 @@ typedef struct cstr_s
 rsRetVal cstrConstruct(cstr_t **ppThis);
 #define rsCStrConstruct(x) cstrConstruct((x))
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
-rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
+rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Destruct the string buffer object.
@@ -64,34 +64,15 @@ void rsCStrDestruct(cstr_t **ppThis);
  * cstrFinalize() is called.
  * rgerhards, 2009-06-16
  */
-rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded); /* our helper, NOT a public interface! */
-static inline rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c)
-{
-	rsRetVal iRet = RS_RET_OK;
-
-	if(pThis->iStrLen+1 >= pThis->iBufSize) {  
-		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
-	}
-
-	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iStrLen++) = c;
-
-finalize_it:
-	return iRet;
-}
-
-
-/* some inline functions for things that are really frequently called... */
+rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
 
 /* Finalize the string object. This must be called after all data is added to it
  * but before that data is used.
  * rgerhards, 2009-06-16
  */
-static inline void
-cstrFinalize(cstr_t *const __restrict__ pThis)
-{
-	if(pThis->iStrLen > 0)
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* space is always reserved for this */
+#define cstrFinalize(pThis) { \
+	if((pThis)->iStrLen > 0) \
+		(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
 }
 
 
@@ -126,7 +107,7 @@ rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**
  * Append an integer to the string. No special formatting is
@@ -135,7 +116,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, char *fmt, ...) __attribute__((format(p
 rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
-rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
+rsRetVal strExit(void);
 uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
 #define rsCStrGetSzStrNoNULL(x) cstrGetSzStrNoNULL(x)
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
@@ -149,7 +130,6 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache)
 void rsCStrRegexDestruct(void *rc);
 
 /* new calling interface */
-void cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t **pThis, uchar **ppSz, int bRetNULL);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
@@ -163,7 +143,6 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 
-rsRetVal strInit();
-rsRetVal strExit();
+rsRetVal strInit(void);
 
 #endif /* single include */

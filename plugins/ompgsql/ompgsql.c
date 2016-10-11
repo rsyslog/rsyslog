@@ -63,6 +63,7 @@ typedef struct _instanceData {
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
 	ConnStatusType	eLastPgSQLStatus; 	/* last status from postgres */
+        uchar   *tplName;                       /* format template to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -115,6 +116,7 @@ static void closePgSQL(instanceData *pData)
 BEGINfreeInstance
 CODESTARTfreeInstance
 	closePgSQL(pData);
+        free(pData->tplName);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -363,12 +365,15 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
 	 */
-	if(*(p-1) == ';')
+	if(*(p-1) == ';') {
 		--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
 			 *       is clean enough for the time being -- rgerhards, 2007-07-30
 			 *       kept it for pgsql -- sur5r, 2007-10-19
 			 */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdPgSQLFmt"));
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) pData->tplName));
+	}
+	else
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
 	
 	/* If we detect invalid properties, we disable logging, 
 	 * because right properties are vital at this place.  

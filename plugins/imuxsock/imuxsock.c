@@ -58,6 +58,8 @@
 #include "hashtable.h"
 #include "ratelimit.h"
 
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imuxsock")
@@ -510,7 +512,7 @@ static inline rsRetVal
 openLogSocket(lstn_t *pLstn)
 {
 	DEFiRet;
-#	if HAVE_SCM_CREDENTIALS
+#	ifdef HAVE_SCM_CREDENTIALS
 	int one;
 #	endif /* HAVE_SCM_CREDENTIALS */
 
@@ -546,7 +548,7 @@ openLogSocket(lstn_t *pLstn)
 		CHKiRet(createLogSocket(pLstn));
 	}
 
-#	if HAVE_SCM_CREDENTIALS
+#	ifdef HAVE_SCM_CREDENTIALS
 	if(pLstn->bUseCreds) {
 		one = 1;
 		if(setsockopt(pLstn->fd, SOL_SOCKET, SO_PASSCRED, &one, (socklen_t) sizeof(one)) != 0) {
@@ -666,7 +668,7 @@ fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
  * journald. Currently works with Linux /proc filesystem, only.
  */
 static rsRetVal
-getTrustedProp(struct ucred *cred, char *propName, uchar *buf, size_t lenBuf, int *lenProp)
+getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenBuf, int *lenProp)
 {
 	int fd;
 	int i;
@@ -1003,7 +1005,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	struct timeval *ts;
 	uchar bufRcv[4096+1];
 	uchar *pRcv = NULL; /* receive buffer */
-#	if HAVE_SCM_CREDENTIALS
+#	ifdef HAVE_SCM_CREDENTIALS
 	char aux[128];
 #	endif
 
@@ -1025,7 +1027,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 
 	memset(&msgh, 0, sizeof(msgh));
 	memset(&msgiov, 0, sizeof(msgiov));
-#	if HAVE_SCM_CREDENTIALS
+#	ifdef HAVE_SCM_CREDENTIALS
 	if(pLstn->bUseCreds) {
 		memset(&aux, 0, sizeof(aux));
 		msgh.msg_control = aux;
@@ -1046,7 +1048,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 		if(pLstn->bUseCreds) {
 			struct cmsghdr *cm;
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
-#				if HAVE_SCM_CREDENTIALS
+#				ifdef HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
 				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
@@ -1079,8 +1081,8 @@ finalize_it:
 
 
 /* activate current listeners */
-static inline rsRetVal
-activateListeners()
+static rsRetVal
+activateListeners(void)
 {
 	register int i;
 	int actSocks;

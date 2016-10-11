@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.20.0.master],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.23.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -21,6 +21,24 @@ AC_PROG_CC_C99
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
+
+m4_ifdef([AX_IS_RELEASE], [
+	AX_IS_RELEASE([git-directory])
+	m4_ifdef([AX_COMPILER_FLAGS], [
+		AX_COMPILER_FLAGS()
+	], [
+		if test "$GCC" = "yes"
+		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		fi
+		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+	])
+], [
+	if test "$GCC" = "yes"
+	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+	fi
+	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
+])
+
 
 PKG_PROG_PKG_CONFIG
 
@@ -60,6 +78,10 @@ case "${host}" in
     AC_SUBST(SOL_LIBS)
   ;;
 esac
+
+# Running from git source?
+in_git_src=no
+AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
@@ -294,10 +316,14 @@ AC_CHECK_LIB(
 		 [1],
 		 [Can set thread-name.])])
 
-AC_CHECK_FUNCS(
+AC_SEARCH_LIBS(
     [pthread_setschedparam],
+    [pthread],
     [
       rsyslog_have_pthread_setschedparam=yes
+      AC_DEFINE([HAVE_PTHREAD_SETSCHEDPARAM],
+	[1],
+	[Can set thread scheduling parameters])
     ],
     [
       rsyslog_have_pthread_setschedparam=no
@@ -435,14 +461,23 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_sy
 
 # debug
 AC_ARG_ENABLE(debug,
-        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=auto@:>@])],
         [case "${enableval}" in
-         yes) enable_debug="yes" ;;
-          no) enable_debug="no" ;;
+          yes) enable_debug="yes" ;;
+           no) enable_debug="no" ;;
+         auto) enable_debug="auto" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
          esac],
-        [enable_debug="no"]
+        [enable_debug="auto"]
 )
+if test "$enable_debug" = "auto"; then
+	if test "x$in_git_src" = "xyes"; then
+		enable_debug="yes"
+	else
+		enable_debug="no"
+	fi
+	AC_MSG_NOTICE([enable-debug in auto mode, enable-debug is set to ${enable_debug}])
+fi
 if test "$enable_debug" = "yes"; then
         AC_DEFINE(DEBUG, 1, [Defined if debug mode is enabled (its easier to check).])
 fi
@@ -831,6 +866,7 @@ if test "$GCC" = "yes"; then
     RSRT_CFLAGS="$RSRT_CFLAGS -g"
   fi
 fi
+RSRT_CFLAGS="$RSRT_CFLAGS $WARN_CFLAGS"
 RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
@@ -883,6 +919,23 @@ AC_ARG_ENABLE(mysql_tests,
         [enable_mysql_tests=no]
 )
 AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
+
+
+# capability to enable PostgreSQL testbench tests. This requries that a Syslog database
+# with the default schema (see plugins/ompgsql/createDB.sql) has been created on the
+# local (127.0.0.1) PostgreSQL server and a user "rsyslog" with password "testbench"
+# exists, is able to login with default parameters and has sufficient (read: all)
+# privileges on that database
+AC_ARG_ENABLE(pgsql_tests,
+        [AS_HELP_STRING([--enable-pgsql-tests],[enable PostgreSQL specific tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pgsql_tests="yes" ;;
+          no) enable_pgsql_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pgsql-tests) ;;
+         esac],
+        [enable_pgsql_tests=no]
+)
+AM_CONDITIONAL(ENABLE_PGSQL_TESTS, test x$enable_pgsql_tests = xyes)
 
 
 # Mail support (so far we do not need a library, but we need to turn this on and off)
@@ -1093,7 +1146,8 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-	PKG_CHECK_MODULES(RELP, relp >= 1.2.5)
+	PKG_CHECK_MODULES(RELP, relp >= 1.2.12)
+	AC_DEFINE([ENABLE_RELP], [1], [Indicator that RELP is present])
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 
@@ -1761,10 +1815,6 @@ AC_ARG_ENABLE(distcheck-workaround,
 AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
 
 
-# Running from git source?
-in_git_src=no
-AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
-
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
 
@@ -1948,6 +1998,7 @@ echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
 echo "    Extended Testbench enabled:               $enable_extended_tests"
 echo "    MySQL Tests enabled:                      $enable_mysql_tests"
+echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"

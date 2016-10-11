@@ -1,6 +1,6 @@
 /* An implementation of the nsd poll interface for plain tcp sockets.
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -25,7 +25,7 @@
 #define INCLUDED_NSDPOLL_PTCP_H
 
 #include "nsd.h"
-#if HAVE_SYS_EPOLL_H
+#ifdef HAVE_SYS_EPOLL_H
 #	include <sys/epoll.h>
 #endif
 typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
@@ -35,7 +35,7 @@ typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
  */
 typedef struct nsdpoll_epollevt_lst_s nsdpoll_epollevt_lst_t;
 struct nsdpoll_epollevt_lst_s {
-#if HAVE_SYS_EPOLL_H
+#ifdef HAVE_SYS_EPOLL_H
 	epoll_event_t event;
 #endif
 	int id;

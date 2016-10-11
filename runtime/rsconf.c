@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2015 Adiscon GmbH.
+ * Copyright 2011-2016 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -122,7 +122,12 @@ static struct cnfparamblk parserpblk =
 /* forward-definitions */
 void cnfDoCfsysline(char *ln);
 
-void cnfSetDefaults(rsconf_t *pThis)
+int rsconfNeedDropPriv(rsconf_t *const cnf)
+{
+	return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
+}
+
+static void cnfSetDefaults(rsconf_t *pThis)
 {
 	pThis->globals.bAbortOnUncleanConfig = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
@@ -177,7 +182,8 @@ ENDobjConstruct(rsconf)
 
 /* ConstructionFinalizer
  */
-rsRetVal rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
+static rsRetVal
+rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, rsconf);
@@ -206,6 +212,7 @@ freeCnf(rsconf_t *pThis)
 
 
 /* destructor for the rsconf object */
+PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
 	freeCnf(pThis);
@@ -219,6 +226,7 @@ ENDobjDestruct(rsconf)
 
 
 /* DebugPrint support for the rsconf object */
+PROTOTYPEObjDebugPrint(rsconf);
 BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 	cfgmodules_etry_t *modNode;
 
@@ -276,7 +284,7 @@ CODESTARTobjDebugPrint(rsconf)
 ENDobjDebugPrint(rsconf)
 
 
-rsRetVal
+static rsRetVal
 parserProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
@@ -326,7 +334,7 @@ finalize_it:
 
 
 /* Process input() objects */
-rsRetVal
+static rsRetVal
 inputProcessCnf(struct cnfobj *o)
 {
 	struct cnfparamvals *pvals;
@@ -363,7 +371,7 @@ finalize_it:
 extern int yylineno;
 
 void
-parser_warnmsg(char *fmt, ...)
+parser_warnmsg(const char *fmt, ...)
 {
 	va_list ap;
 	char errBuf[1024];
@@ -378,7 +386,7 @@ parser_warnmsg(char *fmt, ...)
 }
 
 void
-parser_errmsg(char *fmt, ...)
+parser_errmsg(const char *fmt, ...)
 {
 	va_list ap;
 	char errBuf[1024];
@@ -397,8 +405,9 @@ parser_errmsg(char *fmt, ...)
 	va_end(ap);
 }
 
+int yyerror(const char *s); /* we need this prototype to make compiler happy */
 int
-yyerror(char *s)
+yyerror(const char *s)
 {
 	parser_errmsg("%s on token '%s'", s, yytext);
 	return 0;
@@ -448,6 +457,7 @@ void cnfDoObj(struct cnfobj *o)
 		/* these types are processed at a later stage */
 		bChkUnuse = 0;
 		break;
+	case CNFOBJ_ACTION:
 	default:
 		dbgprintf("cnfDoObj program error: unexpected object type %u\n",
 			 o->objType);
@@ -778,8 +788,8 @@ startInputModules(void)
 
 
 /* activate the main queue */
-static inline rsRetVal
-activateMainQueue()
+static rsRetVal
+activateMainQueue(void)
 {
 	struct cnfobj *mainqCnfObj;
 	DEFiRet;
@@ -825,7 +835,7 @@ setUmask(int iUmask)
  * version of rsyslog does not support this. Future versions probably will.
  * Begun 2011-04-20, rgerhards
  */
-rsRetVal
+static rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
@@ -1029,7 +1039,7 @@ finalize_it:
  * very first version begun on 2007-07-23 by rgerhards
  */
 static rsRetVal
-loadBuildInModules()
+loadBuildInModules(void)
 {
 	DEFiRet;
 
@@ -1277,7 +1287,7 @@ validateConf(void)
  * object that holds the currently-being-loaded config ptr.
  * Begun 2011-04-20, rgerhards
  */
-rsRetVal
+static rsRetVal
 load(rsconf_t **cnf, uchar *confFile)
 {
 	int iNbrActions = 0;
@@ -1361,8 +1371,6 @@ CODESTARTobjQueryInterface(rsconf)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = rsconfConstruct;
-	pIf->ConstructFinalize = rsconfConstructFinalize;
 	pIf->Destruct = rsconfDestruct;
 	pIf->DebugPrint = rsconfDebugPrint;
 	pIf->Load = load;
