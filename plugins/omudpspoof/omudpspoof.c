@@ -197,7 +197,7 @@ getDfltTpl(void)
  * is we do not permit this directive after the v2 config system has been used to set
  * the parameter.
  */
-rsRetVal
+static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 {
 	DEFiRet;
@@ -355,7 +355,9 @@ ENDdbgPrintInstInfo
  * Note: libnet is not thread-safe, so we need to ensure that only one
  * instance ever is calling libnet code.
  * rgehards, 2007-12-20
- */
+ */ 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
 static inline rsRetVal
 UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
 {
@@ -521,6 +523,7 @@ finalize_it:
 	}
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 
 /* try to resume connection if it is not ready

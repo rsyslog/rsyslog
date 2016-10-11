@@ -245,7 +245,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	/* create parser object starting with line string without leading colon */
 	if((iRet = rsParsConstructFromSz(&pPars, pline+1)) != RS_RET_OK) {
 		parser_errmsg("error %d constructing parser object", iRet);
-		ABORT_FINALIZE(iRet);
+		FINALIZE;
 	}
 
 	/* read property */
@@ -253,7 +253,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d parsing filter property", iRet);
 		rsParsDestruct(pPars);
-		ABORT_FINALIZE(iRet);
+		FINALIZE;
 	}
 	CHKiRet(msgPropDescrFill(&stmt->d.s_propfilt.prop, cstrGetSzStrNoNULL(pCSPropName),
 		cstrLen(pCSPropName)));
@@ -263,7 +263,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
-		ABORT_FINALIZE(iRet);
+		FINALIZE;
 	}
 
 	/* we now first check if the condition is to be negated. To do so, we first
@@ -308,7 +308,7 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		if(iRet != RS_RET_OK) {
 			parser_errmsg("error %d compare value property", iRet);
 			rsParsDestruct(pPars);
-			ABORT_FINALIZE(iRet);
+			FINALIZE;
 		}
 	}
 
