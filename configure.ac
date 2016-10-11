@@ -26,7 +26,7 @@ AC_CANONICAL_HOST
 # Seems libtool doesn't honors ARFLAGS, but statically set AR_FLAGS=cru
 # This causes a few warnings on build:
 #   "ar u modifier ignored since D is the default (see U)"
-m4_divert_text([DEFAULTS], [: "${ARFLAGS=Ucru} ${AR_FLAGS=Ucru}"])
+m4_divert_text([DEFAULTS], [: "${ARFLAGS=cr} ${AR_FLAGS=cr}"])
 
 m4_ifdef([AX_IS_RELEASE], [
 	AX_IS_RELEASE([git-directory])
