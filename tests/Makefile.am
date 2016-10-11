@@ -1300,6 +1300,7 @@ EXTRA_DIST= \
 	sndrcv_tls_anon.sh \
 	testsuites/sndrcv_tls_anon_sender.conf \
 	testsuites/sndrcv_tls_anon_rcvr.conf \
+	omtcl.sh \
 	omtcl.tcl
 
 ourtail_SOURCES = ourtail.c
