@@ -15,6 +15,11 @@ Version 8.23.0 [v8-stable] 2016-11-15
   instead of "Message forwarded from ". With this patch, both are now
   detected.
   Thanks to github user patelritesh for the patch.
+- omtcl: new contributed module
+  see also https://github.com/rsyslog/rsyslog/pull/1041
+  Please note: contributed modules are not directly supported by the 
+  project. You might want to contact the author for questions.
+  Thanks to Francisco Castro for contributing it.
 - bugfix imfile: ReopenOnTruncate processing, file open processing
   This fixes
    * ReopenOnTrucate was only honored when a state file existed
