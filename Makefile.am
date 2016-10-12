@@ -253,6 +253,11 @@ if ENABLE_OMAMQP1
 SUBDIRS += contrib/omamqp1
 endif
 
+# omtcl
+if ENABLE_OMTCL
+SUBDIRS += contrib/omtcl
+endif
+
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
