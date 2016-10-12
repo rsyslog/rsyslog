@@ -14,17 +14,21 @@ sleep 1
 
 old_fd_count=$(lsof -p $pid | wc -l)
 
-for i in $(seq 5 100); do
+for i in $(seq 5 10); do
     pkill -USR1 omprog-test-bin
+    sleep .1
     . $srcdir/diag.sh injectmsg  $i 1
+    sleep .1
 done
-sleep 1
+sleep .5
 
-. $srcdir/diag.sh content-check "msgnum:00000099:"
+. $srcdir/diag.sh content-check "msgnum:00000009:"
 
 new_fd_count=$(lsof -p $pid | wc -l)
 echo OLD: $old_fd_count NEW: $new_fd_count
 . $srcdir/diag.sh assert-equal $old_fd_count $new_fd_count 2
+
+cp rsyslog.out.log /tmp/
 
 echo doing shutdown
 . $srcdir/diag.sh shutdown-when-empty
