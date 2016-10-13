@@ -201,10 +201,6 @@ The following system properties exist:
   The name of the current host as it knows itself (probably useful for
   filtering in a generic way)
 
-**$myhostname**
-  The name of the current host as it knows itself (probably useful for
-  filtering in a generic way)
-
 Time-Related System Properties
 ..............................
 
