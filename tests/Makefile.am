@@ -350,6 +350,7 @@ if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic.sh \
 	es-basic-bulk.sh \
+	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
