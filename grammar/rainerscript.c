@@ -4231,6 +4231,7 @@ cnffuncNew_prifilt(int fac)
 		func->fname = es_newStrFromCStr("prifilt", sizeof("prifilt")-1);
 		func->nParams = 0;
 		func->fID = CNFFUNC_PRIFILT;
+		func->destructable_funcdata = 1;
 		((struct funcData_prifilt *)func->funcdata)->pmask[fac] = TABLE_ALLPRI;
 	}
 	return func;
