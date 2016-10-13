@@ -18,6 +18,9 @@ Version 8.23.0 [v8-stable] 2016-11-15
   instead of "Message forwarded from ". With this patch, both are now
   detected.
   Thanks to github user patelritesh for the patch.
+- omelasticsearch: add ability to specify max http request size
+  This permits to keep batches below ES-configured limits.
+  Thanks to github user barakshechter for the patch.
 - omtcl: new contributed module
   see also https://github.com/rsyslog/rsyslog/pull/1041
   Please note: contributed modules are not directly supported by the 
