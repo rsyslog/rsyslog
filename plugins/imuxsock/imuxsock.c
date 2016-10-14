@@ -321,7 +321,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bWritePid = 0;
 	inst->bAnnotate = 0;
 	inst->bParseTrusted = 0;
-	inst->bDiscardOwnMsgs = 1;
+	inst->bDiscardOwnMsgs = bProcessInternalMessages;
 	inst->bUnlink = 1;
 	inst->next = NULL;
 
@@ -1178,7 +1178,10 @@ CODESTARTbeginCnfLoad
 	pModConf->bParseTrusted = 0;
 	pModConf->bParseHost = UNSET;
 	pModConf->bUseSpecialParser = 1;
-	pModConf->bDiscardOwnMsgs = 1;
+	/* if we do not process internal messages, we will see messages
+	 * from ourselves, and so we need to permit this.
+	 */
+	pModConf->bDiscardOwnMsgs = bProcessInternalMessages;
 	pModConf->bUnlink = 1;
 	pModConf->ratelimitIntervalSysSock = DFLT_ratelimitInterval;
 	pModConf->ratelimitBurstSysSock = DFLT_ratelimitBurst;
