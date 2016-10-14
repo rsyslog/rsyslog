@@ -218,7 +218,7 @@ of a new line. They have this format:
 
 "if" and "then" are fixed keywords that mus be present. "expr" is a
 (potentially quite complex) expression. So the `expression
-documentation <expression.html>`_ for details.
+documentation <../rainerscript/expressions.html>`_ for details.
 "action-part-of-selector-line" is an action, just as you know it (e.g.
 "/var/log/logfile" to write to that file).
 
