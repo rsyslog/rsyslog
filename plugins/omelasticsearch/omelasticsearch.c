@@ -246,7 +246,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("omelasticsearch\n");
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tnumServers=%d\n", pData->numServers);
-	dbgprintf("\thealthCheckTimeout=%lun", pData->healthCheckTimeout);
+	dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
 	dbgprintf("\tserverBaseUrls=");
 	for(i = 0 ; i < pData->numServers ; ++i)
 		dbgprintf("%c'%s'", i == 0 ? '[' : ' ', pData->serverBaseUrls[i]);
