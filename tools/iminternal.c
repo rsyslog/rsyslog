@@ -6,7 +6,7 @@
  * 
  * File begun on 2007-08-03 by RGerhards
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #include "syslogd.h"
 #include "linkedlist.h"
@@ -44,8 +43,6 @@ static linkedList_t llMsgs;
 static rsRetVal iminternalDestruct(iminternal_t *pThis)
 {
 	DEFiRet;
-
-	assert(pThis != NULL);
 
 	if(pThis->pMsg != NULL)
 		msgDestruct(&pThis->pMsg);
@@ -62,8 +59,6 @@ static rsRetVal iminternalConstruct(iminternal_t **ppThis)
 {
 	DEFiRet;
 	iminternal_t *pThis;
-
-	assert(ppThis != NULL);
 
 	if((pThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -93,12 +88,8 @@ rsRetVal iminternalAddMsg(msg_t *pMsg)
 	DEFiRet;
 	iminternal_t *pThis;
 
-	assert(pMsg != NULL);
-
 	CHKiRet(iminternalConstruct(&pThis));
-
 	pThis->pMsg = pMsg;
-
 	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
 
 finalize_it:
@@ -122,8 +113,6 @@ rsRetVal iminternalRemoveMsg(msg_t **ppMsg)
 	iminternal_t *pThis;
 	linkedListCookie_t llCookie = NULL;
 
-	assert(ppMsg != NULL);
-
 	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
 	*ppMsg = pThis->pMsg;
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
@@ -144,8 +133,6 @@ finalize_it:
  */
 rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
 {
-	assert(pbHaveOne != NULL);
-
 	return llGetNumElts(&llMsgs, pbHaveOne);
 }
 
@@ -156,9 +143,7 @@ rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
 rsRetVal modInitIminternal(void)
 {
 	DEFiRet;
-
 	iRet = llInit(&llMsgs, iminternalDestruct, NULL, NULL);
-
 	RETiRet;
 }
 
@@ -172,11 +157,6 @@ rsRetVal modInitIminternal(void)
 rsRetVal modExitIminternal(void)
 {
 	DEFiRet;
-
 	iRet = llDestroy(&llMsgs);
-
 	RETiRet;
 }
-
-/* vim:set ai:
- */

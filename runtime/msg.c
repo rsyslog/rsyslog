@@ -1682,7 +1682,8 @@ uchar *getMSG(msg_t * const pM)
 
 
 /* Get PRI value as integer */
-static int getPRIi(msg_t * const pM)
+int
+getPRIi(const msg_t * const pM)
 {
 	syslog_pri_t pri = (pM->iFacility << 3) + (pM->iSeverity);
 	if(pri > 191)
