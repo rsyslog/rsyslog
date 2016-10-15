@@ -308,8 +308,7 @@ computeBaseUrl(char* serverParam, int defaultPort, sbool useHttps, uchar **baseU
 	else if (strcasestr(serverParam, SCHEME_HTTPS))
 		host = serverParam + strlen(SCHEME_HTTPS);
 	else
-		r = useHttps ?
-			es_addBuf(&urlBuf, SCHEME_HTTPS, sizeof(SCHEME_HTTPS)-1) : 
+		r = useHttps ? es_addBuf(&urlBuf, SCHEME_HTTPS, sizeof(SCHEME_HTTPS)-1) : 
 			es_addBuf(&urlBuf, SCHEME_HTTP, sizeof(SCHEME_HTTP)-1);
 
 	if (r == 0) r = es_addBuf(&urlBuf, serverParam, strlen(serverParam));
