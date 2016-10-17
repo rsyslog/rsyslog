@@ -26,6 +26,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Please note: contributed modules are not directly supported by the 
   project. You might want to contact the author for questions.
   Thanks to Francisco Castro for contributing it.
+- lookup tables: improved error checking
+  Thanks to Janmejay Singh for the patch.
 - bugfix imfile: ReopenOnTruncate processing, file open processing
   This fixes
    * ReopenOnTrucate was only honored when a state file existed
@@ -36,6 +38,10 @@ Version 8.23.0 [v8-stable] 2016-11-15
   overall cleaner and easier-to-follow code.
   Thanks to Owen Smith for analyzing the problem and providing a
   prototype PR which greatly helped towards the final solution.
+- bugfix RainerScript: issue in prifilt() function
+  Initialize func-data(and to-be-freed flag) correctly for prifilt
+  function-node
+  Thanks to Janmejay Singh for the patch.
 - bugfix omrelp: invalid module name imrelp was used in some error messages
   Thanks to Chris Pilkington for the patch.
 - bugfix external module perl skeleton: did not work properly
