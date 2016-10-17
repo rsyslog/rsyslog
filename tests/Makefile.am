@@ -230,7 +230,8 @@ TESTS +=  \
 	lookup_table_bad_configs-vg.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
-	multiple_lookup_tables-vg.sh
+	multiple_lookup_tables-vg.sh \
+	fac_local0-vg.sh
 endif # HAVE_VALGRIND
 
 if ENABLE_USERTOOLS
@@ -707,6 +708,7 @@ EXTRA_DIST= \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
+	fac_local0-vg.sh \
 	testsuites/fac_local0.conf \
 	fac_local7.sh \
 	testsuites/fac_local7.conf \
