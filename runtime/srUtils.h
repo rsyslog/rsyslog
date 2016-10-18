@@ -27,6 +27,7 @@
 #define __SRUTILS_H_INCLUDED__ 1
 
 #include <stdlib.h>
+#include <stdint.h>
 
 /* syslog names */
 #ifndef LOG_MAKEPRI
@@ -82,7 +83,7 @@ int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode, u
 int execProg(uchar *program, int bWait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, long lNum, int lNumDigits);
+		     size_t lenFName, int64_t lNum, int lNumDigits);
 int getNumberDigits(long lNum);
 rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
 long timeoutVal(struct timespec *pt);

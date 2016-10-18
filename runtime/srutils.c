@@ -336,7 +336,7 @@ void skipWhiteSpace(uchar **pp)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, long lNum, int lNumDigits)
+		     size_t lenFName, int64_t lNum, int lNumDigits)
 {
 	DEFiRet;
 	uchar *pName;
@@ -351,10 +351,10 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 		lenBuf = 0;
 	} else {
 		if(lNumDigits > 0) {
-			snprintf(szFmtBuf, sizeof(szFmtBuf), ".%%0%dld", lNumDigits);
+			snprintf(szFmtBuf, sizeof(szFmtBuf), ".%%0%d" PRId64, lNumDigits);
 			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), szFmtBuf, lNum);
 		} else
-			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%ld", lNum);
+			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%" PRId64, lNum);
 	}
 
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */

@@ -1723,7 +1723,7 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 				    pThis->iFileNumDigits));
 		stat((char*)pThis->pszCurrFName, &statBuf);
 		*bytesDel = statBuf.st_size;
-		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %d, new %d, "
+		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %u, new %u, "
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
@@ -2053,7 +2053,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	strmFlushInternal(pThis, 0);
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 
-	objSerializeSCALAR(pStrm, iCurrFNum, INT);
+	objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistance */
 	objSerializePTR(pStrm, pszFName, PSZ);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
@@ -2174,7 +2174,7 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
  	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
  	} else if(isProp("iCurrFNum")) {
-		pThis->iCurrFNum = pProp->val.num;
+		pThis->iCurrFNum = (unsigned) pProp->val.num;
  	} else if(isProp("pszFName")) {
 		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
  	} else if(isProp("tOperationsMode")) {
