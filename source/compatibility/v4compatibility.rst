@@ -28,9 +28,9 @@ too, during the short config re-read phase.
 
 In rsyslog, things are quite different: the program is more or less a
 framework into which loadable modules are loaded as needed for a
-particular configuration. The software that will acutally be running is
-taylored via the config file. Thus, a re-read of the config file
-requires a full, very heavy restart, because the software acutally
+particular configuration. The software that will actually be running is
+tailored via the config file. Thus, a re-read of the config file
+requires a full, very heavy restart, because the software actually
 running with the new config can be totally different from what ran with
 the old config.
 
@@ -39,7 +39,7 @@ cause some data loss because queues must be shut down, listeners stopped
 and so on. Some of these operations (depending on their configuration)
 involve intentional message loss. The operation also takes up a lot of
 system resources and needs quite some time (maybe seconds) to be
-completed. During this restart period, the syslog subsytem is not fully
+completed. During this restart period, the syslog subsystem is not fully
 available.
 
 From the software developer's point of view, the full restart done by a
@@ -56,7 +56,7 @@ increase complexity (read: add bugs) and cost performance.
 
 On the contrary, a HUP is typically needed for log rotation, and the
 real desire is to close files. This is a non-disruptive and very
-lightweigth operation.
+lightweight operation.
 
 Many people have said that they are used to HUP the syslogd to apply
 configuration changes. This is true, but it is questionable if that
@@ -77,17 +77,17 @@ Semantically, both is mostly the same thing. The only difference is that
 with the restart command rsyslogd can spit config error message to
 stderr, so that the user is able to see any problems and fix them. With
 a HUP, we do not have access to stderr and thus can log error messages
-only to their configured destinations; exprience tells that most users
+only to their configured destinations; experience tells that most users
 will never find them there. What, by the way, is another strong argument
 against restarting rsyslogd by HUPing it.
 
-So a restart via HUP is not strictly necessary and most other deamons
+So a restart via HUP is not strictly necessary and most other daemons
 require that a restart command is typed in if a restart is required.
 
 Rsyslog will follow this paradigm in the next versions, resulting in
 many benefits. In v4, we provide some support for the old-style
 semantics. We introduced a setting $HUPisRestart which may be set to
-"on" (tradional, heavy operationg) or "off" (new, lightweight "file
+"on" (traditional, heavy operation) or "off" (new, lightweight "file
 close only" operation). The initial versions had the default set to
 traditional behavior, but starting with 4.5.1 we are now using the new
 behavior as the default.
@@ -99,7 +99,7 @@ some of these, it may be a good idea to change them now instead of
 turning restart-type HUPs on. Other than that, one mainly needs to
 change the habit of how to restart rsyslog after a configuration change.
 
-**Please note that restart-type HUP is depricated and will go away in
+**Please note that restart-type HUP is deprecated and will go away in
 rsyslog v5.** So it is a good idea to become ready for the new version
 now and also enjoy some of the benefits of the "real restart", like the
 better error-reporting capability.
@@ -119,7 +119,7 @@ was defined. Then, this channel could be used inside an
 \*.\* $mychannel 
 
 This is still supported and will remain to be
-supported in v4. However, there is a new variant which explicitely tells
+supported in v4. However, there is a new variant which explicitly tells
 this is to be handled by omfile. This new syntax is as follows:
 
 \*.\* :omfile:$mychannel 

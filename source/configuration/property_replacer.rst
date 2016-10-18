@@ -323,7 +323,7 @@ options are defined:
   if (and only if) the first character of the field's content is NOT a
   space. This option is kind of a hack to solve a problem rooted in RFC
   3164: 3164 specifies no delimiter between the syslog tag sequence and
-  the actual message text. Almost all implementation in fact delemit the
+  the actual message text. Almost all implementation in fact delimit the
   two by a space. As of RFC 3164, this space is part of the message text
   itself. This leads to a problem when building the message (e.g. when
   writing to disk or forwarding). Should a delimiting space be included if
@@ -349,7 +349,7 @@ options are defined:
   "a\_b"). Useful for secure pathname generation (with dynafiles).
 
 To use multiple options, simply place them one after each other with a
-comma delmimiting them. For example "escape-cc,sp-if-no-1st-sp". If you
+comma delimiting them. For example "escape-cc,sp-if-no-1st-sp". If you
 use conflicting options together, the last one will override the
 previous one. For example, using "escape-cc,drop-cc" will use drop-cc
 and "drop-cc,escape-cc" will use escape-cc mode.

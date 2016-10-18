@@ -38,12 +38,12 @@ Queue Worker Thread Shutdown
 Previous rsyslog versions had the capability to "run" on zero queue
 worker if no work was required. This was done to save a very limited
 number of resources. However, it came at the price of great complexity.
-In v5, we have decided to let a minium of one worker run all the time.
-The additional resource consumption is probably not noticable at all,
+In v5, we have decided to let a minimum of one worker run all the time.
+The additional resource consumption is probably not noticeable at all,
 however, this enabled us to do some important code cleanups, resulting
 in faster and more reliable code (complex code is hard to maintain and
 error-prone). From the regular user's point of view, this change should
-be barely noticable. I am including the note for expert users, who will
+be barely noticeable. I am including the note for expert users, who will
 notice it in rsyslog debug output and other analysis tools. So it is no
 error if each queue in non-direct mode now always runs at least one
 worker thread.

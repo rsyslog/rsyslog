@@ -57,8 +57,7 @@ is meaningless.
   action(
     name="count_programs"
     server="my-redis-server.example.com"
-    serverpassword="my-redis-password"
-    port="6379"
+    serverport="6379"
     type="omhiredis"
     mode="template"
     template="program_count_tmpl")
@@ -85,8 +84,7 @@ the plugin will default to the RSYSLOG_ForwardFormat template.
   action(
     name="push_redis"
     server="my-redis-server.example.com"
-    serverpassword="my-redis-password"
-    port="6379"
+    serverport="6379"
     type="omhiredis"
     mode="queue"
     key="my_queue")
@@ -113,8 +111,7 @@ will default to the RSYSLOG_ForwardFormat template.
   action(
     name="publish_redis"
     server="my-redis-server.example.com"
-    serverpassword="my-redis-password"
-    port="6379"
+    serverport="6379"
     type="omhiredis"
     mode="publish"
     key="my_channel")
