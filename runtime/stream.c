@@ -507,7 +507,13 @@ strmNextFile(strm_t *pThis)
 	 * make sure their iMaxFiles is large enough. But it is well-desired for other
 	 * use cases, e.g. a circular output log file. -- rgerhards, 2008-01-10
 	 */
-	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % pThis->iMaxFiles;
+	if((pThis->iCurrFNum + 1) == 0) {
+		pThis->iCurrFNum = 0;
+	}
+	else {
+		pThis->iCurrFNum = (pThis->iCurrFNum + 1) % pThis->iMaxFiles;
+	}
+
 
 finalize_it:
 	RETiRet;
@@ -934,9 +940,10 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 				} else {
 					cstrAppendChar(pThis->prevMsgSegment, '\n');
 				}
-				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-				/* we could do this faster, but for now keep it simple */
-
+				if(thisLine->iStrLen > 0) {
+					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+					/* we could do this faster, but for now keep it simple */
+				}
 			}
 		}
 		cstrDestruct(&thisLine);
@@ -1701,7 +1708,7 @@ finalize_it:
  * rgerhards, 2012-11-07
  */
 rsRetVal
-strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
+strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel)
 {
 	struct stat statBuf;
 	DEFiRet;

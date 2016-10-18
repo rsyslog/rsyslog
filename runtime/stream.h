@@ -97,13 +97,13 @@ typedef struct strm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	strmType_t sType;
 	/* descriptive properties */
-	int iCurrFNum;/* current file number (NOT descriptor, but the number in the file name!) */
+	unsigned int iCurrFNum;/* current file number (NOT descriptor, but the number in the file name!) */
 	uchar *pszFName; /* prefix for generated filenames */
 	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
 	int64 iMaxFileSize;/* maximum size a file may grow to */
-	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
+	unsigned int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	sbool bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int64 iCurrOffs;/* current offset */
@@ -216,7 +216,7 @@ ENDinterface(strm)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
-rsRetVal strmMultiFileSeek(strm_t *pThis, int fileNum, off64_t offs, off64_t *bytesDel);
+rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int fileNum, off64_t offs, off64_t *bytesDel);
 rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF);
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
 void strmDebugOutBuf(const strm_t *const pThis);
