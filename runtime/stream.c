@@ -934,8 +934,10 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 				} else {
 					cstrAppendChar(pThis->prevMsgSegment, '\n');
 				}
-				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-				/* we could do this faster, but for now keep it simple */
+				if(cstrLen(thisLine) > 0) {
+					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+					/* we could do this faster, but for now keep it simple */
+				}
 
 			}
 		}
@@ -1701,7 +1703,7 @@ finalize_it:
  * rgerhards, 2012-11-07
  */
 rsRetVal
-strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
+strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel)
 {
 	struct stat statBuf;
 	DEFiRet;
@@ -1723,7 +1725,7 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 				    pThis->iFileNumDigits));
 		stat((char*)pThis->pszCurrFName, &statBuf);
 		*bytesDel = statBuf.st_size;
-		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %d, new %d, "
+		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %u, new %u, "
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
@@ -2053,7 +2055,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	strmFlushInternal(pThis, 0);
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 
-	objSerializeSCALAR(pStrm, iCurrFNum, INT);
+	objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistance */
 	objSerializePTR(pStrm, pszFName, PSZ);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
@@ -2174,7 +2176,7 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
  	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
  	} else if(isProp("iCurrFNum")) {
-		pThis->iCurrFNum = pProp->val.num;
+		pThis->iCurrFNum = (unsigned) pProp->val.num;
  	} else if(isProp("pszFName")) {
 		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
  	} else if(isProp("tOperationsMode")) {
