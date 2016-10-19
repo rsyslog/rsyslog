@@ -50,6 +50,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   such as FreeBSD
   see also https://github.com/rsyslog/rsyslog/pull/1147
   Thanks to Matthew Seaman for the patch.
+- "bugfix": theoretical queue file corruption when more than MAX_INT files
+  closes https://github.com/rsyslog/rsyslog/issues/1202
 - build environment: --enable-debug now defaults to new "auto" mode
   previously, DEBUG mode (and thus assert() macros) was disabled by default
   and explicitly needed to be enabled by providing the --enable-debug
