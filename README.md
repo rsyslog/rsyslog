@@ -65,6 +65,13 @@ apt-get update && apt-get install -y software-properties-common
 add-apt-repository -y ppa:adiscon/v8-stable
 ```
 
+*Note:* if you are a developer who wants to work with git master branch,
+adding the Adiscon repository is probably not a good idea. It then
+is better to also compile the supporting libraries from source, because
+newer versions of rsyslog may need newer versions of the libraries than
+there are in the repositories.
+Libraries in question are at least: libestr, liblognorm, libfastjson.
+
 Needed packages to build with omhiredis support:
 ```
 apt-get update && apt-get install -y build-essential pkg-config libestr-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt20-dev liblogging-stdlog-dev libhiredis-dev
