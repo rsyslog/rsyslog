@@ -7,10 +7,10 @@ Every output in rsyslog uses templates - this holds true for files, user
 messages and so on. The database writer expects its template to be a
 proper SQL statement - so this is highly customizable too. You might ask
 how does all of this work when no templates at all are specified. Good
-question ;). The answer is simple, though. Templates compatible with the
-stock syslogd formats are hardcoded into rsyslogd. So if no template is
+question ;). The answer is simple, though. Templates are compatible with the
+stock syslogd formats which are hardcoded into rsyslogd. So if no template is
 specified, we use one of those hardcoded templates. Search for
-"template\_" in syslogd.c and you will find the hardcoded ones.
+"template\_" in rsconf.c and you will find the hardcoded ones.
 
 Templates are specified by template() statements. They can also be
 specified via $template legacy statements.
@@ -18,6 +18,24 @@ specified via $template legacy statements.
 **Note: key elements of templates are rsyslog properties.** See the
 :doc:`rsyslog properties reference <properties>` for a list of which
 are available.
+
+Template processing
+-------------------
+
+Due to lack of standarization regarding logs formats, when a template is 
+specified it's supposed to include HEADER, as defined in `RFC5424 <https://tools.ietf.org/html/rfc5424>`_
+
+It's very important to have this in mind, and also how to understand how 
+`rsyslog parsing <http://www.rsyslog.com/doc/syslog_parsing.html>`_ works
+
+For example, if MSG field is set to "this:is a message" and no HOSTNAME, 
+neither TAG are specified, outgoing parser will split the message as:
+
+::
+
+  TAG:this:
+  MSG:is a message
+
 
 The template() statement
 ------------------------
