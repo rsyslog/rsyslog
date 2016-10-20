@@ -35,6 +35,23 @@ globaly to all inputs defined by the module.
    two helpers). No more than 16 threads can be set (if tried to,
    rsyslog always resorts to 16).
 
+.. function:: processOnPoller on/off
+
+   *Defaults to on*
+
+   Instructs imptcp to process messages on poller thread opportunistically.
+   This leads to lower resource footprint(as poller thread doubles up as
+   message-processing thread too). "On" works best when imptcp is handling
+   low ingestion rates.
+
+   At high throughput though, it causes polling delay(as poller spends time
+   processing messages, which keeps connections in read-ready state longer
+   than they need to be, filling socket-buffer, hence eventually applying
+   backpressure).
+
+   It defaults to allowing messages to be processed on poller (for backward
+   compatibility).
+
 Input Parameters
 ^^^^^^^^^^^^^^^^
 
@@ -123,23 +140,6 @@ the input they are specified with.
 
    instructs imptcp to emit a message if a remote peer closes the
    connection.
-
-.. function:: processOnPoller on/off
-
-   *Defaults to on*
-
-   Instructs imptcp to process messages on poller thread opportunistically.
-   This leads to lower resource footprint(as poller thread doubles up as
-   message-processing thread too). "On" works best when imptcp is handling
-   low ingestion rates.
-
-   At high throughput though, it causes polling delay(as poller spends time
-   processing messages, which keeps connections in read-ready state longer
-   than they need to be, filling socket-buffer, hence eventually applying
-   backpressure).
-
-   It defaults to allowing messages to be processed on poller (for backward
-   compatibility).
 
 .. function:: KeepAlive on/off
 
