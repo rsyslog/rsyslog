@@ -399,6 +399,10 @@ wtiWorker(wti_t *__restrict__ const pThis)
 				wrkrInfo->p.tx.iparams = NULL;
 				wrkrInfo->p.tx.currIParam = 0;
 				wrkrInfo->p.tx.maxIParams = 0;
+			} else {
+				for(k = 0 ; k < pAction->iNumTpls ; ++k) {
+					free(wrkrInfo->p.nontx.actParams[k].param);
+				}
 			}
 			wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
 		}

@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
 	static char ioBuf[sizeof(edBuf)+1024];
 	char *file = NULL;
+	int ln_nbr = 0;
 
 	while((opt = getopt(argc, argv, "e:f:ds:vm:ET")) != EOF) {
 		switch((char)opt) {
@@ -117,6 +118,7 @@ int main(int argc, char *argv[])
 	}
 
 	for(i = start ; i < end+1 ; ++i) {
+		++ln_nbr;
 		if(bHaveExtraData) {
 			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
 				scanfOK = 0;
@@ -158,7 +160,7 @@ int main(int argc, char *argv[])
 				--i;
 				++nDups;
 			} else {
-				printf("read value %d, but expected value %d\n", val, i);
+				printf("line %d: read value %d, but expected value %d\n", ln_nbr, val, i);
 				exit(1);
 			}
 		}
@@ -180,6 +182,7 @@ int main(int argc, char *argv[])
 		if(dupsPermitted) {
 			i = end;
 			while(!feof(fp)) {
+				++ln_nbr;
 				if(bHaveExtraData) {
 					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
 						scanfOK = 0;
