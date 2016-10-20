@@ -1221,7 +1221,7 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
-	int actrcvbuf;
+	unsigned int actrcvbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
