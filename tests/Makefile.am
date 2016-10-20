@@ -350,6 +350,8 @@ endif
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic.sh \
+	es-basic-server.sh \
+	es-basic-ha.sh \
 	es-basic-bulk.sh \
 	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
