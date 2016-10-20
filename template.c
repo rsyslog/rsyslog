@@ -485,7 +485,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 		} else if((mode == SQL_ESCAPE) && *p == '\\') {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
-		} else if((mode == JSON_ESCAPE) && (*p != '"' || *p != '\\' )) {
+		} else if((mode == JSON_ESCAPE) && (*p == '"' || *p == '\\' )) {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
