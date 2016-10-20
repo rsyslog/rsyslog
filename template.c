@@ -467,7 +467,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
 			;
 	else if(mode == JSON_ESCAPE)
-		for(p = *pp ; *p && *p != '"' ; ++p)
+		for(p = *pp ; *p && (*p != '"' || *p != '\' ) ; ++p)
 			;
 	/* when we get out of the loop, we are either at the
 	 * string terminator or the first character to escape */
@@ -485,7 +485,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 		} else if((mode == SQL_ESCAPE) && *p == '\\') {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
-		} else if((mode == JSON_ESCAPE) && *p == '"') {
+		} else if((mode == JSON_ESCAPE) && (*p != '"' || *p != '\' )) {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
