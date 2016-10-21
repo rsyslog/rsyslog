@@ -101,6 +101,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bDetectYearAfterTimestamp = 0;
 	inst->bPermitSquareBracketsInHostname = 0;
 	inst->bPermitSlashesInHostname = 0;
+	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
 	*pinst = inst;
 finalize_it:
 	RETiRet;
