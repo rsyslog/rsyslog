@@ -115,7 +115,7 @@ struct instanceConf_s {
 	uchar *dfltTZ;
 	int ratelimitInterval;
 	int ratelimitBurst;
-	int rcvbuf;			/* 0 means: do not set, keep OS default */
+	unsigned int rcvbuf;			/* 0 means: do not set, keep OS default */
 	/*  0 means:  IP_FREEBIND is disabled
 	1 means:  IP_FREEBIND enabled + warning disabled
 	1+ means: IP+FREEBIND enabled + warning enabled */
