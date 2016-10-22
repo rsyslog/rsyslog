@@ -352,7 +352,7 @@ finalize_it:
 
 /* clean up after a terminated child
  */
-static inline rsRetVal
+static rsRetVal
 cleanup(wrkrInstanceData_t *pWrkrData)
 {
 	int status;
@@ -401,7 +401,7 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 
 /* try to restart the binary when it has stopped.
  */
-static inline rsRetVal
+static rsRetVal
 tryRestart(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
@@ -476,7 +476,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->szBinary = NULL;

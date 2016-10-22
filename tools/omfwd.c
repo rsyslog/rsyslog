@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -213,7 +213,7 @@ static rsRetVal doZipFinish(wrkrInstanceData_t *);
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -275,7 +275,7 @@ pWrkrData->bIsConnected = 0; // TODO: remove this variable altogether
  * the worst case, some duplication occurs, but we do not
  * loose data.
  */
-static inline void
+static void
 DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
 {
 	doZipFinish(pWrkrData);
@@ -931,7 +931,7 @@ finalize_it:
 }
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->tplName = NULL;

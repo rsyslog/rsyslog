@@ -123,7 +123,7 @@ static int wrkrRunning;
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
  */
-static inline rsRetVal
+static rsRetVal
 addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAddr)
 {
 	tcpLstnPortList_t *pEntry;
@@ -361,7 +361,7 @@ finalize_it:
 /* Initialize TCP listener socket for a single port
  * rgerhards, 2009-05-21
  */
-static inline rsRetVal
+static rsRetVal
 initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 {
 	DEFiRet;
@@ -540,7 +540,7 @@ RunCancelCleanup(void *arg)
 /* helper to close a session. Takes status of poll vs. select into consideration.
  * rgerhards, 2009-11-25
  */
-static inline rsRetVal
+static rsRetVal
 closeSess(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll) {
 	DEFiRet;
 	if(pPoll != NULL) {
@@ -613,7 +613,7 @@ finalize_it:
 
 /* process a single workset item
  */
-static inline rsRetVal
+static rsRetVal
 processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
 {
 	tcps_sess_t *pNewSess = NULL;

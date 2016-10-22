@@ -462,7 +462,7 @@ rsgcryCtxDel(gcryctx ctx)
 	}
 }
 
-static inline void
+static void
 addPadding(gcryfile pF, uchar *buf, size_t *plen)
 {
 	unsigned i;
@@ -475,7 +475,7 @@ addPadding(gcryfile pF, uchar *buf, size_t *plen)
 	(*plen)+= nPad;
 }
 
-static inline void
+static void
 removePadding(uchar *buf, size_t *plen)
 {
 	unsigned len = (unsigned) *plen;
@@ -583,7 +583,7 @@ seedIV(gcryfile gf, uchar **iv)
 	}
 }
 
-static inline rsRetVal
+static rsRetVal
 readIV(gcryfile gf, uchar **iv)
 {
 	rsRetVal localRet;
@@ -615,7 +615,7 @@ finalize_it:
  * retry. This is because that case can never happen under current queue
  * implementations. -- gerhards, 2013-05-16
  */
-static inline rsRetVal
+static rsRetVal
 readBlkEnd(gcryfile gf)
 {
 	off64_t blkEnd;

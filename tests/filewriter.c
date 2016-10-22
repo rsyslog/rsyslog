@@ -14,7 +14,7 @@
  *      This is useful only if -w is specified as well,
  *      default is 1000.
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -54,7 +54,7 @@ static int batchsize = 1000;
 
 /* read the input file and create in-memory representation
  */
-static inline void
+static void
 readFile()
 {
 	char *r;

@@ -267,7 +267,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 invokeForeachBodyWith(struct cnfstmt *stmt, json_object *o, msg_t *pMsg, wti_t *pWti) {
 	struct var v;
 	v.datatype = 'J';
@@ -829,7 +829,7 @@ debugPrintAll(rsconf_t *conf)
 	RETiRet;
 }
 
-static inline void
+static void
 rulesetOptimize(ruleset_t *pRuleset)
 {
 	if(Debug) {
@@ -871,7 +871,7 @@ rulesetOptimizeAll(rsconf_t *conf)
  * considered acceptable for the time being.
  * rgerhards, 2009-10-27
  */
-static inline rsRetVal
+static rsRetVal
 doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 {
 	uchar *rsname;

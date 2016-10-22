@@ -1,6 +1,6 @@
 /* This is a tool for processing rsyslog encrypted log files.
  * 
- * Copyright 2013 Adiscon GmbH
+ * Copyright 2013-2016 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -220,7 +220,7 @@ initCrypt(FILE *eifp)
 done: return r;
 }
 
-static inline void
+static void
 removePadding(char *buf, size_t *plen)
 {
 	unsigned len = (unsigned) *plen;

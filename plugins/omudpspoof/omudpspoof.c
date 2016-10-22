@@ -24,7 +24,7 @@
  * rgerhards, 2009-07-10
  *
  * Copyright 2009 David Lang (spoofing code)
- * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -179,7 +179,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData);
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -358,7 +358,7 @@ ENDdbgPrintInstInfo
  */ 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
-static inline rsRetVal
+static rsRetVal
 UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
@@ -618,7 +618,7 @@ finalize_it:
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->tplName = NULL;

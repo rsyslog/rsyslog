@@ -394,7 +394,7 @@ finalize_it:
  * that require data to be persisted. May be called in non-async mode and is a null
  * operation than. Must be called with the mutex locked.
  */
-static inline void
+static void
 strmWaitAsyncWriterDone(strm_t *pThis)
 {
 	BEGINfunc
@@ -1055,7 +1055,7 @@ finalize_it:
 /* stop the writer thread (we MUST be runnnig asynchronously when this method
  * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
  */
-static inline void
+static void
 stopWriter(strm_t *pThis)
 {
 	BEGINfunc
@@ -1243,7 +1243,7 @@ finalize_it:
 
 /* write memory buffer to a stream object.
  */
-static inline rsRetVal
+static rsRetVal
 doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlush)
 {
 	DEFiRet;
@@ -1271,7 +1271,7 @@ finalize_it:
  * the very some producer comes back in sequence to submit the then-filled buffers.
  * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
  */
-static inline rsRetVal
+static rsRetVal
 doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 {
 	DEFiRet;

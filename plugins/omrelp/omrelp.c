@@ -282,7 +282,7 @@ CODESTARTfreeWrkrInstance
 		relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt);
 ENDfreeWrkrInstance
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->target = NULL;
@@ -444,7 +444,7 @@ CODESTARTtryResume
 finalize_it:
 ENDtryResume
 
-static inline rsRetVal
+static rsRetVal
 doRebind(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;

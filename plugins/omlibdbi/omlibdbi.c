@@ -133,7 +133,7 @@ static struct cnfparamblk actpblk =
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)

@@ -264,7 +264,7 @@ finalize_it:
  * the instance config description, tries to bind the socket and, if that
  * succeeds, adds it to the list of existing listen sockets.
  */
-static inline rsRetVal
+static rsRetVal
 addListner(instanceConf_t *inst)
 {
 	DEFiRet;
@@ -379,7 +379,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 /* This function processes received data. It provides unified handling
  * in cases where recvmmsg() is available and not.
  */
-static inline rsRetVal
+static rsRetVal
 processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 	uchar *rcvBuf, ssize_t lenRcvBuf, struct syslogTime *stTime, time_t ttGenTime,
 	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
@@ -460,7 +460,7 @@ finalize_it:
  * an appropriate version is compiled (as such we need to maintain both!).
  */
 #ifdef HAVE_RECVMMSG
-static inline rsRetVal
+static rsRetVal
 processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
 {
 	DEFiRet;
@@ -606,7 +606,7 @@ finalize_it:
 /* check configured scheduling priority.
  * Precondition: iSchedPolicy must have been set
  */
-static inline rsRetVal
+static rsRetVal
 checkSchedulingPriority(modConfData_t *modConf)
 {
     	DEFiRet;
@@ -879,7 +879,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 #endif /* #if HAVE_EPOLL_CREATE1 */
 
 
-static inline rsRetVal
+static rsRetVal
 createListner(es_str_t *port, struct cnfparamvals *pvals)
 {
 	instanceConf_t *inst;

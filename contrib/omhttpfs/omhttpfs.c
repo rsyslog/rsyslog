@@ -721,7 +721,7 @@ ENDdoAction
  * @param instanceData *pData
  * @return void
  */
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
     pData->host = (uchar*) strdup(OMHTTPFS_DEFAULT_HOST);

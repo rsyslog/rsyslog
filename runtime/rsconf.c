@@ -193,7 +193,7 @@ rsconfConstructFinalize(rsconf_t __attribute__((unused)) *pThis)
 
 /* call freeCnf() module entry points AND free the module entries themselfes.
  */
-static inline void
+static void
 freeCnf(rsconf_t *pThis)
 {
 	cfgmodules_etry_t *etry, *del;
@@ -587,7 +587,7 @@ static void doDropPrivUid(int iUid)
  * set by the user. After this method has been executed, the previous
  * privileges can no be re-gained.
  */
-static inline rsRetVal
+static rsRetVal
 dropPrivileges(rsconf_t *cnf)
 {
 	DEFiRet;
@@ -1090,7 +1090,7 @@ finalize_it:
 
 
 /* intialize the legacy config system */
-static inline rsRetVal 
+static rsRetVal 
 initLegacyConf(void)
 {
 	DEFiRet;
@@ -1252,7 +1252,7 @@ finalize_it:
 /* validate the current configuration, generate error messages, do 
  * optimizations, etc, etc,...
  */
-static inline rsRetVal
+static rsRetVal
 validateConf(void)
 {
 	DEFiRet;

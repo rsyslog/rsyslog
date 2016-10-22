@@ -479,7 +479,7 @@ static rsRetVal discardLogSockets(void)
 
 /* used to create a log socket if NOT passed in via systemd. 
  */
-static inline rsRetVal
+static rsRetVal
 createLogSocket(lstn_t *pLstn)
 {
 	struct sockaddr_un sunx;
@@ -508,7 +508,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 openLogSocket(lstn_t *pLstn)
 {
 	DEFiRet;
@@ -582,7 +582,7 @@ finalize_it:
  * Returns NULL if not found or rate-limiting not activated for this
  * listener (the latter being a performance enhancement).
  */
-static inline rsRetVal
+static rsRetVal
 findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 {
 	ratelimit_t *rl = NULL;
@@ -637,7 +637,7 @@ finalize_it:
 
 /* patch correct pid into tag. bufTAG MUST be CONF_TAG_MAXSIZE long!
  */
-static inline void
+static void
 fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred)
 {
 	int i;
@@ -740,7 +740,7 @@ finalize_it:
  * It is assumed the output buffer is large enough. Returns the number of
  * characters added.
  */
-static inline int
+static int
 copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 {
 	int iDst, iSrc;
@@ -761,7 +761,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
  * We now parse the message according to expected format so that we
  * can also mangle it if necessary.
  */
-static inline rsRetVal
+static rsRetVal
 SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
 	msg_t *pMsg = NULL;

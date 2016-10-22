@@ -76,7 +76,7 @@ dynstats_destroyCtr(dynstats_ctr_t *ctr) {
 	free(ctr);
 }
 
-static inline void /* assumes exclusive access to bucket */
+static void /* assumes exclusive access to bucket */
 dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *ctrs) {
 	dynstats_ctr_t *ctr;
 	int ctrs_purged = 0;
@@ -91,7 +91,7 @@ dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *
 	ATOMIC_SUB(&b->metricCount, ctrs_purged, &b->mutMetricCount);
 }
 
-static inline void /* assumes exclusive access to bucket */
+static void /* assumes exclusive access to bucket */
 dynstats_destroyCounters(dynstats_bucket_t *b) {
 	statsobj.UnlinkAllCounters(b->stats);
 	dynstats_destroyCountersIn(b, b->table, b->ctrs);
@@ -250,7 +250,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 dynstats_resetIfExpired(dynstats_bucket_t *b) {
 	long timeout;
 	pthread_rwlock_rdlock(&b->lock);
@@ -272,7 +272,7 @@ dynstats_readCallback(statsobj_t __attribute__((unused)) *ignore, void *b) {
 	pthread_rwlock_unlock(&bkts->lock);
 }
 
-static inline rsRetVal
+static rsRetVal
 dynstats_initNewBucketStats(dynstats_bucket_t *b) {
 	DEFiRet;
 	

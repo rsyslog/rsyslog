@@ -194,7 +194,7 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
  * (1 = had error, 0=ok). We do not use the standard IRET calling convention
  * rgerhards, 2009-04-17
  */
-static inline int
+static int
 tryExec(uchar *pszCmd, instanceData *pData)
 {
 	PGresult *pgRet;

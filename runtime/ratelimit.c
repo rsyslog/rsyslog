@@ -69,7 +69,7 @@ ratelimitGenRepMsg(ratelimit_t *ratelimit)
 done:	return repMsg;
 }
 
-static inline rsRetVal
+static rsRetVal
 doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
 {
 	int bNeedUnlockMutex = 0;

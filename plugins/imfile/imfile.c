@@ -312,7 +312,7 @@ dbg_wdmapPrint(char *msg)
 }
 #endif
 
-static inline rsRetVal
+static rsRetVal
 wdmapInit(void)
 {
 	DEFiRet;
@@ -936,7 +936,7 @@ lstnDel(lstn_t *pLstn)
  * It also does some late stage error checking on the config
  * and reports issues it finds.
  */
-static inline rsRetVal
+static rsRetVal
 addListner(instanceConf_t *inst)
 {
 	DEFiRet;

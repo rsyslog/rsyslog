@@ -7,7 +7,7 @@
  * In any case, even the initial implementaton is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *
- * Copyright 2011-2014 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -165,7 +165,7 @@ findEntry(struct sockaddr_storage *addr)
  * when being cancelled, at least if the module was dlloaded.
  * rgerhards, 2008-09-30
  */
-static inline int
+static int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
                        char *host, size_t hostlen,
                        char *serv, size_t servlen, int flags)
@@ -181,7 +181,7 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
 
 
 /* get only the local part of the hostname and set it in cache entry */
-static inline void
+static void
 setLocalHostName(dnscache_entry_t *etry)
 {
 	uchar *fqdnLower;
@@ -362,7 +362,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 addEntry(struct sockaddr_storage *addr, dnscache_entry_t **pEtry)
 {
 	int r;

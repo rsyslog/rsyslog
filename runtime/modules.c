@@ -338,7 +338,7 @@ static uchar *modGetStateName(modInfo_t *pThis)
 
 /* Add a module to the loaded module linked list
  */
-static inline void
+static void
 addModToGlblList(modInfo_t *pThis)
 {
 	assert(pThis != NULL);
@@ -1024,7 +1024,7 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 }
 
 /* find module with given name in global list */
-static inline rsRetVal
+static rsRetVal
 findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod)
 {
 	modInfo_t *pModInfo;
