@@ -204,6 +204,7 @@ int verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot);
 int verifySigblkFinishChain(ksifile ksi, block_hashchain_t *hashchain, KSI_DataHash **pRoot, ksierrctx_t *ectx); 
 void outputHash(FILE *fp, const char *hdr, const uint8_t *data, const uint16_t len, const uint8_t verbose); 
 void outputKSIHash(FILE *fp, const char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose); 
+int rsksi_setDefaultConstraint(ksifile ksi, char *stroid, char *strvalue);
 
 /* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);

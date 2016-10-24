@@ -121,7 +121,17 @@ OPTIONS
   GT = Guardtime Client Library
   KSI = Guardtime KSI Library
 
+-C <oid>=<value>, --cnstr <oid>=<value>
+  Specify the OID of the PKI certificate field (e.g. e-mail address) and the 
+  expected value to qualify the certificate for verification of publications 
+  file’s PKI signature. At least one constraint must be defined. All values 
+  from lower priority source are ignored. 
 
+  For more common OIDs there are convenience names defined:
+  - E or email for OID 1.2.840.113549.1.9.1
+  - CN or cname for OID 2.5.4.3
+  - C or country for OID 2.5.4.6
+  - O or org for OID 2.5.4.10
 
 
 OPERATION MODES
