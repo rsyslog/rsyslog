@@ -28,9 +28,6 @@ typedef enum KSI_HashAlgorithm_en KSI_HashAlgorithm;
  * cases ;) [and 64 is not really a waste of memory, so we do not even
  * try to work with reallocs and such...]
  */
-/*#define MAX_ROOTS 64
-#define LOGSIGHDR "LOGSIG10"
-*/ 
 
 /* context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in ksifile.
