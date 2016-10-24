@@ -239,6 +239,8 @@ if ENABLE_GT_KSI
 TESTS +=  \
 	ksi-verify-short.sh \
 	ksi-verify-long.sh \
+	ksi-verify-cnstr-short.sh \
+	ksi-verify-cnstr-long.sh \
 	ksi-extract-verify-short.sh \
 	ksi-extract-verify-long.sh 
 if HAVE_VALGRIND
@@ -1294,6 +1296,8 @@ EXTRA_DIST= \
 	ksi-verify-long.sh \
 	ksi-extract-verify-short.sh \
 	ksi-extract-verify-long.sh \
+	ksi-verify-cnstr-short.sh \
+	ksi-verify-cnstr-long.sh \
 	ksi-verify-short-vg.sh \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
