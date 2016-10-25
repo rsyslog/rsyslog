@@ -1929,11 +1929,13 @@ main(int argc, char *argv[])
 						/* Extract pszOID */
 						constraint_oid = malloc( i + 1 ); 
 						strncpy(constraint_oid, optarg, i);
+						*(constraint_oid+i) = '\0'; 
 
 						/* Extract pszValue */
 						constraint_value = malloc( strlen(pszTmp) + 1 ); 
 						pszTmp++;
 						strncpy(constraint_value, pszTmp, strlen(pszTmp));
+						*(constraint_value+strlen(pszTmp)) = '\0'; 
 						break; 
 					}
 					
