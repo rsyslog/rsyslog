@@ -145,7 +145,7 @@ CODESTARTisCompatibleWithFeature
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
-static inline void
+static void
 initConfigSettings(void)
 {
 	cs.iStatsInterval = DEFAULT_STATS_PERIOD;
@@ -158,7 +158,7 @@ initConfigSettings(void)
 
 /* actually submit a message to the rsyslog core
  */
-static inline void
+static void
 doSubmitMsg(uchar *line)
 {
 	msg_t *pMsg;
@@ -188,7 +188,7 @@ finalize_it:
 
 
 /* log stats message to file; limited error handling done */
-static inline void
+static void
 doLogToFile(const char *ln, const size_t lenLn)
 {
 	struct iovec iov[4];
@@ -258,7 +258,7 @@ doStatsLine(void __attribute__((unused)) *usrptr, const char *const str)
 /* the function to generate the actual statistics messages
  * rgerhards, 2010-09-09
  */
-static inline void
+static void
 generateStatsMsgs(void)
 {
 	struct rusage ru;
@@ -388,7 +388,7 @@ ENDendCnfLoad
 
 
 /* we need our special version of checkRuleset(), as we do not have any instances */
-static inline rsRetVal
+static rsRetVal
 checkRuleset(modConfData_t *modConf)
 {
 	ruleset_t *pRuleset;

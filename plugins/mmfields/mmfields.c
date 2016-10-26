@@ -179,7 +179,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-static inline rsRetVal
+static rsRetVal
 extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf)
 {
 	int i, j;

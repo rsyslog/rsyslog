@@ -61,7 +61,7 @@ DEFobjCurrIf(glbl)
  * been proven OK in practice.
  * rgerhards, 2009-11-18
  */
-static inline rsRetVal
+static rsRetVal
 addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst) {
 	nsdpoll_epollevt_lst_t *pNew;
 	DEFiRet;
@@ -91,7 +91,7 @@ finalize_it:
 /* find and unlink the entry identified by id/pUsr from the list.
  * rgerhards, 2009-11-23
  */
-static inline rsRetVal
+static rsRetVal
 unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst) {
 	nsdpoll_epollevt_lst_t *pEvtLst;
 	nsdpoll_epollevt_lst_t *pPrev = NULL;
@@ -123,7 +123,7 @@ finalize_it:
 /* destruct the provided element. It must already be unlinked from the list.
  * rgerhards, 2009-11-23
  */
-static inline rsRetVal
+static rsRetVal
 delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
 	DEFiRet;
 	free(*ppEvtLst);

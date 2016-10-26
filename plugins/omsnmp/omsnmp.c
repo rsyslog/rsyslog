@@ -391,7 +391,7 @@ CODESTARTfreeWrkrInstance
 	omsnmp_exitSession(pWrkrData);
 ENDfreeWrkrInstance
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->tplName = NULL;

@@ -128,7 +128,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 freeStubValueForReloadFailure(lookup_ref_t *pThis) {/*must be called with reloader_mut acquired*/
 	if (pThis->stub_value_for_reload_failure != NULL) {
 		free(pThis->stub_value_for_reload_failure);
@@ -314,7 +314,7 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 
 typedef int (comp_fn_t)(const void *s1, const void *s2);
 
-static inline void *
+static void *
 bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_fn_t *comp_fn)
 {
 	size_t l, u, idx;
@@ -365,7 +365,7 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' field", type, name); \
 	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 
-static inline rsRetVal
+static rsRetVal
 build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
@@ -399,7 +399,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
@@ -455,7 +455,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;

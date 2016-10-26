@@ -288,7 +288,7 @@ static struct cnfparamblk actpblk =
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -494,7 +494,7 @@ finalize_it:
  * relevant files. Part of Shutdown and HUP processing.
  * rgerhards, 2008-10-23
  */
-static inline void
+static void
 dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 {
 	register int i;
@@ -661,7 +661,7 @@ finalize_it:
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static inline rsRetVal
+static rsRetVal
 prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
 {
 	uint64 ctOldest; /* "timestamp" of oldest element */
@@ -909,7 +909,7 @@ finalize_it:
 ENDsetModCnf
 
 /* This function checks dynafile cache for janitor action */
-static inline void
+static void
 janitorChkDynaFiles(instanceData *__restrict__ const pData)
 {
 	int i;
@@ -1064,7 +1064,7 @@ finalize_it:
 ENDcommitTransaction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *__restrict__ const pData)
 {
 	pData->fname = NULL;

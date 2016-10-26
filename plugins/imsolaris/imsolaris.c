@@ -227,7 +227,7 @@ finalize_it:
  * This mimics the (strange) behaviour of the original syslogd.
  * rgerhards, 2010-04-19
  */
-static inline rsRetVal
+static rsRetVal
 getMsgs(thrdInfo_t *pThrd, int timeout)
 {
 	DEFiRet;

@@ -275,7 +275,7 @@ static void SetGlobalInputTermination(void)
  * ok to call. Most importantly, the IP address must not already have 
  * been set. -- rgerhards, 2012-03-21
  */
-static inline rsRetVal
+static rsRetVal
 storeLocalHostIPIF(uchar *myIP)
 {
 	DEFiRet;
@@ -835,7 +835,7 @@ displayTzinfos(void)
  * This is currently not needed as used only during
  * initialization.
  */
-static inline rsRetVal
+static rsRetVal
 addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 {
 	DEFiRet;

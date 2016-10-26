@@ -279,7 +279,7 @@ rsRetVal writeZMQ(uchar* msg, instanceData* pData) {
     RETiRet;
 }
 
-static inline void
+static void
 setInstParamDefaults(instanceData* pData) {
     pData->description     = NULL;
     pData->socket          = NULL;

@@ -309,7 +309,7 @@ ENDobjDestruct(parser)
  * pMsg->pszRawMsg buffer is updated.
  * rgerhards, 2008-10-09
  */
-static inline rsRetVal uncompressMessage(msg_t *pMsg)
+static rsRetVal uncompressMessage(msg_t *pMsg)
 {
 	DEFiRet;
 	uchar *deflateBuf = NULL;
@@ -567,7 +567,7 @@ finalize_it:
  * this module as it is expected that allmost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
-static inline rsRetVal
+static rsRetVal
 ParsePRI(msg_t *pMsg)
 {
 	syslog_pri_t pri;

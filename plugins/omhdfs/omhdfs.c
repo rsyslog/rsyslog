@@ -156,7 +156,7 @@ finalize_it:
  * the instance data.
  */
 
-static inline rsRetVal
+static rsRetVal
 fileObjConstruct(file_t **ppFile)
 {
 	file_t *pFile;
@@ -173,7 +173,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 fileObjAddUser(file_t *pFile)
 {
 	/* init mutex only when second user is added */
@@ -244,7 +244,7 @@ fileObjDestruct4Hashtable(void *ptr)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 fileOpen(file_t *pFile)
 {
 	DEFiRet;
@@ -291,7 +291,7 @@ finalize_it:
 
 
 /* Note: lenWrite is reset to zero on successful write! */
-static inline rsRetVal
+static rsRetVal
 fileWrite(file_t *pFile, uchar *buf, size_t *lenWrite)
 {
 	DEFiRet;
@@ -327,7 +327,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 fileClose(file_t *pFile)
 {
 	DEFiRet;
@@ -358,7 +358,7 @@ finalize_it:
  * buffer. In that case, the new data will written with its own
  * write operation.
  */
-static inline rsRetVal
+static rsRetVal
 addData(instanceData *pData, uchar *buf)
 {
 	unsigned len;

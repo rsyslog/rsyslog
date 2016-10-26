@@ -8,7 +8,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
  * time of the fork from sysklogd was under BSD license)
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -294,7 +294,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-static inline void
+static void
 populateUsers(instanceData *pData, es_str_t *usrs)
 {
 	int i;

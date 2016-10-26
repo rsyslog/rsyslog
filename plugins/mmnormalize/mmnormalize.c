@@ -256,7 +256,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->rulebase = NULL;

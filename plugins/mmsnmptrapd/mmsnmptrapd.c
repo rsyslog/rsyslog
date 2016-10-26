@@ -135,7 +135,7 @@ ENDtryResume
 
 
 /* check if a string is numeric (int) */
-static inline int
+static int
 isNumeric(uchar *str)
 {
 	int r = 1;
@@ -211,7 +211,7 @@ done:
 /* lookup severity code based on provided severity
  * returns -1 if severity could not be found.
  */
-static inline int
+static int
 lookupSeverityCode(instanceData *pData, uchar *sever)
 {
 	struct severMap_s *node;
@@ -270,7 +270,7 @@ ENDdoAction
 /* Build the severity mapping table based on user-provided configuration
  * settings.
  */
-static inline rsRetVal
+static rsRetVal
 buildSeverityMapping(instanceData *pData)
 {
 	uchar pszSev[512];

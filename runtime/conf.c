@@ -133,7 +133,7 @@ finalize_it:
  * getSubString(), but I was not brave enough to fix the former as
  * it has many other callers... -- rgerhards, 2013-05-27
  */
-static inline void
+static void
 ltrim(char *src)
 {
 	char *dst = src;

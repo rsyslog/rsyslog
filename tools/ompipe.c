@@ -12,7 +12,7 @@
  * NOTE: read comments in module-template.h to understand how this pipe
  *       works!
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -113,7 +113,7 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 /* this function gets the default template */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -149,7 +149,7 @@ ENDdbgPrintInstInfo
  * course). -- rgerhards, 2008-10-22
  * changed to iRet interface - 2009-03-19
  */
-static inline rsRetVal
+static rsRetVal
 preparePipe(instanceData *pData)
 {
 	DEFiRet;

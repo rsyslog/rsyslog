@@ -664,7 +664,7 @@ finalize_it:
 
 
 /* Enable KEEPALIVE handling on the socket.  */
-static inline rsRetVal
+static rsRetVal
 EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 {
 	int ret;
@@ -1079,7 +1079,7 @@ DataRcvd(ptcpsess_t *pThis, char *pData, size_t iLen)
 /****************************************** --END-- TCP SUPPORT FUNCTIONS ***********************************/
 
 
-static inline void
+static void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
@@ -1436,7 +1436,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 {
 	DEFiRet;
@@ -1504,7 +1504,7 @@ finalize_it:
 
 /* destroy worker pool structures and wait for workers to terminate
  */
-static inline void
+static void
 startWorkerPool(void)
 {
 	int i;
@@ -1525,7 +1525,7 @@ startWorkerPool(void)
 
 /* destroy worker pool structures and wait for workers to terminate
  */
-static inline void
+static void
 stopWorkerPool(void)
 {
 	int i;
@@ -1545,7 +1545,7 @@ stopWorkerPool(void)
 /* start up all listeners 
  * This is a one-time stop once the module is set to start.
  */
-static inline rsRetVal
+static rsRetVal
 startupServers(void)
 {
 	DEFiRet;
@@ -1578,7 +1578,7 @@ startupServers(void)
 /* process new activity on listener. This means we need to accept a new
  * connection.
  */
-static inline rsRetVal
+static rsRetVal
 lstnActivity(ptcplstn_t *pLstn)
 {
 	int newSock = -1;
@@ -1665,7 +1665,7 @@ finalize_it:
  * be carried out by the main worker or a helper. It can be run
  * concurrently.
  */
-static inline void
+static void
 processWorkItem(epolld_t *epd)
 {
 	int continue_polling = 1;
@@ -1731,7 +1731,7 @@ destroyIoQ(void)
 	pthread_mutex_destroy(&io_q.mut);
 }
 
-static inline rsRetVal
+static rsRetVal
 enqueueIoWork(epolld_t *epd, int dispatchInlineIfQueueFull) {
 	io_req_t *n;
 	int dispatchInline;
@@ -1771,7 +1771,7 @@ finalize_it:
 /* This function is called to process a complete workset, that
  * is a set of events returned from epoll.
  */
-static inline void
+static void
 processWorkSet(int nEvents, struct epoll_event events[])
 {
 	int iEvt;
@@ -2101,7 +2101,7 @@ ENDwillRun
 /* completely shut down a server, that means closing all of its
  * listeners and sessions.
  */
-static inline void
+static void
 shutdownSrv(ptcpsrv_t *pSrv)
 {
 	ptcplstn_t *pLstn, *lstnDel;

@@ -268,7 +268,7 @@ ENDendTransaction
  *  and is set to a default in initHiredis if 
  *  it is still null when it's called - I should
  *  probable just set the default here instead */
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;

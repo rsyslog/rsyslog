@@ -1,7 +1,7 @@
 /* omkafka.c
  * This output plugin make rsyslog talk to Apache Kafka.
  *
- * Copyright 2014 by Adiscon GmbH.
+ * Copyright 2014-2016-2016 by Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -163,7 +163,7 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 ENDinitConfVars
 
-static inline uint32_t
+static uint32_t
 getPartition(instanceData *const __restrict__ pData)
 {
 	if (pData->autoPartition) {
@@ -234,7 +234,7 @@ finalize_it:
 }
 
 /* clear the entire dynamic topic cache */
-static inline void
+static void
 dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
 {
 	register int i;
@@ -319,7 +319,7 @@ finalize_it:
  *
  * must be called with read(rkLock)
  */
-static inline rsRetVal
+static rsRetVal
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
 				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
 {
@@ -522,7 +522,7 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 }
 
 /* should be called with write(rkLock) */
-static inline void
+static void
 do_rd_kafka_destroy(instanceData *const __restrict pData)
 {
 	if (pData->rk == NULL) {
@@ -864,7 +864,7 @@ finalize_it:
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->topic = NULL;

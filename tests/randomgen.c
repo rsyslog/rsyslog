@@ -13,7 +13,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -55,7 +55,7 @@ static long long fileSize = 1024*1024;	/* file size in K, 1MB default */
 /* generate the random file. This code really can be improved (e.g. read /dev/urandom
  * when available)
  */
-static inline void
+static void
 genFile()
 {
 	long i;

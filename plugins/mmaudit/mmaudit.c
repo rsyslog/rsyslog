@@ -113,7 +113,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-static inline void
+static void
 skipWhitespace(uchar **buf)
 {
 	while(**buf && isspace(**buf))
@@ -121,7 +121,7 @@ skipWhitespace(uchar **buf)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 parseName(uchar **buf, char *name, unsigned lenName)
 {
 	unsigned i;
@@ -138,7 +138,7 @@ parseName(uchar **buf, char *name, unsigned lenName)
 }
 
 
-static inline rsRetVal
+static rsRetVal
 parseValue(uchar **buf, char *val, unsigned lenval)
 {
 	char termc;
