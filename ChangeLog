@@ -69,6 +69,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   already contains the magic LOGSIG11 in the beginning of the file. This leads
   to a log signature file which has correct content but is missing the
   LOGSIG11 magic in the beginning.
+- bugfix template processor: missing escaping of backslash in json mode
+  Thanks to github user mostolog for providing the patch.
 - build environment: --enable-debug now defaults to new "auto" mode
   previously, DEBUG mode (and thus assert() macros) was disabled by default
   and explicitly needed to be enabled by providing the --enable-debug
@@ -80,6 +82,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   * imfile ReopenOnTruncate option is now being tested
   * the CI environment now runs most tests in debug mode, but some in
     release mode to cover potential release-mode races
+  * template json option is now being tested
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
