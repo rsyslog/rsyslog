@@ -21,6 +21,10 @@ TESTS +=  \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	glbl_setenv_2_vars.sh \
+	glbl_setenv_err.sh \
+	glbl_setenv_err_too_long.sh \
+	glbl_setenv.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only.sh \
@@ -529,6 +533,10 @@ EXTRA_DIST= \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	glbl_setenv_2_vars.sh \
+	glbl_setenv_err.sh \
+	glbl_setenv_err_too_long.sh \
+	glbl_setenv.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
 	validation-run.sh \
