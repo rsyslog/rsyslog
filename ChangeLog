@@ -30,6 +30,10 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Please note: contributed modules are not directly supported by the 
   project. You might want to contact the author for questions.
   Thanks to Francisco Castro for contributing it.
+- RainerScript: provide a capability to set environment variables
+  via 'global(environment="var=val")' config statement.
+  This is most importantly for things like HTTP_PROXY.
+  see also https://github.com/rsyslog/rsyslog/issues/1209
 - lookup tables: improved error checking
   Thanks to Janmejay Singh for the patch.
 - rsgtutil: option to specify KSI publications file certificate constraints
