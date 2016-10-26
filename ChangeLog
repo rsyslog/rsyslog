@@ -32,6 +32,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Thanks to Francisco Castro for contributing it.
 - lookup tables: improved error checking
   Thanks to Janmejay Singh for the patch.
+- rsgtutil: option to specify KSI publications file certificate constraints
+  see also https://github.com/rsyslog/rsyslog/issues/1207
 - bugfix imfile: ReopenOnTruncate processing, file open processing
   This fixes
    * ReopenOnTrucate was only honored when a state file existed
@@ -56,6 +58,13 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Thanks to Matthew Seaman for the patch.
 - "bugfix": theoretical queue file corruption when more than MAX_INT files
   closes https://github.com/rsyslog/rsyslog/issues/1202
+- bug fix/KSI: LOGSIG11 missing in the beginning of KSI log signature file
+  When logging with KSI is not working properly for whatever reason, an
+  empty .ksisig file is created (which by itself is not an issue). However,
+  later it looks like this file is re-used, but it is not checked whether it
+  already contains the magic LOGSIG11 in the beginning of the file. This leads
+  to a log signature file which has correct content but is missing the
+  LOGSIG11 magic in the beginning.
 - build environment: --enable-debug now defaults to new "auto" mode
   previously, DEBUG mode (and thus assert() macros) was disabled by default
   and explicitly needed to be enabled by providing the --enable-debug
