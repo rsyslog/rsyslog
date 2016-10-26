@@ -35,6 +35,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -712,6 +713,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
