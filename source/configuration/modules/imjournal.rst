@@ -123,7 +123,7 @@ saving them into /var/log/ceelog.
          StateFile="/path/to/file") #load imjournal module
   module(load="mmjsonparse") #load mmjsonparse module for structured logs
 
-  template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\\n" ) #template for messages
+  template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" ) #template for messages
 
   action(type="mmjsonparse")
   action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
