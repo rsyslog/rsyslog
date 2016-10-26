@@ -280,7 +280,7 @@ Input Parameters
    1 - paragraph (There is a blank line between log messages)
 
    2 - indented (new log messages start at the beginning of a line. If a
-   line starts with a space it is part of the log message before it)
+   line starts with a space or tab "\t" it is part of the log message before it)
 
 .. index:: 
    single: imfile; escapeLF
