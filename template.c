@@ -411,12 +411,17 @@ finalize_it:
 static void doEmergencyEscape(register uchar *p, int mode)
 {
 	while(*p) {
-		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'')
+		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'') {
 			*p = '"';
-		else if((mode == JSON_ESCAPE) &&  (*p == '"' || *p == '\\' ))
-			*p = '\'';
-		else if((mode == SQL_ESCAPE) && *p == '\\')
+		} else if(mode == JSON_ESCAPE) {
+			if(*p == '"') {
+				*p = '\'';
+			} else if(*p == '\\' ) {
+				*p = '/';
+			}
+		} else if((mode == SQL_ESCAPE) && *p == '\\') {
 			*p = '/';
+		}
 		++p;
 	}
 }
