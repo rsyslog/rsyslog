@@ -682,6 +682,8 @@ static int
 tlvOpenKSI(ksifile ksi, const char *const hdr, unsigned lenHdr)
 {
 	int r = 0;
+	struct stat stat_st;
+
 	ksi->fd = open((char*)ksi->sigfilename,
 		       O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC, 0600);
 	if(ksi->fd == -1) {
@@ -692,10 +694,27 @@ tlvOpenKSI(ksifile ksi, const char *const hdr, unsigned lenHdr)
 			r = RSGTE_IO;
 			goto done;
 		}
+
+		/* Write fileHeader */
 		memcpy(ksi->tlvBuf, hdr, lenHdr);
 		ksi->tlvIdx = lenHdr;
 	} else {
-		ksi->tlvIdx = 0; /* header already present! */
+		/* Get FileSize from existing ksisigfile */
+		if(fstat(ksi->fd, &stat_st) == -1) {
+			reportErr(ksi->ctx, "tlvOpenKSI: can not stat file");
+			r = RSGTE_IO;
+			goto done;
+		}
+
+		/* Check if size is above header length. */
+		if(stat_st.st_size > 0) {
+			/* header already present! */
+			ksi->tlvIdx = 0;
+		} else {
+			/* Write fileHeader */
+			memcpy(ksi->tlvBuf, hdr, lenHdr);
+			ksi->tlvIdx = lenHdr;
+		}
 	}
 	/* we now need to obtain the last previous hash, so that
 	 * we can continue the hash chain. We do not check for error

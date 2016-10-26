@@ -55,10 +55,14 @@ static enum { FILEMODE_LOGSIG, FILEMODE_RECSIG } filemode = FILEMODE_LOGSIG;
 static enum { API_GT, API_KSI } apimode = API_GT;
 static int verbose = 0;
 static int debug = 0; 
+/* Helper variables for VERIFY Mode */
+char *constraint_oid = NULL;
+char *constraint_value = NULL;
 /* Helper variables for EXTRACT Mode */
 static int append = 0;
 char *outputfile = NULL;
 const char *linenumbers = "";
+
 
 #ifdef ENABLEGT
 static void
@@ -767,6 +771,13 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 		fprintf(stderr, "verifyKSI:\t\t\t Error initializing signature file structure\n");
 		r = RSGTE_IO;
 		goto done;
+	}
+
+	/* Check if we have a logsignature file */
+	if (constraint_oid != NULL && constraint_value != NULL) {
+		if((r = rsksi_setDefaultConstraint(ksi, constraint_oid, constraint_value)) != 0) {
+			goto done;
+		}
 	}
 
 	/* Check if we have a logsignature file */
@@ -1764,6 +1775,7 @@ static struct option long_options[] =
 	{"extract", required_argument, NULL, 'x'},
 	{"output", required_argument, NULL, 'o'},
 	{"append", no_argument, NULL, 'A'},
+	{"cnstr", required_argument, NULL, 'C'},
 	{NULL, 0, NULL, 0} 
 }; 
 
@@ -1773,28 +1785,29 @@ rsgtutil_usage(void)
 {
 	fprintf(stderr, "usage: rsgtutil [options]\n"
 			"Use \"man rsgtutil\" for more details.\n\n"
-			"\t-h, --help \t\t\t Show this help.\n"
-			"\t-D, --dump \t\t\t dump operations mode.\n"
-			"\t-t, --verify \t\t\t Verify operations mode.\n"
-			"\t-e, --extend \t\t\t Extends the RFC3161 signatures.\n"
-			"\t-x, --extract <LINENUMBERS> \t\t\t Extract these linenumbers including signatures.\n"
-			"\t-B, --show-sigblock-params \t Show signature block parameters.\n"
-			"\t-T, --detect-file-type \t Show Type of signature file.\n"
-			"\t-c, --convert \t\t\t Convert Signature Format Version 10 to 11.\n"
-			"\t-V, --version \t\t\t Print utility version\n"
+			"\t-h, --help \t\t\t\t Show this help.\n"
+			"\t-D, --dump \t\t\t\t dump operations mode.\n"
+			"\t-t, --verify \t\t\t\t Verify operations mode.\n"
+			"\t-e, --extend \t\t\t\t Extends the RFC3161 signatures.\n"
+			"\t-x, --extract <LINENUMBERS> \t\t Extract these linenumbers including signatures.\n"
+			"\t-B, --show-sigblock-params \t\t Show signature block parameters.\n"
+			"\t-T, --detect-file-type \t\t\t Show Type of signature file.\n"
+			"\t-c, --convert \t\t\t\t Convert Signature Format Version 10 to 11.\n"
+			"\t-V, --version \t\t\t\t Print utility version\n"
 			"\t\tOptional parameters\n"
-			"\t-a <GT|KSI>, --api  <GT|KSI> \t Set which API to use.\n"
+			"\t-a <GT|KSI>, --api  <GT|KSI> \t\t Set which API to use.\n"
 			"\t\tGT = Guardtime Client Library\n"
 			"\t\tKSI = Guardtime KSI Library\n"
-			"\t-s, --show-verified \t\t Also show correctly verified blocks.\n"
+			"\t-s, --show-verified \t\t\t Also show correctly verified blocks.\n"
 			"\t-P <URL>, --publications-server <URL> \t Sets the publications server.\n"
 			"\t-E <URL>, --extend-server <URL> \t Sets the extension server.\n"
-			"\t-u <USERID>, --userid <USERID> \t Sets the userid used (Needed for the extension server).\n"
+			"\t-u <USERID>, --userid <USERID> \t\t Sets the userid used (Needed for the extension server).\n"
 			"\t-k <USERKEY>, --userkey <USERKEY> \t Sets the userkey used (Needed for the extension server).\n"
 			"\t-o <FILENAME>, --output <FILENAME> \t Sets an output filename (EXTRACT Mode only).\n"
-			"\t-A, --append \t\t\t Append extracted output to file (EXTRACT Mode only).\n"
-			"\t-v, --verbose \t\t\t Verbose output.\n"
-			"\t-d, --debug \t\t\t Debug (developer) output.\n"
+			"\t-A, --append \t\t\t\t Append extracted output to file (EXTRACT Mode only).\n"
+			"\t-C <oid>=<value>, --cnstr <oid>=<value>\t Specify the OID of the PKI certificate field (e.g. e-mail address) and the expected value.\n"
+			"\t-v, --verbose \t\t\t\t Verbose output.\n"
+			"\t-d, --debug \t\t\t\t Debug (developer) output.\n"
 			);
 }
 
@@ -1805,7 +1818,7 @@ main(int argc, char *argv[])
 	int opt;
 
 	while(1) {
-		opt = getopt_long(argc, argv, "a:ABcdDeE:hk:o:P:stTu:vVx:", long_options, NULL);
+		opt = getopt_long(argc, argv, "a:ABcC:dDeE:hk:o:P:stTu:vVx:", long_options, NULL);
 		if(opt == -1)
 			break;
 		switch(opt) {
@@ -1903,6 +1916,76 @@ main(int argc, char *argv[])
 			break;
 		case 'A':
 			append = 1;
+			break;
+		case 'C':
+#ifdef ENABLEKSI
+			if (strlen(optarg) > 0 && (strchr(optarg, '=') != NULL)) {
+				/* Get pos of = */ 
+				char* pszTmp = optarg;
+				i = 0; /* Reset */
+
+				while(pszTmp != NULL) {
+					if ( *(pszTmp) == '=' ) {
+						/* Extract pszOID */
+						constraint_oid = malloc( i + 1 ); 
+						strncpy(constraint_oid, optarg, i);
+						*(constraint_oid+i) = '\0'; 
+
+						/* Extract pszValue */
+						constraint_value = malloc( strlen(pszTmp) + 1 ); 
+						pszTmp++;
+						strncpy(constraint_value, pszTmp, strlen(pszTmp));
+						*(constraint_value+strlen(pszTmp)) = '\0'; 
+						break; 
+					}
+					
+					pszTmp++; /* Next Char*/
+					i++; /* Increment Count */
+				}
+
+				if (constraint_oid == NULL || constraint_value == NULL) {
+					/* Free mem */
+					if (constraint_oid != NULL) { free(constraint_oid); constraint_oid = NULL; }
+					if (constraint_value != NULL) { free(constraint_value); constraint_value = NULL; } 
+
+					fprintf(stderr, "--cnstr:\t\t\t error missing oid or value\n");
+					return 1;
+				} else {
+					fprintf(stderr, "--cnstr= oid='%s' value='%s' \n", constraint_oid, constraint_value );
+					
+					/* Check for constraint aliases */
+					if(		strcmp(constraint_oid, "E") == 0 || 
+							strcmp(constraint_oid, "email") == 0 ||
+							strcmp(constraint_oid, "1.2.840.113549.1.9.1") == 0) {
+						free(constraint_oid);
+						constraint_oid = KSI_CERT_EMAIL;
+					}
+					else if(strcmp(constraint_oid, "CN") == 0 || 
+							strcmp(constraint_oid, "cname") == 0 ||
+							strcmp(constraint_oid, "2.5.4.3") == 0) {
+						free(constraint_oid);
+						constraint_oid = KSI_CERT_COMMON_NAME; 
+					}
+					else if(strcmp(constraint_oid, "C") == 0 || 
+							strcmp(constraint_oid, "country") == 0 ||
+							strcmp(constraint_oid, "2.5.4.6") == 0) {
+						free(constraint_oid);
+						constraint_oid = KSI_CERT_COUNTRY; 
+					}
+					else if(strcmp(constraint_oid, "O") == 0 || 
+							strcmp(constraint_oid, "org") == 0 ||
+							strcmp(constraint_oid, "2.5.4.10") == 0) {
+						free(constraint_oid);
+						constraint_oid = KSI_CERT_ORGANIZATION; 
+					}
+				}
+			} else {
+				fprintf(stderr, "--cnstr:\t\t\t error invalid constrain parameter\n");
+				return 1;
+			}
+#else 
+			fprintf(stderr, "--cnstr only with ksi library supported\n" );
+#endif
 			break;
 		case 'h':
 		case '?':

@@ -28,9 +28,6 @@ typedef enum KSI_HashAlgorithm_en KSI_HashAlgorithm;
  * cases ;) [and 64 is not really a waste of memory, so we do not even
  * try to work with reallocs and such...]
  */
-/*#define MAX_ROOTS 64
-#define LOGSIGHDR "LOGSIG10"
-*/ 
 
 /* context for gt calls. This primarily serves as a container for the
  * config settings. The actual file-specific data is kept in ksifile.
@@ -207,6 +204,7 @@ int verifySigblkFinish(ksifile ksi, KSI_DataHash **pRoot);
 int verifySigblkFinishChain(ksifile ksi, block_hashchain_t *hashchain, KSI_DataHash **pRoot, ksierrctx_t *ectx); 
 void outputHash(FILE *fp, const char *hdr, const uint8_t *data, const uint16_t len, const uint8_t verbose); 
 void outputKSIHash(FILE *fp, const char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose); 
+int rsksi_setDefaultConstraint(ksifile ksi, char *stroid, char *strvalue);
 
 /* TODO: replace these? */
 int hash_m_ksi(ksifile ksi, KSI_DataHash **m);

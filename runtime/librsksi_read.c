@@ -1372,6 +1372,34 @@ done2:
 }
 
 /**
+*	Set Default Constrain parameters
+*/
+int 
+rsksi_setDefaultConstraint(ksifile ksi, char *stroid, char *strvalue)
+{
+	int ksistate;
+	int r = RSGTE_SUCCESS;
+
+	/* Create and set default CertConstraint */
+	const KSI_CertConstraint pubFileCertConstr[] = {
+			{ stroid, strvalue},
+			{ NULL, NULL }
+	};
+
+	if(rsksi_read_debug) { printf("rsksi_setDefaultConstraint:\t\t Setting OID='%s' to '%s' \n", stroid, strvalue); }
+
+	ksistate = KSI_CTX_setDefaultPubFileCertConstraints(ksi->ctx->ksi_ctx, pubFileCertConstr);
+	if (ksistate != KSI_OK) {
+		fprintf(stderr, "rsksi_setDefaultConstraint:\t\t\t Unable to configure publications file cert constraints %s=%s.\n", stroid, strvalue);
+		r = RSGTE_IO;
+		goto done;
+	}
+done:
+	return r;
+}
+
+
+/**
  * Read the file header and compare it to the expected value.
  * The file pointer is placed right after the header.
  * @param[in] fp file pointer of tlv file
