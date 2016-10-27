@@ -1150,8 +1150,16 @@ getLocalHostname(uchar **ppName)
 	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
 		strcpy(hnbuf, "localhost");
 	} else {
-		hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
+		/* now guard against empty hostname
+		 * see https://github.com/rsyslog/rsyslog/issues/1040
+		 */
+		if(hnbuf[0] == '\0') {
+			strcpy(hnbuf, "localhost");
+		} else {
+			hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
+		}
 	}
+
 	char *dot = strstr(hnbuf, ".");
 	if(dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
