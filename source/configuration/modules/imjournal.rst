@@ -95,7 +95,10 @@ plugin only if there is hard need to do so.**
    native API. This option specifies the default facility for these
    messages. Can be given either as a name or a number. Defaults to 'user'.
 
+-  **usepidfromsystem** [**off**/on]
 
+   Retrieves the trusted systemd parameter, _PID, instead of the user 
+   systemd parameter, SYSLOG_PID, which is the default.
 
 **Caveats/Known Bugs:**
 
