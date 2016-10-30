@@ -145,7 +145,7 @@ case $1 in
 		    echo "ERROR: config file '$CONF_FILE' not found!"
 		    exit 1
 		fi
-		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 		. $srcdir/diag.sh wait-startup $3
 		;;
    'startup-silent')   # start rsyslogd with default params. $2 is the config file name to use

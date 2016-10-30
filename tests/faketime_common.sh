@@ -36,7 +36,7 @@ rsyslog_testbench_preload_libfaketime() {
         exit 77
     else
         echo "Test passed! Will use '${RSYSLOG_LIBFAKETIME}' library!"
-        export LD_PRELOAD="${RSYSLOG_LIBFAKETIME}"
+        export RSYSLOG_PRELOAD="${RSYSLOG_LIBFAKETIME}"
     fi
 
     # GMT-1 (POSIX TIME) is GMT+1 in "Human Time"

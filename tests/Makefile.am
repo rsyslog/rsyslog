@@ -4,6 +4,14 @@ CLEANFILES = \
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
 
+
+pkglib_LTLIBRARIES =
+
+pkglib_LTLIBRARIES += liboverride_gethostname.la
+liboverride_gethostname_la_SOURCES = override_gethostname.c
+liboverride_gethostname_la_CFLAGS =
+liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
@@ -13,6 +21,7 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
+	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
@@ -528,6 +537,7 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
