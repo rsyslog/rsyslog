@@ -278,27 +278,29 @@ ENDdbgPrintInstInfo
 /* Build basic URL part, which includes hostname and port as follows:
  * http://hostname:port/ based on a server param
  * Newly creates a cstr for this purpose.
+ * Note: serverParam MUST NOT end in '/' (caller must strip if it exists)
  */
 static rsRetVal
-computeBaseUrl(char* serverParam, int defaultPort, sbool useHttps, uchar **baseUrl)
+computeBaseUrl(const char*const serverParam,
+	const int defaultPort,
+	const sbool useHttps,
+	uchar **baseUrl)
 {
 #	define SCHEME_HTTPS "https://"
 #	define SCHEME_HTTP "http://"
 
 	char portBuf[64];
 	int r = 0;
-	char* host = serverParam;
+	const char *host = serverParam;
 	DEFiRet;
+
+	assert(serverParam[strlen(serverParam)-1] != '/');
 
 	es_str_t *urlBuf = es_newStr(256);
 	if (urlBuf == NULL) {
 		DBGPRINTF("omelasticsearch: failed to allocate es_str urlBuf in computeBaseUrl\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-
-	/* Remove a trailing slash if it exists */
-	if (serverParam[strlen(serverParam)-1] == '/')
-		serverParam[strlen(serverParam)-1] = '\0';
 
 	/* Find where the hostname/ip of the server starts. If the scheme is not specified
 	  in the uri, start the buffer with a scheme corresponding to the useHttps parameter.
@@ -1583,6 +1585,11 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_ERR, "omelasticsearch: unable to allocate buffer "
 					"for ElasticSearch server configuration.");
 				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			/* Remove a trailing slash if it exists */
+			const size_t serverParamLastChar = strlen(serverParam)-1;
+			if (serverParam[serverParamLastChar] == '/') {
+				serverParam[serverParamLastChar] = '\0';
 			}
 			CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
 			free(serverParam);
