@@ -507,7 +507,8 @@ TESTS += \
 	imfile-endregex-timeout-none-polling.sh \
 	imfile-endregex-timeout-polling.sh \
 	imfile-endregex-timeout.sh \
-	imfile-endregex-timeout-none.sh
+	imfile-endregex-timeout-none.sh \
+	imfile-persist-state-1.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -1028,6 +1029,7 @@ EXTRA_DIST= \
 	imfile-endregex-timeout-polling.sh \
 	imfile-endregex-timeout.sh \
 	imfile-endregex-timeout-none.sh \
+	imfile-persist-state-1.sh \
 	imfile-truncate.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
