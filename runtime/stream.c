@@ -1120,7 +1120,7 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 {
 	DEFiRet;
 
-	if(pThis->fd == -1)
+	if(pThis->fd == -1 || pThis->sType != STREAMTYPE_FILE_CIRCULAR)
 		FINALIZE;
 
 	/* wait for output to be empty, so that our counts are correct */
