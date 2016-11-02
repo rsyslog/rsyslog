@@ -60,6 +60,11 @@ Version 8.23.0 [v8-stable] 2016-11-15
   such as FreeBSD
   see also https://github.com/rsyslog/rsyslog/pull/1147
   Thanks to Matthew Seaman for the patch.
+- bugfix omelasticsearch: modifies constant memory under some circumstances
+  Function computeBaseUrl may modify its serverParam parameter, but
+  this may contain the constant string "localhost". Depending on the
+  platform, this can lead to a segfault.
+  Noticed while working on compiler warnings, not seen in practice.
 - "bugfix": theoretical queue file corruption when more than MAX_INT files
   closes https://github.com/rsyslog/rsyslog/issues/1202
 - bug fix/KSI: LOGSIG11 missing in the beginning of KSI log signature file

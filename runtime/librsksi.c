@@ -194,8 +194,6 @@ hashAlgNameKSI(uint8_t hashID)
 		return "SHA2-384";
 	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
-	case KSI_HASHALG_SHA3_244:
-		return "SHA3-224";
 	case KSI_HASHALG_SHA3_256:
 		return "SHA3-256";
 	case KSI_HASHALG_SHA3_384:
