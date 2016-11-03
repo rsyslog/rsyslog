@@ -2,7 +2,7 @@
 # added 2016-11-03 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
-echo \[omprog-noterm-default.sh\]: test for cleanup in omprog without SIGTERM with default (off) signalOnClose
+echo '[omprog-noterm-default.sh]: test for cleanup in omprog without SIGTERM with default (off) signalOnClose'
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup omprog-noterm-default.conf
 . $srcdir/diag.sh wait-startup
