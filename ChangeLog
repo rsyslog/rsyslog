@@ -54,6 +54,19 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Thanks to Janmejay Singh for the patch.
 - bugfix omrelp: invalid module name imrelp was used in some error messages
   Thanks to Chris Pilkington for the patch.
+- bugfix core: abort when persisting object state
+  This causes a segfault. It happens whenever an object state larger
+  than 4095 byte is persisted. Then, incorrectly a try to rollover to
+  a new state file is tried, which will lead to a division by zero
+  as the necessary variables for this operation are not set because we
+  are NOT in circular mode.
+  This problem can happen wherever state files are written. It has been
+  experienced with imfile and queue files.
+  Many thanks to github user mostolog for his help in reproducing the issue,
+  which was very important to finally nail down this long-standing bug.
+  closes https://github.com/rsyslog/rsyslog/issues/1239
+  closes https://github.com/rsyslog/rsyslog/issues/1162
+  closes https://github.com/rsyslog/rsyslog/issues/1074
 - bugfix external module perl skeleton: did not work properly
   Thanks to github user Igorjan666 for the patch.
 - bugfix build system: Fix detection of pthread_setschedparam() on platforms
