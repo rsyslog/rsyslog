@@ -67,6 +67,16 @@ Version 8.23.0 [v8-stable] 2016-11-15
   closes https://github.com/rsyslog/rsyslog/issues/1239
   closes https://github.com/rsyslog/rsyslog/issues/1162
   closes https://github.com/rsyslog/rsyslog/issues/1074
+- bugfix: segfault if hostname is unset on system
+  happens when gethostname() returns empty string. This will cause
+  the createon of the localhostname prop_t to fail, which in turn
+  leads to a NULL pointer dereference when emitting local messages.
+  As we emit a startup message by default, this had usually lead
+  to a segfault on startup.
+  Thanks to Erik Potter and github user mostolog for their help
+  in analyzing this problem.
+  closes https://github.com/rsyslog/rsyslog/issues/1040
+  closes https://github.com/rsyslog/rsyslog/issues/335
 - bugfix external module perl skeleton: did not work properly
   Thanks to github user Igorjan666 for the patch.
 - bugfix build system: Fix detection of pthread_setschedparam() on platforms
@@ -97,11 +107,13 @@ Version 8.23.0 [v8-stable] 2016-11-15
   disables it when a release build is done (from the release tarball). This
   aims at better error checking during testbench runs and developer testing.
 - testbench improvements
+  * added some plumbing for extended tests which work by overriding OS APIs
   * imfile ReopenOnTruncate option is now being tested
   * the CI environment now runs most tests in debug mode, but some in
     release mode to cover potential release-mode races
   * template json option is now being tested
   * object state persisting received a basic test
+  * added test for empty hostnames
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
