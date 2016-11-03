@@ -36,11 +36,11 @@ rsyslog_testbench_preload_libfaketime() {
         exit 77
     else
         echo "Test passed! Will use '${RSYSLOG_LIBFAKETIME}' library!"
-        export LD_PRELOAD="${RSYSLOG_LIBFAKETIME}"
+        export RSYSLOG_PRELOAD="${RSYSLOG_LIBFAKETIME}"
     fi
 
     # GMT-1 (POSIX TIME) is GMT+1 in "Human Time"
-    faketime_testtime=$(FAKETIME="2040-01-01 16:00:00" TZ=GMT-1 date +%s 2>/dev/null)
+    faketime_testtime=$(LD_PRELOAD="${RSYSLOG_LIBFAKETIME}" FAKETIME="2040-01-01 16:00:00" TZ=GMT-1 date +%s 2>/dev/null)
     if [ ${faketime_testtime} -eq -1 ]; then
         echo "Note: System is not year-2038 compliant"
         RSYSLOG_TESTBENCH_Y2K38_INCOMPATIBLE="yes"
