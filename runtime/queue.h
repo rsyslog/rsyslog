@@ -183,6 +183,7 @@ struct queue_s {
 	STATSCOUNTER_DEF(ctrFDscrd, mutCtrFDscrd)
 	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
 	int ctrMaxqsize; /* NOT guarded by a mutex */
+	int iSmpInterval; /* line interval of sampling logs */
 };
 
 

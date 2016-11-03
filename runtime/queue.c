@@ -126,7 +126,8 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.dequeueslowdown", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimebegin", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimeend", eCmdHdlrInt, 0 },
-	{ "queue.cry.provider", eCmdHdlrGetWord, 0 }
+	{ "queue.cry.provider", eCmdHdlrGetWord, 0 },
+	{ "queue.samplinginterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1059,6 +1060,18 @@ qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
 
 	ASSERT(pThis != NULL);
 
+	static int msgCnt = 0;
+
+	if(pThis->iSmpInterval > 0)
+	{
+		msgCnt = (msgCnt + 1) % (pThis->iSmpInterval);
+		if(msgCnt != 0)
+		{
+		        msgDestruct(&pMsg);
+			goto finalize_it;
+		}
+	}
+
 	CHKiRet(pThis->qAdd(pThis, pMsg));
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
@@ -1423,6 +1436,7 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iDeqSlowdown = 0;
 	pThis->iDeqtWinFromHr = 0;
 	pThis->iDeqtWinToHr = 25;		 /* disable time-windowed dequeuing by default */
+	pThis->iSmpInterval = 0;                 /* disable sampling */
 }
 
 
@@ -1453,6 +1467,7 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->iDeqSlowdown = 0;
 	pThis->iDeqtWinFromHr = 0;
 	pThis->iDeqtWinToHr = 25;		 /* disable time-windowed dequeuing by default */
+	pThis->iSmpInterval = 0;                 /* disable sampling */
 }
 
 
@@ -3140,6 +3155,8 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->iDeqtWinFromHr = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuetimeend")) {
 			pThis->iDeqtWinToHr = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "queue.samplinginterval")) {
+			pThis->iSmpInterval = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("queue: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
@@ -3192,6 +3209,7 @@ DEFpropSetMeth(qqueue, pAction, action_t*)
 DEFpropSetMeth(qqueue, iDeqSlowdown, int)
 DEFpropSetMeth(qqueue, iDeqBatchSize, int)
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)
+DEFpropSetMeth(qqueue, iSmpInterval, int)
 
 
 /* This function can be used as a generic way to set properties. Only the subset
