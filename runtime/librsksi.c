@@ -134,8 +134,6 @@ hashOutputLengthOctetsKSI(uint8_t hashID)
 		return 32;
 	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
 		return 20;
-	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
-		return 28;
 	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
 		return 48;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
@@ -164,8 +162,6 @@ hashIdentifierKSI(KSI_HashAlgorithm hashID)
 		return 0x01;
 	case KSI_HASHALG_RIPEMD160: /** The RIPEMD-160 algorithm. */
 		return 0x02;
-	case KSI_HASHALG_SHA2_224: /** The SHA-224 algorithm. */
-		return 0x03;
 	case KSI_HASHALG_SHA2_384: /** The SHA-384 algorithm. */
 		return 0x04;
 	case KSI_HASHALG_SHA2_512: /** The SHA-512 algorithm. */
@@ -194,14 +190,10 @@ hashAlgNameKSI(uint8_t hashID)
 		return "SHA2-256";
 	case KSI_HASHALG_RIPEMD160:
 		return "RIPEMD-160";
-	case KSI_HASHALG_SHA2_224:
-		return "SHA2-224";
 	case KSI_HASHALG_SHA2_384:
 		return "SHA2-384";
 	case KSI_HASHALG_SHA2_512:
 		return "SHA2-512";
-	case KSI_HASHALG_SHA3_244:
-		return "SHA3-224";
 	case KSI_HASHALG_SHA3_256:
 		return "SHA3-256";
 	case KSI_HASHALG_SHA3_384:
@@ -223,8 +215,6 @@ hashID2AlgKSI(uint8_t hashID)
 		return KSI_HASHALG_SHA2_256;
 	case 0x02:
 		return KSI_HASHALG_RIPEMD160;
-	case 0x03:
-		return KSI_HASHALG_SHA2_224;
 	case 0x04:
 		return KSI_HASHALG_SHA2_384;
 	case 0x05:
@@ -792,7 +782,9 @@ done:	return ksi;
 }
  
 
-/* returns 0 on succes, 1 if algo is unknown */
+/* returns 0 on succes, 1 if algo is unknown, 2 is algo has been remove
+ * because it is now considered insecure
+ */
 int
 rsksiSetHashFunction(rsksictx ctx, char *algName)
 {
@@ -803,8 +795,6 @@ rsksiSetHashFunction(rsksictx ctx, char *algName)
 		ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	else if(!strcmp(algName, "RIPEMD-160"))
 		ctx->hashAlg = KSI_HASHALG_RIPEMD160;
-	else if(!strcmp(algName, "SHA2-224"))
-		ctx->hashAlg = KSI_HASHALG_SHA2_224;
 	else if(!strcmp(algName, "SHA2-384"))
 		ctx->hashAlg = KSI_HASHALG_SHA2_384;
 	else if(!strcmp(algName, "SHA2-512"))
@@ -819,6 +809,8 @@ rsksiSetHashFunction(rsksictx ctx, char *algName)
 		ctx->hashAlg = KSI_HASHALG_SHA3_512;
 	else if(!strcmp(algName, "SM3"))
 		ctx->hashAlg = KSI_HASHALG_SM3;
+	else if(!strcmp(algName, "SHA2-224"))
+		r = 2;
 	else
 		r = 1;
 	return r;
