@@ -107,7 +107,11 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			continue;
 		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
 			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
+			if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) == 2) {
+				errmsg.LogError(0, RS_RET_ERR, "Hash function "
+					"'%s' has been removed due to insecurity - "
+					"using default", cstr);
+			} else if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
 				errmsg.LogError(0, RS_RET_ERR, "Hash function "
 					"'%s' unknown - using default", cstr);
 			}

@@ -782,7 +782,9 @@ done:	return ksi;
 }
  
 
-/* returns 0 on succes, 1 if algo is unknown */
+/* returns 0 on succes, 1 if algo is unknown, 2 is algo has been remove
+ * because it is now considered insecure
+ */
 int
 rsksiSetHashFunction(rsksictx ctx, char *algName)
 {
@@ -807,6 +809,8 @@ rsksiSetHashFunction(rsksictx ctx, char *algName)
 		ctx->hashAlg = KSI_HASHALG_SHA3_512;
 	else if(!strcmp(algName, "SM3"))
 		ctx->hashAlg = KSI_HASHALG_SM3;
+	else if(!strcmp(algName, "SHA2-224"))
+		r = 2;
 	else
 		r = 1;
 	return r;
