@@ -64,6 +64,8 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 #define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
+/* linux specific: how long to wait for process to terminate gracefully before issuing SIGKILL */
+#define DEFAULT_FORCED_TERMINATION_TIMEOUT_MS 5000
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
@@ -72,6 +74,7 @@ typedef struct _instanceData {
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	int iHUPForward;	/* signal to forward on HUP (or NO_HUP_FORWARD) */
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
+	int bSignalOnClose;  /* should signal process at shutdown */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
 
@@ -97,7 +100,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "output", eCmdHdlrString, 0 },
 	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
 	{ "hup.signal", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "signalOnClose", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -426,11 +430,8 @@ doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t
 }
 #endif
 
-
-/* clean up after a terminated child
- */
-static rsRetVal
-cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
+static void
+waitForChild(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 {
 	int status;
 	int ret;
@@ -439,12 +440,7 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 	subprocess_timeout_desc_t subpTimeOut;
 	int timeoutSetupStatus;
 	int waitpid_interrupted;
-#endif
-	DEFiRet;
 
-	assert(pWrkrData->bIsRunning == 1);
-	
-#if defined(__linux__) && defined(_GNU_SOURCE)
 	if (timeout_ms > 0) timeoutSetupStatus = setupSubprocessTimeout(&subpTimeOut, timeout_ms);
 #endif
 
@@ -453,8 +449,12 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 #if defined(__linux__) && defined(_GNU_SOURCE)
 	waitpid_interrupted = (ret != pWrkrData->pid) && (errno == EINTR);
 	if ((timeout_ms > 0) && (timeoutSetupStatus == RS_RET_OK)) doForceKillSubprocess(&subpTimeOut, waitpid_interrupted, pWrkrData->pid);
-	if (waitpid_interrupted) return cleanup(pWrkrData, -1);
+	if (waitpid_interrupted) {
+		waitForChild(pWrkrData, -1);
+		return;
+	}
 #endif
+
 	if(ret != pWrkrData->pid) {
 		if (errno == ECHILD) {
 			errmsg.LogError(errno, RS_RET_OK_WARN, "Child %d doesn't seem to exist, "
@@ -465,14 +465,28 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",
-			  pWrkrData->pData->szBinary, status);
+				  pWrkrData->pData->szBinary, status);
 		if(WIFEXITED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
-					pWrkrData->pData->szBinary, WEXITSTATUS(status));
+							pWrkrData->pData->szBinary, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
-					pWrkrData->pData->szBinary, WTERMSIG(status));
+							pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
+	}
+}
+
+/* clean up after a terminated child
+ */
+static rsRetVal
+cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
+{
+	DEFiRet;
+
+	assert(pWrkrData->bIsRunning == 1);
+
+	if (pWrkrData->pData->bSignalOnClose) {
+		waitForChild(pWrkrData, timeout_ms);
 	}
 
 	checkProgramOutput(pWrkrData); /* try to catch any late messages */
@@ -497,8 +511,10 @@ cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
 	if (pWrkrData->bIsRunning) {
-		kill(pWrkrData->pid, SIGTERM);
-		CHKiRet(cleanup(pWrkrData, 5000));
+		if (pWrkrData->pData->bSignalOnClose) {
+			kill(pWrkrData->pid, SIGTERM);
+		}
+		CHKiRet(cleanup(pWrkrData, DEFAULT_FORCED_TERMINATION_TIMEOUT_MS));
 	}
 finalize_it:
 ENDfreeWrkrInstance
@@ -698,6 +714,8 @@ CODESTARTnewActInst
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "signalOnClose")) {
+			pData->bSignalOnClose = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "hup.signal")) {
 			const char *const sig = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcmp(sig, "HUP"))

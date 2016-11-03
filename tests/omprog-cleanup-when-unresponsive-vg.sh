@@ -17,5 +17,6 @@ echo doing shutdown
 echo wait on shutdown
 . $srcdir/diag.sh wait-shutdown-vg
 . $srcdir/diag.sh check-exit-vg
+. $srcdir/diag.sh content-check "received SIGTERM, ignoring it" #verify it actually received term
 . $srcdir/diag.sh ensure-no-process-exists term-ignoring-script.sh
 . $srcdir/diag.sh exit
