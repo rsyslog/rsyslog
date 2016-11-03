@@ -385,8 +385,9 @@ static void * killSubprocessOnTimeout(void *_subpTimeOut_p) {
 	return NULL;
 }
 
-static inline rsRetVal
-setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms) {
+static rsRetVal
+setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms)
+{
 	int attr_initialized = 0, mutex_initialized = 0, cond_initialized = 0;
 	DEFiRet;
 	CHKiConcCtrl(pthread_attr_init(&subpTimeOut->thd_attr));
@@ -409,8 +410,9 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
-doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t pid) {
+static void
+doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t pid)
+{
     if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
         subpTimeOut->timeout_armed = 0;
         pthread_cond_signal(&subpTimeOut->cond);
