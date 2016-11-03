@@ -3,6 +3,11 @@ Version 8.23.0 [v8-stable] 2016-11-15
 - NEW BUILD REQUIREMENT: libfastjson 0.99.3
   This was introduced in 8.20.0 as a suggestion and has now become a hard
   requirement. See 8.20.0 ChangeLog entry for more details.
+- KSI signatures: removed SHA2-224 hash algorithm
+  This is considered insecure and no longer supported by the underlying
+  KSI library. If still used within a configuration, a descriptive error
+  message is emitted during config processing.
+  Thanks to Henri Lakk for the initial patch.
 - imfile: new timeout feature for multi-line reads
   When using startmsg.regex, messages are held until the next one is written.
   We now provide a "readTimeout" parameter family (see doc) to timeout such
