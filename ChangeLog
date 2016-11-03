@@ -101,6 +101,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   * the CI environment now runs most tests in debug mode, but some in
     release mode to cover potential release-mode races
   * template json option is now being tested
+  * object state persisting received a basic test
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
