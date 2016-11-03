@@ -1,38 +1,66 @@
 /* generate an input file suitable for use by the testbench
- * Copyright (C) 2011 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2016 by Pascal Withopf and Adiscon GmbH.
  * usage: ./inputfilegen num-lines > file
  * Part of rsyslog, licensed under ASL 2.0
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
+#include <getopt.h>
+
+#define DEFMSGS 5
+#define NOEXTRADATA -1
 
 int main(int argc, char* argv[])
 {
-	int extradata = 0;
-	char *pdata = "";
-	int nmsgs;
-	int i;
+	int c, i;
+	int space = 0;
+	int nmsgs = DEFMSGS;
+	int nchars = NOEXTRADATA;
+	int errflg = 0;
+	char *extradata = NULL;
 
-	if(argc < 2 && argc > 3) {
-		fprintf(stderr, "usage: inputfilegen num-messages [extra-data]\n");
-		return 1;
-	}
-
-	nmsgs = atoi(argv[1]);
-	if(argc == 3) {
-		extradata = atoi(argv[2]);
-		if((pdata = malloc(extradata+1)) == NULL) {
-			perror("malloc extradata");
-			return 2;
+	while((c=getopt(argc, argv, "pm:d:")) != -1) {
+		switch(c) {
+		case 'm':
+			nmsgs = atoi(optarg);
+			break;
+		case 'd':
+			nchars = atoi(optarg);
+			break;
+		case 'p':
+			space = 1;
+			break;
+		case ':':
+			fprintf(stderr, "Option -%c requires an operand\n", optopt);
+			errflg++;
+			break;
+		case '?':
+			fprintf(stderr, "Unrecognized option: -%c\n", optopt);
+			errflg++;
+			break;
 		}
-		memset(pdata, 'X', extradata);
-		pdata[extradata] = '\0';
 	}
-	for(i = 0 ; i < nmsgs ; ++i) {
-		printf("msgnum:%8.8d:%s\n", i, pdata);
+	if(errflg) {
+		fprintf(stderr, "Usage: -m <nmsgs> -d <nchars> -p\n");
+		exit(2);
 	}
-	if(argc == 3)
-		free(pdata);
+	if(nchars != NOEXTRADATA) {
+		extradata = (char *)malloc(nchars + 1);
+		memset(extradata, 'X', nchars);
+		extradata[nchars] = '\0';
+	}
+	for(i = 0; i < nmsgs; ++i) {
+		printf("msgnum:%8.8d:", i);
+		if(space==1) {
+			printf("\n ");
+		}
+		if(nchars != NOEXTRADATA) {
+			printf("%s", extradata);
+		}
+		printf("\n");
+	}
+	free(extradata);
 	return 0;
 }

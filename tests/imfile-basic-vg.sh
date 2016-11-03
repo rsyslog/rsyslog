@@ -4,7 +4,7 @@ echo [imfile-basic.sh]
 . $srcdir/diag.sh init
 # generate input file first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
-./inputfilegen 50000 > rsyslog.input
+./inputfilegen -m 50000 > rsyslog.input
 ls -l rsyslog.input
 . $srcdir/diag.sh startup-vg imfile-basic.conf
 # sleep a little to give rsyslog a chance to begin processing
