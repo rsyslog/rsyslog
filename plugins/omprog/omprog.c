@@ -606,6 +606,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->outputFileName = NULL;
 	pData->iParams = 0;
 	pData->bForceSingleInst = 0;
+	pData->bSignalOnClose = 0;
 	pData->iHUPForward = NO_HUP_FORWARD;
 }
 
