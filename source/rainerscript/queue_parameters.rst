@@ -80,6 +80,12 @@ read the :doc:`queues <../concepts/queues>` documentation.
    be turned on without a good reason. Note that the penalty also depends on
    *queue.checkpointInterval* frequency.
 
+-  **queue.samplinginterval** number
+
+   This option allows queues to be populated by events produced at a specific interval.
+   It provides a way to sample data each N events, instead of processing all, in order to reduce resources usage (disk, bandwidth...)
+   This feature is available for version 8.23 and above.
+
 -  **queue.type** [FixedArray/LinkedList/**Direct**/Disk]
 -  **queue.workerthreads** number
    number of worker threads, default 1, recommended 1
