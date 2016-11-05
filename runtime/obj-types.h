@@ -29,6 +29,10 @@
 
 #include "stringbuf.h"
 #include "syslogd-types.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 /* property types for obj[De]Serialize() */
 typedef enum {
@@ -421,4 +425,9 @@ rsRetVal objName##ClassExit(void) \
 
 
 #include "modules.h"
+
+#ifdef _AIX
+#undef msg_t
+#endif
+
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */

@@ -65,6 +65,11 @@
 #include "rsconf.h"
 #include "parserif.h"
 #include <errno.h>
+#ifdef _AIX
+#define msg_t msg_tt
+#define var var_tt
+#endif
+
 
 
 /* inlines */
@@ -374,6 +379,19 @@ static char hexdigit[16] =
 	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
+ #if defined(_AIX)
+ /* AIXPORT : replace facility names with aso and caa only for AIX */
+ static char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+                                     "news", "uucp", "cron", "authpriv", "ftp", "aso", "audit",
+                                     "alert", "caa", "local0", "local1", "local2", "local3",
+                                     "local4", "local5", "local6", "local7", "invld"    };
+ /* length of the facility names string (for optimizatiions) */
+ static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
+                                         4, 4, 4, 8, 3, 3, 5,
+                                         5, 3, 6, 6, 6, 6,
+                                         6, 6, 6, 6, 5 };
+
+ #else
 /*syslog facility names (as of RFC5424) */
 static const char *syslog_fac_names[LOG_NFACILITIES] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
 			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
@@ -384,6 +402,7 @@ static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 			    	          4, 4, 4, 8, 3, 3, 5,
 			    	          5, 5, 6, 6, 6, 6,
 			    	          6, 6, 6, 6, 5 };
+#endif
 
 /* table of severity names (in numerical order)*/
 static const char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
@@ -929,7 +948,14 @@ static inline void freeHOSTNAME(msg_t *pThis)
 }
 
 
+#ifndef _AIX
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
+#else
+rsRetVal msgDestruct(msg_t __attribute__((unused)) **ppThis) 
+{ 
+	DEFiRet;
+        msg_t *pThis;
+#endif
 	int currRefCount;
 #	ifdef HAVE_MALLOC_TRIM
 	int currCnt;

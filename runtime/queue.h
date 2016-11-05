@@ -32,6 +32,10 @@
 #include "statsobj.h"
 #include "cryprov.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
 struct toDeleteLst_s {
@@ -235,4 +239,8 @@ PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 extern unsigned int iOverallQueueSize;
 #endif
 
+
+#ifdef _AIX
+#undef msg_t
+#endif
 #endif /* #ifndef QUEUE_H_INCLUDED */

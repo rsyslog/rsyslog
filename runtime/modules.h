@@ -38,6 +38,11 @@
 #include "objomsr.h"
 #include "rainerscript.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
+
 /* the following define defines the current version of the module interface.
  * It can be used by any module which want's to simply prevent version conflicts
  * and does not intend to do specific old-version emulations.
@@ -202,4 +207,8 @@ rsRetVal modulesProcessCnf(struct cnfobj *o);
 uchar *modGetName(modInfo_t *pThis);
 rsRetVal addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast);
 rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast);
+#ifdef _AIX
+#undef msg_t
+#endif
+
 #endif /* #ifndef MODULES_H_INCLUDED */

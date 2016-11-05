@@ -58,6 +58,9 @@
 #include "ratelimit.h"
 
 #include <regex.h> // TODO: fix via own module
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
@@ -639,7 +642,9 @@ static void pollFileCancelCleanup(void *pArg)
 
 
 /* poll a file, need to check file rollover etc. open file if not open */
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
@@ -685,7 +690,9 @@ finalize_it:
 
 	RETiRet;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* create input instance, set default parameters, and
@@ -970,7 +977,7 @@ addListner(instanceConf_t *inst)
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_tt*)));
 	pThis->multiSub.maxElem = inst->nMultiSub;
 	pThis->multiSub.nElem = 0;
 	pThis->iSeverity = inst->iSeverity;
@@ -1921,8 +1928,10 @@ in_do_timeout_processing(void)
 
 
 /* Monitor files in inotify mode */
+#if !defined(_AIX)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+#endif
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 do_inotify(void)

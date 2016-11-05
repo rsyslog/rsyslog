@@ -45,6 +45,9 @@
 #include "errmsg.h"
 #include "hashtable.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 #define JSON_VAR_NAME "$!mmsequence"
 
 enum mmSequenceModes {

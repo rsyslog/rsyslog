@@ -26,6 +26,9 @@
 #include <regex.h>
 #include "typedefs.h"
 
+#ifdef _AIX
+#define var var_tt
+#endif
 #define LOG_NFACILITIES 24+1 /* we copy&paste this as including rsyslog.h gets us in off64_t trouble... :-( */
 #define CNFFUNC_MAX_ARGS 32
 	/**< maximum number of arguments that any function can have (among
@@ -52,13 +55,13 @@ enum cnfobjType {
 const char* cnfobjType2str(enum cnfobjType ot);
 
 /* a variant type, for example used for expression evaluation
- * 2011-07-15/rger: note that there exists a "legacy" object var_t,
+ * 2011-07-15/rger: note that there exists a "legacy" object var,
  * which implements the same idea, but in a suboptimal manner. I have
  * stipped this down as much as possible, but will keep it for a while
  * to avoid unnecessary complexity during development. TODO: in the long
- * term, var_t shall be replaced by struct var.
+ * term, var shall be replaced by struct var.
  */
-struct var {
+struct var{
 	union {
 		es_str_t *estr;
 		struct cnfarray *ar;
@@ -349,4 +352,8 @@ const char * tokenval2str(int tok);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);
+#ifdef _AIX
+#undef var
+#endif
+
 #endif

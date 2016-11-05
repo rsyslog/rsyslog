@@ -47,9 +47,13 @@
 #include "msg.h"
 #include "parserif.h"
 #include "unicode-helper.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-
+#endif
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)

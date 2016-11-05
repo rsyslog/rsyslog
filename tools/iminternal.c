@@ -34,6 +34,9 @@
 #include "syslogd.h"
 #include "linkedlist.h"
 #include "iminternal.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 static linkedList_t llMsgs;
 

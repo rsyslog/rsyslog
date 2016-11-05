@@ -77,7 +77,10 @@
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
-
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+ 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imptcp")
@@ -517,6 +520,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
+#if !defined (_AIX)
 #ifndef BSD	
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
@@ -528,7 +532,7 @@ startupSrv(ptcpsrv_t *pSrv)
 			}
 		}
 #endif
-
+#endif 
 		if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
 		     && (errno != EADDRINUSE)

@@ -25,6 +25,11 @@
  */
 #ifndef	DIRTY_H_INCLUDED
 #define	DIRTY_H_INCLUDED 1
+#ifdef _AIX
+#define msg_t msg_tt
+#define var var_tt
+#endif
+
 
 rsRetVal __attribute__((deprecated)) multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal multiSubmitMsg2(multi_submit_t *pMultiSub); /* friends only! */
@@ -41,4 +46,8 @@ extern qqueue_t *pMsgQueue;			/* the main message queue */
 #define CONF_VERIFY_PARTIAL_CONF 0x02		/* bit: partial configuration to be checked */
 extern int iConfigVerify;			/* is this just a config verify run? */
 extern int bHaveMainQueue;
+#ifdef _AIX
+#undef msg_t
+#endif
+
 #endif /* #ifndef DIRTY_H_INCLUDED */

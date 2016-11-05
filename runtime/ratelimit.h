@@ -20,6 +20,9 @@
  */
 #ifndef INCLUDED_RATELIMIT_H
 #define INCLUDED_RATELIMIT_H
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 struct ratelimit_s {
 	char *name;	/**< rate limiter name, e.g. for user messages */
@@ -51,5 +54,9 @@ void ratelimitDestruct(ratelimit_t *pThis);
 int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);
 void ratelimitModExit(void);
+
+#ifdef _AIX
+#undef msg_t
+#endif
 
 #endif /* #ifndef INCLUDED_RATELIMIT_H */

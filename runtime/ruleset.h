@@ -27,6 +27,10 @@
 #include "linkedlist.h"
 #include "rsconf.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 /* the ruleset object */
 struct ruleset_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -101,5 +105,9 @@ rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */
 #define rulesetSetCurrRulesetPtr(pRuleset) (loadConf->rulesets.pCurr = (pRuleset))
+
+#ifdef _AIX
+#undef msg_t
+#endif
 
 #endif /* #ifndef INCLUDED_RULESET_H */

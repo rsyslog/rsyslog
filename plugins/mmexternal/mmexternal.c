@@ -31,11 +31,14 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(__FreeBSD__)
+#if defined(_AIX) || defined(__FreeBSD__) 
 #include <sys/wait.h>
 #else
 #include <wait.h>
 #endif
+#ifdef _AIX /* AIXPORT */
+#include <errno.h>
+#endif /* AIXPORT */
 #include <sys/uio.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -44,6 +47,11 @@
 #include "msg.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+
+ 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP

@@ -43,6 +43,10 @@
 #include "dirty.h"
 #include "cfsysline.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 /* some defines */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 

@@ -51,8 +51,14 @@
 #include "msg.h"
 #include "wti.h"
 #include "unicode-helper.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#define var var_tt
+#endif
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)

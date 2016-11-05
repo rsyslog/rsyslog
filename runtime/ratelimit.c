@@ -34,6 +34,9 @@
 #include "msg.h"
 #include "rsconf.h"
 #include "dirty.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 /* definitions for objects we access */
 DEFobjStaticHelpers

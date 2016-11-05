@@ -37,6 +37,9 @@
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include <czmq.h>
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -624,3 +627,4 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 ENDmodInit
+

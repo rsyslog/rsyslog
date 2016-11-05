@@ -49,6 +49,10 @@
 #include "prop.h"
 #include "ratelimit.h"
 #include "debug.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 
 /* static data */

@@ -62,6 +62,10 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imklog")

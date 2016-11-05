@@ -92,6 +92,9 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
+#ifdef _AIX
+#include <pthread.h>
+#endif 
 #include <json.h>
 
 #include "dirty.h"
@@ -111,7 +114,14 @@
 #include "parserif.h"
 #include "statsobj.h"
 
+/* AIXPORT : cs renamed to cs as clashes with libpthreads variable in complete file*/
+#ifdef _AIX
+#define msg_t msg_tt
+#define cs cs_t
+#endif
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
@@ -164,6 +174,7 @@ typedef struct configSettings_s {
 	int iActionQueueDeqtWinFromHr;			/* hour begin of time frame when queue is to be dequeued */
 	int iActionQueueDeqtWinToHr;			/* hour begin of time frame when queue is to be dequeued */
 } configSettings_t;
+
 
 configSettings_t cs;					/* our current config settings */
 configSettings_t cs_save;				/* our saved (scope!) config settings */
@@ -996,8 +1007,10 @@ finalize_it:
 
 
 /* the #pragmas can go away when we have disable array-passing mode */
+#if !defined(_AIX)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
+#endif
 static void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti)
 {
@@ -1042,7 +1055,9 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	return;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic pop
+#endif
 
 
 /* This is used in resume processing. We only finally know that a resume
@@ -1624,7 +1639,9 @@ finalize_it:
 /* Call configured action, most complex case with all features supported (and thus slow).
  * rgerhards, 2010-06-08
  */
+#ifndef _AIX
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
 doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
 {
@@ -1653,7 +1670,9 @@ finalize_it:
 
 	RETiRet;
 }
+#ifndef _AIX
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* helper to activateActions, it activates a specific action.

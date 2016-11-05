@@ -57,6 +57,10 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imudp")
@@ -193,6 +197,7 @@ static struct cnfparamblk inppblk =
 	};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
+
 
 /* create input instance, set default parameters, and
  * add it to the list of instances.

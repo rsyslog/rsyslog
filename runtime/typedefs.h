@@ -25,10 +25,20 @@
  */
 #ifndef INCLUDED_TYPEDEFS_H
 #define INCLUDED_TYPEDEFS_H
-#include <stdint.h>
+
+#ifndef _AIX
+ #include <stdint.h>
+#endif
+#ifdef _AIX
+#include "config.h"
+#endif
 #if defined(__FreeBSD__) || !defined(HAVE_LSEEK64)
 #include <sys/types.h>
 #endif
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 /* some universal fixed size integer defines ... */
 typedef long long int64;
@@ -292,5 +302,9 @@ struct msgPropDescr_s {
 /* some forward-definitions from the grammar */
 struct nvlst;
 struct cnfobj;
+
+#ifdef _AIX
+#undef msg_t
+#endif
 
 #endif /* multi-include protection */

@@ -48,6 +48,10 @@
 #include "statsobj.h"
 #include "prop.h"
 #include "ruleset.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP

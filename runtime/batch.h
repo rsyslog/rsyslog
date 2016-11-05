@@ -29,6 +29,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include "msg.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 /* enum for batch states. Actually, we violate a layer here, in that we assume that a batch is used
  * for action processing. So far, this seems acceptable, the status is simply ignored inside the
@@ -125,5 +129,9 @@ batchInit(batch_t *const pBatch, const int maxElem)
 finalize_it:
 	RETiRet;
 }
+
+#ifdef _AIX
+#undef msg_t
+#endif
 
 #endif /* #ifndef BATCH_H_INCLUDED */

@@ -96,7 +96,15 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 	struct tm tmBuf;
 	long lBias;
 	time_t secs;
+/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm" 
+ *           Choose the HPUX code path, only for this function. 
+ *           This is achieved by adding a check to _AIX wherever _hpux is checked
+ */
 
+
+#if defined(__hpux) || defined(_AIX)
+	struct timezone tz;
+#	endif
 	secs = tp->tv_sec;
 	if(inUTC)
 		tm = gmtime_r(&secs, &tmBuf);
@@ -121,7 +129,7 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 			 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
 			 */
 			lBias = -(tm->tm_isdst ? altzone : timezone);
-#		elif defined(__hpux)
+#		elif defined(__hpux)|| defined(_AIX)
 			lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
 #		else
 			lBias = tm->tm_gmtoff;
@@ -157,12 +165,18 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
 static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC)
 {
 	struct timeval tp;
-#	if defined(__hpux)
+/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm" 
+ *           Choose the HPUX code path, only for this function. 
+ *           This is achieved by adding a check to _AIX wherever _hpux is checked
+ */
+
+
+#if defined(__hpux) || defined(_AIX)
 	struct timezone tz;
 #	endif
 
 	assert(t != NULL);
-#	if defined(__hpux)
+#if defined(__hpux) || defined(_AIX)
 		/* TODO: check this: under HP UX, the tz information is actually valid
 		 * data. So we need to obtain and process it there.
 		 */

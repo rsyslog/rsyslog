@@ -39,6 +39,10 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "hashtable.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 #define JSON_COUNT_NAME "!mmcount"
 #define SEVERITY_COUNT 8

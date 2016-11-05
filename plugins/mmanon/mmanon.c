@@ -36,6 +36,9 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP

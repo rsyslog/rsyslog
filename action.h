@@ -27,6 +27,10 @@
 
 #include "syslogd-types.h"
 #include "queue.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 /* external data */
 extern int glbliActionResumeRetryCount;
@@ -109,4 +113,7 @@ void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);
 /* external data */
 extern int iActionNbr;
 
+#ifdef _AIX
+#undef msg_t
+#endif
 #endif /* #ifndef ACTION_H_INCLUDED */

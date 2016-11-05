@@ -83,6 +83,10 @@
 #include "msg.h"
 #include "prop.h"
 #include "sun_cddl.h"
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP

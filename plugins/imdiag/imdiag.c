@@ -59,6 +59,11 @@
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
 
+#ifdef _AIX
+#define msg_t msg_tt
+#endif
+
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 
