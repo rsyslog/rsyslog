@@ -148,6 +148,9 @@ read the :doc:`queues <../concepts/queues>` documentation.
    delay). Simple rate-limiting!
 -  **queue.dequeuetimebegin** number
 -  **queue.dequeuetimeend** number
+-  **queue.samplinginterval** number
+   Sampling interval for action queue. This parameter specifies how many line
+   of logs will be dropped before one enqueued. default 0.
 
 **Sample:**
 
