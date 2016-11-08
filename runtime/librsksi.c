@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdarg.h>
 #define MAXFNAME 1024
 
 #include <ksi/ksi.h>
@@ -245,6 +246,25 @@ hashID2AlgKSI(uint8_t hashID)
 		return 0xff;
 	}
 }
+
+static void __attribute__ ((format (gnu_printf, 2, 3)))
+report(rsksictx ctx, const char *errmsg, ...) {
+	char buf[1024];
+	va_list args;
+	va_start(args, errmsg);
+
+	int r = vsnprintf(buf, sizeof (buf), errmsg, args);
+	buf[sizeof(buf)-1] = '\0';
+
+	if(ctx->logFunc == NULL)
+		return;
+
+	if(r>0 && r<(int)sizeof(buf))
+		ctx->logFunc(ctx->usrptr, (uchar*)buf);
+	else
+		ctx->logFunc(ctx->usrptr, (uchar*)errmsg);
+}
+
 static void
 reportErr(rsksictx ctx, const char *const errmsg)
 {
@@ -270,6 +290,13 @@ rsksisetErrFunc(rsksictx ctx, void (*func)(void*, uchar *), void *usrptr)
 {
 	ctx->usrptr = usrptr;
 	ctx->errFunc = func;
+}
+
+void
+rsksisetLogFunc(rsksictx ctx, void (*func)(void*, uchar *), void *usrptr)
+{
+	ctx->usrptr = usrptr;
+	ctx->logFunc = func;
 }
 
 int
@@ -848,7 +875,7 @@ sigblkInitKSI(ksifile ksi)
 	ksi->nRecords = 0;
 	ksi->bInBlk = 1;
 
-	reportErr(ksi->ctx, "Started new block for signing");
+	report(ksi->ctx, "Started new block for signing, signature file %s, block count %lu", ksi->sigfilename, ksi->blockSizeLimit);
 
 done:	return;
 }
@@ -1055,9 +1082,16 @@ signIt(ksifile ksi, KSI_DataHash *hash)
 		goto done;
 	}
 
-done:
-	tlvWriteBlockSigKSI(ksi, der, lenDer);
+	r = tlvWriteBlockSigKSI(ksi, der, lenDer);
+	if(r != KSI_OK) {
+		reportKSIAPIErr(ksi->ctx, ksi, "tlvWriteBlockSigKSI", r);
+		ret = 1;
+		goto done;
+	}
 
+	report(ksi->ctx, "KSI signature appended to file %s, block count %lu", ksi->sigfilename, ksi->nRecords);
+
+done:
 	if (sig != NULL)
 		KSI_Signature_free(sig);
 	if (der != NULL)

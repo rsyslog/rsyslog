@@ -43,6 +43,7 @@ struct rsksictx_s {
 	uint64_t blockSizeLimit;
 	char *timestamper;
 	void (*errFunc)(void *, unsigned char*);
+	void (*logFunc)(void *, unsigned char*);
 	void *usrptr; /* for error function */
 };
 typedef struct rsksictx_s *rsksictx;
@@ -165,7 +166,8 @@ int rsksiInit(char *usragent);
 void rsksiExit(void);
 rsksictx rsksiCtxNew(void);
 void rsksisetErrFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
-void reportKSIAPIErr(rsksictx ctx, ksifile ksi, const char *apiname, int ecode); 
+void rsksisetLogFunc(rsksictx ctx, void (*func)(void*, unsigned char *), void *usrptr);
+void reportKSIAPIErr(rsksictx ctx, ksifile ksi, const char *apiname, int ecode);
 ksifile rsksiCtxOpenFile(rsksictx ctx, unsigned char *logfn);
 int rsksifileDestruct(ksifile ksi);
 void rsksiCtxDel(rsksictx ctx);
