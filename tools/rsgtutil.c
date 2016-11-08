@@ -825,7 +825,7 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 					r = RSGTE_SUCCESS;
 				}
 				else if(r != RSGTE_SUCCESS) {
-					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifiying BLOCK signature in block %lu\n", ectx.blkNum);
+					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifying BLOCK signature in block %lld\n", r, (long long unsigned) ectx.blkNum);
 					goto done;
 				}
 				bInBlock = 0;

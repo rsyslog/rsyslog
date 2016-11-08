@@ -247,7 +247,7 @@ hashID2AlgKSI(uint8_t hashID)
 	}
 }
 
-static void __attribute__ ((format (gnu_printf, 2, 3)))
+static void __attribute__ ((format (printf, 2, 3)))
 report(rsksictx ctx, const char *errmsg, ...) {
 	char buf[1024];
 	va_list args;
