@@ -769,6 +769,11 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 		goto done;
 	}
 
+	if(debug) {
+		KSI_CTX_setLoggerCallback(ksi->ctx->ksi_ctx, KSI_LOG_StreamLogger, stdout);
+		KSI_CTX_setLogLevel(ksi->ctx->ksi_ctx, KSI_LOG_DEBUG);
+	}
+
 	/* Check if we have a logsignature file */
 	if((r = rsksi_chkFileHdr(sigfp, (char*)"LOGSIG11", 0)) == 0) {
 		/* Verify Log signature */
@@ -820,7 +825,7 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 					r = RSGTE_SUCCESS;
 				}
 				else if(r != RSGTE_SUCCESS) {
-					//fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 					goto done;
 				}
 				bInBlock = 0;
@@ -1167,6 +1172,11 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 		if (debug) printf("debug: extractKSI:\t\t\t error initializing signature file structures\n");
 		r = RSGTE_IO;
 		goto done;
+	}
+
+	if(debug) {
+		KSI_CTX_setLoggerCallback(ksi->ctx->ksi_ctx, KSI_LOG_StreamLogger, stdout);
+		KSI_CTX_setLogLevel(ksi->ctx->ksi_ctx, KSI_LOG_DEBUG);
 	}
 
 	/* Start extracting process */
