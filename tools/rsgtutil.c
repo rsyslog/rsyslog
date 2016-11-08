@@ -821,11 +821,11 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				/* And Verify Block signature */
 				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx);
 				if(r == RSGTE_MISS_KSISIG) {
-					fprintf(stderr, "\tWARNING: missing KSI signature in block %lu\n", ectx.blkNum);
+					fprintf(stderr, "verifyKSI:\t\t\t WARNING: missing KSI signature in block %lu\n", ectx.blkNum);
 					r = RSGTE_SUCCESS;
 				}
 				else if(r != RSGTE_SUCCESS) {
-					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifiying BLOCK signature in block %lu\n", ectx.blkNum);
 					goto done;
 				}
 				bInBlock = 0;
