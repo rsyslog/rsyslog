@@ -62,14 +62,23 @@ static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
 	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
-		"Error: %s - disabling signatures", emsg);
+		"Error: %s", emsg);
 }
+
+static void
+logfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
+{
+	errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+		"KSI Signature Provider: %s", emsg);
+}
+
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmsig_ksi)
 	pThis->ctx = rsksiCtxNew();
 	rsksisetErrFunc(pThis->ctx, errfunc, NULL);
+	rsksisetLogFunc(pThis->ctx, logfunc, NULL);
 ENDobjConstruct(lmsig_ksi)
 
 
