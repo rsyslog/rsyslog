@@ -805,7 +805,8 @@ rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 		goto done;
 	}
 	CHKr(rsksi_tlvDecodeREC_COUNT(rec, &strtidx, &(bs->recCount)));
-	CHKr(rsksi_tlvDecodeSIG(rec, &strtidx, bs));
+	if(strtidx<rec->tlvlen)
+		CHKr(rsksi_tlvDecodeSIG(rec, &strtidx, bs));
 	if(strtidx != rec->tlvlen) {
 		r = RSGTE_LEN;
 		goto done;
@@ -2138,6 +2139,13 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	}
 
+	/* Process the KSI signature if it is present */
+	if(file_bs->sig.der.data==NULL || file_bs->sig.der.len==0) {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI signature missing\n");
+		r = RSGTE_MISS_KSISIG;
+		goto done;
+	}
+
 	/* Parse KSI Signature */
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
@@ -2173,7 +2181,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		reportVerifySuccess(ectx);
 	if(bExtend)
 		if((r = rsksi_extendSig(sig, ksi, &rec, ectx)) != 0) goto done;
-		
+
 	if(nsigfp != NULL) {
 		if((r = rsksi_tlvwrite(nsigfp, &rec)) != 0) goto done;
 	}

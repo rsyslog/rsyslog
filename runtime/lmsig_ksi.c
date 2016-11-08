@@ -62,7 +62,7 @@ static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
 	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
-		"Error: %s - disabling signatures", emsg);
+		"Error: %s", emsg);
 }
 
 /* Standard-Constructor

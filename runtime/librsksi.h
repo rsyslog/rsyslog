@@ -146,6 +146,7 @@ struct rsksistatefile {
 #define RSGTE_EXTRACT_HASH 23 /* error extracting hashes for record */
 #define RSGTE_CONFIG_ERROR 24 /* Configuration error */
 #define RSGTE_NETWORK_ERROR 25 /* Network error */
+#define RSGTE_MISS_KSISIG 26 /* KSI signature missing */
 
 const char * RSKSIE2String(int err);
 uint16_t hashOutputLengthOctetsKSI(uint8_t hashID);

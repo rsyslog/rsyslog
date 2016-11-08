@@ -814,8 +814,15 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				goto done;
 			if(ectx.recNum == bs->recCount) {
 				/* And Verify Block signature */
-				if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx)) != 0)
+				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx);
+				if(r == RSGTE_MISS_KSISIG) {
+					fprintf(stderr, "\tWARNING: missing KSI signature in block %lu\n", ectx.blkNum);
+					r = RSGTE_SUCCESS;
+				}
+				else if(r != RSGTE_SUCCESS) {
+					//fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 					goto done;
+				}
 				bInBlock = 0;
 			} else	bInBlock = 1;
 		}
@@ -1366,7 +1373,12 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				}
 
 				/* Verify Block signature */
-				if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, NULL, 0, ksiRootHash, &ectx)) != RSGTE_SUCCESS) {
+				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, NULL, 0, ksiRootHash, &ectx);
+				if(r == RSGTE_MISS_KSISIG) {
+					fprintf(stderr, "\tWARNING: missing KSI signature in block %lu\n", ectx.blkNum);
+					r = RSGTE_SUCCESS;
+				}
+				else if(r != RSGTE_SUCCESS) {
 					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 					goto done;
 				}

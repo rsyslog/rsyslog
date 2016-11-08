@@ -119,6 +119,8 @@ RSKSIE2String(int err)
 		return "unexpected end of log";
 	case RSGTE_EXTRACT_HASH:
 		return "either record-hash, left-hash or right-hash was empty";
+	case RSGTE_MISS_KSISIG:
+		return "KSI signature missing";
 	default:
 		return "unknown error";
 	}
@@ -814,7 +816,6 @@ rsksifileDestruct(ksifile ksi)
 
 	if(!ksi->disabled && ksi->bInBlk) {
 		r = sigblkFinishKSI(ksi);
-		if(r != 0) ksi->disabled = 1;
 	}
 	if(!ksi->disabled)
 		r = tlvCloseKSI(ksi);
@@ -846,6 +847,9 @@ sigblkInitKSI(ksifile ksi)
 	ksi->nRoots = 0;
 	ksi->nRecords = 0;
 	ksi->bInBlk = 1;
+
+	reportErr(ksi->ctx, "Started new block for signing");
+
 done:	return;
 }
 
@@ -1010,14 +1014,10 @@ sigblkAddRecordKSI(ksifile ksi, const uchar *rec, const size_t len)
 	KSI_DataHash_free(r);
 
 	if(ksi->nRecords == ksi->blockSizeLimit) {
-		ret = sigblkFinishKSI(ksi);
-		if(ret != 0) goto done;
+		sigblkFinishKSI(ksi);
 		sigblkInitKSI(ksi);
 	}
 done:	
-	if(ret != 0) {
-		ksi->disabled = 1;
-	}
 	return ret;
 }
 
@@ -1025,7 +1025,7 @@ static int
 signIt(ksifile ksi, KSI_DataHash *hash)
 {
 	unsigned char *der = NULL;
-	size_t lenDer;
+	size_t lenDer = 0;
 	int r = KSI_OK;
 	int ret = 0;
 	KSI_Signature *sig = NULL;
@@ -1055,8 +1055,9 @@ signIt(ksifile ksi, KSI_DataHash *hash)
 		goto done;
 	}
 
-	tlvWriteBlockSigKSI(ksi, der, lenDer);
 done:
+	tlvWriteBlockSigKSI(ksi, der, lenDer);
+
 	if (sig != NULL)
 		KSI_Signature_free(sig);
 	if (der != NULL)
@@ -1089,7 +1090,7 @@ sigblkFinishKSI(ksifile ksi)
 			if(ret != 0) goto done; /* checks hash_node_ksi() result! */
 		}
 	}
-	if((ret = signIt(ksi, root)) != 0) goto done;
+	signIt(ksi, root);
 
 	KSI_DataHash_free(root);
 done:
