@@ -2080,7 +2080,8 @@ skip_extention:
 	newrec.hdr[2] = (newrec.tlvlen >> 8) & 0xff;
 	newrec.hdr[3] = newrec.tlvlen & 0xff;
 	newrec.lenHdr = 4;
-	memcpy(newrec.data+iWr, der, lenDer);
+	if(der!=NULL && lenDer!=0)
+		memcpy(newrec.data+iWr, der, lenDer);
 	/* and finally copy back new record to existing one */
 	memcpy(rec, &newrec, sizeof(newrec)-sizeof(newrec.data)+newrec.tlvlen+4);
 	r = 0;
@@ -2141,8 +2142,12 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	/* Process the KSI signature if it is present */
 	if(file_bs->sig.der.data==NULL || file_bs->sig.der.len==0) {
 		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI signature missing\n");
-		r = RSGTE_MISS_KSISIG;
-		goto done;
+		if(bExtend)
+			goto skip_ksi;
+		else {
+			r = RSGTE_MISS_KSISIG;
+			goto done;
+		}
 	}
 
 	/* Parse KSI Signature */
@@ -2161,7 +2166,7 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify failed with error: %s (%d)\n", KSI_getErrorString(ksistate), ksistate); 
 		r = RSGTE_INVLD_SIGNATURE;
 		ectx->ksistate = ksistate;
-		goto skip_ksi;
+		goto done;
 	} else {
 		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI_Signature_verify was successfull\n"); 
 	}
