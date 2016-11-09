@@ -99,19 +99,19 @@ int src_exists =  TRUE;
 #define SRCMIN(a, b)  (a < b) ? a : b
 void
 dosrcpacket(msgno, txt, len)
-        int msgno;
-        char *txt;
-        int len;
+	int msgno;
+	char *txt;
+	int len;
 {
-        struct srcrep reply;
+	struct srcrep reply;
 
-        reply.svrreply.rtncode = msgno;
-/* AIXPORT : 833996 : srv was corrected to syslogd */
-        strcpy(reply.svrreply.objname, "syslogd");
-        snprintf(reply.svrreply.rtnmsg,
-                SRCMIN(sizeof(reply.svrreply.rtnmsg)-1, strlen(txt)), "%s", txt);
-        srchdr = srcrrqs((char *)&srcpacket);
-        srcsrpy(srchdr, (char *)&reply, len, cont);
+	reply.svrreply.rtncode = msgno;
+/* AIXPORT :  srv was corrected to syslogd */
+	strcpy(reply.svrreply.objname, "syslogd");
+	snprintf(reply.svrreply.rtnmsg,
+		SRCMIN(sizeof(reply.svrreply.rtnmsg)-1, strlen(txt)), "%s", txt);
+	srchdr = srcrrqs((char *)&srcpacket);
+	srcsrpy(srchdr, (char *)&reply, len, cont);
 }
 
 #endif
@@ -147,7 +147,7 @@ void rsyslogdDoDie(int sig);
 
 #ifndef PATH_PIDFILE
 #if defined(_AIX)  /* AIXPORT : Add _AIX */
-#   define PATH_PIDFILE "/etc/rsyslogd.pid"
+#	define PATH_PIDFILE "/etc/rsyslogd.pid"
 #else
 #	define PATH_PIDFILE "/var/run/rsyslogd.pid"
 #endif /*_AIX*/
@@ -242,9 +242,9 @@ writePidFile(void)
 	FILE *fp;
 	DEFiRet;
 
+	const char *tmpPidFile;
 #if defined(_AIX)
-       const char * tmpPidFile;
-       int  pidfile_namelen = 0;
+	int  pidfile_namelen = 0;
 #endif
 
 #ifndef _AIX
@@ -254,20 +254,20 @@ writePidFile(void)
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
 #else
-       /* Since above code uses format as  "%s.tmp"
-        * pidfile_namelen will be
-        * length of string "PidFile" + 1 + length of string ".tmp"
-        */
-       pidfile_namelen = strlen(PidFile)+ strlen(".tmp") + 1;
-       tmpPidFile=(char *)malloc(sizeof(char)*pidfile_namelen);
-       if(tmpPidFile == NULL)
-               tmpPidFile = PidFile;
-       else
-               {
-                       memset((void *)tmpPidFile,NULL,pidfile_namelen);
-                       if(snprintf((char* restrict)tmpPidFile, pidfile_namelen, "%s.tmp", PidFile) >= pidfile_namelen)
+	/* Since above code uses format as  "%s.tmp"
+	* pidfile_namelen will be
+	* length of string "PidFile" + 1 + length of string ".tmp"
+	*/
+	pidfile_namelen = strlen(PidFile)+ strlen(".tmp") + 1;
+	tmpPidFile=(char *)malloc(sizeof(char)*pidfile_namelen);
+	if(tmpPidFile == NULL)
+		tmpPidFile = PidFile;
+	else
+	{
+		memset((void *)tmpPidFile,NULL,pidfile_namelen);
+		if(snprintf((char* restrict)tmpPidFile, pidfile_namelen, "%s.tmp", PidFile) >= pidfile_namelen)
 				ABORT_FINALIZE(RS_RET_ERR);
-               }
+	}
 
 #endif
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
@@ -374,15 +374,15 @@ prepareBackground(const int parentPipeFD)
 		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
 /* AIXPORT : src support start */
 #if defined(_AIX)
-                        if(src_exists)
-                        {
+			if(src_exists)
+			{
 				if(i != SRC_FD)
 					(void)close(i);
-                        }
-                        else
+			}
+			else
 #endif
 /* AIXPORT : src support end */
-			close(i);
+				close(i);
 		}
 	}
 }
@@ -1629,7 +1629,7 @@ mainloop(void)
 	/* AIXPORT :  SRC support start */
 #if defined(_AIX)
 	char buf[256];
-        fd_set rfds;
+	fd_set rfds;
 #endif
 	/* AIXPORT : src end */
 
@@ -1640,10 +1640,10 @@ mainloop(void)
 	while(!bFinished){
 		/* AIXPORT :  SRC support start */
 #if defined(_AIX)
-        	if(src_exists)
+		if(src_exists)
 		{
 			FD_ZERO(&rfds);
-                	FD_SET(SRC_FD, &rfds);
+			FD_SET(SRC_FD, &rfds);
 		}
 #endif
 		/* AIXPORT : src end */
@@ -1654,49 +1654,48 @@ mainloop(void)
 #else
 		/* AIXPORT :  SRC support start */
 		if(!src_exists)
-        		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+			select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		else if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
 		{
-	        	if(FD_ISSET(SRC_FD, &rfds))
-        		{
-        			rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
-               			if(rc < 0)
-                		if (errno != EINTR)
-                		{
-                        		fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
-                        		exit(1);
-                		} else  /* punt on short read */
-                        		continue;
+			if(FD_ISSET(SRC_FD, &rfds))
+			{
+				rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
+				if(rc < 0)
+				if (errno != EINTR)
+				{
+					fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
+					exit(1);
+				} else  /* punt on short read */
+					continue;
 
-                		switch(srcpacket.subreq.action)
-                		{
-                    		  case START:
-                        		dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
-                        		break;
-                    		  case STOP:
-                        		if (srcpacket.subreq.object == SUBSYSTEM) {
-                                		dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
-						(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+				switch(srcpacket.subreq.action)
+				{
+					case START:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					break;
+					case STOP:
+						if (srcpacket.subreq.object == SUBSYSTEM) {
+							dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
+							(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 								"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting due to stopsrc.",
 								(int) glblGetOurPid());
-						errno = 0;
-						logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
-						return ;
-                        		} else
-                              			dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+							errno = 0;
+							logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+							return ;
+						} else
+							dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					break;
+					case REFRESH:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n", sizeof(struct srcrep));
                         		break;
-                    		  case REFRESH:
-                        		dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n", sizeof(struct srcrep));
-                        		break;
-                    	  	default:
-                        		dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
-                        		break;
+					default:
+						dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
+					break;
 
-                		}
-
-        		}
-#endif
+				}
+			}
 		}
+#endif
 	/* AIXPORT : SRC end */		
 
 		if(bChildDied) {
@@ -1833,20 +1832,20 @@ main(int argc, char **argv)
 #if defined(_AIX)
 	/* AIXPORT : start
 	* SRC support : fd 0 (stdin) must be the SRC socket
- 	* startup.  fd 0 is duped to a new descriptor so that stdin can be used
- 	* internally by rsyslogd.
- 	*/
+	* startup.  fd 0 is duped to a new descriptor so that stdin can be used
+	* internally by rsyslogd.
+	*/
 
-        strncpy(progname,argv[0], sizeof(progname)-1);
-        addrsz = sizeof(srcaddr);
-        if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
-                fprintf(stderr, "%s: continuing without SRC support\n", progname);
-                src_exists = FALSE;
-        }
-        if (src_exists) 
-                if(dup2(0, SRC_FD) == -1)
+	strncpy(progname,argv[0], sizeof(progname)-1);
+	addrsz = sizeof(srcaddr);
+	if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
+		fprintf(stderr, "%s: continuing without SRC support\n", progname);
+		src_exists = FALSE;
+	}
+	if (src_exists) 
+		if(dup2(0, SRC_FD) == -1)
 		{
-                	fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
+			fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
 			/* In the unlikely event of dup2 failing we exit */
 			exit(-1);
 		}

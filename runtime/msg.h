@@ -38,7 +38,7 @@
 #include "atomic.h"
 
 #ifdef _AIX
-#define msg_t msg_tt
+#define msg_t  msg_tt
 #define var var_tt
 #endif
 
@@ -159,75 +159,75 @@ struct msg {
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
-rsRetVal msgConstruct(msg_t**ppThis);
-rsRetVal msgConstructWithTime(msg_t**ppThis, struct syslogTime *stTime, time_t ttGenTime);
-rsRetVal msgConstructForDeserializer(msg_t**ppThis);
-rsRetVal msgConstructFinalizer(msg_t*pThis);
-rsRetVal msgDestruct(msg_t**ppM);
-msg_t* MsgDup(msg_t* pOld);
-msg_t*MsgAddRef(msg_t*pM);
-void setProtocolVersion(msg_t*pM, int iNewVersion);
-void MsgSetInputName(msg_t*pMsg, prop_t*);
-void MsgSetDfltTZ(msg_t*pThis, char *tz);
-rsRetVal MsgSetAPPNAME(msg_t*pMsg, const char* pszAPPNAME);
-rsRetVal MsgSetPROCID(msg_t*pMsg, const char* pszPROCID);
-rsRetVal MsgSetMSGID(msg_t*pMsg, const char* pszMSGID);
-void MsgSetParseSuccess(msg_t*pMsg, int bSuccess);
-void MsgSetTAG(msg_t*pMsg, const uchar* pszBuf, const size_t lenBuf);
-void MsgSetRuleset(msg_t*pMsg, ruleset_t*);
-rsRetVal MsgSetFlowControlType(msg_t*pMsg, flowControl_t eFlowCtl);
-rsRetVal MsgSetStructuredData(msg_t*const pMsg, const char* pszStrucData);
-rsRetVal MsgAddToStructuredData(msg_t*pMsg, uchar *toadd, rs_size_t len);
-void MsgGetStructuredData(msg_t*pM, uchar **pBuf, rs_size_t *len);
-rsRetVal msgSetFromSockinfo(msg_t*pThis, struct sockaddr_storage *sa);
-void MsgSetRcvFrom(msg_t*pMsg, prop_t*);
-void MsgSetRcvFromStr(msg_t*const pMsg, const uchar* pszRcvFrom, const int, prop_t **);
-rsRetVal MsgSetRcvFromIP(msg_t*pMsg, prop_t*);
-rsRetVal MsgSetRcvFromIPStr(msg_t*const pThis, const uchar *psz, const int len, prop_t **ppProp);
-void MsgSetHOSTNAME(msg_t*pMsg, const uchar* pszHOSTNAME, const int lenHOSTNAME);
-rsRetVal MsgSetAfterPRIOffs(msg_t*pMsg, short offs);
-void MsgSetMSGoffs(msg_t*pMsg, short offs);
-void MsgSetRawMsgWOSize(msg_t*pMsg, char* pszRawMsg);
-void MsgSetRawMsg(msg_t*pMsg, const char* pszRawMsg, size_t lenMsg);
-rsRetVal MsgReplaceMSG(msg_t*pThis, const uchar* pszMSG, int lenMSG);
-uchar *MsgGetProp(msg_t*pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
+rsRetVal msgConstruct(msg_t **ppThis);
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
+rsRetVal msgConstructForDeserializer(msg_t **ppThis);
+rsRetVal msgConstructFinalizer(msg_t *pThis);
+rsRetVal msgDestruct(msg_t **ppM);
+msg_t * MsgDup(msg_t * pOld);
+msg_t *MsgAddRef(msg_t *pM);
+void setProtocolVersion(msg_t *pM, int iNewVersion);
+void MsgSetInputName(msg_t *pMsg, prop_t*);
+void MsgSetDfltTZ(msg_t *pThis, char *tz);
+rsRetVal MsgSetAPPNAME(msg_t *pMsg, const char* pszAPPNAME);
+rsRetVal MsgSetPROCID(msg_t *pMsg, const char* pszPROCID);
+rsRetVal MsgSetMSGID(msg_t *pMsg, const char* pszMSGID);
+void MsgSetParseSuccess(msg_t *pMsg, int bSuccess);
+void MsgSetTAG(msg_t *pMsg, const uchar* pszBuf, const size_t lenBuf);
+void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
+rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
+rsRetVal MsgSetStructuredData(msg_t *const pMsg, const char* pszStrucData);
+rsRetVal MsgAddToStructuredData(msg_t *pMsg, uchar *toadd, rs_size_t len);
+void MsgGetStructuredData(msg_t *pM, uchar **pBuf, rs_size_t *len);
+rsRetVal msgSetFromSockinfo(msg_t *pThis, struct sockaddr_storage *sa);
+void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
+void MsgSetRcvFromStr(msg_t *const pMsg, const uchar* pszRcvFrom, const int, prop_t **);
+rsRetVal MsgSetRcvFromIP(msg_t *pMsg, prop_t*);
+rsRetVal MsgSetRcvFromIPStr(msg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp);
+void MsgSetHOSTNAME(msg_t *pMsg, const uchar* pszHOSTNAME, const int lenHOSTNAME);
+rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
+void MsgSetMSGoffs(msg_t *pMsg, short offs);
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
+void MsgSetRawMsg(msg_t *pMsg, const char* pszRawMsg, size_t lenMsg);
+rsRetVal MsgReplaceMSG(msg_t *pThis, const uchar* pszMSG, int lenMSG);
+uchar *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
 		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
-uchar *getRcvFrom(msg_t*pM);
-void getTAG(msg_t*pM, uchar **ppBuf, int *piLen);
-const char *getTimeReported(msg_t*pM, enum tplFormatTypes eFmt);
-const char *getPRI(msg_t*pMsg);
-int getPRIi(const msg_t* const pM);
-void getRawMsg(msg_t*pM, uchar **pBuf, int *piLen);
-rsRetVal msgAddJSON(msg_t*pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
-rsRetVal msgAddMetadata(msg_t*msg, uchar *metaname, uchar *metaval);
-rsRetVal MsgGetSeverity(msg_t*pThis, int *piSeverity);
-rsRetVal MsgDeserialize(msg_t*pMsg, strm_t *pStrm);
-rsRetVal MsgSetPropsViaJSON(msg_t*__restrict__ const pMsg, const uchar *__restrict__ const json);
-const uchar* msgGetJSONMESG(msg_t*__restrict__ const pMsg);
+uchar *getRcvFrom(msg_t *pM);
+void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
+const char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
+const char *getPRI(msg_t *pMsg);
+int getPRIi(const msg_t * const pM);
+void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
+rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
+rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);
+rsRetVal MsgGetSeverity(msg_t *pThis, int *piSeverity);
+rsRetVal MsgDeserialize(msg_t *pMsg, strm_t *pStrm);
+rsRetVal MsgSetPropsViaJSON(msg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
+const uchar* msgGetJSONMESG(msg_t *__restrict__ const pMsg);
 
 /* TODO: remove these five (so far used in action.c) */
-uchar *getMSG(msg_t*pM);
-const char *getHOSTNAME(msg_t*pM);
-char *getPROCID(msg_t*pM, sbool bLockMutex);
-char *getAPPNAME(msg_t*pM, sbool bLockMutex);
-void setMSGLen(msg_t*pM, int lenMsg);
-int getMSGLen(msg_t*pM);
+uchar *getMSG(msg_t *pM);
+const char *getHOSTNAME(msg_t *pM);
+char *getPROCID(msg_t *pM, sbool bLockMutex);
+char *getAPPNAME(msg_t *pM, sbool bLockMutex);
+void setMSGLen(msg_t *pM, int lenMsg);
+int getMSGLen(msg_t *pM);
 
-int getHOSTNAMELen(msg_t*pM);
-uchar *getProgramName(msg_t*pM, sbool bLockMutex);
-uchar *getRcvFrom(msg_t*pM);
+int getHOSTNAMELen(msg_t *pM);
+uchar *getProgramName(msg_t *pM, sbool bLockMutex);
+uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(uchar *pName, propid_t *pPropID);
 uchar *propIDToName(propid_t propID);
-rsRetVal msgGetJSONPropJSON(msg_t*pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
-rsRetVal msgGetJSONPropJSONorString(msg_t* const pMsg, msgPropDescr_t *pProp, struct json_object **pjson, uchar **pcstr);
-rsRetVal getJSONPropVal(msg_t*pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
-rsRetVal msgSetJSONFromVar(msg_t*pMsg, uchar *varname, struct var *var, int force_reset);
-rsRetVal msgDelJSON(msg_t*pMsg, uchar *varname);
+rsRetVal msgGetJSONPropJSON(msg_t *pMsg, msgPropDescr_t *pProp, struct json_object **pjson);
+rsRetVal msgGetJSONPropJSONorString(msg_t * const pMsg, msgPropDescr_t *pProp, struct json_object **pjson, uchar **pcstr);
+rsRetVal getJSONPropVal(msg_t *pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed);
+rsRetVal msgSetJSONFromVar(msg_t *pMsg, uchar *varname, struct var *var, int force_reset);
+rsRetVal msgDelJSON(msg_t *pMsg, uchar *varname);
 rsRetVal jsonFind(struct json_object *jroot, msgPropDescr_t *pProp, struct json_object **jsonres);
 
 rsRetVal msgPropDescrFill(msgPropDescr_t *pProp, uchar *name, int nameLen);
 void msgPropDescrDestruct(msgPropDescr_t *pProp);
-void msgSetPRI(msg_t*const __restrict__ pMsg, syslog_pri_t pri);
+void msgSetPRI(msg_t *const __restrict__ pMsg, syslog_pri_t pri);
 
 #define msgGetProtocolVersion(pM) ((pM)->iProtocolVersion)
 
@@ -249,7 +249,7 @@ void msgSetPRI(msg_t*const __restrict__ pMsg, syslog_pri_t pri);
  * rgerhards, 2009-08-26
  */
 static inline void __attribute__((unused))
-MsgSetRawMsgSize(msg_t*const __restrict__ pMsg, const size_t newLen)
+MsgSetRawMsgSize(msg_t *const __restrict__ pMsg, const size_t newLen)
 {
 	assert(newLen <= (size_t) pMsg->iLenRawMsg);
 	pMsg->iLenRawMsg = newLen;
@@ -262,7 +262,7 @@ MsgSetRawMsgSize(msg_t*const __restrict__ pMsg, const size_t newLen)
 #define MsgGetRuleset(pMsg) ((pMsg)->pRuleset)
 
 #ifdef _AIX
-#undef msg_t
+#undef msg_t 
 #endif
 
 #endif /* #ifndef MSG_H_INCLUDED */

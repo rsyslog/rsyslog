@@ -11,23 +11,23 @@ AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
 
 # AIXPORT START : Set the required variables for AIX config script
 if test "$unamestr" = "AIX"; then
-  export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
-  LIBS="-lbsd -lsrc"
-  CPPFLAGS="-D_THREAD_SAFE -D_BSD43 -D_AIX"
-  CFLAGS="-D_AIX"
-  LDFLAGS="-qcpluscmt -brtl -bexpall -bE:strippedsymbols.exp "
-  LIBESTR_LIBS="-L/usr/lib/ -lestr"
-  LIBESTR_CFLAGS="-I/usr/include"
-  LIBLOGGING_STDLOG_LIBS="-L/usr/lib/ -llogging-stdlog"
-  LIBLOGGING_STDLOG_CFLAGS="-I/usr/include"
-  GNUTLS_LIBS="-L/usr/lib/ -lgnutls"
-  GNUTLS_CFLAGS="-I/usr/include"
-  RELP_LIBS="-L/usr/lib/ -lrelp"
-  RELP_CFLAGS="-I/usr/include"
-  CC="xlc"
-  AC_PREFIX_DEFAULT(/usr)
-  export  ac_cv_func_malloc_0_nonnull=yes
-  export ac_cv_func_realloc_0_nonnull=yes
+	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
+	LIBS="-lbsd -lsrc"
+	CPPFLAGS="-D_THREAD_SAFE -D_BSD43 -D_AIX"
+	CFLAGS="-D_AIX"
+	LDFLAGS="-qcpluscmt -brtl -bexpall -bE:strippedsymbols.exp "
+	LIBESTR_LIBS="-L/usr/lib/ -lestr"
+	LIBESTR_CFLAGS="-I/usr/include"
+	LIBLOGGING_STDLOG_LIBS="-L/usr/lib/ -llogging-stdlog"
+	LIBLOGGING_STDLOG_CFLAGS="-I/usr/include"
+	GNUTLS_LIBS="-L/usr/lib/ -lgnutls"
+	GNUTLS_CFLAGS="-I/usr/include"
+	RELP_LIBS="-L/usr/lib/ -lrelp"
+	RELP_CFLAGS="-I/usr/include"
+	CC="xlc"
+	AC_PREFIX_DEFAULT(/usr)
+	export  ac_cv_func_malloc_0_nonnull=yes
+	export ac_cv_func_realloc_0_nonnull=yes
 fi
 # AIXPORT END
 
@@ -49,7 +49,7 @@ AC_PROG_CC_C99
 AC_DISABLE_STATIC
 # AIXPORT START: enable dlopen
 if test "$unamestr" = "AIX"; then
-  AC_LIBTOOL_DLOPEN
+	AC_LIBTOOL_DLOPEN
 fi
 # AIXPORT end
 AC_PROG_LIBTOOL
@@ -325,14 +325,14 @@ AC_CHECK_HEADERS(
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
           PTHREADS_LIBS="-lpthread"
-	  if test "$unamestr" = "AIX"; then
-	 	PTHREADS_CFLAGS="-lpthreads" 
-	  else
- 	  	case "${os_type}" in
- 	  	solaris) PTHREADS_CFLAGS="-pthreads" ;;
- 	  	*)       PTHREADS_CFLAGS="-pthread" ;;
- 	  	esac
-	  fi
+          if test "$unamestr" = "AIX"; then
+                  PTHREADS_CFLAGS="-lpthreads" 
+          else
+                  case "${os_type}" in
+                  solaris) PTHREADS_CFLAGS="-pthreads" ;;
+                  *)       PTHREADS_CFLAGS="-pthread" ;;
+                  esac
+          fi
           AC_SUBST(PTHREADS_LIBS)
           AC_SUBST(PTHREADS_CFLAGS)
         ],
