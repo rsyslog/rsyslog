@@ -275,6 +275,28 @@ TESTS +=  \
 	omjournal-basic-no-template.sh
 endif
 
+if ENABLE_OMPROG
+TESTS +=  \
+	omprog-cleanup.sh \
+	omprog-cleanup-with-outfile.sh \
+	omprog-noterm-cleanup.sh \
+	omprog-noterm-default.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive.sh \
+	omprog-noterm-unresponsive.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	omprog-cleanup-vg.sh \
+	omprog-noterm-cleanup-vg.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive-vg.sh
+endif
+endif
+endif
+
 if ENABLE_OMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
@@ -971,6 +993,24 @@ EXTRA_DIST= \
 	testsuites/sndrcv_gzip_rcvr.conf \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
+	omprog-cleanup.sh \
+	omprog-cleanup-vg.sh \
+	omprog-cleanup-with-outfile.sh \
+	omprog-cleanup-when-unresponsive.sh \
+	omprog-cleanup-when-unresponsive-vg.sh \
+	omprog-noterm-cleanup.sh \
+	omprog-noterm-cleanup-vg.sh \
+	omprog-noterm-default.sh \
+	omprog-noterm-unresponsive.sh \
+	testsuites/omprog-cleanup.conf \
+	testsuites/omprog-noterm.conf \
+	testsuites/omprog-noterm-default.conf \
+	testsuites/omprog-noterm-unresponsive.conf \
+	testsuites/omprog-noterm.sh \
+	testsuites/omprog-cleanup-outfile.conf \
+	testsuites/omprog-cleanup-unresponsive.conf \
+	testsuites/omprog-test-bin.sh \
+	testsuites/term-ignoring-script.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \

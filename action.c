@@ -998,8 +998,8 @@ finalize_it:
 /* the #pragmas can go away when we have disable array-passing mode */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
-static void
-releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti)
+void
+releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {
 	int jArr;
 	int j;
@@ -1008,35 +1008,42 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
 	for(j = 0 ; j < pAction->iNumTpls ; ++j) {
-		switch(pAction->peParamPassing[j]) {
-		case ACT_ARRAY_PASSING:
-
-			ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
-			/* if we every use array passing mode again, we need to check
-			 * this code. It hasn't been used since refactoring for v7.
-			 */
-			if(ppMsgs != NULL) {
-				if(((uchar**)ppMsgs)[j] != NULL) {
-					jArr = 0;
-					while(ppMsgs[j][jArr] != NULL) {
-						free(ppMsgs[j][jArr]);
-						ppMsgs[j][jArr] = NULL;
-						++jArr;
-					}
-					free(((uchar**)ppMsgs)[j]);
-					((uchar**)ppMsgs)[j] = NULL;
-				}
+		if (action_destruct) {
+			if (ACT_STRING_PASSING == pAction->peParamPassing[j]) {
+				free(pWrkrInfo->p.nontx.actParams[j].param);
+				pWrkrInfo->p.nontx.actParams[j].param = NULL;
 			}
-			break;
-		case ACT_JSON_PASSING:
-			json_object_put((struct json_object*)
-					pWrkrInfo->p.nontx.actParams[j].param);
-			pWrkrInfo->p.nontx.actParams[j].param = NULL;
-			break;
-		case ACT_STRING_PASSING:
-		case ACT_MSG_PASSING:
-			/* no need to do anything with these */
-			break;
+		} else {
+			switch(pAction->peParamPassing[j]) {
+			case ACT_ARRAY_PASSING:
+
+				ppMsgs = (uchar***) pWrkrInfo->p.nontx.actParams[0].param;
+				/* if we every use array passing mode again, we need to check
+				 * this code. It hasn't been used since refactoring for v7.
+				 */
+				if(ppMsgs != NULL) {
+					if(((uchar**)ppMsgs)[j] != NULL) {
+						jArr = 0;
+						while(ppMsgs[j][jArr] != NULL) {
+							free(ppMsgs[j][jArr]);
+							ppMsgs[j][jArr] = NULL;
+							++jArr;
+						}
+						free(((uchar**)ppMsgs)[j]);
+						((uchar**)ppMsgs)[j] = NULL;
+					}
+				}
+				break;
+			case ACT_JSON_PASSING:
+				json_object_put((struct json_object*)
+								pWrkrInfo->p.nontx.actParams[j].param);
+				pWrkrInfo->p.nontx.actParams[j].param = NULL;
+				break;
+			case ACT_STRING_PASSING:
+			case ACT_MSG_PASSING:
+				/* no need to do anything with these */
+				break;
+			}
 		}
 	}
 
@@ -1374,7 +1381,7 @@ processMsgMain(action_t *__restrict__ const pAction,
 				    pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams,
 				    pWti);
 	if(pAction->bNeedReleaseBatch)
-		releaseDoActionParams(pAction, pWti);
+		releaseDoActionParams(pAction, pWti, 0);
 finalize_it:
 	if(iRet == RS_RET_OK) {
 		if(pWti->execState.bDoAutoCommit)

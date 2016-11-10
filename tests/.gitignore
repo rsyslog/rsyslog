@@ -4,3 +4,4 @@ tmp
 mangle_qi
 .dep_cache
 .dep_wrk
+.loop_monitor

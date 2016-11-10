@@ -467,7 +467,7 @@ writeDataError(instanceData *const pData,
 	struct iovec iov[2];
 	iov[0].iov_base = (void*) json_object_get_string(json);
 	iov[0].iov_len = strlen(iov[0].iov_base);
-	iov[1].iov_base = "\n";
+	iov[1].iov_base = (char *) "\n";
 	iov[1].iov_len = 1;
 
 	/* we must protect the file write do operations due to other wrks & HUP */
@@ -637,6 +637,9 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
+# if RD_KAFKA_VERSION >= 0x00090001
+	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
+# endif
 
 	char kafkaErrMsg[1024];
 	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf,
@@ -646,7 +649,9 @@ openKafka(instanceData *const __restrict__ pData)
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
+# if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_set_logger(pData->rk, kafkaLogger);
+# endif
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
