@@ -127,6 +127,8 @@ Version 8.23.0 [v8-stable] 2016-11-15
   disables it when a release build is done (from the release tarball). This
   aims at better error checking during testbench runs and developer testing.
 - testbench improvements
+  * improved testbench file generation tool
+    Thanks to Pascal Withopf for the patch.
   * added some plumbing for extended tests which work by overriding OS APIs
   * imfile ReopenOnTruncate option is now being tested
   * the CI environment now runs most tests in debug mode, but some in
