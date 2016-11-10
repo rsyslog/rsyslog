@@ -741,7 +741,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	for(i = 0 ; i < numitems ; ++i) {
 
 		cJSON *item=0;
-		cJSON *create=0;
+		cJSON *result=0;
 		cJSON *ok=0;
 		int itemStatus=0;
 		item = cJSON_GetArrayItem(items, i);
@@ -750,14 +750,14 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 				  "cannot obtain reply array item %d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
-		create = cJSON_GetObjectItem(item, "create");
-		if(create == NULL || create->type != cJSON_Object) {
+		result = item->child;
+		if(result == NULL || result->type != cJSON_Object) {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'create' item for #%d\n", i);
+				  "cannot obtain 'result' item for #%d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 
-		ok = cJSON_GetObjectItem(create, "status");
+		ok = cJSON_GetObjectItem(result, "status");
 		itemStatus = checkReplyStatus(ok);
 
 		char *request =0;
@@ -779,7 +779,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-			response = cJSON_PrintUnformatted(create);
+			response = cJSON_PrintUnformatted(result);
 
 			if(response==NULL)
 			{
