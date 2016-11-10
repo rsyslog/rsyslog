@@ -50,8 +50,23 @@ Version 8.23.0 [v8-stable] 2016-11-15
 - queue subsystem: add configuration parameter "queue.samplinginterval"
   Supports sampling of messages (as often used in data transmission).
   Thanks to Zachary M. Zhao for the patch.
+- bugfix core: errmsg.LogError now switches to dfltErrLogger just before shutdown
+  Thanks to Janmejay Singh for the patches.
+- bugfix core: fixed un-freed memory in non-transnational action using string-passing
+  closes https://github.com/rsyslog/rsyslog/issues/968
+  Thanks to Janmejay Singh for the patches.
 - rsgtutil: option to specify KSI publications file certificate constraints
   see also https://github.com/rsyslog/rsyslog/issues/1207
+- omprog: bugfixes and enhancements
+  - omprog resource leak fix (fd leak)
+  - omprog got ability to force-kill process if it doesn't die in 5 seconds
+    (linux specific)
+  - child-process lifecycle debugging aid (in form of logs) (mainLoop and
+    omprog cleanup both log pid at child-death, mainLoop reaping is now
+    visible to user, as opposed to being a mystery, because omprog didn't
+    seem to anticipate it in terms of code)
+  Thanks to Janmejay Singh for the patches.
+  see also https://github.com/rsyslog/rsyslog/pull/1155
 - bugfix imfile: ReopenOnTruncate processing, file open processing
   This fixes
    * ReopenOnTrucate was only honored when a state file existed
@@ -136,6 +151,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   * template json option is now being tested
   * object state persisting received a basic test
   * added test for empty hostnames
+  * added tests for omprog
 ------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
