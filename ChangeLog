@@ -56,6 +56,12 @@ Version 8.23.0 [v8-stable] 2016-11-15
   overall cleaner and easier-to-follow code.
   Thanks to Owen Smith for analyzing the problem and providing a
   prototype PR which greatly helped towards the final solution.
+- bugfix omlibdbi: libdbi-driver-sqlite3/2 requires to provide a path to
+  database split into two strings:
+  * absolute path, where the database file sits
+  * database filename itself.
+  This was previously not done.
+  Thanks to github user aleek for the patch.
 - bugfix RainerScript: issue in prifilt() function
   Initialize func-data(and to-be-freed flag) correctly for prifilt
   function-node
