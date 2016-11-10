@@ -773,11 +773,6 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 		goto done;
 	}
 
-	if(debug) {
-		KSI_CTX_setLoggerCallback(ksi->ctx->ksi_ctx, KSI_LOG_StreamLogger, stdout);
-		KSI_CTX_setLogLevel(ksi->ctx->ksi_ctx, KSI_LOG_DEBUG);
-	}
-
 	/* Check if we have a logsignature file */
 	if (constraint_oid != NULL && constraint_value != NULL) {
 		if((r = rsksi_setDefaultConstraint(ksi, constraint_oid, constraint_value)) != 0) {
@@ -830,15 +825,8 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				goto done;
 			if(ectx.recNum == bs->recCount) {
 				/* And Verify Block signature */
-				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx);
-				if(r == RSGTE_MISS_KSISIG) {
-					fprintf(stderr, "verifyKSI:\t\t\t WARNING: missing KSI signature in block %lu\n", ectx.blkNum);
-					r = RSGTE_SUCCESS;
-				}
-				else if(r != RSGTE_SUCCESS) {
-					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifying BLOCK signature in block %lld\n", r, (long long unsigned) ectx.blkNum);
+				if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx)) != 0)
 					goto done;
-				}
 				bInBlock = 0;
 			} else	bInBlock = 1;
 		}
@@ -1185,11 +1173,6 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 		goto done;
 	}
 
-	if(debug) {
-		KSI_CTX_setLoggerCallback(ksi->ctx->ksi_ctx, KSI_LOG_StreamLogger, stdout);
-		KSI_CTX_setLogLevel(ksi->ctx->ksi_ctx, KSI_LOG_DEBUG);
-	}
-
 	/* Start extracting process */
 	if (debug) printf("debug: extractKSI:\t\t\t extracting lines(%d) %s from %s now ...\n", iLineNumbers, linenumbers, name); 
 
@@ -1394,12 +1377,7 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				}
 
 				/* Verify Block signature */
-				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, NULL, 0, ksiRootHash, &ectx);
-				if(r == RSGTE_MISS_KSISIG) {
-					fprintf(stderr, "\tWARNING: missing KSI signature in block %lu\n", ectx.blkNum);
-					r = RSGTE_SUCCESS;
-				}
-				else if(r != RSGTE_SUCCESS) {
+				if((r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, NULL, 0, ksiRootHash, &ectx)) != RSGTE_SUCCESS) {
 					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 					goto done;
 				}
