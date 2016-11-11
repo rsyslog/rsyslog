@@ -30,6 +30,11 @@ Version 8.23.0 [v8-stable] 2016-11-15
   allow to specify an array of servers, which is tried until a working
   one is found (and given up only if none works).
   Thanks to github user barakshechter for the patch.
+- omelasticsearch: make compatible with ElasticSearch 2.x and 5.x
+  fixes omelasticsearch logs response from ElasticSearch 5.0 _bulk
+  endpoint as error
+  See also https://github.com/rsyslog/rsyslog/pull/1253
+  Thanks to Christian Rodemeyer for the patch.
 - omhiredis: add dynakey attribute.
   If set to on, this causes omhiredis to treat the key attribute as the
   name of a template so that you can build a dynamic redis queue name
