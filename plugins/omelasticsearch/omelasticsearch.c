@@ -310,7 +310,7 @@ computeBaseUrl(const char*const serverParam,
 	else if (strcasestr(serverParam, SCHEME_HTTPS))
 		host = serverParam + strlen(SCHEME_HTTPS);
 	else
-		r = useHttps ? es_addBuf(&urlBuf, SCHEME_HTTPS, sizeof(SCHEME_HTTPS)-1) : 
+		r = useHttps ? es_addBuf(&urlBuf, SCHEME_HTTPS, sizeof(SCHEME_HTTPS)-1) :
 			es_addBuf(&urlBuf, SCHEME_HTTP, sizeof(SCHEME_HTTP)-1);
 
 	if (r == 0) r = es_addBuf(&urlBuf, serverParam, strlen(serverParam));
@@ -357,10 +357,10 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("omelasticsearch: unable to allocate buffer for health check uri.\n");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
-		
+
 	for(i = 0; i < pWrkrData->pData->numServers; ++i) {
 		serverUrl = (char*) pWrkrData->pData->serverBaseUrls[pWrkrData->serverIndex];
-		
+
 		es_emptyStr(urlBuf);
 		r = es_addBuf(&urlBuf, serverUrl, strlen(serverUrl));
 		if(r == 0) r = es_addBuf(&urlBuf, HEALTH_URI, sizeof(HEALTH_URI)-1);
@@ -379,7 +379,7 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 
-		DBGPRINTF("omelasticsearch: checkConn(%s) failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));	
+		DBGPRINTF("omelasticsearch: checkConn(%s) failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));
 		STATSCOUNTER_INC(checkConnFail, mutCheckConnFail);
 		incrementServerIndex(pWrkrData);
 	}
@@ -531,7 +531,7 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 
 	if(pWrkrData->restURL != NULL)
 		free(pWrkrData->restURL);
-	
+
 	pWrkrData->restURL = (uchar*)es_str2cstr(url, NULL);
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_URL, pWrkrData->restURL);
 	DBGPRINTF("omelasticsearch: using REST URL: '%s'\n", pWrkrData->restURL);
@@ -543,7 +543,7 @@ finalize_it:
 }
 
 
-/* this method computes the expected size of adding the next message into 
+/* this method computes the expected size of adding the next message into
  * the batched request to elasticsearch
  */
 static size_t
@@ -741,7 +741,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	for(i = 0 ; i < numitems ; ++i) {
 
 		cJSON *item=0;
-		cJSON *create=0;
+		cJSON *result=0;
 		cJSON *ok=0;
 		int itemStatus=0;
 		item = cJSON_GetArrayItem(items, i);
@@ -750,14 +750,14 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 				  "cannot obtain reply array item %d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
-		create = cJSON_GetObjectItem(item, "create");
-		if(create == NULL || create->type != cJSON_Object) {
+		result = item->child;
+		if(result == NULL || result->type != cJSON_Object) {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'create' item for #%d\n", i);
+				  "cannot obtain 'result' item for #%d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 
-		ok = cJSON_GetObjectItem(create, "status");
+		ok = cJSON_GetObjectItem(result, "status");
 		itemStatus = checkReplyStatus(ok);
 
 		char *request =0;
@@ -779,7 +779,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
-			response = cJSON_PrintUnformatted(create);
+			response = cJSON_PrintUnformatted(result);
 
 			if(response==NULL)
 			{
@@ -1220,10 +1220,10 @@ ENDbeginTransaction
 BEGINdoAction
 CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
-	
+
 	if(pWrkrData->pData->bulkmode) {
 		size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
-		
+
 		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
 		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
 			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d elements.\n", pWrkrData->batch.nmemb);
@@ -1231,9 +1231,9 @@ CODESTARTdoAction
 			initializeBatch(pWrkrData);
 		}
 		CHKiRet(buildBatch(pWrkrData, ppString[0], ppString));
-		
+
 		/* If there is only one item in the batch, all previous items have been submitted or this is the first item
-		   for this transaction. Return previous committed so that all items leading up to the current (exclusive) 
+		   for this transaction. Return previous committed so that all items leading up to the current (exclusive)
 		   are not replayed should a failure occur anywhere else in the transaction. */
 		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
@@ -1303,7 +1303,7 @@ finalize_it:
 }
 
 static void
-curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsignedCerts) 
+curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsignedCerts)
 {
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
 	curl_easy_setopt(handle, CURLOPT_NOBODY, TRUE);
@@ -1313,7 +1313,7 @@ curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsign
 	if(allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-	/* Only enable for debugging 
+	/* Only enable for debugging
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
 }
 
@@ -1347,7 +1347,7 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 		pWrkrData->curlPostHandle = NULL;
 		return RS_RET_OBJ_CREATION_FAILED;
 	}
-	curlCheckConnSetup(pWrkrData->curlCheckConnHandle, pWrkrData->curlHeader, 
+	curlCheckConnSetup(pWrkrData->curlCheckConnHandle, pWrkrData->curlHeader,
 		pData->healthCheckTimeout, pData->allowUnsignedCerts);
 
 	return RS_RET_OK;
