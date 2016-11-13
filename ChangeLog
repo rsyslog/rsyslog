@@ -57,7 +57,7 @@ Version 8.23.0 [v8-stable] 2016-11-15
   Thanks to Zachary M. Zhao for the patch.
 - bugfix core: errmsg.LogError now switches to dfltErrLogger just before shutdown
   Thanks to Janmejay Singh for the patches.
-- bugfix core: fixed un-freed memory in non-transnational action using string-passing
+- bugfix core: fixed un-freed memory in non-transactional action using string-passing
   closes https://github.com/rsyslog/rsyslog/issues/968
   Thanks to Janmejay Singh for the patches.
 - rsgtutil: option to specify KSI publications file certificate constraints
