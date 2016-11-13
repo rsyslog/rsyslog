@@ -73,6 +73,23 @@ not work as expected.
    Currently, HUP, USR1, USR2, INT, and TERM are supported. If unset, no signal
    is sent on HUP. This is the default and what pre 8.9.0 versions did.
 
+-  **signalOnClose** [switch] [v8.23.0+]
+   *Default: off*
+
+   Signal the child process when worker-instance is stopped or Rsyslog is about
+   to shutdown. To signal shutdown, SIGTERM is issued to child and Rsyslog
+   reaps the process before proceeding.
+
+   No signal is issued if this switch is set to 'off' (default). The child-process
+   can still detect shutdown because 'read' from stdin would EOF. However its
+   possible to have process-leak due to careless error-handling around read.
+   Rsyslog won't try to reap the child process in this case.
+
+   Additionaly, this controls the following **GNU/Linux specific behavior**:
+   If 'on', Rsyslog waits for upto 5 seconds for child process to terminate
+   after issuing SIGTERM, after which a SIGKILL is issued ensuring child-death.
+   This ensures even an unresponsive child is reaped before shutdown.
+
 **Caveats/Known Bugs:**
 
 -  None.

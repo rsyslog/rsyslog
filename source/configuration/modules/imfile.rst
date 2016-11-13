@@ -112,6 +112,38 @@ Module Parameters
   reason to enable "polling" mode and later versions will most probably
   remove it. 
 
+.. index::
+   single: imfile; readtimeout
+.. function:: readTimeout [seconds]
+
+   *Default: 0 (no timeout)*
+
+   *Available since: 8.23.0*
+
+  This sets the default value for input *timeout* parameters. See there
+  for exact meaning.
+
+.. index::
+   single: imfile; timeoutGranularity
+.. function:: timeoutGranularity [seconds]
+
+   *Default: 0 (no timeout)*
+
+   *Available since: 8.23.0*
+
+  This sets the interval in which multi-line-read timeouts are checked. Note that
+  this establishes a lower limit on the length of the timeout. For example, if
+  a timeoutGranularity of 60 seconds is selected and a readTimeout value of 10 seconds
+  is used, the timeout is nevertheless only checked every 60 seconds (if there is
+  no other activity in imfile). This means that the readTimeout is also only
+  checked every 60 seconds, which in turn means a timeout can occur only after 60
+  seconds.
+
+  Note that timeGranularity has some performance implication. The more frequently
+  timeout processing is triggerred, the more processing time is needed. This
+  effect should be neglectible, except if a very large number of files is being
+  monitored.
+
 .. index:: 
    single: imfile; PollingInterval
 .. function:: PollingInterval seconds
@@ -202,6 +234,35 @@ Input Parameters
 
    This parameter is available since rsyslog v8.10.0.
 
+.. index::
+   single: imfile; readTimeout
+.. function:: readTimeout [seconds]
+
+   *Default: 0 (no timeout)*
+
+   *Available since: 8.23.0*
+
+  This can be used with *startmsg.regex* (but not *readMode*). If specified,
+  partial multi-line reads are timed out after the specified timeout interval.
+  That means the current message fragment is being processed and the next
+  message fragment arriving is treated as a completely new message. The
+  typical use case for this parameter is a file that is infrequently being
+  written. In such cases, the next message arrives relatively late, maybe hours
+  later. Specifying a readTimeout will ensure that those "last messages" are
+  emitted in a timely manner. In this use case, the "partial" messages being
+  processed are actually full messages, so everything is fully correct.
+
+  To guard against accidential too-early emission of a (partial) message, the
+  timeout should be sufficiently large (5 to 10 seconds or more recommended).
+  Specifying a value of zero turns off timeout processing. Also note the
+  relationship to the *timeoutGranularity* global parameter, which sets the
+  lower bound of *readTimeout*.
+
+  Setting timeout vaues slightly increases processing time requirements; the
+  effect should only be visible of a very large number of files is being
+  monitored.
+
+
 .. index:: 
    single: imfile; readMode
 .. function:: readMode [mode]
@@ -219,7 +280,7 @@ Input Parameters
    1 - paragraph (There is a blank line between log messages)
 
    2 - indented (new log messages start at the beginning of a line. If a
-   line starts with a space it is part of the log message before it)
+   line starts with a space or tab "\t" it is part of the log message before it)
 
 .. index:: 
    single: imfile; escapeLF

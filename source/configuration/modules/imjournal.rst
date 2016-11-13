@@ -95,7 +95,10 @@ plugin only if there is hard need to do so.**
    native API. This option specifies the default facility for these
    messages. Can be given either as a name or a number. Defaults to 'user'.
 
+-  **usepidfromsystem** [**off**/on]
 
+   Retrieves the trusted systemd parameter, _PID, instead of the user 
+   systemd parameter, SYSLOG_PID, which is the default.
 
 **Caveats/Known Bugs:**
 
@@ -123,7 +126,7 @@ saving them into /var/log/ceelog.
          StateFile="/path/to/file") #load imjournal module
   module(load="mmjsonparse") #load mmjsonparse module for structured logs
 
-  template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\\n" ) #template for messages
+  template(name="CEETemplate" type="string" string="%TIMESTAMP% %HOSTNAME% %syslogtag% @cee: %$!all-json%\n" ) #template for messages
 
   action(type="mmjsonparse")
   action(type="omfile" file="/var/log/ceelog" template="CEETemplate")

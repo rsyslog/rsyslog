@@ -27,7 +27,7 @@ Processing Principles
 
 - additional rulesets can be user-defined
 
-- each ruleset contains of zero or many rules
+- each ruleset contains zero or many rules
 
   * while it is permitted to have zero rules inside a ruleset,
     this obviously makes no sense

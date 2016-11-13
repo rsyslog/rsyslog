@@ -14,18 +14,48 @@ This module provides native support for logging to
 
 **Action Parameters**:
 
--  **server**
-   Host name or IP address of the Elasticsearch server. Defaults to
-   "localhost"
+.. _server:
+
+-  **server** [ ``http://`` | ``https://`` |  ] <*hostname* | *ip*> [ ``:`` <*port*> ]
+   An array of Elasticsearch servers in the specified format. If no scheme is specified, 
+   it will be chosen according to usehttps_. If no port is specified, 
+   serverport_ will be used. Defaults to "localhost". 
+
+   Requests to Elasticsearch will be load-balanced between all servers in round-robin fashion.
+
+::
+  
+  Examples:
+       server="localhost:9200"
+       server=["elasticsearch1", "elasticsearch2"]
+
+.. _serverport:
+
 -  **serverport**
-    HTTP port to connect to Elasticsearch. Defaults to 9200
+   Default HTTP port to use to connect to Elasticsearch if none is specified 
+   on a server_. Defaults to 9200
+
+.. _healthchecktimeout:
+
+-  **healthchecktimeout**
+   Specifies the number of milliseconds to wait for a successful health check on a server_. 
+   Before trying to submit events to Elasticsearch, rsyslog will execute an *HTTP HEAD* to 
+   ``/_cat/health`` and expect an *HTTP OK* within this timeframe. Defaults to 3500.
+
+   *Note, the health check is verifying connectivity only, not the state of the Elasticsearch cluster.*
+
+.. _searchIndex:
+
 -  **searchIndex**
    `Elasticsearch
    index <http://www.elasticsearch.org/guide/appendix/glossary.html#index>`_
    to send your logs to. Defaults to "system"
+
+.. _dynSearchIndex:
+
 -  **dynSearchIndex**\ <on/**off**>
-   Whether the string provided for **searchIndex** should be taken as a
-   `template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_.
+   Whether the string provided for searchIndex_ should be taken as a
+   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_.
    Defaults to "off", which means the index name will be taken
    literally. Otherwise, it will look for a template with that name, and
    the resulting string will be the index name. For example, let's
@@ -34,14 +64,23 @@ This module provides native support for logging to
    if you say searchIndex="date-days", each log will be sent to and
    index named after the first 10 characters of the timestamp, like
    "2013-03-22".
+
+.. _searchType:
+
 -  **searchType**
    `Elasticsearch
    type <http://www.elasticsearch.org/guide/appendix/glossary.html#type>`_
    to send your index to. Defaults to "events"
+
+.. _dynSearchType:
+
 -  **dynSearchType** <on/**off**>
-   Like **dynSearchIndex**, it allows you to specify a
-   `template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
-   for **searchType**, instead of a static string.
+   Like dynSearchIndex_, it allows you to specify a
+   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+   for searchType_, instead of a static string.
+
+.. _asyncrepl:
+
 -  **asyncrepl**\ <on/**off**>
    By default, an indexing operation returns after all `replica
    shards <http://www.elasticsearch.org/guide/appendix/glossary.html#replica_shard>`_
@@ -49,17 +88,27 @@ This module provides native support for logging to
    it was indexed on the `primary
    shard <http://www.elasticsearch.org/guide/appendix/glossary.html#primary_shard>`_
    only - thus trading some consistency for speed.
+
+.. _usehttps:
+
 -  **usehttps**\ <on/**off**>
-   Send events over HTTPS instead of HTTP. Good for when you have
+   Default scheme to use when sending events to Elasticsearch if none is
+   specified on a  server_. Good for when you have
    Elasticsearch behind Apache or something else that can add HTTPS.
    Note that if you have a self-signed certificate, you'd need to install
    it first. This is done by copying the certificate to a trusted path
    and then running *update-ca-certificates*. That trusted path is
    typically */usr/local/share/ca-certificates* but check the man page of
    *update-ca-certificates* for the default path of your distro
+
+.. _timeout:
+
 -  **timeout**
    How long Elasticsearch will wait for a primary shard to be available
    for indexing your log before sending back an error. Defaults to "1m".
+
+.. _template:
+
 -  **template**
    This is the JSON document that will be indexed in Elasticsearch. The
    resulting string needs to be a valid JSON, otherwise Elasticsearch
@@ -83,6 +132,8 @@ readability):
         "timegenerated": "2013-03-12T18:05:01.344864+02:00"
     }
 
+.. _bulkmode:
+
 -  **bulkmode**\ <on/**off**>
    The default "off" setting means logs are shipped one by one. Each in
    its own HTTP request, using the `Index
@@ -90,11 +141,27 @@ readability):
    Set it to "on" and it will use Elasticsearch's `Bulk
    API <http://www.elasticsearch.org/guide/reference/api/bulk.html>`_ to
    send multiple logs in the same request. The maximum number of logs
-   sent in a single bulk request depends on your queue settings -
+   sent in a single bulk request depends on your maxbytes_  
+   and queue settings -
    usually limited by the `dequeue batch
    size <http://www.rsyslog.com/doc/node35.html>`_. More information
    about queues can be found
    `here <http://www.rsyslog.com/doc/node32.html>`_.
+
+.. _maxbytes:
+
+-  **maxbytes** *(since v8.23.0)*
+   When shipping logs with bulkmode_ **on**, maxbytes specifies the maximum
+   size of the request body sent to Elasticsearch. Logs are batched until 
+   either the buffer reaches maxbytes or the the `dequeue batch
+   size <http://www.rsyslog.com/doc/node35.html>`_ is reached. In order to
+   ensure Elasticsearch does not reject requests due to content length, verify
+   this value is set accoring to the `http.max_content_length 
+   <https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html>`_
+   setting in Elasticsearch. Defaults to 100m. 
+
+.. _parent:
+
 -  **parent**
    Specifying a string here will index your logs with that string the
    parent ID of those logs. Please note that you need to define the
@@ -103,21 +170,32 @@ readability):
    in your
    `mapping <http://www.elasticsearch.org/guide/reference/mapping/>`_
    for that to work. By default, logs are indexed without a parent.
+
+.. _dynParent:
+
 -  **dynParent**\ <on/**off**>
    Using the same parent for all the logs sent in the same action is
    quite unlikely. So you'd probably want to turn this "on" and specify
    a
-   `template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
+   `rsyslog template <http://www.rsyslog.com/doc/rsyslog_conf_templates.html>`_
    that will provide meaningful parent IDs for your logs.
+
+.. _uid:
+
 -  **uid**
    If you have basic HTTP authentication deployed (eg through the
    `elasticsearch-basic
    plugin <https://github.com/Asquera/elasticsearch-http-basic>`_), you
    can specify your user-name here.
+
+.. _pwd:
+
 -  **pwd**
    Password for basic authentication.
 
-- errorfile <filename> (optional)
+.. _errorfile:
+
+- **errorfile** <filename> (optional)
 
   If specified, records failed in bulk mode are written to this file, including
   their error cause. Rsyslog itself does not process the file any more, but the
@@ -195,6 +273,7 @@ The following sample does the following:
            searchIndex="test-index"
            searchType="test-type"
            bulkmode="on"
+           maxbytes="100m"
            queue.type="linkedlist"
            queue.size="5000"
            queue.dequeuebatchsize="300"
@@ -203,6 +282,6 @@ The following sample does the following:
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
-Copyright © 2008-2014 by `Rainer
+Copyright © 2008-2016 by `Rainer
 Gerhards <http://www.gerhards.net/rainer>`_ and
 `Adiscon <http://www.adiscon.com/>`_. Released under the ASL 2.0.

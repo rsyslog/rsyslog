@@ -24,9 +24,10 @@ The following message properties exist:
   the MSG part of the message (aka "the message" ;))
 
 **rawmsg**
-  the message excactly as it was received from the socket. Should be
-  useful for debugging. It is also useful if a message should be
-  forwarded totally unaltered.
+  the message "as is".  Should be useful for debugging and also if a message
+  should be forwarded totally unaltered.
+  Please notice *EscapecontrolCharactersOnReceive* is enabled by default, so
+  it may be different from what was received in the socket.
 
 **rawmsg-after-pri**
   Almost the same as **rawmsg**, but the syslog PRI is removed.
@@ -197,10 +198,6 @@ The following system properties exist:
   templates for RFC5424 support, when the character set is know to be
   Unicode.
   
-**$myhostname**
-  The name of the current host as it knows itself (probably useful for
-  filtering in a generic way)
-
 **$myhostname**
   The name of the current host as it knows itself (probably useful for
   filtering in a generic way)

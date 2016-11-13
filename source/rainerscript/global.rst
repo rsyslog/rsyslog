@@ -209,3 +209,44 @@ The following parameters can be set:
   problems, but may in extreme cases. The core benefit of this setting is
   that it makes valgrind stack traces readable. In previous versions, the
   same functionality was only available via a special build option.
+
+- **environment** [ARRAY of environment variable=value strings] available 8.23.0+
+
+  **Default:** none
+
+  This permits to set environment variables via rsyslog.conf. The prime
+  motivation for having this is that for many libraries, defaults can be
+  set via environment variables, **but** setting them via operating system
+  service startup files is cumbersome and different on different platforms.
+  So the *environment* parameter provides a handy way to set those
+  variables.
+
+  A common example is to set the *http_proxy* variable, e.g. for use with
+  KSI signing or ElasticSearch. This can be done as follows::
+
+    global(environment="http_proxy=http://myproxy.example.net")
+
+  Note that an environment variable set this way must contain an equal sign,
+  and the variable name must not be longer than 127 characters.
+
+  It is possible to set multiple environment variables in a single
+  global statement. This is done in regular array syntax as follows::
+
+    global(environment=["http_proxy=http://myproxy.example.net",
+                        "another_one=this string is=ok!"
+          )
+
+  As usual, whitespace is irrelevant in regard to parameter placing. So
+  the above sample could also have been written on a single line.
+
+  **Caution:** Environment variables are set immediately when the
+  corresponding statement is encountered. Likewise, modules are loaded when
+  the module load statement is encountered. This may create **sequence
+  dependencies** inside rsyslog.conf. To avoid this, it is highly suggested
+  that environment variables are set **right at the top of rsyslog.conf**.
+  Also, rsyslog-related environment variables may not apply even when set
+  right at the top. It is safest to still set them in operating system
+  start files. Note that rsyslog environment variables are usually intended
+  only for developers so there should hardly be a need to set them for a
+  regular user. Also, many settings (e.g. debug) are also available as
+  configuration objects.
