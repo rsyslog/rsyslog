@@ -1,4 +1,163 @@
 ------------------------------------------------------------------------------
+Version 8.23.0 [v8-stable] 2016-11-15
+- NEW BUILD REQUIREMENT: libfastjson 0.99.3
+  This was introduced in 8.20.0 as a suggestion and has now become a hard
+  requirement. See 8.20.0 ChangeLog entry for more details.
+- KSI signatures: removed SHA2-224 hash algorithm
+  This is considered insecure and no longer supported by the underlying
+  KSI library. If still used within a configuration, a descriptive error
+  message is emitted during config processing.
+  Thanks to Henri Lakk for the initial patch.
+- imfile: new timeout feature for multi-line reads
+  When using startmsg.regex, messages are held until the next one is written.
+  We now provide a "readTimeout" parameter family (see doc) to timeout such
+  reads and ensure messages are not held for a very long time.
+  see also https://github.com/rsyslog/rsyslog/issues/1133
+- omfile: improve robustness against network file system failures
+  in case of failure, a close and re-open is tried, which often solves the
+  issue (and wasn't handle before this patch).
+  see also https://github.com/rsyslog/rsyslog/pull/1161
+  Thanks to github user hese10 for the patch.
+- pmaixforwardedfrom: support for AIX syslogd -s option
+  if syslog in AIX started with "-s" option, AIX syslog adds only "From "
+  instead of "Message forwarded from ". With this patch, both are now
+  detected.
+  Thanks to github user patelritesh for the patch.
+- omelasticsearch: add ability to specify max http request size
+  This permits to keep batches below ES-configured limits.
+  Thanks to github user barakshechter for the patch.
+- omelasticsearch: high availability addressing of ElasticSearch cluster
+  allow to specify an array of servers, which is tried until a working
+  one is found (and given up only if none works).
+  Thanks to github user barakshechter for the patch.
+- omelasticsearch: make compatible with ElasticSearch 2.x and 5.x
+  fixes omelasticsearch logs response from ElasticSearch 5.0 _bulk
+  endpoint as error
+  See also https://github.com/rsyslog/rsyslog/pull/1253
+  Thanks to Christian Rodemeyer for the patch.
+- omhiredis: add dynakey attribute.
+  If set to on, this causes omhiredis to treat the key attribute as the
+  name of a template so that you can build a dynamic redis queue name
+  or list key.
+  see also: https://github.com/rsyslog/rsyslog/pull/1218
+  Thanks to github user bobthemighty for the patch
+- omtcl: new contributed module
+  see also https://github.com/rsyslog/rsyslog/pull/1041
+  Please note: contributed modules are not directly supported by the 
+  project. You might want to contact the author for questions.
+  Thanks to Francisco Castro for contributing it.
+- RainerScript: provide a capability to set environment variables
+  via 'global(environment="var=val")' config statement.
+  This is most importantly for things like HTTP_PROXY.
+  see also https://github.com/rsyslog/rsyslog/issues/1209
+- lookup tables: improved error checking
+  Thanks to Janmejay Singh for the patch.
+- queue subsystem: add configuration parameter "queue.samplinginterval"
+  Supports sampling of messages (as often used in data transmission).
+  Thanks to Zachary M. Zhao for the patch.
+- bugfix core: errmsg.LogError now switches to dfltErrLogger just before shutdown
+  Thanks to Janmejay Singh for the patches.
+- bugfix core: fixed un-freed memory in non-transnational action using string-passing
+  closes https://github.com/rsyslog/rsyslog/issues/968
+  Thanks to Janmejay Singh for the patches.
+- rsgtutil: option to specify KSI publications file certificate constraints
+  see also https://github.com/rsyslog/rsyslog/issues/1207
+- omprog: bugfixes and enhancements
+  - omprog resource leak fix (fd leak)
+  - omprog got ability to force-kill process if it doesn't die in 5 seconds
+    (linux specific)
+  - child-process lifecycle debugging aid (in form of logs) (mainLoop and
+    omprog cleanup both log pid at child-death, mainLoop reaping is now
+    visible to user, as opposed to being a mystery, because omprog didn't
+    seem to anticipate it in terms of code)
+  Thanks to Janmejay Singh for the patches.
+  see also https://github.com/rsyslog/rsyslog/pull/1155
+- bugfix imfile: ReopenOnTruncate processing, file open processing
+  This fixes
+   * ReopenOnTrucate was only honored when a state file existed
+      see https://github.com/rsyslog/rsyslog/issues/1090
+    * open processing could run into a loop
+      see https://github.com/rsyslog/rsyslog/issues/1174
+  This is done via refactoring the open file handling, which provides
+  overall cleaner and easier-to-follow code.
+  Thanks to Owen Smith for analyzing the problem and providing a
+  prototype PR which greatly helped towards the final solution.
+- bugfix omlibdbi: libdbi-driver-sqlite3/2 requires to provide a path to
+  database split into two strings:
+  * absolute path, where the database file sits
+  * database filename itself.
+  This was previously not done.
+  Thanks to github user aleek for the patch.
+- bugfix RainerScript: issue in prifilt() function
+  Initialize func-data(and to-be-freed flag) correctly for prifilt
+  function-node
+  Thanks to Janmejay Singh for the patch.
+- bugfix omrelp: invalid module name imrelp was used in some error messages
+  Thanks to Chris Pilkington for the patch.
+- bugfix core: abort when persisting object state
+  This causes a segfault. It happens whenever an object state larger
+  than 4095 byte is persisted. Then, incorrectly a try to rollover to
+  a new state file is tried, which will lead to a division by zero
+  as the necessary variables for this operation are not set because we
+  are NOT in circular mode.
+  This problem can happen wherever state files are written. It has been
+  experienced with imfile and queue files.
+  Many thanks to github user mostolog for his help in reproducing the issue,
+  which was very important to finally nail down this long-standing bug.
+  closes https://github.com/rsyslog/rsyslog/issues/1239
+  closes https://github.com/rsyslog/rsyslog/issues/1162
+  closes https://github.com/rsyslog/rsyslog/issues/1074
+- bugfix: segfault if hostname is unset on system
+  happens when gethostname() returns empty string. This will cause
+  the createon of the localhostname prop_t to fail, which in turn
+  leads to a NULL pointer dereference when emitting local messages.
+  As we emit a startup message by default, this had usually lead
+  to a segfault on startup.
+  Thanks to Erik Potter and github user mostolog for their help
+  in analyzing this problem.
+  closes https://github.com/rsyslog/rsyslog/issues/1040
+  closes https://github.com/rsyslog/rsyslog/issues/335
+- bugfix external module perl skeleton: did not work properly
+  Thanks to github user Igorjan666 for the patch.
+- bugfix build system: Fix detection of pthread_setschedparam() on platforms
+  such as FreeBSD
+  see also https://github.com/rsyslog/rsyslog/pull/1147
+  Thanks to Matthew Seaman for the patch.
+- bugfix omelasticsearch: modifies constant memory under some circumstances
+  Function computeBaseUrl may modify its serverParam parameter, but
+  this may contain the constant string "localhost". Depending on the
+  platform, this can lead to a segfault.
+  Noticed while working on compiler warnings, not seen in practice.
+- "bugfix": theoretical queue file corruption when more than MAX_INT files
+  closes https://github.com/rsyslog/rsyslog/issues/1202
+- bug fix/KSI: LOGSIG11 missing in the beginning of KSI log signature file
+  When logging with KSI is not working properly for whatever reason, an
+  empty .ksisig file is created (which by itself is not an issue). However,
+  later it looks like this file is re-used, but it is not checked whether it
+  already contains the magic LOGSIG11 in the beginning of the file. This leads
+  to a log signature file which has correct content but is missing the
+  LOGSIG11 magic in the beginning.
+- bugfix template processor: missing escaping of backslash in json mode
+  Thanks to github user mostolog for providing the patch.
+- build environment: --enable-debug now defaults to new "auto" mode
+  previously, DEBUG mode (and thus assert() macros) was disabled by default
+  and explicitly needed to be enabled by providing the --enable-debug
+  ./configure switch. Now, a new --enable-debug=auto mode has been added
+  and made the default. It enables DEBUG mode if we build from git and only
+  disables it when a release build is done (from the release tarball). This
+  aims at better error checking during testbench runs and developer testing.
+- testbench improvements
+  * improved testbench file generation tool
+    Thanks to Pascal Withopf for the patch.
+  * added some plumbing for extended tests which work by overriding OS APIs
+  * imfile ReopenOnTruncate option is now being tested
+  * the CI environment now runs most tests in debug mode, but some in
+    release mode to cover potential release-mode races
+  * template json option is now being tested
+  * object state persisting received a basic test
+  * added test for empty hostnames
+  * added tests for omprog
+------------------------------------------------------------------------------
 Version 8.22.0 [v8-stable] 2016-10-04
 - ompgsql: add template support
   Thanks to Radu Gheorghe for implementing this.
@@ -48,7 +207,7 @@ Version 8.20.0 [v8-stable] 2016-07-12
   while not strictly necessary, previous versions of libfastjson have a bug
   in unicode processing that can result in non US-ASCII characters to be
   improperly encoded and may (very unlikely) also cause a segfault.
-  This version will become mandatory in rsyslog 8.20.1.
+  This version will become mandatory in rsyslog 8.23.0
 - omrelp: add configurable connection timeout
   Thanks to Nathan Brown for implementing this feature.
 - pmrfc3164: add support for slashes in hostname
@@ -5949,7 +6108,7 @@ Version 3.20.3 [v3-stable] (rgerhards), 2009-01-19
   thanks to Andrej for reporting this
 - fixed a potential segfault condition with $AllowedSender directive
   On HUP, the root pointers were not properly cleaned up. Thanks to
-  Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
+  Michael Biebl, olgoat, and Juha Koho for reporting and analyzing
   the bug.
 ---------------------------------------------------------------------------
 Version 3.20.2 [v3-stable] (rgerhards), 2008-12-04
@@ -6128,7 +6287,7 @@ Version 3.19.2 (rgerhards), 2008-05-16
   (in queued mode) was read in
 - bugfix: lmtcpclt, lmtcpsrv and lmgssutil did all link to the static
   runtime library, resulting in a large size increase (and potential
-  "interesting" effects). Thanks to Michael Biebel for reporting the size
+  "interesting" effects). Thanks to Michael Biebl for reporting the size
   issue.
 - bugfix: TLS server went into an endless loop in some situations.
   Thanks to Michael Biebl for reporting the problem.
@@ -6165,7 +6324,7 @@ Version 3.18.7 (rgerhards), 2008-12-??
   http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
 - fixed a potential segfault condition with $AllowedSender directive
   On HUP, the root pointers were not properly cleaned up. Thanks to
-  Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
+  Michael Biebl, olgoat, and Juha Koho for reporting and analyzing
   the bug.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.

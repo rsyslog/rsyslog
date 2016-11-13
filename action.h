@@ -105,6 +105,7 @@ rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
 void actionCommitAllDirect(wti_t *pWti);
 void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);
+void releaseDoActionParams(action_t * const pAction, wti_t * const pWti, int action_destruct);
 
 /* external data */
 extern int iActionNbr;

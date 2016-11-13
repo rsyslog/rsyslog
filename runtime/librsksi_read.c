@@ -805,7 +805,8 @@ rsksi_tlvDecodeBLOCK_SIG(tlvrecord_t *rec, block_sig_t **blocksig)
 		goto done;
 	}
 	CHKr(rsksi_tlvDecodeREC_COUNT(rec, &strtidx, &(bs->recCount)));
-	CHKr(rsksi_tlvDecodeSIG(rec, &strtidx, bs));
+	if(strtidx<rec->tlvlen)
+		CHKr(rsksi_tlvDecodeSIG(rec, &strtidx, bs));
 	if(strtidx != rec->tlvlen) {
 		r = RSGTE_LEN;
 		goto done;
@@ -1370,6 +1371,34 @@ done2:
 	if(rsksi_read_debug) printf("debug: rsksi_getExcerptBlockParams:\t Found %lld records, returned %d\n", (long long unsigned)nRecs, r);
 	return r;
 }
+
+/**
+*	Set Default Constrain parameters
+*/
+int 
+rsksi_setDefaultConstraint(ksifile ksi, char *stroid, char *strvalue)
+{
+	int ksistate;
+	int r = RSGTE_SUCCESS;
+
+	/* Create and set default CertConstraint */
+	const KSI_CertConstraint pubFileCertConstr[] = {
+			{ stroid, strvalue},
+			{ NULL, NULL }
+	};
+
+	if(rsksi_read_debug) { printf("rsksi_setDefaultConstraint:\t\t Setting OID='%s' to '%s' \n", stroid, strvalue); }
+
+	ksistate = KSI_CTX_setDefaultPubFileCertConstraints(ksi->ctx->ksi_ctx, pubFileCertConstr);
+	if (ksistate != KSI_OK) {
+		fprintf(stderr, "rsksi_setDefaultConstraint:\t\t\t Unable to configure publications file cert constraints %s=%s.\n", stroid, strvalue);
+		r = RSGTE_IO;
+		goto done;
+	}
+done:
+	return r;
+}
+
 
 /**
  * Read the file header and compare it to the expected value.
@@ -2027,10 +2056,13 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 {
 	KSI_Signature *extended = NULL;
 	uint8_t *der = NULL;
-	size_t lenDer;
+	size_t lenDer = 0;
 	int r, rgt;
 	tlvrecord_t newrec, subrec;
 	uint16_t iRd, iWr;
+
+	if(sig==NULL)
+		goto skip_extention;
 
 	/* Extend Signature now using KSI API*/
 	rgt = KSI_extendSignature(ksi->ctx->ksi_ctx, sig, &extended);
@@ -2048,28 +2080,24 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 		goto done;
 	}
 
+skip_extention:
+
 	/* update block_sig tlv record with new extended timestamp */
 	/* we now need to copy all tlv records before the actual der
 	 * encoded part.
 	 */
 	iRd = iWr = 0;
-	// TODO; check tlvtypes at comment places below!
 	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec)); 
-	/* HASH_ALGO */
+	/* REC_NUM */
+	if(subrec.tlvtype!=0x01) {
+		r=RSGTE_INVLTYP;
+		goto done;
+	}
 	COPY_SUBREC_TO_NEWREC
-	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
-	/* BLOCK_IV */
-	COPY_SUBREC_TO_NEWREC
-	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
-	/* LAST_HASH */
-	COPY_SUBREC_TO_NEWREC
-	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
-	/* REC_COUNT */
-	COPY_SUBREC_TO_NEWREC
-	CHKr(rsksi_tlvDecodeSUBREC(rec, &iRd, &subrec));
+
 	/* actual sig! */
 	newrec.data[iWr++] = 0x09 | RSKSI_FLAG_TLV16_RUNTIME;
-	newrec.data[iWr++] = 0x06;
+	newrec.data[iWr++] = 0x05;
 	newrec.data[iWr++] = (lenDer >> 8) & 0xff;
 	newrec.data[iWr++] = lenDer & 0xff;
 	/* now we know how large the new main record is */
@@ -2080,7 +2108,8 @@ rsksi_extendSig(KSI_Signature *sig, ksifile ksi, tlvrecord_t *rec, ksierrctx_t *
 	newrec.hdr[2] = (newrec.tlvlen >> 8) & 0xff;
 	newrec.hdr[3] = newrec.tlvlen & 0xff;
 	newrec.lenHdr = 4;
-	memcpy(newrec.data+iWr, der, lenDer);
+	if(der!=NULL && lenDer!=0)
+		memcpy(newrec.data+iWr, der, lenDer);
 	/* and finally copy back new record to existing one */
 	memcpy(rec, &newrec, sizeof(newrec)-sizeof(newrec.data)+newrec.tlvlen+4);
 	r = 0;
@@ -2138,6 +2167,17 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 		goto done;
 	}
 
+	/* Process the KSI signature if it is present */
+	if(file_bs->sig.der.data==NULL || file_bs->sig.der.len==0) {
+		if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t KSI signature missing\n");
+		if(bExtend)
+			goto skip_ksi;
+		else {
+			r = RSGTE_MISS_KSISIG;
+			goto done;
+		}
+	}
+
 	/* Parse KSI Signature */
 	ksistate = KSI_Signature_parse(ksi->ctx->ksi_ctx, file_bs->sig.der.data, file_bs->sig.der.len, &sig);
 	if(ksistate != KSI_OK) {
@@ -2171,9 +2211,11 @@ verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp,
 	if(rsksi_read_debug) printf("debug: verifyBLOCK_SIGKSI:\t\t processed without error's\n"); 
 	if(rsksi_read_showVerified)
 		reportVerifySuccess(ectx);
+
+skip_ksi:
 	if(bExtend)
 		if((r = rsksi_extendSig(sig, ksi, &rec, ectx)) != 0) goto done;
-		
+
 	if(nsigfp != NULL) {
 		if((r = rsksi_tlvwrite(nsigfp, &rec)) != 0) goto done;
 	}

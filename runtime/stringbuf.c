@@ -332,7 +332,8 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...)
 	iRet = rsCStrConstructFromszStrv(&pStr, (char*)fmt, ap);
 	va_end(ap);
 
-	CHKiRet(iRet);
+	if(iRet != RS_RET_OK)
+		goto finalize_it;
 
 	iRet = cstrAppendCStr(pThis, pStr);
 	rsCStrDestruct(&pStr);

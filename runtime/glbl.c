@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -49,6 +50,7 @@
 #include "action.h"
 #include "parserif.h"
 #include "rainerscript.h"
+#include "srUtils.h"
 #include "net.h"
 #include "rsconf.h"
 
@@ -167,6 +169,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
+	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
@@ -272,7 +275,7 @@ static void SetGlobalInputTermination(void)
  * ok to call. Most importantly, the IP address must not already have 
  * been set. -- rgerhards, 2012-03-21
  */
-static inline rsRetVal
+static rsRetVal
 storeLocalHostIPIF(uchar *myIP)
 {
 	DEFiRet;
@@ -832,7 +835,7 @@ displayTzinfos(void)
  * This is currently not needed as used only during
  * initialization.
  */
-static inline rsRetVal
+static rsRetVal
 addTimezoneInfo(uchar *tzid, char offsMode, int8_t offsHour, int8_t offsMin)
 {
 	DEFiRet;
@@ -1022,6 +1025,47 @@ qs_arrcmp_tzinfo(const void *s1, const void *s2)
 	return strcmp(((tzinfo_t*)s1)->id, ((tzinfo_t*)s2)->id);
 }
 
+/* set an environment variable */
+static rsRetVal
+do_setenv(const char *const var)
+{
+	char varname[128];
+	const char *val = var;
+	size_t i;
+	DEFiRet;
+
+	for(i = 0 ; *val != '=' ; ++i, ++val) {
+		if(i == sizeof(varname)-i) {
+			parser_errmsg("environment variable name too long "
+				"[max %zd chars] or malformed entry: '%s'",
+				sizeof(varname)-1, var);
+			ABORT_FINALIZE(RS_RET_ERR_SETENV);
+		}
+		if(*val == '\0') {
+			parser_errmsg("environment variable entry is missing "
+				"equal sign (for value): '%s'", var);
+			ABORT_FINALIZE(RS_RET_ERR_SETENV);
+		}
+		varname[i] = *val;
+	}
+	varname[i] = '\0';
+	++val;
+	DBGPRINTF("do_setenv, var '%s', val '%s'\n", varname, val);
+
+	if(setenv(varname, val, 1) != 0) {
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		parser_errmsg("error setting environment variable "
+			"'%s' to '%s': %s", varname, val, errStr);
+		ABORT_FINALIZE(RS_RET_ERR_SETENV);
+	}
+
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This processes the "regular" parameters which are to be set after the
  * config has been fully loaded.
  */
@@ -1139,6 +1183,13 @@ glblDoneLoadCnf(void)
 		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
 		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
+			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
+				char *const var =
+					es_str2cstr(cnfparamvals[i].val.d.ar->arr[j], NULL);
+				do_setenv(var);
+				free(var);
+			}
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);

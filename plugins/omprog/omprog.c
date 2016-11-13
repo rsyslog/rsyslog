@@ -41,6 +41,10 @@
 #else
 #include <wait.h>
 #endif
+#if defined(__linux__) && defined(_GNU_SOURCE)
+#include <sys/syscall.h>
+#include <sys/types.h>
+#endif
 #include <pthread.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -60,6 +64,8 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 #define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
+/* linux specific: how long to wait for process to terminate gracefully before issuing SIGKILL */
+#define DEFAULT_FORCED_TERMINATION_TIMEOUT_MS 5000
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
 	char **aParams;		/* Optional Parameters for binary command */
@@ -68,6 +74,7 @@ typedef struct _instanceData {
 	int bForceSingleInst;	/* only a single wrkr instance of program permitted? */
 	int iHUPForward;	/* signal to forward on HUP (or NO_HUP_FORWARD) */
 	uchar *outputFileName;	/* name of file for std[out/err] or NULL if to discard */
+	int bSignalOnClose;  /* should signal process at shutdown */
 	pthread_mutex_t mut;	/* make sure only one instance is active */
 } instanceData;
 
@@ -93,7 +100,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "output", eCmdHdlrString, 0 },
 	{ "forcesingleinstance", eCmdHdlrBinary, 0 },
 	{ "hup.signal", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+	{ "template", eCmdHdlrGetWord, 0 },
+	{ "signalOnClose", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -135,6 +143,7 @@ CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mut);
 	free(pData->szBinary);
 	free(pData->outputFileName);
+	free(pData->tplName);
 	if(pData->aParams != NULL) {
 		for (i = 0; i < pData->iParams; i++) {
 			free(pData->aParams[i]);
@@ -142,11 +151,6 @@ CODESTARTfreeInstance
 		free(pData->aParams);
 	}
 ENDfreeInstance
-
-BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
-ENDfreeWrkrInstance
-
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
@@ -332,13 +336,14 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 
 	DBGPRINTF("omprog: child has pid %d\n", (int) cpid);
 	if(pWrkrData->pData->outputFileName != NULL) {
-		pWrkrData->fdPipeIn = dup(pipestdout[0]);
+		pWrkrData->fdPipeIn = pipestdout[0];
 		/* we need to set our fd to be non-blocking! */
 		flags = fcntl(pWrkrData->fdPipeIn, F_GETFL);
 		flags |= O_NONBLOCK;
 		fcntl(pWrkrData->fdPipeIn, F_SETFL, flags);
 	} else {
 		pWrkrData->fdPipeIn = -1;
+		close(pipestdout[0]);
 	}
 	close(pipestdin[0]);
 	close(pipestdout[1]);
@@ -349,34 +354,141 @@ finalize_it:
 	RETiRet;
 }
 
+#if defined(__linux__) && defined(_GNU_SOURCE)
+typedef struct subprocess_timeout_desc_s {
+	pthread_attr_t thd_attr;
+	pthread_t thd;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+	int timeout_armed;
+	pid_t waiter_tid;
+	long timeout_ms;
+	struct timespec timeout;
+} subprocess_timeout_desc_t;
 
-/* clean up after a terminated child
- */
-static inline rsRetVal
-cleanup(wrkrInstanceData_t *pWrkrData)
+static void * killSubprocessOnTimeout(void *_subpTimeOut_p) {
+	subprocess_timeout_desc_t *subpTimeOut = (subprocess_timeout_desc_t *) _subpTimeOut_p;
+	if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
+		while (subpTimeOut->timeout_armed) {
+			int ret = pthread_cond_timedwait(&subpTimeOut->cond, &subpTimeOut->lock, &subpTimeOut->timeout);
+			if (subpTimeOut->timeout_armed && ((ret == ETIMEDOUT) || (timeoutVal(&subpTimeOut->timeout) == 0))) {
+				errmsg.LogError(0, RS_RET_CONC_CTRL_ERR, "omprog: child-process wasn't reaped within timeout "
+								"(%ld ms) preparing to force-kill.", subpTimeOut->timeout_ms);
+				if (syscall(SYS_tgkill, getpid(), subpTimeOut->waiter_tid, SIGINT) != 0) {
+					errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: couldn't interrupt thread(%d) "
+									"which was waiting to reap child-process.", subpTimeOut->waiter_tid);
+				}
+			}
+		}
+		pthread_mutex_unlock(&subpTimeOut->lock);
+	}
+	return NULL;
+}
+
+static rsRetVal
+setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms)
+{
+	int attr_initialized = 0, mutex_initialized = 0, cond_initialized = 0;
+	DEFiRet;
+	CHKiConcCtrl(pthread_attr_init(&subpTimeOut->thd_attr));
+	attr_initialized = 1;
+	CHKiConcCtrl(pthread_mutex_init(&subpTimeOut->lock, NULL));
+	mutex_initialized = 1;
+	CHKiConcCtrl(pthread_cond_init(&subpTimeOut->cond, NULL));
+	cond_initialized = 1;
+	subpTimeOut->timeout_armed = 1;
+	subpTimeOut->waiter_tid = syscall(SYS_gettid);
+	subpTimeOut->timeout_ms = timeout_ms;
+	CHKiRet(timeoutComp(&subpTimeOut->timeout, timeout_ms));
+	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, subpTimeOut));
+finalize_it:
+	if (iRet != RS_RET_OK) {
+		if (attr_initialized) pthread_attr_destroy(&subpTimeOut->thd_attr);
+		if (mutex_initialized) pthread_mutex_destroy(&subpTimeOut->lock);
+		if (cond_initialized) pthread_cond_destroy(&subpTimeOut->cond);
+	}
+	RETiRet;
+}
+
+static void
+doForceKillSubprocess(subprocess_timeout_desc_t *subpTimeOut, int do_kill, pid_t pid)
+{
+    if (pthread_mutex_lock(&subpTimeOut->lock) == 0) {
+        subpTimeOut->timeout_armed = 0;
+        pthread_cond_signal(&subpTimeOut->cond);
+        pthread_mutex_unlock(&subpTimeOut->lock);
+    }
+	pthread_join(subpTimeOut->thd, NULL);
+	if (do_kill) {
+		if (kill(pid, 9) == 0) {
+			errmsg.LogError(0, RS_RET_NO_ERRCODE, "omprog: child-process FORCE-killed");
+		} else {
+			errmsg.LogError(errno, RS_RET_SYS_ERR, "omprog: child-process cound't be FORCE-killed");
+		}
+	}
+	pthread_cond_destroy(&subpTimeOut->cond);
+	pthread_mutex_destroy(&subpTimeOut->lock);
+	pthread_attr_destroy(&subpTimeOut->thd_attr);
+}
+#endif
+
+static void
+waitForChild(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 {
 	int status;
 	int ret;
-	char errStr[1024];
-	DEFiRet;
 
-	assert(pWrkrData->bIsRunning == 1);
+#if defined(__linux__) && defined(_GNU_SOURCE)
+	subprocess_timeout_desc_t subpTimeOut;
+	int timeoutSetupStatus;
+	int waitpid_interrupted;
+
+	if (timeout_ms > 0) timeoutSetupStatus = setupSubprocessTimeout(&subpTimeOut, timeout_ms);
+#endif
+
 	ret = waitpid(pWrkrData->pid, &status, 0);
+
+#if defined(__linux__) && defined(_GNU_SOURCE)
+	waitpid_interrupted = (ret != pWrkrData->pid) && (errno == EINTR);
+	if ((timeout_ms > 0) && (timeoutSetupStatus == RS_RET_OK)) doForceKillSubprocess(&subpTimeOut, waitpid_interrupted, pWrkrData->pid);
+	if (waitpid_interrupted) {
+		waitForChild(pWrkrData, -1);
+		return;
+	}
+#endif
+
 	if(ret != pWrkrData->pid) {
-		/* if waitpid() fails, we can not do much - try to ignore it... */
-		DBGPRINTF("omprog: waitpid() returned state %d[%s], future malfunction may happen\n", ret,
-			   rs_strerror_r(errno, errStr, sizeof(errStr)));
+		if (errno == ECHILD) {
+			errmsg.LogError(errno, RS_RET_OK_WARN, "Child %d doesn't seem to exist, "
+							"hence couldn't be reaped (reaped by main-loop?)", pWrkrData->pid);
+		} else {
+			errmsg.LogError(errno, RS_RET_SYS_ERR, "Cleanup failed for child %d", pWrkrData->pid);
+		}
 	} else {
 		/* check if we should print out some diagnostic information */
 		DBGPRINTF("omprog: waitpid status return for program '%s': %2.2x\n",
-			  pWrkrData->pData->szBinary, status);
+				  pWrkrData->pData->szBinary, status);
 		if(WIFEXITED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
-					pWrkrData->pData->szBinary, WEXITSTATUS(status));
+							pWrkrData->pData->szBinary, WEXITSTATUS(status));
 		} else if(WIFSIGNALED(status)) {
 			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
-					pWrkrData->pData->szBinary, WTERMSIG(status));
+							pWrkrData->pData->szBinary, WTERMSIG(status));
 		}
+	}
+}
+
+/* clean up after a terminated child
+ */
+static rsRetVal
+cleanup(wrkrInstanceData_t *pWrkrData, long timeout_ms)
+{
+	DEFiRet;
+
+	assert(pWrkrData->bIsRunning == 1);
+
+	if (pWrkrData->pData->bSignalOnClose) {
+		waitForChild(pWrkrData, timeout_ms);
 	}
 
 	checkProgramOutput(pWrkrData); /* try to catch any late messages */
@@ -398,10 +510,20 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 	RETiRet;
 }
 
+BEGINfreeWrkrInstance
+CODESTARTfreeWrkrInstance
+	if (pWrkrData->bIsRunning) {
+		if (pWrkrData->pData->bSignalOnClose) {
+			kill(pWrkrData->pid, SIGTERM);
+		}
+		CHKiRet(cleanup(pWrkrData, DEFAULT_FORCED_TERMINATION_TIMEOUT_MS));
+	}
+finalize_it:
+ENDfreeWrkrInstance
 
 /* try to restart the binary when it has stopped.
  */
-static inline rsRetVal
+static rsRetVal
 tryRestart(wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
@@ -436,7 +558,7 @@ writePipe(wrkrInstanceData_t *pWrkrData, uchar *szMsg)
 			case EPIPE:
 				DBGPRINTF("omprog: program '%s' terminated, trying to restart\n",
 					  pWrkrData->pData->szBinary);
-				CHKiRet(cleanup(pWrkrData));
+				CHKiRet(cleanup(pWrkrData, 0));
 				CHKiRet(tryRestart(pWrkrData));
 				break;
 			default:
@@ -476,7 +598,7 @@ CODESTARTdoAction
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->szBinary = NULL;
@@ -484,6 +606,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->outputFileName = NULL;
 	pData->iParams = 0;
 	pData->bForceSingleInst = 0;
+	pData->bSignalOnClose = 0;
 	pData->iHUPForward = NO_HUP_FORWARD;
 }
 
@@ -594,6 +717,8 @@ CODESTARTnewActInst
 			pData->outputFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "forcesingleinstance")) {
 			pData->bForceSingleInst = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "signalOnClose")) {
+			pData->bSignalOnClose = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "hup.signal")) {
 			const char *const sig = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(!strcmp(sig, "HUP"))

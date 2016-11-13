@@ -24,7 +24,7 @@
  * rgerhards, 2009-07-10
  *
  * Copyright 2009 David Lang (spoofing code)
- * Copyright 2009-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -179,7 +179,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData);
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -197,7 +197,7 @@ getDfltTpl(void)
  * is we do not permit this directive after the v2 config system has been used to set
  * the parameter.
  */
-rsRetVal
+static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 {
 	DEFiRet;
@@ -355,8 +355,10 @@ ENDdbgPrintInstInfo
  * Note: libnet is not thread-safe, so we need to ensure that only one
  * instance ever is calling libnet code.
  * rgehards, 2007-12-20
- */
-static inline rsRetVal
+ */ 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+static rsRetVal
 UDPSend(wrkrInstanceData_t *pWrkrData, uchar *pszSourcename, char *msg, size_t len)
 {
 	struct addrinfo *r;
@@ -521,6 +523,7 @@ finalize_it:
 	}
 	RETiRet;
 }
+#pragma GCC diagnostic pop
 
 
 /* try to resume connection if it is not ready
@@ -615,7 +618,7 @@ finalize_it:
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->tplName = NULL;

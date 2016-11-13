@@ -45,6 +45,7 @@
 #include <sys/stat.h>	 /* required for HP UX */
 #include <time.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include "rsyslog.h"
 #include "queue.h"
@@ -125,7 +126,8 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "queue.dequeueslowdown", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimebegin", eCmdHdlrInt, 0 },
 	{ "queue.dequeuetimeend", eCmdHdlrInt, 0 },
-	{ "queue.cry.provider", eCmdHdlrGetWord, 0 }
+	{ "queue.cry.provider", eCmdHdlrGetWord, 0 },
+	{ "queue.samplinginterval", eCmdHdlrInt, 0 }
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -179,7 +181,7 @@ static inline toDeleteLst_t *tdlPeek(qqueue_t *pQueue)
  * element itself is destroyed. Must not be called when the list
  * is empty.
  */
-static inline rsRetVal tdlPop(qqueue_t *pQueue)
+static rsRetVal tdlPop(qqueue_t *pQueue)
 {
 	toDeleteLst_t *pRemove;
 	DEFiRet;
@@ -199,7 +201,8 @@ static inline rsRetVal tdlPop(qqueue_t *pQueue)
  * structure, populates it with the values provided and links the new
  * element into the correct place inside the list.
  */
-static inline rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq)
+static rsRetVal
+tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq)
 {
 	toDeleteLst_t *pNew;
 	toDeleteLst_t *pPrev;
@@ -234,7 +237,7 @@ finalize_it:
 
 /* methods */
 
-static inline const char *
+static const char *
 getQueueTypeName(queueType_t t)
 {
 	const char *r;
@@ -323,7 +326,7 @@ getLogicalQueueSize(qqueue_t *pThis)
  * This functions works "around" the regular deque mechanism, because it is only used to
  * clean up (in cases where message loss is acceptable). 
  */
-static inline void queueDrain(qqueue_t *pThis)
+static void queueDrain(qqueue_t *pThis)
 {
 	msg_t *pMsg;
 	ASSERT(pThis != NULL);
@@ -349,7 +352,7 @@ static inline void queueDrain(qqueue_t *pThis)
  * this point in time. The mutex must be locked when
  * ths function is called. -- rgerhards, 2008-01-25
  */
-static inline rsRetVal
+static rsRetVal
 qqueueAdviseMaxWorkers(qqueue_t *pThis)
 {
 	DEFiRet;
@@ -706,7 +709,7 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis)
  * states, which can trigger different processing in the higher layers.
  * rgerhards, 2011-05-03
  */
-static inline rsRetVal
+static rsRetVal
 queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError)
 {
 	pThis->iQueueSize = 0;
@@ -1057,6 +1060,18 @@ qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
 
 	ASSERT(pThis != NULL);
 
+	static int msgCnt = 0;
+
+	if(pThis->iSmpInterval > 0)
+	{
+		msgCnt = (msgCnt + 1) % (pThis->iSmpInterval);
+		if(msgCnt != 0)
+		{
+		        msgDestruct(&pMsg);
+			goto finalize_it;
+		}
+	}
+
 	CHKiRet(pThis->qAdd(pThis, pMsg));
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
@@ -1112,7 +1127,7 @@ qqueueDeq(qqueue_t *pThis, msg_t **ppMsg)
  * and DA queue to try complete processing.
  * rgerhards, 2009-10-14
  */
-static inline rsRetVal
+static rsRetVal
 tryShutdownWorkersWithinQueueTimeout(qqueue_t *pThis)
 {
 	struct timespec tTimeout;
@@ -1421,6 +1436,7 @@ qqueueSetDefaultsActionQueue(qqueue_t *pThis)
 	pThis->iDeqSlowdown = 0;
 	pThis->iDeqtWinFromHr = 0;
 	pThis->iDeqtWinToHr = 25;		 /* disable time-windowed dequeuing by default */
+	pThis->iSmpInterval = 0;                 /* disable sampling */
 }
 
 
@@ -1451,6 +1467,7 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
 	pThis->iDeqSlowdown = 0;
 	pThis->iDeqtWinFromHr = 0;
 	pThis->iDeqtWinToHr = 25;		 /* disable time-windowed dequeuing by default */
+	pThis->iSmpInterval = 0;                 /* disable sampling */
 }
 
 
@@ -1496,7 +1513,7 @@ finalize_it:
 
 /* Finally remove n elements from the queue store.
  */
-static inline rsRetVal
+static rsRetVal
 DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 {
 	int i;
@@ -1554,7 +1571,7 @@ DoDeleteBatchFromQStore(qqueue_t *pThis, int nElem)
 /* remove messages from the physical queue store that are fully processed. This is
  * controlled via the to-delete list.
  */
-static inline rsRetVal
+static rsRetVal
 DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 {
 	toDeleteLst_t *pTdl;
@@ -1594,7 +1611,7 @@ finalize_it:
  * processed are enqueued again. The new enqueue is necessary because we have a
  * rgerhards, 2009-05-13
  */
-static inline rsRetVal
+static rsRetVal
 DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 {
 	int i;
@@ -1641,7 +1658,7 @@ DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
  * This must only be called when the queue mutex is LOOKED, otherwise serious
  * malfunction will happen.
  */
-static inline rsRetVal
+static rsRetVal
 DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSize, int *const pSkippedMsgs)
 {
 	int nDequeued;
@@ -1675,6 +1692,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 		}
 		if(rd_fd != -1 && rd_fd == wr_fd && rd_offs == wr_offs) {
 			DBGPRINTF("problem on disk queue '%s': "
+					//"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%lld\n",
 					"queue size log %d, phys %d, but rd_fd=wr_rd=%d and offs=%" PRId64 "\n",
 					obj.GetName((obj_t*) pThis), iQueueSize, pThis->iQueueSize,
 					rd_fd, rd_offs);
@@ -1885,7 +1903,7 @@ RateLimiter(qqueue_t *pThis)
  * cancelled, else it will leave back an inconsistent state.
  * rgerhards, 2009-05-20
  */
-static inline rsRetVal
+static rsRetVal
 DequeueForConsumer(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 {
 	DEFiRet;
@@ -2577,7 +2595,7 @@ finalize_it:
  * depending on the queue configuration (e.g. store on remote machine).
  * rgerhards, 2009-05-26
  */
-static inline rsRetVal
+static rsRetVal
 DoSaveOnShutdown(qqueue_t *pThis)
 {
 	struct timespec tTimeout;
@@ -2767,7 +2785,7 @@ finalize_it:
  * Note that the queue mutex MUST already be locked when this function is called.
  * rgerhards, 2009-06-16
  */
-static inline rsRetVal
+static rsRetVal
 doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
 {
 	DEFiRet;
@@ -3137,6 +3155,8 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 			pThis->iDeqtWinFromHr = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "queue.dequeuetimeend")) {
 			pThis->iDeqtWinToHr = pvals[i].val.d.n;
+		} else if(!strcmp(pblk.descr[i].name, "queue.samplinginterval")) {
+			pThis->iSmpInterval = pvals[i].val.d.n;
 		} else {
 			DBGPRINTF("queue: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);
@@ -3189,6 +3209,7 @@ DEFpropSetMeth(qqueue, pAction, action_t*)
 DEFpropSetMeth(qqueue, iDeqSlowdown, int)
 DEFpropSetMeth(qqueue, iDeqBatchSize, int)
 DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)
+DEFpropSetMeth(qqueue, iSmpInterval, int)
 
 
 /* This function can be used as a generic way to set properties. Only the subset

@@ -26,6 +26,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
@@ -705,7 +706,11 @@ startMainQueue(qqueue_t *pQueue)
 void
 rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
-	logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
+	if (glbl.GetGlobalInputTermState() == 1) {
+		dfltErrLogger(severity, iErr, msg);
+	} else {
+		logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
+	}
 }
 
 static inline rsRetVal
@@ -715,12 +720,27 @@ submitMsgWithDfltRatelimiter(msg_t *pMsg)
 }
 
 
-/* This function logs a message to rsyslog itself, using its own
- * internal structures. This means external programs (like the
- * system journal) will never see this message.
+static void
+logmsgInternal_doWrite(msg_t *const __restrict__ pMsg)
+{
+	if(bProcessInternalMessages) {
+		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+	} else {
+		const int pri = getPRIi(pMsg);
+		uchar *const msg = getMSG(pMsg);
+#		ifdef HAVE_LIBLOGGING_STDLOG
+		stdlog_log(stdlog_hdl, pri2sev(pri), "%s", (char*)msg);
+#		else
+		syslog(pri, "%s", msg);
+#		endif
+	}
+}
+
+/* This function creates a log message object out of the provided
+ * message text and forwards it for logging.
  */
 static rsRetVal
-logmsgInternalSelf(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
+logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
 	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
@@ -751,10 +771,7 @@ logmsgInternalSelf(const int iErr, const syslog_pri_t pri, const size_t lenMsg,
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pMsg);
 	} else {
-               /* we have the queue, so we can simply provide the
-		 * message to the queue engine.
-		 */
-		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+		logmsgInternal_doWrite(pMsg);
 	}
 finalize_it:
 	RETiRet;
@@ -787,18 +804,9 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		}
 	}
 
-	if(bProcessInternalMessages) {
-		CHKiRet(logmsgInternalSelf(iErr, pri, lenMsg,
-					   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
-					   flags));
-	} else {
-#ifdef HAVE_LIBLOGGING_STDLOG
-		stdlog_log(stdlog_hdl, pri2sev(pri), "%s",
-			   (bufModMsg == NULL) ? (char*)msg : bufModMsg);
-#else
-		syslog(pri, "%s", msg);
-#endif
-	}
+	CHKiRet(logmsgInternalSubmit(iErr, pri, lenMsg,
+				   (bufModMsg == NULL) ? (char*)msg : bufModMsg,
+				   flags));
 
 	/* we now check if we should print internal messages out to stderr. This was
 	 * suggested by HKS as a way to help people troubleshoot rsyslog configuration
@@ -1369,12 +1377,13 @@ finalize_it:
  * really help us. TODO: add error messages?
  * rgerhards, 2007-08-03
  */
-static inline void processImInternal(void)
+static void
+processImInternal(void)
 {
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		submitMsgWithDfltRatelimiter(pMsg);
+		logmsgInternal_doWrite(pMsg);
 	}
 }
 
@@ -1522,10 +1531,13 @@ mainloop(void)
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 
 		if(bChildDied) {
-			int child;
+			pid_t child;
 			do {
 				child = waitpid(-1, NULL, WNOHANG);
-				DBGPRINTF("rsyslogd: child %d has terminated\n", child);
+				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %d\n", child);
+				if (child != -1 && child != 0) {
+					errmsg.LogError(0, RS_RET_OK, "Child %d has terminated, reaped by main-loop.", child);
+				}
 			} while(child > 0);
 			bChildDied = 0;
 		}
@@ -1580,6 +1592,7 @@ deinitAll(void)
 	/* close the inputs */
 	DBGPRINTF("Terminating input threads...\n");
 	glbl.SetGlobalInputTermination();
+	
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */

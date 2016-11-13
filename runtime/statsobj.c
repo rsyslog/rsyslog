@@ -64,7 +64,7 @@ static struct hashtable *stats_senders = NULL;
 
 /* ------------------------------ statsobj linked list maintenance  ------------------------------ */
 
-static inline void
+static void
 addToObjList(statsobj_t *pThis)
 {
 	pthread_mutex_lock(&mutStats);
@@ -88,7 +88,7 @@ addToObjList(statsobj_t *pThis)
 }
 
 
-static inline void
+static void
 removeFromObjList(statsobj_t *pThis)
 {
 	pthread_mutex_lock(&mutStats);
@@ -104,7 +104,7 @@ removeFromObjList(statsobj_t *pThis)
 }
 
 
-static inline void
+static void
 addCtrToList(statsobj_t *pThis, ctr_t *pCtr)
 {
 	pthread_mutex_lock(&pThis->mutCtr);
@@ -241,7 +241,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline void
+static void
 addPreCreatedCounter(statsobj_t *pThis, ctr_t *pCtr)
 {
 	pCtr->next = NULL;
@@ -285,7 +285,7 @@ destructCounter(statsobj_t *pThis, ctr_t *pCtr)
 	destructUnlinkedCounter(pCtr);
 }
 
-static inline void
+static void
 resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 {
 	if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) ||

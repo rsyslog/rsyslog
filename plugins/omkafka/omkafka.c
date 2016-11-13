@@ -1,7 +1,7 @@
 /* omkafka.c
  * This output plugin make rsyslog talk to Apache Kafka.
  *
- * Copyright 2014 by Adiscon GmbH.
+ * Copyright 2014-2016-2016 by Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -163,7 +163,7 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars 
 ENDinitConfVars
 
-static inline uint32_t
+static uint32_t
 getPartition(instanceData *const __restrict__ pData)
 {
 	if (pData->autoPartition) {
@@ -234,7 +234,7 @@ finalize_it:
 }
 
 /* clear the entire dynamic topic cache */
-static inline void
+static void
 dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
 {
 	register int i;
@@ -319,7 +319,7 @@ finalize_it:
  *
  * must be called with read(rkLock)
  */
-static inline rsRetVal
+static rsRetVal
 prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
 				rd_kafka_topic_t** topic, pthread_rwlock_t** lock)
 {
@@ -467,7 +467,7 @@ writeDataError(instanceData *const pData,
 	struct iovec iov[2];
 	iov[0].iov_base = (void*) json_object_get_string(json);
 	iov[0].iov_len = strlen(iov[0].iov_base);
-	iov[1].iov_base = "\n";
+	iov[1].iov_base = (char *) "\n";
 	iov[1].iov_len = 1;
 
 	/* we must protect the file write do operations due to other wrks & HUP */
@@ -522,7 +522,7 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 }
 
 /* should be called with write(rkLock) */
-static inline void
+static void
 do_rd_kafka_destroy(instanceData *const __restrict pData)
 {
 	if (pData->rk == NULL) {
@@ -637,6 +637,9 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
+# if RD_KAFKA_VERSION >= 0x00090001
+	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
+# endif
 
 	char kafkaErrMsg[1024];
 	pData->rk = rd_kafka_new(RD_KAFKA_PRODUCER, conf,
@@ -646,7 +649,9 @@ openKafka(instanceData *const __restrict__ pData)
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
+# if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_set_logger(pData->rk, kafkaLogger);
+# endif
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
@@ -864,7 +869,7 @@ finalize_it:
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->topic = NULL;

@@ -7,7 +7,7 @@
  * This part of the library uses C stdio and expects that the
  * caller will open and close the file to be read itself.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -80,7 +80,7 @@ outputHexBlob(FILE *fp, uint8_t *blob, uint16_t len, uint8_t verbose)
 	}
 }
 
-static inline void
+static void
 outputHash(FILE *fp, char *hdr, uint8_t *data, uint16_t len, uint8_t verbose)
 {
 	fprintf(fp, "%s", hdr);
@@ -200,7 +200,7 @@ reportVerifySuccess(gterrctx_t *ectx, GTVerificationInfo *vrfyInf)
 }
 
 /* return the actual length in to-be-written octets of an integer */
-static inline uint8_t rsgt_tlvGetInt64OctetSize(uint64_t val)
+static uint8_t rsgt_tlvGetInt64OctetSize(uint64_t val)
 {
 	if(val >> 56)
 		return 8;
@@ -219,7 +219,7 @@ static inline uint8_t rsgt_tlvGetInt64OctetSize(uint64_t val)
 	return 1;
 }
 
-static inline int rsgt_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
+static int rsgt_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 {
 	/* Directory write into file */
 	int r = 0;
@@ -227,7 +227,7 @@ static inline int rsgt_tlvfileAddOctet(FILE *newsigfp, int8_t octet)
 		r = RSGTE_IO; 
 	return r;
 }
-static inline int rsgt_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
+static int rsgt_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int size)
 {
 	int i, r = 0;
 	for(i = 0 ; i < size ; ++i) {
@@ -236,7 +236,7 @@ static inline int rsgt_tlvfileAddOctetString(FILE *newsigfp, uint8_t *octet, int
 	}
 done:	return r;
 }
-static inline int rsgt_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
+static int rsgt_tlvfileAddInt64(FILE *newsigfp, uint64_t val)
 {
 	uint8_t doWrite = 0;
 	int r;
@@ -742,7 +742,7 @@ done:	return r;
 
 
 /* return if a blob is all zero */
-static inline int
+static int
 blobIsZero(uint8_t *blob, uint16_t len)
 {
 	int i;
@@ -1199,7 +1199,7 @@ done:
 	memcpy(newrec.data+iWr, subrec.data, subrec.tlvlen); \
 	iWr += subrec.tlvlen;
 
-static inline int
+static int
 rsgt_extendSig(GTTimestamp *timestamp, tlvrecord_t *rec, gterrctx_t *ectx)
 {
 	GTTimestamp *out_timestamp;

@@ -468,7 +468,7 @@ MsgSetRulesetByName(msg_t * const pMsg, cstr_t *rulesetName)
 /* do a DNS reverse resolution, if not already done, reflect status
  * rgerhards, 2009-11-16
  */
-static inline rsRetVal
+static rsRetVal
 resolveDNS(msg_t * const pMsg) {
 	rsRetVal localRet;
 	prop_t *propFromHost = NULL;
@@ -499,7 +499,7 @@ finalize_it:
 }
 
 
-static inline void
+static void
 getInputName(msg_t * const pM, uchar **ppsz, int *plen)
 {
 	BEGINfunc
@@ -513,7 +513,7 @@ getInputName(msg_t * const pM, uchar **ppsz, int *plen)
 }
 
 
-static inline uchar*
+static uchar*
 getRcvFromIP(msg_t * const pM)
 {
 	uchar *psz;
@@ -786,7 +786,8 @@ uchar *propIDToName(propid_t propID)
  * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
-static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
+static rsRetVal
+msgBaseConstruct(msg_t **ppThis)
 {
 	DEFiRet;
 	msg_t *pM;
@@ -1488,7 +1489,7 @@ finalize_it:
  * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
-static inline rsRetVal
+static rsRetVal
 aquireProgramName(msg_t * const pM)
 {
 	int i;
@@ -1681,7 +1682,8 @@ uchar *getMSG(msg_t * const pM)
 
 
 /* Get PRI value as integer */
-static int getPRIi(msg_t * const pM)
+int
+getPRIi(const msg_t * const pM)
 {
 	syslog_pri_t pri = (pM->iFacility << 3) + (pM->iSeverity);
 	if(pri > 191)
@@ -2172,7 +2174,7 @@ finalize_it:
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void preparePROCID(msg_t * const pM, sbool bLockMutex)
+static void preparePROCID(msg_t * const pM, sbool bLockMutex)
 {
 	if(pM->pCSPROCID == NULL) {
 		if(bLockMutex == LOCK_MUTEX)
@@ -2189,7 +2191,7 @@ static inline void preparePROCID(msg_t * const pM, sbool bLockMutex)
 #if 0
 /* rgerhards, 2005-11-24
  */
-static inline int getPROCIDLen(msg_t *pM, sbool bLockMutex)
+static int getPROCIDLen(msg_t *pM, sbool bLockMutex)
 {
 	assert(pM != NULL);
 	preparePROCID(pM, bLockMutex);
@@ -2584,7 +2586,7 @@ static void tryEmulateAPPNAME(msg_t * const pM)
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
-static inline void prepareAPPNAME(msg_t * const pM, sbool bLockMutex)
+static void prepareAPPNAME(msg_t * const pM, sbool bLockMutex)
 {
 	if(pM->pCSAPPNAME == NULL) {
 		if(bLockMutex == LOCK_MUTEX)

@@ -9,9 +9,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ *		 http://www.apache.org/licenses/LICENSE-2.0
+ *		 -or-
+ *		 see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -74,6 +74,9 @@ const char * reloader_prefix = "lkp_tbl_reloader:";
 static void *
 lookupTableReloader(void *self);
 
+static void
+lookupStopReloader(lookup_ref_t *pThis);
+
 /* create a new lookup table object AND include it in our list of
  * lookup tables.
  */
@@ -82,17 +85,23 @@ lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
+	int initialized = 0;
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
 	CHKmalloc(t = calloc(1, sizeof(lookup_t)));
-	pthread_rwlock_init(&pThis->rwlock, NULL);
-	pthread_mutex_init(&pThis->reloader_mut, NULL);
-	pthread_cond_init(&pThis->run_reloader, NULL);
-	pthread_attr_init(&pThis->reloader_thd_attr);
+	CHKiConcCtrl(pthread_rwlock_init(&pThis->rwlock, NULL));
+	initialized++; /*1*/
+	CHKiConcCtrl(pthread_mutex_init(&pThis->reloader_mut, NULL));
+	initialized++; /*2*/
+	CHKiConcCtrl(pthread_cond_init(&pThis->run_reloader, NULL));
+	initialized++; /*3*/
+	CHKiConcCtrl(pthread_attr_init(&pThis->reloader_thd_attr));
+	initialized++; /*4*/
 	pThis->do_reload = pThis->do_stop = 0;
 	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
-	pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis);
+	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr, lookupTableReloader, pThis));
+	initialized++; /*5*/
 
 	pThis->next = NULL;
 	if(loadConf->lu_tabs.root == NULL) {
@@ -107,13 +116,19 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d (please enable debug logs for details)", initialized);
+		if (initialized > 4) lookupStopReloader(pThis);
+		if (initialized > 3) pthread_attr_destroy(&pThis->reloader_thd_attr);
+		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
+		if (initialized > 1) pthread_mutex_destroy(&pThis->reloader_mut);
+		if (initialized > 0) pthread_rwlock_destroy(&pThis->rwlock);
 		free(t);
 		free(pThis);
 	}
 	RETiRet;
 }
 
-static inline void
+static void
 freeStubValueForReloadFailure(lookup_ref_t *pThis) {/*must be called with reloader_mut acquired*/
 	if (pThis->stub_value_for_reload_failure != NULL) {
 		free(pThis->stub_value_for_reload_failure);
@@ -299,7 +314,7 @@ lookupKey_arr(lookup_t *pThis, lookup_key_t key) {
 
 typedef int (comp_fn_t)(const void *s1, const void *s2);
 
-static inline void *
+static void *
 bsearch_lte(const void *key, const void *base, size_t nmemb, size_t size, comp_fn_t *comp_fn)
 {
 	size_t l, u, idx;
@@ -350,7 +365,7 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' field", type, name); \
 	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 
-static inline rsRetVal
+static rsRetVal
 build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
@@ -384,7 +399,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;
@@ -440,7 +455,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
 	uint32_t i;
 	struct json_object *jrow, *jindex, *jvalue;

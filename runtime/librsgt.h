@@ -184,7 +184,7 @@ rsgtSetKeepTreeHashes(gtctx ctx, int val)
 }
 
 int rsgtSetHashFunction(gtctx ctx, char *algName);
-int rsgtInit(char *usragent);
+int rsgtInit(const char *usragent);
 void rsgtExit(void);
 gtctx rsgtCtxNew(void);
 void rsgtsetErrFunc(gtctx ctx, void (*func)(void*, unsigned char *), void *usrptr);

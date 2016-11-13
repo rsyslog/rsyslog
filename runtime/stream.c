@@ -49,6 +49,7 @@
 #include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 #include <pthread.h>
+#include <poll.h>
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -59,6 +60,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "cryprov.h"
+#include "datetime.h"
 #ifdef HAVE_SYS_PRCTL_H
 #  include <sys/prctl.h>
 #endif
@@ -392,7 +394,7 @@ finalize_it:
  * that require data to be persisted. May be called in non-async mode and is a null
  * operation than. Must be called with the mutex locked.
  */
-static inline void
+static void
 strmWaitAsyncWriterDone(strm_t *pThis)
 {
 	BEGINfunc
@@ -493,9 +495,10 @@ strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->iMaxFiles != 0);
-	ASSERT(pThis->fd != -1);
+	assert(pThis != NULL);
+	assert(pThis->sType == STREAMTYPE_FILE_CIRCULAR);
+	assert(pThis->iMaxFiles != 0);
+	assert(pThis->fd != -1);
 
 	CHKiRet(strmCloseFile(pThis));
 
@@ -752,9 +755,10 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 	}
         if(mode == 0) {
 		while(c != '\n') {
-                	CHKiRet(cstrAppendChar(*ppCStr, c));
-                	readCharRet = strmReadChar(pThis, &c);
-                	if(readCharRet == RS_RET_EOF) {/* end of file reached without \n? */
+			CHKiRet(cstrAppendChar(*ppCStr, c));
+			readCharRet = strmReadChar(pThis, &c);
+			if((readCharRet == RS_RET_TIMED_OUT) ||
+			   (readCharRet == RS_RET_EOF) ) { /* end reached without \n? */
 				CHKiRet(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr));
                 	}
                 	CHKiRet(readCharRet);
@@ -857,6 +861,20 @@ finalize_it:
         RETiRet;
 }
 
+/* check if the current multi line read is timed out
+ * @return 0 - no timeout, something else - timeout
+ */
+int
+strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
+{
+	/* note: order of evaluation is choosen so that the most inexpensive
+	 * processing flow is used.
+	 */
+	return(   (pThis->readTimeout)
+	       && (pThis->prevMsgSegment != NULL)
+	       && (getTime(NULL) > pThis->lastRead + pThis->readTimeout) );
+}
+
 /* read a multi-line message from a strm file.
  * The multi-line message is terminated based on the user-provided
  * startRegex (Posix ERE). For performance reasons, the regex
@@ -864,19 +882,18 @@ finalize_it:
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF)
 {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
+	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
         DEFiRet;
-
-        ASSERT(pThis != NULL);
-        ASSERT(ppCStr != NULL);
 
 	do {
 		CHKiRet(strmReadChar(pThis, &c)); /* immediately exit on EOF */
+		pThis->lastRead = tCurr;
 		CHKiRet(cstrConstruct(&thisLine));
 		/* append previous message to current message if necessary */
 		if(pThis->prevLineSegment != NULL) {
@@ -909,15 +926,19 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 			
 		} else {
-			if(pThis->prevMsgSegment != NULL) {
-				/* may be NULL in initial poll! */
+			if(pThis->prevMsgSegment == NULL) {
+				/* may be NULL in initial poll or after timeout! */
+				CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
+			} else {
 				if(bEscapeLF) {
 					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
 				} else {
 					cstrAppendChar(pThis->prevMsgSegment, '\n');
 				}
-				CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-				/* we could do this faster, but for now keep it simple */
+				if(cstrLen(thisLine) > 0) {
+					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+					/* we could do this faster, but for now keep it simple */
+				}
 
 			}
 		}
@@ -925,6 +946,17 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF
 	} while(finished == 0);
 
 finalize_it:
+	if(   pThis->readTimeout
+	   && (iRet != RS_RET_OK)
+	   && (pThis->prevMsgSegment != NULL)
+	   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
+		CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
+		cstrDestruct(&pThis->prevMsgSegment);
+		pThis->lastRead = tCurr;
+		dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
+			FINALIZE;
+		iRet = RS_RET_OK;
+	}
         RETiRet;
 }
 
@@ -1023,7 +1055,7 @@ finalize_it:
 /* stop the writer thread (we MUST be runnnig asynchronously when this method
  * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
  */
-static inline void
+static void
 stopWriter(strm_t *pThis)
 {
 	BEGINfunc
@@ -1088,7 +1120,7 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 {
 	DEFiRet;
 
-	if(pThis->fd == -1)
+	if(pThis->fd == -1 || pThis->sType != STREAMTYPE_FILE_CIRCULAR)
 		FINALIZE;
 
 	/* wait for output to be empty, so that our counts are correct */
@@ -1179,6 +1211,10 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
 			if(err == EINTR) {
 				/*NO ERROR, just continue */;
+			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
+				/* Failure for network file system, thus file needs to be closed and reopened. */
+				close(pThis->fd);
+				CHKiRet(doPhysOpen(pThis));
 			} else {
 				if(pThis->bIsTTY) {
 					CHKiRet(tryTTYRecover(pThis, err));
@@ -1207,7 +1243,7 @@ finalize_it:
 
 /* write memory buffer to a stream object.
  */
-static inline rsRetVal
+static rsRetVal
 doWriteInternal(strm_t *pThis, uchar *pBuf, const size_t lenBuf, const int bFlush)
 {
 	DEFiRet;
@@ -1235,7 +1271,7 @@ finalize_it:
  * the very some producer comes back in sequence to submit the then-filled buffers.
  * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
  */
-static inline rsRetVal
+static rsRetVal
 doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip)
 {
 	DEFiRet;
@@ -1668,7 +1704,7 @@ finalize_it:
  * rgerhards, 2012-11-07
  */
 rsRetVal
-strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
+strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytesDel)
 {
 	struct stat statBuf;
 	DEFiRet;
@@ -1690,7 +1726,7 @@ strmMultiFileSeek(strm_t *pThis, int FNum, off64_t offs, off64_t *bytesDel)
 				    pThis->iFileNumDigits));
 		stat((char*)pThis->pszCurrFName, &statBuf);
 		*bytesDel = statBuf.st_size;
-		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %d, new %d, "
+		DBGPRINTF("strmMultiFileSeek: detected new filenum, was %u, new %u, "
 			  "deleting '%s' (%lld bytes)\n", pThis->iCurrFNum, FNum,
 			  pThis->pszCurrFName, (long long) *bytesDel);
 		unlink((char*)pThis->pszCurrFName);
@@ -1876,6 +1912,13 @@ DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 DEFpropSetMeth(strm, cryprov, cryprov_if_t*)
 DEFpropSetMeth(strm, cryprovData, void*)
 
+/* sets timeout in seconds */
+void
+strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val)
+{
+	pThis->readTimeout = val;
+}
+
 static rsRetVal strmSetbDeleteOnClose(strm_t *pThis, int val)
 {
 	pThis->bDeleteOnClose = val;
@@ -2013,7 +2056,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	strmFlushInternal(pThis, 0);
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 
-	objSerializeSCALAR(pStrm, iCurrFNum, INT);
+	objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistance */
 	objSerializePTR(pStrm, pszFName, PSZ);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
@@ -2134,7 +2177,7 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
  	if(isProp("sType")) {
 		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
  	} else if(isProp("iCurrFNum")) {
-		pThis->iCurrFNum = pProp->val.num;
+		pThis->iCurrFNum = (unsigned) pProp->val.num;
  	} else if(isProp("pszFName")) {
 		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
  	} else if(isProp("tOperationsMode")) {

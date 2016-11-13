@@ -156,7 +156,7 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
  * to the caller. Leading white space is removed, but
  * not trailing.
  */
-static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
+static rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 {
 	DEFiRet;
 	register uchar *p;

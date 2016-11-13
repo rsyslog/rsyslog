@@ -5,10 +5,13 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[daqueue-persist.sh\]: test data persisting at shutdown
-. $srcdir/daqueue-persist-drvr.sh LinkedList
-. $srcdir/daqueue-persist-drvr.sh FixedArray
+echo mode linkedList
+$srcdir/daqueue-persist-drvr.sh LinkedList
+echo mode fixedArray
+$srcdir/daqueue-persist-drvr.sh FixedArray
 # the disk test should not fail, however, the config is extreme and using
 # it more or less is a config error
-. $srcdir/daqueue-persist-drvr.sh Disk
+echo Disk
+$srcdir/daqueue-persist-drvr.sh Disk
 # we do not test Direct mode because this absolute can not work in direct mode
 # (maybe we should do a fail-type of test?)

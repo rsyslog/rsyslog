@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -191,6 +191,7 @@ uchar *getRcvFrom(msg_t *pM);
 void getTAG(msg_t *pM, uchar **ppBuf, int *piLen);
 const char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
 const char *getPRI(msg_t *pMsg);
+int getPRIi(const msg_t * const pM);
 void getRawMsg(msg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(msg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(msg_t *msg, uchar *metaname, uchar *metaval);

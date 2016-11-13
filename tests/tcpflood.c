@@ -236,7 +236,7 @@ initRELP_PLAIN(void)
 }
 
 /* prepare send subsystem for UDP send */
-static inline int
+static int
 setupUDP(void)
 {
 	if((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
@@ -444,7 +444,7 @@ void closeConnections(void)
  * this has been moved to its own function as we now have various different ways
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
-static inline void
+static void
 genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 {
 	int edLen; /* actual extra data length to use */
@@ -704,7 +704,7 @@ thrdStarter(void *arg)
  * parameter blocks and starts threads. It returns when all threads are ready to run
  * and the main task must just enable them.
  */
-static inline void
+static void
 prepareGenerators()
 {
 	int i;
@@ -744,7 +744,7 @@ prepareGenerators()
 /* Let all generators run. Threads must have been started. Here we wait until
  * all threads are initialized and then broadcast that they can begin to run.
  */
-static inline void
+static void
 runGenerators()
 {
 	pthread_mutex_lock(&thrdMgmt);
@@ -759,7 +759,7 @@ runGenerators()
 
 /* Wait for all traffic generators to stop.
  */
-static inline void
+static void
 waitGenerators()
 {
 	int i;
@@ -776,7 +776,7 @@ waitGenerators()
  * a separate function primarily not to mess up the test driver.
  * rgerhards, 2010-12-08
  */
-static inline void
+static void
 endTiming(struct timeval *tvStart, struct runstats *stats)
 {
 	long sec, usec;
@@ -811,7 +811,7 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 
 /* generate stats summary record at end of run
  */
-static inline void
+static void
 genStats(struct runstats *stats)
 {
 	long unsigned avg;

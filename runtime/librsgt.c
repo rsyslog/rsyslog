@@ -254,7 +254,7 @@ rsgtimprintDel(imprint_t *imp)
 }
 
 int
-rsgtInit(char *usragent)
+rsgtInit(const char *usragent)
 {
 	int r = 0;
 	int ret = GT_OK;
@@ -615,6 +615,8 @@ int
 tlvOpen(gtfile gf, char *hdr, unsigned lenHdr)
 {
 	int r = 0;
+	struct stat stat_st;
+
 	gf->fd = open((char*)gf->sigfilename,
 		       O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC, 0600);
 	if(gf->fd == -1) {
@@ -625,10 +627,27 @@ tlvOpen(gtfile gf, char *hdr, unsigned lenHdr)
 			r = RSGTE_IO;
 			goto done;
 		}
+
+		/* Write fileHeader */
 		memcpy(gf->tlvBuf, hdr, lenHdr);
 		gf->tlvIdx = lenHdr;
 	} else {
-		gf->tlvIdx = 0; /* header already present! */
+		/* Get FileSize from existing ksisigfile */
+		if(fstat(gf->fd, &stat_st) == -1) {
+			reportErr(gf->ctx, "tlvOpen: can not stat file");
+			r = RSGTE_IO;
+			goto done;
+		}
+
+		/* Check if size is above header length. */
+		if(stat_st.st_size > 0) {
+			/* header already present! */
+			gf->tlvIdx = 0;
+		} else {
+			/* Write fileHeader */
+			memcpy(gf->tlvBuf, hdr, lenHdr);
+			gf->tlvIdx = lenHdr;
+		}
 	}
 	/* we now need to obtain the last previous hash, so that
 	 * we can continue the hash chain. We do not check for error

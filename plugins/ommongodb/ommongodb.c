@@ -32,7 +32,11 @@
 #include <signal.h>
 #include <stdint.h>
 #include <time.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-attributes"
 #include <mongo.h>
+#pragma GCC diagnostic pop
 #include <json.h>
 
 #include "rsyslog.h"
@@ -223,7 +227,7 @@ finalize_it:
  * TODO: consider moving this to msg.c - make some dirty "friend" references...
  * rgerhards, 2012-03-19
  */
-static inline const char *
+static const char *
 getLumberjackLevel(short severity)
 {
 	switch(severity) {
@@ -242,7 +246,7 @@ getLumberjackLevel(short severity)
 
 
 /* small helper: get integer power of 10 */
-static inline int
+static int
 i10pow(int exp)
 {
 	int r = 1;
@@ -533,7 +537,7 @@ finalize_it:
 ENDdoAction
 
 
-static inline void
+static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;

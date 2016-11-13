@@ -69,7 +69,7 @@ DEFobjCurrIf(glbl)
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static inline uchar *
+static uchar *
 wtpGetDbgHdr(wtp_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wtp);

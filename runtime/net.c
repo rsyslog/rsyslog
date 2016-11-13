@@ -105,7 +105,7 @@ int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it
 /* sets the correct allow root pointer based on provided type
  * rgerhards, 2008-12-01
  */
-static inline rsRetVal
+static rsRetVal
 setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
 {
 	DEFiRet;
@@ -129,7 +129,7 @@ finalize_it:
 /* re-initializes (sets to NULL) the correct allow root pointer
  * rgerhards, 2009-01-12
  */
-static inline rsRetVal
+static rsRetVal
 reinitAllowRoot(uchar *pszType)
 {
 	DEFiRet;
@@ -487,7 +487,7 @@ finalize_it:
 
 /* Code for handling allowed/disallowed senders
  */
-static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
+static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 	register uint8_t i;
 	
 	assert (addr != NULL);
@@ -500,7 +500,7 @@ static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 		addr->s6_addr32[i] = 0;
 }
 
-static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
+static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 	
 	assert (addr != NULL);
 	assert (bits <=32 );
@@ -517,7 +517,7 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
  * when being cancelled, at least if the module was dlloaded.
  * rgerhards, 2008-09-30
  */
-static inline int
+static int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
                        char *host, size_t hostlen,
                        char *serv, size_t servlen, int flags)
@@ -905,12 +905,11 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 
 /* compares a host to an allowed sender list entry. Handles all subleties
  * including IPv4/v6 as well as domain name wildcards.
- * This is a helper to isAllowedSender. As it is only called once, it is
- * declared inline.
+ * This is a helper to isAllowedSender.
  * Returns 0 if they do not match, 1 if they match and 2 if a DNS name would have been required.
  * contributed 2007-07-16 by mildew@gmail.com
  */
-static inline int
+static int
 MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char *pszFromHost, int bChkDNS)
 {
 	assert(pAllow != NULL);
@@ -1151,8 +1150,16 @@ getLocalHostname(uchar **ppName)
 	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
 		strcpy(hnbuf, "localhost");
 	} else {
-		hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
+		/* now guard against empty hostname
+		 * see https://github.com/rsyslog/rsyslog/issues/1040
+		 */
+		if(hnbuf[0] == '\0') {
+			strcpy(hnbuf, "localhost");
+		} else {
+			hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
+		}
 	}
+
 	char *dot = strstr(hnbuf, ".");
 	if(dot == NULL) {
 		/* we need to (try) to find the real name via resolver */

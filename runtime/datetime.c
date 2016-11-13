@@ -183,7 +183,7 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC
  * this testing. So I created that function as a replacement.
  * rgerhards, 2009-11-12
  */
-static time_t
+time_t
 getTime(time_t *ttSeconds)
 {
 	struct timeval tp;

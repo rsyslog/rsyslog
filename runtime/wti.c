@@ -61,7 +61,7 @@ pthread_key_t thrd_wti_key;
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static inline uchar *
+static uchar *
 wtiGetDbgHdr(wti_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -282,7 +282,7 @@ wtiWorkerCancelCleanup(void *arg)
  * re-tested by the caller, so it is OK to NOT do it here.
  * rgerhards, 2009-05-20
  */
-static inline void
+static void
 doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 {
 	struct timespec t;
@@ -399,6 +399,8 @@ wtiWorker(wti_t *__restrict__ const pThis)
 				wrkrInfo->p.tx.iparams = NULL;
 				wrkrInfo->p.tx.currIParam = 0;
 				wrkrInfo->p.tx.maxIParams = 0;
+			} else {
+				releaseDoActionParams(pAction, pThis, 1);
 			}
 			wrkrInfo->actWrkrData = NULL; /* re-init for next activation */
 		}

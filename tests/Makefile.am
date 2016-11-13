@@ -4,6 +4,14 @@ CLEANFILES = \
 # IN_AUTO_DEBUG should be deleted each time make check is run, but
 # there exists no such hook. Se we at least delete it on make clean.
 
+
+pkglib_LTLIBRARIES =
+
+pkglib_LTLIBRARIES += liboverride_gethostname.la
+liboverride_gethostname_la_SOURCES = override_gethostname.c
+liboverride_gethostname_la_CFLAGS =
+liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
@@ -13,6 +21,7 @@ TESTS = $(TESTRUNS)
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
+	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
@@ -21,6 +30,10 @@ TESTS +=  \
 	stop-msgvar.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	glbl_setenv_2_vars.sh \
+	glbl_setenv_err.sh \
+	glbl_setenv_err_too_long.sh \
+	glbl_setenv.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only.sh \
@@ -31,6 +44,7 @@ TESTS +=  \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -230,7 +244,8 @@ TESTS +=  \
 	lookup_table_bad_configs-vg.sh \
 	lookup_table_rscript_reload-vg.sh \
 	lookup_table_rscript_reload_without_stub-vg.sh \
-	multiple_lookup_tables-vg.sh
+	multiple_lookup_tables-vg.sh \
+	fac_local0-vg.sh
 endif # HAVE_VALGRIND
 
 if ENABLE_USERTOOLS
@@ -238,6 +253,8 @@ if ENABLE_GT_KSI
 TESTS +=  \
 	ksi-verify-short.sh \
 	ksi-verify-long.sh \
+	ksi-verify-cnstr-short.sh \
+	ksi-verify-cnstr-long.sh \
 	ksi-extract-verify-short.sh \
 	ksi-extract-verify-long.sh 
 if HAVE_VALGRIND
@@ -256,6 +273,28 @@ TESTS +=  \
 	omjournal-abort-no-template.sh \
 	omjournal-basic-template.sh \
 	omjournal-basic-no-template.sh
+endif
+
+if ENABLE_OMPROG
+TESTS +=  \
+	omprog-cleanup.sh \
+	omprog-cleanup-with-outfile.sh \
+	omprog-noterm-cleanup.sh \
+	omprog-noterm-default.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive.sh \
+	omprog-noterm-unresponsive.sh
+endif
+if HAVE_VALGRIND
+TESTS +=  \
+	omprog-cleanup-vg.sh \
+	omprog-noterm-cleanup-vg.sh
+if OS_LINUX
+TESTS += \
+	omprog-cleanup-when-unresponsive-vg.sh
+endif
+endif
 endif
 
 if ENABLE_OMKAFKA
@@ -349,7 +388,10 @@ endif
 if ENABLE_ELASTICSEARCH_TESTS
 TESTS +=  \
 	es-basic.sh \
+	es-basic-server.sh \
+	es-basic-ha.sh \
 	es-basic-bulk.sh \
+	es-maxbytes-bulk.sh \
 	es-basic-errfile-empty.sh \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
@@ -486,18 +528,29 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-truncate.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
 	imfile-readmode2-with-persists.sh \
 	imfile-endregex.sh \
 	imfile-endregex-save-lf.sh \
-	imfile-endregex-save-lf-persist.sh
+	imfile-endregex-save-lf-persist.sh \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh \
+	imfile-persist-state-1.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
 	imfile-endregex-vg.sh \
 	imfile-readmode2-vg.sh
 endif
+endif
+
+if ENABLE_OMTCL
+TESTS += \
+	 omtcl.sh
 endif
 
 endif # if ENABLE_TESTBENCH
@@ -507,12 +560,17 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
+	glbl_setenv_2_vars.sh \
+	glbl_setenv_err.sh \
+	glbl_setenv_err_too_long.sh \
+	glbl_setenv.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
 	validation-run.sh \
@@ -688,6 +746,7 @@ EXTRA_DIST= \
 	privdropuserid.sh \
 	privdropgroup.sh \
 	privdropgroupid.sh \
+	template-json.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -696,6 +755,7 @@ EXTRA_DIST= \
 	fac_authpriv.sh \
 	testsuites/fac_authpriv.conf \
 	fac_local0.sh \
+	fac_local0-vg.sh \
 	testsuites/fac_local0.conf \
 	fac_local7.sh \
 	testsuites/fac_local7.conf \
@@ -933,6 +993,24 @@ EXTRA_DIST= \
 	testsuites/sndrcv_gzip_rcvr.conf \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
+	omprog-cleanup.sh \
+	omprog-cleanup-vg.sh \
+	omprog-cleanup-with-outfile.sh \
+	omprog-cleanup-when-unresponsive.sh \
+	omprog-cleanup-when-unresponsive-vg.sh \
+	omprog-noterm-cleanup.sh \
+	omprog-noterm-cleanup-vg.sh \
+	omprog-noterm-default.sh \
+	omprog-noterm-unresponsive.sh \
+	testsuites/omprog-cleanup.conf \
+	testsuites/omprog-noterm.conf \
+	testsuites/omprog-noterm-default.conf \
+	testsuites/omprog-noterm-unresponsive.conf \
+	testsuites/omprog-noterm.sh \
+	testsuites/omprog-cleanup-outfile.conf \
+	testsuites/omprog-cleanup-unresponsive.conf \
+	testsuites/omprog-test-bin.sh \
+	testsuites/term-ignoring-script.sh \
 	pipe_noreader.sh \
 	testsuites/pipe_noreader.conf \
 	uxsock_simple.sh \
@@ -997,6 +1075,12 @@ EXTRA_DIST= \
 	imfile-basic.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
+	imfile-endregex-timeout-none-polling.sh \
+	imfile-endregex-timeout-polling.sh \
+	imfile-endregex-timeout.sh \
+	imfile-endregex-timeout-none.sh \
+	imfile-persist-state-1.sh \
+	imfile-truncate.sh \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \
@@ -1274,6 +1358,8 @@ EXTRA_DIST= \
 	ksi-verify-long.sh \
 	ksi-extract-verify-short.sh \
 	ksi-extract-verify-long.sh \
+	ksi-verify-cnstr-short.sh \
+	ksi-verify-cnstr-long.sh \
 	ksi-verify-short-vg.sh \
 	ksi-verify-long-vg.sh \
 	ksi-extract-verify-short-vg.sh \
@@ -1284,7 +1370,9 @@ EXTRA_DIST= \
 	testsuites/sndrcv_tls_anon_rebind_rcvr.conf \
 	sndrcv_tls_anon.sh \
 	testsuites/sndrcv_tls_anon_sender.conf \
-	testsuites/sndrcv_tls_anon_rcvr.conf
+	testsuites/sndrcv_tls_anon_rcvr.conf \
+	omtcl.sh \
+	omtcl.tcl
 
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c

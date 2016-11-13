@@ -109,7 +109,7 @@ static rsRetVal doTryResume(instanceData *pData);
 /* this function gets the default template. It coordinates action between
  * old-style and new-style configuration parts.
  */
-static inline uchar*
+static uchar*
 getDfltTpl(void)
 {
 	if(loadModConf != NULL && loadModConf->tplName != NULL)
@@ -144,7 +144,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 closeSocket(instanceData *pData)
 {
 	DEFiRet;
@@ -404,7 +404,7 @@ ENDparseSelectorAct
 /* a common function to free our configuration variables - used both on exit
  * and on $ResetConfig processing. -- rgerhards, 2008-05-16
  */
-static inline void
+static void
 freeConfigVars(void)
 {
 	free(cs.tplName);

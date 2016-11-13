@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.22.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.23.0.master],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -44,7 +44,7 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
-PKG_CHECK_MODULES([JSON_C], [libfastjson],,)
+PKG_CHECK_MODULES([JSON_C], [libfastjson >= 0.99.3],,)
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's
@@ -78,6 +78,12 @@ case "${host}" in
     AC_SUBST(SOL_LIBS)
   ;;
 esac
+
+# Running from git source?
+in_git_src=no
+AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
+
+AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
@@ -312,10 +318,14 @@ AC_CHECK_LIB(
 		 [1],
 		 [Can set thread-name.])])
 
-AC_CHECK_FUNCS(
+AC_SEARCH_LIBS(
     [pthread_setschedparam],
+    [pthread],
     [
       rsyslog_have_pthread_setschedparam=yes
+      AC_DEFINE([HAVE_PTHREAD_SETSCHEDPARAM],
+	[1],
+	[Can set thread scheduling parameters])
     ],
     [
       rsyslog_have_pthread_setschedparam=no
@@ -453,14 +463,23 @@ AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_sy
 
 # debug
 AC_ARG_ENABLE(debug,
-        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=auto@:>@])],
         [case "${enableval}" in
-         yes) enable_debug="yes" ;;
-          no) enable_debug="no" ;;
+          yes) enable_debug="yes" ;;
+           no) enable_debug="no" ;;
+         auto) enable_debug="auto" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
          esac],
-        [enable_debug="no"]
+        [enable_debug="auto"]
 )
+if test "$enable_debug" = "auto"; then
+	if test "x$in_git_src" = "xyes"; then
+		enable_debug="yes"
+	else
+		enable_debug="no"
+	fi
+	AC_MSG_NOTICE([enable-debug in auto mode, enable-debug is set to ${enable_debug}])
+fi
 if test "$enable_debug" = "yes"; then
         AC_DEFINE(DEBUG, 1, [Defined if debug mode is enabled (its easier to check).])
 fi
@@ -1749,6 +1768,27 @@ AM_CONDITIONAL(ENABLE_OMAMQP1, test x$enable_omamqp1 = xyes)
 
 # END AMQP 1.0 PROTOCOL SUPPORT
 
+# TCL SUPPORT
+
+AC_ARG_ENABLE(omtcl,
+        [AS_HELP_STRING([--enable-omtcl],[Compiles omtcl output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtcl="yes" ;;
+          no) enable_omtcl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtcl) ;;
+         esac],
+        [enable_omtcl=no]
+)
+
+if test "x$enable_omtcl" = "xyes"; then
+	SC_PATH_TCLCONFIG
+	SC_LOAD_TCLCONFIG
+	AC_SUBST(TCL_INCLUDE_SPEC)
+fi
+AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
+
+# END TCL SUPPORT
+
 # man pages
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
@@ -1776,10 +1816,6 @@ AC_ARG_ENABLE(distcheck-workaround,
 )
 AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround = xyes)
 
-
-# Running from git source?
-in_git_src=no
-AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
 
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
@@ -1875,6 +1911,7 @@ AC_CONFIG_FILES([Makefile \
 		contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
+		contrib/omtcl/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -1925,6 +1962,7 @@ echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
+echo "    omtcl module will be compiled:            $enable_omtcl"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

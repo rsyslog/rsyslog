@@ -6,7 +6,7 @@
  * it could also be evolved into an any-charset-to-UTF8 converter. But
  * first let's see if it really gets into widespread enough use.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2016 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -193,7 +193,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-static inline void
+static void
 doCC(instanceData *pData, uchar *msg, int lenMsg)
 {
 	int i;
@@ -206,7 +206,7 @@ doCC(instanceData *pData, uchar *msg, int lenMsg)
 }
 
 /* fix an invalid multibyte sequence */
-static inline void
+static void
 fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *endIdx, int8_t seqLen)
 {
 	int i;
@@ -220,7 +220,7 @@ fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *end
 		msg[i] = pData->replChar;
 }
 
-static inline void
+static void
 doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 {
 	uchar c;

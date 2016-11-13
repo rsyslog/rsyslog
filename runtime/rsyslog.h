@@ -460,6 +460,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occured during open() */
 	RS_RET_FILE_CHOWN_ERROR = -2434, /**< error during chown() */
 	RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
+	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -484,7 +485,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
 #endif
 
-# define CHKiConcCtrl(code) if (code != 0) { iRet = RS_RET_CONC_CTRL_ERR; goto finalize_it; }
+# define CHKiConcCtrl(code) if (code != 0) { iRet = RS_RET_CONC_CTRL_ERR; errno = code; goto finalize_it; }
 
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
@@ -623,6 +624,8 @@ rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
+
+void dfltErrLogger(const int, const int, const uchar *errMsg);
 
 
 /* this define below is (later) intended to be used to implement empty

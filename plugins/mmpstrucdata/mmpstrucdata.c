@@ -172,7 +172,7 @@ CODESTARTtryResume
 ENDtryResume
 
 
-static inline rsRetVal
+static rsRetVal
 parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
 {
 	int i, j;
@@ -259,7 +259,7 @@ finalize_it:
 }
 
 
-static inline rsRetVal
+static rsRetVal
 parseSD_ELEMENT(uchar *sdbuf, int lenbuf, int *curridx, struct json_object *jroot)
 {
 	int i;
@@ -302,7 +302,7 @@ finalize_it:
 	RETiRet;
 }
 
-static inline rsRetVal
+static rsRetVal
 parse_sd(instanceData *pData, msg_t *pMsg)
 {
 	struct json_object *json, *jroot;
