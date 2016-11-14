@@ -1,6 +1,6 @@
 /* The RELP (reliable event logging protocol) core protocol library.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -69,6 +69,7 @@ relpEngineCallOnGenericErr(relpEngine_t *pThis, char *eobj, relpRetVal ecode, ch
 	}
 }
 
+#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 static char *
 relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
 #ifndef HAVE_STRERROR_R
@@ -91,7 +92,6 @@ relpEngine_strerror_r(int errnum, char *buf, size_t buflen) {
 	return buf;
 }
 
-#if defined(HAVE_EPOLL_CREATE1) || defined(HAVE_EPOLL_CREATE)
 static relpRetVal
 addToEpollSet(relpEngine_t *pThis, epolld_type_t typ, void *ptr, int sock, epolld_t **pepd)
 {

@@ -64,6 +64,9 @@
 #endif
 
 
+#ifndef SOL_TCP
+#  define SOL_TCP (getprotobyname("tcp")->p_proto)
+#endif
 
 #ifdef ENABLE_TLS
 /* forward definitions */
