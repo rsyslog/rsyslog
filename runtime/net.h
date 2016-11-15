@@ -148,7 +148,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*PrintAllowedSenders)(int iListToPrint);
 	void (*clearAllowedSenders)(uchar*);
 	void (*debugListenInfo)(int fd, char *type);
-	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int ipfreebind);
+	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int ipfreebind, char *device);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
 	rsRetVal (*getLocalHostname)(uchar**);
@@ -168,8 +168,9 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 	/* v8 cvthname() signature change -- rgerhards, 2013-01-18 */
+	/* v9 create_udp_socket() signature change -- dsahern, 2016-11-11 */
 ENDinterface(net)
-#define netCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

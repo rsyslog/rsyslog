@@ -1680,7 +1680,7 @@ EnableKeepAlive(nsd_t *pNsd)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
 static rsRetVal
-Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
+Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
@@ -1694,7 +1694,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	assert(port != NULL);
 	assert(host != NULL);
 
-	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host));
+	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
 
 	if(pThis->iMode == 0)
 		FINALIZE;
