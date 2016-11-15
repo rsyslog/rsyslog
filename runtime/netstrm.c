@@ -326,13 +326,13 @@ GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
+Connect(netstrm_t *pThis, int family, uchar *port, uchar *host, char *device)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(port != NULL);
 	assert(host != NULL);
-	iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host);
+	iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host, device);
 	RETiRet;
 }
 
