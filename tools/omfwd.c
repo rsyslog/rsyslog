@@ -757,9 +757,11 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		}
 		dbgprintf("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
-		pWrkrData->bIsConnected = 1;
 		if(pWrkrData->pSockArray == NULL) {
 			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0);
+		}
+		if(pWrkrData->pSockArray != NULL) {
+			pWrkrData->bIsConnected = 1;
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pWrkrData));
