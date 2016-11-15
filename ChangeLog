@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.27.0 [v8-stable] 2017-01-10
+------------------------------------------------------------------------------
 Version 8.23.0 [v8-stable] 2016-11-15
 - NEW BUILD REQUIREMENT: libfastjson 0.99.3
   This was introduced in 8.20.0 as a suggestion and has now become a hard
