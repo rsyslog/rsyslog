@@ -89,7 +89,7 @@ relpFrameDestruct(relpFrame_t **ppThis)
  * This is a state machine. The transport driver needs to pass in octets received
  * one after the other. This function builds frames and submits them for processing
  * as need arises. Please note that the frame pointed to be ppThis may change during
- * processing. It may be NULL after a frame has fully be processed. On Init, the 
+ * processing. It may be NULL after a frame has fully be processed. On Init, the
  * caller can pass in a NULL pointer.
  * rgerhards, 2008-03-16
  */
@@ -102,7 +102,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 
-	/* we allow NULL pointers, as we would not like to have unprocessed frame. 
+	/* we allow NULL pointers, as we would not like to have unprocessed frame.
 	 * Instead, a NULL frame pointer means that we have finished the previous frame
 	 * (or did never before receive one) and so this character must be the first
 	 * of a new frame. -- rgerhards, 2008-03-17
@@ -407,7 +407,7 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 		pSendbuf->lenData += 1 + lenData;
 
 if((pSendbuf->pData = malloc(pSendbuf->lenData + (9 - lenTxnr) + 1)) == NULL)
-       // remove +1 above (for debugging only!)
+	// remove +1 above (for debugging only!)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 
 	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
@@ -502,7 +502,7 @@ relpFrameBuildMembufAndDestruct(relpFrame_t **ppThis, relpOctet_t **ppMembuf, re
 	/* we got everything, so now let's get our membuf */
 	lenMembuf = lenTxnr + 1 + lenCmd + 1 +
 		    lenDatalen + 1 +  pThis->lenData + 1; /* +1 for SP and TRAILER */
-        if((pMembuf = malloc(lenMembuf)) == NULL)
+	if((pMembuf = malloc(lenMembuf)) == NULL)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 
 	ptrMembuf = pMembuf;

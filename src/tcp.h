@@ -40,12 +40,12 @@
 #include "relp.h"
 
 typedef enum { relpTCP_RETRY_none = 0,
-       relpTCP_RETRY_handshake = 1,
-       relpTCP_RETRY_recv = 2, 
-       relpTCP_RETRY_send = 3 } relpTcpRtryState_t;
+	relpTCP_RETRY_handshake = 1,
+	relpTCP_RETRY_recv = 2,
+	relpTCP_RETRY_send = 3 } relpTcpRtryState_t;
 
 #define RELP_SRV_CONN 0	/**< this conection is a server connection */
-#define RELP_CLT_CONN 1	/**< this conection is a client connection */	
+#define RELP_CLT_CONN 1	/**< this conection is a client connection */
 
 
 /* The tcp module uses an extended version of the permittedPeers structure,
@@ -83,7 +83,7 @@ typedef struct tcpPermittedPeers_s {
 	tcpPermittedPeerEntry_t *peer;
 } tcpPermittedPeers_t;
 
-/* the RELPTCP object 
+/* the RELPTCP object
  * rgerhards, 2008-03-16
  */
 typedef struct relpTcp_s {

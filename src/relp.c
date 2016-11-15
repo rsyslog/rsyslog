@@ -272,7 +272,7 @@ finalize_it:
 
 /** Destruct a RELP engine instance
  * Should be called only a after all RELP functions have been terminated.
- * Terminates librelp operations, no calls are permitted after engine 
+ * Terminates librelp operations, no calls are permitted after engine
  * destruction.
  */
 relpRetVal
@@ -362,7 +362,7 @@ finalize_it:
 }
 
 /* unfortunately, we need to duplicate some functionality to support the <= 0.1.2
- * callback interface (which did not contain a user pointer) and the >= 0.1.3 
+ * callback interface (which did not contain a user pointer) and the >= 0.1.3
  * callback interface. I have thought a lot about doing this smarter, but there
  * is no better way the API offers. The functions ending in ...2() are the new
  * interface. -- rgerhards, 2008-07-08
@@ -400,12 +400,12 @@ relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned 
  *
  * This handler will only be called in a mode with authenticaton.
  * Practically, this means when TLS support is enabled.
- * 
+ *
  * Callback parameters:
  *
  * pUsr     - the user pointer set
  * authinfo - the credentials that have been used to authenticate
- *            the remote peer. This may be a fingerprint or something 
+ *            the remote peer. This may be a fingerprint or something
  *            else, depending on authentication settings.
  * errmsg   - error message as far as librelp is concerned
  * errcode  - contains librelp error status that lead to the failed auth.
@@ -444,7 +444,7 @@ relpEngineSetOnErr(relpEngine_t *pThis, void (*pCB)(void*pUsr, char *objinfo, ch
 }
 
 /**
- * Set an event handler that shall receive information when some GENERIC 
+ * Set an event handler that shall receive information when some GENERIC
  * error occured for which no special handler exists. A generic error is
  * one that cannot be assigned to a specific listener or session.
  * Callback parameters:
@@ -701,7 +701,7 @@ handleSessIO(relpEngine_t *pThis, epolld_t *epd)
 #			else
 					pThis->dbgprint("librelp error: handshake retry requested in "
 							"non-TLS mode");
-				
+
 #			endif /* #ifdef ENABLE_TLS */
 		}
 	} else {
@@ -902,7 +902,7 @@ engineEventLoopRun(relpEngine_t *pThis)
 #						else
 							pThis->dbgprint("librelp error: handshake retry requested in "
 									"non-TLS mode");
-				
+
 #						endif /* #ifdef ENABLE_TLS */
 					}
 				}
@@ -984,18 +984,18 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 
 	pThis->dbgprint("relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
 
-	/* currently, we hardcode the commands. Over time, they may be dynamically 
+	/* currently, we hardcode the commands. Over time, they may be dynamically
 	 * loaded and, when so, should come from a linked list.
 	 * NOTE: the command handler are sorted so that most frequently used are
 	 * at the top of the list!
 	 */
 	if(!strcmp((char*)pFrame->cmd, "syslog")) {
-		/*	When processing Syslog frames, we ignore return code. 
-		*	Otherwise valid messages in the frame buffer will be 
-		*	discarded. And it's better to have duplicated messages 
-		*	instead of losing them. 
+		/*	When processing Syslog frames, we ignore return code.
+		*	Otherwise valid messages in the frame buffer will be
+		*	discarded. And it's better to have duplicated messages
+		*	instead of losing them.
 		*/
-		relpSCSyslog(pFrame, pSess); 
+		relpSCSyslog(pFrame, pSess);
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
 		CHKRet(relpSCRsp(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "open")) {

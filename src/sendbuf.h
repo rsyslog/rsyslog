@@ -35,7 +35,7 @@
 
 #include "relpsess.h"
 
-/* the RELPSENDBUF object 
+/* the RELPSENDBUF object
  * rgerhards, 2008-03-16
  */
 struct relpSendbuf_s {

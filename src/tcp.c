@@ -212,8 +212,8 @@ callOnErr(const relpTcp_t *__restrict__ const pThis,
 
 
 #ifdef ENABLE_TLS
-/* helper to call an error code handler if gnutls failed. If there is a failure, 
- * an error message is pulled form gnutls and the error message properly 
+/* helper to call an error code handler if gnutls failed. If there is a failure,
+ * an error message is pulled form gnutls and the error message properly
  * populated.
  * Returns 1 if an error was detected, 0 otherwise. This can be used as a
  * shortcut for error handling (safes doing it twice).
@@ -263,7 +263,7 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 	if((*ppThis)->sock != -1) {
 		ling.l_onoff = 1;
 		ling.l_linger = 0;
-       		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
+		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
 			(*ppThis)->pEngine->dbgprint("could not set SO_LINGER, errno %d\n", errno);
 		}
 	}
@@ -494,7 +494,7 @@ relpTcpSetPrivKey(relpTcp_t *pThis, char *cert)
 	if(cert == NULL) {
 		pThis->privKeyFile = NULL;
 	} else {
-#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
+#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 			if((pThis->privKeyFile = strdup(cert)) == NULL)
 				ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 #		else
@@ -628,7 +628,7 @@ relpTcpAcceptConnReqInitTLS(relpTcp_t *pThis, relpSrv_t *pSrv)
 	pThis->bTLSActive = 1;
 
 finalize_it:
-  	LEAVE_RELPFUNC;
+	LEAVE_RELPFUNC;
 }
 #pragma GCC diagnostic pop
 #endif /* #ifdef ENABLE_TLS */
@@ -703,7 +703,7 @@ EnableKeepAlive(const relpTcp_t *__restrict__ const pThis,
 	// pThis->pEngine->dbgprint("KEEPALIVE enabled for socket %d\n", sock);
 
 done:
-  	return;
+	return;
 }
 
 /* a portable way to put the current thread asleep. Note that
@@ -794,7 +794,7 @@ finalize_it:
 }
 
 #ifdef ENABLE_TLS
-#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 /* Convert a fingerprint to printable data. The function must be provided a
  * sufficiently large buffer. 512 bytes shall always do.
  */
@@ -967,7 +967,7 @@ relpTcpPermittedPeerWildcardCompile(tcpPermittedPeerEntry_t *pEtry)
 		/* now check if we have an empty component at end of string */
 		if(*pC == '.' && *(pC + 1) == '\0') {
 			/* pStart is a dummy, it is not used if length is 0 */
-			CHKRet(AddPermittedPeerWildcard(pEtry, pStart, 0)); 
+			CHKRet(AddPermittedPeerWildcard(pEtry, pStart, 0));
 		}
 		if(*pC != '\0')
 			++pC;
@@ -977,7 +977,7 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
-#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 /* check a peer against a wildcard entry. This is a more lengthy
  * operation.
  */
@@ -1093,7 +1093,7 @@ relpTcpChkOnePeerName(relpTcp_t *pThis, char *peername, int *pbFoundPositiveMatc
 }
 
 /* Obtain the CN from the DN field and hand it back to the caller
- * (which is responsible for destructing it). We try to follow 
+ * (which is responsible for destructing it). We try to follow
  * RFC2253 as far as it makes sense for our use-case. This function
  * is considered a compromise providing good-enough correctness while
  * limiting code size and complexity. If a problem occurs, we may enhance
@@ -1257,7 +1257,7 @@ relpTcpVerifyCertificateCallback(gnutls_session_t session)
 		r = GNUTLS_E_CERTIFICATE_ERROR; goto done;
 	}
 
-	/* If we reach this point, we have at least one valid certificate. 
+	/* If we reach this point, we have at least one valid certificate.
 	 * We always use only the first certificate. As of GnuTLS documentation, the
 	 * first certificate always contains the remote peer's own certificate. All other
 	 * certificates are issuer's certificates (up the chain). We are only interested
@@ -1324,7 +1324,7 @@ relpTcpLstnInitTLS(relpTcp_t *pThis)
 		}
 		gnutls_anon_set_server_dh_params(pThis->anoncredSrv, pThis->dh_params);
 	} else {
-#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
+#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 		r = gnutls_certificate_allocate_credentials(&pThis->xcred);
 		if(chkGnutlsCode(pThis, "Failed to allocate certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
@@ -1363,8 +1363,8 @@ finalize_it:
 relpRetVal
 relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 {
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, on = 1;
+	struct addrinfo hints, *res, *r;
+	int error, maxs, *s, on = 1;
 	int sockflags;
 	unsigned char *pLstnPt;
 
@@ -1376,54 +1376,54 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 	
 	pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = ai_family;
-        hints.ai_socktype = SOCK_STREAM;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = ai_family;
+	hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
-        if(error) {
+	error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
+	if(error) {
 		pThis->pEngine->dbgprint("error %d querying port '%s'\n", error, pLstnPt);
 		ABORT_FINALIZE(RELP_RET_INVALID_PORT);
 	}
 
-        /* Count max number of sockets we may open */
-        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        pThis->socks = malloc((maxs+1) * sizeof(int));
-        if (pThis->socks == NULL) {
-               pThis->pEngine->dbgprint("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
-               freeaddrinfo(res);
-               ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-        }
+	pThis->socks = malloc((maxs+1) * sizeof(int));
+	if (pThis->socks == NULL) {
+	pThis->pEngine->dbgprint("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
+		freeaddrinfo(res);
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
 
-        *pThis->socks = 0;   /* num of sockets counter at start of array */
-        s = pThis->socks + 1;
+	*pThis->socks = 0;   /* num of sockets counter at start of array */
+	s = pThis->socks + 1;
 	for(r = res; r != NULL ; r = r->ai_next) {
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if (*s < 0) {
+		*s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		if (*s < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				pThis->pEngine->dbgprint("creating relp tcp listen socket");
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
-                        continue;
-                }
+			continue;
+		}
 
 #ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int iOn = 1;
+		if (r->ai_family == AF_INET6) {
+			int iOn = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
-			close(*s);
-			*s = -1;
-			continue;
-                	}
-                }
+				(char *)&iOn, sizeof (iOn)) < 0) {
+				close(*s);
+				*s = -1;
+				continue;
+			}
+		}
 #endif
-       		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			pThis->pEngine->dbgprint("error %d setting relp/tcp socket option\n", errno);
-                        close(*s);
+			close(*s);
 			*s = -1;
 			continue;
 		}
@@ -1438,7 +1438,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 		}
 		if(sockflags == -1) {
 			pThis->pEngine->dbgprint("error %d setting fcntl(O_NONBLOCK) on relp socket", errno);
-                        close(*s);
+			close(*s);
 			*s = -1;
 			continue;
 		}
@@ -1459,10 +1459,10 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 				 "on port '%s'", pLstnPort);
 			msgbuf[sizeof(msgbuf)-1] = '\0';
 			callOnErr(pThis, msgbuf, errno);
-                	close(*s);
+			close(*s);
 			*s = -1;
-                        continue;
-                }
+			continue;
+		}
 
 		if(listen(*s,pThis->iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
@@ -1476,7 +1476,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 				pThis->pEngine->dbgprint("relp listen error %d, suspending\n", errno);
 	                	close(*s);
 				*s = -1;
-               		        continue;
+				continue;
 			}
 		}
 
@@ -1484,17 +1484,17 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_family)
 		s++;
 	}
 
-        if(res != NULL)
-               freeaddrinfo(res);
+	if(res != NULL)
+		freeaddrinfo(res);
 
 	if(*pThis->socks != maxs)
 		pThis->pEngine->dbgprint("We could initialize %d RELP TCP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
 
-        if(*pThis->socks == 0) {
+	if(*pThis->socks == 0) {
 		pThis->pEngine->dbgprint("No RELP TCP listen socket could successfully be initialized, "
 			 "message reception via RELP disabled.\n");
-        	free(pThis->socks);
+		free(pThis->socks);
 		ABORT_FINALIZE(RELP_RET_COULD_NOT_BIND);
 	}
 
@@ -1557,7 +1557,7 @@ setCORKopt(int sock, int onOff)
 #endif
 }
 /* this function is called to hint librelp that a "burst" of data is to be
- * sent. librelp can than try to optimize it's handling. Right now, this 
+ * sent. librelp can than try to optimize it's handling. Right now, this
  * means we turn on the CORK option and will turn it off when we are
  * hinted that the burst is over.
  * The function is intentionally void as it must operate in a way that
@@ -1686,7 +1686,7 @@ relpTcpConnectTLSInit(relpTcp_t *pThis)
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
 		}
 	} else {
-#		ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION  
+#ifdef HAVE_GNUTLS_CERTIFICATE_SET_VERIFY_FUNCTION
 		r = gnutls_certificate_allocate_credentials(&pThis->xcred);
 		if(chkGnutlsCode(pThis, "Failed to allocate certificate credentials", RELP_RET_ERR_TLS_SETUP, r)) {
 			ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
@@ -1820,10 +1820,10 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 
 finalize_it:
 	if(res != NULL)
-               freeaddrinfo(res);
+		freeaddrinfo(res);
 	if(reslocal != NULL)
-               freeaddrinfo(reslocal);
-		
+		freeaddrinfo(reslocal);
+
 	if(iRet != RELP_RET_OK) {
 		if(pThis->sock != -1) {
 			close(pThis->sock);
@@ -1852,7 +1852,7 @@ relpTcpRtryHandshake(relpTcp_t *pThis)
 	ENTER_RELPFUNC;
 	r = gnutls_handshake(pThis->session);
 	if(r < 0) {
-                pThis->pEngine->dbgprint("librelp: state %d during retry handshake: %s\n", r, gnutls_strerror(r));
+		pThis->pEngine->dbgprint("librelp: state %d during retry handshake: %s\n", r, gnutls_strerror(r));
 	}
 	if(r == GNUTLS_E_INTERRUPTED || r == GNUTLS_E_AGAIN) {
 		; /* nothing to do, just keep our status... */

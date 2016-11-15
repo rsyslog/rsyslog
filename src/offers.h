@@ -51,7 +51,7 @@ typedef struct relpOfferValue_s {
 } relpOfferValue_t;
 
 
-/* the RELPOFFER object 
+/* the RELPOFFER object
  * rgerhards, 2008-03-24
  */
 struct relpOffer_s {
