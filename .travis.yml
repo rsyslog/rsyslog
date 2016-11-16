@@ -29,7 +29,7 @@ install:
   - sudo apt-get install -qq --force-yes libestr-dev libfastjson-dev liblogging-stdlog-dev
 
 script:
-  - $CC --version
+  - CI/check_codestyle.sh
   - export CFLAGS="-g -fsanitize=address"
   - autoreconf -fvi
   - ./configure --enable-tls
