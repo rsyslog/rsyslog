@@ -1,4 +1,12 @@
 #!/bin/bash
+# This tests checks for a anomaly we have seen in practice:
+# gethostname() may return an empty string as hostname (""). This broke
+# some versions of rsyslog, newer ones return "localhost" in that case.
+# The test is done with the help of a preload library specifically written
+# for this purpose (liboverride_gethostname.so). It will override
+# gethostname() and return an empty string. Then, the test checks if the
+# hardcoded default of "localhost-empty-hostname" is used.
+# Note that the test may fail if the library is not properly preloaded.
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
 . $srcdir/diag.sh init
