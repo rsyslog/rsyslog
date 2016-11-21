@@ -49,7 +49,17 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
 	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
-	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 }
+	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 },
+	{ "dirowner", eCmdHdlrUID, 0 }, /* legacy: dirowner */
+	{ "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
+	{ "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
+	{ "dirgroupnum", eCmdHdlrInt, 0 }, /* legacy: dirgroupnum */
+	{ "fileowner", eCmdHdlrUID, 0 }, /* legacy: fileowner */
+	{ "fileownernum", eCmdHdlrInt, 0 }, /* legacy: fileownernum */
+	{ "filegroup", eCmdHdlrGID, 0 }, /* legacy: filegroup */
+	{ "filegroupnum", eCmdHdlrInt, 0 }, /* legacy: filegroupnum */
+	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: dircreatemode */
+	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 } /* legacy: filecreatemode */
 };
 static struct cnfparamblk pblk =
 	{ CNFPARAMBLK_VERSION,
@@ -137,6 +147,26 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
 		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
 			rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "dirowner")) {
+			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "dirownernum")) {
+			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "dirgroup")) {
+			rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "dirgroupnum")) {
+			rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "fileowner")) {
+			rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "fileownernum")) {
+			rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "filegroup")) {
+			rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "filegroupnum")) {
+			rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "dircreatemode")) {
+			rsksiSetDirCreateMode(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "filecreatemode")) {
+			rsksiSetCreateMode(pThis->ctx, pvals[i].val.d.n);
 		} else {
 			DBGPRINTF("lmsig_ksi: program error, non-handled "
 			  "param '%s'\n", pblk.descr[i].name);

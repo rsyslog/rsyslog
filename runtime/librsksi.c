@@ -665,9 +665,16 @@ writeStateFile(ksifile ksi)
 	struct rsksistatefile sf;
 
 	fd = open((char*)ksi->statefilename,
-		       O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, 0600);
+		       O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, ksi->ctx->fCreateMode);
 	if(fd == -1)
 		goto done;
+	if (ksi->ctx->fileUID != (uid_t) - 1 || ksi->ctx->fileGID != (gid_t) - 1) {
+		/* we need to set owner/group */
+		if (fchown(fd, ksi->ctx->fileUID, ksi->ctx->fileGID) != 0) {
+			report(ksi->ctx, "lmsig_ksi: chown for file '%s' failed: %s",
+				ksi->statefilename, strerror(errno));
+		}
+	}
 
 	memcpy(sf.hdr, "KSISTAT10", 9);
 	sf.hashID = hashIdentifierKSI(ksi->hashAlg);
@@ -708,10 +715,19 @@ tlvOpenKSI(ksifile ksi, const char *const hdr, unsigned lenHdr)
 	if(ksi->fd == -1) {
 		/* looks like we need to create a new file */
 		ksi->fd = open((char*)ksi->sigfilename,
-			       O_WRONLY|O_CREAT|O_NOCTTY|O_CLOEXEC, 0600);
+			       O_WRONLY|O_CREAT|O_NOCTTY|O_CLOEXEC, ksi->ctx->fCreateMode);
 		if(ksi->fd == -1) {
 			r = RSGTE_IO;
 			goto done;
+		}
+
+		/* check and set uid/gid */
+		if (ksi->ctx->fileUID != (uid_t) - 1 || ksi->ctx->fileGID != (gid_t) - 1) {
+			/* we need to set owner/group */
+			if (fchown(ksi->fd, ksi->ctx->fileUID, ksi->ctx->fileGID) != 0) {
+				report(ksi->ctx, "lmsig_ksi: chown for file '%s' failed: %s",
+					ksi->sigfilename, strerror(errno));
+			}
 		}
 
 		/* Write fileHeader */
@@ -780,6 +796,12 @@ rsksiCtxNew(void)
 	ctx->hashAlg = KSI_HASHALG_SHA2_256;
 	ctx->errFunc = NULL;
 	ctx->usrptr = NULL;
+	ctx->fileUID = -1;
+	ctx->fileGID = -1;
+	ctx->dirUID = -1;
+	ctx->dirGID = -1;
+	ctx->fCreateMode = 0644;
+	ctx->fDirCreateMode = 0700;
 	ctx->timestamper = strdup(
 			   "http://stamper.guardtime.net/gt-signingservice");
 	return ctx;
