@@ -947,7 +947,6 @@ rsRetVal msgDestruct(smsg_t **ppThis)
 { 
 	DEFiRet;
         smsg_t *pThis;
-#endif
 	int currRefCount;
 #	ifdef HAVE_MALLOC_TRIM
 	int currCnt;
@@ -1029,7 +1028,6 @@ CODESTARTobjDestruct(msg)
 		pThis = NULL; /* tell framework not to destructing the object! */
 	}
 ENDobjDestruct(msg)
-
 
 /* The macros below are used in MsgDup(). I use macros
  * to keep the fuction code somewhat more readyble. It is my
