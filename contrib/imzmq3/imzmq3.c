@@ -48,10 +48,6 @@
 
 #include <czmq.h>
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imzmq3");
@@ -553,7 +549,7 @@ finalize_it:
 }
 
 static int handlePoll(zloop_t __attribute__((unused)) * loop, zmq_pollitem_t *poller, void* pd) {
-    msg_t* pMsg;
+    smsg_t* pMsg;
     poller_data* pollerData = (poller_data*)pd;
 
     char* buf = zstr_recv(poller->socket);

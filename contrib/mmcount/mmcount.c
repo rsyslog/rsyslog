@@ -39,9 +39,6 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "hashtable.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 
 #define JSON_COUNT_NAME "!mmcount"
@@ -262,7 +259,7 @@ getCounter(struct hashtable *ht, char *str) {
 }
 
 BEGINdoAction
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	char *appname;
 	struct json_object *json = NULL;
 	es_str_t *estr = NULL;
@@ -271,7 +268,7 @@ BEGINdoAction
 	int *pCounter;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
+	pMsg = (smsg_t*) ppString[0];
 	appname = getAPPNAME(pMsg, LOCK_MUTEX);
 
 	pthread_mutex_lock(&pData->mut);

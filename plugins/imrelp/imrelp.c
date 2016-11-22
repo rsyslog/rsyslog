@@ -48,10 +48,6 @@
 #include "ruleset.h"
 #include "glbl.h"
 #include "statsobj.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -205,7 +201,7 @@ static relpRetVal
 onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 {
 	prop_t *pProp = NULL;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	DEFiRet;
 

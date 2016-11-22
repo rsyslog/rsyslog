@@ -83,10 +83,6 @@
 #include "msg.h"
 #include "prop.h"
 #include "sun_cddl.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -186,7 +182,7 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 	struct strbuf ctl;
 	struct log_ctl hdr;
 	int flags;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	int ret;
 	char errStr[1024];
 

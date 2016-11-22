@@ -27,28 +27,20 @@
 #define IMINTERNAL_H_INCLUDED
 #include "template.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 /* this is a single entry for a parse routine. It describes exactly
  * one entry point/handler.
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
 struct iminternal_s { /* config file sysline parse entry */
-	msg_t *pMsg;	/* the message (in all its glory) */
+	smsg_t *pMsg;	/* the message (in all its glory) */
 };
 typedef struct iminternal_s iminternal_t;
 
 /* prototypes */
 rsRetVal modInitIminternal(void);
 rsRetVal modExitIminternal(void);
-rsRetVal iminternalAddMsg(msg_t *pMsg);
+rsRetVal iminternalAddMsg(smsg_t *pMsg);
 rsRetVal iminternalHaveMsgReady(int* pbHaveOne);
-rsRetVal iminternalRemoveMsg(msg_t **ppMsg);
-
-#ifdef _AIX
-#undef msg_t
-#endif
+rsRetVal iminternalRemoveMsg(smsg_t **ppMsg);
 
 #endif /* #ifndef IMINTERNAL_H_INCLUDED */

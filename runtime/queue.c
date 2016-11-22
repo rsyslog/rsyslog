@@ -62,10 +62,6 @@
 #include "statsobj.h"
 #include "parserif.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 #ifdef OS_SOLARIS
 #	include <sched.h>
 #endif
@@ -84,7 +80,7 @@ unsigned int iOverallQueueSize = 0;
 #endif
 
 /* forward-definitions */
-static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg);
+static inline rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg);
 static rsRetVal qqueueChkPersist(qqueue_t *pThis, int nUpdates);
 static rsRetVal RateLimiter(qqueue_t *pThis);
 /*  AIXPORT : return type mismatch corrected */
@@ -98,7 +94,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal batchProcessed(qqueue_t *pThis, wti_t *pWti);
 static rsRetVal qqueueMultiEnqObjNonDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
 static rsRetVal qqueueMultiEnqObjDirect(qqueue_t *pThis, multi_submit_t *pMultiSub);
-static rsRetVal qAddDirect(qqueue_t *pThis, msg_t *pMsg);
+static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg);
 static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qConstructDirect(qqueue_t __attribute__((unused)) *pThis);
 static rsRetVal qDestructDisk(qqueue_t *pThis);
@@ -337,7 +333,7 @@ getLogicalQueueSize(qqueue_t *pThis)
  */
 static void queueDrain(qqueue_t *pThis)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	ASSERT(pThis != NULL);
 
 	BEGINfunc
@@ -570,7 +566,7 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis)
 }
 
 
-static rsRetVal qAddFixedArray(qqueue_t *pThis, msg_t* in)
+static rsRetVal qAddFixedArray(qqueue_t *pThis, smsg_t* in)
 {
 	DEFiRet;
 
@@ -584,7 +580,7 @@ static rsRetVal qAddFixedArray(qqueue_t *pThis, msg_t* in)
 }
 
 
-static rsRetVal qDeqFixedArray(qqueue_t *pThis, msg_t **out)
+static rsRetVal qDeqFixedArray(qqueue_t *pThis, smsg_t **out)
 {
 	DEFiRet;
 
@@ -645,7 +641,7 @@ static rsRetVal qDestructLinkedList(qqueue_t __attribute__((unused)) *pThis)
 	RETiRet;
 }
 
-static rsRetVal qAddLinkedList(qqueue_t *pThis, msg_t* pMsg)
+static rsRetVal qAddLinkedList(qqueue_t *pThis, smsg_t* pMsg)
 {
 	qLinkedList_t *pEntry;
 	DEFiRet;
@@ -671,7 +667,7 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqLinkedList(qqueue_t *pThis, msg_t **ppMsg)
+static rsRetVal qDeqLinkedList(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	qLinkedList_t *pEntry;
 	DEFiRet;
@@ -945,7 +941,7 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	RETiRet;
 }
 
-static rsRetVal qAddDisk(qqueue_t *pThis, msg_t* pMsg)
+static rsRetVal qAddDisk(qqueue_t *pThis, smsg_t* pMsg)
 {
 	DEFiRet;
 	number_t nWriteCount;
@@ -986,7 +982,7 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqDisk(qqueue_t *pThis, msg_t **ppMsg)
+static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	DEFiRet;
 	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
@@ -1007,7 +1003,7 @@ static rsRetVal qDestructDirect(qqueue_t __attribute__((unused)) *pThis)
 	return RS_RET_OK;
 }
 
-static rsRetVal qAddDirectWithWti(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
+static rsRetVal qAddDirectWithWti(qqueue_t *pThis, smsg_t* pMsg, wti_t *pWti)
 {
 	batch_t singleBatch;
 	batch_obj_t batchObj;
@@ -1042,7 +1038,7 @@ static rsRetVal qAddDirectWithWti(qqueue_t *pThis, msg_t* pMsg, wti_t *pWti)
  * to obtain a dummy pWti.
  */
 static rsRetVal
-qAddDirect(qqueue_t *pThis, msg_t* pMsg)
+qAddDirect(qqueue_t *pThis, smsg_t* pMsg)
 {
 	wti_t *pWti;
 	DEFiRet;
@@ -1063,7 +1059,7 @@ qAddDirect(qqueue_t *pThis, msg_t* pMsg)
  * things truely different. -- rgerhards, 2008-02-12
  */
 static rsRetVal
-qqueueAdd(qqueue_t *pThis, msg_t *pMsg)
+qqueueAdd(qqueue_t *pThis, smsg_t *pMsg)
 {
 	DEFiRet;
 
@@ -1105,7 +1101,7 @@ finalize_it:
 /* generic code to dequeue a queue entry
  */
 static rsRetVal
-qqueueDeq(qqueue_t *pThis, msg_t **ppMsg)
+qqueueDeq(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	DEFiRet;
 
@@ -1493,7 +1489,7 @@ qqueueSetDefaultsRulesetQueue(qqueue_t *pThis)
  * the return state!
  * rgerhards, 2008-01-24
  */
-static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, msg_t *pMsg)
+static int qqueueChkDiscardMsg(qqueue_t *pThis, int iQueueSize, smsg_t *pMsg)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -1624,7 +1620,7 @@ static rsRetVal
 DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch)
 {
 	int i;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	int nEnqueued = 0;
 	rsRetVal localRet;
 	DEFiRet;
@@ -1674,7 +1670,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 	int nDiscarded;
 	int nDeleted;
 	int iQueueSize;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	rsRetVal localRet;
 	DEFiRet;
 
@@ -2803,7 +2799,7 @@ finalize_it:
  * rgerhards, 2009-06-16
  */
 static rsRetVal
-doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
+doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 {
 	DEFiRet;
 	int err;
@@ -2999,7 +2995,7 @@ finalize_it:
  * Enqueues the new element and awakes worker thread.
  */
 rsRetVal
-qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, msg_t *pMsg)
+qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 {
 	DEFiRet;
 	int iCancelStateSave;

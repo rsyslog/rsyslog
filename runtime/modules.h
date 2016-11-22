@@ -38,10 +38,6 @@
 #include "objomsr.h"
 #include "rainerscript.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 /* the following define defines the current version of the module interface.
  * It can be used by any module which want's to simply prevent version conflicts
@@ -156,11 +152,11 @@ struct modInfo_s {
 		struct { /* data for parser modules */
 			rsRetVal (*newParserInst)(struct nvlst *lst, void *pinst);
 			rsRetVal (*freeParserInst)(void *pinst);
-			rsRetVal (*parse2)(instanceConf_t *const, msg_t*);
-			rsRetVal (*parse)(msg_t*);
+			rsRetVal (*parse2)(instanceConf_t *const, smsg_t*);
+			rsRetVal (*parse)(smsg_t*);
 		} pm;
 		struct { /* data for strgen modules */
-			rsRetVal (*strgen)(const msg_t*const, actWrkrIParams_t *const iparam);
+			rsRetVal (*strgen)(const smsg_t*const, actWrkrIParams_t *const iparam);
 		} sm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
@@ -207,8 +203,5 @@ rsRetVal modulesProcessCnf(struct cnfobj *o);
 uchar *modGetName(modInfo_t *pThis);
 rsRetVal addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast);
 rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast);
-#ifdef _AIX
-#undef msg_t
-#endif
 
 #endif /* #ifndef MODULES_H_INCLUDED */

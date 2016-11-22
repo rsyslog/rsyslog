@@ -77,10 +77,6 @@
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
- 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imptcp")
@@ -803,7 +799,7 @@ finalize_it:
 static rsRetVal
 doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	ptcpsrv_t *pSrv;
 	DEFiRet;
 
@@ -983,7 +979,7 @@ static rsRetVal
 DataRcvdUncompressed(ptcpsess_t *pThis, char *pData, size_t iLen, struct syslogTime *stTime, time_t ttGenTime)
 {
 	multi_submit_t multiSub;
-	msg_t *pMsgs[CONF_NUM_MULTISUB];
+	smsg_t *pMsgs[CONF_NUM_MULTISUB];
 	char *pEnd;
 	unsigned nMsgs = 0;
 	DEFiRet;

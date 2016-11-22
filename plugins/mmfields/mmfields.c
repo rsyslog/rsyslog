@@ -37,10 +37,6 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
- 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -203,7 +199,7 @@ extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, ucha
 
 
 static rsRetVal
-parse_fields(instanceData *pData, msg_t *pMsg, uchar *msgtext, int lenMsg)
+parse_fields(instanceData *pData, smsg_t *pMsg, uchar *msgtext, int lenMsg)
 {
 	uchar fieldbuf[32*1024];
 	uchar fieldname[512];
@@ -243,8 +239,8 @@ finalize_it:
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 CODESTARTdoAction

@@ -39,11 +39,6 @@
 #include "module-template.h"
 #include "errmsg.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
-
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmpstrucdata")
@@ -308,7 +303,7 @@ finalize_it:
 }
 
 static rsRetVal
-parse_sd(instanceData *pData, msg_t *pMsg)
+parse_sd(instanceData *pData, smsg_t *pMsg)
 {
 	struct json_object *json, *jroot;
 	uchar *sdbuf;
@@ -339,8 +334,8 @@ finalize_it:
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 CODESTARTdoAction
 	DBGPRINTF("mmpstrucdata: enter\n");
 	if(!MsgHasStructuredData(pMsg)) {

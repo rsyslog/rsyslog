@@ -24,7 +24,7 @@ if test "$unamestr" = "AIX"; then
 	GNUTLS_CFLAGS="-I/usr/include"
 	RELP_LIBS="-L/usr/lib/ -lrelp"
 	RELP_CFLAGS="-I/usr/include"
-	CC="xlc"
+	CC="xlc_r"
 	AC_PREFIX_DEFAULT(/usr)
 	export  ac_cv_func_malloc_0_nonnull=yes
 	export ac_cv_func_realloc_0_nonnull=yes
@@ -1860,12 +1860,6 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
-
-if test "$unamestr" = "AIX"; then
-        have_to_generate_man_pages=no
-else
-        have_to_generate_man_pages=yes
-fi
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])

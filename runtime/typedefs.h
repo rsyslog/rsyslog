@@ -35,10 +35,6 @@
 #if defined(__FreeBSD__) || !defined(HAVE_LSEEK64)
 #include <sys/types.h>
 #endif
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 /* some universal fixed size integer defines ... */
 typedef long long int64;
@@ -71,7 +67,7 @@ typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
 typedef struct msgPropDescr_s msgPropDescr_t;
-typedef struct msg msg_t;
+typedef struct msg smsg_t;
 typedef struct queue_s qqueue_t;
 typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
@@ -289,7 +285,7 @@ typedef struct multi_submit_s multi_submit_t;
 struct multi_submit_s {
 	short	maxElem;	/* maximum number of Elements */
 	short	nElem;		/* current number of Elements, points to the next one FREE */
-	msg_t	**ppMsgs;
+	smsg_t	**ppMsgs;
 };
 
 /* the following structure is a helper to describe a message property */
@@ -302,9 +298,5 @@ struct msgPropDescr_s {
 /* some forward-definitions from the grammar */
 struct nvlst;
 struct cnfobj;
-
-#ifdef _AIX
-#undef msg_t
-#endif
 
 #endif /* multi-include protection */

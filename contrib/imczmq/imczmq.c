@@ -37,9 +37,6 @@
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include <czmq.h>
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -334,7 +331,7 @@ static rsRetVal rcvData(){
 			DBGPRINTF("imczmq: null buffer\n");
 			continue;
 		}
-		msg_t *pMsg;
+		smsg_t *pMsg;
 		if(msgConstruct(&pMsg) == RS_RET_OK) {
 			MsgSetRawMsg(pMsg, buf, strlen(buf));
 			MsgSetInputName(pMsg, s_namep);

@@ -48,10 +48,6 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 
- 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -217,7 +213,7 @@ done:	return;
  * not handle those border-cases that are describe to cannot exist!
  */
 static void
-processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
+processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *const pMsg)
 {
 	rsRetVal iRet;
 	char errStr[1024];
@@ -450,7 +446,7 @@ tryRestart(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict__ const pMsg)
+callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict__ const pMsg)
 {
 	int lenWritten;
 	int lenWrite;
@@ -517,8 +513,8 @@ finalize_it:
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;

@@ -62,9 +62,6 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -132,7 +129,7 @@ static rsRetVal
 enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp)
 {
 	struct syslogTime st;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	assert(msg != NULL);

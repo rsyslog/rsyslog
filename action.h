@@ -27,10 +27,6 @@
 
 #include "syslogd-types.h"
 #include "queue.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 /* external data */
 extern int glbliActionResumeRetryCount;
@@ -65,7 +61,7 @@ struct action_s {
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
-	rsRetVal (*submitToActQ)(action_t *, wti_t*, msg_t*);/* function submit message to action queue */
+	rsRetVal (*submitToActQ)(action_t *, wti_t*, smsg_t*);/* function submit message to action queue */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	sbool	bUsesMsgPassingMode;
 	sbool	bNeedReleaseBatch; /* do we need to release batch ressources? Depends on ParamPassig modes... */
@@ -100,7 +96,7 @@ rsRetVal actionDestruct(action_t *pThis);
 //rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
-rsRetVal actionWriteToAction(action_t *pAction, msg_t *pMsg, wti_t*);
+rsRetVal actionWriteToAction(action_t *pAction, smsg_t *pMsg, wti_t*);
 rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, struct cnfparamvals *actParams, struct nvlst *lst);
@@ -113,7 +109,4 @@ void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);
 /* external data */
 extern int iActionNbr;
 
-#ifdef _AIX
-#undef msg_t
-#endif
 #endif /* #ifndef ACTION_H_INCLUDED */

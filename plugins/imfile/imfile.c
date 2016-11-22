@@ -58,9 +58,6 @@
 #include "ratelimit.h"
 
 #include <regex.h> // TODO: fix via own module
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 MODULE_TYPE_NOKEEP
@@ -467,7 +464,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
                         cstr_t *const __restrict__ cstrLine)
 {
 	DEFiRet;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 
 	if(rsCStrLen(cstrLine) == 0) {
 		/* we do not process empty lines */
@@ -977,7 +974,7 @@ addListner(instanceConf_t *inst)
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t *)));
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(smsg_t *)));
 	pThis->multiSub.maxElem = inst->nMultiSub;
 	pThis->multiSub.nElem = 0;
 	pThis->iSeverity = inst->iSeverity;
@@ -1593,7 +1590,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
 	pThis->multiSub.maxElem = existing->multiSub.maxElem;
 	pThis->multiSub.nElem = 0;
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(smsg_t*)));
 	pThis->iSeverity = existing->iSeverity;
 	pThis->iFacility = existing->iFacility;
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;

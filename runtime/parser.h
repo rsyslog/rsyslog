@@ -20,10 +20,6 @@
  */
 #ifndef INCLUDED_PARSER_H
 #define INCLUDED_PARSER_H
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 /* we create a small helper object, a list of parsers, that we can use to
  * build a chain of them whereever this is needed (initially thought to be
@@ -59,8 +55,8 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*DestructParserList)(parserList_t **pListRoot);
 	rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);
 	/* static functions */
-	rsRetVal (*ParseMsg)(msg_t *pMsg);
-	rsRetVal (*SanitizeMsg)(msg_t *pMsg);
+	rsRetVal (*ParseMsg)(smsg_t *pMsg);
+	rsRetVal (*SanitizeMsg)(smsg_t *pMsg);
 	rsRetVal (*AddDfltParser)(uchar *);
 ENDinterface(parser)
 #define parserCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
@@ -75,8 +71,4 @@ PROTOTYPEObj(parser);
 rsRetVal parserConstructViaModAndName(modInfo_t *pMod, uchar *const pName, void *parserInst);
 
 
-
-#ifdef _AIX
-#undef msg_t
-#endif
 #endif /* #ifndef INCLUDED_PARSER_H */

@@ -114,10 +114,9 @@
 #include "parserif.h"
 #include "statsobj.h"
 
-/* AIXPORT : cs renamed to cs as clashes with libpthreads variable in complete file*/
+/* AIXPORT : cs renamed to legacy_cs as clashes with libpthreads variable in complete file*/
 #ifdef _AIX
-#define msg_t msg_tt
-#define cs cs_t
+#define cs legacy_cs
 #endif
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -127,9 +126,9 @@
 
 /* forward definitions */
 static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
-static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t*);
-static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t*);
-static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t*);
+static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t*);
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj)
@@ -958,7 +957,7 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 static rsRetVal
 prepareDoActionParams(action_t * __restrict__ const pAction,
 		      wti_t * __restrict__ const pWti,
-		      msg_t *__restrict__ const pMsg,
+		      smsg_t *__restrict__ const pMsg,
 		      struct syslogTime *ttNow)
 {
 	int i;
@@ -1370,7 +1369,7 @@ actionCommitAllDirect(wti_t *__restrict__ const pWti)
 static rsRetVal
 processMsgMain(action_t *__restrict__ const pAction,
 	wti_t *__restrict__ const pWti,
-	msg_t *__restrict__ const pMsg,
+	smsg_t *__restrict__ const pMsg,
 	struct syslogTime *ttNow)
 {
 	DEFiRet;
@@ -1525,7 +1524,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
+doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
@@ -1574,7 +1573,7 @@ finalize_it:
  * be filtered out before calling us (what is done currently!).
  */
 rsRetVal
-actionWriteToAction(action_t * const pAction, msg_t *pMsg, wti_t * const pWti)
+actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1643,7 +1642,7 @@ finalize_it:
 #pragma GCC diagnostic ignored "-Wempty-body"
 #endif
 static rsRetVal
-doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
+doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
 	DEFiRet;
 
@@ -1721,7 +1720,7 @@ activateActions(void)
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t * const pMsg)
+doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t * const pMsg)
 {
 	int doProcess = 1;
 	time_t lastAct;

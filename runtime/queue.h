@@ -32,10 +32,6 @@
 #include "statsobj.h"
 #include "cryprov.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 /* support for the toDelete list */
 typedef struct toDeleteLst_s toDeleteLst_t;
 struct toDeleteLst_s {
@@ -56,7 +52,7 @@ typedef enum {
 /* list member definition for linked list types of queues: */
 typedef struct qLinkedList_S {
 	struct qLinkedList_S *pNext;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 } qLinkedList_t;
 
 
@@ -115,8 +111,8 @@ struct queue_s {
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
-	rsRetVal (*qAdd)(struct queue_s *pThis, msg_t *pMsg);
-	rsRetVal (*qDeq)(struct queue_s *pThis, msg_t **ppMsg);
+	rsRetVal (*qAdd)(struct queue_s *pThis, smsg_t *pMsg);
+	rsRetVal (*qDeq)(struct queue_s *pThis, smsg_t **ppMsg);
 	rsRetVal (*qDel)(struct queue_s *pThis);
 	/* end type-specific handler */
 	/* public entry points (set during construction, permit to set best algorithm for params selected) */
@@ -200,7 +196,7 @@ struct queue_s {
 
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
-rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, msg_t *pMsg);
+rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
 rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
@@ -239,8 +235,4 @@ PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 extern unsigned int iOverallQueueSize;
 #endif
 
-
-#ifdef _AIX
-#undef msg_t
-#endif
 #endif /* #ifndef QUEUE_H_INCLUDED */

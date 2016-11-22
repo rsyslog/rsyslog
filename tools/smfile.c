@@ -45,7 +45,6 @@
 #include "unicode-helper.h"
 
 #ifdef _AIX
-#define msg_t msg_tt
 #endif
 MODULE_TYPE_STRGEN
 MODULE_TYPE_NOKEEP

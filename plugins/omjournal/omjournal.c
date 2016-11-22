@@ -45,10 +45,6 @@
 #include <systemd/sd-journal.h>
 #include "unicode-helper.h"
 #include <sys/uio.h>
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -249,7 +245,7 @@ fail:
 
 
 static void
-send_non_template_message(msg_t *const __restrict__ pMsg)
+send_non_template_message(smsg_t *const __restrict__ pMsg)
 {
 	uchar *tag;
 	int lenTag;
@@ -289,7 +285,7 @@ CODESTARTdoAction
 	pData = pWrkrData->pData;
 
 	if (pData->tplName == NULL) {
-		send_non_template_message((msg_t*) ((void**)pMsgData)[0]);
+		send_non_template_message((smsg_t*) ((void**)pMsgData)[0]);
 	} else {
 		send_template_message((struct json_object*) ((void**)pMsgData)[0]);
 	}

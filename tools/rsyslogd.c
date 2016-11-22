@@ -62,10 +62,6 @@
 #include "dirty.h"
 #include "janitor.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 #if defined(_AIX)
 /* AIXPORT : start
  * The following includes and declarations are for support of the System
@@ -642,7 +638,7 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
 	int bIsPermitted;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	int i;
 	rsRetVal localRet;
 	DEFiRet;
@@ -812,14 +808,14 @@ rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 }
 
 static inline rsRetVal
-submitMsgWithDfltRatelimiter(msg_t *pMsg)
+submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 {
 	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 }
 
 
 static void
-logmsgInternal_doWrite(msg_t *const __restrict__ pMsg)
+logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
 {
 	if(bProcessInternalMessages) {
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
@@ -842,7 +838,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
@@ -925,7 +921,7 @@ finalize_it:
 }
 
 rsRetVal
-submitMsg(msg_t *pMsg)
+submitMsg(smsg_t *pMsg)
 {
 	return submitMsgWithDfltRatelimiter(pMsg);
 }
@@ -935,7 +931,7 @@ submitMsg(msg_t *pMsg)
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg2(msg_t *pMsg)
+submitMsg2(smsg_t *pMsg)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -1486,7 +1482,7 @@ finalize_it:
 static void
 processImInternal(void)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
 		logmsgInternal_doWrite(pMsg);
@@ -1505,7 +1501,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
 {
 	prop_t *pProp = NULL;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	/* we now create our own message object and submit it to the queue */

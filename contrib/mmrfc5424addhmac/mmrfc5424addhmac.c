@@ -62,10 +62,6 @@
 #include "module-template.h"
 #include "errmsg.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmrfc5424addhmac")
@@ -285,7 +281,7 @@ done:
 
 /* check if "our" hmac is already present */
 static sbool
-isHmacPresent(instanceData *pData, msg_t *pMsg)
+isHmacPresent(instanceData *pData, smsg_t *pMsg)
 {
 	uchar *sdbuf;
 	rs_size_t sdlen;
@@ -314,7 +310,7 @@ done:
 }
 
 static rsRetVal
-hashMsg(instanceData *pData, msg_t *pMsg)
+hashMsg(instanceData *pData, smsg_t *pMsg)
 {
 	uchar *pRawMsg;
 	int lenRawMsg;
@@ -341,9 +337,9 @@ hashMsg(instanceData *pData, msg_t *pMsg)
 
 BEGINdoAction
 	instanceData *pData = pWrkrData->pData;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
+	pMsg = (smsg_t*) ppString[0];
 	if(   msgGetProtocolVersion(pMsg) == MSG_RFC5424_PROTOCOL
 	   && !isHmacPresent(pData, pMsg)) {
 		hashMsg(pData, pMsg);

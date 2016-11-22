@@ -87,7 +87,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 #if defined(_AIX)
 #define ucred  ucred_t
-#define msg_t msg_tt
 #endif 
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
@@ -770,7 +769,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 static rsRetVal
 SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
-	msg_t *pMsg = NULL;
+	smsg_t *pMsg = NULL;
 	int lenMsg;
 	int offs;
 	int i;
@@ -1062,13 +1061,13 @@ static rsRetVal readSocket(lstn_t *pLstn)
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				ifdef HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
-				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
 				if(   pLstn->bUseSysTimeStamp 
-				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SO_TIMESTAMP) {
 					ts = (struct timeval *)CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SO_TIMESTAMP */

@@ -47,10 +47,6 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmnormalize")
@@ -227,8 +223,8 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	uchar *buf;
 	rs_size_t len;
 	int r;

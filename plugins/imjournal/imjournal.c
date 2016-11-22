@@ -49,9 +49,6 @@
 #include "srUtils.h"
 #include "unicode-helper.h"
 #include "ratelimit.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 
 MODULE_TYPE_INPUT
@@ -180,7 +177,7 @@ static rsRetVal
 enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
 {
 	struct syslogTime st;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	size_t len;
 	DEFiRet;
 

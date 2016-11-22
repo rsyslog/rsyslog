@@ -27,10 +27,6 @@
 #include "linkedlist.h"
 #include "rsconf.h"
 
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
-
 /* the ruleset object */
 struct ruleset_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -57,7 +53,7 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	ruleset_t* (*GetCurrent)(rsconf_t *conf);
 	qqueue_t* (*GetRulesetQueue)(ruleset_t*);
 	/* v3, 2009-11-04 */
-	parserList_t* (*GetParserList)(rsconf_t *conf, msg_t *);
+	parserList_t* (*GetParserList)(rsconf_t *conf, smsg_t *);
 	/* v5, 2011-04-19
 	 * added support for the rsconf object -- fundamental change
 	 * v6, 2011-07-15
@@ -105,9 +101,5 @@ rsRetVal activateRulesetQueues(void);
 
 /* Set a current rule set to already-known pointer */
 #define rulesetSetCurrRulesetPtr(pRuleset) (loadConf->rulesets.pCurr = (pRuleset))
-
-#ifdef _AIX
-#undef msg_t
-#endif
 
 #endif /* #ifndef INCLUDED_RULESET_H */

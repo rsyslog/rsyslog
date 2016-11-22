@@ -48,9 +48,6 @@
 #include "statsobj.h"
 #include "prop.h"
 #include "ruleset.h"
-#ifdef _AIX
-#define msg_t msg_tt
-#endif
 
 
 MODULE_TYPE_INPUT
@@ -165,7 +162,7 @@ initConfigSettings(void)
 static void
 doSubmitMsg(uchar *line)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 
 	if(msgConstruct(&pMsg) != RS_RET_OK)
 		goto finalize_it;
