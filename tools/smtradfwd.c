@@ -40,8 +40,6 @@
 #include "msg.h"
 #include "module-template.h"
 #include "unicode-helper.h"
-#ifdef _AIX
-#endif
 
 MODULE_TYPE_STRGEN
 MODULE_TYPE_NOKEEP

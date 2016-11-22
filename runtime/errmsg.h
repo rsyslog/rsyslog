@@ -28,7 +28,7 @@
 /* the errmsg object */
 typedef struct errmsg_s {
     	char dummy;
-} errsmsg_t;
+} errmsg_t;
 
 
 /* interfaces */

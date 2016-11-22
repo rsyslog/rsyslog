@@ -1061,13 +1061,13 @@ static rsRetVal readSocket(lstn_t *pLstn)
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				ifdef HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
-				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SCM_CREDENTIALS) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
 				if(   pLstn->bUseSysTimeStamp 
-				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SO_TIMESTAMP) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
 					ts = (struct timeval *)CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SO_TIMESTAMP */

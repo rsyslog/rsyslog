@@ -32,7 +32,7 @@ typedef enum {
 } varType_t;
 
 /* the var object */
-typedef struct svar_s {
+typedef struct var_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	cstr_t *pcsName;
 	varType_t varType;

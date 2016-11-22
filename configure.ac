@@ -38,7 +38,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
-AC_INIT([rsyslog],[8.24.0.master],[rsyslog@lists.adiscon.com])
 
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -1863,6 +1862,8 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
+
+        have_to_generate_man_pages=yes
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
