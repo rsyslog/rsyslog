@@ -177,7 +177,7 @@ relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 		if((pThis->pLstnPort = (unsigned char*) strdup((char*)pLstnPort)) == NULL)
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
-		
+
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -188,7 +188,7 @@ relpSrvSetAuthMode(relpSrv_t *pThis, char *mode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Srv);
-	if(mode == NULL) 
+	if(mode == NULL)
 		FINALIZE;
 
 	if(!strcasecmp(mode, "fingerprint"))
@@ -197,7 +197,7 @@ relpSrvSetAuthMode(relpSrv_t *pThis, char *mode)
 		pThis->authmode = eRelpAuthMode_Name;
 	else
 		ABORT_FINALIZE(RELP_RET_INVLD_AUTH_MD);
-		
+
 finalize_it:
 	LEAVE_RELPFUNC;
 }
@@ -357,7 +357,7 @@ relpSrvRun(relpSrv_t *pThis)
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
 	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
-		
+
 	pThis->pTcp = pTcp;
 
 finalize_it:

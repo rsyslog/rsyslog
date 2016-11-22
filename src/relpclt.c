@@ -258,7 +258,7 @@ relpCltSetAuthMode(relpClt_t *pThis, char *mode)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Clt);
-	if(mode == NULL) 
+	if(mode == NULL)
 		FINALIZE;
 
 	if(!strcasecmp(mode, "fingerprint"))
@@ -267,7 +267,7 @@ relpCltSetAuthMode(relpClt_t *pThis, char *mode)
 		pThis->authmode = eRelpAuthMode_Name;
 	else
 		ABORT_FINALIZE(RELP_RET_INVLD_AUTH_MD);
-		
+
 finalize_it:
 	LEAVE_RELPFUNC;
 }

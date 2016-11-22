@@ -48,7 +48,7 @@ typedef struct relpSendqe_s {
 	relpSendbuf_t *pBuf; /* our send buffer */
 } relpSendqe_t;
 
-/* the RELPSENDQ object 
+/* the RELPSENDQ object
  * This provides more or less just the root of the sendq entries.
  * rgerhards, 2008-03-16
  */

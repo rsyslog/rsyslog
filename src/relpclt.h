@@ -33,7 +33,7 @@
 #ifndef RELPCLT_H_INCLUDED
 #define	RELPCLT_H_INCLUDED
 
-/* the RELPCLT object 
+/* the RELPCLT object
  * rgerhards, 2008-03-16
  */
 struct relpClt_s {

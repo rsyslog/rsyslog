@@ -46,7 +46,7 @@ typedef enum relpFrameRcvStates_e {
 } relpFrameRcvState_t;
 
 
-/* the RELPFRAME object 
+/* the RELPFRAME object
  * rgerhards, 2008-03-16
  */
 struct relpFrame_s {

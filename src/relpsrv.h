@@ -36,7 +36,7 @@
 #include "relp.h"
 #include "tcp.h"
 
-/* the RELPSRV object 
+/* the RELPSRV object
  * rgerhards, 2008-03-17
  */
 struct relpSrv_s {

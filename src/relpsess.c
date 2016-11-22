@@ -308,7 +308,7 @@ finalize_it:
 }
 
 
-/* Send a command hint to the remote peer. This function works for the 
+/* Send a command hint to the remote peer. This function works for the
  * server-side of the connection. A modified version must be used for the
  * client side (because we have different ways of sending the data). We do
  * not yet need the client side. If we do, way should think about a generic
@@ -538,7 +538,7 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 				ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 			}
 		}
-		else 
+		else
 			pThis->pEngine->dbgprint("relpSessWaitRsp poll returns, "
 				"nfds %d, errno %d\n", nfds, errno);
 		if(relpEngineShouldStop(pThis->pEngine))
@@ -556,8 +556,8 @@ relpSessWaitState(relpSess_t *const pThis, const relpSessState_t stateExpected, 
 
 finalize_it:
 	pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
-	if(	iRet == RELP_RET_TIMED_OUT || 
-		iRet == RELP_RET_SESSION_BROKEN || 
+	if(	iRet == RELP_RET_TIMED_OUT ||
+		iRet == RELP_RET_SESSION_BROKEN ||
 		relpEngineShouldStop(pThis->pEngine)) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
@@ -685,7 +685,7 @@ finalize_it:
 
 
 /* callback when the "open" command has been processed
- * Most importantly, this function needs to check if we are 
+ * Most importantly, this function needs to check if we are
  * compatible with the server-provided offers and terminate if
  * not. If we are, we must set our own parameters to match the
  * server-provided ones. Please note that the offer processing here

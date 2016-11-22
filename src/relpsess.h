@@ -63,7 +63,7 @@ typedef enum relpSessType_e {
 } relpSessType_t; /* what type of session are we? */
 
 
-/* the RELPSESS object 
+/* the RELPSESS object
  * rgerhards, 2008-03-16
  */
 struct relpSess_s {

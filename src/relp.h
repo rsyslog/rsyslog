@@ -106,7 +106,7 @@ typedef struct relpEngSessLst_s {
 } relpEngSessLst_t;
 
 
-/* the RELP engine object 
+/* the RELP engine object
  * Having a specific engine object enables multiple plugins to call the
  * RELP engine at the same time. The core idea of librelp is to have no
  * static data at all and everything stored in RELP engine objects. Every
