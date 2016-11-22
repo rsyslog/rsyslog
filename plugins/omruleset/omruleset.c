@@ -126,8 +126,8 @@ ENDtryResume
  * work off a queue. So a delay would just block out execution for longer than needed.
  */
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg;
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg;
 CODESTARTdoAction
 	CHKmalloc(pMsg = MsgDup(ppMsg[0]));
 	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,

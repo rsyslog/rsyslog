@@ -549,7 +549,7 @@ finalize_it:
 }
 
 static int handlePoll(zloop_t __attribute__((unused)) * loop, zmq_pollitem_t *poller, void* pd) {
-    msg_t* pMsg;
+    smsg_t* pMsg;
     poller_data* pollerData = (poller_data*)pd;
 
     char* buf = zstr_recv(poller->socket);

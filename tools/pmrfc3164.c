@@ -42,7 +42,8 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
-
+#ifdef _AIX
+#endif
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP
 PARSER_NAME("rsyslog.rfc3164")

@@ -73,7 +73,9 @@
 #include "prop.h"
 #include "unicode-helper.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif 
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -519,7 +521,9 @@ RunCancelCleanup(void *arg)
 
 
 /* This function is called to gather input. */
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
 Run(strmsrv_t *pThis)
 {
@@ -629,7 +633,9 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 	RETiRet;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* Standard-Constructor */

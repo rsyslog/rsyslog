@@ -148,6 +148,11 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 	    	CHKiRet(pthread_getschedparam(pthread_self(),
 			    		      &default_thr_sched_policy,
 					      &default_sched_param));
+#if defined (_AIX)
+                pthread_attr_setstacksize(&default_thread_attr, 4096*512);
+#endif
+
+
 		CHKiRet(pthread_attr_setschedpolicy(&default_thread_attr,
 			    			    default_thr_sched_policy));
 		CHKiRet(pthread_attr_setschedparam(&default_thread_attr,

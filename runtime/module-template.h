@@ -1129,7 +1129,7 @@ static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData,
 /* parse() - main entry point of parser modules (v1 config interface)
  */
 #define BEGINparse \
-static rsRetVal parse(msg_t *pMsg)\
+static rsRetVal parse(smsg_t *pMsg)\
 {\
 	DEFiRet;
 
@@ -1144,7 +1144,7 @@ static rsRetVal parse(msg_t *pMsg)\
 /* parse2() - main entry point of parser modules (v2+ config interface)
  */
 #define BEGINparse2 \
-static rsRetVal parse2(instanceConf_t *const pInst, msg_t *pMsg)\
+static rsRetVal parse2(instanceConf_t *const pInst, smsg_t *pMsg)\
 {\
 	DEFiRet;
 
@@ -1166,7 +1166,7 @@ static rsRetVal parse2(instanceConf_t *const pInst, msg_t *pMsg)\
  *         of the generated string on exit (this is cached)
  */
 #define BEGINstrgen \
-static rsRetVal strgen(msg_t *const pMsg, actWrkrIParams_t *const iparam) \
+static rsRetVal strgen(smsg_t *const pMsg, actWrkrIParams_t *const iparam) \
 {\
 	DEFiRet;
 
@@ -1199,7 +1199,6 @@ static rsRetVal GetStrgenName(uchar **ppSz)\
 	*ppSz = UCHAR_CONSTANT(x);\
 	return RS_RET_OK;\
 }
-
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 

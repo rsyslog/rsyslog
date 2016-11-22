@@ -313,8 +313,8 @@ getCounter(struct hashtable *ht, char *str, int initial) {
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	struct json_object *json;
 	int val = 0;
 	int *pCounter;

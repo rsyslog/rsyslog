@@ -59,6 +59,7 @@
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 #include "statsobj.h"
 
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 
@@ -217,7 +218,7 @@ finalize_it:
 static rsRetVal
 doInjectMsg(uchar *szMsg, ratelimit_t *ratelimiter)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	DEFiRet;

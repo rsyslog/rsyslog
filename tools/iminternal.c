@@ -83,7 +83,7 @@ finalize_it:
  * The interface of this function is modelled after syslogd/logmsg(),
  * for which it is an "replacement".
  */
-rsRetVal iminternalAddMsg(msg_t *pMsg)
+rsRetVal iminternalAddMsg(smsg_t *pMsg)
 {
 	DEFiRet;
 	iminternal_t *pThis;
@@ -107,7 +107,7 @@ finalize_it:
  * from the list and return it to the caller. The caller is
  * responsible for freeing the message!
  */
-rsRetVal iminternalRemoveMsg(msg_t **ppMsg)
+rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 {
 	DEFiRet;
 	iminternal_t *pThis;

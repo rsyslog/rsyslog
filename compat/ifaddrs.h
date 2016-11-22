@@ -36,9 +36,9 @@ extern "C" {
  * The `getifaddrs' function generates a linked list of these structures.
  * Each element of the list describes one network interface.
  */
-#if defined(_INT64_TYPE)
-struct ifaddrs {
-	struct ifaddrs	*ifa_next;	/* Pointer to the next structure. */
+//#if defined(_INT64_TYPE)
+struct ifaddrs_rsys {
+	struct ifaddrs_rsys	*ifa_next;	/* Pointer to the next structure. */
 	char		*ifa_name;	/* Name of this network interface. */
 	uint64_t	ifa_flags;	/* Flags as from SIOCGLIFFLAGS ioctl. */
 	struct sockaddr	*ifa_addr;	/* Network address of this interface. */
@@ -65,7 +65,7 @@ struct ifaddrs {
 #define	ifa_dstaddr	ifa_ifu.ifu_dstaddr	/* other end of p-to-p link */
 #endif
 };
-#endif
+//#endif
 
 /*
  * Create a linked list of `struct ifaddrs' structures, one for each
@@ -75,10 +75,10 @@ struct ifaddrs {
  * The storage returned in *ifap is allocated dynamically and can
  * only be properly freed by passing it to `freeifaddrs'.
  */
-extern int getifaddrs(struct ifaddrs **);
+extern int getifaddrs(struct ifaddrs_rsys **);
 
 /* Reclaim the storage allocated by a previous `getifaddrs' call. */
-extern void freeifaddrs(struct ifaddrs *);
+extern void freeifaddrs(struct ifaddrs_rsys *);
 
 
 #ifdef	__cplusplus

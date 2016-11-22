@@ -232,14 +232,14 @@ BEGINdoAction
 	int lenSever;
 	int lenHost;
 	int sevCode;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	uchar *pszTag;
 	uchar pszSever[512];
 	uchar pszHost[512];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;
-	pMsg = (msg_t*) ppString[0];
+	pMsg = (smsg_t*) ppString[0];
 	getTAG(pMsg, &pszTag, &lenTAG);
 	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",

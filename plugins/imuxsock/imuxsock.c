@@ -58,7 +58,9 @@
 #include "hashtable.h"
 #include "ratelimit.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -83,6 +85,9 @@ MODULE_CNFNAME("imuxsock")
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
+#if defined(_AIX)
+#define ucred  ucred_t
+#endif 
 /* emulate struct ucred for platforms that do not have it */
 #ifndef HAVE_SCM_CREDENTIALS
 struct ucred { int pid; uid_t uid; gid_t gid; };
@@ -764,7 +769,7 @@ copyescaped(uchar *dstbuf, uchar *inbuf, int inlen)
 static rsRetVal
 SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct timeval *ts)
 {
-	msg_t *pMsg = NULL;
+	smsg_t *pMsg = NULL;
 	int lenMsg;
 	int offs;
 	int i;
@@ -991,8 +996,10 @@ finalize_it:
  * of the socket which is to be processed. This eases access to the
  * growing number of properties. -- rgerhards, 2008-08-01
  */
+#if !defined(_AIX)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+#endif
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal readSocket(lstn_t *pLstn)
 {
@@ -1038,6 +1045,10 @@ static rsRetVal readSocket(lstn_t *pLstn)
 	msgiov.iov_len = iMaxLine;
 	msgh.msg_iov = &msgiov;
 	msgh.msg_iovlen = 1;
+/*  AIXPORT : MSG_DONTWAIT not supported */
+#if defined (_AIX)
+#define MSG_DONTWAIT    MSG_NONBLOCK
+#endif
 	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
  
 	DBGPRINTF("Message from UNIX socket: #%d\n", pLstn->fd);
@@ -1050,13 +1061,13 @@ static rsRetVal readSocket(lstn_t *pLstn)
 			for(cm = CMSG_FIRSTHDR(&msgh); cm; cm = CMSG_NXTHDR(&msgh, cm)) {
 #				ifdef HAVE_SCM_CREDENTIALS
 				if(   pLstn->bUseCreds
-				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_CREDENTIALS) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SCM_CREDENTIALS) {
 					cred = (struct ucred*) CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SCM_CREDENTIALS */
 #				if HAVE_SO_TIMESTAMP
 				if(   pLstn->bUseSysTimeStamp 
-				   && cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SO_TIMESTAMP) {
+				   && cm->cmsg_level == SOL_SOCKET && cm->csmsg_type == SO_TIMESTAMP) {
 					ts = (struct timeval *)CMSG_DATA(cm);
 				}
 #				endif /* HAVE_SO_TIMESTAMP */
@@ -1077,7 +1088,9 @@ finalize_it:
 
 	RETiRet;
 }
+#if  !defined(_AIX)
 #pragma GCC diagnostic pop
+#endif
 
 
 /* activate current listeners */

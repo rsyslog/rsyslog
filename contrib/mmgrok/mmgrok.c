@@ -47,7 +47,7 @@ typedef struct _instanceData
     char *pszMatch;
     char *pszSource;
     char *pszTarget;/* as a json root for store parse json data */
-    msg_t *pmsg;    /* store  origin messages*/
+    smsg_t *pmsg;    /* store  origin messages*/
 }instanceData;
 
 typedef struct wrkrInstanceData{
@@ -202,7 +202,7 @@ static inline grok_t *CreateGrok()
 
 /* the parseing is complate message into json */
 static rsRetVal 
-msg_to_json(GList *list,instanceData *pData)
+smsg_to_json(GList *list,instanceData *pData)
 {
     GList *it= list;
 
@@ -281,7 +281,7 @@ parse_result_store(const grok_match_t gm,instanceData *pData)
                 re_list = g_list_append(re_list,result);
             }
         }
-        msg_to_json(re_list,pData);
+        smsg_to_json(re_list,pData);
         g_list_free(re_list);
         grok_match_walk_end(&gm);
 	RETiRet;
@@ -331,8 +331,8 @@ MotifyMessage(instanceData *pData)
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	uchar *buf;
         instanceData *pData;
 	

@@ -3,6 +3,34 @@
 
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[8.24.0.master],[rsyslog@lists.adiscon.com])
+
+# AIXPORT START: Detect the underlying OS
+unamestr=$(uname)
+AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
+# AIXPORT END
+
+# AIXPORT START : Set the required variables for AIX config script
+if test "$unamestr" = "AIX"; then
+	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
+	LIBS="-lbsd -lsrc"
+	CPPFLAGS="-D_THREAD_SAFE -D_BSD43 -D_AIX"
+	CFLAGS="-D_AIX"
+	LDFLAGS="-qcpluscmt -brtl -bexpall -bE:strippedsymbols.exp "
+	LIBESTR_LIBS="-L/usr/lib/ -lestr"
+	LIBESTR_CFLAGS="-I/usr/include"
+	LIBLOGGING_STDLOG_LIBS="-L/usr/lib/ -llogging-stdlog"
+	LIBLOGGING_STDLOG_CFLAGS="-I/usr/include"
+	GNUTLS_LIBS="-L/usr/lib/ -lgnutls"
+	GNUTLS_CFLAGS="-I/usr/include"
+	RELP_LIBS="-L/usr/lib/ -lrelp"
+	RELP_CFLAGS="-I/usr/include"
+	CC="xlc_r"
+	AC_PREFIX_DEFAULT(/usr)
+	export  ac_cv_func_malloc_0_nonnull=yes
+	export ac_cv_func_realloc_0_nonnull=yes
+fi
+# AIXPORT END
+
 AM_INIT_AUTOMAKE([subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -10,6 +38,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
+AC_INIT([rsyslog],[8.24.0.master],[rsyslog@lists.adiscon.com])
 
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -19,6 +48,11 @@ AC_PROG_YACC
 AC_PROG_CC
 AC_PROG_CC_C99
 AC_DISABLE_STATIC
+# AIXPORT START: enable dlopen
+if test "$unamestr" = "AIX"; then
+	AC_LIBTOOL_DLOPEN
+fi
+# AIXPORT end
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
@@ -77,6 +111,12 @@ case "${host}" in
     LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
+# AIXPORT START
+  *-*-aix*)
+    os_type="aix"
+    AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
+  ;;
+# AIXPORT END
 esac
 
 # Running from git source?
@@ -288,10 +328,14 @@ AC_CHECK_HEADERS(
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
           PTHREADS_LIBS="-lpthread"
- 	  case "${os_type}" in
- 	  solaris) PTHREADS_CFLAGS="-pthreads" ;;
- 	  *)       PTHREADS_CFLAGS="-pthread" ;;
- 	  esac
+          if test "$unamestr" = "AIX"; then
+                  PTHREADS_CFLAGS="-lpthreads" 
+          else
+                  case "${os_type}" in
+                  solaris) PTHREADS_CFLAGS="-pthreads" ;;
+                  *)       PTHREADS_CFLAGS="-pthread" ;;
+                  esac
+          fi
           AC_SUBST(PTHREADS_LIBS)
           AC_SUBST(PTHREADS_CFLAGS)
         ],
@@ -1819,8 +1863,6 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
-
-        have_to_generate_man_pages=yes
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])

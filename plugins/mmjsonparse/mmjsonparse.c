@@ -165,7 +165,7 @@ ENDtryResume
 
 
 static rsRetVal
-processJSON(wrkrInstanceData_t *pWrkrData, msg_t *pMsg, char *buf, size_t lenBuf)
+processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, char *buf, size_t lenBuf)
 {
 	struct json_object *json;
 	const char *errMsg;
@@ -211,8 +211,8 @@ finalize_it:
 }
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	uchar *buf;
 	rs_size_t len;
 	int bSuccess = 0;

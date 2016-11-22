@@ -50,6 +50,7 @@
 #include "unicode-helper.h"
 #include "ratelimit.h"
 
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imjournal")
@@ -176,7 +177,7 @@ static rsRetVal
 enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
 {
 	struct syslogTime st;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	size_t len;
 	DEFiRet;
 

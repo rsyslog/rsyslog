@@ -464,7 +464,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
                         cstr_t *const __restrict__ cstrLine)
 {
 	DEFiRet;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 
 	if(rsCStrLen(cstrLine) == 0) {
 		/* we do not process empty lines */
@@ -639,7 +639,9 @@ static void pollFileCancelCleanup(void *pArg)
 
 
 /* poll a file, need to check file rollover etc. open file if not open */
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
@@ -685,7 +687,9 @@ finalize_it:
 
 	RETiRet;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* create input instance, set default parameters, and
@@ -970,7 +974,7 @@ addListner(instanceConf_t *inst)
 	pThis->pszStateFile = inst->pszStateFile == NULL ? NULL : (uchar*) strdup((char*) inst->pszStateFile);
 
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)inst->pszFileName));
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(msg_t*)));
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(inst->nMultiSub * sizeof(smsg_t *)));
 	pThis->multiSub.maxElem = inst->nMultiSub;
 	pThis->multiSub.nElem = 0;
 	pThis->iSeverity = inst->iSeverity;
@@ -1586,7 +1590,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname)
 	CHKiRet(ratelimitNew(&pThis->ratelimiter, "imfile", (char*)pThis->pszFileName));
 	pThis->multiSub.maxElem = existing->multiSub.maxElem;
 	pThis->multiSub.nElem = 0;
-	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(msg_t*)));
+	CHKmalloc(pThis->multiSub.ppMsgs = MALLOC(pThis->multiSub.maxElem * sizeof(smsg_t*)));
 	pThis->iSeverity = existing->iSeverity;
 	pThis->iFacility = existing->iFacility;
 	pThis->maxLinesAtOnce = existing->maxLinesAtOnce;
@@ -1921,8 +1925,10 @@ in_do_timeout_processing(void)
 
 
 /* Monitor files in inotify mode */
+#if !defined(_AIX)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+#endif
 /* Problem with the warnings: they seem to stem back from the way the API is structured */
 static rsRetVal
 do_inotify(void)
