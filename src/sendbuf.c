@@ -1,6 +1,6 @@
 /* The relp send buffer object.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -208,7 +208,8 @@ pSess->pEngine->dbgprint("sendbuf added to unacked list\n");
 	relpSessUnacked_t *pUnackedEtry;
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL) {
-pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
+		pThis->pEngine->dbgprint("resending frame '%s'\n",
+			pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis, 0));

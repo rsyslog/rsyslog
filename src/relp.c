@@ -379,7 +379,8 @@ static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
  * not implemented dummy.
  */
 relpRetVal
-relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*, unsigned char*, unsigned char*, size_t))
+relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*,
+	unsigned char*, unsigned char*, size_t))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -600,7 +601,8 @@ epoll_set_events(relpEngine_t *pThis, relpEngSessLst_t *pSessEtry, int sock, uin
 {
 	ENTER_RELPFUNC;
 	/* TODO: remove the status dbgprint's once we have some practice drill 2013-07-05 */
-	pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n", sock, events, pSessEtry->epevt->ev.events);
+	pThis->dbgprint("librelp: epoll_set_events sock %d, target bits %2.2x, current %2.2x\n",
+		sock, events, pSessEtry->epevt->ev.events);
 	if(pSessEtry->epevt->ev.events != events) {
 		pSessEtry->epevt->ev.events = events;
 		pThis->dbgprint("librelp: epoll_set_events sock %d, setting new bits\n", sock);

@@ -3,7 +3,7 @@
  * This file is meant to be included by applications using the relp library.
  * For relp library files themselves, include "relp.h".
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -143,7 +143,8 @@ typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 #define RELP_RET_AUTH_ERR_FP	RELPERR_BASE + 33	/**< auth failed: non-permitted peer fingerprint */
 #define RELP_RET_AUTH_ERR_NAME	RELPERR_BASE + 34	/**< auth failed: no permitted peer name found */
 #define RELP_RET_AUTH_NO_CERT	RELPERR_BASE + 35	/**< auth failed: peer did not present a certificate */
-#define RELP_RET_AUTH_CERT_INVL RELPERR_BASE + 36	/**< auth failed: peer certificate invalid (did not pass validation) */
+#define RELP_RET_AUTH_CERT_INVL RELPERR_BASE + 36	/**< auth failed: peer certificate invalid
+							     (did not pass validation) */
 #define RELP_RET_INVLD_AUTH_MD	RELPERR_BASE + 37	/**< lib user tried to set invalid auth mode */
 #define RELP_RET_INVLD_WILDCARD	RELPERR_BASE + 38	/**< invalid wildcard given in permitted peer name */
 #define RELP_RET_ERR_TLS_HANDS 	RELPERR_BASE + 39	/**< TLS handshake failed */
@@ -166,7 +167,8 @@ char *relpEngineGetVersion(void); /* use this entry point for configure check */
 void relpEngineSetShutdownImmdtPtr(relpEngine_t *pThis, int *ptr);
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
-relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
+relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis,
+	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort) __attribute__ ((deprecated));
 relpRetVal relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void*) __attribute__ ((deprecated));
 relpRetVal relpEngineListnerConstruct(relpEngine_t *pThis, relpSrv_t **ppSrv);
@@ -197,7 +199,8 @@ void relpSrvEnableTLSZip(relpSrv_t *pThis) __attribute__ ((deprecated));
 relpRetVal relpSrvEnableTLS2(relpSrv_t *pThis);
 relpRetVal relpSrvEnableTLSZip2(relpSrv_t *pThis);
 void relpSrvSetDHBits(relpSrv_t *pThis, int bits);
-void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAliveIntvl, const int iKeepAliveProbes, const int iKeepAliveTime);
+void relpSrvSetKeepAlive(relpSrv_t *pThis, const int bEnabled, const int iKeepAliveIntvl,
+	const int iKeepAliveProbes, const int iKeepAliveTime);
 relpRetVal relpSrvSetGnuTLSPriString(relpSrv_t *pThis, char *pristr);
 relpRetVal relpSrvSetCACert(relpSrv_t *pThis, char *cert);
 relpRetVal relpSrvSetOwnCert(relpSrv_t *pThis, char *cert);
