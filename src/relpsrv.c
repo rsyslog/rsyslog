@@ -1,6 +1,6 @@
 /* The relp server.
  *
- * Copyright 2008-2014 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -356,7 +356,8 @@ relpSrvRun(relpSrv_t *pThis)
 		CHKRet(relpTcpSetPrivKey(pTcp, pThis->privKey));
 		CHKRet(relpTcpSetPermittedPeers(pTcp, &(pThis->permittedPeers)));
 	}
-	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
+	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ?
+		(unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort, pThis->ai_family));
 
 	pThis->pTcp = pTcp;
 

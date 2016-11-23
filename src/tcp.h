@@ -1,6 +1,6 @@
 /* The mapping for relp over TCP.
  *
- * Copyright 2008-2013 by Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2016 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of librelp.
  *
@@ -144,7 +144,8 @@ relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort, int ai_fa
 relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpSrv_t *pSrv);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
-relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host, unsigned char *clientIP);
+relpRetVal relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port,
+	unsigned char *host, unsigned char *clientIP);
 relpRetVal relpTcpEnableTLS(relpTcp_t *pThis);
 relpRetVal relpTcpEnableTLSZip(relpTcp_t *pThis);
 relpRetVal relpTcpSetDHBits(relpTcp_t *pThis, int bits);
