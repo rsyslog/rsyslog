@@ -25,40 +25,40 @@
 static relpEngine_t *pRelpEngine;
 
 static void dbgprintf(char __attribute__((unused)) *fmt, ...) {
-    printf(fmt);
+	printf(fmt);
 }
 
 void print_usage()
 {
-    printf("Usage: send SERVER PORTNUM MESSAGE\n");
+	printf("Usage: send SERVER PORTNUM MESSAGE\n");
 }
 
 int main(int argc, char *argv[]) {
-    if ((argc != 4)) {
-        /* Incorrect parameter count, so just print the usage and return */
-        print_usage();
-        return -1;
-    }
+	if ((argc != 4)) {
+		/* Incorrect parameter count, so just print the usage and return */
+		print_usage();
+		return -1;
+	}
 
-    relpClt_t *pRelpClt = NULL;
-    unsigned char *target = (unsigned char*)argv[1];
-    unsigned char *port = (unsigned char*)argv[2];
-    unsigned timeout = 90;
-    int protFamily = 2; /* IPv4=2, IPv6=10 */
+	relpClt_t *pRelpClt = NULL;
+	unsigned char *target = (unsigned char*)argv[1];
+	unsigned char *port = (unsigned char*)argv[2];
+	unsigned timeout = 90;
+	int protFamily = 2; /* IPv4=2, IPv6=10 */
 
-    TRY(relpEngineConstruct(&pRelpEngine));
-    TRY(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
-    TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
-    TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));
-    TRY(relpCltSetTimeout(pRelpClt, timeout));
-    TRY(relpCltConnect(pRelpClt, protFamily, port, target));
+	TRY(relpEngineConstruct(&pRelpEngine));
+	TRY(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog", eRelpCmdState_Required));
+	TRY(relpEngineCltConstruct(pRelpEngine, &pRelpClt));
+	TRY(relpCltSetTimeout(pRelpClt, timeout));
+	TRY(relpCltConnect(pRelpClt, protFamily, port, target));
 
-    unsigned char *pMsg = (unsigned char*)argv[3];
-    size_t lenMsg = strlen((char*) pMsg);
-    TRY(relpCltSendSyslog(pRelpClt, pMsg, lenMsg));
+	unsigned char *pMsg = (unsigned char*)argv[3];
+	size_t lenMsg = strlen((char*) pMsg);
+	TRY(relpCltSendSyslog(pRelpClt, pMsg, lenMsg));
 
-    TRY(relpEngineCltDestruct(pRelpEngine, &pRelpClt));
-    TRY(relpEngineDestruct(&pRelpEngine));
+	TRY(relpEngineCltDestruct(pRelpEngine, &pRelpClt));
+	TRY(relpEngineDestruct(&pRelpEngine));
 
-    return 0;
+	return 0;
 }
