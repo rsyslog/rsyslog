@@ -25,47 +25,47 @@
 static relpEngine_t *pRelpEngine;
 
 static void dbgprintf(char __attribute__((unused)) *fmt, ...) {
-    printf(fmt);
+	printf(fmt);
 }
 
 static relpRetVal onSyslogRcv(unsigned char *pHostname, unsigned char *pIP, unsigned char *msg, size_t lenMsg) {
-    printf("%s\n", msg);
-    fflush(stdout);
+	printf("%s\n", msg);
+	fflush(stdout);
 
-    return RELP_RET_OK;
+	return RELP_RET_OK;
 }
 
 void print_usage()
 {
-    printf("Usage: receive PORTNUM\n");
+	printf("Usage: receive PORTNUM\n");
 }
 
 int main(int argc, char *argv[]) {
-    if ((argc != 2)) {
-        /* Incorrect parameter count, so just print the usage and return */
-        print_usage();
-        return -1;
-    }
+	if ((argc != 2)) {
+	/* Incorrect parameter count, so just print the usage and return */
+	print_usage();
+	return -1;
+}
 
-    relpSrv_t *pRelpSrv;
-    unsigned char *port = (unsigned char*)argv[1];
-    int protFamily = 2; /* IPv4=2, IPv6=10 */
+	relpSrv_t *pRelpSrv;
+	unsigned char *port = (unsigned char*)argv[1];
+	int protFamily = 2; /* IPv4=2, IPv6=10 */
 
-    TRY(relpEngineConstruct(&pRelpEngine));
-    TRY(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
-    TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
-    TRY(relpEngineSetFamily(pRelpEngine, protFamily));
-    TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
-    TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
+	TRY(relpEngineConstruct(&pRelpEngine));
+	TRY(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+	TRY(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*) "syslog", eRelpCmdState_Required));
+	TRY(relpEngineSetFamily(pRelpEngine, protFamily));
+	TRY(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
+	TRY(relpEngineSetDnsLookupMode(pRelpEngine, 0)); /* 0=disable */
 
-    TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
-    TRY(relpSrvSetLstnPort(pRelpSrv, port));
-    TRY(relpEngineListnerConstructFinalize(pRelpEngine, pRelpSrv));
+	TRY(relpEngineListnerConstruct(pRelpEngine, &pRelpSrv));
+	TRY(relpSrvSetLstnPort(pRelpSrv, port));
+	TRY(relpEngineListnerConstructFinalize(pRelpEngine, pRelpSrv));
 
-    TRY(relpEngineRun(pRelpEngine)); /* Abort with ctrl-c */
+	TRY(relpEngineRun(pRelpEngine)); /* Abort with ctrl-c */
 
-    TRY(relpEngineSetStop(pRelpEngine));
-    TRY(relpEngineDestruct(&pRelpEngine));
-    
-    return 0;
+	TRY(relpEngineSetStop(pRelpEngine));
+	TRY(relpEngineDestruct(&pRelpEngine));
+
+	return 0;
 }
