@@ -1140,28 +1140,31 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
  * normalized to lower case. The hostname is kept in mixed case for historic
  * reasons.
  */
+#define EMPTY_HOSTNAME_REPLACEMENT "localhost-empty-hostname"
 static rsRetVal
 getLocalHostname(uchar **ppName)
 {
 	DEFiRet;
 	char hnbuf[8192];
 	uchar *fqdn = NULL;
+	int empty_hostname = 1;
 
 	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
-		strcpy(hnbuf, "localhost");
+		strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
 	} else {
 		/* now guard against empty hostname
 		 * see https://github.com/rsyslog/rsyslog/issues/1040
 		 */
 		if(hnbuf[0] == '\0') {
-			strcpy(hnbuf, "localhost");
+			strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
 		} else {
+			empty_hostname = 0;
 			hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
 		}
 	}
 
 	char *dot = strstr(hnbuf, ".");
-	if(dot == NULL) {
+	if(!empty_hostname && dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
 		struct hostent *hent = gethostbyname((char*)hnbuf);
 		if(hent) {
