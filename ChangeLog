@@ -4,6 +4,18 @@ Version 8.24.0 [v8-stable] 2017-01-10
   In 8.23.0, "localhost" was used in this case, but that could be misleading.
   The new name makes the error condition (gethostname() should always return
   a non-empty name) more obvious.
+- omfwd: Add support for bind-to-device (see below on same for imudp)
+- imudp: Add support for bind-to-device
+  Add support for bind-to-device option to omfwd and imudp modules.
+  Configured using device="name". Only new syntax format is supported.
+  e.g.,
+  input(type="imudp" port=["10514"] device="eth0" name="udp")
+  Action(type="omfwd" Target="192.168.1.23" Port="10514" Device="eth0")
+  see also https://github.com/rsyslog/rsyslog/pull/1261
+  Thanks to David Ahern for the patch.
+- bugfix omfwd: retry processing was not done correctly, could stall
+  see also https://github.com/rsyslog/rsyslog/pull/1261
+  Thanks to David Ahern for the patch.
 - testbench:
   * empty-hostname test did not work correctly
 ------------------------------------------------------------------------------
