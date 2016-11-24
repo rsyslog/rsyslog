@@ -709,7 +709,7 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 static rsRetVal
-Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
+Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	struct addrinfo *res = NULL;
@@ -731,6 +731,16 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	if(device) {
+#		if defined(SO_BINDTODEVICE)
+		if(setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+#		endif
+                {
+                        dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
 	}
 
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {

@@ -1226,7 +1226,7 @@ closeUDPListenSockets(int *pSockArr)
  * param rcvbuf indicates desired rcvbuf size; 0 means OS default
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind)
+create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
@@ -1285,6 +1285,18 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
                 	}
                 }
 #		endif
+
+		if(device) {
+#			if defined(SO_BINDTODEVICE)
+			if(setsockopt(*s, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+#			endif
+			{
+				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(SO_BINDTODEVICE)");
+                                close(*s);
+				*s = -1;
+				continue;
+			}
+		}
 
 		/* if we have an error, we "just" suspend that socket. Eventually
 		 * other sockets will work. At the end of this function, we check
