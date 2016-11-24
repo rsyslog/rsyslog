@@ -88,6 +88,7 @@ static rsRetVal NotImplementedDummy(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
 	pthread_mutex_init(&pThis->mutWtp, NULL);
+	pthread_cond_init(&pThis->condThrdInitDone, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	pthread_attr_init(&pThis->attrThrd);
 	/* Set thread scheduling policy to default */
@@ -156,6 +157,7 @@ CODESTARTobjDestruct(wtp)
 
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
+	pthread_cond_destroy(&pThis->condThrdInitDone);
 	pthread_mutex_destroy(&pThis->mutWtp);
 	pthread_attr_destroy(&pThis->attrThrd);
 	DESTROY_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
@@ -386,6 +388,12 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 #	endif
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
+
+        /* let the parent know we're done with initialization */
+        d_pthread_mutex_lock(&pThis->mutWtp);
+        pthread_cond_broadcast(&pThis->condThrdInitDone);
+        d_pthread_mutex_unlock(&pThis->mutWtp);
+
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
 	wtpWrkrExecCleanup(pWti);
@@ -436,6 +444,11 @@ wtpStartWrkr(wtp_t *pThis)
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState,
 		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+
+        /* wait for the new thread to initialize its signal mask and
+         * cancelation cleanup handler before proceeding
+         */
+        d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
