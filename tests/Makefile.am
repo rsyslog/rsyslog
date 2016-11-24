@@ -415,6 +415,11 @@ TESTS +=  \
 endif
 endif
 
+if ENABLE_MMRM1STSPACE
+TESTS +=  \
+	mmrm1stspace-basic.sh
+endif
+
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh
@@ -800,6 +805,7 @@ EXTRA_DIST= \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
+	mmrm1stspace-basic.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \

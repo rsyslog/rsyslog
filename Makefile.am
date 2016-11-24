@@ -219,6 +219,10 @@ if ENABLE_MMANON
 SUBDIRS += plugins/mmanon
 endif
 
+if ENABLE_MMRM1STSPACE
+SUBDIRS += plugins/mmrm1stspace
+endif
+
 if ENABLE_MMUTF8FIX
 SUBDIRS += plugins/mmutf8fix
 endif

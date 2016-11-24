@@ -1054,6 +1054,19 @@ AC_ARG_ENABLE(mmanon,
 AM_CONDITIONAL(ENABLE_MMANON, test x$enable_mmanon = xyes)
 
 
+# mmrm1stspace
+AC_ARG_ENABLE(mmrm1stspace,
+        [AS_HELP_STRING([--enable-mmrm1stspace],[Enable building mmrm1stspace support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmrm1stspace="yes" ;;
+          no) enable_mmrm1stspace="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmrm1stspace) ;;
+         esac],
+        [enable_mmrm1stspace=no]
+)
+AM_CONDITIONAL(ENABLE_MMRM1STSPACE, test x$enable_mmrm1stspace = xyes)
+
+
 # mmutf8fix
 AC_ARG_ENABLE(mmutf8fix,
         [AS_HELP_STRING([--enable-mmutf8fix],[Enable building mmutf8fix support @<:@default=no@:>@])],
@@ -1888,6 +1901,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmjsonparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
+		plugins/mmrm1stspace/Makefile \
 		plugins/mmutf8fix/Makefile \
 		plugins/mmfields/Makefile \
 		plugins/mmpstrucdata/Makefile \
@@ -1895,7 +1909,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
 		contrib/pmsnare/Makefile \
-    contrib/pmpanngfw/Makefile \
+		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
 		contrib/omhiredis/Makefile \
 		contrib/omrabbitmq/Makefile \
@@ -1930,6 +1944,7 @@ echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI:         $enable_gt_ksi"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
+echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
