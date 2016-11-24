@@ -1226,12 +1226,12 @@ closeUDPListenSockets(int *pSockArr)
  * param rcvbuf indicates desired rcvbuf size; 0 means OS default
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind)
+create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, unsigned int rcvbuf, int ipfreebind)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
-	int actrcvbuf;
+	unsigned int actrcvbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
