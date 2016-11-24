@@ -18,6 +18,13 @@ Version 8.24.0 [v8-stable] 2017-01-10
   Action(type="omfwd" Target="192.168.1.23" Port="10514" Device="eth0")
   see also https://github.com/rsyslog/rsyslog/pull/1261
   Thanks to David Ahern for the patch.
+- bugfix core: potential dealock on shutdown
+  could happen when rsyslog was started and quickly shut down OR when
+  co-incidently a new thread was spawend "with bad timing" around the time
+  of shutdown.
+  See also https://github.com/rsyslog/rsyslog/pull/1274
+  Thanks to github user tomassykora for the final patch and Rado Sroka for
+  the analysis and an initial patch.
 - bugfix omfwd: retry processing was not done correctly, could stall
   see also https://github.com/rsyslog/rsyslog/pull/1261
   Thanks to David Ahern for the patch.
