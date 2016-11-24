@@ -82,6 +82,7 @@ typedef struct _instanceData {
 	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*target;
+	char	*device;
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
@@ -155,6 +156,7 @@ static struct cnfparamblk modpblk =
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "target", eCmdHdlrGetWord, 0 },
+	{ "device", eCmdHdlrGetWord, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "protocol", eCmdHdlrGetWord, 0 },
 	{ "tcp_framing", eCmdHdlrGetWord, 0 },
@@ -382,6 +384,7 @@ CODESTARTfreeInstance
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->port);
 	free(pData->target);
+	free(pData->device);
 	net.DestructPermittedPeers(&pData->pPermPeers);
 ENDfreeInstance
 
@@ -415,6 +418,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	int i;
 	unsigned lsent = 0;
 	sbool bSendSuccess;
+	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
 	char errStr[1024];
 
@@ -444,6 +448,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 					bSendSuccess = RSTRUE;
 					break;
 				} else {
+					reInit = RSTRUE;
 					lasterrno = errno;
 					DBGPRINTF("sendto() error: %d = %s.\n",
 						lasterrno,
@@ -453,6 +458,12 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 			if (lsent == len && !pWrkrData->pData->bSendToAll)
 			       break;
 		}
+
+		/* one or more send failures; close sockets and re-init */
+		if (reInit == RSTRUE) {
+			CHKiRet(closeUDPSockets(pWrkrData));
+		}
+
 		/* finished looping */
 		if(bSendSuccess == RSTRUE) {
 			if(pWrkrData->pData->iUDPSendDelay > 0) {
@@ -707,7 +718,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)pData->port, (uchar*)pData->target));
+			(uchar*)pData->port, (uchar*)pData->target, pData->device));
 
 		/* set keep-alive if enabled */
 		if(pData->bKeepAlive) {
@@ -757,9 +768,11 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		}
 		dbgprintf("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
-		pWrkrData->bIsConnected = 1;
 		if(pWrkrData->pSockArray == NULL) {
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0, pData->device);
+		}
+		if(pWrkrData->pSockArray != NULL) {
+			pWrkrData->bIsConnected = 1;
 		}
 	} else {
 		CHKiRet(TCPSendInit((void*)pWrkrData));
@@ -985,6 +998,8 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->target = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "device")) {
+			pData->device = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
 			pData->port = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "protocol")) {

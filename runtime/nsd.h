@@ -54,7 +54,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Abort)(nsd_t *pThis);
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
-	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host);
+	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
 	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
@@ -84,12 +84,13 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveProbes)(nsd_t *pThis, int keepAliveProbes);
 	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
  * interface version 7 changed signature ofGetRempoteIP() -- rgerhards, 2013-01-21
  * interface version 8 added keep alive parameter set functions
+ * interface version 9 changed signature of Connect() -- dsa, 2016-11-14
  */
 
 /* interface  for the select call */
