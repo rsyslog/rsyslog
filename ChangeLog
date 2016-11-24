@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.24.0 [v8-stable] 2017-01-10
+- KSI signature provider: file permissions can now be specified
+  This happens via parameters equal to those used by omfile itself.
+  Note that KSI files can have different permissions/owner than the log
+  files themself.
+  Thanks to Allan Park for the patch.
 - change: when the hostname is empty, we now use "localhost-empty-hostname"
   In 8.23.0, "localhost" was used in this case, but that could be misleading.
   The new name makes the error condition (gethostname() should always return
