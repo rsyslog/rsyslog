@@ -50,6 +50,7 @@ struct wtp_s {
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
 	pthread_mutex_t mutWtp; /* mutex for the wtp's thread management */
+	pthread_cond_t condThrdInitDone; /* signalled when a new thread is ready for work */
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
 	/* end sync variables */
 	/* user objects */
