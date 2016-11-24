@@ -38,6 +38,12 @@ struct rsksictx_s {
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
 	uint64_t blockSizeLimit;
+	uid_t	fileUID;	/* IDs for creation */
+	uid_t	dirUID;
+	gid_t	fileGID;
+	gid_t	dirGID;
+	int fCreateMode; /* mode to use when creating files */
+	int fDirCreateMode; /* mode to use when creating files */
 	char *timestamper;
 	void (*errFunc)(void *, unsigned char*);
 	void (*logFunc)(void *, unsigned char*);
@@ -156,6 +162,14 @@ KSI_HashAlgorithm hashID2AlgKSI(uint8_t hashID);
 #define rsksiSetBlockSizeLimit(ctx, limit) ((ctx)->blockSizeLimit = limit)
 #define rsksiSetKeepRecordHashes(ctx, val) ((ctx)->bKeepRecordHashes = val)
 #define rsksiSetKeepTreeHashes(ctx, val) ((ctx)->bKeepTreeHashes = val)
+#define rsksiSetFileUID(ctx, val) ((ctx)->fileUID = val)	/* IDs for creation */
+#define rsksiSetDirUID(ctx, val) ((ctx)->dirUID = val)
+#define rsksiSetFileGID(ctx, val) ((ctx)->fileGID= val)
+#define rsksiSetDirGID(ctx, val) ((ctx)->dirGID = val)
+#define rsksiSetCreateMode(ctx, val) ((ctx)->fCreateMode= val)
+#define rsksiSetDirCreateMode(ctx, val) ((ctx)->fDirCreateMode = val)
+
+
 
 int rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key);
 int rsksiSetHashFunction(rsksictx ctx, char *algName);
