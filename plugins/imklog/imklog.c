@@ -62,6 +62,7 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imklog")
@@ -128,7 +129,7 @@ static rsRetVal
 enqMsg(uchar *const __restrict__ msg, uchar* pszTag, const syslog_pri_t pri, struct timeval *tp)
 {
 	struct syslogTime st;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	assert(msg != NULL);

@@ -52,7 +52,9 @@
 #include "wti.h"
 #include "unicode-helper.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
@@ -1299,7 +1301,7 @@ str2num(es_str_t *s, int *bSuccess)
  * rgerhards, 2015-11-12
  */
 static long long
-var2Number(struct var *r, int *bSuccess)
+var2Number(struct svar *r, int *bSuccess)
 {
 	long long n = 0;
 	if(r->datatype == 'S') {
@@ -1319,7 +1321,7 @@ var2Number(struct var *r, int *bSuccess)
 /* ensure that retval is a string
  */
 static es_str_t *
-var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
+var2String(struct svar *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	es_str_t *estr;
 	const char *cstr;
@@ -1345,7 +1347,7 @@ var2String(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 }
 
 static uchar*
-var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
+var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	uchar *cstr;
 	es_str_t *estr;
@@ -1357,16 +1359,16 @@ var2CString(struct var *__restrict__ const r, int *__restrict__ const bMustFree)
 	return cstr;
 }
 
-/* frees struct var members, but not the struct itself. This is because
+/* frees struct svar members, but not the struct itself. This is because
  * it usually is allocated on the stack. Callers why dynamically allocate
- * struct var need to free the struct themselfes!
+ * struct svar need to free the struct themselfes!
  */
 
 int SKIP_NOTHING = 0x0;
 int SKIP_STRING = 0x1;
 
 static void
-varFreeMembersSelectively(const struct var *r, const int skipMask)
+varFreeMembersSelectively(const struct svar *r, const int skipMask)
 {
 	if(r->datatype == 'J') {
 		json_object_put(r->d.json);
@@ -1376,7 +1378,7 @@ varFreeMembersSelectively(const struct var *r, const int skipMask)
 }
 
 static void
-varFreeMembers(const struct var *r)
+varFreeMembers(const struct svar *r)
 {
 	varFreeMembersSelectively(r, SKIP_NOTHING);
 }
@@ -1483,7 +1485,7 @@ finalize_it:
 }
 
 static void
-doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
+doFunc_re_extract(struct cnffunc *func, struct svar *ret, void* usrptr)
 {
 	size_t submatchnbr;
 	short matchnbr;
@@ -1491,7 +1493,7 @@ doFunc_re_extract(struct cnffunc *func, struct var *ret, void* usrptr)
 	int bMustFree;
 	es_str_t *estr = NULL; /* init just to keep compiler happy */
 	char *str;
-	struct var r[CNFFUNC_MAX_ARGS];
+	struct svar r[CNFFUNC_MAX_ARGS];
 	int iLenBuf;
 	unsigned iOffs;
 	short iTry = 0;
@@ -1584,8 +1586,8 @@ finalize_it:
  */
 static void
 doFunc_exec_template(struct cnffunc *__restrict__ const func,
-	struct var *__restrict__ const ret,
-	msg_t *const pMsg)
+	struct svar *__restrict__ const ret,
+	smsg_t *const pMsg)
 {
 	rsRetVal localRet;
 	actWrkrIParams_t iparam;
@@ -1604,7 +1606,7 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 }
 
 static es_str_t*
-doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict__ const findVal, struct var *__restrict__ const replaceWithVal) {
+doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restrict__ const findVal, struct svar *__restrict__ const replaceWithVal) {
     int freeOperand, freeFind, freeReplacement;
     es_str_t *str = var2String(operandVal, &freeOperand);
     es_str_t *findStr = var2String(findVal, &freeFind);
@@ -1661,7 +1663,7 @@ doFuncReplace(struct var *__restrict__ const operandVal, struct var *__restrict_
 }
 
 static es_str_t*
-doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ const wrapperVal, struct var *__restrict__ const escaperVal) {
+doFuncWrap(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const wrapperVal, struct svar *__restrict__ const escaperVal) {
     int freeSource, freeWrapper;
     es_str_t *sourceStr;
     if (escaperVal) {
@@ -1688,7 +1690,7 @@ doFuncWrap(struct var *__restrict__ const sourceVal, struct var *__restrict__ co
 }
 
 static long long
-doRandomGen(struct var *__restrict__ const sourceVal) {
+doRandomGen(struct svar *__restrict__ const sourceVal) {
 	int success = 0;
 	long long max = var2Number(sourceVal, &success);
 	if (! success) {
@@ -1712,7 +1714,7 @@ doRandomGen(struct var *__restrict__ const sourceVal) {
  * to keep the code small and easier to maintain.
  */
 static void
-doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ const ret,
+doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ const ret,
 	   void *__restrict__ const usrptr)
 {
 	char *envvar;
@@ -1721,7 +1723,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 	char *str;
 	uchar *resStr;
 	int retval;
-	struct var r[CNFFUNC_MAX_ARGS];
+	struct svar r[CNFFUNC_MAX_ARGS];
 	int delim;
 	int matchnbr;
 	struct funcData_prifilt *pPrifilt;
@@ -1846,7 +1848,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		doFunc_re_extract(func, ret, usrptr);
 		break;
 	case CNFFUNC_EXEC_TEMPLATE:
-		doFunc_exec_template(func, ret, (msg_t*) usrptr);
+		doFunc_exec_template(func, ret, (smsg_t*) usrptr);
 		break;
 	case CNFFUNC_FIELD:
 		cnfexprEval(func->expr[0], &r[0], usrptr);
@@ -1882,9 +1884,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 		break;
 	case CNFFUNC_PRIFILT:
 		pPrifilt = (struct funcData_prifilt*) func->funcdata;
-		if( (pPrifilt->pmask[((msg_t*)usrptr)->iFacility] == TABLE_NOPRI) ||
-		   ((pPrifilt->pmask[((msg_t*)usrptr)->iFacility]
-			    & (1<<((msg_t*)usrptr)->iSeverity)) == 0) )
+		if( (pPrifilt->pmask[((smsg_t*)usrptr)->iFacility] == TABLE_NOPRI) ||
+		   ((pPrifilt->pmask[((smsg_t*)usrptr)->iFacility]
+			    & (1<<((smsg_t*)usrptr)->iSeverity)) == 0) )
 			ret->d.n = 0;
 		else
 			ret->d.n = 1;
@@ -1943,7 +1945,7 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct var *__restrict__ con
 
 static void
 evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
-	struct var *__restrict__ const ret)
+	struct svar *__restrict__ const ret)
 {
 	rs_size_t propLen;
 	uchar *pszProp = NULL;
@@ -1955,7 +1957,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	if(var->prop.id == PROP_CEE        ||
 	   var->prop.id == PROP_LOCAL_VAR  ||
 	   var->prop.id == PROP_GLOBAL_VAR   ) {
-		localRet = msgGetJSONPropJSONorString((msg_t*)usrptr, &var->prop, &json, &cstr);
+		localRet = msgGetJSONPropJSONorString((smsg_t*)usrptr, &var->prop, &json, &cstr);
 		if(json != NULL) {
 			ret->datatype = 'J';
 			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
@@ -1972,7 +1974,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 		}
 	} else {
 		ret->datatype = 'S';
-		pszProp = (uchar*) MsgGetProp((msg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
+		pszProp = (uchar*) MsgGetProp((smsg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
 		ret->d.estr = es_newStrFromCStr((char*)pszProp, propLen);
 		DBGPRINTF("rainerscript: (string) var %d: '%s'\n", var->prop.id, pszProp);
 		if(bMustBeFreed)
@@ -2078,10 +2080,10 @@ evalStrArrayCmp(es_str_t *const estr_l,
  * simply is no case where full evaluation would make any sense at all.
  */
 void
-cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct var *__restrict__ const ret,
+cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct svar *__restrict__ const ret,
 	    void *__restrict__ const usrptr)
 {
-	struct var r, l; /* memory for subexpression results */
+	struct svar r, l; /* memory for subexpression results */
 	es_str_t *__restrict__ estr_r, *__restrict__ estr_l;
 	int convok_r, convok_l;
 	int bMustFree, bMustFree2;
@@ -2656,7 +2658,7 @@ int
 cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
 {
 	int convok;
-	struct var ret;
+	struct svar ret;
 	cnfexprEval(expr, &ret, usrptr);
 	int retVal = var2Number(&ret, &convok);
 	varFreeMembers(&ret);
@@ -2666,7 +2668,7 @@ cnfexprEvalBool(struct cnfexpr *__restrict__ const expr, void *__restrict__ cons
 struct json_object*
 cnfexprEvalCollection(struct cnfexpr *__restrict__ const expr, void *__restrict__ const usrptr)
 {
-	struct var ret;
+	struct svar ret;
 	void *retptr;
 	cnfexprEval(expr, &ret, usrptr);
 	if(ret.datatype == 'J') {
@@ -4319,7 +4321,7 @@ cnfDoInclude(char *name)
 }
 
 void
-varDelete(const struct var *v)
+varDelete(const struct svar *v)
 {
 	switch(v->datatype) {
 	case 'S':

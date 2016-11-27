@@ -46,7 +46,7 @@ typedef unsigned char batch_state_t;
 /* an object inside a batch, including any information (state!) needed for it to "life".
  */
 struct batch_obj_s {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 };
 
 /* the batch
@@ -125,5 +125,8 @@ batchInit(batch_t *const pBatch, const int maxElem)
 finalize_it:
 	RETiRet;
 }
+
+#ifdef _AIX
+#endif
 
 #endif /* #ifndef BATCH_H_INCLUDED */

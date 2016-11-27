@@ -48,8 +48,9 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-
+#endif
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
@@ -151,7 +152,7 @@ finalize_it:
  */
 rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
-	    msg_t *__restrict__ const pMsg,
+	    smsg_t *__restrict__ const pMsg,
 	    actWrkrIParams_t *__restrict const iparam,
 	    struct syslogTime *const ttNow)
 {
@@ -259,7 +260,7 @@ finalize_it:
  * rgerhards, 2009-04-03
  */
 rsRetVal
-tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow)
+tplToArray(struct template *pTpl, smsg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
@@ -330,7 +331,7 @@ finalize_it:
  * rgerhards, 2012-08-29
  */
 rsRetVal
-tplToJSON(struct template *pTpl, msg_t *pMsg, struct json_object **pjson, struct syslogTime *ttNow)
+tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struct syslogTime *ttNow)
 {
 	struct templateEntry *pTpe;
 	rs_size_t propLen;

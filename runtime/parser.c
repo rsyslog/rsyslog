@@ -309,7 +309,7 @@ ENDobjDestruct(parser)
  * pMsg->pszRawMsg buffer is updated.
  * rgerhards, 2008-10-09
  */
-static rsRetVal uncompressMessage(msg_t *pMsg)
+static rsRetVal uncompressMessage(smsg_t *pMsg)
 {
 	DEFiRet;
 	uchar *deflateBuf = NULL;
@@ -377,7 +377,7 @@ finalize_it:
  * rgerhards, 2007-09-14
  */
 static rsRetVal
-SanitizeMsg(msg_t *pMsg)
+SanitizeMsg(smsg_t *pMsg)
 {
 	DEFiRet;
 	uchar *pszMsg;
@@ -568,7 +568,7 @@ finalize_it:
  * that functionality and so they do not need to implement it themsleves.
  */
 static rsRetVal
-ParsePRI(msg_t *pMsg)
+ParsePRI(smsg_t *pMsg)
 {
 	syslog_pri_t pri;
 	uchar *msg;
@@ -609,7 +609,7 @@ ParsePRI(msg_t *pMsg)
  * rgerhards, 2008-10-09
  */
 static rsRetVal
-ParseMsg(msg_t *pMsg)
+ParseMsg(smsg_t *pMsg)
 {
 	rsRetVal localRet = RS_RET_ERR;
 	parserList_t *pParserList;

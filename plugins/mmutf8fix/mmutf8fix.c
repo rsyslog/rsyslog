@@ -291,8 +291,8 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 }
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
 CODESTARTdoAction

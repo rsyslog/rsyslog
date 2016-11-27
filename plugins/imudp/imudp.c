@@ -197,6 +197,7 @@ static struct cnfparamblk inppblk =
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
+
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
@@ -394,7 +395,7 @@ processPacket(struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *p
 	struct sockaddr_storage *frominet, socklen_t socklen, multi_submit_t *multiSub)
 {
 	DEFiRet;
-	msg_t *pMsg = NULL;
+	smsg_t *pMsg = NULL;
 
 	if(lenRcvBuf == 0)
 		FINALIZE; /* this looks a bit strange, but practice shows it happens... */
@@ -479,7 +480,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 		 * requery below on first loop iteration */
 	struct syslogTime stTime;
 	char errStr[1024];
-	msg_t *pMsgs[CONF_NUM_MULTISUB];
+	smsg_t *pMsgs[CONF_NUM_MULTISUB];
 	multi_submit_t multiSub;
 	int nelem;
 	int i;
@@ -563,7 +564,7 @@ processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_sto
 	ssize_t lenRcvBuf;
 	struct sockaddr_storage frominet;
 	multi_submit_t multiSub;
-	msg_t *pMsgs[CONF_NUM_MULTISUB];
+	smsg_t *pMsgs[CONF_NUM_MULTISUB];
 	char errStr[1024];
 	struct msghdr mh;
 	struct iovec iov[1];

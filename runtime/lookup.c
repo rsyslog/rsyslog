@@ -39,7 +39,9 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 /* definitions for objects we access */
 DEFobjStaticHelpers

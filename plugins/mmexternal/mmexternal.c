@@ -31,11 +31,14 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(__FreeBSD__)
+#if defined(_AIX) || defined(__FreeBSD__) 
 #include <sys/wait.h>
 #else
 #include <wait.h>
 #endif
+#ifdef _AIX /* AIXPORT */
+#include <errno.h>
+#endif /* AIXPORT */
 #include <sys/uio.h>
 #include "conf.h"
 #include "syslogd-types.h"
@@ -44,6 +47,7 @@
 #include "msg.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -209,7 +213,7 @@ done:	return;
  * not handle those border-cases that are describe to cannot exist!
  */
 static void
-processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *const pMsg)
+processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *const pMsg)
 {
 	rsRetVal iRet;
 	char errStr[1024];
@@ -442,7 +446,7 @@ tryRestart(wrkrInstanceData_t *pWrkrData)
  * own action queue.
  */
 static rsRetVal
-callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, msg_t *__restrict__ const pMsg)
+callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict__ const pMsg)
 {
 	int lenWritten;
 	int lenWrite;
@@ -509,8 +513,8 @@ finalize_it:
 
 
 BEGINdoAction_NoStrings
-	msg_t **ppMsg = (msg_t **) pMsgData;
-	msg_t *pMsg = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	instanceData *pData;
 CODESTARTdoAction
 	pData = pWrkrData->pData;

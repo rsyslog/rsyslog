@@ -233,7 +233,7 @@ SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar
 static rsRetVal
 defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, multi_submit_t *pMultiSub)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -473,7 +473,7 @@ static rsRetVal
 DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 {
 	multi_submit_t multiSub;
-	msg_t *pMsgs[NUM_MULTISUB];
+	smsg_t *pMsgs[NUM_MULTISUB];
 	struct syslogTime stTime;
 	time_t ttGenTime;
 	char *pEnd;

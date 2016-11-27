@@ -90,7 +90,7 @@ static rsRetVal
 enqMsg(uchar *msg, uchar* pszTag, syslog_pri_t pri, struct timeval *tp, struct json_object *json)
 {
 	struct syslogTime st;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	assert(msg != NULL);

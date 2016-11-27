@@ -263,7 +263,7 @@ i10pow(int exp)
  * backward compatibility, which we consider pretty important).
  */
 static bson *
-getDefaultBSON(msg_t *pMsg)
+getDefaultBSON(smsg_t *pMsg)
 {
 	bson *doc = NULL;
 	uchar *procid; short unsigned procid_free; rs_size_t procid_len;
@@ -513,7 +513,7 @@ CODESTARTdoAction
 	}
 
 	if(pData->tplName == NULL) {
-		doc = getDefaultBSON((msg_t*)pMsgData);
+		doc = getDefaultBSON((smsg_t*)pMsgData);
 	} else {
 		doc = BSONFromJSONObject((struct json_object *)pMsgData);
 	}
