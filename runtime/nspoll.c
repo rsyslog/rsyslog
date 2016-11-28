@@ -62,10 +62,12 @@ loadDrvr(nspoll_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+	if(pBaseDrvrName == NULL) {/* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	}
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName)) {
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -79,9 +81,10 @@ loadDrvr(nspoll_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if(pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
+		}
 	}
 	RETiRet;
 }
@@ -95,8 +98,9 @@ ENDobjConstruct(nspoll)
 /* destructor for the nspoll object */
 BEGINobjDestruct(nspoll) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nspoll)
-	if(pThis->pDrvrData != NULL)
+	if(pThis->pDrvrData != NULL) {
 		pThis->Drvr.Destruct(&pThis->pDrvrData);
+	}
 
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string

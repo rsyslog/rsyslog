@@ -67,10 +67,12 @@ loadDrvr(nssel_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+	if(pBaseDrvrName == NULL) {/* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	}
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName)) {
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	}
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
@@ -84,9 +86,10 @@ loadDrvr(nssel_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if(pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
+		}
 	}
 	RETiRet;
 }
