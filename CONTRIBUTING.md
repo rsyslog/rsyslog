@@ -119,7 +119,7 @@ a single) platform.
 Note that we always try to merge with the most recent master branch and
 try a build from that version (if automatic merging is possible). If this
 test fails but no other, chances are good that there is an inter-PR issue.
-If this happens, it is suggested to rebase to get master branch and update
+If this happens, it is suggested to rebase to git master branch and update
 the PR.
 
 Note to developers
