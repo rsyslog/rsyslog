@@ -1507,6 +1507,11 @@ BEGINafterRun
 	int i;
 CODESTARTafterRun
 	/* do cleanup here */
+        if(startIndexUxLocalSockets == 1 && nfd == 1) {
+                /* No sockets were configured, no cleanup needed. */
+                return RS_RET_OK;
+        }
+
 	/* Close the UNIX sockets. */
        for (i = 0; i < nfd; i++)
 		if (listeners[i].fd != -1)
