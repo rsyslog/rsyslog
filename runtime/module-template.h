@@ -385,7 +385,8 @@ finalize_it:\
  */
 #define BEGINnewActInst \
 static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
-	struct nvlst *lst, void **ppModData, omodStringRequest_t **ppOMSR)\
+	struct nvlst __attribute__((unused)) *lst, void **ppModData, \
+	omodStringRequest_t **ppOMSR)\
 {\
 	DEFiRet;\
 	instanceData *pData = NULL; \
