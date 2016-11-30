@@ -141,6 +141,8 @@ case $1 in
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
+		    echo $CONF_FILE is:
+		    cat -n $CONF_FILE
 		else
 		    CONF_FILE="$srcdir/testsuites/$2"
 		fi
@@ -164,6 +166,8 @@ case $1 in
    		# returns only after successful startup, $3 is the instance (blank or 2!)
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
+		    echo $CONF_FILE is:
+		    cat -n $CONF_FILE
 		else
 		    CONF_FILE="$srcdir/testsuites/$2"
 		fi
