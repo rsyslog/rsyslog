@@ -98,9 +98,22 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+BEGINcreateInstance
+CODESTARTcreateInstance
+ENDcreateInstance
+
+
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance
+
+BEGINnewActInst
+CODESTARTnewActInst
+	CODE_STD_STRING_REQUESTnewActInst(1)
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	CHKiRet(createInstance(&pData));
+CODE_STD_FINALIZERnewActInst
+ENDnewActInst
 
 
 BEGINfreeWrkrInstance
@@ -164,6 +177,7 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
