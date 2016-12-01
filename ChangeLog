@@ -33,6 +33,7 @@ Version 8.24.0 [v8-stable] 2017-01-10
   Thanks to Tomas Sykora for the patch.
 - testbench:
   * empty-hostname test did not work correctly
+  * improve debugging by better output
 ------------------------------------------------------------------------------
 Version 8.23.0 [v8-stable] 2016-11-15
 - NEW BUILD REQUIREMENT: libfastjson 0.99.3
