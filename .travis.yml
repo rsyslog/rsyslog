@@ -15,8 +15,8 @@ services: mysql
 addons:
   apt:
     packages:
-    - mysql-server
-    - mysql-client
+    #- mysql-server
+    #- mysql-client
     - build-essential
     - automake
     - pkg-config
