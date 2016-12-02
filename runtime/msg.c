@@ -4803,6 +4803,7 @@ msgDelJSON(smsg_t * const pM, uchar *name)
 	} else {
 		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, "
 			  "Local or Global variable).", name);
+		assert(0);	/* during debugging, this is a hard failure! */
 		ABORT_FINALIZE(RS_RET_INVLD_SETOP);
 	}
 
