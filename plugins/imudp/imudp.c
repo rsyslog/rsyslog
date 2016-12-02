@@ -951,7 +951,14 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
-			inst->rcvbuf = (int) pvals[i].val.d.n;
+			const uint64_t val = pvals[i].val.d.n;
+			if(val > 1024 * 1024 * 1024) {
+				errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS,
+					"imudp: rcvbufsize maximum is 1 GiB, using "
+					"default instead");
+			} else {
+				inst->rcvbuf = (int) val;
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "ipfreebind")) {
 			inst->ipfreebind = (int) pvals[i].val.d.n;
 		} else {
