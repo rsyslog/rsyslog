@@ -1,4 +1,6 @@
 language: c
+ 
+group: deprecated
 
 compiler:
   - gcc
