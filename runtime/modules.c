@@ -687,7 +687,12 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			pNew->mod.om.supportsTX = 1;
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+#ifdef _AIX
+/* AIXPORT : typecaste the return type for AIX */
+				pNew->mod.om.beginTransaction = (rsRetVal(*)(void*))dummyBeginTransaction;
+#else
 				pNew->mod.om.beginTransaction = dummyBeginTransaction;
+#endif
 				pNew->mod.om.supportsTX = 0;
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
@@ -738,7 +743,12 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction",
 				   &pNew->mod.om.endTransaction);
 			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+#ifdef _AIX
+/* AIXPORT : typecaste the return type for AIX */
+				pNew->mod.om.endTransaction = (rsRetVal(*)(void*))dummyEndTransaction;
+#else
 				pNew->mod.om.endTransaction = dummyEndTransaction;
+#endif
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
@@ -895,10 +905,18 @@ static void modPrintList(void)
 								    NULL :  pMod->mod.om.newActInst);
 			dbgprintf("\ttryResume:          %p\n", pMod->tryResume);
 			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
+#ifdef _AIX
+/* AIXPORT : typecaste the return type in AIX  */
+			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == (rsRetVal (*) (void*))dummyBeginTransaction) ?
+								   NULL :  pMod->mod.om.beginTransaction));
+			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == (rsRetVal (*)(void*))dummyEndTransaction) ?
+								   NULL :  pMod->mod.om.endTransaction));
+#else
 			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
 								   NULL :  pMod->mod.om.beginTransaction));
 			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == dummyEndTransaction) ?
 								   NULL :  pMod->mod.om.endTransaction));
+#endif
 			break;
 		case eMOD_IN:
 			dbgprintf("Input Module Entry Points\n");
@@ -1229,7 +1247,12 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
+#ifdef _AIX
+/*  AIXPORT : typecaste address of pModInit  in AIX */
+	if((iRet = doModInit((rsRetVal(*)(int,int*,rsRetVal(**)(),rsRetVal(*)(),struct modInfo_s*))pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
+#else
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
+#endif
 		errmsg.LogError(0, RS_RET_MODULE_LOAD_ERR_INIT_FAILED,
 				"could not load module '%s', rsyslog error %d\n", pPathBuf, iRet);
 		dlclose(pModHdlr);

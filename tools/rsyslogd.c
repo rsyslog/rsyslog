@@ -63,6 +63,59 @@
 #include "dirty.h"
 #include "janitor.h"
 
+#if defined(_AIX)
+/* AIXPORT : start
+ * The following includes and declarations are for support of the System
+ * Resource Controller (SRC) .
+ */
+static void deinitAll(void);
+#include <spc.h>
+static  struct srcreq srcpacket;
+int     cont;
+struct  srchdr *srchdr;
+char    progname[128];
+
+
+/* Normally defined as locals in main
+ * But here since the functionality is split
+ * across multiple functions, we make it global
+ */
+static int rc;
+static socklen_t addrsz;
+static struct sockaddr srcaddr;
+static int ch;
+extern int optind;
+extern char *optarg;
+static  struct filed *f;
+int src_exists =  TRUE;
+/* src end */
+
+/*
+ * SRC packet processing - .
+ */
+#define SRCMIN(a, b)  (a < b) ? a : b
+void
+dosrcpacket(msgno, txt, len)
+	int msgno;
+	char *txt;
+	int len;
+{
+	struct srcrep reply;
+
+	reply.svrreply.rtncode = msgno;
+/* AIXPORT :  srv was corrected to syslogd */
+	strcpy(reply.svrreply.objname, "syslogd");
+	snprintf(reply.svrreply.rtnmsg,
+		SRCMIN(sizeof(reply.svrreply.rtnmsg)-1, strlen(txt)), "%s", txt);
+	srchdr = srcrrqs((char *)&srcpacket);
+	srcsrpy(srchdr, (char *)&reply, len, cont);
+}
+
+#endif
+
+/* AIXPORT : end  */
+
+
 DEFobjCurrIf(obj)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(parser)
@@ -90,7 +143,11 @@ void rsyslogdDoDie(int sig);
 
 
 #ifndef PATH_PIDFILE
+#if defined(_AIX)  /* AIXPORT : Add _AIX */
+#	define PATH_PIDFILE "/etc/rsyslogd.pid"
+#else
 #	define PATH_PIDFILE "/var/run/rsyslogd.pid"
+#endif /*_AIX*/
 #endif
 
 /* global data items */
@@ -181,13 +238,35 @@ writePidFile(void)
 {
 	FILE *fp;
 	DEFiRet;
-	
+
 	const char *tmpPidFile;
+#if defined(_AIX)
+	int  pidfile_namelen = 0;
+#endif
+
+#ifndef _AIX
 	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
+#else
+	/* Since above code uses format as  "%s.tmp"
+	* pidfile_namelen will be
+	* length of string "PidFile" + 1 + length of string ".tmp"
+	*/
+	pidfile_namelen = strlen(PidFile)+ strlen(".tmp") + 1;
+	tmpPidFile=(char *)malloc(sizeof(char)*pidfile_namelen);
+	if(tmpPidFile == NULL)
+		tmpPidFile = PidFile;
+	else
+	{
+		memset((void *)tmpPidFile,NULL,pidfile_namelen);
+		if(snprintf((char* restrict)tmpPidFile, pidfile_namelen, "%s.tmp", PidFile) >= pidfile_namelen)
+				ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+#endif
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
@@ -290,7 +369,17 @@ prepareBackground(const int parentPipeFD)
 	close(0);
 	for(int i = beginClose ; i <= endClose ; ++i) {
 		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
-			close(i);
+/* AIXPORT : src support start */
+#if defined(_AIX)
+			if(src_exists)
+			{
+				if(i != SRC_FD)
+					(void)close(i);
+			}
+			else
+#endif
+/* AIXPORT : src support end */
+				close(i);
 		}
 	}
 }
@@ -315,12 +404,22 @@ forkRsyslog(void)
 		perror("error creating rsyslog \"fork pipe\" - terminating");
 		exit(1);
 	}
-
+	/* AIXPORT : src support start */
+#if defined(_AIX)
+	if(!src_exists)
+	{
+#endif
+	/* AIXPORT : src support end */
 	cpid = fork();
 	if(cpid == -1) {
 		perror("error forking rsyslogd process - terminating");
 		exit(1);
 	}
+	/* AIXPORT : src support start */
+#if defined(_AIX)
+	}
+#endif
+	/* AIXPORT : src support end */
 
 	if(cpid == 0) {    
 		prepareBackground(pipefd[1]);
@@ -540,7 +639,7 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *propFromHost = NULL;
 	prop_t *propFromHostIP = NULL;
 	int bIsPermitted;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	int i;
 	rsRetVal localRet;
 	DEFiRet;
@@ -714,14 +813,14 @@ rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 }
 
 static inline rsRetVal
-submitMsgWithDfltRatelimiter(msg_t *pMsg)
+submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 {
 	return ratelimitAddMsg(dflt_ratelimiter, NULL, pMsg);
 }
 
 
 static void
-logmsgInternal_doWrite(msg_t *const __restrict__ pMsg)
+logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
 {
 	if(bProcessInternalMessages) {
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
@@ -744,7 +843,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 	const char *__restrict__ const msg, int flags)
 {
 	uchar pszTag[33];
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
@@ -827,7 +926,7 @@ finalize_it:
 }
 
 rsRetVal
-submitMsg(msg_t *pMsg)
+submitMsg(smsg_t *pMsg)
 {
 	return submitMsgWithDfltRatelimiter(pMsg);
 }
@@ -837,7 +936,7 @@ submitMsg(msg_t *pMsg)
  * rgerhards, 2008-02-13
  */
 rsRetVal
-submitMsg2(msg_t *pMsg)
+submitMsg2(smsg_t *pMsg)
 {
 	qqueue_t *pQueue;
 	ruleset_t *pRuleset;
@@ -1069,7 +1168,11 @@ initAll(int argc, char **argv)
 	 * of other options, we do this during the inital option processing.
 	 * rgerhards, 2008-04-04
 	 */
+#if defined(_AIX)
+	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:CvwxR")) != EOF) {
+#else
 	while((ch = getopt(argc, argv, "46a:Ac:dDef:g:hi:l:m:M:nN:op:qQr::s:S:t:T:u:Cvwx")) != EOF) {
+#endif
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -1090,6 +1193,10 @@ initAll(int argc, char **argv)
 		case 'x': /* disable dns for remote messages */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
+#if defined(_AIX)
+		case 'R':  /* This option is a no-op for AIX */
+			break;   
+#endif
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
 			debugging_on = 1;
 			Debug = 1;
@@ -1380,7 +1487,7 @@ finalize_it:
 static void
 processImInternal(void)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
 		logmsgInternal_doWrite(pMsg);
@@ -1399,7 +1506,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
 {
 	prop_t *pProp = NULL;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	DEFiRet;
 
 	/* we now create our own message object and submit it to the queue */
@@ -1520,15 +1627,77 @@ mainloop(void)
 {
 	struct timeval tvSelectTimeout;
 	time_t tTime;
+	/* AIXPORT :  SRC support start */
+#if defined(_AIX)
+	char buf[256];
+	fd_set rfds;
+#endif
+	/* AIXPORT : src end */
 
 	BEGINfunc
 	/* first check if we have any internal messages queued and spit them out. */
 	processImInternal();
 
 	while(!bFinished){
+		/* AIXPORT :  SRC support start */
+#if defined(_AIX)
+		if(src_exists)
+		{
+			FD_ZERO(&rfds);
+			FD_SET(SRC_FD, &rfds);
+		}
+#endif
+		/* AIXPORT : src end */
 		tvSelectTimeout.tv_sec = janitorInterval * 60; /* interval is in minutes! */
 		tvSelectTimeout.tv_usec = 0;
+#ifndef _AIX
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+#else
+		/* AIXPORT :  SRC support start */
+		if(!src_exists)
+			select(1, NULL, NULL, NULL, &tvSelectTimeout);
+		else if(select(SRC_FD + 1, (fd_set *)&rfds, NULL, NULL, &tvSelectTimeout))
+		{
+			if(FD_ISSET(SRC_FD, &rfds))
+			{
+				rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
+				if(rc < 0)
+				if (errno != EINTR)
+				{
+					fprintf(stderr,"%s: ERROR: '%d' recvfrom\n", progname,errno);
+					exit(1);
+				} else  /* punt on short read */
+					continue;
+
+				switch(srcpacket.subreq.action)
+				{
+					case START:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					break;
+					case STOP:
+						if (srcpacket.subreq.object == SUBSYSTEM) {
+							dosrcpacket(SRC_OK,NULL,sizeof(struct srcrep));
+							(void) snprintf(buf, sizeof(buf) / sizeof(char), " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+								"\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting due to stopsrc.",
+								(int) glblGetOurPid());
+							errno = 0;
+							logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+							return ;
+						} else
+							dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n",sizeof(struct srcrep));
+					break;
+					case REFRESH:
+						dosrcpacket(SRC_SUBMSG,"ERROR: rsyslogd does not support this option.\n", sizeof(struct srcrep));
+                        		break;
+					default:
+						dosrcpacket(SRC_SUBICMD,NULL,sizeof(struct srcrep));
+					break;
+
+				}
+			}
+		}
+#endif
+	/* AIXPORT : SRC end */		
 
 		if(bChildDied) {
 			pid_t child;
@@ -1665,6 +1834,28 @@ deinitAll(void)
 int
 main(int argc, char **argv)
 {
+#if defined(_AIX)
+	/* AIXPORT : start
+	* SRC support : fd 0 (stdin) must be the SRC socket
+	* startup.  fd 0 is duped to a new descriptor so that stdin can be used
+	* internally by rsyslogd.
+	*/
+
+	strncpy(progname,argv[0], sizeof(progname)-1);
+	addrsz = sizeof(srcaddr);
+	if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
+		fprintf(stderr, "%s: continuing without SRC support\n", progname);
+		src_exists = FALSE;
+	}
+	if (src_exists) 
+		if(dup2(0, SRC_FD) == -1)
+		{
+			fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
+			/* In the unlikely event of dup2 failing we exit */
+			exit(-1);
+		}
+#endif
+	/* AIXPORT : src end */
 	/* use faster hash function inside json lib */
 	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");

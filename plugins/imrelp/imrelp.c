@@ -201,7 +201,7 @@ static relpRetVal
 onSyslogRcv(void *pUsr, uchar *pHostname, uchar *pIP, uchar *msg, size_t lenMsg)
 {
 	prop_t *pProp = NULL;
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
 	DEFiRet;
 

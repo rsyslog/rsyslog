@@ -35,7 +35,12 @@
 #ifdef __BIONIC__
 #  include <linux/fcntl.h>
 #else
-#  include <sys/fcntl.h>
+#ifdef _AIX
+/*  AIXPORT : correct the path of fcntl.h */
+#include <fcntl.h>
+#else
+#include <sys/fcntl.h>
+#endif
 #endif
 #include <netinet/in.h>
 #include <stdlib.h>

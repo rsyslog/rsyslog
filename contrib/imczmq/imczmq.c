@@ -331,7 +331,7 @@ static rsRetVal rcvData(){
 			DBGPRINTF("imczmq: null buffer\n");
 			continue;
 		}
-		msg_t *pMsg;
+		smsg_t *pMsg;
 		if(msgConstruct(&pMsg) == RS_RET_OK) {
 			MsgSetRawMsg(pMsg, buf, strlen(buf));
 			MsgSetInputName(pMsg, s_namep);
@@ -624,3 +624,4 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 ENDmodInit
+

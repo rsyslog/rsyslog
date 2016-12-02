@@ -92,6 +92,9 @@
 #include <strings.h>
 #include <time.h>
 #include <errno.h>
+#ifdef _AIX
+#include <pthread.h>
+#endif 
 #include <json.h>
 
 #include "dirty.h"
@@ -111,15 +114,21 @@
 #include "parserif.h"
 #include "statsobj.h"
 
+/* AIXPORT : cs renamed to legacy_cs as clashes with libpthreads variable in complete file*/
+#ifdef _AIX
+#define cs legacy_cs
+#endif
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
 static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
-static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t*);
-static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t*);
-static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t*);
+static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t*);
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj)
@@ -164,6 +173,7 @@ typedef struct configSettings_s {
 	int iActionQueueDeqtWinFromHr;			/* hour begin of time frame when queue is to be dequeued */
 	int iActionQueueDeqtWinToHr;			/* hour begin of time frame when queue is to be dequeued */
 } configSettings_t;
+
 
 configSettings_t cs;					/* our current config settings */
 configSettings_t cs_save;				/* our saved (scope!) config settings */
@@ -947,7 +957,7 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 static rsRetVal
 prepareDoActionParams(action_t * __restrict__ const pAction,
 		      wti_t * __restrict__ const pWti,
-		      msg_t *__restrict__ const pMsg,
+		      smsg_t *__restrict__ const pMsg,
 		      struct syslogTime *ttNow)
 {
 	int i;
@@ -996,8 +1006,10 @@ finalize_it:
 
 
 /* the #pragmas can go away when we have disable array-passing mode */
+#if !defined(_AIX)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
+#endif
 void
 releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {
@@ -1049,7 +1061,9 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 
 	return;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic pop
+#endif
 
 
 /* This is used in resume processing. We only finally know that a resume
@@ -1362,7 +1376,7 @@ actionCommitAllDirect(wti_t *__restrict__ const pWti)
 static rsRetVal
 processMsgMain(action_t *__restrict__ const pAction,
 	wti_t *__restrict__ const pWti,
-	msg_t *__restrict__ const pMsg,
+	smsg_t *__restrict__ const pMsg,
 	struct syslogTime *ttNow)
 {
 	DEFiRet;
@@ -1517,7 +1531,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
+doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
@@ -1566,7 +1580,7 @@ finalize_it:
  * be filtered out before calling us (what is done currently!).
  */
 rsRetVal
-actionWriteToAction(action_t * const pAction, msg_t *pMsg, wti_t * const pWti)
+actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 {
 	DEFiRet;
 
@@ -1631,9 +1645,11 @@ finalize_it:
 /* Call configured action, most complex case with all features supported (and thus slow).
  * rgerhards, 2010-06-08
  */
+#ifndef _AIX
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
-doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, msg_t *pMsg)
+doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
 {
 	DEFiRet;
 
@@ -1660,7 +1676,9 @@ finalize_it:
 
 	RETiRet;
 }
+#ifndef _AIX
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* helper to activateActions, it activates a specific action.
@@ -1709,7 +1727,7 @@ activateActions(void)
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, msg_t * const pMsg)
+doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t * const pMsg)
 {
 	int doProcess = 1;
 	time_t lastAct;

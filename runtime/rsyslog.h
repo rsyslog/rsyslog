@@ -25,12 +25,24 @@
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
+#ifndef _AIX
 #pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 #pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
 #pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
 #pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
+#endif 
 #include <pthread.h>
 #include "typedefs.h"
+
+#if defined(_AIX)
+#include <sys/select.h>
+/* AIXPORT : start*/
+#define SRC_FD          13
+#define SRCMSG          (sizeof(srcpacket))
+extern int src_exists;
+#endif
+/* src end */
+
 
 /* ############################################################# *
  * #                 Some constant values                      # *
@@ -110,6 +122,10 @@
 #define	LOG_CRON	(9<<3)	/* clock daemon */
 #define	LOG_AUTHPRIV	(10<<3)	/* security/authorization messages (private) */
 #define	LOG_FTP		(11<<3)	/* ftp daemon */
+#if defined(_AIX)		/* AIXPORT : These are necessary for AIX */
+#define	LOG_ASO		(12<<3) /* Active System Optimizer. Reserved for internal use */
+#define	LOG_CAA		(15<<3) /* Cluster aware AIX subsystem */
+#endif
 #define	LOG_LOCAL0	(16<<3)	/* reserved for local use */
 #define	LOG_LOCAL1	(17<<3)	/* reserved for local use */
 #define	LOG_LOCAL2	(18<<3)	/* reserved for local use */
@@ -251,7 +267,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_OUT_OF_STACKSPACE = -2055, /**< a stack data structure is exhausted and can not be grown */
 	RS_RET_STACK_EMPTY = -2056, /**< a pop was requested on a stack, but the stack was already empty */
 	RS_RET_INVALID_VMOP = -2057, /**< invalid virtual machine instruction */
-	RS_RET_INVALID_VAR = -2058, /**< a var_t or its content is unsuitable, eg. VARTYPE_NONE */
+	RS_RET_INVALID_VAR = -2058, /**< a var or its content is unsuitable, eg. VARTYPE_NONE */
 	RS_RET_INVALID_NUMBER = -2059, /**< number invalid during parsing */
 	RS_RET_NOT_A_NUMBER = -2060, /**< e.g. conversion impossible because the string is not a number */
 	RS_RET_OBJ_ALREADY_REGISTERED = -2061, /**< object (name) is already registered */

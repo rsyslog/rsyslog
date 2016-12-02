@@ -52,13 +52,13 @@ enum cnfobjType {
 const char* cnfobjType2str(enum cnfobjType ot);
 
 /* a variant type, for example used for expression evaluation
- * 2011-07-15/rger: note that there exists a "legacy" object var_t,
+ * 2011-07-15/rger: note that there exists a "legacy" object var,
  * which implements the same idea, but in a suboptimal manner. I have
  * stipped this down as much as possible, but will keep it for a while
  * to avoid unnecessary complexity during development. TODO: in the long
- * term, var_t shall be replaced by struct var.
+ * term, var shall be replaced by struct svar.
  */
-struct var {
+struct svar{
 	union {
 		es_str_t *estr;
 		struct cnfarray *ar;
@@ -85,7 +85,7 @@ struct objlst {
 struct nvlst {
   struct nvlst *next;
   es_str_t *name;
-  struct var val;
+  struct svar val;
   unsigned char bUsed;
   	/**< was this node used during config processing? If not, this
 	 *   indicates an error. After all, the user specified a setting
@@ -277,7 +277,7 @@ struct cnfparamblk { /* now the actual param block use in API calls */
 	 * that. -- rgerhards, 2011-07-15
 	 */
 struct cnfparamvals { /* the values we obtained for param descr. */
-	struct var val;
+	struct svar val;
 	unsigned char bUsed;
 };
 
@@ -303,7 +303,7 @@ void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
 struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
-void cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void *pusr);
+void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
 struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
@@ -318,7 +318,7 @@ struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *param
 	       struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
 int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
-void varDelete(const struct var *v);
+void varDelete(const struct svar *v);
 void cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk);
 struct cnfstmt * cnfstmtNew(unsigned s_type);
 struct cnfitr * cnfNewIterator(char *var, struct cnfexpr *collection);
@@ -349,4 +349,5 @@ const char * tokenval2str(int tok);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);
+
 #endif

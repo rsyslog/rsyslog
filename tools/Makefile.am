@@ -42,8 +42,12 @@ rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAG
 # otherwise dependencies are not properly calculated (resulting in a
 # potentially incomplete build, a problem we had several times...)
 rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS)
+if AIX
+rsyslogd_LDFLAGS = -export-dynamic 
+else
 rsyslogd_LDFLAGS = -export-dynamic \
 	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+endif
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \

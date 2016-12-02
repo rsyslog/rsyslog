@@ -75,7 +75,9 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -747,7 +749,9 @@ finalize_it:
  * This variant here is only used if we need to work with a netstream driver
  * that does not support epoll().
  */
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 static rsRetVal
 RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 {
@@ -851,7 +855,9 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 	RETiRet;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* This function is called to gather input. It tries doing that via the epoll()
@@ -1029,7 +1035,11 @@ SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, 
 }
 
 static rsRetVal
+#ifdef _AIX
+SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+#else
 SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
+#endif
 {
 	DEFiRet;
 	pThis->pOnListenDeinit = pCB;

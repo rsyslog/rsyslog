@@ -45,10 +45,10 @@ DEFobjCurrIf(parser)
 /* static data */
 
 /* generate a "repeated n times" message */
-static msg_t *
+static smsg_t *
 ratelimitGenRepMsg(ratelimit_t *ratelimit)
 {
-	msg_t *repMsg;
+	smsg_t *repMsg;
 	size_t lenRepMsg;
 	uchar szRepMsg[1024];
 
@@ -70,7 +70,7 @@ done:	return repMsg;
 }
 
 static rsRetVal
-doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
+doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 {
 	int bNeedUnlockMutex = 0;
 	DEFiRet;
@@ -198,7 +198,7 @@ finalize_it:
  * message before the original message.
  */
 rsRetVal
-ratelimitMsg(ratelimit_t *ratelimit, msg_t *pMsg, msg_t **ppRepMsg)
+ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 {
 	DEFiRet;
 	rsRetVal localRet;
@@ -245,10 +245,10 @@ ratelimitChecked(ratelimit_t *ratelimit)
  * if pMultiSub == NULL, a single-message enqueue happens (under reconsideration)
  */
 rsRetVal
-ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, msg_t *pMsg)
+ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 {
 	rsRetVal localRet;
-	msg_t *repMsg;
+	smsg_t *repMsg;
 	DEFiRet;
 
 	if(pMultiSub == NULL) {
@@ -353,7 +353,7 @@ ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity)
 void
 ratelimitDestruct(ratelimit_t *ratelimit)
 {
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	if(ratelimit->pMsg != NULL) {
 		if(ratelimit->nsupp > 0) {
 			pMsg = ratelimitGenRepMsg(ratelimit);

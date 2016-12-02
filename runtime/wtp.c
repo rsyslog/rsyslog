@@ -217,7 +217,9 @@ finalize_it:
 }
 
 
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif
 /* Send a shutdown command to all workers and see if they terminate.
  * A timeout may be specified. This function may also be called with
  * the current number of workers being 0, in which case it does not
@@ -270,7 +272,9 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	
 	RETiRet;
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* Unconditionally cancel all running worker threads.
@@ -351,7 +355,9 @@ wtpWrkrExecCancelCleanup(void *arg)
  * wti worker.
  * rgerhards, 2008-01-21
  */
+#if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
+#endif 
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
@@ -376,6 +382,13 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	sigemptyset(&sigSet);
 	sigaddset(&sigSet, SIGTTIN);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+
+#ifdef _AIX /*AIXPORT unblock SIGSEGV so that the process core dumps on segmentation fault */
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGSEGV);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+#endif /*AIXPORT*/
+
 
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
@@ -406,7 +419,9 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_exit(0);
 }
+#if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#endif
 
 
 /* start a new worker */
