@@ -1,5 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.24.0 [v8-stable] 2017-01-10
+- rsyslog now builds on AIX
+  see also: https://github.com/rsyslog/rsyslog/pull/1247
+  Thanks to github user purnimam1 and the team at IBM
+  Note: the rsyslog project has no AIX platform to ensure that future versions
+  will remain buildable on AIX. If you would like to contribute ressources,
+  please contact the rsyslog team.
 - KSI signature provider: file permissions can now be specified
   This happens via parameters equal to those used by omfile itself.
   Note that KSI files can have different permissions/owner than the log
