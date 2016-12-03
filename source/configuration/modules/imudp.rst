@@ -224,6 +224,8 @@ Input Parameters
 
    *Default: unset*
 
+   *Maximum Value: 1G*
+
    This request a socket receive buffer of specific size from the operating system. It
    is an expert parameter, which should only be changed for a good reason.
    Note that setting this parameter disables Linux auto-tuning, which
