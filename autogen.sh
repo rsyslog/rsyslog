@@ -1,5 +1,7 @@
 #!/bin/sh
 # Run this to generate all the initial makefiles, etc.
+# Licensed under ASL 2.0 (as of email conversation with original
+# author Michael Biebl on 2016-12-04).
 
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
