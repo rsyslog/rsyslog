@@ -6,11 +6,14 @@ compiler:
   - gcc
   - clang
 
-# you can comment this in if a large number of known-good
-# merges is to happen and only buildbot testing is desired
-#branches:
-#  except:
-#    - master-candidate
+# Everything merged to master needs to go through CI, so
+# there should never be a need to check master itself. Thus
+# we can save Travis CI some cost. This will also result in
+# potentially faster builds for ourselvs when there is a
+# high number of PRs and merges ongoing.
+branches:
+  except:
+    - master
 
 services: mysql
 
