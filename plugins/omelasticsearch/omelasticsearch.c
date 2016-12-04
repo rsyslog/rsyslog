@@ -108,7 +108,6 @@ typedef struct _instanceData {
 	sbool dynBulkId;
 	sbool bulkmode;
 	size_t maxbytes;
-	sbool asyncRepl;
 	sbool useHttps;
 	sbool allowUnsignedCerts;
 } instanceData;
@@ -146,7 +145,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynparent", eCmdHdlrBinary, 0 },
 	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "maxbytes", eCmdHdlrSize, 0 },
-	{ "asyncrepl", eCmdHdlrBinary, 0 },
+	{ "asyncrepl", eCmdHdlrGoneAway, 0 },
         { "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
 	{ "errorfile", eCmdHdlrGetWord, 0 },
@@ -261,7 +260,6 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdynamic search index=%d\n", pData->dynSrchIdx);
 	dbgprintf("\tdynamic search type=%d\n", pData->dynSrchType);
 	dbgprintf("\tdynamic parent=%d\n", pData->dynParent);
-	dbgprintf("\tasync replication=%d\n", pData->asyncRepl);
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\tmaxbytes=%lu\n", pData->maxbytes);
@@ -510,11 +508,6 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 	}
 
 	separator = '?';
-	if(pData->asyncRepl) {
-		if(r == 0) r = es_addChar(&url, separator);
-		if(r == 0) r = es_addBuf(&url, "replication=async", sizeof("replication=async")-1);
-		separator = '&';
-	}
 
 	if(pData->timeout != NULL) {
 		if(r == 0) r = es_addChar(&url, separator);
@@ -1369,7 +1362,6 @@ setInstParamDefaults(instanceData *pData)
 	pData->dynSrchIdx = 0;
 	pData->dynSrchType = 0;
 	pData->dynParent = 0;
-	pData->asyncRepl = 0;
 	pData->useHttps = 0;
 	pData->bulkmode = 0;
 	pData->maxbytes = 104857600; //100 MB Is the default max message size that ships with ElasticSearch
@@ -1435,8 +1427,6 @@ CODESTARTnewActInst
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
 			pData->timeout = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "asyncrepl")) {
-			pData->asyncRepl = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "usehttps")) {
 			pData->useHttps = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
