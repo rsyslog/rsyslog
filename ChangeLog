@@ -16,6 +16,12 @@ Version 8.24.0 [v8-stable] 2017-01-10
   In 8.23.0, "localhost" was used in this case, but that could be misleading.
   The new name makes the error condition (gethostname() should always return
   a non-empty name) more obvious.
+- omelasticsearch: remove "asyncrepl" config parameter
+  The _bulk index endpoint on ElasticSearch 5.0 no longer
+  ignores the ?replication=async query parameter. It was deprecated
+  since 1.5 and silently ignored in 2.x but passing it to a 5.x
+  instance breaks omeleastisearch with a 400 response.
+  closes https://github.com/rsyslog/rsyslog/issues/1250
 - omfwd: Add support for bind-to-device (see below on same for imudp)
 - imudp: Add support for bind-to-device
   Add support for bind-to-device option to omfwd and imudp modules.
