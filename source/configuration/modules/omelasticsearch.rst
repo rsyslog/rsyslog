@@ -82,12 +82,7 @@ This module provides native support for logging to
 .. _asyncrepl:
 
 -  **asyncrepl**\ <on/**off**>
-   By default, an indexing operation returns after all `replica
-   shards <http://www.elasticsearch.org/guide/appendix/glossary.html#replica_shard>`_
-   have indexed the document. With asyncrepl="on" it will return after
-   it was indexed on the `primary
-   shard <http://www.elasticsearch.org/guide/appendix/glossary.html#primary_shard>`_
-   only - thus trading some consistency for speed.
+   No longer supported as ElasticSearch no longer supports it.
 
 .. _usehttps:
 
