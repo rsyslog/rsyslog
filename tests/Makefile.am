@@ -420,6 +420,12 @@ TESTS +=  \
 	mmrm1stspace-basic.sh
 endif
 
+if ENABLE_PMNULL
+TESTS +=  \
+	pmnull-basic.sh \
+	pmnull-withparams.sh
+endif
+
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh
@@ -806,6 +812,8 @@ EXTRA_DIST= \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	mmrm1stspace-basic.sh \
+	pmnull-basic.sh \
+	pmnull-withparams.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \

@@ -95,6 +95,10 @@ if ENABLE_PMCISCOIOS
 SUBDIRS += plugins/pmciscoios
 endif
 
+if ENABLE_PMNULL
+SUBDIRS += plugins/pmnull
+endif
+
 if ENABLE_PMAIXFORWARDEDFROM
 SUBDIRS += contrib/pmaixforwardedfrom
 endif
