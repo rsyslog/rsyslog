@@ -20,8 +20,8 @@ services: mysql
 addons:
   apt:
     packages:
-    - mysql-server
-    - mysql-client
+    #- mysql-server
+    #- mysql-client
     - build-essential
     - automake
     - pkg-config
@@ -91,6 +91,7 @@ services:
 
 
 before_install:
+  - jdk_switcher use oraclejdk8
   - if [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
   - sudo add-apt-repository ppa:adiscon/$AD_PPA -y
   - sudo add-apt-repository ppa:qpid/released -y
