@@ -1,6 +1,5 @@
 language: c
  
-group: deprecated
 
 compiler:
   - gcc
@@ -11,9 +10,9 @@ compiler:
 # we can save Travis CI some cost. This will also result in
 # potentially faster builds for ourselvs when there is a
 # high number of PRs and merges ongoing.
-branches:
-  except:
-    - master
+#branches:
+  #except:
+    #- master
 
 services: mysql
 
