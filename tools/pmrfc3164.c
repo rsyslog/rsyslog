@@ -68,6 +68,7 @@ static struct cnfparamdescr parserpdescr[] = {
 	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 },
 	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 },
 	{ "permit.arobasesinhostname", eCmdHdlrBinary, 0 },
+	{ "force.tagendingbycolon", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -80,6 +81,7 @@ struct instanceConf_s {
 	int bPermitSquareBracketsInHostname;
 	int bPermitSlashesInHostname;
 	int bPermitArobasesInHostname;
+	int bForceTagEndingByColon;
 };
 
 
@@ -105,6 +107,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bPermitSquareBracketsInHostname = 0;
 	inst->bPermitSlashesInHostname = 0;
 	inst->bPermitArobasesInHostname = 0;
+	inst->bForceTagEndingByColon = 0;
 	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
 	*pinst = inst;
 finalize_it:
@@ -143,6 +146,8 @@ CODESTARTnewParserInst
 			inst->bPermitSlashesInHostname = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "permit.arobasesinhostname")) {
 			inst->bPermitArobasesInHostname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "force.tagendingbycolon")) {
+			inst->bForceTagEndingByColon = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
@@ -319,6 +324,14 @@ CODESTARTparse
 			++p2parse; 
 			--lenMsg;
 			bufParseTAG[i++] = ':';
+		}
+		else if (pInst->bForceTagEndingByColon) {
+		        /* Tag need to be ended by a colon or it's not a tag but the
+		         * begin of the message
+		         */
+		        p2parse -= i;
+		        lenMsg += i;
+		        i = 0;
 		}
 
 		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
