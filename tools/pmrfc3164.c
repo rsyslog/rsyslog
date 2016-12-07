@@ -69,6 +69,7 @@ static struct cnfparamdescr parserpdescr[] = {
 	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 },
 	{ "permit.arobasesinhostname", eCmdHdlrBinary, 0 },
 	{ "force.tagendingbycolon", eCmdHdlrBinary, 0},
+	{ "remove.msgfirstspace", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -82,6 +83,7 @@ struct instanceConf_s {
 	int bPermitSlashesInHostname;
 	int bPermitArobasesInHostname;
 	int bForceTagEndingByColon;
+	int bRemoveMsgFirstSpace;
 };
 
 
@@ -108,6 +110,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bPermitSlashesInHostname = 0;
 	inst->bPermitArobasesInHostname = 0;
 	inst->bForceTagEndingByColon = 0;
+	inst->bRemoveMsgFirstSpace = 0;
 	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
 	*pinst = inst;
 finalize_it:
@@ -148,6 +151,8 @@ CODESTARTnewParserInst
 			inst->bPermitArobasesInHostname = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "force.tagendingbycolon")) {
 			inst->bForceTagEndingByColon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "remove.msgfirstspace")) {
+			inst->bRemoveMsgFirstSpace = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
@@ -348,6 +353,12 @@ CODESTARTparse
 	}
 
 finalize_it:
+	if (pInst->bRemoveMsgFirstSpace && *p2parse == ' ') {
+		/* Bypass first space found in MSG part
+		 */
+	        p2parse++;
+	        lenMsg--;
+	}
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 ENDparse2
 
