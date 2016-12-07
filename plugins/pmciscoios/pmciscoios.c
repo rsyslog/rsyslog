@@ -127,11 +127,7 @@ CODESTARTnewParserInst
 			continue;
 		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
 			inst->bOriginPresent = (int) pvals[i].val.d.n;
-		} else {
-			dbgprintf("pmciscoios: program error, non-handled "
-			  "param '%s'\n", parserpblk.descr[i].name);
-		}
-                if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
+		} else if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
                         inst->bXrPresent = (int) pvals[i].val.d.n;
                 } else {
                         dbgprintf("pmciscoios: program error, non-handled "
