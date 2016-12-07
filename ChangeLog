@@ -39,6 +39,12 @@ Version 8.24.0 [v8-stable] 2017-01-10
   See also https://github.com/rsyslog/rsyslog/pull/1274
   Thanks to github user tomassykora for the final patch and Rado Sroka for
   the analysis and an initial patch.
+- bugfix ommongodb: did not work in v8 due to invalid indirection
+  Thanks to Benoit Dolez for the patch.
+- bugfix ommongodb: fix tryResume handling
+  To make tryResume working, the connection to mongodb need to be closed.
+  Thus close it on "insert error".
+  Thanks to Benoit Dolez for the patch.
 - bugfix omfwd: retry processing was not done correctly, could stall
   see also https://github.com/rsyslog/rsyslog/pull/1261
   Thanks to David Ahern for the patch.
