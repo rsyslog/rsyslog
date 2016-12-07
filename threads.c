@@ -244,7 +244,8 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool bNeedsCancel, uchar *name)
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *),
+sbool bNeedsCancel, uchar *name)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -261,9 +262,9 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->bNeedsCancel = bNeedsCancel;
 	pThis->name = ustrdup(name);
 #if defined (_AIX)
-        pthread_attr_init(&aix_attr);
-        pthread_attr_setstacksize(&aix_attr, 4096*512);
-        pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+	pthread_attr_init(&aix_attr);
+	pthread_attr_setstacksize(&aix_attr, 4096*512);
+	pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
 #else
 	pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 #endif
