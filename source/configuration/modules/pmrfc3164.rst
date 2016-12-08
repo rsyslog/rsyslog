@@ -32,6 +32,17 @@ Parser Parameters
    Syslog-ng puts the various relay hosts via slashes into the hostname
    field.
 
+.. function:: permit.AtSignsInHostname <boolean>
+
+   **Default**: off
+
+   Available since: 8.25.0
+
+   This setting tells the parser that hostnames may contain at-signs. This
+   is useful when messages are relayed from a syslog-ng server in rfc3164
+   format. The hostname field sent by syslog-ng may be prefixed by the source
+   name followed by an at-sign character.
+
 .. function:: detect.YearAfterTimestamp <boolean>
 
    **Default**: off
