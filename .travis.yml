@@ -4,15 +4,6 @@ compiler:
   - gcc
   - clang
 
-# Everything merged to master needs to go through CI, so
-# there should never be a need to check master itself. Thus
-# we can save Travis CI some cost. This will also result in
-# potentially faster builds for ourselvs when there is a
-# high number of PRs and merges ongoing.
-branches:
-  except:
-    - master
-
 services: mysql
 
 addons:
