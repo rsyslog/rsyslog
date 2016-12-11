@@ -80,7 +80,7 @@ typedef struct _instanceData {
 	char *sockEndpoints;
 	int sockType;
 	uchar *tplName;
-	bool topicFrame;
+	sbool topicFrame;
 	sbool dynaKey;
 } instanceData;
 
@@ -154,19 +154,10 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	switch(pData->sockType) {
 		case ZMQ_PUB:
-#if defined(ZMQ_RADIO)
-		case ZMQ_RADIO:
-#endif
 			pData->serverish = true;
 			break;
 		case ZMQ_PUSH:
-#if defined(ZMQ_SCATTER)
-		case ZMQ_SCATTER:
-#endif
 		case ZMQ_DEALER:
-#if defined(ZMQ_CLIENT)
-		case ZMQ_CLIENT:
-#endif
 			pData->serverish = false;
 			break;
 	}
@@ -189,16 +180,30 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-#if defined(ZMQ_RADIO)
-	if((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
-#else
+	/* if we have a PUB socket and a list of topics, the message
+	 * should be published on each topic */
 	if(pData->sockType == ZMQ_PUB && pData->topics) {
-#endif
+		DBGPRINTF("omczmq: PUB socket and  topic list found\n");
+		
+		int currTopic = 1;
 		char *topic = zlist_first(pData->topics);
-
 		while(topic) {
-			if(pData->topicFrame && pData->sockType == ZMQ_SUB) {
-				if (!pData->dynaKey) {
+			/* if the config has requested topics get their own frame... */
+			if(pData->topicFrame) {
+				DBGPRINTF("omczmq: using topicframe\n");
+				/* dynaKey is set, so construct topics from templates */
+				if (pData->dynaKey) {
+					DBGPRINTF("omczmq: dynaKey created topic: %s\n", (char*)ppString[currTopic]);
+					int rc = zstr_sendx(pData->sock, (char*)ppString[currTopic], (char*)ppString[0], NULL);
+					if(rc != 0) {
+						pData->sendError = true;
+						ABORT_FINALIZE(RS_RET_SUSPENDED);
+					}
+
+				}
+				/* dynaKey is not set, treat topic as a string */
+				else  {
+					DBGPRINTF("omczmq: static topic: %s\n", topic);
 					int rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
 					if(rc != 0) {
 						pData->sendError = true;
@@ -206,26 +211,9 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 					}
 				}
 			} 
-#if defined(ZMQ_RADIO)
-			else if(pData->sockType == ZMQ_RADIO) {
-				zframe_t *frame = zframe_from((char*)ppString[0]);
-				if(!frame) {
-					pData->sendError = true;
-					ABORT_FINALIZE(RS_RET_SUSPENDED);
-				}
-				int rc = zframe_set_group(frame, topic);
-				if(rc != 0) {
-					pData->sendError = true;
-					ABORT_FINALIZE(RS_RET_SUSPENDED);
-				}
-				rc = zframe_send(&frame, pData->sock, 0);
-				if(rc != 0) {
-					pData->sendError = true;
-					ABORT_FINALIZE(RS_RET_SUSPENDED);
-				}
-			}
-#endif
+			/* the topic should be included in the message frame */
 			else {
+				DBGPRINTF("omczmq: not using topicframe\n");
 				if (!pData->dynaKey) {
 					int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
 					if(rc != 0) {
@@ -235,14 +223,23 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 				}
 			}
 			topic = zlist_next(pData->topics);
+			currTopic++;
 		}
 	}
 	else {
-		if (!pData->dynaKey) {
+		/* dynaKey is set - construct a zeromq frame from the current topic template
+		 * combined with the message */
+		if (pData->dynaKey && pData->sockType == ZMQ_PUB) {
+			/* FIXME: write this code :) */
+		}
+
+		/* dynaKey is not set - send the message as is and assume the
+		 * user supplied template does the right thing */
+		else {
 			int rc = zstr_send(pData->sock, (char*)ppString[0]);
 			if(rc != 0) {
 				pData->sendError = true;
-				DBGPRINTF("imczmq send error: %d", rc);
+				DBGPRINTF("omczmq: send error: %d", rc);
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 		}
@@ -326,7 +323,7 @@ CODESTARTactivateCnf
 	runModConf = pModConf;
 	if(runModConf->authenticator == 1) {
 		if(!authActor) {
-			DBGPRINTF("imczmq: starting authActor\n");
+			DBGPRINTF("omczmq: starting authActor\n");
 			authActor = zactor_new(zauth, NULL);
 			if(!strcmp(runModConf->clientCertPath, "*")) {
 				zstr_sendx(authActor, "CURVE", CURVE_ALLOW_ANY, NULL);
@@ -345,7 +342,7 @@ CODESTARTfreeCnf
 	free(pModConf->authType);
 	free(pModConf->serverCertPath);
 	free(pModConf->clientCertPath);
-	DBGPRINTF("imczmq: stopping authActor\n");
+	DBGPRINTF("omczmq: stopping authActor\n");
 	zactor_destroy(&authActor);
 ENDfreeCnf
 
@@ -361,7 +358,7 @@ CODESTARTsetModCnf
 
 	for (i=0; i<modpblk.nParams; ++i) {
 		if(!pvals[i].bUsed) {
-			DBGPRINTF("imczmq: pvals[i].bUSed continuing\n");
+			DBGPRINTF("omczmq: pvals[i].bUSed continuing\n");
 			continue;
 		}
 		if(!strcmp(modpblk.descr[i].name, "authenticator")) {
@@ -381,7 +378,7 @@ CODESTARTsetModCnf
 		}
 		else {
 			errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
-						"imczmq: config error, unknown "
+						"omczmq: config error, unknown "
 						"param %s in setModCnf\n", 
 						modpblk.descr[i].name);
 		} 
@@ -448,27 +445,12 @@ CODESTARTnewActInst
 				if(!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
 				}
-#if defined(ZMQ_RADIO)
-				else if(!strcmp("RADIO", stringType)) {
-					pData->sockType = ZMQ_RADIO;
-				}
-#endif
 				else if(!strcmp("PUSH", stringType)) {
 					pData->sockType = ZMQ_PUSH;
 				}
-#if defined(ZMQ_SCATTER)
-				else if(!strcmp("SCATTER", stringType)) {
-					pData->sockType = ZMQ_SCATTER;
-				}
-#endif
 				else if(!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 				}
-#if defined(ZMQ_CLIENT)
-				else if(!strcmp("CLIENT", stringType)) {
-					pData->sockType = ZMQ_DEALER;
-				}
-#endif
 				free(stringType);
 			}
 			else{
@@ -478,13 +460,7 @@ CODESTARTnewActInst
 			}
 		} 
 		else if(!strcmp(actpblk.descr[i].name, "topicframe")) {
-			int tframe  = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
-			if(tframe == 1) {
-				pData->topicFrame = true;
-			}
-			else {
-				pData->topicFrame = false;
-			}
+			pData->topicFrame = pvals[i].val.d.n;
 		}
 		else if(!strcmp(actpblk.descr[i].name, "topics")) {
 			pData->topics = zlist_new();
@@ -524,9 +500,8 @@ CODESTARTnewActInst
 
 	iNumTpls = 1;
 	if (pData->dynaKey) {
-		iNumTpls = zlist_size (pData->topics);
+		iNumTpls = zlist_size (pData->topics) + iNumTpls;
 	}
-
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
 	
 	if (pData->tplName == NULL) {
@@ -541,7 +516,7 @@ CODESTARTnewActInst
 	if (pData->dynaKey) {
 		char *topic = zlist_first(pData->topics);
 		while (topic) {
-			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar*)topic, OMSR_NO_RQD_TPL_OPTS));
+			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar*)strdup(topic), OMSR_NO_RQD_TPL_OPTS));
 			i++;
 			topic = zlist_next(pData->topics);
 		}
