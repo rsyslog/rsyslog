@@ -180,53 +180,44 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* if we have a PUB socket and a list of topics, the message
-	 * should be published on each topic */
+	/* if we are using a PUB socket and we have a topic list then we 
+	 * need some special care and attention */
 	if(pData->sockType == ZMQ_PUB && pData->topics) {
-		DBGPRINTF("omczmq: PUB socket and  topic list found\n");
-		
-		int currTopic = 1;
+		int templateIndex = 1;
 		char *topic = zlist_first(pData->topics);
 		while(topic) {
 			int rc;
-			/* if the config has requested topics get their own frame... */
+			/* if dynaKey is true, the topic is constructed by rsyslog
+			 * by applying the supplied template to the message properties */
+			if(pData->dynaKey)
+				topic = (char*)ppString[templateIndex];
+			
+			/* if topicFrame is true, send the topic as a separate zmq frame */
 			if(pData->topicFrame) {
-				DBGPRINTF("omczmq: using topicframe\n");
-				/* dynaKey is set, so construct topics from templates */
-				if (pData->dynaKey) {
-					DBGPRINTF("omczmq: dynaKey created topic: %s\n", (char*)ppString[currTopic]);
-					rc = zstr_sendx(pData->sock, (char*)ppString[currTopic], (char*)ppString[0], NULL);
-				}
-				/* dynaKey is not set, treat topic as a string */
-				else  {
-					DBGPRINTF("omczmq: static topic: %s\n", topic);
-					rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
-				}
-			} 
-			/* the topic should be included in the message frame */
-			else {
-				DBGPRINTF("omczmq: not using topicframe\n");
-				if (pData->dynaKey) {
-					rc = zstr_sendf(pData->sock, "%s%s", (char*)ppString[currTopic], (char*)ppString[0]);
-				}
-				else {
-					rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
-				}
+				rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
 			}
 
-			/* check return */
+			/* if topicFrame is false, concatenate the topic with the 
+			 * message in the same frame */
+			else {
+				rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
+			}
+
+			/* if we have a send error notify rsyslog */
 			if(rc != 0) {
 				pData->sendError = true;
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
 
+			/* get the next topic from the list, and increment
+			 * our topic index */
 			topic = zlist_next(pData->topics);
-			currTopic++;
+			templateIndex++;
 		}
 	}
 
-	/* not a PUB socket or didn't have topics, so we 
-	 * just send the message using the template */
+	/* we aren't a PUB socket and we don't have a topic list - this means
+	 * we can just send the message using the rsyslog template */
 	else {
 		int rc = zstr_send(pData->sock, (char*)ppString[0]);
 		if(rc != 0) {
