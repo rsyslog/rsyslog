@@ -188,60 +188,51 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		int currTopic = 1;
 		char *topic = zlist_first(pData->topics);
 		while(topic) {
+			int rc;
 			/* if the config has requested topics get their own frame... */
 			if(pData->topicFrame) {
 				DBGPRINTF("omczmq: using topicframe\n");
 				/* dynaKey is set, so construct topics from templates */
 				if (pData->dynaKey) {
 					DBGPRINTF("omczmq: dynaKey created topic: %s\n", (char*)ppString[currTopic]);
-					int rc = zstr_sendx(pData->sock, (char*)ppString[currTopic], (char*)ppString[0], NULL);
-					if(rc != 0) {
-						pData->sendError = true;
-						ABORT_FINALIZE(RS_RET_SUSPENDED);
-					}
-
+					rc = zstr_sendx(pData->sock, (char*)ppString[currTopic], (char*)ppString[0], NULL);
 				}
 				/* dynaKey is not set, treat topic as a string */
 				else  {
 					DBGPRINTF("omczmq: static topic: %s\n", topic);
-					int rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
-					if(rc != 0) {
-						pData->sendError = true;
-						ABORT_FINALIZE(RS_RET_SUSPENDED);
-					}
+					rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
 				}
 			} 
 			/* the topic should be included in the message frame */
 			else {
 				DBGPRINTF("omczmq: not using topicframe\n");
-				if (!pData->dynaKey) {
-					int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
-					if(rc != 0) {
-						pData->sendError = true;
-						ABORT_FINALIZE(RS_RET_SUSPENDED);
-					}
+				if (pData->dynaKey) {
+					rc = zstr_sendf(pData->sock, "%s%s", (char*)ppString[currTopic], (char*)ppString[0]);
+				}
+				else {
+					rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
 				}
 			}
+
+			/* check return */
+			if(rc != 0) {
+				pData->sendError = true;
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
+			}
+
 			topic = zlist_next(pData->topics);
 			currTopic++;
 		}
 	}
-	else {
-		/* dynaKey is set - construct a zeromq frame from the current topic template
-		 * combined with the message */
-		if (pData->dynaKey && pData->sockType == ZMQ_PUB) {
-			/* FIXME: write this code :) */
-		}
 
-		/* dynaKey is not set - send the message as is and assume the
-		 * user supplied template does the right thing */
-		else {
-			int rc = zstr_send(pData->sock, (char*)ppString[0]);
-			if(rc != 0) {
-				pData->sendError = true;
-				DBGPRINTF("omczmq: send error: %d", rc);
-				ABORT_FINALIZE(RS_RET_SUSPENDED);
-			}
+	/* not a PUB socket or didn't have topics, so we 
+	 * just send the message using the template */
+	else {
+		int rc = zstr_send(pData->sock, (char*)ppString[0]);
+		if(rc != 0) {
+			pData->sendError = true;
+			DBGPRINTF("omczmq: send error: %d", rc);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}
 finalize_it:
@@ -258,7 +249,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->sockType = -1;
 	pData->sendTimeout = -1;
 	pData->topics = NULL;
-	pData->topicFrame = true;
+	pData->topicFrame = false;
 }
 
 
