@@ -129,9 +129,15 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 			scriptIterateAllActions(stmt->d.s_propfilt.t_then,
 						pFunc, pParam);
 			break;
+		case S_RELOAD_LOOKUP_TABLE: /* this is a NOP */
+			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during iterateAll\n",
 				(unsigned) stmt->nodetype);
+			#ifndef NDEBUG
+				fprintf(stderr, "error: unknown stmt type %u during iterateAll\n",
+					(unsigned) stmt->nodetype);
+			#endif
 			assert(0); /* abort under debugging */
 			break;
 		}
