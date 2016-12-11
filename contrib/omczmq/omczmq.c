@@ -81,6 +81,7 @@ typedef struct _instanceData {
 	int sockType;
 	uchar *tplName;
 	bool topicFrame;
+	sbool dynaKey;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -93,7 +94,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "topics", eCmdHdlrGetWord, 0 },
-	{ "topicframe", eCmdHdlrGetWord, 0}
+	{ "topicframe", eCmdHdlrGetWord, 0},
+	{ "dynakey", eCmdHdlrBinary, 0 }
 };
 
 static struct cnfparamblk actpblk = {
@@ -180,7 +182,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
+rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 	DEFiRet;
 
 	if(NULL == pData->sock) {
@@ -196,15 +198,17 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 
 		while(topic) {
 			if(pData->topicFrame && pData->sockType == ZMQ_SUB) {
-				int rc = zstr_sendx(pData->sock, topic, (char*)msg, NULL);
-				if(rc != 0) {
-					pData->sendError = true;
-					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				if (!pData->dynaKey) {
+					int rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
+					if(rc != 0) {
+						pData->sendError = true;
+						ABORT_FINALIZE(RS_RET_SUSPENDED);
+					}
 				}
 			} 
 #if defined(ZMQ_RADIO)
 			else if(pData->sockType == ZMQ_RADIO) {
-				zframe_t *frame = zframe_from((char*)msg);
+				zframe_t *frame = zframe_from((char*)ppString[0]);
 				if(!frame) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -222,22 +226,25 @@ rsRetVal outputCZMQ(uchar* msg, instanceData* pData) {
 			}
 #endif
 			else {
-				int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)msg);
-				if(rc != 0) {
-					pData->sendError = true;
-					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				if (!pData->dynaKey) {
+					int rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
+					if(rc != 0) {
+						pData->sendError = true;
+						ABORT_FINALIZE(RS_RET_SUSPENDED);
+					}
 				}
-
 			}
 			topic = zlist_next(pData->topics);
 		}
 	}
 	else {
-		int rc = zstr_send(pData->sock, (char*)msg);
-		if(rc != 0) {
-			pData->sendError = true;
-			DBGPRINTF("imczmq send error: %d", rc);
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		if (!pData->dynaKey) {
+			int rc = zstr_send(pData->sock, (char*)ppString[0]);
+			if(rc != 0) {
+				pData->sendError = true;
+				DBGPRINTF("imczmq send error: %d", rc);
+				ABORT_FINALIZE(RS_RET_SUSPENDED);
+			}
 		}
 	}
 finalize_it:
@@ -401,7 +408,7 @@ BEGINdoAction
 CODESTARTdoAction
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
-	iRet = outputCZMQ(ppString[0], pData);
+	iRet = outputCZMQ(ppString, pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDdoAction
 
@@ -409,6 +416,7 @@ ENDdoAction
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
+	int iNumTpls;
 CODESTARTnewActInst
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -416,8 +424,6 @@ CODESTARTnewActInst
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
-
-	CODE_STD_STRING_REQUESTnewActInst(1)
 
 	for(i = 0; i < actpblk.nParams; ++i) {
 		if(!pvals[i].bUsed) {
@@ -429,6 +435,9 @@ CODESTARTnewActInst
 		} 
 		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		}
+		else if(!strcmp(actpblk.descr[i].name, "dynakey")) {
+			pData->dynaKey = pvals[i].val.d.n;
 		}
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -513,12 +522,29 @@ CODESTARTnewActInst
 		}
 	}
 
+	iNumTpls = 1;
+	if (pData->dynaKey) {
+		iNumTpls = zlist_size (pData->topics);
+	}
+
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
+	
 	if (pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
 					OMSR_NO_RQD_TPL_OPTS));
 	} 
 	else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+	}
+
+	i = 1;
+	if (pData->dynaKey) {
+		char *topic = zlist_first(pData->topics);
+		while (topic) {
+			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar*)topic, OMSR_NO_RQD_TPL_OPTS));
+			i++;
+			topic = zlist_next(pData->topics);
+		}
 	}
 
 	CODE_STD_FINALIZERnewActInst
