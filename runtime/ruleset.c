@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2015 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -97,6 +97,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		case S_STOP:
 		case S_SET:
 		case S_UNSET:
+		case S_CALL_INDIRECT:
 		case S_CALL:/* call does not need to do anything - done in called ruleset! */
 			break;
 		case S_ACT:
@@ -131,6 +132,7 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 		default:
 			dbgprintf("error: unknown stmt type %u during iterateAll\n",
 				(unsigned) stmt->nodetype);
+			assert(0); /* abort under debugging */
 			break;
 		}
 	}
@@ -226,6 +228,48 @@ execUnset(struct cnfstmt *stmt, smsg_t *pMsg)
 {
 	DEFiRet;
 	msgDelJSON(pMsg, stmt->d.s_unset.varname);
+	RETiRet;
+}
+
+static rsRetVal
+execCallIndirect(struct cnfstmt *const __restrict__ stmt,
+	smsg_t *pMsg,
+	wti_t *const __restrict__ pWti)
+{
+	ruleset_t *pRuleset;
+	struct svar result;
+	int bMustFree; /* dummy parameter */
+	DEFiRet;
+
+	assert(stmt->d.s_call_ind.expr != NULL);
+
+	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg);
+	uchar *const rsName = (uchar*) var2CString(&result, &bMustFree);
+	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
+	if(localRet != RS_RET_OK) {
+		/* in that case, we accept that a NOP will "survive" */
+		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
+			"ruleset '%s' cannot be found, treating as NOP\n", rsName);
+		FINALIZE;
+	}
+	DBGPRINTF("CALL_INDIRECT obtained ruleset ptr %p for ruleset '%s' [hasQueue:%d]\n",
+		  pRuleset, rsName, rulesetHasQueue(pRuleset));
+	if(rulesetHasQueue(pRuleset)) {
+		CHKmalloc(pMsg = MsgDup((smsg_t*) pMsg));
+		DBGPRINTF("CALL_INDIRECT: forwarding message to async ruleset %p\n",
+			  pRuleset->pQueue);
+		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
+		MsgSetRuleset(pMsg, pRuleset);
+		/* Note: we intentionally use submitMsg2() here, as we process messages
+		 * that were already run through the rate-limiter.
+		 */
+		submitMsg2(pMsg);
+	} else {
+		CHKiRet(scriptExec(pRuleset->root, pMsg, pWti));
+	}
+finalize_it:
+	varDelete(&result);
+	free(rsName);
 	RETiRet;
 }
 
@@ -545,6 +589,9 @@ scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti)
 			break;
 		case S_CALL:
 			CHKiRet(execCall(stmt, pMsg, pWti));
+			break;
+		case S_CALL_INDIRECT:
+			CHKiRet(execCallIndirect(stmt, pMsg, pWti));
 			break;
 		case S_IF:
 			CHKiRet(execIf(stmt, pMsg, pWti));

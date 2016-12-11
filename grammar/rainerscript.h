@@ -117,6 +117,7 @@ struct nvlst {
 #define S_CALL 4008
 #define S_FOREACH 4009
 #define S_RELOAD_LOOKUP_TABLE 4010
+#define S_CALL_INDIRECT 4011
 
 enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
 const char* cnfFiltType2str(const enum cnfFiltType filttype);
@@ -145,6 +146,9 @@ struct cnfstmt {
 			struct cnfstmt *stmt;
 			ruleset_t *ruleset;	/* non-NULL if the ruleset has a queue assigned */
 		} s_call;
+		struct {
+			struct cnfexpr *expr;
+		} s_call_ind;
 		struct {
 			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
 			struct cnfstmt *t_then;
@@ -346,6 +350,7 @@ const char* getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
 const char * tokenval2str(int tok);
+uchar* var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);
