@@ -192,18 +192,20 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 	/* if we are using a PUB (or RADIO) socket and we have a topic list then we 
 	 * need some special care and attention */
 #if defined(ZMQ_RADIO)
-	if(pData->sockType == ZMQ_PUB && pData->topics) {
-#else
+	DBGPRINTF("omczmq: ZMQ_RADIO is defined...\n");
 	if((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
+#else
+	DBGPRINTF("omczmq: ZMQ_RADIO is NOT defined...\n");
+	if(pData->sockType == ZMQ_PUB && pData->topics) {
 #endif
 		int templateIndex = 1;
-		char *topic = zlist_first(pData->topics);
+		const char *topic = (const char *)zlist_first(pData->topics);
 		while(topic) {
 			int rc;
 			/* if dynaKey is true, the topic is constructed by rsyslog
 			 * by applying the supplied template to the message properties */
 			if(pData->dynaKey)
-				topic = (char*)ppString[templateIndex];
+				topic = (const char*)ppString[templateIndex];
 		
 			if (pData->sockType == ZMQ_PUB) {	
 				/* if topicFrame is true, send the topic as a separate zmq frame */
@@ -225,13 +227,22 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 			}
 #if defined(ZMQ_RADIO)
 			else if(pData->sockType == ZMQ_RADIO) {
+				DBGPRINTF("omczmq: sending on RADIO socket...\n");
 				zframe_t *frame = zframe_from((char*)ppString[0]);
 				if (!frame) {
+					DBGPRINTF("omczmq: failed to create frame...\n");
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
-				int check = zframe_set_group(frame, topic);
-				if (check != 0) {
+				rc = zframe_set_group(frame, topic);
+				if (rc != 0) {
+					DBGPRINTF("omczmq: failed to set group '%d'...\n", rc);
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+				DBGPRINTF("omczmq: set RADIO group to '%s'\n", topic);
+				rc = zframe_send(&frame, pData->sock, 0);
+				if(rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
