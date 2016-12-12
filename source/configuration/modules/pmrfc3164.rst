@@ -43,6 +43,16 @@ Parser Parameters
    format. The hostname field sent by syslog-ng may be prefixed by the source
    name followed by an at-sign character.
 
+.. function:: force.tagEndingByColon <boolean>
+
+   **Default**: off
+
+   Available since: 8.25.0
+
+   This setting tells the parser that tag need to be ending by colon to be
+   valid.  In others case, the tag is set to dash ("-") without changing
+   message.
+
 .. function:: detect.YearAfterTimestamp <boolean>
 
    **Default**: off
