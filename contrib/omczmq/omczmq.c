@@ -154,10 +154,19 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	switch(pData->sockType) {
 		case ZMQ_PUB:
+#if defined(ZMQ_RADIO)
+		case ZMQ_RADIO:
+#endif
 			pData->serverish = true;
 			break;
 		case ZMQ_PUSH:
+#if defined(ZMQ_SCATTER)
+		case ZMQ_SCATTER:
+#endif
 		case ZMQ_DEALER:
+#if defined(ZMQ_CLIENT)
+		case ZMQ_CLIENT:
+#endif
 			pData->serverish = false;
 			break;
 	}
@@ -180,9 +189,13 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* if we are using a PUB socket and we have a topic list then we 
+	/* if we are using a PUB (or RADIO) socket and we have a topic list then we 
 	 * need some special care and attention */
+#if defined(ZMQ_RADIO)
 	if(pData->sockType == ZMQ_PUB && pData->topics) {
+#else
+	if((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
+#endif
 		int templateIndex = 1;
 		char *topic = zlist_first(pData->topics);
 		while(topic) {
@@ -191,24 +204,40 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 			 * by applying the supplied template to the message properties */
 			if(pData->dynaKey)
 				topic = (char*)ppString[templateIndex];
+		
+			if (pData->sockType == ZMQ_PUB) {	
+				/* if topicFrame is true, send the topic as a separate zmq frame */
+				if(pData->topicFrame) {
+					rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
+				}
+
+				/* if topicFrame is false, concatenate the topic with the 
+				 * message in the same frame */
+				else {
+					rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
+				}
+
+				/* if we have a send error notify rsyslog */
+				if(rc != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+			}
+#if defined(ZMQ_RADIO)
+			else if(pData->sockType == ZMQ_RADIO) {
+				zframe_t *frame = zframe_from((char*)ppString[0]);
+				if (!frame) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+				int check = zframe_set_group(frame, topic);
+				if (check != 0) {
+					pData->sendError = true;
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+			}
+#endif
 			
-			/* if topicFrame is true, send the topic as a separate zmq frame */
-			if(pData->topicFrame) {
-				rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
-			}
-
-			/* if topicFrame is false, concatenate the topic with the 
-			 * message in the same frame */
-			else {
-				rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
-			}
-
-			/* if we have a send error notify rsyslog */
-			if(rc != 0) {
-				pData->sendError = true;
-				ABORT_FINALIZE(RS_RET_SUSPENDED);
-			}
-
 			/* get the next topic from the list, and increment
 			 * our topic index */
 			topic = zlist_next(pData->topics);
@@ -427,12 +456,27 @@ CODESTARTnewActInst
 				if(!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
 				}
+#if defined(ZMQ_RADIO)
+				else if(!strcmp("RADIO", stringType)) {
+					pData->sockType = ZMQ_RADIO;
+				}
+#endif
 				else if(!strcmp("PUSH", stringType)) {
 					pData->sockType = ZMQ_PUSH;
 				}
+#if defined(ZMQ_SCATTER)
+				else if(!strcmp("SCATTER", stringType)) {
+					pData->sockType = ZMQ_SCATTER;
+				}
+#endif
 				else if(!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 				}
+#if defined(ZMQ_CLIENT)
+				else if(!strcmp("CLIENT", stringType)) {
+					pData->sockType = ZMQ_CLIENT;
+				}
+#endif
 				free(stringType);
 			}
 			else{
