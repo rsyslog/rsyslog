@@ -1346,7 +1346,7 @@ var2String(struct svar *__restrict__ const r, int *__restrict__ const bMustFree)
 	return estr;
 }
 
-static uchar*
+uchar*
 var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree)
 {
 	uchar *cstr;
@@ -2547,6 +2547,7 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr, struct svar *__restri
 		ret->d.n = 0ll;
 		DBGPRINTF("eval error: unknown nodetype %u['%c']\n",
 			(unsigned) expr->nodetype, (char) expr->nodetype);
+		assert(0); /* abort on debug builds, this must not happen! */
 		break;
 	}
 	DBGPRINTF("eval expr %p, return datatype '%c':%d\n", expr, ret->datatype,
@@ -2844,6 +2845,7 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 	default:
 		dbgprintf("error: unknown nodetype %u['%c']\n",
 			(unsigned) expr->nodetype, (char) expr->nodetype);
+		assert(0); /* abort on debug builds, this must not happen! */
 		break;
 	}
 }
@@ -2867,6 +2869,10 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		doIndent(indent); dbgprintf("CALL [%s, queue:%d]\n", cstr,
 			stmt->d.s_call.ruleset == NULL ? 0 : 1);
 		free(cstr);
+		break;
+	case S_CALL_INDIRECT:
+		doIndent(indent); dbgprintf("CALL_INDIRECT\n");
+		cnfexprPrint(stmt->d.s_call_ind.expr, indent+1);
 		break;
 	case S_ACT:
 		doIndent(indent); dbgprintf("ACTION %d [%s:%s]\n", stmt->d.act->iActionNbr,
@@ -3068,6 +3074,9 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 		break;
 	case S_CALL:
 		es_deleteStr(stmt->d.s_call.name);
+		break;
+	case S_CALL_INDIRECT:
+		cnfexprDestruct(stmt->d.s_call_ind.expr);
 		break;
 	case S_ACT:
 		actionDestruct(stmt->d.act);
@@ -3836,7 +3845,7 @@ cnfstmtOptimizeCall(struct cnfstmt *stmt)
 		stmt->nodetype = S_NOP;
 		goto done;
 	}
-	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset %s [hasQueue:%d]\n",
+	DBGPRINTF("CALL obtained ruleset ptr %p for ruleset '%s' [hasQueue:%d]\n",
 		  pRuleset, rsName, rulesetHasQueue(pRuleset));
 	if(rulesetHasQueue(pRuleset)) {
 		stmt->d.s_call.ruleset = pRuleset;

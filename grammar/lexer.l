@@ -196,6 +196,7 @@ int fileno(FILE *stream);
 "stop"				{ return STOP; }
 "else"				{ return ELSE; }
 "call"				{ BEGIN INCALL; return CALL; }
+"call_indirect"			{ BEGIN EXPR; return CALL_INDIRECT; }
 "set"				{ BEGIN EXPR; return SET; }
 "reset"				{ BEGIN EXPR; return RESET; }
 "unset"				{ BEGIN EXPR; return UNSET; }

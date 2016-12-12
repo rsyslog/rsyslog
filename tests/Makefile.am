@@ -184,6 +184,9 @@ TESTS +=  \
 	rscript_prifilt.sh \
 	rscript_optimizer1.sh \
 	rscript_ruleset_call.sh \
+	rscript_ruleset_call_indirect-basic.sh \
+	rscript_ruleset_call_indirect-var.sh \
+	rscript_ruleset_call_indirect-invld.sh \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
@@ -824,6 +827,9 @@ EXTRA_DIST= \
 	testsuites/rscript_optimizer1.conf \
 	rscript_ruleset_call.sh \
 	testsuites/rscript_ruleset_call.conf \
+	rscript_ruleset_call_indirect-basic.sh \
+	rscript_ruleset_call_indirect-var.sh \
+	rscript_ruleset_call_indirect-invld.sh \
 	cee_simple.sh \
 	testsuites/cee_simple.conf \
 	cee_diskqueue.sh \
