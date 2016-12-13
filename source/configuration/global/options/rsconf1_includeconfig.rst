@@ -20,6 +20,11 @@ that the module knows exactly what it does. Of course, one might
 specifically NOT do this to inherit parameters from the main file. As
 always, use it as it best fits...
 
+Note: if multiple files are included, they are processed in ascending
+sort order of the file name. We use the "glob()" C library function
+for obtaining the sorted list. On most platforms, especially Linux,
+this means the the sort order is the same as for bash.
+
 If all regular files in the /etc/rsyslog.d directory are included, then
 files starting with "." are ignored - so you can use them to place
 comments into the dir (e.g. "/etc/rsyslog.d/.mycomment" will be
