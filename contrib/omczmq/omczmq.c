@@ -81,7 +81,7 @@ typedef struct _instanceData {
 	int sockType;
 	uchar *tplName;
 	sbool topicFrame;
-	sbool dynaKey;
+	sbool dynaTopic;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -95,7 +95,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "topics", eCmdHdlrGetWord, 0 },
 	{ "topicframe", eCmdHdlrGetWord, 0},
-	{ "dynakey", eCmdHdlrBinary, 0 }
+	{ "dynatopic", eCmdHdlrBinary, 0 }
 };
 
 static struct cnfparamblk actpblk = {
@@ -202,9 +202,9 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 		const char *topic = (const char *)zlist_first(pData->topics);
 		while(topic) {
 			int rc;
-			/* if dynaKey is true, the topic is constructed by rsyslog
+			/* if dynaTopic is true, the topic is constructed by rsyslog
 			 * by applying the supplied template to the message properties */
-			if(pData->dynaKey)
+			if(pData->dynaTopic)
 				topic = (const char*)ppString[templateIndex];
 		
 			if (pData->sockType == ZMQ_PUB) {	
@@ -455,8 +455,8 @@ CODESTARTnewActInst
 		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		}
-		else if(!strcmp(actpblk.descr[i].name, "dynakey")) {
-			pData->dynaKey = pvals[i].val.d.n;
+		else if(!strcmp(actpblk.descr[i].name, "dynatopic")) {
+			pData->dynaTopic = pvals[i].val.d.n;
 		}
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
@@ -536,7 +536,7 @@ CODESTARTnewActInst
 	}
 
 	iNumTpls = 1;
-	if (pData->dynaKey) {
+	if (pData->dynaTopic) {
 		iNumTpls = zlist_size (pData->topics) + iNumTpls;
 	}
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
@@ -550,7 +550,7 @@ CODESTARTnewActInst
 	}
 
 	i = 1;
-	if (pData->dynaKey) {
+	if (pData->dynaTopic) {
 		char *topic = zlist_first(pData->topics);
 		while (topic) {
 			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar*)strdup(topic), OMSR_NO_RQD_TPL_OPTS));

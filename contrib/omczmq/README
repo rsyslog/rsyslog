@@ -23,7 +23,7 @@ socktype: zeromq socket type (currently supports PUSH, PUB, DEALER, RADIO, CLIEN
 sendtimeout: timeout before send errors
 topicframe: "on" to send topic as separate frame if PUB socket
 topics: comma delimited list of topics or templates to make topics from if PUB or RADIO socket
-dynakey: if "on" topics list is treated as list of template names
+dynatopic: if "on" topics list is treated as list of template names
 template: template to use for message (defaults to RSYSLOG_ForwardFormat)
 
 EXAMPLE CONFIGURATION
@@ -68,7 +68,7 @@ action(
   socktype="PUB"
   endpoints="@tcp://*:31338"
   topics="host_program_topic,program_host_topic"
-  dynaKey="on"
-  topicFrame="on"
+  dynatopic="on"
+  topicframe="on"
 )
 -------------------------------------------------------------------------------
