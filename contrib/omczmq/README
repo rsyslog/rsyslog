@@ -21,6 +21,7 @@ type: type of action (omczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
 socktype: zeromq socket type (currently supports PUSH, PUB, DEALER, RADIO, CLIENT, SCATTER)
 sendtimeout: timeout before send errors
+heartbeativl: interval to send heartbeat to clients (requires libzmq 4.2 or higher)
 topicframe: "on" to send topic as separate frame if PUB socket
 topics: comma delimited list of topics or templates to make topics from if PUB or RADIO socket
 dynatopic: if "on" topics list is treated as list of template names
