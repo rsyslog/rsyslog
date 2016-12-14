@@ -80,6 +80,7 @@ typedef struct _instanceData {
 	char *sockEndpoints;
 	int sockType;
 	int heartbeatIvl;
+	int heartbeatTimeout;
 	uchar *tplName;
 	sbool topicFrame;
 	sbool dynaTopic;
