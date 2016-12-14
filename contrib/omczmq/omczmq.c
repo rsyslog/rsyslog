@@ -94,6 +94,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "socktype", eCmdHdlrGetWord, 1 },
 #if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 	{ "heartbeativl", eCmdHdlrGetWord, 0},
+	{ "heartbeattimeout", eCmdHdlrGetWord, 0},
 #endif
 	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
@@ -122,8 +123,10 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
 #if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-	if(pData->heartbeatIvl > 0)
+	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0);
 		zsock_set_heartbeat_ivl(pData->sock, pData->heartbeatIvl);
+		zsock_set_heartbeat_timeout(pData->sock, pData->heartbeatTimeout);
+	}
 #endif
 
 	if(runModConf->authType) {	
@@ -292,6 +295,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->topics = NULL;
 	pData->topicFrame = false;
 	pData->heartbeatIvl = 0;
+	pData->heartbeatTimeout = 0;
 }
 
 
@@ -474,6 +478,9 @@ CODESTARTnewActInst
 		}
 #if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 		else if(!strcmp(actpblk.descr[i].name, "heartbeativl")) {
+			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
+		else if(!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
 			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 		}
 #endif

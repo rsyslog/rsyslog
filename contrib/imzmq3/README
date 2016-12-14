@@ -1,5 +1,11 @@
 ZeroMQ 3.x Input Plugin
 
+DEPRECATION NOTICE
+------------------
+This plugin is not maintained and is deprecated. For ZeroMQ output support,
+please use contrib/omczmq, which is actively developed and maintained - Brian
+------------------
+
 Building this plugin:
 Requires libzmq and libczmq. First, download the tarballs of both libzmq
 and its supporting libczmq from http://download.zeromq.org. As of this
