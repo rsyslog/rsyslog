@@ -21,8 +21,9 @@ type: type of action (omczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
 socktype: zeromq socket type (currently supports PUSH, PUB, DEALER, RADIO, CLIENT, SCATTER)
 sendtimeout: timeout before send errors
-heartbeativl: interval in ms to send heartbeat to clients (requires libzmq 4.2 or higher)
-heartbeattimeout: ms to wait for response to heartbeat (requires libzmq 4.2 or higher)
+heartbeativl: time in ms between sending heartbeat PING messages (requires libzmq 4.2 or higher)
+heartbeattimeout: time in milliseconds to  wait for a PING response before disconnect(libzmq 4.2 or higher)
+heartbeatttl: time remote peer should wait between PINGs before disconnect (libzmq 4.2 or higher)
 topicframe: "on" to send topic as separate frame if PUB socket
 topics: comma delimited list of topics or templates to make topics from if PUB or RADIO socket
 dynatopic: if "on" topics list is treated as list of template names
