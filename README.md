@@ -4,20 +4,10 @@ rsyslog-docs
 Documentation for the rsyslog project
 -------------------------------------
 
-This is a work in progress. We are currently migrating over to a new document
-generation framework.
-
-The process of this work will be done as follows:
-
-1. Complete v5-stable documentation
-2. Merge v5-stable into v7-stable branch
-3. Update v7-stable branch with all new documentation and materials specific for that version
-4. Repeat 2 and 3 merging current repo with next highest until Master is merged and updated.
-
-Current Status -
-* v5-stable - (In Development)
-* v7-stable - (In Development)
-* v8-devel - (In Development)
+Documentation for rsyslog is generated with the (Python) Sphinx documentation
+processor. There is also a procedure which automatically picks up the most
+recent doc from the git archive, generates the html pages and uploads them
+to rsyslog.com.
 
 ## Learning the doc tools
 
@@ -25,11 +15,15 @@ If you are new to rst and Sphinx, visit the Sphinx doc to get started:
 http://sphinx-doc.org/contents.html
 
 ## Importing missing content
-For the time being, occasionally a page from the v7 or v8 doc branches seems to
+While this hasn't happened for some time now, there might be cases 
+where a page from previous html-only doc seems to
 be missing in rsyslog-doc. To recover it, check out the respective version (v8.1.6
 is the latest v8 with html doc) and use this too to convert to rst:
 
 $ pandoc -f html -t rst <html_file> -o <output_file>
+
+Nowaday, it would be rather unexpected that this might really be needed, but
+we still wanted to include the information.
 
 ## Instructions
 
