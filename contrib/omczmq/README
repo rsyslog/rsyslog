@@ -20,7 +20,9 @@ Action
 type: type of action (omczmq for this plugin)
 endpoints: comma delimited list of zeromq endpoints (see zeromq documentation)
 socktype: zeromq socket type (currently supports PUSH, PUB, DEALER, RADIO, CLIENT, SCATTER)
-sendtimeout: timeout before send errors
+sendtimeout: timeout in ms before send errors
+sendhwm: number of messages to store in internal buffer before discarding (defaults to 1000)
+connecttimeout: connection timeout in ms(requires libzmq 4.2 or higher)
 heartbeativl: time in ms between sending heartbeat PING messages (requires libzmq 4.2 or higher)
 heartbeattimeout: time in milliseconds to  wait for a PING response before disconnect(libzmq 4.2 or higher)
 heartbeatttl: time remote peer should wait between PINGs before disconnect (libzmq 4.2 or higher)

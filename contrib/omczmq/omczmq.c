@@ -79,8 +79,13 @@ typedef struct _instanceData {
 	bool sendError;
 	char *sockEndpoints;
 	int sockType;
+	int sendHWM;
+#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 	int heartbeatIvl;
 	int heartbeatTimeout;
+	int heartbeatTTL;
+	int connectTimeout;
+#endif
 	uchar *tplName;
 	sbool topicFrame;
 	sbool dynaTopic;
@@ -93,9 +98,12 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
+	{ "sendhwm", eCmdHdlrGetWord, 0 },
 #if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+	{ "heartbeatttl", eCmdHdlrGetWord, 0},
 	{ "heartbeativl", eCmdHdlrGetWord, 0},
 	{ "heartbeattimeout", eCmdHdlrGetWord, 0},
+	{ "connecttimeout", eCmdHdlrGetWord, 0},
 #endif
 	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
@@ -124,9 +132,10 @@ static rsRetVal initCZMQ(instanceData* pData) {
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
 #if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0) {
+	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0 && pData->heartbeatTTL > 0) {
 		zsock_set_heartbeat_ivl(pData->sock, pData->heartbeatIvl);
 		zsock_set_heartbeat_timeout(pData->sock, pData->heartbeatTimeout);
+		zsock_set_heartbeat_ttl(pData->sock, pData->heartbeatTTL);
 	}
 #endif
 
@@ -295,8 +304,11 @@ setInstParamDefaults(instanceData* pData) {
 	pData->sendTimeout = -1;
 	pData->topics = NULL;
 	pData->topicFrame = false;
+#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 	pData->heartbeatIvl = 0;
 	pData->heartbeatTimeout = 0;
+	pData->heartbeatTTL = 0;
+#endif
 }
 
 
@@ -481,14 +493,22 @@ CODESTARTnewActInst
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: sendTimeout set to %d\n", pData->sendTimeout);
 		}
+		else if(!strcmp(actpblk.descr[i].name, "sendhwm")) {
+			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			DBGPRINTF("omczmq: sendHWM set to %d\n", pData->sendHWM);
+		}
 #if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 		else if(!strcmp(actpblk.descr[i].name, "heartbeativl")) {
 			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
-			DBGPRINTF("omczmq: heartbeatIvl set to %d\n", pData->heartbeatIvl);
+			DBGPRINTF("omczmq: heartbeatbeatIvl set to %d\n", pData->heartbeatIvl);
 		}
 		else if(!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
 			pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
-			DBGPRINTF("omczmq: heartTimeout set to %d\n", pData->heartbeatTimeout);
+			DBGPRINTF("omczmq: heartbeatTimeout set to %d\n", pData->heartbeatTimeout);
+		}
+		else if(!strcmp(actpblk.descr[i].name, "heartbeatttl")) {
+			pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			DBGPRINTF("omczmq: heartbeatTTL set to %d\n", pData->heartbeatTTL);
 		}
 #endif
 		else if(!strcmp(actpblk.descr[i].name, "socktype")){
