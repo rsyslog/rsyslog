@@ -93,7 +93,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
-#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 	{ "heartbeativl", eCmdHdlrGetWord, 0},
 	{ "heartbeattimeout", eCmdHdlrGetWord, 0},
 #endif
@@ -123,8 +123,8 @@ static rsRetVal initCZMQ(instanceData* pData) {
 
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
-#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0);
+#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0) {
 		zsock_set_heartbeat_ivl(pData->sock, pData->heartbeatIvl);
 		zsock_set_heartbeat_timeout(pData->sock, pData->heartbeatTimeout);
 	}
@@ -467,22 +467,28 @@ CODESTARTnewActInst
 
 		if(!strcmp(actpblk.descr[i].name, "endpoints")) {
 			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
+			DBGPRINTF("omczmq: sockEndPoints set to '%s'\n", pData->sockEndpoints);
 		} 
 		else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			DBGPRINTF("omczmq: template set to '%s'\n", pData->tplName);
 		}
 		else if(!strcmp(actpblk.descr[i].name, "dynatopic")) {
 			pData->dynaTopic = pvals[i].val.d.n;
+			DBGPRINTF("omczmq: dynaTopic set to %s\n", pData->dynaTopic ? "true" : "false");
 		}
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			DBGPRINTF("omczmq: sendTimeout set to %d\n", pData->sendTimeout);
 		}
-#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
 		else if(!strcmp(actpblk.descr[i].name, "heartbeativl")) {
 			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			DBGPRINTF("omczmq: heartbeatIvl set to %d\n", pData->heartbeatIvl);
 		}
 		else if(!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
-			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+			DBGPRINTF("omczmq: heartTimeout set to %d\n", pData->heartbeatTimeout);
 		}
 #endif
 		else if(!strcmp(actpblk.descr[i].name, "socktype")){
@@ -490,26 +496,32 @@ CODESTARTnewActInst
 			if(stringType != NULL){
 				if(!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
+					DBGPRINTF("omczmq: sockType set to ZMQ_PUB\n");
 				}
 #if defined(ZMQ_RADIO)
 				else if(!strcmp("RADIO", stringType)) {
 					pData->sockType = ZMQ_RADIO;
+					DBGPRINTF("omczmq: sockType set to ZMQ_RADIO\n");
 				}
 #endif
 				else if(!strcmp("PUSH", stringType)) {
 					pData->sockType = ZMQ_PUSH;
+					DBGPRINTF("omczmq: sockType set to ZMQ_PUSH\n");
 				}
 #if defined(ZMQ_SCATTER)
 				else if(!strcmp("SCATTER", stringType)) {
 					pData->sockType = ZMQ_SCATTER;
+					DBGPRINTF("omczmq: sockType set to ZMQ_SCATTER\n");
 				}
 #endif
 				else if(!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
+					DBGPRINTF("omczmq: sockType set to ZMQ_DEALER\n");
 				}
 #if defined(ZMQ_CLIENT)
 				else if(!strcmp("CLIENT", stringType)) {
 					pData->sockType = ZMQ_CLIENT;
+					DBGPRINTF("omczmq: sockType set to ZMQ_CLIENT\n");
 				}
 #endif
 				free(stringType);
@@ -522,10 +534,12 @@ CODESTARTnewActInst
 		} 
 		else if(!strcmp(actpblk.descr[i].name, "topicframe")) {
 			pData->topicFrame = pvals[i].val.d.n;
+			DBGPRINTF("omczmq: topicFrame set to %s\n", pData->topicFrame ? "true" : "false");
 		}
 		else if(!strcmp(actpblk.descr[i].name, "topics")) {
 			pData->topics = zlist_new();
 			char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
+			DBGPRINTF("omczmq: topics set to %s\n", topics);
 			char *topics_org = topics;
 			char topic[256];
 			if(topics == NULL){
