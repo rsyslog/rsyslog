@@ -79,6 +79,7 @@ typedef struct _instanceData {
 	bool sendError;
 	char *sockEndpoints;
 	int sockType;
+	int heartbeatIvl;
 	uchar *tplName;
 	sbool topicFrame;
 	sbool dynaTopic;
@@ -91,6 +92,9 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "endpoints", eCmdHdlrGetWord, 1 },
 	{ "socktype", eCmdHdlrGetWord, 1 },
+#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+	{ "heartbeativl", eCmdHdlrGetWord, 0},
+#endif
 	{ "sendtimeout", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "topics", eCmdHdlrGetWord, 0 },
@@ -114,7 +118,13 @@ static rsRetVal initCZMQ(instanceData* pData) {
 				pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
+
+#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+	if(pData->heartbeatIvl > 0)
+		zsock_set_heartbeat_ivl(pData->sock, pData->heartbeatIvl);
+#endif
 
 	if(runModConf->authType) {	
 		if (!strcmp(runModConf->authType, "CURVESERVER")) {
@@ -281,6 +291,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->sendTimeout = -1;
 	pData->topics = NULL;
 	pData->topicFrame = false;
+	pData->heartbeatIvl = 0;
 }
 
 
@@ -461,6 +472,11 @@ CODESTARTnewActInst
 		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 		}
+#if (CMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+		else if(!strcmp(actpblk.descr[i].name, "heartbeativl")) {
+			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
+		}
+#endif
 		else if(!strcmp(actpblk.descr[i].name, "socktype")){
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(stringType != NULL){
