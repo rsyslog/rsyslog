@@ -984,7 +984,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	ctx.errRoot=0;
 	DEFiRet;
 
-	STATSCOUNTER_INC(writeDataESFail, mutwriteDataESFail);
+	STATSCOUNTER_INC(writeDataESFail, mutWriteDataESFail);
 	
 	if(pData->errorFile == NULL) {
 		DBGPRINTF("omelasticsearch: no local error logger defined - "
