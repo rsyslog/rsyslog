@@ -71,7 +71,7 @@ STATSCOUNTER_DEF(indexHTTPFail, mutIndexHTTPFail)
 STATSCOUNTER_DEF(indexHTTPReqFail, mutIndexHTTPReqFail)
 STATSCOUNTER_DEF(checkConnFail, mutCheckConnFail)
 STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
-
+STATSCOUNTER_DEF(writeDataESFail, mutWriteDataESFail)
 
 #	define META_STRT "{\"index\":{\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
@@ -984,6 +984,8 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	ctx.errRoot=0;
 	DEFiRet;
 
+	STATSCOUNTER_INC(writeDataESFail, mutwriteDataESFail);
+	
 	if(pData->errorFile == NULL) {
 		DBGPRINTF("omelasticsearch: no local error logger defined - "
 		          "ignoring ES error information\n");
@@ -1679,6 +1681,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(indexESFail, mutIndexESFail);
 	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.es",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &indexESFail));
+	STATSCOUNTER_INIT(writeDataESFail, mutWriteDataESFail);
+	CHKiRet(statsobj.AddCounter(indexStats, (uchar *)"failed.writeData",
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &writeDataESFail));
 	CHKiRet(statsobj.ConstructFinalize(indexStats));
 ENDmodInit
 
