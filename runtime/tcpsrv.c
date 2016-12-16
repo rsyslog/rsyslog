@@ -698,7 +698,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		if(numEntries == 1) {
 			/* process self, save context switch */
-			processWorksetItem(pThis, pPoll, workset[numEntries-1].id, workset[numEntries-1].pUsr);
+			iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id, workset[numEntries-1].pUsr);
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
@@ -721,7 +721,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			} else {
 				pthread_mutex_unlock(&wrkrMut);
 				/* no free worker, so we process this one ourselfs */
-				processWorksetItem(pThis, pPoll, workset[numEntries-1].id,
+				iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id,
 						   workset[numEntries-1].pUsr);
 			}
 		}
@@ -870,6 +870,7 @@ Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int i;
+	int bFailed = FALSE; /* If set to TRUE, accept failed already */
 	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
 	int numEntries;
 	nspoll_t *pPoll = NULL;
@@ -928,7 +929,22 @@ Run(tcpsrv_t *pThis)
 		if(localRet != RS_RET_OK)
 			continue;
 
-		processWorkset(pThis, pPoll, numEntries, workset);
+		localRet = processWorkset(pThis, pPoll, numEntries, workset);
+		if(localRet != RS_RET_OK) {
+			if (bFailed == FALSE) {
+				errmsg.LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed to processed incoming connection with error %d",
+					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
+				bFailed = TRUE; 
+			} else {
+				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process incoming connection with error %d\n",
+					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
+			}
+			/* Sleep 20ms */
+			srSleep(0,20000); 
+		} else {
+			/* Reset bFailed State */
+			bFailed = FALSE; 
+		}
 	}
 
 	/* remove the tcp listen sockets from the epoll set */
