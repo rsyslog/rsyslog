@@ -144,7 +144,7 @@ static int dynFileIDs = 0;
 static int extraDataLen = 0; /* amount of extra data to add to message */
 static int useRFC5424Format = 0; /* should the test message be in RFC5424 format? */
 static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
-static int numMsgsToSend; /* number of messages to send */
+static int numMsgsToSend = 1; /* number of messages to send */
 static int numConnections = 1; /* number of connections to create */
 static int softLimitConnections  = 0; /* soft connection limit, see -c option description */
 static int *sockArray;  /* array of sockets to use */
