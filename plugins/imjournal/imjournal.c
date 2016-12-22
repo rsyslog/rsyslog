@@ -793,8 +793,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.stateFile, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalignorepreviousmessages", 0, eCmdHdlrBinary,
 		NULL, &cs.bIgnorePrevious, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalignorenonvalidstatefile", 0, eCmdHdlrBinary,
-		NULL, &cs.bIgnoreNonValidStatefile, STD_LOADABLE_MODULE_ID)); 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultseverity", 0, eCmdHdlrSeverity,
 		NULL, &cs.iDfltSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultfacility", 0, eCmdHdlrCustomHandler,
