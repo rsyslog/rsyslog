@@ -35,6 +35,22 @@ Version 8.24.0 [v8-stable] 2017-01-10
   Thanks to David Ahern for the patch.
 - imudp: limit rcvbufsize parameter to max 1GiB
 - rainerscript: implement new "call_indirect" statement
+- bugfix imjournal: make state file handling more robust
+  There is a bug in rsyslog which is caused by not very atomic writes of
+  imjournal statefile. It's hardly reproducible but there is a way.
+  fscanf error appears only when rsyslog reads an empty statefile which
+  causes that imjournal is stopped so no logging from journal is
+  performed. When the statefile contains random bytes error appears
+  again but from journal and imjournal is stopped too.
+  In this patch Rsyslog writes imjournal statefile more atomically and
+  secure. Reading the statefile is more robust and doesn't affect
+  imjournal module so when corrupted statefile is read imjournal
+  ignores statefile, continues with logging and it doesn't stop. Logger
+  can be used as a test if it's logging or not.
+  Patch introduces a new option with both old and new config format
+  "IgnoreNonValidStateFile" which is "on" by default and it can turn
+  off ignorance of non valid statefile.
+  Thanks to github user tomassykora for the patch.
 - bugfix core: lookup table reload was not properly integrated
   The opcode was not handled, what lead to misleading messages
   in debug log. Since we run debug builds more strictly, it also
