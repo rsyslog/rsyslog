@@ -41,6 +41,7 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include "srUtils.h"
 #include "obj.h"
 
