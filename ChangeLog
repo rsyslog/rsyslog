@@ -6,6 +6,8 @@ Version 8.24.0 [v8-stable] 2017-01-10
   Note: the rsyslog project has no AIX platform to ensure that future versions
   will remain buildable on AIX. If you would like to contribute ressources,
   please contact the rsyslog team.
+- mmdblookup: new maxminddb lookup message modify plugin
+  Thanks to 饶琛琳 (github user chenryn) for the contribution
 - mmrm1stspace: new module; removes first space in MSG if present
 - KSI signature provider: file permissions can now be specified
   This happens via parameters equal to those used by omfile itself.
