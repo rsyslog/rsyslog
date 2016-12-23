@@ -74,6 +74,7 @@ static struct configSettings_s {
 	int ratelimitInterval;
 	int ratelimitBurst;
 	int bIgnorePrevious;
+	int bIgnoreNonValidStatefile;
 	int iDfltSeverity;
 	int iDfltFacility;
 	int bUseJnlPID;
@@ -88,6 +89,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "ignorepreviousmessages", eCmdHdlrBinary, 0 },
+	{ "ignorenonvalidstatefile", eCmdHdlrBinary, 0 },
 	{ "defaultseverity", eCmdHdlrSeverity, 0 },
 	{ "defaultfacility", eCmdHdlrString, 0 },
 	{ "usepidfromsystem", eCmdHdlrBinary, 0 },
@@ -378,23 +380,37 @@ persistJournalState (void)
 {
 	DEFiRet;
 	FILE *sf; /* state file */
+	char tmp_sf[MAXFNAME];
 	char *cursor;
 	int ret = 0;
 
 	/* On success, sd_journal_get_cursor()  returns 1 in systemd
 	   197 or older and 0 in systemd 198 or newer */
 	if ((ret = sd_journal_get_cursor(j, &cursor)) >= 0) {
-		if ((sf = fopen(cs.stateFile, "wb")) != NULL) {
+               /* we create a temporary name by adding a ".tmp"
+                * suffix to the end of our state file's name
+                */
+               snprintf(tmp_sf, sizeof(tmp_sf), "%s.tmp", cs.stateFile);
+               if ((sf = fopen(tmp_sf, "wb")) != NULL) {
 			if (fprintf(sf, "%s", cursor) < 0) {
 				iRet = RS_RET_IO_ERROR;
 			}
 			fclose(sf);
 			free(cursor);
+                       /* change the name of the file to the configured one */
+                       if (iRet == RS_RET_OK && rename(tmp_sf, cs.stateFile) == -1) {
+                               char errStr[256];
+                               rs_strerror_r(errno, errStr, sizeof(errStr));
+                               iRet = RS_RET_IO_ERROR;
+                               errmsg.LogError(0, iRet, "rename() failed: "
+                                       "'%s', new path: '%s'\n", errStr, cs.stateFile);
+                       }
+
 		} else {
 			char errStr[256];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "fopen() failed: "
-				"'%s', path: '%s'\n", errStr, cs.stateFile);
+				"'%s', path: '%s'\n", errStr, tmp_sf);
 			iRet = RS_RET_FOPEN_FAILURE;
 		}
 	} else {
@@ -479,7 +495,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* This function loads a journal cursor from the state file.
  */
 static rsRetVal
@@ -510,16 +525,26 @@ loadJournalState(void)
 					errmsg.LogError(0, RS_RET_ERR, "imjournal: "
 						"couldn't seek to cursor `%s'\n", readCursor);
 					iRet = RS_RET_ERR;
-					goto finalize_it;
+				} else {
+					sd_journal_next(j);
 				}
-				sd_journal_next(j);
 			} else {
 				errmsg.LogError(0, RS_RET_IO_ERROR, "imjournal: "
 					"fscanf on state file `%s' failed\n", cs.stateFile);
 				iRet = RS_RET_IO_ERROR;
-				goto finalize_it;
 			}
+
 			fclose(r_sf);
+
+                        if (iRet != RS_RET_OK && cs.bIgnoreNonValidStatefile) {
+                                /* ignore state file errors */
+                                iRet = RS_RET_OK;
+                                errmsg.LogError(0, NO_ERRCODE,
+                                        "imjournal: ignoring invalid state file");
+                                if (cs.bIgnorePrevious) {
+                                        skipOldMessages();
+                                }
+                        }
 		} else {
 			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
 					"open on state file `%s' failed\n", cs.stateFile);
@@ -601,6 +626,7 @@ BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	bLegacyCnfModGlobalsPermitted = 1;
 
+	cs.bIgnoreNonValidStatefile = 1;
 	cs.iPersistStateInterval = DFLT_persiststateinterval;
 	cs.stateFile = NULL;
 	cs.ratelimitBurst = 20000;
@@ -697,7 +723,9 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
 			cs.ratelimitInterval = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
-			cs.bIgnorePrevious = (int) pvals[i].val.d.n; 
+			cs.bIgnorePrevious = (int) pvals[i].val.d.n;
+		} else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
+			cs.bIgnoreNonValidStatefile = (int) pvals[i].val.d.n; 
 		} else if (!strcmp(modpblk.descr[i].name, "defaultseverity")) {
 			cs.iDfltSeverity = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "defaultfacility")) {
@@ -764,7 +792,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalstatefile", 0, eCmdHdlrGetWord,
 		NULL, &cs.stateFile, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournalignorepreviousmessages", 0, eCmdHdlrBinary,
-		NULL, &cs.bIgnorePrevious, STD_LOADABLE_MODULE_ID)); 
+		NULL, &cs.bIgnorePrevious, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultseverity", 0, eCmdHdlrSeverity,
 		NULL, &cs.iDfltSeverity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imjournaldefaultfacility", 0, eCmdHdlrCustomHandler,
