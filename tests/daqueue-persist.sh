@@ -5,6 +5,8 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[daqueue-persist.sh\]: test data persisting at shutdown
+echo TEST is currently DISABLE because it is unstable
+exit 77
 echo mode linkedList
 $srcdir/daqueue-persist-drvr.sh LinkedList
 echo mode fixedArray
