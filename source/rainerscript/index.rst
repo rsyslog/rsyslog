@@ -25,4 +25,5 @@ The first full implementation is available since rsyslog v6.
    lookup_tables
    queue_parameters
    rainerscript_call
+   rainerscript_call_indirect
    global
