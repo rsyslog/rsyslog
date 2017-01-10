@@ -1042,19 +1042,23 @@ BEGINcommitTransaction
 CODESTARTcommitTransaction
 	pthread_mutex_lock(&pData->mutWrite);
 
-	for(i = 0 ; i < nParams ; ++i) {
-		writeFile(pData, pParams, i);
-	}
-	/* Note: pStrm may be NULL if there was an error opening the stream */
-	if(pData->bUseAsyncWriter) {
-		if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-			CHKiRet(strm.Flush(pData->pStrm));
-		}
-	} else {
-		if(pData->pStrm != NULL) {
-			CHKiRet(strm.Flush(pData->pStrm));
-		}
-	}
+        size_t bufferPtr_orig = 0;
+        if(pData->pStrm != NULL) {
+            bufferPtr_orig = pData->pStrm->iBufPtr;
+        }
+        for(i = 0 ; i < nParams ; ++i) {
+                    writeFile(pData, pParams, i);
+            }
+        /* Note: pStrm may be NULL if there was an error opening the stream */
+        if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
+            if(!pData->bUseAsyncWriter) {
+                CHKiRet(strm.Flush(pData->pStrm));
+            }
+        } else {  /*Not using auto Flush, have to ensure flush if buffer size reached*/
+            if(pData->pStrm != NULL && pData->pStrm->iBufPtr < bufferPtr_orig) {
+                CHKiRet(strm.Flush(pData->pStrm));
+            }
+        }
 
 finalize_it:
 	if (pData->bDynamicName &&
