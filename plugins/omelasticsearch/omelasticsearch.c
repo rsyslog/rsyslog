@@ -262,7 +262,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdynamic parent=%d\n", pData->dynParent);
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
-	dbgprintf("\tmaxbytes=%lu\n", pData->maxbytes);
+	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
