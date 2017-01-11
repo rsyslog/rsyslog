@@ -126,6 +126,15 @@ Input Parameters
 
    Array of ports: Port=["514","515","10514","..."]
 
+.. function::  Device <device>
+
+   *Default: none*
+
+   Bind socket to given device (e.g., eth0)
+
+   For Linux with VRF support, the Device option can be used to specify the
+   VRF for the Address.
+
 .. function::  Ruleset <ruleset>
 
    *Default: RSYSLOG_DefaultRuleset*
@@ -264,6 +273,13 @@ This sets up an UPD server on port 514:
 
     module(load="imudp") # needs to be done just once
     input(type="imudp" port="514")
+
+This sets up a UDP server on port 514 bound to device eth0:
+
+::
+
+    module(load="imudp") # needs to be done just once
+    input(type="imudp" port="514" device="eth0")
 
 The following sample is mostly equivalent to the first one, but request
 a larger rcvuf size. Note that 1m most probably will not be honored by
