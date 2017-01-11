@@ -90,4 +90,5 @@ before_install:
 install:
 
 script:
+  - CI/check_codestyle.sh
   - tests/travis/run.sh
