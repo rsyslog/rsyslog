@@ -461,7 +461,7 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
  * not freed - thuis must be done by the caller.
  */
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
-                        cstr_t *const __restrict__ cstrLine)
+			cstr_t *const __restrict__ cstrLine)
 {
 	DEFiRet;
 	smsg_t *pMsg;
@@ -1757,7 +1757,7 @@ in_removeFile(const int dirIdx,
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
-        int wd;
+	int wd;
 	uchar *statefn;
 	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
 	          pLstn->pszFileName, dirIdx);
@@ -1783,8 +1783,8 @@ in_removeFile(const int dirIdx,
 				"file \"%s\": %s", toDel, errStr);
 		}
 	}
-        wd = wdmapLookupListner(pLstn);
-        wdmapDel(wd);
+	wd = wdmapLookupListner(pLstn);
+	wdmapDel(wd);
 }
 
 static void
@@ -1883,9 +1883,12 @@ in_processEvent(struct inotify_event *ev)
 				/* Remove file from inotify watch */
 				iRet = inotify_rm_watch(ino_fd, wd); /* Note this will TRIGGER IN_IGNORED Event! */
 				if (iRet != 0) {
-					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n", errno, ftIdx, wd, ev->name);
+					DBGPRINTF("imfile: inotify_rm_watch error %d "
+						"(ftIdx=%d, wd=%d, name=%s)\n", errno, ftIdx, wd, ev->name);
 				} else {
-					DBGPRINTF("imfile: inotify_rm_watch successfully removed file from watch (ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
+					DBGPRINTF("imfile: inotify_rm_watch successfully "
+						"removed file from watch (ftIdx=%d, wd=%d, "
+						"name=%s)\n", ftIdx, wd, ev->name);
 				}
 				in_removeFile(etry->dirIdx, pLstn);
 				DBGPRINTF("imfile: IN_MOVED_FROM Event file removed file (wd=%d, name=%s)\n", wd, ev->name);
@@ -1942,10 +1945,11 @@ do_inotify(void)
 	CHKiRet(wdmapInit());
 	CHKiRet(dirsInit());
 	ino_fd = inotify_init();
-        if(ino_fd < 0) {
-            errmsg.LogError(1, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify instance failed ");
-            return RS_RET_INOTIFY_INIT_FAILED;
-        }
+	if(ino_fd < 0) {
+		errmsg.LogError(1, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify "
+			"instance failed ");
+		return RS_RET_INOTIFY_INIT_FAILED;
+	}
 	DBGPRINTF("imfile: inotify fd %d\n", ino_fd);
 	in_setupInitialWatches();
 
