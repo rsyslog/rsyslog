@@ -153,6 +153,12 @@ can be requested via "*<object>QueueSyncQueueFiles on/off* with the
 default being off. Activating this option has a performance penalty, so
 it should not be turned on without reason.
 
+If you happen to lose or otherwise need the housekeeping structures and 
+have all yours queue chunks you can use perl script included in rsyslog
+package to generate it. 
+Usage: recover_qi.pl -w *$WorkDirectory* -f QueueFileName -d 8 > QueueFileName.qi
+
+
 In-Memory Queues
 ~~~~~~~~~~~~~~~~
 
