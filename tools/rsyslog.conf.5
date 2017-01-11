@@ -267,6 +267,19 @@ port defaults to 514. Due to the nature of UDP, you will probably lose some mess
 If you expect high traffic volume, you can expect to lose a quite noticeable number of messages
 (the higher the traffic, the more likely and severe is message loss).
 
+Sockets for forwarded messages can be bound to a specific device using the "device" option for
+the omfwd module.
+
+.B Example:
+.RS
+action(type="omfwd" Target="192.168.0.1" Device="eth0" Port=514 Protocol="udp")
+.RE
+.sp
+In the example above, messages are forwarded via UDP to the machine 192.168.0.1 at port 514 over
+the device eth0. TCP can be used by setting Protocol to "tcp" in the above example.
+
+For Linux with VRF support, the device option is used to specify the VRF to send messages.
+
 .B If you would like to prevent message loss, use RELP:
 .RS
 *.* :omrelp:192.168.0.1:2514
