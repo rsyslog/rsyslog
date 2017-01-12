@@ -89,6 +89,11 @@ static struct cnfparamblk actpblk = {
 	actpdescr
 };
 
+
+/* protype functions */
+void str_split(char **membuf);
+
+
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
@@ -223,7 +228,7 @@ void str_split(char **membuf){
 		if (*buf == '\n' || *buf == '\t' || *buf == ' ')
 			continue;
 		else {
-			if (*buf == '<'){
+			if (*buf == '<') {
 				char *p = strchr(buf, '>');
 				buf = buf + (int)(p - buf);
 				strcat(tempbuf, ",");
@@ -241,13 +246,13 @@ void str_split(char **membuf){
 
 
 BEGINdoAction
-	msg_t *pMsg;
+	smsg_t *pMsg;
 	struct json_object *json = NULL;
 	struct json_object *keyjson = NULL;
 	char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-	pMsg = (msg_t*) ppString[0];
+	pMsg = (smsg_t*) ppString[0];
 
 	json = json_object_new_object();
 
@@ -281,7 +286,7 @@ CODESTARTdoAction
 	MMDB_entry_data_list_s *entry_data_list = NULL;
 	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
-	if (MMDB_SUCCESS != status){
+	if (MMDB_SUCCESS != status) {
 		dbgprintf("Got an error looking up the entry data - %s\n", MMDB_strerror(status));
 		ABORT_FINALIZE(RS_RET_OK);
 	}
@@ -291,7 +296,7 @@ CODESTARTdoAction
 	FILE   *memstream;
 	memstream = open_memstream(&membuf, &memlen);
 
-	if (entry_data_list != NULL && memstream != NULL){
+	if (entry_data_list != NULL && memstream != NULL) {
 		MMDB_dump_entry_data_list(memstream, entry_data_list, 2);
 		fflush(memstream);
 		str_split(&membuf);
@@ -300,28 +305,29 @@ CODESTARTdoAction
 	json_object *total_json = json_tokener_parse(membuf);
 	fclose(memstream);
 
-	if (pData->fieldList.nmemb < 1){
+	if (pData->fieldList.nmemb < 1) {
 		dbgprintf("fieldList.name is empty!...\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	for (int i = 0 ; i <  pData->fieldList.nmemb ; ++i) {
+	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
 		memset(buf, 0, sizeof(buf));
 		strcpy(buf, (char *)pData->fieldList.name[i]);
 
 		struct json_object *json1[5] = {NULL};
 		json_object *temp_json = total_json;
+		json_object *sub_obj   = temp_json;
 		int j = 0;
 		char *path[10] = {NULL};
-		char *sep = "!";
+		const char *sep = "!";
 
 		char *s = strtok(buf, sep);
-		for (; s != NULL; j++){
+		for (; s != NULL; j++) {
 			path[j] = s;
 			s = strtok(NULL, sep);
 
-			json_object *sub_obj = json_object_object_get(temp_json, path[j]);
+			json_object_object_get_ex(temp_json, path[j], &sub_obj);
 			temp_json = sub_obj;
 		}
 
@@ -331,9 +337,8 @@ CODESTARTdoAction
 				json1[j] = json_object_new_object();
 				json_object_object_add(json1[j], path[j], temp_json);
 				temp_json = json1[j];
-			} else {
+			} else
 				json_object_object_add(json, path[j], temp_json);
-			}
 		}
 
 	}
@@ -349,7 +354,7 @@ ENDdoAction
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmdblookup:", sizeof(":mmdblookup:") - 1)) {
+	if (strncmp((char*) p, ":mmdblookup:", sizeof(":mmdblookup:") - 1)) {
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
 			"mmdblookup supports only v6+ config format, use: "
 			"action(type=\"mmdblookup\" ...)");
