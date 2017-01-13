@@ -71,7 +71,8 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
-		rm -f rsyslog.input rsyslog.empty
+		rm -f -r rsyslog.input.*
+		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state*
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
@@ -116,7 +117,8 @@ case $1 in
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log rsyslog.random.data work-presort rsyslog.pipe
-		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty
+		rm -f -r rsyslog.input.*
+		rm -f rsyslog.input rsyslog.conf.tlscert stat-file1 rsyslog.empty rsyslog.input.* imfile-state*
 		rm -f testconf.conf
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f HOSTNAME imfile-state:.-rsyslog.input
@@ -414,9 +416,11 @@ case $1 in
 		fi
 		;;
    'content-check-with-count') 
-		count=$(cat rsyslog.out.log | grep -qF "$2" | wc -l)
+		count=$(cat rsyslog.out.log | grep -F "$2" | wc -l)
 		if [ "x$count" == "x$3" ]; then
-		    echo content-check failed, expected $2 to occure $3 times, but found it $count times
+		    echo content-check-with-count success, \"$2\" occured $3 times
+		else
+		    echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
