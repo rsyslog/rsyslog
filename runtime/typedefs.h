@@ -73,9 +73,12 @@ typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
-typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function ptr to a function returning a function ptr... */
-typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
-typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
+typedef rsRetVal (*errLogFunc_t)(uchar*);
+/* this is a trick to store a function ptr to a function returning a function ptr... */
+typedef struct permittedPeers_s permittedPeers_t;
+/* this should go away in the long term -- rgerhards, 2008-05-19 */
+typedef struct permittedPeerWildcard_s permittedPeerWildcard_t;
+/* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
 typedef struct tcps_sess_s tcps_sess_t;
 typedef struct strmsrv_s strmsrv_t;

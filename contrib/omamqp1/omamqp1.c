@@ -611,7 +611,8 @@ static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t
                     break;
                 case PN_RELEASED:
                 case PN_MODIFIED:
-                  // the message bus cannot accept the message.  This may be temporary - retry up to maxRetries before dropping
+		// the message bus cannot accept the message.  This may be temporary - retry
+		// up to maxRetries before dropping
                     if (++ps->retries >= cfg->maxRetries) {
                       dbgprintf("omamqp1: message bus failed to accept message - dropping\n");
                       result = RS_RET_OK;

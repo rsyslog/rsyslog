@@ -175,7 +175,8 @@ doRetry(nsd_gtls_t *pNsd)
 		pNsd->rtryCall = gtlsRtry_None; /* we are done */
 	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
 		uchar *pErr = gtlsStrerror(gnuRet);
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+		gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr);
 		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);

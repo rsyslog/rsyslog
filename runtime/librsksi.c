@@ -908,7 +908,8 @@ sigblkInitKSI(ksifile ksi)
 	ksi->nRecords = 0;
 	ksi->bInBlk = 1;
 
-	report(ksi->ctx, "Started new block for signing, signature file %s, block count %lu", ksi->sigfilename, ksi->blockSizeLimit);
+	report(ksi->ctx, "Started new block for signing, signature file %s, block count %lu", ksi->sigfilename,
+	ksi->blockSizeLimit);
 
 done:	return;
 }

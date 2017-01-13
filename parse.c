@@ -247,7 +247,8 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower)
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing,
+	int bConvLower)
 {
 	DEFiRet;
 	register unsigned char *pC;

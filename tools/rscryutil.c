@@ -59,8 +59,10 @@ static int optionForce = 0;
  */
 int Debug = 0;
 void dbgprintf(const char *fmt __attribute__((unused)), ...) {};
-void srSleep(int a __attribute__((unused)), int b __attribute__((unused))); /* prototype (avoid compiler warning) */
-void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {}; /* this is not really needed by any of our code */
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused)));
+/* prototype (avoid compiler warning) */
+void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {};
+/* this is not really needed by any of our code */
 
 /* rectype/value must be EIF_MAX_*_LEN+1 long!
  * returns 0 on success or something else on error/EOF

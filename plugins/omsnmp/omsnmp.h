@@ -80,7 +80,8 @@ static const char *api_errors[-SNMPERR_MAX + 1] = {
     "Unknown Report message",   /* SNMPERR_UNKNOWN_REPORT */
     "USM generic error",        /* SNMPERR_USM_GENERICERROR */
     "USM unknown security name (no such user exists)",  /* SNMPERR_USM_UNKNOWNSECURITYNAME */
-    "USM unsupported security level (this user has not been configured for that level of security)",    /* SNMPERR_USM_UNSUPPORTEDSECURITYLEVEL */
+    "USM unsupported security level (this user has not been configured for that level of security)",
+	/* SNMPERR_USM_UNSUPPORTEDSECURITYLEVEL */
     "USM encryption error",     /* SNMPERR_USM_ENCRYPTIONERROR */
     "USM authentication failure (incorrect password or key)",   /* SNMPERR_USM_AUTHENTICATIONFAILURE */
     "USM parse error",          /* SNMPERR_USM_PARSEERROR */

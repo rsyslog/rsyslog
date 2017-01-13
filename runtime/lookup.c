@@ -118,7 +118,8 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d (please enable debug logs for details)", initialized);
+		errmsg.LogError(errno, iRet, "a lookup table could not be initialized: failed at init-step %d "
+		"(please enable debug logs for details)", initialized);
 		if (initialized > 4) lookupStopReloader(pThis);
 		if (initialized > 3) pthread_attr_destroy(&pThis->reloader_thd_attr);
 		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
@@ -291,7 +292,8 @@ static es_str_t*
 lookupKey_str(lookup_t *pThis, lookup_key_t key) {
 	lookup_string_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), bs_arrcmp_strtab);
+	entry = bsearch(key.k_str, pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t),
+	bs_arrcmp_strtab);
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -352,7 +354,8 @@ static es_str_t*
 lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 	lookup_sparseArray_tab_entry_t *entry;
 	const char *r;
-	entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb, sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
+	entry = bsearch_lte(&key.k_uint, pThis->table.sprsArr->entries, pThis->nmemb,
+	sizeof(lookup_sparseArray_tab_entry_t), bs_arrcmp_sprsArrtab);
 	if(entry == NULL) {
 		r = defaultVal(pThis);
 	} else {
@@ -364,7 +367,8 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 /* builders for different table-types */
 
 #define NO_INDEX_ERROR(type, name)				\
-	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' field", type, name); \
+	errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'index' "\
+"field", type, name); \
 	ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 
 static rsRetVal
@@ -388,7 +392,8 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 			}
 			CHKmalloc(pThis->table.str->entries[i].key = ustrdup((uchar*) json_object_get_string(jindex)));
 			value = (uchar*) json_object_get_string(jvalue);
-			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals,
+			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
 			assert(canonicalValueRef != NULL);
 			pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
 		}
@@ -438,12 +443,14 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 				pThis->table.arr->first_key = index;
 			} else {
 				if (index != ++prev_index) {
-					errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' has non-contiguous members between index '%d' and '%d'",
+					errmsg.LogError(0, RS_RET_INVALID_VALUE, "'array' lookup table name: '%s' "
+					"has non-contiguous members between index '%d' and '%d'",
 									name, prev_index, index);
 					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 				}
 			}
-			canonicalValueRef = *(uchar**) bsearch(indexes[i].val, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			canonicalValueRef = *(uchar**) bsearch(indexes[i].val, pThis->interned_vals,
+			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
 			assert(canonicalValueRef != NULL);
 			pThis->table.arr->interned_val_refs[i] = canonicalValueRef;
 		}
@@ -478,7 +485,8 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 			}
 			pThis->table.sprsArr->entries[i].key = (uint32_t) json_object_get_int(jindex);
 			value = (uchar*) json_object_get_string(jvalue);
-			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals,
+			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
 			assert(canonicalValueRef != NULL);
 			pThis->table.sprsArr->entries[i].interned_val_ref = canonicalValueRef;
 		}
@@ -538,7 +546,8 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		jrow = json_object_array_get_idx(jtab, i);
 		jvalue = json_object_object_get(jrow, "value");
 		if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
-			errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) without 'value' field", table_type, name);
+			errmsg.LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
+			"without 'value' field", table_type, name);
 			ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 		}
 		all_values[i] = (const uchar*) json_object_get_string(jvalue);
@@ -603,7 +612,8 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 	if (jversion != NULL && !json_object_is_type(jversion, json_type_null)) {
 		version = json_object_get_int(jversion);
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version (will use default value: %d)", name, version);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' doesn't specify version "
+		"(will use default value: %d)", name, version);
 	}
 	if (version == 1) {
 		CHKiRet(lookupBuildTable_v1(pThis, jroot, name));
@@ -734,8 +744,8 @@ lookupReload(lookup_ref_t *pThis, const uchar *stub_val_if_reload_fails)
 		pThis->do_reload = 1;
 		pthread_cond_signal(&pThis->run_reloader);
 	} else {
-		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger reload of lookup table '%s' failed (not stubbing)",
-						pThis->name);
+		errmsg.LogError(lock_errno, RS_RET_INTERNAL_ERROR, "attempt to trigger reload of lookup table '%s' "
+		"failed (not stubbing)", pThis->name);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 		/* we can choose to stub the table here, but it'll hurt because
 		   the table reloader may take time to complete the reload

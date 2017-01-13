@@ -80,7 +80,8 @@ module(load="omhttpfs")
 template(name="hdfs_tmp_file" type="string" string="/tmp/%$YEAR%/test.log")
 template(name="hdfs_tmp_filecontent" type="string" string="%$YEAR%-%$MONTH%-%$DAY% %MSG% ==\n")
 local4.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on")
-local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on" template="hdfs_tmp_filecontent")
+local5.*    action(type="omhttpfs" host="10.1.1.161" port="14000" https="off" file="hdfs_tmp_file" isDynFile="on"
+template="hdfs_tmp_filecontent")
 
 */
 
@@ -474,7 +475,8 @@ HTTPFS_CURL_VARS_INIT
     httpfs_curl_set_put(pWrkrData->curl);
 
     /*
-overwrite - if a file with this name already exists, then if true, the file will be overwritten, and if false an error will be thrown.
+overwrite - if a file with this name already exists, then if true, the file will be overwritten, and if
+false an error will be thrown.
 bufferSize - the size of the buffer to be used.
 replication - required block replication for the file.
      */

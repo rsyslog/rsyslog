@@ -428,7 +428,8 @@ addListner(instanceConf_t *inst)
 	listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[nfd].bCreatePath = inst->bCreatePath;
 	listeners[nfd].sockName = ustrdup(inst->sockName);
-	listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate || inst->bUseSysTimeStamp) ? 1 : 0;
+	listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval
+	|| inst->bAnnotate || inst->bUseSysTimeStamp) ? 1 : 0;
 	listeners[nfd].bAnnotate = inst->bAnnotate;
 	listeners[nfd].bParseTrusted = inst->bParseTrusted;
 	listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
@@ -942,16 +943,18 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 				}
 			} else {
 				if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &parse, &lenMsg) != RS_RET_OK &&
-				   datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) != RS_RET_OK) {
+				datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &parse, &lenMsg,
+				NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) != RS_RET_OK) {
 					DBGPRINTF("we have a problem, invalid timestamp in msg!\n");
 				}
 			}
 		} else { /* if we pulled the time from the system, we need to update the message text */
 			uchar *tmpParse = parse; /* just to check correctness of TS */
 			if(datetime.ParseTIMESTAMP3339(&dummyTS, &tmpParse, &lenMsg) == RS_RET_OK ||
-			   datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-				/* We modify the message only if it contained a valid timestamp,
-				 * otherwise we do not touch it at all. */
+		 	datetime.ParseTIMESTAMP3164(&dummyTS, &tmpParse, &lenMsg, NO_PARSE3164_TZSTRING,
+			NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+			/* We modify the message only if it contained a valid timestamp,
+			otherwise we do not touch it at all. */
 				datetime.formatTimestamp3164(&st, (char*)parse, 0);
 				parse[15] = ' '; /* re-write \0 from fromatTimestamp3164 by SP */
 				/* update "counters" to reflect processed timestamp */
@@ -1131,7 +1134,9 @@ activateListeners(void)
 		listeners[0].ratelimitInterval = runModConf->ratelimitIntervalSysSock;
 		listeners[0].ratelimitBurst = runModConf->ratelimitBurstSysSock;
 		listeners[0].ratelimitSev = runModConf->ratelimitSeveritySysSock;
-		listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock || runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs || runModConf->bUseSysTimeStamp) ? 1 : 0;
+		listeners[0].bUseCreds = (runModConf->bWritePidSysSock || runModConf->ratelimitIntervalSysSock
+		|| runModConf->bAnnotateSysSock || runModConf->bDiscardOwnMsgs
+		|| runModConf->bUseSysTimeStamp) ? 1 : 0;
 		listeners[0].bWritePid = runModConf->bWritePidSysSock;
 		listeners[0].bAnnotate = runModConf->bAnnotateSysSock;
 		listeners[0].bParseTrusted = runModConf->bParseTrusted;

@@ -475,7 +475,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				if (ret == 0) {
 					dbgprintf("GSS-API Connection closed by peer %s\n", (char *)pszPeer);
                                 } else {
-					errmsg.LogError(0, RS_RET_ERR, "TCP(GSS) session %p from %s will be closed, error ignored\n", pSess, (char *)pszPeer);
+					errmsg.LogError(0, RS_RET_ERR, "TCP(GSS) session %p from %s will be closed, "
+					"error ignored\n", pSess, (char *)pszPeer);
                                 }
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
@@ -496,7 +497,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					if (ret == 0) {
 						dbgprintf("GSS-API Connection closed by peer %s\n", (char *)pszPeer);
                                         } else {
-						errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be closed, error ignored\n", pSess, (char *)pszPeer);
+						errmsg.LogError(0, NO_ERRCODE, "TCP session %p from %s will be "
+						"closed, error ignored\n", pSess, (char *)pszPeer);
                                         }
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				}

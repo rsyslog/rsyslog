@@ -471,7 +471,8 @@ finalize_it:
  */
 #ifdef HAVE_RECVMMSG
 static rsRetVal
-processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev,
+int *pbIsPermitted)
 {
 	DEFiRet;
 	int iNbrTimeUsed;
@@ -556,7 +557,8 @@ finalize_it:
  * on scheduling order. -- rgerhards, 2008-10-02
  */
 static rsRetVal
-processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev, int *pbIsPermitted)
+processSocket(struct wrkrInfo_s *pWrkr, struct lstn_s *lstn, struct sockaddr_storage *frominetPrev,
+int *pbIsPermitted)
 {
 	int iNbrTimeUsed;
 	time_t ttGenTime;

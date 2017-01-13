@@ -197,8 +197,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
 	pData->pRuleset = cs.pRuleset;
 	pData->pszRulesetName = cs.pszRulesetName;
-	cs.pRuleset = NULL; /* re-set, because there is a high risk of unwanted behavior if we leave it in! */
-	cs.pszRulesetName = NULL; /* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
+	cs.pRuleset = NULL;
+/* re-set, because there is a high risk of unwanted behavior if we leave it in! */
+	cs.pszRulesetName = NULL;
+/* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

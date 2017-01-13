@@ -1,8 +1,10 @@
 /* pmcisconames.c
  *
- * this detects logs sent by Cisco devices that mangle their syslog output when you tell them to log by name by adding ' :' between the name and the %XXX-X-XXXXXXX: tag
+ * this detects logs sent by Cisco devices that mangle their syslog output when you tell them to log by name
+ * by adding ' :' between the name and the %XXX-X-XXXXXXX: tag
  * 
- * instead of actually parsing the message, this modifies the message and then falls through to allow a later parser to handle the now modified message
+ * instead of actually parsing the message, this modifies the message and then falls through to allow a later
+ * parser to handle the now modified message
  *
  * created 2010-12-13 by David Lang based on pmlastmsg
  *
@@ -73,7 +75,8 @@ CODESTARTparse
 	dbgprintf("Message will now be parsed by fix Cisco Names parser.\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* check if this message is of the type we handle in this (very limited) parser */
@@ -94,13 +97,15 @@ CODESTARTparse
 	   this allows the compiler to short circuit the rst of the tests if it is the wrong timestamp
 	   but still check the rest to see if it looks correct
 	*/
-	if ( *(p2parse + 9) == ':' && *(p2parse + 12) == ':' && *(p2parse + 3) == ' ' && *(p2parse + 6) == ' ' && *(p2parse + 15) == ' ') {
+	if ( *(p2parse + 9) == ':' && *(p2parse + 12) == ':' && *(p2parse + 3) == ' ' && *(p2parse + 6) == ' '
+	&& *(p2parse + 15) == ' ') {
 		/* skip over timestamp */
 		dbgprintf("short timestamp found\n");
 		lenMsg -=16;
 		p2parse +=16;
 	} else {
-		if ( *(p2parse + 14) == ':' && *(p2parse + 17) == ':' && *(p2parse + 3) == ' ' && *(p2parse + 6) == ' ' && *(p2parse + 11) == ' ' && *(p2parse + 20) == ' ') {
+		if ( *(p2parse + 14) == ':' && *(p2parse + 17) == ':' && *(p2parse + 3) == ' '
+		&& *(p2parse + 6) == ' ' && *(p2parse + 11) == ' ' && *(p2parse + 20) == ' ') {
 			/* skip over timestamp */
 			dbgprintf("long timestamp found\n");
 			lenMsg -=21;
@@ -118,7 +123,8 @@ CODESTARTparse
 	/* skip the space after the hostname */
 	lenMsg -=1;
 	p2parse +=1;
-        /* if the syslog tag is : and the next thing starts with a % assume that this is a mangled cisco log and fix it */
+        /* if the syslog tag is : and the next thing starts with a % assume that this is a mangled cisco
+	log and fix it */
 	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
 		/* wrong opening text */
 	DBGPRINTF("not a cisco name mangled log!\n");
@@ -166,7 +172,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("cisconames parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+ 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

@@ -631,7 +631,8 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
  	/* These commands will NOT be supported -- the new v6.3 config system provides
 	 * far better methods. We will remove the related code soon. -- rgerhards, 2012-01-09
 	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
+NULL, NULL));
 ENDObjClassInit(conf)
 
 /* vi:set ai:

@@ -90,5 +90,5 @@ before_install:
 install:
 
 script:
-  - CI/check_imfile.sh
+  - CI/check_line_length.sh
   - tests/travis/run.sh

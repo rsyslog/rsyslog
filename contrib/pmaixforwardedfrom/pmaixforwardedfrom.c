@@ -2,7 +2,8 @@
  *
  * this cleans up messages forwarded from AIX
  *
- * instead of actually parsing the message, this modifies the message and then falls through to allow a later parser to handle the now modified message
+ * instead of actually parsing the message, this modifies the message and then falls through to allow a
+ * later parser to handle the now modified message
  *
  * created 2010-12-13 by David Lang based on pmlastmsg
  *
@@ -75,7 +76,8 @@ CODESTARTparse
 	dbgprintf("Message will now be parsed by fix AIX Forwarded From parser.\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* check if this message is of the type we handle in this (very limited) parser */
@@ -105,14 +107,16 @@ CODESTARTparse
 	DBGPRINTF("not a AIX message forwarded from mangled log!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
-	/* bump the message portion up by skipLen(23 or 5) characters to overwrite the "Message forwarded from " or "From " with the hostname */
+	/* bump the message portion up by skipLen(23 or 5) characters to overwrite the "Message forwarded from
+" or "From " with the hostname */
 	lenMsg -=skipLen;
 	memmove(p2parse, p2parse + skipLen, lenMsg);
 	*(p2parse + lenMsg) = '\n';
 	*(p2parse + lenMsg + 1)  = '\0';
 	pMsg->iLenRawMsg -=skipLen;
 	pMsg->iLenMSG -=skipLen;
-	/* now look for the : after the hostname to walk past the hostname, also watch for a space in case this isn't really an AIX log, but has a similar preamble */
+	/* now look for the : after the hostname to walk past the hostname, also watch for a space in case this isn't
+really an AIX log, but has a similar preamble */
 	while(lenMsg && *p2parse != ' ' && *p2parse != ':') {
 		--lenMsg;
 		++p2parse;
@@ -163,7 +167,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+ 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

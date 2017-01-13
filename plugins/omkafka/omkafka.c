@@ -253,7 +253,8 @@ dynaTopicFreeCacheEntries(instanceData *__restrict__ const pData)
 /* create the topic object */
 /* must be called with _atleast_ read(rkLock) */
 static rsRetVal
-createTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName, rd_kafka_topic_t** topic) {
+createTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName,
+rd_kafka_topic_t** topic) {
 /* Get a new topic conf */
 	rd_kafka_topic_conf_t *const topicconf = rd_kafka_topic_conf_new();
 	char errstr[MAX_ERRMSG];
@@ -405,7 +406,8 @@ prepareDynTopic(instanceData *__restrict__ const pData, const uchar *__restrict_
 	localRet = createTopic(pData, newTopicName, &tmpTopic);
 
 	if(localRet != RS_RET_OK) {
-		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' [state %d] - discarding message", newTopicName, localRet);
+		errmsg.LogError(0, localRet, "Could not open dynamic topic '%s' [state %d] - discarding message",
+		newTopicName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
 

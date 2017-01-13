@@ -176,7 +176,8 @@ finalize_it:
  * by the caller.
  */
 static rsRetVal
-enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json, int sharedJsonProperties)
+enqMsg(uchar *msg, uchar *pszTag, int iFacility, int iSeverity, struct timeval *tp, struct json_object *json,
+int sharedJsonProperties)
 {
 	struct syslogTime st;
 	smsg_t *pMsg;

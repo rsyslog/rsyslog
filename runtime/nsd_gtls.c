@@ -73,7 +73,8 @@ DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 
-static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */
+static pthread_mutex_t mutGtlsStrerror;
+/*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 /* a macro to check GnuTLS calls against unexpected errors */
 #define CHKgnutls(x) { \
@@ -83,7 +84,8 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	} else if(gnuRet != 0) { \
 		uchar *pErr = gtlsStrerror(gnuRet); \
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
+	gnuRet, __FILE__, __LINE__, pErr); \
 		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	} \
@@ -537,7 +539,8 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	}
 
 finalize_it:
-	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, (int) lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n",
+	pThis, iRet, (int) lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 
@@ -619,7 +622,8 @@ gtlsGlblInit(void)
 	} else if(gnuRet < 0) {
 		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 		uchar *pErr = gtlsStrerror(gnuRet);
-		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		errmsg.LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+		gnuRet, __FILE__, __LINE__, pErr);
 		free(pErr);
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
@@ -1613,7 +1617,8 @@ finalize_it:
 		free(pThis->pszRcvBuf);
 		pThis->pszRcvBuf = NULL;
 	}
-	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis,
+	iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 

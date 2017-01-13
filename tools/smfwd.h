@@ -24,6 +24,7 @@
 #define	SMFWD_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitsmfwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+rsRetVal modInitsmfwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
+	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
 
 #endif /* #ifndef SMFWD_H_INCLUDED */

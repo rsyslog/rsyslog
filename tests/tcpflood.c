@@ -130,7 +130,8 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
-#define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
+#define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
+/* name of input file, must match $IncludeConfig in .conf files */
 
 #define MAX_EXTRADATA_LEN 100*1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
@@ -993,7 +994,8 @@ closeTLSSess(int i)
 #	else	/* NO TLS available */
 static void initTLS(void) {}
 static void initTLSSess(int __attribute__((unused)) i) {}
-static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf, int __attribute__((unused)) lenBuf) { return 0; }
+static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
+	int __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
 #	endif
 

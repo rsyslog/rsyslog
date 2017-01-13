@@ -103,7 +103,8 @@ BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*EndSerialize)(strm_t *pStrm);
 	rsRetVal (*RegisterObj)(uchar *pszObjName, objInfo_t *pInfo);
 	rsRetVal (*UnregisterObj)(uchar *pszObjName);
-	rsRetVal (*Deserialize)(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
+	rsRetVal (*Deserialize)(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*),
+	void *pUsr);
 	rsRetVal (*DeserializePropBag)(obj_t *pObj, strm_t *pStrm);
 	rsRetVal (*SetName)(obj_t *pThis, uchar *pszName);
 	uchar *  (*GetName)(obj_t *pThis);
@@ -118,7 +119,9 @@ ENDinterface(obj)
 rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
 PROTOTYPEObjClassExit(obj);
-rsRetVal objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(), rsRetVal (*objDeserialize)());
+rsRetVal objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm,
+rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(),
+rsRetVal (*objDeserialize)());
 rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
 rsRetVal objDeserializeDummy(obj_t *pObj, strm_t *pStrm);
 

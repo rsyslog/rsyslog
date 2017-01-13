@@ -41,16 +41,26 @@ extern "C"
 
 /* The cJSON structure: */
 typedef struct cJSON {
-	struct cJSON *next,*prev;	/* next/prev allow you to walk array/object chains. Alternatively, use GetArraySize/GetArrayItem/GetObjectItem */
-	struct cJSON *child;		/* An array or object item will have a child pointer pointing to a chain of the items in the array/object. */
+	struct cJSON *next,*prev;
+	/* next/prev allow you to walk array/object chains. Alternatively,
+	use GetArraySize/GetArrayItem/GetObjectItem */
+	struct cJSON *child;
+	/* An array or object item will have a child pointer pointing to a
+	chain of the items in the array/object. */
 
-	int type;					/* The type of the item, as above. */
+	int type;
+	/* The type of the item, as above. */
 
-	char *valuestring;			/* The item's string, if type==cJSON_String */
-	int valueint;				/* The item's number, if type==cJSON_Number */
-	double valuedouble;			/* The item's number, if type==cJSON_Number */
+	char *valuestring;
+	/* The item's string, if type==cJSON_String */
+	int valueint;
+	/* The item's number, if type==cJSON_Number */
+	double valuedouble;
+	/* The item's number, if type==cJSON_Number */
 
-	char *string;				/* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
+	char *string;
+	/* The item's name string, if this item is the child of, or is in
+	the list of subitems of an object. */
 } cJSON;
 
 typedef struct cJSON_Hooks {
@@ -78,7 +88,8 @@ extern cJSON *cJSON_GetArrayItem(cJSON *array,int item);
 /* Get item "string" from object. Case insensitive. */
 extern cJSON *cJSON_GetObjectItem(cJSON *object,const char *string);
 
-/* For analysing failed parses. This returns a pointer to the parse error. You'll probably need to look a few chars back to make sense of it. Defined when cJSON_Parse() returns 0. 0 when cJSON_Parse() succeeds. */
+/* For analysing failed parses. This returns a pointer to the parse error. You'll probably need to look a few chars
+back to make sense of it. Defined when cJSON_Parse() returns 0. 0 when cJSON_Parse() succeeds. */
 extern const char *cJSON_GetErrorPtr();
 	
 /* These calls create a cJSON item of the appropriate type. */
@@ -100,7 +111,8 @@ extern cJSON *cJSON_CreateStringArray(const char **strings,int count);
 /* Append item to the specified array/object. */
 extern void cJSON_AddItemToArray(cJSON *array, cJSON *item);
 extern void	cJSON_AddItemToObject(cJSON *object,const char *string,cJSON *item);
-/* Append reference to item to the specified array/object. Use this when you want to add an existing cJSON to a new cJSON, but don't want to corrupt your existing cJSON. */
+/* Append reference to item to the specified array/object. Use this when you want to add an existing
+cJSON to a new cJSON, but don't want to corrupt your existing cJSON. */
 extern void cJSON_AddItemReferenceToArray(cJSON *array, cJSON *item);
 extern void	cJSON_AddItemReferenceToObject(cJSON *object,const char *string,cJSON *item);
 

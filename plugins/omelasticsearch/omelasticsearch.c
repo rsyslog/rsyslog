@@ -662,7 +662,8 @@ getSection(const char* bulkRequest, const char **bulkRequestNextSectionStart )
 
 /*
  * Sets the new string in singleRequest for one request in bulkRequest
- * and sets lastLocation pointer to the location till which bulkrequest has been parsed.(used as input to make function thread safe.)
+ * and sets lastLocation pointer to the location till which bulkrequest has been parsed.
+ * (used as input to make function thread safe.)
  */
 static rsRetVal
 getSingleRequest(const char* bulkRequest, char** singleRequest, const char **lastLocation)
@@ -993,7 +994,8 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 	pthread_mutex_lock(&pData->mutErrFile);
 	bMutLocked = 1;
 
-	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly , pData->interleaved);
+	DBGPRINTF("omelasticsearch: error file mode: erroronly='%d' errorInterleaved='%d'\n", pData->errorOnly,
+	pData->interleaved);
 
 	if(pData->interleaved ==0 && pData->errorOnly ==0)/*default write*/
 	{
@@ -1173,7 +1175,8 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 
 	DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
 	if(pWrkrData->replyLen > 0) {
-		pWrkrData->reply[pWrkrData->replyLen] = '\0'; /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+		pWrkrData->reply[pWrkrData->replyLen] = '\0';
+		/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
 	}
 	DBGPRINTF("omelasticsearch: pWrkrData reply: '%s'\n", pWrkrData->reply);
 
@@ -1219,7 +1222,8 @@ CODESTARTdoAction
 
 		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
 		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
-			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d elements.\n", pWrkrData->batch.nmemb);
+			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d "
+			"elements.\n", pWrkrData->batch.nmemb);
 			CHKiRet(submitBatch(pWrkrData));
 			initializeBatch(pWrkrData);
 		}
