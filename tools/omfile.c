@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2016 Adiscon GmbH.
+ * Copyright 2007-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1046,14 +1046,16 @@ CODESTARTcommitTransaction
 		writeFile(pData, pParams, i);
 	}
 	/* Note: pStrm may be NULL if there was an error opening the stream */
-	if(pData->bUseAsyncWriter) {
-		if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
-			CHKiRet(strm.Flush(pData->pStrm));
-		}
-	} else {
-		if(pData->pStrm != NULL) {
-			CHKiRet(strm.Flush(pData->pStrm));
-		}
+	/* if bFlushOnTXEnd is set, we need to flush on transaction end - in
+	 * any case. It is not relevant if this is using background writes
+	 * (which then become pretty slow) or not. And, similarly, no flush
+	 * happens when it is not set. Please see
+	 * https://github.com/rsyslog/rsyslog/issues/1297
+	 * for a discussion of why we actually need this.
+	 * rgerhards, 2017-01-13
+	 */
+	if(pData->bFlushOnTXEnd && pData->pStrm != NULL) {
+		CHKiRet(strm.Flush(pData->pStrm));
 	}
 
 finalize_it:
