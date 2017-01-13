@@ -1,42 +1,24 @@
-# rsyslog-maxminddb
+# Rsyslog - MMDBLookup
 
-MaxMindDB is the new file format for storing information about IP addresses in a highly optimized, flexible database format. GeoIP2 Databases are available in the MaxMind DB format.
+Fast geoip lookups straight from Rsyslog.
 
-MaxMindDB vs GeoIP:
+[Maxmind](https://www.maxmind.com/en/home) provides free and pay-for memmory mapped ip-lookup databases.
+The free city-level database is about 22 mB, and can be found on the [geolite page](http://dev.maxmind.com/geoip/geoip2/geolite2/).
 
-1. 4 ~ 6 faster
-2. MaxMindDB Writer
 
 ## Compile
 
-1. download and install libfastjson > 0.99.3 from https://github.com/rgerhards/libfastjson/commit/c437cad46af1998e3ad2dafa058c9e2c715df261
-```
-	git clone https://github.com/rgerhards/libfastjson
-```
-
-2. download rsyslog source
-```
-git clone https://github.com/rsyslog/rsyslog.git
-```
-
-3. copy the code into rsyslog contrib path：
-```
-cp -r src/contrib/mmdblookup ../rsyslog/contrib/
-cp src/configure.ac ../rsyslog/
-cp src/Makefile.am ../rsyslog/
-cp src/libfastjson.env ../rsyslog/
-# cp src/tests ../rsyslog/
-```
-
-4. configure
+1. Ensure you have [libfastjson](https://github.com/rgerhards/libfastjson/) installed, check your package manager or install from source.
+2. Ensure you have [libmaxminddb](https://github.com/maxmind/libmaxminddb) installed, check your package manager.
+3. configure
 ```
 export PKG_CONFIG_PATH=/lib64/pkgconfig/
 yum install -y libestr liblogging libmaxminddb-devel
-yum install -y git-core valgrind autoconf automake flex bison json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel mysql-devel postgresql-devel libdbi-dbd-mysql libdbi-devel net-snmp-devel
+yum install -y autoconf automake flex bison json-c-devel libuuid-devel libgcrypt-devel zlib-devel openssl-devel libcurl-devel gnutls-devel
 cd ../rsyslog
-source libfastjson.env
-autoconf
-./configure --enable-mmdblookup --enable-mmjsonparse --***
+./autogen.sh --enable-mmdblookup --enable-mmjsonparse --***
+make
+make install
 ```
 
 ## Usage
@@ -49,28 +31,27 @@ module( load="mmdblookup" )
 module( load="mmjsonparse" )
 
 input (
-    type="imfile"
-    File="/tmp/access.log"
-    addMetadata="off"
-    Severity="info"
-    Facility="user"
-    tag="test"
-    ruleset="test"
+	type="imfile"
+	File="/tmp/access.log"
+	addMetadata="off"
+	Severity="info"
+	Facility="user"
+	tag="test"
+	ruleset="test"
 )
 
-template( type="string" string="{\"@timestamp\":\"%timereported:::date-rfc3339%\",\"host\":\"%hostname%\",\"geoip2\":%$!iplocation%,%msg:7:$%" name="clientlog" )
-ruleset ( name="test"){
-    action( type="mmjsonparse" )
-    if ( $parsesuccess == "OK" ) then {
-        action( type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb" fields=["!continent!code","!location"] key="!clientip" )
-        action(type="omfwd" Target="10.211.55.3" port="514" Protocol="tcp" template="clientlog")
-        stop
-    }
-
+template ( type="string" string="{\"@timestamp\":\"%timereported:::date-rfc3339%\",\"host\":\"%hostname%\",\"geoip2\":%$!iplocation%,%msg:7:$%" name="clientlog" )
+ruleset  ( name="test" ) {
+	action ( type="mmjsonparse" )
+	if ( $parsesuccess == "OK" ) then {
+		action( type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb" fields=["!continent!code","!location"] key="!clientip" )
+		action( type="omfwd" Target="10.211.55.3" port="514" Protocol="tcp" template="clientlog" )
+		stop
+	}
 }
 ```
 
-### test
+### Testing
 
 ```
 cat /root/a
@@ -89,4 +70,3 @@ get the result from logstash-input:
           "port" => 58199
 }
 ```
-
