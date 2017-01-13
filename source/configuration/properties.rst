@@ -65,6 +65,20 @@ The following message properties exist:
   the "static" part of the tag, as defined by BSD syslogd. For example,
   when TAG is "named[12345]", programname is "named".
 
+  Precisely, the programname is terminated by either (whichever occurs first):
+
+  - end of tag
+  - nonprintable character
+  - ':'
+  - '['
+  - '/'
+
+  The above definition has been taken from the FreeBSD syslogd sources.
+
+  Please note that some applications include slashes in the static part
+  of the tag, e.g. "app/foo[1234]". In this case, programname is "app".
+
+
 **pri**
   PRI part of the message - undecoded (single value)
 
