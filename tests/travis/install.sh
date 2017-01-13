@@ -8,7 +8,7 @@ sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev lib
 	libcurl4-gnutls-dev
 sudo apt-get install -qq python-docutils
 
-if [ "$DISTRIB_CODENAME" == "trusty" ]; then
+if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
 	set -ex
 	WANT_MAXMIND=1.2.0
 	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
