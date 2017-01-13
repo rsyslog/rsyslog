@@ -1,5 +1,11 @@
 ------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
+- bugfix: bFlushOnTxEnd == 0 not honored when writing w/o async writer
+  If bFlushOnTXEnd is set, we need to flush on transaction end - in
+  any case. It is not relevant if this is using background writes
+  (which then become pretty slow) or not. And, similarly, no flush
+  happens when it is not set.
+  see also https://github.com/rsyslog/rsyslog/issues/1297
 - fix build issues on some platforms (detected on newer Fedora)
 ------------------------------------------------------------------------------
 Version 8.24.0 [v8-stable] 2017-01-10
