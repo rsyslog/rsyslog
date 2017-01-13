@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -41,6 +41,7 @@
 
 extern pid_t glbl_ourpid;
 extern int bProcessInternalMessages;
+extern int bPermitSlashInProgramname;
 #ifdef HAVE_LIBLOGGING_STDLOG
 extern stdlog_channel_t stdlog_hdl;
 #endif
