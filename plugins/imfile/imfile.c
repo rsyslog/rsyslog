@@ -1469,7 +1469,7 @@ finalize_it:
 }
 /* add entry to dirs array */
 static rsRetVal
-dirsAdd(uchar *dirName)
+dirsAdd(uchar *dirName, int* piIndex)
 {
 	sbool sbAdded; 
 	int newMax;
@@ -1489,6 +1489,10 @@ dirsAdd(uchar *dirName)
 		}
 	}
 	
+	/* Save Index for higher functions */
+	if (piIndex != NULL )
+		*piIndex = newindex; 
+
 	/* Check if dirstab size needs to be increased */
 	if(sbAdded == TRUE && newindex == allocMaxDirs) {
 		newMax = 2 * allocMaxDirs;
@@ -1551,7 +1555,7 @@ DBGPRINTF("imfile: dirsInit\n");
 
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		if(dirsFindDir(inst->pszDirName) == -1)
-			dirsAdd(inst->pszDirName);
+			dirsAdd(inst->pszDirName, NULL);
 	}
 
 finalize_it:
@@ -1589,17 +1593,24 @@ finalize_it:
 static void
 in_setupDirWatch(const int dirIdx)
 {
-// TODO HANDLE WILDCARDS! 
 	int wd;
+	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
 	int dirnamelen = 0; 
+	char* psztmp; 
+
 	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 	if(wd < 0) {
 		/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 		dirnamelen = ustrlen(dirs[dirIdx].dirName); 
 		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
-		if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
-			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
+
+		hasWildcard = containsGlobWildcard(dirnametrunc);
+		if(hasWildcard) {
+			/* Set NULL Byte on last directory delimiter occurrence,
+			will also remove asterix */
+			psztmp = strrchr(dirnametrunc, '/');
+			*psztmp = '\0';
 			
 			/* Try to add inotify watch again */
 			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
@@ -1744,8 +1755,8 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, u
 		if (idirindex == -1) {
 			/* Add dir to table and create watch */ 
 			DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", basedir); 
-			dirsAdd(basedir);
-			in_setupDirWatch(currMaxDirs-1);
+			dirsAdd(basedir, &idirindex);
+			in_setupDirWatch(idirindex);
 		}
 		/* Use newFileName */
 		snprintf(fullfn, MAXFNAME, "%s", newFileName);
@@ -1872,17 +1883,22 @@ in_dbg_showEv(struct inotify_event *ev)
 static void 
 in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 {
+	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
 	int dirnamelen = 0;
+	char* psztmp; 
 
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirnamelen = ustrlen(pszrootdir); 
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
-	if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
-		if (*(dirnametrunc+dirnamelen-2) == '/')
-			*(dirnametrunc+dirnamelen-2) = '\0'; /* remove wildcard and slash */
-		else
-			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
+
+	hasWildcard = containsGlobWildcard(dirnametrunc);
+	if(hasWildcard) {
+//	if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
+		/* Set NULL Byte on last directory delimiter occurrence,
+		will also remove asterix */
+		psztmp = strrchr(dirnametrunc, '/');
+		*psztmp = '\0';
 	}
 
 	/* Combine directory and new subdir */
@@ -1908,7 +1924,7 @@ in_removeFile(const int dirIdx,
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
-				     glbl.GetWorkDir(), (char*)statefn);
+				     (char*) glbl.GetWorkDir(), (char*)statefn);
 		bDoRMState = 1;
 	} else {
 		bDoRMState = 0;
@@ -1946,8 +1962,8 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 	if(newdiridx == -1) {
 		/* Add dir to table and create watch */ 
 		DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", fulldn); 
-		dirsAdd((uchar*)fulldn);
-		in_setupDirWatch(currMaxDirs-1);
+		dirsAdd((uchar*)fulldn, &newdiridx);
+		in_setupDirWatch(newdiridx);
 	} else {
 		DBGPRINTF("imfile: dir '%s' already exists in dirs table (Idx %d)\n", fulldn, newdiridx); 
 	}
