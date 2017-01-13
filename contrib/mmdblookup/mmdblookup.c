@@ -245,15 +245,14 @@ void str_split(char **membuf){
 }
 
 
-BEGINdoAction
-	smsg_t *pMsg;
+BEGINdoAction_NoStrings
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg   = ppMsg[0];
 	struct json_object *json = NULL;
 	struct json_object *keyjson = NULL;
 	char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-	pMsg = (smsg_t*) ppString[0];
-
 	json = json_object_new_object();
 
 	/* key is given, so get the property json */
