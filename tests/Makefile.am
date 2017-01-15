@@ -22,6 +22,8 @@ TESTS = $(TESTRUNS)
 
 TESTS +=  \
 	empty-hostname.sh \
+	prop-programname.sh \
+	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
@@ -757,6 +759,8 @@ EXTRA_DIST= \
 	prop-all-json-concurrency.sh \
 	testsuites/prop-all-json-concurrency.conf \
 	global_vars.sh \
+	prop-programname.sh \
+	prop-programname-with-slashes.sh \
 	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
