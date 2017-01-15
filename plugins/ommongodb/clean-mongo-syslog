@@ -21,7 +21,11 @@
 
 import syslog
 import datetime
-from pymongo import Connection
+
+# for older pymongo versions:
+#from pymongo import Connection
+# for more recent pymongo
+from pymongo import MongoClient
 
 # This is a very basic but functional sample
 #
@@ -34,7 +38,7 @@ from pymongo import Connection
 # - log what it is doing to syslog
 # - use indexes for better performance
 
-with Connection() as client:
+with MongoClient() as client:
     db = client.logs
     table = db.syslog
     #print "Initial count: %d" % table.count()
