@@ -1517,7 +1517,8 @@ aquireProgramName(smsg_t * const pM)
 	for(  i = 0
 	    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
 	      && (pszTag[i] != '\0') && (pszTag[i] != ':')
-	      && (pszTag[i] != '[')  && (pszTag[i] != '/')
+	      && (pszTag[i] != '[')
+	      && (bPermitSlashInProgramname || (pszTag[i] != '/'))
 	    ; ++i)
 		; /* just search end of PROGNAME */
 	if(i < CONF_PROGNAME_BUFSIZE) {

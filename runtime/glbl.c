@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -119,6 +119,7 @@ int glblReportGoneAwaySenders = 0;
 int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
 int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 int glblUnloadModules = 1;
+int bPermitSlashInProgramname = 0;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -157,6 +158,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.escapecontrolcharactertab", eCmdHdlrBinary, 0},
 	{ "parser.escapecontrolcharacterscstyle", eCmdHdlrBinary, 0 },
 	{ "parser.parsehostnameandtag", eCmdHdlrBinary, 0 },
+	{ "parser.permitslashinprogramname", eCmdHdlrBinary, 0 },
 	{ "stdlog.channelspec", eCmdHdlrString, 0 },
 	{ "janitor.interval", eCmdHdlrPositiveInt, 0 },
 	{ "senders.reportnew", eCmdHdlrBinary, 0 },
@@ -1142,6 +1144,8 @@ glblDoneLoadCnf(void)
 			bParserEscapeCCCStyle = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.parsehostnameandtag")) {
 			bParseHOSTNAMEandTAG = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "parser.permitslashinprogramname")) {
+			bPermitSlashInProgramname = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.logfile")) {
 			if(pszAltDbgFileName == NULL) {
 				pszAltDbgFileName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
