@@ -195,7 +195,7 @@ selects whether a static or dynamic file (name) shall be written to.
 
 .. function::  veryRobustZip [switch]
 
-   *Default: on*
+   *Default: off*
    
    *Available since: 7.3.0*
 
