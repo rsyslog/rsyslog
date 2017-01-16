@@ -1,5 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
+- bugfix: ratelimiter does not work correctly is time is set back
+  Thanks to github user hese10 for the patch.
+  see also https://github.com/rsyslog/rsyslog/issues/1354
 - bugfix: bFlushOnTxEnd == 0 not honored when writing w/o async writer
   If bFlushOnTXEnd is set, we need to flush on transaction end - in
   any case. It is not relevant if this is using background writes
