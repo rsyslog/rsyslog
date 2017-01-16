@@ -156,8 +156,8 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt)
 	if(ratelimit->begin == 0)
 		ratelimit->begin = tt;
 
-	/* resume if we go out of time window */
-	if(tt > ratelimit->begin + ratelimit->interval) {
+	/* resume if we go out of time window or if time has gone backwards */
+	if((tt > ratelimit->begin + ratelimit->interval) || (tt < ratelimit->begin) ) {
 		ratelimit->begin = 0;
 		ratelimit->done = 0;
 		tellLostCnt(ratelimit);
