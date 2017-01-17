@@ -563,7 +563,8 @@ TESTS += \
 	imfile-persist-state-1.sh \
 	imfile-wildcards.sh \
 	imfile-wildcards-dirs.sh \
-	imfile-wildcards-dirs2.sh
+	imfile-wildcards-dirs2.sh \
+	imfile-wildcards-dirs-multi.sh
 if HAVE_VALGRIND
 TESTS += \
 	imfile-basic-vg.sh \
@@ -1120,6 +1121,7 @@ EXTRA_DIST= \
 	testsuites/imfile-wildcards.conf \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
+	imfile-wildcards-dirs-multi.sh \
 	testsuites/imfile-wildcards-dirs.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
