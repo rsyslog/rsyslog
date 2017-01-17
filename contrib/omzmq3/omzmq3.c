@@ -490,5 +490,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omzmq3: module compiled with rsyslog version %s.\n", VERSION);
 
 	INITLegCnfVars
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omzmq3workerthreads", 0, eCmdHdlrInt, NULL, &s_workerThreads, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omzmq3workerthreads", 0, eCmdHdlrInt, NULL, &s_workerThreads,
+STD_LOADABLE_MODULE_ID));
 ENDmodInit

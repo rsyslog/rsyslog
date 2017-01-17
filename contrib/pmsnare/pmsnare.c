@@ -109,7 +109,8 @@ CODESTARTparse
 
 	*/
 	snaremessage=0;
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	dbgprintf("pmsnare: msg to look at: [%d]'%s'\n", lenMsg, p2parse);
 	if((unsigned) lenMsg < 30) {
@@ -122,8 +123,10 @@ CODESTARTparse
 		--lenMsg;
 		++p2parse;
 	}
-	dbgprintf("pmsnare: separator [%d]'%s'  msg after the first separator: [%d]'%s'\n", tablength,TabRepresentation,lenMsg, p2parse);
-	if ((lenMsg > tablength) && (*p2parse == '\t' || strncasecmp((char*) p2parse, TabRepresentation , tablength-1) == 0)) {
+	dbgprintf("pmsnare: separator [%d]'%s'  msg after the first separator: [%d]'%s'\n", tablength,
+	TabRepresentation,lenMsg, p2parse);
+	if ((lenMsg > tablength) && (*p2parse == '\t' || strncasecmp((char*) p2parse, TabRepresentation ,
+	tablength-1) == 0)) {
 	//if ((lenMsg > tablength) && (*p2parse == '\t' || *p2parse == '#')) {
 	dbgprintf("pmsnare: tab separated message\n");
 		if(strncasecmp((char*) (p2parse + tablength - 1), "MSWinEventLog", 13) == 0) {
@@ -133,7 +136,8 @@ CODESTARTparse
 			snaremessage=11; /* 0 means not a snare message, a number is how long the tag is */
 		}
 		if(snaremessage) {
-			/* replace the tab with a space and if needed move the message portion up by the length of TabRepresentation -2 characters to overwrite the extra : */
+			/* replace the tab with a space and if needed move the message portion up by the length of
+			TabRepresentation -2 characters to overwrite the extra : */
 			*p2parse = ' ';
 			lenMsg -=(tablength-2);
 			p2parse++;
@@ -158,7 +162,8 @@ CODESTARTparse
 		}
 	} else {
 		/* go back to the beginning of the message */
-		lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+		lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+		/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 		p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 		/* skip over timestamp and space*/
 		lenMsg -=17;
@@ -172,7 +177,8 @@ CODESTARTparse
 			--lenMsg;
 			++p2parse;
 		}
-		dbgprintf("pmsnare: separator [%d]'%s'  msg after the timestamp and hostname: [%d]'%s'\n", tablength,TabRepresentation,lenMsg, p2parse);
+		dbgprintf("pmsnare: separator [%d]'%s'  msg after the timestamp and hostname: [%d]'%s'\n", tablength,
+		TabRepresentation,lenMsg, p2parse);
 		if(lenMsg > 13 && strncasecmp((char*) p2parse, "MSWinEventLog", 13) == 0) {
 			snaremessage=13; /* 0 means not a snare message, a number is how long the tag is */
 		}
@@ -229,7 +235,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("snare parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+ 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

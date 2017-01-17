@@ -54,7 +54,8 @@
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
-#define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
+#define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
+/* name of input file, must match $IncludeConfig in .conf files */
 
 typedef enum { inputUDP, inputTCP } inputMode_t;
 inputMode_t inputMode = inputTCP; /* input for which tests are to be run */

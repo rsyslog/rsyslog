@@ -450,7 +450,8 @@ waitForChild(wrkrInstanceData_t *pWrkrData, long timeout_ms)
 
 #if defined(__linux__) && defined(_GNU_SOURCE)
 	waitpid_interrupted = (ret != pWrkrData->pid) && (errno == EINTR);
-	if ((timeout_ms > 0) && (timeoutSetupStatus == RS_RET_OK)) doForceKillSubprocess(&subpTimeOut, waitpid_interrupted, pWrkrData->pid);
+	if ((timeout_ms > 0) && (timeoutSetupStatus == RS_RET_OK))
+		doForceKillSubprocess(&subpTimeOut, waitpid_interrupted, pWrkrData->pid);
 	if (waitpid_interrupted) {
 		waitForChild(pWrkrData, -1);
 		return;
@@ -831,8 +832,10 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomprogbinary", 0, eCmdHdlrGetWord, NULL, &cs.szBinary, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomprogbinary", 0, eCmdHdlrGetWord, NULL, &cs.szBinary,
+	STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
+	NULL, STD_LOADABLE_MODULE_ID));
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 

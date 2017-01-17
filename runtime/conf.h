@@ -59,8 +59,10 @@ PROTOTYPEObj(conf);
 
 
 /* TODO: the following 2 need to go in conf obj interface... */
-rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
-rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts,
+	uchar *dfltTplName);
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts,
+	uchar *pszTpl);
 
 rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[]);
 rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction);

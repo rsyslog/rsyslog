@@ -1122,7 +1122,8 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if (epd != NULL) {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error: could not initialize mutex for ptcp connection for socket: %d", sock);
+			errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "error: could not initialize mutex for ptcp "
+			"connection for socket: %d", sock);
 		}
 		free(epd);
 	}
@@ -1283,7 +1284,8 @@ doZipFinish(ptcpsess_t *pSess)
 	pSess->zstrm.avail_in = 0;
 	/* run inflate() on buffer until everything has been compressed */
 	do {
-		DBGPRINTF("doZipFinish: in inflate() loop, avail_in %d, total_in %ld\n", pSess->zstrm.avail_in, pSess->zstrm.total_in);
+		DBGPRINTF("doZipFinish: in inflate() loop, avail_in %d, total_in %ld\n", pSess->zstrm.avail_in,
+		pSess->zstrm.total_in);
 		pSess->zstrm.avail_out = sizeof(zipBuf);
 		pSess->zstrm.next_out = zipBuf;
 		zRet = inflate(&pSess->zstrm, Z_FINISH);    /* no bad return value */

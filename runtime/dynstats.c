@@ -221,15 +221,18 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 	b->ctrs = NULL;
 finalize_it:
 	if (iRet != RS_RET_OK) {
-		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict TTL-expired metrics of dyn-stats bucket named: %s", b->name);
+		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict TTL-expired metrics of dyn-stats "
+"bucket named: %s", b->name);
 		if (new_table == NULL) {
-			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for dyn-stats bucket named: %s", b->name);
+			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for "
+			"dyn-stats bucket named: %s", b->name);
 		} else {
 			hashtable_destroy(new_table, 0);
 		}
 		if (b->table == NULL) {
 			if (survivor_table == NULL) {
-				errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize ttl-survivor hash-table for dyn-stats bucket named: %s", b->name);
+				errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
+				"ttl-survivor hash-table for dyn-stats bucket named: %s", b->name);
 			} else {
 				hashtable_destroy(survivor_table, 0);
 			}
@@ -332,7 +335,8 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		}
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as global-initialization of buckets was unsuccessful");
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as "
+		"global-initialization of buckets was unsuccessful");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
 finalize_it:
@@ -453,7 +457,8 @@ dynstats_findBucket(const uchar* name) {
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
 		b = NULL;
-		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket lookup failed, as global-initialization of buckets was unsuccessful");
+		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket lookup failed, as global-initialization "
+		"of buckets was unsuccessful");
 	}
 
 	return b;
@@ -588,7 +593,8 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (iRet == RS_RET_NOENTRY) {
-			/* NOTE: this is not tested (because it requires very strong orchestration to gurantee contended lock for testing) */
+			/* NOTE: this is not tested (because it requires very strong orchestration to
+			gurantee contended lock for testing) */
 			STATSCOUNTER_INC(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
 		} else {
 			STATSCOUNTER_INC(b->ctrOpsOverflow, b->mutCtrOpsOverflow);

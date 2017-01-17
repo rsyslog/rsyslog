@@ -32,7 +32,9 @@ rsRetVal submitMsg2(smsg_t *pMsg);
 rsRetVal __attribute__((deprecated)) submitMsg(smsg_t *pMsg);
 rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);
 rsRetVal logmsgInternal(const int iErr, const syslog_pri_t pri, const uchar *const msg, int flags);
-rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset);
+rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len,
+int flags, flowControl_t flowCtlTypeu, prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime,
+ruleset_t *pRuleset);
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
 rsRetVal startMainQueue(qqueue_t *pQueue);
 

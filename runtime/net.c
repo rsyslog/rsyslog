@@ -687,7 +687,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			        errmsg.LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 				
 				if (ACLAddHostnameOnFail) {
-				        errmsg.LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
+				        errmsg.LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
+					"entry.", iAllow->addr.HostWildcard);
 				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
@@ -1276,7 +1277,8 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		/* EMPTY */;
         socks = MALLOC((maxs+1) * sizeof(int));
         if (socks == NULL) {
-               errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP message reception");
+		errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP "
+		"message reception");
                freeaddrinfo(res);
                return NULL;
         }

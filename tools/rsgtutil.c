@@ -499,7 +499,8 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
+verifyGT(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname,
+	FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	block_sig_t *bs = NULL;
 	block_hdr_t *bh = NULL;
@@ -739,7 +740,8 @@ done:
  * note: here we need to have the LOG file name, not signature!
  */
 static int
-verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname, FILE *logfp, FILE *sigfp, FILE *nsigfp)
+verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, char *nsigfname,
+	FILE *logfp, FILE *sigfp, FILE *nsigfp)
 {
 	filemode = FILEMODE_LOGSIG; /* Default FileMode */ 
 	block_sig_t *bs = NULL;
@@ -811,10 +813,13 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes,
 								&bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
-						fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
+						fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding "
+						"any signature block - is the file still open and being "
+						"written to?\n", r);
 						r = RSGTE_IO;
 					} else {
-						if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
+						if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after"
+						"signature block %lld\n", (long long unsigned) ectx.blkNum);
 					}
 					goto done;
 				}
@@ -832,11 +837,13 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 				/* And Verify Block signature */
 				r = verifyBLOCK_SIGKSI(bs, ksi, sigfp, nsigfp, (mode == MD_EXTEND) ? 1 : 0, NULL, &ectx);
 				if(r == RSGTE_MISS_KSISIG) {
-					fprintf(stderr, "verifyKSI:\t\t\t WARNING: missing KSI signature in block %lu\n", ectx.blkNum);
+					fprintf(stderr, "verifyKSI:\t\t\t WARNING: missing KSI signature in "
+					"block %lu\n", ectx.blkNum);
 					r = RSGTE_SUCCESS;
 				}
 				else if(r != RSGTE_SUCCESS) {
-					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifying BLOCK signature in block %lld\n", r, (long long unsigned) ectx.blkNum);
+					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifying BLOCK signature "
+					"in block %lld\n", r, (long long unsigned) ectx.blkNum);
 					goto done;
 				}
 				bInBlock = 0;
@@ -859,10 +866,12 @@ verifyKSI(const char *name, char *errbuf, char *sigfname, char *oldsigfname, cha
 			/* Get/Verify Block Paramaters */
 			if((r = rsksi_getExcerptBlockParams(sigfp, 1, &bs, &bh)) != 0) {
 				if(ectx.blkNum == 0) {
-					fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature block\n", r);
+					fprintf(stderr, "verifyKSI:\t\t\t Error %d before finding any signature "
+					"block\n", r);
 					r = RSGTE_IO;
 				} else {
-					if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
+					if(verbose) fprintf(stderr, "verifyKSI:\t\t\t EOF after signature block "
+					"%lld\n", (long long unsigned) ectx.blkNum);
 				}
 				goto done;
 			}
@@ -917,12 +926,15 @@ if (debug) printf("debug: verifyKSI:\t\t\t NEXT IN LOOP .\n");
 				if (debug) printf("debug: verifyKSI:\t\t\t Processing line '%d': %.64s... \n", iCurrentLine, lineRec); 
 
 				/* Verify logline record against hash chain */
-				if ((r = rsksi_vrfy_nextHashChain(ksi, bs, sigfp, (unsigned char*)lineRec, ssread, &ectx)) != RSGTE_SUCCESS) {
-					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifiying hash chain record for logline (%d): '%.64s...'\n", r, iCurrentLine, lineRec);
+				if ((r = rsksi_vrfy_nextHashChain(ksi, bs, sigfp, (unsigned char*)lineRec, ssread,
+				&ectx)) != RSGTE_SUCCESS) {
+					fprintf(stderr, "verifyKSI:\t\t\t error %d while verifiying hash chain "
+					"record for logline (%d): '%.64s...'\n", r, iCurrentLine, lineRec);
 					goto done;
 				}
 			} while (iCurrentLine > iMaxLine && r != RSGTE_EOF); 
-if (debug) printf("debug: verifyKSI:\t\t\t DONE with LOOP iCurrentLine=%d > iMaxLine=%d r=%d\n", iCurrentLine, iMaxLine, r); 
+if (debug) printf("debug: verifyKSI:\t\t\t DONE with LOOP iCurrentLine=%d > iMaxLine=%d r=%d\n", iCurrentLine,
+iMaxLine, r); 
 		}
 	} else {
 		fprintf(stderr, "verifyKSI:\t\t\t Error %d invalid file header found \n", r); 
@@ -1191,7 +1203,8 @@ extractKSI(const char *name, char *errbuf, char *sigfname, FILE *logfp, FILE *si
 	}
 
 	/* Start extracting process */
-	if (debug) printf("debug: extractKSI:\t\t\t extracting lines(%d) %s from %s now ...\n", iLineNumbers, linenumbers, name); 
+	if (debug) printf("debug: extractKSI:\t\t\t extracting lines(%d) %s from %s now ...\n", iLineNumbers,
+	linenumbers, name); 
 
 	/* Open output logfile for extracted loglines */
 	if((newlogfp = fopen(outputfile, writeMode)) == NULL) {
@@ -1303,7 +1316,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				if( (fwrite(lineRec, ssread, 1, newlogfp) != 1) /*|| 
 					(fwrite("\n", sizeof(char), 1, newlogfp) != 1)*/ ) {
 					free(lineRec);
-					fprintf(stderr, "extractKSI:\t\t\t error '%d' while writing into output logfile %s\n", ferror(newlogfp), outputfile);
+					fprintf(stderr, "extractKSI:\t\t\t error '%d' while writing into output "
+					"logfile %s\n", ferror(newlogfp), outputfile);
 					r = RSGTE_IO;
 					goto done;
 				} 
@@ -1328,11 +1342,13 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				/* Get/Verify Block Paramaters */
 				if((r = rsksi_getBlockParams(sigfp, 1, &bs, &bh, &bHasRecHashes, &bHasIntermedHashes)) != 0) {
 					if(ectx.blkNum == 0) {
-						fprintf(stderr, "extractKSI:\t\t\t Error %d before finding any signature block - is the file still open and being written to?\n", r);
+						fprintf(stderr, "extractKSI:\t\t\t Error %d before finding any "
+						"signature block - is the file still open and being written to?\n", r);
 						r = RSGTE_IO;
 					} else {
 						if(verbose)
-							fprintf(stderr, "extractKSI:\t\t\t EOF after signature block %lld\n", (long long unsigned) ectx.blkNum);
+							fprintf(stderr, "extractKSI:\t\t\t EOF after signature block %lld\n",
+							(long long unsigned) ectx.blkNum);
 						r = RSGTE_EOF;
 					}
 					perror(sigfname);
@@ -1361,8 +1377,10 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 			if(bInBlock == 0) rsksi_errctxFrstRecInBlk(&ectx, lineRec);
 
 			/* Verify next record in signature file */
-			if ((r = rsksi_vrfy_nextRecExtract(ksi, sigfp, NULL, (unsigned char*)lineRec, ssread, &ectx, hashchain, bLogLineFound)) != RSGTE_SUCCESS) {
-				fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying next signature record for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+			if ((r = rsksi_vrfy_nextRecExtract(ksi, sigfp, NULL, (unsigned char*)lineRec, ssread,
+			&ectx, hashchain, bLogLineFound)) != RSGTE_SUCCESS) {
+				fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying next signature record "
+				"for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 				goto done;
 			} 
 
@@ -1371,7 +1389,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 					/* WRITE BLOCK Signature */
 					if (debug) printf("debug: extractKSI:\t\t\t rsksi_ExtractBlockSignature #1: \n"); 
 					if ((r = rsksi_ExtractBlockSignature(newsigfp, bs)) != RSGTE_SUCCESS) {
-						fprintf(stderr, "extractKSI:\t\t\t error %d while writing block signature for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+						fprintf(stderr, "extractKSI:\t\t\t error %d while writing block "
+						"signature for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 						goto done;
 					}
 					bBlockSigWritten = 1; 
@@ -1400,7 +1419,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 					r = RSGTE_SUCCESS;
 				}
 				else if(r != RSGTE_SUCCESS) {
-					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+					fprintf(stderr, "extractKSI:\t\t\t error %d while verifiying BLOCK signature "
+					"for logline (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 					goto done;
 				}
 
@@ -1410,7 +1430,8 @@ if (debug) printf("debug: extractKSI:\t\t\t line '%d': %.64s...\n", iLineCurrent
 				if (bLogLineFound == 1 ) {
 					/* Write HashChain now */
 					if ((r = rsksi_WriteHashChain(newsigfp, hashchain, verbose)) != RSGTE_SUCCESS) {
-						fprintf(stderr, "extractKSI:\t\t\t error %d while starting new hash chain for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
+						fprintf(stderr, "extractKSI:\t\t\t error %d while starting new hash "
+						"chain for (%d): '%.64s...'\n", r, iLineCurrent, lineRec);
 						goto done;
 					}
 
@@ -1592,7 +1613,8 @@ verifyGT:
 	iSuccess = verifyGT(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
 	iSuccess = RSGTE_CONFIG_ERROR; 
-	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime library, rsyslog need to be configured with --enable-guardtime.\n"); 
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime library, rsyslog need to "
+	"be configured with --enable-guardtime.\n"); 
 #endif
 	goto done; 
 
@@ -1607,7 +1629,8 @@ verifyKSI:
 	iSuccess = verifyKSI(name, errbuf, sigfname, oldsigfname, nsigfname, logfp, sigfp, nsigfp); 
 #else
 	iSuccess = RSGTE_CONFIG_ERROR; 
-	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n"); 
+	sprintf(errbuf, "ERROR, unable to perform verify using GuardTime KSI library, rsyslog need to "
+	"be configured with --enable-gt-ksi.\n"); 
 #endif
 goto done; 
 
@@ -1684,7 +1707,8 @@ extractKSI:
 
 #else
 	iSuccess = RSGTE_CONFIG_ERROR; 
-	sprintf(errbuf, "ERROR, unable to extract loglines from %s using GuardTime KSI library, rsyslog need to be configured with --enable-gt-ksi.\n", name); 
+	sprintf(errbuf, "ERROR, unable to extract loglines from %s using GuardTime KSI library, rsyslog "
+	"need to be configured with --enable-gt-ksi.\n", name); 
 #endif
 	goto done; 
 
@@ -1727,13 +1751,15 @@ processFile(const char *name)
 #ifdef ENABLEGT
 			dumpFile(name);
 #else
-			fprintf(stderr, "ERROR, unable to perform dump using GuardTime Api, rsyslog need to be configured with --enable-guardtime.\n"); 
+			fprintf(stderr, "ERROR, unable to perform dump using GuardTime Api, rsyslog need "
+			"to be configured with --enable-guardtime.\n"); 
 #endif
 		if (strstr(name, ".ksisig") != NULL )	/* Detect API Mode by file extension */
 #ifdef ENABLEKSI
 			dumpFileKSI(name);
 #else
-			fprintf(stderr, "ERROR, unable to perform dump using GuardTime KSI Api, rsyslog need to be configured with --enable-gt-ksi.\n"); 
+			fprintf(stderr, "ERROR, unable to perform dump using GuardTime KSI Api, rsyslog "
+			"need to be configured with --enable-gt-ksi.\n"); 
 #endif
 		break;
 	case MD_SHOW_SIGBLK_PARAMS:
@@ -1823,11 +1849,15 @@ rsgtutil_usage(void)
 			"\t-s, --show-verified \t\t\t Also show correctly verified blocks.\n"
 			"\t-P <URL>, --publications-server <URL> \t Sets the publications server.\n"
 			"\t-E <URL>, --extend-server <URL> \t Sets the extension server.\n"
-			"\t-u <USERID>, --userid <USERID> \t\t Sets the userid used (Needed for the extension server).\n"
-			"\t-k <USERKEY>, --userkey <USERKEY> \t Sets the userkey used (Needed for the extension server).\n"
-			"\t-o <FILENAME>, --output <FILENAME> \t Sets an output filename (EXTRACT Mode only).\n"
+			"\t-u <USERID>, --userid <USERID> \t\t Sets the userid used (Needed for the "
+			"extension server).\n"
+			"\t-k <USERKEY>, --userkey <USERKEY> \t Sets the userkey used (Needed for "
+			"the extension server).\n"
+			"\t-o <FILENAME>, --output <FILENAME> \t Sets an output filename (EXTRACT "
+			"Mode only).\n"
 			"\t-A, --append \t\t\t\t Append extracted output to file (EXTRACT Mode only).\n"
-			"\t-C <oid>=<value>, --cnstr <oid>=<value>\t Specify the OID of the PKI certificate field (e.g. e-mail address) and the expected value.\n"
+			"\t-C <oid>=<value>, --cnstr <oid>=<value>\t Specify the OID of the PKI "
+			"certificate field (e.g. e-mail address) and the expected value.\n"
 			"\t-v, --verbose \t\t\t\t Verbose output.\n"
 			"\t-d, --debug \t\t\t\t Debug (developer) output.\n"
 			);

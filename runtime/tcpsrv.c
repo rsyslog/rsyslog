@@ -384,7 +384,8 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 		TCPLstnPort = pPortEntry->pszPort;
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
-        CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort, pPortEntry->pszAddr, pThis->iSessMax));
+        CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
+	pPortEntry->pszAddr, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -406,7 +407,8 @@ create_tcp_socket(tcpsrv_t *pThis)
 	while(pEntry != NULL) {
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port %s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
+			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port "
+			"%s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}
@@ -932,8 +934,9 @@ Run(tcpsrv_t *pThis)
 		localRet = processWorkset(pThis, pPoll, numEntries, workset);
 		if(localRet != RS_RET_OK) {
 			if (bFailed == FALSE) {
-				errmsg.LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed to processed incoming connection with error %d",
-					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
+				errmsg.LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
+				"to processed incoming connection with error %d",
+				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
 				bFailed = TRUE; 
 			} else {
 				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process incoming connection with error %d\n",

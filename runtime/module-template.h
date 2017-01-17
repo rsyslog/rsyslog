@@ -33,7 +33,8 @@
 /* macro to define standard output-module static data members
  */
 #define DEF_MOD_STATIC_DATA \
-	static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
+	static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)(uchar *pCmdName, int bChainingPermitted, \
+	ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
 
 #define DEF_OMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA \
@@ -248,7 +249,8 @@ static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWr
  * introduced in v8.1.3 -- rgerhards, 2013-12-04
  */
 #define BEGINcommitTransaction \
-static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *const pWrkrData, actWrkrIParams_t *const pParams, const unsigned nParams)\
+static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *const pWrkrData, \
+	actWrkrIParams_t *const pParams, const unsigned nParams)\
 {\
 	DEFiRet;
 
@@ -771,8 +773,12 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * cached, left-in-memory copy of a previous incarnation.
  */
 #define BEGINmodInit(uniqName) \
-rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo);\
-rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo)\
+rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), \
+int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), \
+modInfo_t __attribute__((unused)) *pModInfo);\
+rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), \
+int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), \
+modInfo_t __attribute__((unused)) *pModInfo)\
 {\
 	DEFiRet; \
 	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);

@@ -155,7 +155,8 @@ CODESTARTparse2
 	DBGPRINTF("Message will now be parsed by pmciscoios\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* first obtain the MESSAGE COUNTER. It must be numeric up until
@@ -210,7 +211,8 @@ CODESTARTparse2
 
 	/* TIMESTAMP */
 	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
-	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING,
+	NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 	} else {

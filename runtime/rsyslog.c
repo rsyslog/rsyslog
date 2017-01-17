@@ -91,7 +91,8 @@ int default_thr_sched_policy;
 
 /* globally visible static data - see comment in rsyslog.h for details */
 uchar *glblModPath; /* module load path */
-void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger; /* the error logger to use by the errmsg module */
+void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger;
+/* the error logger to use by the errmsg module */
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)

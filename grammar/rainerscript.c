@@ -1606,7 +1606,8 @@ doFunc_exec_template(struct cnffunc *__restrict__ const func,
 }
 
 static es_str_t*
-doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restrict__ const findVal, struct svar *__restrict__ const replaceWithVal) {
+doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restrict__ const findVal,
+	struct svar *__restrict__ const replaceWithVal) {
     int freeOperand, freeFind, freeReplacement;
     es_str_t *str = var2String(operandVal, &freeOperand);
     es_str_t *findStr = var2String(findVal, &freeFind);
@@ -1663,7 +1664,8 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 }
 
 static es_str_t*
-doFuncWrap(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const wrapperVal, struct svar *__restrict__ const escaperVal) {
+doFuncWrap(struct svar *__restrict__ const sourceVal, struct svar *__restrict__ const wrapperVal,
+	struct svar *__restrict__ const escaperVal) {
     int freeSource, freeWrapper;
     es_str_t *sourceStr;
     if (escaperVal) {
@@ -3204,8 +3206,10 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 							  "expects a litteral string for second argument\n");
 				failed = 1;
 			}
-			if ((cnfstmt->d.s_reload_lookup_table.stub_value = (uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
-				parser_errmsg("statement ignored: reload_lookup_table statement failed to allocate memory for lookup-table stub-value\n");
+			if ((cnfstmt->d.s_reload_lookup_table.stub_value =
+			(uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
+				parser_errmsg("statement ignored: reload_lookup_table statement "
+				"failed to allocate memory for lookup-table stub-value\n");
 				failed = 1;
 			}
 		case 1:
@@ -3215,8 +3219,10 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 							  "expects a litteral string for first argument\n");
 				failed = 1;
 			}
-			if ((cnfstmt->d.s_reload_lookup_table.table_name = (uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
-				parser_errmsg("statement ignored: reload_lookup_table statement failed to allocate memory for lookup-table name\n");
+			if ((cnfstmt->d.s_reload_lookup_table.table_name =
+			(uchar*) es_str2cstr(((struct cnfstringval*)param->expr)->estr, NULL)) == NULL) {
+				parser_errmsg("statement ignored: reload_lookup_table statement "
+				"failed to allocate memory for lookup-table name\n");
 				failed = 1;
 			}
 			break;
@@ -4152,7 +4158,8 @@ initFunc_dyn_stats(struct cnffunc *func)
 
 	func->funcdata = NULL;
 	if(func->expr[0]->nodetype != 'S') {
-		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating functions like dyn_inc must be a constant string");
+		parser_errmsg("dyn-stats bucket-name (param 1) of dyn-stats manipulating "
+		"functions like dyn_inc must be a constant string");
 		FINALIZE;
 	}
 

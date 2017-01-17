@@ -208,7 +208,8 @@ modUsrPrintAll(void)
 
 	BEGINfunc
 	for(pMod = pLoadedModules ; pMod != NULL ; pMod = pMod->pNext) {
-		dbgprintf("printing users of loadable module %s, refcount %u, ptr %p, type %d\n", pMod->pszName, pMod->uRefCnt, pMod, pMod->eType);
+		dbgprintf("printing users of loadable module %s, refcount %u, ptr %p, type %d\n",
+		pMod->pszName, pMod->uRefCnt, pMod, pMod->eType);
 		modUsrPrint(pMod);
 	}
 	ENDfunc
@@ -907,9 +908,11 @@ static void modPrintList(void)
 			dbgprintf("\tdoHUP:              %p\n", pMod->doHUP);
 #ifdef _AIX
 /* AIXPORT : typecaste the return type in AIX  */
-			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == (rsRetVal (*) (void*))dummyBeginTransaction) ?
+			dbgprintf("\tBeginTransaction:   %p\n",
+((pMod->mod.om.beginTransaction == (rsRetVal (*) (void*))dummyBeginTransaction) ?
 								   NULL :  pMod->mod.om.beginTransaction));
-			dbgprintf("\tEndTransaction:     %p\n", ((pMod->mod.om.endTransaction == (rsRetVal (*)(void*))dummyEndTransaction) ?
+			dbgprintf("\tEndTransaction:     %p\n",
+			((pMod->mod.om.endTransaction == (rsRetVal (*)(void*))dummyEndTransaction) ?
 								   NULL :  pMod->mod.om.endTransaction));
 #else
 			dbgprintf("\tBeginTransaction:   %p\n", ((pMod->mod.om.beginTransaction == dummyBeginTransaction) ?
@@ -1249,7 +1252,8 @@ Load(uchar *pModName, sbool bConfLoad, struct nvlst *lst)
 	}
 #ifdef _AIX
 /*  AIXPORT : typecaste address of pModInit  in AIX */
-	if((iRet = doModInit((rsRetVal(*)(int,int*,rsRetVal(**)(),rsRetVal(*)(),struct modInfo_s*))pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
+	if((iRet = doModInit((rsRetVal(*)(int,int*,rsRetVal(**)(),rsRetVal(*)(),struct modInfo_s*))pModInit,
+(uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
 #else
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr, &pModInfo)) != RS_RET_OK) {
 #endif

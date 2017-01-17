@@ -422,7 +422,8 @@ rsgt_tlvDecodeSUBREC(tlvrecord_t *rec, uint16_t *stridx, tlvrecord_t *newrec)
 		newrec->tlvlen = c;
 	}
 	if(rsgt_read_debug)
-		printf("debug: rsgt_tlvDecodeSUBREC stridx=%d rec->tlvlen=%d newrec->tlvlen=%d\n", *stridx, rec->tlvlen, newrec->tlvlen);
+		printf("debug: rsgt_tlvDecodeSUBREC stridx=%d rec->tlvlen=%d newrec->tlvlen=%d\n", *stridx,
+		rec->tlvlen, newrec->tlvlen);
 	if(rec->tlvlen < *stridx + newrec->tlvlen) {r=RSGTE_LEN; goto done;}
 	memcpy(newrec->data, (rec->data)+(*stridx), newrec->tlvlen);
 	*stridx += newrec->tlvlen;
@@ -487,7 +488,8 @@ rsgt_tlvDecodeHASH_ALGO(tlvrecord_t *rec, uint16_t *strtidx, uint8_t *hashAlg)
 	r = 0;
 done:	
 	if(r != 0 && rsgt_read_debug)
-		printf("debug: rsgt_tlvDecodeHASH_ALGO failed with error %d, rec->tlvtype %4.4x, subrec->tlvtype %4.4x\n", r, (unsigned) rec->tlvtype, (unsigned) subrec.tlvtype);
+		printf("debug: rsgt_tlvDecodeHASH_ALGO failed with error %d, rec->tlvtype %4.4x, subrec->tlvtype "
+		"%4.4x\n", r, (unsigned) rec->tlvtype, (unsigned) subrec.tlvtype);
 	return r;
 }
 static int
@@ -1083,7 +1085,8 @@ rsgt_vrfy_chkTreeHash(gtfile gf, FILE *sigfp, FILE *nsigfp,
 done:
 	if(imp != NULL) {
 		if(rsgt_read_debug)
-			printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID, hashOutputLengthOctets(imp->hashID));
+			printf("debug: rsgt_vrfy_chkTreeHash returned %d, hashID=%d, Length=%d\n", r, imp->hashID,
+			hashOutputLengthOctets(imp->hashID));
 		/* Free memory */
 		rsgt_objfree(0x0903, imp);
 	}

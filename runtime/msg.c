@@ -400,15 +400,17 @@ static short len_syslog_fac_names[LOG_NFACILITIES] = { 4, 4, 4, 6, 4, 6, 3,
 #endif
 
 /* table of severity names (in numerical order)*/
-static const char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
+static const char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info",
+	"debug" };
 static short len_syslog_severity_names[8] = { 5, 5, 4, 3, 7, 6, 4, 5 };
 
 /* numerical values as string - this is the most efficient approach to convert severity
  * and facility values to a numerical string... -- rgerhars, 2009-06-17
  */
 
-static const char *syslog_number_names[LOG_NFACILITIES] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
-					 "15", "16", "17", "18", "19", "20", "21", "22", "23", "24" };
+static const char *syslog_number_names[LOG_NFACILITIES] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+	"10", "11", "12", "13", "14",
+	"15", "16", "17", "18", "19", "20", "21", "22", "23", "24" };
 
 /* global variables */
 #if defined(HAVE_MALLOC_TRIM) && !defined(HAVE_ATOMIC_BUILTINS)
@@ -417,7 +419,8 @@ static pthread_mutex_t mutTrimCtr;	 /* mutex to handle malloc trim */
 
 /* some forward declarations */
 static int getAPPNAMELen(smsg_t * const pM, sbool bLockMutex);
-static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf, struct json_object **parent, int bCreate);
+static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf,
+	struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
 static struct json_object *jsonDeepCopy(struct json_object *src);
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value);
@@ -952,7 +955,8 @@ rsRetVal msgDestruct(smsg_t **ppThis)
 	int currCnt;
 #	endif
 CODESTARTobjDestruct(msg)
-	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
+	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx,
+	Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
 #	ifdef HAVE_ATOMIC_BUILTINS
 		currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, NULL);
 #	else
@@ -2980,7 +2984,8 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
 rsRetVal
-getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed)
+getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen,
+	unsigned short *pbMustBeFreed)
 {
 	uchar *leaf;
 	struct json_object *jroot;
@@ -4610,7 +4615,8 @@ jsonPathFindNext(struct json_object *root, uchar *namestart, uchar **name, uchar
 
 	if(*p == '!' || (*name == namestart && (*p == '.' || *p == '/')))
 		++p;
-	for(i = 0 ; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!' && p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
+	for(i = 0 ; *p && !(p == namestart && (*p == '.' || *p == '/')) && *p != '!'
+		&& p != leaf && i < sizeof(namebuf)-1 ; ++i, ++p)
 		namebuf[i] = *p;
 	if(i > 0) {
 		namebuf[i] = '\0';

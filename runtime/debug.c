@@ -475,7 +475,8 @@ dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 	}
 
 	if(bPrintMutexAction)
-		dbgprintf("%s:%d:%s: mutex %p waiting on lock, held by %s\n", pFuncDB->file, ln, pFuncDB->func, (void*)pmut, pszHolder);
+		dbgprintf("%s:%d:%s: mutex %p waiting on lock, held by %s\n", pFuncDB->file, ln, pFuncDB->func,
+		(void*)pmut, pszHolder);
 	pthread_mutex_unlock(&mutMutLog);
 }
 
@@ -613,7 +614,8 @@ int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 
 
 /* wrapper for pthread_cond_timedwait() */
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime,
+dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	int ret;
 	dbgRecordExecLocation(iStackPtr, ln);
@@ -1116,7 +1118,8 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	assert(pFuncDB != NULL);
 	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
 
-	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
+	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ",
+	pthread_self());
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
 		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
 			if(iRet == RS_RET_NO_IRET)

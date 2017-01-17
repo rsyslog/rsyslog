@@ -107,7 +107,8 @@ typedef struct strm_s {
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	sbool bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int64 iCurrOffs;/* current offset */
-	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
+	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since
+	the last CntrSet() */
 	sbool bPrevWasNL; /* used for readLine() when reading multi-line messages */
 	/* dynamic properties, valid only during file open, not to be persistet */
 	sbool bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */

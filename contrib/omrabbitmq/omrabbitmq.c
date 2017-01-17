@@ -227,7 +227,8 @@ initRabbitMQ(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	if (die_on_amqp_error(amqp_login(pData->conn, (char*) pData->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, pData->user, pData->password),
+	if (die_on_amqp_error(amqp_login(pData->conn, (char*) pData->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
+	pData->user, pData->password),
 		"Logging in")) {
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -250,7 +251,8 @@ initRabbitMQ(instanceData *pData)
 		edReq.nowait = 0;
 		edReq.arguments = amqp_empty_table;
 
-		amqp_simple_rpc_decoded(pData->conn, RABBITMQ_CHANNEL, AMQP_EXCHANGE_DECLARE_METHOD, AMQP_EXCHANGE_DECLARE_OK_METHOD, &edReq);
+		amqp_simple_rpc_decoded(pData->conn, RABBITMQ_CHANNEL, AMQP_EXCHANGE_DECLARE_METHOD,
+		AMQP_EXCHANGE_DECLARE_OK_METHOD, &edReq);
 		if(die_on_amqp_error(amqp_get_rpc_reply(pData->conn), "Declaring exchange")) {
 			pData->conn = NULL;
 			ABORT_FINALIZE(RS_RET_SUSPENDED);

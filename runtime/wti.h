@@ -103,9 +103,11 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 
 #define getActionStateByNbr(pWti, iActNbr) ((uint8_t) ((pWti)->actWrkrInfo[(iActNbr)].flags.actState))
 #define getActionState(pWti, pAction) (((uint8_t) (pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
-#define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = (newState))
+#define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = \
+(newState))
 #define getActionJustResumed(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed))
-#define setActionJustResumed(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed = (val))
+#define setActionJustResumed(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed = \
+(val))
 #define getActionResumeInRow(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow))
 #define setActionResumeInRow(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow = (val))
 #define incActionResumeInRow(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow++)

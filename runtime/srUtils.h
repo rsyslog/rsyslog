@@ -79,7 +79,8 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * for it.
  * added 2007-07-17 by rgerhards
  */
-int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid, int bFailOnChown);
+int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid,
+int bFailOnChown);
 int execProg(uchar *program, int bWait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,

@@ -25,6 +25,7 @@
 #define	SMFILE_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitsmfile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+rsRetVal modInitsmfile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
+	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
 
 #endif /* #ifndef SMFILE_H_INCLUDED */

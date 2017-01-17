@@ -194,16 +194,20 @@ int rsksi_tlvrd(FILE *fp, tlvrecord_t *rec, void *obj);
 void rsksi_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsksi_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsksi_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
-int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes, uint8_t *bHasIntermedHashes);
+int rsksi_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes,
+uint8_t *bHasIntermedHashes);
 int rsksi_getExcerptBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh); 
 int rsksi_chkFileHdr(FILE *fp, char *expect, uint8_t verbose);
 ksifile rsksi_vrfyConstruct_gf(void);
 void rsksi_vrfyBlkInit(ksifile ksi, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
 int rsksi_vrfy_nextRec(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
-int rsksi_vrfy_nextRecExtract(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx, block_hashchain_t *hashchain, int storehashchain); 
-int rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned char *rec, size_t len, ksierrctx_t *ectx);
+int rsksi_vrfy_nextRecExtract(ksifile ksi, FILE *sigfp, FILE *nsigfp, unsigned char *rec, size_t len,
+ksierrctx_t *ectx, block_hashchain_t *hashchain, int storehashchain); 
+int rsksi_vrfy_nextHashChain(ksifile ksi, block_sig_t *bs, FILE *sigfp, unsigned char *rec, size_t len,
+ksierrctx_t *ectx);
 int verifyBLOCK_HDRKSI(FILE *sigfp, FILE *nsigfp, tlvrecord_t* tlvrec);
-int verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend, KSI_DataHash *ksiHash, ksierrctx_t *ectx);
+int verifyBLOCK_SIGKSI(block_sig_t *bs, ksifile ksi, FILE *sigfp, FILE *nsigfp, uint8_t bExtend,
+KSI_DataHash *ksiHash, ksierrctx_t *ectx);
 void rsksi_errctxInit(ksierrctx_t *ectx);
 void rsksi_errctxExit(ksierrctx_t *ectx);
 void rsksi_errctxSetErrRec(ksierrctx_t *ectx, char *rec);

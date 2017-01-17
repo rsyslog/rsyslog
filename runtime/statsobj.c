@@ -202,7 +202,8 @@ finalize_it:
  * is called.
  */
 static rsRetVal
-addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr, ctr_t **entryRef, int8_t linked)
+addManagedCounter(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr,
+ctr_t **entryRef, int8_t linked)
 {
 	ctr_t *ctr;
 	DEFiRet;
@@ -593,7 +594,8 @@ statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen)
 
 	stat->nMsgs += nMsgs;
 	stat->lastSeen = lastSeen;
-	DBGPRINTF("DDDDD: statsRecordSender: '%s', nmsgs %u [%llu], lastSeen %llu\n", sender, nMsgs, (long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
+	DBGPRINTF("DDDDD: statsRecordSender: '%s', nmsgs %u [%llu], lastSeen %llu\n", sender, nMsgs,
+	(long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
 
 finalize_it:
 	if(mustUnlock)

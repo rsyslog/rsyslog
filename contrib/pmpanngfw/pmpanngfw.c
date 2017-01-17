@@ -104,7 +104,8 @@ CODESTARTparse
     assert(pMsg != NULL);
     assert(pMsg->pszRawMsg != NULL);
 
-    lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+    lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
     p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
     msgend = p2parse+lenMsg;
 
@@ -288,7 +289,8 @@ CODEmodInit_QueryRegCFSLineHdlr
     CHKiRet(objUse(datetime, CORE_COMPONENT));
 
     DBGPRINTF("panngfw parser init called, compiled with version %s\n", VERSION);
-    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

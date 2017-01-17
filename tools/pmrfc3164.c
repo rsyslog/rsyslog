@@ -170,7 +170,8 @@ CODESTARTparse
 	DBGPRINTF("Message will now be parsed by the legacy syslog parser (one size fits all... ;)).\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 	if(pMsg->iFacility == (LOG_INVLD>>3))
@@ -185,14 +186,17 @@ CODESTARTparse
 	 */
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING, pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
+	pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
 		if(pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-	} else if(*p2parse == ' ' && lenMsg > 1) { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+	} else if(*p2parse == ' ' && lenMsg > 1) {
+	/* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
 		--lenMsg;
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING, pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
+		pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {/* parse pointer needs to be restored, as we moved it off-by-one
@@ -352,7 +356,8 @@ ENDqueryEtryPt
 
 BEGINmodInit(pmrfc3164)
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+	/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -360,7 +365,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("rfc3164 parser init called\n");
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(); /* cache value, is set only during rsyslogd option processing */
+ 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+	/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

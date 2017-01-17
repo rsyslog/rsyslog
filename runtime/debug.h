@@ -98,7 +98,8 @@ int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackP
 int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime,
+	dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
 int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
@@ -122,7 +123,8 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #	define DBGOPRINT(...) if(Debug) { dbgoprint(__VA_ARGS__); }
 #endif
 #ifdef RTINST
-#	define BEGINfunc static dbgFuncDB_t *pdbgFuncDB; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
+#define BEGINfunc static dbgFuncDB_t *pdbgFuncDB;
+	int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
 #	define ENDfunc dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
 #	define ENDfuncIRet dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
 #	define ASSERT(x) assert(x)
@@ -133,8 +135,9 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #	define ASSERT(x)
 #endif
 #ifdef RTINST
-#	define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
-#	define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
+#define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);
+	dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__);
+#define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
 	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
 #	define RUNLOG_STR(str)    dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
 				  dbgprintf("%s:%d: %s: %s\n", __FILE__, __LINE__, __func__, str)
@@ -163,7 +166,8 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #define d_pthread_mutex_trylock(x)   dbgMutexTryLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, \
+	pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_free(x)      dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
