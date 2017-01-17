@@ -81,6 +81,10 @@ TESTS +=  \
 	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
+	pmrfc3164-msgFirstSpace.sh \
+	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-AtSignsInHostname_off.sh \
+	pmrfc3164-tagEndingByColon.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
@@ -593,6 +597,10 @@ EXTRA_DIST= \
 	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
+	pmrfc3164-msgFirstSpace.sh \
+	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-AtSignsInHostname_off.sh \
+	pmrfc3164-tagEndingByColon.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
