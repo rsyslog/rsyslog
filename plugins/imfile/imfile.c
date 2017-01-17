@@ -447,6 +447,27 @@ finalize_it:
 #endif /* #if HAVE_INOTIFY_INIT */
 
 
+/*
+*	Helper function to combine statefile and workdir
+*/
+static int 
+getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
+{
+	int lenout; 
+	const uchar* pszworkdir; 
+
+	/* Get Raw Workdir, if it is NULL we need to propper handle it */
+	pszworkdir = glblGetWorkDirRaw(); 
+
+	/* Construct file name */
+	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
+			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
+
+	/* return out length */
+	return lenout; 
+}
+
+
 /* this generates a state file name suitable for the current file. To avoid
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
@@ -533,14 +554,14 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
 		  pLstn->pszFileName, statefn);
-	/* Construct file name */
-	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam), "%s/%s",
-			     (char*) glbl.GetWorkDir(), (char*)statefn);
+
+	/* Get full path and file name */
+	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam)); 
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("imfile: NO state file exists for '%s'\n", pLstn->pszFileName);
+			DBGPRINTF("imfile: NO state file (%s) exists for '%s'\n", pszSFNam, pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
@@ -1749,9 +1770,6 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, u
 		getBasedir(basedir, newFileName);
 		pBaseDir = &basedir[0]; /* Set BaseDir Pointer */
 		idirindex = dirsFindDir(basedir); 
-/* TODO REMOVE DEBUG */
-/* DBGPRINTF("imfile: dirsFindDir(%s) from file '%s': %s : %d|%d\n", 
-	newBaseName, newFileName, basedir, idirindex, currMaxDirs); */
 		if (idirindex == -1) {
 			/* Add dir to table and create watch */ 
 			DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", basedir); 
@@ -1803,9 +1821,9 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
 				uchar *const file = (uchar*)files.gl_pathv[i];
-/* TODO VERIFY THIS */
-if(file[strlen((char*)file)-1] == '/')
-	continue;/* we cannot process subdirs! */
+
+				if(file[strlen((char*)file)-1] == '/')
+					continue;/* we cannot process subdirs! */
 
 				getBasename(basen, file);
 				DBGPRINTF("imfile: setup dynamic watch for '%s : %s' \n", basen, file);
@@ -1891,10 +1909,10 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirnamelen = ustrlen(pszrootdir); 
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
+	dirnametrunc[dirnamelen] = '\0'; /* Terminate copied string */
 
 	hasWildcard = containsGlobWildcard(dirnametrunc);
 	if(hasWildcard) {
-//	if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
 		/* Set NULL Byte on last directory delimiter occurrence,
 		will also remove asterix */
 		psztmp = strrchr(dirnametrunc, '/');
@@ -1904,7 +1922,6 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 	/* Combine directory and new subdir */
 	snprintf(pszoutput, MAXFNAME, "%s/%s", dirnametrunc, pszsubdir);
 }
-
 
 /* inotify told us that a file's wd was closed. We now need to remove
  * the file from our internal structures. Remember that a different inode
@@ -1919,12 +1936,13 @@ in_removeFile(const int dirIdx,
 	int bDoRMState;
 	int wd;
 	uchar *statefn;
+
 	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
 	          pLstn->pszFileName, dirIdx);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
-		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
-				     (char*) glbl.GetWorkDir(), (char*)statefn);
+		/* Get full path and file name */
+		getFullStateFileName(statefn, toDel, sizeof(toDel)); 
 		bDoRMState = 1;
 	} else {
 		bDoRMState = 0;

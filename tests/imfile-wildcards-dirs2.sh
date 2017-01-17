@@ -25,9 +25,6 @@ do
 		./inputfilegen -m 1 > rsyslog.input.dir$i/file.logfile
 	done
 	ls -d rsyslog.input.*
-
-	# sleep a little to give rsyslog a chance for processing
-	sleep 2
 	
 	# Delete all but first!
 	for i in `seq 1 $IMFILEINPUTFILES`;
@@ -35,6 +32,9 @@ do
 		rm -r rsyslog.input.dir$i
 	done
 done
+
+# sleep a little to give rsyslog a chance for processing
+sleep 1
 
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
