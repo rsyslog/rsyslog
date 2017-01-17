@@ -447,27 +447,6 @@ finalize_it:
 #endif /* #if HAVE_INOTIFY_INIT */
 
 
-/*
-*	Helper function to combine statefile and workdir
-*/
-static int 
-getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
-{
-	int lenout; 
-	const uchar* pszworkdir; 
-
-	/* Get Raw Workdir, if it is NULL we need to propper handle it */
-	pszworkdir = glblGetWorkDirRaw(); 
-
-	/* Construct file name */
-	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
-			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
-
-	/* return out length */
-	return lenout; 
-}
-
-
 /* this generates a state file name suitable for the current file. To avoid
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
@@ -554,14 +533,14 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
 		  pLstn->pszFileName, statefn);
-
-	/* Get full path and file name */
-	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam)); 
+	/* Construct file name */
+	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam), "%s/%s",
+			     (char*) glbl.GetWorkDir(), (char*)statefn);
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("imfile: NO state file (%s) exists for '%s'\n", pszSFNam, pLstn->pszFileName);
+			DBGPRINTF("imfile: NO state file exists for '%s'\n", pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
@@ -793,35 +772,6 @@ getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 				basen[0] = '\0';
 			else {
 				memcpy(basen, path+i+1, lenName-i);
-			}
-			break;
-		}
-	}
-	if (found == 1)
-		return i;
-	else {
-		return -1;
-	}
-}
-
-/* the basedir buffer must be of size MAXFNAME
- * returns the index of the last slash before the basename
- */
-static int
-getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
-{
-	int i;
-	int found = 0;
-	const int lenName = ustrlen(path);
-	for(i = lenName ; i >= 0 ; --i) {
-		if(path[i] == '/') {
-			/* found basename component */
-			found = 1;
-			if(i == lenName)
-				basedir[0] = '\0';
-			else {
-				memcpy(basedir, path, i);
-				basedir[i] = '\0';
 			}
 			break;
 		}
@@ -1488,9 +1438,39 @@ fileTableDelFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 finalize_it:
 	RETiRet;
 }
+
+/* the basedir buffer must be of size MAXFNAME
+ * returns the index of the last slash before the basename
+ */
+static int
+in_getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
+{
+	int i;
+	int found = 0;
+	const int lenName = ustrlen(path);
+	for(i = lenName ; i >= 0 ; --i) {
+		if(path[i] == '/') {
+			/* found basename component */
+			found = 1;
+			if(i == lenName)
+				basedir[0] = '\0';
+			else {
+				memcpy(basedir, path, i);
+				basedir[i] = '\0';
+			}
+			break;
+		}
+	}
+	if (found == 1)
+		return i;
+	else {
+		return -1;
+	}
+}
+
 /* add entry to dirs array */
 static rsRetVal
-dirsAdd(uchar *dirName, int* piIndex)
+dirsAdd(uchar *dirName)
 {
 	sbool sbAdded; 
 	int newMax;
@@ -1510,10 +1490,6 @@ dirsAdd(uchar *dirName, int* piIndex)
 		}
 	}
 	
-	/* Save Index for higher functions */
-	if (piIndex != NULL )
-		*piIndex = newindex; 
-
 	/* Check if dirstab size needs to be increased */
 	if(sbAdded == TRUE && newindex == allocMaxDirs) {
 		newMax = 2 * allocMaxDirs;
@@ -1576,7 +1552,7 @@ DBGPRINTF("imfile: dirsInit\n");
 
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		if(dirsFindDir(inst->pszDirName) == -1)
-			dirsAdd(inst->pszDirName, NULL);
+			dirsAdd(inst->pszDirName);
 	}
 
 finalize_it:
@@ -1614,24 +1590,17 @@ finalize_it:
 static void
 in_setupDirWatch(const int dirIdx)
 {
+// TODO HANDLE WILDCARDS! 
 	int wd;
-	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
 	int dirnamelen = 0; 
-	char* psztmp; 
-
 	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 	if(wd < 0) {
 		/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 		dirnamelen = ustrlen(dirs[dirIdx].dirName); 
 		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
-
-		hasWildcard = containsGlobWildcard(dirnametrunc);
-		if(hasWildcard) {
-			/* Set NULL Byte on last directory delimiter occurrence,
-			will also remove asterix */
-			psztmp = strrchr(dirnametrunc, '/');
-			*psztmp = '\0';
+		if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
+			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
 			
 			/* Try to add inotify watch again */
 			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
@@ -1767,14 +1736,17 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, u
 		snprintf(fullfn, MAXFNAME, "%s/%s", pLstn->pszDirName, newBaseName);
 	} else {
 		/* Get BaseDir from filename! */
-		getBasedir(basedir, newFileName);
+		in_getBasedir(basedir, newFileName);
 		pBaseDir = &basedir[0]; /* Set BaseDir Pointer */
 		idirindex = dirsFindDir(basedir); 
+/* TODO REMOVE DEBUG */
+/* DBGPRINTF("imfile: dirsFindDir(%s) from file '%s': %s : %d|%d\n", 
+	newBaseName, newFileName, basedir, idirindex, currMaxDirs); */
 		if (idirindex == -1) {
 			/* Add dir to table and create watch */ 
 			DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", basedir); 
-			dirsAdd(basedir, &idirindex);
-			in_setupDirWatch(idirindex);
+			dirsAdd(basedir);
+			in_setupDirWatch(currMaxDirs-1);
 		}
 		/* Use newFileName */
 		snprintf(fullfn, MAXFNAME, "%s", newFileName);
@@ -1821,9 +1793,9 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
 				uchar *const file = (uchar*)files.gl_pathv[i];
-
-				if(file[strlen((char*)file)-1] == '/')
-					continue;/* we cannot process subdirs! */
+/* TODO VERIFY THIS */
+if(file[strlen((char*)file)-1] == '/')
+	continue;/* we cannot process subdirs! */
 
 				getBasename(basen, file);
 				DBGPRINTF("imfile: setup dynamic watch for '%s : %s' \n", basen, file);
@@ -1901,27 +1873,23 @@ in_dbg_showEv(struct inotify_event *ev)
 static void 
 in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 {
-	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
 	int dirnamelen = 0;
-	char* psztmp; 
 
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirnamelen = ustrlen(pszrootdir); 
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
-	dirnametrunc[dirnamelen] = '\0'; /* Terminate copied string */
-
-	hasWildcard = containsGlobWildcard(dirnametrunc);
-	if(hasWildcard) {
-		/* Set NULL Byte on last directory delimiter occurrence,
-		will also remove asterix */
-		psztmp = strrchr(dirnametrunc, '/');
-		*psztmp = '\0';
+	if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
+		if (*(dirnametrunc+dirnamelen-2) == '/')
+			*(dirnametrunc+dirnamelen-2) = '\0'; /* remove wildcard and slash */
+		else
+			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
 	}
 
 	/* Combine directory and new subdir */
 	snprintf(pszoutput, MAXFNAME, "%s/%s", dirnametrunc, pszsubdir);
 }
+
 
 /* inotify told us that a file's wd was closed. We now need to remove
  * the file from our internal structures. Remember that a different inode
@@ -1936,13 +1904,12 @@ in_removeFile(const int dirIdx,
 	int bDoRMState;
 	int wd;
 	uchar *statefn;
-
 	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
 	          pLstn->pszFileName, dirIdx);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
-		/* Get full path and file name */
-		getFullStateFileName(statefn, toDel, sizeof(toDel)); 
+		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
+				     glbl.GetWorkDir(), (char*)statefn);
 		bDoRMState = 1;
 	} else {
 		bDoRMState = 0;
@@ -1980,8 +1947,8 @@ in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 	if(newdiridx == -1) {
 		/* Add dir to table and create watch */ 
 		DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", fulldn); 
-		dirsAdd((uchar*)fulldn, &newdiridx);
-		in_setupDirWatch(newdiridx);
+		dirsAdd((uchar*)fulldn);
+		in_setupDirWatch(currMaxDirs-1);
 	} else {
 		DBGPRINTF("imfile: dir '%s' already exists in dirs table (Idx %d)\n", fulldn, newdiridx); 
 	}
@@ -2409,7 +2376,9 @@ ENDisCompatibleWithFeature
  */
 BEGINmodExit
 CODESTARTmodExit
+#ifdef HAVE_INOTIFY_INIT
 	int i;
+#endif
 	/* release objects we used */
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
