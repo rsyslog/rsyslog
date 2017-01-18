@@ -474,10 +474,10 @@ TESTS +=  \
 	json_var_case.sh
 endif
 
-if ENABLE_MMDBLOOKUP
-TESTS += \
-    mmdb.sh
-endif
+#if ENABLE_MMDBLOOKUP
+#TESTS += \
+#    mmdb.sh
+#endif
 
 if ENABLE_GNUTLS
 TESTS +=  \
