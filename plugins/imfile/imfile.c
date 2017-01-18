@@ -447,6 +447,27 @@ finalize_it:
 #endif /* #if HAVE_INOTIFY_INIT */
 
 
+/*
+*	Helper function to combine statefile and workdir
+*/
+static int
+getFullStateFileName(uchar* pszstatefile, uchar* pszout, int ilenout)
+{
+	int lenout;
+	const uchar* pszworkdir;
+
+	/* Get Raw Workdir, if it is NULL we need to propper handle it */
+	pszworkdir = glblGetWorkDirRaw();
+
+	/* Construct file name */
+	lenout = snprintf((char*)pszout, ilenout, "%s/%s",
+			     (char*) (pszworkdir == NULL ? "." : (char*) pszworkdir), (char*)pszstatefile);
+
+	/* return out length */
+	return lenout;
+}
+
+
 /* this generates a state file name suitable for the current file. To avoid
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
@@ -533,14 +554,14 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 	uchar *const statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
 	DBGPRINTF("imfile: trying to open state for '%s', state file '%s'\n",
 		  pLstn->pszFileName, statefn);
-	/* Construct file name */
-	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam), "%s/%s",
-			     (char*) glbl.GetWorkDir(), (char*)statefn);
+
+	/* Get full path and file name */
+	lenSFNam = getFullStateFileName(statefn, pszSFNam, sizeof(pszSFNam));
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			DBGPRINTF("imfile: NO state file exists for '%s'\n", pLstn->pszFileName);
+			DBGPRINTF("imfile: NO state file (%s) exists for '%s'\n", pszSFNam, pLstn->pszFileName);
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
 			char errStr[1024];
@@ -1317,6 +1338,35 @@ doPolling(void)
 
 
 #ifdef HAVE_INOTIFY_INIT
+/* the basedir buffer must be of size MAXFNAME
+ * returns the index of the last slash before the basename
+ */
+static int
+in_getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
+{
+	int i;
+	int found = 0;
+	const int lenName = ustrlen(path);
+	for(i = lenName ; i >= 0 ; --i) {
+		if(path[i] == '/') {
+			/* found basename component */
+			found = 1;
+			if(i == lenName)
+				basedir[0] = '\0';
+			else {
+				memcpy(basedir, path, i);
+				basedir[i] = '\0';
+			}
+			break;
+		}
+	}
+	if (found == 1)
+		return i;
+	else {
+		return -1;
+	}
+}
+
 static rsRetVal
 fileTableInit(fileTable_t *const __restrict__ tab, const int nelem)
 {
@@ -1438,58 +1488,32 @@ fileTableDelFile(fileTable_t *const __restrict__ tab, lstn_t *const __restrict__
 finalize_it:
 	RETiRet;
 }
-
-/* the basedir buffer must be of size MAXFNAME
- * returns the index of the last slash before the basename
- */
-static int
-in_getBasedir(uchar *const __restrict__ basedir, uchar *const __restrict__ path)
-{
-	int i;
-	int found = 0;
-	const int lenName = ustrlen(path);
-	for(i = lenName ; i >= 0 ; --i) {
-		if(path[i] == '/') {
-			/* found basename component */
-			found = 1;
-			if(i == lenName)
-				basedir[0] = '\0';
-			else {
-				memcpy(basedir, path, i);
-				basedir[i] = '\0';
-			}
-			break;
-		}
-	}
-	if (found == 1)
-		return i;
-	else {
-		return -1;
-	}
-}
-
 /* add entry to dirs array */
 static rsRetVal
-dirsAdd(uchar *dirName)
+dirsAdd(uchar *dirName, int* piIndex)
 {
-	sbool sbAdded; 
+	sbool sbAdded;
 	int newMax;
 	int i, newindex;
 	dirInfo_t *newDirTab;
 	DEFiRet;
 
 	/* Set new index to last dir by default, then search for a free spot in dirs array */
-	newindex = currMaxDirs; 
+	newindex = currMaxDirs;
 	sbAdded = TRUE;
 	for(i= 0 ; i < currMaxDirs ; ++i) {
 		if (dirs[i].dirName == NULL) {
 			newindex = i;
-			sbAdded = FALSE; 
+			sbAdded = FALSE;
 			DBGPRINTF("imfile: dirsAdd found free spot at %d, reusing\n", newindex);
 			break;
 		}
 	}
 	
+	/* Save Index for higher functions */
+	if (piIndex != NULL )
+		*piIndex = newindex;
+
 	/* Check if dirstab size needs to be increased */
 	if(sbAdded == TRUE && newindex == allocMaxDirs) {
 		newMax = 2 * allocMaxDirs;
@@ -1526,13 +1550,13 @@ static int
 dirsFindDir(uchar *dir)
 {
 	int i, iFind;
-	iFind = -1; 
+	iFind = -1;
 
 	/* Try to find directory using for() */
 	for(i = 0 ; i < currMaxDirs ; ++i) {
 		if (dirs[i].dirName != NULL && ustrcmp(dir, dirs[i].dirName) == 0) {
-			iFind = i; 
-			break; 
+			iFind = i;
+			break;
 		}
 	}
 	return iFind;
@@ -1543,7 +1567,6 @@ dirsInit(void)
 {
 	instanceConf_t *inst;
 	DEFiRet;
-DBGPRINTF("imfile: dirsInit\n"); 
 
 	free(dirs);
 	CHKmalloc(dirs = malloc(sizeof(dirInfo_t) * INIT_FILE_TAB_SIZE));
@@ -1552,7 +1575,7 @@ DBGPRINTF("imfile: dirsInit\n");
 
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		if(dirsFindDir(inst->pszDirName) == -1)
-			dirsAdd(inst->pszDirName);
+			dirsAdd(inst->pszDirName, NULL);
 	}
 
 finalize_it:
@@ -1590,18 +1613,25 @@ finalize_it:
 static void
 in_setupDirWatch(const int dirIdx)
 {
-// TODO HANDLE WILDCARDS! 
 	int wd;
+	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
-	int dirnamelen = 0; 
+	int dirnamelen = 0;
+	char* psztmp;
+
 	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 	if(wd < 0) {
 		/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
-		dirnamelen = ustrlen(dirs[dirIdx].dirName); 
+		dirnamelen = ustrlen(dirs[dirIdx].dirName);
 		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
-		if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
-			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
-			
+
+		hasWildcard = containsGlobWildcard(dirnametrunc);
+		if(hasWildcard) {
+			/* Set NULL Byte on last directory delimiter occurrence,
+			will also remove asterix */
+			psztmp = strrchr(dirnametrunc, '/');
+			*psztmp = '\0';
+
 			/* Try to add inotify watch again */
 			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 			if(wd < 0) {
@@ -1609,7 +1639,7 @@ in_setupDirWatch(const int dirIdx)
 					dirs[dirIdx].dirName, errno);
 				goto done;
 			} else {
-				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard at the end of '%s', " 
+				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard at the end of '%s', "
 					"removing and watching parent path instead! \n",
 					dirs[dirIdx].dirName);
 			}
@@ -1620,7 +1650,7 @@ in_setupDirWatch(const int dirIdx)
 		}
 	}
 	wdmapAdd(wd, dirIdx, NULL);
-	DBGPRINTF("imfile: in_setupDirWatch: watch %d added for dir %s\n", wd, 
+	DBGPRINTF("imfile: in_setupDirWatch: watch %d added for dir %s\n", wd,
 		(dirnamelen == 0) ? (char*) dirs[dirIdx].dirName : (char*) dirnametrunc);
 done:	return;
 }
@@ -1672,7 +1702,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 	if (newdirname == NULL) {
 		pThis->pszDirName = existing->pszDirName; /* read-only */
 	} else {
-		pThis->pszDirName = (uchar*)strdup((char*)newdirname); 
+		pThis->pszDirName = (uchar*)strdup((char*)newdirname);
 	}
 	pThis->pszBaseName = (uchar*)strdup((char*)newname);
 	if(asprintf((char**)&pThis->pszFileName, "%s/%s", (char*)pThis->pszDirName, (char*)newname) == -1) {
@@ -1728,8 +1758,8 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, u
 	char fullfn[MAXFNAME];
 	struct stat fileInfo;
 	uchar basedir[MAXFNAME];
-	uchar* pBaseDir = NULL; 
-	int idirindex; 
+	uchar* pBaseDir = NULL;
+	int idirindex;
 
 	if (newFileName == NULL) {
 		/* Combine directory and filename */
@@ -1738,15 +1768,12 @@ in_setupFileWatchDynamic(lstn_t *pLstn, uchar *const __restrict__ newBaseName, u
 		/* Get BaseDir from filename! */
 		in_getBasedir(basedir, newFileName);
 		pBaseDir = &basedir[0]; /* Set BaseDir Pointer */
-		idirindex = dirsFindDir(basedir); 
-/* TODO REMOVE DEBUG */
-/* DBGPRINTF("imfile: dirsFindDir(%s) from file '%s': %s : %d|%d\n", 
-	newBaseName, newFileName, basedir, idirindex, currMaxDirs); */
+		idirindex = dirsFindDir(basedir);
 		if (idirindex == -1) {
-			/* Add dir to table and create watch */ 
-			DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", basedir); 
-			dirsAdd(basedir);
-			in_setupDirWatch(currMaxDirs-1);
+			/* Add dir to table and create watch */
+			DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", basedir);
+			dirsAdd(basedir, &idirindex);
+			in_setupDirWatch(idirindex);
 		}
 		/* Use newFileName */
 		snprintf(fullfn, MAXFNAME, "%s", newFileName);
@@ -1793,9 +1820,9 @@ in_setupFileWatchStatic(lstn_t *pLstn)
 			for(unsigned i = 0 ; i < files.gl_pathc ; i++) {
 				uchar basen[MAXFNAME];
 				uchar *const file = (uchar*)files.gl_pathv[i];
-/* TODO VERIFY THIS */
-if(file[strlen((char*)file)-1] == '/')
-	continue;/* we cannot process subdirs! */
+
+				if(file[strlen((char*)file)-1] == '/')
+					continue;/* we cannot process subdirs! */
 
 				getBasename(basen, file);
 				DBGPRINTF("imfile: setup dynamic watch for '%s : %s' \n", basen, file);
@@ -1867,49 +1894,53 @@ in_dbg_showEv(struct inotify_event *ev)
 	 }
 }
 
-/* 
-*	Helper function to get fullpath when handling inotify dir events 
+/*
+*	Helper function to get fullpath when handling inotify dir events
 */
-static void 
+static void
 in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 {
+	sbool hasWildcard;
 	char dirnametrunc[MAXFNAME];
 	int dirnamelen = 0;
+	char* psztmp;
 
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
-	dirnamelen = ustrlen(pszrootdir); 
+	dirnamelen = ustrlen(pszrootdir);
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
-	if ( *(dirnametrunc+dirnamelen-1) == '*' ) {
-		if (*(dirnametrunc+dirnamelen-2) == '/')
-			*(dirnametrunc+dirnamelen-2) = '\0'; /* remove wildcard and slash */
-		else
-			*(dirnametrunc+dirnamelen-1) = '\0'; /* remove wildcard */
+	dirnametrunc[dirnamelen] = '\0'; /* Terminate copied string */
+
+	hasWildcard = containsGlobWildcard(dirnametrunc);
+	if(hasWildcard) {
+		/* Set NULL Byte on last directory delimiter occurrence,
+		will also remove asterix */
+		psztmp = strrchr(dirnametrunc, '/');
+		*psztmp = '\0';
 	}
 
 	/* Combine directory and new subdir */
 	snprintf(pszoutput, MAXFNAME, "%s/%s", dirnametrunc, pszsubdir);
 }
 
-
 /* inotify told us that a file's wd was closed. We now need to remove
  * the file from our internal structures. Remember that a different inode
  * with the same name may already be in processing.
  */
 static void
-in_removeFile(const int dirIdx,
-	      lstn_t *const __restrict__ pLstn)
+in_removeFile(const int dirIdx, lstn_t *const __restrict__ pLstn)
 {
 	uchar statefile[MAXFNAME];
 	uchar toDel[MAXFNAME];
 	int bDoRMState;
 	int wd;
 	uchar *statefn;
+
 	DBGPRINTF("imfile: remove listener '%s', dirIdx %d\n",
-	          pLstn->pszFileName, dirIdx);
+			pLstn->pszFileName, dirIdx);
 	if(pLstn->bRMStateOnDel) {
 		statefn = getStateFileName(pLstn, statefile, sizeof(statefile));
-		snprintf((char*)toDel, sizeof(toDel), "%s/%s",
-				     glbl.GetWorkDir(), (char*)statefn);
+		/* Get full path and file name */
+		getFullStateFileName(statefn, toDel, sizeof(toDel));
 		bDoRMState = 1;
 	} else {
 		bDoRMState = 0;
@@ -1937,20 +1968,20 @@ static void
 in_handleDirEventDirCREATE(struct inotify_event *ev, const int dirIdx)
 {
 	char fulldn[MAXFNAME];
-	int newdiridx; 
+	int newdiridx;
 
 	/* Combine to Full Path first */
-	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name); 
+	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name);
 
 	/* Search for existing entry first! */
-	newdiridx = dirsFindDir( (uchar*)fulldn ); 
+	newdiridx = dirsFindDir( (uchar*)fulldn );
 	if(newdiridx == -1) {
-		/* Add dir to table and create watch */ 
-		DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", fulldn); 
-		dirsAdd((uchar*)fulldn);
-		in_setupDirWatch(currMaxDirs-1);
+		/* Add dir to table and create watch */
+		DBGPRINTF("imfile: Adding new dir '%s' to dirs table \n", fulldn);
+		dirsAdd((uchar*)fulldn, &newdiridx);
+		in_setupDirWatch(newdiridx);
 	} else {
-		DBGPRINTF("imfile: dir '%s' already exists in dirs table (Idx %d)\n", fulldn, newdiridx); 
+		DBGPRINTF("imfile: dir '%s' already exists in dirs table (Idx %d)\n", fulldn, newdiridx);
 	}
 }
 
@@ -1961,22 +1992,20 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 	lstn_t *pLstn;
 	int ftIdx;
 	char fullfn[MAXFNAME];
-	uchar* pszDir = NULL; 
-	int dirIdxFinal = dirIdx; 
+	uchar* pszDir = NULL;
+	int dirIdxFinal = dirIdx;
 	ftIdx = fileTableSearch(&dirs[dirIdxFinal].active, (uchar*)ev->name);
 	if(ftIdx >= 0) {
 		pLstn = dirs[dirIdxFinal].active.listeners[ftIdx].pLstn;
 	} else {
-/*		DBGPRINTF("imfile: file '%s' not active in dir '%s'\n",
-			ev->name, dirs[dirIdxFinal].dirName);*/
-		DBGPRINTF("imfile: in_handleDirEventFileCREATE  '%s' not associated with dir '%s' (CurMax:%d)\n", 
+		DBGPRINTF("imfile: in_handleDirEventFileCREATE  '%s' not associated with dir '%s' (CurMax:%d)\n",
 			ev->name, dirs[dirIdxFinal].dirName, dirs[dirIdxFinal].active.currMax);
 		ftIdx = fileTableSearch(&dirs[dirIdxFinal].configured, (uchar*)ev->name);
 		if(ftIdx == -1) {
 			/* Search all other configured directories for proper index! */
 			if (currMaxDirs > 0) {
 				/* Store Dirname as we need to overwrite it in in_setupFileWatchDynamic */
-				pszDir = dirs[dirIdxFinal].dirName; 
+				pszDir = dirs[dirIdxFinal].dirName;
 
 				/* Combine directory and filename */
 				snprintf(fullfn, MAXFNAME, "%s/%s", pszDir, (uchar*)ev->name);
@@ -1985,14 +2014,14 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 					ftIdx = fileTableSearch(&dirs[i].configured, (uchar*)ev->name);
 					if(ftIdx != -1) {
 						/* Found matching directory! */
-						dirIdxFinal = i; /* Have to correct directory index for listnr dupl 
+						dirIdxFinal = i; /* Have to correct directory index for listnr dupl
 											in in_setupFileWatchDynamic */
-						break; 
+						break;
 					}
 				}
 
 				if(ftIdx == -1) {
-					DBGPRINTF("imfile: file '%s' not associated with dir '%s' and also no " 
+					DBGPRINTF("imfile: file '%s' not associated with dir '%s' and also no "
 						"matching wildcard directory found\n", ev->name, dirs[dirIdxFinal].dirName);
 					goto done;
 				}
@@ -2008,7 +2037,7 @@ in_handleDirEventFileCREATE(struct inotify_event *ev, const int dirIdx)
 		}
 		pLstn = dirs[dirIdxFinal].configured.listeners[ftIdx].pLstn;
 	}
-	DBGPRINTF("imfile: file '%s' associated with dir '%s'\n", 
+	DBGPRINTF("imfile: file '%s' associated with dir '%s'\n",
 		ev->name, (pszDir == NULL) ? dirs[dirIdxFinal].dirName : pszDir);
 	in_setupFileWatchDynamic(pLstn, (uchar*)ev->name, (pszDir == NULL) ? NULL : (uchar*)fullfn);
 done:	return;
@@ -2030,15 +2059,15 @@ in_handleDirEventFileDELETE(struct inotify_event *const ev, const int dirIdx)
 		goto done;
 	}
 	DBGPRINTF("imfile: imfile delete processing for '%s'\n",
-	          dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
+		dirs[dirIdx].active.listeners[ftIdx].pLstn->pszFileName);
 	in_removeFile(dirIdx, dirs[dirIdx].active.listeners[ftIdx].pLstn);
 done:	return;
 }
 
 /* inotify told us that a dirs's wd was closed. We now need to remove
- * the dir from our internal structures. 
+ * the dir from our internal structures.
  */
-static void 
+static void
 in_removeDir(const int dirIdx)
 {
 	int wd;
@@ -2051,26 +2080,26 @@ static void
 in_handleDirEventDirDELETE(struct inotify_event *const ev, const int dirIdx)
 {
 	char fulldn[MAXFNAME];
-	int finddiridx; 
+	int finddiridx;
 
-	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name); 
+	in_handleDirGetFullDir(fulldn, (char*)dirs[dirIdx].dirName, (char*)ev->name);
 
 	/* Search for existing entry first! */
-	finddiridx = dirsFindDir( (uchar*)fulldn ); 
+	finddiridx = dirsFindDir( (uchar*)fulldn );
 
 	if(finddiridx != -1) {
 		/* Remove internal structures */
 		in_removeDir(finddiridx);
 
-		/* Delete dir from dirs array! */ 
+		/* Delete dir from dirs array! */
 		free(dirs[finddiridx].dirName);
 		free(dirs[finddiridx].active.listeners);
 		free(dirs[finddiridx].configured.listeners);
-		dirs[finddiridx].dirName = NULL; 
+		dirs[finddiridx].dirName = NULL;
 
-		DBGPRINTF("imfile: in_handleDirEventDirDELETE dir (idx %d) '%s' deleted \n", finddiridx, fulldn); 
+		DBGPRINTF("imfile: in_handleDirEventDirDELETE dir (idx %d) '%s' deleted \n", finddiridx, fulldn);
 	} else {
-		DBGPRINTF("imfile: in_handleDirEventDirDELETE ERROR could not found '%s' in dirs table!\n", fulldn); 
+		DBGPRINTF("imfile: in_handleDirEventDirDELETE ERROR could not found '%s' in dirs table!\n", fulldn);
 	}
 
 /*
@@ -2143,10 +2172,10 @@ in_processEvent(struct inotify_event *ev)
 				/* Remove file from inotify watch */
 				iRet = inotify_rm_watch(ino_fd, wd); /* Note this will TRIGGER IN_IGNORED Event! */
 				if (iRet != 0) {
-					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n", 
+					DBGPRINTF("imfile: inotify_rm_watch error %d (ftIdx=%d, wd=%d, name=%s)\n",
 						errno, ftIdx, wd, ev->name);
 				} else {
-					DBGPRINTF("imfile: inotify_rm_watch successfully removed file from watch " 
+					DBGPRINTF("imfile: inotify_rm_watch successfully removed file from watch "
 						"(ftIdx=%d, wd=%d, name=%s)\n", ftIdx, wd, ev->name);
 				}
 				in_removeFile(etry->dirIdx, pLstn);
@@ -2184,7 +2213,6 @@ in_do_timeout_processing(void)
 			pollFile(pLstn, NULL);
 		}
 	}
-
 }
 
 
@@ -2390,7 +2418,7 @@ CODESTARTmodExit
 	if(dirs != NULL) {
 		/* Free dirNames */
 		for(i = 0 ; i < currMaxDirs ; ++i)
-			free(dirs[i].dirName); 
+			free(dirs[i].dirName);
 		free(dirs->active.listeners);
 		free(dirs->configured.listeners);
 		free(dirs);
