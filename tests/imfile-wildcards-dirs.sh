@@ -16,6 +16,7 @@ sleep 1
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
 	mkdir rsyslog.input.dir$i
+	./msleep 50
 	./inputfilegen -m 1 > rsyslog.input.dir$i/file.logfile
 done
 ls -d rsyslog.input.*

@@ -1627,21 +1627,27 @@ in_setupDirWatch(const int dirIdx)
 
 		hasWildcard = containsGlobWildcard(dirnametrunc);
 		if(hasWildcard) {
-			/* Set NULL Byte on last directory delimiter occurrence,
-			will also remove asterix */
+			/* Set NULL Byte to FIRST wildcard occurrence */
+			psztmp = strchr(dirnametrunc, '*');
+			*psztmp = '\0';
+			/*
+			*	Now set NULL Byte on last directory delimiter occurrence,
+			*	This makes sure that we have the current base path to create a watch for!
+			*/
 			psztmp = strrchr(dirnametrunc, '/');
 			*psztmp = '\0';
 
 			/* Try to add inotify watch again */
 			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
 			if(wd < 0) {
-				DBGPRINTF("imfile: in_setupDirWatch: could not create dir watch for '%s' (wildcard) with error %d\n",
-					dirs[dirIdx].dirName, errno);
+				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard in directory '%s', "
+					"could not create dir watch for '%s' with error %d\n",
+					dirs[dirIdx].dirName, dirnametrunc, errno);
 				goto done;
 			} else {
-				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard at the end of '%s', "
-					"removing and watching parent path instead! \n",
-					dirs[dirIdx].dirName);
+				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard in directory '%s', "
+					"creating watch for base path '%s' instead! \n",
+					dirs[dirIdx].dirName, dirnametrunc);
 			}
 		} else {
 			DBGPRINTF("imfile: in_setupDirWatch: could not create dir watch for '%s' with error %d\n",
@@ -1905,6 +1911,8 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 	int dirnamelen = 0;
 	char* psztmp;
 
+DBGPRINTF("imfile: in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, pszsubdir);
+
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirnamelen = ustrlen(pszrootdir);
 	memcpy(dirnametrunc, pszrootdir, dirnamelen); /* Copy mem */
@@ -1912,8 +1920,13 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 
 	hasWildcard = containsGlobWildcard(dirnametrunc);
 	if(hasWildcard) {
-		/* Set NULL Byte on last directory delimiter occurrence,
-		will also remove asterix */
+		/* Set NULL Byte to FIRST wildcard occurrence */
+		psztmp = strchr(dirnametrunc, '*');
+		*psztmp = '\0';
+		/*
+		*	Now set NULL Byte on last directory delimiter occurrence,
+		*	This makes sure that we have the current base path to create a watch for!
+		*/
 		psztmp = strrchr(dirnametrunc, '/');
 		*psztmp = '\0';
 	}

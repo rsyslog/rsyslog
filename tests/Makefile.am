@@ -1118,11 +1118,12 @@ EXTRA_DIST= \
 	imfile-persist-state-1.sh \
 	imfile-truncate.sh \
 	imfile-wildcards.sh \
-	testsuites/imfile-wildcards.conf \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
 	imfile-wildcards-dirs-multi.sh \
+	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-dirs.conf \
+	testsuites/imfile-wildcards-dirs-multi.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \

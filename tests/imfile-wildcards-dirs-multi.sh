@@ -1,6 +1,6 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
-echo [imfile-wildcards-dirs2.sh]
+echo [imfile-wildcards-multi.sh]
 
 export IMFILEINPUTFILES="10"
 export IMFILEINPUTFILESSTEPS="5"
@@ -11,7 +11,7 @@ export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 # soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
-. $srcdir/diag.sh startup imfile-wildcards-dirs.conf
+. $srcdir/diag.sh startup imfile-wildcards-dirs-multi.conf
 # sleep a little to give rsyslog a chance to begin processing
 sleep 1
 
@@ -22,7 +22,9 @@ do
 	for i in `seq 1 $IMFILEINPUTFILES`;
 	do
 		mkdir rsyslog.input.dir$i
+		./msleep 25
 		mkdir rsyslog.input.dir$i/dir$i
+		./msleep 25
 		./inputfilegen -m 1 > rsyslog.input.dir$i/dir$i/file.logfile
 	done
 	ls -d rsyslog.input.*
