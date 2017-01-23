@@ -10,6 +10,19 @@ Version 8.25.0 [v8-stable] 2017-02-21
   (which then become pretty slow) or not. And, similarly, no flush
   happens when it is not set.
   see also https://github.com/rsyslog/rsyslog/issues/1297
+- bugfix: rsyslog loops on freebsd when trying to write /dev/console
+  Rsyslog 8.23.0 loops on FreeBSD when trying to access a (now revoked)
+  /dev/console file descriptor, as per Alexandre's original bug report [1].
+  The original patch fixes the problem when tryTTYRecover() sees errno 6 ENXIO.
+  Running FreeBSD 10-stable here and getting errno 5 EIO, same as Xavier gets
+  in his 2016 bug report [2].
+  New patch [3] includes errno 5 to tryTTYRecover() in runtime/stream.c and
+  fixes the problem for me, on multiple machines.
+  [1] https://github.com/rsyslog/rsyslog/issues/371
+  [2] https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=211033
+  [3] https://bz-attachments.freebsd.org/attachment.cgi?id=178452
+  closes https://github.com/rsyslog/rsyslog/issues/1351
+  Thanks to Damien Fleuriot for the patch.
 - fix build issues on some platforms (detected on newer Fedora)
 ------------------------------------------------------------------------------
 Version 8.24.0 [v8-stable] 2017-01-10
