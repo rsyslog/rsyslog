@@ -8,6 +8,16 @@ sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev lib
 	libcurl4-gnutls-dev
 sudo apt-get install -qq python-docutils
 
+if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
+	set -ex
+	WANT_MAXMIND=1.2.0
+	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
+	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99" ; sudo make install)
+	set +x
+else
+	sudo apt-get install -qq libmaxminddb-dev
+fi
+
 if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
