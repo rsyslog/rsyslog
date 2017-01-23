@@ -242,13 +242,13 @@ void str_split(char **membuf){
 
 
 BEGINdoAction
-     msg_t *pMsg;
+     smsg_t *pMsg;
      struct json_object *json = NULL;
      struct json_object *keyjson = NULL;
      char *pszValue;
      instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-     pMsg = (msg_t*) ppString[0];
+     pMsg = (smsg_t*) ppString[0];
 
      json = json_object_new_object(); 
 
