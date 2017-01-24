@@ -632,6 +632,7 @@ CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
+		free(inst->pszBindRuleset);
 		free(inst->pszInputName);
 		free(inst->dfltTZ);
 		del = inst;
