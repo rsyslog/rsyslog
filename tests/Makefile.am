@@ -189,6 +189,7 @@ TESTS +=  \
 	rscript_ruleset_call_indirect-basic.sh \
 	rscript_ruleset_call_indirect-var.sh \
 	rscript_ruleset_call_indirect-invld.sh \
+	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
 	rscript_unaffected_reset.sh \
 	rscript_replace_complex.sh \
@@ -229,6 +230,7 @@ TESTS +=  \
 
 if HAVE_VALGRIND
 TESTS +=  \
+	rscript_set_memleak-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
 	failover-basic-vg.sh \
@@ -735,6 +737,8 @@ EXTRA_DIST= \
 	testsuites/rscript_eq.conf \
 	rscript_eq_var.sh \
 	testsuites/rscript_eq_var.conf \
+	rscript_set_memleak-vg.sh \
+	rscript_set_unset_invalid_var.sh \
 	rscript_set_modify.sh \
 	testsuites/rscript_set_modify.conf \
 	testsuites/rscript_unaffected_reset.conf \

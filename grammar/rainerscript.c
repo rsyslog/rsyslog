@@ -3062,6 +3062,19 @@ cnfstmtNew(unsigned s_type)
 	return cnfstmt;
 }
 
+/* This function disables a cnfstmt by setting it to NOP. This is
+ * useful when we detect errors late in the parsing processing, where
+ * we need to return a valid cnfstmt. The optimizer later removes the
+ * NOPs, so all is well.
+ * NOTE: this call assumes that no dynamic data structures have been
+ * allocated. If so, these MUST be freed before calling cnfstmtDisable().
+ */
+static void
+cnfstmtDisable(struct cnfstmt *cnfstmt)
+{
+	cnfstmt->nodetype = S_NOP;
+}
+
 void cnfstmtDestructLst(struct cnfstmt *root);
 
 static void cnfIteratorDestruct(struct cnfitr *itr);
@@ -3166,11 +3179,22 @@ cnfIteratorDestruct(struct cnfitr *itr)
 struct cnfstmt *
 cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset)
 {
+	propid_t propid;
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_SET)) != NULL) {
-		cnfstmt->d.s_set.varname = (uchar*) var;
-		cnfstmt->d.s_set.expr = expr;
-		cnfstmt->d.s_set.force_reset = force_reset;
+		if(propNameToID((uchar *)var, &propid) == RS_RET_OK
+		   && (   propid == PROP_CEE
+		       || propid == PROP_LOCAL_VAR
+		       || propid == PROP_GLOBAL_VAR)
+		   ) {
+			cnfstmt->d.s_set.varname = (uchar*) var;
+			cnfstmt->d.s_set.expr = expr;
+			cnfstmt->d.s_set.force_reset = force_reset;
+		} else {
+			parser_errmsg("invalid variable '%s' in set statement.", var);
+			free(var);
+			cnfstmtDisable(cnfstmt);
+		}
 	}
 	return cnfstmt;
 }
@@ -3254,9 +3278,20 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 struct cnfstmt *
 cnfstmtNewUnset(char *var)
 {
+	propid_t propid;
 	struct cnfstmt* cnfstmt;
 	if((cnfstmt = cnfstmtNew(S_UNSET)) != NULL) {
-		cnfstmt->d.s_unset.varname = (uchar*) var;
+		if(propNameToID((uchar *)var, &propid) == RS_RET_OK
+		   && (   propid == PROP_CEE
+		       || propid == PROP_LOCAL_VAR
+		       || propid == PROP_GLOBAL_VAR)
+		   ) {
+			cnfstmt->d.s_unset.varname = (uchar*) var;
+		} else {
+			parser_errmsg("invalid variable '%s' in unset statement.", var);
+			free(var);
+			cnfstmtDisable(cnfstmt);
+		}
 	}
 	return cnfstmt;
 }
