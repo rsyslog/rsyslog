@@ -12,6 +12,16 @@ Version 8.25.0 [v8-stable] 2017-02-21
   (which then become pretty slow) or not. And, similarly, no flush
   happens when it is not set.
   see also https://github.com/rsyslog/rsyslog/issues/1297
+- bugfix rainerscript: set/unset statement do not check variable name validity
+  Only JSON-based variables can be use with set and unset. Unfortunately,
+  this restriction is not checked. If an invalid variable is given
+  (e.g. $invalid), this is not detected upon config processing on
+  startup. During execution phase, this can lead to a segfault, a
+  memory leak or other types of problems.
+  Thanks to github user mostolog for reporting and helping to analyze
+  this issue.
+  see also https://github.com/rsyslog/rsyslog/issues/1376
+  closes https://github.com/rsyslog/rsyslog/issues/1377
 - bugfix: rsyslog loops on freebsd when trying to write /dev/console
   Rsyslog 8.23.0 loops on FreeBSD when trying to access a (now revoked)
   /dev/console file descriptor, as per Alexandre's original bug report [1].
@@ -25,6 +35,11 @@ Version 8.25.0 [v8-stable] 2017-02-21
   [3] https://bz-attachments.freebsd.org/attachment.cgi?id=178452
   closes https://github.com/rsyslog/rsyslog/issues/1351
   Thanks to Damien Fleuriot for the patch.
+- bugfix imtcp: fix very small (cosmetic) memory leak
+  For each listener, the name of an assigned ruleset is not freed. This
+  is cosmetic, because it is a very small static leak AND it needs to
+  be kept until end of run anyways (and at end of run the OS frees it).
+  However, the leak breaks memleak checks in the testbench.
 - fix build issues on some platforms (detected on newer Fedora)
 ------------------------------------------------------------------------------
 Version 8.24.0 [v8-stable] 2017-01-10
