@@ -127,11 +127,12 @@ Module Parameters
    single: imfile; timeoutGranularity
 .. function:: timeoutGranularity [seconds]
 
-   *Default: 0 (no timeout)*
+   *Default: 1*
 
    *Available since: 8.23.0*
 
-  This sets the interval in which multi-line-read timeouts are checked. Note that
+  This sets the interval in which multi-line-read timeouts are checked.
+  The interval is specified in seconds. Note that
   this establishes a lower limit on the length of the timeout. For example, if
   a timeoutGranularity of 60 seconds is selected and a readTimeout value of 10 seconds
   is used, the timeout is nevertheless only checked every 60 seconds (if there is
