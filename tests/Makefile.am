@@ -478,10 +478,10 @@ TESTS +=  \
 	json_var_case.sh
 endif
 
-#if ENABLE_MMDBLOOKUP
-#TESTS += \
-#    mmdb.sh
-#endif
+if ENABLE_MMDBLOOKUP
+TESTS += \
+    mmdb.sh
+endif
 
 if ENABLE_GNUTLS
 TESTS +=  \
@@ -858,6 +858,7 @@ EXTRA_DIST= \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \
 	mmdb.sh \
+	mmdb.rb \
 	test.mmdb \
 	testsuites/mmdb.conf \
 	incltest.sh \
