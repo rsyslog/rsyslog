@@ -320,7 +320,7 @@ case $1 in
 		;;
    'shutdown-immediate') # shut rsyslogd down without emptying the queue. $2 is the instance.
 		cp rsyslog$2.pid rsyslog$2.pid.save
-		kill `cat rsyslog.pid`
+		kill `cat rsyslog$2.pid`
 		# note: we do not wait for the actual termination!
 		;;
    'kill-immediate') # kill rsyslog unconditionally
