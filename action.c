@@ -1214,6 +1214,11 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 			 */
 			iRet = actionProcessMessage(pThis,
 				&actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
+			if(iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
+			   iRet != RS_RET_OK)
+				--i; /* we need to re-submit */
+			DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n",
+			   pThis->iActionNbr, i,iRet);
 		}
 	}
 finalize_it:
