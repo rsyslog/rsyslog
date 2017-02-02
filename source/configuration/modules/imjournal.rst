@@ -100,6 +100,13 @@ plugin only if there is hard need to do so.**
    Retrieves the trusted systemd parameter, _PID, instead of the user 
    systemd parameter, SYSLOG_PID, which is the default.
 
+-  **IgnoreNonValidStatefile** [**on**/off]
+   
+   When a corrupted statefile is read imjournal ignores the statefile and continues
+   with logging from the beginning of the journal (from its end if IgnorePreviousMessages
+   is on). After PersistStateInterval or when rsyslog is stopped invalid statefile
+   is overwritten with a new valid cursor.
+
 **Caveats/Known Bugs:**
 
 - As stated above, a corrupted systemd journal database can cause major
