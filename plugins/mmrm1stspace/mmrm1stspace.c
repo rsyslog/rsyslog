@@ -145,6 +145,7 @@ CODESTARTdoAction
 			for(i = 1; i < lenMsg; i++) {
 				msg[i-1] = msg[i];
 			}
+			msg[i-1] = '\0';
 			lenMsg -= 1;
 		}
 	}
