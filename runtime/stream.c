@@ -660,9 +660,9 @@ strmDebugOutBuf(const strm_t *const pThis)
 	int strtIdx = pThis->iBufPtr - 50;
 	if(strtIdx < 0)
 		strtIdx = 0;
-	DBGOPRINT((obj_t*) pThis, "strmRead index %zd, max %zd, buf '%.*s'\n",
-		pThis->iBufPtr, pThis->iBufPtrMax, (int) pThis->iBufPtrMax - strtIdx,
-		pThis->pIOBuf+strtIdx);
+	DBGOPRINT((obj_t*) pThis, "strmRead ungetc %d, index %zd, max %zd, buf '%.*s', CURR: '%.*s'\n",
+		pThis->iUngetC, pThis->iBufPtr, pThis->iBufPtrMax, (int) pThis->iBufPtrMax - strtIdx,
+		pThis->pIOBuf+strtIdx, (int) (pThis->iBufPtrMax - pThis->iBufPtr), pThis->pIOBuf+pThis->iBufPtr);
 }
 
 /* logically "read" a character from a file. What actually happens is that

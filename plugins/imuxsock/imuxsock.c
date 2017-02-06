@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1054,7 +1054,7 @@ static rsRetVal readSocket(lstn_t *pLstn)
 #endif
 	iRcvd = recvmsg(pLstn->fd, &msgh, MSG_DONTWAIT);
  
-	DBGPRINTF("Message from UNIX socket: #%d\n", pLstn->fd);
+	DBGPRINTF("Message from UNIX socket: #%d, size %d\n", pLstn->fd, (int) iRcvd);
 	if(iRcvd > 0) {
 		cred = NULL;
 		ts = NULL;

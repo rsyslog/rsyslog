@@ -987,6 +987,8 @@ static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
 	DEFiRet;
 	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
 		NULL, msgConstructForDeserializer, NULL, MsgDeserialize);
+	DBGOPRINT((obj_t*) pThis, "qDeqDisk error %d happened at around offset %lld\n",
+		iRet, (long long) pThis->tVars.disk.pReadDeq->iCurrOffs);
 	RETiRet;
 }
 

@@ -720,6 +720,10 @@ static rsRetVal objDeserializeTrailer(strm_t *pStrm)
 	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 
 finalize_it:
+	if(Debug && iRet != RS_RET_OK) {
+		dbgprintf("objDeserializeTrailer fails with %d\n", iRet);
+	}
+
 	RETiRet;
 }
 
@@ -937,6 +941,12 @@ finalize_it:
 
 	if(pstrID != NULL)
 		rsCStrDestruct(&pstrID);
+
+	if(Debug && iRet != RS_RET_OK) {
+		dbgprintf("objDeserializeWithMethods fails with %d, stream state:\n", iRet);
+		strmDebugOutBuf(pStrm);
+	}
+
 
 	RETiRet;
 }
