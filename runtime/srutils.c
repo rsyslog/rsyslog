@@ -44,6 +44,7 @@
 #include <inttypes.h>
 #include "srUtils.h"
 #include "obj.h"
+#include "errmsg.h"
 
 #if _POSIX_TIMERS <= 0
 #include <sys/time.h>
@@ -220,12 +221,18 @@ again:
                                 if(mkdir((char*)pszWork, mode) == 0) {
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
-						if(chown((char*)pszWork, uid, gid) != 0)
+						if(chown((char*)pszWork, uid, gid) != 0) {
+							char errStr[1024]; /* buffer for strerr() */
+							rs_strerror_r(errno, errStr, sizeof(errStr));
+							LogError(0, RS_RET_DIR_CHOWN_ERROR,
+								"chown for directory '%s' failed: %s",
+								pszWork, errStr);
 							if(bFailOnChownFail)
 								bErr = 1;
 							/* silently ignore if configured
 							 * to do so.
 							 */
+						}
 					}
 				} else {
 					if(errno == EEXIST && iTry == 0) {
