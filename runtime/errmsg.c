@@ -115,7 +115,7 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
  * maps to a specific error event).
  * rgerhards, 2008-06-27
  */
-static void __attribute__((format(printf, 3, 4)))
+void __attribute__((format(printf, 3, 4)))
 LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 {
 	va_list ap;
@@ -144,7 +144,7 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
  * maps to a specific error event).
  * rgerhards, 2008-06-27
  */
-static void __attribute__((format(printf, 4, 5)))
+void __attribute__((format(printf, 4, 5)))
 LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... )
 {
 	va_list ap;
