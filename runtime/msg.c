@@ -1350,6 +1350,11 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
+	if(isProp("pszStrucData")) {
+		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
+		reinitVar(pVar);
+		CHKiRet(objDeserializeProperty(pVar, pStrm));
+	}
 	if(isProp("json")) {
 		tokener = json_tokener_new();
 		pMsg->json = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
@@ -1363,11 +1368,6 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 		pMsg->localvars = json_tokener_parse_ex(tokener, (char*)rsCStrGetSzStrNoNULL(pVar->val.pStr),
 						        cstrLen(pVar->val.pStr));
 		json_tokener_free(tokener);
-		reinitVar(pVar);
-		CHKiRet(objDeserializeProperty(pVar, pStrm));
-	}
-	if(isProp("pszStrucData")) {
-		MsgSetStructuredData(pMsg, (char*) rsCStrGetSzStrNoNULL(pVar->val.pStr));
 		reinitVar(pVar);
 		CHKiRet(objDeserializeProperty(pVar, pStrm));
 	}
@@ -1401,8 +1401,10 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 	 * but on the other hand it works decently AND we will probably replace
 	 * the whole persisted format soon in any case. -- rgerhards, 2012-11-06
 	 */
-	if(!isProp("offMSG"))
+	if(!isProp("offMSG")) {
+		DBGPRINTF("error property: %s\n", rsCStrGetSzStrNoNULL(pVar->pcsName));
 		ABORT_FINALIZE(RS_RET_DS_PROP_SEQ_ERR);
+	}
 	MsgSetMSGoffs(pMsg, pVar->val.num);
 finalize_it:
 	if(pVar != NULL)
