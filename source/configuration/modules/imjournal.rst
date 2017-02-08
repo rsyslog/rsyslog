@@ -52,7 +52,9 @@ plugin only if there is hard need to do so.**
 -  **StateFile** /path/to/file
 
    This is a global setting. It specifies where the state file for
-   persisting journal state is located.
+   persisting journal state is located. If a full path name is given
+   (starting with "/"), that path is used. Otherwise the given name
+   is created inside the working directory.
 
 -  **ratelimit.interval** seconds (default: 600)
 
