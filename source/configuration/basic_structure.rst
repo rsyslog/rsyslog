@@ -186,8 +186,8 @@ Inputs
 ------
 
 Every input requires an input module to be loaded and a listener defined
-for it. Full details can be found inside the `rsyslog
-modules <rsyslog_conf_modules.html>`_ documentation. Once loaded, inputs
+for it. Full details can be found inside the :doc:`rsyslog
+modules <modules/index>` documentation. Once loaded, inputs
 are defined via the **input()** object.
 
 Outputs
