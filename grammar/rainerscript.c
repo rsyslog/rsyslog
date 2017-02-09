@@ -1710,6 +1710,15 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	return x % max;
 }
 
+static unsigned
+ipv42num(char *str)
+{
+
+
+
+	return 3;
+}
+
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
  */
@@ -1813,6 +1822,15 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->datatype = 'S';
 		ret->d.estr = estr;
 		varFreeMembers(&r[0]);
+		break;
+	case CNFFUNC_IPV42NUM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'N';
+		ret->d.n = ipv42num(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -3955,6 +3973,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("cstr", 1, CNFFUNC_CSTR);
 	} else if(FUNC_NAME("cnum")) {
 		GENERATE_FUNC("cnum", 1, CNFFUNC_CNUM);
+	} else if(FUNC_NAME("ip42num")) {
+		GENERATE_FUNC("ip42num", 1, CNFFUNC_IPV42NUM);
 	} else if(FUNC_NAME("re_match")) {
 		GENERATE_FUNC("re_match", 2, CNFFUNC_RE_MATCH);
 	} else if(FUNC_NAME("re_extract")) {
