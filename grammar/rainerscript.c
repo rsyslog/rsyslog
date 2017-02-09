@@ -1704,11 +1704,86 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
 		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
-			"is wider than supported limit of [0 - %d)",
+			"is wider than supported limit of [0 - %d)\n",
 			max, MAX_RANDOM_NUMBER);
 	}
 	return x % max;
 }
+
+static long long
+ipv42num(char *str)
+{
+	unsigned num[4] = {0, 0, 0, 0};
+	long long value = -1;
+	size_t len = strlen(str);
+	int cyc = 0;
+	int prevdot = 0;
+	int startblank = 0;
+	int endblank = 0;
+	DBGPRINTF("rainerscript: (ipv42num) arg: '%s'\n", str);
+	for(unsigned int i = 0 ; i < len ; i++) {
+		switch(str[i]){
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			if(endblank == 1){
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid space(1))\n");
+				goto done;
+			}
+			prevdot = 0;
+			startblank = 0;
+			DBGPRINTF("rainerscript: (ipv42num) cycle: %d\n", cyc);
+			num[cyc] = num[cyc]*10+(str[i]-'0');
+			break;
+		case ' ':
+			prevdot = 0;
+			if(i == 0 || startblank == 1){
+				startblank = 1;
+				break;
+			}
+			else{
+				endblank = 1;
+				break;
+			}
+		case '.':
+			if(endblank == 1){
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (inalid space(2))\n");
+				goto done;
+			}
+			startblank = 0;
+			if(prevdot == 1){
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (two dots after one another)\n");
+				goto done;
+			}
+			prevdot = 1;
+			cyc++;
+			if(cyc > 3){
+				DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (too many dots)\n");
+				goto done;
+			}
+			break;
+		default:
+			DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (invalid charakter)\n");
+			goto done;
+		}
+	}
+	if(cyc != 3){
+		DBGPRINTF("rainerscript: (ipv42num) error: wrong IP-Address format (wrong number of dots)\n");
+		goto done;
+	}
+	value = num[0]*256*256*256+num[1]*256*256+num[2]*256+num[3];
+done:
+	DBGPRINTF("rainerscript: (ipv42num): return value:'%lld'\n",value);
+	return(value);
+}
+
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -1813,6 +1888,15 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->datatype = 'S';
 		ret->d.estr = estr;
 		varFreeMembers(&r[0]);
+		break;
+	case CNFFUNC_IPV42NUM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'N';
+		ret->d.n = ipv42num(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
 		break;
 	case CNFFUNC_CNUM:
 		if(func->expr[0]->nodetype == 'N') {
@@ -3955,6 +4039,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("cstr", 1, CNFFUNC_CSTR);
 	} else if(FUNC_NAME("cnum")) {
 		GENERATE_FUNC("cnum", 1, CNFFUNC_CNUM);
+	} else if(FUNC_NAME("ip42num")) {
+		GENERATE_FUNC("ip42num", 1, CNFFUNC_IPV42NUM);
 	} else if(FUNC_NAME("re_match")) {
 		GENERATE_FUNC("re_match", 2, CNFFUNC_RE_MATCH);
 	} else if(FUNC_NAME("re_extract")) {
