@@ -1704,20 +1704,102 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	long int x = randomNumber();
 	if (max > MAX_RANDOM_NUMBER) {
 		DBGPRINTF("rainerscript: desired random-number range [0 - %lld] "
-			"is wider than supported limit of [0 - %d)",
+			"is wider than supported limit of [0 - %d)\n",
 			max, MAX_RANDOM_NUMBER);
 	}
 	return x % max;
 }
 
-static unsigned
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static uint32_t
 ipv42num(char *str)
 {
-
-
-
-	return 3;
+	DBGPRINTF("JJJJJ: ip42num activated: '%s'\n", str);
+	int num[4] = {0, 0, 0, 0};
+	DBGPRINTF("JJJJJ: num vorher: '%d' '%d' '%d' '%d'\n", num[0], num[1], num[2], num[3]); 
+	int cyc = 0;
+	for(unsigned int i = 0 ; i < strlen(str) ; i++) {
+		DBGPRINTF("JJJJJ: stringausgabe %c\n", str[i]);
+		switch(str[i]){
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			num[cyc] = num[cyc]*10+(str[i]-'0');
+			break;
+		case ' ':
+			break;
+		case '.':
+			cyc++;
+			break;
+		default:
+			DBGPRINTF("JJJJJ: error: wrong IP-Adress format");
+			return 0;
+		}
+	}
+	DBGPRINTF("JJJJJ: num nachher: '%d' '%d' '%d' '%d'\n", num[0], num[1], num[2], num[3]); 
+	uint32_t value = num[0]*256*256*256+num[1]*256*256+num[2]*256+num[3];
+	DBGPRINTF("JJJJJ: value '%" PRIu32 "'\n",value);
+	return(value);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.

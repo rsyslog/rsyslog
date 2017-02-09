@@ -34,8 +34,8 @@
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-#export RSYSLOG_DEBUGLOG="log"
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
 
 #START: ext dependency config

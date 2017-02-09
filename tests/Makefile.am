@@ -178,6 +178,7 @@ TESTS +=  \
 	failover-no-basic.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
+	rscript_ip42num.sh \
 	rscript_field.sh \
 	rscript_stop.sh \
 	rscript_stop2.sh \
@@ -692,6 +693,7 @@ EXTRA_DIST= \
 	testsuites/arrayqueue.conf \
 	rscript_contains.sh \
 	testsuites/rscript_contains.conf \
+	rscript_ip42num.sh \
 	rscript_field.sh \
 	rscript_field-vg.sh \
 	testsuites/rscript_field.conf \
