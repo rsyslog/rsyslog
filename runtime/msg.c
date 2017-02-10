@@ -1407,6 +1407,9 @@ MsgDeserialize(smsg_t * const pMsg, strm_t *pStrm)
 finalize_it:
 	if(pVar != NULL)
 		var.Destruct(&pVar);
+	if(Debug && iRet != RS_RET_OK) {
+		dbgprintf("MsgDeserialize error %d\n", iRet);
+	}
 	RETiRet;
 }
 #undef isProp
