@@ -210,6 +210,7 @@ TESTS +=  \
 	rscript_lt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
+	rscript_num2ipv4.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
@@ -738,6 +739,7 @@ EXTRA_DIST= \
 	rscript_ne.sh \
 	testsuites/rscript_ne.conf \
 	rscript_ne_var.sh \
+	rscript_num2ipv4.sh \
 	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \
