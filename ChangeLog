@@ -14,6 +14,17 @@ Version 8.25.0 [v8-stable] 2017-02-21
 - bugfix: ratelimiter does not work correctly is time is set back
   Thanks to github user hese10 for the patch.
   see also https://github.com/rsyslog/rsyslog/issues/1354
+- bugfix queue subsystem: queue corrupted if certain msg props are used
+  The core issues was in the msg object deserializer, which had the wrong
+  deserialization sequence. That in turn lead to queue corruption issues.
+  Corruption of disk queue (or disk part of DA queue) always happens if
+  the "json" property (message variables) is present and "structured-data"
+  property is also present. This causes rsyslog to serialize to the
+  queue in wrong property sequence, which will lead to error -2308 on
+  deserialization.
+  Seems to be a long-standing bug. Depending on version used, some or
+  all messages in disk queue may be lost.
+  closes https://github.com/rsyslog/rsyslog/issues/1404
 - bugfix: bFlushOnTxEnd == 0 not honored when writing w/o async writer
   If bFlushOnTXEnd is set, we need to flush on transaction end - in
   any case. It is not relevant if this is using background writes
