@@ -97,6 +97,7 @@ TESTS +=  \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown.sh \
+	diskq-rfc5424.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
 	rulesetmultiqueue.sh \
@@ -703,6 +704,7 @@ EXTRA_DIST= \
 	fieldtest.sh \
 	rsf_getenv.sh \
 	testsuites/rsf_getenv.conf \
+	diskq-rfc5424.sh \
 	diskqueue.sh \
 	testsuites/diskqueue.conf \
 	arrayqueue.sh \
