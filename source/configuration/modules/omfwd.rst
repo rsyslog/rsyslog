@@ -46,6 +46,13 @@ Action Parameters
    before the action commend. Note that as of 6.3.6, there is no way to
    specify this within the action itself.
 
+-  **Device** [default none]
+
+   Bind socket to given device (e.g., eth0)
+
+   For Linux with VRF support, the Device option can be used to specify the
+   VRF for the Target address.
+
 -  **TCP\_Framing** "traditional" or "octet-counted" [default traditional]
 
    Framing-Mode to be for forwarding. This affects only TCP-based
@@ -281,7 +288,7 @@ TCP port 10514.
 
 ::
 
-  action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" )
+  action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
 
 Legacy Configuration Directives
 -------------------------------

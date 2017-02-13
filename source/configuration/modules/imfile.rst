@@ -127,11 +127,12 @@ Module Parameters
    single: imfile; timeoutGranularity
 .. function:: timeoutGranularity [seconds]
 
-   *Default: 0 (no timeout)*
+   *Default: 1*
 
    *Available since: 8.23.0*
 
-  This sets the interval in which multi-line-read timeouts are checked. Note that
+  This sets the interval in which multi-line-read timeouts are checked.
+  The interval is specified in seconds. Note that
   this establishes a lower limit on the length of the timeout. For example, if
   a timeoutGranularity of 60 seconds is selected and a readTimeout value of 10 seconds
   is used, the timeout is nevertheless only checked every 60 seconds (if there is
@@ -178,7 +179,7 @@ Input Parameters
    **(Required Parameter)**
    The file being monitored. So far, this must be an absolute name (no
    macros or templates). Note that wildcards are supported at the file
-   name level (see "Wildcards" above for more details).
+   name level (see **WildCards** below for more details).
 
 .. index:: 
    single: imfile; Tag
@@ -416,6 +417,30 @@ Input Parameters
    new log messages generated after the deployment. set **freshstartTail**
    to **on** will discard old logs. Otherwise, there may be vast useless
    message burst on the remote central log receiver
+
+
+WildCards
+---------
+**Before Version: 8.25.0**
+  Wildcards are only supported in the filename part, not in directory names.
+
+* /var/log/\*.log **works**. *
+* /var/log/\*/syslog.log does **not work**. *
+
+
+**Since Version: 8.25.0**
+  Wildcards are supported in filename and pathes which means these samples will work:
+
+* /var/log/\*.log **works**. *
+* /var/log/\*/syslog.log **works**. *
+* /var/log/\*/\*.log **works**. *
+
+
+  All matching files in all matching subfolders will work. 
+  Note that this may derease performance in imfile depending on how 
+  many directories and files are being watched dynamically. 
+
+
 
 Caveats/Known Bugs
 ------------------

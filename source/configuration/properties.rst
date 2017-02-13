@@ -65,6 +65,28 @@ The following message properties exist:
   the "static" part of the tag, as defined by BSD syslogd. For example,
   when TAG is "named[12345]", programname is "named".
 
+  Precisely, the programname is terminated by either (whichever occurs first):
+
+  - end of tag
+  - nonprintable character
+  - ':'
+  - '['
+  - '/'
+
+  The above definition has been taken from the FreeBSD syslogd sources.
+
+  Please note that some applications include slashes in the static part
+  of the tag, e.g. "app/foo[1234]". In this case, programname is "app".
+  If they store an absolute path name like in "/app/foo[1234]", programname
+  will become empty (""). If you need to actually store slashes as
+  part of the programname, you can use the global option
+
+  global(parser.permitSlashInHostname="on")
+
+  to permit this. Then, a syslogtag of "/app/foo[1234]" will result in
+  programname being "/app/foo". Note: this option is available starting at
+  rsyslogd version 8.25.0.
+
 **pri**
   PRI part of the message - undecoded (single value)
 

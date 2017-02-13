@@ -572,13 +572,11 @@ templates that you can use without the need to define it:
    and timezone information. Recommended to be used when sending
    messages to rsyslog 3.12.5 or above.
 -  **RSYSLOG\_SyslogProtocol23Format** - the format specified in IETF's
-   internet-draft ietf-syslog-protocol-23, which is assumed to become
-   the new syslog standard RFC. This format includes several
-   improvements. The rsyslog message parser understands this format, so
-   you can use it together with all relatively recent versions of
-   rsyslog. Other syslogd's may get hopelessly confused if receiving
-   that format, so check before you use it. Note that the format is
-   unlikely to change when the final RFC comes out, but this may happen.
+   internet-draft ietf-syslog-protocol-23, which is very close to the actual
+   syslog standard `RFC5424 <https://tools.ietf.org/html/rfc5424>`_ (we couldn't
+   update this template as things were in production for quite some time when
+   RFC5424 was finally approved). This format includes several improvements.
+   You may use this format with all relatively recent versions of rsyslog or syslogd.
 -  **RSYSLOG\_DebugFormat** - a special format used for troubleshooting
    property problems. This format is meant to be written to a log file.
    Do **not** use for production or remote forwarding.

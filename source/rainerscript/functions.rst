@@ -177,3 +177,11 @@ num2ipv4
    Input is an integer with a value between 0 and 4294967295. The output format
    is '>decimal<.>decimal<.>decimal<.>decimal<' and '-1' if the integer input is invalid
    ot the function encounters a problem.
+
+ipv42num
+--------
+
+   Converts an IPv4-address into an integer and returns the integer. Input is a string;
+   the expected address format may include spaces in the beginning and end, but must not
+   contain any other characters in between (except dots). If the format does include these, the
+   function results in an error and returns -1.

@@ -34,7 +34,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
    the `rsyslog FAQ: "lower bound for queue
    sizes" <http://www.rsyslog.com/lower-bound-for-queue-sizes/>`_.
 -  **queue.dequeuebatchsize** number
-   default 16
+   default 128
 -  **queue.maxdiskspace** number
    The maximum size that all queue files together will use on disk. Note
    that the actual size may be slightly larger than the configured max,

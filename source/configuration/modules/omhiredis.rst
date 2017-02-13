@@ -17,6 +17,11 @@ using the hiredis client library.
 
 - **serverport**
   Port of the Redis server if the server is not listening on the default port.
+  
+- **serverpassword**
+  Password to support authenticated redis database server to push messages 
+  across networks and datacenters. Parameter is optional if not provided 
+  AUTH command wont be sent to the server.
 
 - **mode**
   Mode to run the output action in: "queue" or "publish". If not supplied, the

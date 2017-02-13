@@ -52,7 +52,9 @@ plugin only if there is hard need to do so.**
 -  **StateFile** /path/to/file
 
    This is a global setting. It specifies where the state file for
-   persisting journal state is located.
+   persisting journal state is located. If a full path name is given
+   (starting with "/"), that path is used. Otherwise the given name
+   is created inside the working directory.
 
 -  **ratelimit.interval** seconds (default: 600)
 
@@ -99,6 +101,13 @@ plugin only if there is hard need to do so.**
 
    Retrieves the trusted systemd parameter, _PID, instead of the user 
    systemd parameter, SYSLOG_PID, which is the default.
+
+-  **IgnoreNonValidStatefile** [**on**/off]
+   
+   When a corrupted statefile is read imjournal ignores the statefile and continues
+   with logging from the beginning of the journal (from its end if IgnorePreviousMessages
+   is on). After PersistStateInterval or when rsyslog is stopped invalid statefile
+   is overwritten with a new valid cursor.
 
 **Caveats/Known Bugs:**
 

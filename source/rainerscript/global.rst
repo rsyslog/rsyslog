@@ -153,6 +153,19 @@ The following parameters can be set:
   It is highly suggested to change this setting to "off" only if you
   know exactly why you are doing this.
 
+- **parser.permitSlashInHostname** [on/off] available in 8.25.0+
+
+  **Default:** off
+
+  This controls whether slashes in the "programname" property are
+  permitted or not. This property bases on a BSD concept, and by
+  BSD syslogd sources, slashes are NOT permitted inside the program
+  name. However, some Linux tools (including most importantly the
+  journal) store slashes as part of the program name inside the
+  syslogtag. In those cases, the programname is truncated at the
+  first slash. If this setting is changed to "on", slashes are
+  permitted and will not terminate programname parsing.
+
 - **senders.keepTrack** [on/off] available 8.17.0+
 
   **Default:** off
