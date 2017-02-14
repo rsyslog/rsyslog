@@ -1276,6 +1276,13 @@ str2num(es_str_t *s, int *bSuccess)
 	int64_t num = 0;
 	const uchar *const c = es_getBufAddr(s);
 
+	if(s->lenStr == 0) {
+		DBGPRINTF("rainerscript: str2num: strlen == 0; invalid input (no string)\n");
+		if(bSuccess != NULL) {
+			*bSuccess = 0;
+		}
+		goto done;
+	}
 	if(c[0] == '-') {
 		neg = -1;
 		i = -1;
@@ -1290,6 +1297,7 @@ str2num(es_str_t *s, int *bSuccess)
 	num *= neg;
 	if(bSuccess != NULL)
 		*bSuccess = (i == s->lenStr) ? 1 : 0;
+done:
 	return num;
 }
 
