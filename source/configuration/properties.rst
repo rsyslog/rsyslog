@@ -81,7 +81,7 @@ The following message properties exist:
   will become empty (""). If you need to actually store slashes as
   part of the programname, you can use the global option
 
-  global(parser.permitSlashInHostname="on")
+  global(parser.permitSlashInProgramName="on")
 
   to permit this. Then, a syslogtag of "/app/foo[1234]" will result in
   programname being "/app/foo". Note: this option is available starting at
