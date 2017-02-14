@@ -33,6 +33,12 @@ Version 8.25.0 [v8-stable] 2017-02-21
   (which then become pretty slow) or not. And, similarly, no flush
   happens when it is not set.
   see also https://github.com/rsyslog/rsyslog/issues/1297
+- bugfix core: str2num mishandling empty strings
+  If str2num() receives an empty string, misadressing happens.
+  This theoretically can lead to a segfault if a RainerScript function
+  is used inside the configuration which calls code that could trigger
+  this bug.
+  closes https://github.com/rsyslog/rsyslog/issues/1412
 - bugfix rainerscript: set/unset statement do not check variable name validity
   Only JSON-based variables can be use with set and unset. Unfortunately,
   this restriction is not checked. If an invalid variable is given
