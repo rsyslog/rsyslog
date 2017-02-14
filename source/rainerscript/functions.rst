@@ -169,6 +169,14 @@ lookup(table_name_litteral_string, key)
    server or the department or remote office it is located in.
 
    **Read more about it here** :doc:`Lookup Tables<../configuration/lookup_tables>`
+   
+num2ipv4
+--------
+
+   Converts an integer into an IPv4-address and returns the address as string.
+   Input is an integer with a value between 0 and 4294967295. The output format
+   is '>decimal<.>decimal<.>decimal<.>decimal<' and '-1' if the integer input is invalid
+   ot the function encounters a problem.
 
 ipv42num
 --------
