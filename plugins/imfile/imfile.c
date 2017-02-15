@@ -818,6 +818,7 @@ checkInstance(instanceConf_t *inst)
 	int r;
 	int eno;
 	char errStr[512];
+	sbool hasWildcard;
 	DEFiRet;
 
 	/* this is primarily for the clang static analyzer, but also
@@ -825,16 +826,19 @@ checkInstance(instanceConf_t *inst)
 	 */
 	if(inst->pszFileName == NULL)
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-
+	
 	i = getBasename(basen, inst->pszFileName);
 	if (i == -1) {
 		errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile: file path '%s' does not include a basename component",
 			inst->pszFileName);
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
-	
+
 	memcpy(dirn, inst->pszFileName, i); /* do not copy slash */
 	dirn[i] = '\0';
+
+	DBGPRINTF("imfile: checking instance for directory [%s]\n", dirn);
+
 	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
 	CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
 
@@ -842,6 +846,17 @@ checkInstance(instanceConf_t *inst)
 		dirn[0] = '/';
 		dirn[1] = '\0';
 	}
+
+	/* Check for Wildcards in FileBaseName.
+	* If there is one, we need to truncate before the wildcard in order
+	* to proceed further tests.
+	*/
+	hasWildcard = containsGlobWildcard(dirn);
+	if(hasWildcard) {
+		DBGPRINTF("imfile: wildcard in dirname, do not check if dir exists for [%s]\n", dirn);
+		FINALIZE
+	}
+
 	r = stat(dirn, &sb);
 	if(r != 0)  {
 		eno = errno;
@@ -1629,13 +1644,23 @@ in_setupDirWatch(const int dirIdx)
 		if(hasWildcard) {
 			/* Set NULL Byte to FIRST wildcard occurrence */
 			psztmp = strchr(dirnametrunc, '*');
-			*psztmp = '\0';
-			/*
-			*	Now set NULL Byte on last directory delimiter occurrence,
-			*	This makes sure that we have the current base path to create a watch for!
-			*/
-			psztmp = strrchr(dirnametrunc, '/');
-			*psztmp = '\0';
+			if (psztmp != NULL) {
+				*psztmp = '\0';
+				/*	Now set NULL Byte on last directory delimiter occurrence,
+				*	This makes sure that we have the current base path to create a watch for! */
+				psztmp = strrchr(dirnametrunc, '/');
+				if (psztmp != NULL) {
+					*psztmp = '\0';
+				} else {
+					DBGPRINTF("imfile: in_setupDirWatch: unexpected error #2 creating truncated directorynamefor '%s'\n",
+						dirs[dirIdx].dirName);
+					goto done;
+				}
+			} else {
+				DBGPRINTF("imfile: in_setupDirWatch: unexpected error #1 creating truncated directorynamefor '%s'\n",
+					dirs[dirIdx].dirName);
+				goto done;
+			}
 
 			/* Try to add inotify watch again */
 			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
@@ -1911,7 +1936,7 @@ in_handleDirGetFullDir(char* pszoutput, char* pszrootdir, char* pszsubdir)
 	int dirnamelen = 0;
 	char* psztmp;
 
-DBGPRINTF("imfile: in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, pszsubdir);
+	DBGPRINTF("imfile: in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, pszsubdir);
 
 	/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 	dirnamelen = ustrlen(pszrootdir);
@@ -1922,17 +1947,28 @@ DBGPRINTF("imfile: in_handleDirGetFullDir root='%s' sub='%s' \n", pszrootdir, ps
 	if(hasWildcard) {
 		/* Set NULL Byte to FIRST wildcard occurrence */
 		psztmp = strchr(dirnametrunc, '*');
-		*psztmp = '\0';
-		/*
-		*	Now set NULL Byte on last directory delimiter occurrence,
-		*	This makes sure that we have the current base path to create a watch for!
-		*/
-		psztmp = strrchr(dirnametrunc, '/');
-		*psztmp = '\0';
+		if (psztmp != NULL) {
+			*psztmp = '\0';
+			/*	Now set NULL Byte on last directory delimiter occurrence,
+			*	This makes sure that we have the current base path to create a watch for! */
+			psztmp = strrchr(dirnametrunc, '/');
+			if (psztmp != NULL) {
+				*psztmp = '\0';
+			} else {
+				DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #2 creating truncated directoryname for '%s'\n",
+					dirnametrunc);
+				goto done;
+			}
+		} else {
+			DBGPRINTF("imfile: in_handleDirGetFullDir: unexpected error #1 creating truncated directoryname for '%s'\n",
+				dirnametrunc);
+			goto done;
+		}
 	}
 
 	/* Combine directory and new subdir */
 	snprintf(pszoutput, MAXFNAME, "%s/%s", dirnametrunc, pszsubdir);
+done:	return;
 }
 
 /* inotify told us that a file's wd was closed. We now need to remove
