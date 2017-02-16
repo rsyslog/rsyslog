@@ -464,9 +464,15 @@ SanitizeMsg(smsg_t *pMsg)
 	if(maxDest < sizeof(szSanBuf))
 		pDst = szSanBuf;
 	else 
-		CHKmalloc(pDst = MALLOC(iMaxLine + 1));
+		CHKmalloc(pDst = MALLOC(maxDest + 1));
 	if(iSrc > 0) {
 		iSrc--; /* go back to where everything is OK */
+		if(iSrc > maxDest) {
+			DBGPRINTF("parser.Sanitize: have oversize index %zd, "
+				"max %zd - corrected, but should not happen\n",
+				iSrc, maxDest);
+			iSrc = maxDest;
+		}
 		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
 	}
 	iDst = iSrc;
