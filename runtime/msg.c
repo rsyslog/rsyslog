@@ -2818,6 +2818,16 @@ void MsgSetMSGoffs(smsg_t * const pMsg, short offs)
 }
 
 
+static void
+setLenRawMsg(smsg_t *const pMsg, int lenRawMsg)
+{
+	if(lenRawMsg > glblGetMaxLine()) {
+		lenRawMsg = glblGetMaxLine();
+		//TODO: error message
+	}
+	pMsg->iLenRawMsg = lenRawMsg;
+}
+
 /* replace the MSG part of a message. The update actually takes place inside
  * rawmsg. 
  * There are two cases: either the new message will be larger than the new msg
@@ -2851,7 +2861,7 @@ rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG)
 	if(lenMSG > 0)
 		memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
 	pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
-	pThis->iLenRawMsg = lenNew;
+	setLenRawMsg(pThis, lenNew);
 	pThis->iLenMSG = lenMSG;
 
 finalize_it:
@@ -2871,14 +2881,14 @@ void MsgSetRawMsg(smsg_t *pThis, const char* pszRawMsg, size_t lenMsg)
 		free(pThis->pszRawMsg);
 
 	deltaSize = lenMsg - pThis->iLenRawMsg;
-	pThis->iLenRawMsg = lenMsg;
+	setLenRawMsg(pThis, lenMsg);
 	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
 		pThis->pszRawMsg = pThis->szRawMsg;
 	} else if((pThis->pszRawMsg = (uchar*) MALLOC(pThis->iLenRawMsg + 1)) == NULL) {
 		/* truncate message, better than completely loosing it... */
 		pThis->pszRawMsg = pThis->szRawMsg;
-		pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
+		setLenRawMsg(pThis, CONF_RAWMSG_BUFSIZE);
 	}
 
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);

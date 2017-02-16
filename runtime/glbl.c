@@ -198,8 +198,8 @@ static struct cnfparamvals *cnfparamvals = NULL;
  * each time a new config load begins (TODO: create interface?)
  */
 
-static int
-GetMaxLine(void)
+int
+glblGetMaxLine(void)
 {
 	return(iMaxLine);
 }
@@ -733,7 +733,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDefPFFamily = getDefPFFamily;
 	pIf->SetDisableDNS = setDisableDNS;
 	pIf->GetDisableDNS = getDisableDNS;
-	pIf->GetMaxLine = GetMaxLine;
+	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
