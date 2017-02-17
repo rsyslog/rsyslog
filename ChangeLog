@@ -16,6 +16,9 @@ Version 8.25.0 [v8-stable] 2017-02-21
 - bugfix: ratelimiter does not work correctly is time is set back
   Thanks to github user hese10 for the patch.
   see also https://github.com/rsyslog/rsyslog/issues/1354
+- core: fix potential message loss in old-style transactional interface
+  This was experienced for example by omrelp. Could loose one message per
+  broken connection, iff that message did not make it to the unacked list.
 - bugfix queue subsystem: queue corrupted if certain msg props are used
   The core issues was in the msg object deserializer, which had the wrong
   deserialization sequence. That in turn lead to queue corruption issues.
