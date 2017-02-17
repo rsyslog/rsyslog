@@ -51,16 +51,22 @@ The following parameters can be set:
   **This parameter only has an effect if general debugging is enabled.**
 
 - **processInternalMessages** binary (on/off)
-
-  This tell rsyslog if it shall process internal messages itself. This is
-  the default mode of operations ("on") and usually the best. However, if
-  this (instance) of rsyslog is not the main instance and there is another
-  main logging system, rsyslog internal messages will not be inserted into
-  the main instance's syslog stream. To do this, set the parameter to "off",
-  in which case rsyslog will send messages to the system log sink (and if
-  it is the only instance, receive them back from there). This also works
-  with systemd journal and will make rsyslog messages show up in the
+  
+  This tells rsyslog if it shall process internal messages itself. The
+  default mode of operations ("off") makes rsyslog send messages to the 
+  system log sink (and if it is the only instance, receive them back from there). 
+  This also works with systemd journal and will make rsyslog messages show up in the
   systemd status control information. 
+  
+  If this (instance) of rsyslog is not the main instance and there is another
+  main logging system, rsyslog internal messages will be inserted into
+  the main instance's syslog stream. In this case, setting to ("on") will 
+  let you receive the internal messages in the instance they originate from.
+  
+  Note that earlier versions of rsyslog worked the opposite way. More 
+  information about the change can be found in `rsyslog-error-reporting-improved <http://www.rsyslog.com/rsyslog-error-reporting-improved>`_. 
+  
+  
 
 - **stdlog.channelspec**
 
