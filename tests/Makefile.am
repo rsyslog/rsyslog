@@ -512,6 +512,7 @@ TESTS += sndrcv_relp.sh \
          sndrcv_relp_tls.sh \
          sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
+	 imrelp-oversize-cc.sh \
 	 imrelp-manyconn.sh
 endif
 
@@ -1008,6 +1009,7 @@ EXTRA_DIST= \
 	testsuites/sndrcv_sender.conf \
 	testsuites/sndrcv_rcvr.conf \
 	imrelp-basic.sh \
+	imrelp-oversize-cc.sh \
 	imrelp-manyconn.sh \
 	sndrcv_relp.sh \
 	testsuites/sndrcv_relp_sender.conf \
