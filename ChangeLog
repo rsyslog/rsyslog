@@ -1,6 +1,8 @@
 ----------------------------------------------------------------------
-Version 1.2.13 - 2016-??-??
+Version 1.2.13 - 2017-02-20
 - make build under BSD
+- bugfix: duplicated lines after server reconnect
+  Thanks to Hervé for the patch.
 ----------------------------------------------------------------------
 Version 1.2.12 - 2016-07-07
 - API enhancement: permit to set connection timeout
