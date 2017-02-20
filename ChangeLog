@@ -30,6 +30,17 @@ Version 8.25.0 [v8-stable] 2017-02-21
   Seems to be a long-standing bug. Depending on version used, some or
   all messages in disk queue may be lost.
   closes https://github.com/rsyslog/rsyslog/issues/1404
+- bugfix imjournal: fixed situation when time goes backwards
+  This is resolving the situation when system is after reboot and
+  boot_id doesn't match so cursor pointing into "future".
+  Usually sd_journal_next jump to head of journal due to journal
+  aproximation, but when system time goes backwards and cursor is
+  still invalid, rsyslog stops logging.
+  We use sd_journal_get_cursor to validate our cursor.
+  When cursor is invalid we are trying to jump to the head of journal
+  This problem with time should not affect persistent journal,
+  but if cursor has been intentionally compromised it could stop
+  logging even with persistent journal.
 - bugfix: bFlushOnTxEnd == 0 not honored when writing w/o async writer
   If bFlushOnTXEnd is set, we need to flush on transaction end - in
   any case. It is not relevant if this is using background writes
