@@ -47,6 +47,7 @@
  *      each inidividual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
+ * -Q   if extra data is being used, replace the last character with the -Q argument
  * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain
  *      Note: UDP supports a single target port, only
  * -W	wait time between sending batches of messages, in microseconds (Default: 0)
@@ -64,7 +65,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -175,6 +176,7 @@ static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
 static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
 static int octateCountFramed = 0;
+static int extraDataLastChar = -1;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
@@ -498,6 +500,8 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 			else
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);
+			if(extraDataLastChar)
+				extraData[edLen-1] = extraDataLastChar;
 			extraData[edLen] = '\0';
 			if(useRFC5424Format) {
 				*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
@@ -1022,7 +1026,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:Ov")) != -1) {
+	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:Q:yYz:Z:j:Ov")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1088,6 +1092,12 @@ int main(int argc, char *argv[])
 		case 'X':	bStatsRecords = 1;
 				break;
 		case 'e':	bCSVoutput = 1;
+				break;
+		case 'Q':	extraDataLastChar = atoi(optarg);
+				if(extraDataLastChar <= 1 || extraDataLastChar >= 255) {
+					fprintf(stderr, "-Q parameter out of range, must be in [1..255]\n");
+					exit(1);
+				}
 				break;
 		case 'T':	if(!strcmp(optarg, "udp")) {
 					transport = TP_UDP;
