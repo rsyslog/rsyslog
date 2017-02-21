@@ -484,6 +484,7 @@ operation not carried out */
 	RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
 	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
 	RS_RET_DIR_CHOWN_ERROR = -2437, /**< error during chown() */
+	RS_RET_ENQ_WAIT_NOT_PERMITTED = -2438, /*<< msg enque failed due to eFLOWCTL_NEVER_DELAY */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
