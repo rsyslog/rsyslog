@@ -113,7 +113,7 @@ CODESTARTsetModCnf
 	}
 
 	if(Debug) {
-		dbgprintf("module (global) param blk for imuxsock:\n");
+		dbgprintf("module (global) param blk for immark:\n");
 		cnfparamsPrint(&modpblk, pvals);
 	}
 
@@ -123,7 +123,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "interval")) {
 			loadModConf->iMarkMessagePeriod = (int) pvals[i].val.d.n;
 		} else {
-			dbgprintf("imuxsock: program error, non-handled "
+			dbgprintf("immark: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
 	}
