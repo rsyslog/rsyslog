@@ -885,11 +885,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 	pMsg->msgFlags  = flags;
 	msgSetPRI(pMsg, pri);
 
-	if(bHaveMainQueue == 0) { /* not yet in queued mode */
-		iminternalAddMsg(pMsg);
-	} else {
-		logmsgInternal_doWrite(pMsg);
-	}
+	iminternalAddMsg(pMsg);
 finalize_it:
 	RETiRet;
 }
@@ -1710,10 +1706,9 @@ mainloop(void)
 	time_t tTime;
 
 	BEGINfunc
-	/* first check if we have any internal messages queued and spit them out. */
-	processImInternal();
 
-	while(!bFinished){
+	do {
+		processImInternal();
 		wait_timeout();
 		if(bChildDied) {
 			pid_t child;
@@ -1741,7 +1736,7 @@ mainloop(void)
 			bHadHUP = 0;
 		}
 
-	}
+	} while(!bFinished); /* end do ... while() */
 	ENDfunc
 }
 
