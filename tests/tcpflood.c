@@ -377,6 +377,11 @@ int openConnections(void)
 				}
 				numConnections = i;
 				printf("continuing with %d connections.\n", numConnections);
+				if(numConnections < 1) {
+					fprintf(stderr, "tcpflood could not open at least one "
+						"connection, error-terminating\n");
+					exit(1);
+				}
 				break;
 			}
 			return 1;

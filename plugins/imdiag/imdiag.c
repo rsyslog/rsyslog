@@ -315,6 +315,7 @@ waitMainQEmpty(tcps_sess_t *pSess)
 	DEFiRet;
 
 	while(1) {
+		processImInternal();
 		if(iOverallQueueSize == 0)
 			++nempty;
 		else

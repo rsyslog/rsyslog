@@ -6,7 +6,7 @@
  * 
  * File begun on 2007-08-03 by RGerhards
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -30,12 +30,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <sys/types.h>
+#include <signal.h>
 
 #include "syslogd.h"
 #include "linkedlist.h"
 #include "iminternal.h"
 
 static linkedList_t llMsgs;
+static pthread_mutex_t mutList = PTHREAD_MUTEX_INITIALIZER;
 
 
 /* destructs an iminternal object
@@ -80,19 +84,46 @@ finalize_it:
  * Note: the pMsg reference counter is not incremented. Consequently,
  * the caller must NOT decrement it. The caller actually hands over
  * full ownership of the pMsg object.
- * The interface of this function is modelled after syslogd/logmsg(),
- * for which it is an "replacement".
  */
 rsRetVal iminternalAddMsg(smsg_t *pMsg)
 {
 	DEFiRet;
-	iminternal_t *pThis;
+	iminternal_t *pThis = NULL;
+	struct timespec to;
+	int r;
+	int is_locked = 0;
 
+	/* we guard against deadlock, so we can guarantee rsyslog will never
+	 * block due to internal messages. The 1 second timeout should be
+	 * sufficient under all circumstances.
+	 */
+	to.tv_sec = time(NULL) + 1;
+	to.tv_nsec = 0;
+	r = pthread_mutex_timedlock(&mutList, &to);
+	is_locked = 1;
+	if(r != 0) {
+		dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n",
+			r, getMSG(pMsg));
+		/* the message is lost, nothing we can do against this! */
+		msgDestruct(&pMsg);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	CHKiRet(iminternalConstruct(&pThis));
 	pThis->pMsg = pMsg;
 	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
 
+	/* awake mainloop to emit message ASAP */
+	pthread_mutex_unlock(&mutList);
+	is_locked = 0;
+	if(bHaveMainQueue) {
+		dbgprintf("signaling new internal message via SIGTTOU\n");
+		kill(glblGetOurPid(), SIGTTOU);
+	}
+
 finalize_it:
+	if(is_locked) {
+		pthread_mutex_unlock(&mutList);
+	}
 	if(iRet != RS_RET_OK) {
 		dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
 		if(pThis != NULL)
@@ -113,6 +144,7 @@ rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 	iminternal_t *pThis;
 	linkedListCookie_t llCookie = NULL;
 
+	pthread_mutex_lock(&mutList);
 	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
 	*ppMsg = pThis->pMsg;
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
@@ -124,6 +156,7 @@ rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 	}
 
 finalize_it:
+	pthread_mutex_unlock(&mutList);
 	RETiRet;
 }
 
@@ -133,7 +166,10 @@ finalize_it:
  */
 rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
 {
-	return llGetNumElts(&llMsgs, pbHaveOne);
+	pthread_mutex_lock(&mutList);
+	const rsRetVal iRet = llGetNumElts(&llMsgs, pbHaveOne);
+	pthread_mutex_unlock(&mutList);
+	return iRet;
 }
 
 
