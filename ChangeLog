@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
+  When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
+  or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
+  Thanks to Radovan Sroka for the patch.
 - bugfix: immark emitted error messages with text "imuxsock"
   Thanks to Chris Pilkington for the patch.
 - bugfix tcpflood: build failed if RELP was disabled
