@@ -335,12 +335,15 @@ CODESTARTparse
 			bufParseTAG[i++] = ':';
 		}
 		else if (pInst->bForceTagEndingByColon) {
-		        /* Tag need to be ended by a colon or it's not a tag but the
-		         * begin of the message
-		         */
-		        p2parse -= ( i + 1 );
-		        lenMsg += ( i + 1 );
-		        i = 0;
+			/* Tag need to be ended by a colon or it's not a tag but the
+			 * begin of the message
+			 */
+			p2parse -= ( i + 1 );
+			lenMsg += ( i + 1 );
+			i = 0;
+			/* Default TAG is dash (without ':')
+			 */
+			bufParseTAG[i++] = '-';
 		}
 
 		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
