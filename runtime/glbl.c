@@ -1076,11 +1076,13 @@ finalize_it:
 /* This processes the "regular" parameters which are to be set after the
  * config has been fully loaded.
  */
-void
+rsRetVal
 glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
+	DEFiRet;
+	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
@@ -1210,7 +1212,7 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
-finalize_it:	return;
+finalize_it:	RETiRet;
 }
 
 
