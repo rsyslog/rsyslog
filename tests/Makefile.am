@@ -85,6 +85,7 @@ TESTS +=  \
 	pmrfc3164-AtSignsInHostname.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164-defaultTag.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
@@ -601,6 +602,7 @@ EXTRA_DIST= \
 	pmrfc3164-AtSignsInHostname.sh \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164-defaultTag.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-unloadmodules.sh \
