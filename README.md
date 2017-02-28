@@ -74,7 +74,7 @@ Libraries in question are at least: libestr, liblognorm, libfastjson.
 
 Needed packages to build with omhiredis support:
 ```
-apt-get update && apt-get install -y build-essential pkg-config libestr-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt20-dev liblogging-stdlog-dev libhiredis-dev
+apt-get update && apt-get install -y build-essential pkg-config libestr-dev libfastjson-dev zlib1g-dev uuid-dev libgcrypt20-dev liblogging-stdlog-dev libhiredis-dev uuid-dev libgcrypt11-dev liblogging-stdlog-dev flex bison
 ```
 
 Aditional packages for other modules:
