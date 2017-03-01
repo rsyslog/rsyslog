@@ -987,6 +987,8 @@ glblProcessCnf(struct cnfobj *o)
 #else
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			/* we need to re-open with the new channel */
+			stdlog_close(stdlog_hdl);
 			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
 					(char*) stdlog_chanspec);
 #endif
