@@ -38,6 +38,7 @@ TESTS +=  \
 	glbl_setenv.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
+	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
@@ -757,6 +758,7 @@ EXTRA_DIST= \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
+	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
