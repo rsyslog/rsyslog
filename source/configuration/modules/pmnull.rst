@@ -37,25 +37,31 @@ In this example messages are received through imtcp on port 13514. The
 ruleset uses the parser pmnull which has the parameters tag, syslogfacility
 and syslogseverity given.
 
-:: 
-   module(load="imtcp")
-   module(load="pmnull")
-   input(type="imtcp" port="13514" ruleset="ruleset")
-   parser(name="custom.pmnull" type="pmnull" tag="mytag" syslogfacility="3"
-   syslogseverity="1")
-   ruleset(name="ruleset" parser=["custom.pmnull", "rsyslog.pmnull"]) {
-   action(type="omfile" file="rsyslog.out.log")
-   }
+::
+
+  module(load="imtcp")
+  module(load="pmnull")
+
+  input(type="imtcp" port="13514" ruleset="ruleset")
+  parser(name="custom.pmnull" type="pmnull" tag="mytag" syslogfacility="3"
+  	 syslogseverity="1")
+
+  ruleset(name="ruleset" parser=["custom.pmnull", "rsyslog.pmnull"]) {
+  	action(type="omfile" file="rsyslog.out.log")
+  }
 
 
 In this example the ruleset uses the parser pmnull with the default parameters
 because no specifics were given.
 
 ::
-   module(load="imtcp")
-   module(load="pmnull")
-   input(type="imtcp" port="13514" ruleset="ruleset")
-   parser(name="custom.pmnull" type="pmnull")
-   ruleset(name="ruleset" parser="custom.pmnull") {
-   action(type="omfile" file="rsyslog.out.log")
-   }
+
+  module(load="imtcp")
+  module(load="pmnull")
+
+  input(type="imtcp" port="13514" ruleset="ruleset")
+  parser(name="custom.pmnull" type="pmnull")
+
+  ruleset(name="ruleset" parser="custom.pmnull") {
+  	action(type="omfile" file="rsyslog.out.log")
+  }
