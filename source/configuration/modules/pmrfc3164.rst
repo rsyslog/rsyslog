@@ -32,6 +32,37 @@ Parser Parameters
    Syslog-ng puts the various relay hosts via slashes into the hostname
    field.
 
+.. function:: permit.AtSignsInHostname <boolean>
+
+   **Default**: off
+
+   Available since: 8.25.0
+
+   This setting tells the parser that hostnames may contain at-signs. This
+   is useful when messages are relayed from a syslog-ng server in rfc3164
+   format. The hostname field sent by syslog-ng may be prefixed by the source
+   name followed by an at-sign character.
+
+.. function:: force.tagEndingByColon <boolean>
+
+   **Default**: off
+
+   Available since: 8.25.0
+
+   This setting tells the parser that tag need to be ending by colon to be
+   valid.  In others case, the tag is set to dash ("-") without changing
+   message.
+
+.. function:: remove.msgFirstSpace <boolean>
+
+   **Default**: off
+
+   Available since: 8.25.0
+
+   rfc3164 tell message is directly after tag including first white space.
+   This option tell to remove the first white space in message just after
+   reading. It make rfc3164 & rfc5424 syslog messages working in a better way.
+
 .. function:: detect.YearAfterTimestamp <boolean>
 
    **Default**: off
