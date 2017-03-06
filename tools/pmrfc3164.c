@@ -66,7 +66,10 @@ static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - p
 static struct cnfparamdescr parserpdescr[] = {
 	{ "detect.yearaftertimestamp", eCmdHdlrBinary, 0 },
 	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 },
-	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 }
+	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 },
+	{ "permit.atsignsinhostname", eCmdHdlrBinary, 0 },
+	{ "force.tagendingbycolon", eCmdHdlrBinary, 0},
+	{ "remove.msgfirstspace", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk parserpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -78,6 +81,9 @@ struct instanceConf_s {
 	int bDetectYearAfterTimestamp;
 	int bPermitSquareBracketsInHostname;
 	int bPermitSlashesInHostname;
+	int bPermitAtSignsInHostname;
+	int bForceTagEndingByColon;
+	int bRemoveMsgFirstSpace;
 };
 
 
@@ -102,6 +108,9 @@ createInstance(instanceConf_t **pinst)
 	inst->bDetectYearAfterTimestamp = 0;
 	inst->bPermitSquareBracketsInHostname = 0;
 	inst->bPermitSlashesInHostname = 0;
+	inst->bPermitAtSignsInHostname = 0;
+	inst->bForceTagEndingByColon = 0;
+	inst->bRemoveMsgFirstSpace = 0;
 	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
 	*pinst = inst;
 finalize_it:
@@ -138,6 +147,12 @@ CODESTARTnewParserInst
 			inst->bPermitSquareBracketsInHostname = (int) pvals[i].val.d.n;
 		} else if(!strcmp(parserpblk.descr[i].name, "permit.slashesinhostname")) {
 			inst->bPermitSlashesInHostname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "permit.atsignsinhostname")) {
+			inst->bPermitAtSignsInHostname = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "force.tagendingbycolon")) {
+			inst->bForceTagEndingByColon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(parserpblk.descr[i].name, "remove.msgfirstspace")) {
+			inst->bRemoveMsgFirstSpace = (int) pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
 			  "param '%s'\n", parserpblk.descr[i].name);
@@ -251,6 +266,7 @@ CODESTARTparse
 			        && (isalnum(p2parse[i]) || p2parse[i] == '.'
 					|| p2parse[i] == '_' || p2parse[i] == '-'
 					|| (p2parse[i] == ']' && bHadSBracket)
+					|| (p2parse[i] == '@' && pInst->bPermitAtSignsInHostname)
 					|| (p2parse[i] == '/' && pInst->bPermitSlashesInHostname) )
 				&& i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
@@ -318,6 +334,17 @@ CODESTARTparse
 			--lenMsg;
 			bufParseTAG[i++] = ':';
 		}
+		else if (pInst->bForceTagEndingByColon) {
+			/* Tag need to be ended by a colon or it's not a tag but the
+			 * begin of the message
+			 */
+			p2parse -= ( i + 1 );
+			lenMsg += ( i + 1 );
+			i = 0;
+			/* Default TAG is dash (without ':')
+			 */
+			bufParseTAG[i++] = '-';
+		}
 
 		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
 		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
@@ -333,6 +360,12 @@ CODESTARTparse
 	}
 
 finalize_it:
+	if (pInst->bRemoveMsgFirstSpace && *p2parse == ' ') {
+		/* Bypass first space found in MSG part
+		 */
+	        p2parse++;
+	        lenMsg--;
+	}
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 ENDparse2
 
