@@ -1148,6 +1148,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	const char *const ci_env = getenv("CI");
+	if(ci_env != NULL && !strcmp(ci_env, "true")) {
+		bSilent = 1;	/* auto-apply silent option during CI runs */
+	}
+
 	if(bStatsRecords && waittime) {
 		fprintf(stderr, "warning: generating performance stats and using a waittime "
 				"is somewhat contradictory!\n");
