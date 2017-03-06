@@ -5,6 +5,10 @@ Version 8.26.0 [v8-stable] 2017-04-04
   - permit to use at-sign in host names
   - permit to require tag to end in colon
   Thanks to github user bdolez for the contribution
+- add new global parameter "umask"
+  This is equivalent to "$umask" and permits to convert that construct
+  to new-style config format.
+  closes https://github.com/rsyslog/rsyslog/issues/1382
 - core: make use of -T command line option more secure
   When the -T option is used, a chdir is now done right after chroot. It must
   be noted, though, that -T is a testing option and has no intent to provide
