@@ -30,6 +30,7 @@ TESTS +=  \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	glbl_setenv_2_vars.sh \
@@ -605,6 +606,7 @@ EXTRA_DIST= \
 	pmrfc3164-defaultTag.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
+	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	glbl_setenv_2_vars.sh \

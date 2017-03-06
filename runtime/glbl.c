@@ -174,7 +174,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
-	{ "processinternalmessages", eCmdHdlrBinary, 0 }
+	{ "processinternalmessages", eCmdHdlrBinary, 0 },
+	{ "umask", eCmdHdlrFileCreateMode, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1201,6 +1202,8 @@ glblDoneLoadCnf(void)
 				do_setenv(var);
 				free(var);
 			}
+		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
+		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
