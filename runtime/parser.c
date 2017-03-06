@@ -677,7 +677,7 @@ ParseMsg(smsg_t *pMsg)
 	 * matter if we log a handful messages more than we should...
 	 */
 	if(localRet != RS_RET_OK) {
-		if(++iErrMsgRateLimiter > 1000) {
+		if(++iErrMsgRateLimiter < 1000) {
 			errmsg.LogError(0, localRet, "Error: one message could not be processed by "
 			 	"any parser, message is being discarded (start of raw msg: '%.50s')", 
 				pMsg->pszRawMsg);
