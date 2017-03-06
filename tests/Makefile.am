@@ -253,6 +253,7 @@ if HAVE_VALGRIND
 TESTS +=  \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
+	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
 	failover-basic-vg.sh \
@@ -824,6 +825,7 @@ EXTRA_DIST= \
 	global_vars.sh \
 	testsuites/global_vars.conf \
 	no-parser-errmsg.sh \
+	no-parser-vg.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	rfc5424parser.sh \
