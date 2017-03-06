@@ -31,33 +31,58 @@ Note that mmnormalize should only be called once on each message.
 Behaviour is undefined if multiple calls to mmnormalize happen for the
 same message.
 
-**Module Parameters**
+Module Parameters
+~~~~~~~~~~~~~~~~~
 
--  **allow_regex** [boolean] defaults to "off"
+.. function:: allow_regex <boolean>
+
+   **Default**: off
+
    Specifies if regex field-type should be allowed. Regex field-type has
    significantly higher computational overhead compared to other fields, 
    so it should be avoided when another field-type can achieve the desired 
    effect. Needs to be "on" for regex field-type to work.
 
-**Action Parameters**:
+Action Parameters
+~~~~~~~~~~~~~~~~~
 
--  **ruleBase** [word]
+.. function:: ruleBase <word>
+
    Specifies which rulebase file is to use. If there are multiple
    mmnormalize instances, each one can use a different file. However, a
-   single instance can use only a single file. This parameter MUST be
+   single instance can use only a single file. This parameter or **rule** MUST be
    given, because normalization can only happen based on a rulebase. It
    is recommended that an absolute path name is given. Information on
    how to create the rulebase can be found in the `liblognorm
    manual <http://www.liblognorm.com/files/manual/index.html>`_.
--  **useRawMsg** [boolean]
+
+.. function:: rule <array>
+
+   *(Available since: 8.26.0)*
+
+   Contains an array of strings which will be put together as the rulebase. This parameter
+   or **rulebase** MUST be given, because normalization can only happen based on a rulebase.
+
+.. function:: useRawMsg <boolean>
+
+   **Default**: off
+
    Specifies if the raw message should be used for normalization (on)
-   or just the MSG part of the message (off). Default is "off".
--  **path** [word], defaults to "$!"
+   or just the MSG part of the message (off).
+
+.. function:: path <word>
+
+   **Default**: $!
+
    Specifies the JSON path under which parsed elements should be
    placed. By default, all parsed properties are merged into root of
    message properties. You can place them under a subtree, instead. You
    can place them in local variables, also, by setting path="$.".
--  **variable** [word] *(Available since: 8.5.1)*
+
+.. function:: variable <word>
+
+   *(Available since: 8.5.1)*
+
    Specifies if a variable insteed of property 'msg' should be used for
    normalization. A varible can be property, local variable, json-path etc.
    Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
@@ -66,14 +91,16 @@ same message.
    
 
 
-**Legacy Configuration Directives**:
+Legacy Configuration Directives
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 -  $mmnormalizeRuleBase <rulebase-file> - equivalent to the "ruleBase"
    parameter.
 -  $mmnormalizeUseRawMsg <on/off> - equivalent to the "useRawMsg"
    parameter.
 
-**See Also**
+See Also
+~~~~~~~~
 
 -  `First steps for
    mmnormalize <http://www.rsyslog.com/normalizer-first-steps-for-mmnormalize/>`_
@@ -84,11 +111,49 @@ same message.
 -  `Using mmnormalize effectively with Adiscon
    LogAnalyzer <http://www.rsyslog.com/using-rsyslog-mmnormalize-module-effectively-with-adiscon-loganalyzer/>`_
 
-**Caveats/Known Bugs:**
+Caveats/Known Bugs
+~~~~~~~~~~~~~~~~~~
 
 None known at this time.
 
-**Sample:**
+Example
+~~~~~~~
+
+**Sample 1:**
+
+In this sample messages are received via imtcp. Then they are normalized with the given rulebase.
+After that they are written in a file.
+
+::
+
+  module(load="mmnormalize")
+  module(load="imtcp")
+
+  input(type="imtcp" port="10514" ruleset="outp")
+
+  ruleset(name="outp") {
+  	action(type="mmnormalize" rulebase="/tmp/rules.rulebase")
+  	action(type="omfile" File="/tmp/output")
+  }
+
+**Sample 2:**
+
+In this sample messages are received via imtcp. Then they are normalized based on the given rules.
+The strings from **rule** are put together and are equal to a rulebase with the same content.
+
+::
+
+  module(load="mmnormalize")
+  module(load="imtcp")
+  
+  input(type="imtcp" port="10514" ruleset="outp")
+  
+  ruleset(name="outp") {
+  	action(type="mmnormalize" rule=["rule=:%host:word% %tag:char-to:\\x3a%: no longer listening on %ip:ipv4%#%port:number%", "rule=:%host:word% %ip:ipv4% user was logged out"])
+  	action(type="omfile" File="/tmp/output")
+  }
+
+**Sample 3:**
 
 This activates the module and applies normalization to all messages:
 
