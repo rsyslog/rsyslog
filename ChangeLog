@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- pmrfc3164 improvements
+  - permit to ignore leading space in MSG
+  - permit to use at-sign in host names
+  - permit to require tag to end in colon
+  Thanks to github user bdolez for the contribution
 - core: make use of -T command line option more secure
   When the -T option is used, a chdir is now done right after chroot. It must
   be noted, though, that -T is a testing option and has no intent to provide
