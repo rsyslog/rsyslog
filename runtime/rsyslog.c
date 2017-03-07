@@ -141,7 +141,7 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 		/* init runtime only if not yet done */
 #ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_init(0);
-		stdlog_hdl = NULL;
+		stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG, NULL);
 #endif
 		CHKiRet(pthread_attr_init(&default_thread_attr));
 		pthread_attr_setstacksize(&default_thread_attr, 4096*1024);

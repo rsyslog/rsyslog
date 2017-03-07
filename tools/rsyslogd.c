@@ -1888,5 +1888,8 @@ main(int argc, char **argv)
 
 	mainloop();
 	deinitAll();
+#ifdef HAVE_LIBLOGGING_STDLOG
+	stdlog_close(stdlog_hdl);
+#endif
 	return 0;
 }
