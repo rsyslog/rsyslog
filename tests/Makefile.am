@@ -239,6 +239,11 @@ TESTS +=  \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
 
+if ENABLE_IP
+TESTS += \
+	tcp_forwarding_ns_tpl.sh
+endif
+
 if HAVE_VALGRIND
 TESTS +=  \
 	rscript_set_memleak-vg.sh \
@@ -712,7 +717,9 @@ EXTRA_DIST= \
 	testsuites/1.omod-if-array \
 	testsuites/1.field1 \
 	tcp_forwarding_tpl.sh \
+	tcp_forwarding_ns_tpl.sh \
 	testsuites/tcp_forwarding_tpl.conf \
+	testsuites/tcp_forwarding_ns_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
 	tcp_forwarding_retries.sh \
