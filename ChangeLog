@@ -15,6 +15,11 @@ Version 8.26.0 [v8-stable] 2017-04-04
   real security. So this change does not mean it actually is sufficiently
   secure.
   Thanks to github user jvymazal for the patch.
+- bugfix: rsyslog identifies itself as "liblogging-stdlog" in internal messages
+  This occured when liblogging-stdlog was used, and was used by default (without
+  explicit configuration). This is a regression of the new default, which does
+  not correctly call stdlog_open() in the default case.
+  closes https://github.com/rsyslog/rsyslog/issues/1442
 - bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
   When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
   or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
@@ -22,6 +27,9 @@ Version 8.26.0 [v8-stable] 2017-04-04
 - bugfix: immark emitted error messages with text "imuxsock"
   Thanks to Chris Pilkington for the patch.
 - bugfix tcpflood: build failed if RELP was disabled
+- testbench:
+  * tcpflood now automatically enters silent mode during Travis CI testing
+    This reduces testbench output, which is limited under Travis.
 ------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
 - imfile: add support for wildcards in directory names
