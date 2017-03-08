@@ -8,7 +8,7 @@ export IMFILEINPUTFILES="10"
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
 
-imfilebefore="rsyslog.input.1"
+imfilebefore="rsyslog.input.1.log"
 ./inputfilegen -m 1 > $imfilebefore
 
 # Start rsyslog now before adding more files
@@ -18,8 +18,8 @@ sleep 1
 
 for i in `seq 2 $IMFILEINPUTFILES`;
 do
-	cp $imfilebefore rsyslog.input.$i
-	imfilebefore="rsyslog.input.$i"
+	cp $imfilebefore rsyslog.input.$i.log
+	imfilebefore="rsyslog.input.$i.log"
 done
 ls -l rsyslog.input.*
 
