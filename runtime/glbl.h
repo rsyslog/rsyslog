@@ -125,7 +125,7 @@ void glblProcessCnf(struct cnfobj *o);
 void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj(void);
-void glblDoneLoadCnf(void);
+rsRetVal glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(void);
 tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);

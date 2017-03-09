@@ -1,5 +1,15 @@
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- core: make use of -T command line option more secure
+  When the -T option is used, a chdir is now done right after chroot. It must
+  be noted, though, that -T is a testing option and has no intent to provide
+  real security. So this change does not mean it actually is sufficiently
+  secure.
+  Thanks to github user jvymazal for the patch.
+- bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
+  When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
+  or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
+  Thanks to Radovan Sroka for the patch.
 - bugfix: immark emitted error messages with text "imuxsock"
   Thanks to Chris Pilkington for the patch.
 - bugfix tcpflood: build failed if RELP was disabled
