@@ -196,7 +196,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 #if defined(ZMQ_DISH)
 		case ZMQ_DISH:
 #endif
-			iconf->serverish = true;
+			iconf->serverish = false;
 			break;
 		case ZMQ_PULL:
 #if defined(ZMQ_GATHER)
