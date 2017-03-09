@@ -20,6 +20,11 @@ Version 8.26.0 [v8-stable] 2017-04-04
   explicit configuration). This is a regression of the new default, which does
   not correctly call stdlog_open() in the default case.
   closes https://github.com/rsyslog/rsyslog/issues/1442
+- bugfix imfile: wrong files were monitored when using multiple imfile inputs
+  The bug was introduced by the changes for the multilevel wildcard feature
+  in 8.25.0. We have to handle FileCreate events different if the directory
+  watch is configured or added dynamically.
+  closes https://github.com/rsyslog/rsyslog/issues/1452
 - bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
   When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
   or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
