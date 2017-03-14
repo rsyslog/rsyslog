@@ -108,6 +108,7 @@ typedef struct _instanceData {
 	sbool dynBulkId;
 	sbool bulkmode;
 	size_t maxbytes;
+	sbool reuseconn;
 	sbool useHttps;
 	sbool allowUnsignedCerts;
 } instanceData;
@@ -145,6 +146,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "dynparent", eCmdHdlrBinary, 0 },
 	{ "bulkmode", eCmdHdlrBinary, 0 },
 	{ "maxbytes", eCmdHdlrSize, 0 },
+	{ "reuseconn", eCmdHdlrBinary, 0 },
 	{ "asyncrepl", eCmdHdlrGoneAway, 0 },
         { "usehttps", eCmdHdlrBinary, 0 },
 	{ "timeout", eCmdHdlrGetWord, 0 },
@@ -263,6 +265,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbulkmode=%d\n", pData->bulkmode);
 	dbgprintf("\tmaxbytes=%zu\n", pData->maxbytes);
+	dbgprintf("\treuseconn=%d\n", pData->reuseconn);
 	dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
 	dbgprintf("\terrorfile='%s'\n", pData->errorFile == NULL ?
 		(uchar*)"(not configured)" : pData->errorFile);
@@ -395,7 +398,9 @@ finalize_it:
 BEGINtryResume
 CODESTARTtryResume
 	DBGPRINTF("omelasticsearch: tryResume called\n");
-	iRet = checkConn(pWrkrData);
+	if(pWrkrData->pData->reuseconn) {
+		iRet = checkConn(pWrkrData);
+	}
 ENDtryResume
 
 
@@ -1315,7 +1320,7 @@ curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsign
 }
 
 static void
-curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf)
+curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf, sbool reuseconn)
 {
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, curlResult);
@@ -1325,6 +1330,10 @@ curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf)
 	if(authBuf != NULL) {
 		curl_easy_setopt(handle, CURLOPT_USERPWD, authBuf);
 		curl_easy_setopt(handle, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+	}
+	if(!reuseconn) {
+		curl_easy_setopt(handle, CURLOPT_FORBID_REUSE, 1);
+		curl_easy_setopt(handle, CURLOPT_FRESH_CONNECT, 1);
 	}
 }
 
@@ -1336,7 +1345,7 @@ curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 	if (pWrkrData->curlPostHandle == NULL) {
 		return RS_RET_OBJ_CREATION_FAILED;
 	}
-	curlPostSetup(pWrkrData->curlPostHandle, pWrkrData->curlHeader, pData->authBuf);
+	curlPostSetup(pWrkrData->curlPostHandle, pWrkrData->curlHeader, pData->authBuf, pData->reuseconn);
 
 	pWrkrData->curlCheckConnHandle = curl_easy_init();
 	if (pWrkrData->curlCheckConnHandle == NULL) {
@@ -1369,6 +1378,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->useHttps = 0;
 	pData->bulkmode = 0;
 	pData->maxbytes = 104857600; //100 MB Is the default max message size that ships with ElasticSearch
+	pData->reuseconn = 1;
 	pData->allowUnsignedCerts = 0;
 	pData->tplName = NULL;
 	pData->errorFile = NULL;
@@ -1427,6 +1437,8 @@ CODESTARTnewActInst
 			pData->bulkmode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "maxbytes")) {
 			pData->maxbytes = (size_t) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "reuseconn")) {
+			pData->reuseconn = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "allowunsignedcerts")) {
 			pData->allowUnsignedCerts = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "timeout")) {
