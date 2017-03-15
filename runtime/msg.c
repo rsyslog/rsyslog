@@ -4446,6 +4446,9 @@ msgSetPropViaJSON(smsg_t *__restrict__ const pMsg, const char *name, struct json
 	} else if(!strcmp(name, "syslogtag")) {
 		psz = json_object_get_string(json);
 		MsgSetTAG(pMsg, (const uchar*)psz, strlen(psz)); 
+	} else if(!strcmp(name, "pri")) {
+		val = json_object_get_int(json);
+		msgSetPRI(pMsg, val);
 	} else if(!strcmp(name, "syslogfacility")) {
 		val = json_object_get_int(json);
 		if(val >= 0 && val <= 24)

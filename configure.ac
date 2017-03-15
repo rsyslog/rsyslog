@@ -1553,6 +1553,19 @@ AC_ARG_ENABLE(pmnull,
 AM_CONDITIONAL(ENABLE_PMNULL, test x$enable_pmnull = xyes)
 
 
+# settings for pmnormalize
+AC_ARG_ENABLE(pmnormalize,
+        [AS_HELP_STRING([--enable-pmnormalize],[Compiles normalizer parser module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_pmnormalize="yes" ;;
+          no) enable_pmnormalize="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-pmnormalize) ;;
+         esac],
+        [enable_pmnormalize=no]
+)
+AM_CONDITIONAL(ENABLE_PMNORMALIZE, test x$enable_pmnormalize = xyes)
+
+
 # settings for pmaixforwardedfrom
 AC_ARG_ENABLE(pmaixforwardedfrom,
         [AS_HELP_STRING([--enable-pmaixforwardedfrom],[Compiles aixforwardedfrom parser module @<:@default=no@:>@])],
@@ -2055,6 +2068,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omjournal/Makefile \
 		plugins/pmciscoios/Makefile \
 		plugins/pmnull/Makefile \
+		plugins/pmnormalize/Makefile \
 		plugins/omruleset/Makefile \
 		plugins/omuxsock/Makefile \
 		plugins/imfile/Makefile \
@@ -2164,6 +2178,7 @@ echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"
 echo "    pmcisconames module will be compiled:     $enable_pmcisconames"
 echo "    pmciscoios module will be compiled:       $enable_pmciscoios"
 echo "    pmnull module will be compiled:           $enable_pmnull"
+echo "    pmnormalize module will be compiled:      $enable_pmnormalize"
 echo "    pmaixforwardedfrom module w.be compiled:  $enable_pmaixforwardedfrom"
 echo "    pmsnare module will be compiled:          $enable_pmsnare"
 echo "    pmpanngfw module will be compiled:        $enable_pmpanngfw"
