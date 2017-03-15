@@ -4529,9 +4529,27 @@ MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ co
 		}
 	}
 	if(json == NULL || !json_object_is_type(json, json_type_object)) {
-		ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
+		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
 	}
+	MsgSetPropsViaJSON_Object(pMsg, json);
  
+finalize_it:
+	if(tokener != NULL)
+		json_tokener_free(tokener);
+	RETiRet;
+}
+
+
+/* Used by MsgSetPropsViaJSON to set properties.
+ * The same as MsgSetPropsViaJSON only that a json object is given and not a string
+ */
+rsRetVal
+MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json)
+{
+	DEFiRet;
+	if(json == NULL || !json_object_is_type(json, json_type_object)) {
+		ABORT_FINALIZE(RS_RET_JSON_UNUSABLE);
+	}
 	struct json_object_iterator it = json_object_iter_begin(json);
 	struct json_object_iterator itEnd = json_object_iter_end(json);
 	while (!json_object_iter_equal(&it, &itEnd)) {
@@ -4542,8 +4560,6 @@ MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ co
 	json_object_put(json);
 
 finalize_it:
-	if(tokener != NULL)
-		json_tokener_free(tokener);
 	RETiRet;
 }
 

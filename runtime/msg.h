@@ -206,6 +206,7 @@ rsRetVal msgAddMetadata(smsg_t *msg, uchar *metaname, uchar *metaval);
 rsRetVal MsgGetSeverity(smsg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(smsg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
+rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
 const uchar* msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
 /* TODO: remove these five (so far used in action.c) */
