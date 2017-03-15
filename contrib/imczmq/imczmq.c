@@ -196,7 +196,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 #if defined(ZMQ_DISH)
 		case ZMQ_DISH:
 #endif
-			iconf->serverish = true;
+			iconf->serverish = false;
 			break;
 		case ZMQ_PULL:
 #if defined(ZMQ_GATHER)
@@ -211,6 +211,12 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	}
 
 	if(iconf->topics) {
+		// A zero-length topic means subscribe to everything
+		if(!*iconf->topics && iconf->sockType == ZMQ_SUB) {
+			DBGPRINTF("imczmq: subscribing to all topics\n");
+			zsock_set_subscribe(pData->sock, "");
+		}
+
 		char topic[256];
 		while(*iconf->topics) {
 			char *delimiter = strchr(iconf->topics, ',');
