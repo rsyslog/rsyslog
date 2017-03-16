@@ -1362,11 +1362,12 @@ initAll(int argc, char **argv)
 					 "configuration parameter instead.\n");
 				glbl.SetParseHOSTNAMEandTAG(0);
 			}
-			if(iHelperUOpt & 0x02)
+			if(iHelperUOpt & 0x02) {
 				fprintf (stderr, "rsyslogd: the -u command line option will go away "
 					 "soon.\n"
 					 "For the 0x02 bit, please use the -C option instead.");
 				bChDirRoot = 0;
+			}
 			break;
 		case 'C':
 			bChDirRoot = 0;
