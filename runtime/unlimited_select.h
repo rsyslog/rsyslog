@@ -35,7 +35,7 @@
 #endif
 
 #ifdef USE_UNLIMITED_SELECT
-void freeFdSet(fd_set *p) {
+static inline void freeFdSet(fd_set *p) {
         free(p);
 }
 #else
