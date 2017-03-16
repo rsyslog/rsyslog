@@ -51,15 +51,19 @@ Version 8.26.0 [v8-stable] 2017-04-04
 - bugfix: immark emitted error messages with text "imuxsock"
   Thanks to Chris Pilkington for the patch.
 - bugfix tcpflood: build failed if RELP was disabled
-- testbench:
-  * tcpflood now automatically enters silent mode during Travis CI testing
-    This reduces testbench output, which is limited under Travis.
+- fix gcc6 compiler warnings
+  This also fixes a small bug with incorrectly working deprecated -u
+  command line option.
+  Thanks to Nikola Pajkovsky for the patch.
 - the output module array passing interface has been removed
   It wasn't functional since the v8 update, and the only user was omoracle,
   which is a contributed module that is no longer maintained. So we
   removed that interface to streamline the code. Should it ever be needed
   again, we could check the 8.25 code base. Note, though, that that code
   still needs to be adjusted to the v8 engine.
+- testbench:
+  * tcpflood now automatically enters silent mode during Travis CI testing
+    This reduces testbench output, which is limited under Travis.
 ------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
 - imfile: add support for wildcards in directory names
