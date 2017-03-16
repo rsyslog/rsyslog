@@ -1,5 +1,24 @@
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- enable internal error messages at all times
+  This is an important change to the design of the rsyslog core internal
+  error message system. Previous code could deadlock if internal messages were
+  issued inside queue processing code, which effectively limited error-reporting
+  capabilities. This change makes it possible to call error messages from any
+  part of the code at any time.
+  As a side-effect, this also fixes an issue where rsyslog could deadlock if
+  imuxsock submited messages to the system log socket when that socket blocked.
+  This was a rare race, albeit consistently reproducible and also seen in
+  practice. The work-around for this issue was to set
+     global(processInternalMessages="on")
+  in rsyslog.conf. With the new code, this race can never happen again. The new
+  code also sets stage for emitting better error messages, especially in places
+  where we previously refrained from doing so and messages went only to the
+  debug log. For some file output related messages, this is already done, but
+  there is still further work required.
+  Note well: this is a redesign of an important core component. While intensely
+  tested, this may still have some larger regeression potential than usual code
+  changes.
 - pmrfc3164 improvements
   - permit to ignore leading space in MSG
   - permit to use at-sign in host names
