@@ -1,7 +1,7 @@
 /* omkafka.c
  * This output plugin make rsyslog talk to Apache Kafka.
  *
- * Copyright 2014-2016-2016 by Adiscon GmbH.
+ * Copyright 2014-2017 by Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -654,6 +654,7 @@ openKafka(instanceData *const __restrict__ pData)
 # if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_set_logger(pData->rk, kafkaLogger);
 # endif
+	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
