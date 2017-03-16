@@ -885,11 +885,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 	pMsg->msgFlags  = flags;
 	msgSetPRI(pMsg, pri);
 
-	if(bHaveMainQueue == 0) { /* not yet in queued mode */
-		iminternalAddMsg(pMsg);
-	} else {
-		logmsgInternal_doWrite(pMsg);
-	}
+	iminternalAddMsg(pMsg);
 finalize_it:
 	RETiRet;
 }
@@ -1095,11 +1091,12 @@ finalize_it:
 
 
 static void
-hdlr_sigttin(void)
+hdlr_sigttin_ou(void)
 {
 	/* this is just a dummy to care for our sigttin input
-	 * module cancel interface. The important point is that
-	 * it actually does *NOTHING*.
+	 * module cancel interface and sigttou internal message
+	 * notificaton/mainloop wakeup mechanism. The important
+	 * point is that it actually does *NOTHING*.
 	 */
 }
 
@@ -1451,7 +1448,8 @@ initAll(int argc, char **argv)
 		hdlr_enable(SIGQUIT, SIG_IGN);
 	}
 	hdlr_enable(SIGTERM, rsyslogdDoDie);
-	hdlr_enable(SIGTTIN, hdlr_sigttin);
+	hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
+	hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
@@ -1506,7 +1504,7 @@ finalize_it:
  * really help us. TODO: add error messages?
  * rgerhards, 2007-08-03
  */
-static void
+void
 processImInternal(void)
 {
 	smsg_t *pMsg;
@@ -1714,10 +1712,9 @@ mainloop(void)
 	time_t tTime;
 
 	BEGINfunc
-	/* first check if we have any internal messages queued and spit them out. */
-	processImInternal();
 
-	while(!bFinished){
+	do {
+		processImInternal();
 		wait_timeout();
 		if(bChildDied) {
 			pid_t child;
@@ -1745,7 +1742,7 @@ mainloop(void)
 			bHadHUP = 0;
 		}
 
-	}
+	} while(!bFinished); /* end do ... while() */
 	ENDfunc
 }
 
@@ -1794,9 +1791,10 @@ deinitAll(void)
 		errno = 0;
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
-	/* we sleep for 50ms to give the queue a chance to pick up the exit message;
-	 * otherwise we have seen cases where the message did not make it to log
-	 * files, even on idle systems.
+	processImInternal(); /* make sure not-yet written internal messages are processed */
+	/* we sleep a couple of ms to give the queue a chance to pick up the late messages
+	 * (including exit message); otherwise we have seen cases where the message did
+	 * not make it to log files, even on idle systems.
 	 */
 	srSleep(0, 50);
 
