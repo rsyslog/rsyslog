@@ -464,7 +464,8 @@ finalize_it:
 		if(pThis->pqDA != NULL) {
 			qqueueDestruct(&pThis->pqDA);
 		}
-		DBGOPRINT((obj_t*) pThis, "error %d creating disk queue - giving up.\n", iRet);
+		LogError(0, iRet, "%s: error creating disk queue - giving up.",
+			obj.GetName((obj_t*)pThis));
 		pThis->bIsDA = 0;
 	}
 
@@ -741,8 +742,8 @@ queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError)
 		 */
 	}
 
-	errmsg.LogError(0, initiatingError, "fatal error on disk queue '%s', emergency switch to direct mode",
-			obj.GetName((obj_t*) pThis));
+	errmsg.LogError(0, initiatingError, "fatal error on disk queue '%s', "
+		"emergency switch to direct mode", obj.GetName((obj_t*) pThis));
 	return RS_RET_ERR_QUEUE_EMERGENCY;
 }
 
@@ -982,13 +983,18 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
+static rsRetVal
+qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3,
+		pThis->tVars.disk.pReadDeq, NULL,
 		NULL, msgConstructForDeserializer, NULL, MsgDeserialize);
-	DBGOPRINT((obj_t*) pThis, "qDeqDisk error %d happened at around offset %lld\n",
-		iRet, (long long) pThis->tVars.disk.pReadDeq->iCurrOffs);
+	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "%s: qDeqDisk error happened at around offset %lld",
+			obj.GetName((obj_t*)pThis),
+			(long long) pThis->tVars.disk.pReadDeq->iCurrOffs);
+	}
 	RETiRet;
 }
 
@@ -1768,8 +1774,8 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 	/* dequeue element batch (still protected from mutex) */
 	iRet = DequeueConsumableElements(pThis, pWti, &iQueueSize, pSkippedMsgs);
 	if(*pSkippedMsgs > 0) {
-		DBGOPRINT((obj_t*) pThis, "lost %d messages from diskqueue (invalid .qi file)",
-			*pSkippedMsgs);
+		LogError(0, RS_RET_ERR, "%s: lost %d messages from diskqueue (invalid .qi file)",
+			obj.GetName((obj_t*)pThis), *pSkippedMsgs);
 	}
 
 	/* awake some flow-controlled sources if we can do this right now */
@@ -1791,15 +1797,8 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 	/* WE ARE NO LONGER PROTECTED BY THE MUTEX */
 
 	if(iRet != RS_RET_OK && iRet != RS_RET_DISCARDMSG) {
-		DBGOPRINT((obj_t*) pThis, "error %d dequeueing element - ignoring, but strange things "
-					  "may happen\n", iRet);
-#if 0	// This does not work when we run on the main queue
-	// TODO: find better work-around
-		errmsg.LogError(0, iRet, "problem on disk queue '%s': "
-				"error dequeueing element - we ignore this for now, but it "
-				"may cause future trouble.",
-				obj.GetName((obj_t*) pThis));
-#endif
+		LogError(0, iRet, "%s: error dequeueing element - ignoring, "
+			"but strange things may happen", obj.GetName((obj_t*)pThis));
 	}
 
 	RETiRet;
