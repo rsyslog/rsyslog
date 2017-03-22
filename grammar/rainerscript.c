@@ -1279,7 +1279,7 @@ str2num(es_str_t *s, int *bSuccess)
 	if(s->lenStr == 0) {
 		DBGPRINTF("rainerscript: str2num: strlen == 0; invalid input (no string)\n");
 		if(bSuccess != NULL) {
-			*bSuccess = 0;
+			*bSuccess = 1;
 		}
 		goto done;
 	}
