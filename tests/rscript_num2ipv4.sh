@@ -6,6 +6,7 @@
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="13514")
 
+set $!ip!v0 = num2ipv4("");
 set $!ip!v1 = num2ipv4("0");
 set $!ip!v2 = num2ipv4("1");
 set $!ip!v3 = num2ipv4("256");
@@ -22,7 +23,6 @@ set $!ip!e2 = num2ipv4("-123");
 set $!ip!e3 = num2ipv4("1725464567890");
 set $!ip!e4 = num2ipv4("4294967296");
 set $!ip!e5 = num2ipv4("2839.");
-set $!ip!e6 = num2ipv4("");
 
 
 template(name="outfmt" type="string" string="%!ip%\n")
@@ -32,7 +32,7 @@ local4.* action(type="omfile" file="rsyslog.out.log" template="outfmt")
 . $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo '{ "v1": "0.0.0.0", "v2": "0.0.0.1", "v3": "0.0.1.0", "v4": "0.1.0.0", "v5": "1.0.0.0", "v6": "0.0.0.135", "v7": "1.1.1.1", "v8": "225.33.1.10", "v9": "172.0.0.1", "v10": "255.255.255.255", "e1": "-1", "e2": "-1", "e3": "-1", "e4": "-1", "e5": "-1", "e6": "-1" }' | cmp rsyslog.out.log
+echo '{ "v0": "0.0.0.0", "v1": "0.0.0.0", "v2": "0.0.0.1", "v3": "0.0.1.0", "v4": "0.1.0.0", "v5": "1.0.0.0", "v6": "0.0.0.135", "v7": "1.1.1.1", "v8": "225.33.1.10", "v9": "172.0.0.1", "v10": "255.255.255.255", "e1": "-1", "e2": "-1", "e3": "-1", "e4": "-1", "e5": "-1" }' | cmp rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid function output detected, rsyslog.out.log is:"
   cat rsyslog.out.log
