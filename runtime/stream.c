@@ -64,7 +64,6 @@
 #include "errmsg.h"
 #include "cryprov.h"
 #include "datetime.h"
-#include "errmsg.h"
 
 /* some platforms do not have large file support :( */
 #ifndef O_LARGEFILE
