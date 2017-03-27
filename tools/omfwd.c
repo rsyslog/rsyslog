@@ -754,13 +754,12 @@ static rsRetVal changeToNs(instanceData *pData)
 #ifdef HAVE_SETNS
 	int iErr;
 	int destinationNs = -1;
-	int originalNamespace = -1;
 	char *nsPath = NULL;
 
 	if(pData->networkNamespace) {
 		/* keep file descriptor of original network namespace */
-		originalNamespace = open("/proc/self/ns/net", O_RDONLY);
-		if (originalNamespace < 0) {
+		pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
+		if (pData->originalNamespace < 0) {
 			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
@@ -873,6 +872,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 finalize_it:
 	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pWrkrData->pData->target, iRet);
 	if(iRet != RS_RET_OK) {
+		returnToOriginalNs(pData);
 		if(pWrkrData->f_addr != NULL) {
 			freeaddrinfo(pWrkrData->f_addr);
 			pWrkrData->f_addr = NULL;
