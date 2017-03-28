@@ -69,6 +69,7 @@
 #include "statsobj.h"
 #include "sigprov.h"
 #include "cryprov.h"
+#include "parserif.h"
 #include "janitor.h"
 
 MODULE_TYPE_OUTPUT
@@ -351,7 +352,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omfile: default template already set via module "
+		parser_errmsg("omfile: default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -371,13 +372,13 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
 
 	if(iNewVal < 1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE,
+		parser_errmsg(
 		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
 	} else if(iNewVal > 1000) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE,
+		parser_errmsg(
 		         "DynaFileCacheSize maximum is 1,000 (%d given), changed to 1,000.", iNewVal);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1000;
@@ -419,7 +420,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	pOch = ochFind(szBuf, i);
 
 	if(pOch == NULL) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, 
+		parser_errmsg( 
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -427,7 +428,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 
 	/* check if there is a file name in the outchannel... */
 	if(pOch->pszFileTemplate == NULL) {
-		errmsg.LogError(0, RS_RET_ERR,
+		parser_errmsg(
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -572,7 +573,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 			     pData->fDirCreateMode, pData->dirUID,
 			     pData->dirGID, pData->bFailOnChown) != 0) {
 				rs_strerror_r(errno, errStr, sizeof(errStr));
-				errmsg.LogError(0, RS_RET_ERR, "omfile: creating parent "
+				parser_errmsg( "omfile: creating parent "
 					"directories for file  '%s' failed: %s",
 					errStr, newFileName);
 			     	ABORT_FINALIZE(RS_RET_ERR); /* we give up */
@@ -589,7 +590,7 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 				/* we need to set owner/group */
 				if(fchown(fd, pData->fileUID, pData->fileGID) != 0) {
 					rs_strerror_r(errno, errStr, sizeof(errStr));
-					errmsg.LogError(0, RS_RET_FILE_CHOWN_ERROR,
+					parser_errmsg(
 						"omfile: chown for file '%s' failed: %s",
 						errStr, newFileName);
 					if(pData->bFailOnChown) {
@@ -754,7 +755,7 @@ prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__
 		/* We do no longer care about internal messages. The errmsg rate limiter
 		 * will take care of too-frequent error messages.
 		 */
-		errmsg.LogError(0, localRet, "Could not open dynamic file '%s' [state %d] - discarding "
+		parser_errmsg("Could not open dynamic file '%s' [state %d] - discarding "
 		"message", newFileName, localRet);
 		ABORT_FINALIZE(localRet);
 	}
@@ -823,7 +824,7 @@ writeFile(instanceData *__restrict__ const pData,
 		if(pData->pStrm == NULL) {
 			CHKiRet(prepareFile(pData, pData->fname));
 			if(pData->pStrm == NULL) {
-				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				parser_errmsg(
 					"Could not open output file '%s'", pData->fname);
 			}
 		}
@@ -858,7 +859,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		parser_errmsg("error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -876,7 +877,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(pszFileDfltTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfile: warning: default template "
+				parser_errmsg("omfile: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -1144,7 +1145,7 @@ initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmsig_%s", pData->sigprovName)
 		== sizeof(szDrvrName)) {
-		errmsg.LogError(0, RS_RET_ERR, "omfile: signature provider "
+		parser_errmsg("omfile: signature provider "
 				"name is too long: '%s' - signatures disabled",
 				pData->sigprovName);
 		goto done;
@@ -1159,14 +1160,14 @@ initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 	 */
 	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->sigprov)
 		!= RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+		parser_errmsg("omfile: could not load "
 				"signature provider '%s' - signatures disabled",
 				szDrvrName);
 		goto done;
 	}
 
 	if(pData->sigprov.Construct(&pData->sigprovData) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "omfile: error constructing "
+		parser_errmsg("omfile: error constructing "
 				"signature provider %s dataset - signatures disabled",
 				szDrvrName);
 		goto done;
@@ -1187,7 +1188,7 @@ initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pData->cryprovName)
 		== sizeof(szDrvrName)) {
-		errmsg.LogError(0, RS_RET_ERR, "omfile: crypto provider "
+		parser_errmsg("omfile: crypto provider "
 				"name is too long: '%s' - encryption disabled",
 				pData->cryprovName);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -1202,14 +1203,14 @@ initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 	 */
 	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pData->cryprov)
 		!= RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_LOAD_ERROR, "omfile: could not load "
+		parser_errmsg("omfile: could not load "
 				"crypto provider '%s' - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
 
 	if(pData->cryprov.Construct(&pData->cryprovData) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "omfile: error constructing "
+		parser_errmsg("omfile: error constructing "
 				"crypto provider %s dataset - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
@@ -1232,7 +1233,7 @@ CODESTARTnewActInst
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
+		parser_errmsg("omfile: either the \"file\" or "
 				"\"dynafile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1293,6 +1294,9 @@ CODESTARTnewActInst
 			CODE_STD_STRING_REQUESTnewActInst(1)
 			pData->bDynamicName = 0;
 		} else if(!strcmp(actpblk.descr[i].name, "dynafile")) {
+			if(pData->fname != NULL) {
+				parser_errmsg("omfile: both \"file\" and \"dynafile\" set, will use dynafile");
+			}
 			pData->fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			CODE_STD_STRING_REQUESTnewActInst(2)
 			pData->bDynamicName = 1;
@@ -1311,7 +1315,7 @@ CODESTARTnewActInst
 	}
 
 	if(pData->fname == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfile: either the \"file\" or "
+		parser_errmsg("omfile: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
