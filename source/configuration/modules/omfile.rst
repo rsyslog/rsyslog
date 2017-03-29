@@ -132,7 +132,8 @@ selects whether a static or dynamic file (name) shall be written to.
    created. Files are kept open as long as rsyslogd is active. This
    conflicts with external log file rotation. In order to close a file
    after rotation, send rsyslogd a HUP signal after the file has been
-   rotated away.
+   rotated away. Either file or dynaFile can be used, but not both. If both
+   are given, dynaFile will be used.
 
 .. function::  dynaFile [templateName]
 
@@ -143,7 +144,9 @@ selects whether a static or dynamic file (name) shall be written to.
    data is appended if the file already exists. If the file does not
    exist, a new file is created. The template given in "templateName"
    is just a regular :doc:`rsyslog template <../templates>`, so all
-   you have full control over how to format the file name.
+   you have full control over how to format the file name. Either file
+   or dynaFile can be used, but not both. If both are given, dynaFile
+   will be used.
    
    A cache of recent files is kept. Note
    that this cache can consume quite some memory (especially if large
