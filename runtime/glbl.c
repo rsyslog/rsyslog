@@ -1021,9 +1021,9 @@ glblDestructMainqCnfObj(void)
 	/* Only destruct if not NULL! */
 	if (mainqCnfObj != NULL) {
 		nvlstChkUnused(mainqCnfObj->nvlst);
+		cnfobjDestruct(mainqCnfObj);
+		mainqCnfObj = NULL;
 	}
-	cnfobjDestruct(mainqCnfObj);
-	mainqCnfObj = NULL;
 }
 
 /* comparison function for qsort() and string array compare
