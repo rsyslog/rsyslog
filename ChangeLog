@@ -40,6 +40,11 @@ Version 8.26.0 [v8-stable] 2017-04-04
   real security. So this change does not mean it actually is sufficiently
   secure.
   Thanks to github user jvymazal for the patch.
+- omfile: add error if both file and dynafile are set
+- bugfix: build problem on MacOS (not a supported platform)
+  Thanks to FX Coudert for the fix.
+- bugfix omsnmp: improper handling of new-style configuration parameters
+  Thanks to Radovan Sroka for the patch.
 - bugfix: rsyslog identifies itself as "liblogging-stdlog" in internal messages
   This occured when liblogging-stdlog was used, and was used by default (without
   explicit configuration). This is a regression of the new default, which does
