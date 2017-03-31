@@ -41,6 +41,7 @@ TESTS +=  \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -772,6 +773,7 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \
