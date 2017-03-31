@@ -454,6 +454,12 @@ CODESTARTnewActInst
 		}
 	}
 
+	/* Init NetSNMP library and read in MIB database */
+	init_snmp("rsyslog");
+
+	/* Set some defaults in the NetSNMP library */
+	netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort );
+
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
