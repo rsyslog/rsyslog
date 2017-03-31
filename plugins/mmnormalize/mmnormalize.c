@@ -72,6 +72,7 @@ static struct cnfparamblk modpblk = {
 
 typedef struct _instanceData {
 	sbool bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
+	uchar   *rule;		/* rule to use */
 	uchar 	*rulebase;	/**< name of rulebase to use */
 	ln_ctx ctxln;		/**< context to be used for liblognorm */
 	char *pszPath;		/**< path of normalized data */
@@ -84,6 +85,7 @@ typedef struct wrkrInstanceData {
 
 typedef struct configSettings_s {
 	uchar *rulebase;		/**< name of normalization rulebase to use */
+	uchar *rule;
 	int bUseRawMsg;	/**< use %rawmsg% instead of %msg% */
 } configSettings_t;
 static configSettings_t cs;
@@ -91,7 +93,8 @@ static configSettings_t cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "rulebase", eCmdHdlrGetWord, 1 },
+	{ "rulebase", eCmdHdlrGetWord, 0 },
+	{ "rule", eCmdHdlrArray, 0 },
 	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 },
 	{ "variable", eCmdHdlrGetWord, 0 }
@@ -125,6 +128,7 @@ static rsRetVal
 buildInstance(instanceData *pData)
 {
 	DEFiRet;
+	dbgprintf("test: %s\n", (char*)pData->rule);
 	if((pData->ctxln = ln_initCtx()) == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
@@ -132,11 +136,24 @@ buildInstance(instanceData *pData)
 	}
 	ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
 	ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
-	if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
-		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-				"could not be loaded cannot activate action", pData->rulebase);
-		ln_exitCtx(pData->ctxln);
-		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+	if(pData->rule !=NULL && pData->rulebase == NULL) {
+		dbgprintf("Pascal: vor if %s\n", pData->rule);
+		if(ln_loadSamplesFromString(pData->ctxln, (char*) pData->rule) !=0) {
+			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rule '%s' "
+					"could not be loaded cannot activate action", pData->rule);
+			ln_exitCtx(pData->ctxln);
+			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+		}
+		free(pData->rule);
+		pData->rule = NULL;
+		dbgprintf("Pascal: nach if\n");
+	} else if(pData->rule ==NULL && pData->rulebase != NULL) {
+		if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
+			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+					"could not be loaded cannot activate action", pData->rulebase);
+			ln_exitCtx(pData->ctxln);
+			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+		}
 	}
 finalize_it:
 	RETiRet;
@@ -171,7 +188,9 @@ CODESTARTendCnfLoad
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.rulebase);
+	free(cs.rule);
 	cs.rulebase = NULL;
+	cs.rule = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
@@ -196,6 +215,7 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
 CODESTARTfreeInstance
 	free(pData->rulebase);
+	free(pData->rule);
 	ln_exitCtx(pData->ctxln);
 	free(pData->pszPath);
 	msgPropDescrDestruct(pData->varDescr);
@@ -213,6 +233,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("mmnormalize\n");
 	dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
 	dbgprintf("\trulebase='%s'\n", pData->rulebase);
+	dbgprintf("\trule='%s'\n", pData->rule);
 	dbgprintf("\tpath='%s'\n", pData->pszPath);
 	dbgprintf("\tbUseRawMsg='%d'\n", pData->bUseRawMsg);
 ENDdbgPrintInstInfo
@@ -260,6 +281,7 @@ static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->rulebase = NULL;
+	pData->rule = NULL;
 	pData->bUseRawMsg = 0;
 	pData->pszPath = strdup("$!");
 	pData->varDescr = NULL;
@@ -304,6 +326,9 @@ BEGINnewActInst
 	int bDestructPValsOnExit;
 	char *cstr;
 	char *varName = NULL;
+	char *buffer;
+	char *tStr;
+	int size = 0;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
@@ -329,6 +354,25 @@ CODESTARTnewActInst
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "rulebase")) {
 			pData->rulebase = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "rule")) {
+			for(int j=0; j < pvals[i].val.d.ar->nmemb; ++j) {
+				tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				size += strlen(tStr);
+				free(tStr);
+			}
+			buffer = malloc(size + pvals[i].val.d.ar->nmemb + 1);
+			tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[0], NULL);
+			strcpy(buffer, tStr);
+			free(tStr);
+			strcat(buffer, "\n");
+			for(int j=1; j < pvals[i].val.d.ar->nmemb; ++j) {
+				tStr = (char*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				strcat(buffer, tStr);
+				free(tStr);
+				strcat(buffer, "\n");
+			}
+			strcat(buffer, "\0");
+			pData->rule = (uchar*)buffer;
 		} else if(!strcmp(actpblk.descr[i].name, "userawmsg")) {
 			pData->bUseRawMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "variable")) {
@@ -368,10 +412,25 @@ CODESTARTnewActInst
 		free(varName);
 		varName = NULL;
 	}
+	if(!pData->rulebase) {
+		if(!pData->rule) {
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "mmnormalize: rulebase needed. "
+					"Use option rulebase or rule.");
+		}
+	}
+	if(pData->rulebase) {
+		if(pData->rule) {
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR,
+					"mmnormalize: only one rulebase possible, rulebase "
+					"can't be used with rule");
+		}
+	}
 
+	dbgprintf("Pascal: vor Fehler\n");
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
+	dbgprintf("Pascal: nach Fehler\n");
 CODE_STD_FINALIZERnewActInst
 	if(bDestructPValsOnExit)
 		cnfparamvalsDestruct(pvals, &actpblk);
@@ -386,7 +445,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
-	if(cs.rulebase == NULL) {
+	if(cs.rulebase == NULL && cs.rule == NULL) {
 		errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: no normalization rulebase was specified, use "
 				"$MMNormalizeSampleDB directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULEBASE);
@@ -397,11 +456,13 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	pData->rulebase = cs.rulebase;
+	pData->rule = cs.rule;
 	pData->bUseRawMsg = cs.bUseRawMsg;
 	pData->pszPath = strdup("$!"); /* old interface does not support this feature */
 	/* all config vars auto-reset! */
 	cs.bUseRawMsg = 0;
 	cs.rulebase = NULL; /* we used it up! */
+	cs.rule = NULL;
 
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
@@ -438,6 +499,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	DEFiRet;
 	cs.rulebase = NULL;
+	cs.rule = NULL;
 	cs.bUseRawMsg = 0;
 	RETiRet;
 }
@@ -483,11 +545,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizerulebase", 0, eCmdHdlrGetWord,
 				    setRuleBase, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizerule", 0, eCmdHdlrGetWord, NULL,
+				NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmnormalizeuserawmsg", 0, eCmdHdlrBinary,
-				    NULL, &cs.bUseRawMsg, STD_LOADABLE_MODULE_ID));
+				NULL, &cs.bUseRawMsg, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

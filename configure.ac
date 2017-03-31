@@ -1025,7 +1025,7 @@ AC_ARG_ENABLE(mmnormalize,
         [enable_mmnormalize=no]
 )
 if test "x$enable_mmnormalize" = "xyes"; then
-	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 1.1.2)
+	PKG_CHECK_MODULES(LIBLOGNORM, lognorm >= 2.0.3)
 
 	save_CFLAGS="$CFLAGS"
 	save_LIBS="$LIBS"
