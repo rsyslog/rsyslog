@@ -31,15 +31,26 @@
 # but run a separate checker. We may also handle 2) above via
 # this system.
 #
+# Note: we use TAB, but we need to set IndenWidth to 8 because
+# this is the clang-format assumed default tab width. If we do
+# not set IndentWidth to 8, no tabs will be used in most cases
+# and instead everything is indented by 2 spaces. Our settings
+# do NOT interfere with the user's tab expansion preferrencies
+# as set in her or his editor.
+#
+# The community discussion that lead to the slected code style
+# can be found here:
+#    https://github.com/rsyslog/rsyslog/pull/1479
+#
 # rgerhards, 2017-03-23
 
 BasedOnStyle: LLVM
-IndentWidth: 8
+IndentWidth: 8 # NOTE: we actually use TABS, see top comment
 UseTab: Always
 BreakBeforeBraces: Linux
 AlignEscapedNewlinesLeft: true
 AllowShortIfStatementsOnASingleLine: false
-AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
 SpaceAfterCStyleCast: false
 IndentCaseLabels: false
 SpaceBeforeAssignmentOperators: true
