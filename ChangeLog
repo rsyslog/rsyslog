@@ -23,8 +23,12 @@ Version 8.26.0 [v8-stable] 2017-04-04
   This adds the name to the rate-limiting message itself, making it easier
   to identify the actual source of "spam" messages.
   Thanks to github user jvymazal for the patch.
+- omfwd: omfwd: add support for network namespaces
+  Thanks to Bastian Stender for the patch.
 - imrelp: honor input name if provided when submitting to impstats
   Thanks to Jon Henry for the patch.
+- imptcp: add ability to set owner/group/access perms for uds
+  Thanks to Nathan Brown for implementing this feature.
 - mmnormalize: add ability to load a rulebase from action() parameter
   This is especially useful for small rulebases, as it avoids having
   a separate rulebase file.
