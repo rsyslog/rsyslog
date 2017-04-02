@@ -54,6 +54,7 @@
 #include <netinet/tcp.h>
 #include <stdint.h>
 #include <zlib.h>
+#include <sys/stat.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -133,6 +134,10 @@ struct instanceConf_s {
 	uchar *pszBindPath;     /* Path to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
+	int fCreateMode;	/* file creation mode for open() */
+	uid_t fileUID;	/* IDs for creation */
+	gid_t fileGID;
+	int bFailOnPerms;	/* fail creation if chown fails? */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *dfltTZ;
 	sbool bUnlink;
@@ -170,6 +175,12 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "address", eCmdHdlrString, 0 },
 	{ "path", eCmdHdlrString, 0 },
 	{ "unlink", eCmdHdlrBinary, 0 },
+	{ "fileowner", eCmdHdlrUID, 0 },
+	{ "fileownernum", eCmdHdlrInt, 0 },
+	{ "filegroup", eCmdHdlrGID, 0 },
+	{ "filegroupnum", eCmdHdlrInt, 0 },
+	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
+	{ "failonchownfailure", eCmdHdlrBinary, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
@@ -209,6 +220,10 @@ struct ptcpsrv_s {
 	uchar *port;			/* Port to listen to */
 	uchar *lstnIP;			/* which IP we should listen on? */
 	uchar *path;            /* Use a unix socket instead */
+	int	fCreateMode;	/* file creation mode for open() */
+	uid_t fileUID;	/* IDs for creation */
+	gid_t fileGID;
+	int	bFailOnPerms;	/* fail creation if chown fails? */
 	sbool bUnixSocket;
 	int iAddtlFrameDelim;
 	int iKeepAliveIntvl;
@@ -408,6 +423,20 @@ static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
 	if (listen(sock, 5) < 0) {
 		errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket listen error");
 		ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+	}
+
+	if(chown(local.sun_path, pSrv->fileUID, pSrv->fileGID) != 0) {
+		if(pSrv->bFailOnPerms) {
+			errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket chown error");
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+		}
+	}
+
+	if(chmod(local.sun_path, pSrv->fCreateMode) != 0) {
+		if(pSrv->bFailOnPerms) {
+			errmsg.LogError(errno, RS_RET_ERR_CRE_AFUX, "imptcp: unix socket chmod error");
+			ABORT_FINALIZE(RS_RET_ERR_CRE_AFUX);
+		}
 	}
 
 	CHKiRet(addLstn(pSrv, sock, 0));
@@ -1359,6 +1388,10 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindPath = NULL;
+	inst->fileUID = -1;
+	inst->fileGID = -1;
+	inst->fCreateMode = 0644;
+	inst->bFailOnPerms = 1;
 	inst->bUnlink = 0;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
@@ -1472,6 +1505,10 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKmalloc(pSrv->path = ustrdup(inst->pszBindPath));
 		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPath));
 		pSrv->bUnixSocket = 1;
+		pSrv->fCreateMode = inst->fCreateMode;
+		pSrv->fileUID = inst->fileUID;
+		pSrv->fileGID = inst->fileGID;
+		pSrv->bFailOnPerms = inst->bFailOnPerms;
 	}
 
 	pSrv->bUnlink = inst->bUnlink;
@@ -1865,6 +1902,18 @@ CODESTARTnewInpInst
 			inst->pszBindPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "unlink")) {
 			inst->bUnlink = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "fileowner")) {
+			inst->fileUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "fileownernum")) {
+			inst->fileUID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "filegroup")) {
+			inst->fileGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "filegroupnum")) {
+			inst->fileGID = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "filecreatemode")) {
+			inst->fCreateMode = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "failonpermsfailure")) {
+			inst->bFailOnPerms = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
