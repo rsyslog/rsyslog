@@ -37,6 +37,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include <zlib.h>
 #include <pthread.h>
 #include "syslogd.h"
@@ -86,6 +87,8 @@ typedef struct _instanceData {
 	int compressionLevel;	/* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
+	char *networkNamespace;
+	int originalNamespace;
 	int iRebindInterval;	/* rebind interval */
 	sbool bKeepAlive;
 	int iKeepAliveIntvl;
@@ -159,6 +162,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "device", eCmdHdlrGetWord, 0 },
 	{ "port", eCmdHdlrGetWord, 0 },
 	{ "protocol", eCmdHdlrGetWord, 0 },
+	{ "networknamespace", eCmdHdlrGetWord, 0 },
 	{ "tcp_framing", eCmdHdlrGetWord, 0 },
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
@@ -383,6 +387,7 @@ CODESTARTfreeInstance
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->port);
+	free(pData->networkNamespace);
 	free(pData->target);
 	free(pData->device);
 	net.DestructPermittedPeers(&pData->pPermPeers);
@@ -740,6 +745,87 @@ finalize_it:
 }
 
 
+/* change to network namespace pData->networkNamespace and keep the file
+ * descriptor to the original namespace.
+ */
+static rsRetVal changeToNs(instanceData *pData)
+{
+	DEFiRet;
+#ifdef HAVE_SETNS
+	int iErr;
+	int destinationNs = -1;
+	char *nsPath = NULL;
+
+	if(pData->networkNamespace) {
+		/* keep file descriptor of original network namespace */
+		pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
+		if (pData->originalNamespace < 0) {
+			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+
+		/* build network namespace path */
+		if (asprintf(&nsPath, "/var/run/netns/%s", pData->networkNamespace) == -1) {
+			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed\n");
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+
+		/* keep file descriptor of destination network namespace */
+		destinationNs = open(nsPath, 0);
+		if (destinationNs < 0) {
+			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'\n",
+					pData->networkNamespace);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+
+		/* actually change in the destination network namespace */
+		if((iErr = (setns(destinationNs, CLONE_NEWNET))) != 0) {
+			dbgprintf("could not change to namespace '%s': %d%s\n",
+				  pData->networkNamespace, iErr, gai_strerror(iErr));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		close(destinationNs);
+		free(nsPath);
+		dbgprintf("omfwd: changed to network namespace '%s'\n", pData->networkNamespace);
+	}
+
+finalize_it:
+#else /* #ifdef HAVE_SETNS */
+		dbgprintf("omfwd: OS does not support network namespaces\n");
+#endif /* #ifdef HAVE_SETNS */
+	RETiRet;
+}
+
+
+/* return to the original network namespace. This should be called after
+ * changeToNs().
+ */
+static rsRetVal returnToOriginalNs(instanceData *pData)
+{
+	DEFiRet;
+#ifdef HAVE_SETNS
+	int iErr;
+
+	/* only in case a network namespace is given and a file descriptor to
+	 * the original namespace exists */
+	if(pData->networkNamespace && pData->originalNamespace >= 0) {
+		/* actually change to the original network namespace */
+		if((iErr = (setns(pData->originalNamespace, CLONE_NEWNET))) != 0) {
+			dbgprintf("could not return to original namespace: %d%s\n",
+				  iErr, gai_strerror(iErr));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+
+		close(pData->originalNamespace);
+		dbgprintf("omfwd: returned to original network namespace\n");
+	}
+
+finalize_it:
+#endif /* #ifdef HAVE_SETNS */
+	RETiRet;
+}
+
+
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
@@ -770,18 +856,23 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		dbgprintf("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
 		if(pWrkrData->pSockArray == NULL) {
+			CHKiRet(changeToNs(pData));
 			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0, pData->device);
+			CHKiRet(returnToOriginalNs(pData));
 		}
 		if(pWrkrData->pSockArray != NULL) {
 			pWrkrData->bIsConnected = 1;
 		}
 	} else {
+		CHKiRet(changeToNs(pData));
 		CHKiRet(TCPSendInit((void*)pWrkrData));
+		CHKiRet(returnToOriginalNs(pData));
 	}
 
 finalize_it:
 	DBGPRINTF("omfwd: doTryResume %s iRet %d\n", pWrkrData->pData->target, iRet);
 	if(iRet != RS_RET_OK) {
+		returnToOriginalNs(pData);
 		if(pWrkrData->f_addr != NULL) {
 			freeaddrinfo(pWrkrData->f_addr);
 			pWrkrData->f_addr = NULL;
@@ -950,6 +1041,8 @@ setInstParamDefaults(instanceData *pData)
 {
 	pData->tplName = NULL;
 	pData->protocol = FORW_UDP;
+	pData->networkNamespace = NULL;
+	pData->originalNamespace = -1;
 	pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 	pData->pszStrmDrvr = NULL;
 	pData->pszStrmDrvrAuthMode = NULL;
@@ -1022,6 +1115,8 @@ CODESTARTnewActInst
 				free(str);
 				ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "networknamespace")) {
+			pData->networkNamespace = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tcp_framing")) {
 			if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"traditional", 11)) {
 				pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
@@ -1255,6 +1350,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	pData->tcp_framing = tcp_framing;
 	pData->port = NULL;
+	pData->networkNamespace = NULL;
 	if(*p == ':') { /* process port */
 		uchar * tmp;
 
