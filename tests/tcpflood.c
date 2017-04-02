@@ -96,7 +96,9 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#ifdef ENABLE_RELP
 #include <librelp.h>
+#endif
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <errno.h>
