@@ -174,7 +174,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
-	{ "processinternalmessages", eCmdHdlrBinary, 0 }
+	{ "processinternalmessages", eCmdHdlrBinary, 0 },
+	{ "umask", eCmdHdlrFileCreateMode, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -987,6 +988,8 @@ glblProcessCnf(struct cnfobj *o)
 #else
 			stdlog_chanspec = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			/* we need to re-open with the new channel */
+			stdlog_close(stdlog_hdl);
 			stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG,
 					(char*) stdlog_chanspec);
 #endif
@@ -1076,11 +1079,13 @@ finalize_it:
 /* This processes the "regular" parameters which are to be set after the
  * config has been fully loaded.
  */
-void
+rsRetVal
 glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
+	DEFiRet;
+	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	qsort(tzinfos, ntzinfos, sizeof(tzinfo_t), qs_arrcmp_tzinfo);
 	DBGPRINTF("Timezone information table (%d entries):\n", ntzinfos);
@@ -1199,6 +1204,8 @@ glblDoneLoadCnf(void)
 				do_setenv(var);
 				free(var);
 			}
+		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
+		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else {
 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
 			  "param '%s'\n", paramblk.descr[i].name);
@@ -1210,7 +1217,7 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
-finalize_it:	return;
+finalize_it:	RETiRet;
 }
 
 

@@ -30,6 +30,7 @@ TESTS +=  \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	glbl_setenv_2_vars.sh \
@@ -38,7 +39,9 @@ TESTS +=  \
 	glbl_setenv.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
+	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -81,6 +84,11 @@ TESTS +=  \
 	timereported-utc-legacy.sh \
 	rawmsg-after-pri.sh \
 	rfc5424parser.sh \
+	pmrfc3164-msgFirstSpace.sh \
+	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-AtSignsInHostname_off.sh \
+	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164-defaultTag.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
 	tcp_forwarding_retries.sh \
@@ -230,6 +238,11 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
+
+if ENABLE_IP
+TESTS += \
+	tcp_forwarding_ns_tpl.sh
+endif
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -438,7 +451,9 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
-	msgvar-concurrency-array-event.tags.sh
+	msgvar-concurrency-array-event.tags.sh \
+	mmnormalize_rule_from_string.sh \
+	mmnormalize_rule_from_array.sh
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
@@ -593,8 +608,14 @@ EXTRA_DIST= \
 	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
+	pmrfc3164-msgFirstSpace.sh \
+	pmrfc3164-AtSignsInHostname.sh \
+	pmrfc3164-AtSignsInHostname_off.sh \
+	pmrfc3164-tagEndingByColon.sh \
+	pmrfc3164-defaultTag.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
+	glbl-umask.sh \
 	glbl-unloadmodules.sh \
 	glbl-invld-param.sh \
 	glbl_setenv_2_vars.sh \
@@ -696,7 +717,9 @@ EXTRA_DIST= \
 	testsuites/1.omod-if-array \
 	testsuites/1.field1 \
 	tcp_forwarding_tpl.sh \
+	tcp_forwarding_ns_tpl.sh \
 	testsuites/tcp_forwarding_tpl.conf \
+	testsuites/tcp_forwarding_ns_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
 	tcp_forwarding_retries.sh \
@@ -757,7 +780,9 @@ EXTRA_DIST= \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
+	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \
@@ -838,6 +863,8 @@ EXTRA_DIST= \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	mmrm1stspace-basic.sh \
+	mmnormalize_rule_from_string.sh \
+	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
 	rawmsg-after-pri.sh \

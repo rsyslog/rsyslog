@@ -1,4 +1,95 @@
 ------------------------------------------------------------------------------
+Version 8.26.0 [v8-stable] 2017-04-04
+- enable internal error messages at all times
+  This is an important change to the design of the rsyslog core internal
+  error message system. Previous code could deadlock if internal messages were
+  issued inside queue processing code, which effectively limited error-reporting
+  capabilities. This change makes it possible to call error messages from any
+  part of the code at any time.
+  As a side-effect, this also fixes an issue where rsyslog could deadlock if
+  imuxsock submited messages to the system log socket when that socket blocked.
+  This was a rare race, albeit consistently reproducible and also seen in
+  practice. The work-around for this issue was to set
+     global(processInternalMessages="on")
+  in rsyslog.conf. With the new code, this race can never happen again. The new
+  code also sets stage for emitting better error messages, especially in places
+  where we previously refrained from doing so and messages went only to the
+  debug log. For some file output and queue subsytem related messages, this
+  is already done, but there is still further work required.
+  Note well: this is a redesign of an important core component. While intensely
+  tested, this may still have some larger regeression potential than usual code
+  changes.
+- core: added logging name of source of rate-limited messages
+  This adds the name to the rate-limiting message itself, making it easier
+  to identify the actual source of "spam" messages.
+  Thanks to github user jvymazal for the patch.
+- omfwd: omfwd: add support for network namespaces
+  Thanks to Bastian Stender for the patch.
+- imrelp: honor input name if provided when submitting to impstats
+  Thanks to Jon Henry for the patch.
+- imptcp: add ability to set owner/group/access perms for uds
+  Thanks to Nathan Brown for implementing this feature.
+- mmnormalize: add ability to load a rulebase from action() parameter
+  This is especially useful for small rulebases, as it avoids having
+  a separate rulebase file.
+  closes https://github.com/rsyslog/rsyslog/issues/625
+- pmrfc3164 improvements
+  - permit to ignore leading space in MSG
+  - permit to use at-sign in host names
+  - permit to require tag to end in colon
+  Thanks to github user bdolez for the contribution
+- add new global parameter "umask"
+  This is equivalent to "$umask" and permits to convert that construct
+  to new-style config format.
+  closes https://github.com/rsyslog/rsyslog/issues/1382
+- core: make use of -T command line option more secure
+  When the -T option is used, a chdir is now done right after chroot. It must
+  be noted, though, that -T is a testing option and has no intent to provide
+  real security. So this change does not mean it actually is sufficiently
+  secure.
+  Thanks to github user jvymazal for the patch.
+- omfile: add error if both file and dynafile are set
+- bugfix: build problem on MacOS (not a supported platform)
+  Thanks to FX Coudert for the fix.
+- regression fix: in 8.25, str2num() returned error on empty string
+  past behaviour was to return 0 in this case; past behavior was reinstanciated
+  Thanks to github user jvymazal for the patch.
+- bugfix omsnmp: improper handling of new-style configuration parameters
+  Thanks to Radovan Sroka for the patch.
+- bugfix: rsyslog identifies itself as "liblogging-stdlog" in internal messages
+  This occured when liblogging-stdlog was used, and was used by default (without
+  explicit configuration). This is a regression of the new default, which does
+  not correctly call stdlog_open() in the default case.
+  closes https://github.com/rsyslog/rsyslog/issues/1442
+- bugfix imfile: wrong files were monitored when using multiple imfile inputs
+  The bug was introduced by the changes for the multilevel wildcard feature
+  in 8.25.0. We have to handle FileCreate events different if the directory
+  watch is configured or added dynamically.
+  closes https://github.com/rsyslog/rsyslog/issues/1452
+- bugfix: setting net.aclResolveHostname/net.acladdhostnameonfail segfaults
+  When compiling using hardned gcc (gentoo), specifying net.aclResolveHostname
+  or net.acladdhostnameonfail results in rsyslogd segfaulting on startup.
+  Thanks to Radovan Sroka for the patch.
+- bugfix: immark emitted error messages with text "imuxsock"
+  Thanks to Chris Pilkington for the patch.
+- bugfix tcpflood: build failed if RELP was disabled
+- fix gcc6 compiler warnings
+  This also fixes a small bug with incorrectly working deprecated -u
+  command line option.
+  Thanks to Nikola Pajkovsky for the patch.
+- the output module array passing interface has been removed
+  It wasn't functional since the v8 update, and the only user was omoracle,
+  which is a contributed module that is no longer maintained. So we
+  removed that interface to streamline the code. Should it ever be needed
+  again, we could check the 8.25 code base. Note, though, that that code
+  still needs to be adjusted to the v8 engine.
+- testbench:
+  * tcpflood now automatically enters silent mode during Travis CI testing
+    This reduces testbench output, which is limited under Travis.
+  * the libqpid-proton package is no longer available for Ubuntu trusty. As
+    such, we disabled its use in Travis on this platform. Right now, this
+    means omaqp1 module is no longer tested on trusty.
+------------------------------------------------------------------------------
 Version 8.25.0 [v8-stable] 2017-02-21
 - imfile: add support for wildcards in directory names
   This now permits to monitor newly created directories without altering

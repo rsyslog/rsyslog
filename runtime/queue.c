@@ -70,7 +70,6 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
-DEFobjCurrIf(errmsg)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
 
@@ -451,7 +450,7 @@ StartDA(qqueue_t *pThis)
 	/* file not found is expected, that means it is no previous QIF available */
 	if(iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND) {
 		errno = 0; /* else an errno is shown in errmsg! */
-		errmsg.LogError(errno, iRet, "error starting up disk queue, using pure in-memory mode");
+		LogError(errno, iRet, "error starting up disk queue, using pure in-memory mode");
 		pThis->bIsDA = 0;	/* disable memory mode */
 		FINALIZE; /* something is wrong */
 	}
@@ -464,7 +463,8 @@ finalize_it:
 		if(pThis->pqDA != NULL) {
 			qqueueDestruct(&pThis->pqDA);
 		}
-		DBGOPRINT((obj_t*) pThis, "error %d creating disk queue - giving up.\n", iRet);
+		LogError(0, iRet, "%s: error creating disk queue - giving up.",
+			obj.GetName((obj_t*)pThis));
 		pThis->bIsDA = 0;
 	}
 
@@ -741,8 +741,8 @@ queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError)
 		 */
 	}
 
-	errmsg.LogError(0, initiatingError, "fatal error on disk queue '%s', emergency switch to direct mode",
-			obj.GetName((obj_t*) pThis));
+	LogError(0, initiatingError, "fatal error on disk queue '%s', "
+		"emergency switch to direct mode", obj.GetName((obj_t*) pThis));
 	return RS_RET_ERR_QUEUE_EMERGENCY;
 }
 
@@ -982,13 +982,18 @@ finalize_it:
 }
 
 
-static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
+static rsRetVal
+qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
 {
 	DEFiRet;
-	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3, pThis->tVars.disk.pReadDeq, NULL,
+	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3,
+		pThis->tVars.disk.pReadDeq, NULL,
 		NULL, msgConstructForDeserializer, NULL, MsgDeserialize);
-	DBGOPRINT((obj_t*) pThis, "qDeqDisk error %d happened at around offset %lld\n",
-		iRet, (long long) pThis->tVars.disk.pReadDeq->iCurrOffs);
+	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "%s: qDeqDisk error happened at around offset %lld",
+			obj.GetName((obj_t*)pThis),
+			(long long) pThis->tVars.disk.pReadDeq->iCurrOffs);
+	}
 	RETiRet;
 }
 
@@ -1768,8 +1773,8 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 	/* dequeue element batch (still protected from mutex) */
 	iRet = DequeueConsumableElements(pThis, pWti, &iQueueSize, pSkippedMsgs);
 	if(*pSkippedMsgs > 0) {
-		DBGOPRINT((obj_t*) pThis, "lost %d messages from diskqueue (invalid .qi file)",
-			*pSkippedMsgs);
+		LogError(0, RS_RET_ERR, "%s: lost %d messages from diskqueue (invalid .qi file)",
+			obj.GetName((obj_t*)pThis), *pSkippedMsgs);
 	}
 
 	/* awake some flow-controlled sources if we can do this right now */
@@ -1791,15 +1796,8 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int *const pSkippedMsgs)
 	/* WE ARE NO LONGER PROTECTED BY THE MUTEX */
 
 	if(iRet != RS_RET_OK && iRet != RS_RET_DISCARDMSG) {
-		DBGOPRINT((obj_t*) pThis, "error %d dequeueing element - ignoring, but strange things "
-					  "may happen\n", iRet);
-#if 0	// This does not work when we run on the main queue
-	// TODO: find better work-around
-		errmsg.LogError(0, iRet, "problem on disk queue '%s': "
-				"error dequeueing element - we ignore this for now, but it "
-				"may cause future trouble.",
-				obj.GetName((obj_t*) pThis));
-#endif
+		LogError(0, iRet, "%s: error dequeueing element - ignoring, "
+			"but strange things may happen", obj.GetName((obj_t*)pThis));
 	}
 
 	RETiRet;
@@ -1993,7 +1991,7 @@ ConsumerReg(qqueue_t *pThis, wti_t *pWti)
 
 	/* report errors, now that we are outside of queue lock */
 	if(skippedMsgs > 0) {
-		errmsg.LogError(0, 0, "problem on disk queue '%s': "
+		LogError(0, 0, "problem on disk queue '%s': "
 				"queue files contain %d messages fewer than specified "
 				"in .qi file -- we lost those messages. That's all we know.",
 				obj.GetName((obj_t*) pThis), skippedMsgs);
@@ -2250,7 +2248,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	if(pThis->iMaxQueueSize < 100
 	   && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY)) {
-		errmsg.LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "Note: queue.size=\"%d\" is very "
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "Note: queue.size=\"%d\" is very "
 			"low and can lead to unpredictable results. See also "
 			"http://www.rsyslog.com/lower-bound-for-queue-sizes/",
 			pThis->iMaxQueueSize);
@@ -2261,7 +2259,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	 */
 	goodval = (pThis->iMaxQueueSize / 100) * 60;
 	if(pThis->iHighWtrMrk != -1 && pThis->iHighWtrMrk < goodval) {
-		errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": high water mark "
+		LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": high water mark "
 				"is set quite low at %d. You should only set it below "
 				"60%% (%d) if you have a good reason for this.",
 				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk, goodval);
@@ -2270,7 +2268,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	if(pThis->iNumWorkerThreads > 1) {
 		goodval = (pThis->iMaxQueueSize / 100) * 10;
 		if(pThis->iMinMsgsPerWrkr != -1 && pThis->iMinMsgsPerWrkr < goodval) {
-			errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": "
+			LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING, "queue \"%s\": "
 					"queue.workerThreadMinimumMessage "
 					"is set quite low at %d. You should only set it below "
 					"10%% (%d) if you have a good reason for this.",
@@ -2279,14 +2277,14 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	}
 
 	if(pThis->iDiscardMrk > pThis->iMaxQueueSize) {
-		errmsg.LogError(0, RS_RET_PARAM_ERROR, "error: queue \"%s\": "
+		LogError(0, RS_RET_PARAM_ERROR, "error: queue \"%s\": "
 				"queue.discardMark %d is set larger than queue.size",
 				obj.GetName((obj_t*) pThis), pThis->iDiscardMrk);
 	}
 
 	goodval = (pThis->iMaxQueueSize / 100) * 80;
 	if(pThis->iDiscardMrk != -1 && pThis->iDiscardMrk < goodval) {
-		errmsg.LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
+		LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
 				"queue \"%s\": queue.discardMark "
 				"is set quite low at %d. You should only set it below "
 				"80%% (%d) if you have a good reason for this.",
@@ -2295,7 +2293,7 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 
 	if(pThis->pszFilePrefix != NULL) { /* This means we have a potential DA queue */
 		if(pThis->iFullDlyMrk != -1 && pThis->iFullDlyMrk < pThis->iHighWtrMrk) {
-			errmsg.LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
+			LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
 					"queue \"%s\": queue.fullDelayMark "
 					"is set below high water mark. This will result in DA mode "
 					" NOT being activated for full delayable messages",
@@ -3054,7 +3052,7 @@ initCryprov(qqueue_t *pThis, struct nvlst *lst)
 
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmcry_%s", pThis->cryprovName)
 		== sizeof(szDrvrName)) {
-		errmsg.LogError(0, RS_RET_ERR, "queue: crypto provider "
+		LogError(0, RS_RET_ERR, "queue: crypto provider "
 				"name is too long: '%s' - encryption disabled",
 				pThis->cryprovName);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -3069,14 +3067,14 @@ initCryprov(qqueue_t *pThis, struct nvlst *lst)
 	 */
 	if(obj.UseObj(__FILE__, szDrvrName, szDrvrName, (void*) &pThis->cryprov)
 		!= RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_LOAD_ERROR, "queue: could not load "
+		LogError(0, RS_RET_LOAD_ERROR, "queue: could not load "
 				"crypto provider '%s' - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
 
 	if(pThis->cryprov.Construct(&pThis->cryprovData) != RS_RET_OK) {
-		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "queue: error constructing "
+		LogError(0, RS_RET_CRYPROV_ERR, "queue: error constructing "
 				"crypto provider %s dataset - encryption disabled",
 				szDrvrName);
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
@@ -3179,7 +3177,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	}
 	if(pThis->qType == QUEUETYPE_DISK) {
 		if(pThis->pszFilePrefix == NULL) {
-			errmsg.LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
+			LogError(0, RS_RET_QUEUE_DISK_NO_FN, "error on queue '%s', disk mode selected, but "
 					"no queue file name given; queue type changed to 'linkedList'",
 					obj.GetName((obj_t*) pThis));
 			pThis->qType = QUEUETYPE_LINKEDLIST;
@@ -3187,7 +3185,7 @@ qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst)
 	}
 
 	if(pThis->pszFilePrefix == NULL && pThis->cryprovName != NULL) {
-		errmsg.LogError(0, RS_RET_QUEUE_CRY_DISK_ONLY, "error on queue '%s', crypto provider can "
+		LogError(0, RS_RET_QUEUE_CRY_DISK_ONLY, "error on queue '%s', crypto provider can "
 				"only be set for disk or disk assisted queue - ignored",
 				obj.GetName((obj_t*) pThis));
 		free(pThis->cryprovName);
@@ -3269,7 +3267,6 @@ BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
 	/* now set our own handlers */

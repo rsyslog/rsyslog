@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -50,6 +50,9 @@
 #include <errno.h>
 #include <pthread.h>
 #include <poll.h>
+#ifdef HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -61,9 +64,6 @@
 #include "errmsg.h"
 #include "cryprov.h"
 #include "datetime.h"
-#ifdef HAVE_SYS_PRCTL_H
-#  include <sys/prctl.h>
-#endif
 
 /* some platforms do not have large file support :( */
 #ifndef O_LARGEFILE
@@ -164,9 +164,11 @@ resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(iRet == RS_RET_SIZELIMITCMD_DIDNT_RESOLVE) {
-			DBGPRINTF("file size limit cmd for file '%s' did no resolve situation\n", pszCurrFName);
+			LogError(0, RS_RET_ERR, "file size limit cmd for file '%s' "
+				"did no resolve situation\n", pszCurrFName);
 		} else {
-			DBGPRINTF("file size limit cmd for file '%s' failed with code %d.\n", pszCurrFName, iRet);
+			LogError(0, RS_RET_ERR, "file size limit cmd for file '%s' "
+				"failed with code %d.\n", pszCurrFName, iRet);
 		}
 		pThis->bDisabled = 1;
 	}
@@ -243,17 +245,14 @@ doPhysOpen(strm_t *pThis)
 	}
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
+	const int errno_save = errno; /* dbgprintf can mangle it! */
 	DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName,
 		  pThis->fd, (int) pThis->tOpenMode);
 	if(pThis->fd == -1) {
-		char errStr[1024];
-		int err = errno;
-		rs_strerror_r(err, errStr, sizeof(errStr));
-		DBGOPRINT((obj_t*) pThis, "open error %d, file '%s': %s\n", errno, pThis->pszCurrFName, errStr);
-		if(err == ENOENT)
-			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-		else
-			ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+		const rsRetVal errcode = (errno_save == ENOENT)
+			? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
+		LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+		ABORT_FINALIZE(errcode);
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -360,16 +359,9 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		pThis->iCurrOffs = offset;
 	} else if(pThis->tOperationsMode == STREAMMODE_WRITE) {
 		if(offset != 0) {
-			// TODO: check the exact condition under which this occurs. It
-			// looks OK, seems like the queue code uses a side-effect that makes
-			// this a valid sequence!
-			/*errmsg.LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
+			LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
 				"already contains %zd bytes\n",
 				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
-			*/
-			DBGPRINTF("queue '%s', file '%s' opened for non-append write, but "
-				"already contains %lld bytes\n",
-				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, (long long) offset);
 		}
 	}
 
@@ -1208,11 +1200,11 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 #endif /* __FreeBSD__ */
 		iWritten = write(pThis->fd, pWriteBuf, lenBuf);
 		if(iWritten < 0) {
-			char errStr[1024];
-			int err = errno;
+			const int err = errno;
 			iWritten = 0; /* we have written NO bytes! */
-			rs_strerror_r(err, errStr, sizeof(errStr));
-			DBGPRINTF("log file (%d) write error %d: %s\n", pThis->fd, err, errStr);
+			if(err != EINTR) {
+				LogError(err, RS_RET_IO_ERROR, "file '%d' write error", pThis->fd);
+			}
 			if(err == EINTR) {
 				/*NO ERROR, just continue */;
 			} else if( !pThis->bIsTTY && ( err == ENOTCONN  || err == EIO )) {
@@ -1538,7 +1530,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 {
 	int zRet;	/* zlib return state */
 	DEFiRet;
-	unsigned outavail;
+	unsigned outavail = 0;
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
 
@@ -1550,7 +1542,7 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 		/* see note in file header for the params we use with deflateInit2() */
 		zRet = zlibw.DeflateInit2(&pThis->zstrm, pThis->iZipLevel, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
 		if(zRet != Z_OK) {
-			DBGPRINTF("error %d returned from zlib/deflateInit2()\n", zRet);
+			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateInit2()", zRet);
 			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 		}
 		pThis->bzInitDone = RSTRUE;
@@ -1566,9 +1558,13 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 		pThis->zstrm.avail_out = pThis->sIOBufSize;
 		pThis->zstrm.next_out = pThis->pZipBuf;
 		zRet = zlibw.Deflate(&pThis->zstrm, bFlush ? Z_SYNC_FLUSH : Z_NO_FLUSH);    /* no bad return value */
-		outavail =pThis->sIOBufSize - pThis->zstrm.avail_out;
 		DBGPRINTF("after deflate, ret %d, avail_out %d, to write %d\n",
 			zRet, pThis->zstrm.avail_out, outavail);
+		if(zRet != Z_OK) {
+			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/Deflate()", zRet);
+			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+		}
+		outavail = pThis->sIOBufSize - pThis->zstrm.avail_out;
 		if(outavail != 0) {
 			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
 		}
@@ -1614,7 +1610,7 @@ doZipFinish(strm_t *pThis)
 finalize_it:
 	zRet = zlibw.DeflateEnd(&pThis->zstrm);
 	if(zRet != Z_OK) {
-		DBGPRINTF("error %d returned from zlib/deflateEnd()\n", zRet);
+		LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateEnd()", zRet);
 	}
 
 	pThis->bzInitDone = 0;

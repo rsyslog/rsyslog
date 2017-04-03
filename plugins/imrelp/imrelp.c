@@ -343,8 +343,8 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(prop.ConstructFinalize(inst->pInputName));
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&(inst->data.stats)));
-	snprintf((char*)statname, sizeof(statname), "imrelp[%s]",
-		 inst->pszBindPort);
+	snprintf((char*)statname, sizeof(statname), "%s(%s)",
+		 inst->pszInputName, inst->pszBindPort);
 	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(inst->data.stats, statname));
 	CHKiRet(statsobj.SetOrigin(inst->data.stats, (uchar*)"imrelp"));

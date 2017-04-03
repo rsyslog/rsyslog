@@ -627,11 +627,11 @@ finalize_it:
 /* tell the rsysog core (including ourselfs) that the config load is done and
  * we need to prepare to move over to activate mode.
  */
-static inline void
+static inline rsRetVal
 tellCoreConfigLoadDone(void)
 {
 	DBGPRINTF("telling rsyslog core that config load for %p is done\n", loadConf);
-	glblDoneLoadCnf();
+	return glblDoneLoadCnf();
 }
 
 
@@ -1345,7 +1345,7 @@ ourConf = loadConf; // TODO: remove, once ourConf is gone!
 	DBGPRINTF("Number of actions in this configuration: %d\n", iActionNbr);
 	rulesetOptimizeAll(loadConf);
 
-	tellCoreConfigLoadDone();
+	CHKiRet(tellCoreConfigLoadDone());
 	tellModulesConfigLoadDone();
 
 	tellModulesCheckConfig();

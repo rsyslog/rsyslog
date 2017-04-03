@@ -212,7 +212,7 @@ case $1 in
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
-			ps -p `cat rsyslog$2.pid`
+			ps -p `cat rsyslog$2.pid` &> /dev/null
 			if [ $? -ne 0 ]
 			then
 			   echo "ABORT! rsyslog pid no longer active during startup!"
@@ -467,6 +467,8 @@ case $1 in
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo "file contents:"
+		    cat $3
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -474,6 +476,8 @@ case $1 in
 		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ "x${sum}" != "x$5" ]; then
 		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is not equal to expected value of "'$5'"
+		    echo "file contents:"
+		    cat $4
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -481,6 +485,8 @@ case $1 in
 		sum=$(cat $4 | grep $3 | sed -e $2 | awk '{s+=$1} END {print s}')
 		if [ ! $sum -gt $5 ]; then
 		    echo sum of first column with edit-expr "'$2'" run over lines from file "'$4'" matched by "'$3'" equals "'$sum'" which is smaller than expected lower-limit of "'$5'"
+		    echo "file contents:"
+		    cat $4
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -488,6 +494,8 @@ case $1 in
 		cat rsyslog.out.log | grep -q "$2"
 		if [ "$?" -ne "0" ]; then
 		    echo content-check failed, not every line matched pattern "'$2'"
+		    echo "file contents:"
+		    cat $4
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;

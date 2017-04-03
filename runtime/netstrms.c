@@ -81,9 +81,10 @@ loadDrvr(netstrms_t *pThis)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL)
+		if(pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
+		}
 	}
 	RETiRet;
 }

@@ -21,7 +21,7 @@ fi
 if [ "x$ESTEST" == "xYES" ]; then sudo apt-get install -qq elasticsearch ; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis-dev; export HIREDIS_OPT="--enable-omhiredis"; fi
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
-sudo apt-get install -qq --force-yes libqpid-proton3-dev
+if [ "$DISTRIB_CODENAME" != "precise" ]; then sudo apt-get install -qq --force-yes libqpid-proton3-dev ;fi
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then CLANG_PKG="clang-3.6"; SCAN_BUILD="scan-build-3.6"; else CLANG_PKG="clang"; SCAN_BUILD="scan-build"; fi
 if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench"; fi
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
