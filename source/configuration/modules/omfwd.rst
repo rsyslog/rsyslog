@@ -46,6 +46,14 @@ Action Parameters
    before the action commend. Note that as of 6.3.6, there is no way to
    specify this within the action itself.
 
+-  **NetworkNamespace** [default none]
+
+   Name of a network namespace as in /var/run/netns/ to use for forwarding.
+
+   If the setns() system call is not available on the system (e.g. BSD
+   kernel, linux kernel before v2.6.24) the given namespace will be
+   ignored.
+
 -  **Device** [default none]
 
    Bind socket to given device (e.g., eth0)
@@ -289,6 +297,16 @@ TCP port 10514.
 ::
 
   action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
+
+In case the system in use has multiple (maybe virtual) network interfaces network
+namespaces come in handy, each with its own routing table. To be able to distribute
+syslogs to remote servers in different namespaces specify them as separate actions.
+
+::
+
+  action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
+  action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
+  action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
 
 Legacy Configuration Directives
 -------------------------------
