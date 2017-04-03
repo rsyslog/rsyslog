@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- NEW BUILD REQUIREMENT: liblognorm 2.0.3 is required for mmnormalize
+  If mmnormalize is not built, the build requirements are unchanged.
+  The new version is necessary because it contains an enhanced API for a
+  new mmnormalize feature.
 - enable internal error messages at all times
   This is an important change to the design of the rsyslog core internal
   error message system. Previous code could deadlock if internal messages were
