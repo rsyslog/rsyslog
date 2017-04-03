@@ -132,7 +132,8 @@ selects whether a static or dynamic file (name) shall be written to.
    created. Files are kept open as long as rsyslogd is active. This
    conflicts with external log file rotation. In order to close a file
    after rotation, send rsyslogd a HUP signal after the file has been
-   rotated away.
+   rotated away. Either file or dynaFile can be used, but not both. If both
+   are given, dynaFile will be used.
 
 .. function::  dynaFile [templateName]
 
@@ -143,7 +144,9 @@ selects whether a static or dynamic file (name) shall be written to.
    data is appended if the file already exists. If the file does not
    exist, a new file is created. The template given in "templateName"
    is just a regular :doc:`rsyslog template <../templates>`, so all
-   you have full control over how to format the file name.
+   you have full control over how to format the file name. Either file
+   or dynaFile can be used, but not both. If both are given, dynaFile
+   will be used.
    
    A cache of recent files is kept. Note
    that this cache can consume quite some memory (especially if large
@@ -224,11 +227,7 @@ selects whether a static or dynamic file (name) shall be written to.
    separate thread. In that case, double buffers will be used so that
    one buffer can be filled while the other buffer is being written.
    Note that in order to enable FlushInterval, AsyncWriting must be set
-   to "on". Otherwise, the flush interval will be ignored. Also note
-   that when FlushOnTXEnd is "on" but AsyncWriting is off, output will
-   only be written when the buffer is full. This may take several hours,
-   or even require a rsyslog shutdown. However, a buffer flush can be
-   forced in that case by sending rsyslogd a HUP signal.
+   to "on". Otherwise, the flush interval will be ignored.
 
 .. function::  flushOnTXEnd [switch]
 
@@ -236,13 +235,16 @@ selects whether a static or dynamic file (name) shall be written to.
 
    Omfile has the capability to write output using a buffered writer.
    Disk writes are only done when the buffer is full. So if an error
-   happens during that write, data is potentially lost. In cases where
-   this is unacceptable, set FlushOnTXEnd to on. Then, data is written
-   at the end of each transaction (for pre-v5 this means after each log
-   message) and the usual error recovery thus can handle write errors
-   without data loss. Note that this option severely reduces the effect
-   of zip compression and should be switched to off for that use case.
-   Note that the default -on- is primarily an aid to preserve the
+   happens during that write, data is potentially lost. Bear in mind that
+   the buffer may become full only after several hours or a rsyslog
+   shutdown (however a buffer flush can still be forced by sending rsyslogd
+   a HUP signal). In cases where this is unacceptable, set FlushOnTXEnd
+   to "on". Then, data is written at the end of each transaction
+   (for pre-v5 this means after each log message) and the usual error
+   recovery thus can handle write errors without data loss.
+   Note that this option severely reduces the effect of zip compression
+   and should be switched to "off" for that use case.
+   Also note that the default -on- is primarily an aid to preserve the
    traditional syslogd behaviour.
 
 .. function::  ioBufferSize [size]

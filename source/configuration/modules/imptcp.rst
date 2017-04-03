@@ -70,6 +70,59 @@ the input they are specified with.
    A path on the filesystem for a unix domain socket. It is an error to specify
    both `path` and `port`.
 
+.. function::  fileOwner [userName]
+
+   *Default: system default*
+
+   Set the file owner for the domain socket. The
+   parameter is a user name, for which the userid is obtained by
+   rsyslogd during startup processing. Interim changes to the user
+   mapping are *not* detected.
+
+.. function::  fileOwnerNum [uid]
+
+   *Default: system default*
+
+   Set the file owner for the domain socket. The
+   parameter is a numerical ID, which which is used regardless of
+   whether the user actually exists. This can be useful if the user
+   mapping is not available to rsyslog during startup.
+
+.. function::  fileGroup [groupName]
+
+   *Default: system default*
+
+   Set the group for the domain socket. The parameter is
+   a group name, for which the groupid is obtained by rsyslogd during
+   startup processing. Interim changes to the user mapping are not
+   detected.
+
+.. function::  fileGroupNum [gid]
+
+   *Default: system default*
+
+   Set the group for the domain socket. The parameter is
+   a numerical ID, which is used regardless of whether the group
+   actually exists. This can be useful if the group mapping is not
+   available to rsyslog during startup.
+
+.. function::  fileCreateMode [octalNumber]
+
+   *Default: 0644*
+
+   Set the access permissions for the domain socket. The value given must
+   always be a 4-digit octal number, with the initial digit being zero.
+   Please note that the actual permission depend on rsyslogd's process
+   umask. If in doubt, use "$umask 0000" right at the beginning of the
+   configuration file to remove any restrictions.
+
+.. function::  failOnChOwnFailure [switch]
+
+   *Default: on*
+
+   rsyslog will not start if this is on and changing the file owner, group,
+   or access permissions fails. Disable this to ignore these errors.
+
 .. function:: unlink on/off
 
    *Default: off*

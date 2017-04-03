@@ -27,6 +27,7 @@ Manual
    configuration/index
    installation/index
    troubleshooting/index
+   faq/index
    concepts/index
    examples/index
    tutorials/index

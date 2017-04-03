@@ -8,6 +8,7 @@ they actually are output or parser modules, it is their implementation
 that makes them special.
 
 .. toctree::
+   :maxdepth: 1
    :glob:
 
    mm*
