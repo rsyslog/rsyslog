@@ -12,6 +12,10 @@
 # variables:
 # RS_SORTCMD    Sort command to use (must support -g option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
+# RS_CMPCMD     cmp command to use. If unset, "cmd" is used.
+#               E.g. Solaris needs "gcmp"
+# RS_HEADCMD    head command to use. If unset, "head" is used.
+#               E.g. Solaris needs "ghead"
 #
 
 # environment variables:
@@ -60,6 +64,12 @@ case $1 in
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		if [ -z $RS_CMPCMD ]; then
+			RS_CMPCMD=cmp
+		fi
+		if [ -z $RS_HEADCMD ]; then
+			RS_HEADCMD=head
+		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		echo "------------------------------------------------------------"
 		echo "Test: $0"
@@ -99,7 +109,8 @@ case $1 in
    'exit')	# cleanup
 		# detect any left-over hanging instance
 		nhanging=0
-		for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		#for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over instance $pid, killing it"
 			ps -fp $pid
