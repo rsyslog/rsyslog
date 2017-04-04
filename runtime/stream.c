@@ -361,7 +361,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		if(offset != 0) {
 			LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
 				"already contains %zd bytes\n",
-				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, (ssize_t) offset);
 		}
 	}
 

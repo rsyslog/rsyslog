@@ -50,7 +50,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 
-#ifdef OS_SOLARIS
+#ifndef PATH_MAX
 #	define PATH_MAX MAXPATHLEN
 #endif
 
