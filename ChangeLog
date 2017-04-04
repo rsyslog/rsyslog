@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
+- imfile: fix cross-platform build issue
+  see also https://github.com/rsyslog/rsyslog/issues/1494
+  Thanks to Felix Janda for bug report and solution suggestion.
+- bugfix core: perform MainqObj destruction only when not NULL already
+  This affects the config object; in theory may lead to misadressing during
+  config parsing.
+  Thanks to github user jvymazal for the patch
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
 - NEW BUILD REQUIREMENT: liblognorm 2.0.3 is required for mmnormalize
