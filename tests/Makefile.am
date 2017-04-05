@@ -474,6 +474,7 @@ TESTS += \
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
@@ -887,6 +888,7 @@ EXTRA_DIST= \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \

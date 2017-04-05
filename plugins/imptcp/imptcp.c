@@ -931,7 +931,19 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
 			if(pThis->iMsg >= iMaxLine) {
 				/* emergency, we now need to flush, no matter if we are at end of message or not... */
-				DBGPRINTF("error: message received is larger than max msg size, we split it\n");
+				int i = 1;
+				char currBuffChar;
+				int tttttt;
+				for(tttttt = 0; tttttt < buffLen; tttttt++){
+					DBGPRINTF("JJJJJ:     %c , %d\n", (*buff)[tttttt], (*buff)[tttttt]);
+				}
+				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
+					&& (pThis->pLstn->pSrv->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
+						|| currBuffChar != pThis->pLstn->pSrv->iAddtlFrameDelim))) {
+					i++;
+				}
+				LogError(0, NO_ERRCODE, "error: message received is at least %d byte larger than max msg"
+					" size; message will be split starting at: \"%.*s\"\n", i, (i < 32) ? i : 32, *buff);
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 				++(*pnMsgs);
 				/* we might think if it is better to ignore the rest of the
