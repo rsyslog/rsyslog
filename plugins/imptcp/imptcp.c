@@ -932,7 +932,14 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			if(pThis->iMsg >= iMaxLine) {
 				/* emergency, we now need to flush, no matter if we are at end of message or not... */
 				int i = 1;
-				while(i < buffLen && (*buff)[i] != '\n') {
+				char currBuffChar;
+				int tttttt;
+				for(tttttt = 0; tttttt < buffLen; tttttt++){
+					DBGPRINTF("JJJJJ:     %c , %d\n", (*buff)[tttttt], (*buff)[tttttt]);
+				}
+				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
+					&& (pThis->pLstn->pSrv->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
+						|| currBuffChar != pThis->pLstn->pSrv->iAddtlFrameDelim))) {
 					i++;
 				}
 				LogError(0, NO_ERRCODE, "error: message received is at least %d byte larger than max msg"
