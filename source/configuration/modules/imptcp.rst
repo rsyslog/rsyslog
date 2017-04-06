@@ -12,6 +12,11 @@ can be used.
 
 **Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
+Error Messages
+--------------
+
+When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
+
 Configuration Directives
 ------------------------
 
