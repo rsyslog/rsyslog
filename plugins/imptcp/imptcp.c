@@ -933,10 +933,6 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 				/* emergency, we now need to flush, no matter if we are at end of message or not... */
 				int i = 1;
 				char currBuffChar;
-				int tttttt;
-				for(tttttt = 0; tttttt < buffLen; tttttt++){
-					DBGPRINTF("JJJJJ:     %c , %d\n", (*buff)[tttttt], (*buff)[tttttt]);
-				}
 				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
 					&& (pThis->pLstn->pSrv->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
 						|| currBuffChar != pThis->pLstn->pSrv->iAddtlFrameDelim))) {
