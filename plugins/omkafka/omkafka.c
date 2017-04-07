@@ -1075,6 +1075,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	          VERSION, rd_kafka_version_str());
 	CHKiRet(statsobj.Construct(&kafkaStats));
 	CHKiRet(statsobj.SetName(kafkaStats, (uchar *)"omkafka"));
+	CHKiRet(statsobj.SetOrigin(kafkaStats, (uchar*)"omkafka"));
 	STATSCOUNTER_INIT(ctrTopicSubmit, mutCtrTopicSubmit);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrTopicSubmit));
