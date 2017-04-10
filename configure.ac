@@ -100,6 +100,8 @@ case "${host}" in
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
+    CPPFLAGS="-std=c99 $CPPFLAGS"
+    CFLAGS="-std=c99 $CFLAGS"
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
@@ -142,7 +144,25 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h malloc.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADER([arpa/inet.h],[],[],[
+  [#ifdef HAVE_ARPA_INET_H
+     # include <arpa/inet.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([libgen.h],[],[],[
+  [#ifdef HAVE_LIBGEN_H
+     # include <libgen.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([malloc.h],[],[],[
+  [#ifdef HAVE_MALLOC_H
+     # include <malloc.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

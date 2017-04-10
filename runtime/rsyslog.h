@@ -659,7 +659,11 @@ void dfltErrLogger(const int, const int, const uchar *errMsg);
  * a dummy variable. This requires review of where in code empty structs
  * are already defined. -- rgerhards, 2010-07-26
  */
+#ifdef OS_SOLARIS
+#define EMPTY_STRUCT  int remove_me_when_first_real_member_is_added;
+#else
 #define EMPTY_STRUCT
+#endif
 
 /* TODO: remove this -- this is only for transition of the config system */
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
