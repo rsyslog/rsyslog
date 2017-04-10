@@ -315,32 +315,34 @@ AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
 # multithreading via pthreads
-AC_CHECK_HEADERS(
-    [pthread.h],
-    [
-      AC_CHECK_LIB(
-        [pthread],
-        [pthread_create],
-        [
-          AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
-          PTHREADS_LIBS="-lpthread"
-          if test "$unamestr" = "AIX"; then
-                  PTHREADS_CFLAGS="-lpthreads" 
-          else
-                  case "${os_type}" in
-                  solaris) PTHREADS_CFLAGS="-pthreads" ;;
-                  *)       PTHREADS_CFLAGS="-pthread" ;;
-                  esac
-          fi
-          AC_SUBST(PTHREADS_LIBS)
-          AC_SUBST(PTHREADS_CFLAGS)
-        ],
-        [AC_MSG_FAILURE([pthread is missing])],
-        [-lpthread]
-      )
-    ],
-    [AC_MSG_FAILURE([pthread is missing])]
-)
+if test "$os_type" != "solaris"
+then
+	AC_CHECK_HEADERS(
+	    [pthread.h],
+	    [
+	      AC_CHECK_LIB(
+		[pthread],
+		[pthread_create],
+		[
+		  PTHREADS_LIBS="-lpthread"
+		  if test "$unamestr" = "AIX"; then
+			  PTHREADS_CFLAGS="-lpthreads" 
+		  else
+			  case "${os_type}" in
+			  solaris) PTHREADS_CFLAGS="-pthreads -std=c99" ;;
+			  *)       PTHREADS_CFLAGS="-pthread" ;;
+			  esac
+		  fi
+		  AC_SUBST(PTHREADS_LIBS)
+		  AC_SUBST(PTHREADS_CFLAGS)
+		],
+		[AC_MSG_FAILURE([pthread is missing])],
+		[-lpthread]
+	      )
+	    ],
+	    [AC_MSG_FAILURE([pthread is missing])]
+	)
+fi
 
 AC_CHECK_LIB(
   [pthread],
