@@ -7,9 +7,6 @@ AC_INIT([rsyslog],[8.26.0.master],[rsyslog@lists.adiscon.com])
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
 AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
-# AIXPORT END
-
-# AIXPORT START : Set the required variables for AIX config script
 if test "$unamestr" = "AIX"; then
 	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
 	LIBS="-lbsd -lsrc"
@@ -55,23 +52,23 @@ fi
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
-m4_ifdef([AX_IS_RELEASE], [
-	AX_IS_RELEASE([git-directory])
-	m4_ifdef([AX_COMPILER_FLAGS], [
-		AX_COMPILER_FLAGS()
+if test "$GCC" = "yes"
+then
+	m4_ifdef([AX_IS_RELEASE], [
+		AX_IS_RELEASE([git-directory])
+		m4_ifdef([AX_COMPILER_FLAGS], [
+			AX_COMPILER_FLAGS()
+		], [
+			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		])
 	], [
-		if test "$GCC" = "yes"
-		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		fi
-		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
 	])
-], [
-	if test "$GCC" = "yes"
-	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-	fi
-	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-])
-
+else
+	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+fi
 
 PKG_PROG_PKG_CONFIG
 
