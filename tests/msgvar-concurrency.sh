@@ -4,6 +4,13 @@
 # This file is part of the rsyslog project, released  under ASL 2.0
 echo ===============================================================================
 echo \[msgvar-concurrency.sh\]: testing concurrency of local variables
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup msgvar-concurrency.conf
 sleep 1
