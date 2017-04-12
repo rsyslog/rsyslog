@@ -6,6 +6,13 @@
 echo ===============================================================================
 echo \[pipeaction.sh\]: testing pipe output action
 
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME"
+   exit 77
+fi
+
+
 # create the pipe and start a background process that copies data from 
 # it to the "regular" work file
 . $srcdir/diag.sh init

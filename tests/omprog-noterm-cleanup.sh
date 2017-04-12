@@ -3,6 +3,13 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo ===============================================================================
 echo \[omprog-noterm-cleanup.sh\]: test for cleanup in omprog without SIGTERM
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME"
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup omprog-noterm.conf
 . $srcdir/diag.sh wait-startup

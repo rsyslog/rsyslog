@@ -561,7 +561,7 @@ case $1 in
 		echo "\$IncludeConfig diag-common.conf" > testconf.conf
 		;;
    'add-conf')   # start a standard test rsyslog.conf
-		echo "$2" >> testconf.conf
+		printf "%s" "$2" >> testconf.conf
 		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then
