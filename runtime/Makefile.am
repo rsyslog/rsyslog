@@ -78,8 +78,6 @@ librsyslog_la_SOURCES = \
 	lookup.h \
 	cfsysline.c \
 	cfsysline.h \
-	sd-daemon.c \
-	sd-daemon.h \
 	\
 	../action.h \
 	../action.c \
@@ -88,6 +86,9 @@ librsyslog_la_SOURCES = \
 	\
 	../parse.c \
 	../parse.h \
+	\
+	sd-daemon.c \
+	sd-daemon.h
 	\
 	hashtable.c \
 	hashtable.h \
@@ -102,6 +103,9 @@ librsyslog_la_SOURCES = \
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 #
+#if OS_LINUX
+#librsyslog_la_SOURCES += \
+#endif
 
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"

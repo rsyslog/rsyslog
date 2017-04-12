@@ -1923,11 +1923,14 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 # man pages
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
+git_src_have_to_generate_man_pages="yes" # default to use when building from git source
 AC_ARG_ENABLE(generate-man-pages,
         [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) have_to_generate_man_pages="yes" ;;
-          no) have_to_generate_man_pages="no" ;;
+          no) have_to_generate_man_pages="no" ;
+              git_src_have_to_generate_man_pages="no"
+	      ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-generate-man-pages) ;;
          esac],
         [have_to_generate_man_pages=no]
@@ -1951,7 +1954,7 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
 
-        have_to_generate_man_pages=yes
+        have_to_generate_man_pages=git_src_have_to_generate_man_pages
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
