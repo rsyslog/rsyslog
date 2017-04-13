@@ -1,6 +1,13 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME"
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

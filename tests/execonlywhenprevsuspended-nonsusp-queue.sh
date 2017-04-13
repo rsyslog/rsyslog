@@ -14,7 +14,7 @@ ls *.out.log
 . $srcdir/diag.sh seq-check 0 999
 if [ -e rsyslog2.out.log ]; then
     echo "error: \"suspended\" file exists, first 10 lines:"
-    head rsyslog2.out.log
+    $RS_HEADCMD rsyslog2.out.log
     exit 1
 fi
 . $srcdir/diag.sh exit

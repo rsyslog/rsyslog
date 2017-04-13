@@ -1467,8 +1467,9 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(RELP_CFLAGS)
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS) $(RELP_LIBS)
+tcpflood_CFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(RELP_LIBS) $(GNUTLS_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif

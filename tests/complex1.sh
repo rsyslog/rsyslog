@@ -6,6 +6,13 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ====================================================================================
 echo TEST: \[complex1.sh\]: complex test with gzip and multiple action queues
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 # uncomment for debugging support:
 #export RSYSLOG_DEBUG="debug nostdout"

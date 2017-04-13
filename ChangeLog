@@ -1,3 +1,4 @@
+- builds on solaris again
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
 - imptcp: optionally emit an error message if incoming messages are truncated
