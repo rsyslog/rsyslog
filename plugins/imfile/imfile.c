@@ -93,6 +93,11 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 /* If set to 1, fileTableDisplay will be compiled and used for debugging */
 #define ULTRA_DEBUG 0
 
+/* Setting GLOB_BRACE to ZERO which disables support for GLOB_BRACE if not available on current platform */
+#ifndef GLOB_BRACE
+	#define GLOB_BRACE 0
+#endif
+
 /* this structure is used in pure polling mode as well one of the support
  * structures for inotify.
  */

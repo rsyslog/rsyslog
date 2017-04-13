@@ -96,7 +96,9 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#ifdef ENABLE_RELP
 #include <librelp.h>
+#endif
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -525,7 +527,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		}
 	} else {
 		/* use fixed message format from command line */
-		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
+		*pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
 	}
 	if (octateCountFramed == 1) {
 		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);

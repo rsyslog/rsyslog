@@ -41,6 +41,7 @@ TESTS +=  \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
 	exec_tpl-concurrency.sh \
@@ -237,6 +238,11 @@ TESTS +=  \
 	lookup_table_rscript_reload.sh \
 	lookup_table_rscript_reload_without_stub.sh \
 	multiple_lookup_tables.sh
+
+if ENABLE_IP
+TESTS += \
+	tcp_forwarding_ns_tpl.sh
+endif
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -445,7 +451,9 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
-	msgvar-concurrency-array-event.tags.sh
+	msgvar-concurrency-array-event.tags.sh \
+	mmnormalize_rule_from_string.sh \
+	mmnormalize_rule_from_array.sh
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
@@ -466,6 +474,7 @@ TESTS += \
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
@@ -709,7 +718,9 @@ EXTRA_DIST= \
 	testsuites/1.omod-if-array \
 	testsuites/1.field1 \
 	tcp_forwarding_tpl.sh \
+	tcp_forwarding_ns_tpl.sh \
 	testsuites/tcp_forwarding_tpl.conf \
+	testsuites/tcp_forwarding_ns_tpl.conf \
 	tcp_forwarding_dflt_tpl.sh \
 	testsuites/tcp_forwarding_dflt_tpl.conf \
 	tcp_forwarding_retries.sh \
@@ -772,6 +783,7 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-read-only.sh \
+	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	testsuites/msgvar-concurrency.conf \
 	msgvar-concurrency-array.sh \
@@ -852,6 +864,8 @@ EXTRA_DIST= \
 	timereported-utc-legacy.sh \
 	timereported-utc-vg.sh \
 	mmrm1stspace-basic.sh \
+	mmnormalize_rule_from_string.sh \
+	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
 	rawmsg-after-pri.sh \
@@ -874,6 +888,7 @@ EXTRA_DIST= \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \

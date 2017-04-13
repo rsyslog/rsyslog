@@ -1,5 +1,22 @@
 ------------------------------------------------------------------------------
+Version 8.27.0 [v8-stable] 2017-05-16
+- imptcp: optionally emit an error message if incoming messages are truncated
+- omkafka: add "origin" field to stats output
+  See also https://github.com/rsyslog/rsyslog/issues/1508
+  Thanks to Yury Bushmelev for providing the patch.
+- imfile: fix cross-platform build issue
+  see also https://github.com/rsyslog/rsyslog/issues/1494
+  Thanks to Felix Janda for bug report and solution suggestion.
+- bugfix core: perform MainqObj destruction only when not NULL already
+  This affects the config object; in theory may lead to misadressing during
+  config parsing.
+  Thanks to github user jvymazal for the patch
+------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
+- NEW BUILD REQUIREMENT: liblognorm 2.0.3 is required for mmnormalize
+  If mmnormalize is not built, the build requirements are unchanged.
+  The new version is necessary because it contains an enhanced API for a
+  new mmnormalize feature.
 - enable internal error messages at all times
   This is an important change to the design of the rsyslog core internal
   error message system. Previous code could deadlock if internal messages were
@@ -23,8 +40,16 @@ Version 8.26.0 [v8-stable] 2017-04-04
   This adds the name to the rate-limiting message itself, making it easier
   to identify the actual source of "spam" messages.
   Thanks to github user jvymazal for the patch.
+- omfwd: omfwd: add support for network namespaces
+  Thanks to Bastian Stender for the patch.
 - imrelp: honor input name if provided when submitting to impstats
   Thanks to Jon Henry for the patch.
+- imptcp: add ability to set owner/group/access perms for uds
+  Thanks to Nathan Brown for implementing this feature.
+- mmnormalize: add ability to load a rulebase from action() parameter
+  This is especially useful for small rulebases, as it avoids having
+  a separate rulebase file.
+  closes https://github.com/rsyslog/rsyslog/issues/625
 - pmrfc3164 improvements
   - permit to ignore leading space in MSG
   - permit to use at-sign in host names
@@ -40,6 +65,14 @@ Version 8.26.0 [v8-stable] 2017-04-04
   real security. So this change does not mean it actually is sufficiently
   secure.
   Thanks to github user jvymazal for the patch.
+- omfile: add error if both file and dynafile are set
+- bugfix: build problem on MacOS (not a supported platform)
+  Thanks to FX Coudert for the fix.
+- regression fix: in 8.25, str2num() returned error on empty string
+  past behaviour was to return 0 in this case; past behavior was reinstanciated
+  Thanks to github user jvymazal for the patch.
+- bugfix omsnmp: improper handling of new-style configuration parameters
+  Thanks to Radovan Sroka for the patch.
 - bugfix: rsyslog identifies itself as "liblogging-stdlog" in internal messages
   This occured when liblogging-stdlog was used, and was used by default (without
   explicit configuration). This is a regression of the new default, which does
