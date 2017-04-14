@@ -100,6 +100,7 @@ typedef struct _instanceData {
 	/* following fields for UDP-based delivery */
 	int bSendToAll;
 	int iUDPSendDelay;
+	int iUDPMcastTTL;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
@@ -137,6 +138,7 @@ typedef struct configSettings_s {
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	int iTCPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	int iUDPRebindInterval;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	int iUDPMcastTTL;
 	int bKeepAlive;
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
@@ -180,6 +182,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
+	{ "udp.multicastttl", eCmdHdlrInt, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -208,6 +211,7 @@ CODESTARTinitConfVars
 	cs.bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
 	cs.pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 	cs.iUDPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
+	cs.iUDPMcastTTL = 1;	/* IP multicast TTL */
 	cs.iTCPRebindInterval = 0;	/* support for automatic re-binding (load balancers!). 0 - no rebind */
 	cs.pPermPeers = NULL;
 ENDinitConfVars
@@ -857,7 +861,8 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		pWrkrData->f_addr = res;
 		if(pWrkrData->pSockArray == NULL) {
 			CHKiRet(changeToNs(pData));
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0, pData->device);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target,
+				NULL, NULL, 0, 0, 0, pData->device, pData->iUDPMcastTTL);
 			CHKiRet(returnToOriginalNs(pData));
 		}
 		if(pWrkrData->pSockArray != NULL) {
@@ -1055,6 +1060,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->bResendLastOnRecon = 0; 
 	pData->bSendToAll = -1;  /* unspecified */
 	pData->iUDPSendDelay = 0;
+	pData->iUDPMcastTTL = 1;
 	pData->pPermPeers = NULL;
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
@@ -1193,6 +1199,8 @@ CODESTARTnewActInst
 			pData->bSendToAll = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.senddelay")) {
 			pData->iUDPSendDelay = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.multicastttl")) {
+			pData->iUDPMcastTTL = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
@@ -1390,6 +1398,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	pData->iRebindInterval = (pData->protocol == FORW_TCP) ?
 				 cs.iTCPRebindInterval : cs.iUDPRebindInterval;
 
+	pData->iUDPMcastTTL = cs.iUDPMcastTTL;
 	pData->bKeepAlive = cs.bKeepAlive;
 	pData->iKeepAliveProbes = cs.iKeepAliveProbes;
 	pData->iKeepAliveIntvl = cs.iKeepAliveIntvl;
@@ -1459,6 +1468,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.iStrmDrvrMode = 0;
 	cs.bResendLastOnRecon = 0;
 	cs.iUDPRebindInterval = 0;
+	cs.iUDPMcastTTL = 1;
 	cs.iTCPRebindInterval = 0;
 	cs.bKeepAlive = 0;
 	cs.iKeepAliveProbes = 0;
@@ -1484,6 +1494,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &cs.iTCPRebindInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudprebindinterval", 0, eCmdHdlrInt,
 		NULL, &cs.iUDPRebindInterval, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendudpmulticastttl", 0, eCmdHdlrInt,
+		NULL, &cs.iUDPMcastTTL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcpkeepalive", 0, eCmdHdlrBinary,
 		NULL, &cs.bKeepAlive, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendtcpkeepalive_probes", 0, eCmdHdlrInt,

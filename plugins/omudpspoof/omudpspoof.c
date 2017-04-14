@@ -576,7 +576,8 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 	}
 	DBGPRINTF("%s found, resuming.\n", pData->host);
 	pWrkrData->f_addr = res;
-	pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0, 0, 0, NULL);
+	pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL,
+		NULL, 0, 0, 0, NULL, -1);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
