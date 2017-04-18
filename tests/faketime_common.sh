@@ -10,11 +10,11 @@ rsyslog_testbench_preload_libfaketime() {
         missing_requirements="'find' is missing in PATH; Make sure you have findutils/coreutils installed! Skipping test ..."
     fi
 
-    if ! hash sort 2>/dev/null ; then
+    if ! hash $RS_SORTCMD 2>/dev/null ; then
         missing_requirements="'sort' is missing in PATH; Make sure you have coreutils installed! Skipping test ..."
     fi
 
-    if ! hash head 2>/dev/null ; then
+    if ! hash $RS_HEADCMD 2>/dev/null ; then
         missing_requirements="'head' is missing in PATH; Make sure you have coreutils installed! Skipping test ..."
     fi
 
@@ -23,7 +23,7 @@ rsyslog_testbench_preload_libfaketime() {
         exit 77
     fi
 
-    RSYSLOG_LIBFAKETIME=$(find /usr -name 'libfaketime.so*' -type f | sort --reverse | head --lines 1)
+    RSYSLOG_LIBFAKETIME=$(find /usr -name 'libfaketime.so*' -type f | $RS_SORTCMD --reverse | $RS_HEADCMD --lines 1)
     if [ -z "${RSYSLOG_LIBFAKETIME}" ]; then
         echo "Could not determine libfaketime library, skipping test!"
         exit 77

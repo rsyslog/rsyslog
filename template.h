@@ -166,7 +166,7 @@ rsRetVal doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, in
 rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
 	    smsg_t *__restrict__ const pMsg,
-	    actWrkrIParams_t *__restrict const iparam,
+	    actWrkrIParams_t *__restrict__ const iparam,
 	    struct syslogTime *const ttNow);
 
 rsRetVal templateInit(void);

@@ -116,7 +116,8 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg)
 	pthread_mutex_unlock(&mutList);
 	is_locked = 0;
 	if(bHaveMainQueue) {
-		dbgprintf("signaling new internal message via SIGTTOU\n");
+		DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
+			pThis->pMsg->pszRawMsg);
 		kill(glblGetOurPid(), SIGTTOU);
 	}
 

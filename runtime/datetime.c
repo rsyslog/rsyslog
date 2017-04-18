@@ -50,7 +50,10 @@ DEFobjCurrIf(errmsg)
 static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 
 /* the following table saves us from computing an additional date to get
- * the ordinal day of the year - at least from 1967-2099 */
+ * the ordinal day of the year - at least from 1967-2099
+ * Note: non-2038+ compliant systems (Solaris) will generate compiler
+ * warnings on the post 2038-rollover years.
+ */
 static const int yearInSec_startYear = 1967;
 /* for x in $(seq 1967 2099) ; do
  *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)

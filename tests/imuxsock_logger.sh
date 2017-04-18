@@ -1,5 +1,12 @@
 #!/bin/bash
 echo \[imuxsock_logger.sh\]: test imuxsock
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME LOGGER"
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_logger.conf
 # send a message with trailing LF

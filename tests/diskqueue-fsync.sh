@@ -7,6 +7,13 @@
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
 echo \[diskqueue-fsync.sh\]: testing queue disk-only mode, fsync case
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup diskqueue-fsync.conf
 # 1000 messages should be enough - the disk fsync test is very slow!

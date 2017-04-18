@@ -3,6 +3,13 @@
 # it. This is not 100% the same thing as running as root, but it
 # is pretty close to it. -- rgerhards, 201602-19
 echo \[imuxsock_logger_syssock.sh\]: test trailing LF handling in imuxsock
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME LOGGER"
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_logger_syssock.conf
 # send a message with trailing LF

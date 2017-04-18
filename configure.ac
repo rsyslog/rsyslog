@@ -7,9 +7,6 @@ AC_INIT([rsyslog],[8.27.0.master],[rsyslog@lists.adiscon.com])
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
 AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
-# AIXPORT END
-
-# AIXPORT START : Set the required variables for AIX config script
 if test "$unamestr" = "AIX"; then
 	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
 	LIBS="-lbsd -lsrc"
@@ -55,23 +52,23 @@ fi
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
-m4_ifdef([AX_IS_RELEASE], [
-	AX_IS_RELEASE([git-directory])
-	m4_ifdef([AX_COMPILER_FLAGS], [
-		AX_COMPILER_FLAGS()
+if test "$GCC" = "yes"
+then
+	m4_ifdef([AX_IS_RELEASE], [
+		AX_IS_RELEASE([git-directory])
+		m4_ifdef([AX_COMPILER_FLAGS], [
+			AX_COMPILER_FLAGS()
+		], [
+			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		])
 	], [
-		if test "$GCC" = "yes"
-		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		fi
-		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
 	])
-], [
-	if test "$GCC" = "yes"
-	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-	fi
-	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-])
-
+else
+	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+fi
 
 PKG_PROG_PKG_CONFIG
 
@@ -103,6 +100,8 @@ case "${host}" in
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
+    CPPFLAGS="-std=c99 $CPPFLAGS"
+    CFLAGS="-std=c99 $CFLAGS"
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
@@ -145,7 +144,25 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h malloc.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADER([arpa/inet.h],[],[],[
+  [#ifdef HAVE_ARPA_INET_H
+     # include <arpa/inet.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([libgen.h],[],[],[
+  [#ifdef HAVE_LIBGEN_H
+     # include <libgen.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([malloc.h],[],[],[
+  [#ifdef HAVE_MALLOC_H
+     # include <malloc.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -319,32 +336,34 @@ AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
 # multithreading via pthreads
-AC_CHECK_HEADERS(
-    [pthread.h],
-    [
-      AC_CHECK_LIB(
-        [pthread],
-        [pthread_create],
-        [
-          AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
-          PTHREADS_LIBS="-lpthread"
-          if test "$unamestr" = "AIX"; then
-                  PTHREADS_CFLAGS="-lpthreads" 
-          else
-                  case "${os_type}" in
-                  solaris) PTHREADS_CFLAGS="-pthreads" ;;
-                  *)       PTHREADS_CFLAGS="-pthread" ;;
-                  esac
-          fi
-          AC_SUBST(PTHREADS_LIBS)
-          AC_SUBST(PTHREADS_CFLAGS)
-        ],
-        [AC_MSG_FAILURE([pthread is missing])],
-        [-lpthread]
-      )
-    ],
-    [AC_MSG_FAILURE([pthread is missing])]
-)
+if test "$os_type" != "solaris"
+then
+	AC_CHECK_HEADERS(
+	    [pthread.h],
+	    [
+	      AC_CHECK_LIB(
+		[pthread],
+		[pthread_create],
+		[
+		  PTHREADS_LIBS="-lpthread"
+		  if test "$unamestr" = "AIX"; then
+			  PTHREADS_CFLAGS="-lpthreads" 
+		  else
+			  case "${os_type}" in
+			  solaris) PTHREADS_CFLAGS="-pthreads -std=c99" ;;
+			  *)       PTHREADS_CFLAGS="-pthread" ;;
+			  esac
+		  fi
+		  AC_SUBST(PTHREADS_LIBS)
+		  AC_SUBST(PTHREADS_CFLAGS)
+		],
+		[AC_MSG_FAILURE([pthread is missing])],
+		[-lpthread]
+	      )
+	    ],
+	    [AC_MSG_FAILURE([pthread is missing])]
+	)
+fi
 
 AC_CHECK_LIB(
   [pthread],

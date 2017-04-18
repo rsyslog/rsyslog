@@ -4,6 +4,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
+- build now works on solaris again
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
   Thanks to Felix Janda for bug report and solution suggestion.

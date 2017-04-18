@@ -15,7 +15,7 @@ local0.* action(type="omfile" template="outfmt"
 . $srcdir/diag.sh tcpflood -m1
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
-echo "tag/with/slashes,tag" | cmp rsyslog.out.log
+echo "tag/with/slashes,tag" | $RS_CMPCMD rsyslog.out.log
 if [ ! $? -eq 0 ]; then
   echo "invalid output generated, rsyslog.out.log is:"
   cat rsyslog.out.log
