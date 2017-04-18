@@ -2,6 +2,13 @@
 # This is part of the rsyslog testbench, licensed under GPLv3
 echo [imfile-wildcards-dirs2.sh]
 
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris does not support inotify."
+   exit 77
+fi
+
+
 export IMFILEINPUTFILES="10"
 export IMFILEINPUTFILESSTEPS="5"
 export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))

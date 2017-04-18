@@ -525,7 +525,7 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 
 /* should be called with write(rkLock) */
 static void
-do_rd_kafka_destroy(instanceData *const __restrict pData)
+do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 {
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: can't close, handle wasn't open\n");

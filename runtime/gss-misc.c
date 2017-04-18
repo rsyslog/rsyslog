@@ -35,11 +35,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef USE_PTHREADS
 #include <pthread.h>
-#else
-#include <fcntl.h>
-#endif
 #include <gssapi/gssapi.h>
 #include "dirty.h"
 #include "syslogd-types.h"

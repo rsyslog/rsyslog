@@ -93,6 +93,7 @@ struct globals_s {
  * At a later stage, we may think about dropping them. -- rgerhards, 2011-04-19
  */
 struct defaults_s {
+	int remove_me_when_first_real_member_is_added;
 };
 
 

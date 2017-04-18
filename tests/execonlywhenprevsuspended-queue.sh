@@ -3,6 +3,12 @@
 echo =====================================================================================
 echo \[execonlywhenprevsuspended-queue.sh\]: test execonly...suspended functionality with action on its own queue
 
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup execonlywhenprevsuspended-queue.conf
 . $srcdir/diag.sh injectmsg 0 1000

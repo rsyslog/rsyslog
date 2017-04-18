@@ -12,6 +12,10 @@
 # variables:
 # RS_SORTCMD    Sort command to use (must support -g option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
+# RS_CMPCMD     cmp command to use. If unset, "cmd" is used.
+#               E.g. Solaris needs "gcmp"
+# RS_HEADCMD    head command to use. If unset, "head" is used.
+#               E.g. Solaris needs "ghead"
 #
 
 # environment variables:
@@ -36,7 +40,7 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
+TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext dependency config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
@@ -60,6 +64,12 @@ case $1 in
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		if [ -z $RS_CMPCMD ]; then
+			RS_CMPCMD=cmp
+		fi
+		if [ -z $RS_HEADCMD ]; then
+			RS_HEADCMD=head
+		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		echo "------------------------------------------------------------"
 		echo "Test: $0"
@@ -99,7 +109,8 @@ case $1 in
    'exit')	# cleanup
 		# detect any left-over hanging instance
 		nhanging=0
-		for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		#for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over instance $pid, killing it"
 			ps -fp $pid
@@ -550,7 +561,7 @@ case $1 in
 		echo "\$IncludeConfig diag-common.conf" > testconf.conf
 		;;
    'add-conf')   # start a standard test rsyslog.conf
-		echo "$2" >> testconf.conf
+		printf "%s" "$2" >> testconf.conf
 		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then

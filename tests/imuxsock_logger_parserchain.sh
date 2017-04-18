@@ -2,6 +2,13 @@
 # Copyright (C) 2015-03-04 by rainer gerhards, released under ASL 2.0
 echo ======================================================================
 echo \[imuxsock_logger_parserchain.sh\]: test imuxsock
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "Solaris: FIX ME LOGGER"
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imuxsock_logger_parserchain.conf
 logger -d --rfc3164 -u testbench_socket test

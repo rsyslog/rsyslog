@@ -64,6 +64,7 @@
 #include "prop.h"
 
 #ifdef OS_SOLARIS
+#include <arpa/nameser_compat.h>
 #	define	s6_addr32	_S6_un._S6_u32
 	typedef unsigned int	u_int32_t;
 #endif

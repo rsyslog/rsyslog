@@ -1,5 +1,12 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 
 #export RSYSLOG_DEBUG="debug nologfuncflow nostdout noprintmutexaction"

@@ -4,6 +4,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
+- build now works on solaris again
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
   Thanks to Felix Janda for bug report and solution suggestion.
@@ -40,8 +41,16 @@ Version 8.26.0 [v8-stable] 2017-04-04
   This adds the name to the rate-limiting message itself, making it easier
   to identify the actual source of "spam" messages.
   Thanks to github user jvymazal for the patch.
+- omfwd: omfwd: add support for network namespaces
+  Thanks to Bastian Stender for the patch.
 - imrelp: honor input name if provided when submitting to impstats
   Thanks to Jon Henry for the patch.
+- imptcp: add ability to set owner/group/access perms for uds
+  Thanks to Nathan Brown for implementing this feature.
+- mmnormalize: add ability to load a rulebase from action() parameter
+  This is especially useful for small rulebases, as it avoids having
+  a separate rulebase file.
+  closes https://github.com/rsyslog/rsyslog/issues/625
 - pmrfc3164 improvements
   - permit to ignore leading space in MSG
   - permit to use at-sign in host names
