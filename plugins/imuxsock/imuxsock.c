@@ -594,7 +594,7 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 	ratelimit_t *rl = NULL;
 	int r;
 	pid_t *keybuf;
-	char pidbuf[256];
+	char pinfobuf[512];
 	DEFiRet;
 
 	if(cred == NULL)
@@ -616,10 +616,25 @@ findRatelimiter(lstn_t *pLstn, struct ucred *cred, ratelimit_t **prl)
 		DBGPRINTF("imuxsock: no ratelimiter for pid %lu, creating one\n",
 			  (unsigned long) cred->pid);
 		STATSCOUNTER_INC(ctrNumRatelimiters, mutCtrNumRatelimiters);
-		snprintf(pidbuf, sizeof(pidbuf), "pid %lu",
-			(unsigned long) cred->pid);
-		pidbuf[sizeof(pidbuf)-1] = '\0'; /* to be on safe side */
-		CHKiRet(ratelimitNew(&rl, "imuxsock", pidbuf));
+		/* read process name from system  */
+		char procName[256]; /* enough for any sane process name  */
+		snprintf(procName, sizeof(procName), "/proc/%lu/cmdline", (unsigned long) cred->pid);
+		FILE *f = fopen(procName, "r");
+		if (f) {
+			size_t len;
+			len = fread(procName, sizeof(char), 256, f);
+			if (len > 0) {
+				snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu, name: %s",
+					(unsigned long) cred->pid, procName);
+			}
+			fclose(f);
+		}
+		else {
+			snprintf(pinfobuf, sizeof(pinfobuf), "pid: %lu",
+				(unsigned long) cred->pid);
+		}
+		pinfobuf[sizeof(pinfobuf)-1] = '\0'; /* to be on safe side */
+		CHKiRet(ratelimitNew(&rl, "imuxsock", pinfobuf));
 		ratelimitSetLinuxLike(rl, pLstn->ratelimitInterval, pLstn->ratelimitBurst);
 		ratelimitSetSeverity(rl, pLstn->ratelimitSev);
 		CHKmalloc(keybuf = malloc(sizeof(pid_t)));
