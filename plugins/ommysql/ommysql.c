@@ -55,7 +55,7 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
-	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	dbsrv[_DB_MAXFILEPATH+1];	/* IP or hostname of unix domain socket of DB server*/ 
 	unsigned int dbsrvPort;		/* port of MySQL server */
 	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -191,6 +191,8 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
 	instanceData *pData;
 	DEFiRet;
+	char usock[_DB_MAXFILEPATH+1] = { 0, };
+	char *usock_p = NULL;
 
 	ASSERT(pWrkrData->hmysql == NULL);
 	pData = pWrkrData->pData;
@@ -220,8 +222,16 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 			}
 		}
 		/* Connect to database */
+
+		/* check unix socket */
+		if (pData->dbsrv[0] == '/') {
+			strcpy(usock, pData->dbsrv);
+			usock_p = usock;
+			strcpy(pData->dbsrv, "localhost");
+		}
+
 		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
-				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
+				      pData->dbpwd, pData->dbname, pData->dbsrvPort, usock_p, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
