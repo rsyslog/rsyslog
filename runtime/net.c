@@ -1181,24 +1181,29 @@ getLocalHostname(uchar **ppName)
 	}
 
 	char *dot = strstr(hnbuf, ".");
+	struct addrinfo *res = NULL;
 	if(!empty_hostname && dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
-		struct hostent *hent = gethostbyname((char*)hnbuf);
-		if(hent) {
-			int i = 0;
-			if(hent->h_aliases) {
-				const size_t hnlen = strlen(hnbuf);
-				for(i = 0; hent->h_aliases[i]; i++) {
-					if(!strncmp(hent->h_aliases[i], hnbuf, hnlen)
-					   && hent->h_aliases[i][hnlen] == '.') {
-						break; /* match! */
-					}
-				}
-			}
-			if(hent->h_aliases && hent->h_aliases[i]) {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_aliases[i]));
-			} else {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
+		struct addrinfo *hints = NULL;
+		/* initialize the flags struct */
+		hints->ai_addr = NULL;
+		hints->ai_addrlen = 0;
+		hints->ai_canonname = NULL;
+		hints->ai_family = AF_UNSPEC;
+		hints->ai_next = NULL;
+		hints->ai_protocol = 0;
+		hints->ai_socktype = 0;
+		hints->ai_flags = AI_CANONNAME;
+		int e = getaddrinfo((char*)hnbuf, NULL, hints, &res);
+		if (e != 0) {
+			dbgprintf("getaddrinfo: %s\n", gai_strerror(e));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		if (res != NULL) {
+			/* When AI_CANONNAME is set first member of res linked-list */
+			/* should contain what we need */
+			if (res->ai_canonname != NULL && res->ai_canonname[0] != '\0') {
+				CHKmalloc(fqdn = (uchar*)strdup(res->ai_canonname));
 			}
 			dot = strstr((char*)fqdn, ".");
 		}
@@ -1215,6 +1220,9 @@ getLocalHostname(uchar **ppName)
 
 	*ppName = fqdn;
 finalize_it:
+	if (res != NULL) {
+		freeaddrinfo(res);
+	}
 	RETiRet;
 }
 
