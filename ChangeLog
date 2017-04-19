@@ -4,6 +4,10 @@ Version 8.27.0 [v8-stable] 2017-05-16
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
+- imuxsock: rate-limiting also uses process name
+  both for the actual limit procesing as well as warning messages emitted
+  see also https://github.com/rsyslog/rsyslog/pull/1520
+  Thanks to github user jvymazal for the patch
 - build now works on solaris again
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
