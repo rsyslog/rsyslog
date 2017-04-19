@@ -902,7 +902,16 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 
 	if(pThis->inputState == eInOctetCnt) {
 		if(isdigit(c)) {
-			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
+			if(pThis->iOctetsRemain <= 200000000) {
+				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
+			} else {
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
+						"frame too large (at least %d%c), change to octet stuffing",
+						pThis->iOctetsRemain, c);
+				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
+				pThis->inputState = eInMsg;
+			}
+			*(pThis->pMsg + pThis->iMsg++) = c;
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
@@ -911,9 +920,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.", pThis->iOctetsRemain);
+				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
@@ -924,6 +933,7 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
 			}
 			pThis->inputState = eInMsg;
+			pThis->iMsg = 0;
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
