@@ -172,6 +172,7 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 {
 	DEFiRet;
 	int gnuRet;
+	unsigned int i;
 	gnutls_datum_t data = { NULL, 0 };
 	uchar *keyFile;
 	uchar *certFile;
@@ -194,9 +195,13 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 
 	/* try load certificate */
 	CHKiRet(readFile(certFile, &data));
-	CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
+#if HAVE_GNUTLS_X509_CRT_LIST_IMPORT2
+	CHKgnutls(gnutls_x509_crt_list_import2(&pThis->ourCerts, &pThis->nCerts, &data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED));
+#else
+	gnuRet = gnutls_x509_crt_list_import(pThis->ourCerts, &pThis->nCerts, &data, GNUTLS_X509_FMT_PEM, GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+	if (gnuRet < 0) CHKgnutls(gnuRet);
+#endif
 	pThis->bOurCertIsInit = 1;
-	CHKgnutls(gnutls_x509_crt_import(pThis->ourCert, &data, GNUTLS_X509_FMT_PEM));
 	free(data.data);
 	data.data = NULL;
 
@@ -212,7 +217,8 @@ finalize_it:
 		if(data.data != NULL)
 			free(data.data);
 		if(pThis->bOurCertIsInit) {
-			gnutls_x509_crt_deinit(pThis->ourCert);
+			for (i = 0; i < pThis->nCerts; i++)
+				gnutls_x509_crt_deinit(pThis->ourCerts[i]);
 			pThis->bOurCertIsInit = 0;
 		}
 		if(pThis->bOurKeyIsInit) {
@@ -257,8 +263,8 @@ gtlsClientCertCallback(gnutls_session_t session,
 #else
 	st->type = GNUTLS_CRT_X509;
 #endif
-	st->ncerts = 1;
-	st->cert.x509 = &pThis->ourCert;
+	st->ncerts = pThis->nCerts;
+	st->cert.x509 = pThis->ourCerts;
 	st->key.x509 = pThis->ourKey;
 	st->deinit_all = 0;
 
@@ -646,6 +652,10 @@ gtlsInitSession(nsd_gtls_t *pThis)
 	gnutls_session_t session;
 
 	gnutls_init(&session, GNUTLS_SERVER);
+	pThis->nCerts = NSD_GTLS_MAX_CERTS;
+#if HAVE_GNUTLS_X509_CRT_LIST_IMPORT2
+	pThis->ourCerts = NULL;
+#endif
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 0;
 
@@ -1176,6 +1186,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t) sock);
 }
 #pragma GCC diagnostic warning "-Wint-to-pointer-cast"
+	unsigned int i;
 
 /* ---------------------------- end GnuTLS specifics ---------------------------- */
 
@@ -1208,7 +1219,8 @@ CODESTARTobjDestruct(nsd_gtls)
 	}
 
 	if(pThis->bOurCertIsInit)
-		gnutls_x509_crt_deinit(pThis->ourCert);
+		for (i = 0; i < pThis->nCerts; i++)
+			gnutls_x509_crt_deinit(pThis->ourCerts[i]);
 	if(pThis->bOurKeyIsInit)
 		gnutls_x509_privkey_deinit(pThis->ourKey);
 	if(pThis->bHaveSess)

@@ -865,6 +865,7 @@ if test "x$enable_gnutls" = "xyes"; then
 	AC_DEFINE([ENABLE_GNUTLS], [1], [Indicator that GnuTLS is present])
 	save_libs=$LIBS
 	LIBS="$LIBS $GNUTLS_LIBS"
+	AC_CHECK_FUNCS(gnutls_x509_crt_list_import2,,)
 	AC_CHECK_FUNCS(gnutls_certificate_set_retrieve_function,,)
 	AC_CHECK_FUNCS(gnutls_certificate_type_set_priority,,)
 	LIBS=$save_libs
