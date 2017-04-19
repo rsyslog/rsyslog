@@ -112,6 +112,7 @@ typedef struct configSettings_s {
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
+	int maxFrameSize;
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
 	uchar *lstnIP;			/* which IP we should listen on? */
 	uchar *pszBindRuleset;
@@ -137,6 +138,7 @@ struct instanceConf_s {
 	int fCreateMode;	/* file creation mode for open() */
 	uid_t fileUID;	/* IDs for creation */
 	gid_t fileGID;
+	int maxFrameSize;
 	int bFailOnPerms;	/* fail creation if chown fails? */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *dfltTZ;
@@ -182,6 +184,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
 	{ "failonchownfailure", eCmdHdlrBinary, 0 },
 	{ "name", eCmdHdlrString, 0 },
+	{ "maxframesize", eCmdHdlrInt, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
@@ -223,6 +226,7 @@ struct ptcpsrv_s {
 	int	fCreateMode;	/* file creation mode for open() */
 	uid_t fileUID;	/* IDs for creation */
 	gid_t fileGID;
+	int maxFrameSize;
 	int	bFailOnPerms;	/* fail creation if chown fails? */
 	sbool bUnixSocket;
 	int iAddtlFrameDelim;
@@ -904,12 +908,6 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 		if(isdigit(c)) {
 			if(pThis->iOctetsRemain <= 200000000) {
 				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
-			} else {
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-						"frame too large (at least %d%c), change to octet stuffing",
-						pThis->iOctetsRemain, c);
-				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
-				pThis->inputState = eInMsg;
 			}
 			*(pThis->pMsg + pThis->iMsg++) = c;
 		} else { /* done with the octet count, so this must be the SP terminator */
@@ -932,8 +930,14 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
 					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
 			}
+			if(pThis->iOctetsRemain > pThis->pLstn->pSrv->maxFrameSize) {
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
+						"frame too large: %d, change to octet stuffing", pThis->iOctetsRemain);
+				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
+			} else {
+				pThis->iMsg = 0;
+			}
 			pThis->inputState = eInMsg;
-			pThis->iMsg = 0;
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
@@ -1133,6 +1137,7 @@ initConfigSettings(void)
 	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.maxFrameSize = 200000;
 	cs.pszInputName = NULL;
 	cs.pszBindRuleset = NULL;
 	cs.pszInputName = NULL;
@@ -1408,6 +1413,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPath = NULL;
 	inst->fileUID = -1;
 	inst->fileGID = -1;
+	inst->maxFrameSize = 200000;
 	inst->fCreateMode = 0644;
 	inst->bFailOnPerms = 1;
 	inst->bUnlink = 0;
@@ -1482,6 +1488,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iKeepAliveTime = cs.iKeepAliveTime;
 	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+	inst->maxFrameSize = cs.maxFrameSize;
 
 finalize_it:
 	free(pNewVal);
@@ -1512,6 +1519,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	}
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
+	pSrv->maxFrameSize = inst->maxFrameSize;
 	if (inst->pszBindAddr == NULL) {
 		pSrv->lstnIP = NULL;
 	} else {
@@ -1934,6 +1942,15 @@ CODESTARTnewInpInst
 			inst->bFailOnPerms = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
 			inst->pszInputName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "maxframesize")) {
+			const int max = (int) pvals[i].val.d.n;
+			if(max <= 200000000) {
+				inst->maxFrameSize = max;
+			} else {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'maxFrameSize' "
+						"parameter given is %d, max is 200000000", max);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
@@ -1947,7 +1964,7 @@ CODESTARTnewInpInst
 			} else if(!strcasecmp(cstr, "none")) {
 				inst->compressionMode = COMPRESS_NEVER;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'compression.mode' "
 					 "parameter (given is '%s')", cstr);
 				free(cstr);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -2251,6 +2268,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iKeepAliveIntvl = 0;
 	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.maxFrameSize = 200000;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;
 	free(cs.lstnIP);
