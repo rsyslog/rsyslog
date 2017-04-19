@@ -1,6 +1,8 @@
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
 - imptcp: optionally emit an error message if incoming messages are truncated
+- bugfix imptcp: potential overflow in octet count computation
+  when a very large octet count was specified, the counter could overflow
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
