@@ -453,7 +453,13 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh
+	mmnormalize_rule_from_array.sh \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh
+endif
+
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
@@ -461,10 +467,10 @@ TESTS +=  \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh
 endif
+
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
-endif
 endif
 
 if ENABLE_MMJSONPARSE
@@ -868,6 +874,11 @@ EXTRA_DIST= \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
+	testsuites/mmnormalize_processing_tests.rulebase \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
