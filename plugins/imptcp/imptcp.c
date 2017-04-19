@@ -778,6 +778,8 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	if(iNewSock < 0) {
 		if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
+		LogError(errno, RS_RET_ACCEPT_ERR, "error accepting connection "
+			    "on listen socket %d", pLstn->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
@@ -795,7 +797,8 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
 	if(sockflags == -1) {
-		DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
+		LogError(errno, RS_RET_IO_ERROR, "error setting fcntl(O_NONBLOCK) on "
+			"tcp socket %d", iNewSock);
 		prop.Destruct(peerName);
 		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -1637,6 +1640,7 @@ lstnActivity(ptcplstn_t *pLstn)
 	DBGPRINTF("imptcp: new connection on listen socket %d\n", pLstn->sock);
 	while(glbl.GetGlobalInputTermState() == 0) {
 		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
+		DBGPRINTF("imptcp: AcceptConnReq on listen socket %d returned %d\n", pLstn->sock, localRet);
 		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1) {
 			break;
 		}
@@ -1859,7 +1863,9 @@ wrkr(void *myself)
 				pthread_mutex_unlock(&io_q.mut);
 				break;
 			} else {
+				DBGPRINTF("imptcp: worker %u waiting on new work items\n", (unsigned) me->tid);
 				pthread_cond_wait(&io_q.wakeup_worker, &io_q.mut);
+				DBGPRINTF("imptcp: worker %u awoken\n", (unsigned) me->tid);
 			}
 			++wrkrRunning;
 		}
