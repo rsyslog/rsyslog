@@ -7,11 +7,11 @@ echo \[dynstats_reset-vg.sh\]: test for gathering stats with a known-dyn-metrics
 . $srcdir/diag.sh startup-vg dynstats_reset.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-. $srcdir/diag.sh msleep 2100 #one second for unused-metrics to be kept under observation, another for them to be cleared off
+. $srcdir/diag.sh msleep 4100 #two seconds for unused-metrics to be kept under observation, another two them to be cleared off
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-. $srcdir/diag.sh msleep 2100
+. $srcdir/diag.sh msleep 4100
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
-. $srcdir/diag.sh msleep 2100
+. $srcdir/diag.sh msleep 4100
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh content-check "foo 001 0"
 . $srcdir/diag.sh content-check "bar 002 0"
