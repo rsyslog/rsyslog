@@ -216,7 +216,7 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 	 * treshold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
         char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-        snprintf(namebuf, sizeof namebuf, "%s%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
+        snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
         if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
