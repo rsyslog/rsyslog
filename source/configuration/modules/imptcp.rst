@@ -143,6 +143,18 @@ the input they are specified with.
    Binds specified ruleset to this input. If not set, the default
    ruleset is bound.
 
+.. function:: maxFrameSize <int>
+
+   *Default: 200000; Max: 200000000*
+
+   When in octet counted mode, the frame size is given at the beginning
+   of the message. With this parameter the max size this frame can have
+   is specified and when the frame gets to large the mode is switched to
+   octet stuffing.
+   The max value this parameter can have was specified because otherwise
+   the integer could become negative and this would result in a
+   Segmentation Fault.
+
 .. function:: address <name>
 
    *Default: all interfaces*
