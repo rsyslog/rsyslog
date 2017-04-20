@@ -98,6 +98,7 @@ static struct configSettings_s {
 	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
 	int bDisableLFDelim;
+	int discardTruncatedMsg;
 	int bUseFlowControl;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszInputName;
@@ -129,6 +130,7 @@ struct modConfData_s {
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
 	int bSuppOctetFram;
 	sbool bDisableLFDelim; /* disable standard LF delimiter */
+	sbool discardTruncatedMsg;
 	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
 	sbool bKeepAlive;
 	int iKeepAliveIntvl;
@@ -148,6 +150,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 static struct cnfparamdescr modpdescr[] = {
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
+	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "octetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
 	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
@@ -357,6 +360,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
 		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
+		CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, modConf->discardTruncatedMsg));
 		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
 		/* now set optional params, but only if they were actually configured */
 		if(modConf->pszStrmDrvrName != NULL) {
@@ -459,6 +463,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->bEmitMsgOnClose = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	loadModConf->bDisableLFDelim = 0;
+	loadModConf->discardTruncatedMsg = 0;
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->permittedPeers = NULL;
@@ -493,6 +498,8 @@ CODESTARTsetModCnf
 			loadModConf->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
 			loadModConf->bDisableLFDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
+			loadModConf->discardTruncatedMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
 			loadModConf->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {

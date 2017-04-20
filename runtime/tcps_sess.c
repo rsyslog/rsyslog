@@ -406,6 +406,12 @@ processDataRcvd(tcps_sess_t *pThis,
 			}
 			pThis->inputState = eInMsg;
 		}
+	} else if(pThis->inputState == eInMsgTruncating) {
+		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
+		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
+		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+			pThis->inputState = eAtStrtFram;
+		}
 	} else {
 		assert(pThis->inputState == eInMsg);
 		if(pThis->iMsg >= iMaxLine) {
@@ -413,10 +419,14 @@ processDataRcvd(tcps_sess_t *pThis,
 			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			++(*pnMsgs);
-			/* we might think if it is better to ignore the rest of the
-			 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
+			if(pThis->pSrv->discardTruncatedMsg == 1) {
+				pThis->inputState = eInMsgTruncating;
+			}
+			/* configuration parameter discardTruncatedMsg controlls
+			 * if rest of message is being processed
+			 * 0 = off
+			 * 1 = on
+			 * Pascal Withopf, 2017-04-21
 			 */
 		}
 

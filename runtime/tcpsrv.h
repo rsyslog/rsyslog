@@ -81,6 +81,7 @@ struct tcpsrv_s {
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
+	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	int ratelimitInterval;
 	int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -151,6 +152,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v9 -- rgerhards, 2010-03-01 */
 	rsRetVal (*SetbDisableLFDelim)(tcpsrv_t*, int);
 	/* added v10 -- rgerhards, 2011-04-01 */
+	rsRetVal (*SetDiscardTruncatedMsg)(tcpsrv_t*, int);
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);

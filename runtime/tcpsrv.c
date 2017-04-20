@@ -968,6 +968,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	pThis->bDisableLFDelim = 0;
+	pThis->discardTruncatedMsg = 0;
 	pThis->OnMsgReceive = NULL;
 	pThis->dfltTZ[0] = '\0';
 	pThis->bSPFramingFix = 0;
@@ -1188,6 +1189,19 @@ SetbDisableLFDelim(tcpsrv_t *pThis, int bVal)
 }
 
 
+/* discard the truncated msg part
+ * -- PascalWithopf, 2017-04-20
+ */
+static rsRetVal
+SetDiscardTruncatedMsg(tcpsrv_t *pThis, int discard)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->discardTruncatedMsg = discard;
+	RETiRet;
+}
+
+
 /* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
 static rsRetVal
 SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
@@ -1404,6 +1418,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetbSPFramingFix = SetbSPFramingFix;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
+	pIf->SetDiscardTruncatedMsg = SetDiscardTruncatedMsg;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetUseFlowControl = SetUseFlowControl;
 	pIf->SetLstnMax = SetLstnMax;
