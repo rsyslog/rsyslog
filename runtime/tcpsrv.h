@@ -80,6 +80,7 @@ struct tcpsrv_s {
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
+	int maxFrameSize;	/**< max frame size for octet counted*/
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int ratelimitInterval;
 	int ratelimitBurst;
@@ -124,6 +125,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
 	rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t*, int);
+	rsRetVal (*SetMaxFrameSize)(tcpsrv_t*, int);
 	rsRetVal (*SetInputName)(tcpsrv_t*, uchar*);
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));

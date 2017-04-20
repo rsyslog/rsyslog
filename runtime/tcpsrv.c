@@ -967,6 +967,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->iSessMax = TCPSESS_MAX_DEFAULT;
 	pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	pThis->maxFrameSize = 200000;
 	pThis->bDisableLFDelim = 0;
 	pThis->OnMsgReceive = NULL;
 	pThis->dfltTZ[0] = '\0';
@@ -1199,6 +1200,17 @@ SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
 }
 
 
+/* Set max frame size for octet counted -- PascalWithopf, 2017-04-20*/
+static rsRetVal
+SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->maxFrameSize = maxFrameSize;
+	RETiRet;
+}
+
+
 static rsRetVal
 SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
 {
@@ -1403,6 +1415,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDfltTZ = SetDfltTZ;
 	pIf->SetbSPFramingFix = SetbSPFramingFix;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
+	pIf->SetMaxFrameSize = SetMaxFrameSize;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetUseFlowControl = SetUseFlowControl;
