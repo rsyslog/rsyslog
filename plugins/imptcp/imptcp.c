@@ -110,6 +110,7 @@ typedef struct configSettings_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;		/* emit an informational message on close by remote peer */
+	int bEmitMsgOnOpen;
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int iAddtlFrameDelim;		/* addtl frame delimiter, e.g. for netscreen, default none */
 	uchar *pszInputName;		/* value for inputname property, NULL is OK and handled by core engine */
@@ -125,6 +126,7 @@ struct instanceConf_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;
+	int bEmitMsgOnOpen;
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int bSPFramingFix;
 	int iAddtlFrameDelim;
@@ -187,6 +189,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionopen", eCmdHdlrBinary, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrInt, 0 },
@@ -239,6 +242,7 @@ struct ptcpsrv_s {
 	pthread_mutex_t mutSessLst;
 	sbool bKeepAlive;		/* support keep-alive packets */
 	sbool bEmitMsgOnClose;
+	sbool bEmitMsgOnOpen;
 	sbool bSuppOctetFram;
 	sbool bSPFramingFix;
 	sbool bUnlink;
@@ -796,6 +800,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		 */
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
+
 	if(sockflags == -1) {
 		LogError(errno, RS_RET_IO_ERROR, "error setting fcntl(O_NONBLOCK) on "
 			"tcp socket %d", iNewSock);
@@ -803,11 +808,18 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-
+	DBGPRINTF("pascal: %d\n", pLstn->pSrv->bEmitMsgOnOpen);
+	if(pLstn->pSrv->bEmitMsgOnOpen) {
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: connection established with host: %s", propGetSzStr(*peerName));
+	}
 	*newSock = iNewSock;
 
 finalize_it:
+	DBGPRINTF("iRet: %d\n", iRet);
 	if(iRet != RS_RET_OK) {
+		if(iRet != -3006 && pLstn->pSrv->bEmitMsgOnOpen) {
+			LogError(0, NO_ERRCODE, "imptcp: connection couldn't be established with host: %s", propGetSzStr(*peerName));
+		}
 		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock != -1)
 			close(iNewSock);
@@ -1133,6 +1145,7 @@ static void
 initConfigSettings(void)
 {
 	cs.bEmitMsgOnClose = 0;
+	cs.bEmitMsgOnOpen = 0;
 	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bSuppOctetFram = 1;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
@@ -1386,6 +1399,10 @@ closeSess(ptcpsess_t *pSess)
 	}
 	pthread_mutex_unlock(&pSess->pLstn->pSrv->mutSessLst);
 
+	if(pSess->pLstn->pSrv->bEmitMsgOnClose) {
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: session on socket %d closed "
+						       "with iRet %d.\n", sock, iRet);
+	}
 	/* unlinked, now remove structure */
 	destructSess(pSess);
 
@@ -1423,6 +1440,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iKeepAliveProbes = 0;
 	inst->iKeepAliveTime = 0;
 	inst->bEmitMsgOnClose = 0;
+	inst->bEmitMsgOnOpen = 0;
 	inst->dfltTZ = NULL;
 	inst->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	inst->pBindRuleset = NULL;
@@ -1484,6 +1502,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iKeepAliveProbes = cs.iKeepAliveProbes;
 	inst->iKeepAliveTime = cs.iKeepAliveTime;
 	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
+	inst->bEmitMsgOnOpen = cs.bEmitMsgOnOpen;
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 
 finalize_it:
@@ -1509,6 +1528,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	pSrv->iKeepAliveProbes = inst->iKeepAliveProbes;
 	pSrv->iKeepAliveTime = inst->iKeepAliveTime;
 	pSrv->bEmitMsgOnClose = inst->bEmitMsgOnClose;
+	pSrv->bEmitMsgOnOpen = inst->bEmitMsgOnOpen;
 	pSrv->compressionMode = inst->compressionMode;
 	pSrv->dfltTZ = inst->dfltTZ;
 	if (inst->pszBindPort != NULL) {
@@ -1971,6 +1991,8 @@ CODESTARTnewInpInst
 			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
 			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionopen")) {
+			inst->bEmitMsgOnOpen = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
 			inst->dfltTZ = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
@@ -2250,6 +2272,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cs.bEmitMsgOnClose = 0;
+	cs.bEmitMsgOnOpen = 0;
 	cs.wrkrMax = DFLT_wrkrMax;
 	cs.bKeepAlive = 0;
 	cs.iKeepAliveProbes = 0;
