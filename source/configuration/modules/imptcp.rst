@@ -194,6 +194,13 @@ the input they are specified with.
    instructs imptcp to emit a message if a remote peer closes the
    connection.
 
+.. function:: NotifyOnConnectionOpen on/off
+
+   *Defaults to off*
+
+   instructs imptcp to emit a message if a remote peer opens a
+   connection. Hostname of the remote peer is given in the message.
+
 .. function:: KeepAlive on/off
 
    *Defaults to off*
