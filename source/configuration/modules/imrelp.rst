@@ -51,6 +51,13 @@ Input Parameters
    Binds specified ruleset to this listener.  This overrides the
    module-level Ruleset parameter.
 
+.. function:: MaxDataSize <size_nbr>
+
+   *Default is the global message size*
+
+   Sets the max message size (in bytes) that can be received. Any messages above this size
+   will be rejected causing the relp client to reconnect and retry.
+
 .. function:: tls on/off
 
    *Default is off*
@@ -191,12 +198,12 @@ Caveats/Known Bugs
 Sample
 ------
 
-This sets up a RELP server on port 20514.
+This sets up a RELP server on port 20514 with a max message size of 10,000 bytes.
 
 ::
 
   module(load="imrelp") # needs to be done just once 
-  input(type="imrelp" port="20514")
+  input(type="imrelp" port="20514" maxDataSize="10k")
 
 Legacy Configuration Directives
 -------------------------------
