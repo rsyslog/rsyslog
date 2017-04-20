@@ -968,6 +968,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
 	pThis->bPrevWasNL = 0;
+	pThis->iMaxFiles = 1024;
 ENDobjConstruct(strm)
 
 
