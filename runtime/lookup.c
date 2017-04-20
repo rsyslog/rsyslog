@@ -637,7 +637,7 @@ lookupFindTable(uchar *name)
 {
 	lookup_ref_t *curr;
 
-	for(curr = loadConf->lu_tabs.root ; curr != NULL ; curr = curr->next) {
+	for(curr = loadConf->lu_tabs.last ; curr != NULL ; curr = curr->next) {
 		if(!ustrcmp(curr->name, name))
 			break;
 	}
