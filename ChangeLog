@@ -10,6 +10,11 @@ Version 8.27.0 [v8-stable] 2017-05-16
     then the set frame size (or overly large in general), it is now
     assumed that octet-stuffing mode is used. This probably solves a
     number of issues seen in real deployments.
+- core: replaced gethostbyname() with getaddrinfo() call
+  Gethostbyname() is generally considered obsolete, is not reentrant and
+  cannot really work with IPv6. Changed the only place in rsyslog where
+  this call remained.
+  Thanks to github user jvymazal for the patch
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
