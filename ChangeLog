@@ -1,8 +1,15 @@
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
-- imptcp: optionally emit an error message if incoming messages are truncated
-- bugfix imptcp: potential overflow in octet count computation
-  when a very large octet count was specified, the counter could overflow
+- imptcp enhancements:
+  * optionally emit an error message if incoming messages are truncated
+  * optionally emit connection tracking message (on connection create and
+    close)
+  * add "maxFrameSize" parameter to specify the maximum size permitted
+    in octet-counted mode
+  * improve octect-counted mode detection: if the octet count is larger
+    then the set frame size (or overly large in general), it is now
+    assumed that octet-stuffing mode is used. This probably solves a
+    number of issues seen in real deployments.
 - omkafka: add "origin" field to stats output
   See also https://github.com/rsyslog/rsyslog/issues/1508
   Thanks to Yury Bushmelev for providing the patch.
@@ -18,6 +25,8 @@ Version 8.27.0 [v8-stable] 2017-05-16
   This affects the config object; in theory may lead to misadressing during
   config parsing.
   Thanks to github user jvymazal for the patch
+- bugfix imptcp: potential overflow in octet count computation
+  when a very large octet count was specified, the counter could overflow
 ------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
 - NEW BUILD REQUIREMENT: liblognorm 2.0.3 is required for mmnormalize
