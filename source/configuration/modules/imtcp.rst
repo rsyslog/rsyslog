@@ -138,6 +138,14 @@ Module Parameters
    Array of peers:
    PermittedPeer=["test1.example.net","10.1.2.3","test2.example.net","..."]
 
+.. function:: discardTruncatedMsg on/off
+
+   *Default is off*
+
+   Normally when a message is truncated in octet stuffing mode the part that
+   is cut off is processed as the next message. When this parameter is activated,
+   the part that is cut off after a truncation is discarded and not processed.
+
 Input Parameters
 ^^^^^^^^^^^^^^^^
 
