@@ -47,7 +47,7 @@ make -j
 if [ "x$CHECK" == "xYES" ]
 then
     set +e  # begin testbench, here we do not want to abort
-    make check
+    make check TESTS="mmpstrucdata.sh"
     ALL_OK=$?
     if [ -f tests/test-suite.log ]
     then
@@ -59,7 +59,7 @@ then
         exit $ALL_OK
     fi
     set -e # now errors are no longer permited, again
-    make distcheck
+    #make distcheck
 fi
 
 if [ "x$STAT_AN" == "xYES" ] ; then make clean; CFLAGS="-O2 -std=c99"; ./configure $CONFIG_FLAGS ; fi
