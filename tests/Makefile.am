@@ -29,6 +29,7 @@ TESTS +=  \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	stop-localvar.sh \
+	optimizer_syslogfacility-text.sh \
 	stop-msgvar.sh \
 	glbl-umask.sh \
 	glbl-unloadmodules.sh \
@@ -789,6 +790,7 @@ EXTRA_DIST= \
 	testsuites/rscript_unaffected_reset.conf \
 	stop-localvar.sh \
 	testsuites/stop-localvar.conf \
+	optimizer_syslogfacility-text.sh \
 	stop-msgvar.sh \
 	testsuites/stop-msgvar.conf \
 	omfwd-keepalive.sh \
