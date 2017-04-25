@@ -394,6 +394,7 @@ TESTS +=  \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
+	imptcp-discard-truncated-msg.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
@@ -976,6 +977,7 @@ EXTRA_DIST= \
 	imptcp_large.sh \
 	imptcp-connection-msg-disabled.sh \
 	imptcp-connection-msg-received.sh \
+	imptcp-discard-truncated-msg.sh \
 	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \
 	testsuites/imptcp_addtlframedelim.conf \

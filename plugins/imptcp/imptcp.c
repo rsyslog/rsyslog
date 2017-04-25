@@ -145,6 +145,7 @@ struct instanceConf_s {
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *dfltTZ;
 	sbool bUnlink;
+	sbool discardTruncatedMsg;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -179,6 +180,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "address", eCmdHdlrString, 0 },
 	{ "path", eCmdHdlrString, 0 },
 	{ "unlink", eCmdHdlrBinary, 0 },
+	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "fileowner", eCmdHdlrUID, 0 },
 	{ "fileownernum", eCmdHdlrInt, 0 },
 	{ "filegroup", eCmdHdlrGID, 0 },
@@ -250,6 +252,7 @@ struct ptcpsrv_s {
 	sbool bSuppOctetFram;
 	sbool bSPFramingFix;
 	sbool bUnlink;
+	sbool discardTruncatedMsg;
 	ratelimit_t *ratelimiter;
 };
 
@@ -272,7 +275,8 @@ struct ptcpsess_s {
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,
-		eInMsg
+		eInMsg,
+		eInMsgTruncation
 	} inputState;		/* our current state */
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;
@@ -812,7 +816,6 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	DBGPRINTF("pascal: %d\n", pLstn->pSrv->bEmitMsgOnOpen);
 	if(pLstn->pSrv->bEmitMsgOnOpen) {
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: connection established with host: %s", propGetSzStr(*peerName));
 	}
@@ -954,6 +957,12 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			}
 			pThis->inputState = eInMsg;
 		}
+	} else if(pThis->inputState == eInMsgTruncation) {
+		if ((c == '\n')
+		|| ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+		&& (c == pThis->pLstn->pSrv->iAddtlFrameDelim))) {
+			pThis->inputState = eAtStrtFram;
+		}
 	} else {
 		assert(pThis->inputState == eInMsg);
 
@@ -971,6 +980,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 					" size; message will be split starting at: \"%.*s\"\n", i, (i < 32) ? i : 32, *buff);
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 				++(*pnMsgs);
+				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
+					pThis->inputState = eInMsgTruncation;
+				}
 				/* we might think if it is better to ignore the rest of the
 				 * message than to treat it as a new one. Maybe this is a good
 				 * candidate for a configuration parameter...
@@ -1437,6 +1449,7 @@ createInstance(instanceConf_t **pinst)
 	inst->fCreateMode = 0644;
 	inst->bFailOnPerms = 1;
 	inst->bUnlink = 0;
+	inst->discardTruncatedMsg = 0;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
@@ -1561,6 +1574,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	}
 
 	pSrv->bUnlink = inst->bUnlink;
+	pSrv->discardTruncatedMsg = inst->discardTruncatedMsg;
 	pSrv->pRuleset = inst->pBindRuleset;
 	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
@@ -1954,6 +1968,8 @@ CODESTARTnewInpInst
 			inst->pszBindPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "unlink")) {
 			inst->bUnlink = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
+			inst->discardTruncatedMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "fileowner")) {
 			inst->fileUID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "fileownernum")) {
