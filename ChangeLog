@@ -6,10 +6,17 @@ Version 8.27.0 [v8-stable] 2017-05-16
     close)
   * add "maxFrameSize" parameter to specify the maximum size permitted
     in octet-counted mode
+  * add parameter "discardTruncatedMsg" to permit truncation of
+    oversize messages
   * improve octect-counted mode detection: if the octet count is larger
     then the set frame size (or overly large in general), it is now
     assumed that octet-stuffing mode is used. This probably solves a
     number of issues seen in real deployments.
+- imtcp enhancements:
+  * add parameter "discardTruncatedMsg" to permit truncation of
+    oversize messages
+  * add "maxFrameSize" parameter to specify the maximum size permitted
+    in octet-counted mode
 - core: replaced gethostbyname() with getaddrinfo() call
   Gethostbyname() is generally considered obsolete, is not reentrant and
   cannot really work with IPv6. Changed the only place in rsyslog where
