@@ -75,6 +75,14 @@ the input they are specified with.
    A path on the filesystem for a unix domain socket. It is an error to specify
    both `path` and `port`.
 
+.. function:: discardTruncatedMsg <on/off>
+
+   *Default: off*
+
+   When a message is split because it is to long the second part is normally
+   processed as the next message. This can cause Problems. When this parameter
+   is turned on the part of the message after the truncation will be discarded.
+
 .. function::  fileOwner [userName]
 
    *Default: system default*
