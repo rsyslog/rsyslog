@@ -27,10 +27,10 @@
 . $srcdir/diag.sh init
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="log"
+export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh startup $1_rcvr.conf 
 . $srcdir/diag.sh wait-startup
-#export RSYSLOG_DEBUGLOG="log2"
+export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 . $srcdir/diag.sh startup $1_sender.conf 2
 . $srcdir/diag.sh wait-startup 2
@@ -39,7 +39,7 @@
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
 . $srcdir/diag.sh tcpflood -m$2 -i1
-sleep 2 # make sure all data is received in input buffers
+sleep 5 # make sure all data is received in input buffers
 # shut down sender when everything is sent, receiver continues to run concurrently
 # may be needed by TLS (once we do it): sleep 60
 . $srcdir/diag.sh shutdown-when-empty 2

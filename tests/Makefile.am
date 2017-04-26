@@ -324,7 +324,7 @@ endif
 endif
 endif
 
-if ENABLE_OMKAFKA
+if ENABLE_KAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
 	omkafka_static.sh \

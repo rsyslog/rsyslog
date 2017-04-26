@@ -1641,10 +1641,9 @@ if test "x$enable_omhdfs"; then
 fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
-
-# support for omkafka
+# support for kafka input output
 AC_ARG_ENABLE(omkafka,
-        [AS_HELP_STRING([--enable-omkafka],[Compiles omkafka module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omkafka],[Compiles kafka input and output module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omkafka="yes" ;;
           no) enable_omkafka="no" ;;
@@ -1652,6 +1651,18 @@ AC_ARG_ENABLE(omkafka,
          esac],
         [enable_omkafka=no]
 )
+AC_ARG_ENABLE(kafka,
+        [AS_HELP_STRING([--enable-kafka],[Compiles kafka input and output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_kafka="yes" ;;
+          no) enable_kafka="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-kafka) ;;
+         esac],
+        [enable_kafka=no]
+)
+if test "x$enable_omkafka" = "xyes"; then
+	enable_kafka="yes"
+fi
 AC_ARG_ENABLE(kafka_tests,
         [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -1663,7 +1674,7 @@ AC_ARG_ENABLE(kafka_tests,
 )
 AM_CONDITIONAL(ENABLE_KAFKA_TESTS, test x$enable_kafka_tests = xyes)
 
-if test "x$enable_omkafka" = "xyes"; then
+if test "x$enable_kafka" = "xyes"; then
 	if test "x$enable_kafka_tests" = "xyes"; then
 		AX_PROG_JAVAC #we don't need javac, but macro documentation says JAVAC *must* be checked before JAVA
 		AX_PROG_JAVA
@@ -1676,21 +1687,20 @@ if test "x$enable_omkafka" = "xyes"; then
 			AC_MSG_FAILURE([readlink, which is a kafka-tests dependency, not found])
 		fi
 	fi
-	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
-		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
-			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
-			LIBRDKAFKA_LIBS=-lrdkafka
-		], [
-			AC_MSG_ERROR([could not find rdkafka library])
-		])
+	PKG_CHECK_MODULES(LIBRDKAFKA, rdkafka >= 0.9.1)
+	AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+		AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
+		LIBRDKAFKA_LIBS=-lrdkafka
+	], [
+		AC_MSG_ERROR([could not find rdkafka library])
 	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 else
 	if test "x$enable_kafka_tests" = "xyes"; then
-		AC_MSG_ERROR([kafka-tests can not be enabled while omkafka is disabled])
+		AC_MSG_ERROR([kafka-tests can not be enabled while kafka support is disabled])
 	fi
 fi
-AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
+AM_CONDITIONAL(ENABLE_KAFKA, test x$enable_kafka = xyes)
 
 #MONGODB SUPPORT
 
@@ -1990,6 +2000,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
+		plugins/imkafka/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -2067,7 +2078,6 @@ echo "    imjournal input module enabled:           $enable_imjournal"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
@@ -2116,6 +2126,7 @@ echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"
 echo "    SNMP support enabled:                     $enable_snmp"
+echo "    Kafka support enabled:                    $enable_kafka"
 echo
 echo "---{ debugging support }---"
 echo "    Testbench enabled:                        $enable_testbench"
