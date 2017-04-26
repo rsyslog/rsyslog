@@ -67,22 +67,28 @@
 #include <getopt.h>
 
 
-typedef enum { part, none, atomic, cas, spinlock, mutex, semaphore } syncType_t;
-static syncType_t syncTypes[] = { part, none, atomic, cas, spinlock, mutex, semaphore };
+typedef enum { part,
+	none,
+	atomic,
+	cas,
+	spinlock,
+	mutex,
+	semaphore } syncType_t;
+static syncType_t syncTypes[] = {part, none, atomic, cas, spinlock, mutex, semaphore};
 
 /* config settings */
 static int bCPUAffinity = 0;
-static int procs = 0; /* number of processors */
-static int numthrds = 0; /* if zero, => equal num of processors */
+static int procs = 0;		 /* number of processors */
+static int numthrds = 0;	 /* if zero, => equal num of processors */
 static unsigned goal = 50000000; /* 50 million */
-static int bCSV = 0; /* generate CSV output? */
-static int numIterations = 1; /* number of iterations */
-static int dummyLoad = 0;     /* number of dummy load iterations to generate */
+static int bCSV = 0;		 /* generate CSV output? */
+static int numIterations = 1;    /* number of iterations */
+static int dummyLoad = 0;	/* number of dummy load iterations to generate */
 syncType_t syncType;
 static int bAllSyncTypes = 0;
 
-static int global_int = 0;	/* our global counter */
-static unsigned thrd_WorkToDo;	/* number of computations each thread must do */
+static int global_int = 0;	 /* our global counter */
+static unsigned thrd_WorkToDo;     /* number of computations each thread must do */
 static volatile int bStartRun = 0; /* indicate to flag when threads should start */
 
 static struct timeval tvStart, tvEnd; /* used for timing one testing iteration */
@@ -97,17 +103,24 @@ static pthread_mutex_t mut;
 static pthread_spinlock_t spin;
 static sem_t sem;
 
-static char*
+static char *
 getSyncMethName(syncType_t st)
 {
-	switch(st) {
-	case part     : return "partition";
-	case none     : return "none";
-	case atomic   : return "atomic op";
-	case spinlock : return "spin lock";
-	case mutex    : return "mutex";
-	case semaphore: return "semaphore";
-	case cas      : return "cas";
+	switch (st) {
+	case part:
+		return "partition";
+	case none:
+		return "none";
+	case atomic:
+		return "atomic op";
+	case spinlock:
+		return "spin lock";
+	case mutex:
+		return "mutex";
+	case semaphore:
+		return "semaphore";
+	case cas:
+		return "cas";
 	}
 }
 
@@ -115,11 +128,11 @@ getSyncMethName(syncType_t st)
 static pid_t
 gettid()
 {
-	return syscall( __NR_gettid );
+	return syscall(__NR_gettid);
 }
 
 
-void *workerThread( void *arg )
+void *workerThread(void *arg)
 {
 	int i, j;
 	volatile int partval = 0; /* use volatile so that gcc generates code similar to global var */
@@ -130,26 +143,26 @@ void *workerThread( void *arg )
 
 	CPU_ZERO(&set);
 	CPU_SET(thrd_num % procs, &set);
-	if(syncType == part) {
+	if (syncType == part) {
 		partval = 0;
 	}
 
 	/* if enabled, try to put thread on a fixed CPU (the one that corresponds to the
 	 * thread ID). This may 
 	 */
-	if(bCPUAffinity) {
-		if (sched_setaffinity( gettid(), sizeof( cpu_set_t ), &set )) {
-			perror( "sched_setaffinity" );
+	if (bCPUAffinity) {
+		if (sched_setaffinity(gettid(), sizeof(cpu_set_t), &set)) {
+			perror("sched_setaffinity");
 			return NULL;
 		}
 	}
 
 	/* wait for "go" */
-	while(bStartRun == 0)
+	while (bStartRun == 0)
 		/*WAIT!*/;
 
 	for (i = 0; i < thrd_WorkToDo; i++) {
-		switch(syncType) {
+		switch (syncType) {
 		case part:
 			///* one needs to use inline assembly to get this right... */
 			//asm("addl	$1, global_int(%rip)");
@@ -159,13 +172,13 @@ void *workerThread( void *arg )
 			global_int++;
 			break;
 		case atomic:
-			__sync_fetch_and_add(&global_int,1);
+			__sync_fetch_and_add(&global_int, 1);
 			break;
 		case cas:
 			do {
 				oldval = global_int;
 				newval = oldval + 1;
-			} while(!__sync_bool_compare_and_swap(&global_int, oldval, newval));
+			} while (!__sync_bool_compare_and_swap(&global_int, oldval, newval));
 			break;
 		case mutex:
 			pthread_mutex_lock(&mut);
@@ -188,12 +201,12 @@ void *workerThread( void *arg )
 		 * we do some other work, as in real life, so that we have a better
 		 * ratio of sync vs. actual work to do.
 		 */
-		for(j = 0 ; j < dummyLoad ; ++j) {
+		for (j = 0; j < dummyLoad; ++j) {
 			/* be careful: compiler may optimize loop out! */;
 		}
 	}
 
-	if(syncType == part) {
+	if (syncType == part) {
 		pthread_mutex_lock(&mut);
 		global_int += partval;
 		pthread_mutex_unlock(&mut);
@@ -205,7 +218,7 @@ void *workerThread( void *arg )
 
 static void beginTiming(void)
 {
-	if(!(bCSV || bAllSyncTypes)) {
+	if (!(bCSV || bAllSyncTypes)) {
 		printf("Test Parameters:\n");
 		printf("\tNumber of Cores.........: %d\n", procs);
 		printf("\tNumber of Threads.......: %d\n", numthrds);
@@ -226,7 +239,7 @@ static void endTiming(void)
 	long runtime;
 
 	gettimeofday(&tvEnd, NULL);
-	if(tvStart.tv_usec > tvEnd.tv_usec) {
+	if (tvStart.tv_usec > tvEnd.tv_usec) {
 		tvEnd.tv_sec--;
 		tvEnd.tv_usec += 1000000;
 	}
@@ -235,31 +248,31 @@ static void endTiming(void)
 	usec = tvEnd.tv_usec - tvStart.tv_usec;
 
 	delta = thrd_WorkToDo * numthrds - global_int;
-	if(!bAllSyncTypes) {
-		if(bCSV) {
+	if (!bAllSyncTypes) {
+		if (bCSV) {
 			printf("%s,%d,%d,%d,%u,%u,%ld.%06.6ld\n",
-				getSyncMethName(syncType), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
+			    getSyncMethName(syncType), procs, numthrds, bCPUAffinity, goal, delta, sec, usec);
 		} else {
 			printf("measured (sytem time) runtime is %ld.% 6.6ld seconds\n", sec, usec);
-			if(delta == 0) {
+			if (delta == 0) {
 				printf("Computation was done correctly.\n");
 			} else {
 				printf("Computation INCORRECT,\n"
 				       "\texpected %9u\n"
 				       "\treal     %9u\n"
 				       "\toff by   %9u\n",
-					thrd_WorkToDo * numthrds,
-					global_int,
-					delta);
+				    thrd_WorkToDo * numthrds,
+				    global_int,
+				    delta);
 			}
 		}
 	}
 
 	runtime = sec * 1000 + (usec / 1000);
 	totalRuntime += runtime;
-	if(runtime < minRuntime)
+	if (runtime < minRuntime)
 		minRuntime = runtime;
-	if(runtime > maxRuntime)
+	if (runtime > maxRuntime)
 		maxRuntime = runtime;
 }
 
@@ -293,15 +306,15 @@ singleTest(void)
 
 	thrs = malloc(sizeof(pthread_t) * numthrds);
 	if (thrs == NULL) {
-		perror( "malloc" );
+		perror("malloc");
 		exit(1);
 	}
 
 	thrd_WorkToDo = goal / numthrds;
 
 	for (i = 0; i < numthrds; i++) {
-		if(pthread_create( &thrs[i], NULL, workerThread, (void *)(long)i )) {
-			perror( "pthread_create" );
+		if (pthread_create(&thrs[i], NULL, workerThread, (void *)(long)i)) {
+			perror("pthread_create");
 			procs = i;
 			break;
 		}
@@ -311,12 +324,11 @@ singleTest(void)
 	bStartRun = 1; /* start the threads (they are busy-waiting so far!) */
 
 	for (i = 0; i < numthrds; i++)
-		pthread_join( thrs[i], NULL );
+		pthread_join(thrs[i], NULL);
 
 	endTiming();
 
-	free( thrs );
-
+	free(thrs);
 }
 
 
@@ -331,8 +343,8 @@ dispRuntime(unsigned rt)
 
 	fmtbuf = malloc(32);
 	snprintf(fmtbuf, 32, "%u.%03.3u",
-		 rt / 1000, rt % 1000);
-	return(fmtbuf);
+	    rt / 1000, rt % 1000);
+	return (fmtbuf);
 }
 
 
@@ -344,7 +356,7 @@ doTest(syncType_t st)
 	totalRuntime = 0;
 	minRuntime = 999999999;
 	maxRuntime = 0;
-	for(i = 0 ; i < numIterations ; ++i) {
+	for (i = 0; i < numIterations; ++i) {
 		//printf("starting iteration %d\n", i);
 		singleTest();
 	}
@@ -353,22 +365,21 @@ doTest(syncType_t st)
          * care as we terminate immediately.
          */
 	printf("%-10s: total runtime %6ld.%3.3u, avg %s, min %s, max %s\n",
-	       getSyncMethName(st),
-	       (long)totalRuntime/1000, (unsigned)(totalRuntime % 1000),
-	       dispRuntime((unsigned) (totalRuntime / numIterations)),
-	       dispRuntime(minRuntime),
-	       dispRuntime(maxRuntime));
+	    getSyncMethName(st),
+	    (long)totalRuntime / 1000, (unsigned)(totalRuntime % 1000),
+	    dispRuntime((unsigned)(totalRuntime / numIterations)),
+	    dispRuntime(minRuntime),
+	    dispRuntime(maxRuntime));
 }
 
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int i;
 	int opt;
 
-	while((opt = getopt(argc, argv, "ac:d:i:t:s:CA")) != EOF) {
-		switch((char)opt) {
+	while ((opt = getopt(argc, argv, "ac:d:i:t:s:CA")) != EOF) {
+		switch ((char)opt) {
 		case 'A':
 			bAllSyncTypes = 1;
 			break;
@@ -376,7 +387,7 @@ main(int argc, char *argv[])
 			bCPUAffinity = 1;
 			break;
 		case 'c':
-			goal = (unsigned) atol(optarg);
+			goal = (unsigned)atol(optarg);
 			break;
 		case 'd':
 			dummyLoad = atoi(optarg);
@@ -391,20 +402,20 @@ main(int argc, char *argv[])
 			bCSV = 1;
 			break;
 		case 's':
-			if(!strcmp(optarg, "none"))
+			if (!strcmp(optarg, "none"))
 				syncType = none;
-			else if(!strcmp(optarg, "part"))
+			else if (!strcmp(optarg, "part"))
 				syncType = part;
-			else if(!strcmp(optarg, "atomic"))
+			else if (!strcmp(optarg, "atomic"))
 				syncType = atomic;
-			else if(!strcmp(optarg, "cas"))
+			else if (!strcmp(optarg, "cas"))
 				syncType = cas;
-			else if(!strcmp(optarg, "mutex")) {
+			else if (!strcmp(optarg, "mutex")) {
 				syncType = mutex;
 				pthread_mutex_init(&mut, NULL);
-			} else if(!strcmp(optarg, "spin")) {
+			} else if (!strcmp(optarg, "spin")) {
 				syncType = spinlock;
-			} else if(!strcmp(optarg, "semaphore")) {
+			} else if (!strcmp(optarg, "semaphore")) {
 				syncType = semaphore;
 				sem_init(&sem, 0, 1);
 			} else {
@@ -412,7 +423,8 @@ main(int argc, char *argv[])
 				usage();
 			}
 			break;
-		default:usage();
+		default:
+			usage();
 			break;
 		}
 	}
@@ -424,17 +436,17 @@ main(int argc, char *argv[])
 
 	/* Getting number of CPUs */
 	procs = (int)sysconf(_SC_NPROCESSORS_ONLN);
-	if(procs < 0) {
+	if (procs < 0) {
 		perror("sysconf");
 		return -1;
 	}
 
-	if(numthrds < 1) {
+	if (numthrds < 1) {
 		numthrds = procs;
 	}
 
-	if(bAllSyncTypes) {
-		for(i = 0 ; i < sizeof(syncTypes) / sizeof(syncType_t) ; ++i) {
+	if (bAllSyncTypes) {
+		for (i = 0; i < sizeof(syncTypes) / sizeof(syncType_t); ++i) {
 			doTest(syncTypes[i]);
 		}
 		printf("Done running tests, result based on:\n");

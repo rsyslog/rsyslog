@@ -28,14 +28,14 @@
 #include "obj-types.h"
 
 /* some settings for various debug modes */
-#define DEBUG_OFF	0
-#define DEBUG_ONDEMAND	1
-#define DEBUG_FULL	2
+#define DEBUG_OFF 0
+#define DEBUG_ONDEMAND 1
+#define DEBUG_FULL 2
 
 /* external static data elements (some time to be replaced) */
-extern int Debug;		/* debug flag  - read-only after startup */
-extern int debugging_on;	 /* read-only, except on sig USR1 */
-extern int stddbg; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
+extern int Debug;	/* debug flag  - read-only after startup */
+extern int debugging_on; /* read-only, except on sig USR1 */
+extern int stddbg;       /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 
 /* data types */
 
@@ -47,8 +47,8 @@ extern int stddbg; /* the handle for regular debug output, set to stdout if not 
  */
 typedef struct dbgFuncDBmutInfoEntry_s {
 	pthread_mutex_t *pmut;
-	int lockLn; /* line where it was locked (inside our func): -1 means mutex is not locked */
-	pthread_t thrd; /* thrd where the mutex was locked */
+	int lockLn;		   /* line where it was locked (inside our func): -1 means mutex is not locked */
+	pthread_t thrd;		   /* thrd where the mutex was locked */
 	unsigned long lInvocation; /* invocation (unique during program run!) of this function that locked the mutex */
 } dbgFuncDBmutInfoEntry_t;
 typedef struct dbgFuncDB_s {
@@ -61,13 +61,13 @@ typedef struct dbgFuncDB_s {
 	/* remember to update the initializer if you add anything or change the order! */
 } dbgFuncDB_t;
 #define dbgFUNCDB_MAGIC 0xA1B2C3D4
-#define dbgFuncDB_t_INITIALIZER \
-	{ \
-	.magic = dbgFUNCDB_MAGIC,\
-	.nTimesCalled = 0,\
-	.func = __func__, \
-	.file = __FILE__, \
-	.line = __LINE__ \
+#define dbgFuncDB_t_INITIALIZER           \
+	{                                 \
+		.magic = dbgFUNCDB_MAGIC, \
+		.nTimesCalled = 0,        \
+		.func = __func__,         \
+		.file = __FILE__,         \
+		.line = __LINE__          \
 	}
 
 /* the structure below was originally just the thread's call stack, but it has
@@ -99,7 +99,7 @@ int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iSta
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime,
-	dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+    dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
 int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
@@ -107,74 +107,86 @@ void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 void *dbgmalloc(size_t size);
-void dbgOutputTID(char* name);
+void dbgOutputTID(char *name);
 int dbgGetDbglogFd(void);
 
 /* external data */
 extern char *pszAltDbgFileName; /* if set, debug output is *also* sent to here */
-extern int altdbg;	/* and the handle for alternate debug output */
+extern int altdbg;		/* and the handle for alternate debug output */
 
 /* macros */
 #ifdef DEBUGLESS
-#	define DBGPRINTF(...) {}
-#	define DBGOPRINT(...) {}
+#define DBGPRINTF(...) \
+	{              \
+	}
+#define DBGOPRINT(...) \
+	{              \
+	}
 #else
-#	define DBGPRINTF(...) if(Debug) { dbgprintf(__VA_ARGS__); }
-#	define DBGOPRINT(...) if(Debug) { dbgoprint(__VA_ARGS__); }
+#define DBGPRINTF(...)                  \
+	if (Debug) {                    \
+		dbgprintf(__VA_ARGS__); \
+	}
+#define DBGOPRINT(...)                  \
+	if (Debug) {                    \
+		dbgoprint(__VA_ARGS__); \
+	}
 #endif
 #ifdef RTINST
 #define BEGINfunc static dbgFuncDB_t *pdbgFuncDB;
-	int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
-#	define ENDfunc dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
-#	define ENDfuncIRet dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
-#	define ASSERT(x) assert(x)
+int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
+#define ENDfunc dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
+#define ENDfuncIRet dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
+#define ASSERT(x) assert(x)
 #else
-#	define BEGINfunc
-#	define ENDfunc
-#	define ENDfuncIRet
-#	define ASSERT(x)
+#define BEGINfunc
+#define ENDfunc
+#define ENDfuncIRet
+#define ASSERT(x)
 #endif
 #ifdef RTINST
 #define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);
-	dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__);
-#define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
-	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
-#	define RUNLOG_STR(str)    dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
-				  dbgprintf("%s:%d: %s: %s\n", __FILE__, __LINE__, __func__, str)
+dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__);
+#define RUNLOG_VAR(fmt, x)                                    \
+	dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); \
+	dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
+#define RUNLOG_STR(str)                                       \
+	dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); \
+	dbgprintf("%s:%d: %s: %s\n", __FILE__, __LINE__, __func__, str)
 #else
-#	define RUNLOG
-#	define RUNLOG_VAR(fmt, x)
-#	define RUNLOG_STR(str)
+#define RUNLOG
+#define RUNLOG_VAR(fmt, x)
+#define RUNLOG_STR(str)
 #endif
 
 #ifdef MEMCHECK
-#	define MALLOC(x) dbgmalloc(x)
+#define MALLOC(x) dbgmalloc(x)
 #else
-#	define MALLOC(x) malloc(x)
+#define MALLOC(x) malloc(x)
 #endif
 
 /* mutex operations */
-#define MUTOP_LOCKWAIT		1
-#define MUTOP_LOCK		2
-#define MUTOP_UNLOCK		3
-#define MUTOP_TRYLOCK		4
+#define MUTOP_LOCKWAIT 1
+#define MUTOP_LOCK 2
+#define MUTOP_UNLOCK 3
+#define MUTOP_TRYLOCK 4
 
 
 /* debug aides */
 #ifdef RTINST
-#define d_pthread_mutex_lock(x)      dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_mutex_trylock(x)   dbgMutexTryLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, \
-	pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_free(x)      dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_mutex_lock(x) dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
+#define d_pthread_mutex_trylock(x) dbgMutexTryLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
+#define d_pthread_mutex_unlock(x) dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
+#define d_pthread_cond_wait(cond, mut) dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
+#define d_pthread_cond_timedwait(cond, mut, to) dbgCondTimedWait(cond, mut, to, \
+    pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
+#define d_free(x) dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT)
 #else
-#define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
-#define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
-#define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
-#define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
-#define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
-#define d_free(x)      free(x)
+#define d_pthread_mutex_lock(x) pthread_mutex_lock(x)
+#define d_pthread_mutex_trylock(x) pthread_mutex_trylock(x)
+#define d_pthread_mutex_unlock(x) pthread_mutex_unlock(x)
+#define d_pthread_cond_wait(cond, mut) pthread_cond_wait(cond, mut)
+#define d_pthread_cond_timedwait(cond, mut, to) pthread_cond_timedwait(cond, mut, to)
+#define d_free(x) free(x)
 #endif
 #endif /* #ifndef DEBUG_H_INCLUDED */

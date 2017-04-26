@@ -28,12 +28,12 @@
  * one entry point/handler.
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
-struct cslCmdHdlr_s { /* config file sysline parse entry */
-	ecslConfObjType __attribute__((deprecated)) eConfObjType;		/* which config object is this for? */
-	ecslCmdHdrlType eType;			/* which type of handler is this? */
-	rsRetVal (*cslCmdHdlr)();		/* function pointer to use with handler (params depending on eType) */
-	void *pData;				/* user-supplied data pointer */
-	int *permitted;				/* is this parameter currently permitted? (NULL=don't check) */
+struct cslCmdHdlr_s {						  /* config file sysline parse entry */
+	ecslConfObjType __attribute__((deprecated)) eConfObjType; /* which config object is this for? */
+	ecslCmdHdrlType eType;					  /* which type of handler is this? */
+	rsRetVal (*cslCmdHdlr)();				  /* function pointer to use with handler (params depending on eType) */
+	void *pData;						  /* user-supplied data pointer */
+	int *permitted;						  /* is this parameter currently permitted? (NULL=don't check) */
 };
 typedef struct cslCmdHdlr_s cslCmdHdlr_t;
 
@@ -42,17 +42,17 @@ typedef struct cslCmdHdlr_s cslCmdHdlr_t;
  * their handlers.
  * The short name is cslc (Configfile SysLine Command)
  */
-struct cslCmd_s { /* config file sysline parse entry */
-	int bChainingPermitted;			/* may multiple handlers be chained for this command? */
-	linkedList_t llCmdHdlrs;	/* linked list of command handlers */
+struct cslCmd_s {		 /* config file sysline parse entry */
+	int bChainingPermitted;  /* may multiple handlers be chained for this command? */
+	linkedList_t llCmdHdlrs; /* linked list of command handlers */
 };
 typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
 rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(),
-	void *pData, void *pOwnerCookie);
+    void *pData, void *pOwnerCookie);
 rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(),
-	void *pData, void *pOwnerCookie, int *permitted);
+    void *pData, void *pOwnerCookie, int *permitted);
 rsRetVal unregCfSysLineHdlrs(void);
 rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);

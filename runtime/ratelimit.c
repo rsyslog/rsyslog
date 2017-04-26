@@ -36,37 +36,37 @@
 #include "dirty.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(datetime)
-DEFobjCurrIf(parser)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(datetime);
+DEFobjCurrIf(parser);
 
 /* static data */
 
 /* generate a "repeated n times" message */
-static smsg_t *
-ratelimitGenRepMsg(ratelimit_t *ratelimit)
+static smsg_t *ratelimitGenRepMsg(ratelimit_t *ratelimit)
 {
 	smsg_t *repMsg;
 	size_t lenRepMsg;
 	uchar szRepMsg[1024];
 
-	if(ratelimit->nsupp == 1) { /* we simply use the original message! */
+	if (ratelimit->nsupp == 1) { /* we simply use the original message! */
 		repMsg = MsgAddRef(ratelimit->pMsg);
-	} else {/* we need to duplicate, original message may still be in use in other
+	} else { /* we need to duplicate, original message may still be in use in other
 		 * parts of the system!  */
-		if((repMsg = MsgDup(ratelimit->pMsg)) == NULL) {
+		if ((repMsg = MsgDup(ratelimit->pMsg)) == NULL) {
 			DBGPRINTF("Message duplication failed, dropping repeat message.\n");
 			goto done;
 		}
-		lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg),
-					" message repeated %d times: [%.800s]",
-					ratelimit->nsupp, getMSG(ratelimit->pMsg));
+		lenRepMsg = snprintf((char *)szRepMsg, sizeof(szRepMsg),
+		    " message repeated %d times: [%.800s]",
+		    ratelimit->nsupp, getMSG(ratelimit->pMsg));
 		MsgReplaceMSG(repMsg, szRepMsg, lenRepMsg);
 	}
 
-done:	return repMsg;
+done:
+	return repMsg;
 }
 
 static rsRetVal
@@ -75,12 +75,12 @@ doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep
 	int bNeedUnlockMutex = 0;
 	DEFiRet;
 
-	if(ratelimit->bThreadSafe) {
+	if (ratelimit->bThreadSafe) {
 		pthread_mutex_lock(&ratelimit->mut);
 		bNeedUnlockMutex = 1;
 	}
 
-	if( ratelimit->pMsg != NULL &&
+	if (ratelimit->pMsg != NULL &&
 	    getMSGLen(pMsg) == getMSGLen(ratelimit->pMsg) &&
 	    !ustrcmp(getMSG(pMsg), getMSG(ratelimit->pMsg)) &&
 	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(ratelimit->pMsg)) &&
@@ -93,9 +93,9 @@ doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep
 		msgDestruct(&ratelimit->pMsg);
 		ratelimit->pMsg = pMsg;
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
-	} else {/* new message, do "repeat processing" & save it */
-		if(ratelimit->pMsg != NULL) {
-			if(ratelimit->nsupp > 0) {
+	} else { /* new message, do "repeat processing" & save it */
+		if (ratelimit->pMsg != NULL) {
+			if (ratelimit->nsupp > 0) {
 				*ppRepMsg = ratelimitGenRepMsg(ratelimit);
 				ratelimit->nsupp = 0;
 			}
@@ -105,7 +105,7 @@ doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep
 	}
 
 finalize_it:
-	if(bNeedUnlockMutex)
+	if (bNeedUnlockMutex)
 		pthread_mutex_unlock(&ratelimit->mut);
 	RETiRet;
 }
@@ -116,12 +116,12 @@ static void
 tellLostCnt(ratelimit_t *ratelimit)
 {
 	uchar msgbuf[1024];
-	if(ratelimit->missed) {
-		snprintf((char*)msgbuf, sizeof(msgbuf),
-			 "%s: %u messages lost due to rate-limiting",
-			 ratelimit->name, ratelimit->missed);
+	if (ratelimit->missed) {
+		snprintf((char *)msgbuf, sizeof(msgbuf),
+		    "%s: %u messages lost due to rate-limiting",
+		    ratelimit->name, ratelimit->missed);
 		ratelimit->missed = 0;
-		logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
+		logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG | LOG_INFO, msgbuf, 0);
 	}
 }
 
@@ -132,12 +132,12 @@ tellLostCnt(ratelimit_t *ratelimit)
  * be called concurrently.
  */
 static int
-withinRatelimit(ratelimit_t *ratelimit, time_t tt, char* appname)
+withinRatelimit(ratelimit_t *ratelimit, time_t tt, char *appname)
 {
 	int ret;
 	uchar msgbuf[1024];
 
-	if(ratelimit->interval == 0) {
+	if (ratelimit->interval == 0) {
 		ret = 1;
 		goto finalize_it;
 	}
@@ -148,32 +148,32 @@ withinRatelimit(ratelimit_t *ratelimit, time_t tt, char* appname)
 	 * message rate. To prevent this, we need to query local
 	 * system time ourselvs.
 	 */
-	if(ratelimit->bNoTimeCache)
+	if (ratelimit->bNoTimeCache)
 		tt = time(NULL);
 
 	assert(ratelimit->burst != 0);
 
-	if(ratelimit->begin == 0)
+	if (ratelimit->begin == 0)
 		ratelimit->begin = tt;
 
 	/* resume if we go out of time window or if time has gone backwards */
-	if((tt > ratelimit->begin + ratelimit->interval) || (tt < ratelimit->begin) ) {
+	if ((tt > ratelimit->begin + ratelimit->interval) || (tt < ratelimit->begin)) {
 		ratelimit->begin = 0;
 		ratelimit->done = 0;
 		tellLostCnt(ratelimit);
 	}
 
 	/* do actual limit check */
-	if(ratelimit->burst > ratelimit->done) {
+	if (ratelimit->burst > ratelimit->done) {
 		ratelimit->done++;
 		ret = 1;
 	} else {
 		ratelimit->missed++;
-		if(ratelimit->missed == 1) {
-			snprintf((char*)msgbuf, sizeof(msgbuf),
-                     "%s from <%s>: begin to drop messages due to rate-limiting",
-                 ratelimit->name, appname);
-			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG|LOG_INFO, msgbuf, 0);
+		if (ratelimit->missed == 1) {
+			snprintf((char *)msgbuf, sizeof(msgbuf),
+			    "%s from <%s>: begin to drop messages due to rate-limiting",
+			    ratelimit->name, appname);
+			logmsgInternal(RS_RET_RATE_LIMITED, LOG_SYSLOG | LOG_INFO, msgbuf, 0);
 		}
 		ret = 0;
 	}
@@ -205,8 +205,8 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 
 	*ppRepMsg = NULL;
 
-	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		if((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+	if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		if ((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK) {
 			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 		}
@@ -214,28 +214,27 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 
 	/* Only the messages having severity level at or below the
 	 * treshold (the value is >=) are subject to ratelimiting. */
-	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
-        char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-        snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
-        if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
+	if (ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
+		char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
+		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
+		if (withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
 		}
 	}
-	if(ratelimit->bReduceRepeatMsgs) {
+	if (ratelimit->bReduceRepeatMsgs) {
 		CHKiRet(doLastMessageRepeatedNTimes(ratelimit, pMsg, ppRepMsg));
 	}
 finalize_it:
-	if(Debug) {
-		if(iRet == RS_RET_DISCARDMSG)
+	if (Debug) {
+		if (iRet == RS_RET_DISCARDMSG)
 			dbgprintf("message discarded by ratelimiting\n");
 	}
 	RETiRet;
 }
 
 /* returns 1, if the ratelimiter performs any checks and 0 otherwise */
-int
-ratelimitChecked(ratelimit_t *ratelimit)
+int ratelimitChecked(ratelimit_t *ratelimit)
 {
 	return ratelimit->interval || ratelimit->bReduceRepeatMsgs;
 }
@@ -253,22 +252,22 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 	smsg_t *repMsg;
 	DEFiRet;
 
-	if(pMultiSub == NULL) {
+	if (pMultiSub == NULL) {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
-		if(repMsg != NULL)
+		if (repMsg != NULL)
 			CHKiRet(submitMsg2(repMsg));
-		if(localRet == RS_RET_OK)
+		if (localRet == RS_RET_OK)
 			CHKiRet(submitMsg2(pMsg));
 	} else {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
-		if(repMsg != NULL) {
+		if (repMsg != NULL) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
-			if(pMultiSub->nElem == pMultiSub->maxElem)
+			if (pMultiSub->nElem == pMultiSub->maxElem)
 				CHKiRet(multiSubmitMsg2(pMultiSub));
 		}
-		if(localRet == RS_RET_OK) {
+		if (localRet == RS_RET_OK) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
-			if(pMultiSub->nElem == pMultiSub->maxElem)
+			if (pMultiSub->nElem == pMultiSub->maxElem)
 				CHKiRet(multiSubmitMsg2(pMultiSub));
 		}
 	}
@@ -291,21 +290,21 @@ ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname)
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(ratelimit_t)));
-	if(modname == NULL)
-		modname ="*ERROR:MODULE NAME MISSING*";
+	if (modname == NULL)
+		modname = "*ERROR:MODULE NAME MISSING*";
 
-	if(dynname == NULL) {
+	if (dynname == NULL) {
 		pThis->name = strdup(modname);
 	} else {
 		snprintf(namebuf, sizeof(namebuf), "%s[%s]",
-			 modname, dynname);
-		namebuf[sizeof(namebuf)-1] = '\0'; /* to be on safe side */
+		    modname, dynname);
+		namebuf[sizeof(namebuf) - 1] = '\0'; /* to be on safe side */
 		pThis->name = strdup(namebuf);
 	}
 	/* pThis->severity == 0 - all messages are ratelimited */
 	pThis->bReduceRepeatMsgs = loadConf->globals.bReduceRepeatMsgs;
 	DBGPRINTF("ratelimit:%s:new ratelimiter:bReduceRepeatMsgs %d\n",
-		  pThis->name, pThis->bReduceRepeatMsgs);
+	    pThis->name, pThis->bReduceRepeatMsgs);
 	*ppThis = pThis;
 finalize_it:
 	RETiRet;
@@ -313,8 +312,7 @@ finalize_it:
 
 
 /* enable linux-like ratelimiting */
-void
-ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst)
+void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned short burst)
 {
 	ratelimit->interval = interval;
 	ratelimit->burst = burst;
@@ -330,14 +328,12 @@ ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned short interval, unsigned 
  * to be explicitely enabled. This operation cannot be undone
  * (think: why should one do that???)
  */
-void
-ratelimitSetThreadSafe(ratelimit_t *ratelimit)
+void ratelimitSetThreadSafe(ratelimit_t *ratelimit)
 {
 	ratelimit->bThreadSafe = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
 }
-void
-ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
+void ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
 {
 	ratelimit->bNoTimeCache = 1;
 	pthread_mutex_init(&ratelimit->mut, NULL);
@@ -346,33 +342,30 @@ ratelimitSetNoTimeCache(ratelimit_t *ratelimit)
 /* Severity level determines which messages are subject to
  * ratelimiting. Default (no value set) is all messages.
  */
-void
-ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity)
+void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity)
 {
 	ratelimit->severity = severity;
 }
 
-void
-ratelimitDestruct(ratelimit_t *ratelimit)
+void ratelimitDestruct(ratelimit_t *ratelimit)
 {
 	smsg_t *pMsg;
-	if(ratelimit->pMsg != NULL) {
-		if(ratelimit->nsupp > 0) {
+	if (ratelimit->pMsg != NULL) {
+		if (ratelimit->nsupp > 0) {
 			pMsg = ratelimitGenRepMsg(ratelimit);
-			if(pMsg != NULL)
+			if (pMsg != NULL)
 				submitMsg2(pMsg);
 		}
 		msgDestruct(&ratelimit->pMsg);
 	}
 	tellLostCnt(ratelimit);
-	if(ratelimit->bThreadSafe)
+	if (ratelimit->bThreadSafe)
 		pthread_mutex_destroy(&ratelimit->mut);
 	free(ratelimit->name);
 	free(ratelimit);
 }
 
-void
-ratelimitModExit(void)
+void ratelimitModExit(void)
 {
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);

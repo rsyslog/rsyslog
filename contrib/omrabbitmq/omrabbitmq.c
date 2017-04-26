@@ -56,7 +56,7 @@ MODULE_CNFNAME("omrabbitmq")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
+    static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct _instanceData {
 	/* here you need to define all action-specific data. A record of type 
@@ -89,25 +89,23 @@ typedef struct wrkrInstanceData {
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "host", eCmdHdlrGetWord, 0 },
-	{ "port", eCmdHdlrInt, 0 },
-	{ "virtual_host", eCmdHdlrGetWord, 0 },
-	{ "user", eCmdHdlrGetWord, 0 },
-	{ "password", eCmdHdlrGetWord, 0 },
-	{ "exchange", eCmdHdlrGetWord, 0 },
-	{ "routing_key", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 },
-	{ "exchange_type", eCmdHdlrGetWord, 0},
-	{ "durable", eCmdHdlrNonNegInt, 0},
-	{ "auto_delete", eCmdHdlrNonNegInt, 0},
-	{ "delivery_mode", eCmdHdlrNonNegInt, 0}
-};
+    {"host", eCmdHdlrGetWord, 0},
+    {"port", eCmdHdlrInt, 0},
+    {"virtual_host", eCmdHdlrGetWord, 0},
+    {"user", eCmdHdlrGetWord, 0},
+    {"password", eCmdHdlrGetWord, 0},
+    {"exchange", eCmdHdlrGetWord, 0},
+    {"routing_key", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0},
+    {"exchange_type", eCmdHdlrGetWord, 0},
+    {"durable", eCmdHdlrNonNegInt, 0},
+    {"auto_delete", eCmdHdlrNonNegInt, 0},
+    {"delivery_mode", eCmdHdlrNonNegInt, 0}};
 static struct cnfparamblk actpblk =
-	{
-		CNFPARAMBLK_VERSION,
-		sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-		actpdescr
-	};
+    {
+	CNFPARAMBLK_VERSION,
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+	actpdescr};
 
 
 /*
@@ -153,27 +151,26 @@ die_on_amqp_error(amqp_rpc_reply_t x, char const *context)
 	case AMQP_RESPONSE_SERVER_EXCEPTION:
 		switch (x.reply.id) {
 		case AMQP_CONNECTION_CLOSE_METHOD: {
-			amqp_connection_close_t *m = (amqp_connection_close_t *) x.reply.decoded;
+			amqp_connection_close_t *m = (amqp_connection_close_t *)x.reply.decoded;
 			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: server connection error %d, message: %.*s",
-				context,
-				m->reply_code,
-				(int) m->reply_text.len, (char *) m->reply_text.bytes);
+			    context,
+			    m->reply_code,
+			    (int)m->reply_text.len, (char *)m->reply_text.bytes);
 			break;
-			}
+		}
 		case AMQP_CHANNEL_CLOSE_METHOD: {
-			amqp_channel_close_t *m = (amqp_channel_close_t *) x.reply.decoded;
+			amqp_channel_close_t *m = (amqp_channel_close_t *)x.reply.decoded;
 			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: server channel error %d, message: %.*s",
-				context,
-				m->reply_code,
-				(int) m->reply_text.len, (char *) m->reply_text.bytes);
+			    context,
+			    m->reply_code,
+			    (int)m->reply_text.len, (char *)m->reply_text.bytes);
 			break;
-			}
+		}
 		default:
 			errmsg.LogError(0, RS_RET_ERR, "omrabbitmq: %s: unknown server error, method id 0x%08X\n", context, x.reply.id);
 			break;
 		}
 		break;
-
 	}
 
 	return retVal;
@@ -211,7 +208,7 @@ initRabbitMQ(instanceData *pData)
 	DEFiRet;
 
 	DBGPRINTF("omrabbitmq: trying connect to '%s' at port %d\n", pData->host, pData->port);
-        
+
 	pData->conn = amqp_new_connection();
 
 	asocket = amqp_tcp_socket_new(pData->conn);
@@ -222,13 +219,13 @@ initRabbitMQ(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	if (die_on_error(amqp_socket_open(asocket, (char*) pData->host, pData->port), "Opening socket")) {
+	if (die_on_error(amqp_socket_open(asocket, (char *)pData->host, pData->port), "Opening socket")) {
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	if (die_on_amqp_error(amqp_login(pData->conn, (char*) pData->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
-	pData->user, pData->password),
+	if (die_on_amqp_error(amqp_login(pData->conn, (char *)pData->vhost, 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
+				  pData->user, pData->password),
 		"Logging in")) {
 		pData->conn = NULL;
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -240,7 +237,7 @@ initRabbitMQ(instanceData *pData)
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	if(pData->exchange_type != NULL) {
+	if (pData->exchange_type != NULL) {
 		edReq.ticket = 0;
 		edReq.exchange = amqp_cstring_bytes(pData->exchange);
 		edReq.type = amqp_cstring_bytes(pData->exchange_type);
@@ -252,8 +249,8 @@ initRabbitMQ(instanceData *pData)
 		edReq.arguments = amqp_empty_table;
 
 		amqp_simple_rpc_decoded(pData->conn, RABBITMQ_CHANNEL, AMQP_EXCHANGE_DECLARE_METHOD,
-		AMQP_EXCHANGE_DECLARE_OK_METHOD, &edReq);
-		if(die_on_amqp_error(amqp_get_rpc_reply(pData->conn), "Declaring exchange")) {
+		    AMQP_EXCHANGE_DECLARE_OK_METHOD, &edReq);
+		if (die_on_amqp_error(amqp_get_rpc_reply(pData->conn), "Declaring exchange")) {
 			pData->conn = NULL;
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -265,33 +262,33 @@ finalize_it:
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	/* use this to specify if select features are supported by this
+	CODESTARTisCompatibleWithFeature
+	    /* use this to specify if select features are supported by this
 	 * plugin. If not, the framework will handle that. Currently, only
 	 * RepeatedMsgReduction ("last message repeated n times") is optional.
 	 */
-	if(eFeat == sFEATURERepeatedMsgReduction)
+	    if (eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	/* this is a cleanup callback. All dynamically-allocated resources
+	CODESTARTfreeInstance
+	    /* this is a cleanup callback. All dynamically-allocated resources
 	 * in instance data must be cleaned up here. Prime examples are
 	 * malloc()ed memory, file & database handles and the like.
 	 */
-	closeAMQPConnection(pData);
+	    closeAMQPConnection(pData);
 	free(pData->host);
 	free(pData->vhost);
 	free(pData->user);
@@ -304,17 +301,17 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	/* permits to spit out some debug info */
-	dbgprintf("omrabbitmq\n");
+	CODESTARTdbgPrintInstInfo
+	    /* permits to spit out some debug info */
+	    dbgprintf("omrabbitmq\n");
 	dbgprintf("\thost='%s'\n", pData->host);
 	dbgprintf("\tport=%d\n", pData->port);
 	dbgprintf("\tvirtual_host='%s'\n", pData->vhost);
-	dbgprintf("\tuser='%s'\n", pData->user == NULL ? (uchar*)"(not configured)" : pData->user);
+	dbgprintf("\tuser='%s'\n", pData->user == NULL ? (uchar *)"(not configured)" : pData->user);
 	dbgprintf("\tpassword=(%sconfigured)\n", pData->password == NULL ? "not " : "");
 	dbgprintf("\texchange='%s'\n", pData->exchange);
 	dbgprintf("\trouting_key='%s'\n", pData->routing_key);
@@ -328,8 +325,8 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 	instanceData *pData = pWrkrData->pData;
-CODESTARTtryResume
-	/* this is called when an action has been suspended and the
+	CODESTARTtryResume
+	    /* this is called when an action has been suspended and the
 	 * rsyslog core tries to resume it. The action must then
 	 * retry (if possible) and report RS_RET_OK if it succeeded
 	 * or RS_RET_SUSPENDED otherwise.
@@ -351,7 +348,7 @@ CODESTARTtryResume
 	 * not always be the case.
 	 */
 
-	pthread_mutex_lock(&mutDoAct);
+	    pthread_mutex_lock(&mutDoAct);
 	if (pData->conn == NULL) {
 		iRet = initRabbitMQ(pData);
 	}
@@ -362,8 +359,8 @@ ENDtryResume
 
 BEGINdoAction
 	instanceData *pData = pWrkrData->pData;
-CODESTARTdoAction
-	/* this is where you receive the message and need to carry out the
+	CODESTARTdoAction
+	    /* this is where you receive the message and need to carry out the
 	 * action. Data is provided in ppString[i] where 0 <= i <= num of strings
 	 * requested.
 	 * Return RS_RET_OK if all goes well, RS_RET_SUSPENDED if the action can
@@ -374,7 +371,7 @@ CODESTARTdoAction
 	 * the next restart.
 	 */
 
-	amqp_bytes_t body_bytes;
+	    amqp_bytes_t body_bytes;
 
 	pthread_mutex_lock(&mutDoAct);
 	if (pData->conn == NULL) {
@@ -384,9 +381,10 @@ CODESTARTdoAction
 	body_bytes = amqp_cstring_bytes((char *)ppString[0]);
 
 	if (die_on_error(amqp_basic_publish(pData->conn, RABBITMQ_CHANNEL,
-			cstring_bytes((char *) pData->exchange),
-			cstring_bytes((char *) pData->routing_key),
-			0, 0, &pData->props, body_bytes), "amqp_basic_publish")) {
+			     cstring_bytes((char *)pData->exchange),
+			     cstring_bytes((char *)pData->routing_key),
+			     0, 0, &pData->props, body_bytes),
+		"amqp_basic_publish")) {
 		closeAMQPConnection(pData);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
@@ -417,9 +415,10 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+	CODESTARTnewActInst
 
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	{
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -428,33 +427,34 @@ CODESTARTnewActInst
 
 	CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
+	    for (i = 0; i < actpblk.nParams; ++i)
+	{
 		if (!pvals[i].bUsed)
 			continue;
 		if (!strcmp(actpblk.descr[i].name, "host")) {
-			pData->host = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->host = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "port")) {
-			pData->port = (int) pvals[i].val.d.n;
+			pData->port = (int)pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "virtual_host")) {
-			pData->vhost = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->vhost = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "user")) {
-			pData->user = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->user = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "password")) {
-			pData->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->password = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "exchange")) {
 			pData->exchange = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "routing_key")) {
-			pData->routing_key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->routing_key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "exchange_type")) {
 			pData->exchange_type = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "auto_delete")) {
-			pData->auto_delete = (int) pvals[i].val.d.n;
+			pData->auto_delete = (int)pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "durable")) {
-			pData->durable = (int) pvals[i].val.d.n;
+			pData->durable = (int)pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "delivery_mode")) {
-			pData->delivery_mode = (int) pvals[i].val.d.n;
+			pData->delivery_mode = (int)pvals[i].val.d.n;
 		} else {
 			dbgprintf("omrabbitmq: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
@@ -489,7 +489,7 @@ CODESTARTnewActInst
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "omrabbitmq module disabled: parameter routing_key must be specified");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
- 
+
 	// RabbitMQ properties initialization
 	memset(&pData->props, 0, sizeof pData->props);
 	pData->props._flags = AMQP_BASIC_DELIVERY_MODE_FLAG;
@@ -497,45 +497,44 @@ CODESTARTnewActInst
 	pData->props._flags |= AMQP_BASIC_CONTENT_TYPE_FLAG;
 	pData->props.content_type = amqp_cstring_bytes("application/json");
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
-					    " StdJSONFmt" : (char*)pData->tplName),
-		OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup((pData->tplName == NULL) ? " StdJSONFmt" : (char *)pData->tplName),
+	    OMSR_NO_RQD_TPL_OPTS));
 
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omrabbitmq:", sizeof(":omrabbitmq:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (!strncmp((char *)p, ":omrabbitmq:", sizeof(":omrabbitmq:") - 1))
+	{
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omrabbitmq supports only v6 config format, use: "
-			"action(type=\"omrabbitmq\" host=...)");
+		    "omrabbitmq supports only v6 config format, use: "
+		    "action(type=\"omrabbitmq\" host=...)");
 	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+		    CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

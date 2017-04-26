@@ -55,14 +55,14 @@ typedef struct _instanceData {
 	char *pszKey;
 	char *pszMmdbFile;
 	struct {
-		int     nmemb;
+		int nmemb;
 		uchar **name;
 	} fieldList;
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	MMDB_s        mmdb;
+	MMDB_s mmdb;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -73,21 +73,20 @@ struct modConfData_s {
 /* modConf ptr to use for the current load process */
 static modConfData_t *loadModConf = NULL;
 /* modConf ptr to use for the current exec process */
-static modConfData_t *runModConf  = NULL;
+static modConfData_t *runModConf = NULL;
 
 
 /* tables for interfacing with the v6 config system
  * action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "key",      eCmdHdlrGetWord, 0 },
-	{ "mmdbfile", eCmdHdlrGetWord, 0 },
-	{ "fields",   eCmdHdlrArray,   0 },
+    {"key", eCmdHdlrGetWord, 0},
+    {"mmdbfile", eCmdHdlrGetWord, 0},
+    {"fields", eCmdHdlrArray, 0},
 };
 static struct cnfparamblk actpblk = {
-	CNFPARAMBLK_VERSION,
-	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	actpdescr
-};
+    CNFPARAMBLK_VERSION,
+    sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+    actpdescr};
 
 
 /* protype functions */
@@ -95,36 +94,35 @@ void str_split(char **membuf);
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
+	CODESTARTbeginCnfLoad
+	    loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+	CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+	CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
-	runModConf = pModConf;
+	CODESTARTactivateCnf
+	    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+	CODESTARTfreeCnf
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
-	int status = MMDB_open(pData->pszMmdbFile, MMDB_MODE_MMAP, &pWrkrData->mmdb);
+	CODESTARTcreateWrkrInstance int status = MMDB_open(pData->pszMmdbFile, MMDB_MODE_MMAP, &pWrkrData->mmdb);
 	if (MMDB_SUCCESS != status) {
 		dbgprintf("Can't open %s - %s\n", pData->pszMmdbFile, MMDB_strerror(status));
 		if (MMDB_IO_ERROR == status) {
@@ -137,18 +135,18 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+	CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+	CODESTARTfreeInstance
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
-	MMDB_close(&pWrkrData->mmdb);
+	CODESTARTfreeWrkrInstance
+	    MMDB_close(&pWrkrData->mmdb);
 ENDfreeWrkrInstance
 
 static inline void
@@ -162,14 +160,14 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
-	dbgprintf("newActInst (mmdblookup)\n");
+	CODESTARTnewActInst
+	    dbgprintf("newActInst (mmdblookup)\n");
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
@@ -187,11 +185,12 @@ CODESTARTnewActInst
 		if (!strcmp(actpblk.descr[i].name, "fields")) {
 			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->fieldList.name = malloc(sizeof(uchar *) * pData->fieldList.nmemb));
-			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j)
-				pData->fieldList.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+			for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j)
+				pData->fieldList.name[j] = (uchar *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 		}
 		dbgprintf("mmdblookup: program error, non-handled"
-			" param '%s'\n", actpblk.descr[i].name);
+			  " param '%s'\n",
+		    actpblk.descr[i].name);
 	}
 
 	if (pData->pszKey == NULL) {
@@ -204,23 +203,24 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+	CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 
-void str_split(char **membuf){
-	char *buf  = *membuf;
+void str_split(char **membuf)
+{
+	char *buf = *membuf;
 	char tempbuf[strlen(buf)];
 	memset(tempbuf, 0, strlen(buf));
 
@@ -240,24 +240,24 @@ void str_split(char **membuf){
 	}
 
 	tempbuf[strlen(tempbuf) + 1] = '\n';
-	memset(*membuf, 0, strlen(*membuf))	;
+	memset(*membuf, 0, strlen(*membuf));
 	memcpy(*membuf, tempbuf, strlen(tempbuf));
 }
 
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg   = ppMsg[0];
+	smsg_t **ppMsg = (smsg_t **)pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	struct json_object *json = NULL;
 	struct json_object *keyjson = NULL;
 	char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
-CODESTARTdoAction
-	json = json_object_new_object();
+	CODESTARTdoAction
+	    json = json_object_new_object();
 
 	/* key is given, so get the property json */
 	msgPropDescr_t pProp;
-	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
+	msgPropDescrFill(&pProp, (uchar *)pData->pszKey, strlen(pData->pszKey));
 	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
 	msgPropDescrDestruct(&pProp);
 
@@ -266,7 +266,7 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 	/* key found, so get the value */
-	pszValue = (char*)json_object_get_string(keyjson);
+	pszValue = (char *)json_object_get_string(keyjson);
 
 	int gai_err, mmdb_err;
 	MMDB_lookup_result_s result = MMDB_lookup_string(&pWrkrData->mmdb, pszValue, &gai_err, &mmdb_err);
@@ -283,16 +283,16 @@ CODESTARTdoAction
 	}
 
 	MMDB_entry_data_list_s *entry_data_list = NULL;
-	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
+	int status = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
 	if (MMDB_SUCCESS != status) {
 		dbgprintf("Got an error looking up the entry data - %s\n", MMDB_strerror(status));
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	size_t  memlen;
-	char   *membuf;
-	FILE   *memstream;
+	size_t memlen;
+	char *membuf;
+	FILE *memstream;
 	memstream = open_memstream(&membuf, &memlen);
 
 	if (entry_data_list != NULL && memstream != NULL) {
@@ -309,14 +309,14 @@ CODESTARTdoAction
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
-		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
+	for (int i = 0; i < pData->fieldList.nmemb; ++i) {
+		char buf[(strlen((char *)(pData->fieldList.name[i]))) + 1];
 		memset(buf, 0, sizeof(buf));
 		strcpy(buf, (char *)pData->fieldList.name[i]);
 
 		struct json_object *json1[5] = {NULL};
 		json_object *temp_json = total_json;
-		json_object *sub_obj   = temp_json;
+		json_object *sub_obj = temp_json;
 		int j = 0;
 		char *path[10] = {NULL};
 		const char *sep = "!";
@@ -331,7 +331,7 @@ CODESTARTdoAction
 		}
 
 		j--;
-		for (;j >= 0 ;j--) {
+		for (; j >= 0; j--) {
 			if (j > 0) {
 				json1[j] = json_object_new_object();
 				json_object_object_add(json1[j], path[j], temp_json);
@@ -339,50 +339,49 @@ CODESTARTdoAction
 			} else
 				json_object_object_add(json, path[j], temp_json);
 		}
-
 	}
 
 finalize_it:
 
-if (json)
-	msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME, json, 0, 0);
+	if (json)
+		msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME, json, 0, 0);
 
 ENDdoAction
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if (strncmp((char*) p, ":mmdblookup:", sizeof(":mmdblookup:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (strncmp((char *)p, ":mmdblookup:", sizeof(":mmdblookup:") - 1))
+	{
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmdblookup supports only v6+ config format, use: "
-			"action(type=\"mmdblookup\" ...)");
+		    "mmdblookup supports only v6+ config format, use: "
+		    "action(type=\"mmdblookup\" ...)");
 	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+			CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	/* we only support the current interface specification */
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
+	CODESTARTmodInit
+	    /* we only support the current interface specification */
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION;
+	CODEmodInit_QueryRegCFSLineHdlr
+	    dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

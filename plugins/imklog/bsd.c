@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 #ifdef HAVE_CONFIG_H
-#	include "config.h"
+#include "config.h"
 #endif
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,8 +34,8 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
-#ifdef	OS_LINUX
-#	include <sys/klog.h>
+#ifdef OS_LINUX
+#include <sys/klog.h>
 #endif
 
 #include "rsyslog.h"
@@ -44,14 +44,14 @@
 #include "imklog.h"
 
 /* globals */
-static int	fklog = -1;	/* kernel log fd */
+static int fklog = -1; /* kernel log fd */
 
 #ifndef _PATH_KLOG
-#	ifdef OS_LINUX
-#	  define _PATH_KLOG "/proc/kmsg"
-#	else
-#	  define _PATH_KLOG "/dev/klog"
-#	endif
+#ifdef OS_LINUX
+#define _PATH_KLOG "/proc/kmsg"
+#else
+#define _PATH_KLOG "/dev/klog"
+#endif
 #endif
 
 
@@ -82,10 +82,10 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	struct timeval tv;
 	struct timeval *tp = NULL;
 
-	if(!pModConf->bParseKernelStamp)
+	if (!pModConf->bParseKernelStamp)
 		goto done;
 
-	if(buf[3] != '[')
+	if (buf[3] != '[')
 		goto done;
 	DBGPRINTF("imklog: kernel timestamp detected, extracting it\n");
 
@@ -93,25 +93,25 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	 * it is a timestamp. Otherwise we know for sure it is no ts ;)
 	 */
 	i = 4; /* space or first digit after '[' */
-	while(buf[i] && isspace(buf[i]))
+	while (buf[i] && isspace(buf[i]))
 		++i; /* skip space */
 	secs = 0;
-	while(buf[i] && isdigit(buf[i])) {
+	while (buf[i] && isdigit(buf[i])) {
 		secs = secs * 10 + buf[i] - '0';
 		++i;
 	}
-	if(buf[i] != '.') {
+	if (buf[i] != '.') {
 		DBGPRINTF("no dot --> no kernel timestamp\n");
 		goto done; /* no TS! */
 	}
-	
+
 	++i; /* skip dot */
 	usecs = 0;
-	while(buf[i] && isdigit(buf[i])) {
+	while (buf[i] && isdigit(buf[i])) {
 		usecs = usecs * 10 + buf[i] - '0';
 		++i;
 	}
-	if(buf[i] != ']') {
+	if (buf[i] != ']') {
 		DBGPRINTF("no trailing ']' --> no kernel timestamp\n");
 		goto done; /* no TS! */
 	}
@@ -119,22 +119,22 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 
 	/* we have a timestamp */
 	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, usecs);
-	if(!pModConf->bKeepKernelStamp) {
-		bufsize= strlen((char*)buf);
-		memmove(buf+3, buf+i, bufsize - i + 1);
+	if (!pModConf->bKeepKernelStamp) {
+		bufsize = strlen((char *)buf);
+		memmove(buf + 3, buf + i, bufsize - i + 1);
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);
 	clock_gettime(CLOCK_REALTIME, &realtime);
 	secOffs = realtime.tv_sec - monotonic.tv_sec;
 	usecOffs = (realtime.tv_nsec - monotonic.tv_nsec) / 1000;
-	if(usecOffs < 0) {
+	if (usecOffs < 0) {
 		secOffs--;
 		usecOffs += 1000000l;
 	}
-	
+
 	usecs += usecOffs;
-	if(usecs > 999999l) {
+	if (usecs > 999999l) {
 		secs++;
 		usecs -= 1000000l;
 	}
@@ -146,18 +146,18 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 done:
 	Syslog(pri, buf, tp);
 }
-#else	/* now comes the BSD "code" (just a shim) */
+#else  /* now comes the BSD "code" (just a shim) */
 static void
 submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 {
 	Syslog(pri, buf, NULL);
 }
-#endif	/* #ifdef LINUX */
+#endif /* #ifdef LINUX */
 
 
 static uchar *GetPath(modConfData_t *pModConf)
 {
-	return pModConf->pszPath ? pModConf->pszPath : (uchar*) _PATH_KLOG;
+	return pModConf->pszPath ? pModConf->pszPath : (uchar *)_PATH_KLOG;
 }
 
 /* open the kernel log - will be called inside the willRun() imklog
@@ -169,25 +169,25 @@ klogWillRunPrePrivDrop(modConfData_t *pModConf)
 	char errmsg[2048];
 	DEFiRet;
 
-	fklog = open((char*)GetPath(pModConf), O_RDONLY, 0);
+	fklog = open((char *)GetPath(pModConf), O_RDONLY, 0);
 	if (fklog < 0) {
 		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
-			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		    GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
 
-#	ifdef OS_LINUX
+#ifdef OS_LINUX
 	/* Set level of kernel console messaging.. */
-	if(pModConf->console_log_level != -1) {
+	if (pModConf->console_log_level != -1) {
 		int r = klogctl(8, NULL, pModConf->console_log_level);
-		if(r != 0) {
+		if (r != 0) {
 			imklogLogIntMsg(LOG_WARNING, "imklog: cannot set console log level: %s",
-				rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+			    rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 			/* make sure we do not try to re-set! */
 			pModConf->console_log_level = -1;
 		}
 	}
-#	endif	/* #ifdef OS_LINUX */
+#endif /* #ifdef OS_LINUX */
 
 finalize_it:
 	RETiRet;
@@ -207,7 +207,7 @@ klogWillRunPostPrivDrop(modConfData_t *pModConf)
 	r = read(fklog, NULL, 0);
 	if (r < 0 && errno != EINVAL) {
 		imklogLogIntMsg(LOG_ERR, "imklog: cannot open kernel log (%s): %s.",
-			GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		    GetPath(pModConf), rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		fklog = -1;
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -225,7 +225,7 @@ readklog(modConfData_t *pModConf)
 	char *p, *q;
 	int len, i;
 	int iMaxLine;
-	uchar bufRcv[128*1024+1];
+	uchar bufRcv[128 * 1024 + 1];
 	char errmsg[2048];
 	uchar *pRcv = NULL; /* receive buffer */
 
@@ -237,10 +237,10 @@ readklog(modConfData_t *pModConf)
 	 * many issues with alloca() that I do not want to take that route.
 	 * rgerhards, 2008-09-02
 	 */
-	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+	if ((size_t)iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		if((pRcv = (uchar*) MALLOC(iMaxLine + 1)) == NULL) {
+		if ((pRcv = (uchar *)MALLOC(iMaxLine + 1)) == NULL) {
 			iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
 			pRcv = bufRcv;
 		}
@@ -255,29 +255,29 @@ readklog(modConfData_t *pModConf)
 		} else {
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
 				imklogLogIntMsg(LOG_ERR,
-				       "imklog: error reading kernel log - shutting down: %s",
-					rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+				    "imklog: error reading kernel log - shutting down: %s",
+				    rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 				fklog = -1;
 			}
 			break;
 		}
 
-		for (p = (char*)pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
+		for (p = (char *)pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			submitSyslog(pModConf, LOG_INFO, (uchar*) p);
+			submitSyslog(pModConf, LOG_INFO, (uchar *)p);
 		}
 		len = strlen(p);
 		if (len >= iMaxLine - 1) {
-			submitSyslog(pModConf, LOG_INFO, (uchar*)p);
+			submitSyslog(pModConf, LOG_INFO, (uchar *)p);
 			len = 0;
 		}
-		if(len > 0)
+		if (len > 0)
 			memmove(pRcv, p, len + 1);
 	}
 	if (len > 0)
 		submitSyslog(pModConf, LOG_INFO, pRcv);
 
-	if(pRcv != bufRcv)
+	if (pRcv != bufRcv)
 		free(pRcv);
 }
 
@@ -287,17 +287,16 @@ readklog(modConfData_t *pModConf)
  */
 rsRetVal klogAfterRun(modConfData_t *pModConf)
 {
-        DEFiRet;
-	if(fklog != -1)
+	DEFiRet;
+	if (fklog != -1)
 		close(fklog);
-#	ifdef OS_LINUX
+#ifdef OS_LINUX
 	/* Turn on logging of messages to console, but only if a log level was speficied */
-	if(pModConf->console_log_level != -1)
+	if (pModConf->console_log_level != -1)
 		klogctl(7, NULL, 0);
-#	endif
-        RETiRet;
+#endif
+	RETiRet;
 }
-
 
 
 /* to be called in the module's WillRun entry point, this is the main
@@ -306,7 +305,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  */
 rsRetVal klogLogKMsg(modConfData_t *pModConf)
 {
-        DEFiRet;
+	DEFiRet;
 	readklog(pModConf);
 	RETiRet;
 }
@@ -315,8 +314,7 @@ rsRetVal klogLogKMsg(modConfData_t *pModConf)
 /* provide the (system-specific) default facility for internal messages
  * rgerhards, 2008-04-14
  */
-int
-klogFacilIntMsg(void)
+int klogFacilIntMsg(void)
 {
 	return LOG_SYSLOG;
 }

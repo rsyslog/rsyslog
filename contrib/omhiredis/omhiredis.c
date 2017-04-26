@@ -54,61 +54,58 @@ DEFobjCurrIf(errmsg)
 #define OMHIREDIS_MODE_QUEUE 1
 #define OMHIREDIS_MODE_PUBLISH 2
 
-/* our instance data.
+    /* our instance data.
  * this will be accessable 
  * via pData */
-typedef struct _instanceData {
-	uchar *server; /* redis server address */
-	int port; /* redis port */
+    typedef struct _instanceData {
+	uchar *server;	 /* redis server address */
+	int port;	      /* redis port */
 	uchar *serverpassword; /* redis password */
-	uchar *tplName; /* template name */
+	uchar *tplName;	/* template name */
 	char *modeDescription; /* mode description */
-	int mode; /* mode constant */
-	uchar *key; /* key for QUEUE and PUBLISH modes */
-	sbool dynaKey; /* Should we treat the key as a template? */
+	int mode;	      /* mode constant */
+	uchar *key;	    /* key for QUEUE and PUBLISH modes */
+	sbool dynaKey;	 /* Should we treat the key as a template? */
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData; /* instanc data */
-	redisContext *conn; /* redis connection */
-	int count; /* count of command sent for current batch */
+	redisContext *conn;  /* redis connection */
+	int count;	   /* count of command sent for current batch */
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
-	{ "server", eCmdHdlrGetWord, 0 },
-	{ "serverport", eCmdHdlrInt, 0 },
-	{ "serverpassword", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 },
-	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "key", eCmdHdlrGetWord, 0 },
-	{ "dynakey", eCmdHdlrBinary, 0 }
-};
+    {"server", eCmdHdlrGetWord, 0},
+    {"serverport", eCmdHdlrInt, 0},
+    {"serverpassword", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0},
+    {"mode", eCmdHdlrGetWord, 0},
+    {"key", eCmdHdlrGetWord, 0},
+    {"dynakey", eCmdHdlrBinary, 0}};
 
 static struct cnfparamblk actpblk = {
-	CNFPARAMBLK_VERSION,
-	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	actpdescr
-};
+    CNFPARAMBLK_VERSION,
+    sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+    actpdescr};
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
-	pWrkrData->conn = NULL; /* Connect later */
+	CODESTARTcreateWrkrInstance
+	    pWrkrData->conn = NULL; /* Connect later */
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 /* called when closing */
 static void closeHiredis(wrkrInstanceData_t *pWrkrData)
 {
-	if(pWrkrData->conn != NULL) {
+	if (pWrkrData->conn != NULL) {
 		redisFree(pWrkrData->conn);
 		pWrkrData->conn = NULL;
 	}
@@ -116,20 +113,20 @@ static void closeHiredis(wrkrInstanceData_t *pWrkrData)
 
 /* Free our instance data. */
 BEGINfreeInstance
-CODESTARTfreeInstance
-	if (pData->server != NULL) {
+	CODESTARTfreeInstance if (pData->server != NULL)
+	{
 		free(pData->server);
 	}
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
-	closeHiredis(pWrkrData);
+	CODESTARTfreeWrkrInstance
+	    closeHiredis(pWrkrData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	/* nothing special here */
+	CODESTARTdbgPrintInstInfo
+/* nothing special here */
 ENDdbgPrintInstInfo
 
 /* establish our connection to redis */
@@ -139,23 +136,22 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 	char *serverpasswd;
 	DEFiRet;
 
-	server = (pWrkrData->pData->server == NULL) ? "127.0.0.1" : 
-			(char*) pWrkrData->pData->server;
-	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, 
-			pWrkrData->pData->port);
-	
-	struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
+	server = (pWrkrData->pData->server == NULL) ? "127.0.0.1" : (char *)pWrkrData->pData->server;
+	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server,
+	    pWrkrData->pData->port);
+
+	struct timeval timeout = {1, 500000}; /* 1.5 seconds */
 	pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port,
-			timeout);
+	    timeout);
 	if (pWrkrData->conn->err) {
-		if(!bSilent)
+		if (!bSilent)
 			errmsg.LogError(0, RS_RET_SUSPENDED,
-				"can not initialize redis handle");
+			    "can not initialize redis handle");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 	if (pWrkrData->pData->serverpassword != NULL) {
-		serverpasswd = (char*) pWrkrData->pData->serverpassword;
+		serverpasswd = (char *)pWrkrData->pData->serverpassword;
 		int rc;
 		rc = redisAppendCommand(pWrkrData->conn, "AUTH %s", serverpasswd);
 		if (rc == REDIS_ERR) {
@@ -170,13 +166,13 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWrkrData)
+rsRetVal writeHiredis(uchar *key, uchar *message, wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
 
 	/* if we do not have a redis connection, call
 	 * initHiredis and try to establish one */
-	if(pWrkrData->conn == NULL)
+	if (pWrkrData->conn == NULL)
 		CHKiRet(initHiredis(pWrkrData, 0));
 
 	/* try to append the command to the pipeline. 
@@ -185,19 +181,19 @@ rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWrkrData)
 	 * increase our current pipeline count
 	 * by 1 and continue. */
 	int rc;
-	switch(pWrkrData->pData->mode) {
-		case OMHIREDIS_MODE_TEMPLATE:
-			rc = redisAppendCommand(pWrkrData->conn, (char*)message);
-			break;
-		case OMHIREDIS_MODE_QUEUE:
-			rc = redisAppendCommand(pWrkrData->conn, "LPUSH %s %s", key, (char*)message);
-			break;
-		case OMHIREDIS_MODE_PUBLISH:
-			rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", key, (char*)message);
-			break;
-		default:
-			dbgprintf("omhiredis: mode %d is invalid something is really wrong\n", pWrkrData->pData->mode);
-			ABORT_FINALIZE(RS_RET_ERR);
+	switch (pWrkrData->pData->mode) {
+	case OMHIREDIS_MODE_TEMPLATE:
+		rc = redisAppendCommand(pWrkrData->conn, (char *)message);
+		break;
+	case OMHIREDIS_MODE_QUEUE:
+		rc = redisAppendCommand(pWrkrData->conn, "LPUSH %s %s", key, (char *)message);
+		break;
+	case OMHIREDIS_MODE_PUBLISH:
+		rc = redisAppendCommand(pWrkrData->conn, "PUBLISH %s %s", key, (char *)message);
+		break;
+	default:
+		dbgprintf("omhiredis: mode %d is invalid something is really wrong\n", pWrkrData->pData->mode);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	if (rc == REDIS_ERR) {
@@ -215,9 +211,8 @@ finalize_it:
 /* called when resuming from suspended state.
  * try to restablish our connection to redis */
 BEGINtryResume
-CODESTARTtryResume
-	if(pWrkrData->conn == NULL)
-		iRet = initHiredis(pWrkrData, 0);
+	CODESTARTtryResume if (pWrkrData->conn == NULL)
+	    iRet = initHiredis(pWrkrData, 0);
 ENDtryResume
 
 /* begin a transaction.
@@ -225,8 +220,8 @@ ENDtryResume
  * future, this block should send the
  * MULTI command to redis. */
 BEGINbeginTransaction
-CODESTARTbeginTransaction
-	dbgprintf("omhiredis: beginTransaction called\n");
+	CODESTARTbeginTransaction
+	    dbgprintf("omhiredis: beginTransaction called\n");
 	pWrkrData->count = 0;
 ENDbeginTransaction
 
@@ -234,11 +229,12 @@ ENDbeginTransaction
  * which appends it as a command to the
  * current pipeline */
 BEGINdoAction
-CODESTARTdoAction
-	if(pWrkrData->pData->dynaKey) { 
+	CODESTARTdoAction if (pWrkrData->pData->dynaKey)
+	{
 		CHKiRet(writeHiredis(ppString[1], ppString[0], pWrkrData));
 	}
-	else {
+	else
+	{
 		CHKiRet(writeHiredis(pWrkrData->pData->key, ppString[0], pWrkrData));
 	}
 	iRet = RS_RET_DEFER_COMMIT;
@@ -252,18 +248,17 @@ ENDdoAction
  * don't really bother to check for errors
  * which should be fixed */
 BEGINendTransaction
-CODESTARTendTransaction
-	dbgprintf("omhiredis: endTransaction called\n");
+	CODESTARTendTransaction
+	    dbgprintf("omhiredis: endTransaction called\n");
 	redisReply *reply;
 	int i;
-	for ( i = 0; i < pWrkrData->count; i++ ) {
-		redisGetReply ( pWrkrData->conn, (void*)&reply);
-		if( pWrkrData->conn->err ){
+	for (i = 0; i < pWrkrData->count; i++) {
+		redisGetReply(pWrkrData->conn, (void *)&reply);
+		if (pWrkrData->conn->err) {
 			dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
 			closeHiredis(pWrkrData);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		}
-		else {
+		} else {
 			freeReplyObject(reply);
 		}
 	}
@@ -296,28 +291,27 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int iNumTpls;
-CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	CODESTARTnewActInst if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	    ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < actpblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-	
-		if(!strcmp(actpblk.descr[i].name, "server")) {
-			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "serverpassword")) {
-			pData->serverpassword = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "dynakey")) {
+
+		if (!strcmp(actpblk.descr[i].name, "server")) {
+			pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "serverport")) {
+			pData->port = (int)pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "serverpassword")) {
+			pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
 			pData->dynaKey = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
+		} else if (!strcmp(actpblk.descr[i].name, "mode")) {
 			pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
 			if (!strcmp(pData->modeDescription, "template")) {
 				pData->mode = OMHIREDIS_MODE_TEMPLATE;
@@ -329,37 +323,38 @@ CODESTARTnewActInst
 				dbgprintf("omhiredis: unsupported mode %s\n", actpblk.descr[i].name);
 				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "key")) {
-			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "key")) {
+			pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omhiredis: program error, non-handled "
-				"param '%s'\n", actpblk.descr[i].name);
+				  "param '%s'\n",
+			    actpblk.descr[i].name);
 		}
 	}
 
 	dbgprintf("omhiredis: checking config sanity\n");
 
 	/* check config sanity for selected mode */
-	switch(pData->mode) {
-		case OMHIREDIS_MODE_QUEUE:
-		case OMHIREDIS_MODE_PUBLISH:
-			if (pData->key == NULL) {
-				dbgprintf("omhiredis: mode %s requires a key\n", pData->modeDescription);
-				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-			}
-			if (pData->tplName == NULL) {
-				dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
-				pData->tplName = (uchar*)"RSYSLOG_ForwardFormat";
-			}
-			break;
-		case OMHIREDIS_MODE_TEMPLATE:
-			if (pData->tplName == NULL) {
-				dbgprintf("omhiredis: selected mode requires template\n");
-				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-			}
-			break;
+	switch (pData->mode) {
+	case OMHIREDIS_MODE_QUEUE:
+	case OMHIREDIS_MODE_PUBLISH:
+		if (pData->key == NULL) {
+			dbgprintf("omhiredis: mode %s requires a key\n", pData->modeDescription);
+			ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+		}
+		if (pData->tplName == NULL) {
+			dbgprintf("omhiredis: using default RSYSLOG_ForwardFormat template\n");
+			pData->tplName = (uchar *)"RSYSLOG_ForwardFormat";
+		}
+		break;
+	case OMHIREDIS_MODE_TEMPLATE:
+		if (pData->tplName == NULL) {
+			dbgprintf("omhiredis: selected mode requires template\n");
+			ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+		}
+		break;
 	}
-	
+
 	iNumTpls = 1;
 
 	if (pData->dynaKey) {
@@ -367,51 +362,50 @@ CODESTARTnewActInst
 	}
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 
 	if (pData->dynaKey) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->key), OMSR_NO_RQD_TPL_OPTS));
 	}
 
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+	CODESTARTparseSelectorAct
 
-/* tell the engine we only want one template string */
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(!strncmp((char*) p, ":omhiredis:", sizeof(":omhiredis:") - 1)) 
+	    /* tell the engine we only want one template string */
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (!strncmp((char *)p, ":omhiredis:", sizeof(":omhiredis:") - 1))
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omhiredis supports only v6 config format, use: "
-			"action(type=\"omhiredis\" server=...)");
+		    "omhiredis supports only v6 config format, use: "
+		    "action(type=\"omhiredis\" server=...)");
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 /* register our plugin entry points
  * with the rsyslog core engine */
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /*  supports transaction interface */ 
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+			CODEqueryEtryPt_TXIF_OMOD_QUERIES /*  supports transaction interface */
 ENDqueryEtryPt
 
 /* note we do not support rsyslog v5 syntax */
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	if (!bCoreSupportsBatching) {
 		errmsg.LogError(0, NO_ERRCODE, "omhiredis: rsyslog core does not support batching - abort");

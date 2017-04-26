@@ -91,7 +91,7 @@ int default_thr_sched_policy;
 
 /* globally visible static data - see comment in rsyslog.h for details */
 uchar *glblModPath; /* module load path */
-void (*glblErrLogger)(const int, const int, const uchar*) = dfltErrLogger;
+void (*glblErrLogger)(const int, const int, const uchar *) = dfltErrLogger;
 /* the error logger to use by the errmsg module */
 
 /* static data */
@@ -104,8 +104,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
  * default so that we can log errors during the intial phase, most importantly
  * during initialization. -- rgerhards. 2008-04-17
  */
-void
-dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
+void dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
 {
 	fprintf(stderr, "rsyslog runtime error(%d,%d): %s\n", severity, iErr, errMsg);
 }
@@ -114,8 +113,7 @@ dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
 /* set the error log function
  * rgerhards, 2008-04-18
  */
-void
-rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*))
+void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar *))
 {
 	assert(errLogger != NULL);
 	glblErrLogger = errLogger;
@@ -136,33 +134,34 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 {
 	DEFiRet;
 
-	if(iRefCount == 0) {
+	if (iRefCount == 0) {
 		seedRandomNumber();
-		/* init runtime only if not yet done */
+/* init runtime only if not yet done */
 #ifdef HAVE_LIBLOGGING_STDLOG
 		stdlog_init(0);
 		stdlog_hdl = stdlog_open("rsyslogd", 0, STDLOG_SYSLOG, NULL);
 #endif
 		CHKiRet(pthread_attr_init(&default_thread_attr));
-		pthread_attr_setstacksize(&default_thread_attr, 4096*1024);
+		pthread_attr_setstacksize(&default_thread_attr, 4096 * 1024);
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
-	    	CHKiRet(pthread_getschedparam(pthread_self(),
-			    		      &default_thr_sched_policy,
-					      &default_sched_param));
-#if defined (_AIX)
-                pthread_attr_setstacksize(&default_thread_attr, 4096*512);
+		CHKiRet(pthread_getschedparam(pthread_self(),
+		    &default_thr_sched_policy,
+		    &default_sched_param));
+#if defined(_AIX)
+		pthread_attr_setstacksize(&default_thread_attr, 4096 * 512);
 #endif
 
 
 		CHKiRet(pthread_attr_setschedpolicy(&default_thread_attr,
-			    			    default_thr_sched_policy));
+		    default_thr_sched_policy));
 		CHKiRet(pthread_attr_setschedparam(&default_thread_attr,
-			    			   &default_sched_param));
+		    &default_sched_param));
 		CHKiRet(pthread_attr_setinheritsched(&default_thread_attr,
-			    			     PTHREAD_EXPLICIT_SCHED));
+		    PTHREAD_EXPLICIT_SCHED));
 #endif
-		if(ppErrObj != NULL) *ppErrObj = "obj";
-		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
+		if (ppErrObj != NULL)
+			*ppErrObj = "obj";
+		CHKiRet(objClassInit(NULL));	 /* *THIS* *MUST* always be the first class initilizer being called! */
 		CHKiRet(objGetObjInterface(pObjIF)); /* this provides the root pointer for all other queries */
 
 		/* initialize core classes. We must be very careful with the order of events. Some
@@ -173,37 +172,52 @@ rsrtInit(const char **ppErrObj, obj_if_t *pObjIF)
 		 * class immediately after it is initialized. And, of course, we load those classes
 		 * first that we use ourselfs... -- rgerhards, 2008-03-07
 		 */
-		if(ppErrObj != NULL) *ppErrObj = "statsobj";
+		if (ppErrObj != NULL)
+			*ppErrObj = "statsobj";
 		CHKiRet(statsobjClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "prop";
+		if (ppErrObj != NULL)
+			*ppErrObj = "prop";
 		CHKiRet(propClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "glbl";
+		if (ppErrObj != NULL)
+			*ppErrObj = "glbl";
 		CHKiRet(glblClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "msg";
+		if (ppErrObj != NULL)
+			*ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "ruleset";
+		if (ppErrObj != NULL)
+			*ppErrObj = "ruleset";
 		CHKiRet(rulesetClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "wti";
+		if (ppErrObj != NULL)
+			*ppErrObj = "wti";
 		CHKiRet(wtiClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "wtp";
+		if (ppErrObj != NULL)
+			*ppErrObj = "wtp";
 		CHKiRet(wtpClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "queue";
+		if (ppErrObj != NULL)
+			*ppErrObj = "queue";
 		CHKiRet(qqueueClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "conf";
+		if (ppErrObj != NULL)
+			*ppErrObj = "conf";
 		CHKiRet(confClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "parser";
+		if (ppErrObj != NULL)
+			*ppErrObj = "parser";
 		CHKiRet(parserClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "strgen";
+		if (ppErrObj != NULL)
+			*ppErrObj = "strgen";
 		CHKiRet(strgenClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "rsconf";
+		if (ppErrObj != NULL)
+			*ppErrObj = "rsconf";
 		CHKiRet(rsconfClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "lookup";
+		if (ppErrObj != NULL)
+			*ppErrObj = "lookup";
 		CHKiRet(lookupClassInit());
-		if(ppErrObj != NULL) *ppErrObj = "dynstats";
+		if (ppErrObj != NULL)
+			*ppErrObj = "dynstats";
 		CHKiRet(dynstatsClassInit());
 
 		/* dummy "classes" */
-		if(ppErrObj != NULL) *ppErrObj = "str";
+		if (ppErrObj != NULL)
+			*ppErrObj = "str";
 		CHKiRet(strInit());
 	}
 
@@ -227,7 +241,7 @@ rsrtExit(void)
 {
 	DEFiRet;
 
-	if(iRefCount == 1) {
+	if (iRefCount == 1) {
 		/* do actual de-init only if we are the last runtime user */
 		confClassExit();
 		glblClassExit();

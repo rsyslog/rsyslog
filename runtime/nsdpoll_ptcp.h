@@ -26,7 +26,7 @@
 
 #include "nsd.h"
 #ifdef HAVE_SYS_EPOLL_H
-#	include <sys/epoll.h>
+#include <sys/epoll.h>
 #endif
 typedef nsdpoll_if_t nsdpoll_ptcp_if_t; /* we just *implement* this interface */
 /* a helper object to keep track of the epoll event records
@@ -40,16 +40,17 @@ struct nsdpoll_epollevt_lst_s {
 #endif
 	int id;
 	void *pUsr;
-	nsd_ptcp_t *pSock;	/* our associated netstream driver data */
+	nsd_ptcp_t *pSock; /* our associated netstream driver data */
 	nsdpoll_epollevt_lst_t *pNext;
 };
 
 /* the nsdpoll_ptcp object */
 struct nsdpoll_ptcp_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	int efd;		/* file descriptor used by epoll */
-	nsdpoll_epollevt_lst_t *pRoot;	/* Root of the epoll event list */
-	pthread_mutex_t mutEvtLst;
+	BEGINobjInstance
+		;			       /* Data to implement generic object - MUST be the first data element! */
+		int efd;		       /* file descriptor used by epoll */
+		nsdpoll_epollevt_lst_t *pRoot; /* Root of the epoll event list */
+		pthread_mutex_t mutEvtLst;
 };
 
 /* interface is defined in nsd.h, we just implement it! */

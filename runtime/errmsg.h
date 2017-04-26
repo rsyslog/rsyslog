@@ -27,17 +27,17 @@
 
 /* the errmsg object */
 typedef struct errmsg_s {
-    	char dummy;
+	char dummy;
 } errmsg_t;
 
 
 /* interfaces */
 BEGINinterface(errmsg) /* name must also be changed in ENDinterface macro! */
-	void  __attribute__((format(printf, 3, 4))) (*LogError)(const int iErrno, const int iErrCode,
-	const char *pszErrFmt, ... );
+	void __attribute__((format(printf, 3, 4))) (*LogError)(const int iErrno, const int iErrCode,
+	    const char *pszErrFmt, ...);
 	/* v2, 2013-11-29 */
-	void  __attribute__((format(printf, 4, 5))) (*LogMsg)(const int iErrno, const int iErrCode, const int severity,
-	const char *pszErrFmt, ... );
+	void __attribute__((format(printf, 4, 5))) (*LogMsg)(const int iErrno, const int iErrCode, const int severity,
+	    const char *pszErrFmt, ...);
 ENDinterface(errmsg)
 #define errmsgCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
@@ -46,8 +46,8 @@ ENDinterface(errmsg)
 PROTOTYPEObj(errmsg);
 void resetErrMsgsFlag(void);
 int hadErrMsgs(void);
-void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int iErrCode, const char *fmt, ... );
+void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int iErrCode, const char *fmt, ...);
 void __attribute__((format(printf, 4, 5)))
-	LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... );
+LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ...);
 
 #endif /* #ifndef INCLUDED_ERRMSG_H */

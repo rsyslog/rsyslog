@@ -46,7 +46,7 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omstdout")
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* internal structures
  */
@@ -56,8 +56,8 @@ DEF_OMOD_STATIC_DATA
 
 
 typedef struct _instanceData {
-	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
-	int bEnsureLFEnding;		/* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
+	int bUseArrayInterface; /* uses action use array instead of string template interface? */
+	int bEnsureLFEnding;    /* ensure that a linefeed is written at the end of EACH record (test aid for nettester) */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -65,50 +65,49 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	int bUseArrayInterface;		/* shall action use array instead of string template interface? */
-	int bEnsureLFEnding;		/* shall action use array instead of string template interface? */
+	int bUseArrayInterface; /* shall action use array instead of string template interface? */
+	int bEnsureLFEnding;    /* shall action use array instead of string template interface? */
 } configSettings_t;
 static configSettings_t cs;
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
+	    resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+	CODESTARTfreeInstance
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+	CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
@@ -120,8 +119,8 @@ BEGINdoAction
 	char szBuf[65564];
 	size_t len;
 	int r;
-CODESTARTdoAction
-	if(pWrkrData->pData->bUseArrayInterface) {
+	CODESTARTdoAction if (pWrkrData->pData->bUseArrayInterface)
+	{
 		/* if we use array passing, we need to put together a string
 		 * ourselves. At this point, please keep in mind that omstdout is
 		 * primarily a testing aid. Other modules may do different processing
@@ -130,39 +129,41 @@ CODESTARTdoAction
 		 * So this code here is also more or less an example of how to do that.
 		 * rgerhards, 2009-04-03
 		 */
-		szParams = (char**)(void*) (ppString[0]);
+		szParams = (char **)(void *)(ppString[0]);
 		/* In array-passing mode, ppString[] contains a NULL-terminated array
 		 * of char *pointers.
 		 */
 		iParam = 0;
 		iBuf = 0;
-		while(szParams[iParam] != NULL) {
-			if(iParam > 0)
+		while (szParams[iParam] != NULL) {
+			if (iParam > 0)
 				szBuf[iBuf++] = ','; /* all but first need a delimiter */
 			iParamVal = 0;
-			while(szParams[iParam][iParamVal] != '\0' && iBuf < (int) sizeof(szBuf)) {
+			while (szParams[iParam][iParamVal] != '\0' && iBuf < (int)sizeof(szBuf)) {
 				szBuf[iBuf++] = szParams[iParam][iParamVal++];
 			}
 			++iParam;
 		}
 		szBuf[iBuf] = '\0';
 		toWrite = szBuf;
-	} else {
-		toWrite = (char*) ppString[0];
+	}
+	else
+	{
+		toWrite = (char *)ppString[0];
 	}
 	len = strlen(toWrite);
 	/* the following if's are just to silence compiler warnings. If someone 
 	 * actually intends to use this module in production (why???), this code
 	 * needs to be more solid. -- rgerhards, 2012-11-28
 	 */
-	if((r = write(1, toWrite, len)) != (int) len) { /* 1 is stdout! */
+	if ((r = write(1, toWrite, len)) != (int)len) { /* 1 is stdout! */
 		DBGPRINTF("omstdout: error %d writing to stdout[%zd]: %s\n",
-			r, len, toWrite);
+		    r, len, toWrite);
 	}
-	if(pWrkrData->pData->bEnsureLFEnding && toWrite[len-1] != '\n') {
-		if((r = write(1, "\n", 1)) != 1) { /* write missing LF */
+	if (pWrkrData->pData->bEnsureLFEnding && toWrite[len - 1] != '\n') {
+		if ((r = write(1, "\n", 1)) != 1) { /* write missing LF */
 			DBGPRINTF("omstdout: error %d writing \\n to stdout\n",
-				r);
+			    r);
 		}
 	}
 ENDdoAction
@@ -170,10 +171,11 @@ ENDdoAction
 
 BEGINparseSelectorAct
 	int iTplOpts;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us */
-	if(strncmp((char*) p, ":omstdout:", sizeof(":omstdout:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us */
+	    if (strncmp((char *)p, ":omstdout:", sizeof(":omstdout:") - 1))
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
@@ -182,33 +184,32 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p - 1) == ';')
 		--p;
 	iTplOpts = (cs.bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar *)"RSYSLOG_FileFormat"));
 	pData->bUseArrayInterface = cs.bUseArrayInterface;
 	pData->bEnsureLFEnding = cs.bEnsureLFEnding;
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
-
 
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	DEFiRet;
 	cs.bUseArrayInterface = 0;
@@ -221,33 +222,33 @@ BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
-	int bArrayPassingSupported;		/* does core support template passing as an array? */
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	/* check if the rsyslog core supports parameter passing code */
-	bArrayPassingSupported = 0;
-	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
-	if(localRet == RS_RET_OK) {
+	int bArrayPassingSupported; /* does core support template passing as an array? */
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    /* check if the rsyslog core supports parameter passing code */
+	    bArrayPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar *)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
+	if (localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports array passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_ARRAY)
+		if (opts & OMSR_TPL_AS_ARRAY)
 			bArrayPassingSupported = 1;
-	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+	} else if (localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, what is not acceptable */
 	}
 	DBGPRINTF("omstdout: array-passing is %ssupported by rsyslog core.\n", bArrayPassingSupported ? "" : "not ");
 
-	if(bArrayPassingSupported) {
+	if (bArrayPassingSupported) {
 		/* enable config comand only if core supports it */
 		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
-			                   &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID));
+		    &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID));
 	}
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutensurelfending", 0, eCmdHdlrBinary, NULL,
-				   &cs.bEnsureLFEnding, STD_LOADABLE_MODULE_ID));
+	    &cs.bEnsureLFEnding, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

@@ -30,8 +30,9 @@ typedef sigprov_if_t lmsig_gt_if_t;
 
 /* the lmsig_gt object */
 struct lmsig_gt_s {
-	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
-	gtctx ctx;	/* librsgt context - contains all we need */
+	BEGINobjInstance
+		;	  /* Data to implement generic object - MUST be the first data element! */
+		gtctx ctx; /* librsgt context - contains all we need */
 };
 typedef struct lmsig_gt_s lmsig_gt_t;
 

@@ -23,8 +23,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	IMKLOG_H_INCLUDED
-#define	IMKLOG_H_INCLUDED 1
+#ifndef IMKLOG_H_INCLUDED
+#define IMKLOG_H_INCLUDED 1
 
 #include "rsyslog.h"
 #include "dirty.h"
@@ -54,16 +54,16 @@ rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf);
 int klogFacilIntMsg(void);
 
 /* the functions below may be called by the drivers */
-rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 rsRetVal Syslog(syslog_pri_t priority, uchar *msg, struct timeval *tp);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
-extern int InitKsyms(modConfData_t*);
+extern int InitKsyms(modConfData_t *);
 extern void DeinitKsyms(void);
 extern int InitMsyms(void);
 extern void DeinitMsyms(void);
-extern char * ExpandKadds(char *, char *);
+extern char *ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */

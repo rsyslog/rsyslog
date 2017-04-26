@@ -25,8 +25,8 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#ifndef	IM_HELPER_H_INCLUDED
-#define	IM_HELPER_H_INCLUDED 1
+#ifndef IM_HELPER_H_INCLUDED
+#define IM_HELPER_H_INCLUDED 1
 
 
 /* The following function provides a complete implementation to check a
@@ -43,13 +43,13 @@ std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
 	rsRetVal localRet;
 	DEFiRet;
 
-	inst->pBindRuleset = NULL;	/* assume default ruleset */
+	inst->pBindRuleset = NULL; /* assume default ruleset */
 
-	if(inst->pszBindRuleset == NULL)
+	if (inst->pszBindRuleset == NULL)
 		FINALIZE;
 
 	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
-	if(localRet == RS_RET_NOT_FOUND) {
+	if (localRet == RS_RET_NOT_FOUND) {
 		std_checkRuleset_genErrMsg(modConf, inst);
 	}
 	CHKiRet(localRet);

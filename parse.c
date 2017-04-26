@@ -42,7 +42,6 @@
  * ################################################################# */
 
 
-
 /* ################################################################# *
  * public members                                                    *
  * ################################################################# */
@@ -56,7 +55,7 @@ rsRetVal rsParsDestruct(rsParsObj *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if(pThis->pCStr != NULL)
+	if (pThis->pCStr != NULL)
 		rsCStrDestruct(&pThis->pCStr);
 	RSFREEOBJ(pThis);
 	return RS_RET_OK;
@@ -72,7 +71,7 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis)
 
 	assert(ppThis != NULL);
 
-	if((pThis = (rsParsObj*) calloc(1, sizeof(rsParsObj))) == NULL)
+	if ((pThis = (rsParsObj *)calloc(1, sizeof(rsParsObj))) == NULL)
 		return RS_RET_OUT_OF_MEMORY;
 
 	rsSETOBJTYPE(pThis, OIDrsPars);
@@ -99,13 +98,13 @@ rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
 	CHKiRet(rsCStrConstructFromszStr(&pCS, psz));
 
 	/* create parser */
-	if((iRet = rsParsConstruct(&pThis)) != RS_RET_OK) {
+	if ((iRet = rsParsConstruct(&pThis)) != RS_RET_OK) {
 		rsCStrDestruct(&pCS);
 		FINALIZE;
 	}
 
 	/* assign string to parser */
-	if((iRet = rsParsAssignString(pThis, pCS)) != RS_RET_OK) {
+	if ((iRet = rsParsAssignString(pThis, pCS)) != RS_RET_OK) {
 		rsParsDestruct(pThis);
 		FINALIZE;
 	}
@@ -122,7 +121,7 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	rsCHECKVALIDOBJECT(pCStr, OIDrsCStr);
-	
+
 	pThis->pCStr = pCStr;
 	pThis->iCurrPos = 0;
 
@@ -138,7 +137,7 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr)
  * set (as in ASCII).
  * rgerhards 2005-09-27
  */
-rsRetVal parsInt(rsParsObj *pThis, int* pInt)
+rsRetVal parsInt(rsParsObj *pThis, int *pInt)
 {
 	unsigned char *pC;
 	int iVal;
@@ -152,12 +151,12 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 	/* order of checks is important, else we might do
 	 * mis-addressing! (off by one)
 	 */
-	if(pThis->iCurrPos >= rsCStrLen(pThis->pCStr))
+	if (pThis->iCurrPos >= rsCStrLen(pThis->pCStr))
 		return RS_RET_NO_MORE_DATA;
-	if(!isdigit((int)*pC))
+	if (!isdigit((int)*pC))
 		return RS_RET_NO_DIGIT;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit((int)*pC)) {
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit((int)*pC)) {
 		iVal = iVal * 10 + *pC - '0';
 		++pThis->iCurrPos;
 		++pC;
@@ -184,15 +183,15 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		if(pC[pThis->iCurrPos] == c)
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+		if (pC[pThis->iCurrPos] == c)
 			break;
 		++pThis->iCurrPos;
 	}
 
 	/* delimiter found? */
-	if(pC[pThis->iCurrPos] == c) {
-		if(pThis->iCurrPos+1 < rsCStrLen(pThis->pCStr)) {
+	if (pC[pThis->iCurrPos] == c) {
+		if (pThis->iCurrPos + 1 < rsCStrLen(pThis->pCStr)) {
 			iRet = RS_RET_OK;
 			pThis->iCurrPos++; /* 'eat' delimiter */
 		} else {
@@ -223,8 +222,8 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
 	numSkipped = 0;
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		if(!isspace((int)*(pC+pThis->iCurrPos)))
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+		if (!isspace((int)*(pC + pThis->iCurrPos)))
 			break;
 		++pThis->iCurrPos;
 		++numSkipped;
@@ -248,7 +247,7 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
 rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing,
-	int bConvLower)
+    int bConvLower)
 {
 	DEFiRet;
 	register unsigned char *pC;
@@ -258,19 +257,19 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	CHKiRet(rsCStrConstruct(&pCStr));
 
-	if(bTrimLeading)
+	if (bTrimLeading)
 		parsSkipWhitespace(pThis);
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
 		CHKiRet(cstrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;
 	}
-	
-	if(pThis->iCurrPos < cstrLen(pThis->pCStr)) { //BUGFIX!!
-		++pThis->iCurrPos; /* eat delimiter */
+
+	if (pThis->iCurrPos < cstrLen(pThis->pCStr)) { //BUGFIX!!
+		++pThis->iCurrPos;		       /* eat delimiter */
 	}
 
 	/* We got the string, now take it and see if we need to
@@ -278,7 +277,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	 */
 	cstrFinalize(pCStr);
 
-	if(bTrimTrailing) {
+	if (bTrimTrailing) {
 		cstrTrimTrailingWhiteSpace(pCStr);
 	}
 
@@ -286,8 +285,8 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	*ppCStr = pCStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pCStr != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pCStr != NULL)
 			rsCStrDestruct(&pCStr);
 	}
 
@@ -323,13 +322,13 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 	/* OK, we most probably can obtain a value... */
 	CHKiRet(cstrConstruct(&pCStr));
 
-	while(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
-		if(*pC == '"') {
-			break;	/* we are done! */
-		} else if(*pC == '\\') {
+	while (pThis->iCurrPos < cstrLen(pThis->pCStr)) {
+		if (*pC == '"') {
+			break; /* we are done! */
+		} else if (*pC == '\\') {
 			++pThis->iCurrPos;
 			++pC;
-			if(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
+			if (pThis->iCurrPos < cstrLen(pThis->pCStr)) {
 				/* in this case, we copy the escaped character
 				 * to the output buffer (but do not rely on this,
 				 * we might later introduce other things, like \007!
@@ -342,8 +341,8 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 		++pThis->iCurrPos;
 		++pC;
 	}
-	
-	if(*pC == '"') {
+
+	if (*pC == '"') {
 		++pThis->iCurrPos; /* 'eat' trailing quote */
 	} else {
 		/* error - improperly quoted string! */
@@ -357,8 +356,8 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 	*ppCStr = pCStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pCStr != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pCStr != NULL)
 			cstrDestruct(&pCStr);
 	}
 
@@ -395,64 +394,63 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	/* we parse everything until either '/', ',' or
 	 * whitespace. Validity will be checked down below.
 	 */
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
-	      && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
-		if((iRet = cstrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-			cstrDestruct (&pCStr);
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
+		if ((iRet = cstrAppendChar(pCStr, *pC)) != RS_RET_OK) {
+			cstrDestruct(&pCStr);
 			FINALIZE;
 		}
 		++pThis->iCurrPos;
 		++pC;
 	}
-	
+
 	cstrFinalize(pCStr);
 
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.
-	 */	
-  	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
+	 */
+	CHKiRet(cstrConvSzStrAndDestruct(&pCStr, &pszIP, 0));
 
-	if((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL)
+	if ((*pIP = calloc(1, sizeof(struct NetAddr))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	
-	if (*((char*)pszIP) == '[') {
-		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
+
+	if (*((char *)pszIP) == '[') {
+		pszTmp = (uchar *)strchr((char *)pszIP, ']');
 		if (pszTmp == NULL) {
-			free (pszIP);
-			free (*pIP);
+			free(pszIP);
+			free(*pIP);
 			ABORT_FINALIZE(RS_RET_INVALID_IP);
 		}
 		*pszTmp = '\0';
 
-		memset (&hints, 0, sizeof (struct addrinfo));
+		memset(&hints, 0, sizeof(struct addrinfo));
 		hints.ai_family = AF_INET6;
-		hints.ai_flags  = AI_NUMERICHOST;
+		hints.ai_flags = AI_NUMERICHOST;
 
-		switch(getaddrinfo ((char*)pszIP+1, NULL, &hints, &res)) {
-		case 0: 
-			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
-			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
-			freeaddrinfo (res);
+		switch (getaddrinfo((char *)pszIP + 1, NULL, &hints, &res)) {
+		case 0:
+			(*pIP)->addr.NetAddr = MALLOC(res->ai_addrlen);
+			memcpy((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
+			freeaddrinfo(res);
 			break;
 		case EAI_NONAME:
 			/* The "address" is not an IP prefix but a wildcard */
-			F_SET((*pIP)->flags, ADDR_NAME|ADDR_PRI6);
-			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP+1);
+			F_SET((*pIP)->flags, ADDR_NAME | ADDR_PRI6);
+			(*pIP)->addr.HostWildcard = strdup((const char *)pszIP + 1);
 			break;
 		default:
-			free (pszIP);
-			free (*pIP);
+			free(pszIP);
+			free(*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		
-		if(*pC == '/') {
+
+		if (*pC == '/') {
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */
-			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
+			if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free((*pIP)->addr.NetAddr);
 				free((*pIP)->addr.HostWildcard);
-				free (pszIP);
-				free (*pIP);
+				free(pszIP);
+				free(*pIP);
 				FINALIZE;
 			}
 			/* we need to refresh pointer (changed by parsInt()) */
@@ -462,35 +460,35 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			*pBits = 128;
 		}
 	} else { /* now parse IPv4 */
-		memset (&hints, 0, sizeof (struct addrinfo));
+		memset(&hints, 0, sizeof(struct addrinfo));
 		hints.ai_family = AF_INET;
-		hints.ai_flags  = AI_NUMERICHOST;
+		hints.ai_flags = AI_NUMERICHOST;
 
-		switch(getaddrinfo ((char*)pszIP, NULL, &hints, &res)) {
-		case 0: 
-			(*pIP)->addr.NetAddr = MALLOC (res->ai_addrlen);
-			memcpy ((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
-			freeaddrinfo (res);
+		switch (getaddrinfo((char *)pszIP, NULL, &hints, &res)) {
+		case 0:
+			(*pIP)->addr.NetAddr = MALLOC(res->ai_addrlen);
+			memcpy((*pIP)->addr.NetAddr, res->ai_addr, res->ai_addrlen);
+			freeaddrinfo(res);
 			break;
 		case EAI_NONAME:
 			/* The "address" is not an IP prefix but a wildcard */
 			F_SET((*pIP)->flags, ADDR_NAME);
-			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP);
+			(*pIP)->addr.HostWildcard = strdup((const char *)pszIP);
 			break;
 		default:
-			free (pszIP);
-			free (*pIP);
+			free(pszIP);
+			free(*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-			
-		if(*pC == '/') {
+
+		if (*pC == '/') {
 			/* mask bits follow, let's parse them! */
 			++pThis->iCurrPos; /* eat slash */
-			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
+			if ((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free((*pIP)->addr.NetAddr);
 				free((*pIP)->addr.HostWildcard);
-				free (pszIP);
-				free (*pIP);
+				free(pszIP);
+				free(*pIP);
 				FINALIZE;
 			}
 			/* we need to refresh pointer (changed by parsInt()) */
@@ -503,8 +501,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	free(pszIP); /* no longer needed */
 
 	/* skip to next processable character */
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
-	      && (*pC == ',' || isspace((int)*pC))) {
+	while (pThis->iCurrPos < rsCStrLen(pThis->pCStr) && (*pC == ',' || isspace((int)*pC))) {
 		++pThis->iCurrPos;
 		++pC;
 	}
@@ -514,7 +511,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 finalize_it:
 	RETiRet;
 }
-#endif  /* #ifdef SYSLOG_INET */
+#endif /* #ifdef SYSLOG_INET */
 
 
 /* tell if the parsepointer is at the end of the
@@ -535,7 +532,7 @@ int rsParsGetParsePointer(rsParsObj *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if(pThis->iCurrPos < rsCStrLen(pThis->pCStr))
+	if (pThis->iCurrPos < rsCStrLen(pThis->pCStr))
 		return pThis->iCurrPos;
 	else
 		return rsCStrLen(pThis->pCStr) - 1;
@@ -551,8 +548,8 @@ char parsPeekAtCharAtParsPtr(rsParsObj *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	assert(pThis->iCurrPos < rsCStrLen(pThis->pCStr));
-	
-	return(*(pThis->pCStr->pBuf + pThis->iCurrPos));
+
+	return (*(pThis->pCStr->pBuf + pThis->iCurrPos));
 }
 
 /* return the current position inside the parse object.

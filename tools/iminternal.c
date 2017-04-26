@@ -48,7 +48,7 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
 {
 	DEFiRet;
 
-	if(pThis->pMsg != NULL)
+	if (pThis->pMsg != NULL)
 		msgDestruct(&pThis->pMsg);
 
 	free(pThis);
@@ -64,13 +64,13 @@ static rsRetVal iminternalConstruct(iminternal_t **ppThis)
 	DEFiRet;
 	iminternal_t *pThis;
 
-	if((pThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
+	if ((pThis = (iminternal_t *)calloc(1, sizeof(iminternal_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pThis != NULL)
 			iminternalDestruct(pThis);
 	}
 
@@ -101,33 +101,33 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg)
 	to.tv_nsec = 0;
 	r = pthread_mutex_timedlock(&mutList, &to);
 	is_locked = 1;
-	if(r != 0) {
+	if (r != 0) {
 		dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n",
-			r, getMSG(pMsg));
+		    r, getMSG(pMsg));
 		/* the message is lost, nothing we can do against this! */
 		msgDestruct(&pMsg);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	CHKiRet(iminternalConstruct(&pThis));
 	pThis->pMsg = pMsg;
-	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
+	CHKiRet(llAppend(&llMsgs, NULL, (void *)pThis));
 
 	/* awake mainloop to emit message ASAP */
 	pthread_mutex_unlock(&mutList);
 	is_locked = 0;
-	if(bHaveMainQueue) {
+	if (bHaveMainQueue) {
 		DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
-			pThis->pMsg->pszRawMsg);
+		    pThis->pMsg->pszRawMsg);
 		kill(glblGetOurPid(), SIGTTOU);
 	}
 
 finalize_it:
-	if(is_locked) {
+	if (is_locked) {
 		pthread_mutex_unlock(&mutList);
 	}
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
-		if(pThis != NULL)
+		if (pThis != NULL)
 			iminternalDestruct(pThis);
 	}
 
@@ -146,14 +146,14 @@ rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 	linkedListCookie_t llCookie = NULL;
 
 	pthread_mutex_lock(&mutList);
-	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
+	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void *)&pThis));
 	*ppMsg = pThis->pMsg;
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
 
-	if(llDestroyRootElt(&llMsgs) != RS_RET_OK) {
+	if (llDestroyRootElt(&llMsgs) != RS_RET_OK) {
 		dbgprintf("Root element of iminternal linked list could not be destroyed - there is "
-			"nothing we can do against it, we ignore it for now. Things may go wild "
-			"from here on. This is most probably a program logic error.\n");
+			  "nothing we can do against it, we ignore it for now. Things may go wild "
+			  "from here on. This is most probably a program logic error.\n");
 	}
 
 finalize_it:
@@ -165,7 +165,7 @@ finalize_it:
  * 0 means we have none, everything else means there is at least
  * one message ready.
  */
-rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
+rsRetVal iminternalHaveMsgReady(int *pbHaveOne)
 {
 	pthread_mutex_lock(&mutList);
 	const rsRetVal iRet = llGetNumElts(&llMsgs, pbHaveOne);

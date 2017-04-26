@@ -61,83 +61,82 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	/* do nothing */
+	CODESTARTdbgPrintInstInfo
+/* do nothing */
 ENDdbgPrintInstInfo
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	/* we are not compatible with repeated msg reduction feature, so do not allow it */
+	CODESTARTisCompatibleWithFeature
+/* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction_NoStrings
-CODESTARTdoAction
-	(void)pMsgData; /* Suppress compiler warning on unused var */
+	CODESTARTdoAction(void) pMsgData; /* Suppress compiler warning on unused var */
 	dbgprintf("\n");
 	iRet = RS_RET_DISCARDMSG;
 ENDdoAction
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	/* we do not have instance data, so we do not need to
+	CODESTARTfreeInstance
+/* we do not have instance data, so we do not need to
 	 * do anything here. -- rgerhards, 2007-07-25
 	 */
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(0)
-	pData = NULL; /* this action does not have any instance data */
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(0)
+		pData = NULL; /* this action does not have any instance data */
 	p = *pp;
 
-	if(*p == '~') {
+	if (*p == '~') {
 		dbgprintf("discard\n");
 		errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
-			"warning: ~ action is deprecated, consider "
-			"using the 'stop' statement instead");
+		    "warning: ~ action is deprecated, consider "
+		    "using the 'stop' statement instead");
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(Discard)
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 /*
  * vi:set ai:

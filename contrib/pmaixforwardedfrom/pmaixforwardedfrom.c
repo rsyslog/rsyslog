@@ -48,20 +48,19 @@ PARSER_NAME("rsyslog.aixforwardedfrom")
  */
 DEF_PMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(parser)
+	    DEFobjCurrIf(datetime)
 
 
-/* static data */
-static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+    /* static data */
+    static int bParseHOSTNAMEandTAG; /* cache for the equally-named global param - performance enhancement */
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATUREAutomaticSanitazion)
+	    iRet = RS_RET_OK;
+	if (eFeat == sFEATUREAutomaticPRIParsing)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
@@ -72,8 +71,8 @@ BEGINparse
 	int skipLen = 0;
 #define OpeningText "Message forwarded from "
 #define OpeningText2 "From "
-CODESTARTparse
-	dbgprintf("Message will now be parsed by fix AIX Forwarded From parser.\n");
+	CODESTARTparse
+	    dbgprintf("Message will now be parsed by fix AIX Forwarded From parser.\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
@@ -82,56 +81,56 @@ CODESTARTparse
 
 	/* check if this message is of the type we handle in this (very limited) parser */
 	/* first, we permit SP */
-	while(lenMsg && *p2parse == ' ') {
+	while (lenMsg && *p2parse == ' ') {
 		--lenMsg;
 		++p2parse;
 	}
-	if((unsigned) lenMsg < 24) {
+	if ((unsigned)lenMsg < 24) {
 		/* too short, can not be "our" message */
-                /* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
+		/* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
 	/* skip over timestamp */
-	lenMsg -=16;
-	p2parse +=16;
+	lenMsg -= 16;
+	p2parse += 16;
 	/* if there is the string "Message forwarded from " were the hostname should be */
-	if(!strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1))
+	if (!strncasecmp((char *)p2parse, OpeningText, sizeof(OpeningText) - 1))
 		skipLen = 23;
 	/* or "From " */
-	if(!strncasecmp((char*) p2parse, OpeningText2, sizeof(OpeningText2)-1))
+	if (!strncasecmp((char *)p2parse, OpeningText2, sizeof(OpeningText2) - 1))
 		skipLen = 5;
 	DBGPRINTF("pmaixforwardedfrom: skipLen %d\n", skipLen);
-	if(!skipLen) {
+	if (!skipLen) {
 		/* wrong opening text */
-	DBGPRINTF("not a AIX message forwarded from mangled log!\n");
+		DBGPRINTF("not a AIX message forwarded from mangled log!\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by skipLen(23 or 5) characters to overwrite the "Message forwarded from
 " or "From " with the hostname */
-	lenMsg -=skipLen;
+	lenMsg -= skipLen;
 	memmove(p2parse, p2parse + skipLen, lenMsg);
 	*(p2parse + lenMsg) = '\n';
-	*(p2parse + lenMsg + 1)  = '\0';
-	pMsg->iLenRawMsg -=skipLen;
-	pMsg->iLenMSG -=skipLen;
+	*(p2parse + lenMsg + 1) = '\0';
+	pMsg->iLenRawMsg -= skipLen;
+	pMsg->iLenMSG -= skipLen;
 	/* now look for the : after the hostname to walk past the hostname, also watch for a space in case this isn't
 really an AIX log, but has a similar preamble */
-	while(lenMsg && *p2parse != ' ' && *p2parse != ':') {
+	while (lenMsg && *p2parse != ' ' && *p2parse != ':') {
 		--lenMsg;
 		++p2parse;
 	}
 	if (lenMsg && *p2parse != ':') {
-	DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has been removed\n");
+		DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has been removed\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	/* bump the message portion up by one character to overwrite the extra : */
-	lenMsg -=1;
+	lenMsg -= 1;
 	memmove(p2parse, p2parse + 1, lenMsg);
 	*(p2parse + lenMsg) = '\n';
-	*(p2parse + lenMsg + 1)  = '\0';
-	pMsg->iLenRawMsg -=1;
-	pMsg->iLenMSG -=1;
+	*(p2parse + lenMsg + 1) = '\0';
+	pMsg->iLenRawMsg -= 1;
+	pMsg->iLenMSG -= 1;
 	/* now, claim to abort so that something else can parse the now modified message */
 	DBGPRINTF("pmaixforwardedfrom: new mesage: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
@@ -141,9 +140,9 @@ ENDparse
 
 
 BEGINmodExit
-CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    /* release what we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -151,24 +150,24 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_PMOD_QUERIES
+		CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
-	/* cache value, is set only during rsyslogd option processing */
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

@@ -35,7 +35,7 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* ------------------------------ methods ------------------------------ */
@@ -45,7 +45,8 @@ DEFobjStaticHelpers
  * the relevant entry points.
  */
 
-static int myDeflateInit(z_streamp strm, int level)
+static int
+myDeflateInit(z_streamp strm, int level)
 {
 	return deflateInit(strm, level);
 }
@@ -70,8 +71,8 @@ static int myDeflate(z_streamp strm, int flush)
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(zlibw)
-CODESTARTobjQueryInterface(zlibw)
-	if(pIf->ifVersion != zlibwCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(zlibw) if (pIf->ifVersion != zlibwCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -82,8 +83,8 @@ CODESTARTobjQueryInterface(zlibw)
 	 */
 	pIf->DeflateInit = myDeflateInit;
 	pIf->DeflateInit2 = myDeflateInit2;
-	pIf->Deflate     = myDeflate;
-	pIf->DeflateEnd  = myDeflateEnd;
+	pIf->Deflate = myDeflate;
+	pIf->DeflateEnd = myDeflateEnd;
 finalize_it:
 ENDobjQueryInterface(zlibw)
 
@@ -93,9 +94,9 @@ ENDobjQueryInterface(zlibw)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(zlibw, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
-	/* request objects we use */
+							    /* request objects we use */
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(zlibw)
 
 
@@ -103,22 +104,22 @@ ENDObjClassInit(zlibw)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	CHKiRet(zlibwClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	/* Initialize all classes that are in our module - this includes ourselfs */
+/* Initialize all classes that are in our module - this includes ourselfs */
 ENDmodInit
 /* vi:set ai:
  */

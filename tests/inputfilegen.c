@@ -12,7 +12,7 @@
 #define DEFMSGS 5
 #define NOEXTRADATA -1
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 	int c, i;
 	int space = 0;
@@ -21,8 +21,8 @@ int main(int argc, char* argv[])
 	int errflg = 0;
 	char *extradata = NULL;
 
-	while((c=getopt(argc, argv, "pm:d:")) != -1) {
-		switch(c) {
+	while ((c = getopt(argc, argv, "pm:d:")) != -1) {
+		switch (c) {
 		case 'm':
 			nmsgs = atoi(optarg);
 			break;
@@ -42,21 +42,21 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
-	if(errflg) {
+	if (errflg) {
 		fprintf(stderr, "Usage: -m <nmsgs> -d <nchars> -p\n");
 		exit(2);
 	}
-	if(nchars != NOEXTRADATA) {
+	if (nchars != NOEXTRADATA) {
 		extradata = (char *)malloc(nchars + 1);
 		memset(extradata, 'X', nchars);
 		extradata[nchars] = '\0';
 	}
-	for(i = 0; i < nmsgs; ++i) {
+	for (i = 0; i < nmsgs; ++i) {
 		printf("msgnum:%8.8d:", i);
-		if(space==1) {
+		if (space == 1) {
 			printf("\n ");
 		}
-		if(nchars != NOEXTRADATA) {
+		if (nchars != NOEXTRADATA) {
 			printf("%s", extradata);
 		}
 		printf("\n");

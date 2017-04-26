@@ -21,8 +21,8 @@ void output(int n)
 	int i;
 
 	printf("name:");
-	for(i = 0 ; i < n ; ++i) {
-		if(arr[i]) {
+	for (i = 0; i < n; ++i) {
+		if (arr[i]) {
 			printf("-%s", name[i]);
 		}
 	}
@@ -31,7 +31,7 @@ void output(int n)
 
 void pows(int n, int i)
 {
-	if(i == 0) {
+	if (i == 0) {
 		output(n);
 	} else {
 		--i;
@@ -51,13 +51,13 @@ int main(int argc, char *argv[])
 	int nscanned;
 
 	n = 0;
-	while(!feof(stdin)) {
+	while (!feof(stdin)) {
 		nscanned = scanf("%s %[^\n]s\n", iname, istmt);
-		if(nscanned == EOF)
+		if (nscanned == EOF)
 			break;
-		else if(nscanned != 2) {
+		else if (nscanned != 2) {
 			fprintf(stderr, "problem scanning entry %d, scanned %d\n",
-				n, nscanned);
+			    n, nscanned);
 			exit(1);
 		}
 		name[n] = strdup(iname);

@@ -39,7 +39,7 @@
 #include "var.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* Standard-Constructor
@@ -52,7 +52,7 @@ ENDobjConstruct(var)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-varConstructFinalize(var_t __attribute__((unused)) *pThis)
+    varConstructFinalize(var_t __attribute__((unused)) * pThis)
 {
 	DEFiRet;
 
@@ -64,11 +64,10 @@ varConstructFinalize(var_t __attribute__((unused)) *pThis)
 
 /* destructor for the var object */
 BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(var)
-	if(pThis->pcsName != NULL)
-		rsCStrDestruct(&pThis->pcsName);
-	if(pThis->varType == VARTYPE_STR) {
-		if(pThis->val.pStr != NULL)
+	CODESTARTobjDestruct(var) if (pThis->pcsName != NULL)
+	    rsCStrDestruct(&pThis->pcsName);
+	if (pThis->varType == VARTYPE_STR) {
+		if (pThis->val.pStr != NULL)
 			rsCStrDestruct(&pThis->val.pStr);
 	}
 ENDobjDestruct(var)
@@ -76,19 +75,19 @@ ENDobjDestruct(var)
 
 /* DebugPrint support for the var object */
 BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(var)
-	switch(pThis->varType) {
-		case VARTYPE_STR:
-			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
-			break;
-		case VARTYPE_NUMBER:
-			dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
-			break;
-		case VARTYPE_SYSLOGTIME:
-		case VARTYPE_NONE:
-		default:
-			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);
-			break;
+	CODESTARTobjDebugPrint(var) switch (pThis->varType)
+	{
+	case VARTYPE_STR:
+		dbgoprint((obj_t *)pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
+		break;
+	case VARTYPE_NUMBER:
+		dbgoprint((obj_t *)pThis, "type: number, val %lld\n", pThis->val.num);
+		break;
+	case VARTYPE_SYSLOGTIME:
+	case VARTYPE_NONE:
+	default:
+		dbgoprint((obj_t *)pThis, "type %d currently not suppored in debug output\n", pThis->varType);
+		break;
 	}
 ENDobjDebugPrint(var)
 
@@ -97,8 +96,8 @@ ENDobjDebugPrint(var)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(var)
-CODESTARTobjQueryInterface(var)
-	if(pIf->ifVersion != varCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(var) if (pIf->ifVersion != varCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 

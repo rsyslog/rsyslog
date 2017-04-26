@@ -29,9 +29,9 @@
 #include "unicode-helper.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(statsobj)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(statsobj);
 
 #define DYNSTATS_PARAM_NAME "name"
 #define DYNSTATS_PARAM_RESETTABLE "resettable"
@@ -47,20 +47,20 @@ DEFobjCurrIf(statsobj)
 #define DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING 1.25
 
 static struct cnfparamdescr modpdescr[] = {
-	{ DYNSTATS_PARAM_NAME, eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ DYNSTATS_PARAM_RESETTABLE, eCmdHdlrBinary, 0 },
-	{ DYNSTATS_PARAM_MAX_CARDINALITY, eCmdHdlrPositiveInt, 0},
-	{ DYNSTATS_PARAM_UNUSED_METRIC_LIFE, eCmdHdlrPositiveInt, 0} /* in minutes */
+    {DYNSTATS_PARAM_NAME, eCmdHdlrString, CNFPARAM_REQUIRED},
+    {DYNSTATS_PARAM_RESETTABLE, eCmdHdlrBinary, 0},
+    {DYNSTATS_PARAM_MAX_CARDINALITY, eCmdHdlrPositiveInt, 0},
+    {DYNSTATS_PARAM_UNUSED_METRIC_LIFE, eCmdHdlrPositiveInt, 0} /* in minutes */
 };
 
 static struct cnfparamblk modpblk =
-{ CNFPARAMBLK_VERSION,
-  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-  modpdescr
-};
+    {CNFPARAMBLK_VERSION,
+	sizeof(modpdescr) / sizeof(struct cnfparamdescr),
+	modpdescr};
 
 rsRetVal
-dynstatsClassInit(void) {
+dynstatsClassInit(void)
+{
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
@@ -70,14 +70,16 @@ finalize_it:
 }
 
 static inline void
-dynstats_destroyCtr(dynstats_ctr_t *ctr) {
+dynstats_destroyCtr(dynstats_ctr_t *ctr)
+{
 	statsobj.DestructUnlinkedCounter(ctr->pCtr);
 	free(ctr->metric);
 	free(ctr);
 }
 
 static void /* assumes exclusive access to bucket */
-dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *ctrs) {
+    dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *ctrs)
+{
 	dynstats_ctr_t *ctr;
 	int ctrs_purged = 0;
 	hashtable_destroy(table, 0);
@@ -92,13 +94,15 @@ dynstats_destroyCountersIn(dynstats_bucket_t *b, htable *table, dynstats_ctr_t *
 }
 
 static void /* assumes exclusive access to bucket */
-dynstats_destroyCounters(dynstats_bucket_t *b) {
+    dynstats_destroyCounters(dynstats_bucket_t *b)
+{
 	statsobj.UnlinkAllCounters(b->stats);
 	dynstats_destroyCountersIn(b, b->table, b->ctrs);
 }
 
 static void
-dynstats_destroyBucket(dynstats_bucket_t* b) {
+dynstats_destroyBucket(dynstats_bucket_t *b)
+{
 	dynstats_buckets_t *bkts;
 
 	bkts = &loadConf->dynstats_buckets;
@@ -121,7 +125,8 @@ dynstats_destroyBucket(dynstats_bucket_t* b) {
 }
 
 static rsRetVal
-dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const uchar* name) {
+dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const uchar *name)
+{
 	uchar *metric_name_buff, *metric_suffix;
 	const uchar *suffix_litteral;
 	int name_len;
@@ -139,37 +144,37 @@ dynstats_addBucketMetrics(dynstats_buckets_t *bkts, dynstats_bucket_t *b, const 
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrOpsOverflow, b->mutCtrOpsOverflow);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrOpsOverflow), &b->pOpsOverflowCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrOpsOverflow), &b->pOpsOverflowCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("new_metric_add");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrNewMetricAdd, b->mutCtrNewMetricAdd);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrNewMetricAdd), &b->pNewMetricAddCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrNewMetricAdd), &b->pNewMetricAddCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("no_metric");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrNoMetric, b->mutCtrNoMetric);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrNoMetric), &b->pNoMetricCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrNoMetric), &b->pNoMetricCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("metrics_purged");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrMetricsPurged, b->mutCtrMetricsPurged);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrMetricsPurged), &b->pMetricsPurgedCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("ops_ignored");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrOpsIgnored, b->mutCtrOpsIgnored);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrOpsIgnored), &b->pOpsIgnoredCtr, 1));
 
 	suffix_litteral = UCHAR_CONSTANT("purge_triggered");
 	ustrncpy(metric_suffix, suffix_litteral, DYNSTATS_MAX_BUCKET_NS_METRIC_LENGTH);
 	STATSCOUNTER_INIT(b->ctrPurgeTriggered, b->mutCtrPurgeTriggered);
 	CHKiRet(statsobj.AddManagedCounter(bkts->global_stats, metric_name_buff, ctrType_IntCtr,
-									   CTR_FLAG_RESETTABLE, &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr, 1));
+	    CTR_FLAG_RESETTABLE, &(b->ctrPurgeTriggered), &b->pPurgeTriggeredCtr, 1));
 
 finalize_it:
 	free(metric_name_buff);
@@ -197,16 +202,17 @@ finalize_it:
 }
 
 static void
-no_op_free(void __attribute__((unused)) *ignore)  {}
+no_op_free(void __attribute__((unused)) * ignore) {}
 
-static rsRetVal  /* assumes exclusive access to bucket */
-dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
+static rsRetVal /* assumes exclusive access to bucket */
+    dynstats_rebuildSurvivorTable(dynstats_bucket_t *b)
+{
 	htable *survivor_table = NULL;
 	htable *new_table = NULL;
 	size_t htab_sz;
 	DEFiRet;
-	
-	htab_sz = (size_t) (DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
+
+	htab_sz = (size_t)(DYNSTATS_HASHTABLE_SIZE_OVERPROVISIONING * b->maxCardinality + 1);
 	if (b->table == NULL) {
 		CHKmalloc(survivor_table = create_hashtable(htab_sz, hash_from_string, key_equals_string, no_op_free));
 	}
@@ -222,17 +228,20 @@ dynstats_rebuildSurvivorTable(dynstats_bucket_t *b) {
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to evict TTL-expired metrics of dyn-stats "
-"bucket named: %s", b->name);
+							      "bucket named: %s",
+		    b->name);
 		if (new_table == NULL) {
 			errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table for "
-			"dyn-stats bucket named: %s", b->name);
+								      "dyn-stats bucket named: %s",
+			    b->name);
 		} else {
 			hashtable_destroy(new_table, 0);
 		}
 		if (b->table == NULL) {
 			if (survivor_table == NULL) {
 				errmsg.LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to initialize "
-				"ttl-survivor hash-table for dyn-stats bucket named: %s", b->name);
+									      "ttl-survivor hash-table for dyn-stats bucket named: %s",
+				    b->name);
 			} else {
 				hashtable_destroy(survivor_table, 0);
 			}
@@ -242,7 +251,8 @@ finalize_it:
 }
 
 static rsRetVal
-dynstats_resetBucket(dynstats_bucket_t *b) {
+dynstats_resetBucket(dynstats_bucket_t *b)
+{
 	DEFiRet;
 	pthread_rwlock_wrlock(&b->lock);
 	CHKiRet(dynstats_rebuildSurvivorTable(b));
@@ -254,7 +264,8 @@ finalize_it:
 }
 
 static void
-dynstats_resetIfExpired(dynstats_bucket_t *b) {
+dynstats_resetIfExpired(dynstats_bucket_t *b)
+{
 	long timeout;
 	pthread_rwlock_rdlock(&b->lock);
 	timeout = timeoutVal(&b->metricCleanupTimeout);
@@ -266,32 +277,35 @@ dynstats_resetIfExpired(dynstats_bucket_t *b) {
 }
 
 static void
-dynstats_readCallback(statsobj_t __attribute__((unused)) *ignore, void *b) {
+dynstats_readCallback(statsobj_t __attribute__((unused)) * ignore, void *b)
+{
 	dynstats_buckets_t *bkts;
 	bkts = &loadConf->dynstats_buckets;
 
 	pthread_rwlock_rdlock(&bkts->lock);
-	dynstats_resetIfExpired((dynstats_bucket_t *) b);
+	dynstats_resetIfExpired((dynstats_bucket_t *)b);
 	pthread_rwlock_unlock(&bkts->lock);
 }
 
 static rsRetVal
-dynstats_initNewBucketStats(dynstats_bucket_t *b) {
+dynstats_initNewBucketStats(dynstats_bucket_t *b)
+{
 	DEFiRet;
-	
+
 	CHKiRet(statsobj.Construct(&b->stats));
 	CHKiRet(statsobj.SetOrigin(b->stats, UCHAR_CONSTANT("dynstats.bucket")));
 	CHKiRet(statsobj.SetName(b->stats, b->name));
 	CHKiRet(statsobj.SetReportingNamespace(b->stats, UCHAR_CONSTANT("values")));
 	statsobj.SetReadNotifier(b->stats, dynstats_readCallback, b);
 	CHKiRet(statsobj.ConstructFinalize(b->stats));
-	
+
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinality, uint32_t unusedMetricLife) {
+dynstats_newBucket(const uchar *name, uint8_t resettable, uint32_t maxCardinality, uint32_t unusedMetricLife)
+{
 	dynstats_bucket_t *b;
 	dynstats_buckets_t *bkts;
 	uint8_t lock_initialized, metric_count_mutex_initialized;
@@ -300,14 +314,14 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 
 	lock_initialized = metric_count_mutex_initialized = 0;
 	b = NULL;
-	
+
 	bkts = &loadConf->dynstats_buckets;
 
 	if (bkts->initialized) {
 		CHKmalloc(b = calloc(1, sizeof(dynstats_bucket_t)));
 		b->resettable = resettable;
 		b->maxCardinality = maxCardinality;
-		b->unusedMetricLife = 1000 * unusedMetricLife; 
+		b->unusedMetricLife = 1000 * unusedMetricLife;
 		CHKmalloc(b->name = ustrdup(name));
 
 		pthread_rwlockattr_init(&bucket_lock_attr);
@@ -336,7 +350,7 @@ dynstats_newBucket(const uchar* name, uint8_t resettable, uint32_t maxCardinalit
 		pthread_rwlock_unlock(&bkts->lock);
 	} else {
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket creation failed, as "
-		"global-initialization of buckets was unsuccessful");
+							  "global-initialization of buckets was unsuccessful");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
 finalize_it:
@@ -355,7 +369,8 @@ finalize_it:
 }
 
 rsRetVal
-dynstats_processCnf(struct cnfobj *o) {
+dynstats_processCnf(struct cnfobj *o)
+{
 	struct cnfparamvals *pvals;
 	short i;
 	uchar *name = NULL;
@@ -365,24 +380,25 @@ dynstats_processCnf(struct cnfobj *o) {
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &modpblk, NULL);
-	if(pvals == NULL) {
+	if (pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	
-	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+
+	for (i = 0; i < modpblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_NAME)) {
-			CHKmalloc(name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+		if (!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_NAME)) {
+			CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if (!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_RESETTABLE)) {
 			resettable = (pvals[i].val.d.n != 0);
 		} else if (!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_MAX_CARDINALITY)) {
-			maxCardinality = (uint32_t) pvals[i].val.d.n;
+			maxCardinality = (uint32_t)pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, DYNSTATS_PARAM_UNUSED_METRIC_LIFE)) {
-			unusedMetricLife = (uint32_t) pvals[i].val.d.n;
+			unusedMetricLife = (uint32_t)pvals[i].val.d.n;
 		} else {
 			dbgprintf("dyn_stats: program error, non-handled "
-					  "param '%s'\n", modpblk.descr[i].name);
+				  "param '%s'\n",
+			    modpblk.descr[i].name);
 		}
 	}
 	if (name != NULL) {
@@ -396,11 +412,12 @@ finalize_it:
 }
 
 rsRetVal
-dynstats_initCnf(dynstats_buckets_t *bkts) {
+dynstats_initCnf(dynstats_buckets_t *bkts)
+{
 	DEFiRet;
 
 	bkts->initialized = 0;
-	
+
 	bkts->list = NULL;
 	CHKiRet(statsobj.Construct(&bkts->global_stats));
 	CHKiRet(statsobj.SetOrigin(bkts->global_stats, UCHAR_CONSTANT("dynstats")));
@@ -410,7 +427,7 @@ dynstats_initCnf(dynstats_buckets_t *bkts) {
 	pthread_rwlock_init(&bkts->lock, NULL);
 
 	bkts->initialized = 1;
-	
+
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		statsobj.Destruct(&bkts->global_stats);
@@ -418,14 +435,14 @@ finalize_it:
 	RETiRet;
 }
 
-void
-dynstats_destroyAllBuckets(void) {
+void dynstats_destroyAllBuckets(void)
+{
 	dynstats_buckets_t *bkts;
 	dynstats_bucket_t *b;
 	bkts = &loadConf->dynstats_buckets;
 	if (bkts->initialized) {
 		pthread_rwlock_wrlock(&bkts->lock);
-		while(1) {
+		while (1) {
 			b = bkts->list;
 			if (b == NULL) {
 				break;
@@ -441,15 +458,16 @@ dynstats_destroyAllBuckets(void) {
 }
 
 dynstats_bucket_t *
-dynstats_findBucket(const uchar* name) {
+dynstats_findBucket(const uchar *name)
+{
 	dynstats_buckets_t *bkts;
 	dynstats_bucket_t *b;
 	bkts = &loadConf->dynstats_buckets;
 	if (bkts->initialized) {
 		pthread_rwlock_rdlock(&bkts->lock);
 		b = bkts->list;
-		while(b != NULL) {
-			if (! ustrcmp(name, b->name)) {
+		while (b != NULL) {
+			if (!ustrcmp(name, b->name)) {
 				break;
 			}
 			b = b->next;
@@ -458,22 +476,23 @@ dynstats_findBucket(const uchar* name) {
 	} else {
 		b = NULL;
 		errmsg.LogError(0, RS_RET_INTERNAL_ERROR, "dynstats: bucket lookup failed, as global-initialization "
-		"of buckets was unsuccessful");
+							  "of buckets was unsuccessful");
 	}
 
 	return b;
 }
 
 static rsRetVal
-dynstats_createCtr(dynstats_bucket_t *b, const uchar* metric, dynstats_ctr_t **ctr) {
+dynstats_createCtr(dynstats_bucket_t *b, const uchar *metric, dynstats_ctr_t **ctr)
+{
 	DEFiRet;
-	
+
 	CHKmalloc(*ctr = calloc(1, sizeof(dynstats_ctr_t)));
 	CHKmalloc((*ctr)->metric = ustrdup(metric));
 	STATSCOUNTER_INIT((*ctr)->ctr, (*ctr)->mutCtr);
 	CHKiRet(statsobj.AddManagedCounter(b->stats, metric, ctrType_IntCtr,
-									   b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
-									   &(*ctr)->ctr, &(*ctr)->pCtr, 0));
+	    b->resettable ? CTR_FLAG_MUST_RESET : CTR_FLAG_NONE,
+	    &(*ctr)->ctr, &(*ctr)->pCtr, 0));
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if ((*ctr) != NULL) {
@@ -486,7 +505,8 @@ finalize_it:
 }
 
 static rsRetVal
-dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialIncrement) {
+dynstats_addNewCtr(dynstats_bucket_t *b, const uchar *metric, uint8_t doInitialIncrement)
+{
 	dynstats_ctr_t *ctr;
 	dynstats_ctr_t *found_ctr, *survivor_ctr, *effective_ctr;
 	int created;
@@ -499,11 +519,11 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	if (ATOMIC_FETCH_32BIT(&b->metricCount, &b->mutMetricCount) >= b->maxCardinality) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	
+
 	CHKiRet(dynstats_createCtr(b, metric, &ctr));
 
 	pthread_rwlock_wrlock(&b->lock);
-	found_ctr = (dynstats_ctr_t*) hashtable_search(b->table, ctr->metric);
+	found_ctr = (dynstats_ctr_t *)hashtable_search(b->table, ctr->metric);
 	if (found_ctr != NULL) {
 		if (doInitialIncrement) {
 			STATSCOUNTER_INC(found_ctr->ctr, found_ctr->mutCtr);
@@ -511,7 +531,7 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	} else {
 		copy_of_key = ustrdup(ctr->metric);
 		if (copy_of_key != NULL) {
-			survivor_ctr = (dynstats_ctr_t*) hashtable_search(b->survivor_table, ctr->metric);
+			survivor_ctr = (dynstats_ctr_t *)hashtable_search(b->survivor_table, ctr->metric);
 			if (survivor_ctr == NULL) {
 				effective_ctr = ctr;
 			} else {
@@ -549,26 +569,27 @@ dynstats_addNewCtr(dynstats_bucket_t *b, const uchar* metric, uint8_t doInitialI
 	} else if (created && (effective_ctr != survivor_ctr)) {
 		ATOMIC_INC(&b->metricCount, &b->mutMetricCount);
 		STATSCOUNTER_INC(b->ctrNewMetricAdd, b->mutCtrNewMetricAdd);
-	} else if (! created) {
+	} else if (!created) {
 		if (copy_of_key != NULL) {
 			free(copy_of_key);
 		}
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	
+
 finalize_it:
-	if (((! created) || (effective_ctr != ctr)) && (ctr != NULL)) {
+	if (((!created) || (effective_ctr != ctr)) && (ctr != NULL)) {
 		dynstats_destroyCtr(ctr);
 	}
 	RETiRet;
 }
 
 rsRetVal
-dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
+dynstats_inc(dynstats_bucket_t *b, uchar *metric)
+{
 	dynstats_ctr_t *ctr;
 	DEFiRet;
 
-	if (! GatherStats) {
+	if (!GatherStats) {
 		FINALIZE;
 	}
 
@@ -578,7 +599,7 @@ dynstats_inc(dynstats_bucket_t *b, uchar* metric) {
 	}
 
 	if (pthread_rwlock_tryrdlock(&b->lock) == 0) {
-		ctr = (dynstats_ctr_t *) hashtable_search(b->table, metric);
+		ctr = (dynstats_ctr_t *)hashtable_search(b->table, metric);
 		if (ctr != NULL) {
 			STATSCOUNTER_INC(ctr->ctr, ctr->mutCtr);
 		}
@@ -602,4 +623,3 @@ finalize_it:
 	}
 	RETiRet;
 }
-

@@ -35,10 +35,10 @@ int iActExecOnceInterval = 1;
 int MarkInterval = 30;
 void *pMsgQueue = NULL;
 
-void cflineClassic(void) {};
-void selectorAddList(void) {};
-void selectorConstruct(void) {};
-void selectorDestruct(void) {};
+void cflineClassic(void){};
+void selectorAddList(void){};
+void selectorConstruct(void){};
+void selectorDestruct(void){};
 rsRetVal createMainQueue(void) { return RS_RET_ERR; }
 
 ruleset_t *pCurrRuleset;

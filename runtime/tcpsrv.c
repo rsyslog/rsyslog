@@ -84,22 +84,22 @@ MODULE_TYPE_NOKEEP
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
-#define TCPLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
+#define TCPLSTN_MAX_DEFAULT 20  /* default for nbr of listeners */
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(conf)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(ruleset)
-DEFobjCurrIf(tcps_sess)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(net)
-DEFobjCurrIf(netstrms)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(nssel)
-DEFobjCurrIf(nspoll)
-DEFobjCurrIf(prop)
-DEFobjCurrIf(statsobj)
+DEFobjStaticHelpers;
+DEFobjCurrIf(conf);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(ruleset);
+DEFobjCurrIf(tcps_sess);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(net);
+DEFobjCurrIf(netstrms);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(nssel);
+DEFobjCurrIf(nspoll);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(statsobj);
 
 static void startWorkerPool(void);
 
@@ -107,14 +107,14 @@ static void startWorkerPool(void);
  * needed for their access.
  */
 static struct wrkrInfo_s {
-	pthread_t tid;	/* the worker's thread ID */
+	pthread_t tid; /* the worker's thread ID */
 	pthread_cond_t run;
 	int idx;
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
 	nspoll_t *pPoll;
 	void *pUsr;
 	sbool enabled;
-	long long unsigned numCalled;	/* how often was this called */
+	long long unsigned numCalled; /* how often was this called */
 } wrkrInfo[4];
 static sbool bWrkrRunning; /* are the worker threads running? */
 static pthread_mutex_t wrkrMut;
@@ -136,16 +136,16 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 
 	/* create entry */
 	CHKmalloc(pEntry = MALLOC(sizeof(tcpLstnPortList_t)));
-	if((pEntry->pszPort = ustrdup(pszPort)) == NULL) {
+	if ((pEntry->pszPort = ustrdup(pszPort)) == NULL) {
 		DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup()\n");
 		free(pEntry);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-        pEntry->pszAddr = NULL;
-        /* only if a bind adress is defined copy it in struct */
-        if (pszAddr != NULL) {
-		if((pEntry->pszAddr = ustrdup(pszAddr)) == NULL) {
+	pEntry->pszAddr = NULL;
+	/* only if a bind adress is defined copy it in struct */
+	if (pszAddr != NULL) {
+		if ((pEntry->pszAddr = ustrdup(pszAddr)) == NULL) {
 			DBGPRINTF("tcpsrv/addNewLstnPort: OOM in strdup() 2\n");
 			free(pEntry->pszPort);
 			free(pEntry);
@@ -153,13 +153,13 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 		}
 	}
 
-	strcpy((char*)pEntry->dfltTZ, (char*)pThis->dfltTZ);
+	strcpy((char *)pEntry->dfltTZ, (char *)pThis->dfltTZ);
 	pEntry->bSPFramingFix = pThis->bSPFramingFix;
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	pEntry->bSuppOctetFram = bSuppOctetFram;
 
-	/* we need to create a property */ 
+	/* we need to create a property */
 	CHKiRet(prop.Construct(&pEntry->pInputName));
 	CHKiRet(prop.SetString(pEntry->pInputName, pThis->pszInputName, ustrlen(pThis->pszInputName)));
 	CHKiRet(prop.ConstructFinalize(pEntry->pInputName));
@@ -170,8 +170,8 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&(pEntry->stats)));
-	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
-	statname[sizeof(statname)-1] = '\0'; /* just to be on the save side... */
+	snprintf((char *)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
+	statname[sizeof(statname) - 1] = '\0'; /* just to be on the save side... */
 	CHKiRet(statsobj.SetName(pEntry->stats, statname));
 	CHKiRet(statsobj.SetOrigin(pEntry->stats, pThis->pszOrigin));
 	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
@@ -179,7 +179,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *pszAd
 	ratelimitSetThreadSafe(pEntry->ratelimiter);
 	STATSCOUNTER_INIT(pEntry->ctrSubmit, pEntry->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pEntry->stats, UCHAR_CONSTANT("submitted"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pEntry->ctrSubmit)));
+	    ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pEntry->ctrSubmit)));
 	CHKiRet(statsobj.ConstructFinalize(pEntry->stats));
 
 finalize_it:
@@ -203,11 +203,11 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort, int bSuppOctetFram, uchar *p
 
 	/* extract port */
 	i = 0;
-	while(isdigit((int) *pPort)) {
+	while (isdigit((int)*pPort)) {
 		i = i * 10 + *pPort++ - '0';
 	}
 
-	if(i >= 0 && i <= 65535) {
+	if (i >= 0 && i <= 65535) {
 		CHKiRet(addNewLstnPort(pThis, pszPort, bSuppOctetFram, pszAddr));
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
@@ -230,7 +230,7 @@ TCPSessTblInit(tcpsrv_t *pThis)
 	assert(pThis->pSessions == NULL);
 
 	DBGPRINTF("Allocating buffer for %d TCP sessions.\n", pThis->iSessMax);
-	if((pThis->pSessions = (tcps_sess_t **) calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
+	if ((pThis->pSessions = (tcps_sess_t **)calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
 		DBGPRINTF("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -251,12 +251,12 @@ TCPSessTblFindFreeSpot(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	for(i = 0 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] == NULL)
+	for (i = 0; i < pThis->iSessMax; ++i) {
+		if (pThis->pSessions[i] == NULL)
 			break;
 	}
 
-	return((i < pThis->iSessMax) ? i : -1);
+	return ((i < pThis->iSessMax) ? i : -1);
 }
 
 
@@ -274,15 +274,14 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 	register int i;
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	    ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pThis->pSessions != NULL);
-	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] != NULL)
+	for (i = iCurr + 1; i < pThis->iSessMax; ++i) {
+		if (pThis->pSessions[i] != NULL)
 			break;
 	}
 
-	ENDfunc
-	return((i < pThis->iSessMax) ? i : -1);
+	ENDfunc return ((i < pThis->iSessMax) ? i : -1);
 }
 
 
@@ -300,17 +299,17 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	if(pThis->pSessions != NULL) {
+	if (pThis->pSessions != NULL) {
 		/* close all TCP connections! */
-		if(!pThis->bUsingEPoll) {
+		if (!pThis->bUsingEPoll) {
 			i = TCPSessGetNxtSess(pThis, -1);
-			while(i != -1) {
+			while (i != -1) {
 				tcps_sess.Destruct(&pThis->pSessions[i]);
 				/* now get next... */
 				i = TCPSessGetNxtSess(pThis, i);
 			}
 		}
-		
+
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
 		pThis->pSessions = NULL; /* just to make sure... */
@@ -318,7 +317,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 
 	/* free list of tcp listen ports */
 	pEntry = pThis->pLstnPorts;
-	while(pEntry != NULL) {
+	while (pEntry != NULL) {
 		free(pEntry->pszPort);
 		prop.Destruct(&pEntry->pInputName);
 		ratelimitDestruct(pEntry->ratelimiter);
@@ -329,7 +328,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	}
 
 	/* finally close our listen streams */
-	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+	for (i = 0; i < pThis->iLstnCurr; ++i) {
 		netstrm.Destruct(pThis->ppLstn + i);
 	}
 }
@@ -341,14 +340,14 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 static rsRetVal
 addTcpLstn(void *pUsr, netstrm_t *pLstn)
 {
-	tcpLstnPortList_t *pPortList = (tcpLstnPortList_t *) pUsr;
+	tcpLstnPortList_t *pPortList = (tcpLstnPortList_t *)pUsr;
 	tcpsrv_t *pThis = pPortList->pSrv;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnCurr >= pThis->iLstnMax)
+	if (pThis->iLstnCurr >= pThis->iLstnMax)
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
 	pThis->ppLstn[pThis->iLstnCurr] = pLstn;
@@ -372,9 +371,9 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pPortEntry != NULL);
 
-	if(!ustrcmp(pPortEntry->pszPort, UCHAR_CONSTANT("0")))
+	if (!ustrcmp(pPortEntry->pszPort, UCHAR_CONSTANT("0")))
 		TCPLstnPort = UCHAR_CONSTANT("514");
-		/* use default - we can not do service db update, because there is
+	/* use default - we can not do service db update, because there is
 		 * no IANA-assignment for syslog/tcp. In the long term, we might
 		 * re-use RFC 3195 port of 601, but that would probably break to
 		 * many existing configurations.
@@ -384,8 +383,8 @@ initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
 		TCPLstnPort = pPortEntry->pszPort;
 
 	// pPortEntry->pszAddr = NULL ==> bind to all interfaces
-        CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort,
-	pPortEntry->pszAddr, pThis->iSessMax));
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void *)pPortEntry, addTcpLstn, TCPLstnPort,
+	    pPortEntry->pszAddr, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -404,11 +403,12 @@ create_tcp_socket(tcpsrv_t *pThis)
 
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
-	while(pEntry != NULL) {
+	while (pEntry != NULL) {
 		localRet = initTCPListener(pThis, pEntry);
-		if(localRet != RS_RET_OK) {
+		if (localRet != RS_RET_OK) {
 			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port "
-			"%s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
+						     "%s bind-address %s.",
+			    pEntry->pszPort, pEntry->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}
@@ -416,7 +416,7 @@ create_tcp_socket(tcpsrv_t *pThis)
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
-	if(TCPSessTblInit(pThis) != 0) {
+	if (TCPSessTblInit(pThis) != 0) {
 		/* OK, we are in some trouble - we could not initialize the
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
@@ -458,16 +458,16 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 
 	/* Add to session list */
 	iSess = TCPSessTblFindFreeSpot(pThis);
-	if(iSess == -1) {
+	if (iSess == -1) {
 		errno = 0;
 		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
-	if(pThis->bUseKeepAlive) {
-	        CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
-	        CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, pThis->iKeepAliveTime));
-	        CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, pThis->iKeepAliveIntvl));
+	if (pThis->bUseKeepAlive) {
+		CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
+		CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, pThis->iKeepAliveTime));
+		CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, pThis->iKeepAliveIntvl));
 		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
 	}
 
@@ -475,7 +475,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	CHKiRet(tcps_sess.Construct(&pSess));
 	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
 	CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
-	if(pThis->OnMsgReceive != NULL)
+	if (pThis->OnMsgReceive != NULL)
 		CHKiRet(tcps_sess.SetOnMsgReceive(pSess, pThis->OnMsgReceive));
 
 	/* get the host name */
@@ -488,9 +488,9 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
+	if (!pThis->pIsPermittedHost((struct sockaddr *)addr, (char *)fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
-		if(glbl.GetOption_DisallowWarning()) {
+		if (glbl.GetOption_DisallowWarning()) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed sender %s discarded", fromHostFQDN);
 		}
@@ -509,20 +509,20 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	CHKiRet(tcps_sess.ConstructFinalize(pSess));
 
 	/* check if we need to call our callback */
-	if(pThis->pOnSessAccept != NULL) {
+	if (pThis->pOnSessAccept != NULL) {
 		CHKiRet(pThis->pOnSessAccept(pThis, pSess));
 	}
 
 	*ppSess = pSess;
-	if(!pThis->bUsingEPoll)
+	if (!pThis->bUsingEPoll)
 		pThis->pSessions[iSess] = pSess;
 	pSess = NULL; /* this is now also handed over */
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pSess != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pSess != NULL)
 			tcps_sess.Destruct(&pSess);
-		if(pNewStrm != NULL)
+		if (pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		free(fromHostFQDN);
 	}
@@ -534,9 +534,9 @@ finalize_it:
 static void
 RunCancelCleanup(void *arg)
 {
-	nssel_t **ppSel = (nssel_t**) arg;
+	nssel_t **ppSel = (nssel_t **)arg;
 
-	if(*ppSel != NULL)
+	if (*ppSel != NULL)
 		nssel.Destruct(ppSel);
 }
 
@@ -545,9 +545,10 @@ RunCancelCleanup(void *arg)
  * rgerhards, 2009-11-25
  */
 static rsRetVal
-closeSess(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll) {
+closeSess(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
+{
 	DEFiRet;
-	if(pPoll != NULL) {
+	if (pPoll != NULL) {
 		CHKiRet(nspoll.Ctl(pPoll, (*ppSess)->pStrm, 0, *ppSess, NSDPOLL_IN, NSDPOLL_DEL));
 	}
 	pThis->pOnRegularClose(*ppSess);
@@ -565,7 +566,7 @@ finalize_it:
 static rsRetVal
 doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 {
-	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
+	char buf[128 * 1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
 	rsRetVal localRet;
 	DEFiRet;
@@ -576,13 +577,13 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
 	/* Receive message */
 	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd);
-	switch(iRet) {
+	switch (iRet) {
 	case RS_RET_CLOSED:
-		if(pThis->bEmitMsgOnClose) {
+		if (pThis->bEmitMsgOnClose) {
 			errno = 0;
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			errmsg.LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.\n",
-					(*ppSess)->pStrm, pszPeer);
+			    (*ppSess)->pStrm, pszPeer);
 		}
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
@@ -592,13 +593,14 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	case RS_RET_OK:
 		/* valid data received, process it! */
 		localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd);
-		if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
+		if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			errmsg.LogError(0, localRet, "Tearing down TCP Session from %s - see "
-					    "previous messages for reason(s)\n", pszPeer);
+						     "previous messages for reason(s)\n",
+			    pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
@@ -606,7 +608,7 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 		errno = 0;
 		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 		errmsg.LogError(0, iRet, "netstream session %p from %s will be closed due to error\n",
-				(*ppSess)->pStrm, pszPeer);
+		    (*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
 	}
@@ -624,11 +626,11 @@ processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: processing item %d, pUsr %p, bAbortConn\n", idx, pUsr);
-	if(pUsr == pThis->ppLstn) {
+	if (pUsr == pThis->ppLstn) {
 		DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
 		iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
-		if(iRet == RS_RET_OK) {
-			if(pPoll != NULL) {
+		if (iRet == RS_RET_OK) {
+			if (pPoll != NULL) {
 				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
 			}
 			DBGPRINTF("New session created with NSD %p.\n", pNewSess);
@@ -636,9 +638,9 @@ processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
 			DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
 		}
 	} else {
-		pNewSess = (tcps_sess_t*) pUsr;
+		pNewSess = (tcps_sess_t *)pUsr;
 		doReceive(pThis, &pNewSess, pPoll);
-		if(pPoll == NULL && pNewSess == NULL) {
+		if (pPoll == NULL && pNewSess == NULL) {
 			pThis->pSessions[idx] = NULL;
 		}
 	}
@@ -653,14 +655,14 @@ finalize_it:
 static void *
 wrkr(void *myself)
 {
-	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
-	
+	struct wrkrInfo_s *me = (struct wrkrInfo_s *)myself;
+
 	pthread_mutex_lock(&wrkrMut);
-	while(1) {
-		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
+	while (1) {
+		while (me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
-		if(glbl.GetGlobalInputTermState() == 1) {
+		if (glbl.GetGlobalInputTermState() == 1) {
 			--wrkrRunning;
 			break;
 		}
@@ -670,7 +672,7 @@ wrkr(void *myself)
 		processWorksetItem(me->pSrv, me->pPoll, me->idx, me->pUsr);
 
 		pthread_mutex_lock(&wrkrMut);
-		me->pSrv = NULL;	/* indicate we are free again */
+		me->pSrv = NULL; /* indicate we are free again */
 		--wrkrRunning;
 		pthread_cond_signal(&wrkrIdle);
 	}
@@ -695,23 +697,23 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
-	while(numEntries > 0) {
-		if(glbl.GetGlobalInputTermState() == 1)
+	while (numEntries > 0) {
+		if (glbl.GetGlobalInputTermState() == 1)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		if(numEntries == 1) {
+		if (numEntries == 1) {
 			/* process self, save context switch */
-			iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id, workset[numEntries-1].pUsr);
+			iRet = processWorksetItem(pThis, pPoll, workset[numEntries - 1].id, workset[numEntries - 1].pUsr);
 		} else {
 			pthread_mutex_lock(&wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < wrkrMax) && ((wrkrInfo[i].pSrv != NULL) || (wrkrInfo[i].enabled == 0)) ; ++i)
+			for (i = 0; (i < wrkrMax) && ((wrkrInfo[i].pSrv != NULL) || (wrkrInfo[i].enabled == 0)); ++i)
 				/*do search*/;
-			if(i < wrkrMax) {
+			if (i < wrkrMax) {
 				/* worker free -> use it! */
 				wrkrInfo[i].pSrv = pThis;
 				wrkrInfo[i].pPoll = pPoll;
-				wrkrInfo[i].idx = workset[numEntries -1].id;
-				wrkrInfo[i].pUsr = workset[numEntries -1].pUsr;
+				wrkrInfo[i].idx = workset[numEntries - 1].id;
+				wrkrInfo[i].pUsr = workset[numEntries - 1].pUsr;
 				/* Note: we must increment wrkrRunning HERE and not inside the worker's
 				 * code. This is because a worker may actually never start, and thus
 				 * increment wrkrRunning, before we finish and check the running worker
@@ -723,20 +725,20 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 			} else {
 				pthread_mutex_unlock(&wrkrMut);
 				/* no free worker, so we process this one ourselfs */
-				iRet = processWorksetItem(pThis, pPoll, workset[numEntries-1].id,
-						   workset[numEntries-1].pUsr);
+				iRet = processWorksetItem(pThis, pPoll, workset[numEntries - 1].id,
+				    workset[numEntries - 1].pUsr);
 			}
 		}
 		--numEntries;
 	}
 
-	if(origEntries > 1) {
+	if (origEntries > 1) {
 		/* we now need to wait until all workers finish. This is because the
 		 * rest of this module can not handle the concurrency introduced
 		 * by workers running during the epoll call.
 		 */
 		pthread_mutex_lock(&wrkrMut);
-		while(wrkrRunning > 0) {
+		while (wrkrRunning > 0) {
 			pthread_cond_wait(&wrkrIdle, &wrkrMut);
 		}
 		pthread_mutex_unlock(&wrkrMut);
@@ -772,21 +774,21 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
 	 */
-	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
-	while(1) {
+	pthread_cleanup_push(RunCancelCleanup, (void *)&pSel);
+	while (1) {
 		CHKiRet(nssel.Construct(&pSel));
-		if(pThis->pszDrvrName != NULL)
+		if (pThis->pszDrvrName != NULL)
 			CHKiRet(nssel.SetDrvrName(pSel, pThis->pszDrvrName));
 		CHKiRet(nssel.ConstructFinalize(pSel));
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
-		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+		for (i = 0; i < pThis->iLstnCurr; ++i) {
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
 		/* do the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
-		while(iTCPSess != -1) {
+		while (iTCPSess != -1) {
 			/* TODO: access to pNsd is NOT really CLEAN, use method... */
 			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
 			/* now get next... */
@@ -795,19 +797,19 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
-		if(glbl.GetGlobalInputTermState() == 1)
+		if (glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
 		iWorkset = 0;
-		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-			if(glbl.GetGlobalInputTermState() == 1)
+		for (i = 0; i < pThis->iLstnCurr; ++i) {
+			if (glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
+			if (bIsReady) {
 				workset[iWorkset].id = i;
-				workset[iWorkset].pUsr = (void*) pThis->ppLstn; /* this is a flag to indicate listen sock */
+				workset[iWorkset].pUsr = (void *)pThis->ppLstn; /* this is a flag to indicate listen sock */
 				++iWorkset;
-				if(iWorkset >= (int) sizeWorkset) {
+				if (iWorkset >= (int)sizeWorkset) {
 					processWorkset(pThis, NULL, iWorkset, workset);
 					iWorkset = 0;
 				}
@@ -819,15 +821,15 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
-		while(nfds && iTCPSess != -1) {
-			if(glbl.GetGlobalInputTermState() == 1)
+		while (nfds && iTCPSess != -1) {
+			if (glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds);
-			if(bIsReady || localRet != RS_RET_OK) {
+			if (bIsReady || localRet != RS_RET_OK) {
 				workset[iWorkset].id = iTCPSess;
-				workset[iWorkset].pUsr = (void*) pThis->pSessions[iTCPSess];
+				workset[iWorkset].pUsr = (void *)pThis->pSessions[iTCPSess];
 				++iWorkset;
-				if(iWorkset >= (int) sizeWorkset) {
+				if (iWorkset >= (int)sizeWorkset) {
 					processWorkset(pThis, NULL, iWorkset, workset);
 					iWorkset = 0;
 				}
@@ -836,18 +838,18 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
 
-		if(iWorkset > 0)
+		if (iWorkset > 0)
 			processWorkset(pThis, NULL, iWorkset, workset);
 
 		/* we need to copy back close descriptors */
 		CHKiRet(nssel.Destruct(&pSel));
-finalize_it: /* this is a very special case - this time only we do not exit the function,
+	finalize_it:		    /* this is a very special case - this time only we do not exit the function,
 	      * because that would not help us either. So we simply retry it. Let's see
 	      * if that actually is a better idea. Exiting the loop wasn't we always
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		if(pSel != NULL) { /* cleanup missing? happens during err exit! */
+		if (pSel != NULL) { /* cleanup missing? happens during err exit! */
 			nssel.Destruct(&pSel);
 		}
 	}
@@ -872,7 +874,7 @@ Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	int i;
-	int bFailed = FALSE; /* If set to TRUE, accept failed already */
+	int bFailed = FALSE;	  /* If set to TRUE, accept failed already */
 	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
 	int numEntries;
 	nspoll_t *pPoll = NULL;
@@ -884,7 +886,7 @@ Run(tcpsrv_t *pThis)
 	 * well. Shutdown is done on modExit.
 	 */
 	d_pthread_mutex_lock(&wrkrMut);
-	if(!bWrkrRunning) {
+	if (!bWrkrRunning) {
 		bWrkrRunning = 1;
 		startWorkerPool();
 	}
@@ -894,15 +896,15 @@ Run(tcpsrv_t *pThis)
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerhards, 20080-04-24
 	 */
-	if((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
-		if(pThis->pszDrvrName != NULL)
+	if ((localRet = nspoll.Construct(&pPoll)) == RS_RET_OK) {
+		if (pThis->pszDrvrName != NULL)
 			CHKiRet(nspoll.SetDrvrName(pPoll, pThis->pszDrvrName));
 		localRet = nspoll.ConstructFinalize(pPoll);
 	}
-	if(localRet != RS_RET_OK) {
+	if (localRet != RS_RET_OK) {
 		/* fall back to select */
 		DBGPRINTF("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
-		iRet = RunSelect(pThis, workset, sizeof(workset)/sizeof(nsd_epworkset_t));
+		iRet = RunSelect(pThis, workset, sizeof(workset) / sizeof(nsd_epworkset_t));
 		FINALIZE;
 	}
 
@@ -912,51 +914,51 @@ Run(tcpsrv_t *pThis)
 	pThis->bUsingEPoll = RSTRUE;
 
 	/* Add the TCP listen sockets to the list of sockets to monitor */
-	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+	for (i = 0; i < pThis->iLstnCurr; ++i) {
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
 		DBGPRINTF("Added listener %d\n", i);
 	}
 
-	while(1) {
-		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t);
+	while (1) {
+		numEntries = sizeof(workset) / sizeof(nsd_epworkset_t);
 		localRet = nspoll.Wait(pPoll, -1, &numEntries, workset);
-		if(glbl.GetGlobalInputTermState() == 1)
+		if (glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
 
 		/* check if we need to ignore the i/o ready state. We do this if we got an invalid
 		 * return state. Validly, this can happen for RS_RET_EINTR, for other cases it may
 		 * not be the right thing, but what is the right thing is really hard at this point...
 		 */
-		if(localRet != RS_RET_OK)
+		if (localRet != RS_RET_OK)
 			continue;
 
 		localRet = processWorkset(pThis, pPoll, numEntries, workset);
-		if(localRet != RS_RET_OK) {
+		if (localRet != RS_RET_OK) {
 			if (bFailed == FALSE) {
 				errmsg.LogError(0, localRet, "tcpsrv listener (inputname: '%s') failed "
-				"to processed incoming connection with error %d",
-				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
-				bFailed = TRUE; 
+							     "to processed incoming connection with error %d",
+				    (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName, localRet);
+				bFailed = TRUE;
 			} else {
 				DBGPRINTF("tcpsrv listener (inputname: '%s') still failing to process incoming connection with error %d\n",
-					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName, localRet);
+				    (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName, localRet);
 			}
 			/* Sleep 20ms */
-			srSleep(0,20000); 
+			srSleep(0, 20000);
 		} else {
 			/* Reset bFailed State */
-			bFailed = FALSE; 
+			bFailed = FALSE;
 		}
 	}
 
 	/* remove the tcp listen sockets from the epoll set */
-	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+	for (i = 0; i < pThis->iLstnCurr; ++i) {
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_DEL));
 	}
 
 finalize_it:
-	if(pPoll != NULL)
+	if (pPoll != NULL)
 		nspoll.Destruct(&pPoll);
 	RETiRet;
 }
@@ -989,26 +991,26 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
-	if(pThis->pszDrvrName != NULL)
+	if (pThis->pszDrvrName != NULL)
 		CHKiRet(netstrms.SetDrvrName(pThis->pNS, pThis->pszDrvrName));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
-	if(pThis->pszDrvrAuthMode != NULL)
+	if (pThis->pszDrvrAuthMode != NULL)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
-	if(pThis->pPermPeers != NULL)
+	if (pThis->pPermPeers != NULL)
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
 	/* set up listeners */
-	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t*)));
-	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t*)));
+	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t *)));
+	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t *)));
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->pNS != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pThis->pNS != NULL)
 			netstrms.Destruct(&pThis->pNS);
 		errmsg.LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
-				(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName);
+		    (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName);
 	}
 	RETiRet;
 }
@@ -1016,13 +1018,12 @@ finalize_it:
 
 /* destructor for the tcpsrv object */
 BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcpsrv)
-	if(pThis->OnDestruct != NULL)
-		pThis->OnDestruct(pThis->pUsr);
+	CODESTARTobjDestruct(tcpsrv) if (pThis->OnDestruct != NULL)
+	    pThis->OnDestruct(pThis->pUsr);
 
 	deinit_tcp_listener(pThis);
 
-	if(pThis->pNS != NULL)
+	if (pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
 	free(pThis->pszDrvrName);
 	free(pThis->pszDrvrAuthMode);
@@ -1035,12 +1036,12 @@ ENDobjDestruct(tcpsrv)
 
 /* debugprint for the tcpsrv object */
 BEGINobjDebugPrint(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(tcpsrv)
+	CODESTARTobjDebugPrint(tcpsrv)
 ENDobjDebugPrint(tcpsrv)
 
 /* set functions */
 static rsRetVal
-SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
+SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void *, void *))
 {
 	DEFiRet;
 	pThis->pIsPermittedHost = pCB;
@@ -1048,7 +1049,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;
@@ -1057,9 +1058,9 @@ SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, 
 
 static rsRetVal
 #ifdef _AIX
-SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void *))
 #else
-SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
+SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void *))
 #endif
 {
 	DEFiRet;
@@ -1068,7 +1069,7 @@ SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
+SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *, tcps_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
@@ -1076,7 +1077,7 @@ SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->OnDestruct = pCB;
@@ -1084,7 +1085,7 @@ SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->OnSessConstructFinalize = pCB;
@@ -1092,7 +1093,7 @@ SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->pOnSessDestruct = pCB;
@@ -1100,7 +1101,7 @@ SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
+SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnRegularClose = pCB;
@@ -1108,7 +1109,7 @@ SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
+SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnErrClose = pCB;
@@ -1116,7 +1117,7 @@ SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*))
+SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *))
 {
 	DEFiRet;
 	pThis->OpenLstnSocks = pCB;
@@ -1143,32 +1144,32 @@ SetKeepAlive(tcpsrv_t *pThis, int iVal)
 static rsRetVal
 SetKeepAliveIntvl(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
-       pThis->iKeepAliveIntvl = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
+	pThis->iKeepAliveIntvl = iVal;
+	RETiRet;
 }
 
 static rsRetVal
 SetKeepAliveProbes(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
-       pThis->iKeepAliveProbes = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
+	pThis->iKeepAliveProbes = iVal;
+	RETiRet;
 }
 
 static rsRetVal
 SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
 {
-       DEFiRet;
-       DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
-       pThis->iKeepAliveTime = iVal;
-       RETiRet;
+	DEFiRet;
+	DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
+	pThis->iKeepAliveTime = iVal;
+	RETiRet;
 }
 
 static rsRetVal
-SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
+SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int))
 {
 	DEFiRet;
 	assert(OnMsgReceive != NULL);
@@ -1230,7 +1231,7 @@ SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	strcpy((char*)pThis->dfltTZ, (char*)tz);
+	strcpy((char *)pThis->dfltTZ, (char *)tz);
 	RETiRet;
 }
 
@@ -1260,7 +1261,7 @@ SetInputName(tcpsrv_t *pThis, uchar *name)
 	uchar *pszName;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	if(name == NULL)
+	if (name == NULL)
 		pszName = NULL;
 	else
 		CHKmalloc(pszName = ustrdup(name));
@@ -1305,7 +1306,7 @@ SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
- * -------------------------------------------------------------------------- */   
+ * -------------------------------------------------------------------------- */
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
@@ -1400,8 +1401,8 @@ SetSessMax(tcpsrv_t *pThis, int iMax)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(tcpsrv)
-CODESTARTobjQueryInterface(tcpsrv)
-	if(pIf->ifVersion != tcpsrvCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(tcpsrv) if (pIf->ifVersion != tcpsrvCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -1462,9 +1463,9 @@ ENDobjQueryInterface(tcpsrv)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcpsrv)
-	/* release objects we no longer need */
-	objRelease(tcps_sess, DONT_LOAD_LIB);
+	CODESTARTObjClassExit(tcpsrv)
+	    /* release objects we no longer need */
+	    objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
@@ -1516,21 +1517,22 @@ startWorkerPool(void)
 	wrkrRunning = 0;
 	pthread_cond_init(&wrkrIdle, NULL);
 	pthread_attr_init(&sessThrdAttr);
-	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
-	for(i = 0 ; i < wrkrMax ; ++i) {
+	pthread_attr_setstacksize(&sessThrdAttr, 4096 * 1024);
+	for (i = 0; i < wrkrMax; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&wrkrInfo[i].run, NULL);
 		wrkrInfo[i].pSrv = NULL;
 		wrkrInfo[i].numCalled = 0;
 		r = pthread_create(&wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(wrkrInfo[i]));
-		if(r == 0) {
+		if (r == 0) {
 			wrkrInfo[i].enabled = 1;
 		} else {
 			char errStr[1024];
 			wrkrInfo[i].enabled = 0;
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			errmsg.LogError(0, NO_ERRCODE, "tcpsrv error creating thread %d: "
-			                "%s", i, errStr);
+						       "%s",
+			    i, errStr);
 		}
 	}
 	pthread_attr_destroy(&sessThrdAttr);
@@ -1542,7 +1544,7 @@ static void
 stopWorkerPool(void)
 {
 	int i;
-	for(i = 0 ; i < wrkrMax ; ++i) {
+	for (i = 0; i < wrkrMax; ++i) {
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
@@ -1555,8 +1557,8 @@ stopWorkerPool(void)
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
 
 BEGINmodExit
-CODESTARTmodExit
-	if(bWrkrRunning) {
+	CODESTARTmodExit if (bWrkrRunning)
+	{
 		stopWorkerPool();
 		bWrkrRunning = 0;
 	}
@@ -1568,14 +1570,14 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* we just init the worker mutex, but do not start the workers themselves. This is deferred
 	 * to the first call of Run(). Reasons for this:
 	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE 

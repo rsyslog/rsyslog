@@ -53,29 +53,28 @@ MODULE_CNFNAME("pmrfc3164")
  */
 DEF_PMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(parser)
+	    DEFobjCurrIf(datetime)
 
 
-/* static data */
-static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+    /* static data */
+    static int bParseHOSTNAMEandTAG; /* cache for the equally-named global param - performance enhancement */
 
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-	{ "detect.yearaftertimestamp", eCmdHdlrBinary, 0 },
-	{ "permit.squarebracketsinhostname", eCmdHdlrBinary, 0 },
-	{ "permit.slashesinhostname", eCmdHdlrBinary, 0 },
-	{ "permit.atsignsinhostname", eCmdHdlrBinary, 0 },
-	{ "force.tagendingbycolon", eCmdHdlrBinary, 0},
-	{ "remove.msgfirstspace", eCmdHdlrBinary, 0},
+    {"detect.yearaftertimestamp", eCmdHdlrBinary, 0},
+    {"permit.squarebracketsinhostname", eCmdHdlrBinary, 0},
+    {"permit.slashesinhostname", eCmdHdlrBinary, 0},
+    {"permit.atsignsinhostname", eCmdHdlrBinary, 0},
+    {"force.tagendingbycolon", eCmdHdlrBinary, 0},
+    {"remove.msgfirstspace", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk parserpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
-	  parserpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
+	parserpdescr};
 
 struct instanceConf_s {
 	int bDetectYearAfterTimestamp;
@@ -88,10 +87,9 @@ struct instanceConf_s {
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATUREAutomaticSanitazion)
+	    iRet = RS_RET_OK;
+	if (eFeat == sFEATUREAutomaticPRIParsing)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
@@ -111,7 +109,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bPermitAtSignsInHostname = 0;
 	inst->bForceTagEndingByColon = 0;
 	inst->bRemoveMsgFirstSpace = 0;
-	bParseHOSTNAMEandTAG=glbl.GetParseHOSTNAMEandTAG();
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
 	*pinst = inst;
 finalize_it:
 	RETiRet;
@@ -120,56 +118,56 @@ finalize_it:
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewParserInst
-	DBGPRINTF("newParserInst (pmrfc3164)\n");
+	CODESTARTnewParserInst
+	    DBGPRINTF("newParserInst (pmrfc3164)\n");
 
 	inst = NULL;
 	CHKiRet(createInstance(&inst));
 
-	if(lst == NULL)
-		FINALIZE;  /* just set defaults, no param block! */
+	if (lst == NULL)
+		FINALIZE; /* just set defaults, no param block! */
 
-	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+	if ((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("parser param blk in pmrfc3164:\n");
 		cnfparamsPrint(&parserpblk, pvals);
 	}
 
-	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < parserpblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(parserpblk.descr[i].name, "detect.yearaftertimestamp")) {
-			inst->bDetectYearAfterTimestamp = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "permit.squarebracketsinhostname")) {
-			inst->bPermitSquareBracketsInHostname = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "permit.slashesinhostname")) {
-			inst->bPermitSlashesInHostname = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "permit.atsignsinhostname")) {
-			inst->bPermitAtSignsInHostname = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "force.tagendingbycolon")) {
-			inst->bForceTagEndingByColon = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "remove.msgfirstspace")) {
-			inst->bRemoveMsgFirstSpace = (int) pvals[i].val.d.n;
+		if (!strcmp(parserpblk.descr[i].name, "detect.yearaftertimestamp")) {
+			inst->bDetectYearAfterTimestamp = (int)pvals[i].val.d.n;
+		} else if (!strcmp(parserpblk.descr[i].name, "permit.squarebracketsinhostname")) {
+			inst->bPermitSquareBracketsInHostname = (int)pvals[i].val.d.n;
+		} else if (!strcmp(parserpblk.descr[i].name, "permit.slashesinhostname")) {
+			inst->bPermitSlashesInHostname = (int)pvals[i].val.d.n;
+		} else if (!strcmp(parserpblk.descr[i].name, "permit.atsignsinhostname")) {
+			inst->bPermitAtSignsInHostname = (int)pvals[i].val.d.n;
+		} else if (!strcmp(parserpblk.descr[i].name, "force.tagendingbycolon")) {
+			inst->bForceTagEndingByColon = (int)pvals[i].val.d.n;
+		} else if (!strcmp(parserpblk.descr[i].name, "remove.msgfirstspace")) {
+			inst->bRemoveMsgFirstSpace = (int)pvals[i].val.d.n;
 		} else {
 			dbgprintf("pmrfc3164: program error, non-handled "
-			  "param '%s'\n", parserpblk.descr[i].name);
+				  "param '%s'\n",
+			    parserpblk.descr[i].name);
 		}
 	}
 finalize_it:
-CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
-		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
+	CODE_STD_FINALIZERnewParserInst if (lst != NULL)
+	    cnfparamvalsDestruct(pvals, &parserpblk);
+	if (iRet != RS_RET_OK)
 		free(inst);
 ENDnewParserInst
 
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst
-	dbgprintf("pmrfc3164: free parser instance %p\n", pInst);
+	CODESTARTfreeParserInst
+	    dbgprintf("pmrfc3164: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
 
@@ -178,18 +176,18 @@ ENDfreeParserInst
 BEGINparse2
 	uchar *p2parse;
 	int lenMsg;
-	int i;	/* general index for parsing */
+	int i; /* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE];
-CODESTARTparse
-	DBGPRINTF("Message will now be parsed by the legacy syslog parser (one size fits all... ;)).\n");
+	CODESTARTparse
+	    DBGPRINTF("Message will now be parsed by the legacy syslog parser (one size fits all... ;)).\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
 	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
-	if(pMsg->iFacility == (LOG_INVLD>>3))
+	if (pMsg->iFacility == (LOG_INVLD >> 3))
 		FINALIZE; /* don't parse out from invalid messages! */
 
 
@@ -199,22 +197,22 @@ CODESTARTparse
 	 * message. There we go from high-to low precison and are done
 	 * when we find a matching one. -- rgerhards, 2008-09-16
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
+	if (datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
-	pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
-		if(pMsg->dfltTZ[0] != '\0')
+	} else if (datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
+		       pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+		if (pMsg->dfltTZ[0] != '\0')
 			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-	} else if(*p2parse == ' ' && lenMsg > 1) {
-	/* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
-		++p2parse;	/* move over space */
+	} else if (*p2parse == ' ' && lenMsg > 1) {
+		/* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+		++p2parse; /* move over space */
 		--lenMsg;
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
-		pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
+		if (datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, NO_PARSE3164_TZSTRING,
+			pInst->bDetectYearAfterTimestamp) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-		} else {/* parse pointer needs to be restored, as we moved it off-by-one
+		} else { /* parse pointer needs to be restored, as we moved it off-by-one
 			 * for this try.
 			 */
 			--p2parse;
@@ -222,7 +220,7 @@ CODESTARTparse
 		}
 	}
 
-	if(pMsg->msgFlags & IGNDATE) {
+	if (pMsg->msgFlags & IGNDATE) {
 		/* we need to ignore the msg data, so simply copy over reception date */
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	}
@@ -234,7 +232,7 @@ CODESTARTparse
 	 * machine that we received the message from and the tag will be empty. This
 	 * is meant to be an interim solution, but for now it is in the code.
 	 */
-	if(bParseHOSTNAMEandTAG && !(pMsg->msgFlags & INTERNAL_MSG)) {
+	if (bParseHOSTNAMEandTAG && !(pMsg->msgFlags & INTERNAL_MSG)) {
 		/* parse HOSTNAME - but only if this is network-received!
 		 * rger, 2005-11-14: we still have a problem with BSD messages. These messages
 		 * do NOT include a host name. In most cases, this leads to the TAG to be treated
@@ -252,30 +250,24 @@ CODESTARTparse
 		 * an option as it may interfere with non-hostnames in some message formats.
 		 * rgerhards, 2015-04-20
 		 */
-		if(lenMsg > 0 && pMsg->msgFlags & PARSE_HOSTNAME) {
+		if (lenMsg > 0 && pMsg->msgFlags & PARSE_HOSTNAME) {
 			i = 0;
 			int bHadSBracket = 0;
-			if(pInst->bPermitSquareBracketsInHostname) {
-				if(i < lenMsg && p2parse[i] == '[') {
+			if (pInst->bPermitSquareBracketsInHostname) {
+				if (i < lenMsg && p2parse[i] == '[') {
 					bHadSBracket = 1;
 					bufParseHOSTNAME[0] = '[';
 					++i;
 				}
 			}
-			while(i < lenMsg
-			        && (isalnum(p2parse[i]) || p2parse[i] == '.'
-					|| p2parse[i] == '_' || p2parse[i] == '-'
-					|| (p2parse[i] == ']' && bHadSBracket)
-					|| (p2parse[i] == '@' && pInst->bPermitAtSignsInHostname)
-					|| (p2parse[i] == '/' && pInst->bPermitSlashesInHostname) )
-				&& i < (CONF_HOSTNAME_MAXSIZE - 1)) {
+			while (i < lenMsg && (isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '_' || p2parse[i] == '-' || (p2parse[i] == ']' && bHadSBracket) || (p2parse[i] == '@' && pInst->bPermitAtSignsInHostname) || (p2parse[i] == '/' && pInst->bPermitSlashesInHostname)) && i < (CONF_HOSTNAME_MAXSIZE - 1)) {
 				bufParseHOSTNAME[i] = p2parse[i];
 				++i;
-				if(p2parse[i] == ']')
-					break;	/* must be closing bracket */
+				if (p2parse[i] == ']')
+					break; /* must be closing bracket */
 			}
 
-			if(i == lenMsg) {
+			if (i == lenMsg) {
 				/* we have a message that is empty immediately after the hostname,
 				* but the hostname thus is valid! -- rgerhards, 2010-02-22
 				*/
@@ -285,23 +277,23 @@ CODESTARTparse
 				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
 			} else {
 				int isHostName = 0;
-				if(i > 0) {
-					if(bHadSBracket) {
-						if(p2parse[i] == ']') {
+				if (i > 0) {
+					if (bHadSBracket) {
+						if (p2parse[i] == ']') {
 							bufParseHOSTNAME[i] = ']';
 							++i;
 							isHostName = 1;
 						}
 					} else {
-						if(isalnum(p2parse[i-1])) {
+						if (isalnum(p2parse[i - 1])) {
 							isHostName = 1;
 						}
 					}
-					if(p2parse[i] != ' ')
+					if (p2parse[i] != ' ')
 						isHostName = 0;
 				}
 
-				if(isHostName) {
+				if (isHostName) {
 					/* we got a hostname! */
 					p2parse += i + 1; /* "eat" it (including SP delimiter) */
 					lenMsg -= i + 1;
@@ -325,21 +317,20 @@ CODESTARTparse
 		 * outputs so that only 32 characters max are used by default.
 		 */
 		i = 0;
-		while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE - 2) {
+		while (lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE - 2) {
 			bufParseTAG[i++] = *p2parse++;
 			--lenMsg;
 		}
-		if(lenMsg > 0 && *p2parse == ':') {
-			++p2parse; 
+		if (lenMsg > 0 && *p2parse == ':') {
+			++p2parse;
 			--lenMsg;
 			bufParseTAG[i++] = ':';
-		}
-		else if (pInst->bForceTagEndingByColon) {
+		} else if (pInst->bForceTagEndingByColon) {
 			/* Tag need to be ended by a colon or it's not a tag but the
 			 * begin of the message
 			 */
-			p2parse -= ( i + 1 );
-			lenMsg += ( i + 1 );
+			p2parse -= (i + 1);
+			lenMsg += (i + 1);
 			i = 0;
 			/* Default TAG is dash (without ':')
 			 */
@@ -349,12 +340,12 @@ CODESTARTparse
 		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
 		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
 		 */
-		bufParseTAG[i] = '\0';	/* terminate string */
+		bufParseTAG[i] = '\0'; /* terminate string */
 		MsgSetTAG(pMsg, bufParseTAG, i);
-	} else {/* we enter this code area when the user has instructed rsyslog NOT
+	} else { /* we enter this code area when the user has instructed rsyslog NOT
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
 		 */
-		if(!(pMsg->msgFlags & INTERNAL_MSG)) {
+		if (!(pMsg->msgFlags & INTERNAL_MSG)) {
 			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
 		}
 	}
@@ -363,17 +354,17 @@ finalize_it:
 	if (pInst->bRemoveMsgFirstSpace && *p2parse == ' ') {
 		/* Bypass first space found in MSG part
 		 */
-	        p2parse++;
-	        lenMsg--;
+		p2parse++;
+		lenMsg--;
 	}
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 ENDparse2
 
 
 BEGINmodExit
-CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    /* release what we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -381,25 +372,25 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD2_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_PMOD2_QUERIES
+		CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(pmrfc3164)
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 	/* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	DBGPRINTF("rfc3164 parser init called\n");
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
-	/* cache value, is set only during rsyslogd option processing */
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

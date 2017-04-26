@@ -49,28 +49,28 @@ enum nsdsel_waitOp_e {
 
 /* interface */
 BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsd_t **ppThis);
-	rsRetVal (*Destruct)(nsd_t **ppThis);
-	rsRetVal (*Abort)(nsd_t *pThis);
-	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
-	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
-	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
-	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
-	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
-	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
-	rsRetVal (*GetRemoteIP)(nsd_t *pThis, prop_t **ip);
-	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
-	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
-	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
-	rsRetVal (*CheckConnection)(nsd_t *pThis);	/* This is a trick mostly for plain tcp syslog */
-	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
-	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
+	rsRetVal (*Construct)(nsd_t * *ppThis);
+	rsRetVal (*Destruct)(nsd_t * *ppThis);
+	rsRetVal (*Abort)(nsd_t * pThis);
+	rsRetVal (*Rcv)(nsd_t * pThis, uchar * pRcvBuf, ssize_t * pLenBuf);
+	rsRetVal (*Send)(nsd_t * pThis, uchar * pBuf, ssize_t * pLenBuf);
+	rsRetVal (*Connect)(nsd_t * pThis, int family, unsigned char *port, unsigned char *host, char *device);
+	rsRetVal (*LstnInit)(netstrms_t * pNS, void *pUsr, rsRetVal (*fAddLstn)(void *, netstrm_t *),
+	    uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+	rsRetVal (*AcceptConnReq)(nsd_t * pThis, nsd_t * *ppThis);
+	rsRetVal (*GetRemoteHName)(nsd_t * pThis, uchar * *pszName);
+	rsRetVal (*GetRemoteIP)(nsd_t * pThis, prop_t * *ip);
+	rsRetVal (*SetMode)(nsd_t * pThis, int mode);		     /* sets a driver specific mode - see driver doc for details */
+	rsRetVal (*SetAuthMode)(nsd_t * pThis, uchar *);	     /* sets a driver specific mode - see driver doc for details */
+	rsRetVal (*SetPermPeers)(nsd_t * pThis, permittedPeers_t *); /* sets driver permitted peers for auth needs */
+	rsRetVal (*CheckConnection)(nsd_t * pThis);		     /* This is a trick mostly for plain tcp syslog */
+	rsRetVal (*GetSock)(nsd_t * pThis, int *pSock);
+	rsRetVal (*SetSock)(nsd_t * pThis, int sock);
 	/* GetSock() and SetSock() return an error if the driver does not use plain
 	 * OS sockets. This interface is primarily meant as an internal aid for
 	 * those drivers that utilize the nsd_ptcp to do some of their work.
 	 */
-	rsRetVal (*GetRemAddr)(nsd_t *pThis, struct sockaddr_storage **ppAddr);
+	rsRetVal (*GetRemAddr)(nsd_t * pThis, struct sockaddr_storage * *ppAddr);
 	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
 	 * peer's socket addr structure, so that the legacy matching functions can work on
 	 * it. Note that this ties netstream drivers to things that can be implemented over
@@ -78,11 +78,11 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
 	 */
 	/* v5 */
-	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
+	rsRetVal (*EnableKeepAlive)(nsd_t * pThis);
 	/* v8 */
-	rsRetVal (*SetKeepAliveIntvl)(nsd_t *pThis, int keepAliveIntvl);
-	rsRetVal (*SetKeepAliveProbes)(nsd_t *pThis, int keepAliveProbes);
-	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
+	rsRetVal (*SetKeepAliveIntvl)(nsd_t * pThis, int keepAliveIntvl);
+	rsRetVal (*SetKeepAliveProbes)(nsd_t * pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(nsd_t * pThis, int keepAliveTime);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
@@ -95,20 +95,20 @@ ENDinterface(nsd)
 
 /* interface  for the select call */
 BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdsel_t **ppThis);
-	rsRetVal (*Destruct)(nsdsel_t **ppThis);
-	rsRetVal (*Add)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
-	rsRetVal (*Select)(nsdsel_t *pNsdsel, int *piNumReady);
-	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady);
+	rsRetVal (*Construct)(nsdsel_t * *ppThis);
+	rsRetVal (*Destruct)(nsdsel_t * *ppThis);
+	rsRetVal (*Add)(nsdsel_t * pNsdsel, nsd_t * pNsd, nsdsel_waitOp_t waitOp);
+	rsRetVal (*Select)(nsdsel_t * pNsdsel, int *piNumReady);
+	rsRetVal (*IsReady)(nsdsel_t * pNsdsel, nsd_t * pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady);
 ENDinterface(nsdsel)
 #define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* interface  for the epoll call */
 BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdpoll_t **ppThis);
-	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
-	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op);
-	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, nsd_epworkset_t workset[]);
+	rsRetVal (*Construct)(nsdpoll_t * *ppThis);
+	rsRetVal (*Destruct)(nsdpoll_t * *ppThis);
+	rsRetVal (*Ctl)(nsdpoll_t * pNsdpoll, nsd_t * pNsd, int id, void *pUsr, int mode, int op);
+	rsRetVal (*Wait)(nsdpoll_t * pNsdpoll, int timeout, int *numReady, nsd_epworkset_t workset[]);
 ENDinterface(nsdpoll)
 #define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

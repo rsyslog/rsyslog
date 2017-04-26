@@ -45,35 +45,41 @@
  * The key length is limited to 64KiB to prevent DoS.
  * Note well: key is a blob, not a C string (NUL may be present!)
  */
-int
-gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen)
+int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen)
 {
 	struct stat sb;
 	int fd;
 	int r;
 
-	if(stat(fn, &sb) == -1) {
-		r = 1; goto done;
+	if (stat(fn, &sb) == -1) {
+		r = 1;
+		goto done;
 	}
-	if((sb.st_mode & S_IFMT) != S_IFREG) {
-		r = 2; goto done;
+	if ((sb.st_mode & S_IFMT) != S_IFREG) {
+		r = 2;
+		goto done;
 	}
-	if(sb.st_size > 64*1024) {
-		r = 3; goto done;
+	if (sb.st_size > 64 * 1024) {
+		r = 3;
+		goto done;
 	}
-	if((*key = malloc(sb.st_size)) == NULL) {
-		r = -1; goto done;
+	if ((*key = malloc(sb.st_size)) == NULL) {
+		r = -1;
+		goto done;
 	}
-	if((fd = open(fn, O_RDONLY)) < 0) {
-		r = 4; goto done;
+	if ((fd = open(fn, O_RDONLY)) < 0) {
+		r = 4;
+		goto done;
 	}
-	if(read(fd, *key, sb.st_size) != sb.st_size) {
-		r = 5; goto done;
+	if (read(fd, *key, sb.st_size) != sb.st_size) {
+		r = 5;
+		goto done;
 	}
 	*keylen = sb.st_size;
 	close(fd);
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
 
@@ -84,14 +90,14 @@ done:	return r;
 static void
 execKeyScript(char *cmd, int pipefd[])
 {
-	char *newargv[] = { NULL };
-	char *newenviron[] = { NULL };
+	char *newargv[] = {NULL};
+	char *newenviron[] = {NULL};
 
 	dup2(pipefd[0], STDIN_FILENO);
 	dup2(pipefd[1], STDOUT_FILENO);
 
 	/* finally exec child */
-fprintf(stderr, "pre execve: %s\n", cmd);
+	fprintf(stderr, "pre execve: %s\n", cmd);
 	execve(cmd, newargv, newenviron);
 	/* switch to?
 	execlp((char*)program, (char*) program, (char*)arg, NULL);
@@ -109,16 +115,18 @@ openPipe(char *cmd, int *fd)
 	pid_t cpid;
 	int r;
 
-	if(pipe(pipefd) == -1) {
-		r = 1; goto done;
+	if (pipe(pipefd) == -1) {
+		r = 1;
+		goto done;
 	}
 
 	cpid = fork();
-	if(cpid == -1) {
-		r = 1; goto done;
+	if (cpid == -1) {
+		r = 1;
+		goto done;
 	}
 
-	if(cpid == 0) {    
+	if (cpid == 0) {
 		/* we are the child */
 		execKeyScript(cmd, pipefd);
 		exit(1);
@@ -127,7 +135,8 @@ openPipe(char *cmd, int *fd)
 	close(pipefd[1]);
 	*fd = pipefd[0];
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
 
@@ -138,11 +147,13 @@ static int
 readProgChar(int fd, char *c)
 {
 	int r;
-	if(read(fd, c, 1) != 1) {
-		r = 1; goto done;
+	if (read(fd, c, 1) != 1) {
+		r = 1;
+		goto done;
 	}
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
 /* Read a line from the script. Line is terminated by LF, which
@@ -155,19 +166,22 @@ readProgLine(int fd, char *buf)
 	char c;
 	int r;
 	unsigned i;
-	
-	for(i = 0 ; i < 64*1024 ; ++i) {
-		if((r = readProgChar(fd, &c)) != 0) goto done;
-		if(c == '\n')
+
+	for (i = 0; i < 64 * 1024; ++i) {
+		if ((r = readProgChar(fd, &c)) != 0)
+			goto done;
+		if (c == '\n')
 			break;
 		buf[i] = c;
 	};
-	if(i >= 64*1024) {
-		r = 1; goto done;
+	if (i >= 64 * 1024) {
+		r = 1;
+		goto done;
 	}
 	buf[i] = '\0';
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 static int
 readProgKey(int fd, char *buf, unsigned keylen)
@@ -175,32 +189,40 @@ readProgKey(int fd, char *buf, unsigned keylen)
 	char c;
 	int r;
 	unsigned i;
-	
-	for(i = 0 ; i < keylen ; ++i) {
-		if((r = readProgChar(fd, &c)) != 0) goto done;
+
+	for (i = 0; i < keylen; ++i) {
+		if ((r = readProgChar(fd, &c)) != 0)
+			goto done;
 		buf[i] = c;
 	};
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
-int 
-gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen)
+int gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen)
 {
 	int r;
 	int fd;
-	char rcvBuf[64*1024];
+	char rcvBuf[64 * 1024];
 
-	if((r = openPipe(cmd, &fd)) != 0) goto done;
-	if((r = readProgLine(fd, rcvBuf)) != 0) goto done;
-	if(strcmp(rcvBuf, "RSYSLOG-KEY-PROVIDER:0")) {
-		r = 2; goto done;
+	if ((r = openPipe(cmd, &fd)) != 0)
+		goto done;
+	if ((r = readProgLine(fd, rcvBuf)) != 0)
+		goto done;
+	if (strcmp(rcvBuf, "RSYSLOG-KEY-PROVIDER:0")) {
+		r = 2;
+		goto done;
 	}
-	if((r = readProgLine(fd, rcvBuf)) != 0) goto done;
+	if ((r = readProgLine(fd, rcvBuf)) != 0)
+		goto done;
 	*keylen = atoi(rcvBuf);
-	if((*key = malloc(*keylen)) == NULL) {
-		r = -1; goto done;
+	if ((*key = malloc(*keylen)) == NULL) {
+		r = -1;
+		goto done;
 	}
-	if((r = readProgKey(fd, *key, *keylen)) != 0) goto done;
-done:	return r;
+	if ((r = readProgKey(fd, *key, *keylen)) != 0)
+		goto done;
+done:
+	return r;
 }

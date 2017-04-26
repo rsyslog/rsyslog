@@ -75,26 +75,26 @@
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
-#endif 
+#endif
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* defines */
 #define STRMSESS_MAX_DEFAULT 200 /* default for nbr of strm sessions if no number is given */
-#define STRMLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
+#define STRMLSTN_MAX_DEFAULT 20  /* default for nbr of listeners */
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(conf)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(strms_sess)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(net)
-DEFobjCurrIf(netstrms)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(nssel)
-DEFobjCurrIf(prop)
+DEFobjStaticHelpers;
+DEFobjCurrIf(conf);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(strms_sess);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(net);
+DEFobjCurrIf(netstrms);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(nssel);
+DEFobjCurrIf(prop);
 
 /* forward definitions */
 static rsRetVal create_strm_socket(strmsrv_t *pThis);
@@ -104,8 +104,8 @@ static rsRetVal create_strm_socket(strmsrv_t *pThis);
  */
 /* this shall go into a specific ACL module! */
 static int
-isPermittedHost(struct sockaddr __attribute__((unused)) *addr, char __attribute__((unused)) *fromHostFQDN,
-		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess)
+isPermittedHost(struct sockaddr __attribute__((unused)) * addr, char __attribute__((unused)) * fromHostFQDN,
+    void __attribute__((unused)) * pUsrSrv, void __attribute__((unused)) * pUsrSess)
 {
 	return 1;
 }
@@ -127,7 +127,7 @@ doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar *)buf, piLenRcvd));
 finalize_it:
 	RETiRet;
 }
@@ -173,7 +173,7 @@ addNewLstnPort(strmsrv_t *pThis, uchar *pszPort)
 	CHKmalloc(pEntry = MALLOC(sizeof(strmLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
-	if((pEntry->pszInputName = ustrdup(pThis->pszInputName)) == NULL) {
+	if ((pEntry->pszInputName = ustrdup(pThis->pszInputName)) == NULL) {
 		DBGPRINTF("strmsrv/addNewLstnPort: OOM in strdup()\n");
 		free(pEntry);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -204,11 +204,11 @@ configureSTRMListen(strmsrv_t *pThis, uchar *pszPort)
 
 	/* extract port */
 	i = 0;
-	while(isdigit((int) *pPort)) {
+	while (isdigit((int)*pPort)) {
 		i = i * 10 + *pPort++ - '0';
 	}
 
-	if(i >= 0 && i <= 65535) {
+	if (i >= 0 && i <= 65535) {
 		CHKiRet(addNewLstnPort(pThis, pszPort));
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "Invalid STRM listen port %s - ignored.\n", pszPort);
@@ -231,7 +231,7 @@ STRMSessTblInit(strmsrv_t *pThis)
 	assert(pThis->pSessions == NULL);
 
 	dbgprintf("Allocating buffer for %d STRM sessions.\n", pThis->iSessMax);
-	if((pThis->pSessions = (strms_sess_t **) calloc(pThis->iSessMax, sizeof(strms_sess_t *))) == NULL) {
+	if ((pThis->pSessions = (strms_sess_t **)calloc(pThis->iSessMax, sizeof(strms_sess_t *))) == NULL) {
 		dbgprintf("Error: STRMSessInit() could not alloc memory for STRM session table.\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -252,12 +252,12 @@ STRMSessTblFindFreeSpot(strmsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
-	for(i = 0 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] == NULL)
+	for (i = 0; i < pThis->iSessMax; ++i) {
+		if (pThis->pSessions[i] == NULL)
 			break;
 	}
 
-	return((i < pThis->iSessMax) ? i : -1);
+	return ((i < pThis->iSessMax) ? i : -1);
 }
 
 
@@ -275,15 +275,14 @@ STRMSessGetNxtSess(strmsrv_t *pThis, int iCurr)
 	register int i;
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pThis, strmsrv);
+	    ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pThis->pSessions != NULL);
-	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
-		if(pThis->pSessions[i] != NULL)
+	for (i = iCurr + 1; i < pThis->iSessMax; ++i) {
+		if (pThis->pSessions[i] != NULL)
 			break;
 	}
 
-	ENDfunc
-	return((i < pThis->iSessMax) ? i : -1);
+	ENDfunc return ((i < pThis->iSessMax) ? i : -1);
 }
 
 
@@ -301,15 +300,15 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
-	if(pThis->pSessions != NULL) {
+	if (pThis->pSessions != NULL) {
 		/* close all STRM connections! */
 		i = STRMSessGetNxtSess(pThis, -1);
-		while(i != -1) {
+		while (i != -1) {
 			strms_sess.Destruct(&pThis->pSessions[i]);
 			/* now get next... */
 			i = STRMSessGetNxtSess(pThis, i);
 		}
-		
+
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
 		pThis->pSessions = NULL; /* just to make sure... */
@@ -317,7 +316,7 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 
 	/* free list of strm listen ports */
 	pEntry = pThis->pLstnPorts;
-	while(pEntry != NULL) {
+	while (pEntry != NULL) {
 		free(pEntry->pszPort);
 		free(pEntry->pszInputName);
 		pDel = pEntry;
@@ -326,7 +325,7 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 	}
 
 	/* finally close our listen streams */
-	for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+	for (i = 0; i < pThis->iLstnMax; ++i) {
 		netstrm.Destruct(pThis->ppLstn + i);
 	}
 }
@@ -338,14 +337,14 @@ static void deinit_strm_listener(strmsrv_t *pThis)
 static rsRetVal
 addStrmLstn(void *pUsr, netstrm_t *pLstn)
 {
-	strmLstnPortList_t *pPortList = (strmLstnPortList_t *) pUsr;
+	strmLstnPortList_t *pPortList = (strmLstnPortList_t *)pUsr;
 	strmsrv_t *pThis = pPortList->pSrv;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnMax >= STRMLSTN_MAX_DEFAULT)
+	if (pThis->iLstnMax >= STRMLSTN_MAX_DEFAULT)
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
 	pThis->ppLstn[pThis->iLstnMax] = pLstn;
@@ -369,7 +368,7 @@ initSTRMListener(strmsrv_t *pThis, strmLstnPortList_t *pPortEntry)
 	assert(pPortEntry != NULL);
 
 	/* TODO: add capability to specify local listen address! */
-	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addStrmLstn, pPortEntry->pszPort, NULL, pThis->iSessMax));
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void *)pPortEntry, addStrmLstn, pPortEntry->pszPort, NULL, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -387,7 +386,7 @@ create_strm_socket(strmsrv_t *pThis)
 
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
-	while(pEntry != NULL) {
+	while (pEntry != NULL) {
 		CHKiRet(initSTRMListener(pThis, pEntry));
 		pEntry = pEntry->pNext;
 	}
@@ -395,7 +394,7 @@ create_strm_socket(strmsrv_t *pThis)
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
-	if(STRMSessTblInit(pThis) != 0) {
+	if (STRMSessTblInit(pThis) != 0) {
 		/* OK, we are in some trouble - we could not initialize the
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
@@ -437,13 +436,13 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 
 	/* Add to session list */
 	iSess = STRMSessTblFindFreeSpot(pThis);
-	if(iSess == -1) {
+	if (iSess == -1) {
 		errno = 0;
 		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many strm sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
-	if(pThis->bUseKeepAlive) {
+	if (pThis->bUseKeepAlive) {
 		CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
 		CHKiRet(netstrm.SetKeepAliveTime(pNewStrm, pThis->iKeepAliveTime));
 		CHKiRet(netstrm.SetKeepAliveIntvl(pNewStrm, pThis->iKeepAliveIntvl));
@@ -465,10 +464,9 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(pThis->pIsPermittedHost != NULL
-	   && !pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
+	if (pThis->pIsPermittedHost != NULL && !pThis->pIsPermittedHost((struct sockaddr *)addr, (char *)fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
-		if(glbl.GetOption_DisallowWarning()) {
+		if (glbl.GetOption_DisallowWarning()) {
 			errno = 0;
 			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed sender %s discarded", fromHostFQDN);
 		}
@@ -487,7 +485,7 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	CHKiRet(strms_sess.ConstructFinalize(pSess));
 
 	/* check if we need to call our callback */
-	if(pThis->pOnSessAccept != NULL) {
+	if (pThis->pOnSessAccept != NULL) {
 		CHKiRet(pThis->pOnSessAccept(pThis, pSess));
 	}
 
@@ -496,13 +494,13 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 	pSess = NULL; /* this is now also handed over */
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pSess != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pSess != NULL)
 			strms_sess.Destruct(&pSess);
-		if(pNewStrm != NULL)
+		if (pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		free(fromHostFQDN);
-		if(ip != NULL)
+		if (ip != NULL)
 			prop.Destruct(&ip);
 	}
 
@@ -513,9 +511,9 @@ finalize_it:
 static void
 RunCancelCleanup(void *arg)
 {
-	nssel_t **ppSel = (nssel_t**) arg;
+	nssel_t **ppSel = (nssel_t **)arg;
 
-	if(*ppSel != NULL)
+	if (*ppSel != NULL)
 		nssel.Destruct(ppSel);
 }
 
@@ -543,20 +541,20 @@ Run(strmsrv_t *pThis)
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
 	 * to prevent us from leaking anything. -- rgerharsd, 20080-04-24
 	 */
-	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
-	while(1) {
+	pthread_cleanup_push(RunCancelCleanup, (void *)&pSel);
+	while (1) {
 		CHKiRet(nssel.Construct(&pSel));
 		// TODO: set driver
 		CHKiRet(nssel.ConstructFinalize(pSel));
 
 		/* Add the STRM listen sockets to the list of read descriptors. */
-		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+		for (i = 0; i < pThis->iLstnMax; ++i) {
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
 		/* do the sessions */
 		iSTRMSess = STRMSessGetNxtSess(pThis, -1);
-		while(iSTRMSess != -1) {
+		while (iSTRMSess != -1) {
 			/* TODO: access to pNsd is NOT really CLEAN, use method... */
 			CHKiRet(nssel.Add(pSel, pThis->pSessions[iSTRMSess]->pStrm, NSDSEL_RD));
 			/* now get next... */
@@ -566,9 +564,9 @@ Run(strmsrv_t *pThis)
 		/* wait for io to become ready */
 		CHKiRet(nssel.Wait(pSel, &nfds));
 
-		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+		for (i = 0; i < pThis->iLstnMax; ++i) {
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
+			if (bIsReady) {
 				dbgprintf("New connect on NSD %p.\n", pThis->ppLstn[i]);
 				SessAccept(pThis, pThis->ppLstnPort[i], &pNewSess, pThis->ppLstn[i]);
 				--nfds; /* indicate we have processed one */
@@ -577,15 +575,15 @@ Run(strmsrv_t *pThis)
 
 		/* now check the sessions */
 		iSTRMSess = STRMSessGetNxtSess(pThis, -1);
-		while(nfds && iSTRMSess != -1) {
+		while (nfds && iSTRMSess != -1) {
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iSTRMSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
-			if(bIsReady) {
-				char buf[8*1024]; /* reception buffer - may hold a partial or multiple messages */
+			if (bIsReady) {
+				char buf[8 * 1024]; /* reception buffer - may hold a partial or multiple messages */
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iSTRMSess]->pStrm);
 
 				/* Receive message */
 				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd);
-				switch(iRet) {
+				switch (iRet) {
 				case RS_RET_CLOSED:
 					pThis->pOnRegularClose(pThis->pSessions[iSTRMSess]);
 					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
@@ -596,12 +594,13 @@ Run(strmsrv_t *pThis)
 				case RS_RET_OK:
 					/* valid data received, process it! */
 					localRet = strms_sess.DataRcvd(pThis->pSessions[iSTRMSess], buf, iRcvd);
-					if(localRet != RS_RET_OK) {
+					if (localRet != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
 						errmsg.LogError(0, localRet, "Tearing down STRM Session %d - see "
-							    "previous messages for reason(s)\n", iSTRMSess);
+									     "previous messages for reason(s)\n",
+						    iSTRMSess);
 						pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 						strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					}
@@ -609,7 +608,7 @@ Run(strmsrv_t *pThis)
 				default:
 					errno = 0;
 					errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
-							pThis->pSessions[iSTRMSess]->pStrm);
+					    pThis->pSessions[iSTRMSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;
@@ -619,13 +618,13 @@ Run(strmsrv_t *pThis)
 			iSTRMSess = STRMSessGetNxtSess(pThis, iSTRMSess);
 		}
 		CHKiRet(nssel.Destruct(&pSel));
-finalize_it: /* this is a very special case - this time only we do not exit the function,
+	finalize_it: /* this is a very special case - this time only we do not exit the function,
 	      * because that would not help us either. So we simply retry it. Let's see
 	      * if that actually is a better idea. Exiting the loop wasn't we always
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		/*EMPTY*/;
+		     /*EMPTY*/;
 	}
 
 	/* note that this point is usually not reached */
@@ -639,7 +638,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 
 /* Standard-Constructor */
-BEGINobjConstruct(strmsrv) /* be sure to specify the object type also in END macro! */
+BEGINobjConstruct(strmsrv)			/* be sure to specify the object type also in END macro! */
 	pThis->iSessMax = STRMSESS_MAX_DEFAULT; /* TODO: useful default ;) */
 	/* set default callbacks (used if caller does not overwrite them) */
 	pThis->pIsPermittedHost = isPermittedHost;
@@ -647,9 +646,9 @@ BEGINobjConstruct(strmsrv) /* be sure to specify the object type also in END mac
 	pThis->pRcvData = doRcvData;
 	pThis->pOnRegularClose = onRegularClose;
 	pThis->pOnErrClose = onErrClose;
-	/* session specific callbacks */
-	//pThis->OnSessConstructFinalize =
-	//pThis->pOnSessDestruct =
+/* session specific callbacks */
+//pThis->OnSessConstructFinalize =
+//pThis->pOnSessDestruct =
 ENDobjConstruct(strmsrv)
 
 
@@ -663,21 +662,21 @@ strmsrvConstructFinalize(strmsrv_t *pThis)
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
-	if(pThis->pszDrvrAuthMode != NULL)
+	if (pThis->pszDrvrAuthMode != NULL)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
-	if(pThis->pPermPeers != NULL)
+	if (pThis->pPermPeers != NULL)
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	// TODO: set driver!
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
 	/* set up listeners */
-	CHKmalloc(pThis->ppLstn = calloc(STRMLSTN_MAX_DEFAULT, sizeof(netstrm_t*)));
-	CHKmalloc(pThis->ppLstnPort = calloc(STRMLSTN_MAX_DEFAULT, sizeof(strmLstnPortList_t*)));
+	CHKmalloc(pThis->ppLstn = calloc(STRMLSTN_MAX_DEFAULT, sizeof(netstrm_t *)));
+	CHKmalloc(pThis->ppLstnPort = calloc(STRMLSTN_MAX_DEFAULT, sizeof(strmLstnPortList_t *)));
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->pNS != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pThis->pNS != NULL)
 			netstrms.Destruct(&pThis->pNS);
 	}
 	RETiRet;
@@ -686,13 +685,12 @@ finalize_it:
 
 /* destructor for the strmsrv object */
 BEGINobjDestruct(strmsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strmsrv)
-	if(pThis->OnDestruct != NULL)
-		pThis->OnDestruct(pThis->pUsr);
+	CODESTARTobjDestruct(strmsrv) if (pThis->OnDestruct != NULL)
+	    pThis->OnDestruct(pThis->pUsr);
 
 	deinit_strm_listener(pThis);
 
-	if(pThis->pNS != NULL)
+	if (pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
 	free(pThis->pszDrvrAuthMode);
 	free(pThis->ppLstn);
@@ -703,12 +701,12 @@ ENDobjDestruct(strmsrv)
 
 /* debugprint for the strmsrv object */
 BEGINobjDebugPrint(strmsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(strmsrv)
+	CODESTARTobjDebugPrint(strmsrv)
 ENDobjDebugPrint(strmsrv)
 
 /* set functions */
 static rsRetVal
-SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
+SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void *, void *))
 {
 	DEFiRet;
 	pThis->pIsPermittedHost = pCB;
@@ -716,7 +714,7 @@ SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *f
 }
 
 static rsRetVal
-SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*, strms_sess_t*))
+SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t *, strms_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
@@ -724,7 +722,7 @@ SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*, strms_sess_t*))
 }
 
 static rsRetVal
-SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->OnDestruct = pCB;
@@ -732,7 +730,7 @@ SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->OnSessConstructFinalize = pCB;
@@ -740,7 +738,7 @@ SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void *))
 {
 	DEFiRet;
 	pThis->pOnSessDestruct = pCB;
@@ -748,7 +746,7 @@ SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
+SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnRegularClose = pCB;
@@ -756,7 +754,7 @@ SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
 }
 
 static rsRetVal
-SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
+SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t *))
 {
 	DEFiRet;
 	pThis->pOnErrClose = pCB;
@@ -764,7 +762,7 @@ SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
 }
 
 static rsRetVal
-SetCBOpenLstnSocks(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*))
+SetCBOpenLstnSocks(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t *))
 {
 	DEFiRet;
 	pThis->OpenLstnSocks = pCB;
@@ -816,7 +814,7 @@ SetKeepAliveTime(strmsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
-SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
+SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t *, uchar))
 {
 	DEFiRet;
 	assert(OnCharRcvd != NULL);
@@ -831,7 +829,7 @@ SetInputName(strmsrv_t *pThis, uchar *name)
 	uchar *pszName;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strmsrv);
-	if(name == NULL)
+	if (name == NULL)
 		pszName = NULL;
 	else
 		CHKmalloc(pszName = ustrdup(name));
@@ -845,7 +843,7 @@ finalize_it:
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
- * -------------------------------------------------------------------------- */   
+ * -------------------------------------------------------------------------- */
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
@@ -904,8 +902,8 @@ SetSessMax(strmsrv_t *pThis, int iMax)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(strmsrv)
-CODESTARTobjQueryInterface(strmsrv)
-	if(pIf->ifVersion != strmsrvCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(strmsrv) if (pIf->ifVersion != strmsrvCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -949,9 +947,9 @@ ENDobjQueryInterface(strmsrv)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(strmsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(strmsrv)
-	/* release objects we no longer need */
-	objRelease(strms_sess, DONT_LOAD_LIB);
+	CODESTARTObjClassExit(strmsrv)
+	    /* release objects we no longer need */
+	    objRelease(strms_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -989,22 +987,22 @@ ENDObjClassInit(strmsrv)
 
 
 BEGINmodExit
-CODESTARTmodExit
-	/* de-init in reverse order! */
-	strmsrvClassExit();
+	CODESTARTmodExit
+	    /* de-init in reverse order! */
+	    strmsrvClassExit();
 	strms_sessClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(strms_sessClassInit(pModInfo));

@@ -51,13 +51,13 @@ DEFobjCurrIf(errmsg);
 DEF_OMOD_STATIC_DATA
 
 /* define operation modes we have */
-#define MODE_CC 0	 /* just fix control characters */
-#define MODE_UTF8 1	 /* do real UTF-8 fixing */
+#define MODE_CC 0   /* just fix control characters */
+#define MODE_UTF8 1 /* do real UTF-8 fixing */
 
 /* config variables */
 typedef struct _instanceData {
 	uchar replChar;
-	uint8_t mode;		/* operations mode */
+	uint8_t mode; /* operations mode */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -65,70 +65,68 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
+	rsconf_t *pConf; /* our overall config object */
 };
-static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;  /* modConf ptr to use for the current exec process */
 
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "replacementchar", eCmdHdlrGetChar, 0 }
-};
+    {"mode", eCmdHdlrGetWord, 0},
+    {"replacementchar", eCmdHdlrGetChar, 0}};
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+	actpdescr};
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
+	CODESTARTbeginCnfLoad
+	    loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+	CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+	CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
-	runModConf = pModConf;
+	CODESTARTactivateCnf
+	    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+	CODESTARTfreeCnf
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+	CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+	CODESTARTfreeInstance
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
@@ -142,54 +140,55 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
-	DBGPRINTF("newActInst (mmutf8fix)\n");
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	CODESTARTnewActInst
+	    DBGPRINTF("newActInst (mmutf8fix)\n");
+	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < actpblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "mode")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"utf-8",
-					 sizeof("utf-8")-1)) {
+		if (!strcmp(actpblk.descr[i].name, "mode")) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"utf-8",
+				sizeof("utf-8") - 1)) {
 				pData->mode = MODE_UTF8;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"controlcharacters",
-					 sizeof("controlcharacters")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"controlcharacters",
+				       sizeof("controlcharacters") - 1)) {
 				pData->mode = MODE_CC;
 			} else {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_INVLD_MODE,
-					"mmutf8fix: invalid mode '%s' - ignored",
-					cstr);
+				    "mmutf8fix: invalid mode '%s' - ignored",
+				    cstr);
 				free(cstr);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
+		} else if (!strcmp(actpblk.descr[i].name, "replacementchar")) {
 			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else {
 			dbgprintf("mmutf8fix: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+				  "param '%s'\n",
+			    actpblk.descr[i].name);
 		}
 	}
 
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+	CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 
@@ -198,8 +197,8 @@ doCC(instanceData *pData, uchar *msg, int lenMsg)
 {
 	int i;
 
-	for(i = 0 ; i < lenMsg ; ++i) {
-		if(msg[i] < 32 || msg[i] > 126) {
+	for (i = 0; i < lenMsg; ++i) {
+		if (msg[i] < 32 || msg[i] > 126) {
 			msg[i] = pData->replChar;
 		}
 	}
@@ -214,9 +213,9 @@ fixInvldMBSeq(instanceData *pData, uchar *msg, int lenMsg, int strtIdx, int *end
 	/* startIdx and seqLen always set if bytesLeft is set,
 	   which is required before this function is called */
 	*endIdx = strtIdx + seqLen;
-	if(*endIdx > lenMsg)
+	if (*endIdx > lenMsg)
 		*endIdx = lenMsg;
-	for(i = strtIdx ; i < *endIdx ; ++i)
+	for (i = strtIdx; i < *endIdx; ++i)
 		msg[i] = pData->replChar;
 }
 
@@ -229,58 +228,58 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 	int strtIdx = 0, endIdx = 0;
 	int i;
 
-	for(i = 0 ; i < lenMsg ; ++i) {
+	for (i = 0; i < lenMsg; ++i) {
 		c = msg[i];
-		if(bytesLeft) {
-			if((c & 0xc0) != 0x80) {
+		if (bytesLeft) {
+			if ((c & 0xc0) != 0x80) {
 				/* sequence invalid, invalidate all bytes
 				   startIdx is always set if bytesLeft is set */
 				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &endIdx,
-				              seqLen);
+				    seqLen);
 				i = endIdx - 1;
 				bytesLeft = 0;
 			} else {
 				codepoint = (codepoint << 6) | (c & 0x3f);
 				--bytesLeft;
-				if(bytesLeft == 0) {
+				if (bytesLeft == 0) {
 					/* too-large codepoint? */
-					if(codepoint > 0x10FFFF) {
+					if (codepoint > 0x10FFFF) {
 						/* sequence invalid, invalidate all bytes
 						   startIdx is always set if bytesLeft is set */
 						fixInvldMBSeq(pData, msg, lenMsg,
-							      strtIdx, &endIdx,
-							      seqLen);
+						    strtIdx, &endIdx,
+						    seqLen);
 					}
 				}
 			}
 		} else {
-			if((c & 0x80) == 0) {
+			if ((c & 0x80) == 0) {
 				/* 1-byte sequence, US-ASCII */
 				; /* nothing to do, all well */
-			} else if((c & 0xe0) == 0xc0) {
+			} else if ((c & 0xe0) == 0xc0) {
 				/* 2-byte sequence */
 				/* 0xc0 and 0xc1 are illegal */
-				if(c == 0xc0 || c == 0xc1) {
+				if (c == 0xc0 || c == 0xc1) {
 					msg[i] = pData->replChar;
 				} else {
 					strtIdx = i;
 					seqLen = bytesLeft = 1;
 					codepoint = c & 0x1f;
 				}
-			} else if((c & 0xf0) == 0xe0) {
+			} else if ((c & 0xf0) == 0xe0) {
 				/* 3-byte sequence */
 				strtIdx = i;
 				seqLen = bytesLeft = 2;
 				codepoint = c & 0x0f;
-			} else if((c & 0xf8) == 0xf0) {
+			} else if ((c & 0xf8) == 0xf0) {
 				/* 4-byte sequence */
 				strtIdx = i;
 				seqLen = bytesLeft = 3;
 				codepoint = c & 0x07;
-			} else {   /* invalid (5&6 byte forbidden by RFC3629) */
+			} else { /* invalid (5&6 byte forbidden by RFC3629) */
 				msg[i] = pData->replChar;
 			}
-			if(i+bytesLeft >= lenMsg) {
+			if (i + bytesLeft >= lenMsg) {
 				int dummy = lenMsg;
 				/* invalid, as rest of message cannot contain full char */
 				fixInvldMBSeq(pData, msg, lenMsg, strtIdx, &dummy, seqLen);
@@ -291,14 +290,14 @@ doUTF8(instanceData *pData, uchar *msg, int lenMsg)
 }
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t **ppMsg = (smsg_t **)pMsgData;
 	smsg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
-CODESTARTdoAction
-	lenMsg = getMSGLen(pMsg);
+	CODESTARTdoAction
+	    lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
-	if(pWrkrData->pData->mode == MODE_CC) {
+	if (pWrkrData->pData->mode == MODE_CC) {
 		doCC(pWrkrData->pData, msg, lenMsg);
 	} else {
 		doUTF8(pWrkrData->pData, msg, lenMsg);
@@ -307,37 +306,37 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmutf8fix:", sizeof(":mmutf8fix:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (strncmp((char *)p, ":mmutf8fix:", sizeof(":mmutf8fix:") - 1))
+	{
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmutf8fix supports only v6+ config format, use: "
-			"action(type=\"mmutf8fix\" ...)");
+		    "mmutf8fix supports only v6+ config format, use: "
+		    "action(type=\"mmutf8fix\" ...)");
 	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+			CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("mmutf8fix: module compiled with rsyslog version %s.\n", VERSION);
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    DBGPRINTF("mmutf8fix: module compiled with rsyslog version %s.\n", VERSION);
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

@@ -6,22 +6,21 @@
 #include "hashtable.h"
 
 /*****************************************************************************/
-struct entry
-{
-    void *k, *v;
-    unsigned int h;
-    struct entry *next;
+struct entry {
+	void *k, *v;
+	unsigned int h;
+	struct entry *next;
 };
 
 struct hashtable {
-    unsigned int tablelength;
-    struct entry **table;
-    unsigned int entrycount;
-    unsigned int loadlimit;
-    unsigned int primeindex;
-    unsigned int (*hashfn) (void *k);
-    int (*eqfn) (void *k1, void *k2);
-    void (*dest) (void *v); /* destructor for values, if NULL use free() */
+	unsigned int tablelength;
+	struct entry **table;
+	unsigned int entrycount;
+	unsigned int loadlimit;
+	unsigned int primeindex;
+	unsigned int (*hashfn)(void *k);
+	int (*eqfn)(void *k1, void *k2);
+	void (*dest)(void *v); /* destructor for values, if NULL use free() */
 };
 
 /*****************************************************************************/

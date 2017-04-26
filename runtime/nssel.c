@@ -43,8 +43,8 @@
 #include "nssel.h"
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
 
 
 /* load our low-level driver. This must be done before any
@@ -67,11 +67,11 @@ loadDrvr(nssel_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+	if (pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if (snprintf((char *)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
-	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
+	CHKmalloc(pThis->pDrvrName = (uchar *)strdup((char *)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -80,11 +80,11 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName + 2, DONT_LOAD_LIB, (void *)&pThis->Drvr));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL) {
+	if (iRet != RS_RET_OK) {
+		if (pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
 		}
@@ -100,17 +100,16 @@ ENDobjConstruct(nssel)
 
 /* destructor for the nssel object */
 BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nssel)
-	if(pThis->pDrvrData != NULL)
-		pThis->Drvr.Destruct(&pThis->pDrvrData);
+	CODESTARTobjDestruct(nssel) if (pThis->pDrvrData != NULL)
+	    pThis->Drvr.Destruct(&pThis->pDrvrData);
 
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
 	 * to release the driver 
 	 */
 	free(pThis->pBaseDrvrName);
-	if(pThis->pDrvrName != NULL) {
-		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr);
+	if (pThis->pDrvrName != NULL) {
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName + 2, DONT_LOAD_LIB, (void *)&pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
 ENDobjDestruct(nssel)
@@ -139,13 +138,13 @@ SetDrvrName(nssel_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	if(pThis->pBaseDrvrName != NULL) {
+	if (pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
 	}
 
-	if(pszName != NULL) {
-		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	if (pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar *)strdup((char *)pszName));
 	}
 finalize_it:
 	RETiRet;
@@ -163,7 +162,7 @@ Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nssel);
 	ISOBJ_TYPE_assert(pStrm, netstrm);
-	
+
 	CHKiRet(pThis->Drvr.Add(pThis->pDrvrData, pStrm->pDrvrData, waitOp));
 
 finalize_it:
@@ -194,7 +193,7 @@ Wait(nssel_t *pThis, int *piNumReady)
  */
 static rsRetVal
 IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady,
-int __attribute__((unused)) *piNumReady)
+    int __attribute__((unused)) * piNumReady)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nssel);
@@ -208,8 +207,8 @@ int __attribute__((unused)) *piNumReady)
 
 /* queryInterface function */
 BEGINobjQueryInterface(nssel)
-CODESTARTobjQueryInterface(nssel)
-	if(pIf->ifVersion != nsselCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(nssel) if (pIf->ifVersion != nsselCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -232,9 +231,9 @@ ENDobjQueryInterface(nssel)
 /* exit our class
  */
 BEGINObjClassExit(nssel, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nssel)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
+	CODESTARTObjClassExit(nssel)
+	    /* release objects we no longer need */
+	    objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(nssel)
 
 
@@ -247,7 +246,7 @@ BEGINObjClassInit(nssel, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	DBGPRINTF("doing nsselClassInit\n");
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(nssel)
 /* vi:set ai:
  */

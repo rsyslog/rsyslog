@@ -47,77 +47,74 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("ommysql")
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-typedef struct _instanceData {
-	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-	unsigned int dbsrvPort;		/* port of MySQL server */
-	char	dbname[_DB_MAXDBLEN+1];	/* DB name */
-	char	dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-	char	dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	uchar   *configfile;			/* MySQL Client Configuration File */
-	uchar   *configsection;		/* MySQL Client Configuration Section */
-	uchar	*tplName;			/* format template to use */
+    typedef struct _instanceData {
+	char dbsrv[MAXHOSTNAMELEN + 1];  /* IP or hostname of DB server*/
+	unsigned int dbsrvPort;		 /* port of MySQL server */
+	char dbname[_DB_MAXDBLEN + 1];   /* DB name */
+	char dbuid[_DB_MAXUNAMELEN + 1]; /* DB user */
+	char dbpwd[_DB_MAXPWDLEN + 1];   /* DB user's password */
+	uchar *configfile;		 /* MySQL Client Configuration File */
+	uchar *configsection;		 /* MySQL Client Configuration Section */
+	uchar *tplName;			 /* format template to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	MYSQL	*hmysql;			/* handle to MySQL */
-	unsigned uLastMySQLErrno;		/* last errno returned by MySQL or 0 if all is well */
+	MYSQL *hmysql;		  /* handle to MySQL */
+	unsigned uLastMySQLErrno; /* last errno returned by MySQL or 0 if all is well */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	int iSrvPort;				/* database server port */
-	uchar *pszMySQLConfigFile;	/* MySQL Client Configuration File */
-	uchar *pszMySQLConfigSection;	/* MySQL Client Configuration Section */ 
+	int iSrvPort;		      /* database server port */
+	uchar *pszMySQLConfigFile;    /* MySQL Client Configuration File */
+	uchar *pszMySQLConfigSection; /* MySQL Client Configuration Section */
 } configSettings_t;
 static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "server", eCmdHdlrGetWord, 1 },
-	{ "db", eCmdHdlrGetWord, 1 },
-	{ "uid", eCmdHdlrGetWord, 1 },
-	{ "pwd", eCmdHdlrGetWord, 1 },
-	{ "serverport", eCmdHdlrInt, 0 },
-	{ "mysqlconfig.file", eCmdHdlrGetWord, 0 },
-	{ "mysqlconfig.section", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
-};
+    {"server", eCmdHdlrGetWord, 1},
+    {"db", eCmdHdlrGetWord, 1},
+    {"uid", eCmdHdlrGetWord, 1},
+    {"pwd", eCmdHdlrGetWord, 1},
+    {"serverport", eCmdHdlrInt, 0},
+    {"mysqlconfig.file", eCmdHdlrGetWord, 0},
+    {"mysqlconfig.section", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+	actpdescr};
 
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
+	    resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
-	pWrkrData->hmysql = NULL;
+	CODESTARTcreateWrkrInstance
+	    pWrkrData->hmysql = NULL;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -127,30 +124,30 @@ ENDisCompatibleWithFeature
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 {
-	if(pWrkrData->hmysql != NULL) {	/* just to be on the safe side... */
-		mysql_close(pWrkrData->hmysql);	
+	if (pWrkrData->hmysql != NULL) { /* just to be on the safe side... */
+		mysql_close(pWrkrData->hmysql);
 		pWrkrData->hmysql = NULL;
 	}
 }
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	free(pData->configfile);
+	CODESTARTfreeInstance
+	    free(pData->configfile);
 	free(pData->configsection);
 	free(pData->tplName);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
-	closeMySQL(pWrkrData);
+	CODESTARTfreeWrkrInstance
+	    closeMySQL(pWrkrData);
 	mysql_thread_end();
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	/* nothing special here */
+	CODESTARTdbgPrintInstInfo
+/* nothing special here */
 ENDdbgPrintInstInfo
 
 
@@ -165,20 +162,20 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 
 	/* output log message */
 	errno = 0;
-	if(pWrkrData->hmysql == NULL) {
+	if (pWrkrData->hmysql == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
 		uMySQLErrno = mysql_errno(pWrkrData->hmysql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uMySQLErrno,
-			mysql_error(pWrkrData->hmysql));
-		if(bSilent || uMySQLErrno == pWrkrData->uLastMySQLErrno)
+		    mysql_error(pWrkrData->hmysql));
+		if (bSilent || uMySQLErrno == pWrkrData->uLastMySQLErrno)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
 			pWrkrData->uLastMySQLErrno = uMySQLErrno;
 			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
-		
+
 	return;
 }
 
@@ -195,33 +192,33 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 	ASSERT(pWrkrData->hmysql == NULL);
 	pData = pWrkrData->pData;
 	pWrkrData->hmysql = mysql_init(NULL);
-	if(pWrkrData->hmysql == NULL) {
+	if (pWrkrData->hmysql == NULL) {
 		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
-		mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_GROUP,
-		((pData->configsection!=NULL)?(char*)pData->configsection:"client"));
-		if(pData->configfile!=NULL){
-			FILE * fp;
-			fp=fopen((char*)pData->configfile,"r");
-			int err=errno;
-			if(fp==NULL){
+		mysql_options(pWrkrData->hmysql, MYSQL_READ_DEFAULT_GROUP,
+		    ((pData->configsection != NULL) ? (char *)pData->configsection : "client"));
+		if (pData->configfile != NULL) {
+			FILE *fp;
+			fp = fopen((char *)pData->configfile, "r");
+			int err = errno;
+			if (fp == NULL) {
 				char msg[512];
-				snprintf(msg,sizeof(msg),"Could not open '%s' for reading",pData->configfile);
-				if(bSilent) {
+				snprintf(msg, sizeof(msg), "Could not open '%s' for reading", pData->configfile);
+				if (bSilent) {
 					char errStr[512];
 					rs_strerror_r(err, errStr, sizeof(errStr));
-					dbgprintf("mysql configuration error(%d): %s - %s\n",err,msg,errStr);
+					dbgprintf("mysql configuration error(%d): %s - %s\n", err, msg, errStr);
 				} else
-					errmsg.LogError(err,NO_ERRCODE,"mysql configuration error: %s\n",msg);
+					errmsg.LogError(err, NO_ERRCODE, "mysql configuration error: %s\n", msg);
 			} else {
 				fclose(fp);
-				mysql_options(pWrkrData->hmysql,MYSQL_READ_DEFAULT_FILE,pData->configfile);
+				mysql_options(pWrkrData->hmysql, MYSQL_READ_DEFAULT_FILE, pData->configfile);
 			}
 		}
 		/* Connect to database */
-		if(mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
-				      pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
+		if (mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid,
+			pData->dbpwd, pData->dbname, pData->dbsrvPort, NULL, 0) == NULL) {
 			reportDBError(pWrkrData, bSilent);
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -243,17 +240,16 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	DEFiRet;
 
 	/* see if we are ready to proceed */
-	if(pWrkrData->hmysql == NULL) {
+	if (pWrkrData->hmysql == NULL) {
 		CHKiRet(initMySQL(pWrkrData, 0));
-		
 	}
 
 	/* try insert */
-	if(mysql_query(pWrkrData->hmysql, (char*)psz)) {
+	if (mysql_query(pWrkrData->hmysql, (char *)psz)) {
 		/* error occured, try to re-init connection and retry */
-		closeMySQL(pWrkrData); /* close the current handle */
-		CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
-		if(mysql_query(pWrkrData->hmysql, (char*)psz)) { /* re-try insert */
+		closeMySQL(pWrkrData);				   /* close the current handle */
+		CHKiRet(initMySQL(pWrkrData, 0));		   /* try to re-open */
+		if (mysql_query(pWrkrData->hmysql, (char *)psz)) { /* re-try insert */
 			/* we failed, giving up for now */
 			reportDBError(pWrkrData, 0);
 			closeMySQL(pWrkrData); /* free ressources */
@@ -262,7 +258,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
 	}
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
+	if (iRet == RS_RET_OK) {
 		pWrkrData->uLastMySQLErrno = 0; /* reset error for error supression */
 	}
 
@@ -271,30 +267,30 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
-	if(pWrkrData->hmysql == NULL) {
+	CODESTARTtryResume if (pWrkrData->hmysql == NULL)
+	{
 		iRet = initMySQL(pWrkrData, 1);
 	}
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
-	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
+	CODESTARTbeginTransaction
+	CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
 finalize_it:
 ENDbeginTransaction
 
 BEGINdoAction
-CODESTARTdoAction
-	dbgprintf("\n");
+	CODESTARTdoAction
+	    dbgprintf("\n");
 	CHKiRet(writeMySQL(pWrkrData, ppString[0]));
 	iRet = RS_RET_DEFER_COMMIT;
 finalize_it:
 ENDdoAction
 
 BEGINendTransaction
-CODESTARTendTransaction
-	if(mysql_commit(pWrkrData->hmysql) != 0)	{	
-		dbgprintf("mysql server error: transaction not committed\n");		
+	CODESTARTendTransaction if (mysql_commit(pWrkrData->hmysql) != 0)
+	{
+		dbgprintf("mysql server error: transaction not committed\n");
 		iRet = RS_RET_SUSPENDED;
 	}
 ENDendTransaction
@@ -317,66 +313,67 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	char *cstr;
-CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	CODESTARTnewActInst if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	{
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	CODE_STD_STRING_REQUESTparseSelectorAct(1) for (i = 0; i < actpblk.nParams; ++i)
+	{
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "server")) {
+		if (!strcmp(actpblk.descr[i].name, "server")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			strncpy(pData->dbsrv, cstr, sizeof(pData->dbsrv));
 			free(cstr);
-		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->dbsrvPort = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "db")) {
+		} else if (!strcmp(actpblk.descr[i].name, "serverport")) {
+			pData->dbsrvPort = (int)pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "db")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			strncpy(pData->dbname, cstr, sizeof(pData->dbname));
 			free(cstr);
-		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
+		} else if (!strcmp(actpblk.descr[i].name, "uid")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			strncpy(pData->dbuid, cstr, sizeof(pData->dbuid));
 			free(cstr);
-		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
+		} else if (!strcmp(actpblk.descr[i].name, "pwd")) {
 			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			strncpy(pData->dbpwd, cstr, sizeof(pData->dbpwd));
 			free(cstr);
-		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
-			pData->configfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "mysqlconfig.section")) {
-			pData->configsection = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "mysqlconfig.file")) {
+			pData->configfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "mysqlconfig.section")) {
+			pData->configsection = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("ommysql: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+				  "param '%s'\n",
+			    actpblk.descr[i].name);
 		}
 	}
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdDBFmt"),
-			OMSR_RQD_TPL_OPT_SQL));
+	if (pData->tplName == NULL) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup(" StdDBFmt"),
+		    OMSR_RQD_TPL_OPT_SQL));
 	} else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_RQD_TPL_OPT_SQL));
+		    (uchar *)strdup((char *)pData->tplName),
+		    OMSR_RQD_TPL_OPT_SQL));
 	}
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 	int iMySQLPropErr = 0;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
 	 * support the newer slection syntax [:modname:]. This is in fact
 	 * recommended for new modules. Please note that over time this part
@@ -384,11 +381,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * a good compromise to do it at the module level.
 	 * rgerhards, 2007-10-15
 	 */
-	if(*p == '>') {
+	    if (*p == '>')
+	{
 		p++; /* eat '>' '*/
-	} else if(!strncmp((char*) p, ":ommysql:", sizeof(":ommysql:") - 1)) {
+	}
+	else if (!strncmp((char *)p, ":ommysql:", sizeof(":ommysql:") - 1))
+	{
 		p += sizeof(":ommysql:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
-	} else {
+	}
+	else
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
@@ -400,69 +402,69 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Now we read the MySQL connection properties 
 	 * and verify that the properties are valid.
 	 */
-	if(getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN+1, ','))
+	if (getSubString(&p, pData->dbsrv, MAXHOSTNAMELEN + 1, ','))
 		iMySQLPropErr++;
-	if(*pData->dbsrv == '\0')
+	if (*pData->dbsrv == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ','))
+	if (getSubString(&p, pData->dbname, _DB_MAXDBLEN + 1, ','))
 		iMySQLPropErr++;
-	if(*pData->dbname == '\0')
+	if (*pData->dbname == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbuid, _DB_MAXUNAMELEN+1, ','))
+	if (getSubString(&p, pData->dbuid, _DB_MAXUNAMELEN + 1, ','))
 		iMySQLPropErr++;
-	if(*pData->dbuid == '\0')
+	if (*pData->dbuid == '\0')
 		iMySQLPropErr++;
-	if(getSubString(&p, pData->dbpwd, _DB_MAXPWDLEN+1, ';'))
+	if (getSubString(&p, pData->dbpwd, _DB_MAXPWDLEN + 1, ';'))
 		iMySQLPropErr++;
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
 	 */
-	if(*(p-1) == ';')
-		--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
+	if (*(p - 1) == ';')
+		--p; /* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
 			 *       is clean enough for the time being -- rgerhards, 2007-07-30
 			 */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
-	
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar *)" StdDBFmt"));
+
 	/* If we detect invalid properties, we disable logging, 
 	 * because right properties are vital at this place.  
 	 * Retries make no sense. 
 	 */
-	if (iMySQLPropErr) { 
+	if (iMySQLPropErr) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
-		pData->dbsrvPort = (unsigned) cs.iSrvPort;	/* set configured port */
+		pData->dbsrvPort = (unsigned)cs.iSrvPort; /* set configured port */
 		pData->configfile = cs.pszMySQLConfigFile;
 		pData->configsection = cs.pszMySQLConfigSection;
 	}
 
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-#	ifdef HAVE_MYSQL_LIBRARY_INIT
+	CODESTARTmodExit
+#ifdef HAVE_MYSQL_LIBRARY_INIT
 	mysql_library_end();
-#	else
+#else
 	mysql_server_end();
-#	endif
+#endif
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+			CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	DEFiRet;
 	cs.iSrvPort = 0; /* zero is the default port */
@@ -474,39 +476,39 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if(!bCoreSupportsBatching) {	
+	if (!bCoreSupportsBatching) {
 		errmsg.LogError(0, NO_ERRCODE, "ommysql: rsyslog core too old");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* we need to init the MySQL library. If that fails, we cannot run */
-	if(
-#	ifdef HAVE_MYSQL_LIBRARY_INIT
-	   mysql_library_init(0, NULL, NULL)
-#	else
-	   mysql_server_init(0, NULL, NULL)
-#	endif
-	                                   ) {
+	if (
+#ifdef HAVE_MYSQL_LIBRARY_INIT
+	    mysql_library_init(0, NULL, NULL)
+#else
+	    mysql_server_init(0, NULL, NULL)
+#endif
+		) {
 		errmsg.LogError(0, NO_ERRCODE, "ommysql: intializing mysql client failed, plugin "
-		                "can not run");
+					       "can not run");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* register our config handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"ommysqlconfigfile",0,eCmdHdlrGetWord,NULL,&cs.pszMySQLConfigFile,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"ommysqlconfigsection",0,eCmdHdlrGetWord,NULL,&cs.pszMySQLConfigSection,
-	STD_LOADABLE_MODULE_ID));
+	    STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"ommysqlconfigfile", 0, eCmdHdlrGetWord, NULL, &cs.pszMySQLConfigFile,
+	    STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"ommysqlconfigsection", 0, eCmdHdlrGetWord, NULL, &cs.pszMySQLConfigSection,
+	    STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
-	NULL, STD_LOADABLE_MODULE_ID));
+	    NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

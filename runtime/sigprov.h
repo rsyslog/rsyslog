@@ -34,4 +34,4 @@ BEGINinterface(sigprov) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*OnFileClose)(void *pFileInstData);
 ENDinterface(sigprov)
 #define sigprovCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-#endif /* #ifndef INCLUDED_SIGPROV_H */
+#endif				 /* #ifndef INCLUDED_SIGPROV_H */

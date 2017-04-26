@@ -65,18 +65,18 @@
 
 #ifdef OS_SOLARIS
 #include <arpa/nameser_compat.h>
-#	define	s6_addr32	_S6_un._S6_u32
-	typedef unsigned int	u_int32_t;
+#define s6_addr32 _S6_un._S6_u32
+typedef unsigned int u_int32_t;
 #endif
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(prop)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(prop);
 
 #ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
 extern size_t SALEN(struct sockaddr *sa);
@@ -87,8 +87,8 @@ extern size_t SALEN(struct sockaddr *sa);
  * rgerhards, 2005-09-26
  */
 /* All of the five below are read-only after startup */
-struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
-struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
+struct AllowedSenders *pAllowedSenders_UDP = NULL;	    /* the roots of the allowed sender */
+struct AllowedSenders *pAllowedSenders_TCP = NULL;	    /* lists. If NULL, all senders are ok! */
 static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
 static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */
 #ifdef USE_GSSAPI
@@ -96,8 +96,8 @@ struct AllowedSenders *pAllowedSenders_GSS = NULL;
 static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 #endif
 
-int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
-int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
+int ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
+int ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
 
 
 /* ------------------------------ begin permitted peers code ------------------------------ */
@@ -111,12 +111,12 @@ setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
 {
 	DEFiRet;
 
-	if(!strcmp((char*)pszType, "UDP"))
+	if (!strcmp((char *)pszType, "UDP"))
 		*ppAllowRoot = pAllowedSenders_UDP;
-	else if(!strcmp((char*)pszType, "TCP"))
+	else if (!strcmp((char *)pszType, "TCP"))
 		*ppAllowRoot = pAllowedSenders_TCP;
 #ifdef USE_GSSAPI
-	else if(!strcmp((char*)pszType, "GSS"))
+	else if (!strcmp((char *)pszType, "GSS"))
 		*ppAllowRoot = pAllowedSenders_GSS;
 #endif
 	else {
@@ -135,12 +135,12 @@ reinitAllowRoot(uchar *pszType)
 {
 	DEFiRet;
 
-	if(!strcmp((char*)pszType, "UDP"))
+	if (!strcmp((char *)pszType, "UDP"))
 		pAllowedSenders_UDP = NULL;
-	else if(!strcmp((char*)pszType, "TCP"))
+	else if (!strcmp((char *)pszType, "TCP"))
 		pAllowedSenders_TCP = NULL;
 #ifdef USE_GSSAPI
-	else if(!strcmp((char*)pszType, "GSS"))
+	else if (!strcmp((char *)pszType, "GSS"))
 		pAllowedSenders_GSS = NULL;
 #endif
 	else {
@@ -160,7 +160,7 @@ finalize_it:
  * rgerhards, 2008-05-27
  */
 static rsRetVal
-AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
+AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar *pszStr, size_t lenStr)
 {
 	permittedPeerWildcard_t *pNew = NULL;
 	size_t iSrc;
@@ -172,30 +172,30 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 
 	CHKmalloc(pNew = calloc(1, sizeof(*pNew)));
 
-	if(lenStr == 0) { /* empty domain components are permitted */
+	if (lenStr == 0) { /* empty domain components are permitted */
 		pNew->wildcardType = PEER_WILDCARD_EMPTY_COMPONENT;
 		FINALIZE;
 	} else {
 		/* alloc memory for the domain component. We may waste a byte or
 		 * two, but that's ok.
 		 */
-		CHKmalloc(pNew->pszDomainPart = MALLOC(lenStr +1 ));
+		CHKmalloc(pNew->pszDomainPart = MALLOC(lenStr + 1));
 	}
 
-	if(pszStr[0] == '*') {
+	if (pszStr[0] == '*') {
 		pNew->wildcardType = PEER_WILDCARD_AT_START;
 		iSrc = 1; /* skip '*' */
 	} else {
 		iSrc = 0;
 	}
 
-	for(iDst = 0 ; iSrc < lenStr && pszStr[iSrc] != '*' ; ++iSrc, ++iDst)  {
+	for (iDst = 0; iSrc < lenStr && pszStr[iSrc] != '*'; ++iSrc, ++iDst) {
 		pNew->pszDomainPart[iDst] = pszStr[iSrc];
 	}
 
-	if(iSrc < lenStr) {
-		if(iSrc + 1 == lenStr && pszStr[iSrc] == '*') {
-			if(pNew->wildcardType == PEER_WILDCARD_AT_START) {
+	if (iSrc < lenStr) {
+		if (iSrc + 1 == lenStr && pszStr[iSrc] == '*') {
+			if (pNew->wildcardType == PEER_WILDCARD_AT_START) {
 				ABORT_FINALIZE(RS_RET_INVALID_WILDCARD);
 			} else {
 				pNew->wildcardType = PEER_WILDCARD_AT_END;
@@ -206,7 +206,7 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 		}
 	}
 
-	if(lenStr == 1 && pNew->wildcardType == PEER_WILDCARD_AT_START) {
+	if (lenStr == 1 && pNew->wildcardType == PEER_WILDCARD_AT_START) {
 		pNew->wildcardType = PEER_WILDCARD_MATCH_ALL;
 	}
 
@@ -214,18 +214,18 @@ AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
 	 * properly terminate the domain component string.
 	 */
 	pNew->pszDomainPart[iDst] = '\0';
-	pNew->lenDomainPart = strlen((char*)pNew->pszDomainPart);
+	pNew->lenDomainPart = strlen((char *)pNew->pszDomainPart);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pNew != NULL) {
-			if(pNew->pszDomainPart != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pNew != NULL) {
+			if (pNew->pszDomainPart != NULL)
 				free(pNew->pszDomainPart);
 			free(pNew);
 		}
 	} else {
 		/* enqueue the element */
-		if(pPeer->pWildcardRoot == NULL) {
+		if (pPeer->pWildcardRoot == NULL) {
 			pPeer->pWildcardRoot = pNew;
 			pPeer->pWildcardLast = pNew;
 		} else {
@@ -248,7 +248,7 @@ DestructPermittedPeerWildcards(permittedPeers_t *pPeer)
 
 	assert(pPeer != NULL);
 
-	for(pCurr = pPeer->pWildcardRoot ; pCurr != NULL ; /*EMPTY*/) {
+	for (pCurr = pPeer->pWildcardRoot; pCurr != NULL; /*EMPTY*/) {
 		pDel = pCurr;
 		pCurr = pCurr->pNext;
 		free(pDel->pszDomainPart);
@@ -268,7 +268,7 @@ DestructPermittedPeerWildcards(permittedPeers_t *pPeer)
  * no longer access it. -- rgerhards, 2008-05-19
  */
 static rsRetVal
-AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
+AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar *pszID)
 {
 	permittedPeers_t *pNew = NULL;
 	DEFiRet;
@@ -277,16 +277,16 @@ AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
 	assert(pszID != NULL);
 
 	CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t))); /* we use calloc() for consistency with "real" objects */
-	CHKmalloc(pNew->pszID = (uchar*)strdup((char*)pszID));
+	CHKmalloc(pNew->pszID = (uchar *)strdup((char *)pszID));
 
-	if(*ppRootPeer != NULL) {
+	if (*ppRootPeer != NULL) {
 		pNew->pNext = *ppRootPeer;
 	}
 	*ppRootPeer = pNew;
-		
+
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pNew != NULL)
 			free(pNew);
 	}
 	RETiRet;
@@ -303,7 +303,7 @@ DestructPermittedPeers(permittedPeers_t **ppRootPeer)
 
 	assert(ppRootPeer != NULL);
 
-	for(pCurr = *ppRootPeer ; pCurr != NULL ; /*EMPTY*/) {
+	for (pCurr = *ppRootPeer; pCurr != NULL; /*EMPTY*/) {
 		pDel = pCurr;
 		pCurr = pCurr->pNext;
 		DestructPermittedPeerWildcards(pDel);
@@ -333,10 +333,10 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 	assert(pPeer->pszID != NULL);
 
 	/* first check if we have a wildcard */
-	for(pC = pPeer->pszID ; *pC != '\0' && *pC != '*' ; ++pC)
+	for (pC = pPeer->pszID; *pC != '\0' && *pC != '*'; ++pC)
 		/*EMPTY, just skip*/;
 
-	if(*pC == '\0') {
+	if (*pC == '\0') {
 		/* no wildcard found, we are mostly done */
 		pPeer->etryType = PERM_PEER_TYPE_PLAIN;
 		FINALIZE;
@@ -350,25 +350,25 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 	 */
 	pPeer->etryType = PERM_PEER_TYPE_WILDCARD;
 	pC = pPeer->pszID;
-	while(*pC != '\0') {
+	while (*pC != '\0') {
 		pStart = pC;
 		/* find end of domain component */
-		for( ; *pC != '\0' && *pC != '.' ; ++pC)
+		for (; *pC != '\0' && *pC != '.'; ++pC)
 			/*EMPTY, just skip*/;
 		CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, pC - pStart));
 		/* now check if we have an empty component at end of string */
-		if(*pC == '.' && *(pC + 1) == '\0') {
+		if (*pC == '.' && *(pC + 1) == '\0') {
 			/* pStart is a dummy, it is not used if length is 0 */
-			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0)); 
+			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0));
 		}
-		if(*pC != '\0')
+		if (*pC != '\0')
 			++pC;
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error compiling wildcard expression '%s'",
-			 pPeer->pszID);
+		    pPeer->pszID);
 	}
 	RETiRet;
 }
@@ -384,7 +384,7 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 {
 	permittedPeerWildcard_t *pWildcard;
 	uchar *pC;
-	uchar *pStart; /* start of current domain component */
+	uchar *pStart;		 /* start of current domain component */
 	size_t iWildcard, iName; /* work indexes for backward comparisons */
 	DEFiRet;
 
@@ -392,12 +392,12 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 	assert(pszNameToMatch != NULL);
 	assert(pbIsMatching != NULL);
 
-	if(pPeer->etryType == PERM_PEER_TYPE_UNDECIDED) {
+	if (pPeer->etryType == PERM_PEER_TYPE_UNDECIDED) {
 		PermittedPeerWildcardCompile(pPeer);
 	}
 
-	if(pPeer->etryType == PERM_PEER_TYPE_PLAIN) {
-		*pbIsMatching = !strcmp((char*)pPeer->pszID, (char*)pszNameToMatch);
+	if (pPeer->etryType == PERM_PEER_TYPE_PLAIN) {
+		*pbIsMatching = !strcmp((char *)pPeer->pszID, (char *)pszNameToMatch);
 		FINALIZE;
 	}
 
@@ -406,69 +406,67 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 	 */
 	pWildcard = pPeer->pWildcardRoot;
 	pC = pszNameToMatch;
-	while(*pC != '\0') {
-		if(pWildcard == NULL) {
+	while (*pC != '\0') {
+		if (pWildcard == NULL) {
 			/* we have more domain components than we have wildcards --> no match */
 			*pbIsMatching = 0;
 			FINALIZE;
 		}
 		pStart = pC;
-		while(*pC != '\0' && *pC != '.') {
+		while (*pC != '\0' && *pC != '.') {
 			++pC;
 		}
 
 		/* got the component, now do the match */
-		switch(pWildcard->wildcardType) {
-			case PEER_WILDCARD_NONE:
-				if(   pWildcard->lenDomainPart != (size_t) (pC - pStart)
-				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pC - pStart)) {
+		switch (pWildcard->wildcardType) {
+		case PEER_WILDCARD_NONE:
+			if (pWildcard->lenDomainPart != (size_t)(pC - pStart) || strncmp((char *)pStart, (char *)pWildcard->pszDomainPart, pC - pStart)) {
+				*pbIsMatching = 0;
+				FINALIZE;
+			}
+			break;
+		case PEER_WILDCARD_AT_START:
+			/* we need to do the backwards-matching manually */
+			if (pWildcard->lenDomainPart > (size_t)(pC - pStart)) {
+				*pbIsMatching = 0;
+				FINALIZE;
+			}
+			iName = (size_t)(pC - pStart) - pWildcard->lenDomainPart;
+			iWildcard = 0;
+			while (iWildcard < pWildcard->lenDomainPart) {
+				if (pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
 					*pbIsMatching = 0;
 					FINALIZE;
 				}
-				break;
-			case PEER_WILDCARD_AT_START:
-				/* we need to do the backwards-matching manually */
-				if(pWildcard->lenDomainPart > (size_t) (pC - pStart)) {
-					*pbIsMatching = 0;
-					FINALIZE;
-				}
-				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
-				iWildcard = 0;
-				while(iWildcard < pWildcard->lenDomainPart) {
-					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
-						*pbIsMatching = 0;
-						FINALIZE;
-					}
-					++iName;
-					++iWildcard;
-				}
-				break;
-			case PEER_WILDCARD_AT_END:
-				if(   pWildcard->lenDomainPart > (size_t) (pC - pStart)
-				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
-					*pbIsMatching = 0;
-					FINALIZE;
-				}
-				break;
-			case PEER_WILDCARD_MATCH_ALL:
-				/* everything is OK, just continue */
-				break;
-			case PEER_WILDCARD_EMPTY_COMPONENT:
-				if(pC - pStart > 0) {
-				   	/* if it is not empty, it is no match... */
-					*pbIsMatching = 0;
-					FINALIZE;
-				}
-				break;
+				++iName;
+				++iWildcard;
+			}
+			break;
+		case PEER_WILDCARD_AT_END:
+			if (pWildcard->lenDomainPart > (size_t)(pC - pStart) || strncmp((char *)pStart, (char *)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
+				*pbIsMatching = 0;
+				FINALIZE;
+			}
+			break;
+		case PEER_WILDCARD_MATCH_ALL:
+			/* everything is OK, just continue */
+			break;
+		case PEER_WILDCARD_EMPTY_COMPONENT:
+			if (pC - pStart > 0) {
+				/* if it is not empty, it is no match... */
+				*pbIsMatching = 0;
+				FINALIZE;
+			}
+			break;
 		}
-		pWildcard =  pWildcard->pNext; /* we processed this entry */
+		pWildcard = pWildcard->pNext; /* we processed this entry */
 
 		/* skip '.' if we had it and so prepare for next iteration */
-		if(*pC == '.')
+		if (*pC == '.')
 			++pC;
 	}
 
-	if(pWildcard != NULL) {
+	if (pWildcard != NULL) {
 		/* we have more domain components than in the name to be
 		 * checked. So this is no match.
 		 */
@@ -488,29 +486,31 @@ finalize_it:
 
 /* Code for handling allowed/disallowed senders
  */
-static void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
+static void MaskIP6(struct in6_addr *addr, uint8_t bits)
+{
 	register uint8_t i;
-	
-	assert (addr != NULL);
-	assert (bits <= 128);
-	
-	i = bits/32;
-	if (bits%32)
+
+	assert(addr != NULL);
+	assert(bits <= 128);
+
+	i = bits / 32;
+	if (bits % 32)
 		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
-	for (; i < (sizeof addr->s6_addr32)/4; i++)
+	for (; i < (sizeof addr->s6_addr32) / 4; i++)
 		addr->s6_addr32[i] = 0;
 }
 
-static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
-	
-	assert (addr != NULL);
-	assert (bits <=32 );
-	
+static void MaskIP4(struct in_addr *addr, uint8_t bits)
+{
+
+	assert(addr != NULL);
+	assert(bits <= 32);
+
 	addr->s_addr &= htonl(0xffffffff << (32 - bits));
 }
 
-#define SIN(sa)  ((struct sockaddr_in  *)(void*)(sa))
-#define SIN6(sa) ((struct sockaddr_in6 *)(void*)(sa))
+#define SIN(sa) ((struct sockaddr_in *)(void *)(sa))
+#define SIN6(sa) ((struct sockaddr_in6 *)(void *)(sa))
 
 
 /* This is a cancel-safe getnameinfo() version, because we learned
@@ -520,8 +520,8 @@ static void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
  */
 static int
 mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
-                       char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
+    char *host, size_t hostlen,
+    char *serv, size_t servlen, int flags)
 {
 	int iCancelStateSave;
 	int i;
@@ -541,7 +541,7 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
  * rgerhards, 2007-07-17
  */
 static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     		      struct NetAddr *iAllow, uint8_t iSignificantBits)
+    struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
 	struct AllowedSenders *pEntry = NULL;
 
@@ -549,22 +549,22 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 	assert(ppLast != NULL);
 	assert(iAllow != NULL);
 
-	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
+	if ((pEntry = (struct AllowedSenders *)calloc(1, sizeof(struct AllowedSenders))) == NULL) {
 		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 	}
-	
-	memcpy(&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
+
+	memcpy(&(pEntry->allowedSender), iAllow, sizeof(struct NetAddr));
 	pEntry->pNext = NULL;
 	pEntry->SignificantBits = iSignificantBits;
-	
+
 	/* enqueue */
-	if(*ppRoot == NULL) {
+	if (*ppRoot == NULL) {
 		*ppRoot = pEntry;
 	} else {
 		(*ppLast)->pNext = pEntry;
 	}
 	*ppLast = pEntry;
-	
+
 	return RS_RET_OK;
 }
 
@@ -579,14 +579,14 @@ clearAllowedSenders(uchar *pszType)
 	struct AllowedSenders *pPrev;
 	struct AllowedSenders *pCurr = NULL;
 
-	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
-		return;	/* if something went wrong, so let's leave */
-	
-	while(pCurr != NULL) {
+	if (setAllowRoot(&pCurr, pszType) != RS_RET_OK)
+		return; /* if something went wrong, so let's leave */
+
+	while (pCurr != NULL) {
 		pPrev = pCurr;
 		pCurr = pCurr->pNext;
 		/* now delete the entry we are right now processing */
-		if(F_ISSET(pPrev->allowedSender.flags, ADDR_NAME))
+		if (F_ISSET(pPrev->allowedSender.flags, ADDR_NAME))
 			free(pPrev->allowedSender.addr.HostWildcard);
 		else
 			free(pPrev->allowedSender.addr.NetAddr);
@@ -611,7 +611,7 @@ clearAllowedSenders(uchar *pszType)
  * added (all addresses from that host).
  */
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
+    struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
 	DEFiRet;
 
@@ -620,32 +620,32 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	assert(iAllow != NULL);
 
 	if (!F_ISSET(iAllow->flags, ADDR_NAME)) {
-		if(iSignificantBits == 0)
+		if (iSignificantBits == 0)
 			/* we handle this seperatly just to provide a better
 			 * error message.
 			 */
 			errmsg.LogError(0, NO_ERRCODE, "You can not specify 0 bits of the netmask, this would "
-				 "match ALL systems. If you really intend to do that, "
-				 "remove all $AllowedSender directives.");
-		
+						       "match ALL systems. If you really intend to do that, "
+						       "remove all $AllowedSender directives.");
+
 		switch (iAllow->addr.NetAddr->sa_family) {
 		case AF_INET:
-			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
+			if ((iSignificantBits < 1) || (iSignificantBits > 32)) {
 				errmsg.LogError(0, NO_ERRCODE, "Invalid number of bits (%d) in IPv4 address - adjusted to 32",
-					    (int)iSignificantBits);
+				    (int)iSignificantBits);
 				iSignificantBits = 32;
 			}
-			
-			MaskIP4 (&(SIN(iAllow->addr.NetAddr)->sin_addr), iSignificantBits);
+
+			MaskIP4(&(SIN(iAllow->addr.NetAddr)->sin_addr), iSignificantBits);
 			break;
 		case AF_INET6:
-			if((iSignificantBits < 1) || (iSignificantBits > 128)) {
+			if ((iSignificantBits < 1) || (iSignificantBits > 128)) {
 				errmsg.LogError(0, NO_ERRCODE, "Invalid number of bits (%d) in IPv6 address - adjusted to 128",
-					    iSignificantBits);
+				    iSignificantBits);
 				iSignificantBits = 128;
 			}
 
-			MaskIP6 (&(SIN6(iAllow->addr.NetAddr)->sin6_addr), iSignificantBits);
+			MaskIP6(&(SIN6(iAllow->addr.NetAddr)->sin6_addr), iSignificantBits);
 			break;
 		default:
 			/* rgerhards, 2007-07-16: We have an internal program error in this
@@ -656,102 +656,102 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			 * log.
 			 */
 			errmsg.LogError(0, NO_ERRCODE, "Internal error caused AllowedSender to be ignored, AF = %d",
-				    iAllow->addr.NetAddr->sa_family);
+			    iAllow->addr.NetAddr->sa_family);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		/* OK, entry constructed, now lets add it to the ACL list */
 		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 	} else {
 		/* we need to process a hostname ACL */
-		if(glbl.GetDisableDNS()) {
+		if (glbl.GetDisableDNS()) {
 			errmsg.LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
-		
-		if (!strchr (iAllow->addr.HostWildcard, '*') &&
-		    !strchr (iAllow->addr.HostWildcard, '?') &&
+
+		if (!strchr(iAllow->addr.HostWildcard, '*') &&
+		    !strchr(iAllow->addr.HostWildcard, '?') &&
 		    ACLDontResolve == 0) {
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
 			struct addrinfo hints, *res, *restmp;
 			struct NetAddr allowIP;
-			
-			memset (&hints, 0, sizeof (struct addrinfo));
+
+			memset(&hints, 0, sizeof(struct addrinfo));
 			hints.ai_family = AF_UNSPEC;
 			hints.ai_socktype = SOCK_DGRAM;
-#			ifdef AI_ADDRCONFIG /* seems not to be present on all systems */
-				hints.ai_flags  = AI_ADDRCONFIG;
-#			endif
+#ifdef AI_ADDRCONFIG /* seems not to be present on all systems */
+			hints.ai_flags = AI_ADDRCONFIG;
+#endif
 
-			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
-			        errmsg.LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
-				
+			if (getaddrinfo(iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
+				errmsg.LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
+
 				if (ACLAddHostnameOnFail) {
-				        errmsg.LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
-					"entry.", iAllow->addr.HostWildcard);
-				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+					errmsg.LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard "
+								       "entry.",
+					    iAllow->addr.HostWildcard);
+					iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
-				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
-				        ABORT_FINALIZE(RS_RET_NOENTRY);
+					errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+					ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
-			
-			for (restmp = res ; res != NULL ; res = res->ai_next) {
+
+			for (restmp = res; res != NULL; res = res->ai_next) {
 				switch (res->ai_family) {
 				case AF_INET: /* add IPv4 */
 					iSignificantBits = 32;
 					allowIP.flags = 0;
-					if((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
+					if ((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
 						ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 					}
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
-					
-					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
-						!= RS_RET_OK) {
+
+					if ((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits)) != RS_RET_OK) {
 						free(allowIP.addr.NetAddr);
 						FINALIZE;
 					}
 					break;
 				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
-					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
+					if (IN6_IS_ADDR_V4MAPPED(&SIN6(res->ai_addr)->sin6_addr)) {
 						/* extract & add IPv4 */
-						
+
 						iSignificantBits = 32;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = (struct sockaddr *) MALLOC(sizeof(struct sockaddr)))
-						    == NULL) {
+						if ((allowIP.addr.NetAddr = (struct sockaddr *)MALLOC(sizeof(struct sockaddr))) == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
-						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
-#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN    
-                                                SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
+						SIN(allowIP.addr.NetAddr)
+						    ->sin_family = AF_INET;
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+						SIN(allowIP.addr.NetAddr)
+						    ->sin_len = sizeof(struct sockaddr_in);
 #endif
-						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
+						SIN(allowIP.addr.NetAddr)
+						    ->sin_port = 0;
 						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
-							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
-							sizeof (in_addr_t));
+						    &(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
+						    sizeof(in_addr_t));
 
-						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
-								iSignificantBits))
-							!= RS_RET_OK) {
+						if ((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+							 iSignificantBits)) != RS_RET_OK) {
 							free(allowIP.addr.NetAddr);
 							FINALIZE;
 						}
 					} else {
 						/* finally add IPv6 */
-						
+
 						iSignificantBits = 128;
 						allowIP.flags = 0;
-						if((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
+						if ((allowIP.addr.NetAddr = MALLOC(res->ai_addrlen)) == NULL) {
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
-						
-						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
-								iSignificantBits))
-							!= RS_RET_OK) {
+
+						if ((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+							 iSignificantBits)) != RS_RET_OK) {
 							free(allowIP.addr.NetAddr);
 							FINALIZE;
 						}
@@ -759,13 +759,13 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					break;
 				}
 			}
-			freeaddrinfo (restmp);
+			freeaddrinfo(restmp);
 		} else {
 			/* wildcards in hostname - we need to add a text-based ACL.
 			 * For this, we already have everything ready and just need
 			 * to pass it along...
 			 */
-			iRet =  AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+			iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 		}
 	}
 
@@ -783,58 +783,55 @@ PrintAllowedSenders(int iListToPrint)
 {
 	struct AllowedSenders *pSender;
 	uchar szIP[64];
-	
+
 #ifdef _AIX
-#ifdef USE_GSSAPI 
+#ifdef USE_GSSAPI
 	assert((iListToPrint == 1) || (iListToPrint == 2) || (iListToPrint == 3));
 	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
-	       (iListToPrint == 3) ? "GSS" :
-	       "TCP");
-#else 
+	    (iListToPrint == 1) ? "UDP" : (iListToPrint == 3) ? "GSS" : "TCP");
+#else
 	assert((iListToPrint == 1) || (iListToPrint == 2));
 	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
-	       "TCP");
+	    (iListToPrint == 1) ? "UDP" : "TCP");
 #endif /* USE_GSSAPI */
-#else /* _AIX */
-	assert((iListToPrint == 1) || (iListToPrint == 2) 
-#ifdef USE_GSSAPI 
-	       || (iListToPrint == 3)  
-#endif 
-	       );
+#else  /* _AIX */
+	assert((iListToPrint == 1) || (iListToPrint == 2)
+#ifdef USE_GSSAPI
+	       || (iListToPrint == 3)
+#endif
+		);
 
 	dbgprintf("Allowed %s Senders:\n",
-	       (iListToPrint == 1) ? "UDP" :
+	    (iListToPrint == 1) ? "UDP" :
 #ifdef USE_GSSAPI
-	       (iListToPrint == 3) ? "GSS" :
+				(iListToPrint == 3) ? "GSS" :
 #endif
-	       "TCP");
+						    "TCP");
 #endif /* End of _AIX */
 
 	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
 #ifdef USE_GSSAPI
-		(iListToPrint == 3) ? pAllowedSenders_GSS :
+				      (iListToPrint == 3) ? pAllowedSenders_GSS :
 #endif
-		pAllowedSenders_TCP;
-	if(pSender == NULL) {
+							  pAllowedSenders_TCP;
+	if (pSender == NULL) {
 		dbgprintf("\tNo restrictions set.\n");
 	} else {
-		while(pSender != NULL) {
+		while (pSender != NULL) {
 			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
-				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
+				dbgprintf("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
-				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
-						     SALEN(pSender->allowedSender.addr.NetAddr),
-						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
-					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
+				if (mygetnameinfo(pSender->allowedSender.addr.NetAddr,
+					SALEN(pSender->allowedSender.addr.NetAddr),
+					(char *)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+					dbgprintf("\t%s/%u\n", szIP, pSender->SignificantBits);
 				} else {
 					/* getnameinfo() failed - but as this is only a
 					 * debug function, we simply spit out an error and do
 					 * not care much about it.
 					 */
 					dbgprintf("\tERROR in getnameinfo() - something may be wrong "
-						"- ignored for now\n");
+						  "- ignored for now\n");
 				}
 			}
 			pSender = pSender->pNext;
@@ -848,7 +845,7 @@ PrintAllowedSenders(int iListToPrint)
  * rgerhards, 2005-09-27
  */
 static rsRetVal
-addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
+addAllowedSenderLine(char *pName, uchar **ppRestOfConfLine)
 {
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
@@ -861,20 +858,21 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 	assert(ppRestOfConfLine != NULL);
 	assert(*ppRestOfConfLine != NULL);
 
-	if(!strcasecmp(pName, "udp")) {
+	if (!strcasecmp(pName, "udp")) {
 		ppRoot = &pAllowedSenders_UDP;
 		ppLast = &pLastAllowedSenders_UDP;
-	} else if(!strcasecmp(pName, "tcp")) {
+	} else if (!strcasecmp(pName, "tcp")) {
 		ppRoot = &pAllowedSenders_TCP;
 		ppLast = &pLastAllowedSenders_TCP;
 #ifdef USE_GSSAPI
-	} else if(!strcasecmp(pName, "gss")) {
+	} else if (!strcasecmp(pName, "gss")) {
 		ppRoot = &pAllowedSenders_GSS;
 		ppLast = &pLastAllowedSenders_GSS;
 #endif
 	} else {
 		errmsg.LogError(0, RS_RET_ERR, "Invalid protocol '%s' in allowed sender "
-		           "list, line ignored", pName);
+					       "list, line ignored",
+		    pName);
 		return RS_RET_ERR;
 	}
 
@@ -883,41 +881,43 @@ addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 	 * for this.
 	 */
 	/* create parser object starting with line string without leading colon */
-	if((iRet = rsParsConstructFromSz(&pPars, (uchar*) *ppRestOfConfLine) != RS_RET_OK)) {
+	if ((iRet = rsParsConstructFromSz(&pPars, (uchar *)*ppRestOfConfLine) != RS_RET_OK)) {
 		errmsg.LogError(0, iRet, "Error %d constructing parser object - ignoring allowed sender list", iRet);
-		return(iRet);
+		return (iRet);
 	}
 
-	while(!parsIsAtEndOfParseString(pPars)) {
-		if(parsPeekAtCharAtParsPtr(pPars) == '#')
+	while (!parsIsAtEndOfParseString(pPars)) {
+		if (parsPeekAtCharAtParsPtr(pPars) == '#')
 			break; /* a comment-sign stops processing of line */
 		/* now parse a single IP address */
-		if((iRet = parsAddrWithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
+		if ((iRet = parsAddrWithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
 			errmsg.LogError(0, iRet, "Error %d parsing address in allowed sender"
-				    "list - ignoring.", iRet);
+						 "list - ignoring.",
+			    iRet);
 			rsParsDestruct(pPars);
-			return(iRet);
+			return (iRet);
 		}
-		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits)) != RS_RET_OK) {
-		        if(iRet == RS_RET_NOENTRY) {
-			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
-					    "- ignoring.", iRet);
-		        } else {
-			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
-					    "- terminating, nothing more will be added.", iRet);
+		if ((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits)) != RS_RET_OK) {
+			if (iRet == RS_RET_NOENTRY) {
+				errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
+							 "- ignoring.",
+				    iRet);
+			} else {
+				errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
+							 "- terminating, nothing more will be added.",
+				    iRet);
 				rsParsDestruct(pPars);
 				free(uIP);
-				return(iRet);
-		        }
+				return (iRet);
+			}
 		}
-		free (uIP); /* copy stored in AllowedSenders list */ 
+		free(uIP); /* copy stored in AllowedSenders list */
 	}
 
 	/* cleanup */
 	*ppRestOfConfLine += parsGetCurrentPosition(pPars);
 	return rsParsDestruct(pPars);
 }
-
 
 
 /* compares a host to an allowed sender list entry. Handles all subleties
@@ -932,23 +932,22 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 	assert(pAllow != NULL);
 	assert(pFrom != NULL);
 
-	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
-		if(bChkDNS == 0)
+	if (F_ISSET(pAllow->flags, ADDR_NAME)) {
+		if (bChkDNS == 0)
 			return 2;
 		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
-		
-#		if !defined(FNM_CASEFOLD)
-			/* TODO: I don't know if that then works, seen on HP UX, what I have not in lab... ;) */
-			return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE) == 0);
-#		else
-			return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
-#		endif
-	} else {/* We need to compare an IP address */
+
+#if !defined(FNM_CASEFOLD)
+		/* TODO: I don't know if that then works, seen on HP UX, what I have not in lab... ;) */
+		return (fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE) == 0);
+#else
+		return (fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE | FNM_CASEFOLD) == 0);
+#endif
+	} else { /* We need to compare an IP address */
 		switch (pFrom->sa_family) {
 		case AF_INET:
 			if (AF_INET == pAllow->addr.NetAddr->sa_family)
-				return(( SIN(pFrom)->sin_addr.s_addr & htonl(0xffffffff << (32 - bits)) )
-				       == SIN(pAllow->addr.NetAddr)->sin_addr.s_addr);
+				return ((SIN(pFrom)->sin_addr.s_addr & htonl(0xffffffff << (32 - bits))) == SIN(pAllow->addr.NetAddr)->sin_addr.s_addr);
 			else
 				return 0;
 			break;
@@ -957,25 +956,24 @@ MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char
 			case AF_INET6: {
 				struct in6_addr ip, net;
 				register uint8_t i;
-				
-				memcpy (&ip,  &(SIN6(pFrom))->sin6_addr, sizeof (struct in6_addr));
-				memcpy (&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof (struct in6_addr));
-				
-				i = bits/32;
+
+				memcpy(&ip, &(SIN6(pFrom))->sin6_addr, sizeof(struct in6_addr));
+				memcpy(&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof(struct in6_addr));
+
+				i = bits / 32;
 				if (bits % 32)
 					ip.s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
-				for (; i < (sizeof ip.s6_addr32)/4; i++)
+				for (; i < (sizeof ip.s6_addr32) / 4; i++)
 					ip.s6_addr32[i] = 0;
-				
-				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
-					(SIN6(pAllow->addr.NetAddr)->sin6_scope_id != 0 ?
-					 SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id : 1));
+
+				return (memcmp(ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
+					(SIN6(pAllow->addr.NetAddr)->sin6_scope_id != 0 ? SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id : 1));
 			}
 			case AF_INET: {
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
-				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
-				
-				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
+				struct in_addr *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
+
+				if ((ip6->s6_addr32[3] & (u_int32_t)htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
 #if BYTE_ORDER == LITTLE_ENDIAN
 				    (ip6->s6_addr32[2] == (u_int32_t)0xffff0000) &&
 #else
@@ -1010,28 +1008,28 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
 {
 	struct AllowedSenders *pAllow;
 	struct AllowedSenders *pAllowRoot = NULL;
-	int bNeededDNS = 0;	/* partial check because we could not resolve DNS? */
+	int bNeededDNS = 0; /* partial check because we could not resolve DNS? */
 	int ret;
 
 	assert(pFrom != NULL);
-	
-	if(setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
-		return 0;	/* if something went wrong, we deny access - that's the better choice... */
 
-	if(pAllowRoot == NULL)
+	if (setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
+		return 0; /* if something went wrong, we deny access - that's the better choice... */
+
+	if (pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
-	
+
 	/* now we loop through the list of allowed senders. As soon as
 	 * we find a match, we return back (indicating allowed). We loop
 	 * until we are out of allowed senders. If so, we fall through the
 	 * loop and the function's terminal return statement will indicate
 	 * that the sender is disallowed.
 	 */
-	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
-		ret = MaskCmp (&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost, bChkDNS);
-		if(ret == 1)
+	for (pAllow = pAllowRoot; pAllow != NULL; pAllow = pAllow->pNext) {
+		ret = MaskCmp(&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost, bChkDNS);
+		if (ret == 1)
 			return 1;
-		else if(ret == 2)
+		else if (ret == 2)
 			bNeededDNS = 2;
 	}
 	return bNeededDNS;
@@ -1040,7 +1038,8 @@ static int isAllowedSender2(uchar *pszType, struct sockaddr *pFrom, const char *
 
 /* legacy API, not to be used any longer */
 static int
-isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost) {
+isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost)
+{
 	return isAllowedSender2(pszType, pFrom, pszFromHost, 1);
 }
 
@@ -1058,36 +1057,36 @@ static int
 should_use_so_bsdcompat(void)
 {
 #ifndef OS_BSD
-    static int init_done = 0;
-    static int so_bsdcompat_is_obsolete = 0;
+	static int init_done = 0;
+	static int so_bsdcompat_is_obsolete = 0;
 
-    if (!init_done) {
-	struct utsname myutsname;
-	unsigned int version, patchlevel;
+	if (!init_done) {
+		struct utsname myutsname;
+		unsigned int version, patchlevel;
 
-	init_done = 1;
-	if (uname(&myutsname) < 0) {
-		char errStr[1024];
-		dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		return 1;
-	}
-	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
+		init_done = 1;
+		if (uname(&myutsname) < 0) {
+			char errStr[1024];
+			dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
+			return 1;
+		}
+		/* Format is <version>.<patchlevel>.<sublevel><extraversion>
 	   where the first three are unsigned integers and the last
 	   is an arbitrary string. We only care about the first two. */
-	if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
-	    dbgprintf("uname: unexpected release '%s'\r\n",
-		    myutsname.release);
-	    return 1;
-	}
-	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
+		if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
+			dbgprintf("uname: unexpected release '%s'\r\n",
+			    myutsname.release);
+			return 1;
+		}
+		/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
 	   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
-	if (version > 2 || (version == 2 && patchlevel >= 5))
-	    so_bsdcompat_is_obsolete = 1;
-    }
-    return !so_bsdcompat_is_obsolete;
-#else	/* #ifndef OS_BSD */
-    return 1;
-#endif	/* #ifndef OS_BSD */
+		if (version > 2 || (version == 2 && patchlevel >= 5))
+			so_bsdcompat_is_obsolete = 1;
+	}
+	return !so_bsdcompat_is_obsolete;
+#else  /* #ifndef OS_BSD */
+	return 1;
+#endif /* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
 /* this shall prevent compiler errors due to undfined name */
@@ -1106,15 +1105,15 @@ debugListenInfo(int fd, char *type)
 	struct sockaddr_storage sa;
 	socklen_t saLen = sizeof(sa);
 
-	if(getsockname(fd, (struct sockaddr *) &sa, &saLen) == 0) {
-		switch(sa.ss_family) {
+	if (getsockname(fd, (struct sockaddr *)&sa, &saLen) == 0) {
+		switch (sa.ss_family) {
 		case PF_INET:
 			szFamily = "IPv4";
-			port = ntohs(((struct sockaddr_in *) &sa)->sin_port);
+			port = ntohs(((struct sockaddr_in *)&sa)->sin_port);
 			break;
 		case PF_INET6:
 			szFamily = "IPv6";
-			port = ntohs(((struct sockaddr_in6 *) &sa)->sin6_port);
+			port = ntohs(((struct sockaddr_in6 *)&sa)->sin6_port);
 			break;
 		default:
 			szFamily = "other";
@@ -1122,7 +1121,7 @@ debugListenInfo(int fd, char *type)
 			break;
 		}
 		dbgprintf("Listening on %s syslogd socket %d (%s/port %d).\n",
-			type, fd, szFamily, port);
+		    type, fd, szFamily, port);
 		return;
 	}
 
@@ -1166,28 +1165,28 @@ getLocalHostname(uchar **ppName)
 	uchar *fqdn = NULL;
 	int empty_hostname = 1;
 
-	if(gethostname(hnbuf, sizeof(hnbuf)) != 0) {
+	if (gethostname(hnbuf, sizeof(hnbuf)) != 0) {
 		strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
 	} else {
 		/* now guard against empty hostname
 		 * see https://github.com/rsyslog/rsyslog/issues/1040
 		 */
-		if(hnbuf[0] == '\0') {
+		if (hnbuf[0] == '\0') {
 			strcpy(hnbuf, EMPTY_HOSTNAME_REPLACEMENT);
 		} else {
 			empty_hostname = 0;
-			hnbuf[sizeof(hnbuf)-1] = '\0'; /* be on the safe side... */
+			hnbuf[sizeof(hnbuf) - 1] = '\0'; /* be on the safe side... */
 		}
 	}
 
 	char *dot = strstr(hnbuf, ".");
 	struct addrinfo *res = NULL;
-	if(!empty_hostname && dot == NULL) {
+	if (!empty_hostname && dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
 		struct addrinfo flags;
 		memset(&flags, 0, sizeof(flags));
 		flags.ai_flags = AI_CANONNAME;
-		int error = getaddrinfo((char*)hnbuf, NULL, &flags, &res);
+		int error = getaddrinfo((char *)hnbuf, NULL, &flags, &res);
 		if (error != 0) {
 			dbgprintf("getaddrinfo: %s\n", gai_strerror(error));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -1196,19 +1195,19 @@ getLocalHostname(uchar **ppName)
 			/* When AI_CANONNAME is set first member of res linked-list */
 			/* should contain what we need */
 			if (res->ai_canonname != NULL && res->ai_canonname[0] != '\0') {
-				CHKmalloc(fqdn = (uchar*)strdup(res->ai_canonname));
+				CHKmalloc(fqdn = (uchar *)strdup(res->ai_canonname));
 			}
-			dot = strstr((char*)fqdn, ".");
+			dot = strstr((char *)fqdn, ".");
 		}
 	}
 
-	if(fqdn == NULL) {
+	if (fqdn == NULL) {
 		/* already was FQDN or we could not obtain a better one */
-		CHKmalloc(fqdn = (uchar*) strdup(hnbuf));
+		CHKmalloc(fqdn = (uchar *)strdup(hnbuf));
 	}
 
-	if(dot != NULL)
-		for(char *p = dot+1 ; *p ; ++p)
+	if (dot != NULL)
+		for (char *p = dot + 1; *p; ++p)
 			*p = tolower(*p);
 
 	*ppName = fqdn;
@@ -1229,9 +1228,9 @@ closeUDPListenSockets(int *pSockArr)
 	register int i;
 
 	assert(pSockArr != NULL);
-        if(pSockArr != NULL) {
-	        for (i = 0; i < *pSockArr; i++)
-	                close(pSockArr[i+1]);
+	if (pSockArr != NULL) {
+		for (i = 0; i < *pSockArr; i++)
+			close(pSockArr[i + 1]);
 		free(pSockArr);
 	}
 }
@@ -1246,83 +1245,83 @@ closeUDPListenSockets(int *pSockArr)
 static int *
 create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
 {
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks, on = 1;
+	struct addrinfo hints, *res, *r;
+	int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 	int actrcvbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
 	assert(!((pszPort == NULL) && (hostname == NULL)));
-        memset(&hints, 0, sizeof(hints));
-	if(bIsServer)
+	memset(&hints, 0, sizeof(hints));
+	if (bIsServer)
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_DGRAM;
- #if defined (_AIX)
-/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP 
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_DGRAM;
+#if defined(_AIX)
+	/* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP 
  *           getaddrinfo needs this hint on AIX
  */
-        hints.ai_protocol = IPPROTO_UDP;
+	hints.ai_protocol = IPPROTO_UDP;
 #endif
-        error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
-        if(error) {
-               errmsg.LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
-	       errmsg.LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
-	       return NULL;
+	error = getaddrinfo((char *)hostname, (char *)pszPort, &hints, &res);
+	if (error) {
+		errmsg.LogError(0, NO_ERRCODE, "%s", gai_strerror(error));
+		errmsg.LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
+		return NULL;
 	}
 
-        /* Count max number of sockets we may open */
-        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for (maxs = 0, r = res; r != NULL; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        socks = MALLOC((maxs+1) * sizeof(int));
-        if (socks == NULL) {
+	socks = MALLOC((maxs + 1) * sizeof(int));
+	if (socks == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP "
-		"message reception");
-               freeaddrinfo(res);
-               return NULL;
-        }
+					       "message reception");
+		freeaddrinfo(res);
+		return NULL;
+	}
 
-        *socks = 0;   /* num of sockets counter at start of array */
-        s = socks + 1;
-	for (r = res; r != NULL ; r = r->ai_next) {
-#if defined (_AIX)
-/* AIXPORT : socktype will be SOCK_DGRAM, as set in hints above */
-               *s = socket(r->ai_family, SOCK_DGRAM, r->ai_protocol);
+	*socks = 0; /* num of sockets counter at start of array */
+	s = socks + 1;
+	for (r = res; r != NULL; r = r->ai_next) {
+#if defined(_AIX)
+		/* AIXPORT : socktype will be SOCK_DGRAM, as set in hints above */
+		*s = socket(r->ai_family, SOCK_DGRAM, r->ai_protocol);
 #else
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		*s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
 #endif
-        	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+		if (*s < 0) {
+			if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				errmsg.LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
-				/* it is debateble if PF_INET with EAFNOSUPPORT should
+			/* it is debateble if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
-                        continue;
-                }
-
-#		ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int ion = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&ion, sizeof (ion)) < 0) {
-			errmsg.LogError(errno, NO_ERRCODE, "setsockopt");
-			close(*s);
-			*s = -1;
 			continue;
-                	}
-                }
-#		endif
+		}
 
-		if(device) {
-#			if defined(SO_BINDTODEVICE)
-			if(setsockopt(*s, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
-#			endif
+#ifdef IPV6_V6ONLY
+		if (r->ai_family == AF_INET6) {
+			int ion = 1;
+			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+				(char *)&ion, sizeof(ion)) < 0) {
+				errmsg.LogError(errno, NO_ERRCODE, "setsockopt");
+				close(*s);
+				*s = -1;
+				continue;
+			}
+		}
+#endif
+
+		if (device) {
+#if defined(SO_BINDTODEVICE)
+			if (setsockopt(*s, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+#endif
 			{
 				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(SO_BINDTODEVICE)");
-                                close(*s);
+				close(*s);
 				*s = -1;
 				continue;
 			}
@@ -1335,26 +1334,26 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		 * what we could obtain.
 		 * rgerhards, 2007-06-22
 		 */
-       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
-			       (char *) &on, sizeof(on)) < 0 ) {
+		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
+			(char *)&on, sizeof(on)) < 0) {
 			errmsg.LogError(errno, NO_ERRCODE, "setsockopt(REUSEADDR)");
-                        close(*s);
+			close(*s);
 			*s = -1;
 			continue;
 		}
 
-		/* We need to enable BSD compatibility. Otherwise an attacker
+/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 /* AIXPORT : SO_BSDCOMPAT socket option is depricated , and its usage has been discontinued
              on most unixes, AIX does not support this option , hence avoid the call.
 */
-#if !defined(OS_BSD) && !defined(__hpux)  && !defined(_AIX)
+#if !defined(OS_BSD) && !defined(__hpux) && !defined(_AIX)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
+				(char *)&on, sizeof(on)) < 0) {
 				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(BSDCOMPAT)");
-                                close(*s);
+				close(*s);
 				*s = -1;
 				continue;
 			}
@@ -1376,15 +1375,15 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		}
 		if (sockflags == -1) {
 			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
-                        close(*s);
+			close(*s);
 			*s = -1;
 			continue;
 		}
 
-		if(rcvbuf != 0) {
-#			if defined(SO_RCVBUFFORCE)
-			if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
-#			endif
+		if (rcvbuf != 0) {
+#if defined(SO_RCVBUFFORCE)
+			if (setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
+#endif
 			{
 				/* if we fail, try to do it the regular way. Experiments show that at 
 				 * least some platforms do not return an error here, but silently set
@@ -1395,22 +1394,22 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 
-		if(Debug || rcvbuf != 0) {
+		if (Debug || rcvbuf != 0) {
 			optlen = sizeof(actrcvbuf);
-			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
+			if (getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
 				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
-				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
+				if (rcvbuf != 0 && actrcvbuf / 2 != rcvbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
-						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
-						rcvbuf, *s, actrcvbuf/2);
+					    "cannot set os socket rcvbuf size %d for socket %d, value now is %d",
+					    rcvbuf, *s, actrcvbuf / 2);
 				}
 			} else {
 				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
-					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+				    *s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
 
-		if(bIsServer) {
+		if (bIsServer) {
 
 			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
 			 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
@@ -1419,16 +1418,15 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			 * workaround is to ignore the "socket in use" error. This is what we
 			 * do if we have to.
 			 */
-			if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-	#		ifndef IPV6_V6ONLY
-			     && (errno != EADDRINUSE)
-	#		endif
-			   ) {
+			if ((bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#ifndef IPV6_V6ONLY
+			    && (errno != EADDRINUSE)
+#endif
+				) {
 				if (errno == EADDRNOTAVAIL && ipfreebind != IPFREEBIND_DISABLED) {
 					if (setsockopt(*s, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on)) < 0) {
 						errmsg.LogError(errno, NO_ERRCODE, "setsockopt(IP_FREEBIND)");
-					}
-					else if (bind(*s, r->ai_addr, r->ai_addrlen) < 0) {
+					} else if (bind(*s, r->ai_addr, r->ai_addrlen) < 0) {
 						errmsg.LogError(errno, NO_ERRCODE, "bind with IP_FREEBIND");
 					} else {
 						if (ipfreebind >= IPFREEBIND_ENABLED_WITH_LOG)
@@ -1442,26 +1440,27 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 
-                (*socks)++;
-                s++;
+		(*socks)++;
+		s++;
 	}
 
-        if(res != NULL)
-               freeaddrinfo(res);
+	if (res != NULL)
+		freeaddrinfo(res);
 
-	if(Debug && *socks != maxs)
+	if (Debug && *socks != maxs)
 		dbgprintf("We could initialize %d UDP listen sockets out of %d we received "
-		 	"- this may or may not be an error indication.\n", *socks, maxs);
+			  "- this may or may not be an error indication.\n",
+		    *socks, maxs);
 
-        if(*socks == 0) {
+	if (*socks == 0) {
 		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
+					       "message reception via UDP disabled.\n");
 		/* we do NOT need to free any sockets, because there were none... */
-        	free(socks);
-		return(NULL);
+		free(socks);
+		return (NULL);
 	}
 
-	return(socks);
+	return (socks);
 }
 
 
@@ -1478,26 +1477,26 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
  * (the order relation may be a bit arbritrary, but at least it is consistent).
  * rgerhards, 2009-09-03
  */
-static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage* s2, size_t socklen)
+static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage *s2, size_t socklen)
 {
 	int ret;
 
-	if(((struct sockaddr*) s1)->sa_family != ((struct sockaddr*) s2)->sa_family) {
+	if (((struct sockaddr *)s1)->sa_family != ((struct sockaddr *)s2)->sa_family) {
 		ret = memcmp(s1, s2, socklen);
 		goto finalize_it;
 	}
 
-	if(((struct sockaddr*) s1)->sa_family == AF_INET) {
-		if(((struct sockaddr_in *) s1)->sin_addr.s_addr == ((struct sockaddr_in*)s2)->sin_addr.s_addr) {
+	if (((struct sockaddr *)s1)->sa_family == AF_INET) {
+		if (((struct sockaddr_in *)s1)->sin_addr.s_addr == ((struct sockaddr_in *)s2)->sin_addr.s_addr) {
 			ret = 0;
-		} else if(((struct sockaddr_in *) s1)->sin_addr.s_addr < ((struct sockaddr_in*)s2)->sin_addr.s_addr) {
+		} else if (((struct sockaddr_in *)s1)->sin_addr.s_addr < ((struct sockaddr_in *)s2)->sin_addr.s_addr) {
 			ret = -1;
 		} else {
 			ret = 1;
 		}
-	} else if(((struct sockaddr*) s1)->sa_family == AF_INET6) {
+	} else if (((struct sockaddr *)s1)->sa_family == AF_INET6) {
 		/* IPv6 addresses are always 16 octets long */
-		ret = memcmp(((struct sockaddr_in6 *)s1)->sin6_addr.s6_addr, ((struct sockaddr_in6*)s2)->sin6_addr.s6_addr, 16);
+		ret = memcmp(((struct sockaddr_in6 *)s1)->sin6_addr.s6_addr, ((struct sockaddr_in6 *)s2)->sin6_addr.s6_addr, 16);
 	} else {
 		ret = memcmp(s1, s2, socklen);
 	}
@@ -1507,7 +1506,6 @@ finalize_it:
 }
 
 
-
 /* check if restrictions (ALCs) exists. The goal of this function is to disable the
  * somewhat time-consuming ACL checks if no restrictions are defined (the usual case).
  * This also permits to gain some speedup by using firewall-based ACLs instead of
@@ -1515,7 +1513,8 @@ finalize_it:
  * rgerhards, 2009-11-16
  */
 static rsRetVal
-HasRestrictions(uchar *pszType, int *bHasRestrictions) {
+HasRestrictions(uchar *pszType, int *bHasRestrictions)
+{
 	struct AllowedSenders *pAllowRoot = NULL;
 	DEFiRet;
 
@@ -1524,7 +1523,7 @@ HasRestrictions(uchar *pszType, int *bHasRestrictions) {
 	*bHasRestrictions = (pAllowRoot == NULL) ? 0 : 1;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		*bHasRestrictions = 1; /* in this case it is better to check individually */
 		DBGPRINTF("Error %d trying to obtain ACL restriction state of '%s'\n", iRet, pszType);
 	}
@@ -1549,44 +1548,42 @@ static rsRetVal
 getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
 {
 #ifdef _AIX
-	struct ifaddrs_rsys * ifaddrs = NULL;
-	struct ifaddrs_rsys * ifa;
+	struct ifaddrs_rsys *ifaddrs = NULL;
+	struct ifaddrs_rsys *ifa;
 #else
-	struct ifaddrs * ifaddrs = NULL;
-	struct ifaddrs * ifa;
+	struct ifaddrs *ifaddrs = NULL;
+	struct ifaddrs *ifa;
 #endif
-	void * pAddr;
+	void *pAddr;
 	DEFiRet;
 
- 	if(getifaddrs(&ifaddrs) != 0) {
+	if (getifaddrs(&ifaddrs) != 0) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
-		if(strcmp(ifa->ifa_name, (char*)szif))
+		if (strcmp(ifa->ifa_name, (char *)szif))
 			continue;
-		if(   (family == AF_INET6 || family == AF_UNSPEC)
-		   && ifa->ifa_addr->sa_family == AF_INET6) {
+		if ((family == AF_INET6 || family == AF_UNSPEC) && ifa->ifa_addr->sa_family == AF_INET6) {
 			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
+			inet_ntop(AF_INET6, pAddr, (char *)pszbuf, lenBuf);
 			break;
-		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
+		} else if (/*   (family == AF_INET || family == AF_UNSPEC)
 		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
 			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
+			inet_ntop(AF_INET, pAddr, (char *)pszbuf, lenBuf);
 			break;
-		} 
+		}
 	}
 
-	if(ifaddrs != NULL)
+	if (ifaddrs != NULL)
 		freeifaddrs(ifaddrs);
 
-	if(ifa == NULL)
+	if (ifa == NULL)
 		iRet = RS_RET_NOT_FOUND;
 
 finalize_it:
 	RETiRet;
-
 }
 #if !defined(_AIX)
 #pragma GCC diagnostic pop
@@ -1597,8 +1594,8 @@ finalize_it:
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(net)
-CODESTARTobjQueryInterface(net)
-	if(pIf->ifVersion != netCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(net) if (pIf->ifVersion != netCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -1636,9 +1633,9 @@ ENDobjQueryInterface(net)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(net, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(net)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
+	CODESTARTObjClassExit(net)
+	    /* release objects we no longer need */
+	    objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(net)
@@ -1654,7 +1651,7 @@ BEGINAbstractObjClassInit(net, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(net)
 
 
@@ -1662,20 +1659,20 @@ ENDObjClassInit(net)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	netClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(netClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

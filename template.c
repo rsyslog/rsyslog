@@ -53,72 +53,66 @@
 #endif
 /* static data */
 DEFobjCurrIf(obj)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(strgen)
+    DEFobjCurrIf(errmsg)
+	DEFobjCurrIf(strgen)
 
-/* tables for interfacing with the v6 config system */
-static struct cnfparamdescr cnfparamdescr[] = {
-	{ "name", eCmdHdlrString, 1 },
-	{ "type", eCmdHdlrString, 1 },
-	{ "string", eCmdHdlrString, 0 },
-	{ "plugin", eCmdHdlrString, 0 },
-	{ "subtree", eCmdHdlrString, 0 },
-	{ "option.stdsql", eCmdHdlrBinary, 0 },
-	{ "option.sql", eCmdHdlrBinary, 0 },
-	{ "option.json", eCmdHdlrBinary, 0 },
-	{ "option.casesensitive", eCmdHdlrBinary, 0 }
-};
+    /* tables for interfacing with the v6 config system */
+    static struct cnfparamdescr cnfparamdescr[] = {
+	{"name", eCmdHdlrString, 1},
+	{"type", eCmdHdlrString, 1},
+	{"string", eCmdHdlrString, 0},
+	{"plugin", eCmdHdlrString, 0},
+	{"subtree", eCmdHdlrString, 0},
+	{"option.stdsql", eCmdHdlrBinary, 0},
+	{"option.sql", eCmdHdlrBinary, 0},
+	{"option.json", eCmdHdlrBinary, 0},
+	{"option.casesensitive", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
-	  cnfparamdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfparamdescr) / sizeof(struct cnfparamdescr),
+	cnfparamdescr};
 
 static struct cnfparamdescr cnfparamdescrProperty[] = {
-	{ "name", eCmdHdlrString, 1 },
-	{ "outname", eCmdHdlrString, 0 },
-	{ "dateformat", eCmdHdlrString, 0 },
-	{ "date.inutc", eCmdHdlrBinary, 0 },
-	{ "compressspace", eCmdHdlrBinary, 0 },
-	{ "caseconversion", eCmdHdlrString, 0 },
-	{ "controlcharacters", eCmdHdlrString, 0 },
-	{ "securepath", eCmdHdlrString, 0 },
-	{ "format", eCmdHdlrString, 0 },
-	{ "position.from", eCmdHdlrInt, 0 },
-	{ "position.to", eCmdHdlrInt, 0 },
-	{ "position.relativetoend", eCmdHdlrBinary, 0 },
-	{ "field.number", eCmdHdlrInt, 0 },
-	{ "field.delimiter", eCmdHdlrInt, 0 },
-	{ "regex.expression", eCmdHdlrString, 0 },
-	{ "regex.type", eCmdHdlrString, 0 },
-	{ "regex.nomatchmode", eCmdHdlrString, 0 },
-	{ "regex.match", eCmdHdlrInt, 0 },
-	{ "regex.submatch", eCmdHdlrInt, 0 },
-	{ "droplastlf", eCmdHdlrBinary, 0 },
-	{ "fixedwidth", eCmdHdlrBinary, 0 },
-	{ "mandatory", eCmdHdlrBinary, 0 },
-	{ "spifno1stsp", eCmdHdlrBinary, 0 }
-};
+    {"name", eCmdHdlrString, 1},
+    {"outname", eCmdHdlrString, 0},
+    {"dateformat", eCmdHdlrString, 0},
+    {"date.inutc", eCmdHdlrBinary, 0},
+    {"compressspace", eCmdHdlrBinary, 0},
+    {"caseconversion", eCmdHdlrString, 0},
+    {"controlcharacters", eCmdHdlrString, 0},
+    {"securepath", eCmdHdlrString, 0},
+    {"format", eCmdHdlrString, 0},
+    {"position.from", eCmdHdlrInt, 0},
+    {"position.to", eCmdHdlrInt, 0},
+    {"position.relativetoend", eCmdHdlrBinary, 0},
+    {"field.number", eCmdHdlrInt, 0},
+    {"field.delimiter", eCmdHdlrInt, 0},
+    {"regex.expression", eCmdHdlrString, 0},
+    {"regex.type", eCmdHdlrString, 0},
+    {"regex.nomatchmode", eCmdHdlrString, 0},
+    {"regex.match", eCmdHdlrInt, 0},
+    {"regex.submatch", eCmdHdlrInt, 0},
+    {"droplastlf", eCmdHdlrBinary, 0},
+    {"fixedwidth", eCmdHdlrBinary, 0},
+    {"mandatory", eCmdHdlrBinary, 0},
+    {"spifno1stsp", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblkProperty =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfparamdescrProperty)/sizeof(struct cnfparamdescr),
-	  cnfparamdescrProperty
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfparamdescrProperty) / sizeof(struct cnfparamdescr),
+	cnfparamdescrProperty};
 
 static struct cnfparamdescr cnfparamdescrConstant[] = {
-	{ "value", eCmdHdlrString, 1 },
-	{ "outname", eCmdHdlrString, 0 },
+    {"value", eCmdHdlrString, 1},
+    {"outname", eCmdHdlrString, 0},
 };
 static struct cnfparamblk pblkConstant =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfparamdescrConstant)/sizeof(struct cnfparamdescr),
-	  cnfparamdescrConstant
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfparamdescrConstant) / sizeof(struct cnfparamdescr),
+	cnfparamdescrConstant};
 
 
 #ifdef FEATURE_REGEXP
-DEFobjCurrIf(regexp)
-static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
+DEFobjCurrIf(regexp) static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 #endif
 
 /* helper to tplToString and strgen's, extends buffer */
@@ -131,7 +125,7 @@ ExtendBuf(actWrkrIParams_t *__restrict__ const iparam, const size_t iMinSize)
 	DEFiRet;
 
 	iNewSize = (iMinSize / ALLOC_INC + 1) * ALLOC_INC;
-	CHKmalloc(pNewBuf = (uchar*) realloc(iparam->param, iNewSize));
+	CHKmalloc(pNewBuf = (uchar *)realloc(iparam->param, iNewSize));
 	iparam->param = pNewBuf;
 	iparam->lenBuf = iNewSize;
 
@@ -152,9 +146,9 @@ finalize_it:
  */
 rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
-	    smsg_t *__restrict__ const pMsg,
-	    actWrkrIParams_t *__restrict__ const iparam,
-	    struct syslogTime *const ttNow)
+    smsg_t *__restrict__ const pMsg,
+    actWrkrIParams_t *__restrict__ const iparam,
+    struct syslogTime *const ttNow)
 {
 	DEFiRet;
 	struct templateEntry *__restrict__ pTpe;
@@ -163,26 +157,26 @@ tplToString(struct template *__restrict__ const pTpl,
 	uchar *pVal;
 	rs_size_t iLenVal = 0;
 
-	if(pTpl->pStrgen != NULL) {
+	if (pTpl->pStrgen != NULL) {
 		CHKiRet(pTpl->pStrgen(pMsg, iparam));
 		FINALIZE;
 	}
 
-	if(pTpl->bHaveSubtree) {
+	if (pTpl->bHaveSubtree) {
 		/* only a single CEE subtree must be provided */
 		/* note: we could optimize the code below, however, this is
 		 * not worth the effort, as this passing mode is not expected
 		 * in subtree mode and so most probably only used for debug & test.
 		 */
 		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &iLenVal, &bMustBeFreed);
-		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
+		if (iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(iparam, iLenVal + 1));
-		memcpy(iparam->param, pVal, iLenVal+1);
-		if(bMustBeFreed)
+		memcpy(iparam->param, pVal, iLenVal + 1);
+		if (bMustBeFreed)
 			free(pVal);
 		FINALIZE;
 	}
-	
+
 	/* we have a "regular" template with template entries */
 
 	/* loop through the template. We obtain one value
@@ -192,49 +186,49 @@ tplToString(struct template *__restrict__ const pTpl,
 	 */
 	pTpe = pTpl->pEntryRoot;
 	iBuf = 0;
-	while(pTpe != NULL) {
-		if(pTpe->eEntryType == CONSTANT) {
-			pVal = (uchar*) pTpe->data.constant.pConstant;
+	while (pTpe != NULL) {
+		if (pTpe->eEntryType == CONSTANT) {
+			pVal = (uchar *)pTpe->data.constant.pConstant;
 			iLenVal = pTpe->data.constant.iLenConstant;
 			bMustBeFreed = 0;
-		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
-						   &iLenVal, &bMustBeFreed, ttNow);
+		} else if (pTpe->eEntryType == FIELD) {
+			pVal = (uchar *)MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
+			    &iLenVal, &bMustBeFreed, ttNow);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
 			 * but they are handled in this way because of legacy (don't break any
 			 * existing thing).
 			 */
-			if(pTpl->optFormatEscape == SQL_ESCAPE)
+			if (pTpl->optFormatEscape == SQL_ESCAPE)
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, SQL_ESCAPE);
-			else if(pTpl->optFormatEscape == JSON_ESCAPE)
+			else if (pTpl->optFormatEscape == JSON_ESCAPE)
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, JSON_ESCAPE);
-			else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+			else if (pTpl->optFormatEscape == STDSQL_ESCAPE)
 				doEscape(&pVal, &iLenVal, &bMustBeFreed, STDSQL_ESCAPE);
 		} else {
 			DBGPRINTF("TplToString: invalid entry type %d\n", pTpe->eEntryType);
-			pVal = (uchar*) "*LOGIC ERROR*";
+			pVal = (uchar *)"*LOGIC ERROR*";
 			iLenVal = sizeof("*LOGIC ERROR*") - 1;
 			bMustBeFreed = 0;
 		}
 		/* got source, now copy over */
-		if(iLenVal > 0) { /* may be zero depending on property */
+		if (iLenVal > 0) { /* may be zero depending on property */
 			/* first, make sure buffer fits */
-			if(iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
+			if (iBuf + iLenVal >= iparam->lenBuf) /* we reserve one char for the final \0! */
 				CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
 
 			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 		}
 
-		if(bMustBeFreed)
+		if (bMustBeFreed)
 			free(pVal);
 
 		pTpe = pTpe->pNext;
 	}
 
-	if(iBuf == iparam->lenBuf) {
+	if (iBuf == iparam->lenBuf) {
 		/* in the weired case of an *empty* template, this can happen.
 		 * it is debatable if we should really fix it here or simply
 		 * forbid that case. However, performance toll is minimal, so 
@@ -244,7 +238,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	}
 	iparam->param[iBuf] = '\0';
 	iparam->lenStr = iBuf;
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -260,7 +254,7 @@ finalize_it:
  * rgerhards, 2009-04-03
  */
 rsRetVal
-tplToArray(struct template *pTpl, smsg_t *pMsg, uchar*** ppArr, struct syslogTime *ttNow)
+tplToArray(struct template *pTpl, smsg_t *pMsg, uchar ***ppArr, struct syslogTime *ttNow)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
@@ -274,16 +268,16 @@ tplToArray(struct template *pTpl, smsg_t *pMsg, uchar*** ppArr, struct syslogTim
 	assert(pMsg != NULL);
 	assert(ppArr != NULL);
 
-	if(pTpl->bHaveSubtree) {
+	if (pTpl->bHaveSubtree) {
 		/* Note: this mode is untested, as there is no official plugin
 		 *       using array passing, so I simply could not test it.
 		 */
-		CHKmalloc(pArr = calloc(2, sizeof(uchar*)));
+		CHKmalloc(pArr = calloc(2, sizeof(uchar *)));
 		getJSONPropVal(pMsg, &pTpl->subtree, &pVal, &propLen, &bMustBeFreed);
-		if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
+		if (bMustBeFreed) {     /* if it must be freed, it is our own private copy... */
 			pArr[0] = pVal; /* ... so we can use it! */
 		} else {
-			CHKmalloc(pArr[0] = (uchar*)strdup((char*) pVal));
+			CHKmalloc(pArr[0] = (uchar *)strdup((char *)pVal));
 		}
 		FINALIZE;
 	}
@@ -292,20 +286,20 @@ tplToArray(struct template *pTpl, smsg_t *pMsg, uchar*** ppArr, struct syslogTim
 	 * private copy (if necessary), add it to the string array
 	 * and then on to the next until we have processed everything.
 	 */
-	CHKmalloc(pArr = calloc(pTpl->tpenElements + 1, sizeof(uchar*)));
+	CHKmalloc(pArr = calloc(pTpl->tpenElements + 1, sizeof(uchar *)));
 	iArr = 0;
 
 	pTpe = pTpl->pEntryRoot;
-	while(pTpe != NULL) {
-		if(pTpe->eEntryType == CONSTANT) {
-			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
-		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
-						   &propLen, &bMustBeFreed, ttNow);
-			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
+	while (pTpe != NULL) {
+		if (pTpe->eEntryType == CONSTANT) {
+			CHKmalloc(pArr[iArr] = (uchar *)strdup((char *)pTpe->data.constant.pConstant));
+		} else if (pTpe->eEntryType == FIELD) {
+			pVal = (uchar *)MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
+			    &propLen, &bMustBeFreed, ttNow);
+			if (bMustBeFreed) {	/* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
-				CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pVal));
+				CHKmalloc(pArr[iArr] = (uchar *)strdup((char *)pVal));
 			}
 		}
 		iArr++;
@@ -314,7 +308,7 @@ tplToArray(struct template *pTpl, smsg_t *pMsg, uchar*** ppArr, struct syslogTim
 
 finalize_it:
 	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
-	if(iRet == RS_RET_OK) {
+	if (iRet == RS_RET_OK) {
 		*ppArr = pArr;
 	} else {
 		*ppArr = NULL;
@@ -341,10 +335,10 @@ tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struc
 	rsRetVal localRet;
 	DEFiRet;
 
-	if(pTpl->bHaveSubtree){
-		if(jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
+	if (pTpl->bHaveSubtree) {
+		if (jsonFind(pMsg->json, &pTpl->subtree, pjson) != RS_RET_OK)
 			*pjson = NULL;
-		if(*pjson == NULL) {
+		if (*pjson == NULL) {
 			/* we need to have a root object! */
 			*pjson = json_object_new_object();
 		} else {
@@ -354,34 +348,34 @@ tplToJSON(struct template *pTpl, smsg_t *pMsg, struct json_object **pjson, struc
 	}
 
 	json = json_object_new_object();
-	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
-		if(pTpe->eEntryType == CONSTANT) {
-			if(pTpe->fieldName == NULL)
+	for (pTpe = pTpl->pEntryRoot; pTpe != NULL; pTpe = pTpe->pNext) {
+		if (pTpe->eEntryType == CONSTANT) {
+			if (pTpe->fieldName == NULL)
 				continue;
-			jsonf = json_object_new_string((char*) pTpe->data.constant.pConstant);
-			json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
-		} else 	if(pTpe->eEntryType == FIELD) {
-			if(pTpe->data.field.msgProp.id == PROP_CEE        ||
-			   pTpe->data.field.msgProp.id == PROP_LOCAL_VAR  ||
-			   pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR   ) {
+			jsonf = json_object_new_string((char *)pTpe->data.constant.pConstant);
+			json_object_object_add(json, (char *)pTpe->fieldName, jsonf);
+		} else if (pTpe->eEntryType == FIELD) {
+			if (pTpe->data.field.msgProp.id == PROP_CEE ||
+			    pTpe->data.field.msgProp.id == PROP_LOCAL_VAR ||
+			    pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR) {
 				localRet = msgGetJSONPropJSON(pMsg, &pTpe->data.field.msgProp, &jsonf);
-				if(localRet == RS_RET_OK) {
-					json_object_object_add(json, (char*)pTpe->fieldName, json_object_get(jsonf));
+				if (localRet == RS_RET_OK) {
+					json_object_object_add(json, (char *)pTpe->fieldName, json_object_get(jsonf));
 				} else {
 					DBGPRINTF("tplToJSON: error %d looking up property %s\n",
-						  localRet, pTpe->fieldName);
-					if(pTpe->data.field.options.bMandatory) {
-						json_object_object_add(json, (char*)pTpe->fieldName, NULL);
+					    localRet, pTpe->fieldName);
+					if (pTpe->data.field.options.bMandatory) {
+						json_object_object_add(json, (char *)pTpe->fieldName, NULL);
 					}
 				}
-			} else  {
-				pVal = (uchar*) MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
-							   &propLen, &bMustBeFreed, ttNow);
-				if(pTpe->data.field.options.bMandatory || propLen > 0) {
-					jsonf = json_object_new_string_len((char*)pVal, propLen+1);
-					json_object_object_add(json, (char*)pTpe->fieldName, jsonf);
+			} else {
+				pVal = (uchar *)MsgGetProp(pMsg, pTpe, &pTpe->data.field.msgProp,
+				    &propLen, &bMustBeFreed, ttNow);
+				if (pTpe->data.field.options.bMandatory || propLen > 0) {
+					jsonf = json_object_new_string_len((char *)pVal, propLen + 1);
+					json_object_object_add(json, (char *)pTpe->fieldName, jsonf);
 				}
-				if(bMustBeFreed) { /* json-c makes its own private copy! */
+				if (bMustBeFreed) { /* json-c makes its own private copy! */
 					free(pVal);
 				}
 			}
@@ -411,16 +405,16 @@ finalize_it:
  */
 static void doEmergencyEscape(register uchar *p, int mode)
 {
-	while(*p) {
-		if((mode == SQL_ESCAPE||mode == STDSQL_ESCAPE) && *p == '\'') {
+	while (*p) {
+		if ((mode == SQL_ESCAPE || mode == STDSQL_ESCAPE) && *p == '\'') {
 			*p = '"';
-		} else if(mode == JSON_ESCAPE) {
-			if(*p == '"') {
+		} else if (mode == JSON_ESCAPE) {
+			if (*p == '"') {
 				*p = '\'';
-			} else if(*p == '\\' ) {
+			} else if (*p == '\\') {
 				*p = '/';
 			}
-		} else if((mode == SQL_ESCAPE) && *p == '\\') {
+		} else if ((mode == SQL_ESCAPE) && *p == '\\') {
 			*p = '/';
 		}
 		++p;
@@ -466,34 +460,34 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 	assert(pbMustBeFreed != NULL);
 
 	/* first check if we need to do anything at all... */
-	if(mode == STDSQL_ESCAPE)
-		for(p = *pp ; *p && *p != '\'' ; ++p)
+	if (mode == STDSQL_ESCAPE)
+		for (p = *pp; *p && *p != '\''; ++p)
 			;
-	else if(mode == SQL_ESCAPE)
-		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
+	else if (mode == SQL_ESCAPE)
+		for (p = *pp; *p && *p != '\'' && *p != '\\'; ++p)
 			;
-	else if(mode == JSON_ESCAPE)
-		for(p = *pp ; *p &&  (*p == '"' || *p == '\\' ) ; ++p)
+	else if (mode == JSON_ESCAPE)
+		for (p = *pp; *p && (*p == '"' || *p == '\\'); ++p)
 			;
 	/* when we get out of the loop, we are either at the
 	 * string terminator or the first character to escape */
-	if(p && *p == '\0')
+	if (p && *p == '\0')
 		FINALIZE; /* nothing to do in this case! */
 
 	p = *pp;
 	iLen = *pLen;
 	CHKiRet(cstrConstruct(&pStrB));
 
-	while(*p) {
-		if((mode == SQL_ESCAPE || mode == STDSQL_ESCAPE) && *p == '\'') {
+	while (*p) {
+		if ((mode == SQL_ESCAPE || mode == STDSQL_ESCAPE) && *p == '\'') {
 			CHKiRet(cstrAppendChar(pStrB, (mode == STDSQL_ESCAPE) ? '\'' : '\\'));
-			iLen++;	/* reflect the extra character */
-		} else if((mode == SQL_ESCAPE) && *p == '\\') {
+			iLen++; /* reflect the extra character */
+		} else if ((mode == SQL_ESCAPE) && *p == '\\') {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
-			iLen++;	/* reflect the extra character */
-		} else if((mode == JSON_ESCAPE) &&  (*p == '"' || *p == '\\' )) {
+			iLen++; /* reflect the extra character */
+		} else if ((mode == JSON_ESCAPE) && (*p == '"' || *p == '\\')) {
 			CHKiRet(cstrAppendChar(pStrB, '\\'));
-			iLen++;	/* reflect the extra character */
+			iLen++; /* reflect the extra character */
 		}
 		CHKiRet(cstrAppendChar(pStrB, *p));
 		++p;
@@ -501,7 +495,7 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 	cstrFinalize(pStrB);
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &pszGenerated, 0));
 
-	if(*pbMustBeFreed)
+	if (*pbMustBeFreed)
 		free(*pp); /* discard previous value */
 
 	*pp = pszGenerated;
@@ -509,9 +503,9 @@ doEscape(uchar **pp, rs_size_t *pLen, unsigned short *pbMustBeFreed, int mode)
 	*pbMustBeFreed = 1;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		doEmergencyEscape(*pp, mode);
-		if(pStrB != NULL)
+		if (pStrB != NULL)
 			cstrDestruct(&pStrB);
 	}
 
@@ -523,28 +517,28 @@ finalize_it:
  * or NULL (if it fails). Pointer to associated template list entry 
  * must be provided.
  */
-static struct templateEntry* tpeConstruct(struct template *pTpl)
+static struct templateEntry *tpeConstruct(struct template *pTpl)
 {
 	struct templateEntry *pTpe;
 
 	assert(pTpl != NULL);
 
-	if((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
+	if ((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
 		return NULL;
-	
+
 	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(pTpl->pEntryLast == NULL){
+	if (pTpl->pEntryLast == NULL) {
 		/* we are the first element! */
-		pTpl->pEntryRoot = pTpl->pEntryLast  = pTpe;
+		pTpl->pEntryRoot = pTpl->pEntryLast = pTpe;
 	} else {
 		pTpl->pEntryLast->pNext = pTpe;
-		pTpl->pEntryLast  = pTpe;
+		pTpl->pEntryLast = pTpe;
 	}
 	pTpl->tpenElements++;
 
-	return(pTpe);
+	return (pTpe);
 }
 
 
@@ -553,20 +547,23 @@ static struct templateEntry* tpeConstruct(struct template *pTpl)
 static void
 apply_case_sensitivity(struct template *pTpl)
 {
-	if(pTpl->optCaseSensitive) return;
+	if (pTpl->optCaseSensitive)
+		return;
 
 	struct templateEntry *pTpe;
 
-	for(pTpe = pTpl->pEntryRoot ; pTpe != NULL ; pTpe = pTpe->pNext) {
-		if(pTpe->eEntryType == FIELD) {
-			if(pTpe->data.field.msgProp.id == PROP_CEE        ||
-			   pTpe->data.field.msgProp.id == PROP_LOCAL_VAR  ||
-			   pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR   ) {
-				uchar* p;
+	for (pTpe = pTpl->pEntryRoot; pTpe != NULL; pTpe = pTpe->pNext) {
+		if (pTpe->eEntryType == FIELD) {
+			if (pTpe->data.field.msgProp.id == PROP_CEE ||
+			    pTpe->data.field.msgProp.id == PROP_LOCAL_VAR ||
+			    pTpe->data.field.msgProp.id == PROP_GLOBAL_VAR) {
+				uchar *p;
 				p = pTpe->fieldName;
-				for ( ; *p; ++p) *p = tolower(*p);
+				for (; *p; ++p)
+					*p = tolower(*p);
 				p = pTpe->data.field.msgProp.name;
-				for ( ; *p; ++p) *p = tolower(*p);
+				for (; *p; ++p)
+					*p = tolower(*p);
 			}
 		}
 	}
@@ -576,17 +573,17 @@ apply_case_sensitivity(struct template *pTpl)
 /* Constructs a template list object. Returns pointer to it
  * or NULL (if it fails).
  */
-static struct template*
+static struct template *
 tplConstruct(rsconf_t *conf)
 {
 	struct template *pTpl;
-	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
+	if ((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
-	
+
 	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(conf->templates.last == NULL)	{
+	if (conf->templates.last == NULL) {
 		/* we are the first element! */
 		conf->templates.root = conf->templates.last = pTpl;
 	} else {
@@ -594,7 +591,7 @@ tplConstruct(rsconf_t *conf)
 		conf->templates.last = pTpl;
 	}
 
-	return(pTpl);
+	return (pTpl);
 }
 
 
@@ -625,55 +622,54 @@ do_Constant(unsigned char **pp, struct template *pTpl, int bDoEscapes)
 	/* process the message and expand escapes
 	 * (additional escapes can be added here if needed)
 	 */
-	while(*p && *p != '%' && !(bDoEscapes && *p == '\"')) {
-		if(bDoEscapes && *p == '\\') {
-			switch(*++p) {
-				case '\0':	
-					/* the best we can do - it's invalid anyhow... */
-					cstrAppendChar(pStrB, *p);
-					break;
-				case 'n':
-					cstrAppendChar(pStrB, '\n');
-					++p;
-					break;
-				case 'r':
-					cstrAppendChar(pStrB, '\r');
-					++p;
-					break;
-				case '\\':
-					cstrAppendChar(pStrB, '\\');
-					++p;
-					break;
-				case '%':
-					cstrAppendChar(pStrB, '%');
-					++p;
-					break;
-				case '0': /* numerical escape sequence */
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					i = 0;
-					while(*p && isdigit((int)*p)) {
-						i = i * 10 + *p++ - '0';
-					}
-					cstrAppendChar(pStrB, i);
-					break;
-				default:
-					cstrAppendChar(pStrB, *p++);
-					break;
+	while (*p && *p != '%' && !(bDoEscapes && *p == '\"')) {
+		if (bDoEscapes && *p == '\\') {
+			switch (*++p) {
+			case '\0':
+				/* the best we can do - it's invalid anyhow... */
+				cstrAppendChar(pStrB, *p);
+				break;
+			case 'n':
+				cstrAppendChar(pStrB, '\n');
+				++p;
+				break;
+			case 'r':
+				cstrAppendChar(pStrB, '\r');
+				++p;
+				break;
+			case '\\':
+				cstrAppendChar(pStrB, '\\');
+				++p;
+				break;
+			case '%':
+				cstrAppendChar(pStrB, '%');
+				++p;
+				break;
+			case '0': /* numerical escape sequence */
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				i = 0;
+				while (*p && isdigit((int)*p)) {
+					i = i * 10 + *p++ - '0';
+				}
+				cstrAppendChar(pStrB, i);
+				break;
+			default:
+				cstrAppendChar(pStrB, *p++);
+				break;
 			}
-		}
-		else
+		} else
 			cstrAppendChar(pStrB, *p++);
 	}
 
-	if((pTpe = tpeConstruct(pTpl)) == NULL) {
+	if ((pTpe = tpeConstruct(pTpl)) == NULL) {
 		rsCStrDestruct(&pStrB);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -696,13 +692,13 @@ finalize_it:
 /* Helper that checks to see if a property already has a format
  * type defined
  */
-static int hasFormat(struct templateEntry *pTpe) {
+static int hasFormat(struct templateEntry *pTpe)
+{
 	return (
-		pTpe->data.field.options.bCSV ||
-		pTpe->data.field.options.bJSON ||
-		pTpe->data.field.options.bJSONf ||
-		pTpe->data.field.options.bJSONr
-	);
+	    pTpe->data.field.options.bCSV ||
+	    pTpe->data.field.options.bJSON ||
+	    pTpe->data.field.options.bJSONf ||
+	    pTpe->data.field.options.bJSONr);
 }
 
 /* Helper to do_Parameter(). This parses the formatting options
@@ -721,131 +717,132 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 
 	p = *pp;
 
-	while(*p && *p != '%' && *p != ':') {
+	while (*p && *p != '%' && *p != ':') {
 		/* outer loop - until end of options */
 		i = 0;
-		while((i < sizeof(Buf)-1) &&
-		      *p && *p != '%' && *p != ':' && *p != ',') {
+		while ((i < sizeof(Buf) - 1) &&
+		       *p && *p != '%' && *p != ':' && *p != ',') {
 			/* inner loop - until end of ONE option */
 			Buf[i++] = tolower((int)*p);
 			++p;
 		}
 		Buf[i] = '\0'; /* terminate */
 		/* check if we need to skip oversize option */
-		while(*p && *p != '%' && *p != ':' && *p != ',')
-			++p;	/* just skip */
-		if(*p == ',')
+		while (*p && *p != '%' && *p != ':' && *p != ',')
+			++p; /* just skip */
+		if (*p == ',')
 			++p; /* eat ',' */
-		/* OK, we got the option, so now lets look what
+			     /* OK, we got the option, so now lets look what
 		 * it tells us...
 		 */
-		 if(!strcmp((char*)Buf, "date-mysql")) {
+		if (!strcmp((char *)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
-                 } else if(!strcmp((char*)Buf, "date-pgsql")) {
-                        pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
-		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
+		} else if (!strcmp((char *)Buf, "date-pgsql")) {
+			pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
+		} else if (!strcmp((char *)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
-		 } else if(!strcmp((char*)Buf, "date-rfc3164-buggyday")) {
+		} else if (!strcmp((char *)Buf, "date-rfc3164-buggyday")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164BuggyDate;
-		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
+		} else if (!strcmp((char *)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
-		 } else if(!strcmp((char*)Buf, "date-unixtimestamp")) {
+		} else if (!strcmp((char *)Buf, "date-unixtimestamp")) {
 			pTpe->data.field.eDateFormat = tplFmtUnixDate;
-		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
+		} else if (!strcmp((char *)Buf, "date-subseconds")) {
 			pTpe->data.field.eDateFormat = tplFmtSecFrac;
-		 } else if(!strcmp((char*)Buf, "date-wdayname")) {
+		} else if (!strcmp((char *)Buf, "date-wdayname")) {
 			pTpe->data.field.eDateFormat = tplFmtWDayName;
-		 } else if(!strcmp((char*)Buf, "date-wday")) {
+		} else if (!strcmp((char *)Buf, "date-wday")) {
 			pTpe->data.field.eDateFormat = tplFmtWDay;
-		 } else if(!strcmp((char*)Buf, "date-year")) {
+		} else if (!strcmp((char *)Buf, "date-year")) {
 			pTpe->data.field.eDateFormat = tplFmtYear;
-		 } else if(!strcmp((char*)Buf, "date-month")) {
+		} else if (!strcmp((char *)Buf, "date-month")) {
 			pTpe->data.field.eDateFormat = tplFmtMonth;
-		 } else if(!strcmp((char*)Buf, "date-day")) {
+		} else if (!strcmp((char *)Buf, "date-day")) {
 			pTpe->data.field.eDateFormat = tplFmtDay;
-		 } else if(!strcmp((char*)Buf, "date-hour")) {
+		} else if (!strcmp((char *)Buf, "date-hour")) {
 			pTpe->data.field.eDateFormat = tplFmtHour;
-		 } else if(!strcmp((char*)Buf, "date-minute")) {
+		} else if (!strcmp((char *)Buf, "date-minute")) {
 			pTpe->data.field.eDateFormat = tplFmtMinute;
-		 } else if(!strcmp((char*)Buf, "date-second")) {
+		} else if (!strcmp((char *)Buf, "date-second")) {
 			pTpe->data.field.eDateFormat = tplFmtSecond;
-		 } else if(!strcmp((char*)Buf, "date-tzoffshour")) {
+		} else if (!strcmp((char *)Buf, "date-tzoffshour")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsHour;
-		 } else if(!strcmp((char*)Buf, "date-tzoffsmin")) {
+		} else if (!strcmp((char *)Buf, "date-tzoffsmin")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsMin;
-		 } else if(!strcmp((char*)Buf, "date-tzoffsdirection")) {
+		} else if (!strcmp((char *)Buf, "date-tzoffsdirection")) {
 			pTpe->data.field.eDateFormat = tplFmtTZOffsDirection;
-		 } else if (!strcmp((char*)Buf, "date-ordinal")) {
+		} else if (!strcmp((char *)Buf, "date-ordinal")) {
 			pTpe->data.field.eDateFormat = tplFmtOrdinal;
-		 } else if (!strcmp((char*)Buf, "date-week")) {
+		} else if (!strcmp((char *)Buf, "date-week")) {
 			pTpe->data.field.eDateFormat = tplFmtWeek;
-		 } else if(!strcmp((char*)Buf, "date-utc")) {
+		} else if (!strcmp((char *)Buf, "date-utc")) {
 			pTpe->data.field.options.bDateInUTC = 1;
-		 } else if(!strcmp((char*)Buf, "lowercase")) {
+		} else if (!strcmp((char *)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
-		 } else if(!strcmp((char*)Buf, "uppercase")) {
+		} else if (!strcmp((char *)Buf, "uppercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
-		 } else if(!strcmp((char*)Buf, "sp-if-no-1st-sp")) {
+		} else if (!strcmp((char *)Buf, "sp-if-no-1st-sp")) {
 			pTpe->data.field.options.bSPIffNo1stSP = 1;
-		 } else if(!strcmp((char*)Buf, "compressspace")) {
+		} else if (!strcmp((char *)Buf, "compressspace")) {
 			pTpe->data.field.options.bCompressSP = 1;
-		 } else if(!strcmp((char*)Buf, "escape-cc")) {
+		} else if (!strcmp((char *)Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
-		 } else if(!strcmp((char*)Buf, "drop-cc")) {
+		} else if (!strcmp((char *)Buf, "drop-cc")) {
 			pTpe->data.field.options.bDropCC = 1;
-		 } else if(!strcmp((char*)Buf, "space-cc")) {
+		} else if (!strcmp((char *)Buf, "space-cc")) {
 			pTpe->data.field.options.bSpaceCC = 1;
-		 } else if(!strcmp((char*)Buf, "drop-last-lf")) {
+		} else if (!strcmp((char *)Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
-		 } else if(!strcmp((char*)Buf, "secpath-drop")) {
+		} else if (!strcmp((char *)Buf, "secpath-drop")) {
 			pTpe->data.field.options.bSecPathDrop = 1;
-		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
+		} else if (!strcmp((char *)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
-		 } else if(!strcmp((char*)Buf, "pos-end-relative")) {
+		} else if (!strcmp((char *)Buf, "pos-end-relative")) {
 			pTpe->data.field.options.bFromPosEndRelative = 1;
-		 } else if(!strcmp((char*)Buf, "fixed-width")) {
+		} else if (!strcmp((char *)Buf, "fixed-width")) {
 			pTpe->data.field.options.bFixedWidth = 1;
-		 } else if(!strcmp((char*)Buf, "csv")) {
-			if(hasFormat(pTpe)) {
+		} else if (!strcmp((char *)Buf, "csv")) {
+			if (hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, jsonr, jsonfr, csv) - csv ignored");
+							       "one option out of (json, jsonf, jsonr, jsonfr, csv) - csv ignored");
 			} else {
 				pTpe->data.field.options.bCSV = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "json")) {
-			if(hasFormat(pTpe)) {
+		} else if (!strcmp((char *)Buf, "json")) {
+			if (hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, jsonr, jsonfr, csv) - json ignored");
+							       "one option out of (json, jsonf, jsonr, jsonfr, csv) - json ignored");
 			} else {
 				pTpe->data.field.options.bJSON = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonf")) {
-			if(hasFormat(pTpe)) {
+		} else if (!strcmp((char *)Buf, "jsonf")) {
+			if (hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonf ignored");
+							       "one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonf ignored");
 			} else {
 				pTpe->data.field.options.bJSONf = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonr")) {
-			if(hasFormat(pTpe)) {
+		} else if (!strcmp((char *)Buf, "jsonr")) {
+			if (hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonr ignored");
+							       "one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonr ignored");
 			} else {
 				pTpe->data.field.options.bJSONr = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "jsonfr")) {
-			if(hasFormat(pTpe)) {
+		} else if (!strcmp((char *)Buf, "jsonfr")) {
+			if (hasFormat(pTpe)) {
 				errmsg.LogError(0, NO_ERRCODE, "error: can only specify "
-					"one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonfr ignored");
+							       "one option out of (json, jsonf, jsonr, jsonfr, csv) - jsonfr ignored");
 			} else {
 				pTpe->data.field.options.bJSONfr = 1;
 			}
-		 } else if(!strcmp((char*)Buf, "mandatory-field")) {
-			 pTpe->data.field.options.bMandatory = 1;
-		 } else {
+		} else if (!strcmp((char *)Buf, "mandatory-field")) {
+			pTpe->data.field.options.bMandatory = 1;
+		} else {
 			errmsg.LogError(0, NO_ERRCODE, "template error: invalid field option '%s' "
-				"specified - ignored", Buf);
-		 }
+						       "specified - ignored",
+			    Buf);
+		}
 	}
 
 	*pp = p;
@@ -861,7 +858,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	cstr_t *pStrProp = NULL;
 	cstr_t *pStrField = NULL;
 	struct templateEntry *pTpe;
-	int iNum;	/* to compute numbers */
+	int iNum; /* to compute numbers */
 #ifdef FEATURE_REGEXP
 	/* APR: variables for regex */
 	rsRetVal iRetLocal;
@@ -875,12 +872,12 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	assert(*pp != NULL);
 	assert(pTpl != NULL);
 
-	p = (uchar*) *pp;
+	p = (uchar *)*pp;
 	CHKiRet(cstrConstruct(&pStrProp));
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
 
-	while(*p && *p != '%' && *p != ':') {
+	while (*p && *p != '%' && *p != ':') {
 		cstrAppendChar(pStrProp, *p);
 		++p;
 	}
@@ -889,102 +886,98 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	cstrFinalize(pStrProp);
 
 	CHKiRet(msgPropDescrFill(&pTpe->data.field.msgProp, cstrGetSzStrNoNULL(pStrProp),
-		cstrLen(pStrProp)));
+	    cstrLen(pStrProp)));
 
 	/* Check frompos, if it has an R, then topos should be a regex */
-	if(*p == ':') {
+	if (*p == ':') {
 		pTpe->bComplexProcessing = 1;
 		++p; /* eat ':' */
 #ifdef FEATURE_REGEXP
-		if(*p == 'R') {
+		if (*p == 'R') {
 			/* APR: R found! regex alarm ! :) */
-			++p;	/* eat ':' */
+			++p; /* eat ':' */
 
 			/* first come the regex type */
-			if(*p == ',') {
+			if (*p == ',') {
 				++p; /* eat ',' */
-				if(p[0] == 'B' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
+				if (p[0] == 'B' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
 					pTpe->data.field.typeRegex = TPL_REGEX_BRE;
 					p += 3; /* eat indicator sequence */
-				} else if(p[0] == 'E' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
+				} else if (p[0] == 'E' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
 					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
 					p += 3; /* eat indicator sequence */
 				} else {
 					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
-				               (char*) p);
+					    (char *)p);
 				}
 			}
 
 			/* now check for submatch ID */
 			pTpe->data.field.iSubMatchToUse = 0;
-			if(*p == ',') {
+			if (*p == ',') {
 				/* in this case a number follows, which indicates which match
 				 * shall be used. This must be a single digit.
 				 */
 				++p; /* eat ',' */
-				if(isdigit((int) *p)) {
+				if (isdigit((int)*p)) {
 					pTpe->data.field.iSubMatchToUse = *p - '0';
 					++p; /* eat digit */
 				}
 			}
 
 			/* now pull what to do if we do not find a match */
-			if(*p == ',') {
+			if (*p == ',') {
 				++p; /* eat ',' */
-				if(p[0] == 'D' && p[1] == 'F' && p[2] == 'L' && p[3] == 'T'
-				   && (p[4] == ',' || p[4] == ':')) {
+				if (p[0] == 'D' && p[1] == 'F' && p[2] == 'L' && p[3] == 'T' && (p[4] == ',' || p[4] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
 					p += 4; /* eat indicator sequence */
-				} else if(p[0] == 'B' && p[1] == 'L' && p[2] == 'A' && p[3] == 'N' && p[4] == 'K'
-				          && (p[5] == ',' || p[5] == ':')) {
+				} else if (p[0] == 'B' && p[1] == 'L' && p[2] == 'A' && p[3] == 'N' && p[4] == 'K' && (p[5] == ',' || p[5] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_BLANK;
 					p += 5; /* eat indicator sequence */
-				} else if(p[0] == 'F' && p[1] == 'I' && p[2] == 'E' && p[3] == 'L' && p[4] == 'D'
-				          && (p[5] == ',' || p[5] == ':')) {
+				} else if (p[0] == 'F' && p[1] == 'I' && p[2] == 'E' && p[3] == 'L' && p[4] == 'D' && (p[5] == ',' || p[5] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
 					p += 5; /* eat indicator sequence */
-				} else if(p[0] == 'Z' && p[1] == 'E' && p[2] == 'R' && p[3] == 'O'
-				          && (p[4] == ',' || p[4] == ':')) {
+				} else if (p[0] == 'Z' && p[1] == 'E' && p[2] == 'R' && p[3] == 'O' && (p[4] == ',' || p[4] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_ZERO;
-					p += 4; /* eat indicator sequence */
-				} else if(p[0] == ',') { /* empty, use default */
+					p += 4;		  /* eat indicator sequence */
+				} else if (p[0] == ',') { /* empty, use default */
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
-					 /* do NOT eat indicator sequence, as this was already eaten - the 
+					/* do NOT eat indicator sequence, as this was already eaten - the 
 					  * comma itself is already part of the next field.
 					  */
 				} else {
 					errmsg.LogError(0, NO_ERRCODE, "template %s error: invalid regular expression type, rest of line %s",
-				               pTpl->pszName, (char*) p);
+					    pTpl->pszName, (char *)p);
 				}
 			}
 
 			/* now check for match ID */
 			pTpe->data.field.iMatchToUse = 0;
-			if(*p == ',') {
+			if (*p == ',') {
 				/* in this case a number follows, which indicates which match
 				 * shall be used. This must be a single digit.
 				 */
 				++p; /* eat ',' */
-				if(isdigit((int) *p)) {
+				if (isdigit((int)*p)) {
 					pTpe->data.field.iMatchToUse = *p - '0';
 					++p; /* eat digit */
 				}
 			}
 
-			if(*p != ':') {
+			if (*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
 				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
-				    (char*) *pp);
+				    (char *)*pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
 				dbgprintf("we have a regexp and use match #%d, submatch #%d\n",
-					  pTpe->data.field.iMatchToUse, pTpe->data.field.iSubMatchToUse);
+				    pTpe->data.field.iMatchToUse, pTpe->data.field.iSubMatchToUse);
 			}
 		} else {
-			/* now we fall through the "regular" FromPos code */
+/* now we fall through the "regular" FromPos code */
 #endif /* #ifdef FEATURE_REGEXP */
-			if(*p == 'F') {
+			if (*p == 'F') {
 #ifdef STRICT_GPLV3
 				pTpe->data.field.field_expand = 0;
 #endif
@@ -1001,37 +994,39 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					 * **DECIMAL** ASCII value of the delimiter character.
 					 */
 					pTpe->data.field.has_fields = 1;
-					if(!isdigit((int)*p)) {
+					if (!isdigit((int)*p)) {
 						/* complain and use default */
 						errmsg.LogError(0, NO_ERRCODE, "error: invalid character in "
-"frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
-						    (char*) *pp);
+									       "frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
+						    (char *)*pp);
 						pTpe->data.field.field_delim = 9;
 					} else {
 						iNum = 0;
-						while(isdigit((int)*p))
+						while (isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
-						if(iNum < 0 || iNum > 255) {
+						if (iNum < 0 || iNum > 255) {
 							errmsg.LogError(0, NO_ERRCODE, "error: non-USASCII delimiter "
-"character value %d in template - using 9 (HT) as substitute", iNum);
+										       "character value %d in template - using 9 (HT) as substitute",
+							    iNum);
 							pTpe->data.field.field_delim = 9;
 						} else {
 							pTpe->data.field.field_delim = iNum;
-#							ifdef STRICT_GPLV3
+#ifdef STRICT_GPLV3
 							if (*p == '+') {
 								pTpe->data.field.field_expand = 1;
-								p ++;
+								p++;
 							}
-#							endif
-							if(*p == ',') { /* real fromPos? */
+#endif
+							if (*p == ',') { /* real fromPos? */
 								++p;
 								iNum = 0;
-								while(isdigit((int)*p))
+								while (isdigit((int)*p))
 									iNum = iNum * 10 + *p++ - '0';
 								pTpe->data.field.iFromPos = iNum;
-							} else if(*p != ':') {
+							} else if (*p != ':') {
 								parser_errmsg("error: invalid character '%c' in frompos after \"F,\", property: '%s' "
-									      "be sure to use DECIMAL character codes!", *p, (char*) *pp);
+									      "be sure to use DECIMAL character codes!",
+								    *p, (char *)*pp);
 								ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 							}
 						}
@@ -1041,16 +1036,16 @@ do_Parameter(uchar **pp, struct template *pTpl)
 					 * this.
 					 */
 					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
-					    (char*) *pp);
+					    (char *)*pp);
 				}
 			} else {
 				/* we now have a simple offset in frompos (the previously "normal" case) */
 				iNum = 0;
-				while(isdigit((int)*p))
+				while (isdigit((int)*p))
 					iNum = iNum * 10 + *p++ - '0';
 				pTpe->data.field.iFromPos = iNum;
 				/* skip to next known good */
-				while(*p && *p != '%' && *p != ':') {
+				while (*p && *p != '%' && *p != ':') {
 					/* TODO: complain on extra characters */
 					dbgprintf("error: extra character in frompos: '%s'\n", p);
 					++p;
@@ -1061,7 +1056,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 	/* check topos  (holds an regex if FromPos is "R"*/
-	if(*p == ':') {
+	if (*p == ':') {
 		++p; /* eat ':' */
 
 #ifdef FEATURE_REGEXP
@@ -1070,7 +1065,7 @@ do_Parameter(uchar **pp, struct template *pTpl)
 			/* APR 2005-09 I need the string that represent the regex */
 			/* The regex end is: "--end" */
 			/* TODO : this is hardcoded and cant be escaped, please change */
-			regex_end = (unsigned char*) strstr((char*)p, "--end");
+			regex_end = (unsigned char *)strstr((char *)p, "--end");
 			if (regex_end == NULL) {
 				dbgprintf("error: can not find regex end in: '%s'\n", p);
 				pTpe->data.field.has_regex = 0;
@@ -1078,8 +1073,8 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				/* We get here ONLY if the regex end was found */
 				longitud = regex_end - p;
 				/* Malloc for the regex string */
-				regex_char = (unsigned char *) MALLOC(longitud + 1);
-				if(regex_char == NULL) {
+				regex_char = (unsigned char *)MALLOC(longitud + 1);
+				if (regex_char == NULL) {
 					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
 					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1091,31 +1086,32 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				dbgprintf("debug: regex detected: '%s'\n", regex_char);
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
-				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+				if ((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 					int iOptions;
 					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
-					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0) {
+					if (regexp.regcomp(&(pTpe->data.field.re), (char *)regex_char, iOptions) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;
 					}
 				} else {
 					/* regexp object could not be loaded */
 					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
-						  iRetLocal);
-					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+					    iRetLocal);
+					if (bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
 						errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
-								"regexp ignored", iRetLocal);
+									       "regexp ignored",
+						    iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;
 				}
 
 				/* Finally we move the pointer to the end of the regex
 				 * so it aint parsed twice or something weird */
-				p = regex_end + 5/*strlen("--end")*/;
+				p = regex_end + 5 /*strlen("--end")*/;
 				free(regex_char);
 			}
-		} else if(*p == '$') {
+		} else if (*p == '$') {
 			/* shortcut for "end of message */
 			p++; /* eat '$' */
 			/* in this case, we do a quick, somewhat dirty but totally
@@ -1126,29 +1122,29 @@ do_Parameter(uchar **pp, struct template *pTpl)
 			 */
 			pTpe->data.field.iToPos = 9999999;
 		} else {
-			/* fallthrough to "regular" ToPos code */
+/* fallthrough to "regular" ToPos code */
 #endif /* #ifdef FEATURE_REGEXP */
 
-			if(pTpe->data.field.has_fields == 1) {
+			if (pTpe->data.field.has_fields == 1) {
 				iNum = 0;
-				while(isdigit((int)*p))
+				while (isdigit((int)*p))
 					iNum = iNum * 10 + *p++ - '0';
 				pTpe->data.field.iFieldNr = iNum;
-				if(*p == ',') { /* get real toPos? */
+				if (*p == ',') { /* get real toPos? */
 					++p;
 					iNum = 0;
-					while(isdigit((int)*p))
+					while (isdigit((int)*p))
 						iNum = iNum * 10 + *p++ - '0';
 					pTpe->data.field.iToPos = iNum;
 				}
 			} else {
 				iNum = 0;
-				while(isdigit((int)*p))
+				while (isdigit((int)*p))
 					iNum = iNum * 10 + *p++ - '0';
 				pTpe->data.field.iToPos = iNum;
 			}
 			/* skip to next known good */
-			while(*p && *p != '%' && *p != ':') {
+			while (*p && *p != '%' && *p != ':') {
 				/* TODO: complain on extra characters */
 				dbgprintf("error: extra character in frompos: '%s'\n", p);
 				++p;
@@ -1159,19 +1155,19 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	}
 
 	/* check options */
-	if(*p == ':') {
+	if (*p == ':') {
 		++p; /* eat ':' */
 		doOptions(&p, pTpe);
 	}
 
-	if(pTpe->data.field.options.bFromPosEndRelative) {
-		if(pTpe->data.field.iToPos > pTpe->data.field.iFromPos) {
+	if (pTpe->data.field.options.bFromPosEndRelative) {
+		if (pTpe->data.field.iToPos > pTpe->data.field.iFromPos) {
 			iNum = pTpe->data.field.iToPos;
 			pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
 			pTpe->data.field.iFromPos = iNum;
 		}
 	} else {
-		if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
+		if (pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
 			iNum = pTpe->data.field.iToPos;
 			pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
 			pTpe->data.field.iFromPos = iNum;
@@ -1180,10 +1176,10 @@ do_Parameter(uchar **pp, struct template *pTpl)
 
 
 	/* check field name */
-	if(*p == ':') {
+	if (*p == ':') {
 		++p; /* eat ':' */
 		CHKiRet(cstrConstruct(&pStrField));
-		while(*p != ':' && *p != '%' && *p != '\0') {
+		while (*p != ':' && *p != '%' && *p != '\0') {
 			cstrAppendChar(pStrField, *p);
 			++p;
 		}
@@ -1191,12 +1187,12 @@ do_Parameter(uchar **pp, struct template *pTpl)
 	}
 
 	/* save field name - if none was given, use the property name instead */
-	if(pStrField == NULL) {
+	if (pStrField == NULL) {
 		/* FIXME Global Var?   AND   Lower case? */
-		if(pTpe->data.field.msgProp.id == PROP_CEE || pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
+		if (pTpe->data.field.msgProp.id == PROP_CEE || pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
 			/* in CEE case, we remove "$!"/"$." from the fieldname - it's just our indicator */
-			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp)+2);
-			pTpe->lenFieldName = cstrLen(pStrProp)-2;
+			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp) + 2);
+			pTpe->lenFieldName = cstrLen(pStrProp) - 2;
 		} else {
 			pTpe->fieldName = ustrdup(cstrGetSzStrNoNULL(pStrProp));
 			pTpe->lenFieldName = cstrLen(pStrProp);
@@ -1206,14 +1202,15 @@ do_Parameter(uchar **pp, struct template *pTpl)
 		pTpe->lenFieldName = ustrlen(pTpe->fieldName);
 		cstrDestruct(&pStrField);
 	}
-	if(pTpe->fieldName == NULL) {
+	if (pTpe->fieldName == NULL) {
 		DBGPRINTF("template/do_Parameter: fieldName is NULL!\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-	if(*p) ++p; /* eat '%' */
+	if (*p)
+		++p; /* eat '%' */
 	*pp = p;
 finalize_it:
-	if(pStrProp != NULL)
+	if (pStrProp != NULL)
 		cstrDestruct(&pStrProp);
 	RETiRet;
 }
@@ -1224,7 +1221,7 @@ finalize_it:
  * rgerhards, 2010-05-31
  */
 static rsRetVal
-tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
+tplAddTplMod(struct template *pTpl, uchar **ppRestOfConfLine)
 {
 	uchar *pSrc;
 	uchar szMod[2048];
@@ -1234,10 +1231,9 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 
 	pSrc = *ppRestOfConfLine;
 	lenMod = 0;
-	while(*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
+	while (*pSrc && !isspace(*pSrc) && lenMod < sizeof(szMod) - 1) {
 		szMod[lenMod] = *pSrc++;
 		lenMod++;
-		
 	}
 	szMod[lenMod] = '\0';
 	*ppRestOfConfLine = pSrc;
@@ -1251,13 +1247,13 @@ tplAddTplMod(struct template *pTpl, uchar** ppRestOfConfLine)
 	 * regular syntax were used, and it make sure the strgen postively
 	 * acknowledged implementing the option. -- rgerhards, 2011-03-21
 	 */
-	if(lenMod > 6 && !strcasecmp((char*) szMod + lenMod - 7, ",stdsql")) {
+	if (lenMod > 6 && !strcasecmp((char *)szMod + lenMod - 7, ",stdsql")) {
 		pTpl->optFormatEscape = STDSQL_ESCAPE;
 		DBGPRINTF("strgen supports the stdsql option\n");
-	} else if(lenMod > 3 && !strcasecmp((char*) szMod+ lenMod - 4, ",sql")) {
+	} else if (lenMod > 3 && !strcasecmp((char *)szMod + lenMod - 4, ",sql")) {
 		pTpl->optFormatEscape = SQL_ESCAPE;
 		DBGPRINTF("strgen supports the sql option\n");
-	} else if(lenMod > 4 && !strcasecmp((char*) szMod+ lenMod - 4, ",json")) {
+	} else if (lenMod > 4 && !strcasecmp((char *)szMod + lenMod - 4, ",json")) {
 		pTpl->optFormatEscape = JSON_ESCAPE;
 		DBGPRINTF("strgen supports the json option\n");
 	}
@@ -1270,23 +1266,23 @@ finalize_it:
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfConfLine)
+struct template *tplAddLine(rsconf_t *conf, const char *pName, uchar **ppRestOfConfLine)
 {
 	struct template *pTpl;
- 	unsigned char *p;
+	unsigned char *p;
 	int bDone;
 	size_t i;
 	rsRetVal localRet;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
-	if((pTpl = tplConstruct(conf)) == NULL)
+	if ((pTpl = tplConstruct(conf)) == NULL)
 		return NULL;
-	
+
 	DBGPRINTF("tplAddLine processing template '%s'\n", pName);
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) MALLOC(pTpl->iLenName + 1);
-	if(pTpl->pszName == NULL) {
+	pTpl->pszName = (char *)MALLOC(pTpl->iLenName + 1);
+	if (pTpl->pszName == NULL) {
 		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;
 		return NULL;
@@ -1301,18 +1297,18 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	p = *ppRestOfConfLine;
 	assert(p != NULL);
 
-	while(isspace((int)*p))/* skip whitespace */
+	while (isspace((int)*p)) /* skip whitespace */
 		++p;
-	
-	switch(*p) {
+
+	switch (*p) {
 	case '"': /* just continue */
 		break;
 	case '=':
 		*ppRestOfConfLine = p + 1;
 		localRet = tplAddTplMod(pTpl, ppRestOfConfLine);
-		if(localRet != RS_RET_OK) {
+		if (localRet != RS_RET_OK) {
 			errmsg.LogError(0, localRet, "Template '%s': error %d defining template via strgen module",
-					pTpl->pszName, localRet);
+			    pTpl->pszName, localRet);
 			/* we simply make the template defunct in this case by setting
 			 * its name to a zero-string. We do not free it, as this would
 			 * require additional code and causes only a very small memory
@@ -1336,68 +1332,67 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 
 	/* we finally go to the actual template string - so let's have some fun... */
 	bDone = *p ? 0 : 1;
-	while(!bDone) {
-		switch(*p) {
-			case '\0':
-				bDone = 1;
-				break;
-			case '%': /* parameter */
-				++p; /* eat '%' */
-				if(do_Parameter(&p, pTpl) != RS_RET_OK) {
-					dbgprintf("tplAddLine error: parameter invalid");
-					return NULL;
-				};
-				break;
-			default: /* constant */
-				do_Constant(&p, pTpl, 1);
-				break;
+	while (!bDone) {
+		switch (*p) {
+		case '\0':
+			bDone = 1;
+			break;
+		case '%':    /* parameter */
+			++p; /* eat '%' */
+			if (do_Parameter(&p, pTpl) != RS_RET_OK) {
+				dbgprintf("tplAddLine error: parameter invalid");
+				return NULL;
+			};
+			break;
+		default: /* constant */
+			do_Constant(&p, pTpl, 1);
+			break;
 		}
-		if(*p == '"') {/* end of template string? */
-			++p;	/* eat it! */
+		if (*p == '"') { /* end of template string? */
+			++p;     /* eat it! */
 			bDone = 1;
 		}
 	}
-	
+
 	/* we now have the template - let's look at the options (if any)
 	 * we process options until we reach the end of the string or 
 	 * an error occurs - whichever is first.
 	 */
-	while(*p) {
-		while(isspace((int)*p))/* skip whitespace */
+	while (*p) {
+		while (isspace((int)*p)) /* skip whitespace */
 			++p;
-		
-		if(*p != ',')
+
+		if (*p != ',')
 			break;
 		++p; /* eat ',' */
 
-		while(isspace((int)*p))/* skip whitespace */
+		while (isspace((int)*p)) /* skip whitespace */
 			++p;
-		
+
 		/* read option word */
-		char optBuf[128] = { '\0' }; /* buffer for options - should be more than enough... */
+		char optBuf[128] = {'\0'}; /* buffer for options - should be more than enough... */
 		i = 0;
-		while((i < (sizeof(optBuf) - 1))
-		      && *p && *p != '=' && *p !=',' && *p != '\n') {
+		while ((i < (sizeof(optBuf) - 1)) && *p && *p != '=' && *p != ',' && *p != '\n') {
 			optBuf[i++] = tolower((int)*p);
 			++p;
 		}
 		optBuf[i] = '\0';
 
-		if(*p == '\n')
+		if (*p == '\n')
 			++p;
 
 		/* as of now, the no form is nonsense... but I do include
 		 * it anyhow... ;) rgerhards 2004-11-22
 		 */
-		if(!strcmp(optBuf, "stdsql")) {
+		if (!strcmp(optBuf, "stdsql")) {
 			pTpl->optFormatEscape = STDSQL_ESCAPE;
-		} else if(!strcmp(optBuf, "json")) {
+		} else if (!strcmp(optBuf, "json")) {
 			pTpl->optFormatEscape = JSON_ESCAPE;
-		} else if(!strcmp(optBuf, "sql")) {
+		} else if (!strcmp(optBuf, "sql")) {
 			pTpl->optFormatEscape = SQL_ESCAPE;
-		} else if(!strcmp(optBuf, "nosql")) {
+		} else if (!strcmp(optBuf, "nosql")) {
 			pTpl->optFormatEscape = NO_ESCAPE;
-		} else if(!strcmp(optBuf, "casesensitive")) {
+		} else if (!strcmp(optBuf, "casesensitive")) {
 			pTpl->optCaseSensitive = 1;
 		} else {
 			dbgprintf("Invalid option '%s' ignored.\n", optBuf);
@@ -1407,7 +1402,7 @@ struct template *tplAddLine(rsconf_t *conf, const char* pName, uchar** ppRestOfC
 	*ppRestOfConfLine = p;
 	apply_case_sensitivity(pTpl);
 
-	return(pTpl);
+	return (pTpl);
 }
 
 static rsRetVal
@@ -1423,17 +1418,18 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
 	cnfparamsPrint(&pblkConstant, pvals);
-	
-	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+
+	for (i = 0; i < pblkConstant.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblkConstant.descr[i].name, "value")) {
+		if (!strcmp(pblkConstant.descr[i].name, "value")) {
 			value = pvals[i].val.d.estr;
-		} else if(!strcmp(pblkConstant.descr[i].name, "outname")) {
-			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblkConstant.descr[i].name, "outname")) {
+			outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("template:constantTpe: program error, non-handled "
-			  "param '%s'\n", pblkConstant.descr[i].name);
+				  "param '%s'\n",
+			    pblkConstant.descr[i].name);
 		}
 	}
 
@@ -1444,13 +1440,13 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	es_unescapeStr(value);
 	pTpe->eEntryType = CONSTANT;
 	pTpe->fieldName = outname;
-	if(outname != NULL)
+	if (outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
 	pTpe->data.constant.iLenConstant = es_strlen(value);
-	pTpe->data.constant.pConstant = (uchar*)es_str2cstr(value, NULL);
+	pTpe->data.constant.pConstant = (uchar *)es_str2cstr(value, NULL);
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblkConstant);
 	RETiRet;
 }
@@ -1478,9 +1474,19 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int bCompressSP = 0;
 	char *re_expr = NULL;
 	struct cnfparamvals *pvals = NULL;
-	enum {F_NONE, F_CSV, F_JSON, F_JSONF, F_JSONR, F_JSONFR} formatType = F_NONE;
-	enum {CC_NONE, CC_ESCAPE, CC_SPACE, CC_DROP} controlchr = CC_NONE;
-	enum {SP_NONE, SP_DROP, SP_REPLACE} secpath = SP_NONE;
+	enum { F_NONE,
+		F_CSV,
+		F_JSON,
+		F_JSONF,
+		F_JSONR,
+		F_JSONFR } formatType = F_NONE;
+	enum { CC_NONE,
+		CC_ESCAPE,
+		CC_SPACE,
+		CC_DROP } controlchr = CC_NONE;
+	enum { SP_NONE,
+		SP_DROP,
+		SP_REPLACE } secpath = SP_NONE;
 	enum tplFormatCaseConvTypes caseconv = tplCaseConvNo;
 	enum tplFormatTypes datefmt = tplFmtDefault;
 	enum tplRegexType re_type = TPL_REGEX_BRE;
@@ -1490,241 +1496,242 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
 	cnfparamsPrint(&pblkProperty, pvals);
-	
-	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+
+	for (i = 0; i < pblkProperty.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblkProperty.descr[i].name, "name")) {
-			name = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
+		if (!strcmp(pblkProperty.descr[i].name, "name")) {
+			name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblkProperty.descr[i].name, "droplastlf")) {
 			droplastlf = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "fixedwidth")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "fixedwidth")) {
 			fixedwidth = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "mandatory")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "mandatory")) {
 			mandatory = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
 			spifno1stsp = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "outname")) {
-			outname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblkProperty.descr[i].name, "position.from")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "outname")) {
+			outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblkProperty.descr[i].name, "position.from")) {
 			frompos = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "position.to")) {
 			topos = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "position.relativetoend")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "position.relativetoend")) {
 			bPosRelativeToEnd = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "field.number")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "field.number")) {
 			fieldnum = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "field.delimiter")) {
 			fielddelim = pvals[i].val.d.n;
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
 			re_expr = es_str2cstr(pvals[i].val.d.estr, NULL);
 			bComplexProcessing = 1;
-		} else if(!strcmp(pblkProperty.descr[i].name, "regex.type")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "regex.type")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BRE", sizeof("BRE")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"BRE", sizeof("BRE") - 1)) {
 				re_type = TPL_REGEX_BRE;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ERE", sizeof("ERE")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"ERE", sizeof("ERE") - 1)) {
 				re_type = TPL_REGEX_ERE;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "regex.nomatchmode")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "regex.nomatchmode")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"DFLT", sizeof("DFLT")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"DFLT", sizeof("DFLT") - 1)) {
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_DFLTSTR;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"BLANK", sizeof("BLANK")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"BLANK", sizeof("BLANK") - 1)) {
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_BLANK;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"FIELD", sizeof("FIELD")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"FIELD", sizeof("FIELD") - 1)) {
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ZERO", sizeof("ZERO")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"ZERO", sizeof("ZERO") - 1)) {
 				re_nomatchType = TPL_REGEX_NOMATCH_USE_ZERO;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "regex.match")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "regex.match")) {
 			bComplexProcessing = 1;
 			re_matchToUse = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "regex.submatch")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "regex.submatch")) {
 			bComplexProcessing = 1;
 			re_submatchToUse = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "format")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "format")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"csv", sizeof("csv")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"csv", sizeof("csv") - 1)) {
 				formatType = F_CSV;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"json", sizeof("json")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"json", sizeof("json") - 1)) {
 				formatType = F_JSON;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonf", sizeof("jsonf")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"jsonf", sizeof("jsonf") - 1)) {
 				formatType = F_JSONF;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonr", sizeof("jsonr")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"jsonr", sizeof("jsonr") - 1)) {
 				formatType = F_JSONR;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"jsonfr", sizeof("jsonfr")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"jsonfr", sizeof("jsonfr") - 1)) {
 				formatType = F_JSONFR;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid format type '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "controlcharacters")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "controlcharacters")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"escape", sizeof("escape")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"escape", sizeof("escape") - 1)) {
 				controlchr = CC_ESCAPE;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"space", sizeof("space")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"space", sizeof("space") - 1)) {
 				controlchr = CC_SPACE;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"drop", sizeof("drop") - 1)) {
 				controlchr = CC_DROP;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "securepath")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "securepath")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"drop", sizeof("drop")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"drop", sizeof("drop") - 1)) {
 				secpath = SP_DROP;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"replace", sizeof("replace")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"replace", sizeof("replace") - 1)) {
 				secpath = SP_REPLACE;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "caseconversion")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "caseconversion")) {
 			bComplexProcessing = 1;
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"lower", sizeof("lower")-1)) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"lower", sizeof("lower") - 1)) {
 				caseconv = tplCaseConvLower;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"upper", sizeof("upper")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"upper", sizeof("upper") - 1)) {
 				caseconv = tplCaseConvUpper;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblkProperty.descr[i].name, "compressspace")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "compressspace")) {
 			bComplexProcessing = 1;
 			bCompressSP = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "date.inutc")) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "date.inutc")) {
 			bDateInUTC = pvals[i].val.d.n;
-		} else if(!strcmp(pblkProperty.descr[i].name, "dateformat")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"mysql", sizeof("mysql")-1)) {
+		} else if (!strcmp(pblkProperty.descr[i].name, "dateformat")) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"mysql", sizeof("mysql") - 1)) {
 				datefmt = tplFmtMySQLDate;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"pgsql", sizeof("pgsql")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"pgsql", sizeof("pgsql") - 1)) {
 				datefmt = tplFmtPgSQLDate;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164", sizeof("rfc3164")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"rfc3164", sizeof("rfc3164") - 1)) {
 				datefmt = tplFmtRFC3164Date;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3164-buggyday", sizeof("rfc3164-buggyday")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"rfc3164-buggyday", sizeof("rfc3164-buggyday") - 1)) {
 				datefmt = tplFmtRFC3164BuggyDate;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rfc3339", sizeof("rfc3339")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"rfc3339", sizeof("rfc3339") - 1)) {
 				datefmt = tplFmtRFC3339Date;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"unixtimestamp", sizeof("unixtimestamp")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"unixtimestamp", sizeof("unixtimestamp") - 1)) {
 				datefmt = tplFmtUnixDate;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subseconds", sizeof("subseconds")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"subseconds", sizeof("subseconds") - 1)) {
 				datefmt = tplFmtSecFrac;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wdayname", sizeof("wdayname")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"wdayname", sizeof("wdayname") - 1)) {
 				datefmt = tplFmtWDayName;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"wday", sizeof("wday")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"wday", sizeof("wday") - 1)) {
 				datefmt = tplFmtWDay;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"year", sizeof("year")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"year", sizeof("year") - 1)) {
 				datefmt = tplFmtYear;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"month", sizeof("month")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"month", sizeof("month") - 1)) {
 				datefmt = tplFmtMonth;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"day", sizeof("day")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"day", sizeof("day") - 1)) {
 				datefmt = tplFmtDay;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"hour", sizeof("hour")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"hour", sizeof("hour") - 1)) {
 				datefmt = tplFmtHour;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"minute", sizeof("minute")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"minute", sizeof("minute") - 1)) {
 				datefmt = tplFmtMinute;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"second", sizeof("second")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"second", sizeof("second") - 1)) {
 				datefmt = tplFmtSecond;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffshour", sizeof("tzoffshour")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"tzoffshour", sizeof("tzoffshour") - 1)) {
 				datefmt = tplFmtTZOffsHour;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsmin", sizeof("tzoffsmin")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"tzoffsmin", sizeof("tzoffsmin") - 1)) {
 				datefmt = tplFmtTZOffsMin;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"tzoffsdirection", sizeof("tzoffsdirection")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"tzoffsdirection", sizeof("tzoffsdirection") - 1)) {
 				datefmt = tplFmtTZOffsDirection;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"ordinal", sizeof("ordinal")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"ordinal", sizeof("ordinal") - 1)) {
 				datefmt = tplFmtOrdinal;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"week", sizeof("week")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"week", sizeof("week") - 1)) {
 				datefmt = tplFmtWeek;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid date format '%s' for property",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else {
 			dbgprintf("template:propertyTpe: program error, non-handled "
-			  "param '%s'\n", pblkProperty.descr[i].name);
+				  "param '%s'\n",
+			    pblkProperty.descr[i].name);
 		}
 	}
 	if (name == NULL) {
-		CHKmalloc(name = (uchar*)strdup(""));
+		CHKmalloc(name = (uchar *)strdup(""));
 	}
-	if(outname == NULL) {
+	if (outname == NULL) {
 		/* we need to drop "$!" prefix, if present */
-		if(ustrlen(name) >= 2 && !strncmp((char*)name, "$!", 2))
+		if (ustrlen(name) >= 2 && !strncmp((char *)name, "$!", 2))
 			outname = ustrdup(name + 2);
 		else
 			outname = ustrdup(name);
 	}
 
 	/* sanity check */
-	if(topos == -1 && frompos != -1)
+	if (topos == -1 && frompos != -1)
 		topos = 2000000000; /* large enough ;) */
-	if(frompos == -1 && topos != -1)
+	if (frompos == -1 && topos != -1)
 		frompos = 0;
-	if(bPosRelativeToEnd) {
-		if(topos > frompos) {
+	if (bPosRelativeToEnd) {
+		if (topos > frompos) {
 			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is higher than postion.from=%d in 'relativeToEnd' mode\n",
-				topos, frompos);
+			    topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(topos < frompos) {
+		if (topos < frompos) {
 			errmsg.LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
-				topos, frompos);
+			    topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
-	if(fieldnum != -1 && re_expr != NULL) {
+	if (fieldnum != -1 && re_expr != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "both field extraction and regex extraction "
-				"specified - this is not possible, remove one");
+					       "specified - this is not possible, remove one");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
 	pTpe->eEntryType = FIELD;
-	CHKiRet(msgPropDescrFill(&pTpe->data.field.msgProp, name, strlen((char*)name)));
+	CHKiRet(msgPropDescrFill(&pTpe->data.field.msgProp, name, strlen((char *)name)));
 	pTpe->data.field.options.bDropLastLF = droplastlf;
 	pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
 	pTpe->data.field.options.bMandatory = mandatory;
 	pTpe->data.field.options.bFixedWidth = fixedwidth;
 	pTpe->data.field.eCaseConv = caseconv;
-	switch(formatType) {
+	switch (formatType) {
 	case F_NONE:
 		/* all set ;) */
 		break;
@@ -1744,7 +1751,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bJSONfr = 1;
 		break;
 	}
-	switch(controlchr) {
+	switch (controlchr) {
 	case CC_NONE:
 		/* all set ;) */
 		break;
@@ -1758,7 +1765,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		pTpe->data.field.options.bDropCC = 1;
 		break;
 	}
-	switch(secpath) {
+	switch (secpath) {
 	case SP_NONE:
 		/* all set ;) */
 		break;
@@ -1770,44 +1777,45 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		break;
 	}
 	pTpe->fieldName = outname;
-	if(outname != NULL)
+	if (outname != NULL)
 		pTpe->lenFieldName = ustrlen(outname);
 	outname = NULL;
 	pTpe->bComplexProcessing = bComplexProcessing;
 	pTpe->data.field.eDateFormat = datefmt;
 	pTpe->data.field.options.bDateInUTC = bDateInUTC;
 	pTpe->data.field.options.bCompressSP = bCompressSP;
-	if(fieldnum != -1) {
+	if (fieldnum != -1) {
 		pTpe->data.field.has_fields = 1;
 		pTpe->data.field.iFieldNr = fieldnum;
 		pTpe->data.field.field_delim = fielddelim;
 	}
-	if(frompos != -1) {
+	if (frompos != -1) {
 		pTpe->data.field.iFromPos = frompos;
 		pTpe->data.field.iToPos = topos;
 		pTpe->data.field.options.bFromPosEndRelative = bPosRelativeToEnd;
 	}
-	if(re_expr != NULL) {
+	if (re_expr != NULL) {
 		rsRetVal iRetLocal;
 		pTpe->data.field.typeRegex = re_type;
 		pTpe->data.field.nomatchAction = re_nomatchType;
 		pTpe->data.field.iMatchToUse = re_matchToUse;
 		pTpe->data.field.iSubMatchToUse = re_submatchToUse;
 		pTpe->data.field.has_regex = 1;
-		if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+		if ((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 			int iOptions;
 			iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
-			if(regexp.regcomp(&(pTpe->data.field.re), (char*) re_expr, iOptions) != 0) {
+			if (regexp.regcomp(&(pTpe->data.field.re), (char *)re_expr, iOptions) != 0) {
 				errmsg.LogError(0, NO_ERRCODE, "error compiling regex '%s'", re_expr);
 				pTpe->data.field.has_regex = 2;
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		} else {
 			/* regexp object could not be loaded */
-			if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+			if (bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 				bFirstRegexpErrmsg = 0;
 				errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
-						"regexp ignored", iRetLocal);
+							       "regexp ignored",
+				    iRetLocal);
 			}
 			pTpe->data.field.has_regex = 2;
 			ABORT_FINALIZE(RS_RET_ERR);
@@ -1815,7 +1823,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblkProperty);
 	free(name);
 	free(outname);
@@ -1832,16 +1840,18 @@ createListTpl(struct template *pTpl, struct cnfobj *o)
 	dbgprintf("create template from subobjs\n");
 	objlstPrint(o->subobjs);
 
-	for(lst = o->subobjs ; lst != NULL ; lst = lst->next) {
-		switch(lst->obj->objType) {
+	for (lst = o->subobjs; lst != NULL; lst = lst->next) {
+		switch (lst->obj->objType) {
 		case CNFOBJ_PROPERTY:
 			CHKiRet(createPropertyTpe(pTpl, lst->obj));
 			break;
 		case CNFOBJ_CONSTANT:
 			CHKiRet(createConstantTpe(pTpl, lst->obj));
 			break;
-		default:dbgprintf("program error: invalid object type %d "
-				  "in createLstTpl\n", lst->obj->objType);
+		default:
+			dbgprintf("program error: invalid object type %d "
+				  "in createLstTpl\n",
+			    lst->obj->objType);
 			break;
 		}
 		nvlstChkUnused(lst->obj->nvlst);
@@ -1863,71 +1873,75 @@ tplProcessCnf(struct cnfobj *o)
 	uchar *p;
 	msgPropDescr_t subtree;
 	sbool bHaveSubtree = 0;
-	enum { T_STRING, T_PLUGIN, T_LIST, T_SUBTREE }
-		tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
+	enum { T_STRING,
+		T_PLUGIN,
+		T_LIST,
+		T_SUBTREE } tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
 	int i;
-	int o_sql=0, o_stdsql=0, o_json=0, o_casesensitive=0; /* options */
+	int o_sql = 0, o_stdsql = 0, o_json = 0, o_casesensitive = 0; /* options */
 	int numopts;
 	rsRetVal localRet;
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
 	cnfparamsPrint(&pblk, pvals);
-	
-	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+
+	for (i = 0; i < pblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk.descr[i].name, "name")) {
+		if (!strcmp(pblk.descr[i].name, "name")) {
 			lenName = es_strlen(pvals[i].val.d.estr);
 			name = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "type")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"string", sizeof("string")-1)) {
+		} else if (!strcmp(pblk.descr[i].name, "type")) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"string", sizeof("string") - 1)) {
 				tplType = T_STRING;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"plugin", sizeof("plugin")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"plugin", sizeof("plugin") - 1)) {
 				tplType = T_PLUGIN;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"list", sizeof("list")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"list", sizeof("list") - 1)) {
 				tplType = T_LIST;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"subtree", sizeof("subtree")-1)) {
+			} else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"subtree", sizeof("subtree") - 1)) {
 				tplType = T_SUBTREE;
 			} else {
-				uchar *typeStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+				uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid template type '%s'",
-					typeStr);
+				    typeStr);
 				free(typeStr);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-		} else if(!strcmp(pblk.descr[i].name, "string")) {
-			tplStr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "subtree")) {
+		} else if (!strcmp(pblk.descr[i].name, "string")) {
+			tplStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk.descr[i].name, "subtree")) {
 			uchar *st_str = es_getBufAddr(pvals[i].val.d.estr);
-			if(st_str[0] != '$' || st_str[1] != '!') {
+			if (st_str[0] != '$' || st_str[1] != '!') {
 				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 				errmsg.LogError(0, RS_RET_ERR, "invalid subtree "
-					"parameter, variable must start with '$!' but "
-					"var name is '%s'", cstr);
+							       "parameter, variable must start with '$!' but "
+							       "var name is '%s'",
+				    cstr);
 				free(cstr);
 				free(name); /* overall assigned */
 				ABORT_FINALIZE(RS_RET_ERR);
 			} else {
 				uchar *cstr;
-				cstr  = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+				cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 				CHKiRet(msgPropDescrFill(&subtree, cstr, ustrlen(cstr)));
 				free(cstr);
 				bHaveSubtree = 1;
 			}
-		} else if(!strcmp(pblk.descr[i].name, "plugin")) {
-			plugin = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "option.stdsql")) {
+		} else if (!strcmp(pblk.descr[i].name, "plugin")) {
+			plugin = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk.descr[i].name, "option.stdsql")) {
 			o_stdsql = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "option.sql")) {
+		} else if (!strcmp(pblk.descr[i].name, "option.sql")) {
 			o_sql = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "option.json")) {
+		} else if (!strcmp(pblk.descr[i].name, "option.json")) {
 			o_json = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "option.casesensitive")) {
+		} else if (!strcmp(pblk.descr[i].name, "option.casesensitive")) {
 			o_casesensitive = pvals[i].val.d.n;
 		} else {
 			dbgprintf("template: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
+				  "param '%s'\n",
+			    pblk.descr[i].name);
 		}
 	}
 
@@ -1935,132 +1949,149 @@ tplProcessCnf(struct cnfobj *o)
 	 * cannot occur if all is setup well, because "name" is a required parameter
 	 * inside the param block and so the code should err out above.
 	 */
-	if(name == NULL) {
+	if (name == NULL) {
 		DBGPRINTF("template/tplProcessConf: logic error name == NULL - pblk wrong?\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* do config sanity checks */
-	if(tplStr  == NULL) {
-		if(tplType == T_STRING) {
+	if (tplStr == NULL) {
+		if (tplType == T_STRING) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type string needs "
-				"string parameter", name);
+						       "string parameter",
+			    name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(tplType != T_STRING) {
+		if (tplType != T_STRING) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a string "
-				"template but has a string specified - ignored", name);
+						       "template but has a string specified - ignored",
+			    name);
 		}
 	}
 
-	if(plugin  == NULL) {
-		if(tplType == T_PLUGIN) {
+	if (plugin == NULL) {
+		if (tplType == T_PLUGIN) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type plugin needs "
-				"plugin parameter", name);
+						       "plugin parameter",
+			    name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(tplType != T_PLUGIN) {
+		if (tplType != T_PLUGIN) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a plugin "
-				"template but has a plugin specified - ignored", name);
+						       "template but has a plugin specified - ignored",
+			    name);
 		}
 	}
 
-	if(!bHaveSubtree) {
-		if(tplType == T_SUBTREE) {
+	if (!bHaveSubtree) {
+		if (tplType == T_SUBTREE) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type subtree needs "
-				"subtree parameter", name);
+						       "subtree parameter",
+			    name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(tplType != T_SUBTREE) {
+		if (tplType != T_SUBTREE) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a subtree "
-				"template but has a subtree specified - ignored", name);
+						       "template but has a subtree specified - ignored",
+			    name);
 		}
 	}
 
-	if(o->subobjs  == NULL) {
-		if(tplType == T_LIST) {
+	if (o->subobjs == NULL) {
+		if (tplType == T_LIST) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' of type list has "
-				"has no parameters specified", name);
+						       "has no parameters specified",
+			    name);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(tplType != T_LIST) {
+		if (tplType != T_LIST) {
 			errmsg.LogError(0, RS_RET_ERR, "template '%s' is not a list "
-				"template but has parameters specified - ignored", name);
+						       "template but has parameters specified - ignored",
+			    name);
 		}
 	}
 
 	numopts = 0;
-	if(o_sql) ++numopts;
-	if(o_stdsql) ++numopts;
-	if(o_json) ++numopts;
-	if(o_casesensitive) ++numopts;
-	if(numopts > 1) {
+	if (o_sql)
+		++numopts;
+	if (o_stdsql)
+		++numopts;
+	if (o_json)
+		++numopts;
+	if (o_casesensitive)
+		++numopts;
+	if (numopts > 1) {
 		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
-			"options of sql, stdsql or json specified", name);
+					       "options of sql, stdsql or json specified",
+		    name);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* config ok */
-	if((pTpl = tplConstruct(loadConf)) == NULL) {
+	if ((pTpl = tplConstruct(loadConf)) == NULL) {
 		DBGPRINTF("template.c: tplConstruct failed!\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	pTpl->pszName = name;
 	pTpl->iLenName = lenName;
-	
-	switch(tplType) {
-	case T_STRING:	p = tplStr;
-			while(*p) {
-				switch(*p) {
-					case '%': /* parameter */
-						++p; /* eat '%' */
-						CHKiRet(do_Parameter(&p, pTpl));
-						break;
-					default: /* constant */
-						do_Constant(&p, pTpl, 0);
-						break;
-				}
+
+	switch (tplType) {
+	case T_STRING:
+		p = tplStr;
+		while (*p) {
+			switch (*p) {
+			case '%':    /* parameter */
+				++p; /* eat '%' */
+				CHKiRet(do_Parameter(&p, pTpl));
+				break;
+			default: /* constant */
+				do_Constant(&p, pTpl, 0);
+				break;
 			}
-			break;
-	case T_PLUGIN:	p = plugin;
-			/* TODO: the use of tplAddTplMod() can be improved! */
-			localRet = tplAddTplMod(pTpl, &p);
-			if(localRet != RS_RET_OK) {
-				errmsg.LogError(0, localRet, "template '%s': error %d "
-						"defining template via plugin (strgen) module",
-						pTpl->pszName, localRet);
-				ABORT_FINALIZE(localRet);
-			}
-			break;
-	case T_LIST:	createListTpl(pTpl, o);
-			break;
-	case T_SUBTREE:	memcpy(&pTpl->subtree, &subtree, sizeof(msgPropDescr_t));
-			pTpl->bHaveSubtree = 1;
-			break;
+		}
+		break;
+	case T_PLUGIN:
+		p = plugin;
+		/* TODO: the use of tplAddTplMod() can be improved! */
+		localRet = tplAddTplMod(pTpl, &p);
+		if (localRet != RS_RET_OK) {
+			errmsg.LogError(0, localRet, "template '%s': error %d "
+						     "defining template via plugin (strgen) module",
+			    pTpl->pszName, localRet);
+			ABORT_FINALIZE(localRet);
+		}
+		break;
+	case T_LIST:
+		createListTpl(pTpl, o);
+		break;
+	case T_SUBTREE:
+		memcpy(&pTpl->subtree, &subtree, sizeof(msgPropDescr_t));
+		pTpl->bHaveSubtree = 1;
+		break;
 	}
-	
+
 	pTpl->optFormatEscape = NO_ESCAPE;
-	if(o_stdsql)
+	if (o_stdsql)
 		pTpl->optFormatEscape = STDSQL_ESCAPE;
-	else if(o_sql)
+	else if (o_sql)
 		pTpl->optFormatEscape = SQL_ESCAPE;
-	else if(o_json)
+	else if (o_json)
 		pTpl->optFormatEscape = JSON_ESCAPE;
 
-	if(o_casesensitive)
+	if (o_casesensitive)
 		pTpl->optCaseSensitive = 1;
 	apply_case_sensitivity(pTpl);
 finalize_it:
 	free(tplStr);
 	free(plugin);
-	if(pvals != NULL)
+	if (pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
-	if(iRet != RS_RET_OK) {
-		if(pTpl != NULL) {
+	if (iRet != RS_RET_OK) {
+		if (pTpl != NULL) {
 			/* we simply make the template defunct in this case by setting
 			 * its name to a zero-string. We do not free it, as this would
 			 * require additional code and causes only a very small memory
@@ -2087,14 +2118,12 @@ struct template *tplFind(rsconf_t *conf, char *pName, int iLenName)
 	assert(pName != NULL);
 
 	pTpl = conf->templates.root;
-	while(pTpl != NULL &&
-	      !(pTpl->iLenName == iLenName &&
-	        !strcmp(pTpl->pszName, pName)
-	        ))
-		{
-			pTpl = pTpl->pNext;
-		}
-	return(pTpl);
+	while (pTpl != NULL &&
+	       !(pTpl->iLenName == iLenName &&
+		   !strcmp(pTpl->pszName, pName))) {
+		pTpl = pTpl->pNext;
+	}
+	return (pTpl);
 }
 
 /* Destroy the template structure. This is for de-initialization
@@ -2110,15 +2139,15 @@ void tplDeleteAll(rsconf_t *conf)
 	struct templateEntry *pTpe, *pTpeDel;
 	BEGINfunc
 
-	pTpl = conf->templates.root;
-	while(pTpl != NULL) {
+	    pTpl = conf->templates.root;
+	while (pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
-		while(pTpe != NULL) {
+		while (pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
 			/*dbgprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
-			switch(pTpeDel->eEntryType) {
+			switch (pTpeDel->eEntryType) {
 			case UNDEFINED:
 				/*dbgprintf("(UNDEFINED)");*/
 				break;
@@ -2128,10 +2157,10 @@ void tplDeleteAll(rsconf_t *conf)
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
-				/* check if we have a regexp and, if so, delete it */
+/* check if we have a regexp and, if so, delete it */
 #ifdef FEATURE_REGEXP
-				if(pTpeDel->data.field.has_regex != 0) {
-					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+				if (pTpeDel->data.field.has_regex != 0) {
+					if (objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
@@ -2146,7 +2175,7 @@ void tplDeleteAll(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->bHaveSubtree)
+		if (pTplDel->bHaveSubtree)
 			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
@@ -2164,20 +2193,19 @@ void tplDeleteNew(rsconf_t *conf)
 
 	BEGINfunc
 
-	if(conf->templates.root == NULL || conf->templates.lastStatic == NULL)
-		return;
+	    if (conf->templates.root == NULL || conf->templates.lastStatic == NULL) return;
 
 	pTpl = conf->templates.lastStatic->pNext;
 	conf->templates.lastStatic->pNext = NULL;
 	conf->templates.last = conf->templates.lastStatic;
-	while(pTpl != NULL) {
+	while (pTpl != NULL) {
 		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
-		while(pTpe != NULL) {
+		while (pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
 			/*dbgprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
-			switch(pTpeDel->eEntryType) {
+			switch (pTpeDel->eEntryType) {
 			case UNDEFINED:
 				/*dbgprintf("(UNDEFINED)");*/
 				break;
@@ -2189,8 +2217,8 @@ void tplDeleteNew(rsconf_t *conf)
 			case FIELD:
 #ifdef FEATURE_REGEXP
 				/* check if we have a regexp and, if so, delete it */
-				if(pTpeDel->data.field.has_regex != 0) {
-					if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+				if (pTpeDel->data.field.has_regex != 0) {
+					if (objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
@@ -2204,7 +2232,7 @@ void tplDeleteNew(rsconf_t *conf)
 		pTplDel = pTpl;
 		pTpl = pTpl->pNext;
 		free(pTplDel->pszName);
-		if(pTplDel->bHaveSubtree)
+		if (pTplDel->bHaveSubtree)
 			msgPropDescrDestruct(&pTplDel->subtree);
 		free(pTplDel);
 	}
@@ -2226,46 +2254,46 @@ void tplPrintList(rsconf_t *conf)
 	struct templateEntry *pTpe;
 
 	pTpl = conf->templates.root;
-	while(pTpl != NULL) {
-		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatEscape == SQL_ESCAPE)
+	while (pTpl != NULL) {
+		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL ? "NULL" : pTpl->pszName);
+		if (pTpl->optFormatEscape == SQL_ESCAPE)
 			dbgprintf("[SQL-Format (MySQL)] ");
-		else if(pTpl->optFormatEscape == JSON_ESCAPE)
+		else if (pTpl->optFormatEscape == JSON_ESCAPE)
 			dbgprintf("[JSON-Escaped Format] ");
-		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+		else if (pTpl->optFormatEscape == STDSQL_ESCAPE)
 			dbgprintf("[SQL-Format (standard SQL)] ");
-		if(pTpl->optCaseSensitive)
+		if (pTpl->optCaseSensitive)
 			dbgprintf("[Case Sensitive Vars] ");
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
-		while(pTpe != NULL) {
-			dbgprintf("\tEntry(%lx): type %d, ", (unsigned long) pTpe, pTpe->eEntryType);
-			switch(pTpe->eEntryType) {
+		while (pTpe != NULL) {
+			dbgprintf("\tEntry(%lx): type %d, ", (unsigned long)pTpe, pTpe->eEntryType);
+			switch (pTpe->eEntryType) {
 			case UNDEFINED:
 				dbgprintf("(UNDEFINED)");
 				break;
 			case CONSTANT:
 				dbgprintf("(CONSTANT), value: '%s'",
-					pTpe->data.constant.pConstant);
+				    pTpe->data.constant.pConstant);
 				break;
 			case FIELD:
 				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.msgProp.id);
-				if(pTpe->data.field.msgProp.id == PROP_CEE) {
+				if (pTpe->data.field.msgProp.id == PROP_CEE) {
 					dbgprintf("[EE-Property: '%s'] ", pTpe->data.field.msgProp.name);
-				} else if(pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
+				} else if (pTpe->data.field.msgProp.id == PROP_LOCAL_VAR) {
 					dbgprintf("[Local Var: '%s'] ", pTpe->data.field.msgProp.name);
-				//} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
-				//	dbgprintf("[Global Var: '%s'] ", pTpe->data.field.propName);
+					//} else if(pTpe->data.field.propid == PROP_GLOBAL_VAR) {
+					//	dbgprintf("[Global Var: '%s'] ", pTpe->data.field.propName);
 				}
-				switch(pTpe->data.field.eDateFormat) {
+				switch (pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;
 				case tplFmtMySQLDate:
 					dbgprintf("[Format as MySQL-Date] ");
 					break;
-                                case tplFmtPgSQLDate:
-                                        dbgprintf("[Format as PgSQL-Date] ");
-                                        break;
+				case tplFmtPgSQLDate:
+					dbgprintf("[Format as PgSQL-Date] ");
+					break;
 				case tplFmtRFC3164Date:
 					dbgprintf("[Format as RFC3164-Date] ");
 					break;
@@ -2284,7 +2312,7 @@ void tplPrintList(rsconf_t *conf)
 				default:
 					dbgprintf("[UNKNOWN eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
-				switch(pTpe->data.field.eCaseConv) {
+				switch (pTpe->data.field.eCaseConv) {
 				case tplCaseConvNo:
 					break;
 				case tplCaseConvLower:
@@ -2294,57 +2322,57 @@ void tplPrintList(rsconf_t *conf)
 					dbgprintf("[Converted to Upper Case] ");
 					break;
 				}
-				if(pTpe->data.field.options.bEscapeCC) {
-				  	dbgprintf("[escape control-characters] ");
+				if (pTpe->data.field.options.bEscapeCC) {
+					dbgprintf("[escape control-characters] ");
 				}
-				if(pTpe->data.field.options.bDropCC) {
-				  	dbgprintf("[drop control-characters] ");
+				if (pTpe->data.field.options.bDropCC) {
+					dbgprintf("[drop control-characters] ");
 				}
-				if(pTpe->data.field.options.bSpaceCC) {
-				  	dbgprintf("[replace control-characters with space] ");
+				if (pTpe->data.field.options.bSpaceCC) {
+					dbgprintf("[replace control-characters with space] ");
 				}
-				if(pTpe->data.field.options.bSecPathDrop) {
-				  	dbgprintf("[slashes are dropped] ");
+				if (pTpe->data.field.options.bSecPathDrop) {
+					dbgprintf("[slashes are dropped] ");
 				}
-				if(pTpe->data.field.options.bSecPathReplace) {
-				  	dbgprintf("[slashes are replaced by '_'] ");
+				if (pTpe->data.field.options.bSecPathReplace) {
+					dbgprintf("[slashes are replaced by '_'] ");
 				}
-				if(pTpe->data.field.options.bSPIffNo1stSP) {
-				  	dbgprintf("[SP iff no first SP] ");
+				if (pTpe->data.field.options.bSPIffNo1stSP) {
+					dbgprintf("[SP iff no first SP] ");
 				}
-				if(pTpe->data.field.options.bCSV) {
-				  	dbgprintf("[format as CSV (RFC4180)]");
+				if (pTpe->data.field.options.bCSV) {
+					dbgprintf("[format as CSV (RFC4180)]");
 				}
-				if(pTpe->data.field.options.bJSON) {
+				if (pTpe->data.field.options.bJSON) {
 					dbgprintf("[format as JSON] ");
 				}
-				if(pTpe->data.field.options.bJSONf) {
+				if (pTpe->data.field.options.bJSONf) {
 					dbgprintf("[format as JSON field] ");
 				}
-				if(pTpe->data.field.options.bJSONr) {
+				if (pTpe->data.field.options.bJSONr) {
 					dbgprintf("[format as JSON without re-escaping] ");
 				}
-				if(pTpe->data.field.options.bJSONfr) {
+				if (pTpe->data.field.options.bJSONfr) {
 					dbgprintf("[format as JSON field without re-escaping] ");
 				}
-				if(pTpe->data.field.options.bMandatory) {
+				if (pTpe->data.field.options.bMandatory) {
 					dbgprintf("[mandatory field] ");
 				}
-				if(pTpe->data.field.options.bDropLastLF) {
-				  	dbgprintf("[drop last LF in msg] ");
+				if (pTpe->data.field.options.bDropLastLF) {
+					dbgprintf("[drop last LF in msg] ");
 				}
-				if(pTpe->data.field.has_fields == 1) {
-				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
-						pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
+				if (pTpe->data.field.has_fields == 1) {
+					dbgprintf("[substring, field #%d only (delemiter %d)] ",
+					    pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
 				}
-				if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
-				  	dbgprintf("[substring, from character %d to %d] ",
-						pTpe->data.field.iFromPos,
-						pTpe->data.field.iToPos);
+				if (pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+					dbgprintf("[substring, from character %d to %d] ",
+					    pTpe->data.field.iFromPos,
+					    pTpe->data.field.iToPos);
 				}
 				break;
 			}
-			if(pTpe->bComplexProcessing)
+			if (pTpe->bComplexProcessing)
 				dbgprintf("[COMPLEX]");
 			dbgprintf("\n");
 			pTpe = pTpe->pNext;
@@ -2356,7 +2384,7 @@ void tplPrintList(rsconf_t *conf)
 int tplGetEntryCount(struct template *pTpl)
 {
 	assert(pTpl != NULL);
-	return(pTpl->tpenElements);
+	return (pTpl->tpenElements);
 }
 
 rsRetVal templateInit(void)

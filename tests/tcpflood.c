@@ -103,28 +103,29 @@
 #include <sys/time.h>
 #include <errno.h>
 #ifdef ENABLE_GNUTLS
-#	include <gnutls/gnutls.h>
-#	if GNUTLS_VERSION_NUMBER <= 0x020b00
-#		include <gcrypt.h>
-	GCRY_THREAD_OPTION_PTHREAD_IMPL;
-#	endif
+#include <gnutls/gnutls.h>
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
+#include <gcrypt.h>
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 #endif
 
-char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
+char *test_rs_strerror_r(int errnum, char *buf, size_t buflen)
+{
 #ifndef HAVE_STRERROR_R
 	char *pszErr;
 	pszErr = strerror(errnum);
 	snprintf(buf, buflen, "%s", pszErr);
 #else
-#	ifdef STRERROR_R_CHAR_P
+#ifdef STRERROR_R_CHAR_P
 	char *p = strerror_r(errnum, buf, buflen);
 	if (p != buf) {
 		strncpy(buf, p, buflen);
 		buf[buflen - 1] = '\0';
 	}
-#	else
+#else
 	strerror_r(errnum, buf, buflen);
-#	endif
+#endif
 #endif /* #ifdef __hpux */
 	return buf;
 }
@@ -135,7 +136,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
 /* name of input file, must match $IncludeConfig in .conf files */
 
-#define MAX_EXTRADATA_LEN 100*1024
+#define MAX_EXTRADATA_LEN 100 * 1024
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 
 static char *targetIP = "127.0.0.1";
@@ -144,36 +145,36 @@ static int targetPort = 13514;
 static int numTargetPorts = 1;
 static int verbose = 0;
 static int dynFileIDs = 0;
-static int extraDataLen = 0; /* amount of extra data to add to message */
-static int useRFC5424Format = 0; /* should the test message be in RFC5424 format? */
-static int bRandomizeExtraData = 0; /* randomize amount of extra data added */
-static int numMsgsToSend = 1; /* number of messages to send */
-static int numConnections = 1; /* number of connections to create */
-static int softLimitConnections  = 0; /* soft connection limit, see -c option description */
-static int *sockArray;  /* array of sockets to use */
+static int extraDataLen = 0;	 /* amount of extra data to add to message */
+static int useRFC5424Format = 0;     /* should the test message be in RFC5424 format? */
+static int bRandomizeExtraData = 0;  /* randomize amount of extra data added */
+static int numMsgsToSend = 1;	/* number of messages to send */
+static int numConnections = 1;       /* number of connections to create */
+static int softLimitConnections = 0; /* soft connection limit, see -c option description */
+static int *sockArray;		     /* array of sockets to use */
 #ifdef ENABLE_RELP
-static relpClt_t **relpCltArray;  /* array of sockets to use */
+static relpClt_t **relpCltArray; /* array of sockets to use */
 #endif
-static int msgNum = 0;	/* initial message number to start with */
-static int bShowProgress = 1; /* show progress messages */
-static int bSilent = 0; /* completely silent operation */
-static int bRandConnDrop = 0; /* randomly drop connections? */
+static int msgNum = 0;		     /* initial message number to start with */
+static int bShowProgress = 1;	/* show progress messages */
+static int bSilent = 0;		     /* completely silent operation */
+static int bRandConnDrop = 0;	/* randomly drop connections? */
 static double dbRandConnDrop = 0.95; /* random drop probability */
-static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
-static int bBinaryFile = 0;	/* is -I file binary */
+static char *MsgToSend = NULL;       /* if non-null, this is the actual message to send */
+static int bBinaryFile = 0;	  /* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
-static int numFileIterations = 1;/* how often is file data to be sent? */
-static char frameDelim = '\n';	/* default frame delimiter */
-FILE *dataFP = NULL;		/* file pointer for data file, if used */
-static long nConnDrops = 0;	/* counter: number of time connection was dropped (-D option) */
-static int numRuns = 1;		/* number of times the test shall be run */
-static int sleepBetweenRuns = 30; /* number of seconds to sleep between runs */
+static int numFileIterations = 1;    /* how often is file data to be sent? */
+static char frameDelim = '\n';       /* default frame delimiter */
+FILE *dataFP = NULL;		     /* file pointer for data file, if used */
+static long nConnDrops = 0;	  /* counter: number of time connection was dropped (-D option) */
+static int numRuns = 1;		     /* number of times the test shall be run */
+static int sleepBetweenRuns = 30;    /* number of seconds to sleep between runs */
 static int bStatsRecords = 0;	/* generate stats records */
-static int bCSVoutput = 0;	/* generate output in CSV (where applicable) */
+static int bCSVoutput = 0;	   /* generate output in CSV (where applicable) */
 static long long batchsize = 100000000ll;
 static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
-static int numThrds = 1;	/* number of threads to use */
+static int numThrds = 1;	 /* number of threads to use */
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
 static int tlsLogLevel = 0;
@@ -181,14 +182,14 @@ static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie
 static int octateCountFramed = 0;
 
 #ifdef ENABLE_GNUTLS
-static gnutls_session_t *sessArray;	/* array of TLS sessions to use */
+static gnutls_session_t *sessArray; /* array of TLS sessions to use */
 static gnutls_certificate_credentials_t tlscred;
 #endif
 
 /* variables for managing multi-threaded operations */
-int runningThreads;		/* number of threads currently running */
-int doRun;			/* shall sender thread begin to run? */
-pthread_mutex_t thrdMgmt;	/* mutex for controling startup/shutdown */
+int runningThreads;       /* number of threads currently running */
+int doRun;		  /* shall sender thread begin to run? */
+pthread_mutex_t thrdMgmt; /* mutex for controling startup/shutdown */
 pthread_cond_t condStarted;
 pthread_cond_t condDoRun;
 
@@ -198,8 +199,8 @@ struct instdata {
 	unsigned long long lower;
 	unsigned long long numMsgs; /* number of messages to send */
 	unsigned long long numSent; /* number of messages already sent */
-	unsigned idx;	/**< index of fd to be used for sending */
-	pthread_t thread; /**< thread processing this instance */
+	unsigned idx;		    /**< index of fd to be used for sending */
+	pthread_t thread;	   /**< thread processing this instance */
 } *instarray = NULL;
 
 /* the following structure is used to gather performance data */
@@ -210,10 +211,13 @@ struct runstats {
 	int numRuns;
 };
 
-static int udpsock;			/* socket for sending in UDP mode */
-static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
+static int udpsock;		   /* socket for sending in UDP mode */
+static struct sockaddr_in udpRcvr; /* remote receiver in UDP mode */
 
-static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN } transport = TP_TCP;
+static enum { TP_UDP,
+	TP_TCP,
+	TP_TLS,
+	TP_RELP_PLAIN } transport = TP_TCP;
 
 /* forward definitions */
 static void initTLSSess(int);
@@ -224,21 +228,26 @@ static void closeTLSSess(int __attribute__((unused)) i);
 /* RELP subsystem */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
-static void relp_dbgprintf(char __attribute__((unused)) *fmt, ...) {
-    printf(fmt);
+static void relp_dbgprintf(char __attribute__((unused)) * fmt, ...)
+{
+	printf(fmt);
 }
 #pragma GCC diagnostic pop
 
 static relpEngine_t *pRelpEngine;
-#define CHKRELP(f) if(f != RELP_RET_OK) { fprintf(stderr, "%s\n", #f); exit(1); }
+#define CHKRELP(f)                           \
+	if (f != RELP_RET_OK) {              \
+		fprintf(stderr, "%s\n", #f); \
+		exit(1);                     \
+	}
 static void
 initRELP_PLAIN(void)
 {
 	CHKRELP(relpEngineConstruct(&pRelpEngine));
 	CHKRELP(relpEngineSetDbgprint(pRelpEngine,
-		verbose ? relp_dbgprintf : NULL));
-	CHKRELP(relpEngineSetEnableCmd(pRelpEngine, (unsigned char*)"syslog",
-		eRelpCmdState_Required));
+	    verbose ? relp_dbgprintf : NULL));
+	CHKRELP(relpEngineSetEnableCmd(pRelpEngine, (unsigned char *)"syslog",
+	    eRelpCmdState_Required));
 }
 #endif /* #ifdef ENABLE_RELP */
 
@@ -246,15 +255,15 @@ initRELP_PLAIN(void)
 static int
 setupUDP(void)
 {
-	if((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+	if ((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return 1;
 
-	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
+	memset((char *)&udpRcvr, 0, sizeof(udpRcvr));
 	udpRcvr.sin_family = AF_INET;
 	udpRcvr.sin_port = htons(targetPort);
-	if(inet_aton(targetIP, &udpRcvr.sin_addr)==0) {
+	if (inet_aton(targetIP, &udpRcvr.sin_addr) == 0) {
 		fprintf(stderr, "inet_aton() failed\n");
-		return(1);
+		return (1);
 	}
 
 	return 0;
@@ -272,14 +281,14 @@ int openConn(int *fd, const int connIdx)
 	int rnd;
 
 	/* randomize port if required */
-	if(numTargetPorts > 1) {
+	if (numTargetPorts > 1) {
 		rnd = rand(); /* easier if we need value for debug messages ;) */
 		port = targetPort + (rnd % numTargetPorts);
 	} else {
 		port = targetPort;
 	}
-	if(transport == TP_RELP_PLAIN) {
-		#ifdef ENABLE_RELP
+	if (transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
 		relpRetVal relp_r;
 		relpClt_t *relpClt;
 		char relpPort[16];
@@ -287,38 +296,38 @@ int openConn(int *fd, const int connIdx)
 		CHKRELP(relpEngineCltConstruct(pRelpEngine, &relpClt));
 		relpCltArray[connIdx] = relpClt;
 		relp_r = relpCltConnect(relpCltArray[connIdx], 2,
-			(unsigned char*)relpPort, (unsigned char*)targetIP);
-		if(relp_r != RELP_RET_OK) {
+		    (unsigned char *)relpPort, (unsigned char *)targetIP);
+		if (relp_r != RELP_RET_OK) {
 			fprintf(stderr, "relp connect failed with return %d\n", relp_r);
-			return(1);
+			return (1);
 		}
 		*fd = 1; /* mimic "all ok" state */
-		#endif
+#endif
 	} else { /* TCP, with or without TLS */
-		if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
+		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 			perror("\nsocket()");
-			return(1);
+			return (1);
 		}
-		memset((char *) &addr, 0, sizeof(addr));
+		memset((char *)&addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
-		if(inet_aton(targetIP, &addr.sin_addr)==0) {
+		if (inet_aton(targetIP, &addr.sin_addr) == 0) {
 			fprintf(stderr, "inet_aton() failed\n");
-			return(1);
+			return (1);
 		}
-		while(1) { /* loop broken inside */
-			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+		while (1) { /* loop broken inside */
+			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
 				break;
 			} else {
-				if(retries++ == 50) {
+				if (retries++ == 50) {
 					perror("connect()");
 					fprintf(stderr, "connect() failed\n");
-					return(1);
+					return (1);
 				} else {
 					usleep(100000); /* ms = 1000 us! */
 				}
 			}
-		} 
+		}
 
 		*fd = sock;
 	}
@@ -335,43 +344,44 @@ int openConnections(void)
 	char msgBuf[128];
 	size_t lenMsg;
 
-	if(transport == TP_UDP)
+	if (transport == TP_UDP)
 		return setupUDP();
 
-	if(bShowProgress)
-		if(write(1, "      open connections", sizeof("      open connections")-1)){}
-#	ifdef ENABLE_GNUTLS
+	if (bShowProgress)
+		if (write(1, "      open connections", sizeof("      open connections") - 1)) {
+		}
+#ifdef ENABLE_GNUTLS
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
-#	endif
+#endif
 	sockArray = calloc(numConnections, sizeof(int));
-	#ifdef ENABLE_RELP
-	if(transport == TP_RELP_PLAIN)
-		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
-	#endif
-	for(i = 0 ; i < numConnections ; ++i) {
-		if(i % 10 == 0) {
-			if(bShowProgress)
+#ifdef ENABLE_RELP
+	if (transport == TP_RELP_PLAIN)
+		relpCltArray = calloc(numConnections, sizeof(relpClt_t *));
+#endif
+	for (i = 0; i < numConnections; ++i) {
+		if (i % 10 == 0) {
+			if (bShowProgress)
 				printf("\r%5.5d", i);
 		}
-		if(openConn(&(sockArray[i]), i) != 0) {
+		if (openConn(&(sockArray[i]), i) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
-			if(softLimitConnections) {
+			if (softLimitConnections) {
 				printf("Connection limit is soft, continuing with fewer connections\n");
 				numConnections = i - 1;
 				int close_conn = 10;
-				for(i -= 1 ; close_conn > 0 && i > 1 ; --i, --close_conn) {
+				for (i -= 1; close_conn > 0 && i > 1; --i, --close_conn) {
 					printf("closing connection %d to make some room\n", i);
 					/* close at least some connections so that
 					 * other functionality has a chance to do
 					 * at least something.
 					 */
-					if(transport == TP_RELP_PLAIN) {
-						#ifdef ENABLE_RELP
+					if (transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
 						CHKRELP(relpEngineCltDestruct(pRelpEngine,
-							relpCltArray+i));
-						#endif
+						    relpCltArray + i));
+#endif
 					} else { /* TCP and TLS modes */
-						if(transport == TP_TLS)
+						if (transport == TP_TLS)
 							closeTLSSess(i);
 						close(sockArray[i]);
 					}
@@ -379,22 +389,23 @@ int openConnections(void)
 				}
 				numConnections = i;
 				printf("continuing with %d connections.\n", numConnections);
-				if(numConnections < 1) {
+				if (numConnections < 1) {
 					fprintf(stderr, "tcpflood could not open at least one "
-						"connection, error-terminating\n");
+							"connection, error-terminating\n");
 					exit(1);
 				}
 				break;
 			}
 			return 1;
 		}
-		if(transport == TP_TLS) {
+		if (transport == TP_TLS) {
 			initTLSSess(i);
 		}
 	}
-	if(bShowProgress) {
+	if (bShowProgress) {
 		lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
-		if(write(1, msgBuf, lenMsg)) {}
+		if (write(1, msgBuf, lenMsg)) {
+		}
 	}
 
 	return 0;
@@ -415,46 +426,48 @@ void closeConnections(void)
 	struct linger ling;
 	char msgBuf[128];
 
-	if(transport == TP_UDP)
+	if (transport == TP_UDP)
 		return;
 
-	if(bShowProgress)
-		if(write(1, "      close connections", sizeof("      close connections")-1)){}
-	for(i = 0 ; i < numConnections ; ++i) {
-		if(i % 10 == 0 && bShowProgress) {
-			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
-			if(write(1, msgBuf, lenMsg)){}
+	if (bShowProgress)
+		if (write(1, "      close connections", sizeof("      close connections") - 1)) {
 		}
-		if(transport == TP_RELP_PLAIN) {
-			#ifdef ENABLE_RELP
+	for (i = 0; i < numConnections; ++i) {
+		if (i % 10 == 0 && bShowProgress) {
+			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+			if (write(1, msgBuf, lenMsg)) {
+			}
+		}
+		if (transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
 			relpRetVal relpr;
-			if(sockArray[i] != -1) {
-				relpr = relpEngineCltDestruct(pRelpEngine, relpCltArray+i);
-				if(relpr != RELP_RET_OK) {
+			if (sockArray[i] != -1) {
+				relpr = relpEngineCltDestruct(pRelpEngine, relpCltArray + i);
+				if (relpr != RELP_RET_OK) {
 					fprintf(stderr, "relp error %d on close\n", relpr);
 				}
 				sockArray[i] = -1;
 			}
-			#endif
+#endif
 		} else { /* TCP and TLS modes */
-			if(sockArray[i] != -1) {
+			if (sockArray[i] != -1) {
 				/* we try to not overrun the receiver by trying to flush buffers
 				 * *during* close(). -- rgerhards, 2010-08-10
 				 */
 				ling.l_onoff = 1;
 				ling.l_linger = 1;
 				setsockopt(sockArray[i], SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
-				if(transport == TP_TLS)
+				if (transport == TP_TLS)
 					closeTLSSess(i);
 				close(sockArray[i]);
 			}
 		}
 	}
-	if(bShowProgress) {
+	if (bShowProgress) {
 		lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
-		if(write(1, msgBuf, lenMsg)){}
+		if (write(1, msgBuf, lenMsg)) {
+		}
 	}
-
 }
 
 
@@ -472,13 +485,13 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 	char payloadLen[32];
 	int payloadStringLen;
 
-	if(dataFP != NULL) {
+	if (dataFP != NULL) {
 		/* get message from file */
 		do {
 			done = 1;
 			*pLenBuf = fread(buf, 1, MAX_EXTRADATA_LEN + 1024, dataFP);
-			if(*pLenBuf == 0) {
-				if(--numFileIterations > 0)  {
+			if (*pLenBuf == 0) {
+				if (--numFileIterations > 0) {
 					rewind(dataFP);
 					done = 0; /* need new iteration */
 				} else {
@@ -486,43 +499,43 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 					goto finalize_it;
 				}
 			}
-		} while(!done); /* Attention: do..while()! */
-	} else if(jsonCookie != NULL) {
-		if(useRFC5424Format) {
+		} while (!done); /* Attention: do..while()! */
+	} else if (jsonCookie != NULL) {
+		if (useRFC5424Format) {
 			*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
-					     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] %s{\"msgnum\":%d}%c",
-					       msgPRI, msgNum, jsonCookie, msgNum, frameDelim);
+							 "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] %s{\"msgnum\":%d}%c",
+			    msgPRI, msgNum, jsonCookie, msgNum, frameDelim);
 		} else {
 			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag %s{\"msgnum\":%d}%c",
-					       msgPRI, jsonCookie, msgNum, frameDelim);
+			    msgPRI, jsonCookie, msgNum, frameDelim);
 		}
-	} else if(MsgToSend == NULL) {
-		if(dynFileIDs > 0) {
+	} else if (MsgToSend == NULL) {
+		if (dynFileIDs > 0) {
 			snprintf(dynFileIDBuf, sizeof(dynFileIDBuf), "%d:", rand() % dynFileIDs);
 		}
-		if(extraDataLen == 0) {
-			if(useRFC5424Format) {
+		if (extraDataLen == 0) {
+			if (useRFC5424Format) {
 				*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
-						     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
-						       msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+								 "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
+				    msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
 			} else {
 				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%c",
-						       msgPRI, dynFileIDBuf, msgNum, frameDelim);
+				    msgPRI, dynFileIDBuf, msgNum, frameDelim);
 			}
 		} else {
-			if(bRandomizeExtraData)
-				edLen = ((unsigned long) rand() + extraDataLen) % extraDataLen + 1;
+			if (bRandomizeExtraData)
+				edLen = ((unsigned long)rand() + extraDataLen) % extraDataLen + 1;
 			else
 				edLen = extraDataLen;
 			memset(extraData, 'X', edLen);
 			extraData[edLen] = '\0';
-			if(useRFC5424Format) {
+			if (useRFC5424Format) {
 				*pLenBuf = snprintf(buf, maxBuf, "<%s>1 2003-03-01T01:00:00.000Z mymachine.example.com tcpflood "
-						     "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
-						       msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
+								 "- tag [tcpflood@32473 MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
+				    msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
 			} else {
 				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum:%s%8.8d:%d:%s%c",
-						       msgPRI, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
+				    msgPRI, dynFileIDBuf, msgNum, edLen, extraData, frameDelim);
 			}
 		}
 	} else {
@@ -563,8 +576,8 @@ int sendMessages(struct instdata *inst)
 	int error_number = 0;
 	unsigned show_progress_interval = 100;
 
-	if(!bSilent) {
-		if(dataFile == NULL) {
+	if (!bSilent) {
+		if (dataFile == NULL) {
 			printf("Sending %llu messages.\n", inst->numMsgs);
 			statusText = "messages";
 			if ((inst->numMsgs / 100) > show_progress_interval) {
@@ -572,19 +585,19 @@ int sendMessages(struct instdata *inst)
 			}
 		} else {
 			printf("Sending file '%s' %d times.\n", dataFile,
-			       numFileIterations);
+			    numFileIterations);
 			statusText = "kb";
 		}
 	}
-	if(bShowProgress)
+	if (bShowProgress)
 		printf("\r%8.8d %s sent", 0, statusText);
-	while(i < inst->numMsgs) {
-		if(runMultithreaded) {
+	while (i < inst->numMsgs) {
+		if (runMultithreaded) {
 			socknum = inst->idx;
 		} else {
-			if((int) i < numConnections)
+			if ((int)i < numConnections)
 				socknum = i;
-			else if(i >= inst->numMsgs - numConnections) {
+			else if (i >= inst->numMsgs - numConnections) {
 				socknum = i - (inst->numMsgs - numConnections);
 			} else {
 				int rnd = rand();
@@ -592,32 +605,32 @@ int sendMessages(struct instdata *inst)
 			}
 		}
 		genMsg(buf, sizeof(buf), &lenBuf, inst); /* generate the message to send according to params */
-		if(lenBuf == 0)
-			break;	/* terminate when no message could be generated */
-		if(transport == TP_TCP) {
-			if(sockArray[socknum] == -1) {
+		if (lenBuf == 0)
+			break; /* terminate when no message could be generated */
+		if (transport == TP_TCP) {
+			if (sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if (openConn(&(sockArray[socknum]), socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
 			}
 			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 			error_number = errno;
-		} else if(transport == TP_UDP) {
+		} else if (transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 			error_number = errno;
-		} else if(transport == TP_TLS) {
-			if(sockArray[socknum] == -1) {
+		} else if (transport == TP_TLS) {
+			if (sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if (openConn(&(sockArray[socknum]), socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
 				initTLSSess(socknum);
 			}
-			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
-				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
+			if (offsSendBuf + lenBuf < MAX_SENDBUF) {
+				memcpy(sendBuf + offsSendBuf, buf, lenBuf);
 				offsSendBuf += lenBuf;
 				lenSend = lenBuf; /* simulate "good" call */
 			} else {
@@ -626,54 +639,54 @@ int sendMessages(struct instdata *inst)
 				memcpy(sendBuf, buf, lenBuf);
 				offsSendBuf = lenBuf;
 			}
-		} else if(transport == TP_RELP_PLAIN) {
-			#ifdef ENABLE_RELP
+		} else if (transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
 			relpRetVal relp_ret;
-			if(sockArray[socknum] == -1) {
+			if (sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if (openConn(&(sockArray[socknum]), socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
 			}
 			relp_ret = relpCltSendSyslog(relpCltArray[socknum],
-					(unsigned char*)buf, lenBuf);
+			    (unsigned char *)buf, lenBuf);
 			if (relp_ret == RELP_RET_OK) {
 				lenSend = lenBuf; /* mimic ok */
 			} else {
 				lenSend = 0; /* mimic fail */
 				printf("\nrelpCltSendSyslog() failed with relp error code %d\n",
-					   relp_ret);
+				    relp_ret);
 			}
-			#endif
+#endif
 		}
-		if(lenSend != lenBuf) {
+		if (lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
 			printf("send() failed \"%s\" at socket %d, index %d, msgNum %lld\n",
-				   errStr, sockArray[socknum], i, inst->numSent);
+			    errStr, sockArray[socknum], i, inst->numSent);
 			fflush(stderr);
 
-			return(1);
+			return (1);
 		}
-		if(i % show_progress_interval == 0) {
-			if(bShowProgress)
+		if (i % show_progress_interval == 0) {
+			if (bShowProgress)
 				printf("\r%8.8d", i);
 		}
-		if(!runMultithreaded && bRandConnDrop) {
+		if (!runMultithreaded && bRandConnDrop) {
 			/* if we need to randomly drop connections, see if we 
 			 * are a victim
 			 */
-			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
+			if (rand() > (int)(RAND_MAX * dbRandConnDrop)) {
 #if 1
-				if(transport == TP_TLS && offsSendBuf != 0) {
+				if (transport == TP_TLS && offsSendBuf != 0) {
 					/* send remaining buffer */
 					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
-					if(lenSend != offsSendBuf) {
+					if (lenSend != offsSendBuf) {
 						fprintf(stderr, "tcpflood: error in send function causes potential data loss "
-						"lenSend %d, offsSendBuf %d\n",
-						lenSend, offsSendBuf);
+								"lenSend %d, offsSendBuf %d\n",
+						    lenSend, offsSendBuf);
 					}
 					offsSendBuf = 0;
 				}
@@ -683,17 +696,17 @@ int sendMessages(struct instdata *inst)
 				sockArray[socknum] = -1;
 			}
 		}
-		if(inst->numSent % batchsize == 0) {
+		if (inst->numSent % batchsize == 0) {
 			usleep(waittime);
 		}
 		++msgNum;
 		++i;
 	}
-	if(transport == TP_TLS && offsSendBuf != 0) {
+	if (transport == TP_TLS && offsSendBuf != 0) {
 		/* send remaining buffer */
 		lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 	}
-	if(!bSilent)
+	if (!bSilent)
 		printf("\r%8.8d %s sent\n", i, statusText);
 
 	return 0;
@@ -705,15 +718,15 @@ int sendMessages(struct instdata *inst)
 static void *
 thrdStarter(void *arg)
 {
-	struct instdata *inst = (struct instdata*) arg;
+	struct instdata *inst = (struct instdata *)arg;
 	pthread_mutex_lock(&thrdMgmt);
 	runningThreads++;
 	pthread_cond_signal(&condStarted);
-	while(doRun == 0) {
+	while (doRun == 0) {
 		pthread_cond_wait(&condDoRun, &thrdMgmt);
 	}
 	pthread_mutex_unlock(&thrdMgmt);
-	if(sendMessages(inst) != 0) {
+	if (sendMessages(inst) != 0) {
 		printf("error sending messages\n");
 	}
 	return NULL;
@@ -730,8 +743,8 @@ prepareGenerators()
 	int i;
 	long long msgsThrd;
 	long long starting = 0;
-	
-	if(runMultithreaded) {
+
+	if (runMultithreaded) {
 		bSilent = 1;
 		numThrds = numConnections;
 	} else {
@@ -744,18 +757,18 @@ prepareGenerators()
 	pthread_cond_init(&condStarted, NULL);
 	pthread_cond_init(&condDoRun, NULL);
 
-	if(instarray != NULL) {
+	if (instarray != NULL) {
 		free(instarray);
 	}
 	instarray = calloc(numThrds, sizeof(struct instdata));
 	msgsThrd = numMsgsToSend / numThrds;
 
-	for(i = 0 ; i < numThrds ; ++i)  {
+	for (i = 0; i < numThrds; ++i) {
 		instarray[i].lower = starting;
 		instarray[i].numMsgs = msgsThrd;
 		instarray[i].numSent = 0;
 		instarray[i].idx = i;
-		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i); 
+		pthread_create(&(instarray[i].thread), NULL, thrdStarter, instarray + i);
 		/*printf("started thread %x\n", (unsigned) instarray[i].thread);*/
 		starting += msgsThrd;
 	}
@@ -768,7 +781,7 @@ static void
 runGenerators()
 {
 	pthread_mutex_lock(&thrdMgmt);
-	while(runningThreads != numThrds){
+	while (runningThreads != numThrds) {
 		pthread_cond_wait(&condStarted, &thrdMgmt);
 	}
 	doRun = 1;
@@ -783,7 +796,7 @@ static void
 waitGenerators()
 {
 	int i;
-	for(i = 0 ; i < numThrds ; ++i)  {
+	for (i = 0; i < numThrds; ++i) {
 		pthread_join(instarray[i].thread, NULL);
 		/*printf("thread %x stopped\n", (unsigned) instarray[i].thread);*/
 	}
@@ -804,7 +817,7 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 	struct timeval tvEnd;
 
 	gettimeofday(&tvEnd, NULL);
-	if(tvStart->tv_usec > tvEnd.tv_usec) {
+	if (tvStart->tv_usec > tvEnd.tv_usec) {
 		tvEnd.tv_sec--;
 		tvEnd.tv_usec += 1000000;
 	}
@@ -814,13 +827,13 @@ endTiming(struct timeval *tvStart, struct runstats *stats)
 
 	runtime = sec * 1000 + (usec / 1000);
 	stats->totalRuntime += runtime;
-	if(runtime < stats->minRuntime)
+	if (runtime < stats->minRuntime)
 		stats->minRuntime = runtime;
-	if(runtime > stats->maxRuntime)
+	if (runtime > stats->maxRuntime)
 		stats->maxRuntime = runtime;
 
-	if(!bSilent || bStatsRecords) {
-		if(bCSVoutput) {
+	if (!bSilent || bStatsRecords) {
+		if (bCSVoutput) {
 			printf("%ld.%3.3ld\n", runtime / 1000, runtime % 1000);
 		} else {
 			printf("runtime: %ld.%3.3ld\n", runtime / 1000, runtime % 1000);
@@ -837,22 +850,22 @@ genStats(struct runstats *stats)
 	long unsigned avg;
 	avg = stats->totalRuntime / stats->numRuns;
 
-	if(bCSVoutput) {
+	if (bCSVoutput) {
 		printf("#numRuns,TotalRuntime,AvgRuntime,MinRuntime,MaxRuntime\n");
 		printf("%d,%llu.%3.3d,%lu.%3.3lu,%lu.%3.3lu,%lu.%3.3lu\n",
-			stats->numRuns,
-		        stats->totalRuntime / 1000, (int) stats->totalRuntime % 1000,
-		        avg / 1000, avg % 1000,
-		        stats->minRuntime / 1000, stats->minRuntime % 1000,
-		        stats->maxRuntime / 1000, stats->maxRuntime % 1000);
+		    stats->numRuns,
+		    stats->totalRuntime / 1000, (int)stats->totalRuntime % 1000,
+		    avg / 1000, avg % 1000,
+		    stats->minRuntime / 1000, stats->minRuntime % 1000,
+		    stats->maxRuntime / 1000, stats->maxRuntime % 1000);
 	} else {
-		printf("Runs:     %d\n",   stats->numRuns);
+		printf("Runs:     %d\n", stats->numRuns);
 		printf("Runtime:\n");
 		printf("  total:  %llu.%3.3d\n", stats->totalRuntime / 1000,
-						 (int) stats->totalRuntime % 1000);
-		printf("  avg:    %lu.%3.3lu\n",  avg / 1000, avg % 1000);
-		printf("  min:    %lu.%3.3lu\n",  stats->minRuntime / 1000, stats->minRuntime % 1000);
-		printf("  max:    %lu.%3.3lu\n",  stats->maxRuntime / 1000, stats->maxRuntime % 1000);
+		    (int)stats->totalRuntime % 1000);
+		printf("  avg:    %lu.%3.3lu\n", avg / 1000, avg % 1000);
+		printf("  min:    %lu.%3.3lu\n", stats->minRuntime / 1000, stats->minRuntime % 1000);
+		printf("  max:    %lu.%3.3lu\n", stats->maxRuntime / 1000, stats->maxRuntime % 1000);
 		printf("All times are wallclock time.\n");
 	}
 }
@@ -874,30 +887,30 @@ runTests(void)
 	stats.maxRuntime = 0;
 	stats.numRuns = numRuns;
 	run = 1;
-	while(1) { /* loop broken inside */
-		if(!bSilent)
+	while (1) { /* loop broken inside */
+		if (!bSilent)
 			printf("starting run %d\n", run);
 		prepareGenerators();
 		gettimeofday(&tvStart, NULL);
 		runGenerators();
 		waitGenerators();
 		endTiming(&tvStart, &stats);
-		if(run == numRuns)
+		if (run == numRuns)
 			break;
-		if(!bSilent)
+		if (!bSilent)
 			printf("sleeping %d seconds before next run\n", sleepBetweenRuns);
 		sleep(sleepBetweenRuns);
 		++run;
 	}
 
-	if(bStatsRecords) {
+	if (bStatsRecords) {
 		genStats(&stats);
 	}
 
 	return 0;
 }
 
-#	if defined(ENABLE_GNUTLS)
+#if defined(ENABLE_GNUTLS)
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -905,7 +918,6 @@ runTests(void)
 static void tlsLogFunction(int level, const char *msg)
 {
 	printf("GnuTLS (level %d): %s", level, msg);
-
 }
 
 
@@ -916,33 +928,33 @@ initTLS(void)
 {
 	int r;
 
-	/* order of gcry_control and gnutls_global_init matters! */
-	#if GNUTLS_VERSION_NUMBER <= 0x020b00
+/* order of gcry_control and gnutls_global_init matters! */
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	#endif
+#endif
 	gnutls_global_init();
 	/* set debug mode, if so required by the options */
-	if(tlsLogLevel > 0) {
+	if (tlsLogLevel > 0) {
 		gnutls_global_set_log_function(tlsLogFunction);
 		gnutls_global_set_log_level(tlsLogLevel);
 	}
 
 	r = gnutls_certificate_allocate_credentials(&tlscred);
-	if(r != GNUTLS_E_SUCCESS) {
+	if (r != GNUTLS_E_SUCCESS) {
 		printf("error allocating credentials\n");
 		gnutls_perror(r);
 		exit(1);
 	}
 	r = gnutls_certificate_set_x509_key_file(tlscred, tlsCertFile, tlsKeyFile, GNUTLS_X509_FMT_PEM);
-	if(r != GNUTLS_E_SUCCESS) {
+	if (r != GNUTLS_E_SUCCESS) {
 		printf("error setting certificate files -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
 		printf("Certifcate is: '%s'\n", tlsCertFile);
 		printf("Key        is: '%s'\n", tlsKeyFile);
 		gnutls_perror(r);
 		r = gnutls_certificate_set_x509_key_file(tlscred, tlsKeyFile, tlsCertFile,
-							 GNUTLS_X509_FMT_PEM);
-		if(r == GNUTLS_E_SUCCESS) {
+		    GNUTLS_X509_FMT_PEM);
+		if (r == GNUTLS_E_SUCCESS) {
 			printf("Tried swapping files, this seems to work "
 			       "(but results may be unpredictable!)\n");
 		} else {
@@ -965,8 +977,8 @@ initTLSSess(int i)
 
 	/* put our credentials to the current session */
 	r = gnutls_credentials_set(sessArray[i], GNUTLS_CRD_CERTIFICATE, tlscred);
-	if(r != GNUTLS_E_SUCCESS) {
-		fprintf (stderr, "Setting credentials failed\n");
+	if (r != GNUTLS_E_SUCCESS) {
+		fprintf(stderr, "Setting credentials failed\n");
 		gnutls_perror(r);
 		exit(1);
 	}
@@ -974,12 +986,12 @@ initTLSSess(int i)
 	/* NOTE: the following statement generates a cast warning, but there seems to
 	 * be no way around it with current GnuTLS. Do NOT try to "fix" the situation!
 	 */
-	gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t) sockArray[i]);
+	gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t)sockArray[i]);
 
 	/* Perform the TLS handshake */
 	r = gnutls_handshake(sessArray[i]);
-	if(r < 0) {
-		fprintf (stderr, "TLS Handshake failed\n");
+	if (r < 0) {
+		fprintf(stderr, "TLS Handshake failed\n");
 		gnutls_perror(r);
 		exit(1);
 	}
@@ -994,9 +1006,9 @@ sendTLS(int i, char *buf, int lenBuf)
 	int r;
 
 	lenSent = 0;
-	while(lenSent != lenBuf) {
+	while (lenSent != lenBuf) {
 		r = gnutls_record_send(sessArray[i], buf + lenSent, lenBuf - lenSent);
-		if(r < 0)
+		if (r < 0)
 			break;
 		lenSent += r;
 	}
@@ -1010,13 +1022,15 @@ closeTLSSess(int i)
 	gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
 	gnutls_deinit(sessArray[i]);
 }
-#	else	/* NO TLS available */
-static void initTLS(void) {}
+#else /* NO TLS available */
+static void initTLS(void)
+{
+}
 static void initTLSSess(int __attribute__((unused)) i) {}
-static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
-	int __attribute__((unused)) lenBuf) { return 0; }
+static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) * buf,
+    int __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
-#	endif
+#endif
 
 /* Run the test.
  * rgerhards, 2009-04-03
@@ -1029,7 +1043,7 @@ int main(int argc, char *argv[])
 	struct rlimit maxFiles;
 	static char buf[1024];
 
-	srand(time(NULL));	/* seed is good enough for our needs */
+	srand(time(NULL)); /* seed is good enough for our needs */
 
 	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
 	 * we block SIGPIPE (not an issue for this program)
@@ -1040,187 +1054,220 @@ int main(int argc, char *argv[])
 	sigaction(SIGPIPE, &sigAct, NULL);
 
 	setvbuf(stdout, buf, _IONBF, 48);
-	
-	while((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:Ov")) != -1) {
+
+	while ((opt = getopt(argc, argv, "b:ef:F:t:p:c:C:m:i:I:P:d:Dn:l:L:M:rsBR:S:T:XW:yYz:Z:j:Ov")) != -1) {
 		switch (opt) {
-		case 'b':	batchsize = atoll(optarg);
-				break;
-		case 't':	targetIP = optarg;
-				break;
-		case 'p':	targetPort = atoi(optarg);
-				break;
-		case 'n':	numTargetPorts = atoi(optarg);
-				break;
-		case 'c':	numConnections = atoi(optarg);
-				if(numConnections < 0) {
-					numConnections *= -1;
-					softLimitConnections = 1;
-				}
-				break;
-		case 'C':	numFileIterations = atoi(optarg);
-				break;
-		case 'm':	numMsgsToSend = atoi(optarg);
-				break;
-		case 'i':	msgNum = atoi(optarg);
-				break;
-		case 'P':	msgPRI = optarg;
-				break;
-		case 'j':	jsonCookie = optarg;
-				break;
-		case 'd':	extraDataLen = atoi(optarg);
-				if(extraDataLen > MAX_EXTRADATA_LEN) {
-					fprintf(stderr, "-d max is %d!\n",
-						MAX_EXTRADATA_LEN);
-					exit(1);
-				}
-				break;
-		case 'D':	bRandConnDrop = 1;
-				break;
-		case 'l':	
-					dbRandConnDrop = atof(optarg); 
-					printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
-				break;
-		case 'r':	bRandomizeExtraData = 1;
-				break;
-		case 'f':	dynFileIDs = atoi(optarg);
-				break;
-		case 'F':	frameDelim = atoi(optarg);
-				break;
-		case 'L':	tlsLogLevel = atoi(optarg);
-				break;
-		case 'M':	MsgToSend = optarg;
-				break;
-		case 'I':	dataFile = optarg;
-				/* in this mode, we do not know the num messages to send, so
+		case 'b':
+			batchsize = atoll(optarg);
+			break;
+		case 't':
+			targetIP = optarg;
+			break;
+		case 'p':
+			targetPort = atoi(optarg);
+			break;
+		case 'n':
+			numTargetPorts = atoi(optarg);
+			break;
+		case 'c':
+			numConnections = atoi(optarg);
+			if (numConnections < 0) {
+				numConnections *= -1;
+				softLimitConnections = 1;
+			}
+			break;
+		case 'C':
+			numFileIterations = atoi(optarg);
+			break;
+		case 'm':
+			numMsgsToSend = atoi(optarg);
+			break;
+		case 'i':
+			msgNum = atoi(optarg);
+			break;
+		case 'P':
+			msgPRI = optarg;
+			break;
+		case 'j':
+			jsonCookie = optarg;
+			break;
+		case 'd':
+			extraDataLen = atoi(optarg);
+			if (extraDataLen > MAX_EXTRADATA_LEN) {
+				fprintf(stderr, "-d max is %d!\n",
+				    MAX_EXTRADATA_LEN);
+				exit(1);
+			}
+			break;
+		case 'D':
+			bRandConnDrop = 1;
+			break;
+		case 'l':
+			dbRandConnDrop = atof(optarg);
+			printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
+			break;
+		case 'r':
+			bRandomizeExtraData = 1;
+			break;
+		case 'f':
+			dynFileIDs = atoi(optarg);
+			break;
+		case 'F':
+			frameDelim = atoi(optarg);
+			break;
+		case 'L':
+			tlsLogLevel = atoi(optarg);
+			break;
+		case 'M':
+			MsgToSend = optarg;
+			break;
+		case 'I':
+			dataFile = optarg;
+			/* in this mode, we do not know the num messages to send, so
 				 * we set a (high) number to keep the code happy.
 				 */
-				numMsgsToSend = 1000000;
-				break;
-		case 's':	bSilent = 1;
-				break;
-		case 'B':	bBinaryFile = 1;
-				break;
-		case 'R':	numRuns = atoi(optarg);
-				break;
-		case 'S':	sleepBetweenRuns = atoi(optarg);
-				break;
-		case 'X':	bStatsRecords = 1;
-				break;
-		case 'e':	bCSVoutput = 1;
-				break;
-		case 'T':	if(!strcmp(optarg, "udp")) {
-					transport = TP_UDP;
-				} else if(!strcmp(optarg, "tcp")) {
-					transport = TP_TCP;
-				} else if(!strcmp(optarg, "tls")) {
-#					if defined(ENABLE_GNUTLS)
-						transport = TP_TLS;
-#					else
-						fprintf(stderr, "compiled without TLS support: "
-							"\"-Ttls\" not supported!\n");
-						exit(1);
-#					endif
-				} else if(!strcmp(optarg, "relp-plain")) {
-#					if defined(ENABLE_RELP)
-						transport = TP_RELP_PLAIN;
-#					else
-						fprintf(stderr, "compiled without RELP support: "
-							"\"-Trelp-plain\" not supported!\n"
-							"(add --enable-relp to ./configure options "
-							"if desired)\n");
-						exit(1);
-#					endif
-				} else {
-					fprintf(stderr, "unknown transport '%s'\n", optarg);
-					exit(1);
-				}
-				break;
-		case 'W':	waittime = atoi(optarg);
-				break;
-		case 'Y':	runMultithreaded = 1;
-				break;
-		case 'y':	useRFC5424Format = 1;
-				break;
-		case 'z':	tlsKeyFile = optarg;
-				break;
-		case 'Z':	tlsCertFile = optarg;
-				break;
-		case 'O':	octateCountFramed = 1;
-				break;				
-		case 'v':	verbose = 1;
-				break;
-		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
-				exit (1);
-				break;
+			numMsgsToSend = 1000000;
+			break;
+		case 's':
+			bSilent = 1;
+			break;
+		case 'B':
+			bBinaryFile = 1;
+			break;
+		case 'R':
+			numRuns = atoi(optarg);
+			break;
+		case 'S':
+			sleepBetweenRuns = atoi(optarg);
+			break;
+		case 'X':
+			bStatsRecords = 1;
+			break;
+		case 'e':
+			bCSVoutput = 1;
+			break;
+		case 'T':
+			if (!strcmp(optarg, "udp")) {
+				transport = TP_UDP;
+			} else if (!strcmp(optarg, "tcp")) {
+				transport = TP_TCP;
+			} else if (!strcmp(optarg, "tls")) {
+#if defined(ENABLE_GNUTLS)
+				transport = TP_TLS;
+#else
+				fprintf(stderr, "compiled without TLS support: "
+						"\"-Ttls\" not supported!\n");
+				exit(1);
+#endif
+			} else if (!strcmp(optarg, "relp-plain")) {
+#if defined(ENABLE_RELP)
+				transport = TP_RELP_PLAIN;
+#else
+				fprintf(stderr, "compiled without RELP support: "
+						"\"-Trelp-plain\" not supported!\n"
+						"(add --enable-relp to ./configure options "
+						"if desired)\n");
+				exit(1);
+#endif
+			} else {
+				fprintf(stderr, "unknown transport '%s'\n", optarg);
+				exit(1);
+			}
+			break;
+		case 'W':
+			waittime = atoi(optarg);
+			break;
+		case 'Y':
+			runMultithreaded = 1;
+			break;
+		case 'y':
+			useRFC5424Format = 1;
+			break;
+		case 'z':
+			tlsKeyFile = optarg;
+			break;
+		case 'Z':
+			tlsCertFile = optarg;
+			break;
+		case 'O':
+			octateCountFramed = 1;
+			break;
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			printf("invalid option '%c' or value missing - terminating...\n", opt);
+			exit(1);
+			break;
 		}
 	}
 
 	const char *const ci_env = getenv("CI");
-	if(ci_env != NULL && !strcmp(ci_env, "true")) {
-		bSilent = 1;	/* auto-apply silent option during CI runs */
+	if (ci_env != NULL && !strcmp(ci_env, "true")) {
+		bSilent = 1; /* auto-apply silent option during CI runs */
 	}
 
-	if(bStatsRecords && waittime) {
+	if (bStatsRecords && waittime) {
 		fprintf(stderr, "warning: generating performance stats and using a waittime "
 				"is somewhat contradictory!\n");
 	}
 
-	if(!isatty(1) || bSilent)
+	if (!isatty(1) || bSilent)
 		bShowProgress = 0;
 
-	if(numConnections > 20) {
+	if (numConnections > 20) {
 		/* if we use many (whatever this means, 20 is randomly picked)
 		 * connections, we need to make sure we have a high enough
 		 * limit. -- rgerhards, 2010-03-25
 		 */
 		maxFiles.rlim_cur = numConnections + 20;
 		maxFiles.rlim_max = numConnections + 20;
-		if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+		if (setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
 			perror("setrlimit to increase file handles failed");
 			fprintf(stderr,
-			        "could net set sufficiently large number of "
-			        "open files for required connection count!\n");
+			    "could net set sufficiently large number of "
+			    "open files for required connection count!\n");
 			exit(1);
 		}
 	}
-	
-	if(dataFile != NULL) {
-		if((dataFP = fopen(dataFile, "r")) == NULL) {
+
+	if (dataFile != NULL) {
+		if ((dataFP = fopen(dataFile, "r")) == NULL) {
 			perror(dataFile);
 			exit(1);
 		}
 	}
 
-	if(transport == TP_TLS) {
+	if (transport == TP_TLS) {
 		initTLS();
-	} else if(transport == TP_RELP_PLAIN) {
-		#ifdef ENABLE_RELP
+	} else if (transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
 		initRELP_PLAIN();
-		#endif
+#endif
 	}
 
-	if(openConnections() != 0) {
+	if (openConnections() != 0) {
 		printf("error opening connections\n");
 		exit(1);
 	}
 
-	if(runTests() != 0) {
+	if (runTests() != 0) {
 		printf("error running tests\n");
 		exit(1);
 	}
 
 	closeConnections(); /* this is important so that we do not finish too early! */
 
-	#ifdef ENABLE_RELP
-	if(transport == TP_RELP_PLAIN) {
+#ifdef ENABLE_RELP
+	if (transport == TP_RELP_PLAIN) {
 		CHKRELP(relpEngineDestruct(&pRelpEngine));
 	}
-	#endif
+#endif
 
-	if(nConnDrops > 0 && !bSilent)
+	if (nConnDrops > 0 && !bSilent)
 		printf("-D option initiated %ld connection closures\n", nConnDrops);
 
-	if(!bSilent)
+	if (!bSilent)
 		printf("End of tcpflood Run\n");
 
 	exit(ret);

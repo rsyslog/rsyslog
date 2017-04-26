@@ -51,7 +51,7 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omruleset")
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* static data */
 DEFobjCurrIf(ruleset);
@@ -65,8 +65,8 @@ DEF_OMOD_STATIC_DATA
 
 
 typedef struct _instanceData {
-	ruleset_t *pRuleset;	/* ruleset to enqueue to */
-	uchar *pszRulesetName;	/* primarily for debugging/display purposes */
+	ruleset_t *pRuleset;   /* ruleset to enqueue to */
+	uchar *pszRulesetName; /* primarily for debugging/display purposes */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -74,51 +74,51 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	ruleset_t *pRuleset;	/* ruleset to enqueue message to (NULL = Default, not recommended) */
+	ruleset_t *pRuleset; /* ruleset to enqueue message to (NULL = Default, not recommended) */
 	uchar *pszRulesetName;
 } configSettings_t;
 static configSettings_t cs;
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	resetConfigVariables(NULL, NULL);
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
+	    resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+	CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	free(pData->pszRulesetName);
+	CODESTARTfreeInstance
+	    free(pData->pszRulesetName);
 ENDfreeInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	dbgprintf("omruleset target %s[%p]\n", (char*) pData->pszRulesetName, pData->pRuleset);
+	CODESTARTdbgPrintInstInfo
+	    dbgprintf("omruleset target %s[%p]\n", (char *)pData->pszRulesetName, pData->pRuleset);
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 /* Note that we change the flow control type to "no delay", because at this point in 
@@ -126,12 +126,12 @@ ENDtryResume
  * work off a queue. So a delay would just block out execution for longer than needed.
  */
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t **ppMsg = (smsg_t **)pMsgData;
 	smsg_t *pMsg;
-CODESTARTdoAction
-	CHKmalloc(pMsg = MsgDup(ppMsg[0]));
+	CODESTARTdoAction
+	    CHKmalloc(pMsg = MsgDup(ppMsg[0]));
 	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,
-		  (char*) pWrkrData->pData->pszRulesetName, pWrkrData->pData->pRuleset);
+	    (char *)pWrkrData->pData->pszRulesetName, pWrkrData->pData->pRuleset);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	MsgSetRuleset(pMsg, pWrkrData->pData->pRuleset);
 	/* Note: we intentionally use submitMsg2() here, as we process messages
@@ -144,20 +144,20 @@ ENDdoAction
 
 /* set the ruleset name */
 static rsRetVal
-setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+setRuleset(void __attribute__((unused)) * pVal, uchar *pszName)
 {
 	rsRetVal localRet;
 	DEFiRet;
 
 	localRet = ruleset.GetRuleset(ourConf, &cs.pRuleset, pszName);
-	if(localRet == RS_RET_NOT_FOUND) {
+	if (localRet == RS_RET_NOT_FOUND) {
 		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: ruleset '%s' not found - ignored", pszName);
 	}
 	CHKiRet(localRet);
 	cs.pszRulesetName = pszName; /* save for later display purposes */
 
 finalize_it:
-	if(iRet != RS_RET_OK) { /* cleanup needed? */
+	if (iRet != RS_RET_OK) { /* cleanup needed? */
 		free(pszName);
 	}
 	RETiRet;
@@ -166,16 +166,17 @@ finalize_it:
 
 BEGINparseSelectorAct
 	int iTplOpts;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us */
-	if(strncmp((char*) p, ":omruleset:", sizeof(":omruleset:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us */
+	    if (strncmp((char *)p, ":omruleset:", sizeof(":omruleset:") - 1))
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
-	if(cs.pRuleset == NULL) {
+	if (cs.pRuleset == NULL) {
 		errmsg.LogError(0, RS_RET_NO_RULESET, "error: no ruleset was specified, use "
-				"$ActionOmrulesetRulesetName directive first!");
+						      "$ActionOmrulesetRulesetName directive first!");
 		ABORT_FINALIZE(RS_RET_NO_RULESET);
 	}
 
@@ -184,47 +185,46 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
-			"warning: omruleset is deprecated, consider "
-			"using the 'call' statement instead");
+	    "warning: omruleset is deprecated, consider "
+	    "using the 'call' statement instead");
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p - 1) == ';')
 		--p;
 	iTplOpts = OMSR_TPL_AS_MSG;
 	/* we call the message below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar *)"RSYSLOG_FileFormat"));
 	pData->pRuleset = cs.pRuleset;
 	pData->pszRulesetName = cs.pszRulesetName;
 	cs.pRuleset = NULL;
-/* re-set, because there is a high risk of unwanted behavior if we leave it in! */
+	/* re-set, because there is a high risk of unwanted behavior if we leave it in! */
 	cs.pszRulesetName = NULL;
-/* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
-CODE_STD_FINALIZERparseSelectorAct
+	/* note: we must not free, as we handed over this pointer to the instanceDat to the instanceDataa! */
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	free(cs.pszRulesetName);
+	CODESTARTmodExit
+	    free(cs.pszRulesetName);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
-
 
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	DEFiRet;
 	cs.pRuleset = NULL;
@@ -238,24 +238,24 @@ BEGINmodInit()
 	rsRetVal localRet;
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
-	int bMsgPassingSupported;		/* does core support template passing as an array? */
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	/* check if the rsyslog core supports parameter passing code */
-	bMsgPassingSupported = 0;
-	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
-	if(localRet == RS_RET_OK) {
+	int bMsgPassingSupported; /* does core support template passing as an array? */
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    /* check if the rsyslog core supports parameter passing code */
+	    bMsgPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar *)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
+	if (localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG)
 			bMsgPassingSupported = 1;
-	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+	} else if (localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, what is not acceptable */
 	}
-	
-	if(!bMsgPassingSupported) {
+
+	if (!bMsgPassingSupported) {
 		DBGPRINTF("omruleset: msg-passing is not supported by rsyslog core, can not continue.\n");
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
 	}
@@ -264,13 +264,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	errmsg.LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
-			"warning: omruleset is deprecated, consider "
-			"using the 'call' statement instead");
+	    "warning: omruleset is deprecated, consider "
+	    "using the 'call' statement instead");
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomrulesetrulesetname", 0, eCmdHdlrGetWord,
-				    setRuleset, NULL, STD_LOADABLE_MODULE_ID));
+	    setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

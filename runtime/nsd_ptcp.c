@@ -58,22 +58,21 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(net)
-DEFobjCurrIf(netstrms)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(prop)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(net);
+DEFobjCurrIf(netstrms);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(prop);
 
 
 /* a few deinit helpers */
 
 /* close socket if open (may always be called) */
-static void
-sockClose(int *pSock)
+static void sockClose(int *pSock)
 {
-	if(*pSock >= 0) {
+	if (*pSock >= 0) {
 		close(*pSock);
 		*pSock = -1;
 	}
@@ -88,9 +87,9 @@ ENDobjConstruct(nsd_ptcp)
 
 /* destructor for the nsd_ptcp object */
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsd_ptcp)
-	sockClose(&pThis->sock);
-	if(pThis->remoteIP != NULL)
+	CODESTARTobjDestruct(nsd_ptcp)
+	    sockClose(&pThis->sock);
+	if (pThis->remoteIP != NULL)
 		prop.Destruct(&pThis->remoteIP);
 	free(pThis->pRemHostName);
 ENDobjDestruct(nsd_ptcp)
@@ -102,7 +101,7 @@ ENDobjDestruct(nsd_ptcp)
 static rsRetVal
 GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -121,7 +120,7 @@ GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
 static rsRetVal
 GetSock(nsd_t *pNsd, int *pSock)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -139,12 +138,13 @@ GetSock(nsd_t *pNsd, int *pSock)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
+SetMode(nsd_t __attribute__((unused)) * pNsd, int mode)
 {
 	DEFiRet;
-	if(mode != 0) {
+	if (mode != 0) {
 		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
-				"ptcp netstream driver", mode);
+							     "ptcp netstream driver",
+		    mode);
 		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
 	}
 finalize_it:
@@ -162,12 +162,13 @@ finalize_it:
  * rgerhards, 2008-05-17
  */
 static rsRetVal
-SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
+SetAuthMode(nsd_t __attribute__((unused)) * pNsd, uchar *mode)
 {
 	DEFiRet;
-	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
+	if (mode != NULL && strcasecmp((char *)mode, "anon")) {
 		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
-				"ptcp netstream driver", mode);
+							       "ptcp netstream driver",
+		    mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
@@ -181,11 +182,11 @@ finalize_it:
  * rgerhards, 2008-05-17
  */
 static rsRetVal
-SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__((unused)) *pPermPeers)
+    SetPermPeers(nsd_t __attribute__((unused)) * pNsd, permittedPeers_t __attribute__((unused)) * pPermPeers)
 {
 	DEFiRet;
 
-	if(pPermPeers != NULL) {
+	if (pPermPeers != NULL) {
 		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by ptcp netstream driver");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
@@ -193,8 +194,6 @@ SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__
 finalize_it:
 	RETiRet;
 }
-
-
 
 
 /* Provide access to the underlying OS socket. This is primarily
@@ -205,7 +204,7 @@ finalize_it:
 static rsRetVal
 SetSock(nsd_t *pNsd, int sock)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -221,7 +220,7 @@ SetSock(nsd_t *pNsd, int sock)
 static rsRetVal
 SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -236,7 +235,7 @@ SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
 static rsRetVal
 SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -251,7 +250,7 @@ SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
 static rsRetVal
 SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
@@ -268,15 +267,15 @@ static rsRetVal
 Abort(nsd_t *pNsd)
 {
 	struct linger ling;
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 
 	DEFiRet;
 	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
 
-	if((pThis)->sock != -1) {
+	if ((pThis)->sock != -1) {
 		ling.l_onoff = 1;
 		ling.l_linger = 0;
-       		if(setsockopt((pThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
+		if (setsockopt((pThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0) {
 			dbgprintf("could not set SO_LINGER, errno %d\n", errno);
 		}
 	}
@@ -298,7 +297,7 @@ static rsRetVal
 FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 {
 	prop_t *fqdn;
-	
+
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(pAddr != NULL);
@@ -309,9 +308,9 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr_storage *pAddr)
 	 * (side note: we may hold on to these values for quite a while, thus we trim their
 	 * memory consumption)
 	 */
-	if((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn)+1)) == NULL)
+	if ((pThis->pRemHostName = MALLOC(prop.GetStringLen(fqdn) + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn)+1);
+	memcpy(pThis->pRemHostName, propGetSzStr(fqdn), prop.GetStringLen(fqdn) + 1);
 	prop.Destruct(&fqdn);
 
 finalize_it:
@@ -326,7 +325,7 @@ static rsRetVal
 AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 {
 	int sockflags;
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	nsd_ptcp_t *pNew = NULL;
@@ -336,13 +335,13 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	assert(ppNew != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
-	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
-	if(iNewSock < 0) {
-		if(Debug) {
+	iNewSock = accept(pThis->sock, (struct sockaddr *)&addr, &addrlen);
+	if (iNewSock < 0) {
+		if (Debug) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			dbgprintf("nds_ptcp: error accepting connection on socket %d, errno %d: %s\n",
-				  pThis->sock, errno, errStr);
+			    pThis->sock, errno, errStr);
 		}
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
@@ -359,24 +358,24 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	CHKiRet(FillRemHost(pNew, &addr));
 
 	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
-	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
+	if ((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
 		/* SETFL could fail too, so get it caught by the subsequent
 		 * error check.
 		 */
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
-	if(sockflags == -1) {
+	if (sockflags == -1) {
 		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
 	pNew->sock = iNewSock;
-	*ppNew = (nsd_t*) pNew;
+	*ppNew = (nsd_t *)pNew;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pNew != NULL)
 			nsd_ptcpDestruct(&pNew);
 		/* the close may be redundant, but that doesn't hurt... */
 		sockClose(&iNewSock);
@@ -394,17 +393,17 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal (*fAddLstn)(void *, netstrm_t *),
+    uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
-        int error, maxs, on = 1;
+	int error, maxs, on = 1;
 	int sock = -1;
 	int numSocks;
 	int sockflags;
-        struct addrinfo hints, *res = NULL, *r;
+	struct addrinfo hints, *res = NULL, *r;
 
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
@@ -413,81 +412,80 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 
 	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_STREAM;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
-        if(error) {
+	error = getaddrinfo((char *)pLstnIP, (char *)pLstnPort, &hints, &res);
+	if (error) {
 		dbgprintf("error %d querying port '%s'\n", error, pLstnPort);
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
-        /* Count max number of sockets we may open */
-        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+	/* Count max number of sockets we may open */
+	for (maxs = 0, r = res; r != NULL; r = r->ai_next, maxs++)
 		/* EMPTY */;
 
-        numSocks = 0;   /* num of sockets counter at start of array */
-	for(r = res; r != NULL ; r = r->ai_next) {
-               sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if(sock < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+	numSocks = 0; /* num of sockets counter at start of array */
+	for (r = res; r != NULL; r = r->ai_next) {
+		sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		if (sock < 0) {
+			if (!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				dbgprintf("error %d creating tcp listen socket", errno);
-				/* it is debatable if PF_INET with EAFNOSUPPORT should
+			/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
-                        continue;
-                }
+			continue;
+		}
 
 #ifdef IPV6_V6ONLY
-                if(r->ai_family == AF_INET6) {
-                	int iOn = 1;
-			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
+		if (r->ai_family == AF_INET6) {
+			int iOn = 1;
+			if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
+				(char *)&iOn, sizeof(iOn)) < 0) {
 				close(sock);
 				sock = -1;
 				continue;
-                	}
-                }
+			}
+		}
 #endif
-       		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on)) < 0) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
-                        close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
 
 		/* We use non-blocking IO! */
-		if((sockflags = fcntl(sock, F_GETFL)) != -1) {
+		if ((sockflags = fcntl(sock, F_GETFL)) != -1) {
 			sockflags |= O_NONBLOCK;
 			/* SETFL could fail too, so get it caught by the subsequent
 			 * error check.
 			 */
 			sockflags = fcntl(sock, F_SETFL, sockflags);
 		}
-		if(sockflags == -1) {
+		if (sockflags == -1) {
 			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-                        close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
 
 
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
+/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 /* AIXPORT : SO_BSDCOMPAT socket option is depricated , and its usage has been discontinued
              on most unixes, AIX does not support this option , hence remove the call.
 */
 #if !defined(_AIX)
-#ifndef BSD	
-		if(net.should_use_so_bsdcompat()) {
+#ifndef BSD
+		if (net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
+				(char *)&on, sizeof(on)) < 0) {
 				errmsg.LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(sock);
+				close(sock);
 				sock = -1;
 				continue;
 			}
@@ -495,33 +493,33 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 #endif
 #endif
 
-	        if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
+		if ((bind(sock, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
-		     && (errno != EADDRINUSE)
+		    && (errno != EADDRINUSE)
 #endif
-	           ) {
+			) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-                        dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
-                	close(sock);
+			dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
+			close(sock);
 			sock = -1;
-                        continue;
-                }
+			continue;
+		}
 
-		if(listen(sock, iSessMax / 10 + 5) < 0) {
+		if (listen(sock, iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
 			 * for a too-large backlog. So in this case we first set back
 			 * to a fixed, reasonable, limit that should work. Only if
 			 * that fails, too, we give up.
 			 */
 			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.\n",
-				   iSessMax / 10 + 5);
-			if(listen(sock, 32) < 0) {
+			    iSessMax / 10 + 5);
+			if (listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
-	                	close(sock);
+				close(sock);
 				sock = -1;
-               		        continue;
+				continue;
 			}
 		}
 
@@ -536,32 +534,33 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
-		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+		pNewStrm->pDrvrData = (nsd_t *)pNewNsd;
 		pNewNsd = NULL;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
 		++numSocks;
 	}
 
-	if(numSocks != maxs)
+	if (numSocks != maxs)
 		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
-		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
+			  "- this may or may not be an error indication.\n",
+		    numSocks, maxs);
 
-        if(numSocks == 0) {
+	if (numSocks == 0) {
 		dbgprintf("No TCP listen sockets could successfully be initialized\n");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 
 finalize_it:
-	if(res != NULL)
+	if (res != NULL)
 		freeaddrinfo(res);
 
-	if(iRet != RS_RET_OK) {
-		if(sock != -1)
+	if (iRet != RS_RET_OK) {
+		if (sock != -1)
 			close(sock);
-		if(pNewStrm != NULL)
+		if (pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
-		if(pNewNsd != NULL)
+		if (pNewNsd != NULL)
 			pNS->Drvr.Destruct(&pNewNsd);
 	}
 
@@ -583,16 +582,16 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
 {
 	char errStr[1024];
 	DEFiRet;
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
-/*  AIXPORT : MSG_DONTWAIT not supported */ 
-#if defined (_AIX)
-#define MSG_DONTWAIT    MSG_NONBLOCK
+/*  AIXPORT : MSG_DONTWAIT not supported */
+#if defined(_AIX)
+#define MSG_DONTWAIT MSG_NONBLOCK
 #endif
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 
-	if(*pLenBuf == 0) {
+	if (*pLenBuf == 0) {
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	} else if (*pLenBuf < 0) {
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -614,23 +613,23 @@ finalize_it:
 static rsRetVal
 Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	ssize_t written;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
 	written = send(pThis->sock, pBuf, *pLenBuf, 0);
 
-	if(written == -1) {
-		switch(errno) {
-			case EAGAIN:
-			case EINTR:
-				/* this is fine, just retry... */
-				written = 0;
-				break;
-			default:
-				ABORT_FINALIZE(RS_RET_IO_ERROR);
-				break;
+	if (written == -1) {
+		switch (errno) {
+		case EAGAIN:
+		case EINTR:
+			/* this is fine, just retry... */
+			written = 0;
+			break;
+		default:
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			break;
 		}
 	}
 
@@ -646,7 +645,7 @@ finalize_it:
 static rsRetVal
 EnableKeepAlive(nsd_t *pNsd)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	int ret;
 	int optval;
 	socklen_t optlen;
@@ -656,53 +655,53 @@ EnableKeepAlive(nsd_t *pNsd)
 	optval = 1;
 	optlen = sizeof(optval);
 	ret = setsockopt(pThis->sock, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
-	if(ret < 0) {
+	if (ret < 0) {
 		dbgprintf("EnableKeepAlive socket call returns error %d\n", ret);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
-	if(pThis->iKeepAliveProbes > 0) {
+#if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if (pThis->iKeepAliveProbes > 0) {
 		optval = pThis->iKeepAliveProbes;
 		optlen = sizeof(optval);
 		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPCNT, &optval, optlen);
 	} else {
 		ret = 0;
 	}
-#	else
+#else
 	ret = -1;
-#	endif
-	if(ret < 0) {
+#endif
+	if (ret < 0) {
 		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
-	if(pThis->iKeepAliveTime > 0) {
+#if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if (pThis->iKeepAliveTime > 0) {
 		optval = pThis->iKeepAliveTime;
 		optlen = sizeof(optval);
 		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPIDLE, &optval, optlen);
 	} else {
 		ret = 0;
 	}
-#	else
+#else
 	ret = -1;
-#	endif
-	if(ret < 0) {
+#endif
+	if (ret < 0) {
 		errmsg.LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
 	}
 
-#	if defined(SOL_TCP) && defined(TCP_KEEPCNT)
-	if(pThis->iKeepAliveIntvl > 0) {
+#if defined(SOL_TCP) && defined(TCP_KEEPCNT)
+	if (pThis->iKeepAliveIntvl > 0) {
 		optval = pThis->iKeepAliveIntvl;
 		optlen = sizeof(optval);
 		ret = setsockopt(pThis->sock, SOL_TCP, TCP_KEEPINTVL, &optval, optlen);
 	} else {
 		ret = 0;
 	}
-#	else
+#else
 	ret = -1;
-#	endif
-	if(ret < 0) {
+#endif
+	if (ret < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
 	}
 
@@ -710,7 +709,6 @@ EnableKeepAlive(nsd_t *pNsd)
 
 finalize_it:
 	RETiRet;
-
 }
 
 
@@ -720,7 +718,7 @@ finalize_it:
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 
@@ -733,34 +731,34 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = family;
 	hints.ai_socktype = SOCK_STREAM;
-	if(getaddrinfo((char*)host, (char*)port, &hints, &res) != 0) {
+	if (getaddrinfo((char *)host, (char *)port, &hints, &res) != 0) {
 		dbgprintf("error %d in getaddrinfo\n", errno);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	
-	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+
+	if ((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
-	if(device) {
-#		if defined(SO_BINDTODEVICE)
-		if(setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
-#		endif
-                {
-                        dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
+	if (device) {
+#if defined(SO_BINDTODEVICE)
+		if (setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+#endif
+		{
+			dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
 
-	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+	if (connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
 finalize_it:
-	if(res != NULL)
-               freeaddrinfo(res);
-		
-	if(iRet != RS_RET_OK) {
+	if (res != NULL)
+		freeaddrinfo(res);
+
+	if (iRet != RS_RET_OK) {
 		sockClose(&pThis->sock);
 	}
 
@@ -776,12 +774,12 @@ static rsRetVal
 GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
 {
 	DEFiRet;
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	assert(ppszHName != NULL);
 
 	// TODO: how can the RemHost be empty?
-	CHKmalloc(*ppszHName = (uchar*)strdup(pThis->pRemHostName == NULL ? "" : (char*) pThis->pRemHostName));
+	CHKmalloc(*ppszHName = (uchar *)strdup(pThis->pRemHostName == NULL ? "" : (char *)pThis->pRemHostName));
 
 finalize_it:
 	RETiRet;
@@ -803,11 +801,11 @@ CheckConnection(nsd_t *pNsd)
 	DEFiRet;
 	int rc;
 	char msgbuf[1]; /* dummy */
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
 	rc = recv(pThis->sock, msgbuf, 1, MSG_DONTWAIT | MSG_PEEK);
-	if(rc == 0) {
+	if (rc == 0) {
 		dbgprintf("CheckConnection detected broken connection - closing it\n");
 		/* in this case, the remote peer had shut down the connection and we
 		 * need to close our side, too.
@@ -826,7 +824,7 @@ static rsRetVal
 GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 {
 	DEFiRet;
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 	prop.AddRef(pThis->remoteIP);
 	*ip = pThis->remoteIP;
@@ -836,8 +834,8 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ptcp)
-CODESTARTobjQueryInterface(nsd_ptcp)
-	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(nsd_ptcp) if (pIf->ifVersion != nsdCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -846,8 +844,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_ptcpConstruct;
-	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
+	pIf->Construct = (rsRetVal(*)(nsd_t **))nsd_ptcpConstruct;
+	pIf->Destruct = (rsRetVal(*)(nsd_t **))nsd_ptcpDestruct;
 	pIf->Abort = Abort;
 	pIf->GetRemAddr = GetRemAddr;
 	pIf->GetSock = GetSock;
@@ -874,9 +872,9 @@ ENDobjQueryInterface(nsd_ptcp)
 /* exit our class
  */
 BEGINObjClassExit(nsd_ptcp, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsd_ptcp)
-	/* release objects we no longer need */
-	objRelease(net, CORE_COMPONENT);
+	CODESTARTObjClassExit(nsd_ptcp)
+	    /* release objects we no longer need */
+	    objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -898,7 +896,7 @@ BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(nsd_ptcp)
 
 
@@ -906,31 +904,31 @@ ENDObjClassInit(nsd_ptcp)
 
 
 BEGINmodExit
-CODESTARTmodExit
-#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
+	CODESTARTmodExit
+#ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
 	nsdpoll_ptcpClassExit();
-#	endif
+#endif
 	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
+	CHKiRet(nsd_ptcpClassInit(pModInfo));     /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdsel_ptcpClassInit(pModInfo));  /* must be done after tcps_sess, as we use it */
+#ifdef HAVE_EPOLL_CREATE			  /* module only available if epoll() is supported! */
 	CHKiRet(nsdpoll_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-#	endif
+#endif
 ENDmodInit
 /* vi:set ai:
  */

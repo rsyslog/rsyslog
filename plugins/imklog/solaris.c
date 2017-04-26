@@ -29,7 +29,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#	include "config.h"
+#include "config.h"
 #endif
 #include <stdlib.h>
 #include <unistd.h>
@@ -37,7 +37,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/socket.h>
-
 
 
 #include "rsyslog.h"
@@ -49,7 +48,7 @@
 /* globals */
 static int fklog; // TODO: remove
 #ifndef _PATH_KLOG
-#	define _PATH_KLOG "/dev/log"
+#define _PATH_KLOG "/dev/log"
 #endif
 
 
@@ -66,13 +65,13 @@ klogWillRun(void)
 {
 	DEFiRet;
 
-	fklog = sun_openklog((char*) GetPath(), O_RDONLY);
+	fklog = sun_openklog((char *)GetPath(), O_RDONLY);
 	if (fklog < 0) {
 		char errStr[1024];
 		int err = errno;
 		rs_strerror_r(err, errStr, sizeof(errStr));
 		DBGPRINTF("error %s opening log socket: %s\n",
-				   errStr, GetPath());
+		    errStr, GetPath());
 		iRet = RS_RET_ERR; // TODO: better error code
 	}
 
@@ -85,12 +84,11 @@ klogWillRun(void)
  */
 rsRetVal klogAfterRun(void)
 {
-        DEFiRet;
-	if(fklog != -1)
+	DEFiRet;
+	if (fklog != -1)
 		close(fklog);
-        RETiRet;
+	RETiRet;
 }
-
 
 
 /* to be called in the module's WillRun entry point, this is the main
@@ -99,7 +97,7 @@ rsRetVal klogAfterRun(void)
  */
 rsRetVal klogLogKMsg(void)
 {
-        DEFiRet;
+	DEFiRet;
 	sun_sys_poll();
 	RETiRet;
 }
@@ -108,9 +106,7 @@ rsRetVal klogLogKMsg(void)
 /* provide the (system-specific) default facility for internal messages
  * rgerhards, 2008-04-14
  */
-int
-klogFacilIntMsg(void)
+int klogFacilIntMsg(void)
 {
 	return LOG_SYSLOG;
 }
-

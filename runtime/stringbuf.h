@@ -32,14 +32,13 @@
 /** 
  * The dynamic string buffer object.
  */
-typedef struct cstr_s
-{	
-#ifndef	NDEBUG
-	rsObjID OID;		/**< object ID */
+typedef struct cstr_s {
+#ifndef NDEBUG
+	rsObjID OID; /**< object ID */
 #endif
-	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
-	size_t iBufSize;	/**< current maximum size of the string buffer */
-	size_t iStrLen;		/**< length of the string in characters. */
+	uchar *pBuf;     /**< pointer to the string buffer, may be NULL if string is empty */
+	size_t iBufSize; /**< current maximum size of the string buffer */
+	size_t iStrLen;  /**< length of the string in characters. */
 } cstr_t;
 
 
@@ -51,7 +50,7 @@ rsRetVal cstrConstruct(cstr_t **ppThis);
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
-rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 /**
  * Destruct the string buffer object.
@@ -70,10 +69,11 @@ rsRetVal cstrAppendChar(cstr_t *pThis, const uchar c);
  * but before that data is used.
  * rgerhards, 2009-06-16
  */
-#define cstrFinalize(pThis) { \
-	if((pThis)->iStrLen > 0) \
-		(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
-}
+#define cstrFinalize(pThis)                                                                             \
+	{                                                                                               \
+		if ((pThis)->iStrLen > 0)                                                               \
+			(pThis)->pBuf[(pThis)->iStrLen] = '\0'; /* space is always reserved for this */ \
+	}
 
 
 /**
@@ -92,7 +92,7 @@ void cstrTrimTrailingWhiteSpace(cstr_t *pThis);
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
-rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar* psz);
+rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar *psz);
 
 /**
  * Append a string to the buffer.
@@ -100,14 +100,14 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar* psz);
  * \param psz pointer to string to be appended. Must not be NULL.
  * \param iStrLen the length of the string pointed to by psz
  */
-rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen);
+rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar *psz, size_t iStrLen);
 
 /**
  * Append a printf-style formated string to the buffer.
  *
  * \param fmt pointer to the format string (see man 3 printf for details). Must not be NULL.
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 /**
  * Append an integer to the string. No special formatting is
@@ -117,7 +117,7 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
 rsRetVal strExit(void);
-uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
+uchar *cstrGetSzStrNoNULL(cstr_t *pThis);
 #define rsCStrGetSzStrNoNULL(x) cstrGetSzStrNoNULL(x)
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
 int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2);
@@ -135,9 +135,9 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
-#	define cstrLen(x) ((int)((x)->iStrLen))
+#define cstrLen(x) ((int)((x)->iStrLen))
 #else
-	int cstrLen(cstr_t *pThis);
+int cstrLen(cstr_t *pThis);
 #endif
 #define rsCStrLen(s) cstrLen((s))
 

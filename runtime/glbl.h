@@ -48,9 +48,9 @@ extern stdlog_channel_t stdlog_hdl;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
-	uchar* (*GetWorkDir)(void);
+	uchar *(*GetWorkDir)(void);
 	int (*GetMaxLine)(void);
-#define SIMP_PROP(name, dataType) \
+#define SIMP_PROP(name, dataType)    \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
 	SIMP_PROP(OptimizeUniProc, int)
@@ -59,16 +59,16 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(Option_DisallowWarning, int)
 	SIMP_PROP(DisableDNS, int)
-	SIMP_PROP(LocalFQDNName, uchar*)
-	SIMP_PROP(mainqCnfObj, struct cnfobj*)
-	SIMP_PROP(LocalHostName, uchar*)
-	SIMP_PROP(LocalDomain, uchar*)
-	SIMP_PROP(StripDomains, char**)
-	SIMP_PROP(LocalHosts, char**)
-	SIMP_PROP(DfltNetstrmDrvr, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
+	SIMP_PROP(LocalFQDNName, uchar *)
+	SIMP_PROP(mainqCnfObj, struct cnfobj *)
+	SIMP_PROP(LocalHostName, uchar *)
+	SIMP_PROP(LocalDomain, uchar *)
+	SIMP_PROP(StripDomains, char **)
+	SIMP_PROP(LocalHosts, char **)
+	SIMP_PROP(DfltNetstrmDrvr, uchar *)
+	SIMP_PROP(DfltNetstrmDrvrCAF, uchar *)
+	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar *)
+	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar *)
 	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
 	SIMP_PROP(ParserDropTrailingLFOnReception, int)
 	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
@@ -79,7 +79,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 
 	/* added v3, 2009-06-30 */
 	rsRetVal (*GenerateLocalHostNameProperty)(void);
-	prop_t* (*GetLocalHostNameProp)(void);
+	prop_t *(*GetLocalHostNameProp)(void);
 	/* added v4, 2009-07-20 */
 	int (*GetGlobalInputTermState)(void);
 	void (*SetGlobalInputTermination)(void);
@@ -97,11 +97,11 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	/* v7: was neeeded to mean v5+v6 - do NOT add anything else for that version! */
 	/* next change is v9! */
 	/* v8 - 2012-03-21 */
-	prop_t* (*GetLocalHostIP)(void);
-	uchar* (*GetSourceIPofLocalClient)(void);		/* [ar] */
-	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
-	/* v9 - 2015-01-12  SetMaxLine method removed */
-#undef	SIMP_PROP
+	prop_t *(*GetLocalHostIP)(void);
+	uchar *(*GetSourceIPofLocalClient)(void);      /* [ar] */
+	rsRetVal (*SetSourceIPofLocalClient)(uchar *); /* [ar] */
+						       /* v9 - 2015-01-12  SetMaxLine method removed */
+#undef SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
@@ -109,7 +109,7 @@ ENDinterface(glbl)
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
 
-extern int glblDebugOnShutdown;	/* start debug log when we are shut down */
+extern int glblDebugOnShutdown; /* start debug log when we are shut down */
 extern int glblReportNewSenders;
 extern int glblReportGoneAwaySenders;
 extern int glblSenderStatsTimeout;
@@ -118,7 +118,10 @@ extern int glblUnloadModules;
 extern short janitorInterval;
 
 #define glblGetOurPid() glbl_ourpid
-#define glblSetOurPid(pid) { glbl_ourpid = (pid); }
+#define glblSetOurPid(pid)           \
+	{                            \
+		glbl_ourpid = (pid); \
+	}
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);
@@ -126,8 +129,8 @@ void glblProcessTimezone(struct cnfobj *o);
 void glblProcessMainQCnf(struct cnfobj *o);
 void glblDestructMainqCnfObj(void);
 rsRetVal glblDoneLoadCnf(void);
-const uchar * glblGetWorkDirRaw(void);
-tzinfo_t* glblFindTimezoneInfo(char *id);
+const uchar *glblGetWorkDirRaw(void);
+tzinfo_t *glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

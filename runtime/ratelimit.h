@@ -22,7 +22,7 @@
 #define INCLUDED_RATELIMIT_H
 
 struct ratelimit_s {
-	char *name;	/**< rate limiter name, e.g. for user messages */
+	char *name; /**< rate limiter name, e.g. for user messages */
 	/* support for Linux kernel-type ratelimiting */
 	unsigned short interval;
 	unsigned short burst;
@@ -32,11 +32,11 @@ struct ratelimit_s {
 	time_t begin;
 	/* support for "last message repeated n times */
 	int bReduceRepeatMsgs; /**< shall we do "last message repeated n times" processing? */
-	unsigned nsupp;		/**< nbr of msgs suppressed */
+	unsigned nsupp;	/**< nbr of msgs suppressed */
 	smsg_t *pMsg;
-	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */
-	sbool bNoTimeCache;	/**< if we shall not used cached reception time */
-	pthread_mutex_t mut;	/**< mutex if thread-safe operation desired */
+	sbool bThreadSafe;   /**< do we need to operate in Thread-Safe mode? */
+	sbool bNoTimeCache;  /**< if we shall not used cached reception time */
+	pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
 /* prototypes */

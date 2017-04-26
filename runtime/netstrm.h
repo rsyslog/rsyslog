@@ -28,32 +28,33 @@
 
 /* the netstrm object */
 struct netstrm_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
-	nsd_if_t Drvr;		/**< our stream driver */
-	void *pUsr;		/**< pointer to user-provided data structure */
-	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
+	BEGINobjInstance
+		;		  /* Data to implement generic object - MUST be the first data element! */
+		nsd_t *pDrvrData; /**< the driver's data elements (at most other places, this is called pNsd) */
+		nsd_if_t Drvr;    /**< our stream driver */
+		void *pUsr;       /**< pointer to user-provided data structure */
+		netstrms_t *pNS;  /**< pointer to our netstream subsystem object */
 };
 
 
 /* interface */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(netstrm_t **ppThis);
-	rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
-	rsRetVal (*Destruct)(netstrm_t **ppThis);
-	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
-	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
-		             uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
-	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew);
-	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
-	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
-	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
-	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
-	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, prop_t **ip);
-	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
-	rsRetVal (*SetDrvrAuthMode)(netstrm_t *pThis, uchar*);
-	rsRetVal (*SetDrvrPermPeers)(netstrm_t *pThis, permittedPeers_t*);
-	rsRetVal (*CheckConnection)(netstrm_t *pThis);	/* This is a trick mostly for plain tcp syslog */
+	rsRetVal (*Construct)(netstrm_t * *ppThis);
+	rsRetVal (*ConstructFinalize)(netstrm_t * pThis);
+	rsRetVal (*Destruct)(netstrm_t * *ppThis);
+	rsRetVal (*AbortDestruct)(netstrm_t * *ppThis);
+	rsRetVal (*LstnInit)(netstrms_t * pNS, void *pUsr, rsRetVal (*)(void *, netstrm_t *),
+	    uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+	rsRetVal (*AcceptConnReq)(netstrm_t * pThis, netstrm_t * *ppNew);
+	rsRetVal (*Rcv)(netstrm_t * pThis, uchar * pRcvBuf, ssize_t * pLenBuf);
+	rsRetVal (*Send)(netstrm_t * pThis, uchar * pBuf, ssize_t * pLenBuf);
+	rsRetVal (*Connect)(netstrm_t * pThis, int family, unsigned char *port, unsigned char *host, char *device);
+	rsRetVal (*GetRemoteHName)(netstrm_t * pThis, uchar * *pszName);
+	rsRetVal (*GetRemoteIP)(netstrm_t * pThis, prop_t * *ip);
+	rsRetVal (*SetDrvrMode)(netstrm_t * pThis, int iMode);
+	rsRetVal (*SetDrvrAuthMode)(netstrm_t * pThis, uchar *);
+	rsRetVal (*SetDrvrPermPeers)(netstrm_t * pThis, permittedPeers_t *);
+	rsRetVal (*CheckConnection)(netstrm_t * pThis); /* This is a trick mostly for plain tcp syslog */
 	/* the GetSock() below is a hack to make imgssapi work. In the long term,
 	 * we should migrate imgssapi to a stream driver, which will relieve us of
 	 * this problem. Please note that nobody else should use GetSock(). Using it 
@@ -61,8 +62,8 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	 * it at all. Once the imgssapi problem is solved, GetSock should be removed from
 	 * this interface. -- rgerhards, 2008-05-05
 	 */
-	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
-	rsRetVal (*GetRemAddr)(netstrm_t *pThis, struct sockaddr_storage **ppAddr);
+	rsRetVal (*GetSock)(netstrm_t * pThis, int *pSock);
+	rsRetVal (*GetRemAddr)(netstrm_t * pThis, struct sockaddr_storage * *ppAddr);
 	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
 	 * peer's socket addr structure, so that the legacy matching functions can work on
 	 * it. Note that this ties netstream drivers to things that can be implemented over
@@ -70,11 +71,11 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
 	 */
 	/* v4 */
-	rsRetVal (*EnableKeepAlive)(netstrm_t *pThis);
+	rsRetVal (*EnableKeepAlive)(netstrm_t * pThis);
 	/* v7 */
-	rsRetVal (*SetKeepAliveProbes)(netstrm_t *pThis, int keepAliveProbes);
-	rsRetVal (*SetKeepAliveTime)(netstrm_t *pThis, int keepAliveTime);
-	rsRetVal (*SetKeepAliveIntvl)(netstrm_t *pThis, int keepAliveIntvl);
+	rsRetVal (*SetKeepAliveProbes)(netstrm_t * pThis, int keepAliveProbes);
+	rsRetVal (*SetKeepAliveTime)(netstrm_t * pThis, int keepAliveTime);
+	rsRetVal (*SetKeepAliveIntvl)(netstrm_t * pThis, int keepAliveIntvl);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()

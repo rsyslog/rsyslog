@@ -30,8 +30,9 @@ typedef sigprov_if_t lmsig_ksi_if_t;
 
 /* the lmsig_ksi object */
 struct lmsig_ksi_s {
-	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
-	rsksictx ctx;	/* librsksi context - contains all we need */
+	BEGINobjInstance
+		;	     /* Data to implement generic object - MUST be the first data element! */
+		rsksictx ctx; /* librsksi context - contains all we need */
 };
 typedef struct lmsig_ksi_s lmsig_ksi_t;
 

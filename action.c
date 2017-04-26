@@ -94,7 +94,7 @@
 #include <errno.h>
 #ifdef _AIX
 #include <pthread.h>
-#endif 
+#endif
 #include <json.h>
 
 #include "dirty.h"
@@ -125,58 +125,58 @@
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
-static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t * const pWti);
-static rsRetVal doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t*);
-static rsRetVal doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t*);
-static rsRetVal doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t*);
+static rsRetVal processBatchMain(void *pVoid, batch_t *pBatch, wti_t *const pWti);
+static rsRetVal doSubmitToActionQ(action_t *const pAction, wti_t *const pWti, smsg_t *);
+static rsRetVal doSubmitToActionQComplex(action_t *const pAction, wti_t *const pWti, smsg_t *);
+static rsRetVal doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *const pWti, smsg_t *);
 
 /* object static data (once for all instances) */
 DEFobjCurrIf(obj)
-DEFobjCurrIf(datetime)
-DEFobjCurrIf(module)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(statsobj)
-DEFobjCurrIf(ruleset)
+    DEFobjCurrIf(datetime)
+	DEFobjCurrIf(module)
+	    DEFobjCurrIf(errmsg)
+		DEFobjCurrIf(statsobj)
+		    DEFobjCurrIf(ruleset)
 
 
-typedef struct configSettings_s {
-	int bActExecWhenPrevSusp;			/* execute action only when previous one was suspended? */
-	int bActionWriteAllMarkMsgs;			/* should all mark messages be unconditionally written? */
-	int iActExecOnceInterval;			/* execute action once every nn seconds */
-	int iActExecEveryNthOccur;			/* execute action every n-th occurence (0,1=always) */
-	time_t iActExecEveryNthOccurTO;			/* timeout for n-occurence setting (in seconds, 0=never) */
+			typedef struct configSettings_s {
+	int bActExecWhenPrevSusp;       /* execute action only when previous one was suspended? */
+	int bActionWriteAllMarkMsgs;    /* should all mark messages be unconditionally written? */
+	int iActExecOnceInterval;       /* execute action once every nn seconds */
+	int iActExecEveryNthOccur;      /* execute action every n-th occurence (0,1=always) */
+	time_t iActExecEveryNthOccurTO; /* timeout for n-occurence setting (in seconds, 0=never) */
 	int glbliActionResumeInterval;
-	int glbliActionResumeRetryCount;		/* how often should suspended actions be retried? */
-	int bActionRepMsgHasMsg;			/* last messsage repeated... has msg fragment in it */
-	uchar *pszActionName;				/* short name for the action */
+	int glbliActionResumeRetryCount; /* how often should suspended actions be retried? */
+	int bActionRepMsgHasMsg;	 /* last messsage repeated... has msg fragment in it */
+	uchar *pszActionName;		 /* short name for the action */
 	/* action queue and its configuration parameters */
-	queueType_t ActionQueType;			/* type of the main message queue above */
-	int iActionQueueSize;				/* size of the main message queue above */
-	int iActionQueueDeqBatchSize;			/* batch size for action queues */
-	int iActionQHighWtrMark;			/* high water mark for disk-assisted queues */
-	int iActionQLowWtrMark;				/* low water mark for disk-assisted queues */
-	int iActionQDiscardMark;			/* begin to discard messages */
-	int iActionQDiscardSeverity;			/* by default, discard nothing to prevent unintentional loss */
-	int iActionQueueNumWorkers;			/* number of worker threads for the mm queue above */
-	uchar *pszActionQFName;				/* prefix for the main message queue file */
+	queueType_t ActionQueType;    /* type of the main message queue above */
+	int iActionQueueSize;	 /* size of the main message queue above */
+	int iActionQueueDeqBatchSize; /* batch size for action queues */
+	int iActionQHighWtrMark;      /* high water mark for disk-assisted queues */
+	int iActionQLowWtrMark;       /* low water mark for disk-assisted queues */
+	int iActionQDiscardMark;      /* begin to discard messages */
+	int iActionQDiscardSeverity;  /* by default, discard nothing to prevent unintentional loss */
+	int iActionQueueNumWorkers;   /* number of worker threads for the mm queue above */
+	uchar *pszActionQFName;       /* prefix for the main message queue file */
 	int64 iActionQueMaxFileSize;
-	int iActionQPersistUpdCnt;			/* persist queue info every n updates */
-	int bActionQSyncQeueFiles;			/* sync queue files */
-	int iActionQtoQShutdown;			/* queue shutdown */ 
-	int iActionQtoActShutdown;			/* action shutdown (in phase 2) */ 
-	int iActionQtoEnq;				/* timeout for queue enque */ 
-	int iActionQtoWrkShutdown;			/* timeout for worker thread shutdown */
-	int iActionQWrkMinMsgs;				/* minimum messages per worker needed to start a new one */
-	int bActionQSaveOnShutdown;			/* save queue on shutdown (when DA enabled)? */
-	int64 iActionQueMaxDiskSpace;			/* max disk space allocated 0 ==> unlimited */
-	int iActionQueueDeqSlowdown;			/* dequeue slowdown (simple rate limiting) */
-	int iActionQueueDeqtWinFromHr;			/* hour begin of time frame when queue is to be dequeued */
-	int iActionQueueDeqtWinToHr;			/* hour begin of time frame when queue is to be dequeued */
+	int iActionQPersistUpdCnt;     /* persist queue info every n updates */
+	int bActionQSyncQeueFiles;     /* sync queue files */
+	int iActionQtoQShutdown;       /* queue shutdown */
+	int iActionQtoActShutdown;     /* action shutdown (in phase 2) */
+	int iActionQtoEnq;	     /* timeout for queue enque */
+	int iActionQtoWrkShutdown;     /* timeout for worker thread shutdown */
+	int iActionQWrkMinMsgs;	/* minimum messages per worker needed to start a new one */
+	int bActionQSaveOnShutdown;    /* save queue on shutdown (when DA enabled)? */
+	int64 iActionQueMaxDiskSpace;  /* max disk space allocated 0 ==> unlimited */
+	int iActionQueueDeqSlowdown;   /* dequeue slowdown (simple rate limiting) */
+	int iActionQueueDeqtWinFromHr; /* hour begin of time frame when queue is to be dequeued */
+	int iActionQueueDeqtWinToHr;   /* hour begin of time frame when queue is to be dequeued */
 } configSettings_t;
 
 
-configSettings_t cs;					/* our current config settings */
-configSettings_t cs_save;				/* our saved (scope!) config settings */
+configSettings_t cs;      /* our current config settings */
+configSettings_t cs_save; /* our saved (scope!) config settings */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -189,25 +189,23 @@ int bActionReportSuspensionCont = 0;
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
-	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
-	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: actionname */
-	{ "action.writeallmarkmessages", eCmdHdlrBinary, 0 }, /* legacy: actionwriteallmarkmessages */
-	{ "action.execonlyeverynthtime", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtime */
-	{ "action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtimetimeout */
-	{ "action.execonlyonceeveryinterval", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyonceeveryinterval */
-	{ "action.execonlywhenpreviousissuspended", eCmdHdlrBinary, 0 }, /* legacy: actionexeconlywhenpreviousissuspended */
-	{ "action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0 }, /* legacy: repeatedmsgcontainsoriginalmsg */
-	{ "action.resumeretrycount", eCmdHdlrInt, 0 }, /* legacy: actionresumeretrycount */
-	{ "action.reportsuspension", eCmdHdlrBinary, 0 },
-	{ "action.reportsuspensioncontinuation", eCmdHdlrBinary, 0 },
-	{ "action.resumeinterval", eCmdHdlrInt, 0 },
-	{ "action.copymsg", eCmdHdlrBinary, 0 }
-};
+    {"name", eCmdHdlrGetWord, 0},				   /* legacy: actionname */
+    {"type", eCmdHdlrString, CNFPARAM_REQUIRED},		   /* legacy: actionname */
+    {"action.writeallmarkmessages", eCmdHdlrBinary, 0},		   /* legacy: actionwriteallmarkmessages */
+    {"action.execonlyeverynthtime", eCmdHdlrInt, 0},		   /* legacy: actionexeconlyeverynthtime */
+    {"action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0},	/* legacy: actionexeconlyeverynthtimetimeout */
+    {"action.execonlyonceeveryinterval", eCmdHdlrInt, 0},	  /* legacy: actionexeconlyonceeveryinterval */
+    {"action.execonlywhenpreviousissuspended", eCmdHdlrBinary, 0}, /* legacy: actionexeconlywhenpreviousissuspended */
+    {"action.repeatedmsgcontainsoriginalmsg", eCmdHdlrBinary, 0},  /* legacy: repeatedmsgcontainsoriginalmsg */
+    {"action.resumeretrycount", eCmdHdlrInt, 0},		   /* legacy: actionresumeretrycount */
+    {"action.reportsuspension", eCmdHdlrBinary, 0},
+    {"action.reportsuspensioncontinuation", eCmdHdlrBinary, 0},
+    {"action.resumeinterval", eCmdHdlrInt, 0},
+    {"action.copymsg", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfparamdescr)/sizeof(struct cnfparamdescr),
-	  cnfparamdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfparamdescr) / sizeof(struct cnfparamdescr),
+	cnfparamdescr};
 
 
 /* primarily a helper for debug purposes, get human-readble name of state */
@@ -232,7 +230,7 @@ batchState2String(const batch_state_t state)
 }
 */
 
-/* ------------------------------ methods ------------------------------ */ 
+/* ------------------------------ methods ------------------------------ */
 
 /* This function returns the "current" time for this action. Current time
  * is not necessarily real-time. In order to enhance performance, current
@@ -257,14 +255,14 @@ batchState2String(const batch_state_t state)
  * a lot. So we simply return the system time.
  */
 static time_t
-getActNow(action_t * const pThis)
+getActNow(action_t *const pThis)
 {
 	assert(pThis != NULL);
-	if(pThis->tActNow == -1) {
+	if (pThis->tActNow == -1) {
 		pThis->tActNow = datetime.GetTime(NULL); /* good time call - the only one done */
-		if(pThis->tLastExec > pThis->tActNow) {
+		if (pThis->tLastExec > pThis->tActNow) {
 			/* if we are traveling back in time, reset tLastExec */
-			pThis->tLastExec = (time_t) 0;
+			pThis->tLastExec = (time_t)0;
 		}
 	}
 
@@ -283,32 +281,32 @@ actionResetQueueParams(void)
 {
 	DEFiRet;
 
-	cs.ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
-	cs.iActionQueueSize = 1000;			/* size of the main message queue above */
-	cs.iActionQueueDeqBatchSize = 16;		/* default batch size */
-	cs.iActionQHighWtrMark = -1;			/* high water mark for disk-assisted queues */
-	cs.iActionQLowWtrMark = -1;			/* low water mark for disk-assisted queues */
-	cs.iActionQDiscardMark = 980;			/* begin to discard messages */
-	cs.iActionQDiscardSeverity = 8;			/* discard warning and above */
-	cs.iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
-	cs.iActionQueMaxFileSize = 1024*1024;
-	cs.iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
+	cs.ActionQueType = QUEUETYPE_DIRECT; /* type of the main message queue above */
+	cs.iActionQueueSize = 1000;	  /* size of the main message queue above */
+	cs.iActionQueueDeqBatchSize = 16;    /* default batch size */
+	cs.iActionQHighWtrMark = -1;	 /* high water mark for disk-assisted queues */
+	cs.iActionQLowWtrMark = -1;	  /* low water mark for disk-assisted queues */
+	cs.iActionQDiscardMark = 980;	/* begin to discard messages */
+	cs.iActionQDiscardSeverity = 8;      /* discard warning and above */
+	cs.iActionQueueNumWorkers = 1;       /* number of worker threads for the mm queue above */
+	cs.iActionQueMaxFileSize = 1024 * 1024;
+	cs.iActionQPersistUpdCnt = 0; /* persist queue info every n updates */
 	cs.bActionQSyncQeueFiles = 0;
-	cs.iActionQtoQShutdown = 0;			/* queue shutdown */ 
-	cs.iActionQtoActShutdown = 1000;		/* action shutdown (in phase 2) */ 
-	cs.iActionQtoEnq = 50;				/* timeout for queue enque */ 
-	cs.iActionQtoWrkShutdown = 60000;		/* timeout for worker thread shutdown */
-	cs.iActionQWrkMinMsgs = -1;			/* minimum messages per worker needed to start a new one */
-	cs.bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
+	cs.iActionQtoQShutdown = 0;       /* queue shutdown */
+	cs.iActionQtoActShutdown = 1000;  /* action shutdown (in phase 2) */
+	cs.iActionQtoEnq = 50;		  /* timeout for queue enque */
+	cs.iActionQtoWrkShutdown = 60000; /* timeout for worker thread shutdown */
+	cs.iActionQWrkMinMsgs = -1;       /* minimum messages per worker needed to start a new one */
+	cs.bActionQSaveOnShutdown = 1;    /* save queue on shutdown (when DA enabled)? */
 	cs.iActionQueMaxDiskSpace = 0;
 	cs.iActionQueueDeqSlowdown = 0;
 	cs.iActionQueueDeqtWinFromHr = 0;
-	cs.iActionQueueDeqtWinToHr = 25;		/* 25 disables time windowed dequeuing */
+	cs.iActionQueueDeqtWinToHr = 25; /* 25 disables time windowed dequeuing */
 
-	cs.glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
+	cs.glbliActionResumeRetryCount = 0; /* I guess it is smart to reset this one, too */
 
 	d_free(cs.pszActionQFName);
-	cs.pszActionQFName = NULL;			/* prefix for the main message queue file */
+	cs.pszActionQFName = NULL; /* prefix for the main message queue file */
 
 	RETiRet;
 }
@@ -317,27 +315,27 @@ actionResetQueueParams(void)
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
  */
-rsRetVal actionDestruct(action_t * const pThis)
+rsRetVal actionDestruct(action_t *const pThis)
 {
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
-	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
+	if (!strcmp((char *)modGetName(pThis->pMod), "builtin:omdiscard")) {
 		/* discard actions will be optimized out */
 		FINALIZE;
 	}
 
-	if(pThis->pQueue != NULL) {
+	if (pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
 	}
 
 	/* destroy stats object, if we have one (may not always be
 	 * be the case, e.g. if turned off)
 	 */
-	if(pThis->statsobj != NULL)
+	if (pThis->statsobj != NULL)
 		statsobj.Destruct(&pThis->statsobj);
 
-	if(pThis->pModData != NULL)
+	if (pThis->pModData != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	pthread_mutex_destroy(&pThis->mutAction);
@@ -365,7 +363,6 @@ actionDisable(action_t *__restrict__ const pThis)
 }
 
 
-
 /* create a new action descriptor object
  * rgerhards, 2007-08-01
  * Note that it is vital to set proper initial values as the v6 config
@@ -377,8 +374,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 	action_t *pThis;
 
 	ASSERT(ppThis != NULL);
-	
-	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
+
+	CHKmalloc(pThis = (action_t *)calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = 30;
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
@@ -390,10 +387,10 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->bRepMsgHasMsg = 0;
 	pThis->bDisabled = 0;
 	pThis->isTransactional = 0;
-	pThis->bReportSuspension = -1; /* indicate "not yet set" */
+	pThis->bReportSuspension = -1;     /* indicate "not yet set" */
 	pThis->bReportSuspensionCont = -1; /* indicate "not yet set" */
 	pThis->bCopyMsg = 0;
-	pThis->tLastOccur = datetime.GetTime(NULL);	/* done once per action on startup only */
+	pThis->tLastOccur = datetime.GetTime(NULL); /* done once per action on startup only */
 	pThis->iActionNbr = iActionNbr;
 	pthread_mutex_init(&pThis->mutAction, NULL);
 	pthread_mutex_init(&pThis->mutWrkrDataTable, NULL);
@@ -416,31 +413,30 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	DEFiRet;
 	uchar pszAName[64]; /* friendly name of our action */
 
-	if(!strcmp((char*)modGetName(pThis->pMod), "builtin:omdiscard")) {
+	if (!strcmp((char *)modGetName(pThis->pMod), "builtin:omdiscard")) {
 		/* discard actions will be optimized out */
 		FINALIZE;
 	}
 	/* generate a friendly name for us action stats */
-	if(pThis->pszName == NULL) {
-		snprintf((char*) pszAName, sizeof(pszAName), "action %d", pThis->iActionNbr);
+	if (pThis->pszName == NULL) {
+		snprintf((char *)pszAName, sizeof(pszAName), "action %d", pThis->iActionNbr);
 		pThis->pszName = ustrdup(pszAName);
 	}
 
 	/* cache transactional attribute */
 	pThis->isTransactional = pThis->pMod->mod.om.supportsTX;
-	if(pThis->isTransactional) {
+	if (pThis->isTransactional) {
 		int i;
-		for(i = 0 ; i < pThis->iNumTpls ; ++i) {
-			if(pThis->peParamPassing[i] != ACT_STRING_PASSING) {
+		for (i = 0; i < pThis->iNumTpls; ++i) {
+			if (pThis->peParamPassing[i] != ACT_STRING_PASSING) {
 				errmsg.LogError(0, RS_RET_INVLD_OMOD, "action '%s'(%d) is transactional but "
-						"parameter %d "
-						"uses invalid parameter passing mode -- disabling "
-						"action. This is probably caused by a pre-v7 "
-						"output module that needs upgrade.",
-						pThis->pszName, pThis->iActionNbr, i);
+								      "parameter %d "
+								      "uses invalid parameter passing mode -- disabling "
+								      "action. This is probably caused by a pre-v7 "
+								      "output module that needs upgrade.",
+				    pThis->pszName, pThis->iActionNbr, i);
 				actionDisable(pThis);
 				ABORT_FINALIZE(RS_RET_INVLD_OMOD);
-
 			}
 		}
 	}
@@ -449,34 +445,34 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	/* support statistics gathering */
 	CHKiRet(statsobj.Construct(&pThis->statsobj));
 	CHKiRet(statsobj.SetName(pThis->statsobj, pThis->pszName));
-	CHKiRet(statsobj.SetOrigin(pThis->statsobj, (uchar*)"core.action"));
+	CHKiRet(statsobj.SetOrigin(pThis->statsobj, (uchar *)"core.action"));
 
 	STATSCOUNTER_INIT(pThis->ctrProcessed, pThis->mutCtrProcessed);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrProcessed));
+	    ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrProcessed));
 
 	STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrFail));
+	    ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrFail));
 
 	STATSCOUNTER_INIT(pThis->ctrSuspend, pThis->mutCtrSuspend);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrSuspend));
+	    ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrSuspend));
 	STATSCOUNTER_INIT(pThis->ctrSuspendDuration, pThis->mutCtrSuspendDuration);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("suspended.duration"),
-		ctrType_IntCtr, 0, &pThis->ctrSuspendDuration));
+	    ctrType_IntCtr, 0, &pThis->ctrSuspendDuration));
 
 	STATSCOUNTER_INIT(pThis->ctrResume, pThis->mutCtrResume);
 	CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("resumed"),
-		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrResume));
+	    ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pThis->ctrResume));
 
 	CHKiRet(statsobj.ConstructFinalize(pThis->statsobj));
 
 	/* create our queue */
 
 	/* generate a friendly name for the queue */
-	snprintf((char*) pszAName, sizeof(pszAName), "%s queue",
-		 pThis->pszName);
+	snprintf((char *)pszAName, sizeof(pszAName), "%s queue",
+	    pThis->pszName);
 
 	/* now check if we can run the action in "firehose mode" during stage one of 
 	 * its processing (that is before messages are enqueued into the action q).
@@ -484,14 +480,12 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	 * not used. Thankfully, that is usually the case. The benefit of firehose
 	 * mode is much faster processing (and simpler code) -- rgerhards, 2010-06-08
 	 */
-	if(   pThis->iExecEveryNthOccur > 1
-	   || pThis->iSecsExecOnceInterval
-	  ) {
+	if (pThis->iExecEveryNthOccur > 1 || pThis->iSecsExecOnceInterval) {
 		DBGPRINTF("info: firehose mode disabled for action because "
-		          "iExecEveryNthOccur=%d, iSecsExecOnceInterval=%d\n",
-			  pThis->iExecEveryNthOccur, pThis->iSecsExecOnceInterval);
+			  "iExecEveryNthOccur=%d, iSecsExecOnceInterval=%d\n",
+		    pThis->iExecEveryNthOccur, pThis->iSecsExecOnceInterval);
 		pThis->submitToActQ = doSubmitToActionQComplex;
-	} else if(pThis->bWriteAllMarkMsgs) {
+	} else if (pThis->bWriteAllMarkMsgs) {
 		/* full firehose submission mode, default case*/
 		pThis->submitToActQ = doSubmitToActionQ;
 	} else {
@@ -506,29 +500,33 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 	 * spec. -- rgerhards, 2008-01-30
 	 */
 	CHKiRet(qqueueConstruct(&pThis->pQueue, cs.ActionQueType, 1, cs.iActionQueueSize,
-					processBatchMain));
-	obj.SetName((obj_t*) pThis->pQueue, pszAName);
+	    processBatchMain));
+	obj.SetName((obj_t *)pThis->pQueue, pszAName);
 	qqueueSetpAction(pThis->pQueue, pThis);
 
-	if(lst == NULL) { /* use legacy params? */
-		/* ... set some properties ... */
-#		define setQPROP(func, directive, data) \
-		CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
-				error %d. Ignored, running with default setting", iRet); \
-		}
-#		define setQPROPstr(func, directive, data) \
-		CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
-				error %d. Ignored, running with default setting", iRet); \
-		}
+	if (lst == NULL) { /* use legacy params? */
+			   /* ... set some properties ... */
+#define setQPROP(func, directive, data)                                           \
+	CHKiRet_Hdlr(func(pThis->pQueue, data))                                   \
+	{                                                                         \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting", \
+		    iRet);                                                        \
+	}
+#define setQPROPstr(func, directive, data)                                                 \
+	CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL) ? 0 : strlen((char *)data))) \
+	{                                                                                  \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", \
+				error %d. Ignored, running with default setting",          \
+		    iRet);                                                                 \
+	}
 		setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", cs.iActionQueMaxDiskSpace);
 		setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", cs.iActionQueueDeqBatchSize);
 		setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", cs.iActionQueMaxFileSize);
 		setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", cs.pszActionQFName);
 		setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", cs.iActionQPersistUpdCnt);
 		setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", cs.bActionQSyncQeueFiles);
-		setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", cs.iActionQtoQShutdown );
+		setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", cs.iActionQtoQShutdown);
 		setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", cs.iActionQtoActShutdown);
 		setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", cs.iActionQtoWrkShutdown);
 		setQPROP(qqueueSettoEnq, "$ActionQueueTimeoutEnqueue", cs.iActionQtoEnq);
@@ -539,35 +537,35 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 		setQPROP(qqueueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", cs.iActionQWrkMinMsgs);
 		setQPROP(qqueueSetiNumWorkerThreads, "$ActionQueueWorkerThreads", cs.iActionQueueNumWorkers);
 		setQPROP(qqueueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", cs.bActionQSaveOnShutdown);
-		setQPROP(qqueueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
-		setQPROP(qqueueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
-		setQPROP(qqueueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
+		setQPROP(qqueueSetiDeqSlowdown, "$ActionQueueDequeueSlowdown", cs.iActionQueueDeqSlowdown);
+		setQPROP(qqueueSetiDeqtWinFromHr, "$ActionQueueDequeueTimeBegin", cs.iActionQueueDeqtWinFromHr);
+		setQPROP(qqueueSetiDeqtWinToHr, "$ActionQueueDequeueTimeEnd", cs.iActionQueueDeqtWinToHr);
 	} else {
 		/* we have v6-style config params */
 		qqueueSetDefaultsActionQueue(pThis->pQueue);
 		qqueueApplyCnfParam(pThis->pQueue, lst);
 	}
 
-#	undef setQPROP
-#	undef setQPROPstr
+#undef setQPROP
+#undef setQPROPstr
 
 	qqueueDbgPrint(pThis->pQueue);
 
 	DBGPRINTF("Action %p: queue %p created\n", pThis, pThis->pQueue);
 
-	if(pThis->bUsesMsgPassingMode && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
+	if (pThis->bUsesMsgPassingMode && pThis->pQueue->qType != QUEUETYPE_DIRECT) {
 		parser_warnmsg("module %s with message passing mode uses "
-			"non-direct queue. This most probably leads to undesired "
-			"results", (char*)modGetName(pThis->pMod));
+			       "non-direct queue. This most probably leads to undesired "
+			       "results",
+		    (char *)modGetName(pThis->pMod));
 	}
-	
+
 	/* and now reset the queue params (see comment in its function header!) */
 	actionResetQueueParams();
 
 finalize_it:
 	RETiRet;
 }
-
 
 
 /* set the global resume interval
@@ -583,21 +581,21 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal)
  * returned string must not be modified.
  * rgerhards, 2009-05-07
  */
-static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
+static uchar *getActStateName(action_t *const pThis, wti_t *const pWti)
 {
-	switch(getActionState(pWti, pThis)) {
-		case ACT_STATE_RDY:
-			return (uchar*) "rdy";
-		case ACT_STATE_ITX:
-			return (uchar*) "itx";
-		case ACT_STATE_RTRY:
-			return (uchar*) "rtry";
-		case ACT_STATE_SUSP:
-			return (uchar*) "susp";
-		case ACT_STATE_COMM:
-			return (uchar*) "comm";
-		default:
-			return (uchar*) "ERROR/UNKNWON";
+	switch (getActionState(pWti, pThis)) {
+	case ACT_STATE_RDY:
+		return (uchar *)"rdy";
+	case ACT_STATE_ITX:
+		return (uchar *)"itx";
+	case ACT_STATE_RTRY:
+		return (uchar *)"rtry";
+	case ACT_STATE_SUSP:
+		return (uchar *)"susp";
+	case ACT_STATE_COMM:
+		return (uchar *)"comm";
+	default:
+		return (uchar *)"ERROR/UNKNWON";
 	}
 }
 
@@ -605,34 +603,34 @@ static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
 /* returns a suitable return code based on action state
  * rgerhards, 2009-05-07
  */
-static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
+static rsRetVal getReturnCode(action_t *const pThis, wti_t *const pWti)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	switch(getActionState(pWti, pThis)) {
-		case ACT_STATE_RDY:
-			iRet = RS_RET_OK;
-			break;
-		case ACT_STATE_ITX:
-			if(pThis->bHadAutoCommit) {
-				pThis->bHadAutoCommit = 0; /* auto-reset */
-				iRet = RS_RET_PREVIOUS_COMMITTED;
-			} else {
-				iRet = RS_RET_DEFER_COMMIT;
-			}
-			break;
-		case ACT_STATE_RTRY:
-			iRet = RS_RET_SUSPENDED;
-			break;
-		case ACT_STATE_SUSP:
-			iRet = RS_RET_ACTION_FAILED;
-			break;
-		default:
-			DBGPRINTF("Invalid action engine state %u, program error\n",
-				  getActionState(pWti, pThis));
-			iRet = RS_RET_ERR;
-			break;
+	switch (getActionState(pWti, pThis)) {
+	case ACT_STATE_RDY:
+		iRet = RS_RET_OK;
+		break;
+	case ACT_STATE_ITX:
+		if (pThis->bHadAutoCommit) {
+			pThis->bHadAutoCommit = 0; /* auto-reset */
+			iRet = RS_RET_PREVIOUS_COMMITTED;
+		} else {
+			iRet = RS_RET_DEFER_COMMIT;
+		}
+		break;
+	case ACT_STATE_RTRY:
+		iRet = RS_RET_SUSPENDED;
+		break;
+	case ACT_STATE_SUSP:
+		iRet = RS_RET_ACTION_FAILED;
+		break;
+	default:
+		DBGPRINTF("Invalid action engine state %u, program error\n",
+		    getActionState(pWti, pThis));
+		iRet = RS_RET_ERR;
+		break;
 	}
 
 	RETiRet;
@@ -643,18 +641,18 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
  * rgerhards, 2007-08-02
  */
 static inline void
-actionSetState(action_t * const pThis, wti_t * const pWti, uint8_t newState)
+actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t newState)
 {
 	setActionState(pWti, pThis, newState);
 	DBGPRINTF("Action %d transitioned to state: %s\n",
-		  pThis->iActionNbr, getActStateName(pThis, pWti));
+	    pThis->iActionNbr, getActStateName(pThis, pWti));
 }
 
 /* Handles the transient commit state. So far, this is
  * mostly a dummy...
  * rgerhards, 2007-08-02
  */
-static void actionCommitted(action_t * const pThis, wti_t * const pWti)
+static void actionCommitted(action_t *const pThis, wti_t *const pWti)
 {
 	actionSetState(pThis, pWti, ACT_STATE_RDY);
 }
@@ -663,7 +661,7 @@ static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 /* set action to "rtry" state.
  * rgerhards, 2007-08-02
  */
-static void actionRetry(action_t * const pThis, wti_t * const pWti)
+static void actionRetry(action_t *const pThis, wti_t *const pWti)
 {
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
 	incActionResumeInRow(pWti, pThis);
@@ -678,7 +676,7 @@ static void actionRetry(action_t * const pThis, wti_t * const pWti)
  * rgerhards, 2007-08-02
  */
 static void
-actionSuspend(action_t * const pThis, wti_t * const pWti)
+actionSuspend(action_t *const pThis, wti_t *const pWti)
 {
 	time_t ttNow;
 	int suspendDuration;
@@ -689,11 +687,11 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	 * that is here. It's not a performance problem, as it happens infrequently.
 	 * it's not a threading race problem, as always the same value will be written.
 	 */
-	if(pThis->bReportSuspension == -1)
+	if (pThis->bReportSuspension == -1)
 		pThis->bReportSuspension = bActionReportSuspension;
-	if(pThis->bReportSuspensionCont == -1) {
+	if (pThis->bReportSuspensionCont == -1) {
 		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
-		if(pThis->bReportSuspensionCont == -1)
+		if (pThis->bReportSuspensionCont == -1)
 			pThis->bReportSuspension = 1;
 	}
 
@@ -705,22 +703,21 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	pThis->ttResumeRtry = ttNow + suspendDuration;
 	actionSetState(pThis, pWti, ACT_STATE_SUSP);
 	pThis->ctrSuspendDuration += suspendDuration;
-	if(getActionNbrResRtry(pWti, pThis) == 0) {
+	if (getActionNbrResRtry(pWti, pThis) == 0) {
 		STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
 	}
 
-	if(   pThis->bReportSuspensionCont
-	   || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0) ) {
+	if (pThis->bReportSuspensionCont || (pThis->bReportSuspension && getActionNbrResRtry(pWti, pThis) == 0)) {
 		ctime_r(&pThis->ttResumeRtry, timebuf);
-		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
+		timebuf[strlen(timebuf) - 1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-			      "action '%s' suspended, next retry is %s",
-			      pThis->pszName, timebuf);
+		    "action '%s' suspended, next retry is %s",
+		    pThis->pszName, timebuf);
 	}
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
 		  "duration %d\n",
-		  pThis->pszName, (long long) pThis->ttResumeRtry, (long long) ttNow,
-		  getActionNbrResRtry(pWti, pThis), suspendDuration);
+	    pThis->pszName, (long long)pThis->ttResumeRtry, (long long)ttNow,
+	    getActionNbrResRtry(pWti, pThis), suspendDuration);
 }
 
 
@@ -740,7 +737,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
  * of its inability to recover. -- rgerhards, 2010-04-26.
  */
 static rsRetVal
-actionDoRetry(action_t * const pThis, wti_t * const pWti)
+actionDoRetry(action_t *const pThis, wti_t *const pWti)
 {
 	int iRetries;
 	int iSleepPeriod;
@@ -750,51 +747,51 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	ASSERT(pThis != NULL);
 
 	iRetries = 0;
-	while((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+	while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
 		DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n",
-			pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
+		    pThis->pszName, iRetries, getActionResumeInRow(pWti, pThis));
 		iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		DBGPRINTF("actionDoRetry: %s action->tryResume returned %d\n", pThis->pszName, iRet);
-		if((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
+		if ((getActionResumeInRow(pWti, pThis) > 9) && (getActionResumeInRow(pWti, pThis) % 10 == 0)) {
 			bTreatOKasSusp = 1;
 			setActionResumeInRow(pWti, pThis, 0);
 			iRet = RS_RET_SUSPENDED;
 		} else {
 			bTreatOKasSusp = 0;
 		}
-		if((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
+		if ((iRet == RS_RET_OK) && (!bTreatOKasSusp)) {
 			DBGPRINTF("actionDoRetry: %s had success RDY again (iRet=%d)\n",
-				  pThis->pszName, iRet);
-			if(pThis->bReportSuspension) {
+			    pThis->pszName, iRet);
+			if (pThis->bReportSuspension) {
 				errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
-					      "resumed (module '%s')",
-					      pThis->pszName, pThis->pMod->pszName);
+									   "resumed (module '%s')",
+				    pThis->pszName, pThis->pMod->pszName);
 			}
 			setActionJustResumed(pWti, pThis, 1);
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
-		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
+		} else if (iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
 			DBGPRINTF("actionDoRetry: %s check for max retries, iResumeRetryCount "
 				  "%d, iRetries %d\n",
-				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
-			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
+			    pThis->pszName, pThis->iResumeRetryCount, iRetries);
+			if ((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
 				actionSuspend(pThis, pWti);
-				if(getActionNbrResRtry(pWti, pThis) < 20)
+				if (getActionNbrResRtry(pWti, pThis) < 20)
 					incActionNbrResRtry(pWti, pThis);
 			} else {
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
 				srSleep(iSleepPeriod, 0);
-				if(*pWti->pbShutdownImmediate) {
+				if (*pWti->pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
 				}
 			}
-		} else if(iRet == RS_RET_DISABLE_ACTION) {
+		} else if (iRet == RS_RET_DISABLE_ACTION) {
 			actionDisable(pThis);
 		}
 	}
 
-	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
+	if (getActionState(pWti, pThis) == ACT_STATE_RDY) {
 		setActionNbrResRtry(pWti, pThis, 0);
 	}
 
@@ -804,35 +801,37 @@ finalize_it:
 
 
 static rsRetVal
-actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
+actionCheckAndCreateWrkrInstance(action_t *const pThis, wti_t *const pWti)
 {
 	DEFiRet;
-	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
+	if (pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
 		DBGPRINTF("wti %p: we need to create a new action worker instance for "
-			  "action %d\n", pWti, pThis->iActionNbr);
+			  "action %d\n",
+		    pWti, pThis->iActionNbr);
 		CHKiRet(pThis->pMod->mod.om.createWrkrInstance(&(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData),
-						               pThis->pModData));
+		    pThis->pModData));
 		pWti->actWrkrInfo[pThis->iActionNbr].pAction = pThis;
 		setActionState(pWti, pThis, ACT_STATE_RDY); /* action is enabled */
-		
+
 		/* maintain worker data table -- only needed if wrkrHUP is requested! */
 
 		pthread_mutex_lock(&pThis->mutWrkrDataTable);
 		int freeSpot;
-		for(freeSpot = 0 ; freeSpot < pThis->wrkrDataTableSize ; ++freeSpot)
-			if(pThis->wrkrDataTable[freeSpot] == NULL)
+		for (freeSpot = 0; freeSpot < pThis->wrkrDataTableSize; ++freeSpot)
+			if (pThis->wrkrDataTable[freeSpot] == NULL)
 				break;
-		if(pThis->nWrkr == pThis->wrkrDataTableSize) {
+		if (pThis->nWrkr == pThis->wrkrDataTableSize) {
 			// TODO: check realloc, fall back to old table if it fails. Better than nothing...
 			pThis->wrkrDataTable = realloc(pThis->wrkrDataTable,
-				(pThis->wrkrDataTableSize + 1) * sizeof(void*));
+			    (pThis->wrkrDataTableSize + 1) * sizeof(void *));
 			pThis->wrkrDataTableSize++;
 		}
 		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
 		pThis->nWrkr++;
 		pthread_mutex_unlock(&pThis->mutWrkrDataTable);
 		DBGPRINTF("wti %p: created action worker instance %d for "
-			  "action %d\n", pWti, pThis->nWrkr, pThis->iActionNbr);
+			  "action %d\n",
+		    pWti, pThis->nWrkr, pThis->iActionNbr);
 	}
 finalize_it:
 	RETiRet;
@@ -842,12 +841,12 @@ finalize_it:
  * changed to new action state engine -- rgerhards, 2009-05-07
  */
 static rsRetVal
-actionTryResume(action_t * const pThis, wti_t * const pWti)
+actionTryResume(action_t *const pThis, wti_t *const pWti)
 {
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
 
-	if(getActionState(pWti, pThis) == ACT_STATE_SUSP) {
+	if (getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 		/* if we are suspended, we need to check if the timeout expired.
 		 * for this handling, we must always obtain a fresh timestamp. We used
 		 * to use the action timestamp, but in this case we will never reach a
@@ -856,20 +855,20 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 		 * here. -- rgerhards, 2009-03-18
 		 */
 		datetime.GetTime(&ttNow); /* cache "now" */
-		if(ttNow >= pThis->ttResumeRtry) {
+		if (ttNow >= pThis->ttResumeRtry) {
 			actionSetState(pThis, pWti, ACT_STATE_RTRY); /* back to retries */
 		}
 	}
 
-	if(getActionState(pWti, pThis) == ACT_STATE_RTRY) {
-		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
+	if (getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+		if (ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
 			datetime.GetTime(&ttNow);
 		CHKiRet(actionDoRetry(pThis, pWti));
 	}
 
-	if(Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY ||getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
+	if (Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY || getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
 		DBGPRINTF("actionTryResume: action %p state: %s, next retry (if applicable): %u [now %u]\n",
-			pThis, getActStateName(pThis, pWti), (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
+		    pThis, getActStateName(pThis, pWti), (unsigned)pThis->ttResumeRtry, (unsigned)ttNow);
 	}
 
 finalize_it:
@@ -892,19 +891,20 @@ actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
 	 */
-	if(getActionState(pWti, pThis) == ACT_STATE_RDY) {
+	if (getActionState(pWti, pThis) == ACT_STATE_RDY) {
 		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
-		switch(iRet) {
-			case RS_RET_OK:
-				actionSetState(pThis, pWti, ACT_STATE_ITX);
-				break;
-			case RS_RET_SUSPENDED:
-				actionRetry(pThis, pWti);
-				break;
-			case RS_RET_DISABLE_ACTION:
-				actionDisable(pThis);
-				break;
-			default:FINALIZE;
+		switch (iRet) {
+		case RS_RET_OK:
+			actionSetState(pThis, pWti, ACT_STATE_ITX);
+			break;
+		case RS_RET_SUSPENDED:
+			actionRetry(pThis, pWti);
+			break;
+		case RS_RET_DISABLE_ACTION:
+			actionDisable(pThis);
+			break;
+		default:
+			FINALIZE;
 		}
 	}
 
@@ -955,10 +955,10 @@ static rsRetVal actionDbgPrint(action_t *pThis)
  * rgerhards, 2009-05-07
  */
 static rsRetVal
-prepareDoActionParams(action_t * __restrict__ const pAction,
-		      wti_t * __restrict__ const pWti,
-		      smsg_t *__restrict__ const pMsg,
-		      struct syslogTime *ttNow)
+prepareDoActionParams(action_t *__restrict__ const pAction,
+    wti_t *__restrict__ const pWti,
+    smsg_t *__restrict__ const pMsg,
+    struct syslogTime *ttNow)
 {
 	int i;
 	struct json_object *json;
@@ -967,34 +967,35 @@ prepareDoActionParams(action_t * __restrict__ const pAction,
 	DEFiRet;
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
-	if(pAction->isTransactional) {
+	if (pAction->isTransactional) {
 		CHKiRet(wtiNewIParam(pWti, pAction, &iparams));
-		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			CHKiRet(tplToString(pAction->ppTpl[i], pMsg, 
-					    &actParam(iparams, pAction->iNumTpls, 0, i),
-				            ttNow));
+		for (i = 0; i < pAction->iNumTpls; ++i) {
+			CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
+			    &actParam(iparams, pAction->iNumTpls, 0, i),
+			    ttNow));
 		}
 	} else {
-		for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-			switch(pAction->peParamPassing[i]) {
+		for (i = 0; i < pAction->iNumTpls; ++i) {
+			switch (pAction->peParamPassing[i]) {
 			case ACT_STRING_PASSING:
 				CHKiRet(tplToString(pAction->ppTpl[i], pMsg,
-					   &(pWrkrInfo->p.nontx.actParams[i]),
-					   ttNow));
+				    &(pWrkrInfo->p.nontx.actParams[i]),
+				    ttNow));
 				break;
 			/* note: ARRAY_PASSING mode has been removed in 8.26.0; if it
 			 * is ever needed again, it can be found in 8.25.0.
 			 * rgerhards 2017-03-06
 			 */
 			case ACT_MSG_PASSING:
-				pWrkrInfo->p.nontx.actParams[i].param = (void*) pMsg;
+				pWrkrInfo->p.nontx.actParams[i].param = (void *)pMsg;
 				break;
 			case ACT_JSON_PASSING:
 				CHKiRet(tplToJSON(pAction->ppTpl[i], pMsg, &json, ttNow));
-				pWrkrInfo->p.nontx.actParams[i].param = (void*) json;
+				pWrkrInfo->p.nontx.actParams[i].param = (void *)json;
 				break;
-			default:dbgprintf("software bug/error: unknown pAction->peParamPassing[%d] %d in prepareDoActionParams\n",
-					  i, (int) pAction->peParamPassing[i]);
+			default:
+				dbgprintf("software bug/error: unknown pAction->peParamPassing[%d] %d in prepareDoActionParams\n",
+				    i, (int)pAction->peParamPassing[i]);
 				break;
 			}
 		}
@@ -1010,28 +1011,28 @@ finalize_it:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 #endif
-void
-releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
+void releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct)
 {
 	int j;
 	actWrkrInfo_t *__restrict__ pWrkrInfo;
 
 	pWrkrInfo = &(pWti->actWrkrInfo[pAction->iActionNbr]);
-	for(j = 0 ; j < pAction->iNumTpls ; ++j) {
+	for (j = 0; j < pAction->iNumTpls; ++j) {
 		if (action_destruct) {
 			if (ACT_STRING_PASSING == pAction->peParamPassing[j]) {
 				free(pWrkrInfo->p.nontx.actParams[j].param);
 				pWrkrInfo->p.nontx.actParams[j].param = NULL;
 			}
 		} else {
-			switch(pAction->peParamPassing[j]) {
+			switch (pAction->peParamPassing[j]) {
 			case ACT_ARRAY_PASSING:
 				LogError(0, RS_RET_ERR, "plugin error: no longer supported "
-					"ARRAY_PASSING mode is used (see action.c)");
+							"ARRAY_PASSING mode is used (see action.c)");
 				return;
 			case ACT_JSON_PASSING:
-				json_object_put((struct json_object*)
-								pWrkrInfo->p.nontx.actParams[j].param);
+				json_object_put((struct json_object *)
+						    pWrkrInfo->p.nontx.actParams[j]
+							.param);
 				pWrkrInfo->p.nontx.actParams[j].param = NULL;
 				break;
 			case ACT_STRING_PASSING:
@@ -1058,12 +1059,12 @@ actionSetActionWorked(action_t *__restrict__ const pThis, wti_t *__restrict__ co
 {
 	setActionResumeInRow(pWti, pThis, 0);
 
-	if(getActionJustResumed(pWti, pThis)) {
+	if (getActionJustResumed(pWti, pThis)) {
 		/* OK, we *really* could resume, so tell user! */
-		if(pThis->bReportSuspension) {
+		if (pThis->bReportSuspension) {
 			errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
-				      "resumed (module '%s')",
-				      pThis->pszName, pThis->pMod->pszName);
+								   "resumed (module '%s')",
+			    pThis->pszName, pThis->pMod->pszName);
 		}
 		setActionJustResumed(pWti, pThis, 0);
 	}
@@ -1071,31 +1072,31 @@ actionSetActionWorked(action_t *__restrict__ const pThis, wti_t *__restrict__ co
 
 static rsRetVal
 handleActionExecResult(action_t *__restrict__ const pThis,
-	wti_t *__restrict__ const pWti,
-	const rsRetVal ret)
+    wti_t *__restrict__ const pWti,
+    const rsRetVal ret)
 {
 	DEFiRet;
-	switch(ret) {
-		case RS_RET_OK:
-			actionCommitted(pThis, pWti);
-			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
-			break;
-		case RS_RET_DEFER_COMMIT:
-			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
-			/* we are done, action state remains the same */
-			break;
-		case RS_RET_PREVIOUS_COMMITTED:
-			/* action state remains the same, but we had a commit. */
-			pThis->bHadAutoCommit = 1;
-			actionSetActionWorked(pThis, pWti); /* we had a successful call! */
-			break;
-		case RS_RET_DISABLE_ACTION:
-			actionDisable(pThis);
-			break;
-		case RS_RET_SUSPENDED:
-		default:/* error happened - if it hits us here, we treat it as suspension */
-			actionRetry(pThis, pWti);
-			break;
+	switch (ret) {
+	case RS_RET_OK:
+		actionCommitted(pThis, pWti);
+		actionSetActionWorked(pThis, pWti); /* we had a successful call! */
+		break;
+	case RS_RET_DEFER_COMMIT:
+		actionSetActionWorked(pThis, pWti); /* we had a successful call! */
+		/* we are done, action state remains the same */
+		break;
+	case RS_RET_PREVIOUS_COMMITTED:
+		/* action state remains the same, but we had a commit. */
+		pThis->bHadAutoCommit = 1;
+		actionSetActionWorked(pThis, pWti); /* we had a successful call! */
+		break;
+	case RS_RET_DISABLE_ACTION:
+		actionDisable(pThis);
+		break;
+	case RS_RET_SUSPENDED:
+	default: /* error happened - if it hits us here, we treat it as suspension */
+		actionRetry(pThis, pWti);
+		break;
 	}
 	iRet = getReturnCode(pThis, pWti);
 
@@ -1107,26 +1108,26 @@ handleActionExecResult(action_t *__restrict__ const pThis,
  */
 static rsRetVal
 actionCallDoAction(action_t *__restrict__ const pThis,
-	actWrkrIParams_t *__restrict__ const iparams,
-	wti_t *__restrict__ const pWti)
+    actWrkrIParams_t *__restrict__ const iparams,
+    wti_t *__restrict__ const pWti)
 {
 	void *param[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 	int i;
 	DEFiRet;
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s, actionNbr %d\n",
-		  getActStateName(pThis, pWti), pThis->iActionNbr);
+	    getActStateName(pThis, pWti), pThis->iActionNbr);
 
 	pThis->bHadAutoCommit = 0;
 	/* for this interface, we need to emulate the old style way
 	 * of parameter passing.
 	 */
-	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+	for (i = 0; i < pThis->iNumTpls; ++i) {
 		param[i] = actParam(iparams, pThis->iNumTpls, 0, i).param;
 	}
 
 	iRet = pThis->pMod->mod.om.doAction(param,
-				            pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
+	    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
@@ -1134,9 +1135,9 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 
 /* call the commitTransaction output plugin entry point */
 static rsRetVal
-actionCallCommitTransaction(action_t * const pThis,
-	const actWrkrInfo_t *const wrkrInfo,
-	wti_t *const pWti)
+actionCallCommitTransaction(action_t *const pThis,
+    const actWrkrInfo_t *const wrkrInfo,
+    wti_t *const pWti)
 {
 	DEFiRet;
 
@@ -1144,12 +1145,12 @@ actionCallCommitTransaction(action_t * const pThis,
 
 	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d, "
 		  "nMsgs %u\n",
-		  getActStateName(pThis, pWti), pThis->iActionNbr,
-		  wrkrInfo->p.tx.currIParam);
+	    getActStateName(pThis, pWti), pThis->iActionNbr,
+	    wrkrInfo->p.tx.currIParam);
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
-		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-		    wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
+	    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
+	    wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
@@ -1160,14 +1161,14 @@ actionCallCommitTransaction(action_t * const pThis,
  * rgerhards, 2008-01-28
  */
 static rsRetVal
-actionProcessMessage(action_t * const pThis, void *actParams, wti_t * const pWti)
+actionProcessMessage(action_t *const pThis, void *actParams, wti_t *const pWti)
 {
 	DEFiRet;
 
 	CHKiRet(actionPrepare(pThis, pWti));
-	if(pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
+	if (pThis->pMod->mod.om.SetShutdownImmdtPtr != NULL)
 		pThis->pMod->mod.om.SetShutdownImmdtPtr(pThis->pModData, pWti->pbShutdownImmediate);
-	if(getActionState(pWti, pThis) == ACT_STATE_ITX)
+	if (getActionState(pWti, pThis) == ACT_STATE_ITX)
 		CHKiRet(actionCallDoAction(pThis, actParams, pWti));
 
 	iRet = getReturnCode(pThis, pWti);
@@ -1185,27 +1186,27 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	DEFiRet;
 
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
-	if(pThis->pMod->mod.om.commitTransaction != NULL) {
+	if (pThis->pMod->mod.om.commitTransaction != NULL) {
 		DBGPRINTF("doTransaction: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
 		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
 	} else { /* note: this branch is for compatibility with old TX modules */
 		DBGPRINTF("doTransaction: action %d, currIParam %d\n",
-			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
-		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
+		    pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
+		for (i = 0; i < wrkrInfo->p.tx.currIParam; ++i) {
 			/* Note: we provide the message's base iparam - actionProcessMessage()
 			 * uses this as *base* address.
 			 */
 			iRet = actionProcessMessage(pThis,
-				&actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
-			if(iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
-			   iRet != RS_RET_OK)
+			    &actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
+			if (iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
+			    iRet != RS_RET_OK)
 				--i; /* we need to re-submit */
 			DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n",
-			   pThis->iActionNbr, i,iRet);
+			    pThis->iActionNbr, i, iRet);
 		}
 	}
 finalize_it:
-	if(iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
+	if (iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
 		iRet = RS_RET_OK; /* this is expected for transactional action! */
 	RETiRet;
 }
@@ -1221,32 +1222,32 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 
 	CHKiRet(doTransaction(pThis, pWti));
 
-	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
+	if (getActionState(pWti, pThis) == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
-		switch(iRet) {
-			case RS_RET_OK:
-				actionCommitted(pThis, pWti);
-				break;
-			case RS_RET_SUSPENDED:
-				actionRetry(pThis, pWti);
-				break;
-			case RS_RET_DISABLE_ACTION:
-				actionDisable(pThis);
-				break;
-			case RS_RET_DEFER_COMMIT:
-				DBGPRINTF("output plugin error: endTransaction() returns RS_RET_DEFER_COMMIT "
-					  "- ignored\n");
-				actionCommitted(pThis, pWti);
-				break;
-			case RS_RET_PREVIOUS_COMMITTED:
-				DBGPRINTF("output plugin error: endTransaction() returns RS_RET_PREVIOUS_COMMITTED "
-					  "- ignored\n");
-				actionCommitted(pThis, pWti);
-				break;
-			default:/* permanent failure of this message - no sense in retrying. This is
+		switch (iRet) {
+		case RS_RET_OK:
+			actionCommitted(pThis, pWti);
+			break;
+		case RS_RET_SUSPENDED:
+			actionRetry(pThis, pWti);
+			break;
+		case RS_RET_DISABLE_ACTION:
+			actionDisable(pThis);
+			break;
+		case RS_RET_DEFER_COMMIT:
+			DBGPRINTF("output plugin error: endTransaction() returns RS_RET_DEFER_COMMIT "
+				  "- ignored\n");
+			actionCommitted(pThis, pWti);
+			break;
+		case RS_RET_PREVIOUS_COMMITTED:
+			DBGPRINTF("output plugin error: endTransaction() returns RS_RET_PREVIOUS_COMMITTED "
+				  "- ignored\n");
+			actionCommitted(pThis, pWti);
+			break;
+		default: /* permanent failure of this message - no sense in retrying. This is
 				 * not yet handled (but easy TODO)
 				 */
-				FINALIZE;
+			FINALIZE;
 		}
 	}
 	iRet = getReturnCode(pThis, pWti);
@@ -1266,11 +1267,11 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, wti_t *__restrict__ con
 	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
 
 	DBGPRINTF("action %d commit failed, writing %u messages to error file\n",
-		pThis->iActionNbr, nMsgs);
-	for(i = 0 ; i < nMsgs ; ++i) {
+	    pThis->iActionNbr, nMsgs);
+	for (i = 0; i < nMsgs; ++i) {
 		// TODO: get actual param count!
 		dbgprintf("msg %d: '%s'\n", i,
-			actParam(wrkrInfo->p.tx.iparams, 1, i, 0).param);
+		    actParam(wrkrInfo->p.tx.iparams, 1, i, 0).param);
 	}
 }
 
@@ -1286,10 +1287,9 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	sbool bDone;
 	DEFiRet;
 
-	if(!pThis->isTransactional ||
-	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
-	   getActionState(pWti, pThis) == ACT_STATE_SUSP
-	   ) {
+	if (!pThis->isTransactional ||
+	    pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
+	    getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 		FINALIZE;
 	}
 
@@ -1310,49 +1310,48 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 	do {
 		iRet = actionTryCommit(pThis, pWti);
 		DBGPRINTF("actionCommit, action %d, in retry loop, iRet %d\n",
-			pThis->iActionNbr, iRet);
-		if(iRet == RS_RET_FORCE_TERM) {
+		    pThis->iActionNbr, iRet);
+		if (iRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		} else if(iRet == RS_RET_SUSPENDED) {
+		} else if (iRet == RS_RET_SUSPENDED) {
 			iRet = actionDoRetry(pThis, pWti);
-			if(iRet == RS_RET_FORCE_TERM) {
+			if (iRet == RS_RET_FORCE_TERM) {
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
-			} else if(iRet != RS_RET_OK) {
+			} else if (iRet != RS_RET_OK) {
 				actionWriteErrorFile(pThis, pWti);
 				bDone = 1;
 			}
 			continue;
-		} else if(iRet == RS_RET_OK ||
-		          iRet == RS_RET_SUSPENDED ||
-			  iRet == RS_RET_ACTION_FAILED) {
+		} else if (iRet == RS_RET_OK ||
+			   iRet == RS_RET_SUSPENDED ||
+			   iRet == RS_RET_ACTION_FAILED) {
 			bDone = 1;
 		}
-		if(getActionState(pWti, pThis) == ACT_STATE_RDY ||
-		   getActionState(pWti, pThis) == ACT_STATE_SUSP) {
+		if (getActionState(pWti, pThis) == ACT_STATE_RDY ||
+		    getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 			bDone = 1;
 		}
-	} while(!bDone);
+	} while (!bDone);
 finalize_it:
 	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
 /* Commit all active transactions in *DIRECT mode* */
-void
-actionCommitAllDirect(wti_t *__restrict__ const pWti)
+void actionCommitAllDirect(wti_t *__restrict__ const pWti)
 {
 	int i;
 	action_t *pAction;
 
-	for(i = 0 ; i < iActionNbr ; ++i) {
+	for (i = 0; i < iActionNbr; ++i) {
 		pAction = pWti->actWrkrInfo[i].pAction;
-		if(pAction == NULL)
+		if (pAction == NULL)
 			continue;
 		DBGPRINTF("actionCommitAllDirect: action %d, state %u, nbr to commit %d "
 			  "isTransactional %d\n",
-			  i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam,
-			  pAction->isTransactional);
-		if(pAction->pQueue->qType == QUEUETYPE_DIRECT)
+		    i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam,
+		    pAction->isTransactional);
+		if (pAction->pQueue->qType == QUEUETYPE_DIRECT)
 			actionCommit(pAction, pWti);
 	}
 }
@@ -1363,15 +1362,15 @@ actionCommitAllDirect(wti_t *__restrict__ const pWti)
  */
 static rsRetVal
 processMsgMain(action_t *__restrict__ const pAction,
-	wti_t *__restrict__ const pWti,
-	smsg_t *__restrict__ const pMsg,
-	struct syslogTime *ttNow)
+    wti_t *__restrict__ const pWti,
+    smsg_t *__restrict__ const pMsg,
+    struct syslogTime *ttNow)
 {
 	DEFiRet;
 
 	CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
-	if(pAction->isTransactional) {
+	if (pAction->isTransactional) {
 		pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
 		DBGPRINTF("action '%s': is transactional - executing in commit phase\n", pAction->pszName);
 		actionPrepare(pAction, pWti);
@@ -1380,13 +1379,13 @@ processMsgMain(action_t *__restrict__ const pAction,
 	}
 
 	iRet = actionProcessMessage(pAction,
-				    pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams,
-				    pWti);
-	if(pAction->bNeedReleaseBatch)
+	    pWti->actWrkrInfo[pAction->iActionNbr].p.nontx.actParams,
+	    pWti);
+	if (pAction->bNeedReleaseBatch)
 		releaseDoActionParams(pAction, pWti, 0);
 finalize_it:
-	if(iRet == RS_RET_OK) {
-		if(pWti->execState.bDoAutoCommit)
+	if (iRet == RS_RET_OK) {
+		if (pWti->execState.bDoAutoCommit)
 			iRet = actionCommit(pAction, pWti);
 	}
 	RETiRet;
@@ -1396,10 +1395,10 @@ finalize_it:
  */
 static rsRetVal
 processBatchMain(void *__restrict__ const pVoid,
-	batch_t *__restrict__ const pBatch,
-	wti_t *__restrict__ const pWti)
+    batch_t *__restrict__ const pBatch,
+    wti_t *__restrict__ const pWti)
 {
-	action_t *__restrict__ const pAction = (action_t*__restrict__ const) pVoid;
+	action_t *__restrict__ const pAction = (action_t * __restrict__ const)pVoid;
 	int i;
 	struct syslogTime ttNow;
 	DEFiRet;
@@ -1408,8 +1407,8 @@ processBatchMain(void *__restrict__ const pVoid,
 	/* indicate we have not yet read the date */
 	ttNow.year = 0;
 
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate ; ++i) {
-		if(batchIsValidElem(pBatch, i)) {
+	for (i = 0; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate; ++i) {
+		if (batchIsValidElem(pBatch, i)) {
 			/* we do not check error state below, because aborting would be
 			 * more harmful than continuing.
 			 */
@@ -1426,14 +1425,13 @@ processBatchMain(void *__restrict__ const pVoid,
 /* remove an action worker instance from our table of
  * workers. To be called from worker handler (wti).
  */
-void
-actionRemoveWorker(action_t *const __restrict__ pAction,
-	void *const __restrict__ actWrkrData)
+void actionRemoveWorker(action_t *const __restrict__ pAction,
+    void *const __restrict__ actWrkrData)
 {
 	pthread_mutex_lock(&pAction->mutWrkrDataTable);
 	pAction->nWrkr--;
-	for(int w = 0 ; w < pAction->wrkrDataTableSize ; ++w) {
-		if(pAction->wrkrDataTable[w] == actWrkrData) {
+	for (int w = 0; w < pAction->wrkrDataTableSize; ++w) {
+		if (pAction->wrkrDataTable[w] == actWrkrData) {
 			pAction->wrkrDataTable[w] = NULL;
 			break; /* done */
 		}
@@ -1447,30 +1445,30 @@ actionRemoveWorker(action_t *const __restrict__ pAction,
  * to any current doAction() processing.
  */
 rsRetVal
-actionCallHUPHdlr(action_t * const pAction)
+actionCallHUPHdlr(action_t *const pAction)
 {
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
 	DBGPRINTF("Action %p checks HUP hdlr, act level: %p, wrkr level %p\n",
-		pAction, pAction->pMod->doHUP, pAction->pMod->doHUPWrkr);
+	    pAction, pAction->pMod->doHUP, pAction->pMod->doHUPWrkr);
 
-	if(pAction->pMod->doHUP != NULL) {
+	if (pAction->pMod->doHUP != NULL) {
 		CHKiRet(pAction->pMod->doHUP(pAction->pModData));
 	}
 
-	if(pAction->pMod->doHUPWrkr != NULL) {
+	if (pAction->pMod->doHUPWrkr != NULL) {
 		pthread_mutex_lock(&pAction->mutWrkrDataTable);
-		for(int i = 0 ; i < pAction->wrkrDataTableSize ; ++i) {
+		for (int i = 0; i < pAction->wrkrDataTableSize; ++i) {
 			dbgprintf("HUP: table entry %d: %p %s\n", i,
-				pAction->wrkrDataTable[i],
-				pAction->wrkrDataTable[i] == NULL ? "[unused]" : "");
-			if(pAction->wrkrDataTable[i] != NULL) {
-				const rsRetVal localRet
-					= pAction->pMod->doHUPWrkr(pAction->wrkrDataTable[i]);
-				if(localRet != RS_RET_OK) {
+			    pAction->wrkrDataTable[i],
+			    pAction->wrkrDataTable[i] == NULL ? "[unused]" : "");
+			if (pAction->wrkrDataTable[i] != NULL) {
+				const rsRetVal localRet = pAction->pMod->doHUPWrkr(pAction->wrkrDataTable[i]);
+				if (localRet != RS_RET_OK) {
 					DBGPRINTF("HUP handler returned error state %d - "
-						  "ignored\n", localRet);
+						  "ignored\n",
+					    localRet);
 				}
 			}
 		}
@@ -1486,24 +1484,24 @@ finalize_it:
  * TODO: probably move this into queue object, merge with MainMsgQueue!
  * rgerhards, 2008-01-28
  */
-static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszType)
+static rsRetVal setActionQueType(void __attribute__((unused)) * pVal, uchar *pszType)
 {
 	DEFiRet;
 
-	if (!strcasecmp((char *) pszType, "fixedarray")) {
+	if (!strcasecmp((char *)pszType, "fixedarray")) {
 		cs.ActionQueType = QUEUETYPE_FIXED_ARRAY;
 		DBGPRINTF("action queue type set to FIXED_ARRAY\n");
-	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
+	} else if (!strcasecmp((char *)pszType, "linkedlist")) {
 		cs.ActionQueType = QUEUETYPE_LINKEDLIST;
 		DBGPRINTF("action queue type set to LINKEDLIST\n");
-	} else if (!strcasecmp((char *) pszType, "disk")) {
+	} else if (!strcasecmp((char *)pszType, "disk")) {
 		cs.ActionQueType = QUEUETYPE_DISK;
 		DBGPRINTF("action queue type set to DISK\n");
-	} else if (!strcasecmp((char *) pszType, "direct")) {
+	} else if (!strcasecmp((char *)pszType, "direct")) {
 		cs.ActionQueType = QUEUETYPE_DIRECT;
 		DBGPRINTF("action queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *) pszType);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *)pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	d_free(pszType); /* no longer needed */
@@ -1519,41 +1517,40 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQ(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
+doSubmitToActionQ(action_t *const pAction, wti_t *const pWti, smsg_t *pMsg)
 {
 	struct syslogTime ttNow; // TODO: think if we can buffer this in pWti
 	DEFiRet;
 
 	DBGPRINTF("action '%s': called, logging to %s (susp %d/%d, direct q %d)\n",
-		pAction->pszName, module.GetStateName(pAction->pMod),
-		pAction->bExecWhenPrevSusp, pWti->execState.bPrevWasSuspended,
-		pAction->pQueue->qType == QUEUETYPE_DIRECT);
+	    pAction->pszName, module.GetStateName(pAction->pMod),
+	    pAction->bExecWhenPrevSusp, pWti->execState.bPrevWasSuspended,
+	    pAction->pQueue->qType == QUEUETYPE_DIRECT);
 
-	if(   pAction->bExecWhenPrevSusp
-	   && !pWti->execState.bPrevWasSuspended) {
+	if (pAction->bExecWhenPrevSusp && !pWti->execState.bPrevWasSuspended) {
 		DBGPRINTF("action '%s': NOT executing, as previous action was "
-			  "not suspended\n", pAction->pszName);
+			  "not suspended\n",
+		    pAction->pszName);
 		FINALIZE;
 	}
 
 	STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
-	if(pAction->pQueue->qType == QUEUETYPE_DIRECT) {
+	if (pAction->pQueue->qType == QUEUETYPE_DIRECT) {
 		ttNow.year = 0;
 		iRet = processMsgMain(pAction, pWti, pMsg, &ttNow);
-	} else {/* in this case, we do single submits to the queue. 
+	} else { /* in this case, we do single submits to the queue. 
 		 * TODO: optimize this, we may do at least a multi-submit!
 		 */
 		iRet = qqueueEnqMsg(pAction->pQueue, eFLOWCTL_NO_DELAY,
-			pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
+		    pAction->bCopyMsg ? MsgDup(pMsg) : MsgAddRef(pMsg));
 	}
-	pWti->execState.bPrevWasSuspended
-		= (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
+	pWti->execState.bPrevWasSuspended = (iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED);
 
-	if (iRet == RS_RET_ACTION_FAILED)	/* Increment failed counter */
+	if (iRet == RS_RET_ACTION_FAILED) /* Increment failed counter */
 		STATSCOUNTER_INC(pAction->ctrFail, pAction->mutCtrFail);
 
 	DBGPRINTF("action '%s': set suspended state to %d\n",
-		pAction->pszName, pWti->execState.bPrevWasSuspended);
+	    pAction->pszName, pWti->execState.bPrevWasSuspended);
 
 finalize_it:
 	RETiRet;
@@ -1568,7 +1565,7 @@ finalize_it:
  * be filtered out before calling us (what is done currently!).
  */
 rsRetVal
-actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
+actionWriteToAction(action_t *const pAction, smsg_t *pMsg, wti_t *const pWti)
 {
 	DEFiRet;
 
@@ -1579,19 +1576,18 @@ actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 	 * as the action was properly "passed to execution" from the upper layer's point
 	 * of view. -- rgerhards, 2008-08-07.
 	 */
-	if(pAction->iExecEveryNthOccur > 1) {
+	if (pAction->iExecEveryNthOccur > 1) {
 		/* we need to care about multiple occurences */
-		if(   pAction->iExecEveryNthOccurTO > 0
-		   && (getActNow(pAction) - pAction->tLastOccur) > pAction->iExecEveryNthOccurTO) {
-		  	DBGPRINTF("n-th occurence handling timed out (%d sec), restarting from 0\n",
-				  (int) (getActNow(pAction) - pAction->tLastOccur));
+		if (pAction->iExecEveryNthOccurTO > 0 && (getActNow(pAction) - pAction->tLastOccur) > pAction->iExecEveryNthOccurTO) {
+			DBGPRINTF("n-th occurence handling timed out (%d sec), restarting from 0\n",
+			    (int)(getActNow(pAction) - pAction->tLastOccur));
 			pAction->iNbrNoExec = 0;
 			pAction->tLastOccur = getActNow(pAction);
-		   }
-		if(pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
+		}
+		if (pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
 			++pAction->iNbrNoExec;
 			DBGPRINTF("action %p passed %d times to execution - less than neded - discarding\n",
-			  pAction, pAction->iNbrNoExec);
+			    pAction, pAction->iNbrNoExec);
 			FINALIZE;
 		} else {
 			pAction->iNbrNoExec = 0; /* we execute the action now, so the number of no execs is down to */
@@ -1606,12 +1602,12 @@ actionWriteToAction(action_t * const pAction, smsg_t *pMsg, wti_t * const pWti)
 	 * a purely logical point of view. However, if safes us to check the system time in
 	 * (those common) cases where ExecOnceInterval is not used. -- rgerhards, 2008-09-16
 	 */
-	if(pAction->iSecsExecOnceInterval > 0 &&
-	   pAction->iSecsExecOnceInterval + pAction->tLastExec > getActNow(pAction)) {
+	if (pAction->iSecsExecOnceInterval > 0 &&
+	    pAction->iSecsExecOnceInterval + pAction->tLastExec > getActNow(pAction)) {
 		/* in this case we need to discard the message - its not yet time to exec the action */
 		DBGPRINTF("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
-			  (int) pAction->iSecsExecOnceInterval, (int) getActNow(pAction),
-			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
+		    (int)pAction->iSecsExecOnceInterval, (int)getActNow(pAction),
+		    (int)(pAction->iSecsExecOnceInterval + pAction->tLastExec));
 		FINALIZE;
 	}
 
@@ -1637,21 +1633,20 @@ finalize_it:
 #pragma GCC diagnostic ignored "-Wempty-body"
 #endif
 static rsRetVal
-doSubmitToActionQComplex(action_t * const pAction, wti_t * const pWti, smsg_t *pMsg)
+doSubmitToActionQComplex(action_t *const pAction, wti_t *const pWti, smsg_t *pMsg)
 {
 	DEFiRet;
 
 	d_pthread_mutex_lock(&pAction->mutAction);
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutAction);
 	DBGPRINTF("Called action %p (complex case), logging to %s\n",
-		  pAction, module.GetStateName(pAction->pMod));
+	    pAction, module.GetStateName(pAction->pMod));
 
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 	// TODO: can we optimize the "now" handling again (was batch, I guess...)?
 
 	/* don't output marks to recently written outputs */
-	if(pAction->bWriteAllMarkMsgs == 0
-	   && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
+	if (pAction->bWriteAllMarkMsgs == 0 && (pMsg->msgFlags & MARK) && (getActNow(pAction) - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
@@ -1674,21 +1669,20 @@ finalize_it:
 DEFFUNC_llExecFunc(doActivateActions)
 {
 	rsRetVal localRet;
-	action_t * const pThis = (action_t*) pData;
+	action_t *const pThis = (action_t *)pData;
 	BEGINfunc
-	localRet = qqueueStart(pThis->pQueue);
-	if(localRet != RS_RET_OK) {
+	    localRet = qqueueStart(pThis->pQueue);
+	if (localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "error starting up action queue");
-		if(localRet == RS_RET_FILE_PREFIX_MISSING) {
+		if (localRet == RS_RET_FILE_PREFIX_MISSING) {
 			errmsg.LogError(0, localRet, "file prefix (work directory?) "
-					"is missing");
+						     "is missing");
 		}
 		actionDisable(pThis);
 	}
 	DBGPRINTF("Action %s[%p]: queue %p started\n", modGetName(pThis->pMod),
-		  pThis, pThis->pQueue);
-	ENDfunc
-	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+	    pThis, pThis->pQueue);
+	ENDfunc return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 
 
@@ -1705,7 +1699,6 @@ activateActions(void)
 }
 
 
-
 /* This submits the message to the action queue in case where we need to handle
  * bWriteAllMarkMessage == RSFALSE only. Note that we use a non-blocking CAS loop
  * for the synchronization. Here, we just modify the filter condition to be false when
@@ -1715,7 +1708,7 @@ activateActions(void)
  * rgerhards, 2010-06-08
  */
 static rsRetVal
-doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t * const pMsg)
+doSubmitToActionQNotAllMark(action_t *const pAction, wti_t *const pWti, smsg_t *const pMsg)
 {
 	int doProcess = 1;
 	time_t lastAct;
@@ -1731,19 +1724,19 @@ doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t
 	 * also faster ;) -- rgerhards, 2008-09-17 */
 	do {
 		lastAct = pAction->f_time;
-		if(pMsg->msgFlags & MARK) {
-			if((pMsg->ttGenTime - lastAct) < MarkInterval / 2) {
+		if (pMsg->msgFlags & MARK) {
+			if ((pMsg->ttGenTime - lastAct) < MarkInterval / 2) {
 				doProcess = 0;
 				DBGPRINTF("action was recently called, ignoring mark message\n");
 				break; /* do not update timestamp for non-written mark messages */
 			}
 		}
-	} while(ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
-		pMsg->ttGenTime, &pAction->mutCAS) == 0);
+	} while (ATOMIC_CAS_time_t(&pAction->f_time, lastAct,
+		     pMsg->ttGenTime, &pAction->mutCAS) == 0);
 
-	if(doProcess) {
+	if (doProcess) {
 		DBGPRINTF("Called action(NotAllMark), processing via '%s'\n",
-			  module.GetStateName(pAction->pMod));
+		    module.GetStateName(pAction->pMod));
 		iRet = doSubmitToActionQ(pAction, pWti, pMsg);
 	}
 
@@ -1756,42 +1749,43 @@ doSubmitToActionQNotAllMark(action_t * const pAction, wti_t * const pWti, smsg_t
  * rgerhards, 2011-08-01
  */
 static rsRetVal
-actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
+actionApplyCnfParam(action_t *const pAction, struct cnfparamvals *const pvals)
 {
 	int i;
-	
-	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+
+	for (i = 0; i < pblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk.descr[i].name, "name")) {
-			pAction->pszName = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "type")) {
+		if (!strcmp(pblk.descr[i].name, "name")) {
+			pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk.descr[i].name, "type")) {
 			continue; /* this is handled seperately during module select! */
-		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
 			pAction->bWriteAllMarkMsgs = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.execonlyeverynthtime")) {
 			pAction->iExecEveryNthOccur = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.execonlyeverynthtimetimeout")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.execonlyeverynthtimetimeout")) {
 			pAction->iExecEveryNthOccurTO = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.execonlyonceeveryinterval")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.execonlyonceeveryinterval")) {
 			pAction->iSecsExecOnceInterval = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.execonlywhenpreviousissuspended")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.execonlywhenpreviousissuspended")) {
 			pAction->bExecWhenPrevSusp = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.repeatedmsgcontainsoriginalmsg")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.repeatedmsgcontainsoriginalmsg")) {
 			pAction->bRepMsgHasMsg = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.resumeretrycount")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.resumeretrycount")) {
 			pAction->iResumeRetryCount = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspension")) {
-			pAction->bReportSuspension = (int) pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
-			pAction->bReportSuspensionCont = (int) pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.copymsg")) {
-			pAction->bCopyMsg = (int) pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
+		} else if (!strcmp(pblk.descr[i].name, "action.reportsuspension")) {
+			pAction->bReportSuspension = (int)pvals[i].val.d.n;
+		} else if (!strcmp(pblk.descr[i].name, "action.reportsuspensioncontinuation")) {
+			pAction->bReportSuspensionCont = (int)pvals[i].val.d.n;
+		} else if (!strcmp(pblk.descr[i].name, "action.copymsg")) {
+			pAction->bCopyMsg = (int)pvals[i].val.d.n;
+		} else if (!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
 		} else {
 			dbgprintf("action: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
+				  "param '%s'\n",
+			    pblk.descr[i].name);
 		}
 	}
 	return RS_RET_OK;
@@ -1805,8 +1799,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
  */
 rsRetVal
 addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
-	  omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
-	  struct nvlst * const lst)
+    omodStringRequest_t *pOMSR, struct cnfparamvals *actParams,
+    struct nvlst *const lst)
 {
 	DEFiRet;
 	int i;
@@ -1823,7 +1817,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
-	if(actParams == NULL) { /* use legacy systemn */
+	if (actParams == NULL) { /* use legacy systemn */
 		pAction->pszName = cs.pszActionName;
 		pAction->iResumeInterval = cs.glbliActionResumeInterval;
 		pAction->iResumeRetryCount = cs.glbliActionResumeRetryCount;
@@ -1833,7 +1827,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 		pAction->iExecEveryNthOccur = cs.iActExecEveryNthOccur;
 		pAction->iExecEveryNthOccurTO = cs.iActExecEveryNthOccurTO;
 		pAction->bRepMsgHasMsg = cs.bActionRepMsgHasMsg;
-		cs.iActExecEveryNthOccur = 0; /* auto-reset */
+		cs.iActExecEveryNthOccur = 0;   /* auto-reset */
 		cs.iActExecEveryNthOccurTO = 0; /* auto-reset */
 		cs.bActionWriteAllMarkMsgs = 1; /* auto-reset */
 		cs.pszActionName = NULL;	/* free again! */
@@ -1848,46 +1842,45 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	 * does not request any templates. This sounds unlikely, but an actual example is
 	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
 	 */
-	if(pAction->iNumTpls > 0) {
+	if (pAction->iNumTpls > 0) {
 		/* we first need to create the template arrays */
 		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
-		CHKmalloc(pAction->peParamPassing = (paramPassing_t*)calloc(pAction->iNumTpls, sizeof(paramPassing_t)));
+		CHKmalloc(pAction->peParamPassing = (paramPassing_t *)calloc(pAction->iNumTpls, sizeof(paramPassing_t)));
 	}
-	
+
 	pAction->bUsesMsgPassingMode = 0;
 	pAction->bNeedReleaseBatch = 0;
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+	for (i = 0; i < pAction->iNumTpls; ++i) {
 		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
 		/* Ok, we got everything, so it now is time to look up the template
 		 * (Hint: templates MUST be defined before they are used!)
 		 */
-		if(!(iTplOpts & OMSR_TPL_AS_MSG)) {
-		   	if((pAction->ppTpl[i] =
-				tplFind(ourConf, (char*)pTplName, strlen((char*)pTplName))) == NULL) {
+		if (!(iTplOpts & OMSR_TPL_AS_MSG)) {
+			if ((pAction->ppTpl[i] =
+				    tplFind(ourConf, (char *)pTplName, strlen((char *)pTplName))) == NULL) {
 				snprintf(errMsg, sizeof(errMsg),
-					 " Could not find template %d '%s' - action disabled",
-					 i, pTplName);
+				    " Could not find template %d '%s' - action disabled",
+				    i, pTplName);
 				errno = 0;
 				errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
 				ABORT_FINALIZE(RS_RET_NOT_FOUND);
 			}
 			/* check required template options */
-			if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-			   && (pAction->ppTpl[i]->optFormatEscape == 0)) {
+			if ((iTplOpts & OMSR_RQD_TPL_OPT_SQL) && (pAction->ppTpl[i]->optFormatEscape == 0)) {
 				errno = 0;
 				errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
-					"the SQL or stdSQL option in your template!\n");
+									      "the SQL or stdSQL option in your template!\n");
 				ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
 			}
 		}
 
 		/* set parameter-passing mode */
-		if(iTplOpts & OMSR_TPL_AS_ARRAY) {
+		if (iTplOpts & OMSR_TPL_AS_ARRAY) {
 			ABORT_FINALIZE(RS_RET_ERR);
-		} else if(iTplOpts & OMSR_TPL_AS_MSG) {
+		} else if (iTplOpts & OMSR_TPL_AS_MSG) {
 			pAction->peParamPassing[i] = ACT_MSG_PASSING;
 			pAction->bUsesMsgPassingMode = 1;
-		} else if(iTplOpts & OMSR_TPL_AS_JSON) {
+		} else if (iTplOpts & OMSR_TPL_AS_JSON) {
 			pAction->peParamPassing[i] = ACT_JSON_PASSING;
 			pAction->bNeedReleaseBatch = 1;
 		} else {
@@ -1901,18 +1894,18 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData,
 	pAction->pModData = pModData;
 
 	CHKiRet(actionConstructFinalize(pAction, lst));
-	
+
 	/* TODO: if we exit here, we have a (quite acceptable...) memory leak */
 
 	*ppAction = pAction; /* finally store the action pointer */
 
 finalize_it:
-	if(iRet == RS_RET_OK)
+	if (iRet == RS_RET_OK)
 		iRet = OMSRdestruct(pOMSR);
 	else {
 		/* do not overwrite error state! */
 		OMSRdestruct(pOMSR);
-		if(pAction != NULL)
+		if (pAction != NULL)
 			actionDestruct(pAction);
 	}
 
@@ -1924,7 +1917,7 @@ finalize_it:
  * rgerhards, 2009-11-12
  */
 static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	cs.iActExecOnceInterval = 0;
 	cs.bActExecWhenPrevSusp = 0;
@@ -1947,7 +1940,7 @@ initConfigVariables(void)
 	cs.glbliActionResumeInterval = 30;
 	cs.glbliActionResumeRetryCount = 0;
 	cs.bActionRepMsgHasMsg = 0;
-	if(cs.pszActionName != NULL) {
+	if (cs.pszActionName != NULL) {
 		free(cs.pszActionName);
 		cs.pszActionName = NULL;
 	}
@@ -1967,22 +1960,22 @@ actionNewInst(struct nvlst *lst, action_t **ppAction)
 	DEFiRet;
 
 	paramvals = nvlstGetParams(lst, &pblk, NULL);
-	if(paramvals == NULL) {
+	if (paramvals == NULL) {
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 	dbgprintf("action param blk after actionNewInst:\n");
 	cnfparamsPrint(&pblk, paramvals);
-	cnfModName = (uchar*)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
-	if((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
+	cnfModName = (uchar *)es_str2cstr(paramvals[cnfparamGetIdx(&pblk, ("type"))].val.d.estr, NULL);
+	if ((pMod = module.FindWithCnfName(loadConf, cnfModName, eMOD_OUT)) == NULL) {
 		errmsg.LogError(0, RS_RET_MOD_UNKNOWN, "module name '%s' is unknown", cnfModName);
 		ABORT_FINALIZE(RS_RET_MOD_UNKNOWN);
 	}
 	CHKiRet(pMod->mod.om.newActInst(cnfModName, lst, &pModData, &pOMSR));
 
-	if((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst)) == RS_RET_OK) {
+	if ((iRet = addAction(&pAction, pMod, pModData, pOMSR, paramvals, lst)) == RS_RET_OK) {
 		/* check if the module is compatible with select features
 		 * (currently no such features exist) */
-		loadConf->actions.nbrActions++;	/* one more active action! */
+		loadConf->actions.nbrActions++; /* one more active action! */
 		*ppAction = pAction;
 	} else {
 		// TODO: cleanup
@@ -2007,64 +2000,64 @@ rsRetVal actionClassInit(void)
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionname", 0, eCmdHdlrGetWord, NULL, &cs.pszActionName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL,
-		&cs.pszActionQFName, NULL));
+	    &cs.pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &cs.iActionQueueSize,
-		NULL));
+	    NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionwriteallmarkmessages", 0, eCmdHdlrBinary, NULL,
-		&cs.bActionWriteAllMarkMsgs, NULL));
+	    &cs.bActionWriteAllMarkMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQueueDeqBatchSize, NULL));
+	    &cs.iActionQueueDeqBatchSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL,
-		&cs.iActionQueMaxDiskSpace, NULL));
+	    &cs.iActionQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQHighWtrMark, NULL));
+	    &cs.iActionQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQLowWtrMark, NULL));
+	    &cs.iActionQLowWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQDiscardMark, NULL));
+	    &cs.iActionQDiscardMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQDiscardSeverity, NULL));
+	    &cs.iActionQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQPersistUpdCnt, NULL));
+	    &cs.iActionQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL,
-		&cs.bActionQSyncQeueFiles, NULL));
+	    &cs.bActionQSyncQeueFiles, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetype", 0, eCmdHdlrGetWord, setActionQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreads", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQueueNumWorkers, NULL));
+	    &cs.iActionQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQtoQShutdown, NULL));
+	    &cs.iActionQtoQShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQtoActShutdown, NULL));
+	    &cs.iActionQtoActShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQtoEnq, NULL));
+	    &cs.iActionQtoEnq, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQtoWrkShutdown, NULL));
+	    &cs.iActionQtoWrkShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQWrkMinMsgs, NULL));
+	    &cs.iActionQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL,
-		&cs.iActionQueMaxFileSize, NULL));
+	    &cs.iActionQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL,
-		&cs.bActionQSaveOnShutdown, NULL));
+	    &cs.bActionQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQueueDeqSlowdown, NULL));
+	    &cs.iActionQueueDeqSlowdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQueueDeqtWinFromHr, NULL));
+	    &cs.iActionQueueDeqtWinFromHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL,
-		&cs.iActionQueueDeqtWinToHr, NULL));
+	    &cs.iActionQueueDeqtWinToHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL,
-		&cs.iActExecEveryNthOccur, NULL));
+	    &cs.iActExecEveryNthOccur, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL,
-		&cs.iActExecEveryNthOccurTO, NULL));
+	    &cs.iActExecEveryNthOccurTO, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL,
-		&cs.iActExecOnceInterval, NULL));
+	    &cs.iActExecOnceInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgcontainsoriginalmsg", 0, eCmdHdlrBinary, NULL,
-		&cs.bActionRepMsgHasMsg, NULL));
+	    &cs.bActionRepMsgHasMsg, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL,
-		&cs.bActExecWhenPrevSusp, NULL));
+	    &cs.bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL,
-		&cs.glbliActionResumeRetryCount, NULL));
+	    &cs.glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, NULL));
+	    resetConfigVariables, NULL, NULL));
 
 	initConfigVariables(); /* first-time init of config setings */
 

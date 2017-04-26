@@ -44,20 +44,20 @@
 #include "cfsysline.h"
 
 /* some defines */
-#define DEFUPRI		(LOG_USER|LOG_NOTICE)
+#define DEFUPRI (LOG_USER | LOG_NOTICE)
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(datetime)
-DEFobjCurrIf(ruleset)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(datetime);
+DEFobjCurrIf(ruleset);
 
 /* static data */
 
 static char hexdigit[16] =
-	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
-	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+    {'0', '1', '2', '3', '4', '5', '6', '7', '8',
+	'9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 /* This is the list of all parsers known to us.
  * This is also used to unload all modules on shutdown.
@@ -93,7 +93,7 @@ DestructParserList(parserList_t **ppListRoot)
 	parserList_t *pParsLstDel;
 
 	pParsLst = *ppListRoot;
-	while(pParsLst != NULL) {
+	while (pParsLst != NULL) {
 		pParsLstDel = pParsLst;
 		pParsLst = pParsLst->pNext;
 		free(pParsLstDel);
@@ -122,25 +122,24 @@ AddParserToList(parserList_t **ppListRoot, parser_t *pParser)
 	pThis->pParser = pParser;
 	pThis->pNext = NULL;
 
-	if(*ppListRoot == NULL) {
+	if (*ppListRoot == NULL) {
 		pThis->pNext = *ppListRoot;
 		*ppListRoot = pThis;
 	} else {
 		/* find tail first */
-		for(pTail = *ppListRoot ; pTail->pNext != NULL ; pTail = pTail->pNext)
+		for (pTail = *ppListRoot; pTail->pNext != NULL; pTail = pTail->pNext)
 			/* just search, do nothing else */;
 		/* add at tail */
 		pTail->pNext = pThis;
 	}
-DBGPRINTF("DDDDD: added parser '%s' to list %p\n", pParser->pName, ppListRoot);
+	DBGPRINTF("DDDDD: added parser '%s' to list %p\n", pParser->pName, ppListRoot);
 finalize_it:
 	RETiRet;
 }
 
-void
-printParserList(parserList_t *pList)
+void printParserList(parserList_t *pList)
 {
-	while(pList != NULL) {
+	while (pList != NULL) {
 		dbgprintf("parser: %s\n", pList->pParser->pName);
 		pList = pList->pNext;
 	}
@@ -152,11 +151,11 @@ FindParser(parser_t **ppParser, uchar *pName)
 {
 	parserList_t *pThis;
 	DEFiRet;
-	
-	for(pThis = pParsLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
-		if(ustrcmp(pThis->pParser->pName, pName) == 0) {
+
+	for (pThis = pParsLstRoot; pThis != NULL; pThis = pThis->pNext) {
+		if (ustrcmp(pThis->pParser->pName, pName) == 0) {
 			*ppParser = pThis->pParser;
-			FINALIZE;	/* found it, iRet still eq. OK! */
+			FINALIZE; /* found it, iRet still eq. OK! */
 		}
 	}
 
@@ -183,7 +182,7 @@ AddDfltParser(uchar *pName)
 	CHKiRet(FindParser(&pParser, pName));
 	CHKiRet(AddParserToList(&pDfltParsLst, pParser));
 	DBGPRINTF("Parser '%s' added to default parser set.\n", pName);
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -200,7 +199,7 @@ SetName(parser_t *pThis, uchar *name)
 	ISOBJ_TYPE_assert(pThis, parser);
 	assert(name != NULL);
 
-	if(pThis->pName != NULL) {
+	if (pThis->pName != NULL) {
 		free(pThis->pName);
 		pThis->pName = NULL;
 	}
@@ -238,8 +237,6 @@ SetDoPRIParsing(parser_t *pThis, int bDoIt)
 }
 
 
-
-
 BEGINobjConstruct(parser) /* be sure to specify the object type also in END macro! */
 ENDobjConstruct(parser)
 
@@ -271,18 +268,18 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	parser_t *pParser = NULL;
 	DEFiRet;
 
-	if(pInst == NULL && pMod->mod.pm.newParserInst != NULL) {
+	if (pInst == NULL && pMod->mod.pm.newParserInst != NULL) {
 		/* this happens for the default instance on ModLoad time */
 		CHKiRet(pMod->mod.pm.newParserInst(NULL, &pInst));
 	}
 	CHKiRet(parserConstruct(&pParser));
 	/* check some features */
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
-	if(localRet == RS_RET_OK){
+	if (localRet == RS_RET_OK) {
 		pParser->bDoSanitazion = RSTRUE;
 	}
 	localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
-	if(localRet == RS_RET_OK){
+	if (localRet == RS_RET_OK) {
 		CHKiRet(SetDoPRIParsing(pParser, RSTRUE));
 	}
 
@@ -291,14 +288,14 @@ parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const __restri
 	pParser->pInst = pInst;
 	CHKiRet(parserConstructFinalize(pParser));
 finalize_it:
-	if(iRet != RS_RET_OK)
+	if (iRet != RS_RET_OK)
 		free(pParser);
 	RETiRet;
 }
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(parser)
-	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
-	if(pThis->pInst != NULL) {
+	CODESTARTobjDestruct(parser)
+	    DBGPRINTF("destructing parser '%s'\n", pThis->pName);
+	if (pThis->pInst != NULL) {
 		pThis->pModule->mod.pm.freeParserInst(pThis->pInst);
 	}
 	free(pThis->pName);
@@ -316,7 +313,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	uLongf iLenDefBuf;
 	uchar *pszMsg;
 	size_t lenMsg;
-	
+
 	assert(pMsg != NULL);
 	pszMsg = pMsg->pszRawMsg;
 	lenMsg = pMsg->iLenRawMsg;
@@ -324,7 +321,7 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 	/* we first need to check if we have a compressed record. If so,
 	 * we must decompress it.
 	 */
-	if(lenMsg > 0 && *pszMsg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
+	if (lenMsg > 0 && *pszMsg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
 		/* we have compressed data, so let's deflate it. We support a maximum
 		 * message size of iMaxLine. If it is larger, an error message is logged
 		 * and the message is dropped. We do NOT try to decompress larger messages
@@ -335,9 +332,9 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 		int ret;
 		iLenDefBuf = glbl.GetMaxLine();
 		CHKmalloc(deflateBuf = MALLOC(iLenDefBuf + 1));
-		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) pszMsg+1, lenMsg-1);
+		ret = uncompress((uchar *)deflateBuf, &iLenDefBuf, (uchar *)pszMsg + 1, lenMsg - 1);
 		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
-		        ret, (long) iLenDefBuf, (int) (lenMsg-1));
+		    ret, (long)iLenDefBuf, (int)(lenMsg - 1));
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
 		 * that case, we log an error message but ignore the message itself. Storing the
 		 * compressed text is dangerous, as it contains control characters. So we do
@@ -346,16 +343,17 @@ static rsRetVal uncompressMessage(smsg_t *pMsg)
 		 * this functionality right now.
 		 * rgerhards, 2006-12-07
 		 */
-		if(ret != Z_OK) {
+		if (ret != Z_OK) {
 			errmsg.LogError(0, NO_ERRCODE, "Uncompression of a message failed with return code %d "
-			            "- enable debug logging if you need further information. "
-				    "Message ignored.", ret);
+						       "- enable debug logging if you need further information. "
+						       "Message ignored.",
+			    ret);
 			FINALIZE; /* unconditional exit, nothing left to do... */
 		}
-		MsgSetRawMsg(pMsg, (char*)deflateBuf, iLenDefBuf);
+		MsgSetRawMsg(pMsg, (char *)deflateBuf, iLenDefBuf);
 	}
 finalize_it:
-	if(deflateBuf != NULL)
+	if (deflateBuf != NULL)
 		free(deflateBuf);
 
 	RETiRet;
@@ -389,7 +387,7 @@ SanitizeMsg(smsg_t *pMsg)
 	size_t maxDest;
 	uchar pc;
 	sbool bUpdatedLen = RSFALSE;
-	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
+	uchar szSanBuf[32 * 1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
 	assert(pMsg->iLenRawMsg > 0);
@@ -401,7 +399,7 @@ SanitizeMsg(smsg_t *pMsg)
 	 * Note that we do not need to add a NUL character in this case, because it
 	 * is already present ;)
 	 */
-	if(pszMsg[lenMsg-1] == '\0') {
+	if (pszMsg[lenMsg - 1] == '\0') {
 		DBGPRINTF("dropped NUL at very end of message\n");
 		bUpdatedLen = RSTRUE;
 		lenMsg--;
@@ -412,8 +410,7 @@ SanitizeMsg(smsg_t *pMsg)
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
-	if(glbl.GetParserDropTrailingLFOnReception()
-	   && lenMsg > 0 && pszMsg[lenMsg-1] == '\n') {
+	if (glbl.GetParserDropTrailingLFOnReception() && lenMsg > 0 && pszMsg[lenMsg - 1] == '\n') {
 		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		lenMsg--;
 		pszMsg[lenMsg] = '\0';
@@ -431,24 +428,24 @@ SanitizeMsg(smsg_t *pMsg)
 	 * need below (but it then still will work perfectly well!). -- rgerhards, 2009-11-27
 	 */
 	int bNeedSanitize = 0;
-	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
-		if(pszMsg[iSrc] < 32) {
-			if(glbl.GetParserSpaceLFOnReceive() && pszMsg[iSrc] == '\n') {
+	for (iSrc = 0; iSrc < lenMsg; iSrc++) {
+		if (pszMsg[iSrc] < 32) {
+			if (glbl.GetParserSpaceLFOnReceive() && pszMsg[iSrc] == '\n') {
 				pszMsg[iSrc] = ' ';
-			} else if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
+			} else if (pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
 				bNeedSanitize = 1;
 				if (!glbl.GetParserSpaceLFOnReceive()) {
 					break;
-			    }
+				}
 			}
-		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
+		} else if (pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			bNeedSanitize = 1;
 			break;
 		}
 	}
 
-	if(!bNeedSanitize) {
-		if(bUpdatedLen == RSTRUE)
+	if (!bNeedSanitize) {
+		if (bUpdatedLen == RSTRUE)
 			MsgSetRawMsgSize(pMsg, lenMsg);
 		FINALIZE;
 	}
@@ -459,29 +456,29 @@ SanitizeMsg(smsg_t *pMsg)
 	iMaxLine = glbl.GetMaxLine();
 	maxDest = lenMsg * 4; /* message can grow at most four-fold */
 
-	if(maxDest > iMaxLine)
-		maxDest = iMaxLine;	/* but not more than the max size! */
-	if(maxDest < sizeof(szSanBuf))
+	if (maxDest > iMaxLine)
+		maxDest = iMaxLine; /* but not more than the max size! */
+	if (maxDest < sizeof(szSanBuf))
 		pDst = szSanBuf;
-	else 
+	else
 		CHKmalloc(pDst = MALLOC(maxDest + 1));
-	if(iSrc > 0) {
+	if (iSrc > 0) {
 		iSrc--; /* go back to where everything is OK */
-		if(iSrc > maxDest) {
+		if (iSrc > maxDest) {
 			DBGPRINTF("parser.Sanitize: have oversize index %zd, "
-				"max %zd - corrected, but should not happen\n",
-				iSrc, maxDest);
+				  "max %zd - corrected, but should not happen\n",
+			    iSrc, maxDest);
 			iSrc = maxDest;
 		}
 		memcpy(pDst, pszMsg, iSrc); /* fast copy known good */
 	}
 	iDst = iSrc;
-	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
-		if((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab())) {
+	while (iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
+		if ((pszMsg[iSrc] < 32) && (pszMsg[iSrc] != '\t' || glbl.GetParserEscapeControlCharacterTab())) {
 			/* note: \0 must always be escaped, the rest of the code currently
 			 * can not handle it! -- rgerhards, 2009-08-26
 			 */
-			if(pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
+			if (pszMsg[iSrc] == '\0' || glbl.GetParserEscapeControlCharactersOnReceive()) {
 				/* we are configured to escape control characters. Please note
 				 * that this most probably break non-western character sets like
 				 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
@@ -535,7 +532,7 @@ SanitizeMsg(smsg_t *pMsg)
 				}
 			}
 
-		} else if(pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
+		} else if (pszMsg[iSrc] > 127 && glbl.GetParserEscape8BitCharactersOnReceive()) {
 			if (glbl.GetParserEscapeControlCharactersCStyle()) {
 				pDst[iDst++] = '\\';
 				pDst[iDst++] = 'x';
@@ -560,9 +557,9 @@ SanitizeMsg(smsg_t *pMsg)
 	}
 	pDst[iDst] = '\0';
 
-	MsgSetRawMsg(pMsg, (char*)pDst, iDst); /* save sanitized string */
+	MsgSetRawMsg(pMsg, (char *)pDst, iDst); /* save sanitized string */
 
-	if(pDst != szSanBuf)
+	if (pDst != szSanBuf)
 		free(pDst);
 
 finalize_it:
@@ -585,21 +582,21 @@ ParsePRI(smsg_t *pMsg)
 	lenMsg = pMsg->iLenRawMsg;
 	msg = pMsg->pszRawMsg;
 	pri = DEFUPRI;
-	if(pMsg->msgFlags & NO_PRI_IN_RAW) {
+	if (pMsg->msgFlags & NO_PRI_IN_RAW) {
 		/* In this case, simply do so as if the pri would be right at top */
 		MsgSetAfterPRIOffs(pMsg, 0);
 	} else {
-		if(*msg == '<') {
+		if (*msg == '<') {
 			pri = 0;
-			while(--lenMsg > 0 && isdigit((int) *++msg) && pri <= LOG_MAXPRI) {
+			while (--lenMsg > 0 && isdigit((int)*++msg) && pri <= LOG_MAXPRI) {
 				pri = 10 * pri + (*msg - '0');
 			}
-			if(*msg == '>') {
+			if (*msg == '>') {
 				++msg;
 			} else {
 				pri = LOG_PRI_INVLD;
 			}
-			if(pri > LOG_MAXPRI)
+			if (pri > LOG_MAXPRI)
 				pri = LOG_PRI_INVLD;
 		}
 		msgSetPRI(pMsg, pri);
@@ -625,7 +622,7 @@ ParseMsg(smsg_t *pMsg)
 	static int iErrMsgRateLimiter = 0;
 	DEFiRet;
 
-	if(pMsg->iLenRawMsg == 0)
+	if (pMsg->iLenRawMsg == 0)
 		ABORT_FINALIZE(RS_RET_EMPTY_MSG);
 
 	CHKiRet(uncompressMessage(pMsg));
@@ -634,8 +631,8 @@ ParseMsg(smsg_t *pMsg)
 	 * (and that functionality is too important for debugging to drop it...).
 	 */
 	DBGPRINTF("msg parser: flags %x, from '%s', msg '%.60s'\n", pMsg->msgFlags,
-		  (pMsg->msgFlags & NEEDS_DNSRESOL) ? UCHAR_CONSTANT("~NOTRESOLVED~") : getRcvFrom(pMsg),
-		  pMsg->pszRawMsg);
+	    (pMsg->msgFlags & NEEDS_DNSRESOL) ? UCHAR_CONSTANT("~NOTRESOLVED~") : getRcvFrom(pMsg),
+	    pMsg->pszRawMsg);
 
 	/* we now need to go through our list of parsers and see which one is capable of
 	 * parsing the message. Note that the first parser that requires message sanitization
@@ -643,30 +640,30 @@ ParseMsg(smsg_t *pMsg)
 	 * loger possible.
 	 */
 	pParserList = ruleset.GetParserList(ourConf, pMsg);
-	if(pParserList == NULL) {
+	if (pParserList == NULL) {
 		pParserList = pDfltParsLst;
 	}
 	DBGPRINTF("parse using parser list %p%s.\n", pParserList,
-		  (pParserList == pDfltParsLst) ? " (the default list)" : "");
+	    (pParserList == pDfltParsLst) ? " (the default list)" : "");
 
 	bIsSanitized = RSFALSE;
 	bPRIisParsed = RSFALSE;
-	while(pParserList != NULL) {
+	while (pParserList != NULL) {
 		pParser = pParserList->pParser;
-		if(pParser->bDoSanitazion && bIsSanitized == RSFALSE) {
+		if (pParser->bDoSanitazion && bIsSanitized == RSFALSE) {
 			CHKiRet(SanitizeMsg(pMsg));
-			if(pParser->bDoPRIParsing && bPRIisParsed == RSFALSE) {
+			if (pParser->bDoPRIParsing && bPRIisParsed == RSFALSE) {
 				CHKiRet(ParsePRI(pMsg));
 				bPRIisParsed = RSTRUE;
 			}
 			bIsSanitized = RSTRUE;
 		}
-		if(pParser->pModule->mod.pm.parse2 == NULL)
+		if (pParser->pModule->mod.pm.parse2 == NULL)
 			localRet = pParser->pModule->mod.pm.parse(pMsg);
 		else
 			localRet = pParser->pModule->mod.pm.parse2(pParser->pInst, pMsg);
 		DBGPRINTF("Parser '%s' returned %d\n", pParser->pName, localRet);
-		if(localRet != RS_RET_COULD_NOT_PARSE)
+		if (localRet != RS_RET_COULD_NOT_PARSE)
 			break;
 		pParserList = pParserList->pNext;
 	}
@@ -676,11 +673,11 @@ ParseMsg(smsg_t *pMsg)
 	 * that causes a message generation loop. We do not synchronize that counter, it doesn't
 	 * matter if we log a handful messages more than we should...
 	 */
-	if(localRet != RS_RET_OK) {
-		if(++iErrMsgRateLimiter > 1000) {
+	if (localRet != RS_RET_OK) {
+		if (++iErrMsgRateLimiter > 1000) {
 			errmsg.LogError(0, localRet, "Error: one message could not be processed by "
-			 	"any parser, message is being discarded (start of raw msg: '%.50s')", 
-				pMsg->pszRawMsg);
+						     "any parser, message is being discarded (start of raw msg: '%.50s')",
+			    pMsg->pszRawMsg);
 		}
 		DBGPRINTF("No parser could process the message (state %d), we need to discard it.\n", localRet);
 		ABORT_FINALIZE(localRet);
@@ -695,8 +692,8 @@ finalize_it:
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(parser)
-CODESTARTobjQueryInterface(parser)
-	if(pIf->ifVersion != parserCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(parser) if (pIf->ifVersion != parserCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -732,7 +729,7 @@ destroyMasterParserList(void)
 	parserList_t *pParsLstDel;
 
 	pParsLst = pParsLstRoot;
-	while(pParsLst != NULL) {
+	while (pParsLst != NULL) {
 		parserDestruct(&pParsLst->pParser);
 		pParsLstDel = pParsLst;
 		pParsLst = pParsLst->pNext;

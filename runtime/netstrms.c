@@ -42,10 +42,9 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-//DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(netstrm)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(netstrm);
 
 
 /* load our low-level driver. This must be done before any
@@ -64,11 +63,11 @@ loadDrvr(netstrms_t *pThis)
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
 	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+	if (pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if (snprintf((char *)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
-	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
+	CHKmalloc(pThis->pDrvrName = (uchar *)strdup((char *)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -77,11 +76,11 @@ loadDrvr(netstrms_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName + 2, szDrvrName, (void *)&pThis->Drvr));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL) {
+	if (iRet != RS_RET_OK) {
+		if (pThis->pDrvrName != NULL) {
 			free(pThis->pDrvrName);
 			pThis->pDrvrName = NULL;
 		}
@@ -97,20 +96,21 @@ ENDobjConstruct(netstrms)
 
 /* destructor for the netstrms object */
 BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(netstrms)
-	/* and now we must release our driver, if we got one. We use the presence of
+	CODESTARTobjDestruct(netstrms)
+	    /* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
 	 * to release the driver 
 	 */
-	if(pThis->pDrvrName != NULL) {
-		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
+	    if (pThis->pDrvrName != NULL)
+	{
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName + 2, pThis->pDrvrName, (void *)&pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
-	if(pThis->pszDrvrAuthMode != NULL) {
+	if (pThis->pszDrvrAuthMode != NULL) {
 		free(pThis->pszDrvrAuthMode);
 		pThis->pszDrvrAuthMode = NULL;
 	}
-	if(pThis->pBaseDrvrName != NULL) {
+	if (pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
 	}
@@ -139,13 +139,13 @@ SetDrvrName(netstrms_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	if(pThis->pBaseDrvrName != NULL) {
+	if (pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
 	}
 
-	if(pszName != NULL) {
-		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	if (pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar *)strdup((char *)pszName));
 	}
 finalize_it:
 	RETiRet;
@@ -166,7 +166,7 @@ SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
  * of sense here.
  * rgerhards, 2008-05-19
  */
-static permittedPeers_t*
+static permittedPeers_t *
 GetDrvrPermPeers(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
@@ -180,7 +180,7 @@ SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
+	CHKmalloc(pThis->pszDrvrAuthMode = (uchar *)strdup((char *)mode));
 finalize_it:
 	RETiRet;
 }
@@ -189,7 +189,7 @@ finalize_it:
  * of sense here.
  * rgerhards, 2008-05-19
  */
-static uchar*
+static uchar *
 GetDrvrAuthMode(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
@@ -240,12 +240,12 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	 */
 	memcpy(&pStrm->Drvr, &pThis->Drvr, sizeof(pThis->Drvr));
 	pStrm->pNS = pThis;
-	
+
 	*ppStrm = pStrm;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStrm != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pStrm != NULL)
 			netstrm.Destruct(&pStrm);
 	}
 	RETiRet;
@@ -254,8 +254,8 @@ finalize_it:
 
 /* queryInterface function */
 BEGINobjQueryInterface(netstrms)
-CODESTARTobjQueryInterface(netstrms)
-	if(pIf->ifVersion != netstrmsCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(netstrms) if (pIf->ifVersion != netstrmsCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -281,9 +281,9 @@ ENDobjQueryInterface(netstrms)
 
 /* exit our class */
 BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(netstrms)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
+	CODESTARTObjClassExit(netstrms)
+	    /* release objects we no longer need */
+	    objRelease(glbl, CORE_COMPONENT);
 	objRelease(netstrm, DONT_LOAD_LIB);
 ENDObjClassExit(netstrms)
 
@@ -296,7 +296,7 @@ BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(netstrms)
 
 
@@ -304,7 +304,7 @@ ENDObjClassInit(netstrms)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	nsselClassExit();
 	nspollClassExit();
 	netstrmsClassExit();
@@ -313,14 +313,14 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(netstrmClassInit(pModInfo));

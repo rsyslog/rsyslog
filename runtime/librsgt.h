@@ -40,7 +40,7 @@ struct gtctx_s {
 	uint8_t bKeepTreeHashes;
 	uint64_t blockSizeLimit;
 	char *timestamper;
-	void (*errFunc)(void *, unsigned char*);
+	void (*errFunc)(void *, unsigned char *);
 	void *usrptr; /* for error function */
 };
 typedef struct gtctx_s *gtctx;
@@ -58,13 +58,13 @@ struct gtfile_s {
 	/* end mirrored properties */
 	uint8_t disabled; /* permits to disable this file --> set to 1 */
 	uint64_t blockSizeLimit;
-	uint8_t *IV; /* initial value for blinding masks */
+	uint8_t *IV;       /* initial value for blinding masks */
 	imprint_t *x_prev; /* last leaf hash (maybe of previous block) --> preserve on term */
 	unsigned char *sigfilename;
 	unsigned char *statefilename;
 	int fd;
-	uint64_t nRecords;  /* current number of records in current block */
-	uint64_t bInBlk;    /* are we currently inside a blk --> need to finish on close */
+	uint64_t nRecords; /* current number of records in current block */
+	uint64_t bInBlk;   /* are we currently inside a blk --> need to finish on close */
 	int8_t nRoots;
 	/* algo engineering: roots structure is split into two arrays
 	 * in order to improve cache hits.
@@ -72,8 +72,8 @@ struct gtfile_s {
 	int8_t roots_valid[MAX_ROOTS];
 	GTDataHash *roots_hash[MAX_ROOTS];
 	/* data members for the associated TLV file */
-	char	tlvBuf[4096];
-	int	tlvIdx; /* current index into tlvBuf */
+	char tlvBuf[4096];
+	int tlvIdx; /* current index into tlvBuf */
 	gtctx ctx;
 };
 
@@ -91,7 +91,7 @@ struct gtfile_s {
  * the relevant information.
  */
 struct gterrctx_s {
-	FILE *fp;	/**< file for error messages */
+	FILE *fp; /**< file for error messages */
 	char *filename;
 	uint8_t verbose;
 	uint64_t recNumInFile;
@@ -101,7 +101,7 @@ struct gterrctx_s {
 	GTDataHash *computedHash;
 	GTDataHash *lefthash, *righthash; /* hashes to display if tree hash fails */
 	imprint_t *fileHash;
-	int gtstate;	/* status from last relevant GT.*() function call */
+	int gtstate; /* status from last relevant GT.*() function call */
 	char *errRec;
 	char *frstRecInBlk; /* This holds the first message seen inside the current block */
 };
@@ -110,49 +110,49 @@ struct gterrctx_s {
  * is fixed, we may change that over time.
  */
 struct rsgtstatefile {
-	char hdr[8];	/* must be "GTSTAT10" */
+	char hdr[8]; /* must be "GTSTAT10" */
 	uint8_t hashID;
 	uint8_t lenHash;
 	/* after that, the hash value is contained within the file */
 };
 
 /* error states */
-#define RSGTE_IO 1 	/* any kind of io error */
-#define RSGTE_FMT 2	/* data fromat error */
-#define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
-#define RSGTE_OOM 4	/* ran out of memory */
-#define RSGTE_LEN 5	/* error related to length records */
-#define RSGTE_TS_EXTEND 6/* error extending timestamp */
-#define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
-                               given in block-sig record */
-#define RSGTE_INVLHDR 8/* invalid file header */
-#define RSGTE_EOF 9 	/* specific EOF */
-#define RSGTE_MISS_REC_HASH 10 /* record hash missing when expected */
-#define RSGTE_MISS_TREE_HASH 11 /* tree hash missing when expected */
-#define RSGTE_INVLD_REC_HASH 12 /* invalid record hash (failed verification) */
-#define RSGTE_INVLD_TREE_HASH 13 /* invalid tree hash (failed verification) */
-#define RSGTE_INVLD_REC_HASHID 14 /* invalid record hash ID (failed verification) */
+#define RSGTE_IO 1		   /* any kind of io error */
+#define RSGTE_FMT 2		   /* data fromat error */
+#define RSGTE_INVLTYP 3		   /* invalid TLV type record (unexcpected at this point) */
+#define RSGTE_OOM 4		   /* ran out of memory */
+#define RSGTE_LEN 5		   /* error related to length records */
+#define RSGTE_TS_EXTEND 6	  /* error extending timestamp */
+#define RSGTE_INVLD_RECCNT 7       /* mismatch between actual records and records \
+				      given in block-sig record */
+#define RSGTE_INVLHDR 8		   /* invalid file header */
+#define RSGTE_EOF 9		   /* specific EOF */
+#define RSGTE_MISS_REC_HASH 10     /* record hash missing when expected */
+#define RSGTE_MISS_TREE_HASH 11    /* tree hash missing when expected */
+#define RSGTE_INVLD_REC_HASH 12    /* invalid record hash (failed verification) */
+#define RSGTE_INVLD_TREE_HASH 13   /* invalid tree hash (failed verification) */
+#define RSGTE_INVLD_REC_HASHID 14  /* invalid record hash ID (failed verification) */
 #define RSGTE_INVLD_TREE_HASHID 15 /* invalid tree hash ID (failed verification) */
-#define RSGTE_MISS_BLOCKSIG 16 /* block signature record missing when expected */
-#define RSGTE_INVLD_TIMESTAMP 17 /* RFC3161 timestamp is invalid */
-#define RSGTE_TS_DERDECODE 18 /* error DER-Decoding a timestamp */
-#define RSGTE_TS_DERENCODE 19 /* error DER-Encoding a timestamp */
-#define RSGTE_HASH_CREATE 20 /* error creating a hash */
-#define RSGTE_END_OF_SIG 21 /* unexpected end of signature - more log line exist */
-#define RSGTE_END_OF_LOG 22 /* unexpected end of log file - more signatures exist */
-#define RSGTE_EXTRACT_HASH 23 /* error extracting hashes for record */
-#define RSGTE_CONFIG_ERROR 24 /* Configuration error */
-#define RSGTE_NETWORK_ERROR 25 /* Network error */
+#define RSGTE_MISS_BLOCKSIG 16     /* block signature record missing when expected */
+#define RSGTE_INVLD_TIMESTAMP 17   /* RFC3161 timestamp is invalid */
+#define RSGTE_TS_DERDECODE 18      /* error DER-Decoding a timestamp */
+#define RSGTE_TS_DERENCODE 19      /* error DER-Encoding a timestamp */
+#define RSGTE_HASH_CREATE 20       /* error creating a hash */
+#define RSGTE_END_OF_SIG 21	/* unexpected end of signature - more log line exist */
+#define RSGTE_END_OF_LOG 22	/* unexpected end of log file - more signatures exist */
+#define RSGTE_EXTRACT_HASH 23      /* error extracting hashes for record */
+#define RSGTE_CONFIG_ERROR 24      /* Configuration error */
+#define RSGTE_NETWORK_ERROR 25     /* Network error */
 
 /* the following function maps RSGTE_* state to a string - must be updated
  * whenever a new state is added.
  * Note: it is thread-safe to call this function, as it returns a pointer
  * into constant memory pool.
  */
-const char * RSGTE2String(int err);
+const char *RSGTE2String(int err);
 uint16_t hashOutputLengthOctets(uint8_t hashID);
 uint8_t hashIdentifier(enum GTHashAlgorithm hashID);
-const char * hashAlgName(uint8_t hashID);
+const char *hashAlgName(uint8_t hashID);
 enum GTHashAlgorithm hashID2Alg(uint8_t hashID);
 
 static inline uint16_t
@@ -187,14 +187,14 @@ int rsgtSetHashFunction(gtctx ctx, char *algName);
 int rsgtInit(const char *usragent);
 void rsgtExit(void);
 gtctx rsgtCtxNew(void);
-void rsgtsetErrFunc(gtctx ctx, void (*func)(void*, unsigned char *), void *usrptr);
+void rsgtsetErrFunc(gtctx ctx, void (*func)(void *, unsigned char *), void *usrptr);
 gtfile rsgtCtxOpenFile(gtctx ctx, unsigned char *logfn);
 int rsgtfileDestruct(gtfile gf);
 void rsgtCtxDel(gtctx ctx);
 void sigblkInit(gtfile gf);
 int sigblkAddRecord(gtfile gf, const unsigned char *rec, const size_t len);
 int sigblkFinish(gtfile gf);
-imprint_t * rsgtImprintFromGTDataHash(GTDataHash *hash);
+imprint_t *rsgtImprintFromGTDataHash(GTDataHash *hash);
 void rsgtimprintDel(imprint_t *imp);
 /* reader functions */
 int rsgt_tlvrdHeader(FILE *fp, unsigned char *hdr);
@@ -203,7 +203,7 @@ void rsgt_tlvprint(FILE *fp, uint16_t tlvtype, void *obj, uint8_t verbose);
 void rsgt_printBLOCK_HDR(FILE *fp, block_hdr_t *bh, uint8_t verbose);
 void rsgt_printBLOCK_SIG(FILE *fp, block_sig_t *bs, uint8_t verbose);
 int rsgt_getBlockParams(FILE *fp, uint8_t bRewind, block_sig_t **bs, block_hdr_t **bh, uint8_t *bHasRecHashes,
-	uint8_t *bHasIntermedHashes);
+    uint8_t *bHasIntermedHashes);
 int rsgt_chkFileHdr(FILE *fp, char *expect);
 gtfile rsgt_vrfyConstruct_gf(void);
 void rsgt_vrfyBlkInit(gtfile gf, block_hdr_t *bh, uint8_t bHasRecHashes, uint8_t bHasIntermedHashes);
@@ -215,19 +215,19 @@ void rsgt_errctxExit(gterrctx_t *ectx);
 void rsgt_errctxSetErrRec(gterrctx_t *ectx, char *rec);
 void rsgt_errctxFrstRecInBlk(gterrctx_t *ectx, char *rec);
 void rsgt_objfree(uint16_t tlvtype, void *obj);
-void rsgt_set_debug(int iDebug); 
-int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose); 
+void rsgt_set_debug(int iDebug);
+int rsgt_ConvertSigFile(FILE *oldsigfp, FILE *newsigfp, int verbose);
 
 /* TODO: replace these? */
 int hash_m(gtfile gf, GTDataHash **m);
 int hash_r(gtfile gf, GTDataHash **r, const unsigned char *rec, const size_t len);
 int hash_node(gtfile gf, GTDataHash **node, GTDataHash *m, GTDataHash *r, uint8_t level);
-extern char *rsgt_read_puburl;		/**< url of publication server */
-extern char *rsgt_extend_puburl;	/**< url of extension server */
-extern char *rsgt_userid;			/**< userid for extension server */
-extern char *rsgt_userkey;			/**< userkey for extension server */
+extern char *rsgt_read_puburl;   /**< url of publication server */
+extern char *rsgt_extend_puburl; /**< url of extension server */
+extern char *rsgt_userid;	/**< userid for extension server */
+extern char *rsgt_userkey;       /**< userkey for extension server */
 extern uint8_t rsgt_read_showVerified;
 extern int RSGT_FLAG_TLV16_RUNTIME;
-extern int RSGT_FLAG_NONCRIT_RUNTIME; 
+extern int RSGT_FLAG_NONCRIT_RUNTIME;
 
-#endif  /* #ifndef INCLUDED_LIBRSGT_H */
+#endif /* #ifndef INCLUDED_LIBRSGT_H */
