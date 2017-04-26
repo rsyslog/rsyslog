@@ -29,11 +29,11 @@
 
 #include <string.h>
 
-#define ustrncpy(psz1, psz2, len) strncpy((char*)(psz1), (char*)(psz2), (len))
-#define ustrdup(psz) (uchar*)strdup((char*)(psz))
-#define ustrcmp(psz1, psz2) (strcmp((const char*) (psz1), (const char*) (psz2)))
-#define ustrlen(psz) (strlen((const char*) (psz)))
-#define UCHAR_CONSTANT(x) ((uchar*) (x))
-#define CHAR_CONVERT(x) ((char*) (x))
+#define ustrncpy(psz1, psz2, len) strncpy((char *)(psz1), (char *)(psz2), (len))
+#define ustrdup(psz) (uchar *)strdup((char *)(psz))
+#define ustrcmp(psz1, psz2) (strcmp((const char *)(psz1), (const char *)(psz2)))
+#define ustrlen(psz) (strlen((const char *)(psz)))
+#define UCHAR_CONSTANT(x) ((uchar *)(x))
+#define CHAR_CONVERT(x) ((char *)(x))
 
 #endif /* multi-include protection */

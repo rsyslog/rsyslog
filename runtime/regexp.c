@@ -36,19 +36,18 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* ------------------------------ methods ------------------------------ */
-
 
 
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(regexp)
-CODESTARTobjQueryInterface(regexp)
-	if(pIf->ifVersion != regexpCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(regexp) if (pIf->ifVersion != regexpCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -70,9 +69,9 @@ ENDobjQueryInterface(regexp)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(regexp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
-	/* request objects we use */
+							     /* request objects we use */
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(regexp)
 
 
@@ -80,22 +79,22 @@ ENDObjClassInit(regexp)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	CHKiRet(regexpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	/* Initialize all classes that are in our module - this includes ourselfs */
+					    /* Initialize all classes that are in our module - this includes ourselfs */
 ENDmodInit
 /* vi:set ai:
  */

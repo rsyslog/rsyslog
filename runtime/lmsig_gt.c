@@ -37,30 +37,29 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
-	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
-	{ "sig.timestampservice", eCmdHdlrGetWord, 0 },
-	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
-	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
-	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 }
-};
+    {"sig.hashfunction", eCmdHdlrGetWord, 0},
+    {"sig.timestampservice", eCmdHdlrGetWord, 0},
+    {"sig.block.sizelimit", eCmdHdlrSize, 0},
+    {"sig.keeprecordhashes", eCmdHdlrBinary, 0},
+    {"sig.keeptreehashes", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
-	  cnfpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfpdescr) / sizeof(struct cnfparamdescr),
+	cnfpdescr};
 
 
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
 	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "Signature Provider"
-		"Error: %s - disabling signatures", emsg);
+					       "Error: %s - disabling signatures",
+	    emsg);
 }
 
 /* Standard-Constructor
@@ -73,8 +72,8 @@ ENDobjConstruct(lmsig_gt)
 
 /* destructor for the lmsig_gt object */
 BEGINobjDestruct(lmsig_gt) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmsig_gt)
-	rsgtCtxDel(pThis->ctx);
+	CODESTARTobjDestruct(lmsig_gt)
+	    rsgtCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_gt)
 
 
@@ -85,47 +84,49 @@ ENDobjDestruct(lmsig_gt)
 static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
+	lmsig_gt_t *pThis = (lmsig_gt_t *)pT;
 	int i;
 	uchar *cstr;
 	struct cnfparamvals *pvals;
 	DEFiRet;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
-	if(pvals == NULL) {
+	if (pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("sig param blk in lmsig_gt:\n");
 		cnfparamsPrint(&pblk, pvals);
 	}
 
-	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < pblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(rsgtSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
+		if (!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
+			cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (rsgtSetHashFunction(pThis->ctx, (char *)cstr) != 0) {
 				errmsg.LogError(0, RS_RET_ERR, "Hash function "
-					"'%s' unknown - using default", cstr);
+							       "'%s' unknown - using default",
+				    cstr);
 			}
 			free(cstr);
-		} else if(!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
-			cstr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsgtSetTimestamper(pThis->ctx, (char*) cstr);
+		} else if (!strcmp(pblk.descr[i].name, "sig.timestampservice")) {
+			cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+			rsgtSetTimestamper(pThis->ctx, (char *)cstr);
 			free(cstr);
-		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
 			rsgtSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
 			rsgtSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
 			rsgtSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
 		} else {
 			DBGPRINTF("lmsig_gt: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
+				  "param '%s'\n",
+			    pblk.descr[i].name);
 		}
 	}
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	RETiRet;
 }
@@ -134,8 +135,8 @@ finalize_it:
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF)
 {
-	lmsig_gt_t *pThis = (lmsig_gt_t*) pT;
-	gtfile *pgf = (gtfile*) pGF;
+	lmsig_gt_t *pThis = (lmsig_gt_t *)pT;
+	gtfile *pgf = (gtfile *)pGF;
 	DEFiRet;
 	DBGPRINTF("lmsig_gt: onFileOpen: %s\n", fn);
 	/* note: if *pgf is set to NULL, this auto-disables GT functions */
@@ -156,8 +157,8 @@ static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
-	DBGPRINTF("lmsig_gt: onRecordWrite (%d): %s\n", lenRec-1, rec);
-	sigblkAddRecord(pF, rec, lenRec-1);
+	DBGPRINTF("lmsig_gt: onRecordWrite (%d): %s\n", lenRec - 1, rec);
+	sigblkAddRecord(pF, rec, lenRec - 1);
 
 	RETiRet;
 }
@@ -173,13 +174,13 @@ OnFileClose(void *pF)
 }
 
 BEGINobjQueryInterface(lmsig_gt)
-CODESTARTobjQueryInterface(lmsig_gt)
-	 if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(lmsig_gt) if (pIf->ifVersion != sigprovCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmsig_gtConstruct;
+	pIf->Construct = (rsRetVal(*)(void *))lmsig_gtConstruct;
 	pIf->SetCnfParam = SetCnfParam;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_gtDestruct;
+	pIf->Destruct = (rsRetVal(*)(void *))lmsig_gtDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->OnRecordWrite = OnRecordWrite;
 	pIf->OnFileClose = OnFileClose;
@@ -188,9 +189,9 @@ ENDobjQueryInterface(lmsig_gt)
 
 
 BEGINObjClassExit(lmsig_gt, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmsig_gt)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(lmsig_gt)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 
 	rsgtExit();
@@ -202,9 +203,9 @@ BEGINObjClassInit(lmsig_gt, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	if(rsgtInit((char*)"rsyslogd " VERSION) != 0) {
+	if (rsgtInit((char *)"rsyslogd " VERSION) != 0) {
 		errmsg.LogError(0, RS_RET_SIGPROV_ERR, "error initializing "
-			"signature provider - cannot sign");
+						       "signature provider - cannot sign");
 		ABORT_FINALIZE(RS_RET_SIGPROV_ERR);
 	}
 ENDObjClassInit(lmsig_gt)
@@ -214,20 +215,20 @@ ENDObjClassInit(lmsig_gt)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	lmsig_gtClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(lmsig_gtClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

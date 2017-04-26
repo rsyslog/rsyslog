@@ -51,7 +51,7 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("mmsnmptrapd")
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* static data */
 DEFobjCurrIf(errmsg);
@@ -68,8 +68,8 @@ struct severMap_s {
 
 typedef struct _instanceData {
 	uchar *pszTagName;
-	uchar *pszTagID;	/* cached: name plus trailing shlash (for compares) */
-	int lenTagID;		/* cached: length of tag ID, for performance reasons */
+	uchar *pszTagID; /* cached: name plus trailing shlash (for compares) */
+	int lenTagID;    /* cached: length of tag ID, for performance reasons */
 	struct severMap_s *severMap;
 } instanceData;
 
@@ -78,37 +78,37 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	uchar *pszTagName;	/**< name of tag start value that indicates snmptrapd initiated message */
+	uchar *pszTagName;	 /**< name of tag start value that indicates snmptrapd initiated message */
 	uchar *pszSeverityMapping; /**< severitystring to numerical code mapping for snmptrapd string */
 } configSettings_t;
 static configSettings_t cs;
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
-	cs.pszTagName = NULL;
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
+	    cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+	CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
 	struct severMap_s *node, *nodeDel;
-CODESTARTfreeInstance
-	for(node = pData->severMap ; node != NULL ; ) {
+	CODESTARTfreeInstance for (node = pData->severMap; node != NULL;)
+	{
 		nodeDel = node;
 		node = node->next;
 		free(nodeDel->name);
@@ -119,18 +119,18 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	dbgprintf("mmsnmptrapd\n");
+	CODESTARTdbgPrintInstInfo
+	    dbgprintf("mmsnmptrapd\n");
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 
@@ -139,10 +139,10 @@ static int
 isNumeric(uchar *str)
 {
 	int r = 1;
-	if(*str == '-' || *str == '+')
+	if (*str == '-' || *str == '+')
 		++str;
-	while(*str) {
-		if(!isdigit(*str)) {
+	while (*str) {
+		if (!isdigit(*str)) {
 			r = 0;
 			goto done;
 		}
@@ -164,22 +164,22 @@ getSubstring(uchar **psrc, uchar delim, uchar *dst, int lenDst)
 {
 	uchar *dstwrk = dst;
 	uchar *src = *psrc;
-	while(*src && isspace(*src)) {
-		++src;	/* trim leading spaces */
+	while (*src && isspace(*src)) {
+		++src; /* trim leading spaces */
 	}
-	while(*src && *src != delim && --lenDst > 0) {
+	while (*src && *src != delim && --lenDst > 0) {
 		*dstwrk++ = *src++;
 	}
 	dstwrk--;
-	while(dstwrk > dst && isspace(*dst))
+	while (dstwrk > dst && isspace(*dst))
 		--dstwrk; /* trim trailing spaces */
 	*++dstwrk = '\0';
-	
+
 	/* final results */
-	if(*src == delim)
+	if (*src == delim)
 		++src;
 	*psrc = src;
-	return(dstwrk - dst);
+	return (dstwrk - dst);
 }
 
 
@@ -194,10 +194,10 @@ getTagComponent(uchar *tag, uchar *dst, int *lenDst)
 	int i;
 
 	i = 0;
-	if(tag[i] != '/')
+	if (tag[i] != '/')
 		goto done;
 	++tag;
-	while(i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
+	while (i < end && tag[i] != '\0' && tag[i] != ' ' && tag[i] != '/') {
 		dst[i] = tag[i];
 		++i;
 	}
@@ -217,8 +217,8 @@ lookupSeverityCode(instanceData *pData, uchar *sever)
 	struct severMap_s *node;
 	int sevCode = -1;
 
-	for(node = pData->severMap ; node != NULL ; node = node->next) {
-		if(!ustrcmp(node->name, sever)) {
+	for (node = pData->severMap; node != NULL; node = node->next) {
+		if (!ustrcmp(node->name, sever)) {
 			sevCode = node->code;
 			break;
 		}
@@ -237,31 +237,31 @@ BEGINdoAction
 	uchar pszSever[512];
 	uchar pszHost[512];
 	instanceData *pData;
-CODESTARTdoAction
-	pData = pWrkrData->pData;
-	pMsg = (smsg_t*) ppString[0];
+	CODESTARTdoAction
+	    pData = pWrkrData->pData;
+	pMsg = (smsg_t *)ppString[0];
 	getTAG(pMsg, &pszTag, &lenTAG);
-	if(strncmp((char*)pszTag, (char*)pData->pszTagID, pData->lenTagID)) {
+	if (strncmp((char *)pszTag, (char *)pData->pszTagID, pData->lenTagID)) {
 		DBGPRINTF("tag '%s' not matching, mmsnmptrapd ignoring this message\n",
-			  pszTag);
+		    pszTag);
 		FINALIZE;
 	}
 
 	lenSever = sizeof(pszSever);
-	getTagComponent(pszTag+pData->lenTagID-1, pszSever, &lenSever);
+	getTagComponent(pszTag + pData->lenTagID - 1, pszSever, &lenSever);
 	lenHost = sizeof(pszHost);
-	getTagComponent(pszTag+pData->lenTagID+lenSever, pszHost, &lenHost);
-	DBGPRINTF("mmsnmptrapd: sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost,lenHost);
+	getTagComponent(pszTag + pData->lenTagID + lenSever, pszHost, &lenHost);
+	DBGPRINTF("mmsnmptrapd: sever '%s'(%d), host '%s'(%d)\n", pszSever, lenSever, pszHost, lenHost);
 
-	if(pszHost[lenHost-1] == ':') {
-		pszHost[lenHost-1] = '\0';
+	if (pszHost[lenHost - 1] == ':') {
+		pszHost[lenHost - 1] = '\0';
 		--lenHost;
 	}
 	sevCode = lookupSeverityCode(pData, pszSever);
 	/* now apply new settings */
 	MsgSetTAG(pMsg, pData->pszTagName, pData->lenTagID);
 	MsgSetHOSTNAME(pMsg, pszHost, lenHost);
-	if(sevCode != -1)
+	if (sevCode != -1)
 		pMsg->iSeverity = sevCode; /* we update like the parser does! */
 finalize_it:
 ENDdoAction
@@ -282,21 +282,23 @@ buildSeverityMapping(instanceData *pData)
 
 	mapping = cs.pszSeverityMapping;
 
-	while(1) {	/* broken inside when all entries are processed */
-		if(getSubstring(&mapping, '/', pszSev, sizeof(pszSev)) == 0) {
+	while (1) { /* broken inside when all entries are processed */
+		if (getSubstring(&mapping, '/', pszSev, sizeof(pszSev)) == 0) {
 			FINALIZE;
 		}
-		if(getSubstring(&mapping, ',', pszSevCode, sizeof(pszSevCode)) == 0) {
+		if (getSubstring(&mapping, ',', pszSevCode, sizeof(pszSevCode)) == 0) {
 			errmsg.LogError(0, RS_RET_ERR, "error: invalid severity mapping, cannot "
-					"extract code. given: '%s'\n", cs.pszSeverityMapping);
+						       "extract code. given: '%s'\n",
+			    cs.pszSeverityMapping);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		sevCode = atoi((char*) pszSevCode);
-		if(!isNumeric(pszSevCode))
+		sevCode = atoi((char *)pszSevCode);
+		if (!isNumeric(pszSevCode))
 			sevCode = -1;
-		if(sevCode < 0 || sevCode > 7) {
+		if (sevCode < 0 || sevCode > 7) {
 			errmsg.LogError(0, RS_RET_ERR, "error: severity code %d outside of valid "
-					"range 0..7 (was string '%s')\n", sevCode, pszSevCode);
+						       "range 0..7 (was string '%s')\n",
+			    sevCode, pszSevCode);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		CHKmalloc(node = MALLOC(sizeof(struct severMap_s)));
@@ -306,12 +308,12 @@ buildSeverityMapping(instanceData *pData)
 		node->next = pData->severMap;
 		pData->severMap = node;
 		DBGPRINTF("mmsnmptrapd: severity string '%s' mapped to code %d\n",
-			  pszSev, sevCode);
+		    pszSev, sevCode);
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(node != NULL)
+	if (iRet != RS_RET_OK) {
+		if (node != NULL)
 			free(node);
 	}
 	RETiRet;
@@ -319,10 +321,11 @@ finalize_it:
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us */
-	if(strncmp((char*) p, ":mmsnmptrapd:", sizeof(":mmsnmptrapd:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us */
+	    if (strncmp((char *)p, ":mmsnmptrapd:", sizeof(":mmsnmptrapd:") - 1))
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
@@ -331,31 +334,31 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* check if a non-standard template is to be applied */
-	if(*(p-1) == ';')
+	if (*(p - 1) == ';')
 		--p;
 	/* we call the function below because we need to call it via our interface definition. However,
 	 * the format specified (if any) is always ignored.
 	 */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*) "RSYSLOG_FileFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar *)"RSYSLOG_FileFormat"));
 
 	/* finally build the instance */
-	if(cs.pszTagName == NULL) {
-		pData->pszTagName = (uchar*) strdup("snmptrapd:");
-		pData->pszTagID = (uchar*) strdup("snmptrapd/");
+	if (cs.pszTagName == NULL) {
+		pData->pszTagName = (uchar *)strdup("snmptrapd:");
+		pData->pszTagID = (uchar *)strdup("snmptrapd/");
 	} else {
 		int lenTag = ustrlen(cs.pszTagName);
 		/* new tag value (with colon at the end) */
 		CHKmalloc(pData->pszTagName = MALLOC(lenTag + 2));
 		memcpy(pData->pszTagName, cs.pszTagName, lenTag);
-		memcpy(pData->pszTagName+lenTag, ":", 2);
+		memcpy(pData->pszTagName + lenTag, ":", 2);
 		/* tag ID for comparisions */
 		CHKmalloc(pData->pszTagID = MALLOC(lenTag + 2));
 		memcpy(pData->pszTagID, cs.pszTagName, lenTag);
-		memcpy(pData->pszTagID+lenTag, "/", 2);
+		memcpy(pData->pszTagID + lenTag, "/", 2);
 		free(cs.pszTagName); /* no longer needed */
 	}
 	pData->lenTagID = ustrlen(pData->pszTagID);
-	if(cs.pszSeverityMapping != NULL) {
+	if (cs.pszSeverityMapping != NULL) {
 		CHKiRet(buildSeverityMapping(pData));
 	}
 
@@ -363,28 +366,27 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	cs.pszTagName = NULL;
 	free(cs.pszSeverityMapping);
 	cs.pszSeverityMapping = NULL;
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 ENDqueryEtryPt
-
 
 
 /* Reset config variables for this module to default values.
  */
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	DEFiRet;
 	free(cs.pszTagName);
@@ -400,25 +402,25 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bMsgPassingSupported;
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-		/* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	/* check if the rsyslog core supports parameter passing code */
-	bMsgPassingSupported = 0;
-	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts",
-			&pomsrGetSupportedTplOpts);
-	if(localRet == RS_RET_OK) {
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION;
+	/* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    /* check if the rsyslog core supports parameter passing code */
+	    bMsgPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar *)"OMSRgetSupportedTplOpts",
+	    &pomsrGetSupportedTplOpts);
+	if (localRet == RS_RET_OK) {
 		/* found entry point, so let's see if core supports msg passing */
 		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
-		if(opts & OMSR_TPL_AS_MSG)
+		if (opts & OMSR_TPL_AS_MSG)
 			bMsgPassingSupported = 1;
-	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+	} else if (localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}
-	
-	if(!bMsgPassingSupported) {
+
+	if (!bMsgPassingSupported) {
 		DBGPRINTF("mmsnmptrapd: msg-passing is not supported by rsyslog core, "
 			  "can not continue.\n");
 		ABORT_FINALIZE(RS_RET_NO_MSG_PASSING);
@@ -429,13 +431,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* TODO: config vars ininit can be replaced by commented-out code above in v6 */
 	cs.pszTagName = NULL;
 	cs.pszSeverityMapping = NULL;
-	
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdtag", 0, eCmdHdlrGetWord,
-				    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID));
+	    NULL, &cs.pszTagName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"mmsnmptrapdseveritymapping", 0, eCmdHdlrGetWord,
-				    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID));
+	    NULL, &cs.pszSeverityMapping, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

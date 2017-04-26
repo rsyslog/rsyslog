@@ -52,20 +52,20 @@ PARSER_NAME("rsyslog.rfc5424")
  */
 DEF_PMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(parser)
+	    DEFobjCurrIf(datetime)
 
 
-/* config data */
+    /* config data */
 
 
-BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    BEGINisCompatibleWithFeature
+    CODESTARTisCompatibleWithFeature
+    if (eFeat == sFEATUREAutomaticSanitazion)
+	iRet = RS_RET_OK;
+if (eFeat == sFEATUREAutomaticPRIParsing)
+	iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -92,12 +92,12 @@ static int parseRFCField(uchar **pp2parse, uchar *pResult, int *pLenStr)
 	p2parse = *pp2parse;
 
 	/* this is the actual parsing loop */
-	while(*pLenStr > 0  && *p2parse != ' ') {
+	while (*pLenStr > 0 && *p2parse != ' ') {
 		*pResult++ = *p2parse++;
 		--(*pLenStr);
 	}
 
-	if(*pLenStr > 0 && *p2parse == ' ') {
+	if (*pLenStr > 0 && *p2parse == ' ') {
 		++p2parse; /* eat SP, but only if not at end of string */
 		--(*pLenStr);
 	} else {
@@ -143,18 +143,18 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 	 * structured data. There may also be \] inside the structured data, which
 	 * do NOT terminate an element.
 	 */
-	if(lenStr == 0 || (*p2parse != '[' && *p2parse != '-'))
+	if (lenStr == 0 || (*p2parse != '[' && *p2parse != '-'))
 		return 1; /* this is NOT structured data! */
 
-	if(*p2parse == '-') { /* empty structured data? */
+	if (*p2parse == '-') { /* empty structured data? */
 		*pResult++ = '-';
 		++p2parse;
 		--lenStr;
 	} else {
-		while(bCont) {
-			if(lenStr < 2) {
+		while (bCont) {
+			if (lenStr < 2) {
 				/* we now need to check if we have only structured data */
-				if(lenStr > 0 && *p2parse == ']') {
+				if (lenStr > 0 && *p2parse == ']') {
 					*pResult++ = *p2parse;
 					p2parse++;
 					lenStr--;
@@ -163,12 +163,12 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 					iRet = 1; /* this is not valid! */
 					bCont = 0;
 				}
-			} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
+			} else if (*p2parse == '\\' && *(p2parse + 1) == ']') {
 				/* this is escaped, need to copy both */
 				*pResult++ = *p2parse++;
 				*pResult++ = *p2parse++;
 				lenStr -= 2;
-			} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
+			} else if (*p2parse == ']' && *(p2parse + 1) == ' ') {
 				/* found end, just need to copy the ] and eat the SP */
 				*pResult++ = *p2parse;
 				p2parse += 2;
@@ -181,7 +181,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
 		}
 	}
 
-	if(lenStr > 0 && *p2parse == ' ') {
+	if (lenStr > 0 && *p2parse == ' ') {
 		++p2parse; /* eat SP, but only if not at end of string */
 		--lenStr;
 	} else {
@@ -217,14 +217,14 @@ BEGINparse
 	uchar *pBuf = NULL;
 	int lenMsg;
 	int bContParse = 1;
-CODESTARTparse
-	assert(pMsg != NULL);
+	CODESTARTparse
+	    assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
 
 	/* check if we are the right parser */
-	if(lenMsg < 2 || p2parse[0] != '1' || p2parse[1] != ' ') {
+	if (lenMsg < 2 || p2parse[0] != '1' || p2parse[1] != ' ') {
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 	DBGPRINTF("Message has RFC5424/syslog-protocol format.\n");
@@ -238,7 +238,7 @@ CODESTARTparse
 	 * wiser than to use individual buffers.
 	 */
 	CHKmalloc(pBuf = MALLOC(lenMsg + 1));
-		
+
 	/* IMPORTANT NOTE:
 	 * Validation is not actually done below nor are any errors handled. I have
 	 * NOT included this for the current proof of concept. However, it is strongly
@@ -247,12 +247,12 @@ CODESTARTparse
 	 */
 
 	/* TIMESTAMP */
-	if(lenMsg >= 2 && p2parse[0] == '-' && p2parse[1] == ' ') {
+	if (lenMsg >= 2 && p2parse[0] == '-' && p2parse[1] == ' ') {
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		p2parse += 2;
 		lenMsg -= 2;
-	} else if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse, &lenMsg) == RS_RET_OK) {
-		if(pMsg->msgFlags & IGNDATE) {
+	} else if (datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg) == RS_RET_OK) {
+		if (pMsg->msgFlags & IGNDATE) {
 			/* we need to ignore the msg data, so simply copy over reception date */
 			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		}
@@ -262,48 +262,48 @@ CODESTARTparse
 	}
 
 	/* HOSTNAME */
-	if(bContParse) {
+	if (bContParse) {
 		parseRFCField(&p2parse, pBuf, &lenMsg);
 		MsgSetHOSTNAME(pMsg, pBuf, ustrlen(pBuf));
 	}
 
 	/* APP-NAME */
-	if(bContParse) {
+	if (bContParse) {
 		parseRFCField(&p2parse, pBuf, &lenMsg);
-		MsgSetAPPNAME(pMsg, (char*)pBuf);
+		MsgSetAPPNAME(pMsg, (char *)pBuf);
 	}
 
 	/* PROCID */
-	if(bContParse) {
+	if (bContParse) {
 		parseRFCField(&p2parse, pBuf, &lenMsg);
-		MsgSetPROCID(pMsg, (char*)pBuf);
+		MsgSetPROCID(pMsg, (char *)pBuf);
 	}
 
 	/* MSGID */
-	if(bContParse) {
+	if (bContParse) {
 		parseRFCField(&p2parse, pBuf, &lenMsg);
-		MsgSetMSGID(pMsg, (char*)pBuf);
+		MsgSetMSGID(pMsg, (char *)pBuf);
 	}
 
 	/* STRUCTURED-DATA */
-	if(bContParse) {
+	if (bContParse) {
 		parseRFCStructuredData(&p2parse, pBuf, &lenMsg);
-		MsgSetStructuredData(pMsg, (char*)pBuf);
+		MsgSetStructuredData(pMsg, (char *)pBuf);
 	}
 
 	/* MSG */
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 
 finalize_it:
-	if(pBuf != NULL)
+	if (pBuf != NULL)
 		free(pBuf);
 ENDparse
 
 
 BEGINmodExit
-CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    /* release what we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -311,17 +311,17 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_PMOD_QUERIES
+		CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(pmrfc5424)
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));

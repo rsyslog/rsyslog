@@ -42,8 +42,8 @@
 /* Initialize an existing linkedList_t structure
  * pKey destructor may be zero to take care of non-keyed lists.
  */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*),
-int (*pCmpOp)(void*,void*))
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void *), rsRetVal (*pKeyDestructor)(void *),
+    int (*pCmpOp)(void *, void *))
 {
 	assert(pThis != NULL);
 	assert(pEltDestructor != NULL);
@@ -58,7 +58,7 @@ int (*pCmpOp)(void*,void*))
 
 	return RS_RET_OK;
 };
-	
+
 
 /* llDestroyEltData - destroys a list element 
  * It is a separate function as the
@@ -74,9 +74,9 @@ static rsRetVal llDestroyElt(linkedList_t *pList, llElt_t *pElt)
 	/* we ignore errors during destruction, as we need to try
 	 * free the element in any case.
 	 */
-	if(pElt->pData != NULL)
+	if (pElt->pData != NULL)
 		pList->pEltDestruct(pElt->pData);
-	if(pElt->pKey != NULL)
+	if (pElt->pKey != NULL)
 		pList->pKeyDestruct(pElt->pKey);
 	free(pElt);
 	pList->iNumElts--; /* one less */
@@ -95,12 +95,12 @@ rsRetVal llDestroy(linkedList_t *pThis)
 	assert(pThis != NULL);
 
 	pElt = pThis->pRoot;
-	while(pElt != NULL) {
+	while (pElt != NULL) {
 		/* keep the list structure in a consistent state as
 		 * the destructor bellow may reference it again
 		 */
 		pThis->pRoot = pElt->pNext;
-		if(pElt->pNext == NULL)
+		if (pElt->pNext == NULL)
 			pThis->pLast = NULL;
 
 		/* we ignore errors during destruction, as we need to try
@@ -120,13 +120,13 @@ rsRetVal llDestroyRootElt(linkedList_t *pThis)
 {
 	DEFiRet;
 	llElt_t *pPrev;
-	
-	if(pThis->pRoot == NULL) {
+
+	if (pThis->pRoot == NULL) {
 		ABORT_FINALIZE(RS_RET_EMPTY_LIST);
 	}
 
 	pPrev = pThis->pRoot;
-	if(pPrev->pNext == NULL) {
+	if (pPrev->pNext == NULL) {
 		/* it was the only list element */
 		pThis->pLast = NULL;
 		pThis->pRoot = NULL;
@@ -162,7 +162,7 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
 
 	pElt = (pElt == NULL) ? pThis->pRoot : pElt->pNext;
 
-	if(pElt == NULL) {
+	if (pElt == NULL) {
 		iRet = RS_RET_END_OF_LINKEDLIST;
 	} else {
 		*ppUsr = pElt->pData;
@@ -184,7 +184,7 @@ rsRetVal llGetKey(llElt_t *pThis, void *ppData)
 	assert(pThis != NULL);
 	assert(ppData != NULL);
 
-	*(void**) ppData = pThis->pKey;
+	*(void **)ppData = pThis->pKey;
 
 	return RS_RET_OK;
 }
@@ -199,7 +199,7 @@ static rsRetVal llEltConstruct(llElt_t **ppThis, void *pKey, void *pData)
 
 	assert(ppThis != NULL);
 
-	if((pThis = (llElt_t*) calloc(1, sizeof(llElt_t))) == NULL) {
+	if ((pThis = (llElt_t *)calloc(1, sizeof(llElt_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -219,11 +219,11 @@ rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
 {
 	llElt_t *pElt;
 	DEFiRet;
-	
+
 	CHKiRet(llEltConstruct(&pElt, pKey, pData));
 
 	pThis->iNumElts++; /* one more */
-	if(pThis->pLast == NULL) {
+	if (pThis->pLast == NULL) {
 		pThis->pRoot = pElt;
 	} else {
 		pThis->pLast->pNext = pElt;
@@ -244,13 +244,13 @@ static rsRetVal llUnlinkElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPre
 {
 	assert(pElt != NULL);
 
-	if(pEltPrev == NULL) { /* root element? */
+	if (pEltPrev == NULL) { /* root element? */
 		pThis->pRoot = pElt->pNext;
 	} else { /* regular element */
 		pEltPrev->pNext = pElt->pNext;
 	}
 
-	if(pElt == pThis->pLast)
+	if (pElt == pThis->pLast)
 		pThis->pLast = pEltPrev;
 
 	return RS_RET_OK;
@@ -294,8 +294,8 @@ static rsRetVal llFindElt(linkedList_t *pThis, void *pKey, llElt_t **ppElt, llEl
 	assert(ppEltPrev != NULL);
 
 	pElt = pThis->pRoot;
-	while(pElt != NULL && bFound == 0) {
-		if(pThis->cmpOp(pKey, pElt->pKey) == 0)
+	while (pElt != NULL && bFound == 0) {
+		if (pThis->cmpOp(pKey, pElt->pKey) == 0)
 			bFound = 1;
 		else {
 			pEltPrev = pElt;
@@ -303,7 +303,7 @@ static rsRetVal llFindElt(linkedList_t *pThis, void *pKey, llElt_t **ppElt, llEl
 		}
 	}
 
-	if(bFound == 1) {
+	if (bFound == 1) {
 		*ppElt = pElt;
 		*ppEltPrev = pEltPrev;
 	} else
@@ -377,7 +377,7 @@ rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt)
  * If the called user function returns RS_RET_OK_DELETE_LISTENTRY the current element
  * is deleted.
  */
-rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam)
+rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void *, void *), void *pParam)
 {
 	DEFiRet;
 	rsRetVal iRetLL;
@@ -388,9 +388,9 @@ rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* 
 	assert(pThis != NULL);
 	assert(pFunc != NULL);
 
-	while((iRetLL = llGetNextElt(pThis, &llCookie, (void**)&pData)) == RS_RET_OK) {
+	while ((iRetLL = llGetNextElt(pThis, &llCookie, (void **)&pData)) == RS_RET_OK) {
 		iRet = pFunc(pData, pParam);
-		if(iRet == RS_RET_OK_DELETE_LISTENTRY) {
+		if (iRet == RS_RET_OK_DELETE_LISTENTRY) {
 			/* delete element */
 			CHKiRet(llUnlinkAndDelteElt(pThis, llCookie, llCookiePrev));
 			/* we need to revert back, as we have just deleted the current element.
@@ -404,7 +404,7 @@ rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* 
 		llCookiePrev = llCookie;
 	}
 
-	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
+	if (iRetLL != RS_RET_END_OF_LINKEDLIST)
 		iRet = iRetLL;
 
 finalize_it:

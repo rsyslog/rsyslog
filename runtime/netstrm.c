@@ -51,9 +51,9 @@
 #include "netstrm.h"
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(netstrms)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(netstrms);
 
 
 /* Standard-Constructor */
@@ -63,9 +63,9 @@ ENDobjConstruct(netstrm)
 
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(netstrm)
-//printf("destruct driver data %p\n", pThis->pDrvrData);
-	if(pThis->pDrvrData != NULL)
+	CODESTARTobjDestruct(netstrm)
+	    //printf("destruct driver data %p\n", pThis->pDrvrData);
+	    if (pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
 
@@ -123,9 +123,9 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	(*ppNew)->pDrvrData = pNewNsd;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		/* the close may be redundant, but that doesn't hurt... */
-		if(pNewNsd != NULL)
+		if (pNewNsd != NULL)
 			pThis->Drvr.Destruct(&pNewNsd);
 	}
 
@@ -140,8 +140,8 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal (*fAddLstn)(void *, netstrm_t *),
+    uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
 
@@ -170,7 +170,7 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-//printf("Rcv %p\n", pThis);
+	//printf("Rcv %p\n", pThis);
 	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
 	RETiRet;
 }
@@ -356,8 +356,8 @@ GetSock(netstrm_t *pThis, int *pSock)
 /* queryInterface function
  */
 BEGINobjQueryInterface(netstrm)
-CODESTARTobjQueryInterface(netstrm)
-	if(pIf->ifVersion != netstrmCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(netstrm) if (pIf->ifVersion != netstrmCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -394,9 +394,9 @@ ENDobjQueryInterface(netstrm)
 /* exit our class
  */
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(netstrm)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(netstrm)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)
 
@@ -409,7 +409,7 @@ BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(netstrm)
 /* vi:set ai:
  */

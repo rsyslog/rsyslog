@@ -35,10 +35,10 @@ typedef struct gcryfile_s *gcryfile;
 /* this describes a file, as far as libgcry is concerned */
 struct gcryfile_s {
 	gcry_cipher_hd_t chd; /* cypher handle */
-	size_t blkLength; /* size of low-level crypto block */
-	uchar *eiName; /* name of .encinfo file */
-	int fd; /* descriptor of .encinfo file (-1 if not open) */
-	char openMode; /* 'r': read, 'w': write */
+	size_t blkLength;     /* size of low-level crypto block */
+	uchar *eiName;	/* name of .encinfo file */
+	int fd;		      /* descriptor of .encinfo file (-1 if not open) */
+	char openMode;	/* 'r': read, 'w': write */
 	gcryctx ctx;
 	uchar *readBuf;
 	int16_t readBufIdx;
@@ -68,8 +68,8 @@ int rsgcryModename2Mode(char *const __restrict__ modename);
 int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 /* error states */
-#define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
-#define RSGCRYE_OOM 4	/* ran out of memory */
+#define RSGCRYE_EI_OPEN 1 /* error opening .encinfo file */
+#define RSGCRYE_OOM 4     /* ran out of memory */
 
 #define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
 #define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
@@ -80,8 +80,8 @@ int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 static inline void __attribute__((unused))
 gcryfileSetDeleteOnClose(gcryfile gf, const int val)
 {
-	if(gf != NULL)
+	if (gf != NULL)
 		gf->bDeleteOnClose = val;
 }
 
-#endif  /* #ifndef INCLUDED_LIBGCRY_H */
+#endif /* #ifndef INCLUDED_LIBGCRY_H */

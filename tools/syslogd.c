@@ -59,14 +59,14 @@
 #include <assert.h>
 
 #ifdef OS_SOLARIS
-#	include <errno.h>
-#	include <fcntl.h>
-#	include <stropts.h>
-#	include <sys/termios.h>
-#	include <sys/types.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stropts.h>
+#include <sys/termios.h>
+#include <sys/types.h>
 #else
-#	include <libgen.h>
-#	include <sys/errno.h>
+#include <libgen.h>
+#include <sys/errno.h>
 #endif
 
 #include <sys/ioctl.h>
@@ -76,11 +76,11 @@
 #include <grp.h>
 
 #ifdef HAVE_SYS_TIMESPEC_H
-# include <sys/timespec.h>
+#include <sys/timespec.h>
 #endif
 
 #ifdef HAVE_SYS_STAT_H
-#	include <sys/stat.h>
+#include <sys/stat.h>
 #endif
 
 #include <signal.h>
@@ -122,7 +122,7 @@ void rsyslogdDebugSwitch();
 void rsyslogdDoDie(int sig);
 
 
-#define LIST_DELIMITER	':'		/* delimiter between two hosts */
+#define LIST_DELIMITER ':' /* delimiter between two hosts */
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running. This code
  * contains some exits, but they are considered safe because they only happen
@@ -144,20 +144,21 @@ char **syslogd_crunch_list(char *list)
 	p = list;
 
 	/* strip off trailing delimiters */
-	while (p[strlen(p)-1] == LIST_DELIMITER) {
-		p[strlen(p)-1] = '\0';
+	while (p[strlen(p) - 1] == LIST_DELIMITER) {
+		p[strlen(p) - 1] = '\0';
 	}
 	/* cut off leading delimiters */
 	while (p[0] == LIST_DELIMITER) {
-               p++;
+		p++;
 	}
 
 	/* count delimiters to calculate elements */
-	for (count=i=0; p[i]; i++)
-		if (p[i] == LIST_DELIMITER) count++;
+	for (count = i = 0; p[i]; i++)
+		if (p[i] == LIST_DELIMITER)
+			count++;
 
-	if ((result = (char **)MALLOC(sizeof(char *) * (count+2))) == NULL) {
-		printf ("Sorry, can't get enough memory, exiting.\n");
+	if ((result = (char **)MALLOC(sizeof(char *) * (count + 2))) == NULL) {
+		printf("Sorry, can't get enough memory, exiting.\n");
 		exit(0); /* safe exit, because only called during startup */
 	}
 
@@ -167,23 +168,24 @@ char **syslogd_crunch_list(char *list)
 	 * so we don't have to care about this.
 	 */
 	count = 0;
-	while ((q=strchr(p, LIST_DELIMITER))) {
-		result[count] = (char *) MALLOC(q - p + 1);
+	while ((q = strchr(p, LIST_DELIMITER))) {
+		result[count] = (char *)MALLOC(q - p + 1);
 		if (result[count] == NULL) {
-			printf ("Sorry, can't get enough memory, exiting.\n");
+			printf("Sorry, can't get enough memory, exiting.\n");
 			exit(0); /* safe exit, because only called during startup */
 		}
 		strncpy(result[count], p, q - p);
 		result[count][q - p] = '\0';
-		p = q; p++;
+		p = q;
+		p++;
 		count++;
 	}
-	if ((result[count] = \
-	     (char *)MALLOC(strlen(p) + 1)) == NULL) {
-		printf ("Sorry, can't get enough memory, exiting.\n");
+	if ((result[count] =
+		    (char *)MALLOC(strlen(p) + 1)) == NULL) {
+		printf("Sorry, can't get enough memory, exiting.\n");
 		exit(0); /* safe exit, because only called during startup */
 	}
-	strcpy(result[count],p);
+	strcpy(result[count], p);
 	result[++count] = NULL;
 
 	return result;
@@ -197,7 +199,7 @@ void untty(void)
 	int i;
 	pid_t pid;
 
-	if(!Debug) {
+	if (!Debug) {
 		/* Peng Haitao <penght@cn.fujitsu.com> contribution */
 		pid = getpid();
 		if (setpgid(pid, pid) < 0) {
@@ -206,16 +208,16 @@ void untty(void)
 		}
 		/* end Peng Haitao <penght@cn.fujitsu.com> contribution */
 
-		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
+		i = open(_PATH_TTY, O_RDWR | O_CLOEXEC);
 		if (i >= 0) {
-#			if !defined(__hpux)
-				(void) ioctl(i, (int) TIOCNOTTY, NULL);
-#			else
-				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
-				/* actually, HP UX should have setsid, so the code directly above should
+#if !defined(__hpux)
+			(void)ioctl(i, (int)TIOCNOTTY, NULL);
+#else
+/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
+/* actually, HP UX should have setsid, so the code directly above should
 				 * trigger. So the actual question is why it doesn't do that...
 				 */
-#			endif
+#endif
 			close(i);
 		}
 	}

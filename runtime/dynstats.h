@@ -54,7 +54,7 @@ struct dynstats_bucket_s {
 	  so in case it is accessed within (ttl - 2 * ttl) time-period we can re-store the accumulator value from this */
 	struct dynstats_ctr_s *survivor_ctrs;
 	htable *survivor_table;
-	
+
 	uint32_t maxCardinality;
 	uint32_t metricCount;
 	pthread_mutex_t mutMetricCount;
@@ -73,8 +73,8 @@ struct dynstats_buckets_s {
 
 rsRetVal dynstats_initCnf(dynstats_buckets_t *b);
 rsRetVal dynstats_processCnf(struct cnfobj *o);
-dynstats_bucket_t * dynstats_findBucket(const uchar* name);
-rsRetVal dynstats_inc(dynstats_bucket_t *bucket, uchar* metric);
+dynstats_bucket_t *dynstats_findBucket(const uchar *name);
+rsRetVal dynstats_inc(dynstats_bucket_t *bucket, uchar *metric);
 void dynstats_destroyAllBuckets(void);
 void dynstats_resetExpired(void);
 rsRetVal dynstatsClassInit(void);

@@ -30,7 +30,7 @@
 #include <sys/socket.h>
 #if defined(__FreeBSD__)
 #include <netinet/in.h>
-#endif 
+#endif
 
 static char *targetIP = "127.0.0.1";
 static int targetPort = 13500;
@@ -45,24 +45,24 @@ int openConn(int *fd)
 	int port;
 	int retries = 0;
 
-	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket()");
 		exit(1);
 	}
 
 	port = targetPort;
-	memset((char *) &addr, 0, sizeof(addr));
+	memset((char *)&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	if(inet_aton(targetIP, &addr.sin_addr)==0) {
+	if (inet_aton(targetIP, &addr.sin_addr) == 0) {
 		fprintf(stderr, "inet_aton() failed\n");
 		exit(1);
 	}
-	while(1) { /* loop broken inside */
-		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+	while (1) { /* loop broken inside */
+		if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
 			break;
 		} else {
-			if(retries++ == 50) {
+			if (retries++ == 50) {
 				perror("connect()");
 				fprintf(stderr, "connect() failed\n");
 				exit(1);
@@ -71,8 +71,8 @@ int openConn(int *fd)
 				usleep(100000); /* ms = 1000 us! */
 			}
 		}
-	} 
-	if(retries > 0) {
+	}
+	if (retries > 0) {
 		fprintf(stderr, "connection established.\n");
 	}
 
@@ -89,7 +89,7 @@ sendCmd(int fd, char *buf, int len)
 	int lenSend;
 
 	lenSend = send(fd, buf, len, 0);
-	if(lenSend != len) {
+	if (lenSend != len) {
 		perror("sending string");
 		exit(1);
 	}
@@ -104,7 +104,7 @@ waitRsp(int fd, char *buf, int len)
 	int ret;
 
 	ret = recv(fd, buf, len - 1, 0);
-	if(ret < 0) {
+	if (ret < 0) {
 		perror("receiving response");
 		exit(1);
 	}
@@ -125,8 +125,8 @@ doProcessing()
 	char line[2048];
 
 	openConn(&fd);
-	while(!feof(stdin)) {
-		if(fgets(line, sizeof(line) - 1, stdin) == NULL)
+	while (!feof(stdin)) {
+		if (fgets(line, sizeof(line) - 1, stdin) == NULL)
 			break;
 		len = strlen(line);
 		sendCmd(fd, line, len);
@@ -147,15 +147,18 @@ int main(int argc, char *argv[])
 	int ret = 0;
 	int opt;
 
-	while((opt = getopt(argc, argv, "t:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "t:p:")) != -1) {
 		switch (opt) {
-		case 't':	targetIP = optarg;
-				break;
-		case 'p':	targetPort = atoi(optarg);
-				break;
-		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
-				exit (1);
-				break;
+		case 't':
+			targetIP = optarg;
+			break;
+		case 'p':
+			targetPort = atoi(optarg);
+			break;
+		default:
+			printf("invalid option '%c' or value missing - terminating...\n", opt);
+			exit(1);
+			break;
 		}
 	}
 

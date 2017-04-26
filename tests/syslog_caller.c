@@ -38,8 +38,10 @@
 #include <liblogging/stdlog.h>
 #endif
 
-static enum { FMT_NATIVE, FMT_SYSLOG_INJECT_L, FMT_SYSLOG_INJECT_C
-	} fmt = FMT_NATIVE;
+static enum { FMT_NATIVE,
+	FMT_SYSLOG_INJECT_L,
+	FMT_SYSLOG_INJECT_C
+} fmt = FMT_NATIVE;
 
 static void usage(void)
 {
@@ -53,7 +55,7 @@ static void usage(void)
 static void
 genMsg(char *buf, const int sev, const int iRun)
 {
-	switch(fmt) {
+	switch (fmt) {
 	case FMT_NATIVE:
 		sprintf(buf, "test message nbr %d, severity=%d", iRun, sev);
 		break;
@@ -82,65 +84,70 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_LIBLOGGING_STDLOG
 	stdlog_init(STDLOG_USE_DFLT_OPTS);
-	while((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
+	while ((opt = getopt(argc, argv, "m:s:C:f:")) != -1) {
 #else
-	while((opt = getopt(argc, argv, "m:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "m:s:")) != -1) {
 #endif
 		switch (opt) {
-		case 's':	if(*optarg == 'r') {
-					bRollingSev = 1;
-					sev = 0;
-				} else
+		case 's':
+			if (*optarg == 'r') {
+				bRollingSev = 1;
+				sev = 0;
+			} else
 #ifdef HAVE_LIBLOGGING_STDLOG
-					sev = atoi(optarg) % 8;
+				sev = atoi(optarg) % 8;
 #else
-					sev = atoi(optarg);
+				sev = atoi(optarg);
 #endif
-				break;
-		case 'm':	msgs = atoi(optarg);
-				break;
+			break;
+		case 'm':
+			msgs = atoi(optarg);
+			break;
 #ifdef HAVE_LIBLOGGING_STDLOG
-		case 'C':	chandesc = optarg;
-				break;
-		case 'f':	if(!strcmp(optarg, "syslog_inject-l"))
-					fmt = FMT_SYSLOG_INJECT_L;
-				else if(!strcmp(optarg, "syslog_inject-c"))
-					fmt = FMT_SYSLOG_INJECT_C;
-				else
-					usage();
-				break;
+		case 'C':
+			chandesc = optarg;
+			break;
+		case 'f':
+			if (!strcmp(optarg, "syslog_inject-l"))
+				fmt = FMT_SYSLOG_INJECT_L;
+			else if (!strcmp(optarg, "syslog_inject-c"))
+				fmt = FMT_SYSLOG_INJECT_C;
+			else
+				usage();
+			break;
 #endif
-		default:	usage();
+		default:
+			usage();
 #ifdef HAVE_LIBLOGGING_STDLOG
-				exit(1);
+			exit(1);
 #endif
-				break;
+			break;
 		}
 	}
 
 #ifdef HAVE_LIBLOGGING_STDLOG
-	if((logchan = stdlog_open(argv[0], 0, STDLOG_LOCAL1, chandesc)) == NULL) {
+	if ((logchan = stdlog_open(argv[0], 0, STDLOG_LOCAL1, chandesc)) == NULL) {
 		fprintf(stderr, "error opening logchannel '%s': %s\n",
-			chandesc, strerror(errno));
+		    chandesc, strerror(errno));
 		exit(1);
 	}
 #endif
-	for(i = 0 ; i < msgs ; ++i) {
+	for (i = 0; i < msgs; ++i) {
 #ifdef HAVE_LIBLOGGING_STDLOG
 		genMsg(msgbuf, sev, i);
-		if(stdlog_log(logchan, sev, "%s", msgbuf) != 0) {
+		if (stdlog_log(logchan, sev, "%s", msgbuf) != 0) {
 			perror("error writing log record");
 			exit(1);
 		}
 #else
 		syslog(sev % 8, "test message nbr %d, severity=%d", i, sev % 8);
 #endif
-		if(bRollingSev)
+		if (bRollingSev)
 #ifdef HAVE_LIBLOGGING_STDLOG
 			sev = (sev + 1) % 8;
 #else
-		sev++;
+			sev++;
 #endif
 	}
-	return(0);
+	return (0);
 }

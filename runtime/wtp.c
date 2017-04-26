@@ -41,7 +41,7 @@
 #include <errno.h>
 #include <atomic.h>
 #ifdef HAVE_SYS_PRCTL_H
-#  include <sys/prctl.h>
+#include <sys/prctl.h>
 #endif
 
 /// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
@@ -59,8 +59,8 @@
 #include "glbl.h"
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
 
 /* forward-definitions */
 
@@ -69,17 +69,15 @@ DEFobjCurrIf(glbl)
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static uchar *
-wtpGetDbgHdr(wtp_t *pThis)
+static uchar *wtpGetDbgHdr(wtp_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	if(pThis->pszDbgHdr == NULL)
-		return (uchar*) "wtp"; /* should not normally happen */
+	if (pThis->pszDbgHdr == NULL)
+		return (uchar *)"wtp"; /* should not normally happen */
 	else
 		return pThis->pszDbgHdr;
 }
-
 
 
 /* Not implemented dummy function for constructor */
@@ -91,7 +89,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdInitDone, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	pthread_attr_init(&pThis->attrThrd);
-	/* Set thread scheduling policy to default */
+/* Set thread scheduling policy to default */
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
 	pthread_attr_setschedpolicy(&pThis->attrThrd, default_thr_sched_policy);
 	pthread_attr_setschedparam(&pThis->attrThrd, &default_sched_param);
@@ -99,10 +97,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 #endif
 	pthread_attr_setdetachstate(&pThis->attrThrd, PTHREAD_CREATE_DETACHED);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
-	pThis->pfChkStopWrkr = (rsRetVal (*)(void*,int))NotImplementedDummy;
-	pThis->pfGetDeqBatchSize = (rsRetVal (*)(void*,int*))NotImplementedDummy;
-	pThis->pfDoWork = (rsRetVal (*)(void*,void*))NotImplementedDummy;
-	pThis->pfObjProcessed = (rsRetVal (*)(void*,wti_t*))NotImplementedDummy;
+	pThis->pfChkStopWrkr = (rsRetVal(*)(void *, int))NotImplementedDummy;
+	pThis->pfGetDeqBatchSize = (rsRetVal(*)(void *, int *))NotImplementedDummy;
+	pThis->pfDoWork = (rsRetVal(*)(void *, void *))NotImplementedDummy;
+	pThis->pfObjProcessed = (rsRetVal(*)(void *, wti_t *))NotImplementedDummy;
 	INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
 	INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)
@@ -123,21 +121,21 @@ wtpConstructFinalize(wtp_t *pThis)
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	DBGPRINTF("%s: finalizing construction of worker thread pool (numworkerThreads %d)\n",
-		  wtpGetDbgHdr(pThis), pThis->iNumWorkerThreads);
+	    wtpGetDbgHdr(pThis), pThis->iNumWorkerThreads);
 	/* alloc and construct workers - this can only be done in finalizer as we previously do
 	 * not know the max number of workers
 	 */
-	CHKmalloc(pThis->pWrkr = MALLOC(sizeof(wti_t*) * pThis->iNumWorkerThreads));
-	
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+	CHKmalloc(pThis->pWrkr = MALLOC(sizeof(wti_t *) * pThis->iNumWorkerThreads));
+
+	for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
-		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s/w%d", wtpGetDbgHdr(pThis), i);
+		lenBuf = snprintf((char *)pszBuf, sizeof(pszBuf), "%s/w%d", wtpGetDbgHdr(pThis), i);
 		CHKiRet(wtiSetDbgHdr(pWti, pszBuf, lenBuf));
 		CHKiRet(wtiSetpWtp(pWti, pThis));
 		CHKiRet(wtiConstructFinalize(pWti));
 	}
-		
+
 
 finalize_it:
 	RETiRet;
@@ -147,9 +145,9 @@ finalize_it:
 /* Destructor */
 BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
-CODESTARTobjDestruct(wtp)
-	/* destruct workers */
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
+	CODESTARTobjDestruct(wtp)
+	    /* destruct workers */
+	    for (i = 0; i < pThis->iNumWorkerThreads; ++i)
 		wtiDestruct(&pThis->pWrkr[i]);
 
 	free(pThis->pWrkr);
@@ -199,16 +197,16 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockUsrMutex)
 	/* we need a consistent value, but it doesn't really matter if it is changed
 	 * right after the fetch - then we simply do one more iteration in the worker
 	 */
-	wtpState = (wtpState_t) ATOMIC_FETCH_32BIT((int*)&pThis->wtpState, &pThis->mutWtpState);
+	wtpState = (wtpState_t)ATOMIC_FETCH_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
 
-	if(wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+	if (wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
-	} else if(wtpState == wtpState_SHUTDOWN) {
+	} else if (wtpState == wtpState_SHUTDOWN) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
 	}
 
 	/* try customer handler if one was set and we do not yet have a definite result */
-	if(pThis->pfChkStopWrkr != NULL) {
+	if (pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
 
@@ -239,7 +237,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	d_pthread_mutex_lock(pThis->pmutUsr);
 	wtpSetState(pThis, tShutdownCmd);
 	/* awake workers in retry loop */
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+	for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
 		pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
 		wtiWakeupThrd(pThis->pWrkr[i]);
 	}
@@ -249,27 +247,26 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	d_pthread_mutex_lock(&pThis->mutWtp);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	bTimedOut = 0;
-	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
+	while (pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
 		DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n",
-			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
-			   ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+		    wtpGetDbgHdr(pThis), timeoutVal(ptTimeout),
+		    ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
-		if(d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
+		if (d_pthread_cond_timedwait(&pThis->condThrdTrm, &pThis->mutWtp, ptTimeout) != 0) {
 			DBGPRINTF("%s: timeout waiting on worker thread termination\n", wtpGetDbgHdr(pThis));
-			bTimedOut = 1;	/* we exit the loop on timeout */
+			bTimedOut = 1; /* we exit the loop on timeout */
 		}
 
 		/* awake workers in retry loop */
-		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+		for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
 			wtiWakeupThrd(pThis->pWrkr[i]);
 		}
-
 	}
 	pthread_cleanup_pop(1);
 
-	if(bTimedOut)
+	if (bTimedOut)
 		iRet = RS_RET_TIMED_OUT;
-	
+
 	RETiRet;
 }
 #if !defined(_AIX)
@@ -289,7 +286,7 @@ wtpCancelAll(wtp_t *pThis)
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	/* go through all workers and cancel those that are active */
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+	for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
 		wtiCancelThrd(pThis->pWrkr[i]);
 	}
 
@@ -308,7 +305,7 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	wtp_t *pThis;
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pWti, wti);
+	    ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -317,8 +314,8 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), (unsigned long) pWti,
-		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+	    wtpGetDbgHdr(pThis), (unsigned long)pWti,
+	    ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 	ENDfunc
 }
@@ -330,24 +327,24 @@ wtpWrkrExecCleanup(wti_t *pWti)
 static void
 wtpWrkrExecCancelCleanup(void *arg)
 {
-	wti_t *pWti = (wti_t*) arg;
+	wti_t *pWti = (wti_t *)arg;
 	wtp_t *pThis;
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pWti, wti);
+	    ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 	DBGPRINTF("%s: Worker thread %lx requested to be cancelled.\n",
-		  wtpGetDbgHdr(pThis), (unsigned long) pWti);
+	    wtpGetDbgHdr(pThis), (unsigned long)pWti);
 
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
-	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
+	    /* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
 	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
-	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+	    pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 }
 
 
@@ -357,20 +354,20 @@ wtpWrkrExecCancelCleanup(void *arg)
  */
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wempty-body"
-#endif 
+#endif
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
-	wti_t *pWti = (wti_t*) arg;
+	wti_t *pWti = (wti_t *)arg;
 	wtp_t *pThis;
 	sigset_t sigSet;
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+#if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar *pszDbgHdr;
 	uchar thrdName[32] = "rs:";
-#	endif
+#endif
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pWti, wti);
+	    ISOBJ_TYPE_assert(pWti, wti);
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -390,33 +387,33 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 #endif /*AIXPORT*/
 
 
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+#if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	pszDbgHdr = wtpGetDbgHdr(pThis);
-	ustrncpy(thrdName+3, pszDbgHdr, 20);
-	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+	ustrncpy(thrdName + 3, pszDbgHdr, 20);
+	if (prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", wtpGetDbgHdr(pThis));
 	}
-	dbgOutputTID((char*)thrdName);
-#	endif
+	dbgOutputTID((char *)thrdName);
+#endif
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
 
-        /* let the parent know we're done with initialization */
-        d_pthread_mutex_lock(&pThis->mutWtp);
-        pthread_cond_broadcast(&pThis->condThrdInitDone);
-        d_pthread_mutex_unlock(&pThis->mutWtp);
+	/* let the parent know we're done with initialization */
+	d_pthread_mutex_lock(&pThis->mutWtp);
+	pthread_cond_broadcast(&pThis->condThrdInitDone);
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
-	/* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
+	    /* NOTE: we must call ENDfunc FIRST, because otherwise the schedule may activate the main
 	 * thread after the broadcast, which could destroy the debug class, resulting in a potential
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
-	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+	    pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
 	pthread_exit(0);
 }
 #if !defined(_AIX)
@@ -438,32 +435,32 @@ wtpStartWrkr(wtp_t *pThis)
 	d_pthread_mutex_lock(&pThis->mutWtp);
 
 	/* find free spot in thread table. */
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-		if(wtiGetState(pThis->pWrkr[i]) == WRKTHRD_STOPPED) {
+	for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
+		if (wtiGetState(pThis->pWrkr[i]) == WRKTHRD_STOPPED) {
 			break;
 		}
 	}
 
-	if(i == pThis->iNumWorkerThreads)
+	if (i == pThis->iNumWorkerThreads)
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 
-	if(i == 0 || pThis->toWrkShutdown == -1) {
+	if (i == 0 || pThis->toWrkShutdown == -1) {
 		wtiSetAlwaysRunning(pThis->pWrkr[i]);
 	}
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
-	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
+	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void *)pWti);
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), iState,
-		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+	    wtpGetDbgHdr(pThis), iState,
+	    ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
-        /* wait for the new thread to initialize its signal mask and
+	/* wait for the new thread to initialize its signal mask and
          * cancelation cleanup handler before proceeding
          */
-        d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
+	d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);
 
 finalize_it:
 	d_pthread_mutex_unlock(&pThis->mutWtp);
@@ -488,24 +485,24 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	if(nMaxWrkr == 0)
+	if (nMaxWrkr == 0)
 		FINALIZE;
 
-	if(nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
+	if (nMaxWrkr > pThis->iNumWorkerThreads) /* limit to configured maximum */
 		nMaxWrkr = pThis->iNumWorkerThreads;
 
 	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
-	if(nMissing > 0) {
+	if (nMissing > 0) {
 		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n",
-			  wtpGetDbgHdr(pThis), nMissing);
+		    wtpGetDbgHdr(pThis), nMissing);
 		/* start the rqtd nbr of workers */
-		for(i = 0 ; i < nMissing ; ++i) {
+		for (i = 0; i < nMissing; ++i) {
 			CHKiRet(wtpStartWrkr(pThis));
 		}
 	} else {
 		/* we have needed number of workers, but they may be sleeping */
-		for(i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
+		for (i = 0, nRunning = 0; i < pThis->iNumWorkerThreads && nRunning < nMaxWrkr; ++i) {
 			if (wtiGetState(pThis->pWrkr[i]) != WRKTHRD_STOPPED) {
 				pthread_cond_signal(&pThis->pWrkr[i]->pcondBusy);
 				nRunning++;
@@ -513,7 +510,7 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 		}
 	}
 
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -521,39 +518,39 @@ finalize_it:
 
 /* some simple object access methods */
 DEFpropSetMeth(wtp, toWrkShutdown, long)
-DEFpropSetMeth(wtp, wtpState, wtpState_t)
-DEFpropSetMeth(wtp, iNumWorkerThreads, int)
-DEFpropSetMeth(wtp, pUsr, void*)
-DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
-DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
-DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
-DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
-DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*))
-DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
+    DEFpropSetMeth(wtp, wtpState, wtpState_t)
+	DEFpropSetMeth(wtp, iNumWorkerThreads, int)
+	    DEFpropSetMeth(wtp, pUsr, void *)
+		DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
+		    DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal (*pVal)(void *, int))
+			DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal (*pVal)(void *))
+			    DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal (*pVal)(void *, int *))
+				DEFpropSetMethFP(wtp, pfDoWork, rsRetVal (*pVal)(void *, void *))
+				    DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal (*pVal)(void *, wti_t *))
 
 
-/* set the debug header message
+    /* set the debug header message
  * The passed-in string is duplicated. So if the caller does not need
  * it any longer, it must free it. Must be called only before object is finalized.
  * rgerhards, 2008-01-09
  */
-rsRetVal
-wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
+    rsRetVal
+    wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 	assert(pszMsg != NULL);
-	
-	if(lenMsg < 1)
+
+	if (lenMsg < 1)
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
-	if(pThis->pszDbgHdr != NULL) {
+	if (pThis->pszDbgHdr != NULL) {
 		free(pThis->pszDbgHdr);
 		pThis->pszDbgHdr = NULL;
 	}
 
-	if((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
+	if ((pThis->pszDbgHdr = MALLOC(lenMsg + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	memcpy(pThis->pszDbgHdr, pszMsg, lenMsg + 1); /* always think about the \0! */
@@ -568,9 +565,9 @@ static rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 /* exit our class
  */
 BEGINObjClassExit(wtp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsdsel_gtls)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
+	CODESTARTObjClassExit(nsdsel_gtls)
+	    /* release objects we no longer need */
+	    objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(wtp)
 
 

@@ -69,71 +69,70 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
+	rsconf_t *pConf; /* our overall config object */
 };
-static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;  /* modConf ptr to use for the current exec process */
 
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "appname", eCmdHdlrGetWord, 0 },
-	{ "key", eCmdHdlrGetWord, 0 },
-	{ "value", eCmdHdlrGetWord, 0 },
+    {"appname", eCmdHdlrGetWord, 0},
+    {"key", eCmdHdlrGetWord, 0},
+    {"value", eCmdHdlrGetWord, 0},
 };
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+	actpdescr};
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
+	CODESTARTbeginCnfLoad
+	    loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+	CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+	CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
-	runModConf = pModConf;
+	CODESTARTactivateCnf
+	    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+	CODESTARTfreeCnf
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
-	pthread_mutex_init(&pData->mut, NULL);
+	CODESTARTcreateInstance
+	    pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+	CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+	CODESTARTfreeInstance
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 static inline void
@@ -143,7 +142,7 @@ setInstParamDefaults(instanceData *pData)
 
 	pData->pszAppName = NULL;
 	for (i = 0; i < SEVERITY_COUNT; i++)
-	        pData->severity[i] = 0;
+		pData->severity[i] = 0;
 	pData->pszKey = NULL;
 	pData->pszValue = NULL;
 	pData->valueCounter = 0;
@@ -165,63 +164,65 @@ key_equals_fn(void *k1, void *k2)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
-	DBGPRINTF("newActInst (mmcount)\n");
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	CODESTARTnewActInst
+	    DBGPRINTF("newActInst (mmcount)\n");
+	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+	    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < actpblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "appname")) {
+		if (!strcmp(actpblk.descr[i].name, "appname")) {
 			pData->pszAppName = es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;
 		}
-		if(!strcmp(actpblk.descr[i].name, "key")) {
+		if (!strcmp(actpblk.descr[i].name, "key")) {
 			pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;
 		}
-		if(!strcmp(actpblk.descr[i].name, "value")) {
+		if (!strcmp(actpblk.descr[i].name, "value")) {
 			pData->pszValue = es_str2cstr(pvals[i].val.d.estr, NULL);
 			continue;
 		}
 		dbgprintf("mmcount: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+			  "param '%s'\n",
+		    actpblk.descr[i].name);
 	}
 
-	if(pData->pszAppName == NULL) {
+	if (pData->pszAppName == NULL) {
 		dbgprintf("mmcount: action requires a appname");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	if(pData->pszKey != NULL && pData->pszValue == NULL) {
-		if(NULL == (pData->ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL))) {
+	if (pData->pszKey != NULL && pData->pszValue == NULL) {
+		if (NULL == (pData->ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL))) {
 			DBGPRINTF("mmcount: error creating hash table!\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+	CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 static int *
-getCounter(struct hashtable *ht, char *str) {
+getCounter(struct hashtable *ht, char *str)
+{
 	unsigned int key;
 	int *pCounter;
 	unsigned int *pKey;
@@ -230,26 +231,26 @@ getCounter(struct hashtable *ht, char *str) {
 	   as key to reduce memory usage */
 	key = hash_from_string(str);
 	pCounter = hashtable_search(ht, &key);
-	if(pCounter) {
+	if (pCounter) {
 		return pCounter;
 	}
 
 	/* counter is not found for the str, so add new entry and
 	   return the counter */
-	if(NULL == (pKey = (unsigned int*)malloc(sizeof(unsigned int)))) {
+	if (NULL == (pKey = (unsigned int *)malloc(sizeof(unsigned int)))) {
 		DBGPRINTF("mmcount: memory allocation for key failed\n");
 		return NULL;
 	}
 	*pKey = key;
 
-	if(NULL == (pCounter = (int*)malloc(sizeof(int)))) {
+	if (NULL == (pCounter = (int *)malloc(sizeof(int)))) {
 		DBGPRINTF("mmcount: memory allocation for value failed\n");
 		free(pKey);
 		return NULL;
 	}
 	*pCounter = 0;
 
-	if(!hashtable_insert(ht, pKey, pCounter)) {
+	if (!hashtable_insert(ht, pKey, pCounter)) {
 		DBGPRINTF("mmcount: inserting element into hashtable failed\n");
 		free(pKey);
 		free(pCounter);
@@ -267,19 +268,19 @@ BEGINdoAction
 	char *pszValue;
 	int *pCounter;
 	instanceData *const pData = pWrkrData->pData;
-CODESTARTdoAction
-	pMsg = (smsg_t*) ppString[0];
+	CODESTARTdoAction
+	    pMsg = (smsg_t *)ppString[0];
 	appname = getAPPNAME(pMsg, LOCK_MUTEX);
 
 	pthread_mutex_lock(&pData->mut);
-	if(0 != strcmp(appname, pData->pszAppName)) {
+	if (0 != strcmp(appname, pData->pszAppName)) {
 		/* we are not working for this appname. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	if(!pData->pszKey) {
+	if (!pData->pszKey) {
 		/* no key given for count, so we count severity */
-		if(pMsg->iSeverity < SEVERITY_COUNT) {
+		if (pMsg->iSeverity < SEVERITY_COUNT) {
 			pData->severity[pMsg->iSeverity]++;
 			json = json_object_new_int(pData->severity[pMsg->iSeverity]);
 		}
@@ -288,20 +289,20 @@ CODESTARTdoAction
 
 	/* key is given, so get the property json */
 	msgPropDescr_t pProp;
-	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
+	msgPropDescrFill(&pProp, (uchar *)pData->pszKey, strlen(pData->pszKey));
 	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
 	msgPropDescrDestruct(&pProp);
-	if(localRet != RS_RET_OK) {
+	if (localRet != RS_RET_OK) {
 		/* key not found in the message. nothing to do */
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
 	/* key found, so get the value */
-	pszValue = (char*)json_object_get_string(keyjson);
+	pszValue = (char *)json_object_get_string(keyjson);
 
-	if(pData->pszValue) {
+	if (pData->pszValue) {
 		/* value also given for count */
-		if(!strcmp(pszValue, pData->pszValue)) {
+		if (!strcmp(pszValue, pData->pszValue)) {
 			/* count for (value and key and appname) matched */
 			pData->valueCounter++;
 			json = json_object_new_int(pData->valueCounter);
@@ -311,55 +312,54 @@ CODESTARTdoAction
 
 	/* value is not given, so we count for each value of given key */
 	pCounter = getCounter(pData->ht, pszValue);
-	if(pCounter) {
+	if (pCounter) {
 		(*pCounter)++;
 		json = json_object_new_int(*pCounter);
 	}
 finalize_it:
 	pthread_mutex_unlock(&pData->mut);
-	if(estr) {
+	if (estr) {
 		es_deleteStr(estr);
 	}
 
-	if(json) {
+	if (json) {
 		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json, 0, 0);
 	}
 ENDdoAction
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":mmcount:", sizeof(":mmcount:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (strncmp((char *)p, ":mmcount:", sizeof(":mmcount:") - 1))
+	{
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"mmcount supports only v6+ config format, use: "
-			"action(type=\"mmcount\" ...)");
+		    "mmcount supports only v6+ config format, use: "
+		    "action(type=\"mmcount\" ...)");
 	}
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+			CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
-
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("mmcount: module compiled with rsyslog version %s.\n", VERSION);
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    DBGPRINTF("mmcount: module compiled with rsyslog version %s.\n", VERSION);
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit

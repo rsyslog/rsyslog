@@ -26,9 +26,9 @@
 #include <regex.h>
 #include "typedefs.h"
 
-#define LOG_NFACILITIES 24+1 /* we copy&paste this as including rsyslog.h gets us in off64_t trouble... :-( */
+#define LOG_NFACILITIES 24 + 1 /* we copy&paste this as including rsyslog.h gets us in off64_t trouble... :-( */
 #define CNFFUNC_MAX_ARGS 32
-	/**< maximum number of arguments that any function can have (among
+/**< maximum number of arguments that any function can have (among
 	 *   others, this is used to size data structures).
 	 */
 
@@ -49,7 +49,7 @@ enum cnfobjType {
 	CNFOBJ_INVALID = 0
 };
 
-const char* cnfobjType2str(enum cnfobjType ot);
+const char *cnfobjType2str(enum cnfobjType ot);
 
 /* a variant type, for example used for expression evaluation
  * 2011-07-15/rger: note that there exists a "legacy" object var,
@@ -58,7 +58,7 @@ const char* cnfobjType2str(enum cnfobjType ot);
  * to avoid unnecessary complexity during development. TODO: in the long
  * term, var shall be replaced by struct svar.
  */
-struct svar{
+struct svar {
 	union {
 		es_str_t *estr;
 		struct cnfarray *ar;
@@ -83,11 +83,11 @@ struct objlst {
 };
 
 struct nvlst {
-  struct nvlst *next;
-  es_str_t *name;
-  struct svar val;
-  unsigned char bUsed;
-  	/**< was this node used during config processing? If not, this
+	struct nvlst *next;
+	es_str_t *name;
+	struct svar val;
+	unsigned char bUsed;
+	/**< was this node used during config processing? If not, this
 	 *   indicates an error. After all, the user specified a setting
 	 *   that the software does not know.
 	 */
@@ -111,7 +111,7 @@ struct nvlst {
 #define S_PROPFILT 4002
 #define S_IF 4003
 #define S_ACT 4004
-#define S_NOP 4005	/* usually used to disable some statement */
+#define S_NOP 4005 /* usually used to disable some statement */
 #define S_SET 4006
 #define S_UNSET 4007
 #define S_CALL 4008
@@ -119,8 +119,11 @@ struct nvlst {
 #define S_RELOAD_LOOKUP_TABLE 4010
 #define S_CALL_INDIRECT 4011
 
-enum cnfFiltType { CNFFILT_NONE, CNFFILT_PRI, CNFFILT_PROP, CNFFILT_SCRIPT };
-const char* cnfFiltType2str(const enum cnfFiltType filttype);
+enum cnfFiltType { CNFFILT_NONE,
+	CNFFILT_PRI,
+	CNFFILT_PROP,
+	CNFFILT_SCRIPT };
+const char *cnfFiltType2str(const enum cnfFiltType filttype);
 
 
 struct cnfstmt {
@@ -144,33 +147,33 @@ struct cnfstmt {
 		struct {
 			es_str_t *name;
 			struct cnfstmt *stmt;
-			ruleset_t *ruleset;	/* non-NULL if the ruleset has a queue assigned */
+			ruleset_t *ruleset; /* non-NULL if the ruleset has a queue assigned */
 		} s_call;
 		struct {
 			struct cnfexpr *expr;
 		} s_call_ind;
 		struct {
-			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
+			uchar pmask[LOG_NFACILITIES + 1]; /* priority mask */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_prifilt;
 		struct {
 			fiop_t operation;
-			regex_t *regex_cache;/* cache for compiled REs, if used */
-			struct cstr_s *pCSCompValue;/* value to "compare" against */
+			regex_t *regex_cache;	/* cache for compiled REs, if used */
+			struct cstr_s *pCSCompValue; /* value to "compare" against */
 			sbool isNegated;
 			msgPropDescr_t prop; /* requested property */
 			struct cnfstmt *t_then;
 			struct cnfstmt *t_else;
 		} s_propfilt;
 		struct action_s *act;
-        struct {
+		struct {
 			struct cnfitr *iter;
 			struct cnfstmt *body;
 		} s_foreach;
-        struct {
+		struct {
 			lookup_ref_t *table;
-            uchar *table_name;
+			uchar *table_name;
 			uchar *stub_value;
 		} s_reload_lookup_table;
 	} d;
@@ -183,8 +186,8 @@ struct cnfexpr {
 };
 
 struct cnfitr {
-    char* var;
-    struct cnfexpr* collection;
+	char *var;
+	struct cnfexpr *collection;
 };
 
 struct cnfnumval {
@@ -217,7 +220,7 @@ struct cnffparamlst {
 
 enum cnffuncid {
 	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
-	CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
+	CNFFUNC_NAME = 1,    /**< use name to call function (for future use) */
 	CNFFUNC_STRLEN,
 	CNFFUNC_GETENV,
 	CNFFUNC_TOLOWER,
@@ -242,7 +245,7 @@ struct cnffunc {
 	es_str_t *fname;
 	unsigned short nParams;
 	enum cnffuncid fID; /* function ID for built-ins, 0 means use name */
-	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
+	void *funcdata;     /* global data for function-specific use (e.g. compiled regex) */
 	uint8_t destructable_funcdata;
 	struct cnfexpr *expr[];
 };
@@ -262,14 +265,14 @@ struct x {
  * load but never during actual processing. So there is really no reason
  * to care.
  */
-struct cnfparamdescr { /* first the param description */
-	const char *name;/**< not a es_str_t to ease definition in code */
+struct cnfparamdescr {    /* first the param description */
+	const char *name; /**< not a es_str_t to ease definition in code */
 	ecslCmdHdrlType type;
 	unsigned flags;
 };
 /* flags for cnfparamdescr: */
-#define CNFPARAM_REQUIRED	0x0001
-#define CNFPARAM_DEPRECATED	0x0002
+#define CNFPARAM_REQUIRED 0x0001
+#define CNFPARAM_DEPRECATED 0x0002
 
 struct cnfparamblk { /* now the actual param block use in API calls */
 	unsigned short version;
@@ -277,7 +280,7 @@ struct cnfparamblk { /* now the actual param block use in API calls */
 	struct cnfparamdescr *descr;
 };
 #define CNFPARAMBLK_VERSION 1
-	/**< caller must have same version as engine -- else things may
+/**< caller must have same version as engine -- else things may
 	 * be messed up. But note that we may support multiple versions
 	 * inside the engine, if at some later stage we want to do
 	 * that. -- rgerhards, 2011-07-15
@@ -288,71 +291,71 @@ struct cnfparamvals { /* the values we obtained for param descr. */
 };
 
 struct funcData_prifilt {
-	uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
+	uchar pmask[LOG_NFACILITIES + 1]; /* priority mask */
 };
 
 
 int cnfParseBuffer(char *buf, unsigned lenBuf);
 void readConfFile(FILE *fp, es_str_t **str);
-struct objlst* objlstNew(struct cnfobj *obj);
+struct objlst *objlstNew(struct cnfobj *obj);
 void objlstDestruct(struct objlst *lst);
 void objlstPrint(struct objlst *lst);
-struct nvlst* nvlstNewArray(struct cnfarray *ar);
-struct nvlst* nvlstNewStr(es_str_t *value);
-struct nvlst* nvlstSetName(struct nvlst *lst, es_str_t *name);
+struct nvlst *nvlstNewArray(struct cnfarray *ar);
+struct nvlst *nvlstNewStr(es_str_t *value);
+struct nvlst *nvlstSetName(struct nvlst *lst, es_str_t *name);
 void nvlstDestruct(struct nvlst *lst);
 void nvlstPrint(struct nvlst *lst);
 void nvlstChkUnused(struct nvlst *lst);
-struct nvlst* nvlstFindName(struct nvlst *lst, es_str_t *name);
-struct cnfobj* cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
+struct nvlst *nvlstFindName(struct nvlst *lst, es_str_t *name);
+struct cnfobj *cnfobjNew(enum cnfobjType objType, struct nvlst *lst);
 void cnfobjDestruct(struct cnfobj *o);
 void cnfobjPrint(struct cnfobj *o);
-struct cnfexpr* cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
+struct cnfexpr *cnfexprNew(unsigned nodetype, struct cnfexpr *l, struct cnfexpr *r);
 void cnfexprPrint(struct cnfexpr *expr, int indent);
 void cnfexprEval(const struct cnfexpr *const expr, struct svar *ret, void *pusr);
 int cnfexprEvalBool(struct cnfexpr *expr, void *usrptr);
-struct json_object* cnfexprEvalCollection(struct cnfexpr * const expr, void * const usrptr);
+struct json_object *cnfexprEvalCollection(struct cnfexpr *const expr, void *const usrptr);
 void cnfexprDestruct(struct cnfexpr *expr);
-struct cnfnumval* cnfnumvalNew(long long val);
-struct cnfstringval* cnfstringvalNew(es_str_t *estr);
-struct cnfvar* cnfvarNew(char *name);
-struct cnffunc * cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst);
-struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
+struct cnfnumval *cnfnumvalNew(long long val);
+struct cnfstringval *cnfstringvalNew(es_str_t *estr);
+struct cnfvar *cnfvarNew(char *name);
+struct cnffunc *cnffuncNew(es_str_t *fname, struct cnffparamlst *paramlst);
+struct cnffparamlst *cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst *next);
 int cnfDoInclude(char *name);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
-struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
-	       struct cnfparamvals *vals);
+struct cnfparamvals *nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
+    struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
 int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(const struct svar *v);
 void cnfparamvalsDestruct(const struct cnfparamvals *paramvals, const struct cnfparamblk *blk);
-struct cnfstmt * cnfstmtNew(unsigned s_type);
-struct cnfitr * cnfNewIterator(char *var, struct cnfexpr *collection);
+struct cnfstmt *cnfstmtNew(unsigned s_type);
+struct cnfitr *cnfNewIterator(char *var, struct cnfexpr *collection);
 void cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree);
 void cnfstmtPrint(struct cnfstmt *stmt, int indent);
-struct cnfstmt* scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
-struct objlst* objlstAdd(struct objlst *root, struct cnfobj *o);
+struct cnfstmt *scriptAddStmt(struct cnfstmt *root, struct cnfstmt *s);
+struct objlst *objlstAdd(struct objlst *root, struct cnfobj *o);
 char *rmLeadingSpace(char *s);
-struct cnfstmt * cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
-struct cnfstmt * cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
-struct cnfstmt * cnfstmtNewAct(struct nvlst *lst);
-struct cnfstmt * cnfstmtNewLegaAct(char *actline);
-struct cnfstmt * cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
-struct cnfstmt * cnfstmtNewUnset(char *var);
-struct cnfstmt * cnfstmtNewCall(es_str_t *name);
-struct cnfstmt * cnfstmtNewContinue(void);
-struct cnfstmt * cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
+struct cnfstmt *cnfstmtNewPRIFILT(char *prifilt, struct cnfstmt *t_then);
+struct cnfstmt *cnfstmtNewPROPFILT(char *propfilt, struct cnfstmt *t_then);
+struct cnfstmt *cnfstmtNewAct(struct nvlst *lst);
+struct cnfstmt *cnfstmtNewLegaAct(char *actline);
+struct cnfstmt *cnfstmtNewSet(char *var, struct cnfexpr *expr, int force_reset);
+struct cnfstmt *cnfstmtNewUnset(char *var);
+struct cnfstmt *cnfstmtNewCall(es_str_t *name);
+struct cnfstmt *cnfstmtNewContinue(void);
+struct cnfstmt *cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams);
 void cnfstmtDestructLst(struct cnfstmt *root);
 void cnfstmtOptimize(struct cnfstmt *root);
-struct cnfarray* cnfarrayNew(es_str_t *val);
-struct cnfarray* cnfarrayDup(struct cnfarray *old);
-struct cnfarray* cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
+struct cnfarray *cnfarrayNew(es_str_t *val);
+struct cnfarray *cnfarrayDup(struct cnfarray *old);
+struct cnfarray *cnfarrayAdd(struct cnfarray *ar, es_str_t *val);
 void cnfarrayContentDestruct(struct cnfarray *ar);
-const char* getFIOPName(unsigned iFIOP);
+const char *getFIOPName(unsigned iFIOP);
 rsRetVal initRainerscript(void);
 void unescapeStr(uchar *s, int len);
-const char * tokenval2str(int tok);
-uchar* var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
+const char *tokenval2str(int tok);
+uchar *var2CString(struct svar *__restrict__ const r, int *__restrict__ const bMustFree);
 
 /* debug helper */
 void cstrPrint(const char *text, es_str_t *estr);

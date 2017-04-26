@@ -40,16 +40,16 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 
 	assert(pThis != NULL);
 	/* free the strings */
-	if(pThis->ppTplName != NULL) {
-		for(i = 0 ; i < pThis->iNumEntries ; ++i) {
+	if (pThis->ppTplName != NULL) {
+		for (i = 0; i < pThis->iNumEntries; ++i) {
 			free(pThis->ppTplName[i]);
 		}
 		free(pThis->ppTplName);
 	}
-	if(pThis->piTplOpts != NULL)
+	if (pThis->piTplOpts != NULL)
 		free(pThis->piTplOpts);
 	free(pThis);
-	
+
 	return RS_RET_OK;
 }
 
@@ -63,7 +63,7 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 
 	assert(ppThis != NULL);
 	assert(iNumEntries >= 0);
-	if(iNumEntries > CONF_OMOD_NUMSTRINGS_MAXSIZE) {
+	if (iNumEntries > CONF_OMOD_NUMSTRINGS_MAXSIZE) {
 		ABORT_FINALIZE(RS_RET_MAX_OMSR_REACHED);
 	}
 	CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
@@ -73,14 +73,14 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	/* allocate string for template name array. The individual strings will be
 	 * allocated as the code progresses (we do not yet know the string sizes)
 	 */
-	CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
+	CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar *)));
 
 	/* allocate the template options array. */
 	CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
-	
+
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL) {
+	if (iRet != RS_RET_OK) {
+		if (pThis != NULL) {
 			OMSRdestruct(pThis);
 			pThis = NULL;
 		}
@@ -97,7 +97,7 @@ rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, i
 	assert(pThis != NULL);
 	assert(iEntry < pThis->iNumEntries);
 
-	if(pThis->ppTplName[iEntry] != NULL)
+	if (pThis->ppTplName[iEntry] != NULL)
 		free(pThis->ppTplName[iEntry]);
 	pThis->ppTplName[iEntry] = pTplName;
 	pThis->piTplOpts[iEntry] = iTplOpts;
@@ -147,8 +147,7 @@ OMSRgetSupportedTplOpts(unsigned long *pOpts)
 {
 	DEFiRet;
 	assert(pOpts != NULL);
-	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG
-		 | OMSR_TPL_AS_JSON;
+	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG | OMSR_TPL_AS_JSON;
 	RETiRet;
 }
 

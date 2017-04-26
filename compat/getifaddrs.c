@@ -26,38 +26,38 @@
  */
 
 #include <netdb.h>
-#if !defined (_AIX)
+#if !defined(_AIX)
 #include <nss_dbdefs.h>
 #endif
 
 #include <netinet/in.h>
 #include <sys/socket.h>
-#if defined (_AIX)
+#if defined(_AIX)
 #include <sys/errno.h>
 #include <sys/ioctl.h>
 #endif
 #include <string.h>
 #include <stdio.h>
-#if defined (_AIX)
+#if defined(_AIX)
 #include <netdb.h>
 #endif
-#if !defined (_AIX)
+#if !defined(_AIX)
 #include <sys/sockio.h>
 #endif
 #include <sys/types.h>
 #include <stdlib.h>
 #include <net/if.h>
 #include <ifaddrs.h>
-#if defined (_AIX)
+#if defined(_AIX)
 #include <netinet/in6_var.h>
 #endif
 
 /* Normally this is defined in <net/if.h> but was new for Solaris 11 */
 #ifndef LIFC_ENABLED
-#define LIFC_ENABLED    0x20
+#define LIFC_ENABLED 0x20
 #endif
 
-#if defined (_AIX) /* Use ifaddrs_rsys instead of ifaddrs and ifreq instead of lifreq */
+#if defined(_AIX) /* Use ifaddrs_rsys instead of ifaddrs and ifreq instead of lifreq */
 int getallifaddrs(sa_family_t af, struct ifaddrs_rsys **ifap, int64_t flags);
 int getallifs(int s, sa_family_t af, struct ifreq **ifr, int *numifs,
     int64_t ifc_flags);
@@ -76,18 +76,18 @@ int getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
  * only be properly freed by passing it to `freeifaddrs'.
  */
 int
-#if defined (_AIX)
+#if defined(_AIX)
 getifaddrs(struct ifaddrs_rsys **ifap)
 #else
 getifaddrs(struct ifaddrs **ifap)
 #endif
 {
-	int		err;
-	char		*cp;
-#if defined (_AIX)
-	struct ifaddrs_rsys	*curr;
+	int err;
+	char *cp;
+#if defined(_AIX)
+	struct ifaddrs_rsys *curr;
 #else
-	struct ifaddrs  *curr;
+	struct ifaddrs *curr;
 #endif
 
 	if (ifap == NULL) {
@@ -106,13 +106,13 @@ getifaddrs(struct ifaddrs **ifap)
 }
 
 void
-#if defined (_AIX)
+#if defined(_AIX)
 freeifaddrs(struct ifaddrs_rsys *ifa)
 #else
 freeifaddrs(struct ifaddrs *ifa)
 #endif
 {
-#if defined (_AIX)
+#if defined(_AIX)
 	struct ifaddrs_rsys *curr;
 #else
 	struct ifaddrs *curr;
@@ -135,9 +135,8 @@ freeifaddrs(struct ifaddrs *ifa)
  * Address list that is returned by this function must be freed
  * using freeifaddrs().
  */
-#if defined (_AIX)
-int
-getallifaddrs(sa_family_t af, struct ifaddrs_rsys **ifap, int64_t flags)
+#if defined(_AIX)
+int getallifaddrs(sa_family_t af, struct ifaddrs_rsys **ifap, int64_t flags)
 {
 	struct ifreq *buf = NULL;
 	struct ifreq *ifrp;
@@ -177,8 +176,7 @@ retry:
 	s_ifrp = (char *)buf;
 	e_ifrp = (char *)buf + iflen;
 	*ifap = NULL;
-	while (s_ifrp < e_ifrp)
-	{
+	while (s_ifrp < e_ifrp) {
 		ifrp = (struct ifreq *)s_ifrp;
 		ifsize = sizeof(struct ifreq);
 
@@ -187,10 +185,10 @@ retry:
 		}
 
 		/* Prepare for the ioctl call */
-		(void) strncpy(ifrl.ifr_name, ifrp->ifr_name,
-		    sizeof (ifrl.ifr_name));
-		(void) strncpy(ifrl6.ifr_name, ifrp->ifr_name,
-		    sizeof (ifrl.ifr_name));
+		(void)strncpy(ifrl.ifr_name, ifrp->ifr_name,
+		    sizeof(ifrl.ifr_name));
+		(void)strncpy(ifrl6.ifr_name, ifrp->ifr_name,
+		    sizeof(ifrl.ifr_name));
 		ifr_af = ifrp->ifr_addr.sa_family;
 
 		if (ifr_af != AF_INET && ifr_af != AF_INET6)
@@ -209,7 +207,7 @@ retry:
 		 * Allocate the current list node. Each node contains data
 		 * for one ifaddrs structure.
 		 */
-		curr = calloc(1, sizeof (struct ifaddrs_rsys));
+		curr = calloc(1, sizeof(struct ifaddrs_rsys));
 		if (curr == NULL)
 			goto fail;
 
@@ -221,36 +219,36 @@ retry:
 		}
 		prev = curr;
 
-/* AIXPORT :  ifreq field names used instead of linux lifreq field names */
+		/* AIXPORT :  ifreq field names used instead of linux lifreq field names */
 		curr->ifa_flags = ifrl.ifr_flags;
 		if ((curr->ifa_name = strdup(ifrp->ifr_name)) == NULL)
 			goto fail;
 
-		curr->ifa_addr = malloc(sizeof (struct sockaddr_storage));
+		curr->ifa_addr = malloc(sizeof(struct sockaddr_storage));
 		if (curr->ifa_addr == NULL)
 			goto fail;
-		(void) memcpy(curr->ifa_addr, &ifrp->ifr_addr,
-		    sizeof (struct sockaddr_storage));
+		(void)memcpy(curr->ifa_addr, &ifrp->ifr_addr,
+		    sizeof(struct sockaddr_storage));
 
 		/* Get the netmask */
 		if (ifr_af == AF_INET) {
 			if (ioctl(s, SIOCGIFNETMASK, (caddr_t)&ifrl) < 0) {
 				goto fail;
 			}
-			curr->ifa_netmask = malloc(sizeof (struct sockaddr_storage));
+			curr->ifa_netmask = malloc(sizeof(struct sockaddr_storage));
 			if (curr->ifa_netmask == NULL)
 				goto fail;
-			(void) memcpy(curr->ifa_netmask, &ifrl.ifr_addr,
-			    sizeof (struct sockaddr_storage));
+			(void)memcpy(curr->ifa_netmask, &ifrl.ifr_addr,
+			    sizeof(struct sockaddr_storage));
 		} else {
 			if (ioctl(s, SIOCGIFNETMASK6, (caddr_t)&ifrl6) < 0) {
 				goto fail;
 			}
-			curr->ifa_netmask = malloc(sizeof (struct sockaddr_storage));
+			curr->ifa_netmask = malloc(sizeof(struct sockaddr_storage));
 			if (curr->ifa_netmask == NULL)
 				goto fail;
-			(void) memcpy(curr->ifa_netmask, &ifrl6.ifr_Addr,
-			    sizeof (struct sockaddr_storage));
+			(void)memcpy(curr->ifa_netmask, &ifrl6.ifr_Addr,
+			    sizeof(struct sockaddr_storage));
 		}
 
 		/* Get the destination for a pt-pt interface */
@@ -259,33 +257,33 @@ retry:
 				if (ioctl(s, SIOCGIFDSTADDR, (caddr_t)&ifrl) < 0)
 					goto fail;
 				curr->ifa_dstaddr = malloc(
-				    sizeof (struct sockaddr_storage));
+				    sizeof(struct sockaddr_storage));
 				if (curr->ifa_dstaddr == NULL)
 					goto fail;
-				(void) memcpy(curr->ifa_dstaddr, &ifrl.ifr_addr,
-				    sizeof (struct sockaddr_storage));
+				(void)memcpy(curr->ifa_dstaddr, &ifrl.ifr_addr,
+				    sizeof(struct sockaddr_storage));
 			} else {
 				if (ioctl(s, SIOCGIFDSTADDR6, (caddr_t)&ifrl6) < 0)
 					goto fail;
 				curr->ifa_dstaddr = malloc(
-				    sizeof (struct sockaddr_storage));
+				    sizeof(struct sockaddr_storage));
 				if (curr->ifa_dstaddr == NULL)
 					goto fail;
-				(void) memcpy(curr->ifa_dstaddr, &ifrl6.ifr_Addr,
-				    sizeof (struct sockaddr_storage));
+				(void)memcpy(curr->ifa_dstaddr, &ifrl6.ifr_Addr,
+				    sizeof(struct sockaddr_storage));
 			}
 			/* Do not get broadcast address for IPv6 */
 		} else if ((curr->ifa_flags & IFF_BROADCAST) && (ifr_af == AF_INET)) {
 			if (ioctl(s, SIOCGIFBRDADDR, (caddr_t)&ifrl) < 0)
 				goto fail;
 			curr->ifa_broadaddr = malloc(
-			    sizeof (struct sockaddr_storage));
+			    sizeof(struct sockaddr_storage));
 			if (curr->ifa_broadaddr == NULL)
 				goto fail;
-			(void) memcpy(curr->ifa_broadaddr, &ifrl.ifr_addr,
-			    sizeof (struct sockaddr_storage));
+			(void)memcpy(curr->ifa_broadaddr, &ifrl.ifr_addr,
+			    sizeof(struct sockaddr_storage));
 		}
-next:
+	next:
 		s_ifrp += ifsize;
 	}
 	free(buf);
@@ -308,8 +306,7 @@ fail:
 /*
  * Do a SIOCGIFCONF and store all the interfaces in `buf'.
  */
-int
-getallifs(int s, sa_family_t af, struct ifreq **ifr, int *iflen,
+int getallifs(int s, sa_family_t af, struct ifreq **ifr, int *iflen,
     int64_t ifc_flags)
 {
 	int ifsize;
@@ -329,7 +326,7 @@ retry:
 	 * the interface status of potential interfaces which may have
 	 * been plumbed between the SIOCGSIZIFCONF and the SIOCGIFCONF.
 	 */
-	bufsize = ifsize + (4 * sizeof (struct in6_ifreq));
+	bufsize = ifsize + (4 * sizeof(struct in6_ifreq));
 
 	if ((tmp = realloc(*buf, bufsize)) == NULL)
 		goto fail;
@@ -356,9 +353,8 @@ fail:
 	*buf = NULL;
 	return (-1);
 }
-#else /* _AIX */
-int
-getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags)
+#else  /* _AIX */
+int getallifaddrs(sa_family_t af, struct ifaddrs **ifap, int64_t flags)
 {
 	struct lifreq *buf = NULL;
 	struct lifreq *lifrp;
@@ -396,8 +392,8 @@ retry:
 	for (n = 0; n < numifs; n++, lifrp++) {
 
 		/* Prepare for the ioctl call */
-		(void) strncpy(lifrl.lifr_name, lifrp->lifr_name,
-		    sizeof (lifrl.lifr_name));
+		(void)strncpy(lifrl.lifr_name, lifrp->lifr_name,
+		    sizeof(lifrl.lifr_name));
 		lifr_af = lifrp->lifr_addr.ss_family;
 		if (af != AF_UNSPEC && lifr_af != af)
 			continue;
@@ -413,7 +409,7 @@ retry:
 		 * Allocate the current list node. Each node contains data
 		 * for one ifaddrs structure.
 		 */
-		curr = calloc(1, sizeof (struct ifaddrs));
+		curr = calloc(1, sizeof(struct ifaddrs));
 		if (curr == NULL)
 			goto fail;
 
@@ -429,42 +425,41 @@ retry:
 		if ((curr->ifa_name = strdup(lifrp->lifr_name)) == NULL)
 			goto fail;
 
-		curr->ifa_addr = malloc(sizeof (struct sockaddr_storage));
+		curr->ifa_addr = malloc(sizeof(struct sockaddr_storage));
 		if (curr->ifa_addr == NULL)
 			goto fail;
-		(void) memcpy(curr->ifa_addr, &lifrp->lifr_addr,
-		    sizeof (struct sockaddr_storage));
+		(void)memcpy(curr->ifa_addr, &lifrp->lifr_addr,
+		    sizeof(struct sockaddr_storage));
 
 		/* Get the netmask */
 		if (ioctl(s, SIOCGLIFNETMASK, (caddr_t)&lifrl) < 0)
 			goto fail;
-		curr->ifa_netmask = malloc(sizeof (struct sockaddr_storage));
+		curr->ifa_netmask = malloc(sizeof(struct sockaddr_storage));
 		if (curr->ifa_netmask == NULL)
 			goto fail;
-		(void) memcpy(curr->ifa_netmask, &lifrl.lifr_addr,
-		    sizeof (struct sockaddr_storage));
+		(void)memcpy(curr->ifa_netmask, &lifrl.lifr_addr,
+		    sizeof(struct sockaddr_storage));
 
 		/* Get the destination for a pt-pt interface */
 		if (curr->ifa_flags & IFF_POINTOPOINT) {
 			if (ioctl(s, SIOCGLIFDSTADDR, (caddr_t)&lifrl) < 0)
 				goto fail;
 			curr->ifa_dstaddr = malloc(
-			    sizeof (struct sockaddr_storage));
+			    sizeof(struct sockaddr_storage));
 			if (curr->ifa_dstaddr == NULL)
 				goto fail;
-			(void) memcpy(curr->ifa_dstaddr, &lifrl.lifr_addr,
-			    sizeof (struct sockaddr_storage));
+			(void)memcpy(curr->ifa_dstaddr, &lifrl.lifr_addr,
+			    sizeof(struct sockaddr_storage));
 		} else if (curr->ifa_flags & IFF_BROADCAST) {
 			if (ioctl(s, SIOCGLIFBRDADDR, (caddr_t)&lifrl) < 0)
 				goto fail;
 			curr->ifa_broadaddr = malloc(
-			    sizeof (struct sockaddr_storage));
+			    sizeof(struct sockaddr_storage));
 			if (curr->ifa_broadaddr == NULL)
 				goto fail;
-			(void) memcpy(curr->ifa_broadaddr, &lifrl.lifr_addr,
-			    sizeof (struct sockaddr_storage));
+			(void)memcpy(curr->ifa_broadaddr, &lifrl.lifr_addr,
+			    sizeof(struct sockaddr_storage));
 		}
-
 	}
 	free(buf);
 	close(sock4);
@@ -486,8 +481,7 @@ fail:
 /*
  * Do a SIOCGLIFCONF and store all the interfaces in `buf'.
  */
-int
-getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
+int getallifs(int s, sa_family_t af, struct lifreq **lifr, int *numifs,
     int64_t lifc_flags)
 {
 	struct lifnum lifn;
@@ -510,7 +504,7 @@ retry:
 	 * the interface status of potential interfaces which may have
 	 * been plumbed between the SIOCGLIFNUM and the SIOCGLIFCONF.
 	 */
-	bufsize = (lifn.lifn_count + 4) * sizeof (struct lifreq);
+	bufsize = (lifn.lifn_count + 4) * sizeof(struct lifreq);
 
 	if ((tmp = realloc(*buf, bufsize)) == NULL)
 		goto fail;
@@ -523,7 +517,7 @@ retry:
 	if (ioctl(s, SIOCGLIFCONF, (char *)&lifc) < 0)
 		goto fail;
 
-	*numifs = lifc.lifc_len / sizeof (struct lifreq);
+	*numifs = lifc.lifc_len / sizeof(struct lifreq);
 	if (*numifs >= (lifn.lifn_count + 4)) {
 		/*
 		 * If every entry was filled, there are probably

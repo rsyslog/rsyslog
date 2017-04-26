@@ -39,7 +39,7 @@
 #if defined(__FreeBSD__)
 #include <sys/socket.h>
 #endif
- 
+
 char *sockName = NULL;
 int sock;
 int addNL = 0;
@@ -47,23 +47,20 @@ int addNL = 0;
 
 /* called to clean up on exit
  */
-void
-cleanup(void)
+void cleanup(void)
 {
-        unlink(sockName);
+	unlink(sockName);
 	close(sock);
 }
 
 
-void
-doTerm(int __attribute__((unused)) signum)
+void doTerm(int __attribute__((unused)) signum)
 {
 	exit(1);
 }
 
 
-void
-usage(void)
+void usage(void)
 {
 	fprintf(stderr, "usage: uxsockrcvr -s /socket/name -o /output/file -l\n"
 			"-l adds newline after each message received\n"
@@ -73,88 +70,88 @@ usage(void)
 }
 
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int opt;
-        int rlen;
+	int rlen;
 	FILE *fp = stdout;
-        unsigned char data[128*1024];
-        struct  sockaddr_un addr; /* address of server */
-        struct  sockaddr from;
-        socklen_t fromlen;
+	unsigned char data[128 * 1024];
+	struct sockaddr_un addr; /* address of server */
+	struct sockaddr from;
+	socklen_t fromlen;
 
-	if(argc < 2) {
+	if (argc < 2) {
 		fprintf(stderr, "error: too few arguments!\n");
 		usage();
 	}
 
-	while((opt = getopt(argc, argv, "s:o:l")) != EOF) {
-		switch((char)opt) {
-                case 'l':
+	while ((opt = getopt(argc, argv, "s:o:l")) != EOF) {
+		switch ((char)opt) {
+		case 'l':
 			addNL = 1;
 			break;
-                case 's':
+		case 's':
 			sockName = optarg;
 			break;
-                case 'o':
-			if((fp = fopen(optarg, "w")) == NULL) {
+		case 'o':
+			if ((fp = fopen(optarg, "w")) == NULL) {
 				perror(optarg);
 				exit(1);
 			}
 			break;
-		default:usage();
+		default:
+			usage();
 		}
 	}
 
-	if(sockName == NULL) {
+	if (sockName == NULL) {
 		fprintf(stderr, "error: -s /socket/name must be specified!\n");
 		exit(1);
 	}
 
-        if(signal(SIGTERM, doTerm) == SIG_ERR) {
+	if (signal(SIGTERM, doTerm) == SIG_ERR) {
 		perror("signal(SIGTERM, ...)");
 		exit(1);
 	}
-        if(signal(SIGINT, doTerm) == SIG_ERR) {
+	if (signal(SIGINT, doTerm) == SIG_ERR) {
 		perror("signal(SIGINT, ...)");
 		exit(1);
 	}
 
-        /*      Create a UNIX datagram socket for server        */
-        if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
-                perror("server: socket");
-                exit(1);
-        }
+	/*      Create a UNIX datagram socket for server        */
+	if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+		perror("server: socket");
+		exit(1);
+	}
 
 	atexit(cleanup);
 
-        /*      Set up address structure for server socket      */
-        memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strcpy(addr.sun_path, sockName);
-        
-        if (bind(sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-                close(sock);
-                perror("server: bind");
-                exit(1);
-        }        
+	/*      Set up address structure for server socket      */
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strcpy(addr.sun_path, sockName);
+
+	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		close(sock);
+		perror("server: bind");
+		exit(1);
+	}
 
 	/* we now run in an endless loop. We do not check who sends us
 	 * data. This should be no problem for our testbench use.
 	 */
-	while(1) {
+	while (1) {
 		fromlen = sizeof(from);
 		rlen = recvfrom(sock, data, 2000, 0, &from, &fromlen);
-		if(rlen == -1) {
-		       perror("uxsockrcvr : recv\n");
-		       exit(1);
+		if (rlen == -1) {
+			perror("uxsockrcvr : recv\n");
+			exit(1);
 		} else {
-		      fwrite(data, 1, rlen, fp);
-			if(addNL)
+			fwrite(data, 1, rlen, fp);
+			if (addNL)
 				fputc('\n', fp);
 		}
-        }
+	}
 
-        return 0;
+	return 0;
 }

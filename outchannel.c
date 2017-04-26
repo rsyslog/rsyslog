@@ -41,26 +41,23 @@
 /* Constructs a outchannel list object. Returns pointer to it
  * or NULL (if it fails).
  */
-struct outchannel* ochConstruct(void)
+struct outchannel *ochConstruct(void)
 {
 	struct outchannel *pOch;
-	if((pOch = calloc(1, sizeof(struct outchannel))) == NULL)
+	if ((pOch = calloc(1, sizeof(struct outchannel))) == NULL)
 		return NULL;
-	
+
 	/* basic initialisaion is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(loadConf->och.ochLast == NULL)
-	{ /* we are the first element! */
+	if (loadConf->och.ochLast == NULL) { /* we are the first element! */
 		loadConf->och.ochRoot = loadConf->och.ochLast = pOch;
-	}
-	else
-	{
+	} else {
 		loadConf->och.ochLast->pNext = pOch;
 		loadConf->och.ochLast = pOch;
 	}
 
-	return(pOch);
+	return (pOch);
 }
 
 
@@ -75,11 +72,11 @@ static void skip_Comma(char **pp)
 	assert(*pp != NULL);
 
 	p = *pp;
-	while(isspace((int)*p))
+	while (isspace((int)*p))
 		++p;
-	if(*p == ',')
+	if (*p == ',')
 		++p;
-	while(isspace((int)*p))
+	while (isspace((int)*p))
 		++p;
 	*pp = p;
 }
@@ -98,13 +95,13 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	assert(*pp != NULL);
 	assert(pField != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma((char **)pp);
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));
 
 	/* copy the field */
-	while(*p && *p != ' ' && *p != ',') {
+	while (*p && *p != ' ' && *p != ',') {
 		CHKiRet(cstrAppendChar(pStrB, *p++));
 	}
 
@@ -113,8 +110,8 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pField, 0));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStrB != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pStrB != NULL)
 			cstrDestruct(&pStrB);
 	}
 
@@ -135,11 +132,11 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
 	assert(*pp != NULL);
 	assert(pOff_t != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma((char **)pp);
 	p = *pp;
 
 	val = 0;
-	while(*p && isdigit((int)*p)) {
+	while (*p && isdigit((int)*p)) {
 		val = val * 10 + (*p - '0');
 		++p;
 	}
@@ -166,13 +163,13 @@ static rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	assert(*pp != NULL);
 	assert(pBuf != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma((char **)pp);
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));
 
 	/* copy the field */
-	while(*p) {
+	while (*p) {
 		CHKiRet(cstrAppendChar(pStrB, *p++));
 	}
 
@@ -181,8 +178,8 @@ static rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	CHKiRet(cstrConvSzStrAndDestruct(&pStrB, pBuf, 0));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStrB != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pStrB != NULL)
 			cstrDestruct(&pStrB);
 	}
 
@@ -196,20 +193,20 @@ finalize_it:
  * There might be some whitespace between the field (but not within)
  * and the commas. This can be removed.
  */
-struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
+struct outchannel *ochAddLine(char *pName, uchar **ppRestOfConfLine)
 {
 	struct outchannel *pOch;
- 	uchar *p;
+	uchar *p;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
 
-	if((pOch = ochConstruct()) == NULL)
+	if ((pOch = ochConstruct()) == NULL)
 		return NULL;
-	
+
 	pOch->iLenName = strlen(pName);
-	pOch->pszName = (char*) MALLOC(pOch->iLenName + 1);
-	if(pOch->pszName == NULL) {
+	pOch->pszName = (char *)MALLOC(pOch->iLenName + 1);
+	if (pOch->pszName == NULL) {
 		dbgprintf("ochAddLine could not alloc memory for outchannel name!");
 		pOch->iLenName = 0;
 		return NULL;
@@ -226,11 +223,13 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 
 	/* get params */
 	get_Field(&p, &pOch->pszFileTemplate);
-	if(*p) get_off_t(&p, &pOch->uSizeLimit);
-	if(*p) get_restOfLine(&p, &pOch->cmdOnSizeLimit);
+	if (*p)
+		get_off_t(&p, &pOch->uSizeLimit);
+	if (*p)
+		get_restOfLine(&p, &pOch->cmdOnSizeLimit);
 
 	*ppRestOfConfLine = p;
-	return(pOch);
+	return (pOch);
 }
 
 
@@ -247,14 +246,12 @@ struct outchannel *ochFind(char *pName, int iLenName)
 	assert(pName != NULL);
 
 	pOch = loadConf->och.ochRoot;
-	while(pOch != NULL &&
-	      !(pOch->iLenName == iLenName &&
-	        !strcmp(pOch->pszName, pName)
-	        ))
-		{
-			pOch = pOch->pNext;
-		}
-	return(pOch);
+	while (pOch != NULL &&
+	       !(pOch->iLenName == iLenName &&
+		   !strcmp(pOch->pszName, pName))) {
+		pOch = pOch->pNext;
+	}
+	return (pOch);
 }
 
 /* Destroy the outchannel structure. This is for de-initialization
@@ -266,11 +263,11 @@ void ochDeleteAll(void)
 	struct outchannel *pOch, *pOchDel;
 
 	pOch = loadConf->och.ochRoot;
-	while(pOch != NULL) {
-		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
+	while (pOch != NULL) {
+		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL ? "NULL" : pOch->pszName);
 		pOchDel = pOch;
 		pOch = pOch->pNext;
-		if(pOchDel->pszName != NULL)
+		if (pOchDel->pszName != NULL)
 			free(pOchDel->pszName);
 		free(pOchDel);
 	}
@@ -285,11 +282,11 @@ void ochPrintList(void)
 	struct outchannel *pOch;
 
 	pOch = loadConf->och.ochRoot;
-	while(pOch != NULL) {
-		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
-		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : (char*) pOch->pszFileTemplate);
-		dbgprintf("\tMax Size.....: %lu\n", (long unsigned) pOch->uSizeLimit);
-		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : (char*) pOch->cmdOnSizeLimit);
+	while (pOch != NULL) {
+		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL ? "NULL" : pOch->pszName);
+		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : (char *)pOch->pszFileTemplate);
+		dbgprintf("\tMax Size.....: %lu\n", (long unsigned)pOch->uSizeLimit);
+		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : (char *)pOch->cmdOnSizeLimit);
 		pOch = pOch->pNext; /* done, go next */
 	}
 }

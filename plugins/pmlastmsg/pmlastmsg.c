@@ -53,20 +53,19 @@ PARSER_NAME("rsyslog.lastline")
  */
 DEF_PMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(parser)
+	    DEFobjCurrIf(datetime)
 
 
-/* static data */
-static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+    /* static data */
+    static int bParseHOSTNAMEandTAG; /* cache for the equally-named global param - performance enhancement */
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATUREAutomaticSanitazion)
+	    iRet = RS_RET_OK;
+	if (eFeat == sFEATUREAutomaticPRIParsing)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
@@ -78,8 +77,8 @@ BEGINparse
 	int lenMsg;
 #define OpeningText "last message repeated "
 #define ClosingText " times"
-CODESTARTparse
-	dbgprintf("Message will now be parsed by \"last message repated n times\" parser.\n");
+	CODESTARTparse
+	    dbgprintf("Message will now be parsed by \"last message repated n times\" parser.\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
@@ -88,16 +87,16 @@ CODESTARTparse
 
 	/* check if this message is of the type we handle in this (very limited) parser */
 	/* first, we permit SP */
-	while(lenMsg && *p2parse == ' ') {
+	while (lenMsg && *p2parse == ' ') {
 		--lenMsg;
 		++p2parse;
 	}
-	if((unsigned) lenMsg < sizeof(OpeningText)-1 + sizeof(ClosingText)-1 + 1) {
+	if ((unsigned)lenMsg < sizeof(OpeningText) - 1 + sizeof(ClosingText) - 1 + 1) {
 		/* too short, can not be "our" message */
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
-	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
+	if (strncasecmp((char *)p2parse, OpeningText, sizeof(OpeningText) - 1) != 0) {
 		/* wrong opening text */
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
@@ -105,17 +104,17 @@ CODESTARTparse
 	p2parse += sizeof(OpeningText) - 1;
 
 	/* now we need an integer --> digits */
-	while(lenMsg && isdigit(*p2parse)) {
+	while (lenMsg && isdigit(*p2parse)) {
 		--lenMsg;
 		++p2parse;
 	}
 
-	if(lenMsg != sizeof(ClosingText)-1) {
+	if (lenMsg != sizeof(ClosingText) - 1) {
 		/* size must fit, else it is not "our" message... */
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
 
-	if(strncasecmp((char*) p2parse, ClosingText, lenMsg) != 0) {
+	if (strncasecmp((char *)p2parse, ClosingText, lenMsg) != 0) {
 		/* wrong closing text */
 		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	}
@@ -128,16 +127,16 @@ CODESTARTparse
 	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	MsgSetMSGoffs(pMsg, pMsg->offAfterPRI); /* we don't have a header! */
-	MsgSetTAG(pMsg, (uchar*)"", 0);
+	MsgSetTAG(pMsg, (uchar *)"", 0);
 
 finalize_it:
 ENDparse
 
 
 BEGINmodExit
-CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTmodExit
+	    /* release what we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -145,24 +144,24 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_PMOD_QUERIES
+		CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	dbgprintf("lastmsg parser init called, compiled with version %s\n", VERSION);
- 	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
-	/* cache value, is set only during rsyslogd option processing */
+	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG();
+/* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

@@ -70,27 +70,27 @@ BEGINstrgen
 	uchar *pMSG;
 	size_t lenMSG;
 	size_t lenTotal;
-CODESTARTstrgen
-	/* first obtain all strings and their length (if not fixed) */
-	pPRI = getPRI(pMsg);
+	CODESTARTstrgen
+	    /* first obtain all strings and their length (if not fixed) */
+	    pPRI = getPRI(pMsg);
 	lenPRI = strlen(pPRI);
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
+	pTimeStamp = (uchar *)getTimeReported(pMsg, tplFmtRFC3339Date);
 	lenTimeStamp = ustrlen(pTimeStamp);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
+	pHOSTNAME = (uchar *)getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
 	getTAG(pMsg, &pTAG, &lenTAG);
-	if(lenTAG > 32)
+	if (lenTAG > 32)
 		lenTAG = 32; /* for forwarding, a max of 32 chars is permitted (RFC!) */
 	pMSG = getMSG(pMsg);
 	lenMSG = getMSGLen(pMsg);
 
 	/* calculate len, constants for spaces and similar fixed strings */
 	lenTotal = 1 + lenPRI + 1 + lenTimeStamp + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 1;
-	if(pMSG[0] != ' ')
+	if (pMSG[0] != ' ')
 		++lenTotal; /* then we need to introduce one additional space */
 
 	/* now make sure buffer is large enough */
-	if(lenTotal  >= iparam->lenBuf)
+	if (lenTotal >= iparam->lenBuf)
 		CHKiRet(ExtendBuf(iparam, lenTotal));
 
 	/* and concatenate the resulting string */
@@ -110,7 +110,7 @@ CODESTARTstrgen
 	memcpy(iparam->param + iBuf, pTAG, lenTAG);
 	iBuf += lenTAG;
 
-	if(pMSG[0] != ' ')
+	if (pMSG[0] != ' ')
 		iparam->param[iBuf++] = ' ';
 	memcpy(iparam->param + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
@@ -125,20 +125,20 @@ ENDstrgen
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_SMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_SMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(smfwd)
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
 
-	dbgprintf("rsyslog standard (network) forward format strgen init called, compiled with version %s\n", VERSION);
+	    dbgprintf("rsyslog standard (network) forward format strgen init called, compiled with version %s\n", VERSION);
 ENDmodInit

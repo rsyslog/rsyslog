@@ -23,7 +23,7 @@
  * limitations under the License.
  */
 #ifdef HAVE_CONFIG_H
-#	include "config.h"
+#include "config.h"
 #endif
 #include <stdlib.h>
 #include <time.h>
@@ -43,10 +43,10 @@
 #include "imkmsg.h"
 
 /* globals */
-static int	fklog = -1;	/* kernel log fd */
+static int fklog = -1; /* kernel log fd */
 
 #ifndef _PATH_KLOG
-#	define _PATH_KLOG "/dev/kmsg"
+#define _PATH_KLOG "/dev/kmsg"
 #endif
 
 /* submit a message to imkmsg Syslog() API. In this function, we parse
@@ -100,7 +100,7 @@ submitSyslog(uchar *buf)
 		msg[offs] = *buf;
 	}
 	msg[offs] = '\0';
-	jval = json_object_new_string((char*)msg);
+	jval = json_object_new_string((char *)msg);
 	json_object_object_add(json, "msg", jval);
 
 	if (*buf != '\0') /* message has appended properties, skip \n */
@@ -114,7 +114,8 @@ submitSyslog(uchar *buf)
 			name[offs] = *buf;
 		}
 		name[offs] = '\0';
-		buf++; /* skip = or ' ' */;
+		buf++; /* skip = or ' ' */
+		;
 
 		offs = 0;
 		for (; *buf != '\n' && *buf != '\0'; buf++, offs++) {
@@ -125,7 +126,7 @@ submitSyslog(uchar *buf)
 			buf++; /* another property, skip \n */
 		}
 
-		jval = json_object_new_string((char*)value);
+		jval = json_object_new_string((char *)value);
 		json_object_object_add(json, name, jval);
 	}
 
@@ -164,7 +165,7 @@ klogWillRunPrePrivDrop(modConfData_t *pModConf)
 	fklog = open(_PATH_KLOG, O_RDONLY, 0);
 	if (fklog < 0) {
 		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
-			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		    _PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
 
@@ -186,7 +187,7 @@ klogWillRunPostPrivDrop(modConfData_t *pModConf)
 	r = read(fklog, NULL, 0);
 	if (r < 0 && errno != EINVAL) {
 		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
-			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+		    _PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		fklog = -1;
 		ABORT_FINALIZE(RS_RET_ERR_OPEN_KLOG);
 	}
@@ -202,7 +203,7 @@ static void
 readkmsg(void)
 {
 	int i;
-	uchar pRcv[8192+1];
+	uchar pRcv[8192 + 1];
 	char errmsg[2048];
 
 	for (;;) {
@@ -216,15 +217,15 @@ readkmsg(void)
 			pRcv[i] = '\0';
 		} else if (i == -EPIPE) {
 			imkmsgLogIntMsg(LOG_WARNING,
-					"imkmsg: some messages in circular buffer got overwritten");
+			    "imkmsg: some messages in circular buffer got overwritten");
 			continue;
 		} else {
 			/* something went wrong - error or zero length message */
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
 				/* error occured */
 				imkmsgLogIntMsg(LOG_ERR,
-				       "imkmsg: error reading kernel log - shutting down: %s",
-					rs_strerror_r(errno, errmsg, sizeof(errmsg)));
+				    "imkmsg: error reading kernel log - shutting down: %s",
+				    rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 				fklog = -1;
 			}
 			break;
@@ -241,10 +242,10 @@ readkmsg(void)
 rsRetVal klogAfterRun(modConfData_t *pModConf)
 {
 	DEFiRet;
-	if(fklog != -1)
+	if (fklog != -1)
 		close(fklog);
 	/* Turn on logging of messages to console, but only if a log level was speficied */
-	if(pModConf->console_log_level != -1)
+	if (pModConf->console_log_level != -1)
 		klogctl(7, NULL, 0);
 	RETiRet;
 }
@@ -254,7 +255,7 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
+rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) * pModConf)
 {
 	DEFiRet;
 	readkmsg();
@@ -265,9 +266,7 @@ rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
 /* provide the (system-specific) default facility for internal messages
  * rgerhards, 2008-04-14
  */
-int
-klogFacilIntMsg(void)
+int klogFacilIntMsg(void)
 {
 	return LOG_SYSLOG;
 }
-

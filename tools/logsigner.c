@@ -112,45 +112,43 @@ done:	GTDataHash_free(hash);
 }
 #endif
 
-void
-processFile(char *name)
+void processFile(char *name)
 {
 	FILE *fp;
 	size_t len;
-	char line[64*1024+1];
+	char line[64 * 1024 + 1];
 	gtctx ctx = NULL;
-	
-	ctx = rsgtCtxNew((unsigned char*)"SIGFILE", GT_HASHALG_SHA256);
+
+	ctx = rsgtCtxNew((unsigned char *)"SIGFILE", GT_HASHALG_SHA256);
 	sigblkInit(ctx);
-	if(!strcmp(name, "-"))
+	if (!strcmp(name, "-"))
 		fp = stdin;
 	else
 		fp = fopen(name, "r");
 
-	while(1) {
-		if(fgets(line, sizeof(line), fp) == NULL) {
-			if(!feof(fp))
+	while (1) {
+		if (fgets(line, sizeof(line), fp) == NULL) {
+			if (!feof(fp))
 				perror(name);
 			break;
 		}
 		len = strlen(line);
-		if(line[len-1] == '\n') {
+		if (line[len - 1] == '\n') {
 			--len;
 			line[len] = '\0';
 		}
 		//sign(line, len);
-		sigblkAddRecord(ctx, (unsigned char*)line, len);
+		sigblkAddRecord(ctx, (unsigned char *)line, len);
 	}
 
-	if(fp != stdin)
+	if (fp != stdin)
 		fclose(fp);
 	sigblkFinish(ctx);
 	rsgtCtxDel(ctx);
 }
 
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	rsgtInit("rsyslog logsigner " VERSION);
 	processFile("-");

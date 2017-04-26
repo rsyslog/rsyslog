@@ -56,14 +56,14 @@ MODULE_TYPE_NOKEEP
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-typedef struct _instanceData {
-	PGconn	*f_hpgsql;			/* handle to PgSQL */
-	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	ConnStatusType	eLastPgSQLStatus; 	/* last status from postgres */
-        uchar   *tplName;                       /* format template to use */
+    typedef struct _instanceData {
+	PGconn *f_hpgsql;		   /* handle to PgSQL */
+	char f_dbsrv[MAXHOSTNAMELEN + 1];  /* IP or hostname of DB server*/
+	char f_dbname[_DB_MAXDBLEN + 1];   /* DB name */
+	char f_dbuid[_DB_MAXUNAMELEN + 1]; /* DB user */
+	char f_dbpwd[_DB_MAXPWDLEN + 1];   /* DB user's password */
+	ConnStatusType eLastPgSQLStatus;   /* last status from postgres */
+	uchar *tplName;			   /* format template to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -77,26 +77,25 @@ static configSettings_t __attribute__((unused)) cs;
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
 ENDinitConfVars
 
 
 static rsRetVal writePgSQL(uchar *psz, instanceData *pData);
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -107,25 +106,25 @@ static void closePgSQL(instanceData *pData)
 {
 	assert(pData != NULL);
 
-	if(pData->f_hpgsql != NULL) {	/* just to be on the safe side... */
+	if (pData->f_hpgsql != NULL) { /* just to be on the safe side... */
 		PQfinish(pData->f_hpgsql);
 		pData->f_hpgsql = NULL;
 	}
 }
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	closePgSQL(pData);
-        free(pData->tplName);
+	CODESTARTfreeInstance
+	    closePgSQL(pData);
+	free(pData->tplName);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	/* nothing special here */
+	CODESTARTdbgPrintInstInfo
+/* nothing special here */
 ENDdbgPrintInstInfo
 
 
@@ -139,24 +138,24 @@ static void reportDBError(instanceData *pData, int bSilent)
 	ConnStatusType ePgSQLStatus;
 
 	assert(pData != NULL);
-	bSilent=0;
+	bSilent = 0;
 
 	/* output log message */
 	errno = 0;
-	if(pData->f_hpgsql == NULL) {
+	if (pData->f_hpgsql == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
-				PQerrorMessage(pData->f_hpgsql));
-		if(bSilent || ePgSQLStatus == pData->eLastPgSQLStatus)
+		    PQerrorMessage(pData->f_hpgsql));
+		if (bSilent || ePgSQLStatus == pData->eLastPgSQLStatus)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
 		else {
 			pData->eLastPgSQLStatus = ePgSQLStatus;
 			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
-		
+
 	return;
 }
 
@@ -171,7 +170,7 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 	assert(pData != NULL);
 	assert(pData->f_hpgsql == NULL);
 
-	dbgprintf("host=%s dbname=%s uid=%s\n",pData->f_dbsrv,pData->f_dbname,pData->f_dbuid);
+	dbgprintf("host=%s dbname=%s uid=%s\n", pData->f_dbsrv, pData->f_dbname, pData->f_dbuid);
 
 	/* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
 	 * get all sorts of side effects (e.g.: backslash escapes) and warnings
@@ -179,8 +178,8 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 	const char *PgConnectionOptions = "-c standard_conforming_strings=on";
 
 	/* Connect to database */
-	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, PgConnectionOptions, NULL,
-				pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
+	if ((pData->f_hpgsql = PQsetdbLogin(pData->f_dbsrv, NULL, PgConnectionOptions, NULL,
+		 pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
 		reportDBError(pData, bSilent);
 		closePgSQL(pData); /* ignore any error we may get */
 		iRet = RS_RET_SUSPENDED;
@@ -202,15 +201,15 @@ tryExec(uchar *pszCmd, instanceData *pData)
 	int bHadError = 0;
 
 	/* try insert */
-	pgRet = PQexec(pData->f_hpgsql, (char*)pszCmd);
+	pgRet = PQexec(pData->f_hpgsql, (char *)pszCmd);
 	execState = PQresultStatus(pgRet);
-	if(execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
+	if (execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
 		dbgprintf("postgres query execution failed: %s\n", PQresStatus(PQresultStatus(pgRet)));
 		bHadError = 1;
 	}
 	PQclear(pgRet);
 
-	return(bHadError);
+	return (bHadError);
 }
 
 
@@ -234,8 +233,8 @@ writePgSQL(uchar *psz, instanceData *pData)
 
 	bHadError = tryExec(psz, pData); /* try insert */
 
-	if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
-#if 0		/* re-enable once we have transaction support */
+	if (bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
+#if 0 /* re-enable once we have transaction support */
 		/* error occured, try to re-init connection and retry */
 		int inTransaction = 0;
 		if(pData->f_hpgsql != NULL) {
@@ -247,11 +246,11 @@ writePgSQL(uchar *psz, instanceData *pData)
 		if ( inTransaction == 0 )
 #endif
 		{
-			closePgSQL(pData); /* close the current handle */
-			CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
+			closePgSQL(pData);		 /* close the current handle */
+			CHKiRet(initPgSQL(pData, 0));    /* try to re-open */
 			bHadError = tryExec(psz, pData); /* retry */
 		}
-		if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
+		if (bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
 			closePgSQL(pData); /* free ressources */
@@ -260,7 +259,7 @@ writePgSQL(uchar *psz, instanceData *pData)
 	}
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
+	if (iRet == RS_RET_OK) {
 		pData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
 	}
 
@@ -269,19 +268,18 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
-	if(pWrkrData->pData->f_hpgsql == NULL) {
+	CODESTARTtryResume if (pWrkrData->pData->f_hpgsql == NULL)
+	{
 		iRet = initPgSQL(pWrkrData->pData, 1);
-		if(iRet == RS_RET_OK) {
+		if (iRet == RS_RET_OK) {
 			/* the code above seems not to actually connect to the database. As such, we do a
 			 * dummy statement (a pointless select...) to verify the connection and return
 			 * success only when that statemetn succeeds. Note that I am far from being a 
 			 * PostgreSQL expert, so any patch that does the desired result in a more
 			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
 			 */
-			iRet = writePgSQL((uchar*)"select 'a' as a", pWrkrData->pData);
+			iRet = writePgSQL((uchar *)"select 'a' as a", pWrkrData->pData);
 		}
-
 	}
 ENDtryResume
 
@@ -298,11 +296,11 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-CODESTARTdoAction
-	pthread_mutex_lock(&mutDoAct);
+	CODESTARTdoAction
+	    pthread_mutex_lock(&mutDoAct);
 	dbgprintf("\n");
 	CHKiRet(writePgSQL(ppString[0], pWrkrData->pData));
-	if(bCoreSupportsBatching)
+	if (bCoreSupportsBatching)
 		iRet = RS_RET_DEFER_COMMIT;
 finalize_it:
 	pthread_mutex_unlock(&mutDoAct);
@@ -319,9 +317,9 @@ ENDendTransaction
 
 BEGINparseSelectorAct
 	int iPgSQLPropErr = 0;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
 	 * support the newer slection syntax [:modname:]. This is in fact
 	 * recommended for new modules. Please note that over time this part
@@ -330,14 +328,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * rgerhards, 2007-10-15
 	 */
 
-	if(!strncmp((char*) p, ":ompgsql:", sizeof(":ompgsql:") - 1)) {
+	    if (!strncmp((char *)p, ":ompgsql:", sizeof(":ompgsql:") - 1))
+	{
 		p += sizeof(":ompgsql:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
-	} else {
+	}
+	else
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK)
 		goto finalize_it;
 
 
@@ -346,70 +347,69 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Now we read the PgSQL connection properties 
 	 * and verify that the properties are valid.
 	 */
-	if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
+	if (getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN + 1, ','))
 		iPgSQLPropErr++;
-	dbgprintf("%p:%s\n",p,p);
-	if(*pData->f_dbsrv == '\0')
+	dbgprintf("%p:%s\n", p, p);
+	if (*pData->f_dbsrv == '\0')
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
+	if (getSubString(&p, pData->f_dbname, _DB_MAXDBLEN + 1, ','))
 		iPgSQLPropErr++;
-	if(*pData->f_dbname == '\0')
+	if (*pData->f_dbname == '\0')
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ','))
+	if (getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN + 1, ','))
 		iPgSQLPropErr++;
-	if(*pData->f_dbuid == '\0')
+	if (*pData->f_dbuid == '\0')
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+	if (getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN + 1, ';'))
 		iPgSQLPropErr++;
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
 	 */
-	if(*(p-1) == ';') {
-		--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
+	if (*(p - 1) == ';') {
+		--p; /* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
 			 *       is clean enough for the time being -- rgerhards, 2007-07-30
 			 *       kept it for pgsql -- sur5r, 2007-10-19
 			 */
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) pData->tplName));
-	}
-	else
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
-	
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar *)pData->tplName));
+	} else
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar *)" StdPgSQLFmt"));
+
 	/* If we detect invalid properties, we disable logging, 
 	 * because right properties are vital at this place.  
 	 * Retries make no sense. 
 	 */
-	if (iPgSQLPropErr) { 
+	if (iPgSQLPropErr) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-/* CODEqueryEtryPt_TXIF_OMOD_QUERIES currently no TX support! */ /* we support the transactional interface! */
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+	/* CODEqueryEtryPt_TXIF_OMOD_QUERIES currently no TX support! */ /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 
 	/* TODO: transaction support missing for v8 */
-	bCoreSupportsBatching= 0;
+	bCoreSupportsBatching = 0;
 	DBGPRINTF("ompgsql: transactions are not yet supported on v8\n");
 
 	DBGPRINTF("ompgsql: module compiled with rsyslog version %s.\n", VERSION);

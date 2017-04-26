@@ -31,16 +31,16 @@
 
 /* syslog names */
 #ifndef LOG_MAKEPRI
-#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#define LOG_MAKEPRI(fac, pri) (((fac) << 3) | (pri))
 #endif
-#define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
-#define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
-#define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
-#define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
+#define INTERNAL_NOPRI 0x10			 /* the "no priority" priority */
+#define TABLE_NOPRI 0				 /* Value to indicate no priority in f_pmask */
+#define TABLE_ALLPRI 0xFF			 /* Value to indicate all priorities in f_pmask */
+#define LOG_MARK LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
 
 typedef struct syslogName_s {
-	const char	*c_name;
-	int	c_val;
+	const char *c_name;
+	int c_val;
 } syslogName_t;
 
 extern syslogName_t syslogPriNames[];
@@ -80,11 +80,11 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * added 2007-07-17 by rgerhards
  */
 int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid,
-int bFailOnChown);
+    int bFailOnChown);
 int execProg(uchar *program, int bWait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, int64_t lNum, int lNumDigits);
+    size_t lenFName, int64_t lNum, int lNumDigits);
 int getNumberDigits(long lNum);
 rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
 long timeoutVal(struct timespec *pt);
@@ -92,7 +92,7 @@ void mutexCancelCleanup(void *arg);
 void srSleep(int iSeconds, int iuSeconds);
 char *rs_strerror_r(int errnum, char *buf, size_t buflen);
 int decodeSyslogName(uchar *name, syslogName_t *codetab);
-int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
+int getSubString(uchar **ppSrc, char *pDst, size_t DstSize, char cSep);
 rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 int containsGlobWildcard(char *str);
 void seedRandomNumber(void);
@@ -102,18 +102,18 @@ long long currentTimeMills(void);
 
 /* mutex operations */
 /* some useful constants */
-#define DEFVARS_mutexProtection\
-	int bLockedOpIsLocked=0
+#define DEFVARS_mutexProtection \
+	int bLockedOpIsLocked = 0
 #define BEGIN_MTX_PROTECTED_OPERATIONS(mut, bMustLock) \
-	if(bMustLock == LOCK_MUTEX) { \
-		d_pthread_mutex_lock(mut); \
-		assert(bLockedOpIsLocked == 0); \
-		bLockedOpIsLocked = 1; \
+	if (bMustLock == LOCK_MUTEX) {                 \
+		d_pthread_mutex_lock(mut);             \
+		assert(bLockedOpIsLocked == 0);        \
+		bLockedOpIsLocked = 1;                 \
 	}
-#define END_MTX_PROTECTED_OPERATIONS(mut) \
-	if(bLockedOpIsLocked) { \
+#define END_MTX_PROTECTED_OPERATIONS(mut)    \
+	if (bLockedOpIsLocked) {             \
 		d_pthread_mutex_unlock(mut); \
-		bLockedOpIsLocked = 0; \
+		bLockedOpIsLocked = 0;       \
 	}
 
 #endif

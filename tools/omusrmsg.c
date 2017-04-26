@@ -37,13 +37,13 @@
 #include <ctype.h>
 #include <sys/param.h>
 #ifdef HAVE_UTMP_H
-#  include <utmp.h>
-#  define STRUCTUTMP struct utmp
-#  define UTNAME ut_name
+#include <utmp.h>
+#define STRUCTUTMP struct utmp
+#define UTNAME ut_name
 #else
-#  include <utmpx.h>
-#  define STRUCTUTMP struct utmpx
-#  define UTNAME ut_user
+#include <utmpx.h>
+#define STRUCTUTMP struct utmpx
+#define UTNAME ut_user
 #endif
 #include <unistd.h>
 #include <sys/uio.h>
@@ -68,7 +68,7 @@
 
 /* portability: */
 #ifndef _PATH_DEV
-#	define _PATH_DEV	"/dev/"
+#define _PATH_DEV "/dev/"
 #endif
 
 
@@ -81,9 +81,9 @@ MODULE_CNFNAME("omusrmsg")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-typedef struct _instanceData {
+    typedef struct _instanceData {
 	int bIsWall; /* 1- is wall, 0 - individual users */
-	char uname[MAXUNAMES][UNAMESZ+1];
+	char uname[MAXUNAMES][UNAMESZ + 1];
 	uchar *tplName;
 } instanceData;
 
@@ -100,53 +100,49 @@ static configSettings_t __attribute__((unused)) cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "users", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "template", eCmdHdlrGetWord, 0 }
-};
+    {"users", eCmdHdlrString, CNFPARAM_REQUIRED},
+    {"template", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+	actpdescr};
 
-BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+BEGINinitConfVars /* (re)set config variables to default values */
+	CODESTARTinitConfVars
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	free(pData->tplName);
+	CODESTARTfreeInstance
+	    free(pData->tplName);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
 	register int i;
-CODESTARTdbgPrintInstInfo
-	for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
-		dbgprintf("%s, ", pData->uname[i]);
+	CODESTARTdbgPrintInstInfo for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
+	    dbgprintf("%s, ", pData->uname[i]);
 ENDdbgPrintInstInfo
 
 
@@ -159,9 +155,9 @@ ENDdbgPrintInstInfo
 #ifdef OS_BSD
 /* Since version 900007, FreeBSD has a POSIX compliant <utmpx.h> */
 #if defined(__FreeBSD__) && (__FreeBSD_version >= 900007)
-#  define setutent(void) setutxent(void)
-#  define getutent(void) getutxent(void)
-#  define endutent(void) endutxent(void)
+#define setutent(void) setutxent(void)
+#define getutent(void) getutxent(void)
+#define endutent(void) endutxent(void)
 #else
 static FILE *BSD_uf = NULL;
 void setutent(void)
@@ -173,14 +169,14 @@ void setutent(void)
 	}
 }
 
-STRUCTUTMP* getutent(void)
+STRUCTUTMP *getutent(void)
 {
 	static STRUCTUTMP st_utmp;
 
-	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
+	if (fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
 		return NULL;
 
-	return(&st_utmp);
+	return (&st_utmp);
 }
 
 void endutent(void)
@@ -189,7 +185,7 @@ void endutent(void)
 	BSD_uf = NULL;
 }
 #endif /* if defined(__FreeBSD__) */
-#endif  /* #ifdef OS_BSD */
+#endif /* #ifdef OS_BSD */
 
 
 /*  WALLMSG -- Write a message to the world at large
@@ -204,9 +200,9 @@ void endutent(void)
  * rgerhards, 2008-07-04: changing the function to no longer use fork() but
  * 	continue run on its thread instead.
  */
-static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
+static rsRetVal wallmsg(uchar *pMsg, instanceData *pData)
 {
-  
+
 	uchar szErr[512];
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
@@ -224,30 +220,30 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	setutent();
 
 	/* scan the user login file */
-	while((uptr = getutent())) {
+	while ((uptr = getutent())) {
 		memcpy(&ut, uptr, sizeof(ut));
 		/* is this slot used? */
-		if(ut.UTNAME[0] == '\0')
+		if (ut.UTNAME[0] == '\0')
 			continue;
 #ifndef OS_BSD
-		if(ut.ut_type != USER_PROCESS)
+		if (ut.ut_type != USER_PROCESS)
 			continue;
 #endif
-		if(!(strncmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
+		if (!(strncmp(ut.UTNAME, "LOGIN", 6))) /* paranoia */
 			continue;
 
 		/* should we send the message to this user? */
-		if(pData->bIsWall == 0) {
-			for(i = 0; i < MAXUNAMES; i++) {
-				if(!pData->uname[i][0]) {
+		if (pData->bIsWall == 0) {
+			for (i = 0; i < MAXUNAMES; i++) {
+				if (!pData->uname[i][0]) {
 					i = MAXUNAMES;
 					break;
 				}
-				if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
+				if (strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
 					break;
 			}
-			if(i == MAXUNAMES) /* user not found? */
-				continue; /* on to next user! */
+			if (i == MAXUNAMES) /* user not found? */
+				continue;   /* on to next user! */
 		}
 
 		/* compute the device name */
@@ -262,15 +258,15 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 		 */
 
 		/* open the terminal */
-		if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
-			if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
-				wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
-				if(Debug && wrRet == -1) {
+		if ((ttyf = open(p, O_WRONLY | O_NOCTTY | O_NONBLOCK)) >= 0) {
+			if (fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
+				wrRet = write(ttyf, pMsg, strlen((char *)pMsg));
+				if (Debug && wrRet == -1) {
 					/* we record the state to the debug log */
 					errnoSave = errno;
-					rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
+					rs_strerror_r(errno, (char *)szErr, sizeof(szErr));
 					dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
-						  p, errnoSave, szErr);
+					    p, errnoSave, szErr);
 				}
 			}
 			close(ttyf);
@@ -284,12 +280,12 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 
 
 BEGINtryResume
-CODESTARTtryResume
+	CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
-CODESTARTdoAction
-	dbgprintf("\n");
+	CODESTARTdoAction
+	    dbgprintf("\n");
 	iRet = wallmsg(ppString[0], pWrkrData->pData);
 ENDdoAction
 
@@ -307,39 +303,38 @@ populateUsers(instanceData *pData, es_str_t *usrs)
 	c = es_getBufAddr(usrs);
 	pData->bIsWall = 0; /* write to individual users */
 	iUsr = 0;
-	for(i = 0 ; i < MAXUNAMES && iUsr < len ; ++i) {
-		for(  iDst = 0
-		    ; iDst < UNAMESZ && iUsr < len && c[iUsr] != ','
-		    ; ++iDst, ++iUsr) {
+	for (i = 0; i < MAXUNAMES && iUsr < len; ++i) {
+		for (iDst = 0; iDst < UNAMESZ && iUsr < len && c[iUsr] != ','; ++iDst, ++iUsr) {
 			pData->uname[i][iDst] = c[iUsr];
 		}
 		pData->uname[i][iDst] = '\0';
 		DBGPRINTF("omusrmsg: send to user '%s'\n", pData->uname[i]);
-		if(iUsr < len && c[iUsr] != ',') {
+		if (iUsr < len && c[iUsr] != ',') {
 			errmsg.LogError(0, RS_RET_ERR, "user name '%s...' too long - "
-				"ignored", pData->uname[i]);
+						       "ignored",
+			    pData->uname[i]);
 			--i;
 			++iUsr;
-			while(iUsr < len && c[iUsr] != ',')
+			while (iUsr < len && c[iUsr] != ',')
 				++iUsr; /* skip to next name */
-		} else if(iDst == 0) {
+		} else if (iDst == 0) {
 			errmsg.LogError(0, RS_RET_ERR, "no user name given - "
-				"ignored");
+						       "ignored");
 			--i;
 			++iUsr;
-			while(iUsr < len && c[iUsr] != ',')
+			while (iUsr < len && c[iUsr] != ',')
 				++iUsr; /* skip to next name */
 		}
-		if(iUsr < len) {
+		if (iUsr < len) {
 			++iUsr; /* skip "," */
-			while(iUsr < len && isspace(c[iUsr]))
+			while (iUsr < len && isspace(c[iUsr]))
 				++iUsr; /* skip whitespace */
 		}
 	}
-	if(i == MAXUNAMES && iUsr != len) {
+	if (i == MAXUNAMES && iUsr != len) {
 		errmsg.LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
-			"user names in a single action - all others have been ignored",
-			MAXUNAMES);
+					       "user names in a single action - all others have been ignored",
+		    MAXUNAMES);
 	}
 }
 
@@ -354,113 +349,112 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	CODESTARTnewActInst if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	{
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	CODE_STD_STRING_REQUESTnewActInst(1) for (i = 0; i < actpblk.nParams; ++i)
+	{
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "users")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"*", 1)) {
+		if (!strcmp(actpblk.descr[i].name, "users")) {
+			if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"*", 1)) {
 				pData->bIsWall = 1;
 			} else {
 				populateUsers(pData, pvals[i].val.d.estr);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omusrmsg: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
+				  "param '%s'\n",
+			    actpblk.descr[i].name);
 		}
 	}
 
-	if(pData->tplName == NULL) {
+	if (pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup(pData->bIsWall ? " WallFmt" : " StdUsrMsgFmt"),
-			OMSR_NO_RQD_TPL_OPTS));
+		    (uchar *)strdup(pData->bIsWall ? " WallFmt" : " StdUsrMsgFmt"),
+		    OMSR_NO_RQD_TPL_OPTS));
 	} else {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_NO_RQD_TPL_OPTS));
+		    (uchar *)strdup((char *)pData->tplName),
+		    OMSR_NO_RQD_TPL_OPTS));
 	}
-CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	CODE_STD_FINALIZERnewActInst
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 	es_str_t *usrs;
 	int bHadWarning;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	bHadWarning = 0;
-	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+		bHadWarning = 0;
+	if (!strncmp((char *)p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
 		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
-		if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
-	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
+		if (!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
 			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 		} else {
 			errmsg.LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
-				"action '%s' treated as ':omusrmsg:%s' - please "
-				"use ':omusrmsg:%s' syntax instead, '%s' will "
-				"not be supported in the future",
-				p, p, p, p);
+			    "action '%s' treated as ':omusrmsg:%s' - please "
+			    "use ':omusrmsg:%s' syntax instead, '%s' will "
+			    "not be supported in the future",
+			    p, p, p, p);
 			bHadWarning = 1;
 		}
 	}
 
 	CHKiRet(createInstance(&pData));
 
-	if(*p == '*') { /* wall */
+	if (*p == '*') { /* wall */
 		dbgprintf("write-all");
-		++p; /* eat '*' */
+		++p;		    /* eat '*' */
 		pData->bIsWall = 1; /* write to all users */
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"));
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar *)" WallFmt"));
 	} else {
 		/* everything else is currently treated as a user name */
 		usrs = es_newStr(128);
-		while(*p && *p != ';') {
+		while (*p && *p != ';') {
 			es_addChar(&usrs, *p);
 			++p;
 		}
 		populateUsers(pData, usrs);
 		es_deleteStr(usrs);
-		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
-			!= RS_RET_OK)
+		if ((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar *)" StdUsrMsgFmt")) != RS_RET_OK)
 			goto finalize_it;
 	}
-	if(iRet == RS_RET_OK && bHadWarning)
+	if (iRet == RS_RET_OK && bHadWarning)
 		iRet = RS_RET_OK_WARN;
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(UsrMsg)
-CODESTARTmodInit
-INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    INITLegCnfVars
+		*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /* vim:set ai:

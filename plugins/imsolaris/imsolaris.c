@@ -89,23 +89,23 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imsolaris")
 
 /* defines */
-#define PATH_LOG	"/dev/log"
+#define PATH_LOG "/dev/log"
 
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(prop)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(prop)
 
 
-/* config settings */
-struct modConfData_s {
+    /* config settings */
+    struct modConfData_s {
 	EMPTY_STRUCT;
 };
 
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
-static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
+static prop_t *pInputName = NULL; /* our inputName currently is always "imuxsock", and this will hold it */
+static char *LogName = NULL;      /* the log socket name TODO: make configurable! */
 
 
 /* a function to replace the sun logerror() function.
@@ -114,8 +114,7 @@ static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
  * know or has acces to rsyslog objects (namely errmsg) -- and we do not
  * want to do this effort. -- rgerhards, 2010-04-19
  */
-void
-imsolaris_logerror(int err, char *errStr)
+void imsolaris_logerror(int err, char *errStr)
 {
 	errmsg.LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
 }
@@ -139,31 +138,31 @@ tryRecover(void)
 	close(sun_Pfd.fd);
 	sun_Pfd.fd = -1;
 
-	while(1) { /* loop broken inside */
+	while (1) { /* loop broken inside */
 		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
-		if(iRet == RS_RET_OK) {
-			if(tryNum > 1) {		
+		if (iRet == RS_RET_OK) {
+			if (tryNum > 1) {
 				errmsg.LogError(0, iRet, "failure on system log socket recovered.");
-			}	
+			}
 			break;
-		}	
+		}
 		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
-		if(tryNum == 1) {		
+		if (tryNum == 1) {
 			errmsg.LogError(0, iRet, "failure on system log socket, trying to recover...");
-		}	
+		}
 		waitusecs = tryNum * 10000;
 		waitsecs = waitusecs / 1000000;
 		DBGPRINTF("imsolaris: try %d to recover system log socket in %d.%d seconds\n",
-			  tryNum, waitsecs, waitusecs);
-		if(waitsecs > 15) {
+		    tryNum, waitsecs, waitusecs);
+		if (waitsecs > 15) {
 			waitsecs = 15;
 			waitusecs = 0;
-		} else  {	
+		} else {
 			waitusecs = waitusecs % 1000000;
-		}	
+		}
 		srSleep(waitsecs, waitusecs);
 		++tryNum;
-	}	
+	}
 }
 
 
@@ -186,28 +185,28 @@ readLog(int fd, uchar *pRcv, int iMaxLine)
 	int ret;
 	char errStr[1024];
 
-	data.buf = (char*)pRcv;
+	data.buf = (char *)pRcv;
 	data.maxlen = iMaxLine;
-	ctl.maxlen = sizeof (struct log_ctl);
+	ctl.maxlen = sizeof(struct log_ctl);
 	ctl.buf = (caddr_t)&hdr;
 	flags = 0;
 	ret = getmsg(fd, &ctl, &data, &flags);
-	if(ret < 0) {
-		if(errno == EINTR) {
+	if (ret < 0) {
+		if (errno == EINTR) {
 			FINALIZE;
-		} else 	{
+		} else {
 			int en = errno;
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
 			errmsg.LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
 			tryRecover();
-		}	
+		}
 	} else {
 		DBGPRINTF("imsolaris: message from log stream %d: %s\n", fd, pRcv);
 		pRcv[data.len] = '\0'; /* make sure it is a valid C-String */
 		CHKiRet(msgConstruct(&pMsg));
 		MsgSetInputName(pMsg, pInputName);
-		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
+		MsgSetRawMsg(pMsg, (char *)pRcv, strlen((char *)pRcv));
 		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 		msgSetPRI(pMsg, hdr.pri);
 		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW;
@@ -234,7 +233,7 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 	int nfds;
 	int iMaxLine;
 	uchar *pRcv = NULL; /* receive buffer */
-	uchar bufRcv[4096+1];
+	uchar bufRcv[4096 + 1];
 	char errStr[1024];
 
 	iMaxLine = glbl.GetMaxLine();
@@ -245,43 +244,43 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 	 * many issues with alloca() that I do not want to take that route.
 	 * rgerhards, 2008-09-02
 	 */
-	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+	if ((size_t)iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(iMaxLine + 1));
+		CHKmalloc(pRcv = (uchar *)malloc(iMaxLine + 1));
 	}
 
-	 while(pThrd->bShallStop != RSTRUE) {
+	while (pThrd->bShallStop != RSTRUE) {
 		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
-		if(timeout == 0) {
+		if (timeout == 0) {
 			nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-			if(pThrd->bShallStop == RSTRUE) {
+			if (pThrd->bShallStop == RSTRUE) {
 				break;
 			}
 
-			if(nfds == 0) {
-				if(timeout == 0) {
+			if (nfds == 0) {
+				if (timeout == 0) {
 					DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
 					FINALIZE;
 				} else {
 					continue;
-				}	
-			}		
+				}
+			}
 
-			if(nfds < 0) {
-				if(errno != EINTR) {
+			if (nfds < 0) {
+				if (errno != EINTR) {
 					int en = errno;
 					rs_strerror_r(en, errStr, sizeof(errStr));
 					DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
 					errmsg.LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
-							errStr);
+					    errStr);
 				}
 				continue;
 			}
-			if(sun_Pfd.revents & POLLIN) {
+			if (sun_Pfd.revents & POLLIN) {
 				readLog(sun_Pfd.fd, pRcv, iMaxLine);
-			} else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+			} else if (sun_Pfd.revents & (POLLNVAL | POLLHUP | POLLERR)) {
 				tryRecover();
 			}
 		} else {
@@ -295,11 +294,10 @@ getMsgs(thrdInfo_t *pThrd, int timeout)
 			 */
 			readLog(sun_Pfd.fd, pRcv, iMaxLine);
 		}
-
 	}
 
 finalize_it:
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+	if (pRcv != NULL && (size_t)iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
 
 	RETiRet;
@@ -307,39 +305,39 @@ finalize_it:
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+	CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+	CODESTARTendCnfLoad
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+	CODESTARTcheckCnf
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+	CODESTARTactivateCnf
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+	CODESTARTfreeCnf
 ENDfreeCnf
 
 
 /* This function is called to gather input. */
 BEGINrunInput
-CODESTARTrunInput
-	/* this is an endless loop - it is terminated when the thread is
+	CODESTARTrunInput
+	    /* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
 	 */
 
-	DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
+	    DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
 	CHKiRet(getMsgs(pThrd, 0));
 
 	/* note: sun's syslogd code claims that the door should only
@@ -357,14 +355,14 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
+	CODESTARTwillRun
+	    /* we need to create the inputName property (only once during our lifetime) */
+	    CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imsolaris"), sizeof("imsolaris") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
 
 	iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
-	if(iRet != RS_RET_OK) {
+	if (iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error opening system log socket");
 	}
 finalize_it:
@@ -372,16 +370,16 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
-	/* do cleanup here */
-	if(pInputName != NULL)
+	CODESTARTafterRun
+	    /* do cleanup here */
+	    if (pInputName != NULL)
 		prop.Destruct(&pInputName);
-	free(LogName);	
+	free(LogName);
 ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	sun_delete_doorfiles();
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -390,30 +388,29 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-        if(eFeat == sFEATURENonCancelInputTermination)
-                iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURENonCancelInputTermination)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_IMOD_QUERIES
+		CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
-				     void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp,
+    void __attribute__((unused)) * pVal)
 {
 	return RS_RET_OK;
 }
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 
@@ -421,9 +418,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-        CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
-                NULL, &LogName, STD_LOADABLE_MODULE_ID));
+	    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
+	    NULL, &LogName, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

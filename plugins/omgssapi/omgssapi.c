@@ -60,20 +60,20 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omgssapi")
 
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(gssutil)
-DEFobjCurrIf(tcpclt)
+    DEFobjCurrIf(glbl)
+	DEFobjCurrIf(gssutil)
+	    DEFobjCurrIf(tcpclt)
 
-typedef struct _instanceData {
-	char	*f_hname;
-	short	sock;			/* file descriptor */
-	enum { /* TODO: we shoud revisit these definitions */
+		typedef struct _instanceData {
+	char *f_hname;
+	short sock; /* file descriptor */
+	enum {      /* TODO: we shoud revisit these definitions */
 		eDestFORW,
 		eDestFORW_SUSP,
 		eDestFORW_UNKN
@@ -81,7 +81,7 @@ typedef struct _instanceData {
 	struct addrinfo *f_addr;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
-	tcpclt_t *pTCPClt;		/* our tcpclt object */
+	tcpclt_t *pTCPClt; /* our tcpclt object */
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
 } instanceData;
@@ -98,7 +98,7 @@ typedef enum gss_mode_e {
 } gss_mode_t;
 
 static struct configSettings_s {
-	uchar	*pszTplName; /* name of the default template to use */
+	uchar *pszTplName; /* name of the default template to use */
 	char *gss_base_service_name;
 	gss_mode_t gss_mode;
 } cs;
@@ -114,41 +114,40 @@ static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 static char *getFwdSyslogPt(instanceData *pData)
 {
 	assert(pData != NULL);
-	if(pData->port == NULL)
-		return("514");
+	if (pData->port == NULL)
+		return ("514");
 	else
-		return(pData->port);
+		return (pData->port);
 }
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-OM_uint32 maj_stat, min_stat;
-CODESTARTfreeInstance
-	switch (pData->eDestState) {
-		case eDestFORW:
-		case eDestFORW_SUSP:
-			freeaddrinfo(pData->f_addr);
-			/* fall through */
-		case eDestFORW_UNKN:
-			if(pData->port != NULL)
-				free(pData->port);
-			break;
+	OM_uint32 maj_stat, min_stat;
+	CODESTARTfreeInstance switch (pData->eDestState)
+	{
+	case eDestFORW:
+	case eDestFORW_SUSP:
+		freeaddrinfo(pData->f_addr);
+	/* fall through */
+	case eDestFORW_UNKN:
+		if (pData->port != NULL)
+			free(pData->port);
+		break;
 	}
 
 	if (pData->gss_context != GSS_C_NO_CONTEXT) {
@@ -164,20 +163,20 @@ CODESTARTfreeInstance
 
 	/* final cleanup */
 	tcpclt.Destruct(&pData->pTCPClt);
-	if(pData->sock >= 0)
+	if (pData->sock >= 0)
 		close(pData->sock);
 
-	if(pData->f_hname != NULL)
+	if (pData->f_hname != NULL)
 		free(pData->f_hname);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-	printf("%s", pData->f_hname);
+	CODESTARTdbgPrintInstInfo
+	    printf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
 
@@ -185,7 +184,7 @@ ENDdbgPrintInstInfo
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) *pData)
+static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) * pData)
 {
 	/* in case of TCP/GSS, there is nothing to do */
 	return RS_RET_OK;
@@ -202,12 +201,12 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	gss_buffer_t tok_ptr;
 	gss_name_t target_name;
 	gss_ctx_id_t *context;
-	instanceData *pData = (instanceData *) pvData;
+	instanceData *pData = (instanceData *)pvData;
 
 	assert(pData != NULL);
 
 	/* if the socket is already initialized, we are done */
-	if(pData->sock > 0)
+	if (pData->sock > 0)
 		ABORT_FINALIZE(RS_RET_OK);
 
 	base = (cs.gss_base_service_name == NULL) ? "host" : cs.gss_base_service_name;
@@ -216,7 +215,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
-	dbgprintf("GSS-API service name: %s\n", (char*) out_tok.value);
+	dbgprintf("GSS-API service name: %s\n", (char *)out_tok.value);
 
 	tok_ptr = GSS_C_NO_BUFFER;
 	context = &pData->gss_context;
@@ -245,13 +244,12 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 	do {
 		maj_stat = gss_init_sec_context(&init_sec_min_stat, GSS_C_NO_CREDENTIAL, context,
-						target_name, GSS_C_NO_OID, *sess_flags, 0, NULL,
-						tok_ptr, NULL, &out_tok, &ret_flags, NULL);
+		    target_name, GSS_C_NO_OID, *sess_flags, 0, NULL,
+		    tok_ptr, NULL, &out_tok, &ret_flags, NULL);
 		if (tok_ptr != GSS_C_NO_BUFFER)
 			free(in_tok.value);
 
-		if (maj_stat != GSS_S_COMPLETE
-		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
+		if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CONTINUE_NEEDED) {
 			gssutil.display_status("initializing context", maj_stat, init_sec_min_stat);
 			goto fail;
 		}
@@ -261,7 +259,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 				goto fail;
 
 		if (out_tok.length != 0) {
-			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long) out_tok.length);
+			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long)out_tok.length);
 			if (gssutil.send_token(s, &out_tok) < 0) {
 				goto fail;
 			}
@@ -287,7 +285,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 finalize_it:
 	RETiRet;
 
- fail:
+fail:
 	errmsg.LogError(0, RS_RET_GSS_SENDINIT_ERROR, "GSS-API Context initialization failed\n");
 	gss_release_name(&min_stat, &target_name);
 	gss_release_buffer(&min_stat, &out_tok);
@@ -308,7 +306,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 	gss_ctx_id_t *context;
 	OM_uint32 maj_stat, min_stat;
 	gss_buffer_desc in_buf, out_buf;
-	instanceData *pData = (instanceData *) pvData;
+	instanceData *pData = (instanceData *)pvData;
 
 	assert(pData != NULL);
 	assert(msg != NULL);
@@ -319,12 +317,12 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 	in_buf.value = msg;
 	in_buf.length = len;
 	maj_stat = gss_wrap(&min_stat, *context, (cs.gss_mode == GSSMODE_ENC) ? 1 : 0, GSS_C_QOP_DEFAULT,
-			    &in_buf, NULL, &out_buf);
+	    &in_buf, NULL, &out_buf);
 	if (maj_stat != GSS_S_COMPLETE) {
 		gssutil.display_status("wrapping message", maj_stat, min_stat);
 		goto fail;
 	}
-	
+
 	if (gssutil.send_token(s, &out_buf) < 0) {
 		goto fail;
 	}
@@ -332,7 +330,7 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 
 	return RS_RET_OK;
 
- fail:
+fail:
 	close(s);
 	pData->sock = -1;
 	gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
@@ -358,7 +356,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		iRet = RS_RET_OK; /* the actual check happens during doAction() only */
 		pData->eDestState = eDestFORW;
 		break;
-		
+
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
@@ -370,8 +368,8 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_STREAM;
-		if((e = getaddrinfo(pData->f_hname,
-				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
+		if ((e = getaddrinfo(pData->f_hname,
+			 getFwdSyslogPt(pData), &hints, &res)) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
 			pData->eDestState = eDestFORW;
@@ -389,8 +387,8 @@ static rsRetVal doTryResume(instanceData *pData)
 
 
 BEGINtryResume
-CODESTARTtryResume
-	pthread_mutex_lock(&mutDoAct);
+	CODESTARTtryResume
+	    pthread_mutex_lock(&mutDoAct);
 	iRet = doTryResume(pWrkrData->pData);
 	pthread_mutex_unlock(&mutDoAct);
 ENDtryResume
@@ -400,15 +398,15 @@ BEGINdoAction
 	register unsigned l;
 	int iMaxLine;
 	instanceData *pData;
-CODESTARTdoAction
-	pthread_mutex_lock(&mutDoAct);
+	CODESTARTdoAction
+	    pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
 		dbgprintf("internal error in omgssapi.c, eDestFORW_SUSP in doAction()!\n");
 		iRet = RS_RET_SUSPENDED;
 		break;
-		
+
 	case eDestFORW_UNKN:
 		dbgprintf("doAction eDestFORW_UNKN\n");
 		iRet = doTryResume(pData);
@@ -417,9 +415,9 @@ CODESTARTdoAction
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp-gssapi");
 		iMaxLine = glbl.GetMaxLine();
-		psz = (char*) ppString[0];
-		l = strlen((char*) psz);
-		if((int) l > iMaxLine)
+		psz = (char *)ppString[0];
+		l = strlen((char *)psz);
+		if ((int)l > iMaxLine)
 			l = iMaxLine;
 
 		/* Check if we should compress and, if so, do it. We also
@@ -430,20 +428,20 @@ CODESTARTdoAction
 		 * hard-coded but this may be changed to a config parameter.
 		 * rgerhards, 2006-11-30
 		 */
-		if(pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
+		if (pData->compressionLevel && (l > CONF_MIN_SIZE_FOR_COMPRESS)) {
 			Bytef *out;
 			uLongf destLen = sizeof(out) / sizeof(Bytef);
 			uLong srcLen = l;
 			int ret;
 			/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
-			CHKmalloc(out = (Bytef*) MALLOC(iMaxLine + iMaxLine/100 + 12));
+			CHKmalloc(out = (Bytef *)MALLOC(iMaxLine + iMaxLine / 100 + 12));
 			out[0] = 'z';
 			out[1] = '\0';
-			ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-					srcLen, pData->compressionLevel);
+			ret = compress2((Bytef *)out + 1, &destLen, (Bytef *)psz,
+			    srcLen, pData->compressionLevel);
 			dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
-				l, (int) destLen, ret);
-			if(ret != Z_OK) {
+			    l, (int)destLen, ret);
+			if (ret != Z_OK) {
 				/* if we fail, we complain, but only in debug mode
 				 * Otherwise, we are silent. In any case, we ignore the
 				 * failed compression and just sent the uncompressed
@@ -453,10 +451,10 @@ CODESTARTdoAction
 				 */
 				dbgprintf("Compression failed, sending uncompressed message\n");
 				free(out);
-			} else if(destLen+1 < l) {
+			} else if (destLen + 1 < l) {
 				/* only use compression if there is a gain in using it! */
 				dbgprintf("there is gain in compression, so we do it\n");
-				psz = (char*) out;
+				psz = (char *)out;
 				l = destLen + 1; /* take care for the "z" at message start! */
 			} else {
 				free(out);
@@ -464,7 +462,8 @@ CODESTARTdoAction
 			++destLen;
 		}
 
-		CHKiRet_Hdlr(tcpclt.Send(pData->pTCPClt, pData, psz, l)) {
+		CHKiRet_Hdlr(tcpclt.Send(pData->pTCPClt, pData, psz, l))
+		{
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
@@ -473,7 +472,7 @@ CODESTARTdoAction
 		break;
 	}
 finalize_it:
-	if((psz != NULL) && (psz != (char*) ppString[0]))  {
+	if ((psz != NULL) && (psz != (char *)ppString[0])) {
 		/* we need to free temporary buffer, alloced above - Naoya Nakazawa, 2010-01-11 */
 		free(psz);
 	}
@@ -484,13 +483,13 @@ ENDdoAction
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-        int error;
+	int error;
 	int bErr;
-        struct addrinfo hints, *res;
+	struct addrinfo hints, *res;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
-CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	    /* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
 	 * support the newer slection syntax [:modname:]. This is in fact
 	 * recommended for new modules. Please note that over time this part
@@ -499,14 +498,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * rgerhards, 2007-10-15
 	 */
 
-	if(!strncmp((char*) p, ":omgssapi:", sizeof(":omgssapi:") - 1)) {
+	    if (!strncmp((char *)p, ":omgssapi:", sizeof(":omgssapi:") - 1))
+	{
 		p += sizeof(":omgssapi:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
-	} else {
+	}
+	else
+	{
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
+	if ((iRet = createInstance(&pData)) != RS_RET_OK)
 		goto finalize_it;
 
 	/* we are now after the protocol indicator. Now check if we should
@@ -523,25 +525,25 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * That is not yet implemented.
 	 * rgerhards, 2006-12-07
 	 */
-	if(*p == '(') {
+	if (*p == '(') {
 		/* at this position, it *must* be an option indicator */
 		do {
 			++p; /* eat '(' or ',' (depending on when called) */
 			/* check options */
-			if(*p == 'z') { /* compression */
-				++p; /* eat */
-				if(isdigit((int) *p)) {
+			if (*p == 'z') { /* compression */
+				++p;     /* eat */
+				if (isdigit((int)*p)) {
 					int iLevel;
 					iLevel = *p - '0';
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
 				} else {
 					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
-						 "forwardig action - NOT turning on compression.",
-						 *p);
+								       "forwardig action - NOT turning on compression.",
+					    *p);
 				}
-			} else if(*p == 'o') { /* octet-couting based TCP framing? */
-				++p; /* eat */
+			} else if (*p == 'o') { /* octet-couting based TCP framing? */
+				++p;		/* eat */
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
@@ -552,10 +554,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 * to either the next option or the end of the option
 			 * block.
 			 */
-			while(*p && *p != ')' && *p != ',')
-				++p;	/* just skip it */
-		} while(*p && *p == ','); /* Attention: do.. while() */
-		if(*p == ')')
+			while (*p && *p != ')' && *p != ',')
+				++p;       /* just skip it */
+		} while (*p && *p == ','); /* Attention: do.. while() */
+		if (*p == ')')
 			++p; /* eat terminator, on to next */
 		else
 			/* we probably have end of string - leave it for the rest
@@ -566,21 +568,21 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
 	 */
-	for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
+	for (q = p; *p && *p != ';' && *p != ':' && *p != '#'; ++p)
 		/* JUST SKIP */;
 
 	pData->port = NULL;
-	if(*p == ':') { /* process port */
-		uchar * tmp;
+	if (*p == ':') { /* process port */
+		uchar *tmp;
 
 		*p = '\0'; /* trick to obtain hostname (later)! */
 		tmp = ++p;
-		for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
+		for (i = 0; *p && isdigit((int)*p); ++p, ++i)
 			/* SKIP AND COUNT */;
 		pData->port = MALLOC(i + 1);
-		if(pData->port == NULL) {
+		if (pData->port == NULL) {
 			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
-				 "using default port, results may not be what you intend\n");
+						       "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
 			 * getFwdSyslogPt().
 			 */
@@ -589,35 +591,35 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			*(pData->port + i) = '\0';
 		}
 	}
-	
-		
+
+
 	/* now skip to template */
 	bErr = 0;
-	while(*p && *p != ';') {
-		if(*p && *p != ';' && !isspace((int) *p)) {
-			if(bErr == 0) { /* only 1 error msg! */
+	while (*p && *p != ';') {
+		if (*p && *p != ';' && !isspace((int)*p)) {
+			if (bErr == 0) { /* only 1 error msg! */
 				bErr = 1;
 				errno = 0;
 				errmsg.LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
-					 "what was intended");
+							       "what was intended");
 			}
 		}
 		++p;
 	}
 
 	/* TODO: make this if go away! */
-	if(*p == ';' || *p == '#' || isspace(*p)) {
+	if (*p == ';' || *p == '#' || isspace(*p)) {
 		uchar cTmp = *p;
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->f_hname = strdup((char *)q));
 		*p = cTmp;
 	} else {
-		CHKmalloc(pData->f_hname = strdup((char*) q));
+		CHKmalloc(pData->f_hname = strdup((char *)q));
 	}
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-			(cs.pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
+	    (cs.pszTplName == NULL) ? (uchar *)"RSYSLOG_TraditionalForwardFormat" : cs.pszTplName));
 
 	/* first set the pData->eDestState */
 	memset(&hints, 0, sizeof(hints));
@@ -625,7 +627,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	hints.ai_flags = AI_NUMERICSERV;
 	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
-	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
+	if ((error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
 	} else {
 		pData->eDestState = eDestFORW;
@@ -643,18 +645,18 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
 	 */
-CODE_STD_FINALIZERparseSelectorAct
+	CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
-	objRelease(glbl, CORE_COMPONENT);
+	CODESTARTmodExit
+	    objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
-	if(cs.pszTplName != NULL) {
+	if (cs.pszTplName != NULL) {
 		free(cs.pszTplName);
 		cs.pszTplName = NULL;
 	}
@@ -662,25 +664,25 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
 /* set a new GSSMODE based on config directive */
-static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
+static rsRetVal setGSSMode(void __attribute__((unused)) * pVal, uchar *mode)
 {
 	DEFiRet;
 
-	if (!strcmp((char *) mode, "integrity")) {
+	if (!strcmp((char *)mode, "integrity")) {
 		cs.gss_mode = GSSMODE_MIC;
 		dbgprintf("GSS-API gssmode set to GSSMODE_MIC\n");
-	} else if (!strcmp((char *) mode, "encryption")) {
+	} else if (!strcmp((char *)mode, "encryption")) {
 		cs.gss_mode = GSSMODE_ENC;
 		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
 	} else {
-		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown gssmode parameter: %s", (char *) mode);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown gssmode parameter: %s", (char *)mode);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(mode);
@@ -689,7 +691,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 }
 
 
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal)
 {
 	cs.gss_mode = GSSMODE_ENC;
 	free(cs.gss_base_service_name);
@@ -701,22 +703,22 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL,
-	&cs.gss_base_service_name, STD_LOADABLE_MODULE_ID));
+	    &cs.gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &cs.gss_mode,
-	STD_LOADABLE_MODULE_ID));
+	    STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actiongssforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL,
-	&cs.pszTplName, STD_LOADABLE_MODULE_ID));
+	    &cs.pszTplName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
-	NULL, STD_LOADABLE_MODULE_ID));
+	    NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 #endif /* #ifdef USE_GSSAPI */

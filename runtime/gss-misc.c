@@ -55,9 +55,9 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(errmsg);
 
 static void display_status_(char *m, OM_uint32 code, int type)
 {
@@ -71,7 +71,7 @@ static void display_status_(char *m, OM_uint32 code, int type)
 			break;
 		} else {
 			char buf[1024];
-			snprintf(buf, sizeof(buf), "GSS-API error %s: %s\n", m, (char *) msg.value);
+			snprintf(buf, sizeof(buf), "GSS-API error %s: %s\n", m, (char *)msg.value);
 			buf[sizeof(buf) - 1] = '\0';
 			errmsg.LogError(0, NO_ERRCODE, "%s", buf);
 		}
@@ -90,81 +90,80 @@ static void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat)
 
 static void display_ctx_flags(OM_uint32 flags)
 {
-    if (flags & GSS_C_DELEG_FLAG)
-	dbgprintf("GSS_C_DELEG_FLAG\n");
-    if (flags & GSS_C_MUTUAL_FLAG)
-	dbgprintf("GSS_C_MUTUAL_FLAG\n");
-    if (flags & GSS_C_REPLAY_FLAG)
-	dbgprintf("GSS_C_REPLAY_FLAG\n");
-    if (flags & GSS_C_SEQUENCE_FLAG)
-	dbgprintf("GSS_C_SEQUENCE_FLAG\n");
-    if (flags & GSS_C_CONF_FLAG)
-	dbgprintf("GSS_C_CONF_FLAG\n");
-    if (flags & GSS_C_INTEG_FLAG)
-	dbgprintf("GSS_C_INTEG_FLAG\n");
+	if (flags & GSS_C_DELEG_FLAG)
+		dbgprintf("GSS_C_DELEG_FLAG\n");
+	if (flags & GSS_C_MUTUAL_FLAG)
+		dbgprintf("GSS_C_MUTUAL_FLAG\n");
+	if (flags & GSS_C_REPLAY_FLAG)
+		dbgprintf("GSS_C_REPLAY_FLAG\n");
+	if (flags & GSS_C_SEQUENCE_FLAG)
+		dbgprintf("GSS_C_SEQUENCE_FLAG\n");
+	if (flags & GSS_C_CONF_FLAG)
+		dbgprintf("GSS_C_CONF_FLAG\n");
+	if (flags & GSS_C_INTEG_FLAG)
+		dbgprintf("GSS_C_INTEG_FLAG\n");
 }
 
 
 static int read_all(int fd, char *buf, unsigned int nbyte)
 {
-    int     ret;
-    char   *ptr;
-    struct timeval tv;
+	int ret;
+	char *ptr;
+	struct timeval tv;
 #ifdef USE_UNLIMITED_SELECT
-    fd_set  *pRfds = malloc(glbl.GetFdSetSize());
+	fd_set *pRfds = malloc(glbl.GetFdSetSize());
 
-    if (pRfds == NULL)
-	    return -1;
+	if (pRfds == NULL)
+		return -1;
 #else
-    fd_set  rfds;
-    fd_set *pRfds = &rfds;
+	fd_set rfds;
+	fd_set *pRfds = &rfds;
 #endif
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	    FD_ZERO(pRfds);
-	    FD_SET(fd, pRfds);
-	    tv.tv_sec = 1;
-	    tv.tv_usec = 0;
+	for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+		FD_ZERO(pRfds);
+		FD_SET(fd, pRfds);
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
 
-	    if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0
-		|| !FD_ISSET(fd, pRfds)) {
-                    freeFdSet(pRfds);
-		    return ret;
-            }
-	    ret = recv(fd, ptr, nbyte, 0);
-	    if (ret < 0) {
-		    if (errno == EINTR)
-			    continue;
-                    freeFdSet(pRfds);
-		    return (ret);
-	    } else if (ret == 0) {
-                    freeFdSet(pRfds);
-		    return (ptr - buf);
-	    }
-    }
+		if ((ret = select(FD_SETSIZE, pRfds, NULL, NULL, &tv)) <= 0 || !FD_ISSET(fd, pRfds)) {
+			freeFdSet(pRfds);
+			return ret;
+		}
+		ret = recv(fd, ptr, nbyte, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			freeFdSet(pRfds);
+			return (ret);
+		} else if (ret == 0) {
+			freeFdSet(pRfds);
+			return (ptr - buf);
+		}
+	}
 
-    freeFdSet(pRfds);
-    return (ptr - buf);
+	freeFdSet(pRfds);
+	return (ptr - buf);
 }
 
 
 static int write_all(int fd, char *buf, unsigned int nbyte)
 {
-    int     ret;
-    char   *ptr;
+	int ret;
+	char *ptr;
 
-    for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
-	ret = send(fd, ptr, nbyte, 0);
-	if (ret < 0) {
-	    if (errno == EINTR)
-		continue;
-	    return (ret);
-	} else if (ret == 0) {
-	    return (ptr - buf);
+	for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+		ret = send(fd, ptr, nbyte, 0);
+		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+			return (ret);
+		} else if (ret == 0) {
+			return (ptr - buf);
+		}
 	}
-    }
 
-    return (ptr - buf);
+	return (ptr - buf);
 }
 
 
@@ -174,7 +173,7 @@ static int recv_token(int s, gss_buffer_t tok)
 	unsigned char lenbuf[4];
 	unsigned int len;
 
-	ret = read_all(s, (char *) lenbuf, 4);
+	ret = read_all(s, (char *)lenbuf, 4);
 	if (ret < 0) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token length");
 		return -1;
@@ -185,24 +184,21 @@ static int recv_token(int s, gss_buffer_t tok)
 		return -1;
 	}
 
-	len = ((lenbuf[0] << 24)
-	       | (lenbuf[1] << 16)
-	       | (lenbuf[2] << 8)
-	       | lenbuf[3]);
+	len = ((lenbuf[0] << 24) | (lenbuf[1] << 16) | (lenbuf[2] << 8) | lenbuf[3]);
 	tok->length = ntohl(len);
 
-	tok->value = (char *) MALLOC(tok->length ? tok->length : 1);
+	tok->value = (char *)MALLOC(tok->length ? tok->length : 1);
 	if (tok->length && tok->value == NULL) {
 		errmsg.LogError(0, NO_ERRCODE, "Out of memory allocating token data\n");
 		return -1;
 	}
 
-	ret = read_all(s, (char *) tok->value, tok->length);
+	ret = read_all(s, (char *)tok->value, tok->length);
 	if (ret < 0) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
-	} else if (ret != (int) tok->length) {
+	} else if (ret != (int)tok->length) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
@@ -214,19 +210,19 @@ static int recv_token(int s, gss_buffer_t tok)
 
 static int send_token(int s, gss_buffer_t tok)
 {
-	int     ret;
+	int ret;
 	unsigned char lenbuf[4];
 	unsigned int len;
 
 	if (tok->length > 0xffffffffUL)
-		abort();  /* TODO: we need to reconsider this, abort() is not really a solution - degrade, but keep running */
+		abort(); /* TODO: we need to reconsider this, abort() is not really a solution - degrade, but keep running */
 	len = htonl(tok->length);
 	lenbuf[0] = (len >> 24) & 0xff;
 	lenbuf[1] = (len >> 16) & 0xff;
 	lenbuf[2] = (len >> 8) & 0xff;
 	lenbuf[3] = len & 0xff;
 
-	ret = write_all(s, (char *) lenbuf, 4);
+	ret = write_all(s, (char *)lenbuf, 4);
 	if (ret < 0) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token length");
 		return -1;
@@ -239,7 +235,7 @@ static int send_token(int s, gss_buffer_t tok)
 	if (ret < 0) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
-	} else if (ret != (int) tok->length) {
+	} else if (ret != (int)tok->length) {
 		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
 	}
@@ -252,8 +248,8 @@ static int send_token(int s, gss_buffer_t tok)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(gssutil)
-CODESTARTobjQueryInterface(gssutil)
-	if(pIf->ifVersion != gssutilCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(gssutil) if (pIf->ifVersion != gssutilCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -275,9 +271,9 @@ ENDobjQueryInterface(gssutil)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(gssutil, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(gssutil)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(gssutil)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(gssutil)
 
@@ -297,20 +293,20 @@ ENDObjClassInit(gssutil)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	gssutilClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(gssutilClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

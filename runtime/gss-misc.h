@@ -19,8 +19,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	GSS_MISC_H_INCLUDED
-#define	GSS_MISC_H_INCLUDED 1
+#ifndef GSS_MISC_H_INCLUDED
+#define GSS_MISC_H_INCLUDED 1
 
 #include <gssapi/gssapi.h>
 #include "obj.h"

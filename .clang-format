@@ -1,0 +1,169 @@
+# format style file for rsyslog projects
+# --------------------------------------
+# This file is to be used with clang-format.
+# see https://clang.llvm.org/docs/ClangFormat.html
+#
+# To automtically reformat your changes with clang-format,
+# go to the project's home directory and do
+# $ find . -name "*.[ch]" -exec clang-format -i {} +
+#
+# These definitions are a compromise; they do two thing not
+# like we want:
+# 1) preprocessor statements are not aligned, but moved to
+#    column 0, which makes some constructs hard to read
+# 2) it does not enforce braces on single-statement blocks,
+#    e.g.
+#    if (cond)
+#       stmt;
+#    is NOT converted to
+#    if (cond) {
+#       stmt;
+#    }
+# For the time being, we accept these restrictions. Should
+# clang-format later support indention of preprocessor
+# statements, we will change the code style definition
+# accordingly and accept yet-another format change PR
+# (which should not be a too-big one and so be acceptable
+# in regard to git history).
+#
+# Also, we do not like the way clang-format breaks lines if
+# we limit the line length. As such, we do not limit it here,
+# but run a separate checker. We may also handle 2) above via
+# this system.
+#
+# Note: we use TAB, but we need to set IndenWidth to 8 because
+# this is the clang-format assumed default tab width. If we do
+# not set IndentWidth to 8, no tabs will be used in most cases
+# and instead everything is indented by 2 spaces. Our settings
+# do NOT interfere with the user's tab expansion preferrencies
+# as set in her or his editor.
+#
+# The community discussion that lead to the slected code style
+# can be found here:
+#    https://github.com/rsyslog/rsyslog/pull/1479
+#
+# rgerhards, 2017-03-23
+
+BasedOnStyle: LLVM
+IndentWidth: 8 # NOTE: we actually use TABS, see top comment
+UseTab: Always
+BreakBeforeBraces: Linux
+AlignEscapedNewlinesLeft: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+SpaceAfterCStyleCast: false
+IndentCaseLabels: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+ColumnLimit: 0
+PointerAlignment: Right
+AlignAfterOpenBracket: DontAlign
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpaceInEmptyParentheses: false
+MaxEmptyLinesToKeep: 2
+BreakBeforeTernaryOperators: true
+SortIncludes: false
+
+#
+
+MacroBlockBegin: "^BEGINcreateInstance|\
+BEGINfreeInstance|\
+BEGINcreateWrkrInstance|\
+BEGINfreeWrkrInstance|\
+BEGINisCompatibleWithFeature|\
+BEGINbeginTransaction|\
+BEGINcommitTransaction|\
+BEGINendTransaction|\
+BEGINdoAction|\
+BEGINdoAction_NoStrings|\
+BEGINdbgPrintInstInfo|\
+BEGINparseSelectorAct|\
+BEGINnewActInst|\
+BEGINnewInpInst|\
+BEGINnewParserInst|\
+BEGINfreeParserInst|\
+BEGINtryResume|\
+BEGINinitConfVars|\
+BEGINqueryEtryPt|\
+BEGINmodInit|\
+BEGINmodExit|\
+BEGINbeginCnfLoad|\
+BEGINsetModCnf|\
+BEGINendCnfLoad|\
+BEGINcheckCnf|\
+BEGINactivateCnfPrePrivDrop|\
+BEGINactivateCnf|\
+BEGINfreeCnf|\
+BEGINrunInput|\
+BEGINwillRun|\
+BEGINafterRun|\
+BEGINdoHUP|\
+BEGINdoHUPWrkr|\
+BEGINSetShutdownImmdtPtr|\
+BEGINparse|\
+BEGINparse2|\
+BEGINstrgen|\
+BEGINobjInstance|\
+BEGINObjClassInit|\
+BEGINAbstractObjClassInit|\
+BEGINObjClassExit|\
+BEGINobjConstruct|\
+BEGINobjDestruct|\
+BEGINobjDebugPrint|\
+BEGINobjQueryInterface|\
+BEGINinterface|\
+BEGIN_MTX_PROTECTED_OPERATIONS|\
+BEGINInit|\
+BEGINTest|\
+BEGINExit"
+MacroBlockEnd: "ENDcreateInstance|\
+ENDfreeInstance|\
+ENDcreateWrkrInstance|\
+ENDfreeWrkrInstance|\
+ENDisCompatibleWithFeature|\
+ENDbeginTransaction|\
+ENDcommitTransaction|\
+ENDendTransaction|\
+ENDdoAction|\
+ENDdoAction_NoStrings|\
+ENDdbgPrintInstInfo|\
+ENDparseSelectorAct|\
+ENDnewActInst|\
+ENDnewInpInst|\
+ENDnewParserInst|\
+ENDfreeParserInst|\
+ENDtryResume|\
+ENDinitConfVars|\
+ENDqueryEtryPt|\
+ENDmodInit|\
+ENDmodExit|\
+ENDbeginCnfLoad|\
+ENDsetModCnf|\
+ENDendCnfLoad|\
+ENDcheckCnf|\
+ENDactivateCnfPrePrivDrop|\
+ENDactivateCnf|\
+ENDfreeCnf|\
+ENDrunInput|\
+ENDwillRun|\
+ENDafterRun|\
+ENDdoHUP|\
+ENDdoHUPWrkr|\
+ENDSetShutdownImmdtPtr|\
+ENDparse|\
+ENDparse2|\
+ENDstrgen|\
+ENDobjInstance|\
+ENDObjClassInit|\
+ENDAbstractObjClassInit|\
+ENDObjClassExit|\
+ENDobjConstruct|\
+ENDobjDestruct|\
+ENDobjDebugPrint|\
+ENDobjQueryInterface|\
+ENDinterface|\
+END_MTX_PROTECTED_OPERATIONS|\
+ENDInit|\
+ENDTest|\
+ENDExit"

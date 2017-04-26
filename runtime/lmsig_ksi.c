@@ -37,49 +37,49 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
-	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
-	{ "sig.aggregator.uri", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "sig.aggregator.user", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "sig.block.sizelimit", eCmdHdlrSize, 0 },
-	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
-	{ "sig.keeptreehashes", eCmdHdlrBinary, 0 },
-	{ "dirowner", eCmdHdlrUID, 0 }, /* legacy: dirowner */
-	{ "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
-	{ "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
-	{ "dirgroupnum", eCmdHdlrInt, 0 }, /* legacy: dirgroupnum */
-	{ "fileowner", eCmdHdlrUID, 0 }, /* legacy: fileowner */
-	{ "fileownernum", eCmdHdlrInt, 0 }, /* legacy: fileownernum */
-	{ "filegroup", eCmdHdlrGID, 0 }, /* legacy: filegroup */
-	{ "filegroupnum", eCmdHdlrInt, 0 }, /* legacy: filegroupnum */
-	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: dircreatemode */
-	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 } /* legacy: filecreatemode */
+    {"sig.hashfunction", eCmdHdlrGetWord, 0},
+    {"sig.aggregator.uri", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+    {"sig.aggregator.user", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+    {"sig.aggregator.key", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+    {"sig.block.sizelimit", eCmdHdlrSize, 0},
+    {"sig.keeprecordhashes", eCmdHdlrBinary, 0},
+    {"sig.keeptreehashes", eCmdHdlrBinary, 0},
+    {"dirowner", eCmdHdlrUID, 0},		  /* legacy: dirowner */
+    {"dirownernum", eCmdHdlrInt, 0},		  /* legacy: dirownernum */
+    {"dirgroup", eCmdHdlrGID, 0},		  /* legacy: dirgroup */
+    {"dirgroupnum", eCmdHdlrInt, 0},		  /* legacy: dirgroupnum */
+    {"fileowner", eCmdHdlrUID, 0},		  /* legacy: fileowner */
+    {"fileownernum", eCmdHdlrInt, 0},		  /* legacy: fileownernum */
+    {"filegroup", eCmdHdlrGID, 0},		  /* legacy: filegroup */
+    {"filegroupnum", eCmdHdlrInt, 0},		  /* legacy: filegroupnum */
+    {"dircreatemode", eCmdHdlrFileCreateMode, 0}, /* legacy: dircreatemode */
+    {"filecreatemode", eCmdHdlrFileCreateMode, 0} /* legacy: filecreatemode */
 };
 static struct cnfparamblk pblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
-	  cnfpdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfpdescr) / sizeof(struct cnfparamdescr),
+	cnfpdescr};
 
 
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
 	errmsg.LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
-		"Error: %s", emsg);
+					       "Error: %s",
+	    emsg);
 }
 
 static void
 logfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
 	errmsg.LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
-		"KSI Signature Provider: %s", emsg);
+	    "KSI Signature Provider: %s", emsg);
 }
 
 
@@ -94,8 +94,8 @@ ENDobjConstruct(lmsig_ksi)
 
 /* destructor for the lmsig_ksi object */
 BEGINobjDestruct(lmsig_ksi) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmsig_ksi)
-	rsksiCtxDel(pThis->ctx);
+	CODESTARTobjDestruct(lmsig_ksi)
+	    rsksiCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_ksi)
 
 
@@ -107,45 +107,47 @@ static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
 	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;
-	lmsig_ksi_t *pThis = (lmsig_ksi_t*) pT;
+	lmsig_ksi_t *pThis = (lmsig_ksi_t *)pT;
 	int i;
 	uchar *cstr;
 	struct cnfparamvals *pvals;
 	DEFiRet;
 	pvals = nvlstGetParams(lst, &pblk, NULL);
-	if(pvals == NULL) {
+	if (pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("sig param blk in lmsig_ksi:\n");
 		cnfparamsPrint(&pblk, pvals);
 	}
 
-	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < pblk.nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) == 2) {
+		if (!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
+			cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (rsksiSetHashFunction(pThis->ctx, (char *)cstr) == 2) {
 				errmsg.LogError(0, RS_RET_ERR, "Hash function "
-					"'%s' has been removed due to insecurity - "
-					"using default", cstr);
-			} else if(rsksiSetHashFunction(pThis->ctx, (char*)cstr) != 0) {
+							       "'%s' has been removed due to insecurity - "
+							       "using default",
+				    cstr);
+			} else if (rsksiSetHashFunction(pThis->ctx, (char *)cstr) != 0) {
 				errmsg.LogError(0, RS_RET_ERR, "Hash function "
-					"'%s' unknown - using default", cstr);
+							       "'%s' unknown - using default",
+				    cstr);
 			}
 			free(cstr);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.uri")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.uri")) {
 			ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
 			ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
 			ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.block.sizelimit")) {
 			rsksiSetBlockSizeLimit(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
 			rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
+		} else if (!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
 			rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
 		} else if (!strcmp(pblk.descr[i].name, "dirowner")) {
 			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
@@ -169,18 +171,19 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			rsksiSetCreateMode(pThis->ctx, pvals[i].val.d.n);
 		} else {
 			DBGPRINTF("lmsig_ksi: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
+				  "param '%s'\n",
+			    pblk.descr[i].name);
 		}
 	}
 
-	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)
+	if (rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)
 		ABORT_FINALIZE(RS_RET_KSI_ERR);
 
 	free(ag_uri);
 	free(ag_loginid);
 	free(ag_key);
 finalize_it:
-	if(pvals != NULL)
+	if (pvals != NULL)
 		cnfparamvalsDestruct(pvals, &pblk);
 	RETiRet;
 }
@@ -189,8 +192,8 @@ finalize_it:
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF)
 {
-	lmsig_ksi_t *pThis = (lmsig_ksi_t*) pT;
-	ksifile *pgf = (ksifile*) pGF;
+	lmsig_ksi_t *pThis = (lmsig_ksi_t *)pT;
+	ksifile *pgf = (ksifile *)pGF;
 	DEFiRet;
 	DBGPRINTF("lmsig_ksi: onFileOpen: %s\n", fn);
 	/* note: if *pgf is set to NULL, this auto-disables GT functions */
@@ -211,8 +214,8 @@ static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
 	DEFiRet;
-	DBGPRINTF("lmsig_ksi: onRecordWrite (%d): %s\n", lenRec-1, rec);
-	sigblkAddRecordKSI(pF, rec, lenRec-1);
+	DBGPRINTF("lmsig_ksi: onRecordWrite (%d): %s\n", lenRec - 1, rec);
+	sigblkAddRecordKSI(pF, rec, lenRec - 1);
 
 	RETiRet;
 }
@@ -228,13 +231,13 @@ OnFileClose(void *pF)
 }
 
 BEGINobjQueryInterface(lmsig_ksi)
-CODESTARTobjQueryInterface(lmsig_ksi)
-	 if(pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(lmsig_ksi) if (pIf->ifVersion != sigprovCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmsig_ksiConstruct;
+	pIf->Construct = (rsRetVal(*)(void *))lmsig_ksiConstruct;
 	pIf->SetCnfParam = SetCnfParam;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_ksiDestruct;
+	pIf->Destruct = (rsRetVal(*)(void *))lmsig_ksiDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->OnRecordWrite = OnRecordWrite;
 	pIf->OnFileClose = OnFileClose;
@@ -243,9 +246,9 @@ ENDobjQueryInterface(lmsig_ksi)
 
 
 BEGINObjClassExit(lmsig_ksi, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmsig_ksi)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(lmsig_ksi)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(lmsig_ksi)
 
@@ -261,19 +264,19 @@ ENDObjClassInit(lmsig_ksi)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	lmsig_ksiClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 	CHKiRet(lmsig_ksiClassInit(pModInfo));
 ENDmodInit

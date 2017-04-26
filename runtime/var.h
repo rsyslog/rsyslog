@@ -33,25 +33,26 @@ typedef enum {
 
 /* the var object */
 typedef struct var_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	cstr_t *pcsName;
-	varType_t varType;
-	union {
-		number_t num;
-		es_str_t *str;
-		cstr_t *pStr;
-		syslogTime_t vSyslogTime;
+	BEGINobjInstance
+		; /* Data to implement generic object - MUST be the first data element! */
+		cstr_t *pcsName;
+		varType_t varType;
+		union {
+			number_t num;
+			es_str_t *str;
+			cstr_t *pStr;
+			syslogTime_t vSyslogTime;
 
-	} val;
+		} val;
 } var_t;
 
 
 /* interfaces */
 BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(var);
-	rsRetVal (*Construct)(var_t **ppThis);
-	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) *pThis);
-	rsRetVal (*Destruct)(var_t **ppThis);
+	rsRetVal (*Construct)(var_t * *ppThis);
+	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) * pThis);
+	rsRetVal (*Destruct)(var_t * *ppThis);
 ENDinterface(var)
 #define varCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
 /* v2 - 2011-07-15/rger: on the way to remove var */

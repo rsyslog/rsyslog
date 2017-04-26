@@ -32,8 +32,7 @@
 extern int yylineno;
 int Debug = 1;
 
-void
-parser_errmsg(char *fmt, ...)
+void parser_errmsg(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -43,15 +42,13 @@ parser_errmsg(char *fmt, ...)
 	va_end(ap);
 }
 
-int
-yyerror(char *s)
+int yyerror(char *s)
 {
 	parser_errmsg("%s", s);
 	return 0;
 }
 
-void
-dbgprintf(char *fmt, ...)
+void dbgprintf(char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -74,21 +71,20 @@ void cnfDoRule(struct cnfrule *rule)
 
 void cnfDoCfsysline(char *ln)
 {
-	 dbgprintf("global:cfsysline: %s\n", ln);
+	dbgprintf("global:cfsysline: %s\n", ln);
 }
 
 void cnfDoBSDTag(char *ln)
 {
-	 dbgprintf("global:BSD tag: %s\n", ln);
+	dbgprintf("global:BSD tag: %s\n", ln);
 }
 
 void cnfDoBSDHost(char *ln)
 {
-	 dbgprintf("global:BSD host: %s\n", ln);
+	dbgprintf("global:BSD host: %s\n", ln);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int r;
 

@@ -40,7 +40,7 @@
 #include "stringbuf.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 static int bHadErrMsgs; /* indicates if we had error messages since reset of this flag
                          * This is used to abort a run if the config is unclean.
@@ -52,14 +52,12 @@ static int bHadErrMsgs; /* indicates if we had error messages since reset of thi
 /* Resets the error message flag. Must be done before processing config
  * files.
  */
-void
-resetErrMsgsFlag(void)
+void resetErrMsgsFlag(void)
 {
 	bHadErrMsgs = 0;
 }
 
-int
-hadErrMsgs(void)
+int hadErrMsgs(void)
 {
 	return bHadErrMsgs;
 }
@@ -75,22 +73,22 @@ hadErrMsgs(void)
  * rgerhards, 2008-06-27
  */
 static void
-doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *msg)
+doLogMsg(const int iErrno, const int iErrCode, const int severity, const char *msg)
 {
 	char buf[2048];
 	char errStr[1024];
-	
+
 	dbgprintf("Called LogMsg, msg: %s\n", msg);
 
-	if(iErrno != 0) {
+	if (iErrno != 0) {
 		rs_strerror_r(iErrno, errStr, sizeof(errStr));
-		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
+		if (iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
 		} else {
 			snprintf(buf, sizeof(buf), "%s: %s [v%s try http://www.rsyslog.com/e/%d ]", msg, errStr, VERSION, iErrCode * -1);
 		}
 	} else {
-		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
+		if (iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
 			snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
 		} else {
 			snprintf(buf, sizeof(buf), "%s [v%s try http://www.rsyslog.com/e/%d ]", msg, VERSION, iErrCode * -1);
@@ -98,10 +96,10 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 	}
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
-	
-	glblErrLogger(severity, iErrCode, (uchar*)buf);
 
-	if(severity == LOG_ERR)
+	glblErrLogger(severity, iErrCode, (uchar *)buf);
+
+	if (severity == LOG_ERR)
 		bHadErrMsgs = 1;
 }
 
@@ -116,21 +114,21 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
  * rgerhards, 2008-06-27
  */
 void __attribute__((format(printf, 3, 4)))
-LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
+LogError(const int iErrno, const int iErrCode, const char *fmt, ...)
 {
 	va_list ap;
 	char buf[2048];
 	size_t lenBuf;
-	
+
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf >= sizeof(buf)) {
+	if (lenBuf >= sizeof(buf)) {
 		/* if our buffer was too small, we simply truncate. */
 		lenBuf--;
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
-	
+
 	doLogMsg(iErrno, iErrCode, LOG_ERR, buf);
 }
 
@@ -145,21 +143,21 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
  * rgerhards, 2008-06-27
  */
 void __attribute__((format(printf, 4, 5)))
-LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... )
+LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ...)
 {
 	va_list ap;
 	char buf[2048];
 	size_t lenBuf;
-	
+
 	va_start(ap, fmt);
 	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf >= sizeof(buf)) {
+	if (lenBuf >= sizeof(buf)) {
 		/* if our buffer was too small, we simply truncate. */
 		lenBuf--;
 	}
 	va_end(ap);
 	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
-	
+
 	doLogMsg(iErrno, iErrCode, severity, buf);
 }
 
@@ -168,8 +166,8 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(errmsg)
-CODESTARTobjQueryInterface(errmsg)
-	if(pIf->ifVersion != errmsgCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(errmsg) if (pIf->ifVersion != errmsgCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -189,16 +187,16 @@ ENDobjQueryInterface(errmsg)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(errmsg, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
+/* request objects we use */
 
-	/* set our own handlers */
+/* set our own handlers */
 ENDObjClassInit(errmsg)
 
 /* Exit the class.
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(errmsg, OBJ_IS_CORE_MODULE) /* class, version */
-	/* release objects we no longer need */
+					      /* release objects we no longer need */
 ENDObjClassExit(errmsg)
 
 /* vi:set ai:

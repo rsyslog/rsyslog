@@ -41,10 +41,10 @@
 #include "cfsysline.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(ruleset)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(ruleset);
 
 /* static data */
 
@@ -79,7 +79,7 @@ DestructStrgenList(strgenList_t **ppListRoot)
 	strgenList_t *pStrgenLstDel;
 
 	pStrgenLst = *ppListRoot;
-	while(pStrgenLst != NULL) {
+	while (pStrgenLst != NULL) {
 		pStrgenLstDel = pStrgenLst;
 		pStrgenLst = pStrgenLst->pNext;
 		free(pStrgenLstDel);
@@ -107,12 +107,12 @@ AddStrgenToList(strgenList_t **ppListRoot, strgen_t *pStrgen)
 	pThis->pStrgen = pStrgen;
 	pThis->pNext = NULL;
 
-	if(*ppListRoot == NULL) {
+	if (*ppListRoot == NULL) {
 		pThis->pNext = *ppListRoot;
 		*ppListRoot = pThis;
 	} else {
 		/* find tail first */
-		for(pTail = *ppListRoot ; pTail->pNext != NULL ; pTail = pTail->pNext)
+		for (pTail = *ppListRoot; pTail->pNext != NULL; pTail = pTail->pNext)
 			/* just search, do nothing else */;
 		/* add at tail */
 		pTail->pNext = pThis;
@@ -129,11 +129,11 @@ FindStrgen(strgen_t **ppStrgen, uchar *pName)
 {
 	strgenList_t *pThis;
 	DEFiRet;
-	
-	for(pThis = pStrgenLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
-		if(ustrcmp(pThis->pStrgen->pName, pName) == 0) {
+
+	for (pThis = pStrgenLstRoot; pThis != NULL; pThis = pThis->pNext) {
+		if (ustrcmp(pThis->pStrgen->pName, pName) == 0) {
 			*ppStrgen = pThis->pStrgen;
-			FINALIZE;	/* found it, iRet still eq. OK! */
+			FINALIZE; /* found it, iRet still eq. OK! */
 		}
 	}
 
@@ -169,8 +169,8 @@ finalize_it:
 
 PROTOTYPEobjDestruct(strgen);
 BEGINobjDestruct(strgen) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strgen)
-	dbgprintf("destructing strgen '%s'\n", pThis->pName);
+	CODESTARTobjDestruct(strgen)
+	    dbgprintf("destructing strgen '%s'\n", pThis->pName);
 	free(pThis->pName);
 ENDobjDestruct(strgen)
 
@@ -185,7 +185,7 @@ SetName(strgen_t *pThis, uchar *name)
 	ISOBJ_TYPE_assert(pThis, strgen);
 	assert(name != NULL);
 
-	if(pThis->pName != NULL) {
+	if (pThis->pName != NULL) {
 		free(pThis->pName);
 		pThis->pName = NULL;
 	}
@@ -214,8 +214,8 @@ SetModPtr(strgen_t *pThis, modInfo_t *pMod)
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(strgen)
-CODESTARTobjQueryInterface(strgen)
-	if(pIf->ifVersion != strgenCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(strgen) if (pIf->ifVersion != strgenCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -248,7 +248,7 @@ destroyMasterStrgenList(void)
 	strgenList_t *pStrgenLstDel;
 
 	pStrgenLst = pStrgenLstRoot;
-	while(pStrgenLst != NULL) {
+	while (pStrgenLst != NULL) {
 		strgenDestruct(&pStrgenLst->pStrgen);
 		pStrgenLstDel = pStrgenLst;
 		pStrgenLst = pStrgenLst->pNext;
@@ -278,4 +278,3 @@ BEGINObjClassInit(strgen, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 	InitStrgenList(&pStrgenLstRoot);
 ENDObjClassInit(strgen)
-

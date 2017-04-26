@@ -28,8 +28,8 @@
  */
 struct llElt_s { /* config file sysline parse entry */
 	struct llElt_s *pNext;
-	void *pKey;		/* key for this element */
-	void *pData;		/* user-supplied data pointer */
+	void *pKey;  /* key for this element */
+	void *pData; /* user-supplied data pointer */
 };
 typedef struct llElt_s llElt_t;
 
@@ -38,18 +38,18 @@ typedef struct llElt_s llElt_t;
  * their handlers.
  * The short name is cslc (Configfile SysLine Command)
  */
-struct linkedList_s { /* config file sysline parse entry */
-	int iNumElts;		/* number of elements in list */
-	rsRetVal (*pEltDestruct)(void*pData);	/* destructor for user pointer in llElt_t's */
-	rsRetVal (*pKeyDestruct)(void*pKey);	/* destructor for key pointer in llElt_t's */
-	int (*cmpOp)(void*, void*); /* pointer to key compare operation function, retval like strcmp */
-	void *pKey;			/* the list key (searchable, if set) */
-	llElt_t *pRoot;	/* list root */
-	llElt_t *pLast;	/* list tail */
+struct linkedList_s {			       /* config file sysline parse entry */
+	int iNumElts;			       /* number of elements in list */
+	rsRetVal (*pEltDestruct)(void *pData); /* destructor for user pointer in llElt_t's */
+	rsRetVal (*pKeyDestruct)(void *pKey);  /* destructor for key pointer in llElt_t's */
+	int (*cmpOp)(void *, void *);	  /* pointer to key compare operation function, retval like strcmp */
+	void *pKey;			       /* the list key (searchable, if set) */
+	llElt_t *pRoot;			       /* list root */
+	llElt_t *pLast;			       /* list tail */
 };
 typedef struct linkedList_s linkedList_t;
 
-typedef llElt_t* linkedListCookie_t;	/* this type avoids exposing internals and keeps us flexible */
+typedef llElt_t *linkedListCookie_t; /* this type avoids exposing internals and keeps us flexible */
 
 /* prototypes */
 rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(), rsRetVal (*pKeyDestructor)(), int (*pCmpOp)());
@@ -60,12 +60,12 @@ rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
 rsRetVal llGetKey(llElt_t *pThis, void *ppData);
 rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt);
-rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam);
+rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void *, void *), void *pParam);
 rsRetVal llFindAndDelete(linkedList_t *pThis, void *pKey);
 /* use the macro below to define a function that will be executed by
  * llExecFunc()
  */
-#define DEFFUNC_llExecFunc(funcName)\
-	static rsRetVal funcName(void __attribute__((unused)) *pData, void __attribute__((unused)) *pParam)
+#define DEFFUNC_llExecFunc(funcName) \
+	static rsRetVal funcName(void __attribute__((unused)) * pData, void __attribute__((unused)) * pParam)
 
 #endif /* #ifndef LINKEDLIST_H_INCLUDED */

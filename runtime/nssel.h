@@ -26,24 +26,25 @@
 
 /* the nssel object */
 struct nssel_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	nsd_t *pDrvrData;	/**< the driver's data elements */
-	uchar *pBaseDrvrName;	/**< nsd base driver name to use, or NULL if system default */
-	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
-	nsdsel_if_t Drvr;	/**< our stream driver */
+	BEGINobjInstance
+		;		      /* Data to implement generic object - MUST be the first data element! */
+		nsd_t *pDrvrData;     /**< the driver's data elements */
+		uchar *pBaseDrvrName; /**< nsd base driver name to use, or NULL if system default */
+		uchar *pDrvrName;     /**< full base driver name (set when driver is loaded) */
+		nsdsel_if_t Drvr;     /**< our stream driver */
 };
 
 
 /* interface */
 BEGINinterface(nssel) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nssel_t **ppThis);
-	rsRetVal (*ConstructFinalize)(nssel_t *pThis);
-	rsRetVal (*Destruct)(nssel_t **ppThis);
-	rsRetVal (*Add)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp);
-	rsRetVal (*Wait)(nssel_t *pThis, int *pNumReady);
-	rsRetVal (*IsReady)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady);
+	rsRetVal (*Construct)(nssel_t * *ppThis);
+	rsRetVal (*ConstructFinalize)(nssel_t * pThis);
+	rsRetVal (*Destruct)(nssel_t * *ppThis);
+	rsRetVal (*Add)(nssel_t * pThis, netstrm_t * pStrm, nsdsel_waitOp_t waitOp);
+	rsRetVal (*Wait)(nssel_t * pThis, int *pNumReady);
+	rsRetVal (*IsReady)(nssel_t * pThis, netstrm_t * pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady);
 	/* v2 - 2013-09-17 by rgerhards */
-	rsRetVal (*SetDrvrName)(nssel_t *pThis, uchar *name);
+	rsRetVal (*SetDrvrName)(nssel_t * pThis, uchar * name);
 ENDinterface(nssel)
 #define nsselCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 

@@ -57,15 +57,16 @@
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf"
 /* name of input file, must match $IncludeConfig in .conf files */
 
-typedef enum { inputUDP, inputTCP } inputMode_t;
-inputMode_t inputMode = inputTCP; /* input for which tests are to be run */
-static pid_t rsyslogdPid = 0;	/* pid of rsyslog instance being tested */
-static char *srcdir;	/* global $srcdir, set so that we can run outside of "make check" */
-static char *testSuite = NULL; /* name of current test suite */
-static int iPort = 12514; /* port which shall be used for sending data */
-static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
-static int verbose = 0;	/* verbose output? -v option */
-static int IPv4Only = 0;	/* use only IPv4 in rsyslogd call? */
+typedef enum { inputUDP,
+	inputTCP } inputMode_t;
+inputMode_t inputMode = inputTCP;  /* input for which tests are to be run */
+static pid_t rsyslogdPid = 0;      /* pid of rsyslog instance being tested */
+static char *srcdir;		   /* global $srcdir, set so that we can run outside of "make check" */
+static char *testSuite = NULL;     /* name of current test suite */
+static int iPort = 12514;	  /* port which shall be used for sending data */
+static char *pszCustomConf = NULL; /* custom config file, use -c conf to specify */
+static int verbose = 0;		   /* verbose output? -v option */
+static int IPv4Only = 0;	   /* use only IPv4 in rsyslogd call? */
 static char **ourEnvp;
 static char *ourHostName;
 
@@ -79,7 +80,7 @@ static char *inputMode2Str(inputMode_t mode)
 {
 	char *pszMode;
 
-	if(mode == inputUDP)
+	if (mode == inputUDP)
 		pszMode = "udp";
 	else
 		pszMode = "tcp";
@@ -94,15 +95,16 @@ void readLine(int fd, char *ln)
 	char c;
 	int lenRead;
 
-	if(verbose)
+	if (verbose)
 		fprintf(stderr, "begin readLine\n");
 	lenRead = read(fd, &c, 1);
 
-	while(lenRead == 1 && c != '\n') {
-		if(c == '\0') {
+	while (lenRead == 1 && c != '\n') {
+		if (c == '\0') {
 			*ln = c;
 			fprintf(stderr, "Warning: there was a '\\0'-Byte in the read response "
-					"right after this string: '%s'\n", orig);
+					"right after this string: '%s'\n",
+			    orig);
 			c = '?';
 		}
 		*ln++ = c;
@@ -110,12 +112,12 @@ void readLine(int fd, char *ln)
 	}
 	*ln = '\0';
 
-	if(lenRead < 0) {
+	if (lenRead < 0) {
 		fprintf(stderr, "read from rsyslogd returned with error '%s' - aborting test\n", strerror(errno));
 		exit(1);
 	}
 
-	if(verbose)
+	if (verbose)
 		fprintf(stderr, "end readLine, val read '%s'\n", orig);
 }
 
@@ -133,8 +135,7 @@ void readLine(int fd, char *ln)
  * into troubles (maybe something wrongly initialized then?)
  * -- rgerhards, 2010-04-12
  */
-int
-tcpSend(char *buf, int lenBuf)
+int tcpSend(char *buf, int lenBuf)
 {
 	static int sock = INVALID_SOCKET;
 	struct sockaddr_in addr;
@@ -142,28 +143,28 @@ tcpSend(char *buf, int lenBuf)
 	int ret;
 	int iRet = 0; /* 0 OK, anything else error */
 
-	if(sock == INVALID_SOCKET) {
+	if (sock == INVALID_SOCKET) {
 		/* first time, need to connect to target */
 		retries = 0;
-		while(1) { /* loop broken inside */
+		while (1) { /* loop broken inside */
 			/* first time, need to connect to target */
-			if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
+			if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 				perror("socket()");
 				iRet = 1;
 				goto finalize_it;
 			}
-			memset((char *) &addr, 0, sizeof(addr));
+			memset((char *)&addr, 0, sizeof(addr));
 			addr.sin_family = AF_INET;
 			addr.sin_port = htons(iPort);
-			if(inet_aton("127.0.0.1", &addr.sin_addr)==0) {
+			if (inet_aton("127.0.0.1", &addr.sin_addr) == 0) {
 				fprintf(stderr, "inet_aton() failed\n");
 				iRet = 1;
 				goto finalize_it;
 			}
-			if((ret = connect(sock, (struct sockaddr*)&addr, sizeof(addr))) == 0) {
+			if ((ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr))) == 0) {
 				break;
 			} else {
-				if(retries++ == 50) {
+				if (retries++ == 50) {
 					fprintf(stderr, "connect() failed\n");
 					iRet = 1;
 					goto finalize_it;
@@ -171,11 +172,11 @@ tcpSend(char *buf, int lenBuf)
 					usleep(100000); /* ms = 1000 us! */
 				}
 			}
-		} 
+		}
 	}
 
 	/* send test data */
-	if((ret = send(sock, buf, lenBuf, 0)) != lenBuf) {
+	if ((ret = send(sock, buf, lenBuf, 0)) != lenBuf) {
 		perror("send test data");
 		fprintf(stderr, "send() failed, sock=%d, ret=%d\n", sock, ret);
 		iRet = 1;
@@ -183,7 +184,7 @@ tcpSend(char *buf, int lenBuf)
 	}
 
 	/* send record terminator */
-	if(send(sock, "\n", 1, 0) != 1) {
+	if (send(sock, "\n", 1, 0) != 1) {
 		perror("send record terminator");
 		fprintf(stderr, "send() failed\n");
 		iRet = 1;
@@ -191,9 +192,9 @@ tcpSend(char *buf, int lenBuf)
 	}
 
 finalize_it:
-	if(iRet != 0) {
+	if (iRet != 0) {
 		/* need to do some (common) cleanup */
-		if(sock != INVALID_SOCKET) {
+		if (sock != INVALID_SOCKET) {
 			close(sock);
 			sock = INVALID_SOCKET;
 		}
@@ -207,29 +208,28 @@ finalize_it:
 /* send a message via UDP
  * returns 0 if ok, something else otherwise.
  */
-int
-udpSend(char *buf, int lenBuf)
+int udpSend(char *buf, int lenBuf)
 {
 	struct sockaddr_in si_other;
-	int s, slen=sizeof(si_other);
+	int s, slen = sizeof(si_other);
 
-	if((s=socket(AF_INET, SOCK_DGRAM, 0))==-1) {
+	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		perror("socket()");
-		return(1);
+		return (1);
 	}
 
-	memset((char *) &si_other, 0, sizeof(si_other));
+	memset((char *)&si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(iPort);
-	if(inet_aton("127.0.0.1", &si_other.sin_addr)==0) {
+	if (inet_aton("127.0.0.1", &si_other.sin_addr) == 0) {
 		fprintf(stderr, "inet_aton() failed\n");
-		return(1);
+		return (1);
 	}
 
-	if(sendto(s, buf, lenBuf, 0, (struct sockaddr*) &si_other, slen)==-1) {
+	if (sendto(s, buf, lenBuf, 0, (struct sockaddr *)&si_other, slen) == -1) {
 		perror("sendto");
 		fprintf(stderr, "sendto() failed\n");
-		return(1);
+		return (1);
 	}
 
 	close(s);
@@ -247,15 +247,15 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	int pipefd[2];
 	pid_t cpid;
 	char *newargv[] = {"../tools/rsyslogd", "dummy", "-C", "-n", "-irsyslog.pid",
-			   "-M../runtime/.libs:../.libs", NULL, NULL};
+	    "-M../runtime/.libs:../.libs", NULL, NULL};
 	char confFile[1024];
 
 	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
-		(pszCustomConf == NULL) ? configFile : pszCustomConf);
+	    (pszCustomConf == NULL) ? configFile : pszCustomConf);
 	newargv[1] = confFile;
 
-	if(IPv4Only)
-		newargv[(sizeof(newargv)/sizeof(char*)) - 2] = "-4";
+	if (IPv4Only)
+		newargv[(sizeof(newargv) / sizeof(char *)) - 2] = "-4";
 
 	if (pipe(pipefd) == -1) {
 		perror("pipe");
@@ -270,9 +270,9 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		exit(EXIT_FAILURE);
 	}
 
-	if(cpid == 0) {    /* Child reads from pipe */
+	if (cpid == 0) { /* Child reads from pipe */
 		fclose(stdout);
-		if(dup(pipefd[1]) == -1) {
+		if (dup(pipefd[1]) == -1) {
 			perror("dup");
 			fprintf(stderr, "error dup\n");
 			exit(1);
@@ -281,14 +281,14 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 		close(pipefd[0]);
 		fclose(stdin);
 		execve("../tools/rsyslogd", newargv, ourEnvp);
-	} else {            
+	} else {
 		usleep(10000);
 		close(pipefd[1]);
 		*pid = cpid;
 		*pfd = pipefd[0];
 	}
 
-	return(0);
+	return (0);
 }
 
 
@@ -313,32 +313,38 @@ void unescapeTestdata(char *testdata)
 	int c;
 
 	pDst = pSrc = testdata;
-	while(*pSrc) {
-		if(*pSrc == '\\') {
-			switch(*++pSrc) {
-			case '\\':	*pDst++ = *pSrc++;
-					break;
-			case 'n':	*pDst++ = '\n';
-					++pSrc;
-					break;
-			case 'r':	*pDst++ = '\r';
-					++pSrc;
-					break;
-			case 't':	*pDst++ = '\t';
-					++pSrc;
-					break;
+	while (*pSrc) {
+		if (*pSrc == '\\') {
+			switch (*++pSrc) {
+			case '\\':
+				*pDst++ = *pSrc++;
+				break;
+			case 'n':
+				*pDst++ = '\n';
+				++pSrc;
+				break;
+			case 'r':
+				*pDst++ = '\r';
+				++pSrc;
+				break;
+			case 't':
+				*pDst++ = '\t';
+				++pSrc;
+				break;
 			case '0':
 			case '1':
 			case '2':
-			case '3':	c = *pSrc++ - '0';
-					i = 1; /* we already processed one digit! */
-					while(i < 3 && isdigit(*pSrc)) {
-						c = c * 8 + *pSrc++ - '0';
-						++i;
-					}
-					*pDst++ = c;
-					break;
-			default:	break;
+			case '3':
+				c = *pSrc++ - '0';
+				i = 1; /* we already processed one digit! */
+				while (i < 3 && isdigit(*pSrc)) {
+					c = c * 8 + *pSrc++ - '0';
+					++i;
+				}
+				*pDst++ = c;
+				break;
+			default:
+				break;
 			}
 		} else {
 			*pDst++ = *pSrc++;
@@ -354,9 +360,9 @@ void unescapeTestdata(char *testdata)
 static void
 getline_abort(char **lineptr, size_t *const n, FILE *stream)
 {
-	if(getline(lineptr, n, stream) == -1) {
+	if (getline(lineptr, n, stream) == -1) {
 		int e = errno;
-		if(!feof(stream)) {
+		if (!feof(stream)) {
 			perror("getline");
 			fprintf(stderr, "error %d getline\n", e);
 			exit(1);
@@ -377,19 +383,19 @@ doVarsInExpected(char **pe)
 	char *n, *newBase;
 	char *e = *pe;
 	n = newBase = malloc(strlen(e) + 1024); /* we simply say "sufficient" */
-	while(*e) {
-		if(*e == '~') {
+	while (*e) {
+		if (*e == '~') {
 			++e;
-			if(*e == 'H') {
+			if (*e == 'H') {
 				++e;
 				char *hn = ourHostName;
-				while(*hn)
+				while (*hn)
 					*n++ = *hn++;
 			} else {
 				*n++ = '?';
 				++e;
 			}
-		} else if(*e == '\\') {
+		} else if (*e == '\\') {
 			++e; /* skip */
 			*n++ = *e++;
 		} else {
@@ -404,8 +410,7 @@ doVarsInExpected(char **pe)
 /* Process a specific test case. File name is provided.
  * Needs to return 0 if all is OK, something else otherwise.
  */
-int
-processTestFile(int fd, char *pszFileName)
+int processTestFile(int fd, char *pszFileName)
 {
 	FILE *fp;
 	char *testdata = NULL;
@@ -414,37 +419,37 @@ processTestFile(int fd, char *pszFileName)
 	size_t lenLn;
 	char buf[4096];
 
-	if((fp = fopen((char*)pszFileName, "r")) == NULL) {
-		perror((char*)pszFileName);
-		return(2);
+	if ((fp = fopen((char *)pszFileName, "r")) == NULL) {
+		perror((char *)pszFileName);
+		return (2);
 	}
 
 	/* skip comments at start of file */
 
-	while(!feof(fp)) {
+	while (!feof(fp)) {
 		getline_abort(&testdata, &lenLn, fp);
-		while(!feof(fp)) {
-			if(*testdata == '#')
+		while (!feof(fp)) {
+			if (*testdata == '#')
 				getline_abort(&testdata, &lenLn, fp);
 			else
 				break; /* first non-comment */
 		}
 
 		/* this is not perfect, but works ;) */
-		if(feof(fp))
+		if (feof(fp))
 			break;
 
 		++iTests; /* increment test count, we now do one! */
 
-		testdata[strlen(testdata)-1] = '\0'; /* remove \n */
+		testdata[strlen(testdata) - 1] = '\0'; /* remove \n */
 		/* now we have the test data to send (we could use function pointers here...) */
 		unescapeTestdata(testdata);
-		if(inputMode == inputUDP) {
-			if(udpSend(testdata, strlen(testdata)) != 0)
-				return(2);
+		if (inputMode == inputUDP) {
+			if (udpSend(testdata, strlen(testdata)) != 0)
+				return (2);
 		} else {
-			if(tcpSend(testdata, strlen(testdata)) != 0)
-				return(2);
+			if (tcpSend(testdata, strlen(testdata)) != 0)
+				return (2);
 		}
 
 		/* next line is expected output 
@@ -452,20 +457,20 @@ processTestFile(int fd, char *pszFileName)
 		 * draw enough attention. -- rgerhards, 2009-03-31
 		 */
 		getline_abort(&expected, &lenLn, fp);
-		expected[strlen(expected)-1] = '\0'; /* remove \n */
+		expected[strlen(expected) - 1] = '\0'; /* remove \n */
 		doVarsInExpected(&expected);
 
 		/* pull response from server and then check if it meets our expectation */
 		readLine(fd, buf);
-		if(strlen(buf) == 0) {
+		if (strlen(buf) == 0) {
 			fprintf(stderr, "something went wrong - read a zero-length string from rsyslogd\n");
 			exit(1);
 		}
-		if(strcmp(expected, buf)) {
+		if (strcmp(expected, buf)) {
 			++iFailed;
 			fprintf(stderr, "\nFile %s:\nExpected Response:\n'%s'\nActual Response:\n'%s'\n",
-				pszFileName, expected, buf);
-				ret = 1;
+			    pszFileName, expected, buf);
+			ret = 1;
 		}
 
 		/* we need to free buffers, as we have potentially modified them! */
@@ -476,7 +481,7 @@ processTestFile(int fd, char *pszFileName)
 	}
 
 	fclose(fp);
-	return(ret);
+	return (ret);
 }
 
 
@@ -486,8 +491,7 @@ processTestFile(int fd, char *pszFileName)
  * Returns the number of tests that failed. Zero means all
  * success.
  */
-int
-doTests(int fd, char *files)
+int doTests(int fd, char *files)
 {
 	int ret;
 	char *testFile;
@@ -497,20 +501,22 @@ doTests(int fd, char *files)
 
 	glob(files, GLOB_MARK, NULL, &testFiles);
 
-	for(i = 0; i < testFiles.gl_pathc; i++) {
+	for (i = 0; i < testFiles.gl_pathc; i++) {
 		testFile = testFiles.gl_pathv[i];
 
-		if(stat((char*) testFile, &fileInfo) != 0) 
+		if (stat((char *)testFile, &fileInfo) != 0)
 			continue; /* continue with the next file if we can't stat() the file */
 
 		/* all regular files are run through the test logic. Symlinks don't work. */
-		if(S_ISREG(fileInfo.st_mode)) { /* config file */
-			if(verbose) fprintf(stderr, "processing test case '%s' ... ", testFile);
+		if (S_ISREG(fileInfo.st_mode)) { /* config file */
+			if (verbose)
+				fprintf(stderr, "processing test case '%s' ... ", testFile);
 			ret = processTestFile(fd, testFile);
-			if(ret == 0) {
-				if(verbose) fprintf(stderr, "successfully completed\n");
+			if (ret == 0) {
+				if (verbose)
+					fprintf(stderr, "successfully completed\n");
 			} else {
-				if(!verbose)
+				if (!verbose)
 					fprintf(stderr, "test '%s' ", testFile);
 				fprintf(stderr, "failed!\n");
 			}
@@ -518,15 +524,15 @@ doTests(int fd, char *files)
 	}
 	globfree(&testFiles);
 
-	if(iTests == 0) {
+	if (iTests == 0) {
 		fprintf(stderr, "Error: no test cases found, no tests executed.\n");
 		iFailed = 1;
 	} else {
 		fprintf(stderr, "Number of tests run: %3d, number of failures: %d, test: %s/%s\n",
-		       iTests, iFailed, testSuite, inputMode2Str(inputMode));
+		    iTests, iFailed, testSuite, inputMode2Str(inputMode));
 	}
 
-	return(iFailed);
+	return (iFailed);
 }
 
 
@@ -547,9 +553,9 @@ void doAtExit(void)
 	/* disarm died-child handler */
 	signal(SIGCHLD, SIG_IGN);
 
-	if(rsyslogdPid != 0) {
+	if (rsyslogdPid != 0) {
 		kill(rsyslogdPid, SIGTERM);
-		waitpid(rsyslogdPid, &status, 0);	/* wait until instance terminates */
+		waitpid(rsyslogdPid, &status, 0); /* wait until instance terminates */
 	}
 
 	unlink(NETTEST_INPUT_CONF_FILE);
@@ -562,7 +568,7 @@ getHostname(void)
 {
 	size_t dummy;
 	FILE *fp;
-	if((fp = fopen("HOSTNAME", "r")) == NULL) {
+	if ((fp = fopen("HOSTNAME", "r")) == NULL) {
 		perror("HOSTNAME");
 		fprintf(stderr, "error opening HOSTNAME configuration file\n");
 		exit(1);
@@ -589,59 +595,61 @@ int main(int argc, char *argv[], char *envp[])
 	ourEnvp = envp;
 	getHostname();
 
-	while((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
-		switch((char)opt) {
-                case '4':
+	while ((opt = getopt(argc, argv, "4c:i:p:t:v")) != EOF) {
+		switch ((char)opt) {
+		case '4':
 			IPv4Only = 1;
 			break;
-                case 'c':
+		case 'c':
 			pszCustomConf = optarg;
 			break;
-                case 'i':
-			if(!strcmp(optarg, "udp"))
+		case 'i':
+			if (!strcmp(optarg, "udp"))
 				inputMode = inputUDP;
-			else if(!strcmp(optarg, "tcp"))
+			else if (!strcmp(optarg, "tcp"))
 				inputMode = inputTCP;
 			else {
 				fprintf(stderr, "error: unsupported input mode '%s'\n", optarg);
 				exit(1);
 			}
 			break;
-                case 'p':
+		case 'p':
 			iPort = atoi(optarg);
 			break;
-                case 't':
+		case 't':
 			testSuite = optarg;
 			break;
-                case 'v':
+		case 'v':
 			verbose = 1;
 			break;
-		default:fprintf(stderr, "Invalid call of nettester, invalid option '%c'.\n", opt);
+		default:
+			fprintf(stderr, "Invalid call of nettester, invalid option '%c'.\n", opt);
 			fprintf(stderr, "Usage: nettester -d -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
 			exit(1);
 		}
 	}
-	
-	if(testSuite == NULL) {
+
+	if (testSuite == NULL) {
 		fprintf(stderr, "error: no testsuite given, need to specify -t testsuite!\n");
 		exit(1);
 	}
 
 	atexit(doAtExit);
 
-	if((srcdir = getenv("srcdir")) == NULL)
+	if ((srcdir = getenv("srcdir")) == NULL)
 		srcdir = ".";
 
-	if(verbose) fprintf(stderr, "Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
-		srcdir, testSuite, inputMode2Str(inputMode), iPort);
+	if (verbose)
+		fprintf(stderr, "Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
+		    srcdir, testSuite, inputMode2Str(inputMode), iPort);
 
 	/* create input config file */
-	if((fp = fopen(NETTEST_INPUT_CONF_FILE, "w")) == NULL) {
+	if ((fp = fopen(NETTEST_INPUT_CONF_FILE, "w")) == NULL) {
 		perror(NETTEST_INPUT_CONF_FILE);
 		fprintf(stderr, "error opening input configuration file\n");
 		exit(1);
 	}
-	if(inputMode == inputUDP) {
+	if (inputMode == inputUDP) {
 		fputs("$ModLoad ../plugins/imudp/.libs/imudp\n", fp);
 		fprintf(fp, "$UDPServerRun %d\n", iPort);
 	} else {
@@ -664,10 +672,11 @@ int main(int argc, char *argv[], char *envp[])
 
 	/* generate filename */
 	sprintf(testcases, "%s/testsuites/*.%s", srcdir, testSuite);
-	if(doTests(fd, testcases) != 0)
+	if (doTests(fd, testcases) != 0)
 		ret = 1;
 
-	if(verbose) fprintf(stderr, "End of nettester run (%d).\n", ret);
+	if (verbose)
+		fprintf(stderr, "End of nettester run (%d).\n", ret);
 
 	exit(ret);
 }

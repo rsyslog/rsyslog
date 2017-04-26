@@ -44,7 +44,7 @@
 #include "prop.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 //extern uchar *propGetSzStr(prop_t *pThis); /* expand inline function here */
 
@@ -59,11 +59,11 @@ ENDobjConstruct(prop)
 /* destructor for the prop object */
 BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
-CODESTARTobjDestruct(prop)
-	currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
-	if(currRefCount == 0) {
+	CODESTARTobjDestruct(prop)
+	    currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
+	if (currRefCount == 0) {
 		/* (only) in this case we need to actually destruct the object */
-		if(pThis->len >= CONF_PROP_BUFSIZE)
+		if (pThis->len >= CONF_PROP_BUFSIZE)
 			free(pThis->szVal.psz);
 		DESTROY_ATOMIC_HELPER_MUT(pThis->mutRefCount);
 	} else {
@@ -78,10 +78,10 @@ static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len >= CONF_PROP_BUFSIZE)
+	if (pThis->len >= CONF_PROP_BUFSIZE)
 		free(pThis->szVal.psz);
 	pThis->len = len;
-	if(len < CONF_PROP_BUFSIZE) {
+	if (len < CONF_PROP_BUFSIZE) {
 		memcpy(pThis->szVal.sz, psz, len + 1);
 	} else {
 		CHKmalloc(pThis->szVal.psz = MALLOC(len + 1));
@@ -104,15 +104,14 @@ static int GetStringLen(prop_t *pThis)
 static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
 	BEGINfunc
-	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len < CONF_PROP_BUFSIZE) {
+	    ISOBJ_TYPE_assert(pThis, prop);
+	if (pThis->len < CONF_PROP_BUFSIZE) {
 		*ppsz = pThis->szVal.sz;
 	} else {
 		*ppsz = pThis->szVal.psz;
 	}
 	*plen = pThis->len;
-	ENDfunc
-	return RS_RET_OK;
+	ENDfunc return RS_RET_OK;
 }
 
 
@@ -120,7 +119,7 @@ static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-propConstructFinalize(prop_t __attribute__((unused)) *pThis)
+    propConstructFinalize(prop_t __attribute__((unused)) * pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
@@ -143,7 +142,7 @@ static rsRetVal AddRef(prop_t *pThis)
  * convenience, it is also (very, very) slightly faster.
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len)
+static rsRetVal CreateStringProp(prop_t **ppThis, const uchar *psz, const int len)
 {
 	prop_t *pThis = NULL;
 	DEFiRet;
@@ -153,8 +152,8 @@ static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int le
 	CHKiRet(propConstructFinalize(pThis));
 	*ppThis = pThis;
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
+	if (iRet != RS_RET_OK) {
+		if (pThis != NULL)
 			propDestruct(&pThis);
 	}
 
@@ -178,13 +177,13 @@ static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const
 	DEFiRet;
 	assert(ppThis != NULL);
 
-	if(*ppThis == NULL) {
-		/* we need to create a property */ 
+	if (*ppThis == NULL) {
+		/* we need to create a property */
 		CHKiRet(CreateStringProp(ppThis, psz, len));
 	} else {
 		/* already exists, check if we can re-use it */
 		GetString(*ppThis, &pszPrev, &lenPrev);
-		if(len != lenPrev || ustrcmp(psz, pszPrev)) {
+		if (len != lenPrev || ustrcmp(psz, pszPrev)) {
 			/* different, need to discard old & create new one */
 			propDestruct(ppThis);
 			CHKiRet(CreateStringProp(ppThis, psz, len));
@@ -198,8 +197,8 @@ finalize_it:
 
 /* debugprint for the prop object */
 BEGINobjDebugPrint(prop) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(prop)
-	dbgprintf("prop object %p - no further debug info implemented\n", pThis);
+	CODESTARTobjDebugPrint(prop)
+	    dbgprintf("prop object %p - no further debug info implemented\n", pThis);
 ENDobjDebugPrint(prop)
 
 
@@ -207,8 +206,8 @@ ENDobjDebugPrint(prop)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(prop)
-CODESTARTobjQueryInterface(prop)
-	if(pIf->ifVersion != propCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(prop) if (pIf->ifVersion != propCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -246,7 +245,7 @@ ENDObjClassExit(prop)
  */
 BEGINObjClassInit(prop, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-//	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	//	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, propDebugPrint);

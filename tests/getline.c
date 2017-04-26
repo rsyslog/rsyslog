@@ -36,17 +36,17 @@ ssize_t getline(char **lineptr, size_t *n, FILE *fp)
 	int c;
 	int len = 0;
 
-	if(*lineptr == NULL)
+	if (*lineptr == NULL)
 		*lineptr = malloc(4096); /* quick and dirty! */
 
 	c = fgetc(fp);
-	while(c != EOF && c != '\n') {
+	while (c != EOF && c != '\n') {
 		(*lineptr)[len++] = c;
 		c = fgetc(fp);
 	}
-	if(c != EOF) /* need to add NL? */
+	if (c != EOF) /* need to add NL? */
 		(*lineptr)[len++] = c;
-	
+
 	(*lineptr)[len] = '\0';
 
 	*n = len;

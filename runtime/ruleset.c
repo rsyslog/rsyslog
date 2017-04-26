@@ -53,20 +53,18 @@
 
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(parser)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(parser);
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
 static struct cnfparamdescr rspdescr[] = {
-	{ "name", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "parser", eCmdHdlrArray, 0 }
-};
+    {"name", eCmdHdlrString, CNFPARAM_REQUIRED},
+    {"parser", eCmdHdlrArray, 0}};
 static struct cnfparamblk rspblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(rspdescr)/sizeof(struct cnfparamdescr),
-	  rspdescr
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(rspdescr) / sizeof(struct cnfparamdescr),
+	rspdescr};
 
 /* forward definitions */
 static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti);
@@ -78,7 +76,7 @@ static rsRetVal scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti);
 /* destructor for linked list keys.
  */
 rsRetVal
-rulesetKeyDestruct(void __attribute__((unused)) *pData)
+rulesetKeyDestruct(void __attribute__((unused)) * pData)
 {
 	free(pData);
 	return RS_RET_OK;
@@ -88,56 +86,56 @@ rulesetKeyDestruct(void __attribute__((unused)) *pData)
 
 /* iterate over all actions in a script (stmt subtree) */
 static void
-scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), void* pParam)
+scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void *, void *), void *pParam)
 {
 	struct cnfstmt *stmt;
-	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-		switch(stmt->nodetype) {
+	for (stmt = root; stmt != NULL; stmt = stmt->next) {
+		switch (stmt->nodetype) {
 		case S_NOP:
 		case S_STOP:
 		case S_SET:
 		case S_UNSET:
 		case S_CALL_INDIRECT:
-		case S_CALL:/* call does not need to do anything - done in called ruleset! */
+		case S_CALL: /* call does not need to do anything - done in called ruleset! */
 			break;
 		case S_ACT:
 			DBGPRINTF("iterateAllActions calling into action %p\n", stmt->d.act);
 			pFunc(stmt->d.act, pParam);
 			break;
 		case S_IF:
-			if(stmt->d.s_if.t_then != NULL)
+			if (stmt->d.s_if.t_then != NULL)
 				scriptIterateAllActions(stmt->d.s_if.t_then,
-							pFunc, pParam);
-			if(stmt->d.s_if.t_else != NULL)
+				    pFunc, pParam);
+			if (stmt->d.s_if.t_else != NULL)
 				scriptIterateAllActions(stmt->d.s_if.t_else,
-							pFunc, pParam);
+				    pFunc, pParam);
 			break;
 		case S_FOREACH:
-			if(stmt->d.s_foreach.body != NULL)
+			if (stmt->d.s_foreach.body != NULL)
 				scriptIterateAllActions(stmt->d.s_foreach.body,
-                                        pFunc, pParam);
+				    pFunc, pParam);
 			break;
 		case S_PRIFILT:
-			if(stmt->d.s_prifilt.t_then != NULL)
+			if (stmt->d.s_prifilt.t_then != NULL)
 				scriptIterateAllActions(stmt->d.s_prifilt.t_then,
-							pFunc, pParam);
-			if(stmt->d.s_prifilt.t_else != NULL)
+				    pFunc, pParam);
+			if (stmt->d.s_prifilt.t_else != NULL)
 				scriptIterateAllActions(stmt->d.s_prifilt.t_else,
-							pFunc, pParam);
+				    pFunc, pParam);
 			break;
 		case S_PROPFILT:
 			scriptIterateAllActions(stmt->d.s_propfilt.t_then,
-						pFunc, pParam);
+			    pFunc, pParam);
 			break;
 		case S_RELOAD_LOOKUP_TABLE: /* this is a NOP */
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during iterateAll\n",
-				(unsigned) stmt->nodetype);
-			#ifndef NDEBUG
-				fprintf(stderr, "error: unknown stmt type %u during iterateAll\n",
-					(unsigned) stmt->nodetype);
-			#endif
+			    (unsigned)stmt->nodetype);
+#ifndef NDEBUG
+			fprintf(stderr, "error: unknown stmt type %u during iterateAll\n",
+			    (unsigned)stmt->nodetype);
+#endif
 			assert(0); /* abort under debugging */
 			break;
 		}
@@ -146,15 +144,15 @@ scriptIterateAllActions(struct cnfstmt *root, rsRetVal (*pFunc)(void*, void*), v
 
 /* driver to iterate over all of this ruleset actions */
 typedef struct iterateAllActions_s {
-	rsRetVal (*pFunc)(void*, void*);
+	rsRetVal (*pFunc)(void *, void *);
 	void *pParam;
 } iterateAllActions_t;
 /* driver to iterate over all actions */
 DEFFUNC_llExecFunc(doIterateAllActions)
 {
 	DEFiRet;
-	ruleset_t* pThis = (ruleset_t*) pData;
-	iterateAllActions_t *pMyParam = (iterateAllActions_t*) pParam;
+	ruleset_t *pThis = (ruleset_t *)pData;
+	iterateAllActions_t *pMyParam = (iterateAllActions_t *)pParam;
 	scriptIterateAllActions(pThis->root, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
@@ -163,7 +161,7 @@ DEFFUNC_llExecFunc(doIterateAllActions)
  * must be done or a shutdown is pending.
  */
 static rsRetVal
-iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void*, void*), void* pParam)
+iterateAllActions(rsconf_t *conf, rsRetVal (*pFunc)(void *, void *), void *pParam)
 {
 	iterateAllActions_t params;
 	DEFiRet;
@@ -181,10 +179,10 @@ finalize_it:
 DEFFUNC_llExecFunc(doActivateRulesetQueues)
 {
 	DEFiRet;
-	ruleset_t* pThis = (ruleset_t*) pData;
+	ruleset_t *pThis = (ruleset_t *)pData;
 	dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n",
-		  pThis->pQueue, pThis->pszName);
-	if(pThis->pQueue != NULL)
+	    pThis->pQueue, pThis->pszName);
+	if (pThis->pQueue != NULL)
 		startMainQueue(pThis->pQueue);
 	RETiRet;
 }
@@ -201,14 +199,14 @@ static rsRetVal
 execAct(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
-	if(stmt->d.act->bDisabled) {
+	if (stmt->d.act->bDisabled) {
 		DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
 		FINALIZE;
 	}
 
 	DBGPRINTF("executing action %d\n", stmt->d.act->iActionNbr);
 	stmt->d.act->submitToActQ(stmt->d.act, pWti, pMsg);
-	if(iRet != RS_RET_DISCARDMSG) {
+	if (iRet != RS_RET_DISCARDMSG) {
 		/* note: we ignore the error code here, as we do NEVER want to
 		 * stop script execution due to action return code
 		 */
@@ -239,8 +237,8 @@ execUnset(struct cnfstmt *stmt, smsg_t *pMsg)
 
 static rsRetVal
 execCallIndirect(struct cnfstmt *const __restrict__ stmt,
-	smsg_t *pMsg,
-	wti_t *const __restrict__ pWti)
+    smsg_t *pMsg,
+    wti_t *const __restrict__ pWti)
 {
 	ruleset_t *pRuleset;
 	struct svar result;
@@ -250,20 +248,21 @@ execCallIndirect(struct cnfstmt *const __restrict__ stmt,
 	assert(stmt->d.s_call_ind.expr != NULL);
 
 	cnfexprEval(stmt->d.s_call_ind.expr, &result, pMsg);
-	uchar *const rsName = (uchar*) var2CString(&result, &bMustFree);
+	uchar *const rsName = (uchar *)var2CString(&result, &bMustFree);
 	const rsRetVal localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
-	if(localRet != RS_RET_OK) {
+	if (localRet != RS_RET_OK) {
 		/* in that case, we accept that a NOP will "survive" */
 		errmsg.LogError(0, RS_RET_RULESET_NOT_FOUND, "error: CALL_INDIRECT: "
-			"ruleset '%s' cannot be found, treating as NOP\n", rsName);
+							     "ruleset '%s' cannot be found, treating as NOP\n",
+		    rsName);
 		FINALIZE;
 	}
 	DBGPRINTF("CALL_INDIRECT obtained ruleset ptr %p for ruleset '%s' [hasQueue:%d]\n",
-		  pRuleset, rsName, rulesetHasQueue(pRuleset));
-	if(rulesetHasQueue(pRuleset)) {
-		CHKmalloc(pMsg = MsgDup((smsg_t*) pMsg));
+	    pRuleset, rsName, rulesetHasQueue(pRuleset));
+	if (rulesetHasQueue(pRuleset)) {
+		CHKmalloc(pMsg = MsgDup((smsg_t *)pMsg));
 		DBGPRINTF("CALL_INDIRECT: forwarding message to async ruleset %p\n",
-			  pRuleset->pQueue);
+		    pRuleset->pQueue);
 		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 		MsgSetRuleset(pMsg, pRuleset);
 		/* Note: we intentionally use submitMsg2() here, as we process messages
@@ -283,12 +282,12 @@ static rsRetVal
 execCall(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 {
 	DEFiRet;
-	if(stmt->d.s_call.ruleset == NULL) {
+	if (stmt->d.s_call.ruleset == NULL) {
 		CHKiRet(scriptExec(stmt->d.s_call.stmt, pMsg, pWti));
 	} else {
-		CHKmalloc(pMsg = MsgDup((smsg_t*) pMsg));
+		CHKmalloc(pMsg = MsgDup((smsg_t *)pMsg));
 		DBGPRINTF("CALL: forwarding message to async ruleset %p\n",
-			  stmt->d.s_call.ruleset->pQueue);
+		    stmt->d.s_call.ruleset->pQueue);
 		MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 		MsgSetRuleset(pMsg, stmt->d.s_call.ruleset);
 		/* Note: we intentionally use submitMsg2() here, as we process messages
@@ -307,11 +306,11 @@ execIf(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 	DEFiRet;
 	bRet = cnfexprEvalBool(stmt->d.s_if.expr, pMsg);
 	DBGPRINTF("if condition result is %d\n", bRet);
-	if(bRet) {
-		if(stmt->d.s_if.t_then != NULL)
+	if (bRet) {
+		if (stmt->d.s_if.t_then != NULL)
 			CHKiRet(scriptExec(stmt->d.s_if.t_then, pMsg, pWti));
 	} else {
-		if(stmt->d.s_if.t_else != NULL)
+		if (stmt->d.s_if.t_else != NULL)
 			CHKiRet(scriptExec(stmt->d.s_if.t_else, pMsg, pWti));
 	}
 finalize_it:
@@ -319,19 +318,21 @@ finalize_it:
 }
 
 static rsRetVal
-invokeForeachBodyWith(struct cnfstmt *stmt, json_object *o, smsg_t *pMsg, wti_t *pWti) {
+invokeForeachBodyWith(struct cnfstmt *stmt, json_object *o, smsg_t *pMsg, wti_t *pWti)
+{
 	struct svar v;
 	v.datatype = 'J';
 	v.d.json = o;
 	DEFiRet;
-	CHKiRet(msgSetJSONFromVar(pMsg, (uchar*)stmt->d.s_foreach.iter->var, &v, 1));
+	CHKiRet(msgSetJSONFromVar(pMsg, (uchar *)stmt->d.s_foreach.iter->var, &v, 1));
 	CHKiRet(scriptExec(stmt->d.s_foreach.body, pMsg, pWti));
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-callForeachArray(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *pWti) {
+callForeachArray(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *pWti)
+{
 	DEFiRet;
 	int len = json_object_array_length(arr);
 	json_object *curr;
@@ -345,14 +346,15 @@ finalize_it:
 
 
 static rsRetVal
-callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *pWti) {
+callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *pWti)
+{
 	json_object *entry = NULL;
 	json_object *key = NULL;
 	const char **keys = NULL;
 	DEFiRet;
 
 	int len = json_object_object_length(arr);
-	CHKmalloc(keys = calloc(len, sizeof(char*)));
+	CHKmalloc(keys = calloc(len, sizeof(char *)));
 	const char **curr_key = keys;
 	struct json_object_iterator it = json_object_iter_begin(arr);
 	struct json_object_iterator itEnd = json_object_iter_end(arr);
@@ -373,10 +375,13 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 		}
 	}
 finalize_it:
-	if (keys != NULL) free(keys);
-	if (entry != NULL) json_object_put(entry);
-	if (key != NULL) json_object_put(key);
-	
+	if (keys != NULL)
+		free(keys);
+	if (entry != NULL)
+		json_object_put(entry);
+	if (key != NULL)
+		json_object_put(key);
+
 	RETiRet;
 }
 
@@ -388,7 +393,7 @@ execForeach(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 
 	/* arr can either be an array or an associative-array (obj) */
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg);
-	
+
 	if (arr == NULL) {
 		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty\n");
 		FINALIZE;
@@ -400,10 +405,11 @@ execForeach(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 		DBGPRINTF("foreach loop skipped, as object to iterate upon is not an array\n");
 		FINALIZE;
 	}
-	CHKiRet(msgDelJSON(pMsg, (uchar*)stmt->d.s_foreach.iter->var));
+	CHKiRet(msgDelJSON(pMsg, (uchar *)stmt->d.s_foreach.iter->var));
 
 finalize_it:
-	if (arr != NULL) json_object_put(arr);
+	if (arr != NULL)
+		json_object_put(arr);
 
 	RETiRet;
 }
@@ -413,19 +419,18 @@ execPRIFILT(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 {
 	int bRet;
 	DEFiRet;
-	if( (stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
-	   ((stmt->d.s_prifilt.pmask[pMsg->iFacility]
-		    & (1<<pMsg->iSeverity)) == 0) )
+	if ((stmt->d.s_prifilt.pmask[pMsg->iFacility] == TABLE_NOPRI) ||
+	    ((stmt->d.s_prifilt.pmask[pMsg->iFacility] & (1 << pMsg->iSeverity)) == 0))
 		bRet = 0;
 	else
 		bRet = 1;
 
 	DBGPRINTF("PRIFILT condition result is %d\n", bRet);
-	if(bRet) {
-		if(stmt->d.s_prifilt.t_then != NULL)
+	if (bRet) {
+		if (stmt->d.s_prifilt.t_then != NULL)
 			CHKiRet(scriptExec(stmt->d.s_prifilt.t_then, pMsg, pWti));
 	} else {
-		if(stmt->d.s_prifilt.t_else != NULL)
+		if (stmt->d.s_prifilt.t_else != NULL)
 			CHKiRet(scriptExec(stmt->d.s_prifilt.t_else, pMsg, pWti));
 	}
 finalize_it:
@@ -442,40 +447,40 @@ evalPROPFILT(struct cnfstmt *stmt, smsg_t *pMsg)
 	int bRet = 0;
 	rs_size_t propLen;
 
-	if(stmt->d.s_propfilt.prop.id == PROP_INVALID)
+	if (stmt->d.s_propfilt.prop.id == PROP_INVALID)
 		goto done;
 
 	pszPropVal = MsgGetProp(pMsg, NULL, &stmt->d.s_propfilt.prop,
-				&propLen, &pbMustBeFreed, NULL);
+	    &propLen, &pbMustBeFreed, NULL);
 
 	/* Now do the compares (short list currently ;)) */
-	switch(stmt->d.s_propfilt.operation ) {
+	switch (stmt->d.s_propfilt.operation) {
 	case FIOP_CONTAINS:
-		if(rsCStrLocateInSzStr(stmt->d.s_propfilt.pCSCompValue, (uchar*) pszPropVal) != -1)
+		if (rsCStrLocateInSzStr(stmt->d.s_propfilt.pCSCompValue, (uchar *)pszPropVal) != -1)
 			bRet = 1;
 		break;
 	case FIOP_ISEMPTY:
-		if(propLen == 0)
+		if (propLen == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_ISEQUAL:
-		if(rsCStrSzStrCmp(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, propLen) == 0)
+		if (rsCStrSzStrCmp(stmt->d.s_propfilt.pCSCompValue,
+			pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_STARTSWITH:
-		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, propLen) == 0)
+		if (rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
+			pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_REGEX:
-		if(rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
-				(unsigned char*) pszPropVal, 0, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
+		if (rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
+			(unsigned char *)pszPropVal, 0, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
 			bRet = 1;
 		break;
 	case FIOP_EREREGEX:
-		if(rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
-				  (unsigned char*) pszPropVal, 1, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
+		if (rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
+			(unsigned char *)pszPropVal, 1, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
 			bRet = 1;
 		break;
 	case FIOP_NOP:
@@ -487,39 +492,39 @@ evalPROPFILT(struct cnfstmt *stmt, smsg_t *pMsg)
 	}
 
 	/* now check if the value must be negated */
-	if(stmt->d.s_propfilt.isNegated)
-		bRet = (bRet == 1) ?  0 : 1;
+	if (stmt->d.s_propfilt.isNegated)
+		bRet = (bRet == 1) ? 0 : 1;
 
-	if(Debug) {
-		if(stmt->d.s_propfilt.prop.id == PROP_CEE) {
+	if (Debug) {
+		if (stmt->d.s_propfilt.prop.id == PROP_CEE) {
 			DBGPRINTF("Filter: check for CEE property '%s' (value '%s') ",
-				stmt->d.s_propfilt.prop.name, pszPropVal);
-		} else if(stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
+			    stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if (stmt->d.s_propfilt.prop.id == PROP_LOCAL_VAR) {
 			DBGPRINTF("Filter: check for local var '%s' (value '%s') ",
-				stmt->d.s_propfilt.prop.name, pszPropVal);
-		} else if(stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
+			    stmt->d.s_propfilt.prop.name, pszPropVal);
+		} else if (stmt->d.s_propfilt.prop.id == PROP_GLOBAL_VAR) {
 			DBGPRINTF("Filter: check for global var '%s' (value '%s') ",
-				stmt->d.s_propfilt.prop.name, pszPropVal);
+			    stmt->d.s_propfilt.prop.name, pszPropVal);
 		} else {
 			DBGPRINTF("Filter: check for property '%s' (value '%s') ",
-				propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
+			    propIDToName(stmt->d.s_propfilt.prop.id), pszPropVal);
 		}
-		if(stmt->d.s_propfilt.isNegated)
+		if (stmt->d.s_propfilt.isNegated)
 			DBGPRINTF("NOT ");
-		if(stmt->d.s_propfilt.operation == FIOP_ISEMPTY) {
+		if (stmt->d.s_propfilt.operation == FIOP_ISEMPTY) {
 			DBGPRINTF("%s : %s\n",
-			       getFIOPName(stmt->d.s_propfilt.operation),
-			       bRet ? "TRUE" : "FALSE");
+			    getFIOPName(stmt->d.s_propfilt.operation),
+			    bRet ? "TRUE" : "FALSE");
 		} else {
 			DBGPRINTF("%s '%s': %s\n",
-			       getFIOPName(stmt->d.s_propfilt.operation),
-			       rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue),
-			       bRet ? "TRUE" : "FALSE");
+			    getFIOPName(stmt->d.s_propfilt.operation),
+			    rsCStrGetSzStrNoNULL(stmt->d.s_propfilt.pCSCompValue),
+			    bRet ? "TRUE" : "FALSE");
 		}
 	}
 
 	/* cleanup */
-	if(pbMustBeFreed)
+	if (pbMustBeFreed)
 		free(pszPropVal);
 done:
 	return bRet;
@@ -533,26 +538,27 @@ execPROPFILT(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti)
 
 	bRet = evalPROPFILT(stmt, pMsg);
 	DBGPRINTF("PROPFILT condition result is %d\n", bRet);
-	if(bRet)
+	if (bRet)
 		CHKiRet(scriptExec(stmt->d.s_propfilt.t_then, pMsg, pWti));
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-execReloadLookupTable(struct cnfstmt *stmt) {
+execReloadLookupTable(struct cnfstmt *stmt)
+{
 	lookup_ref_t *t;
 	DEFiRet;
 	t = stmt->d.s_reload_lookup_table.table;
 	if (t == NULL) {
 		ABORT_FINALIZE(RS_RET_NONE);
 	}
-	
+
 	CHKiRet(lookupReload(t, stmt->d.s_reload_lookup_table.stub_value));
-	/* Note that reload dispatched above is performed asynchronously,
+/* Note that reload dispatched above is performed asynchronously,
 	   on a different thread. So rsRetVal it returns means it was triggered
 	   successfully, and not that it was reloaded successfully. */
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -569,16 +575,16 @@ scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti)
 	struct cnfstmt *stmt;
 	DEFiRet;
 
-	for(stmt = root ; stmt != NULL ; stmt = stmt->next) {
-		if(*pWti->pbShutdownImmediate) {
+	for (stmt = root; stmt != NULL; stmt = stmt->next) {
+		if (*pWti->pbShutdownImmediate) {
 			DBGPRINTF("scriptExec: ShutdownImmediate set, "
-				  "force terminating\n");	
+				  "force terminating\n");
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		}
-		if(Debug) {
+		if (Debug) {
 			cnfstmtPrintOnly(stmt, 2, 0);
 		}
-		switch(stmt->nodetype) {
+		switch (stmt->nodetype) {
 		case S_NOP:
 			break;
 		case S_STOP:
@@ -611,12 +617,12 @@ scriptExec(struct cnfstmt *root, smsg_t *pMsg, wti_t *pWti)
 		case S_PROPFILT:
 			CHKiRet(execPROPFILT(stmt, pMsg, pWti));
 			break;
-        case S_RELOAD_LOOKUP_TABLE:
+		case S_RELOAD_LOOKUP_TABLE:
 			CHKiRet(execReloadLookupTable(stmt));
 			break;
 		default:
 			dbgprintf("error: unknown stmt type %u during exec\n",
-				(unsigned) stmt->nodetype);
+			    (unsigned)stmt->nodetype);
 			break;
 		}
 	}
@@ -642,7 +648,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 	wtiResetExecState(pWti, pBatch);
 
 	/* execution phase */
-	for(i = 0 ; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate) ; ++i) {
+	for (i = 0; i < batchNumMsgs(pBatch) && !*(pWti->pbShutdownImmediate); ++i) {
 		pMsg = pBatch->pElem[i].pMsg;
 		DBGPRINTF("processBATCH: next msg %d: %.128s\n", i, pMsg->pszRawMsg);
 		pRuleset = (pMsg->pRuleset == NULL) ? ourConf->rulesets.pDflt : pMsg->pRuleset;
@@ -652,13 +658,14 @@ processBatch(batch_t *pBatch, wti_t *pWti)
 		 * message as committed. If we would do so, the message would
 		 * potentially be lost.
 		 */
-		if(localRet == RS_RET_OK)
+		if (localRet == RS_RET_OK)
 			batchSetElemState(pBatch, i, BATCH_STATE_COMM);
 	}
 
 	/* commit phase */
 	DBGPRINTF("END batch execution phase, entering to commit phase "
-		"[processed %d of %d messages]\n", i, batchNumMsgs(pBatch));
+		  "[processed %d of %d messages]\n",
+	    i, batchNumMsgs(pBatch));
 	actionCommitAllDirect(pWti);
 
 	DBGPRINTF("processBATCH: batch of %d elements has been processed\n", pBatch->nElem);
@@ -670,7 +677,7 @@ processBatch(batch_t *pBatch, wti_t *pWti)
  * parser list.
  * rgerhards, 2009-11-04
  */
-static parserList_t*
+static parserList_t *
 GetParserList(rsconf_t *conf, smsg_t *pMsg)
 {
 	return (pMsg->pRuleset == NULL) ? conf->rulesets.pDflt->pParserLst : pMsg->pRuleset->pParserLst;
@@ -681,7 +688,7 @@ GetParserList(rsconf_t *conf, smsg_t *pMsg)
 static void
 addScript(ruleset_t *pThis, struct cnfstmt *script)
 {
-	if(pThis->last == NULL)
+	if (pThis->last == NULL)
 		pThis->root = pThis->last = script;
 	else {
 		pThis->last->next = script;
@@ -706,7 +713,7 @@ finalize_it:
  * We use a non-standard calling interface, as nothing can go wrong and it
  * is really much more natural to return the pointer directly.
  */
-static ruleset_t*
+static ruleset_t *
 GetCurrent(rsconf_t *conf)
 {
 	return conf->rulesets.pCurr;
@@ -718,7 +725,7 @@ GetCurrent(rsconf_t *conf)
  * We use a non-standard calling interface, as nothing can go wrong and it
  * is really much more natural to return the pointer directly.
  */
-static qqueue_t*
+static qqueue_t *
 GetRulesetQueue(ruleset_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, ruleset);
@@ -735,7 +742,7 @@ rulesetGetRuleset(rsconf_t *conf, ruleset_t **ppRuleset, uchar *pszName)
 	assert(ppRuleset != NULL);
 	assert(pszName != NULL);
 
-	CHKiRet(llFind(&(conf->rulesets.llRulesets), pszName, (void*) ppRuleset));
+	CHKiRet(llFind(&(conf->rulesets.llRulesets), pszName, (void *)ppRuleset));
 
 finalize_it:
 	RETiRet;
@@ -803,7 +810,7 @@ rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis)
 	CHKiRet(llAppend(&(conf->rulesets.llRulesets), keyName, pThis));
 
 	/* and also the default, if so far none has been set */
-	if(conf->rulesets.pDflt == NULL)
+	if (conf->rulesets.pDflt == NULL)
 		conf->rulesets.pDflt = pThis;
 
 finalize_it:
@@ -813,12 +820,12 @@ finalize_it:
 
 /* destructor for the ruleset object */
 BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(ruleset)
-	DBGPRINTF("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
-	if(pThis->pQueue != NULL) {
+	CODESTARTobjDestruct(ruleset)
+	    DBGPRINTF("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
+	if (pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
 	}
-	if(pThis->pParserLst != NULL) {
+	if (pThis->pParserLst != NULL) {
 		parser.DestructParserList(&pThis->pParserLst);
 	}
 	free(pThis->pszName);
@@ -852,16 +859,16 @@ finalize_it:
 rsRetVal
 rulesetDestructForLinkedList(void *pData)
 {
-	ruleset_t *pThis = (ruleset_t*) pData;
+	ruleset_t *pThis = (ruleset_t *)pData;
 	return rulesetDestruct(&pThis);
 }
 
 /* debugprint for the ruleset object */
 BEGINobjDebugPrint(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(ruleset)
-	dbgoprint((obj_t*) pThis, "rsyslog ruleset %s:\n", pThis->pszName);
+	CODESTARTobjDebugPrint(ruleset)
+	    dbgoprint((obj_t *)pThis, "rsyslog ruleset %s:\n", pThis->pszName);
 	cnfstmtPrint(pThis->root, 0);
-	dbgoprint((obj_t*) pThis, "ruleset %s assigned parser list:\n", pThis->pszName);
+	dbgoprint((obj_t *)pThis, "ruleset %s assigned parser list:\n", pThis->pszName);
 	printParserList(pThis->pParserLst);
 ENDobjDebugPrint(ruleset)
 
@@ -869,7 +876,7 @@ ENDobjDebugPrint(ruleset)
 /* helper for debugPrintAll(), prints a single ruleset */
 DEFFUNC_llExecFunc(doDebugPrintAll)
 {
-	return rulesetDebugPrint((ruleset_t*) pData);
+	return rulesetDebugPrint((ruleset_t *)pData);
 }
 /* debug print all rulesets
  */
@@ -886,23 +893,23 @@ debugPrintAll(rsconf_t *conf)
 static void
 rulesetOptimize(ruleset_t *pRuleset)
 {
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("ruleset '%s' before optimization:\n",
-			  pRuleset->pszName);
-		rulesetDebugPrint((ruleset_t*) pRuleset);
+		    pRuleset->pszName);
+		rulesetDebugPrint((ruleset_t *)pRuleset);
 	}
 	cnfstmtOptimize(pRuleset->root);
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("ruleset '%s' after optimization:\n",
-			  pRuleset->pszName);
-		rulesetDebugPrint((ruleset_t*) pRuleset);
+		    pRuleset->pszName);
+		rulesetDebugPrint((ruleset_t *)pRuleset);
 	}
 }
 
 /* helper for rulsetOptimizeAll(), optimizes a single ruleset */
 DEFFUNC_llExecFunc(doRulesetOptimizeAll)
 {
-	rulesetOptimize((ruleset_t*) pData);
+	rulesetOptimize((ruleset_t *)pData);
 	return RS_RET_OK;
 }
 /* optimize all rulesets
@@ -931,22 +938,22 @@ doRulesetCreateQueue(rsconf_t *conf, int *pNewVal)
 	uchar *rsname;
 	DEFiRet;
 
-	if(conf->rulesets.pCurr == NULL) {
+	if (conf->rulesets.pCurr == NULL) {
 		errmsg.LogError(0, RS_RET_NO_CURR_RULESET, "error: currently no specific ruleset specified, thus a "
-				"queue can not be added to it");
+							   "queue can not be added to it");
 		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
 	}
 
-	if(conf->rulesets.pCurr->pQueue != NULL) {
+	if (conf->rulesets.pCurr->pQueue != NULL) {
 		errmsg.LogError(0, RS_RET_RULES_QUEUE_EXISTS, "error: ruleset already has a main queue, can not "
-				"add another one");
+							      "add another one");
 		ABORT_FINALIZE(RS_RET_RULES_QUEUE_EXISTS);
 	}
 
-	if(pNewVal == 0)
+	if (pNewVal == 0)
 		FINALIZE; /* if it is turned off, we do not need to change anything ;) */
 
-	rsname = (conf->rulesets.pCurr->pszName == NULL) ? (uchar*) "[ruleset]" : conf->rulesets.pCurr->pszName;
+	rsname = (conf->rulesets.pCurr->pszName == NULL) ? (uchar *)"[ruleset]" : conf->rulesets.pCurr->pszName;
 	DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
 	CHKiRet(createMainQueue(&conf->rulesets.pCurr->pQueue, rsname, NULL));
 
@@ -955,7 +962,7 @@ finalize_it:
 }
 
 static rsRetVal
-rulesetCreateQueue(void __attribute__((unused)) *pVal, int *pNewVal)
+rulesetCreateQueue(void __attribute__((unused)) * pVal, int *pNewVal)
 {
 	return doRulesetCreateQueue(ourConf, pNewVal);
 }
@@ -977,11 +984,12 @@ doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	iRet = parser.FindParser(&pParser, pName);
-	if(iRet == RS_RET_PARSER_NOT_FOUND) {
+	if (iRet == RS_RET_PARSER_NOT_FOUND) {
 		errmsg.LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
-			  	"(maybe defined too late in rsyslog.conf?)", pName);
+							    "(maybe defined too late in rsyslog.conf?)",
+		    pName);
 		ABORT_FINALIZE(RS_RET_NO_CURR_RULESET);
-	} else if(iRet != RS_RET_OK) {
+	} else if (iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error trying to find parser '%s'\n", pName);
 		FINALIZE;
 	}
@@ -997,7 +1005,7 @@ finalize_it:
 }
 
 static rsRetVal
-rulesetAddParser(void __attribute__((unused)) *pVal, uchar *pName)
+rulesetAddParser(void __attribute__((unused)) * pVal, uchar *pName)
 {
 	return doRulesetAddParser(ourConf->rulesets.pCurr, pName);
 }
@@ -1019,31 +1027,31 @@ rulesetProcessCnf(struct cnfobj *o)
 	DEFiRet;
 
 	pvals = nvlstGetParams(o->nvlst, &rspblk, NULL);
-	if(pvals == NULL) {
+	if (pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 	DBGPRINTF("ruleset param blk after rulesetProcessCnf:\n");
 	cnfparamsPrint(&rspblk, pvals);
 	nameIdx = cnfparamGetIdx(&rspblk, "name");
-	rsName = (uchar*)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
-	
+	rsName = (uchar *)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
+
 	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
-	if(localRet == RS_RET_OK) {
+	if (localRet == RS_RET_OK) {
 		errmsg.LogError(0, RS_RET_RULESET_EXISTS,
-			"error: ruleset '%s' specified more than once",
-			rsName);
+		    "error: ruleset '%s' specified more than once",
+		    rsName);
 		cnfstmtDestructLst(o->script);
 		ABORT_FINALIZE(RS_RET_RULESET_EXISTS);
-	} else if(localRet != RS_RET_NOT_FOUND) {
+	} else if (localRet != RS_RET_NOT_FOUND) {
 		ABORT_FINALIZE(localRet);
 	}
 
 	CHKiRet(rulesetConstruct(&pRuleset));
-	if((localRet = rulesetSetName(pRuleset, rsName)) != RS_RET_OK) {
+	if ((localRet = rulesetSetName(pRuleset, rsName)) != RS_RET_OK) {
 		rulesetDestruct(&pRuleset);
 		ABORT_FINALIZE(localRet);
 	}
-	if((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) {
+	if ((localRet = rulesetConstructFinalize(loadConf, pRuleset)) != RS_RET_OK) {
 		rulesetDestruct(&pRuleset);
 		ABORT_FINALIZE(localRet);
 	}
@@ -1051,18 +1059,18 @@ rulesetProcessCnf(struct cnfobj *o)
 
 	/* we have only two params, so we do NOT do the usual param loop */
 	parserIdx = cnfparamGetIdx(&rspblk, "parser");
-	if(parserIdx != -1  && pvals[parserIdx].bUsed) {
+	if (parserIdx != -1 && pvals[parserIdx].bUsed) {
 		ar = pvals[parserIdx].val.d.ar;
-		for(i = 0 ; i <  ar->nmemb ; ++i) {
-			parserName = (uchar*)es_str2cstr(ar->arr[i], NULL);
+		for (i = 0; i < ar->nmemb; ++i) {
+			parserName = (uchar *)es_str2cstr(ar->arr[i], NULL);
 			doRulesetAddParser(pRuleset, parserName);
 			/* note parserName is freed in doRulesetAddParser()! */
 		}
 	}
 
 	/* pick up ruleset queue parameters */
-	if(queueCnfParamsSet(o->nvlst)) {
-		rsname = (pRuleset->pszName == NULL) ? (uchar*) "[ruleset]" : pRuleset->pszName;
+	if (queueCnfParamsSet(o->nvlst)) {
+		rsname = (pRuleset->pszName == NULL) ? (uchar *)"[ruleset]" : pRuleset->pszName;
 		DBGPRINTF("adding a ruleset-specific \"main\" queue for ruleset '%s'\n", rsname);
 		CHKiRet(createMainQueue(&pRuleset->pQueue, rsname, o->nvlst));
 	}
@@ -1078,8 +1086,8 @@ finalize_it:
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(ruleset)
-CODESTARTobjQueryInterface(ruleset)
-	if(pIf->ifVersion != rulesetCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(ruleset) if (pIf->ifVersion != rulesetCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 

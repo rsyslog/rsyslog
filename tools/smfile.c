@@ -71,11 +71,11 @@ BEGINstrgen
 	uchar *pMSG;
 	size_t lenMSG;
 	size_t lenTotal;
-CODESTARTstrgen
-	/* first obtain all strings and their length (if not fixed) */
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3339Date);
+	CODESTARTstrgen
+	    /* first obtain all strings and their length (if not fixed) */
+	    pTimeStamp = (uchar *)getTimeReported(pMsg, tplFmtRFC3339Date);
 	lenTimeStamp = ustrlen(pTimeStamp);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
+	pHOSTNAME = (uchar *)getHOSTNAME(pMsg);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
 	getTAG(pMsg, &pTAG, &lenTAG);
 	pMSG = getMSG(pMsg);
@@ -83,11 +83,11 @@ CODESTARTstrgen
 
 	/* calculate len, constants for spaces and similar fixed strings */
 	lenTotal = lenTimeStamp + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
-	if(pMSG[0] != ' ')
+	if (pMSG[0] != ' ')
 		++lenTotal; /* then we need to introduce one additional space */
 
 	/* now make sure buffer is large enough */
-	if(lenTotal  >= iparam->lenBuf)
+	if (lenTotal >= iparam->lenBuf)
 		CHKiRet(ExtendBuf(iparam, lenTotal));
 
 	/* and concatenate the resulting string */
@@ -102,7 +102,7 @@ CODESTARTstrgen
 	memcpy(iparam->param + iBuf, pTAG, lenTAG);
 	iBuf += lenTAG;
 
-	if(pMSG[0] != ' ')
+	if (pMSG[0] != ' ')
 		iparam->param[iBuf++] = ' ';
 	memcpy(iparam->param + iBuf, pMSG, lenMSG);
 	iBuf += lenMSG;
@@ -118,20 +118,20 @@ ENDstrgen
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_SMOD_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_SMOD_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit(smfile)
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr
 
-	dbgprintf("rsyslog standard file format strgen init called, compiled with version %s\n", VERSION);
+	    dbgprintf("rsyslog standard file format strgen init called, compiled with version %s\n", VERSION);
 ENDmodInit

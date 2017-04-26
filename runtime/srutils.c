@@ -57,59 +57,58 @@
  * And nobody modified them since it was under LGPL, so we can also move it
  * to ASL 2.0.
  */
-syslogName_t	syslogPriNames[] = {
-	{"alert",	LOG_ALERT},
-	{"crit",	LOG_CRIT},
-	{"debug",	LOG_DEBUG},
-	{"emerg",	LOG_EMERG},
-	{"err",		LOG_ERR},
-	{"error",	LOG_ERR},		/* DEPRECATED */
-	{"info",	LOG_INFO},
-	{"none",	INTERNAL_NOPRI},	/* INTERNAL */
-	{"notice",	LOG_NOTICE},
-	{"panic",	LOG_EMERG},		/* DEPRECATED */
-	{"warn",	LOG_WARNING},		/* DEPRECATED */
-	{"warning",	LOG_WARNING},
-	{"*",		TABLE_ALLPRI},
-	{NULL,		-1}
-};
+syslogName_t syslogPriNames[] = {
+    {"alert", LOG_ALERT},
+    {"crit", LOG_CRIT},
+    {"debug", LOG_DEBUG},
+    {"emerg", LOG_EMERG},
+    {"err", LOG_ERR},
+    {"error", LOG_ERR}, /* DEPRECATED */
+    {"info", LOG_INFO},
+    {"none", INTERNAL_NOPRI}, /* INTERNAL */
+    {"notice", LOG_NOTICE},
+    {"panic", LOG_EMERG},  /* DEPRECATED */
+    {"warn", LOG_WARNING}, /* DEPRECATED */
+    {"warning", LOG_WARNING},
+    {"*", TABLE_ALLPRI},
+    {NULL, -1}};
 
 #ifndef LOG_AUTHPRIV
-#	define LOG_AUTHPRIV LOG_AUTH
+#define LOG_AUTHPRIV LOG_AUTH
 #endif
-syslogName_t	syslogFacNames[] = {
-	{"auth",         LOG_AUTH},
-	{"authpriv",     LOG_AUTHPRIV},
-	{"cron",         LOG_CRON},
-	{"daemon",       LOG_DAEMON},
-	{"kern",         LOG_KERN},
-	{"lpr",          LOG_LPR},
-	{"mail",         LOG_MAIL},
-	{"mark",         LOG_MARK},		/* INTERNAL */
-	{"news",         LOG_NEWS},
-	{"ntp",          (12<<3) },             /* NTP, perhaps BSD-specific? */
-	{"security",     LOG_AUTH},		/* DEPRECATED */
-	{"bsd_security", (13<<3) },		/* BSD-specific, unfortunatly with duplicate name... */
-	{"syslog",       LOG_SYSLOG},
-	{"user",         LOG_USER},
-	{"uucp",         LOG_UUCP},
+syslogName_t syslogFacNames[] = {
+    {"auth", LOG_AUTH},
+    {"authpriv", LOG_AUTHPRIV},
+    {"cron", LOG_CRON},
+    {"daemon", LOG_DAEMON},
+    {"kern", LOG_KERN},
+    {"lpr", LOG_LPR},
+    {"mail", LOG_MAIL},
+    {"mark", LOG_MARK}, /* INTERNAL */
+    {"news", LOG_NEWS},
+    {"ntp", (12 << 3)},		 /* NTP, perhaps BSD-specific? */
+    {"security", LOG_AUTH},      /* DEPRECATED */
+    {"bsd_security", (13 << 3)}, /* BSD-specific, unfortunatly with duplicate name... */
+    {"syslog", LOG_SYSLOG},
+    {"user", LOG_USER},
+    {"uucp", LOG_UUCP},
 #if defined(LOG_FTP)
-	{"ftp",          LOG_FTP},
+    {"ftp", LOG_FTP},
 #endif
 #if defined(LOG_AUDIT)
-	{"audit",        LOG_AUDIT},
+    {"audit", LOG_AUDIT},
 #endif
-	{"console",	 (14 << 3)},		/* BSD-specific priority */
-	{"local0",       LOG_LOCAL0},
-	{"local1",       LOG_LOCAL1},
-	{"local2",       LOG_LOCAL2},
-	{"local3",       LOG_LOCAL3},
-	{"local4",       LOG_LOCAL4},
-	{"local5",       LOG_LOCAL5},
-	{"local6",       LOG_LOCAL6},
-	{"local7",       LOG_LOCAL7},
-	{"invld",        LOG_INVLD},
-	{NULL,           -1},
+    {"console", (14 << 3)}, /* BSD-specific priority */
+    {"local0", LOG_LOCAL0},
+    {"local1", LOG_LOCAL1},
+    {"local2", LOG_LOCAL2},
+    {"local3", LOG_LOCAL3},
+    {"local4", LOG_LOCAL4},
+    {"local5", LOG_LOCAL5},
+    {"local6", LOG_LOCAL6},
+    {"local7", LOG_LOCAL7},
+    {"invld", LOG_INVLD},
+    {NULL, -1},
 };
 
 /* ################################################################# *
@@ -128,38 +127,35 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
 {
 	int i;
 	int bIsNegative;
-	char szBuf[64];	/* sufficiently large for my lifespan and those of my children... ;) */
+	char szBuf[64]; /* sufficiently large for my lifespan and those of my children... ;) */
 
 	assert(pBuf != NULL);
-	assert(iLenBuf > 1);	/* This is actually an app error and as thus checked for... */
+	assert(iLenBuf > 1); /* This is actually an app error and as thus checked for... */
 
-	if(iToConv < 0)
-	{
+	if (iToConv < 0) {
 		bIsNegative = RSTRUE;
 		iToConv *= -1;
-	}
-	else
+	} else
 		bIsNegative = RSFALSE;
 
 	/* first generate a string with the digits in the reverse direction */
 	i = 0;
-	do
-	{
+	do {
 		szBuf[i++] = iToConv % 10 + '0';
 		iToConv /= 10;
-	} while(iToConv > 0);	/* warning: do...while()! */
-	--i; /* undo last increment - we were pointing at NEXT location */
+	} while (iToConv > 0); /* warning: do...while()! */
+	--i;		       /* undo last increment - we were pointing at NEXT location */
 
 	/* make sure we are within bounds... */
-	if(i + 2 > iLenBuf)	/* +2 because: a) i starts at zero! b) the \0 byte */
+	if (i + 2 > iLenBuf) /* +2 because: a) i starts at zero! b) the \0 byte */
 		return RS_RET_PROVIDED_BUFFER_TOO_SMALL;
 
 	/* then move it to the right direction... */
-	if(bIsNegative == RSTRUE)
+	if (bIsNegative == RSTRUE)
 		*pBuf++ = '-';
-	while(i >= 0)
+	while (i >= 0)
 		*pBuf++ = szBuf[i--];
-	*pBuf = '\0';	/* terminate it!!! */
+	*pBuf = '\0'; /* terminate it!!! */
 
 	return RS_RET_OK;
 }
@@ -169,8 +165,8 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 	uchar *pNew;
 
 	assert(pOld != NULL);
-	
-	if((pNew = MALLOC(len + 1)) != NULL)
+
+	if ((pNew = MALLOC(len + 1)) != NULL)
 		memcpy(pNew, pOld, len + 1);
 
 	return pNew;
@@ -196,38 +192,38 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * loop. -- rgerhards, 2010-03-25
  */
 int makeFileParentDirs(const uchar *const szFile, size_t lenFile, mode_t mode,
-		       uid_t uid, gid_t gid, int bFailOnChownFail)
+    uid_t uid, gid_t gid, int bFailOnChownFail)
 {
-        uchar *p;
-        uchar *pszWork;
-        size_t len;
+	uchar *p;
+	uchar *pszWork;
+	size_t len;
 	int iTry = 0;
 	int bErr = 0;
 
 	assert(szFile != NULL);
 	assert(lenFile > 0);
 
-        len = lenFile + 1; /* add one for '\0'-byte */
-	if((pszWork = MALLOC(len)) == NULL)
+	len = lenFile + 1; /* add one for '\0'-byte */
+	if ((pszWork = MALLOC(len)) == NULL)
 		return -1;
-        memcpy(pszWork, szFile, len);
-        for(p = pszWork+1 ; *p ; p++)
-                if(*p == '/') {
+	memcpy(pszWork, szFile, len);
+	for (p = pszWork + 1; *p; p++)
+		if (*p == '/') {
 			/* temporarily terminate string, create dir and go on */
-                        *p = '\0';
+			*p = '\0';
 			iTry = 0;
-again:
-                        if(access((char*)pszWork, F_OK)) {
-                                if(mkdir((char*)pszWork, mode) == 0) {
-					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
+		again:
+			if (access((char *)pszWork, F_OK)) {
+				if (mkdir((char *)pszWork, mode) == 0) {
+					if (uid != (uid_t)-1 || gid != (gid_t)-1) {
 						/* we need to set owner/group */
-						if(chown((char*)pszWork, uid, gid) != 0) {
+						if (chown((char *)pszWork, uid, gid) != 0) {
 							char errStr[1024]; /* buffer for strerr() */
 							rs_strerror_r(errno, errStr, sizeof(errStr));
 							LogError(0, RS_RET_DIR_CHOWN_ERROR,
-								"chown for directory '%s' failed: %s",
-								pszWork, errStr);
-							if(bFailOnChownFail)
+							    "chown for directory '%s' failed: %s",
+							    pszWork, errStr);
+							if (bFailOnChownFail)
 								bErr = 1;
 							/* silently ignore if configured
 							 * to do so.
@@ -235,21 +231,21 @@ again:
 						}
 					}
 				} else {
-					if(errno == EEXIST && iTry == 0) {
+					if (errno == EEXIST && iTry == 0) {
 						iTry = 1;
 						goto again;
-						}
+					}
 					bErr = 1;
 				}
-				if(bErr) {
+				if (bErr) {
 					int eSave = errno;
 					free(pszWork);
 					errno = eSave;
 					return -1;
 				}
 			}
-                        *p = '/';
-                }
+			*p = '/';
+		}
 	free(pszWork);
 	return 0;
 }
@@ -265,41 +261,41 @@ again:
  */
 int execProg(uchar *program, int bWait, uchar *arg)
 {
-        int pid;
+	int pid;
 	int sig;
 	struct sigaction sigAct;
 
 	dbgprintf("exec program '%s' with param '%s'\n", program, arg);
-        pid = fork();
-        if (pid < 0) {
-                return 0;
-        }
+	pid = fork();
+	if (pid < 0) {
+		return 0;
+	}
 
-        if(pid) {       /* Parent */
-		if(bWait)
-			if(waitpid(pid, NULL, 0) == -1)
-				if(errno != ECHILD) {
+	if (pid) { /* Parent */
+		if (bWait)
+			if (waitpid(pid, NULL, 0) == -1)
+				if (errno != ECHILD) {
 					/* we do not use logerror(), because
 					 * that might bring us into an endless
 					 * loop. At some time, we may
 					 * reconsider this behaviour.
 					 */
 					dbgprintf("could not wait on child after executing '%s'",
-					        (char*)program);
+					    (char *)program);
 				}
-                return pid;
+		return pid;
 	}
-        /* Child */
+	/* Child */
 	alarm(0); /* create a clean environment before we exec the real child */
 
 	memset(&sigAct, 0, sizeof(sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = SIG_DFL;
 
-	for(sig = 1 ; sig < NSIG ; ++sig)
+	for (sig = 1; sig < NSIG; ++sig)
 		sigaction(sig, &sigAct, NULL);
 
-	execlp((char*)program, (char*) program, (char*)arg, NULL);
+	execlp((char *)program, (char *)program, (char *)arg, NULL);
 	/* In the long term, it's a good idea to implement some enhanced error
 	 * checking here. However, it can not easily be done. For starters, we
 	 * may run into endless loops if we log to syslog. The next problem is
@@ -325,7 +321,7 @@ void skipWhiteSpace(uchar **pp)
 	assert(*pp != NULL);
 
 	p = *pp;
-	while(*p && isspace((int) *p))
+	while (*p && isspace((int)*p))
 		++p;
 	*pp = p;
 }
@@ -346,38 +342,38 @@ void skipWhiteSpace(uchar **pp)
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, int64_t lNum, int lNumDigits)
+    size_t lenFName, int64_t lNum, int lNumDigits)
 {
 	DEFiRet;
 	uchar *pName;
 	uchar *pNameWork;
 	size_t lenName;
-	uchar szBuf[128];	/* buffer for number */
-	char szFmtBuf[32];	/* buffer for snprintf format */
+	uchar szBuf[128];  /* buffer for number */
+	char szFmtBuf[32]; /* buffer for snprintf format */
 	size_t lenBuf;
 
-	if(lNum < 0) {
+	if (lNum < 0) {
 		szBuf[0] = '\0';
 		lenBuf = 0;
 	} else {
-		if(lNumDigits > 0) {
+		if (lNumDigits > 0) {
 			snprintf(szFmtBuf, sizeof(szFmtBuf), ".%%0%d" PRId64, lNumDigits);
-			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), szFmtBuf, lNum);
+			lenBuf = snprintf((char *)szBuf, sizeof(szBuf), szFmtBuf, lNum);
 		} else
-			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%" PRId64, lNum);
+			lenBuf = snprintf((char *)szBuf, sizeof(szBuf), ".%" PRId64, lNum);
 	}
 
 	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
-	if((pName = MALLOC(lenName)) == NULL)
+	if ((pName = MALLOC(lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	
+
 	/* got memory, now construct string */
 	memcpy(pName, pDirName, lenDirName);
 	pNameWork = pName + lenDirName;
 	*pNameWork++ = '/';
 	memcpy(pNameWork, pFName, lenFName);
 	pNameWork += lenFName;
-	if(lenBuf > 0) {
+	if (lenBuf > 0) {
 		memcpy(pNameWork, szBuf, lenBuf);
 		pNameWork += lenBuf;
 	}
@@ -400,10 +396,10 @@ int getNumberDigits(long lNum)
 {
 	int iDig;
 
-	if(lNum == 0)
+	if (lNum == 0)
 		iDig = 1;
 	else
-		for(iDig = 0 ; lNum != 0 ; ++iDig)
+		for (iDig = 0; lNum != 0; ++iDig)
 			lNum /= 10;
 
 	return iDig;
@@ -417,49 +413,48 @@ int getNumberDigits(long lNum)
 rsRetVal
 timeoutComp(struct timespec *pt, long iTimeout)
 {
-#	if _POSIX_TIMERS <= 0
+#if _POSIX_TIMERS <= 0
 	struct timeval tv;
-#	endif
+#endif
 
 	BEGINfunc
-	assert(pt != NULL);
-	/* compute timeout */
+	    assert(pt != NULL);
+/* compute timeout */
 
-#	if _POSIX_TIMERS > 0
+#if _POSIX_TIMERS > 0
 	/* this is the "regular" code */
 	clock_gettime(CLOCK_REALTIME, pt);
-#	else
+#else
 	gettimeofday(&tv, NULL);
 	pt->tv_sec = tv.tv_sec;
 	pt->tv_nsec = tv.tv_usec * 1000;
-#	endif
+#endif
 	pt->tv_sec += iTimeout / 1000;
 	pt->tv_nsec += (iTimeout % 1000) * 1000000; /* think INTEGER arithmetic! */
-	if(pt->tv_nsec > 999999999) { /* overrun? */
+	if (pt->tv_nsec > 999999999) {		    /* overrun? */
 		pt->tv_nsec -= 1000000000;
 		++pt->tv_sec;
 	}
-	ENDfunc
-	return RS_RET_OK; /* so far, this is static... */
+	ENDfunc return RS_RET_OK; /* so far, this is static... */
 }
 
 long long
 currentTimeMills(void)
 {
 	struct timespec tm;
-#	if _POSIX_TIMERS <= 0
+#if _POSIX_TIMERS <= 0
 	struct timeval tv;
-#	endif
+#endif
 
-#	if _POSIX_TIMERS > 0
+#if _POSIX_TIMERS > 0
 	clock_gettime(CLOCK_REALTIME, &tm);
-#	else
+#else
 	gettimeofday(&tv, NULL);
 	tm.tv_sec = tv.tv_sec;
 	tm.tv_nsec = tv.tv_usec * 1000;
-#	endif
+#endif
 
-	return ((long long) tm.tv_sec) * 1000 + (tm.tv_nsec / 1000000);
+	return ((long long)tm.tv_sec) * 1000 + (tm.tv_nsec / 1000000);
 }
 
 
@@ -468,46 +463,43 @@ currentTimeMills(void)
  * in the past, 0 is returned. The return value is in ms.
  * rgerhards, 2008-01-25
  */
-long
-timeoutVal(struct timespec *pt)
+long timeoutVal(struct timespec *pt)
 {
 	struct timespec t;
 	long iTimeout;
-#	if _POSIX_TIMERS <= 0
+#if _POSIX_TIMERS <= 0
 	struct timeval tv;
-#	endif
+#endif
 
 	BEGINfunc
-	assert(pt != NULL);
-	/* compute timeout */
-#	if _POSIX_TIMERS > 0
+	    assert(pt != NULL);
+/* compute timeout */
+#if _POSIX_TIMERS > 0
 	/* this is the "regular" code */
 	clock_gettime(CLOCK_REALTIME, &t);
-#	else
+#else
 	gettimeofday(&tv, NULL);
 	t.tv_sec = tv.tv_sec;
 	t.tv_nsec = tv.tv_usec * 1000;
-#	endif
+#endif
 	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000000;
 	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
 
-	if(iTimeout < 0)
+	if (iTimeout < 0)
 		iTimeout = 0;
 
-	ENDfunc
-	return iTimeout;
+	ENDfunc return iTimeout;
 }
 
 
 /* cancellation cleanup handler - frees provided mutex
  * rgerhards, 2008-01-14
  */
-void
-mutexCancelCleanup(void *arg)
+void mutexCancelCleanup(void *arg)
 {
 	BEGINfunc
-	assert(arg != NULL);
-	d_pthread_mutex_unlock((pthread_mutex_t*) arg);
+	    assert(arg != NULL);
+	d_pthread_mutex_unlock((pthread_mutex_t *)arg);
 	ENDfunc
 }
 
@@ -517,13 +509,12 @@ mutexCancelCleanup(void *arg)
  * a) the wake-time is over
  * rgerhards, 2008-01-28
  */
-void
-srSleep(int iSeconds, int iuSeconds)
+void srSleep(int iSeconds, int iuSeconds)
 {
 	struct timeval tvSelectTimeout;
 
 	BEGINfunc
-	tvSelectTimeout.tv_sec = iSeconds;
+	    tvSelectTimeout.tv_sec = iSeconds;
 	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
 	ENDfunc
@@ -545,21 +536,22 @@ srSleep(int iSeconds, int iuSeconds)
  *
  * Added 2008-01-30
  */
-char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
+char *rs_strerror_r(int errnum, char *buf, size_t buflen)
+{
 #ifndef HAVE_STRERROR_R
 	char *pszErr;
 	pszErr = strerror(errnum);
 	snprintf(buf, buflen, "%s", pszErr);
 #else
-#	ifdef STRERROR_R_CHAR_P
-		char *p = strerror_r(errnum, buf, buflen);
-		if (p != buf) {
-			strncpy(buf, p, buflen);
-			buf[buflen - 1] = '\0';
-		}
-#	else
-		strerror_r(errnum, buf, buflen);
-#	endif
+#ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#else
+	strerror_r(errnum, buf, buflen);
+#endif
 #endif /* #ifdef __hpux */
 	return buf;
 }
@@ -576,17 +568,17 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 	ASSERT(codetab != NULL);
 
 	DBGPRINTF("symbolic name: %s", name);
-	if(isdigit((int) *name)) {
+	if (isdigit((int)*name)) {
 		DBGPRINTF("\n");
-		return (atoi((char*) name));
+		return (atoi((char *)name));
 	}
-	strncpy((char*) buf, (char*) name, 79);
-	for(p = buf; *p; p++) {
-		if (isupper((int) *p))
-			*p = tolower((int) *p);
+	strncpy((char *)buf, (char *)name, 79);
+	for (p = buf; *p; p++) {
+		if (isupper((int)*p))
+			*p = tolower((int)*p);
 	}
-	for(c = codetab; c->c_name; c++) {
-		if(!strcmp((char*) buf, (char*) c->c_name)) {
+	for (c = codetab; c->c_name; c++) {
+		if (!strcmp((char *)buf, (char *)c->c_name)) {
 			DBGPRINTF(" ==> %d\n", c->c_val);
 			return (c->c_val);
 		}
@@ -616,26 +608,26 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
  * so that it treats ' ' as a request for whitespace. But in general, the function and its callers
  * should be changed over time, this is not really very good code...
  */
-int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
+int getSubString(uchar **ppSrc, char *pDst, size_t DstSize, char cSep)
 {
 	uchar *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
-	while((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
+	while ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize > 1) {
 		*pDst++ = *(pSrc)++;
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') {
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
-	}	
+	}
 	if (*pSrc == '\0' || *pSrc == '\n')
 		/* this line was missing, causing ppSrc to be invalid when it
 		 * was returned in case of end-of-string. rgerhards 2005-07-29
 		 */
 		*ppSrc = pSrc;
 	else
-		*ppSrc = pSrc+1;
+		*ppSrc = pSrc + 1;
 	*pDst = '\0';
 	return iErr;
 }
@@ -652,13 +644,16 @@ getFileSize(uchar *pszName, off_t *pSize)
 	struct stat statBuf;
 	DEFiRet;
 
-	ret = stat((char*) pszName, &statBuf);
-	if(ret == -1) {
-		switch(errno) {
-			case EACCES: ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
-			case ENOTDIR:
-			case ENOENT:  ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-			default:      ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+	ret = stat((char *)pszName, &statBuf);
+	if (ret == -1) {
+		switch (errno) {
+		case EACCES:
+			ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
+		case ENOTDIR:
+		case ENOENT:
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+		default:
+			ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 		}
 	}
 
@@ -671,20 +666,19 @@ finalize_it:
 /* Returns 1 if the given string contains a non-escaped glob(3)
  * wildcard character and 0 otherwise (or if the string is empty).
  */
-int
-containsGlobWildcard(char *str)
+int containsGlobWildcard(char *str)
 {
 	char *p;
-	if(!str) {
+	if (!str) {
 		return 0;
 	}
 	/* From Linux Programmer's Guide:
 	 * "A string is a wildcard pattern if it contains one of the characters '?', '*', '{' or '['"
 	 * "One can remove the special meaning of '?', '*', '{' and '[' by preceding them by a backslash"
 	 */
-	for(p = str; *p != '\0'; p++) {
-		if((*p == '?' || *p == '*' || *p == '[' || *p == '{') &&
-				(p == str || *(p-1) != '\\')) {
+	for (p = str; *p != '\0'; p++) {
+		if ((*p == '?' || *p == '*' || *p == '[' || *p == '{') &&
+		    (p == str || *(p - 1) != '\\')) {
 			return 1;
 		}
 	}
@@ -696,7 +690,7 @@ void seedRandomNumber(void)
 	struct timespec t;
 	timeoutComp(&t, 0);
 	long long x = t.tv_sec * 3 + t.tv_nsec * 2;
-	srandom((unsigned int) x);
+	srandom((unsigned int)x);
 }
 
 long int randomNumber(void)

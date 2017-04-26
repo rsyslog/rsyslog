@@ -43,12 +43,12 @@
 
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(prop)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(datetime)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(datetime);
 
 static int iMaxLine; /* maximum size of a single message */
 
@@ -68,7 +68,7 @@ strms_sessConstructFinalize(strms_sess_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
-	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
+	if (pThis->pSrv->OnSessConstructFinalize != NULL) {
 		CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
 	}
 
@@ -79,23 +79,22 @@ finalize_it:
 
 /* destructor for the strms_sess object */
 BEGINobjDestruct(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strms_sess)
-	if(pThis->pStrm != NULL)
-		netstrm.Destruct(&pThis->pStrm);
+	CODESTARTobjDestruct(strms_sess) if (pThis->pStrm != NULL)
+	    netstrm.Destruct(&pThis->pStrm);
 
-	if(pThis->pSrv->pOnSessDestruct != NULL) {
+	if (pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
 	free(pThis->fromHost);
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL)
 		prop.Destruct(&pThis->fromHostIP);
 ENDobjDestruct(strms_sess)
 
 
 /* debugprint for the strms_sess object */
 BEGINobjDebugPrint(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(strms_sess)
+	CODESTARTobjDebugPrint(strms_sess)
 ENDobjDebugPrint(strms_sess)
 
 
@@ -123,7 +122,7 @@ SetHostIP(strms_sess_t *pThis, prop_t *ip)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL)
 		prop.Destruct(&pThis->fromHostIP);
 	pThis->fromHostIP = ip;
 	RETiRet;
@@ -192,12 +191,11 @@ Close(strms_sess_t *pThis)
 	netstrm.Destruct(&pThis->pStrm);
 	free(pThis->fromHost);
 	pThis->fromHost = NULL; /* not really needed, but... */
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL)
 		prop.Destruct(&pThis->fromHostIP);
 
 	RETiRet;
 }
-
 
 
 /* Processes the data received via a STRM session. If there
@@ -222,10 +220,10 @@ DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen)
 	assert(pData != NULL);
 	assert(iLen > 0);
 
-	 /* We now copy the message to the session buffer. */
+	/* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
-	while(pData < pEnd) {
+	while (pData < pEnd) {
 		CHKiRet(pThis->pSrv->OnCharRcvd(pThis, (uchar)*pData++));
 	}
 
@@ -238,8 +236,8 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(strms_sess)
-CODESTARTobjQueryInterface(strms_sess)
-	if(pIf->ifVersion != strms_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(strms_sess) if (pIf->ifVersion != strms_sessCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -271,9 +269,9 @@ ENDobjQueryInterface(strms_sess)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(strms_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(strms_sess)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(strms_sess)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
 ENDObjClassExit(strms_sess)

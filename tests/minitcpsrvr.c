@@ -43,18 +43,17 @@ static void
 usage(void)
 {
 	fprintf(stderr, "usage: minitcpsrvr -t ip-addr -p port -f outfile\n");
-	exit (1);
+	exit(1);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	int fds;
 	int fdc;
 	int fdf = -1;
 	struct sockaddr_in srvAddr;
 	struct sockaddr_in cliAddr;
-	unsigned int srvAddrLen; 
+	unsigned int srvAddrLen;
 	unsigned int cliAddrLen;
 	char wrkBuf[4096];
 	ssize_t nRead;
@@ -63,7 +62,7 @@ main(int argc, char *argv[])
 	char *targetIP = NULL;
 	int targetPort = -1;
 
-	while((opt = getopt(argc, argv, "t:p:f:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "t:p:f:s:")) != -1) {
 		switch (opt) {
 		case 's':
 			sleeptime = atoi(optarg);
@@ -75,11 +74,12 @@ main(int argc, char *argv[])
 			targetPort = atoi(optarg);
 			break;
 		case 'f':
-			if(!strcmp(optarg, "-")) {
+			if (!strcmp(optarg, "-")) {
 				fdf = 1;
 			} else {
-				fdf = open(optarg, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
-				if(fdf == -1) errout(argv[3]);
+				fdf = open(optarg, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+				if (fdf == -1)
+					errout(argv[3]);
 			}
 			break;
 		default:
@@ -89,20 +89,20 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if(targetIP == NULL) {
+	if (targetIP == NULL) {
 		fprintf(stderr, "-t parameter missing -- terminating\n");
 		usage();
 	}
-	if(targetPort == -1) {
+	if (targetPort == -1) {
 		fprintf(stderr, "-p parameter missing -- terminating\n");
 		usage();
 	}
-	if(fdf == -1) {
+	if (fdf == -1) {
 		fprintf(stderr, "-f parameter missing -- terminating\n");
 		usage();
 	}
 
-	if(sleeptime) {
+	if (sleeptime) {
 		printf("minitcpsrv: deliberate sleep of %d seconds\n", sleeptime);
 		sleep(sleeptime);
 		printf("minitcpsrv: end sleep\n");
@@ -113,16 +113,18 @@ main(int argc, char *argv[])
 	srvAddr.sin_addr.s_addr = inet_addr(targetIP);
 	srvAddr.sin_port = htons(targetPort);
 	srvAddrLen = sizeof(srvAddr);
-	if(bind(fds, (struct sockaddr *)&srvAddr, srvAddrLen) != 0)
+	if (bind(fds, (struct sockaddr *)&srvAddr, srvAddrLen) != 0)
 		errout("bind");
-	if(listen(fds, 20) != 0) errout("listen");
+	if (listen(fds, 20) != 0)
+		errout("listen");
 	cliAddrLen = sizeof(cliAddr);
 
 	fdc = accept(fds, (struct sockaddr *)&cliAddr, &cliAddrLen);
-	while(1) {       
+	while (1) {
 		nRead = read(fdc, wrkBuf, sizeof(wrkBuf));
-		if(nRead == 0) break;
-		if(write(fdf, wrkBuf, nRead) != nRead)
+		if (nRead == 0)
+			break;
+		if (write(fdf, wrkBuf, nRead) != nRead)
 			errout("write");
 	}
 	/* let the OS do the cleanup */

@@ -52,12 +52,12 @@
 
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(prop)
-DEFobjCurrIf(datetime)
+DEFobjStaticHelpers;
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(datetime);
 
 
 /* forward definitions */
@@ -65,12 +65,12 @@ static rsRetVal Close(tcps_sess_t *pThis);
 
 
 /* Standard-Constructor */
-BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
-		pThis->iMsg = 0; /* just make sure... */
-		pThis->inputState = eAtStrtFram; /* indicate frame header expected */
-		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
-		/* now allocate the message reception buffer */
-		CHKmalloc(pThis->pMsg = (uchar*) MALLOC(glbl.GetMaxLine() + 1));
+BEGINobjConstruct(tcps_sess)			      /* be sure to specify the object type also in END macro! */
+	pThis->iMsg = 0;			      /* just make sure... */
+	pThis->inputState = eAtStrtFram;	      /* indicate frame header expected */
+	pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
+	/* now allocate the message reception buffer */
+	CHKmalloc(pThis->pMsg = (uchar *)MALLOC(glbl.GetMaxLine() + 1));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -78,11 +78,11 @@ ENDobjConstruct(tcps_sess)
 /* ConstructionFinalizer
  */
 static rsRetVal
-tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis)
+    tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) * pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
+	if (pThis->pSrv->OnSessConstructFinalize != NULL) {
 		CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
 	}
 
@@ -93,18 +93,18 @@ finalize_it:
 
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcps_sess)
-//printf("sess %p destruct, pStrm %p\n", pThis, pThis->pStrm);
-	if(pThis->pStrm != NULL)
+	CODESTARTobjDestruct(tcps_sess)
+	    //printf("sess %p destruct, pStrm %p\n", pThis, pThis->pStrm);
+	    if (pThis->pStrm != NULL)
 		netstrm.Destruct(&pThis->pStrm);
 
-	if(pThis->pSrv->pOnSessDestruct != NULL) {
+	if (pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
-	if(pThis->fromHost != NULL)
+	if (pThis->fromHost != NULL)
 		CHKiRet(prop.Destruct(&pThis->fromHost));
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL)
 		CHKiRet(prop.Destruct(&pThis->fromHostIP));
 	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
@@ -112,7 +112,7 @@ ENDobjDestruct(tcps_sess)
 
 /* debugprint for the tcps_sess object */
 BEGINobjDebugPrint(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(tcps_sess)
+	CODESTARTobjDebugPrint(tcps_sess)
 ENDobjDebugPrint(tcps_sess)
 
 
@@ -128,7 +128,7 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHost == NULL)
+	if (pThis->fromHost == NULL)
 		CHKiRet(prop.Construct(&pThis->fromHost));
 
 	CHKiRet(prop.SetString(pThis->fromHost, pszHost, ustrlen(pszHost)));
@@ -148,7 +148,7 @@ SetHostIP(tcps_sess_t *pThis, prop_t *ip)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHostIP != NULL) {
+	if (pThis->fromHostIP != NULL) {
 		prop.Destruct(&pThis->fromHostIP);
 	}
 	pThis->fromHostIP = ip;
@@ -212,7 +212,7 @@ SetUsrP(tcps_sess_t *pThis, void *pUsr)
 
 
 static rsRetVal
-SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
+SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int))
 {
 	DEFiRet;
 	pThis->DoSubmitMessage = OnMsgReceive;
@@ -237,26 +237,27 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	
-	if(pThis->iMsg == 0) {
+
+	if (pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");
 		FINALIZE;
 	}
 
-	if(pThis->DoSubmitMessage != NULL) {
+	if (pThis->DoSubmitMessage != NULL) {
 		pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
 		FINALIZE;
 	}
 
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
-	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
+	MsgSetRawMsg(pMsg, (char *)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pInputName);
-	if(pThis->pLstnInfo->dfltTZ[0] != '\0')
-		MsgSetDfltTZ(pMsg, (char*) pThis->pLstnInfo->dfltTZ);
+	if (pThis->pLstnInfo->dfltTZ[0] != '\0')
+		MsgSetDfltTZ(pMsg, (char *)pThis->pLstnInfo->dfltTZ);
 	MsgSetFlowControlType(pMsg, pThis->pSrv->bUseFlowControl
-			            ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
-	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
+					? eFLOWCTL_LIGHT_DELAY
+					: eFLOWCTL_NO_DELAY);
+	pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
@@ -270,7 +271,6 @@ finalize_it:
 
 	RETiRet;
 }
-
 
 
 /* This should be called before a normal (non forced) close
@@ -292,22 +292,23 @@ PrepareClose(tcps_sess_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	
-	if(pThis->inputState == eAtStrtFram) {
+
+	if (pThis->inputState == eAtStrtFram) {
 		/* this is how it should be. There is no unprocessed
 		 * data left and such we have nothing to do. For simplicity
 		 * reasons, we immediately return in that case.
 		 */
-		 FINALIZE;
+		FINALIZE;
 	}
 
 	/* we have some data left! */
-	if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
+	if (pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
 		/* In this case, we have an invalid frame count and thus
 		 * generate an error message and discard the frame.
 		 */
 		errmsg.LogError(0, NO_ERRCODE, "Incomplete frame at end of stream in session %p - "
-			    "ignoring extra data (a message may be lost).", pThis->pStrm);
+					       "ignoring extra data (a message may be lost).",
+		    pThis->pStrm);
 		/* nothing more to do */
 	} else { /* here, we have traditional framing. Missing LF at the end
 		 * of message may occur. As such, we process the message in
@@ -332,13 +333,13 @@ Close(tcps_sess_t *pThis)
 {
 	DEFiRet;
 
-//printf("sess %p close\n", pThis);
+	//printf("sess %p close\n", pThis);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	netstrm.Destruct(&pThis->pStrm);
-	if(pThis->fromHost != NULL) {
+	if (pThis->fromHost != NULL) {
 		prop.Destruct(&pThis->fromHost);
 	}
-	if(pThis->fromHostIP != NULL)
+	if (pThis->fromHostIP != NULL)
 		prop.Destruct(&pThis->fromHostIP);
 
 	RETiRet;
@@ -353,81 +354,83 @@ Close(tcps_sess_t *pThis)
  */
 static rsRetVal
 processDataRcvd(tcps_sess_t *pThis,
-	char c,
-	struct syslogTime *stTime,
-	const time_t ttGenTime,
-	multi_submit_t *pMultiSub,
-	unsigned *const __restrict__ pnMsgs)
+    char c,
+    struct syslogTime *stTime,
+    const time_t ttGenTime,
+    multi_submit_t *pMultiSub,
+    unsigned *const __restrict__ pnMsgs)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	int iMaxLine = glbl.GetMaxLine();
 
-	if(pThis->inputState == eAtStrtFram) {
-		if(pThis->bSuppOctetFram && c >= '0' && c <= '9') {
+	if (pThis->inputState == eAtStrtFram) {
+		if (pThis->bSuppOctetFram && c >= '0' && c <= '9') {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
 			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
-		} else if(pThis->bSPFramingFix && c == ' ') {
+		} else if (pThis->bSPFramingFix && c == ' ') {
 			/* Cisco ASA very occasionally sends a SP after a LF, which
 			 * thrashes framing if not taken special care of. Here,
 			 * we permit space *in front of the next frame* and
 			 * ignore it.
 			 */
-			 FINALIZE;
+			FINALIZE;
 		} else {
 			pThis->inputState = eInMsg;
 			pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 		}
 	}
 
-	if(pThis->inputState == eInOctetCnt) {
-		if(c >= '0' && c <= '9') { /* isdigit() the faster way */
-			if(pThis->iOctetsRemain <= 200000000) {
+	if (pThis->inputState == eInOctetCnt) {
+		if (c >= '0' && c <= '9') { /* isdigit() the faster way */
+			if (pThis->iOctetsRemain <= 200000000) {
 				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 			}
 			*(pThis->pMsg + pThis->iMsg++) = c;
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
-			if(c != ' ') {
+			if (c != ' ') {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "delimiter is not SP but has ASCII value %d.", c);
+							       "delimiter is not SP but has ASCII value %d.",
+				    c);
 			}
-			if(pThis->iOctetsRemain < 1) {
+			if (pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "invalid octet count %d.", pThis->iOctetsRemain);
+							       "invalid octet count %d.",
+				    pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
-			} else if(pThis->iOctetsRemain > iMaxLine) {
+			} else if (pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
-					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
+							       "max msg size is %d, truncating...",
+				    pThis->iOctetsRemain, iMaxLine);
 			}
-			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
+			if (pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-						"frame too large: %d, change to octet stuffing", pThis->iOctetsRemain);
+							       "frame too large: %d, change to octet stuffing",
+				    pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else {
 				pThis->iMsg = 0;
 			}
 			pThis->inputState = eInMsg;
 		}
-	} else if(pThis->inputState == eInMsgTruncating) {
-		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
-		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
-		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+	} else if (pThis->inputState == eInMsgTruncating) {
+		if ((((c == '\n') && !pThis->pSrv->bDisableLFDelim) || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
 			pThis->inputState = eAtStrtFram;
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
-		if(pThis->iMsg >= iMaxLine) {
+		if (pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			++(*pnMsgs);
-			if(pThis->pSrv->discardTruncatedMsg == 1) {
+			if (pThis->pSrv->discardTruncatedMsg == 1) {
 				pThis->inputState = eInMsgTruncating;
 			}
 			/* configuration parameter discardTruncatedMsg controlls
@@ -438,9 +441,7 @@ processDataRcvd(tcps_sess_t *pThis,
 			 */
 		}
 
-		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
-		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
-		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
+		if ((((c == '\n') && !pThis->pSrv->bDisableLFDelim) || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			++(*pnMsgs);
 			pThis->inputState = eAtStrtFram;
@@ -449,15 +450,15 @@ processDataRcvd(tcps_sess_t *pThis,
 			 * If we have a message that is larger than the max msg size, we truncate it. This is the best
 			 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
 			 */
-			if(pThis->iMsg < iMaxLine) {
+			if (pThis->iMsg < iMaxLine) {
 				*(pThis->pMsg + pThis->iMsg++) = c;
 			}
 		}
 
-		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
+		if (pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
 			/* do we need to find end-of-frame via octet counting? */
 			pThis->iOctetsRemain--;
-			if(pThis->iOctetsRemain < 1) {
+			if (pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
 				defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 				++(*pnMsgs);
@@ -507,15 +508,15 @@ DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen)
 	multiSub.maxElem = NUM_MULTISUB;
 	multiSub.nElem = 0;
 
-	 /* We now copy the message to the session buffer. */
+	/* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
-	while(pData < pEnd) {
+	while (pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub, &nMsgs));
 	}
 	iRet = multiSubmitFlush(&multiSub);
 
-	if(glblSenderKeepTrack)
+	if (glblSenderKeepTrack)
 		statsRecordSender(propGetSzStr(pThis->fromHost), nMsgs, ttGenTime);
 
 finalize_it:
@@ -528,8 +529,8 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(tcps_sess)
-CODESTARTobjQueryInterface(tcps_sess)
-	if(pIf->ifVersion != tcps_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(tcps_sess) if (pIf->ifVersion != tcps_sessCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -563,9 +564,9 @@ ENDobjQueryInterface(tcps_sess)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcps_sess)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(tcps_sess)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);

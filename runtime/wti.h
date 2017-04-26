@@ -30,28 +30,28 @@
 #include "action.h"
 
 
-#define ACT_STATE_RDY  0	/* action ready, waiting for new transaction */
-#define ACT_STATE_ITX  1	/* transaction active, waiting for new data or commit */
-#define ACT_STATE_COMM 2 	/* transaction finished (a transient state) */
-#define ACT_STATE_RTRY 3	/* failure occured, trying to restablish ready state */
-#define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
+#define ACT_STATE_RDY 0  /* action ready, waiting for new transaction */
+#define ACT_STATE_ITX 1  /* transaction active, waiting for new data or commit */
+#define ACT_STATE_COMM 2 /* transaction finished (a transient state) */
+#define ACT_STATE_RTRY 3 /* failure occured, trying to restablish ready state */
+#define ACT_STATE_SUSP 4 /* suspended due to failure (return fail until timeout expired) */
 /* note: 3 bit bit field --> highest value is 7! */
 
 typedef struct actWrkrInfo {
 	action_t *pAction;
 	void *actWrkrData;
-	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
+	uint16_t uResumeOKinRow; /* number of times in a row that resume said OK with an
 				   immediate failure following */
-	int	iNbrResRtry;	/* number of retries since last suspend */
+	int iNbrResRtry;	 /* number of retries since last suspend */
 	struct {
 		unsigned actState : 3;
 		unsigned bJustResumed : 1;
 	} flags;
 	union {
 		struct {
-			actWrkrIParams_t *iparams;/* dynamically sized array for transactional outputs */
+			actWrkrIParams_t *iparams; /* dynamically sized array for transactional outputs */
 			int currIParam;
-			int maxIParams;	/* current max */
+			int maxIParams; /* current max */
 		} tx;
 		struct {
 			actWrkrIParams_t actParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
@@ -61,53 +61,54 @@ typedef struct actWrkrInfo {
 
 /* the worker thread instance class */
 struct wti_s {
-	BEGINobjInstance;
-	pthread_t thrdID; 	/* thread ID */
-	int bIsRunning;	/* is this thread currently running? (must be int for atomic op!) */
-	sbool bAlwaysRunning;	/* should this thread always run? */
-	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
-	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	batch_t batch; /* pointer to an object array meaningful for current user
+	BEGINobjInstance
+		;
+		pthread_t thrdID;	   /* thread ID */
+		int bIsRunning;		    /* is this thread currently running? (must be int for atomic op!) */
+		sbool bAlwaysRunning;       /* should this thread always run? */
+		int *pbShutdownImmediate;   /* end processing of this batch immediately if set to 1 */
+		wtp_t *pWtp;		    /* my worker thread pool (important if only the work thread instance is passed! */
+		batch_t batch;		    /* pointer to an object array meaningful for current user
 			  pointer (e.g. queue pUsr data elemt) */
-	uchar *pszDbgHdr;	/* header string for debug messages */
-	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
+		uchar *pszDbgHdr;	   /* header string for debug messages */
+		actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
 				      (sized for max nbr of actions in config!) */
-	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
-	DEF_ATOMIC_HELPER_MUT(mutIsRunning)
-	struct {
-		uint8_t bPrevWasSuspended;
-		uint8_t bDoAutoCommit; /* do a commit after each message
+		pthread_cond_t pcondBusy;   /* condition to wake up the worker, protected by pmutUsr in wtp */
+		DEF_ATOMIC_HELPER_MUT(mutIsRunning)
+		struct {
+			uint8_t bPrevWasSuspended;
+			uint8_t bDoAutoCommit; /* do a commit after each message
 		                        * this is usually set for batches with 0 element, but may
 					* also be added as a user-selectable option (not implemented yet)
 					*/
-	} execState;	/* state for the execution engine */
+		} execState;		       /* state for the execution engine */
 };
 
 
 /* prototypes */
 rsRetVal wtiConstruct(wti_t **ppThis);
-rsRetVal wtiConstructFinalize(wti_t * const pThis);
+rsRetVal wtiConstructFinalize(wti_t *const pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
-rsRetVal wtiWorker(wti_t * const pThis);
-rsRetVal wtiSetDbgHdr(wti_t * const pThis, uchar *pszMsg, size_t lenMsg);
-rsRetVal wtiCancelThrd(wti_t * const pThis);
-rsRetVal wtiSetAlwaysRunning(wti_t * const pThis);
-rsRetVal wtiSetState(wti_t * const pThis, sbool bNew);
-rsRetVal wtiWakeupThrd(wti_t * const pThis);
-sbool wtiGetState(wti_t * const pThis);
+rsRetVal wtiWorker(wti_t *const pThis);
+rsRetVal wtiSetDbgHdr(wti_t *const pThis, uchar *pszMsg, size_t lenMsg);
+rsRetVal wtiCancelThrd(wti_t *const pThis);
+rsRetVal wtiSetAlwaysRunning(wti_t *const pThis);
+rsRetVal wtiSetState(wti_t *const pThis, sbool bNew);
+rsRetVal wtiWakeupThrd(wti_t *const pThis);
+sbool wtiGetState(wti_t *const pThis);
 wti_t *wtiGetDummy(void);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEObjClassExit(wti);
-PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
-PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
+PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar *);
+PROTOTYPEpropSetMeth(wti, pWtp, wtp_t *);
 
-#define getActionStateByNbr(pWti, iActNbr) ((uint8_t) ((pWti)->actWrkrInfo[(iActNbr)].flags.actState))
-#define getActionState(pWti, pAction) (((uint8_t) (pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
+#define getActionStateByNbr(pWti, iActNbr) ((uint8_t)((pWti)->actWrkrInfo[(iActNbr)].flags.actState))
+#define getActionState(pWti, pAction) (((uint8_t)(pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
 #define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = \
-(newState))
+						     (newState))
 #define getActionJustResumed(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed))
 #define setActionJustResumed(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed = \
-(val))
+						      (val))
 #define getActionResumeInRow(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow))
 #define setActionResumeInRow(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow = (val))
 #define incActionResumeInRow(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow++)
@@ -117,7 +118,7 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define wtiInitIParam(piparams) (memset((piparams), 0, sizeof(actWrkrIParams_t)))
 
 static inline void __attribute__((unused))
-wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
+wtiResetExecState(wti_t *const pWti, batch_t *const pBatch)
 {
 	pWti->execState.bPrevWasSuspended = 0;
 	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);

@@ -38,36 +38,32 @@ MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
 /* static data */
-DEFobjStaticHelpers
-DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
+DEFobjStaticHelpers;
+DEFobjCurrIf(errmsg);
+DEFobjCurrIf(glbl);
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescrRegular[] = {
-	{ "cry.key", eCmdHdlrGetWord, 0 },
-	{ "cry.keyfile", eCmdHdlrGetWord, 0 },
-	{ "cry.keyprogram", eCmdHdlrGetWord, 0 },
-	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
-	{ "cry.algo", eCmdHdlrGetWord, 0 }
-};
+    {"cry.key", eCmdHdlrGetWord, 0},
+    {"cry.keyfile", eCmdHdlrGetWord, 0},
+    {"cry.keyprogram", eCmdHdlrGetWord, 0},
+    {"cry.mode", eCmdHdlrGetWord, 0}, /* CBC, ECB, etc */
+    {"cry.algo", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblkRegular =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescrRegular)/sizeof(struct cnfparamdescr),
-	  cnfpdescrRegular
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfpdescrRegular) / sizeof(struct cnfparamdescr),
+	cnfpdescrRegular};
 
 static struct cnfparamdescr cnfpdescrQueue[] = {
-	{ "queue.cry.key", eCmdHdlrGetWord, 0 },
-	{ "queue.cry.keyfile", eCmdHdlrGetWord, 0 },
-	{ "queue.cry.keyprogram", eCmdHdlrGetWord, 0 },
-	{ "queue.cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
-	{ "queue.cry.algo", eCmdHdlrGetWord, 0 }
-};
+    {"queue.cry.key", eCmdHdlrGetWord, 0},
+    {"queue.cry.keyfile", eCmdHdlrGetWord, 0},
+    {"queue.cry.keyprogram", eCmdHdlrGetWord, 0},
+    {"queue.cry.mode", eCmdHdlrGetWord, 0}, /* CBC, ECB, etc */
+    {"queue.cry.algo", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblkQueue =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescrQueue)/sizeof(struct cnfparamdescr),
-	  cnfpdescrQueue
-	};
+    {CNFPARAMBLK_VERSION,
+	sizeof(cnfpdescrQueue) / sizeof(struct cnfparamdescr),
+	cnfpdescrQueue};
 
 
 #if 0
@@ -88,8 +84,8 @@ ENDobjConstruct(lmcry_gcry)
 
 /* destructor for the lmcry_gcry object */
 BEGINobjDestruct(lmcry_gcry) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmcry_gcry)
-	rsgcryCtxDel(pThis->ctx);
+	CODESTARTobjDestruct(lmcry_gcry)
+	    rsgcryCtxDel(pThis->ctx);
 ENDobjDestruct(lmcry_gcry)
 
 
@@ -100,7 +96,7 @@ ENDobjDestruct(lmcry_gcry)
 static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 {
-	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
+	lmcry_gcry_t *pThis = (lmcry_gcry_t *)pT;
 	int i, r;
 	unsigned keylen = 0;
 	uchar *key = NULL;
@@ -113,108 +109,110 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	struct cnfparamblk *pblk;
 	DEFiRet;
 
-	pblk = (paramType == CRYPROV_PARAMTYPE_REGULAR ) ?  &pblkRegular : &pblkQueue;
+	pblk = (paramType == CRYPROV_PARAMTYPE_REGULAR) ? &pblkRegular : &pblkQueue;
 	nKeys = 0;
 	pvals = nvlstGetParams(lst, pblk, NULL);
-	if(Debug) {
+	if (Debug) {
 		dbgprintf("param blk in lmcry_gcry:\n");
 		cnfparamsPrint(pblk, pvals);
 	}
 
-	for(i = 0 ; i < pblk->nParams ; ++i) {
-		if(!pvals[i].bUsed)
+	for (i = 0; i < pblk->nParams; ++i) {
+		if (!pvals[i].bUsed)
 			continue;
-		if(!strcmp(pblk->descr[i].name, "cry.key") || 
-		   !strcmp(pblk->descr[i].name, "queue.cry.key")) {
-			key = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+		if (!strcmp(pblk->descr[i].name, "cry.key") ||
+		    !strcmp(pblk->descr[i].name, "queue.cry.key")) {
+			key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk->descr[i].name, "cry.keyfile") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
-			keyfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk->descr[i].name, "cry.keyfile") ||
+			   !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
+			keyfile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk->descr[i].name, "cry.keyprogram") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.keyprogram")) {
-			keyprogram = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk->descr[i].name, "cry.keyprogram") ||
+			   !strcmp(pblk->descr[i].name, "queue.cry.keyprogram")) {
+			keyprogram = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk->descr[i].name, "cry.mode") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.mode")) {
-			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk->descr[i].name, "cry.algo") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
-			algo = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk->descr[i].name, "cry.mode") ||
+			   !strcmp(pblk->descr[i].name, "queue.cry.mode")) {
+			mode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(pblk->descr[i].name, "cry.algo") ||
+			   !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
+			algo = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			DBGPRINTF("lmcry_gcry: program error, non-handled "
-			  "param '%s'\n", pblk->descr[i].name);
+				  "param '%s'\n",
+			    pblk->descr[i].name);
 		}
 	}
-	if(algo != NULL) {
+	if (algo != NULL) {
 		iRet = rsgcrySetAlgo(pThis->ctx, algo);
-		if(iRet != RS_RET_OK) {
+		if (iRet != RS_RET_OK) {
 			errmsg.LogError(0, iRet, "cry.algo '%s' is not know/supported", algo);
 			FINALIZE;
 		}
 	}
-	if(mode != NULL) {
+	if (mode != NULL) {
 		iRet = rsgcrySetMode(pThis->ctx, mode);
-		if(iRet != RS_RET_OK) {
+		if (iRet != RS_RET_OK) {
 			errmsg.LogError(0, iRet, "cry.mode '%s' is not know/supported", mode);
 			FINALIZE;
 		}
 	}
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
-	if(nKeys != 1) {
+	if (nKeys != 1) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
-			"parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
+							  "parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
-	if(key != NULL) {
+	if (key != NULL) {
 		errmsg.LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
-			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
-		keylen = strlen((char*)key);
+					       "config file is highly insecure - DO NOT USE FOR PRODUCTION");
+		keylen = strlen((char *)key);
 	}
-	if(keyfile != NULL) {
-		r = gcryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
-		if(r != 0) {
+	if (keyfile != NULL) {
+		r = gcryGetKeyFromFile((char *)keyfile, (char **)&key, &keylen);
+		if (r != 0) {
 			errmsg.LogError(0, RS_RET_ERR, "error %d reading keyfile %s\n",
-				r, keyfile);
+			    r, keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
-	if(keyprogram != NULL) {
-		r = gcryGetKeyFromProg((char*)keyprogram, (char**)&key, &keylen);
-		if(r != 0) {
+	if (keyprogram != NULL) {
+		r = gcryGetKeyFromProg((char *)keyprogram, (char **)&key, &keylen);
+		if (r != 0) {
 			errmsg.LogError(0, RS_RET_ERR, "error %d obtaining key from program %s\n",
-				r, keyprogram);
+			    r, keyprogram);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
 
 	/* if we reach this point, we have a valid key */
 	r = rsgcrySetKey(pThis->ctx, key, keylen);
-	if(r > 0) {
+	if (r > 0) {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
-			"key of length %d given", r, keylen);
+							  "key of length %d given",
+		    r, keylen);
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 	cnfparamvalsDestruct(pvals, pblk);
 
 finalize_it:
-    if (key != NULL)
-        free(key);
-    
-    if (keyfile != NULL)
-        free(keyfile);
-    
-    if (algo != NULL)
-        free(algo);
-    
-    if (keyprogram != NULL)
-        free(keyprogram);
-    
-    if (mode != NULL)
-        free(mode);
-    
+	if (key != NULL)
+		free(key);
+
+	if (keyfile != NULL)
+		free(keyfile);
+
+	if (algo != NULL)
+		free(algo);
+
+	if (keyprogram != NULL)
+		free(keyprogram);
+
+	if (mode != NULL)
+		free(mode);
+
 	RETiRet;
 }
 
@@ -227,7 +225,7 @@ SetDeleteOnClose(void *pF, int val)
 static rsRetVal
 GetBytesLeftInBlock(void *pF, ssize_t *left)
 {
-	return gcryfileGetBytesLeftInBlock((gcryfile) pF, left);
+	return gcryfileGetBytesLeftInBlock((gcryfile)pF, left);
 }
 
 static rsRetVal
@@ -239,8 +237,8 @@ DeleteStateFiles(uchar *logfn)
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 {
-	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
-	gcryfile *pgf = (gcryfile*) pGF;
+	lmcry_gcry_t *pThis = (lmcry_gcry_t *)pT;
+	gcryfile *pgf = (gcryfile *)pGF;
 	DEFiRet;
 	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
 
@@ -282,14 +280,14 @@ OnFileClose(void *pF, off64_t offsLogfile)
 }
 
 BEGINobjQueryInterface(lmcry_gcry)
-CODESTARTobjQueryInterface(lmcry_gcry)
-	 if(pIf->ifVersion != cryprovCURR_IF_VERSION) {/* check for current version, increment on each change */
+	CODESTARTobjQueryInterface(lmcry_gcry) if (pIf->ifVersion != cryprovCURR_IF_VERSION)
+	{ /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmcry_gcryConstruct;
+	pIf->Construct = (rsRetVal(*)(void *))lmcry_gcryConstruct;
 	pIf->SetCnfParam = SetCnfParam;
 	pIf->SetDeleteOnClose = SetDeleteOnClose;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_gcryDestruct;
+	pIf->Destruct = (rsRetVal(*)(void *))lmcry_gcryDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->Encrypt = Encrypt;
 	pIf->Decrypt = Decrypt;
@@ -301,9 +299,9 @@ ENDobjQueryInterface(lmcry_gcry)
 
 
 BEGINObjClassExit(lmcry_gcry, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmcry_gcry)
-	/* release objects we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
+	CODESTARTObjClassExit(lmcry_gcry)
+	    /* release objects we no longer need */
+	    objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 
 	rsgcryExit();
@@ -315,9 +313,9 @@ BEGINObjClassInit(lmcry_gcry, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	if(rsgcryInit() != 0) {
+	if (rsgcryInit() != 0) {
 		errmsg.LogError(0, RS_RET_CRYPROV_ERR, "error initializing "
-			"crypto provider - cannot encrypt");
+						       "crypto provider - cannot encrypt");
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
 ENDObjClassInit(lmcry_gcry)
@@ -327,20 +325,20 @@ ENDObjClassInit(lmcry_gcry)
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 	lmcry_gcryClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_LIB_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(lmcry_gcryClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

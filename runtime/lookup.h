@@ -32,8 +32,8 @@
 #define LOOKUP_KEY_TYPE_NONE 3
 
 struct lookup_tables_s {
-	lookup_ref_t *root;	/* the root of the template list */
-	lookup_ref_t *last;	/* points to the last element of the template list */
+	lookup_ref_t *root; /* the root of the template list */
+	lookup_ref_t *last; /* points to the last element of the template list */
 };
 
 struct lookup_array_tab_s {
@@ -60,7 +60,7 @@ struct lookup_string_tab_s {
 };
 
 struct lookup_ref_s {
-	pthread_rwlock_t rwlock;	/* protect us in case of dynamic reloads */
+	pthread_rwlock_t rwlock; /* protect us in case of dynamic reloads */
 	uchar *name;
 	uchar *filename;
 	lookup_t *self;
@@ -71,13 +71,13 @@ struct lookup_ref_s {
 	pthread_cond_t run_reloader;
 	pthread_t reloader;
 	pthread_attr_t reloader_thd_attr;
-	uchar *stub_value_for_reload_failure; 
+	uchar *stub_value_for_reload_failure;
 	uint8_t do_reload;
 	uint8_t do_stop;
 	uint8_t reload_on_hup;
 };
 
-typedef es_str_t* (lookup_fn_t)(lookup_t*, lookup_key_t);
+typedef es_str_t *(lookup_fn_t)(lookup_t *, lookup_key_t);
 
 /* a single lookup table */
 struct lookup_s {
@@ -96,7 +96,7 @@ struct lookup_s {
 };
 
 union lookup_key_u {
-	uchar* k_str;
+	uchar *k_str;
 	uint32_t k_uint;
 };
 
@@ -104,7 +104,7 @@ union lookup_key_u {
 void lookupInitCnf(lookup_tables_t *lu_tabs);
 rsRetVal lookupTableDefProcessCnf(struct cnfobj *o);
 lookup_ref_t *lookupFindTable(uchar *name);
-es_str_t * lookupKey(lookup_ref_t *pThis, lookup_key_t key);
+es_str_t *lookupKey(lookup_ref_t *pThis, lookup_key_t key);
 void lookupDestroyCnf(void);
 void lookupClassExit(void);
 void lookupDoHUP(void);

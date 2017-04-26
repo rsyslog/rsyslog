@@ -44,20 +44,18 @@ MODULE_CNFNAME("omczmq")
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
+    static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 static struct cnfparamdescr modpdescr[] = {
-	{ "authenticator", eCmdHdlrBinary, 0 },
-	{ "authtype", eCmdHdlrGetWord, 0 },
-	{ "clientcertpath", eCmdHdlrGetWord, 0 },
-	{ "servercertpath", eCmdHdlrGetWord, 0 }
-};
+    {"authenticator", eCmdHdlrBinary, 0},
+    {"authtype", eCmdHdlrGetWord, 0},
+    {"clientcertpath", eCmdHdlrGetWord, 0},
+    {"servercertpath", eCmdHdlrGetWord, 0}};
 
 static struct cnfparamblk modpblk = {
-	CNFPARAMBLK_VERSION,
-	sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-	modpdescr
-};
+    CNFPARAMBLK_VERSION,
+    sizeof(modpdescr) / sizeof(struct cnfparamdescr),
+    modpdescr};
 
 struct modConfData_s {
 	rsconf_t *pConf;
@@ -80,7 +78,7 @@ typedef struct _instanceData {
 	char *sockEndpoints;
 	int sockType;
 	int sendHWM;
-#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
 	int heartbeatIvl;
 	int heartbeatTimeout;
 	int heartbeatTTL;
@@ -96,108 +94,106 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
-	{ "endpoints", eCmdHdlrGetWord, 1 },
-	{ "socktype", eCmdHdlrGetWord, 1 },
-	{ "sendhwm", eCmdHdlrGetWord, 0 },
-#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-	{ "heartbeatttl", eCmdHdlrGetWord, 0},
-	{ "heartbeativl", eCmdHdlrGetWord, 0},
-	{ "heartbeattimeout", eCmdHdlrGetWord, 0},
-	{ "connecttimeout", eCmdHdlrGetWord, 0},
+    {"endpoints", eCmdHdlrGetWord, 1},
+    {"socktype", eCmdHdlrGetWord, 1},
+    {"sendhwm", eCmdHdlrGetWord, 0},
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
+    {"heartbeatttl", eCmdHdlrGetWord, 0},
+    {"heartbeativl", eCmdHdlrGetWord, 0},
+    {"heartbeattimeout", eCmdHdlrGetWord, 0},
+    {"connecttimeout", eCmdHdlrGetWord, 0},
 #endif
-	{ "sendtimeout", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 },
-	{ "topics", eCmdHdlrGetWord, 0 },
-	{ "topicframe", eCmdHdlrGetWord, 0},
-	{ "dynatopic", eCmdHdlrBinary, 0 }
-};
+    {"sendtimeout", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0},
+    {"topics", eCmdHdlrGetWord, 0},
+    {"topicframe", eCmdHdlrGetWord, 0},
+    {"dynatopic", eCmdHdlrBinary, 0}};
 
 static struct cnfparamblk actpblk = {
-	CNFPARAMBLK_VERSION,
-	sizeof(actpdescr) / sizeof(struct cnfparamdescr),
-	actpdescr
-};
+    CNFPARAMBLK_VERSION,
+    sizeof(actpdescr) / sizeof(struct cnfparamdescr),
+    actpdescr};
 
-static rsRetVal initCZMQ(instanceData* pData) {
+static rsRetVal initCZMQ(instanceData *pData)
+{
 	DEFiRet;
-    putenv("ZSYS_SIGHANDLER=false");
+	putenv("ZSYS_SIGHANDLER=false");
 	pData->sock = zsock_new(pData->sockType);
-	if(!pData->sock) {
+	if (!pData->sock) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
-				"omczmq: new socket failed for endpoints: %s",
-				pData->sockEndpoints);
+		    "omczmq: new socket failed for endpoints: %s",
+		    pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 	zsock_set_sndtimeo(pData->sock, pData->sendTimeout);
 
-#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-	if(pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0 && pData->heartbeatTTL > 0) {
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
+	if (pData->heartbeatIvl > 0 && pData->heartbeatTimeout > 0 && pData->heartbeatTTL > 0) {
 		zsock_set_heartbeat_ivl(pData->sock, pData->heartbeatIvl);
 		zsock_set_heartbeat_timeout(pData->sock, pData->heartbeatTimeout);
 		zsock_set_heartbeat_ttl(pData->sock, pData->heartbeatTTL);
 	}
 #endif
 
-	if(runModConf->authType) {	
+	if (runModConf->authType) {
 		if (!strcmp(runModConf->authType, "CURVESERVER")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
-			if(!serverCert) {
+			if (!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
-					runModConf->serverCertPath);
+				    runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 			zsock_set_zap_domain(pData->sock, "global");
 			zsock_set_curve_server(pData->sock, 1);
 			zcert_apply(serverCert, pData->sock);
 			zcert_destroy(&serverCert);
-		} 
-		else if(!strcmp(runModConf->authType, "CURVECLIENT")) {
+		} else if (!strcmp(runModConf->authType, "CURVECLIENT")) {
 			zcert_t *serverCert = zcert_load(runModConf->serverCertPath);
-			if(!serverCert) {
+			if (!serverCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
-					runModConf->serverCertPath);
+				    runModConf->serverCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 			const char *server_key = zcert_public_txt(serverCert);
 			zcert_destroy(&serverCert);
 			zsock_set_curve_serverkey(pData->sock, server_key);
-			
+
 			zcert_t *clientCert = zcert_load(runModConf->clientCertPath);
-			if(!clientCert) {
+			if (!clientCert) {
 				errmsg.LogError(0, NO_ERRCODE, "could not load cert %s",
-					runModConf->clientCertPath);
+				    runModConf->clientCertPath);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-			
+
 			zcert_apply(clientCert, pData->sock);
 			zcert_destroy(&clientCert);
 		}
 	}
 
-	switch(pData->sockType) {
-		case ZMQ_PUB:
+	switch (pData->sockType) {
+	case ZMQ_PUB:
 #if defined(ZMQ_RADIO)
-		case ZMQ_RADIO:
+	case ZMQ_RADIO:
 #endif
-			pData->serverish = true;
-			break;
-		case ZMQ_PUSH:
+		pData->serverish = true;
+		break;
+	case ZMQ_PUSH:
 #if defined(ZMQ_SCATTER)
-		case ZMQ_SCATTER:
+	case ZMQ_SCATTER:
 #endif
-		case ZMQ_DEALER:
+	case ZMQ_DEALER:
 #if defined(ZMQ_CLIENT)
-		case ZMQ_CLIENT:
+	case ZMQ_CLIENT:
 #endif
-			pData->serverish = false;
-			break;
+		pData->serverish = false;
+		break;
 	}
 
 	int rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);
-	if(rc == -1) {
+	if (rc == -1) {
 		errmsg.LogError(0, NO_ERRCODE, "zsock_attach to %s failed",
-				pData->sockEndpoints);
+		    pData->sockEndpoints);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -205,53 +201,54 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
+rsRetVal outputCZMQ(uchar **ppString, instanceData *pData)
+{
 	DEFiRet;
 
-	if(NULL == pData->sock) {
+	if (NULL == pData->sock) {
 		CHKiRet(initCZMQ(pData));
 	}
 
-	/* if we are using a PUB (or RADIO) socket and we have a topic list then we 
+/* if we are using a PUB (or RADIO) socket and we have a topic list then we 
 	 * need some special care and attention */
 #if defined(ZMQ_RADIO)
 	DBGPRINTF("omczmq: ZMQ_RADIO is defined...\n");
-	if((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
+	if ((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
 #else
 	DBGPRINTF("omczmq: ZMQ_RADIO is NOT defined...\n");
-	if(pData->sockType == ZMQ_PUB && pData->topics) {
+	if (pData->sockType == ZMQ_PUB && pData->topics) {
 #endif
 		int templateIndex = 1;
 		const char *topic = (const char *)zlist_first(pData->topics);
-		while(topic) {
+		while (topic) {
 			int rc;
 			/* if dynaTopic is true, the topic is constructed by rsyslog
 			 * by applying the supplied template to the message properties */
-			if(pData->dynaTopic)
-				topic = (const char*)ppString[templateIndex];
-		
-			if (pData->sockType == ZMQ_PUB) {	
+			if (pData->dynaTopic)
+				topic = (const char *)ppString[templateIndex];
+
+			if (pData->sockType == ZMQ_PUB) {
 				/* if topicFrame is true, send the topic as a separate zmq frame */
-				if(pData->topicFrame) {
-					rc = zstr_sendx(pData->sock, topic, (char*)ppString[0], NULL);
+				if (pData->topicFrame) {
+					rc = zstr_sendx(pData->sock, topic, (char *)ppString[0], NULL);
 				}
 
 				/* if topicFrame is false, concatenate the topic with the 
 				 * message in the same frame */
 				else {
-					rc = zstr_sendf(pData->sock, "%s%s", topic, (char*)ppString[0]);
+					rc = zstr_sendf(pData->sock, "%s%s", topic, (char *)ppString[0]);
 				}
 
 				/* if we have a send error notify rsyslog */
-				if(rc != 0) {
+				if (rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
 			}
 #if defined(ZMQ_RADIO)
-			else if(pData->sockType == ZMQ_RADIO) {
+			else if (pData->sockType == ZMQ_RADIO) {
 				DBGPRINTF("omczmq: sending on RADIO socket...\n");
-				zframe_t *frame = zframe_from((char*)ppString[0]);
+				zframe_t *frame = zframe_from((char *)ppString[0]);
 				if (!frame) {
 					DBGPRINTF("omczmq: failed to create frame...\n");
 					pData->sendError = true;
@@ -265,13 +262,13 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 				}
 				DBGPRINTF("omczmq: set RADIO group to '%s'\n", topic);
 				rc = zframe_send(&frame, pData->sock, 0);
-				if(rc != 0) {
+				if (rc != 0) {
 					pData->sendError = true;
 					ABORT_FINALIZE(RS_RET_SUSPENDED);
 				}
 			}
 #endif
-			
+
 			/* get the next topic from the list, and increment
 			 * our topic index */
 			topic = zlist_next(pData->topics);
@@ -282,8 +279,8 @@ rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 	/* we aren't a PUB socket and we don't have a topic list - this means
 	 * we can just send the message using the rsyslog template */
 	else {
-		int rc = zstr_send(pData->sock, (char*)ppString[0]);
-		if(rc != 0) {
+		int rc = zstr_send(pData->sock, (char *)ppString[0]);
+		if (rc != 0) {
 			pData->sendError = true;
 			DBGPRINTF("omczmq: send error: %d", rc);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -294,7 +291,8 @@ finalize_it:
 }
 
 static inline void
-setInstParamDefaults(instanceData* pData) {
+setInstParamDefaults(instanceData *pData)
+{
 	pData->sockEndpoints = NULL;
 	pData->sock = NULL;
 	pData->sendError = false;
@@ -304,7 +302,7 @@ setInstParamDefaults(instanceData* pData) {
 	pData->sendTimeout = -1;
 	pData->topics = NULL;
 	pData->topicFrame = false;
-#if(CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
 	pData->heartbeatIvl = 0;
 	pData->heartbeatTimeout = 0;
 	pData->heartbeatTTL = 0;
@@ -313,26 +311,26 @@ setInstParamDefaults(instanceData* pData) {
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+	CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+	CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction) {
+	CODESTARTisCompatibleWithFeature if (eFeat == sFEATURERepeatedMsgReduction)
+	{
 		iRet = RS_RET_OK;
 	}
 ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+	CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 BEGINfreeInstance
-CODESTARTfreeInstance
-	zlist_destroy(&pData->topics);
+	CODESTARTfreeInstance
+	    zlist_destroy(&pData->topics);
 	zsock_destroy(&pData->sock);
 	free(pData->sockEndpoints);
 	free(pData->tplName);
@@ -340,13 +338,13 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+	CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINtryResume
 	instanceData *pData;
-CODESTARTtryResume
-	pthread_mutex_lock(&mutDoAct);
+	CODESTARTtryResume
+	    pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	DBGPRINTF("omczmq: trying to resume...\n");
 	zsock_destroy(&pData->sock);
@@ -355,8 +353,8 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
-	runModConf = pModConf;
+	CODESTARTbeginCnfLoad
+	    runModConf = pModConf;
 	runModConf->pConf = pConf;
 	runModConf->authenticator = 0;
 	runModConf->authType = NULL;
@@ -365,20 +363,19 @@ CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+	CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
-	runModConf = pModConf;
-	if(runModConf->authenticator == 1) {
-		if(!authActor) {
+	CODESTARTactivateCnf
+	    runModConf = pModConf;
+	if (runModConf->authenticator == 1) {
+		if (!authActor) {
 			DBGPRINTF("omczmq: starting authActor\n");
 			authActor = zactor_new(zauth, NULL);
-			if(!strcmp(runModConf->clientCertPath, "*")) {
+			if (!strcmp(runModConf->clientCertPath, "*")) {
 				zstr_sendx(authActor, "CURVE", CURVE_ALLOW_ANY, NULL);
-			}
-			else {
+			} else {
 				zstr_sendx(authActor, "CURVE", runModConf->clientCertPath, NULL);
 			}
 			zsock_wait(authActor);
@@ -387,8 +384,8 @@ CODESTARTactivateCnf
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
-	free(pModConf->tplName);
+	CODESTARTfreeCnf
+	    free(pModConf->tplName);
 	free(pModConf->authType);
 	free(pModConf->serverCertPath);
 	free(pModConf->clientCertPath);
@@ -399,40 +396,36 @@ ENDfreeCnf
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	CODESTARTsetModCnf
+	    pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	for (i=0; i<modpblk.nParams; ++i) {
-		if(!pvals[i].bUsed) {
+	for (i = 0; i < modpblk.nParams; ++i) {
+		if (!pvals[i].bUsed) {
 			DBGPRINTF("omczmq: pvals[i].bUSed continuing\n");
 			continue;
 		}
-		if(!strcmp(modpblk.descr[i].name, "authenticator")) {
+		if (!strcmp(modpblk.descr[i].name, "authenticator")) {
 			runModConf->authenticator = (int)pvals[i].val.d.n;
-		}
-		else if(!strcmp(modpblk.descr[i].name, "authtype")) {
+		} else if (!strcmp(modpblk.descr[i].name, "authtype")) {
 			runModConf->authType = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: authtype set to %s\n", runModConf->authType);
-		}
-		else if(!strcmp(modpblk.descr[i].name, "servercertpath")) {
+		} else if (!strcmp(modpblk.descr[i].name, "servercertpath")) {
 			runModConf->serverCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: serverCertPath set to %s\n", runModConf->serverCertPath);
-		}
-		else if(!strcmp(modpblk.descr[i].name, "clientcertpath")) {
+		} else if (!strcmp(modpblk.descr[i].name, "clientcertpath")) {
 			runModConf->clientCertPath = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
+		} else {
+			errmsg.LogError(0, RS_RET_INVALID_PARAMS,
+			    "omczmq: config error, unknown "
+			    "param %s in setModCnf\n",
+			    modpblk.descr[i].name);
 		}
-		else {
-			errmsg.LogError(0, RS_RET_INVALID_PARAMS, 
-						"omczmq: config error, unknown "
-						"param %s in setModCnf\n", 
-						modpblk.descr[i].name);
-		} 
-	}	
+	}
 
 	DBGPRINTF("omczmq: authenticator set to %d\n", runModConf->authenticator);
 	DBGPRINTF("omczmq: authType set to %s\n", runModConf->authType);
@@ -440,20 +433,20 @@ CODESTARTsetModCnf
 	DBGPRINTF("omczmq: clientCertPath set to %s\n", runModConf->clientCertPath);
 
 finalize_it:
-		if(pvals != NULL)
-			cnfparamvalsDestruct(pvals, &modpblk);
+	if (pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
-	runModConf = NULL;
+	CODESTARTendCnfLoad
+	    runModConf = NULL;
 ENDendCnfLoad
 
 
 BEGINdoAction
 	instanceData *pData;
-CODESTARTdoAction
-	pthread_mutex_lock(&mutDoAct);
+	CODESTARTdoAction
+	    pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	iRet = outputCZMQ(ppString, pData);
 	pthread_mutex_unlock(&mutDoAct);
@@ -464,171 +457,164 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int iNumTpls;
-CODESTARTnewActInst
-	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+	CODESTARTnewActInst if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
+	{
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	for(i = 0; i < actpblk.nParams; ++i) {
-		if(!pvals[i].bUsed) {
+	for (i = 0; i < actpblk.nParams; ++i) {
+		if (!pvals[i].bUsed) {
 			continue;
 		}
 
-		if(!strcmp(actpblk.descr[i].name, "endpoints")) {
+		if (!strcmp(actpblk.descr[i].name, "endpoints")) {
 			pData->sockEndpoints = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: sockEndPoints set to '%s'\n", pData->sockEndpoints);
-		} 
-		else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "template")) {
+			pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: template set to '%s'\n", pData->tplName);
-		}
-		else if(!strcmp(actpblk.descr[i].name, "dynatopic")) {
+		} else if (!strcmp(actpblk.descr[i].name, "dynatopic")) {
 			pData->dynaTopic = pvals[i].val.d.n;
 			DBGPRINTF("omczmq: dynaTopic set to %s\n", pData->dynaTopic ? "true" : "false");
-		}
-		else if(!strcmp(actpblk.descr[i].name, "sendtimeout")) {
+		} else if (!strcmp(actpblk.descr[i].name, "sendtimeout")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: sendTimeout set to %d\n", pData->sendTimeout);
-		}
-		else if(!strcmp(actpblk.descr[i].name, "sendhwm")) {
+		} else if (!strcmp(actpblk.descr[i].name, "sendhwm")) {
 			pData->sendTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: sendHWM set to %d\n", pData->sendHWM);
 		}
-#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >=4 && ZMQ_VERSION_MINOR >=2)
-		else if(!strcmp(actpblk.descr[i].name, "heartbeativl")) {
+#if (CZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MAJOR >= 4 && ZMQ_VERSION_MINOR >= 2)
+		else if (!strcmp(actpblk.descr[i].name, "heartbeativl")) {
 			pData->heartbeatIvl = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: heartbeatbeatIvl set to %d\n", pData->heartbeatIvl);
-		}
-		else if(!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
+		} else if (!strcmp(actpblk.descr[i].name, "heartbeattimeout")) {
 			pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: heartbeatTimeout set to %d\n", pData->heartbeatTimeout);
-		}
-		else if(!strcmp(actpblk.descr[i].name, "heartbeatttl")) {
+		} else if (!strcmp(actpblk.descr[i].name, "heartbeatttl")) {
 			pData->heartbeatTimeout = atoi(es_str2cstr(pvals[i].val.d.estr, NULL));
 			DBGPRINTF("omczmq: heartbeatTTL set to %d\n", pData->heartbeatTTL);
 		}
 #endif
-		else if(!strcmp(actpblk.descr[i].name, "socktype")){
+		else if (!strcmp(actpblk.descr[i].name, "socktype")) {
 			char *stringType = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(stringType != NULL){
-				if(!strcmp("PUB", stringType)) {
+			if (stringType != NULL) {
+				if (!strcmp("PUB", stringType)) {
 					pData->sockType = ZMQ_PUB;
 					DBGPRINTF("omczmq: sockType set to ZMQ_PUB\n");
 				}
 #if defined(ZMQ_RADIO)
-				else if(!strcmp("RADIO", stringType)) {
+				else if (!strcmp("RADIO", stringType)) {
 					pData->sockType = ZMQ_RADIO;
 					DBGPRINTF("omczmq: sockType set to ZMQ_RADIO\n");
 				}
 #endif
-				else if(!strcmp("PUSH", stringType)) {
+				else if (!strcmp("PUSH", stringType)) {
 					pData->sockType = ZMQ_PUSH;
 					DBGPRINTF("omczmq: sockType set to ZMQ_PUSH\n");
 				}
 #if defined(ZMQ_SCATTER)
-				else if(!strcmp("SCATTER", stringType)) {
+				else if (!strcmp("SCATTER", stringType)) {
 					pData->sockType = ZMQ_SCATTER;
 					DBGPRINTF("omczmq: sockType set to ZMQ_SCATTER\n");
 				}
 #endif
-				else if(!strcmp("DEALER", stringType)) {
+				else if (!strcmp("DEALER", stringType)) {
 					pData->sockType = ZMQ_DEALER;
 					DBGPRINTF("omczmq: sockType set to ZMQ_DEALER\n");
 				}
 #if defined(ZMQ_CLIENT)
-				else if(!strcmp("CLIENT", stringType)) {
+				else if (!strcmp("CLIENT", stringType)) {
 					pData->sockType = ZMQ_CLIENT;
 					DBGPRINTF("omczmq: sockType set to ZMQ_CLIENT\n");
 				}
 #endif
 				free(stringType);
-			}
-			else{
+			} else {
 				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
-						"omczmq: out of memory");
+				    "omczmq: out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
-		} 
-		else if(!strcmp(actpblk.descr[i].name, "topicframe")) {
+		} else if (!strcmp(actpblk.descr[i].name, "topicframe")) {
 			pData->topicFrame = pvals[i].val.d.n;
 			DBGPRINTF("omczmq: topicFrame set to %s\n", pData->topicFrame ? "true" : "false");
-		}
-		else if(!strcmp(actpblk.descr[i].name, "topics")) {
+		} else if (!strcmp(actpblk.descr[i].name, "topics")) {
 			pData->topics = zlist_new();
 			char *topics = es_str2cstr(pvals[i].val.d.estr, NULL);
 			DBGPRINTF("omczmq: topics set to %s\n", topics);
 			char *topics_org = topics;
 			char topic[256];
-			if(topics == NULL){
+			if (topics == NULL) {
 				errmsg.LogError(0, RS_RET_OUT_OF_MEMORY,
-					"out of memory");
+				    "out of memory");
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 			}
-			
-			while(*topics) {
+
+			while (*topics) {
 				char *delimiter = strchr(topics, ',');
 				if (!delimiter) {
 					delimiter = topics + strlen(topics);
 				}
-				memcpy (topic, topics, delimiter - topics);
-				topic[delimiter-topics] = 0;
+				memcpy(topic, topics, delimiter - topics);
+				topic[delimiter - topics] = 0;
 				char *current_topic = strdup(topic);
-				zlist_append (pData->topics, current_topic);
-				if(*delimiter == 0) {
+				zlist_append(pData->topics, current_topic);
+				if (*delimiter == 0) {
 					break;
 				}
 				topics = delimiter + 1;
 			}
 			free(topics_org);
 
-		}
-		else {
+		} else {
 			errmsg.LogError(0, NO_ERRCODE,
-					"omczmq: config error - '%s' is not a valid option",
-					actpblk.descr[i].name);
+			    "omczmq: config error - '%s' is not a valid option",
+			    actpblk.descr[i].name);
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		}
 	}
 
 	iNumTpls = 1;
 	if (pData->dynaTopic) {
-		iNumTpls = zlist_size (pData->topics) + iNumTpls;
+		iNumTpls = zlist_size(pData->topics) + iNumTpls;
 	}
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
-	
-	if (pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
-					OMSR_NO_RQD_TPL_OPTS));
-	} 
-	else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
+
+	    if (pData->tplName == NULL)
+	{
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)strdup("RSYSLOG_ForwardFormat"),
+		    OMSR_NO_RQD_TPL_OPTS));
+	}
+	else
+	{
+		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar *)pData->tplName, OMSR_NO_RQD_TPL_OPTS));
 	}
 
 	i = 1;
 	if (pData->dynaTopic) {
 		char *topic = zlist_first(pData->topics);
 		while (topic) {
-			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar*)strdup(topic), OMSR_NO_RQD_TPL_OPTS));
+			CHKiRet(OMSRsetEntry(*ppOMSR, i, (uchar *)strdup(topic), OMSR_NO_RQD_TPL_OPTS));
 			i++;
 			topic = zlist_next(pData->topics);
 		}
 	}
 
 	CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+	    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	CODESTARTparseSelectorAct
+	    CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
-	if(!strncmp((char*) p, ":omczmq:", sizeof(":omczmq:") - 1)) { 
+		if (!strncmp((char *)p, ":omczmq:", sizeof(":omczmq:") - 1))
+	{
 		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
-			"omczmq supports only v6 config format, use: "
-			"action(type=\"omczmq\" serverport=...)");
+		    "omczmq supports only v6 config format, use: "
+		    "action(type=\"omczmq\" serverport=...)");
 	}
 
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -636,29 +622,29 @@ CODESTARTparseSelectorAct
 ENDparseSelectorAct
 
 BEGINinitConfVars
-CODESTARTinitConfVars
+	CODESTARTinitConfVars
 ENDinitConfVars
 
 
 BEGINmodExit
-CODESTARTmodExit
+	CODESTARTmodExit
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-    CODEqueryEtryPt_STD_CONF2_QUERIES
-	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODESTARTqueryEtryPt
+	    CODEqueryEtryPt_STD_OMOD_QUERIES
+		CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+		    CODEqueryEtryPt_STD_CONF2_QUERIES
+			CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
+			    CODEqueryEtryPt_STD_OMOD8_QUERIES
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CODESTARTmodInit
+	    *ipIFVersProvided = CURR_MOD_IF_VERSION;
+	CODEmodInit_QueryRegCFSLineHdlr
+	    CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omczmq: module compiled with rsyslog version %s.\n", VERSION);
 

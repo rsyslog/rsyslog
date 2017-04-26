@@ -42,7 +42,7 @@
 struct line {
 	struct line *next;
 	char *ln;
-} *root, *tail;
+} * root, *tail;
 
 static FILE *fpIn;
 static FILE *fpOut;
@@ -63,19 +63,19 @@ readFile()
 
 	root = tail = NULL;
 	r = fgets(lnBuf, sizeof(lnBuf), fpIn);
-	while(r != NULL) {
+	while (r != NULL) {
 		node = malloc(sizeof(struct line));
-		if(node == NULL) {
+		if (node == NULL) {
 			perror("malloc node");
 			exit(1);
 		}
 		node->next = NULL;
 		node->ln = strdup(lnBuf);
-		if(node->ln == NULL) {
+		if (node->ln == NULL) {
 			perror("malloc node");
 			exit(1);
 		}
-		if(tail == NULL) {
+		if (tail == NULL) {
 			tail = root = node;
 		} else {
 			tail->next = node;
@@ -83,7 +83,7 @@ readFile()
 		}
 		r = fgets(lnBuf, sizeof(lnBuf), fpIn);
 	}
-	if(!feof(fpIn)) {
+	if (!feof(fpIn)) {
 		perror("fgets");
 		fprintf(stderr, "end of read loop, but not end of file!");
 		exit(1);
@@ -99,14 +99,14 @@ genCopies()
 	struct line *node;
 
 	lnnbr = 1;
-	for(i = 0 ; i < nCopies ; ++i) {
-		if(i % 10000 == 0)
+	for (i = 0; i < nCopies; ++i) {
+		if (i % 10000 == 0)
 			fprintf(stderr, "copyrun %d\n", i);
-		if(waitusecs && (i % batchsize == 0)) {
+		if (waitusecs && (i % batchsize == 0)) {
 			usleep(waitusecs);
 		}
-		for(node = root ; node != NULL ; node = node->next) {
-			if(linenbrs)
+		for (node = root; node != NULL; node = node->next) {
+			if (linenbrs)
 				fprintf(fpOut, "%12.12llu:%s", lnnbr, node->ln);
 			else
 				fprintf(fpOut, "%s", node->ln);
@@ -121,16 +121,16 @@ void main(int argc, char *argv[])
 	fpIn = stdin;
 	fpOut = stdout;
 
-	while((opt = getopt(argc, argv, "i:o:c:nw:W:")) != -1) {
+	while ((opt = getopt(argc, argv, "i:o:c:nw:W:")) != -1) {
 		switch (opt) {
 		case 'i': /* input file */
-			if((fpIn = fopen(optarg, "r")) == NULL) {
+			if ((fpIn = fopen(optarg, "r")) == NULL) {
 				perror(optarg);
 				exit(1);
 			}
 			break;
 		case 'o': /* output file */
-			if((fpOut = fopen(optarg, "w")) == NULL) {
+			if ((fpOut = fopen(optarg, "w")) == NULL) {
 				perror(optarg);
 				exit(1);
 			}
@@ -147,9 +147,10 @@ void main(int argc, char *argv[])
 		case 'W':
 			batchsize = atoi(optarg);
 			break;
-		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
-				exit (1);
-				break;
+		default:
+			printf("invalid option '%c' or value missing - terminating...\n", opt);
+			exit(1);
+			break;
 		}
 	}
 
