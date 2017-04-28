@@ -251,7 +251,11 @@ doPhysOpen(strm_t *pThis)
 	if(pThis->fd == -1) {
 		const rsRetVal errcode = (errno_save == ENOENT)
 			? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
-		LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+		if(pThis->fileNotFoundError) {
+			LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+		} else {
+			DBGPRINTF("file '%s': open error", pThis->pszCurrFName);
+		}
 		ABORT_FINALIZE(errcode);
 	}
 
@@ -968,6 +972,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
 	pThis->bPrevWasNL = 0;
+	pThis->fileNotFoundError = 1;
 ENDobjConstruct(strm)
 
 
@@ -1937,6 +1942,12 @@ static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 	return RS_RET_OK;
 }
 
+static rsRetVal strmSetFileNotFoundError(strm_t *pThis, int pFileNotFoundError)
+{
+	pThis->fileNotFoundError = pFileNotFoundError;
+	return RS_RET_OK;
+}
+
 
 /* set the stream's file prefix
  * The passed-in string is duplicated. So if the caller does not need
@@ -2192,6 +2203,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		pThis->inode = (ino_t) pProp->val.num;
  	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
+ 	} else if(isProp("fileNotFoundError")) {
+		CHKiRet(strmSetFileNotFoundError(pThis, pProp->val.num));
  	} else if(isProp("iMaxFiles")) {
 		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.num));
  	} else if(isProp("iFileNumDigits")) {
@@ -2255,6 +2268,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->WriteChar = strmWriteChar;
 	pIf->WriteLong = strmWriteLong;
 	pIf->SetFName = strmSetFName;
+	pIf->SetFileNotFoundError = strmSetFileNotFoundError;
 	pIf->SetDir = strmSetDir;
 	pIf->Flush = strmFlush;
 	pIf->RecordBegin = strmRecordBegin;
