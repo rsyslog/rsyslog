@@ -586,6 +586,8 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-file-not-found-error.sh \
+	imfile-fileNotFoundError-parameter.sh \
 	imfile-truncate.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
@@ -1180,6 +1182,8 @@ EXTRA_DIST= \
 	imfile-endregex-vg.sh \
 	testsuites/imfile-endregex.conf \
 	imfile-basic.sh \
+	imfile-file-not-found-error.sh \
+	imfile-fileNotFoundError-parameter.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \
