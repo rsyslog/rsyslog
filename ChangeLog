@@ -17,6 +17,10 @@ Version 8.27.0 [v8-stable] 2017-05-16
     oversize messages
   * add "maxFrameSize" parameter to specify the maximum size permitted
     in octet-counted mode
+- imfile: in inotify mode, add error message if configured file cannot
+  be found
+- imfile: add parameter "fileNotFoundError" to optinally disable
+  "file not found" error messages
 - core: replaced gethostbyname() with getaddrinfo() call
   Gethostbyname() is generally considered obsolete, is not reentrant and
   cannot really work with IPv6. Changed the only place in rsyslog where
