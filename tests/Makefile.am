@@ -588,6 +588,7 @@ TESTS += \
 	imfile-basic.sh \
 	imfile-file-not-found-error.sh \
 	imfile-fileNotFoundError-parameter.sh \
+	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
@@ -1184,6 +1185,7 @@ EXTRA_DIST= \
 	imfile-basic.sh \
 	imfile-file-not-found-error.sh \
 	imfile-fileNotFoundError-parameter.sh \
+	imfile-error-not-repeated.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \

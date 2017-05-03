@@ -252,11 +252,16 @@ doPhysOpen(strm_t *pThis)
 		const rsRetVal errcode = (errno_save == ENOENT)
 			? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
 		if(pThis->fileNotFoundError) {
-			LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+			if(pThis->noRepeatedErrorOutput == 0) {
+				LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+				pThis->noRepeatedErrorOutput = 1;
+			}
 		} else {
 			DBGPRINTF("file '%s': open error", pThis->pszCurrFName);
 		}
 		ABORT_FINALIZE(errcode);
+	} else {
+		pThis->noRepeatedErrorOutput = 0;
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -280,6 +285,7 @@ doPhysOpen(strm_t *pThis)
 			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
+
 finalize_it:
 	RETiRet;
 }
@@ -973,6 +979,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->prevMsgSegment = NULL;
 	pThis->bPrevWasNL = 0;
 	pThis->fileNotFoundError = 1;
+	pThis->noRepeatedErrorOutput = 0;
 ENDobjConstruct(strm)
 
 
