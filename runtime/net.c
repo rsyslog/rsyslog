@@ -1197,8 +1197,8 @@ getLocalHostname(uchar **ppName)
 			/* should contain what we need */
 			if (res->ai_canonname != NULL && res->ai_canonname[0] != '\0') {
 				CHKmalloc(fqdn = (uchar*)strdup(res->ai_canonname));
+				dot = strstr((char*)fqdn, ".");
 			}
-			dot = strstr((char*)fqdn, ".");
 		}
 	}
 
