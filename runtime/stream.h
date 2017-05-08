@@ -161,6 +161,7 @@ typedef struct strm_s {
 	cstr_t *prevLineSegment; /* for ReadLine, previous, unprocessed part of file */
 	cstr_t *prevMsgSegment; /* for ReadMultiLine, previous, yet unprocessed part of msg */
 	int fileNotFoundError;
+	int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
 } strm_t;
 
 
