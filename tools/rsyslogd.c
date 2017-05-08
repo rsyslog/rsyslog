@@ -824,7 +824,9 @@ void
 rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
 	if (glbl.GetGlobalInputTermState() == 1) {
-		dfltErrLogger(severity, iErr, msg);
+		/* After fork the stderr is unusable (dfltErrLogger uses is internally) */
+		if(!doFork)
+			dfltErrLogger(severity, iErr, msg);
 	} else {
 		logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
 	}
