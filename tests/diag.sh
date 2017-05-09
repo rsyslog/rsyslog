@@ -609,7 +609,7 @@ case $1 in
 		cp $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
 		echo "Starting Zookeeper instance $2"
 		(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
-		./msleep 4000
+		./msleep 2000
 		;;
 	 'start-kafka')
 		if [ "x$2" == "x" ]; then
@@ -637,7 +637,7 @@ case $1 in
 		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
 		echo "Starting Kafka instance $2"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		./msleep 4000
+		./msleep 2000
 		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then
