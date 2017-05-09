@@ -43,6 +43,11 @@ Version 8.27.0 [v8-stable] 2017-05-16
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
   Thanks to Felix Janda for bug report and solution suggestion.
+- bugfix core: when obtaining local hostname, a NULL pointer could be
+  accessed. This depends on many factors, among them that no local host
+  name is configured in rsyslog.conf AND the local system configuration
+  also is set to an empty hostname.
+  Thanks to github user jvymazal for the patch.
 - bugfix core: on shutdown, stderr was written to, even if alrady closed
   This lead to messages going to whatever was associated with file
   descriptor two.
