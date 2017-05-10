@@ -5,12 +5,12 @@
 # from creating additional tests
 # requires faketime
 echo \[timegenerated-uxtimestamp\]: check valid dates with uxtimestamp format
+. $srcdir/diag.sh init
 
 . $srcdir/faketime_common.sh
 
 export TZ=UTC+00:00
 
-. $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 $ModLoad ../plugins/imtcp/.libs/imtcp
