@@ -840,7 +840,7 @@ submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 
 
 static void
-logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
+logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	if(bProcessInternalMessages) {
 		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
@@ -852,6 +852,8 @@ logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
 #		else
 		syslog(pri, "%s", msg);
 #		endif
+		/* we have emitted the message and must destruct it */
+		msgDestruct(&pMsg);
 	}
 }
 
