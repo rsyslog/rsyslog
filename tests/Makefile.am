@@ -250,6 +250,7 @@ endif
 
 if HAVE_VALGRIND
 TESTS +=  \
+	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
@@ -625,6 +626,7 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	internal-errmsg-memleak.sh \
 	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \

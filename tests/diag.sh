@@ -175,8 +175,7 @@ case $1 in
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
 		. $srcdir/diag.sh wait-startup $3
 		;;
-   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
-   		# returns only after successful startup, $3 is the instance (blank or 2!)
+   'startup-vg-waitpid-only') # same as startup-vg, BUT we do NOT wait on the startup message!
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
 		    echo $CONF_FILE is:
@@ -189,6 +188,11 @@ case $1 in
 		    exit 1
 		fi
 		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		. $srcdir/diag.sh wait-startup-pid $3
+		;;
+   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
+		# returns only after successful startup, $3 is the instance (blank or 2!)
+		. $srcdir/diag.sh startup-vg-waitpid-only $2 $3
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
@@ -209,7 +213,7 @@ case $1 in
    	$srcdir/msleep $2
 		;;
 
-   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+   'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
 			./msleep 100 # wait 100 milliseconds
@@ -220,6 +224,10 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
+		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat rsyslog$2.pid`
+		;;
+   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
@@ -236,7 +244,7 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
-		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
