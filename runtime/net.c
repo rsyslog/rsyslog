@@ -1420,9 +1420,9 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			 * do if we have to.
 			 */
 			if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-	#		ifndef IPV6_V6ONLY
+#			ifndef IPV6_V6ONLY
 			     && (errno != EADDRINUSE)
-	#		endif
+#			endif
 			   ) {
 				if (errno == EADDRNOTAVAIL && ipfreebind != IPFREEBIND_DISABLED) {
 					if (setsockopt(*s, IPPROTO_IP, IP_FREEBIND, &on, sizeof(on)) < 0) {

@@ -727,11 +727,11 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 
 	if(lst == NULL) { /* use legacy parameters? */
 		/* ... set some properties ... */
-	#	define setQPROP(func, directive, data) \
+#		define setQPROP(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data)) { \
 			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 		}
-	#	define setQPROPstr(func, directive, data) \
+#		define setQPROPstr(func, directive, data) \
 		CHKiRet_Hdlr(func(*ppQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
 			errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 		}
@@ -795,8 +795,8 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
 		setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd",
 			ourConf->globals.mainQ.iMainMsgQueueDeqtWinToHr);
 
-	#	undef setQPROP
-	#	undef setQPROPstr
+#		undef setQPROP
+#		undef setQPROPstr
 	} else { /* use new style config! */
 		qqueueSetDefaultsRulesetQueue(*ppQueue);
 		qqueueApplyCnfParam(*ppQueue, lst);

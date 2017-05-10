@@ -46,7 +46,7 @@
 #  include <malloc.h>
 #endif
 #ifdef USE_LIBUUID
-  #include <uuid/uuid.h>
+#  include <uuid/uuid.h>
 #endif
 #include "rsyslog.h"
 #include "srUtils.h"
