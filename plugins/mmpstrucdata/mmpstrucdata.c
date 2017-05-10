@@ -126,11 +126,12 @@ ENDfreeWrkrInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->jsonRoot = NULL;
+	pData->jsonRoot = (uchar*) strdup("rfc5424-sd");
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
+	char *cstr;
 	int i;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmpstrucdata)\n");
@@ -147,14 +148,21 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
-			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (strlen(cstr) < 2) {
+				errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+						"mmpstrucdata: valid jsonRoot value should be at least "
+						"2 symbols long, got '%s'",	cstr);
+				free(cstr);
+			} else {
+				free(pData->jsonRoot);
+				pData->jsonRoot = (uchar*)cstr;
+			}
+			continue;
 		} else {
 			dbgprintf("mmpstrucdata: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
-	}
-	if(pData->jsonRoot == NULL) {
-		CHKmalloc(pData->jsonRoot = (uchar*) strdup("!"));
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -164,6 +172,9 @@ ENDnewActInst
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
+	dbgprintf("mmpstrucdata\n");
+	dbgprintf("\tjsonRoot='%s'\n", pData->jsonRoot);
+
 ENDdbgPrintInstInfo
 
 
@@ -324,7 +335,7 @@ parse_sd(instanceData *pData, smsg_t *pMsg)
 	if(jroot == NULL) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	json_object_object_add(jroot, "rfc5424-sd", json);
+	json_object_object_add(jroot, (const char *)pData->jsonRoot, json);
  	msgAddJSON(pMsg, pData->jsonRoot, jroot, 0, 0);
 finalize_it:
 	if(iRet != RS_RET_OK && json != NULL)
