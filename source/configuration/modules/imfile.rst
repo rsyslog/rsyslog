@@ -112,6 +112,10 @@ Module Parameters
   reason to enable "polling" mode and later versions will most probably
   remove it. 
 
+  Note: if a legacy "$ModLoad" statement is used, the default is *polling*.
+  This default was kept to prevent problems with old configurations. It
+  might change in the future.
+
 .. index::
    single: imfile; readtimeout
 .. function:: readTimeout [seconds]
