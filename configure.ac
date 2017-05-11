@@ -1289,6 +1289,22 @@ fi
 AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
 
 
+# GuardTime KSI LOGSIG 12 support
+AC_ARG_ENABLE(ksi-ls12,
+        [AS_HELP_STRING([--enable-ksi-ls12],[Enable log file signing support via GuardTime KSI LS12 @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_ksi_ls12="yes" ;;
+          no) enable_ksi_ls12="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-ksi-ls12) ;;
+         esac],
+        [enable_ksi_ls12=no]
+)
+if test "x$enable_ksi_ls12" = "xyes"; then
+	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.13.0)
+	AC_CHECK_LIB([ksi], [KSI_Signature_signAggregatedWithPolicy], [], [AC_MSG_FAILURE([Could not find libksi])])
+fi
+AM_CONDITIONAL(ENABLE_KSI_LS12, test x$enable_ksi_ls12 = xyes)
+
 # liblogging-stdlog support
 AC_ARG_ENABLE(liblogging-stdlog,
         [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=yes@:>@])],
@@ -2046,6 +2062,7 @@ echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI:         $enable_gt_ksi"
+echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
