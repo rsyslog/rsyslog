@@ -262,6 +262,16 @@ if ENABLE_GT_KSI
    lmsig_ksi_la_LIBADD = librsksi.la $(GT_KSI_LIBS)
 endif
 
+#
+# support library for Guardtime KSI-LS12
+#
+if ENABLE_KSI_LS12
+   pkglib_LTLIBRARIES += lmsig_ksi_ls12.la
+   lmsig_ksi_ls12_la_SOURCES = lmsig_ksi-ls12.c lmsig_ksi-ls12.h lib_ksils12.c \
+			lib_ksils12.h lib_ksi_queue.c lib_ksi_queue.h
+   lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
+   lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version
+endif
 
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c
