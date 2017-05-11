@@ -843,7 +843,7 @@ static void
 logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	if(bProcessInternalMessages) {
-		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+		submitMsg2(pMsg);
 	} else {
 		const int pri = getPRIi(pMsg);
 		uchar *const msg = getMSG(pMsg);
@@ -1513,9 +1513,16 @@ void
 processImInternal(void)
 {
 	smsg_t *pMsg;
+	smsg_t *repMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		logmsgInternal_doWrite(pMsg);
+		rsRetVal localRet = ratelimitMsg(internalMsg_ratelimiter, pMsg, &repMsg);
+		if(repMsg != NULL) {
+			logmsgInternal_doWrite(repMsg);
+		}
+		if(localRet == RS_RET_OK) {
+			logmsgInternal_doWrite(pMsg);
+		}
 	}
 }
 
