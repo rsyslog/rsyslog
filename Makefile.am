@@ -191,8 +191,12 @@ if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
 
-if ENABLE_KAFKA
-SUBDIRS += plugins/omkafka plugins/imkafka
+if ENABLE_OMKAFKA
+SUBDIRS += plugins/omkafka 
+endif
+
+if ENABLE_IMKAFKA
+SUBDIRS += plugins/imkafka
 endif
 
 if ENABLE_OMPROG

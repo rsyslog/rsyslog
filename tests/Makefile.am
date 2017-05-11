@@ -324,11 +324,13 @@ endif
 endif
 endif
 
-if ENABLE_KAFKA
+if ENABLE_OMKAFKA
+if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	omkafka_static.sh \
-	omkafka_multiple.sh
+	sndrcv_kafka.sh \
+	sndrcv_kafka_multi.sh
+endif
 endif
 endif
 

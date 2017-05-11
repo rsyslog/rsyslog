@@ -62,9 +62,6 @@ DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(statsobj)
 
-/* forward definitions */
-/* static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);*/
-
 struct kafka_params {
 	const char *name;
 	const char *val;
@@ -87,6 +84,7 @@ struct instanceConf_s {
 	int64_t offset;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
+	int bReportErrs;
 	int nConfParams;
 	struct kafka_params *confParams;
 	int bIsConnected;
@@ -279,6 +277,7 @@ createInstance(instanceConf_t **pinst)
 	inst->nConfParams = 0;
 	inst->confParams = NULL;
 	inst->pBindRuleset = NULL;
+	inst->bReportErrs = 1; /* Fixed for now */
 	inst->bIsConnected = 0;
 	inst->bIsSubscribed = 0;
 	/* Kafka objects */
@@ -312,15 +311,37 @@ checkInstance(instanceConf_t *inst)
 	/* main kafka conf */
 	inst->conf = rd_kafka_conf_new();
 	if(inst->conf == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"imkafka: error creating kafka conf obj: %s\n",
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+		if(inst->bReportErrs) {
+			errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+				"imkafka: error creating kafka conf obj: %s\n",
+				rd_kafka_err2str(rd_kafka_errno2err(errno)));
+		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 
 # if RD_KAFKA_VERSION >= 0x00090001
 	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
 # endif
+
+	/* Set custom configuration parameters */
+	for(int i = 0 ; i < inst->nConfParams ; ++i) {
+		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
+			inst->confParams[i].name,
+			inst->confParams[i].val);
+		if(rd_kafka_conf_set(inst->conf,
+				     inst->confParams[i].name,
+				     inst->confParams[i].val,
+				     kafkaErrMsg, sizeof(kafkaErrMsg))
+	 	   != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+						"parameter '%s=%s': %s",
+						inst->confParams[i].name,
+						inst->confParams[i].val, kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+		}
+	}
 
 	/* Topic configuration */
 	inst->topic_conf = rd_kafka_topic_conf_new();
@@ -331,10 +352,12 @@ checkInstance(instanceConf_t *inst)
 		if (rd_kafka_conf_set(inst->conf, "group.id", (char*) inst->consumergroup,
 							  kafkaErrMsg, sizeof(kafkaErrMsg)) !=
 			RD_KAFKA_CONF_OK) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-					"imkafka: error assigning consumergroup %s to kafka config: %s\n",
-					inst->consumergroup,
-					kafkaErrMsg);
+				if(inst->bReportErrs) {
+					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+						"imkafka: error assigning consumergroup %s to kafka config: %s\n",
+						inst->consumergroup,
+						kafkaErrMsg);
+				}
 				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
@@ -343,20 +366,24 @@ checkInstance(instanceConf_t *inst)
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset",
 									"smallest",
 									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-					"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
-					inst->consumergroup,
-					kafkaErrMsg);
+				if(inst->bReportErrs) {
+					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+						"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
+						inst->consumergroup,
+						kafkaErrMsg);
+				}
 				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 		/* Consumer groups always use broker based offset storage */
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method",
 									"broker",
 									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-					"imkafka: error setting kafka offset.store.method on %s: %s\n",
-					inst->consumergroup,
-					kafkaErrMsg);
+				if(inst->bReportErrs) {
+					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+						"imkafka: error setting kafka offset.store.method on %s: %s\n",
+						inst->consumergroup,
+						kafkaErrMsg);
+				}
 				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
@@ -371,8 +398,10 @@ checkInstance(instanceConf_t *inst)
 	inst->rk = rd_kafka_new(RD_KAFKA_CONSUMER, inst->conf,
 				     kafkaErrMsg, sizeof(kafkaErrMsg));
 	if(inst->rk == NULL) {
-		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"imkafka: error creating kafka handle: %s\n", kafkaErrMsg);
+		if(inst->bReportErrs) {
+			errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+				"imkafka: error creating kafka handle: %s\n", kafkaErrMsg);
+		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 # if RD_KAFKA_VERSION < 0x00090001
@@ -381,8 +410,10 @@ checkInstance(instanceConf_t *inst)
 
    	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
-		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
-			"imkafka: no valid brokers specified: %s\n", inst->brokers);
+		if(inst->bReportErrs) {
+			errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+				"imkafka: no valid brokers specified: %s\n", inst->brokers);
+		}
 		ABORT_FINALIZE(RS_RET_KAFKA_NO_VALID_BROKERS);
 	}
 
@@ -397,9 +428,11 @@ finalize_it:
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
 {
-	errmsg.LogError(0, NO_ERRCODE, "imkafka: ruleset '%s' not found - "
+	if(inst->bReportErrs) {
+		errmsg.LogError(0, NO_ERRCODE, "imkafka: ruleset '%s' not found - "
 			"using default ruleset instead",
 			inst->pszBindRuleset);
+	}
 }
 
 
@@ -437,8 +470,6 @@ addConsumer(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst
 		/* Subscription is working */
 		inst->bIsSubscribed = 1;
 	}
-/* @rainer: rly needed*/
-/*	resetConfigVariables(NULL,NULL);*/
 finalize_it:
 	RETiRet;
 }
@@ -543,7 +574,7 @@ CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "imkafka: error processing module "
-				"config parameters [module(...)]");
+			"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
@@ -596,20 +627,8 @@ ENDcheckCnf
 
 
 BEGINactivateCnfPrePrivDrop
-	instanceConf_t *inst;
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	/* init topic consumer configs */
-//	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
-//		addConsumer(runModConf, inst);
-//	}
-
-/*	if(pRelpEngine == NULL) {
-		errmsg.LogError(0, RS_RET_NO_LSTN_DEFINED, "imkafka: no Kafka consumer defined, module can not run.");
-		ABORT_FINALIZE(RS_RET_NO_RUN);
-	}
-finalize_it:
-*/
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
@@ -713,17 +732,6 @@ CODESTARTmodExit
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
-
-
-static rsRetVal
-resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	DEFiRet;
-	free(cs.pszBindRuleset);
-	cs.pszBindRuleset = NULL;
-	RETiRet;
-	return RS_RET_OK;
-}
 
 
 BEGINisCompatibleWithFeature
