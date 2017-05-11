@@ -65,12 +65,19 @@ DEFobjCurrIf(statsobj)
 /* forward definitions */
 /* static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);*/
 
+struct kafka_params {
+	const char *name;
+	const char *val;
+};
+
 /* Module static data */
 static struct configSettings_s {
 	uchar *topic;
 	uchar *consumergroup;
 	char *brokers;
 	uchar *pszBindRuleset;
+	int nConfParams;
+	struct kafka_params *confParams;
 } cs;
 
 struct instanceConf_s {
@@ -80,6 +87,8 @@ struct instanceConf_s {
 	int64_t offset;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
+	int nConfParams;
+	struct kafka_params *confParams;
 	int bIsConnected;
 	rd_kafka_conf_t *conf;
 	rd_kafka_t *rk;
@@ -121,6 +130,7 @@ static struct cnfparamblk modpblk =
 static struct cnfparamdescr inppdescr[] = {
 	{ "topic", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "broker", eCmdHdlrArray, 0 },
+	{ "confparam", eCmdHdlrArray, 0 },
 	{ "consumergroup", eCmdHdlrString, 0},
 	{ "ruleset", eCmdHdlrString, 0 },
 };
@@ -266,6 +276,8 @@ createInstance(instanceConf_t **pinst)
 	inst->topic = NULL;
 	inst->consumergroup = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->nConfParams = 0;
+	inst->confParams = NULL;
 	inst->pBindRuleset = NULL;
 	inst->bIsConnected = 0;
 	inst->bIsSubscribed = 0;
@@ -431,6 +443,25 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+processKafkaParam(char *const param,
+	const char **const name,
+	const char **const paramval)
+{
+	DEFiRet;
+	char *val = strstr(param, "=");
+	if(val == NULL) {
+		errmsg.LogError(0, RS_RET_PARAM_ERROR, "missing equal sign in "
+				"parameter '%s'", param);
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
+	*val = '\0'; /* terminates name */
+	++val; /* now points to begin of value */
+	CHKmalloc(*name = strdup(param));
+	CHKmalloc(*paramval = strdup(val));
+finalize_it:
+	RETiRet;
+}
 
 BEGINnewInpInst
 	struct cnfparamvals *pvals;
@@ -464,6 +495,15 @@ CODESTARTnewInpInst
 			}
 			inst->brokers = (uchar*)es_str2cstr(es, NULL);
 			es_deleteStr(es);
+		} else if(!strcmp(inppblk.descr[i].name, "confparam")) {
+			inst->nConfParams = pvals[i].val.d.ar->nmemb;
+			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*pvals[i].val.d.ar->nmemb));
+			for(int j = 0; j < pvals[i].val.d.ar->nmemb; j++) {
+				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				CHKiRet(processKafkaParam(cstr, &inst->confParams[j].name,
+								&inst->confParams[j].val));
+				free(cstr);
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "topic")) {
 			inst->topic = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "consumergroup")) {
@@ -585,6 +625,10 @@ CODESTARTfreeCnf
 		free(inst->consumergroup);
 		free(inst->brokers);
 		free(inst->pszBindRuleset);
+		for(int i = 0; i < inst->nConfParams; i++) {
+			free((void*)inst->confParams[i].name);
+			free((void*)inst->confParams[i].val);
+		}
 		del = inst;
 		inst = inst->next;
 		free(del);

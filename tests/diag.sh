@@ -628,10 +628,6 @@ case $1 in
 				echo "Creating dependency working directory"
 				mkdir -p $dep_work_dir
 		fi
-		if [ -d $dep_work_dir/kafka ]; then
-				(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
-				./msleep 4000
-		fi
 		rm -rf $dep_work_dir/kafka
 		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
@@ -646,13 +642,13 @@ case $1 in
 			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
 		if [ ! -d $dep_work_dir/kafka ]; then
-				echo "Kafka work-dir does not exist, did you start kafka?"
-				exit 1
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
+		else
+			echo "Stopping Kafka instance $2"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
+			./msleep 2000
+			rm -rf $dep_work_dir/kafka
 		fi
-		echo "Stopping Kafka instance $2"
-		(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
-		./msleep 2000
-		rm -rf $dep_work_dir/kafka
 		;;
 	 'stop-zookeeper')
 		if [ "x$2" == "x" ]; then
