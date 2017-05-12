@@ -958,7 +958,11 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
-	pthread_setname_np(lu->reloader, reloader_thd_name);
+  #ifndef __APPLE__
+     pthread_setname_np(lu->reloader, reloader_thd_name);
+  #else
+     pthread_setname_np(reloader_thd_name); // must check
+  #endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);
