@@ -39,10 +39,15 @@ Version 8.27.0 [v8-stable] 2017-05-16
   both for the actual limit procesing as well as warning messages emitted
   see also https://github.com/rsyslog/rsyslog/pull/1520
   Thanks to github user jvymazal for the patch
+- Added new module: KSI log signing ver. 1.2 (lmsig_ksi_ls12)
 - build now works on solaris again
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
   Thanks to Felix Janda for bug report and solution suggestion.
+- bugfix core: segfault when no parser could parse message
+  This could happen if the default parser chain was changed and the
+  RFC3164 parser was not included. Never seen in practice, just by
+  experimenting in lab.
 - bugfix core: rate-limit internal messages when going to external log system
   Rate-limiting was only applied to messages processed internally.
   While the external logging system probably also applies rate-limiting,
