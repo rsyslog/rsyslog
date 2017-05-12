@@ -94,6 +94,7 @@ TESTS +=  \
 	tcp_forwarding_retries.sh \
 	arrayqueue.sh \
 	global_vars.sh \
+	no-parser-errmsg.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	empty-ruleset.sh \
@@ -252,6 +253,7 @@ if HAVE_VALGRIND
 TESTS +=  \
 	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
+	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
 	failover-basic-vg.sh \
@@ -819,10 +821,13 @@ EXTRA_DIST= \
 	testsuites/exec_tpl-concurrency.conf \
 	prop-all-json-concurrency.sh \
 	testsuites/prop-all-json-concurrency.conf \
+	no-parser-errmsg.sh \
 	global_vars.sh \
+	testsuites/global_vars.conf \
+	no-parser-errmsg.sh \
+	no-parser-vg.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
-	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
 	privdrop_common.sh \
