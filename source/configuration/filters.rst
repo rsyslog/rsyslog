@@ -79,7 +79,7 @@ properties, not the replacer is supported). With this filter, each
 properties can be checked against a specified value, using a specified
 compare operation.
 
-A property-based filter must start with a colon **in column 0**. This tells
+A property-based filter must start with a colon **in column 1**. This tells
 rsyslogd that it is the new filter type. The colon must be followed by
 the property name, a comma, the name of the compare operation to carry
 out, another comma and then the value to compare against. This value
