@@ -328,9 +328,12 @@ endif
 endif
 
 if ENABLE_OMKAFKA
+if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	omkafka_static.sh
+	sndrcv_kafka.sh \
+	sndrcv_kafka_multi.sh
+endif
 endif
 endif
 
@@ -1312,6 +1315,8 @@ EXTRA_DIST= \
 	testsuites/zoo.cfg \
 	omkafka_static.sh \
 	testsuites/omkafka_static.conf \
+	omkafka_multiple.sh \
+	testsuites/omkafka_multiple.conf \
 	mmpstrucdata.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \

@@ -42,22 +42,22 @@
 #export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
-#START: ext dependency config
+#START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
-dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
-
-dep_kafka_work_dir=$dep_work_dir/kafka
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
-
-dep_zk_work_dir=$dep_work_dir/zk
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
-
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
-#END: ext dependency config
+
+#	TODO Make dynamic work dir for multiple instances
+dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+#dep_kafka_work_dir=$dep_work_dir/kafka
+#dep_zk_work_dir=$dep_work_dir/zk
+
+#END: ext kafka config
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -591,11 +591,43 @@ case $1 in
 				wget $dep_kafka_url -O $dep_kafka_cached_file
 		fi
 		;;
-	 'start-kafka')
+	 'start-zookeeper')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_tk_config="zoo.cfg"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_tk_config="zoo$2.cfg"
+		fi
+
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
 				exit 1
 		fi
+		if [ ! -d $dep_work_dir ]; then
+				echo "Creating dependency working directory"
+				mkdir -p $dep_work_dir
+		fi
+		if [ -d $dep_work_dir/zk ]; then
+				(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
+				./msleep 2000
+		fi
+		rm -rf $dep_work_dir/zk
+		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
+		cp $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
+		echo "Starting Zookeeper instance $2"
+		(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
+		./msleep 2000
+		;;
+	 'start-kafka')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_kafka_config="kafka-server.properties"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_kafka_config="kafka-server$2.properties"
+		fi
+
 		if [ ! -f $dep_kafka_cached_file ]; then
 				echo "Dependency-cache does not have kafka package, did you download dependencies?"
 				exit 1
@@ -604,39 +636,50 @@ case $1 in
 				echo "Creating dependency working directory"
 				mkdir -p $dep_work_dir
 		fi
-		if [ -d $dep_kafka_work_dir ]; then
-				(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
-				./msleep 4000
-		fi
-		if [ -d $dep_zk_work_dir ]; then
-				(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
-				./msleep 2000
-		fi
-		rm -rf $dep_kafka_work_dir
-		rm -rf $dep_zk_work_dir
-		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names)
-		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names)
-		cp $srcdir/testsuites/zoo.cfg $dep_zk_work_dir/conf/
-		(cd $dep_zk_work_dir && ./bin/zkServer.sh start)
-		./msleep 4000
-		cp $srcdir/testsuites/kafka-server.properties $dep_kafka_work_dir/config/
-		(cd $dep_kafka_work_dir && ./bin/kafka-server-start.sh -daemon ./config/kafka-server.properties)
-		./msleep 8000
+		rm -rf $dep_work_dir/kafka
+		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
+		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
+		echo "Starting Kafka instance $2"
+		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+		./msleep 2000
 		;;
 	 'stop-kafka')
-		if [ ! -d $dep_kafka_work_dir ]; then
-				echo "Kafka work-dir does not exist, did you start kafka?"
-				exit 1
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
-		(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
-		./msleep 4000
-		(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+		if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
+		else
+			echo "Stopping Kafka instance $2"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
+			./msleep 2000
+			rm -rf $dep_work_dir/kafka
+		fi
+		;;
+	 'stop-zookeeper')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
 		./msleep 2000
-		rm -rf $dep_kafka_work_dir
-		rm -rf $dep_zk_work_dir
+		rm -rf $dep_work_dir/zk
 		;;
 	 'create-kafka-topic')
-		if [ ! -d $dep_kafka_work_dir ]; then
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+		if [ ! -d $dep_work_dir/kafka ]; then
 				echo "Kafka work-dir does not exist, did you start kafka?"
 				exit 1
 		fi
@@ -644,11 +687,39 @@ case $1 in
 				echo "Topic-name not provided."
 				exit 1
 		fi
-		(cd $dep_kafka_work_dir && ./bin/kafka-topics.sh --create --zookeeper localhost:2181/kafka --topic $2 --partitions 2 --replication-factor 1)
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --create --zookeeper localhost:$dep_work_port/kafka --topic $2 --partitions 2 --replication-factor 1)
+		;;
+	 'delete-kafka-topic')
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+
+		echo "deleting kafka-topic $2"
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --delete --zookeeper localhost:$dep_work_port/kafka --topic $2)
 		;;
 	 'dump-kafka-topic')
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka$3.log)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+
 		echo "dumping kafka-topic $2"
-		if [ ! -d $dep_kafka_work_dir ]; then
+		if [ ! -d $dep_work_dir/kafka ]; then
 				echo "Kafka work-dir does not exist, did you start kafka?"
 				exit 1
 		fi
@@ -657,7 +728,7 @@ case $1 in
 				exit 1
 		fi
 
-		(cd $dep_kafka_work_dir && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:2181/kafka --topic $2 > $dep_kafka_log_dump)
+		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
    'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
