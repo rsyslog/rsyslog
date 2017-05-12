@@ -88,7 +88,7 @@ librsyslog_la_SOURCES = \
 	../parse.h \
 	\
 	sd-daemon.c \
-	sd-daemon.h
+	sd-daemon.h \
 	\
 	hashtable.c \
 	hashtable.h \

@@ -81,6 +81,7 @@ AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes
 # nice to have the extra information.
 AC_DEFINE_UNQUOTED([PLATFORM_ID_LSB], ["`lsb_release -d`"], [platform id for display purposes])
 
+echo HOST: ${host}
 case "${host}" in
   *-*-linux*)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
@@ -89,6 +90,10 @@ case "${host}" in
   *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
+  ;;
+  *-apple-*)
+    AC_DEFINE([OS_APPLE], [1], [Indicator for APPLE OS])
+    os_type="apple"
   ;;
   *-*-kfreebsd*)
     # kernel is FreeBSD, but userspace is glibc - i.e. like linux
@@ -109,19 +114,19 @@ case "${host}" in
     LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
-# AIXPORT START
   *-*-aix*)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
   ;;
-# AIXPORT END
 esac
+AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
+AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
+AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 # Running from git source?
 in_git_src=no
 AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
 
-AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
