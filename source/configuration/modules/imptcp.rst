@@ -12,6 +12,11 @@ can be used.
 
 **Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
+Error Messages
+--------------
+
+When a message is to long it will be truncated and an error will show the remaining length of the message and the beginning of it. It will be easier to comprehend the truncation.
+
 Configuration Directives
 ------------------------
 
@@ -69,6 +74,14 @@ the input they are specified with.
 
    A path on the filesystem for a unix domain socket. It is an error to specify
    both `path` and `port`.
+
+.. function:: discardTruncatedMsg <on/off>
+
+   *Default: off*
+
+   When a message is split because it is to long the second part is normally
+   processed as the next message. This can cause Problems. When this parameter
+   is turned on the part of the message after the truncation will be discarded.
 
 .. function::  fileOwner [userName]
 
@@ -143,6 +156,18 @@ the input they are specified with.
    Binds specified ruleset to this input. If not set, the default
    ruleset is bound.
 
+.. function:: maxFrameSize <int>
+
+   *Default: 200000; Max: 200000000*
+
+   When in octet counted mode, the frame size is given at the beginning
+   of the message. With this parameter the max size this frame can have
+   is specified and when the frame gets to large the mode is switched to
+   octet stuffing.
+   The max value this parameter can have was specified because otherwise
+   the integer could become negative and this would result in a
+   Segmentation Fault.
+
 .. function:: address <name>
 
    *Default: all interfaces*
@@ -193,6 +218,13 @@ the input they are specified with.
 
    instructs imptcp to emit a message if a remote peer closes the
    connection.
+
+.. function:: NotifyOnConnectionOpen on/off
+
+   *Defaults to off*
+
+   instructs imptcp to emit a message if a remote peer opens a
+   connection. Hostname of the remote peer is given in the message.
 
 .. function:: KeepAlive on/off
 
