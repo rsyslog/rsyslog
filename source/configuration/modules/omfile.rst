@@ -147,7 +147,7 @@ selects whether a static or dynamic file (name) shall be written to.
    you have full control over how to format the file name. Either file
    or dynaFile can be used, but not both. If both are given, dynaFile
    will be used.
-   
+
    A cache of recent files is kept. Note
    that this cache can consume quite some memory (especially if large
    buffer sizes are used). Files are kept open as long as they stay
@@ -165,12 +165,12 @@ selects whether a static or dynamic file (name) shall be written to.
 .. function::  closeTimeout [minutes]
 
    *Default: for static files: 0; for dynamic files: 10*
-   
+
    *Available since: 8.3.3*
 
    Specifies after how many minutes of inactivity a file is
    automatically closed. Note that this functionality is implemented
-   based on the 
+   based on the
    :doc:`janitor process <../../concepts/janitor>`.
    See its doc to understand why and how janitor-based times are
    approximate.
@@ -199,7 +199,7 @@ selects whether a static or dynamic file (name) shall be written to.
 .. function::  veryRobustZip [switch]
 
    *Default: off*
-   
+
    *Available since: 7.3.0*
 
    if *zipLevel* is greater 0,
@@ -404,7 +404,9 @@ selects whether a static or dynamic file (name) shall be written to.
    Selects a signature provider for log signing. By selecting a provider,
    the signature feature is turned on.
 
-   Currently, there are two providers available ":doc:`gt <sigprov_gt>`" and ":doc:`ksi <sigprov_ksi>`". 
+   Currently there is one signature provider available: ":doc:`ksi_ls12 <sigprov_ksi12>`".
+
+   Previous signature providers ":doc:`gt <sigprov_gt>`" and ":doc:`ksi <sigprov_ksi>`" are depricated.
 
 .. function::  cry.provider [providerName]
 
@@ -415,11 +417,6 @@ selects whether a static or dynamic file (name) shall be written to.
 
    Currently, there only is one provider called ":doc:`gcry <../cryprov_gcry>`".
 
-See Also
---------
-
-- `Sign log messages through signature provider
-  Guardtime <http://www.rsyslog.com/how-to-sign-log-messages-through-signature-provider-guardtime/>`_
 
 Caveats/Known Bugs
 ------------------
