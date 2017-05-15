@@ -57,6 +57,7 @@
 #include "datetime.h"
 #include "hashtable.h"
 #include "ratelimit.h"
+#include "parserif.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -112,6 +113,8 @@ DEFobjCurrIf(ruleset)
 
 statsobj_t *modStats;
 STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+STATSCOUNTER_DEF(ctrSubmitFail, mutCtrSubmitFail)
+STATSCOUNTER_DEF(ctrSubmitFailNoWait, mutCtrSubmitFailNoWait)
 STATSCOUNTER_DEF(ctrLostRatelimit, mutCtrLostRatelimit)
 STATSCOUNTER_DEF(ctrNumRatelimiters, mutCtrNumRatelimiters)
 
@@ -141,7 +144,7 @@ typedef struct lstn_s {
 	prop_t *hostName;	/* host-name override - if set, use this instead of actual name */
 	int fd;			/* read-only after startup */
 	int flags;		/* should parser parse host name?  read-only after startup */
-	int flowCtl;		/* flow control settings for this socket */
+	flowControl_t flowCtl;	/* flow control settings for this socket */
 	int ratelimitInterval;
 	int ratelimitBurst;
 	ratelimit_t *dflt_ratelimiter;/*ratelimiter to apply if none else is to be used */
@@ -204,7 +207,6 @@ static struct configSettings_s {
 struct instanceConf_s {
 	uchar *sockName;
 	uchar *pLogHostName;		/* host name to use with this socket */
-	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
 	sbool bWritePid;		/* use credentials from recvmsg() and fixup PID in TAG */
 	sbool bUseSysTimeStamp;		/* use timestamp from system (instead of from message) */
@@ -218,6 +220,7 @@ struct instanceConf_s {
 	sbool bUnlink;
 	sbool bUseSpecialParser;
 	sbool bParseHost;
+	flowControl_t flowCtl;		/* flow control settings for this socket */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	struct instanceConf_s *next;
@@ -234,8 +237,8 @@ struct modConfData_s {
 	int bParseTrusted;
 	int bUseSpecialParser;
 	int bParseHost;
+	flowControl_t flowCtl;		/* flow control settings for this socket */
 	sbool bIgnoreTimestamp;		/* ignore timestamps present in the incoming message? */
-	sbool bUseFlowCtl;		/* use flow control or not (if yes, only LIGHT is used! */
 	sbool bOmitLocalLogging;
 	sbool bWritePidSysSock;
 	sbool bUseSysTimeStamp;
@@ -254,6 +257,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "syssock.ignoretimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.ignoreownmessages", eCmdHdlrBinary, 0 },
 	{ "syssock.flowcontrol", eCmdHdlrBinary, 0 },
+	{ "syssock.neverwait", eCmdHdlrBinary, 0 },
 	{ "syssock.usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "syssock.annotate", eCmdHdlrBinary, 0 },
 	{ "syssock.parsetrusted", eCmdHdlrBinary, 0 },
@@ -280,6 +284,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "hostname", eCmdHdlrString, 0 },
 	{ "ignoretimestamp", eCmdHdlrBinary, 0 },
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
+	{ "neverwait", eCmdHdlrBinary, 0 },
 	{ "usesystimestamp", eCmdHdlrBinary, 0 },
 	{ "annotate", eCmdHdlrBinary, 0 },
 	{ "usespecialparser", eCmdHdlrBinary, 0 },
@@ -317,7 +322,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitInterval = DFLT_ratelimitInterval;
 	inst->ratelimitBurst = DFLT_ratelimitBurst;
 	inst->ratelimitSeverity = DFLT_ratelimitSeverity;
-	inst->bUseFlowCtl = 0;
+	inst->flowCtl = eFLOWCTL_NO_DELAY;
 	inst->bUseSpecialParser = 1;
 	inst->bParseHost = UNSET;
 	inst->bIgnoreTimestamp = 1;
@@ -368,7 +373,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->pLogHostName = cs.pLogHostName;
 	inst->ratelimitBurst = cs.ratelimitBurst;
 	inst->ratelimitSeverity = cs.ratelimitSeverity;
-	inst->bUseFlowCtl = cs.bUseFlowCtl;
+	inst->flowCtl = cs.bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 	inst->bIgnoreTimestamp = cs.bIgnoreTimestamp;
 	inst->bCreatePath = cs.bCreatePath;
 	inst->bUseSysTimeStamp = cs.bUseSysTimeStamp;
@@ -424,7 +429,7 @@ addListner(instanceConf_t *inst)
 	listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
 	listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
 	listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
-	listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	listeners[nfd].flowCtl = inst->flowCtl;
 	listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
 	listeners[nfd].bCreatePath = inst->bCreatePath;
 	listeners[nfd].sockName = ustrdup(inst->sockName);
@@ -996,8 +1001,16 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	ratelimitAddMsg(ratelimiter, NULL, pMsg);
-	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
+	iRet = ratelimitAddMsg(ratelimiter, NULL, pMsg);
+	if(iRet != RS_RET_OK) {
+		DBGPRINTF("imuxsock: submitMsg failed: %d\n", iRet);
+		STATSCOUNTER_INC(ctrSubmitFail, mutCtrSubmitFail);
+		if ( iRet == RS_RET_ENQ_WAIT_NOT_PERMITTED) {
+			STATSCOUNTER_INC(ctrSubmitFailNoWait, mutCtrSubmitFailNoWait);
+		}
+	} else {
+		STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
+	}
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pMsg != NULL)
@@ -1161,7 +1174,7 @@ activateListeners(void)
 		listeners[0].bUnlink = runModConf->bUnlink;
 		listeners[0].bUseSysTimeStamp = runModConf->bUseSysTimeStamp;
 		listeners[0].flags = runModConf->bIgnoreTimestamp ? IGNDATE : NOFLAG;
-		listeners[0].flowCtl = runModConf->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		listeners[0].flowCtl = runModConf->flowCtl;
 		CHKiRet(ratelimitNew(&listeners[0].dflt_ratelimiter, "imuxsock", NULL));
 			ratelimitSetLinuxLike(listeners[0].dflt_ratelimiter,
 			listeners[0].ratelimitInterval,
@@ -1204,7 +1217,7 @@ CODESTARTbeginCnfLoad
 	pModConf->pLogSockName = NULL;
 	pModConf->bOmitLocalLogging = 0;
 	pModConf->bIgnoreTimestamp = 1;
-	pModConf->bUseFlowCtl = 0;
+	pModConf->flowCtl = eFLOWCTL_NO_DELAY;
 	pModConf->bUseSysTimeStamp = 1;
 	pModConf->bWritePidSysSock = 0;
 	pModConf->bAnnotateSysSock = 0;
@@ -1228,6 +1241,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
+	int bUsedFlowCtlSetting = 0;
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
@@ -1255,7 +1269,20 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.unlink")) {
 			loadModConf->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.flowcontrol")) {
-			loadModConf->bUseFlowCtl = (int) pvals[i].val.d.n;
+			if(bUsedFlowCtlSetting) {
+				parser_errmsg("imuxsock: already used flow control setting, "
+					"ignoring syssock.flowcontrol");
+			}
+			loadModConf->flowCtl = (pvals[i].val.d.n == 1) ? eFLOWCTL_LIGHT_DELAY
+								       : eFLOWCTL_NO_DELAY;
+			bUsedFlowCtlSetting = 1;
+		} else if(!strcmp(modpblk.descr[i].name, "syssock.neverwait")) {
+			if(bUsedFlowCtlSetting) {
+				parser_errmsg("imuxsock: already used flow control setting, "
+					"ignoring syssock.neverwait");
+			}
+			loadModConf->flowCtl = eFLOWCTL_NEVER_DELAY;
+			bUsedFlowCtlSetting = 1;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.usesystimestamp")) {
 			loadModConf->bUseSysTimeStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "syssock.annotate")) {
@@ -1294,6 +1321,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
+	int bUsedFlowCtlSetting = 0;
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (imuxsock)\n");
 
@@ -1329,7 +1357,20 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "ignoretimestamp")) {
 			inst->bIgnoreTimestamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
-			inst->bUseFlowCtl = (int) pvals[i].val.d.n;
+			if(bUsedFlowCtlSetting) {
+				parser_errmsg("imuxsock: already used flow control setting, "
+					"ignoring flowcontrol");
+			}
+			inst->flowCtl = (pvals[i].val.d.n == 1) ? eFLOWCTL_LIGHT_DELAY
+							        : eFLOWCTL_NO_DELAY;
+			bUsedFlowCtlSetting = 1;
+		} else if(!strcmp(inppblk.descr[i].name, "neverwait")) {
+			if(bUsedFlowCtlSetting) {
+				parser_errmsg("imuxsock: already used flow control setting, "
+					"ignoring neverwait");
+			}
+			inst->flowCtl = eFLOWCTL_NEVER_DELAY;
+			bUsedFlowCtlSetting = 1;
 		} else if(!strcmp(inppblk.descr[i].name, "usesystimestamp")) {
 			inst->bUseSysTimeStamp = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "annotate")) {
@@ -1368,7 +1409,7 @@ CODESTARTendCnfLoad
 		loadModConf->pLogSockName = cs.pLogSockName;
 		loadModConf->bIgnoreTimestamp = cs.bIgnoreTimestampSysSock;
 		loadModConf->bUseSysTimeStamp = cs.bUseSysTimeStampSysSock;
-		loadModConf->bUseFlowCtl = cs.bUseFlowCtlSysSock;
+		loadModConf->flowCtl = cs.bUseFlowCtlSysSock ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 		loadModConf->bAnnotateSysSock = cs.bAnnotateSysSock;
 		loadModConf->bWritePidSysSock = cs.bWritePidSysSock;
 		loadModConf->bParseTrusted = cs.bParseTrusted;
@@ -1730,6 +1771,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	STATSCOUNTER_INIT(ctrSubmit, mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmit));
+	STATSCOUNTER_INIT(ctrSubmitFail, mutCtrSubmitFail);
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("failed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmitFail));
+	STATSCOUNTER_INIT(ctrSubmitFailNoWait, mutCtrSubmitFailNoWait);
+	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("failed.no_wait"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmitFailNoWait));
 	STATSCOUNTER_INIT(ctrLostRatelimit, mutCtrLostRatelimit);
 	CHKiRet(statsobj.AddCounter(modStats, UCHAR_CONSTANT("ratelimit.discarded"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrLostRatelimit));

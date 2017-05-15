@@ -2882,13 +2882,19 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 	      || ((pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) && pThis->sizeOnDiskMax != 0
 	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
 		STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
-		if(pThis->toEnq == 0 || pThis->bEnqOnly) {
+		if(pThis->toEnq == 0 || pThis->bEnqOnly || flowCtlType == eFLOWCTL_NEVER_DELAY) {
 			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - configured for immediate discarding QueueSize=%d "
-				"MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld\n", pThis->iQueueSize, pThis->iMaxQueueSize,
-				pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax); 
+				"MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld flowCtl %d\n",
+				pThis->iQueueSize, pThis->iMaxQueueSize,
+				pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax,
+				flowCtlType); 
 			STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-			msgDestruct(&pMsg);
-			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+			if(flowCtlType != eFLOWCTL_NEVER_DELAY) {
+				/* in NEVER_DELAY case, caller might have recovery options */
+				msgDestruct(&pMsg);
+			}
+			ABORT_FINALIZE((flowCtlType == eFLOWCTL_NEVER_DELAY) ? RS_RET_ENQ_WAIT_NOT_PERMITTED
+									     : RS_RET_QUEUE_FULL);
 		} else {
 			DBGOPRINT((obj_t*) pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
 			if(glbl.GetGlobalInputTermState()) {
@@ -2999,13 +3005,31 @@ qqueueEnqMsg(qqueue_t *pThis, flowControl_t flowCtlType, smsg_t *pMsg)
 {
 	DEFiRet;
 	int iCancelStateSave;
+	int r;
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	const int isNonDirectQ = pThis->qType != QUEUETYPE_DIRECT;
 
 	if(isNonDirectQ) {
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-		d_pthread_mutex_lock(pThis->mut);
+		if(flowCtlType == eFLOWCTL_NEVER_DELAY) {
+			/* the input is so important that we really NEVER want
+			 * any delay. Probably the only use case is imuxsock, which
+			 * can hang the system if unresponsive for too long. So
+			 * we prefer message loss, even though a very short wait
+			 * would have been sufficient. We assume that in this mode
+			 * we will loose some messages even if everything is working
+			 * really smoothly. So the caller might consider to re-submit
+			 * based on its operations. rgerhards, 2017-02-21
+			 */
+			r = pthread_mutex_trylock(pThis->mut);
+			if (r != 0) {
+				DBGPRINTF("qqueueEnqMsg: mutx_trylock failed with %d\n", r);
+				ABORT_FINALIZE(RS_RET_ENQ_WAIT_NOT_PERMITTED);
+			}
+		} else {
+			d_pthread_mutex_lock(pThis->mut);
+		}
 	}
 
 	CHKiRet(doEnqSingleObj(pThis, flowCtlType, pMsg));

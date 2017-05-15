@@ -174,6 +174,7 @@ TESTS +=  \
 	imuxsock_logger_ruleset_ratelimit.sh \
 	imuxsock_logger_err.sh \
 	imuxsock_logger_parserchain.sh \
+	imuxsock_logger_nodelay.sh \
 	imuxsock_traillf.sh \
 	imuxsock_ccmiddle.sh \
 	imuxsock_logger_syssock.sh \
@@ -1262,6 +1263,7 @@ EXTRA_DIST= \
 	testsuites/dircreate_dflt.conf \
 	dircreate_off.sh \
 	testsuites/dircreate_off.conf \
+	imuxsock_logger_nodelay.sh \
 	imuxsock_logger_parserchain.sh \
 	testsuites/imuxsock_logger_parserchain.conf \
 	imuxsock_logger.sh \

@@ -2136,7 +2136,8 @@ MsgSetFlowControlType(smsg_t * const pMsg, flowControl_t eFlowCtl)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
-	assert(eFlowCtl == eFLOWCTL_NO_DELAY || eFlowCtl == eFLOWCTL_LIGHT_DELAY || eFlowCtl == eFLOWCTL_FULL_DELAY);
+	assert(eFlowCtl == eFLOWCTL_NO_DELAY || eFlowCtl == eFLOWCTL_LIGHT_DELAY
+		|| eFlowCtl == eFLOWCTL_FULL_DELAY || eFlowCtl == eFLOWCTL_NEVER_DELAY);
 
 	pMsg->flowCtlType = eFlowCtl;
 

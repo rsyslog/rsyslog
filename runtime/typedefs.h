@@ -163,7 +163,8 @@ typedef char sbool;		/* (small bool) I intentionally use char, to keep it slim s
 typedef enum {
 	eFLOWCTL_NO_DELAY = 0,		/**< UDP and other non-delayable sources */
 	eFLOWCTL_LIGHT_DELAY = 1,	/**< some light delay possible, but no extended period of time */
-	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
+	eFLOWCTL_FULL_DELAY = 2,	/**< delay possible for extended period of time */
+	eFLOWCTL_NEVER_DELAY = 3	/**< never tolerate any delay at all (prefer loss over delay) */
 } flowControl_t;
 
 /* filter operations */
