@@ -1446,7 +1446,7 @@ finalize_it:
  * have it). -- rgerhards, 2009-06-08
  */
 #undef SYNCCALL
-#ifdef HAVE_FDATASYNC
+#if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
 #	define SYNCCALL(x) fdatasync(x)
 #else
 #	define SYNCCALL(x) fsync(x)
