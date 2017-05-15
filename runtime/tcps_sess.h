@@ -40,7 +40,8 @@ struct tcps_sess_s {
 	enum {
 		eAtStrtFram,
 		eInOctetCnt,
-		eInMsg
+		eInMsg,
+		eInMsgTruncating
 	} inputState;		/* our current state */
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;

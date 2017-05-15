@@ -80,7 +80,9 @@ struct tcpsrv_s {
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
+	int maxFrameSize;	/**< max frame size for octet counted*/
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
+	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	int ratelimitInterval;
 	int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -124,6 +126,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
 	rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t*, int);
+	rsRetVal (*SetMaxFrameSize)(tcpsrv_t*, int);
 	rsRetVal (*SetInputName)(tcpsrv_t*, uchar*);
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
@@ -151,6 +154,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v9 -- rgerhards, 2010-03-01 */
 	rsRetVal (*SetbDisableLFDelim)(tcpsrv_t*, int);
 	/* added v10 -- rgerhards, 2011-04-01 */
+	rsRetVal (*SetDiscardTruncatedMsg)(tcpsrv_t*, int);
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);

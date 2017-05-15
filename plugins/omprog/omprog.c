@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <sys/wait.h>
 #else
 #include <wait.h>

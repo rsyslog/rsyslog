@@ -78,8 +78,6 @@ librsyslog_la_SOURCES = \
 	lookup.h \
 	cfsysline.c \
 	cfsysline.h \
-	sd-daemon.c \
-	sd-daemon.h \
 	\
 	../action.h \
 	../action.c \
@@ -88,6 +86,9 @@ librsyslog_la_SOURCES = \
 	\
 	../parse.c \
 	../parse.h \
+	\
+	sd-daemon.c \
+	sd-daemon.h \
 	\
 	hashtable.c \
 	hashtable.h \
@@ -102,6 +103,9 @@ librsyslog_la_SOURCES = \
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 #
+#if OS_LINUX
+#librsyslog_la_SOURCES += \
+#endif
 
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
@@ -262,6 +266,16 @@ if ENABLE_GT_KSI
    lmsig_ksi_la_LIBADD = librsksi.la $(GT_KSI_LIBS)
 endif
 
+#
+# support library for Guardtime KSI-LS12
+#
+if ENABLE_KSI_LS12
+   pkglib_LTLIBRARIES += lmsig_ksi_ls12.la
+   lmsig_ksi_ls12_la_SOURCES = lmsig_ksi-ls12.c lmsig_ksi-ls12.h lib_ksils12.c \
+			lib_ksils12.h lib_ksi_queue.c lib_ksi_queue.h
+   lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
+   lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version
+endif
 
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c

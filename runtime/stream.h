@@ -160,6 +160,8 @@ typedef struct strm_s {
 	sbool	bIsTTY;		/* is this a tty file? */
 	cstr_t *prevLineSegment; /* for ReadLine, previous, unprocessed part of file */
 	cstr_t *prevMsgSegment; /* for ReadMultiLine, previous, yet unprocessed part of msg */
+	int fileNotFoundError;
+	int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
 } strm_t;
 
 
@@ -175,6 +177,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Write)(strm_t *const pThis, const uchar *const pBuf, size_t lenBuf);
 	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
 	rsRetVal (*WriteLong)(strm_t *pThis, long i);
+	rsRetVal (*SetFileNotFoundError)(strm_t *pThis, int pFileNotFoundError);
 	rsRetVal (*SetFName)(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 	rsRetVal (*SetDir)(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 	rsRetVal (*Flush)(strm_t *pThis);

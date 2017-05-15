@@ -2,14 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.26.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[8.27.0],[rsyslog@lists.adiscon.com])
 
 # AIXPORT START: Detect the underlying OS
 unamestr=$(uname)
 AM_CONDITIONAL([AIX], [test x$unamestr = xAIX])
-# AIXPORT END
-
-# AIXPORT START : Set the required variables for AIX config script
 if test "$unamestr" = "AIX"; then
 	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/lib/pkgconfig"
 	LIBS="-lbsd -lsrc"
@@ -55,23 +52,23 @@ fi
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
-m4_ifdef([AX_IS_RELEASE], [
-	AX_IS_RELEASE([git-directory])
-	m4_ifdef([AX_COMPILER_FLAGS], [
-		AX_COMPILER_FLAGS()
+if test "$GCC" = "yes"
+then
+	m4_ifdef([AX_IS_RELEASE], [
+		AX_IS_RELEASE([git-directory])
+		m4_ifdef([AX_COMPILER_FLAGS], [
+			AX_COMPILER_FLAGS()
+		], [
+			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		])
 	], [
-		if test "$GCC" = "yes"
-		then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		fi
-		AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
 	])
-], [
-	if test "$GCC" = "yes"
-	then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-	fi
-	AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-])
-
+else
+	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+fi
 
 PKG_PROG_PKG_CONFIG
 
@@ -84,6 +81,7 @@ AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes
 # nice to have the extra information.
 AC_DEFINE_UNQUOTED([PLATFORM_ID_LSB], ["`lsb_release -d`"], [platform id for display purposes])
 
+echo HOST: ${host}
 case "${host}" in
   *-*-linux*)
     AC_DEFINE([OS_LINUX], [1], [Indicator for a Linux OS])
@@ -92,6 +90,10 @@ case "${host}" in
   *-*-*darwin*|*-*-dragonfly*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
+  ;;
+  *-apple-*)
+    AC_DEFINE([OS_APPLE], [1], [Indicator for APPLE OS])
+    os_type="apple"
   ;;
   *-*-kfreebsd*)
     # kernel is FreeBSD, but userspace is glibc - i.e. like linux
@@ -103,6 +105,8 @@ case "${host}" in
     AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
     AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
     AC_DEFINE([_XOPEN_SOURCE], [600], [Use X/Open CAE Specification])
+    CPPFLAGS="-std=c99 $CPPFLAGS"
+    CFLAGS="-std=c99 $CFLAGS"
     SOL_LIBS="-lsocket -lnsl"
     # Solaris libuuid does not ship with a pkgconfig file so override the appropriate
     # variables (but only if they have not been set by the user).
@@ -110,19 +114,19 @@ case "${host}" in
     LIBUUID_LIBS=${LIBUUID_LIBS:=-luuid}
     AC_SUBST(SOL_LIBS)
   ;;
-# AIXPORT START
   *-*-aix*)
     os_type="aix"
     AC_DEFINE([OS_AIX], [1], [Indicator for a AIX OS])
   ;;
-# AIXPORT END
 esac
+AM_CONDITIONAL(OS_APPLE, test x$os_type == xapple)
+AM_CONDITIONAL(xOS_LINUX, test x$os_type == xlinux)
+AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 # Running from git source?
 in_git_src=no
 AS_IF([test -d "$srcdir"/.git && ! test -f  "$srcdir"/.tarball-version], [in_git_src=yes])
 
-AM_CONDITIONAL(OS_LINUX, test x$os_type == xlinux)
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
 
@@ -145,7 +149,25 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h malloc.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
+AC_CHECK_HEADER([arpa/inet.h],[],[],[
+  [#ifdef HAVE_ARPA_INET_H
+     # include <arpa/inet.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([libgen.h],[],[],[
+  [#ifdef HAVE_LIBGEN_H
+     # include <libgen.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([malloc.h],[],[],[
+  [#ifdef HAVE_MALLOC_H
+     # include <malloc.h>
+     #endif
+  ]
+])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h sys/inotify.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -319,32 +341,34 @@ AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 
 # multithreading via pthreads
-AC_CHECK_HEADERS(
-    [pthread.h],
-    [
-      AC_CHECK_LIB(
-        [pthread],
-        [pthread_create],
-        [
-          AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
-          PTHREADS_LIBS="-lpthread"
-          if test "$unamestr" = "AIX"; then
-                  PTHREADS_CFLAGS="-lpthreads" 
-          else
-                  case "${os_type}" in
-                  solaris) PTHREADS_CFLAGS="-pthreads" ;;
-                  *)       PTHREADS_CFLAGS="-pthread" ;;
-                  esac
-          fi
-          AC_SUBST(PTHREADS_LIBS)
-          AC_SUBST(PTHREADS_CFLAGS)
-        ],
-        [AC_MSG_FAILURE([pthread is missing])],
-        [-lpthread]
-      )
-    ],
-    [AC_MSG_FAILURE([pthread is missing])]
-)
+if test "$os_type" != "solaris"
+then
+	AC_CHECK_HEADERS(
+	    [pthread.h],
+	    [
+	      AC_CHECK_LIB(
+		[pthread],
+		[pthread_create],
+		[
+		  PTHREADS_LIBS="-lpthread"
+		  if test "$unamestr" = "AIX"; then
+			  PTHREADS_CFLAGS="-lpthreads" 
+		  else
+			  case "${os_type}" in
+			  solaris) PTHREADS_CFLAGS="-pthreads -std=c99" ;;
+			  *)       PTHREADS_CFLAGS="-pthread" ;;
+			  esac
+		  fi
+		  AC_SUBST(PTHREADS_LIBS)
+		  AC_SUBST(PTHREADS_CFLAGS)
+		],
+		[AC_MSG_FAILURE([pthread is missing])],
+		[-lpthread]
+	      )
+	    ],
+	    [AC_MSG_FAILURE([pthread is missing])]
+	)
+fi
 
 AC_CHECK_LIB(
   [pthread],
@@ -1270,6 +1294,22 @@ fi
 AM_CONDITIONAL(ENABLE_GT_KSI, test x$enable_gt_ksi = xyes)
 
 
+# GuardTime KSI LOGSIG 12 support
+AC_ARG_ENABLE(ksi-ls12,
+        [AS_HELP_STRING([--enable-ksi-ls12],[Enable log file signing support via GuardTime KSI LS12 @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_ksi_ls12="yes" ;;
+          no) enable_ksi_ls12="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-ksi-ls12) ;;
+         esac],
+        [enable_ksi_ls12=no]
+)
+if test "x$enable_ksi_ls12" = "xyes"; then
+	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.13.0)
+	AC_CHECK_LIB([ksi], [KSI_Signature_signAggregatedWithPolicy], [], [AC_MSG_FAILURE([Could not find libksi])])
+fi
+AM_CONDITIONAL(ENABLE_KSI_LS12, test x$enable_ksi_ls12 = xyes)
+
 # liblogging-stdlog support
 AC_ARG_ENABLE(liblogging-stdlog,
         [AS_HELP_STRING([--enable-liblogging-stdlog],[Enable liblogging-stdlog support @<:@default=yes@:>@])],
@@ -1622,10 +1662,9 @@ if test "x$enable_omhdfs"; then
 fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
-
-# support for omkafka
+# support for kafka input output
 AC_ARG_ENABLE(omkafka,
-        [AS_HELP_STRING([--enable-omkafka],[Compiles omkafka module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omkafka],[Compiles kafka output module @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_omkafka="yes" ;;
           no) enable_omkafka="no" ;;
@@ -1633,6 +1672,16 @@ AC_ARG_ENABLE(omkafka,
          esac],
         [enable_omkafka=no]
 )
+AC_ARG_ENABLE(imkafka,
+        [AS_HELP_STRING([--enable-imkafka],[Compiles kafka input and output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imkafka="yes" ;;
+          no) enable_imkafka="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imkafka) ;;
+         esac],
+        [enable_imkafka=no]
+)
+
 AC_ARG_ENABLE(kafka_tests,
         [AS_HELP_STRING([--enable-kafka-tests],[Enable Kafka tests, needs Java @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -1644,7 +1693,32 @@ AC_ARG_ENABLE(kafka_tests,
 )
 AM_CONDITIONAL(ENABLE_KAFKA_TESTS, test x$enable_kafka_tests = xyes)
 
+# omkafka works with older library
 if test "x$enable_omkafka" = "xyes"; then
+	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
+		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
+			LIBRDKAFKA_LIBS=-lrdkafka
+		], [
+			AC_MSG_ERROR([could not find rdkafka library])
+		])
+	])
+	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+fi
+
+# imkafka needs newer library
+if test "x$enable_imkafka" = "xyes"; then
+	PKG_CHECK_MODULES(LIBRDKAFKA, rdkafka >= 0.9.1)
+	AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+		AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
+		LIBRDKAFKA_LIBS=-lrdkafka
+	], [
+		AC_MSG_ERROR([could not find rdkafka library])
+	])
+	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+fi
+
+if test "x$enable_omkafka" = "xyes" && test "x$enable_imkafka" = "xyes"; then
 	if test "x$enable_kafka_tests" = "xyes"; then
 		AX_PROG_JAVAC #we don't need javac, but macro documentation says JAVAC *must* be checked before JAVA
 		AX_PROG_JAVA
@@ -1657,21 +1731,14 @@ if test "x$enable_omkafka" = "xyes"; then
 			AC_MSG_FAILURE([readlink, which is a kafka-tests dependency, not found])
 		fi
 	fi
-	PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
-		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
-			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
-			LIBRDKAFKA_LIBS=-lrdkafka
-		], [
-			AC_MSG_ERROR([could not find rdkafka library])
-		])
-	])
-	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 else
 	if test "x$enable_kafka_tests" = "xyes"; then
-		AC_MSG_ERROR([kafka-tests can not be enabled while omkafka is disabled])
+		AC_MSG_WARN([kafka-tests can not be enabled without omkafka and imkafka support. Disabling enable_kafka_tests...])
+		enable_kafka_tests="no"
 	fi
 fi
 AM_CONDITIONAL(ENABLE_OMKAFKA, test x$enable_omkafka = xyes)
+AM_CONDITIONAL(ENABLE_IMKAFKA, test x$enable_imkafka = xyes)
 
 #MONGODB SUPPORT
 
@@ -1888,11 +1955,14 @@ AM_CONDITIONAL(ENABLE_OMTCL, test x$enable_omtcl = xyes)
 # man pages
 AC_CHECKING([if required man pages already exist])
 have_to_generate_man_pages="no"
+git_src_have_to_generate_man_pages="yes" # default to use when building from git source
 AC_ARG_ENABLE(generate-man-pages,
         [AS_HELP_STRING([--enable-generate-man-pages],[Generate man pages from source @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) have_to_generate_man_pages="yes" ;;
-          no) have_to_generate_man_pages="no" ;;
+          no) have_to_generate_man_pages="no" ;
+              git_src_have_to_generate_man_pages="no"
+	      ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-generate-man-pages) ;;
          esac],
         [have_to_generate_man_pages=no]
@@ -1916,7 +1986,7 @@ AM_CONDITIONAL(ENABLE_DISTCHECK_WORKAROUND, test x$enable_distcheck_workaround =
 if test "x$in_git_src" = "xyes"; then
         AC_MSG_NOTICE([Running from git source])
 
-        have_to_generate_man_pages=yes
+        have_to_generate_man_pages=git_src_have_to_generate_man_pages
 
         if test "x$LEX" != "xflex"; then
                 AC_MSG_ERROR([flex program is needed to build rsyslog, please install flex.])
@@ -1971,6 +2041,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/impstats/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
+		plugins/imkafka/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -2027,6 +2098,7 @@ echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support:                 $enable_guardtime"
 echo "    Log file signing support via KSI:         $enable_gt_ksi"
+echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
@@ -2045,10 +2117,10 @@ echo "    periodic statistics module enabled:       $enable_impstats"
 echo "    imzmq3 input module enabled:              $enable_imzmq3"
 echo "    imczmq input module enabled:              $enable_imczmq"
 echo "    imjournal input module enabled:           $enable_imjournal"
+echo "    imkafka module will be compiled:          $enable_imkafka"
 echo
 echo "---{ output plugins }---"
 echo "    Mail support enabled:                     $enable_mail"
-echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omjournal module will be compiled:        $enable_omjournal"
@@ -2063,6 +2135,7 @@ echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
 echo "    omtcl module will be compiled:            $enable_omtcl"
+echo "    omkafka module will be compiled:          $enable_omkafka"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

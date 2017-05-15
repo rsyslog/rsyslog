@@ -527,7 +527,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		}
 	} else {
 		/* use fixed message format from command line */
-		*pLenBuf = snprintf(buf, maxBuf, "%s\n", MsgToSend);
+		*pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
 	}
 	if (octateCountFramed == 1) {
 		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);

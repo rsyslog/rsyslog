@@ -94,10 +94,15 @@ TESTS +=  \
 	tcp_forwarding_retries.sh \
 	arrayqueue.sh \
 	global_vars.sh \
+	no-parser-errmsg.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	empty-ruleset.sh \
+	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-maxFrameSize.sh \
+	imtcp-msg-truncation-on-number.sh \
+	imtcp-msg-truncation-on-number2.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-multiport.sh \
@@ -246,7 +251,9 @@ endif
 
 if HAVE_VALGRIND
 TESTS +=  \
+	internal-errmsg-memleak.sh \
 	rscript_set_memleak-vg.sh \
+	no-parser-vg.sh \
 	discard-rptdmsg-vg.sh \
 	discard-allmark-vg.sh \
 	failover-basic-vg.sh \
@@ -321,9 +328,12 @@ endif
 endif
 
 if ENABLE_OMKAFKA
+if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	omkafka_static.sh
+	sndrcv_kafka.sh \
+	sndrcv_kafka_multi.sh
+endif
 endif
 endif
 
@@ -392,6 +402,9 @@ if ENABLE_IMPTCP
 TESTS +=  \
 	manyptcp.sh \
 	imptcp_large.sh \
+	imptcp-connection-msg-disabled.sh \
+	imptcp-connection-msg-received.sh \
+	imptcp-discard-truncated-msg.sh \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
@@ -453,7 +466,13 @@ if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
 	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh
+	mmnormalize_rule_from_array.sh \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh
+endif
+
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmnormalize_regex_defaulted.sh \
@@ -461,10 +480,10 @@ TESTS +=  \
 	mmnormalize_variable.sh \
 	mmnormalize_tokenized.sh
 endif
+
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
-endif
 endif
 
 if ENABLE_MMJSONPARSE
@@ -474,6 +493,10 @@ TESTS += \
 if ENABLE_IMPTCP
 TESTS +=  \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
+	imptcp-msg-truncation-on-number.sh \
+	imptcp-msg-truncation-on-number2.sh \
+	imptcp-maxFrameSize-parameter.sh \
 	mmjsonparse_cim.sh \
 	json_array_subscripting.sh \
 	json_array_looping.sh \
@@ -569,6 +592,9 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-file-not-found-error.sh \
+	imfile-fileNotFoundError-parameter.sh \
+	imfile-error-not-repeated.sh \
 	imfile-truncate.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-with-persists-data-during-stop.sh \
@@ -605,6 +631,7 @@ DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= \
+	internal-errmsg-memleak.sh \
 	empty-hostname.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
@@ -797,10 +824,13 @@ EXTRA_DIST= \
 	testsuites/exec_tpl-concurrency.conf \
 	prop-all-json-concurrency.sh \
 	testsuites/prop-all-json-concurrency.conf \
+	no-parser-errmsg.sh \
 	global_vars.sh \
+	testsuites/global_vars.conf \
+	no-parser-errmsg.sh \
+	no-parser-vg.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
-	testsuites/global_vars.conf \
 	rfc5424parser.sh \
 	testsuites/rfc5424parser.conf \
 	privdrop_common.sh \
@@ -867,6 +897,11 @@ EXTRA_DIST= \
 	mmnormalize_rule_from_array.sh \
 	pmnull-basic.sh \
 	pmnull-withparams.sh \
+	testsuites/mmnormalize_processing_tests.rulebase \
+	mmnormalize_processing_test1.sh \
+	mmnormalize_processing_test2.sh \
+	mmnormalize_processing_test3.sh \
+	mmnormalize_processing_test4.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \
@@ -887,6 +922,10 @@ EXTRA_DIST= \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
 	mmjsonparse_simple.sh \
+	imptcp-oversize-message-display.sh \
+	imptcp-msg-truncation-on-number.sh \
+	imptcp-msg-truncation-on-number2.sh \
+	imptcp-maxFrameSize-parameter.sh \
 	testsuites/mmjsonparse_simple.conf \
 	mmjsonparse_cim.sh \
 	testsuites/mmjsonparse_cim.conf \
@@ -931,7 +970,11 @@ EXTRA_DIST= \
 	testsuites/diskqueue-fsync.conf \
 	empty-ruleset.sh \
 	testsuites/empty-ruleset.conf \
+	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-maxFrameSize.sh \
+	imtcp-msg-truncation-on-number.sh \
+	imtcp-msg-truncation-on-number2.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-tls-basic.sh \
@@ -953,6 +996,9 @@ EXTRA_DIST= \
 	imptcp-NUL.sh \
 	imptcp-NUL-rawmsg.sh \
 	imptcp_large.sh \
+	imptcp-connection-msg-disabled.sh \
+	imptcp-connection-msg-received.sh \
+	imptcp-discard-truncated-msg.sh \
 	testsuites/imptcp_large.conf \
 	imptcp_addtlframedelim.sh \
 	testsuites/imptcp_addtlframedelim.conf \
@@ -1147,6 +1193,9 @@ EXTRA_DIST= \
 	imfile-endregex-vg.sh \
 	testsuites/imfile-endregex.conf \
 	imfile-basic.sh \
+	imfile-file-not-found-error.sh \
+	imfile-fileNotFoundError-parameter.sh \
+	imfile-error-not-repeated.sh \
 	imfile-basic-vg.sh \
 	testsuites/imfile-basic.conf \
 	imfile-endregex-timeout-none-polling.sh \
@@ -1266,6 +1315,8 @@ EXTRA_DIST= \
 	testsuites/zoo.cfg \
 	omkafka_static.sh \
 	testsuites/omkafka_static.conf \
+	omkafka_multiple.sh \
+	testsuites/omkafka_multiple.conf \
 	mmpstrucdata.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \
@@ -1465,8 +1516,9 @@ uxsockrcvr_SOURCES = uxsockrcvr.c
 uxsockrcvr_LDADD = $(SOL_LIBS)
 
 tcpflood_SOURCES = tcpflood.c
-tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(GNUTLS_CFLAGS) $(RELP_CFLAGS)
-tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(GNUTLS_LIBS) $(RELP_LIBS)
+tcpflood_CFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
+tcpflood_CPPFLAGS = $(PTHREADS_CFLAGS) $(RELP_CFLAGS) $(GNUTLS_CFLAGS)
+tcpflood_LDADD = $(SOL_LIBS) $(PTHREADS_LIBS) $(RELP_LIBS) $(GNUTLS_LIBS)
 if ENABLE_GNUTLS
 tcpflood_LDADD += -lgcrypt
 endif

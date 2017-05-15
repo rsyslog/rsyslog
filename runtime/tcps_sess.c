@@ -383,7 +383,10 @@ processDataRcvd(tcps_sess_t *pThis,
 
 	if(pThis->inputState == eInOctetCnt) {
 		if(c >= '0' && c <= '9') { /* isdigit() the faster way */
-			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
+			if(pThis->iOctetsRemain <= 200000000) {
+				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
+			}
+			*(pThis->pMsg + pThis->iMsg++) = c;
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			if(c != ' ') {
@@ -392,19 +395,30 @@ processDataRcvd(tcps_sess_t *pThis,
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				DBGPRINTF("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.", pThis->iOctetsRemain);
+				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
-					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
 					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
 			}
+			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
+						"frame too large: %d, change to octet stuffing", pThis->iOctetsRemain);
+				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
+			} else {
+				pThis->iMsg = 0;
+			}
 			pThis->inputState = eInMsg;
+		}
+	} else if(pThis->inputState == eInMsgTruncating) {
+		if((   ((c == '\n') && !pThis->pSrv->bDisableLFDelim)
+		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
+		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+			pThis->inputState = eAtStrtFram;
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
@@ -413,10 +427,14 @@ processDataRcvd(tcps_sess_t *pThis,
 			DBGPRINTF("error: message received is larger than max msg size, we split it\n");
 			defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
 			++(*pnMsgs);
-			/* we might think if it is better to ignore the rest of the
-			 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
+			if(pThis->pSrv->discardTruncatedMsg == 1) {
+				pThis->inputState = eInMsgTruncating;
+			}
+			/* configuration parameter discardTruncatedMsg controlls
+			 * if rest of message is being processed
+			 * 0 = off
+			 * 1 = on
+			 * Pascal Withopf, 2017-04-21
 			 */
 		}
 

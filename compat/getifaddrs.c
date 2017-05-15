@@ -47,10 +47,10 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <net/if.h>
+#include <ifaddrs.h>
 #if defined (_AIX)
 #include <netinet/in6_var.h>
 #endif
-#include <ifaddrs.h>
 
 /* Normally this is defined in <net/if.h> but was new for Solaris 11 */
 #ifndef LIFC_ENABLED

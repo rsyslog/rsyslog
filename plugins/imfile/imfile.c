@@ -93,6 +93,11 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 /* If set to 1, fileTableDisplay will be compiled and used for debugging */
 #define ULTRA_DEBUG 0
 
+/* Setting GLOB_BRACE to ZERO which disables support for GLOB_BRACE if not available on current platform */
+#ifndef GLOB_BRACE
+	#define GLOB_BRACE 0
+#endif
+
 /* this structure is used in pure polling mode as well one of the support
  * structures for inotify.
  */
@@ -126,6 +131,7 @@ typedef struct lstn_s {
 	sbool addMetadata;
 	sbool addCeeTag;
 	sbool freshStartTail; /* read from tail of file on fresh start? */
+	sbool fileNotFoundError;
 	ruleset_t *pRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
@@ -165,6 +171,7 @@ struct instanceConf_s {
 	sbool addCeeTag;
 	sbool addMetadata;
 	sbool freshStartTail;
+	sbool fileNotFoundError;
 	int maxLinesAtOnce;
 	uint32_t trimLineOverBytes;
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -296,7 +303,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "addceetag", eCmdHdlrBinary, 0 },
 	{ "statefile", eCmdHdlrString, CNFPARAM_DEPRECATED },
 	{ "readtimeout", eCmdHdlrPositiveInt, 0 },
-	{ "freshstarttail", eCmdHdlrBinary, 0}
+	{ "freshstarttail", eCmdHdlrBinary, 0},
+	{ "filenotfounderror", eCmdHdlrBinary, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -588,6 +596,7 @@ openFileWithStateFile(lstn_t *const __restrict__ pLstn)
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_READ));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetFName(psSF, pszSFNam, lenSFNam));
+	CHKiRet(strm.SetFileNotFoundError(psSF, pLstn->fileNotFoundError));
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	/* read back in the object */
@@ -636,6 +645,7 @@ openFileWithoutStateFile(lstn_t *const __restrict__ pLstn)
 	CHKiRet(strm.SettOperationsMode(pLstn->pStrm, STREAMMODE_READ));
 	CHKiRet(strm.SetsType(pLstn->pStrm, STREAMTYPE_FILE_MONITOR));
 	CHKiRet(strm.SetFName(pLstn->pStrm, pLstn->pszFileName, strlen((char*) pLstn->pszFileName)));
+	CHKiRet(strm.SetFileNotFoundError(pLstn->pStrm, pLstn->fileNotFoundError));
 	CHKiRet(strm.ConstructFinalize(pLstn->pStrm));
 
 	/* As a state file not exist, this is a fresh start. seek to file end
@@ -770,6 +780,7 @@ createInstance(instanceConf_t **pinst)
 	inst->addMetadata = ADD_METADATA_UNSPECIFIED;
 	inst->addCeeTag = 0;
 	inst->freshStartTail = 0;
+	inst->fileNotFoundError = 1;
 	inst->readTimeout = loadModConf->readTimeout;
 
 	/* node created, let's add to config */
@@ -1060,6 +1071,7 @@ addListner(instanceConf_t *inst)
 	pThis->addCeeTag = inst->addCeeTag;
 	pThis->readTimeout = inst->readTimeout;
 	pThis->freshStartTail = inst->freshStartTail;
+	pThis->fileNotFoundError = inst->fileNotFoundError;
 	pThis->pRuleset = inst->pBindRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -1118,6 +1130,8 @@ CODESTARTnewInpInst
 			inst->addCeeTag = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "freshstarttail")) {
 			inst->freshStartTail = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "filenotfounderror")) {
+			inst->fileNotFoundError = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "escapelf")) {
 			inst->escapeLF = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "reopenontruncate")) {
@@ -1717,13 +1731,22 @@ startLstnFile(lstn_t *const __restrict__ pLstn)
 	if(wd < 0) {
 		char errStr[512];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("imfile: could not create file table entry for '%s' - "
-			  "not processing it now: %s\n",
-			  pLstn->pszFileName, errStr);
+		if(pLstn->fileNotFoundError) {
+			errmsg.LogError(0, NO_ERRCODE, "imfile: error with inotify API,"
+					" ignoring file '%s': %s ", pLstn->pszFileName, errStr);
+		} else {
+			DBGPRINTF("imfile: could not create file table entry for '%s' - "
+				  "not processing it now: %s\n", pLstn->pszFileName, errStr);
+		}
 		goto done;
 	}
 	if((localRet = wdmapAdd(wd, -1, pLstn)) != RS_RET_OK) {
-		DBGPRINTF("imfile: error %d adding file to wdmap, ignoring\n", localRet);
+		if(pLstn->fileNotFoundError) {
+			errmsg.LogError(0, NO_ERRCODE, "imfile: internal error: error %d adding file "
+					"to wdmap, ignoring file '%s'\n", localRet, pLstn->pszFileName);
+		} else {
+			DBGPRINTF("imfile: error %d adding file to wdmap, ignoring\n", localRet);
+		}
 		goto done;
 	}
 	DBGPRINTF("imfile: watch %d added for file %s\n", wd, pLstn->pszFileName);
@@ -1783,6 +1806,7 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 	pThis->addCeeTag = existing->addCeeTag;
 	pThis->readTimeout = existing->readTimeout;
 	pThis->freshStartTail = existing->freshStartTail;
+	pThis->fileNotFoundError = existing->fileNotFoundError;
 	pThis->pRuleset = existing->pRuleset;
 	pThis->nRecords = 0;
 	pThis->pStrm = NULL;
@@ -2431,6 +2455,7 @@ persistStrmState(lstn_t *pLstn)
 	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetFName(psSF, statefn, strlen((char*) statefn)));
+	CHKiRet(strm.SetFileNotFoundError(psSF, pLstn->fileNotFoundError));
 	CHKiRet(strm.ConstructFinalize(psSF));
 
 	CHKiRet(strm.Serialize(pLstn->pStrm, psSF));

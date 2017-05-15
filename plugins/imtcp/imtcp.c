@@ -97,7 +97,9 @@ static struct configSettings_s {
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;
 	int iAddtlFrameDelim;
+	int maxFrameSize;
 	int bDisableLFDelim;
+	int discardTruncatedMsg;
 	int bUseFlowControl;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszInputName;
@@ -127,8 +129,10 @@ struct modConfData_s {
 	int iTCPLstnMax; /* max number of sessions */
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
+	int maxFrameSize;
 	int bSuppOctetFram;
 	sbool bDisableLFDelim; /* disable standard LF delimiter */
+	sbool discardTruncatedMsg;
 	sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
 	sbool bKeepAlive;
 	int iKeepAliveIntvl;
@@ -148,9 +152,11 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
 static struct cnfparamdescr modpdescr[] = {
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
+	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "octetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
 	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
+	{ "maxframesize", eCmdHdlrInt, 0 },
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
@@ -356,7 +362,9 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, modConf->iStrmDrvrMode));
 		CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, modConf->bUseFlowControl));
 		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, modConf->iAddtlFrameDelim));
+		CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, modConf->maxFrameSize));
 		CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, modConf->bDisableLFDelim));
+		CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, modConf->discardTruncatedMsg));
 		CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, modConf->bEmitMsgOnClose));
 		/* now set optional params, but only if they were actually configured */
 		if(modConf->pszStrmDrvrName != NULL) {
@@ -458,7 +466,9 @@ CODESTARTbeginCnfLoad
 	loadModConf->iKeepAliveTime = 0;
 	loadModConf->bEmitMsgOnClose = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	loadModConf->maxFrameSize = 200000;
 	loadModConf->bDisableLFDelim = 0;
+	loadModConf->discardTruncatedMsg = 0;
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->permittedPeers = NULL;
@@ -493,12 +503,23 @@ CODESTARTsetModCnf
 			loadModConf->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "disablelfdelimiter")) {
 			loadModConf->bDisableLFDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "discardtruncatedmsg")) {
+			loadModConf->discardTruncatedMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "octetcountedframing")) {
 			loadModConf->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
 			loadModConf->bEmitMsgOnClose = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
 			loadModConf->iAddtlFrameDelim = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "maxframesize")) {
+			const int max = (int) pvals[i].val.d.n;
+			if(max <= 200000000) {
+				loadModConf->maxFrameSize = max;
+			} else {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imtcp: invalid value for 'maxFrameSize' "
+						"parameter given is %d, max is 200000000", max);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
 		} else if(!strcmp(modpblk.descr[i].name, "maxsessions")) {
 			loadModConf->iTCPSessMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "maxlisteners") ||
@@ -548,6 +569,7 @@ CODESTARTendCnfLoad
 		pModConf->bEmitMsgOnClose = cs.bEmitMsgOnClose;
 		pModConf->bSuppOctetFram = cs.bSuppOctetFram;
 		pModConf->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+		pModConf->maxFrameSize = cs.maxFrameSize;
 		pModConf->bDisableLFDelim = cs.bDisableLFDelim;
 		pModConf->bUseFlowControl = cs.bUseFlowControl;
 		pModConf->bKeepAlive = cs.bKeepAlive;
@@ -702,6 +724,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	cs.iKeepAliveIntvl = 0;
 	cs.bEmitMsgOnClose = 0;
 	cs.iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	cs.maxFrameSize = 200000;
 	cs.bDisableLFDelim = 0;
 	free(cs.pszInputName);
 	cs.pszInputName = NULL;

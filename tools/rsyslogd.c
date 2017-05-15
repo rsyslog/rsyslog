@@ -824,7 +824,9 @@ void
 rsyslogd_submitErrMsg(const int severity, const int iErr, const uchar *msg)
 {
 	if (glbl.GetGlobalInputTermState() == 1) {
-		dfltErrLogger(severity, iErr, msg);
+		/* After fork the stderr is unusable (dfltErrLogger uses is internally) */
+		if(!doFork)
+			dfltErrLogger(severity, iErr, msg);
 	} else {
 		logmsgInternal(iErr, LOG_SYSLOG|(severity & 0x07), msg, 0);
 	}
@@ -838,10 +840,10 @@ submitMsgWithDfltRatelimiter(smsg_t *pMsg)
 
 
 static void
-logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
+logmsgInternal_doWrite(smsg_t *pMsg)
 {
 	if(bProcessInternalMessages) {
-		ratelimitAddMsg(internalMsg_ratelimiter, NULL, pMsg);
+		submitMsg2(pMsg);
 	} else {
 		const int pri = getPRIi(pMsg);
 		uchar *const msg = getMSG(pMsg);
@@ -850,6 +852,8 @@ logmsgInternal_doWrite(smsg_t *const __restrict__ pMsg)
 #		else
 		syslog(pri, "%s", msg);
 #		endif
+		/* we have emitted the message and must destruct it */
+		msgDestruct(&pMsg);
 	}
 }
 
@@ -1509,9 +1513,16 @@ void
 processImInternal(void)
 {
 	smsg_t *pMsg;
+	smsg_t *repMsg;
 
 	while(iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
-		logmsgInternal_doWrite(pMsg);
+		rsRetVal localRet = ratelimitMsg(internalMsg_ratelimiter, pMsg, &repMsg);
+		if(repMsg != NULL) {
+			logmsgInternal_doWrite(repMsg);
+		}
+		if(localRet == RS_RET_OK) {
+			logmsgInternal_doWrite(pMsg);
+		}
 	}
 }
 
@@ -1721,10 +1732,10 @@ mainloop(void)
 			pid_t child;
 			do {
 				child = waitpid(-1, NULL, WNOHANG);
-				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %d\n", child);
+				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n", (unsigned) child);
 				if (child != -1 && child != 0) {
 					errmsg.LogError(0, RS_RET_OK, "Child %d has terminated, reaped "
-						"by main-loop.", child);
+						"by main-loop.", (unsigned) child);
 				}
 			} while(child > 0);
 			bChildDied = 0;

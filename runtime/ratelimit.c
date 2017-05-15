@@ -216,7 +216,7 @@ ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg)
 	 * treshold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
         char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-        snprintf(namebuf, sizeof namebuf, "%s%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
+        snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg), getAPPNAME(pMsg, 0));
         if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_DISCARDMSG);
@@ -261,6 +261,7 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 			CHKiRet(submitMsg2(pMsg));
 	} else {
 		localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
+dbgprintf("RRRRRR: localRet %d\n", localRet);
 		if(repMsg != NULL) {
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = repMsg;
 			if(pMultiSub->nElem == pMultiSub->maxElem)
@@ -270,6 +271,8 @@ ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg)
 			pMultiSub->ppMsgs[pMultiSub->nElem++] = pMsg;
 			if(pMultiSub->nElem == pMultiSub->maxElem)
 				CHKiRet(multiSubmitMsg2(pMultiSub));
+		//} else if(localRet == RS_RET_DISCARDMSG) { /////
+			//msgDestruct(&pMsg); /////
 		}
 	}
 

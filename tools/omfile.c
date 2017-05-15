@@ -1528,7 +1528,7 @@ INITLegCnfVars
 
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, setDynaFileCacheSize,
 		NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &cs.iZipLevel,
 		STD_LOADABLE_MODULE_ID));

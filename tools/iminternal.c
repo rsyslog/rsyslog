@@ -99,7 +99,11 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg)
 	 */
 	to.tv_sec = time(NULL) + 1;
 	to.tv_nsec = 0;
-	r = pthread_mutex_timedlock(&mutList, &to);
+   #if !defined(__APPLE__)
+   r = pthread_mutex_timedlock(&mutList, &to);
+   #else
+   r = pthread_mutex_trylock(&mutList); // must check
+   #endif
 	is_locked = 1;
 	if(r != 0) {
 		dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n",
@@ -116,7 +120,8 @@ rsRetVal iminternalAddMsg(smsg_t *pMsg)
 	pthread_mutex_unlock(&mutList);
 	is_locked = 0;
 	if(bHaveMainQueue) {
-		dbgprintf("signaling new internal message via SIGTTOU\n");
+		DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
+			pThis->pMsg->pszRawMsg);
 		kill(glblGetOurPid(), SIGTTOU);
 	}
 

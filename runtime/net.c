@@ -64,6 +64,7 @@
 #include "prop.h"
 
 #ifdef OS_SOLARIS
+#include <arpa/nameser_compat.h>
 #	define	s6_addr32	_S6_un._S6_u32
 	typedef unsigned int	u_int32_t;
 #endif
@@ -1180,26 +1181,24 @@ getLocalHostname(uchar **ppName)
 	}
 
 	char *dot = strstr(hnbuf, ".");
+	struct addrinfo *res = NULL;
 	if(!empty_hostname && dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
-		struct hostent *hent = gethostbyname((char*)hnbuf);
-		if(hent) {
-			int i = 0;
-			if(hent->h_aliases) {
-				const size_t hnlen = strlen(hnbuf);
-				for(i = 0; hent->h_aliases[i]; i++) {
-					if(!strncmp(hent->h_aliases[i], hnbuf, hnlen)
-					   && hent->h_aliases[i][hnlen] == '.') {
-						break; /* match! */
-					}
-				}
+		struct addrinfo flags;
+		memset(&flags, 0, sizeof(flags));
+		flags.ai_flags = AI_CANONNAME;
+		int error = getaddrinfo((char*)hnbuf, NULL, &flags, &res);
+		if (error != 0) {
+			dbgprintf("getaddrinfo: %s\n", gai_strerror(error));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		if (res != NULL) {
+			/* When AI_CANONNAME is set first member of res linked-list */
+			/* should contain what we need */
+			if (res->ai_canonname != NULL && res->ai_canonname[0] != '\0') {
+				CHKmalloc(fqdn = (uchar*)strdup(res->ai_canonname));
+				dot = strstr((char*)fqdn, ".");
 			}
-			if(hent->h_aliases && hent->h_aliases[i]) {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_aliases[i]));
-			} else {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
-			}
-			dot = strstr((char*)fqdn, ".");
 		}
 	}
 
@@ -1214,6 +1213,9 @@ getLocalHostname(uchar **ppName)
 
 	*ppName = fqdn;
 finalize_it:
+	if (res != NULL) {
+		freeaddrinfo(res);
+	}
 	RETiRet;
 }
 

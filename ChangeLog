@@ -1,4 +1,84 @@
 ------------------------------------------------------------------------------
+Version 8.27.0 [v8-stable] 2017-05-16
+- imkafka: add module
+- imptcp enhancements:
+  * optionally emit an error message if incoming messages are truncated
+  * optionally emit connection tracking message (on connection create and
+    close)
+  * add "maxFrameSize" parameter to specify the maximum size permitted
+    in octet-counted mode
+  * add parameter "discardTruncatedMsg" to permit truncation of
+    oversize messages
+  * improve octect-counted mode detection: if the octet count is larger
+    then the set frame size (or overly large in general), it is now
+    assumed that octet-stuffing mode is used. This probably solves a
+    number of issues seen in real deployments.
+- imtcp enhancements:
+  * add parameter "discardTruncatedMsg" to permit truncation of
+    oversize messages
+  * add "maxFrameSize" parameter to specify the maximum size permitted
+    in octet-counted mode
+- imfile bugfix: "file not found error" repeatedly being reported
+  for configured non-existing file. In polling mode, this message
+  appeared once in each polling cycle, causing a potentially very large
+  amout of error messages. Note that they were usually emitted too
+  infrequently to trigger the error message rate limiter, albeit often
+  enough to be a major annoance.
+- imfile: in inotify mode, add error message if configured file cannot
+  be found
+- imfile: add parameter "fileNotFoundError" to optinally disable
+  "file not found" error messages
+- core: replaced gethostbyname() with getaddrinfo() call
+  Gethostbyname() is generally considered obsolete, is not reentrant and
+  cannot really work with IPv6. Changed the only place in rsyslog where
+  this call remained.
+  Thanks to github user jvymazal for the patch
+- omkafka: add "origin" field to stats output
+  See also https://github.com/rsyslog/rsyslog/issues/1508
+  Thanks to Yury Bushmelev for providing the patch.
+- imuxsock: rate-limiting also uses process name
+  both for the actual limit procesing as well as warning messages emitted
+  see also https://github.com/rsyslog/rsyslog/pull/1520
+  Thanks to github user jvymazal for the patch
+- Added new module: KSI log signing ver. 1.2 (lmsig_ksi_ls12)
+- rsylsog base functionality now builds on osx (Mac)
+  Thanks to github user hdatma for his help in getting this done.
+- build now works on solaris again
+- imfile: fix cross-platform build issue
+  see also https://github.com/rsyslog/rsyslog/issues/1494
+  Thanks to Felix Janda for bug report and solution suggestion.
+- bugfix core: segfault when no parser could parse message
+  This could happen if the default parser chain was changed and the
+  RFC3164 parser was not included. Never seen in practice, just by
+  experimenting in lab.
+- bugfix core: rate-limit internal messages when going to external log system
+  Rate-limiting was only applied to messages processed internally.
+  While the external logging system probably also applies rate-limiting,
+  it would be preferrable that rsyslog applies the same policies on
+  internal messages, no matter where they go. This is now the case.
+- bugfix core: when obtaining local hostname, a NULL pointer could be
+  accessed. This depends on many factors, among them that no local host
+  name is configured in rsyslog.conf AND the local system configuration
+  also is set to an empty hostname.
+  Thanks to github user jvymazal for the patch.
+- bugfix core: on shutdown, stderr was written to, even if alrady closed
+  This lead to messages going to whatever was associated with file
+  descriptor two.
+  Thanks to Allan Park for the patch.
+- bugfix core: perform MainqObj destruction only when not NULL already
+  This affects the config object; in theory may lead to misadressing during
+  config parsing.
+  Thanks to github user jvymazal for the patch
+- bugfix core: memory leak when internal messages not processed internally
+  In this case, the message object is not destructed, resulting in
+  a memory leak. Usually, this is no problem due to the low number
+  of internal message, but it can become an issue if a large number
+  of messages is emitted.
+  closes https://github.com/rsyslog/rsyslog/issues/1548
+  closes https://github.com/rsyslog/rsyslog/issues/1531
+- bugfix imptcp: potential overflow in octet count computation
+  when a very large octet count was specified, the counter could overflow
+------------------------------------------------------------------------------
 Version 8.26.0 [v8-stable] 2017-04-04
 - NEW BUILD REQUIREMENT: liblognorm 2.0.3 is required for mmnormalize
   If mmnormalize is not built, the build requirements are unchanged.

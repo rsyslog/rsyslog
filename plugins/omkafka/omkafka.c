@@ -1,18 +1,18 @@
 /* omkafka.c
  * This output plugin make rsyslog talk to Apache Kafka.
  *
- * Copyright 2014-2016-2016 by Adiscon GmbH.
+ * Copyright 2014-2017 by Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,6 @@
 #include <pthread.h>
 #include <sys/uio.h>
 #include <librdkafka/rdkafka.h>
-#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
@@ -160,7 +159,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 ENDinitConfVars
 
 static uint32_t
@@ -287,7 +286,7 @@ rd_kafka_topic_t** topic) {
 	rkt = rd_kafka_topic_new(pData->rk, (char *)newTopicName, topicconf);
 	if(rkt == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"omkafka: error creating kafka topic: %s\n", 
+						"omkafka: error creating kafka topic: %s\n",
 						rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
@@ -525,7 +524,7 @@ kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 
 /* should be called with write(rkLock) */
 static void
-do_rd_kafka_destroy(instanceData *const __restrict pData)
+do_rd_kafka_destroy(instanceData *const __restrict__ pData)
 {
 	if (pData->rk == NULL) {
 		DBGPRINTF("omkafka: can't close, handle wasn't open\n");
@@ -535,7 +534,7 @@ do_rd_kafka_destroy(instanceData *const __restrict pData)
 
 		struct timespec tOut;
 		timeoutComp(&tOut, pData->closeTimeout);
-		
+
 		while (timeoutVal(&tOut) > 0) {
 			queuedCount = rd_kafka_outq_len(pData->rk);
 			if (queuedCount > 0) {
@@ -617,25 +616,25 @@ openKafka(instanceData *const __restrict__ pData)
 	rd_kafka_conf_t *const conf = rd_kafka_conf_new();
 	if(conf == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-			"omkafka: error creating kafka conf obj: %s\n", 
+			"omkafka: error creating kafka conf obj: %s\n",
 			rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		if(rd_kafka_conf_set(conf,
-				     pData->confParams[i].name, 
-				     pData->confParams[i].val, 
+				     pData->confParams[i].name,
+				     pData->confParams[i].val,
 				     errstr, sizeof(errstr))
 	 	   != RD_KAFKA_CONF_OK) {
 			if(pData->bReportErrs) {
 				errmsg.LogError(0, RS_RET_PARAM_ERROR, "error in kafka "
-						"parameter '%s=%s': %s", 
-						pData->confParams[i].name, 
+						"parameter '%s=%s': %s",
+						pData->confParams[i].name,
 						pData->confParams[i].val, errstr);
 			}
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
-	} 
+	}
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
@@ -654,6 +653,7 @@ openKafka(instanceData *const __restrict__ pData)
 # if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_set_logger(pData->rk, kafkaLogger);
 # endif
+	DBGPRINTF("omkafka setting brokers: '%s'n", pData->brokers);
 	if((nBrokers = rd_kafka_brokers_add(pData->rk, (char*)pData->brokers)) == 0) {
 		errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
 			"omkafka: no valid brokers specified: %s\n", pData->brokers);
@@ -790,7 +790,7 @@ CODESTARTtryResume
 	 * mailing list. -- rgerhards, 2014-12-14
 	 */
 	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
-	
+
 finalize_it:
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
@@ -865,7 +865,7 @@ CODESTARTdoAction
 		iRet = writeKafka(pData, ppString[0], ppString[1]);
 	else
 		iRet = writeKafka(pData, ppString[0], pData->topic);
-		
+
 	pthread_rwlock_unlock(&pData->rkLock);
 finalize_it:
 ENDdoAction
@@ -998,7 +998,7 @@ CODESTARTnewActInst
 	iNumTpls = 1;
 	if(pData->dynaTopic) ++iNumTpls;
 	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ? 
+	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 						"RSYSLOG_FileFormat" : (char*)pData->tplName),
 						OMSR_NO_RQD_TPL_OPTS));
 	if(pData->dynaTopic) {
@@ -1055,7 +1055,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
@@ -1075,6 +1075,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	          VERSION, rd_kafka_version_str());
 	CHKiRet(statsobj.Construct(&kafkaStats));
 	CHKiRet(statsobj.SetName(kafkaStats, (uchar *)"omkafka"));
+	CHKiRet(statsobj.SetOrigin(kafkaStats, (uchar*)"omkafka"));
 	STATSCOUNTER_INIT(ctrTopicSubmit, mutCtrTopicSubmit);
 	CHKiRet(statsobj.AddCounter(kafkaStats, (uchar *)"submitted",
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrTopicSubmit));

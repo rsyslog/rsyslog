@@ -955,8 +955,8 @@ rsRetVal msgDestruct(smsg_t **ppThis)
 	int currCnt;
 #	endif
 CODESTARTobjDestruct(msg)
-	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx,
-	Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
+	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, "
+		"Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
 #	ifdef HAVE_ATOMIC_BUILTINS
 		currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, NULL);
 #	else
