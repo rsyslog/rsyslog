@@ -1,5 +1,6 @@
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
+- imkafka: add module
 - imptcp enhancements:
   * optionally emit an error message if incoming messages are truncated
   * optionally emit connection tracking message (on connection create and
@@ -40,6 +41,8 @@ Version 8.27.0 [v8-stable] 2017-05-16
   see also https://github.com/rsyslog/rsyslog/pull/1520
   Thanks to github user jvymazal for the patch
 - Added new module: KSI log signing ver. 1.2 (lmsig_ksi_ls12)
+- rsylsog base functionality now builds on osx (Mac)
+  Thanks to github user hdatma for his help in getting this done.
 - build now works on solaris again
 - imfile: fix cross-platform build issue
   see also https://github.com/rsyslog/rsyslog/issues/1494
