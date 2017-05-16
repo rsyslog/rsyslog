@@ -74,7 +74,8 @@ PKG_PROG_PKG_CONFIG
 
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
-PKG_CHECK_MODULES([JSON_C], [libfastjson >= 0.99.3],,)
+
+PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.3],,)
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's
@@ -923,7 +924,7 @@ if test "x$enable_rsyslogrt" = "xyes"; then
   RSRT_LIBS1="\$(top_builddir)/runtime/librsyslog.la"
 fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(JSON_C_CFLAGS)"
+RSRT_CFLAGS="\$(RSRT_CFLAGS1) \$(LIBESTR_CFLAGS) \$(LIBFASTJSON_CFLAGS)"
 if test "$GCC" = "yes"; then
   RSRT_CFLAGS="$RSRT_CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute"
   if $CC -Werror=implicit-function-declaration -x c -c /dev/null -o /dev/null 2>/dev/null; then
@@ -937,7 +938,7 @@ if test "$GCC" = "yes"; then
   fi
 fi
 RSRT_CFLAGS="$RSRT_CFLAGS $WARN_CFLAGS"
-RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(JSON_C_LIBS)"
+RSRT_LIBS="\$(RSRT_LIBS1) \$(LIBESTR_LIBS) \$(LIBFASTJSON_LIBS)"
 AC_SUBST(RSRT_CFLAGS1)
 AC_SUBST(RSRT_LIBS1)
 AC_SUBST(RSRT_CFLAGS)

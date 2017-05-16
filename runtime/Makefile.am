@@ -113,8 +113,8 @@ else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
 
 #
 # regular expression support
