@@ -63,7 +63,7 @@ Version 8.27.0 [v8-stable] 2017-05-16
   name is configured in rsyslog.conf AND the local system configuration
   also is set to an empty hostname.
   Thanks to github user jvymazal for the patch.
-- bugfix core: on shutdown, stderr was written to, even if alrady closed
+- bugfix core: on shutdown, stderr was written to, even if already closed
   This lead to messages going to whatever was associated with file
   descriptor two.
   Thanks to Allan Park for the patch.
