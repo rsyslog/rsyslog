@@ -60,7 +60,7 @@ The following example creates a custom parser definition and uses it within a ru
 
 ::
 
-  load(module="pmciscoios")
+  module(load="pmciscoios")
   parser(name="custom.pmciscoios.with_origin" type="pmciscoios")
 
   ruleset(name="myRuleset" parser="custom.pmciscoios.with_origin") {
@@ -71,8 +71,8 @@ The following example uses multiple parsers within a ruleset without a parser ob
 
 ::
 
-  load(module="pmaixforwardedfrom")
-  load(module="pmlastmsg")
+  module(load="pmaixforwardedfrom")
+  module(load="pmlastmsg")
   
   ruleset(name="myRuleset" parser=["rsyslog.lastline","rsyslog.aixforwardedfrom","rsyslog.rfc5424","rsyslog.rfc3164"]) {
      ... do something here ...
