@@ -5,11 +5,11 @@ Keyless Signature Infrastructure Provider (ksi)
 
 **Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
-**Supported Since:** since 8.11.0
+**Supported:** from 8.11.0 to 8.26.0
 
 **Description**:
 
-Provides the ability to sign syslog messages via the GuardTime KSI 
+Provides the ability to sign syslog messages via the GuardTime KSI
 signature services.
 
 **Configuration Parameters**:
@@ -41,15 +41,15 @@ both in order to prove integrity.
 
 -  **sig.aggregator.uri** <KSI Aggregator URL>
    This provides the URL of the KSI Aggregator service provided by
-   guardtime and looks like this: 
-	
+   guardtime and looks like this:
+
 	ksi+tcp://[ip/dnsname]:3332
 
 -  **sig.aggregator.user** <KSI UserID>
-   Set your username provided by Guardtime here. 
+   Set your username provided by Guardtime here.
 
 -  **sig.aggregator.key** <KSI Key / Password>
-   Set your key provided by Guardtime here. 
+   Set your key provided by Guardtime here.
 
 -  **sig.block.sizeLimit** <nbr-records>
    The maximum number of records inside a single signature block. By
