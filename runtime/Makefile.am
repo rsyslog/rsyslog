@@ -107,14 +107,42 @@ librsyslog_la_SOURCES = \
 #librsyslog_la_SOURCES += \
 #endif
 
+librsyslog_la_LDFLAGS =
+
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
 else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
-#librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
+
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) -I\$(top_srcdir)/tools
+librsyslog_la_LIBADD    = $(DL_LIBS) $(RT_LIBS)
+#librsyslog_la_LDFLAGS += -module -avoid-version
+
+# https://github.com/rsyslog/libestr/releases
+librsyslog_la_CPPFLAGS += ${LIBESTR_CFLAGS}
+librsyslog_la_LIBADD   += ${LIBESTR_LIBS}
+librsyslog_la_LDFLAGS  += ${LIBESTR_LIBS}
+librsyslog_la_LDFLAGS  += -lestr
+
+# https://github.com/rsyslog/libfastjson/releases
+librsyslog_la_CPPFLAGS += $(JSON_C_CFLAGS)
+librsyslog_la_LIBADD   += $(JSON_C_LIBS)
+librsyslog_la_LDFLAGS  += $(JSON_C_LIBS)
+librsyslog_la_LDFLAGS  += -lfastjson
+
+# https://github.com/rsyslog/liblogging/releases
+if ENABLE_LIBLOGGING_STDLOG
+librsyslog_la_CPPFLAGS += ${LIBLOGGING_STDLOG_CFLAGS}
+librsyslog_la_LIBADD   += ${LIBLOGGING_STDLOG_LIBS}
+librsyslog_la_LDFLAGS  += ${LIBLOGGING_STDLOG_LIBS}
+librsyslog_la_LDFLAGS  += -llogging-stdlog
+endif
+
+if ENABLE_UUID
+librsyslog_la_CPPFLAGS += $(LIBUUID_CFLAGS)
+librsyslog_la_LIBADD   += $(LIBUUID_LIBS)
+endif
 
 #
 # regular expression support
