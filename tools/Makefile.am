@@ -37,37 +37,52 @@ rsyslogd_SOURCES = \
 	iminternal.h \
 	\
 	../dirty.h
-rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBLOGGING_STDLOG_CFLAGS) -DSD_EXPORT_SYMBOLS
+
+rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) -DSD_EXPORT_SYMBOLS
+
 # note: it looks like librsyslog.la must be explicitely given on LDDADD,
 # otherwise dependencies are not properly calculated (resulting in a
 # potentially incomplete build, a problem we had several times...)
-rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/compat.la $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS) $(LIBUUID_LIBS)
+rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/compat.la ${ZLIB_LIBS} $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS)
 
-# if you know how to do an "if AIX os OS_APPLE" or an elseif chain, let me now!
-#rsyslogd_LDFLAGS = -export-dynamic \
-#	-Wl,$(top_builddir)/runtime/.libs/librsyslog.a
-#if OS_LINUX
-rsyslogd_LDFLAGS = -export-dynamic \
-	#-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
-#endif
-if OS_APPLE
-rsyslogd_LDFLAGS = -export-dynamic \
-	-Wl,$(top_builddir)/runtime/.libs/librsyslog.a
-endif
 if AIX
-rsyslogd_LDFLAGS = -export-dynamic 
-#else
-#rsyslogd_LDFLAGS = -export-dynamic \
-	#-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+LDFLAGSOPT = 
 endif
+if OS_APPLE
+LDFLAGSOPT = -Wl,$(top_builddir)/runtime/.libs/librsyslog.a
+endif
+if OS_LINUX
+LDFLAGSOPT = -Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+endif
+rsyslogd_LDFLAGS = -export-dynamic $(LDFLAGSOPT)
 
 EXTRA_DIST = $(man_MANS) \
 	rsgtutil.rst \
 	rscryutil.rst \
 	recover_qi.pl
 
+# https://github.com/rsyslog/libestr/releases
+rsyslogd_CPPFLAGS += ${LIBESTR_CFLAGS}
+rsyslogd_LDADD    += ${LIBESTR_LIBS}
+rsyslogd_LDFLAGS  += ${LIBESTR_LIBS}
+rsyslogd_LDFLAGS  += -lestr
+
+# https://github.com/rsyslog/libfastjson/releases
+rsyslogd_CPPFLAGS += ${JSON_C_CFLAGS}
+rsyslogd_LDADD    += ${JSON_C_LIBS}
+rsyslogd_LDFLAGS  += ${JSON_C_LIBS}
+rsyslogd_LDFLAGS  += -lfastjson
+
+# https://github.com/rsyslog/liblogging/releases
 if ENABLE_LIBLOGGING_STDLOG
-rsyslogd_LDADD += $(LIBLOGGING_STDLOG_LIBS)
+rsyslogd_CPPFLAGS += ${LIBLOGGING_STDLOG_CFLAGS}
+rsyslogd_LDADD    += ${LIBLOGGING_STDLOG_LIBS}
+rsyslogd_LDFLAGS  += -llogging-stdlog
+endif
+
+if ENABLE_UUID
+rsyslogd_CPPFLAGS += $(LIBUUID_CFLAGS)
+rsyslogd_LDADD    += $(LIBUUID_LIBS)
 endif
 
 if ENABLE_DIAGTOOLS
