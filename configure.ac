@@ -1710,12 +1710,13 @@ fi
 
 # imkafka needs newer library
 if test "x$enable_imkafka" = "xyes"; then
-	PKG_CHECK_MODULES(LIBRDKAFKA, rdkafka >= 0.9.1)
-	AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
-		AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
-		LIBRDKAFKA_LIBS=-lrdkafka
-	], [
-		AC_MSG_ERROR([could not find rdkafka library])
+	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.9.1],, [
+		AC_CHECK_LIB([rdkafka], [rd_kafka_produce], [
+			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
+			LIBRDKAFKA_LIBS=-lrdkafka
+		], [
+			AC_MSG_ERROR([could not find rdkafka library])
+		])
 	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 fi
