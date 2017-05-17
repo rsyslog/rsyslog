@@ -279,6 +279,14 @@ the input they are specified with.
    :doc:`omfwd <omfwd>`.
    Please see it's documentation for details.
 
+.. function:: flowControl <on/off>
+
+   *Default: on*
+
+   Flow control is used to throttle the sender if the receiver queue is
+   near-full preserving some space for input that can not be throttled.
+
+
 Caveats/Known Bugs
 ------------------
 
