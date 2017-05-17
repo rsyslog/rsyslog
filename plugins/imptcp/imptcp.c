@@ -146,6 +146,7 @@ struct instanceConf_s {
 	uchar *dfltTZ;
 	sbool bUnlink;
 	sbool discardTruncatedMsg;
+	sbool flowControl;
 	int ratelimitInterval;
 	int ratelimitBurst;
 	struct instanceConf_s *next;
@@ -187,6 +188,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "filegroupnum", eCmdHdlrInt, 0 },
 	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
 	{ "failonchownfailure", eCmdHdlrBinary, 0 },
+	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "name", eCmdHdlrString, 0 },
 	{ "maxframesize", eCmdHdlrInt, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
@@ -253,6 +255,7 @@ struct ptcpsrv_s {
 	sbool bSPFramingFix;
 	sbool bUnlink;
 	sbool discardTruncatedMsg;
+	sbool flowControl;
 	ratelimit_t *ratelimiter;
 };
 
@@ -867,6 +870,8 @@ doSubmitMsg(ptcpsess_t *pThis, struct syslogTime *stTime, time_t ttGenTime, mult
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	if(pSrv->dfltTZ != NULL)
 		MsgSetDfltTZ(pMsg, (char*) pSrv->dfltTZ);
+	MsgSetFlowControlType(pMsg, pSrv->flowControl
+			            ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	MsgSetRcvFrom(pMsg, pThis->peerName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->peerIP));
@@ -1450,6 +1455,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bFailOnPerms = 1;
 	inst->bUnlink = 0;
 	inst->discardTruncatedMsg = 0;
+	inst->flowControl = 1;
 	inst->pszBindRuleset = NULL;
 	inst->pszInputName = NULL;
 	inst->bSuppOctetFram = 1;
@@ -1575,6 +1581,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 	pSrv->bUnlink = inst->bUnlink;
 	pSrv->discardTruncatedMsg = inst->discardTruncatedMsg;
+	pSrv->flowControl = inst->flowControl;
 	pSrv->pRuleset = inst->pBindRuleset;
 	pSrv->pszInputName = ustrdup((inst->pszInputName == NULL) ?  UCHAR_CONSTANT("imptcp") : inst->pszInputName);
 	CHKiRet(prop.Construct(&pSrv->pInputName));
@@ -1970,6 +1977,8 @@ CODESTARTnewInpInst
 			inst->bUnlink = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
 			inst->discardTruncatedMsg = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
+			inst->flowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "fileowner")) {
 			inst->fileUID = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "fileownernum")) {
