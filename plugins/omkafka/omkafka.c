@@ -128,6 +128,7 @@ typedef struct _instanceData {
 	int fdErrFile;		/* error file fd or -1 if not open */
 	pthread_mutex_t mutErrFile;
 	int bIsOpen;
+	int bIsSuspended;	/* when broker fail, we need to suspend the action */
 	pthread_rwlock_t rkLock;
 	rd_kafka_t *rk;
 	int closeTimeout;
@@ -515,8 +516,14 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	   void *opaque, void __attribute__((unused)) *msg_opaque)
 {
 	instanceData *const pData = (instanceData *) opaque;
-	if(error_code != 0)
+	// int msgid = 0; //*(int *)msg_opaque;
+
+	if(error_code != 0) {
+		DBGPRINTF("omkafka: kafka delivery FAIL on msg '%.*s'\n", (int)len-1, (char*)payload);
 		writeDataError(pData, (char*) payload, len, error_code);
+	} else {
+		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)len-1, (char*)payload);
+	}
 }
 
 static void
@@ -579,8 +586,17 @@ errorCallback(rd_kafka_t __attribute__((unused)) *rk,
 	const char *reason,
 	void __attribute__((unused)) *opaque)
 {
+	/* Get InstanceData pointer */
+	instanceData *const pData = (instanceData *) opaque;
+
 	errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-		"omkafka: kafka message %s", reason);
+		"omkafka: kafka error message:'%d','%s','%s'", err, rd_kafka_err2str(err), reason);
+
+	if (err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN ||
+		err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
+		/* Broker transport error, we need to disable the action for now!*/
+		pData->bIsSuspended = 1;
+	}
 }
 
 
@@ -625,6 +641,15 @@ openKafka(instanceData *const __restrict__ pData)
 			rd_kafka_err2str(rd_kafka_errno2err(errno)));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
+
+#ifdef DEBUG
+	/* enable kafka debug output */
+	if(	rd_kafka_conf_set(conf, "debug", RD_KAFKA_DEBUG_CONTEXTS,
+		errstr, sizeof(errstr)) != RD_KAFKA_CONF_OK) {
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	}
+#endif
+
 	for(int i = 0 ; i < pData->nConfParams ; ++i) {
 		if(rd_kafka_conf_set(conf,
 				     pData->confParams[i].name,
@@ -655,6 +680,7 @@ openKafka(instanceData *const __restrict__ pData)
 			"omkafka: error creating kafka handle: %s\n", kafkaErrMsg);
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
+
 # if RD_KAFKA_VERSION < 0x00090001
 	rd_kafka_set_logger(pData->rk, kafkaLogger);
 # endif
@@ -719,6 +745,7 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->currPartition = 0;
 	pData->bIsOpen = 0;
+	pData->bIsSuspended = 0;
 	pData->fdErrFile = -1;
 	pData->pTopic = NULL;
 	pData->bReportErrs = 1;
@@ -779,6 +806,8 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
+	int iKafkaRet;
+	const struct rd_kafka_metadata *metadata;
 CODESTARTtryResume
 	/* Note: we do have an issue here: some errors unfortunately
 	 * show up only when we actually produce data. As such, we cannot
@@ -795,6 +824,16 @@ CODESTARTtryResume
 	 * mailing list. -- rgerhards, 2014-12-14
 	 */
 	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
+
+	if ((iKafkaRet = rd_kafka_metadata(pWrkrData->pData->rk, 0, NULL, &metadata, 1000)) != RD_KAFKA_RESP_ERR_NO_ERROR) {
+		DBGPRINTF("omkafka: tryResume failed, brokers down %d,%s\n", iKafkaRet, rd_kafka_err2str(iKafkaRet));
+	} else {
+		DBGPRINTF("omkafka: tryResume success, %d brokers UP\n", metadata->broker_cnt);
+		/* Reset suspended state */
+		pWrkrData->pData->bIsSuspended = 0;
+		/* free mem*/
+		rd_kafka_metadata_destroy(metadata);
+	}
 
 finalize_it:
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
@@ -904,6 +943,12 @@ CODESTARTdoAction
 	instanceData *const pData = pWrkrData->pData;
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
+
+	/* Suspend Action if broker problems were reported in error callback */
+	if (pData->bIsSuspended) {
+		DBGPRINTF("omkafka: broker failure detected, suspending action\n");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
 
 	pthread_rwlock_rdlock(&pData->rkLock);
 

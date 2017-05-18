@@ -91,7 +91,6 @@ matrix:
 services:
   - elasticsearch
 
-
 before_install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then AD_PPA="v8-stable"; fi
   - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then sudo add-apt-repository ppa:adiscon/$AD_PPA -y ; fi
