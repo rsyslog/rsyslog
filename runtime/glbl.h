@@ -129,5 +129,6 @@ rsRetVal glblDoneLoadCnf(void);
 const uchar * glblGetWorkDirRaw(void);
 tzinfo_t* glblFindTimezoneInfo(char *id);
 int GetGnuTLSLoglevel(void);
+int glblGetMaxLine(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */
