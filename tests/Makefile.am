@@ -522,6 +522,10 @@ endif
 if ENABLE_MMDBLOOKUP
 TESTS += \
     mmdb.sh
+if HAVE_VALGRIND
+TESTS += \
+    mmdb-vg.sh
+endif
 endif
 
 if ENABLE_GNUTLS
@@ -933,6 +937,7 @@ EXTRA_DIST= \
 	mmdb.rb \
 	test.mmdb \
 	testsuites/mmdb.conf \
+	mmdb-vg.sh \
 	incltest.sh \
 	testsuites/incltest.conf \
 	incltest_dir.sh \
@@ -1480,6 +1485,7 @@ EXTRA_DIST= \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
 	testsuites/imptcp_nonProcessingPoller.conf \
+	libmaxmindb.supp \
 	travis/trusty.supp \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \

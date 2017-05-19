@@ -143,6 +143,14 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	if(pData->fieldList.name != NULL) {
+		for(int i = 0 ; i < pData->fieldList.nmemb ; ++i) {
+			free(pData->fieldList.name[i]);
+		}
+		free(pData->fieldList.name);
+	}
+	free(pData->pszKey);
+	free(pData->pszMmdbFile);
 ENDfreeInstance
 
 
@@ -186,7 +194,7 @@ CODESTARTnewActInst
 		}
 		if (!strcmp(actpblk.descr[i].name, "fields")) {
 			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(pData->fieldList.name = malloc(sizeof(uchar *) * pData->fieldList.nmemb));
+			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
 			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j)
 				pData->fieldList.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 		}
@@ -252,6 +260,8 @@ BEGINdoAction_NoStrings
 	struct json_object *keyjson = NULL;
 	char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
+	json_object *total_json = NULL;
+	MMDB_entry_data_list_s *entry_data_list = NULL;
 CODESTARTdoAction
 	json = json_object_new_object();
 
@@ -273,16 +283,13 @@ CODESTARTdoAction
 
 	if (0 != gai_err) {
 		dbgprintf("Error from call to getaddrinfo for %s - %s\n", pszValue, gai_strerror(gai_err));
-		dbgprintf("aaaaa\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 	if (MMDB_SUCCESS != mmdb_err) {
 		dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
-		dbgprintf("bbbbb\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	MMDB_entry_data_list_s *entry_data_list = NULL;
 	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
 	if (MMDB_SUCCESS != status) {
@@ -301,14 +308,16 @@ CODESTARTdoAction
 		str_split(&membuf);
 	}
 
-	json_object *total_json = json_tokener_parse(membuf);
+	total_json = json_tokener_parse(membuf);
 	fclose(memstream);
+	free(membuf);
 
 	if (pData->fieldList.nmemb < 1) {
-		dbgprintf("fieldList.name is empty!...\n");
+		DBGPRINTF("fieldList.name is empty!...\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
+	/* extract and amend fields (to message) as configured */
 	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
 		memset(buf, 0, sizeof(buf));
@@ -334,18 +343,25 @@ CODESTARTdoAction
 		for (;j >= 0 ;j--) {
 			if (j > 0) {
 				json1[j] = json_object_new_object();
+				json_object_get(temp_json);
 				json_object_object_add(json1[j], path[j], temp_json);
 				temp_json = json1[j];
-			} else
+			} else {
+				json_object_get(temp_json);
 				json_object_object_add(json, path[j], temp_json);
+			}
 		}
 
 	}
 
 finalize_it:
-
-if (json)
-	msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME, json, 0, 0);
+	if (json)
+		msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME, json, 0, 0);
+	if(entry_data_list != NULL)
+		MMDB_free_entry_data_list(entry_data_list);
+	json_object_put(keyjson);
+	if(total_json != NULL)
+		json_object_put(total_json);
 
 ENDdoAction
 
