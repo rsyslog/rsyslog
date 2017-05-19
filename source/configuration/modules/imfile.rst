@@ -422,6 +422,25 @@ Input Parameters
    to **on** will discard old logs. Otherwise, there may be vast useless
    message burst on the remote central log receiver
 
+.. index::
+   single: imfile; discardTruncatedMsg
+.. function:: discardTruncatedMsg <on/off>
+
+   *Default: off*
+
+   When messages are too long they are truncated and the following part is
+   processed as a new message. When this parameter is turned on the
+   truncated part is not processed but discarded.
+
+.. index::
+   single: imfile; msgDiscardingError
+.. function:: msgDiscardingError <on/off>
+
+   *Default: on*
+
+   Upon truncation an error is given. When this parameter is turned off, no
+   error will be shown upon truncation.
+
 
 WildCards
 ---------
