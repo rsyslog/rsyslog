@@ -592,6 +592,8 @@ endif
 if ENABLE_IMFILE
 TESTS += \
 	imfile-basic.sh \
+	imfile-discard-truncated-line.sh \
+	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \
@@ -1193,6 +1195,8 @@ EXTRA_DIST= \
 	imfile-endregex-vg.sh \
 	testsuites/imfile-endregex.conf \
 	imfile-basic.sh \
+	imfile-discard-truncated-line.sh \
+	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
 	imfile-fileNotFoundError-parameter.sh \
 	imfile-error-not-repeated.sh \

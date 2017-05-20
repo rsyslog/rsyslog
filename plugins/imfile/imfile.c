@@ -124,6 +124,8 @@ typedef struct lstn_s {
 	sbool hasWildcard;
 	uint8_t readMode;	/* which mode to use in ReadMulteLine call? */
 	uchar *startRegex;	/* regex that signifies end of message (NULL if unset) */
+	sbool discardTruncatedMsg;
+	sbool msgDiscardingError;
 	regex_t end_preg;	/* compiled version of startRegex */
 	uchar *prevLineSegment;	/* previous line segment (in regex mode) */
 	sbool escapeLF;	/* escape LF inside the MSG content? */
@@ -166,6 +168,8 @@ struct instanceConf_s {
 	sbool bRMStateOnDel;
 	uint8_t readMode;
 	uchar *startRegex;
+	sbool discardTruncatedMsg;
+	sbool msgDiscardingError;
 	sbool escapeLF;
 	sbool reopenOnTruncate;
 	sbool addCeeTag;
@@ -291,6 +295,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "ruleset", eCmdHdlrString, 0 },
 	{ "readmode", eCmdHdlrInt, 0 },
 	{ "startmsg.regex", eCmdHdlrString, 0 },
+	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
+	{ "msgdiscardingerror", eCmdHdlrBinary, 0 },
 	{ "escapelf", eCmdHdlrBinary, 0 },
 	{ "reopenontruncate", eCmdHdlrBinary, 0 },
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
@@ -722,7 +728,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->startRegex == NULL) {
 			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
 		} else {
-			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF));
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
@@ -774,6 +780,8 @@ createInstance(instanceConf_t **pinst)
 	inst->iPersistStateInterval = 0;
 	inst->readMode = 0;
 	inst->startRegex = NULL;
+	inst->discardTruncatedMsg = 0;
+	inst->msgDiscardingError = 1;
 	inst->bRMStateOnDel = 1;
 	inst->escapeLF = 1;
 	inst->reopenOnTruncate = 0;
@@ -1063,6 +1071,8 @@ addListner(instanceConf_t *inst)
 			DBGPRINTF("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
+	pThis->discardTruncatedMsg = inst->discardTruncatedMsg;
+	pThis->msgDiscardingError = inst->msgDiscardingError;
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;
 	pThis->escapeLF = inst->escapeLF;
 	pThis->reopenOnTruncate = inst->reopenOnTruncate;
@@ -1122,6 +1132,10 @@ CODESTARTnewInpInst
 			inst->readMode = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "startmsg.regex")) {
 			inst->startRegex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "discardtruncatedmsg")) {
+			inst->discardTruncatedMsg = (sbool) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "msgdiscardingerror")) {
+			inst->msgDiscardingError = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
 			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
@@ -1798,6 +1812,8 @@ lstnDup(lstn_t **ppExisting, uchar *const __restrict__ newname, uchar *const __r
 			DBGPRINTF("imfile: error regex compile\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
+	pThis->discardTruncatedMsg = existing->discardTruncatedMsg;
+	pThis->msgDiscardingError = existing->msgDiscardingError;
 	pThis->bRMStateOnDel = existing->bRMStateOnDel;
 	pThis->hasWildcard = existing->hasWildcard;
 	pThis->escapeLF = existing->escapeLF;

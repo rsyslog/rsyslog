@@ -885,13 +885,14 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF, const sbool discardTruncatedMsg, const sbool msgDiscardingError)
 {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
+	int maxMsgSize = glblGetMaxLine();
         DEFiRet;
 
 	do {
@@ -921,28 +922,59 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 			/* in this case, the *previous* message is complete and we are
 			 * at the start of a new one.
 			 */
-			if(pThis->prevMsgSegment != NULL) {
-				/* may be NULL in initial poll! */
-				finished = 1;
-				*ppCStr = pThis->prevMsgSegment;
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment != NULL) {
+					/* may be NULL in initial poll! */
+					finished = 1;
+					*ppCStr = pThis->prevMsgSegment;
+				}
 			}
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
-			
+			pThis->ignoringMsg = 0;
 		} else {
-			if(pThis->prevMsgSegment == NULL) {
-				/* may be NULL in initial poll or after timeout! */
-				CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
-			} else {
-				if(bEscapeLF) {
-					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment == NULL) {
+					/* may be NULL in initial poll or after timeout! */
+					CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 				} else {
-					cstrAppendChar(pThis->prevMsgSegment, '\n');
-				}
-				if(cstrLen(thisLine) > 0) {
-					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-					/* we could do this faster, but for now keep it simple */
-				}
+					if(bEscapeLF) {
+						rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+					} else {
+						cstrAppendChar(pThis->prevMsgSegment, '\n');
+					}
 
+
+					int currLineLen = cstrLen(thisLine);
+					if(currLineLen > 0) {
+						int len;
+						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) < maxMsgSize) {
+							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+							/* we could do this faster, but for now keep it simple */
+						} else {
+							len = currLineLen-(len-maxMsgSize);
+							for(int z=0; z<len; z++) {
+								cstrAppendChar(pThis->prevMsgSegment, thisLine->pBuf[z]);
+							}
+							finished = 1;
+							*ppCStr = pThis->prevMsgSegment;
+							CHKiRet(rsCStrConstructFromszStr(&pThis->prevMsgSegment, thisLine->pBuf+len));
+							if(discardTruncatedMsg == 1) {
+								pThis->ignoringMsg = 1;
+							}
+							if(msgDiscardingError == 1) {
+								if(discardTruncatedMsg == 1) {
+									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
+											"larger than max msg size; rest of message "
+											"will not be processed");
+								} else {
+									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
+											"larger than max msg size; message will be "
+											"split and processed as another message");
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 		cstrDestruct(&thisLine);
@@ -977,6 +1009,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
+	pThis->ignoringMsg = 0;
 	pThis->bPrevWasNL = 0;
 	pThis->fileNotFoundError = 1;
 	pThis->noRepeatedErrorOutput = 0;
