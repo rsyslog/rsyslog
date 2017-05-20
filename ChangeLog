@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.28.0 [v8-stable] 2017-06-27
+- imfile: add capability to truncate oversize messages or split into multiple
+  also in this case an error message is emitted. Both of these actions are
+  configurable. This also solves memory issues when an endregex does not
+  match for prolonged time. In that case, large parts of the file were
+  previously buffered, which could cause big problems in case e.g. the
+  endregex was simply wrong and never matched. For the later, see also
+  https://github.com/rsyslog/rsyslog/issues/1552
 - imptcp: add new parameter "flowControl"
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
