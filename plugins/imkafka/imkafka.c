@@ -185,7 +185,7 @@ DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage
 	}
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 
-	CHKiRet(submitMsg(pMsg));
+	CHKiRet(submitMsg2(pMsg));
 
 /* useful?
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
