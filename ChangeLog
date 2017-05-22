@@ -8,6 +8,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
   endregex was simply wrong and never matched. For the later, see also
   https://github.com/rsyslog/rsyslog/issues/1552
 - imptcp: add new parameter "flowControl"
+- bugfix mmdblookup: fixed multiple memory leaks
 - testbench/CI enhancements
   * re-enable and add kafka tests
     Kafka tests were disabled in 8.27.0 (a regression from imkafka).
