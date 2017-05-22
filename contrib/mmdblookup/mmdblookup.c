@@ -325,6 +325,7 @@ CODESTARTdoAction
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
 		memset(buf, 0, sizeof(buf));
 		strcpy(buf, (char *)pData->fieldList.name[i]);
+		dbgprintf("RRRR: buf: '%s'\n", buf);
 
 		struct json_object *json1[5] = {NULL};
 		json_object *temp_json = total_json;
