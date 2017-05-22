@@ -641,7 +641,18 @@ case $1 in
 		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
 		echo "Starting Kafka instance $2"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		./msleep 2000
+		./msleep 4000
+
+		# Check if kafka instance came up!
+		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+		# kafkapid=$(ps aux | grep -i '$dep_work_kafka_config' | grep java | grep -v grep | awk '{print $2}')
+		if [[ "" !=  "$kafkapid" ]];
+		then
+			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+		else
+			echo "Failed to start Kafka instance for $dep_work_kafka_config"
+			. $srcdir/diag.sh error-exit 1
+		fi
 		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then

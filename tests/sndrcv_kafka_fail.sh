@@ -44,7 +44,7 @@ echo \[sndrcv_kafka_fail.sh\]: Inject messages into rsyslog sender instance
 . $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1001
 
 echo \[sndrcv_kafka_fail.sh\]: Sleep to give rsyslog instances time to process data ...
-sleep 5
+sleep 10
 
 echo \[sndrcv_kafka_fail.sh\]: Stopping sender instance [imkafka]
 . $srcdir/diag.sh shutdown-when-empty 2
@@ -60,4 +60,6 @@ echo \[sndrcv_kafka_fail.sh\]: Stopping receiver instance [omkafka]
 echo \[sndrcv_kafka_fail.sh\]: stop kafka instance
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk' '22181'
 . $srcdir/diag.sh stop-kafka
+
+# STOP ZOOKEEPER in any case
 . $srcdir/diag.sh stop-zookeeper

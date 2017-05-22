@@ -1706,6 +1706,14 @@ if test "x$enable_omkafka" = "xyes"; then
 			])
 		])
 	])
+	PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
+		AC_CHECK_LIB([lz4], [LZ4_compress], [
+			AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
+			LIBRDKAFKA_LIBS=-llz4
+		], [
+			AC_MSG_ERROR([could not find liblz4 library])
+		])
+	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 fi
 
@@ -1719,6 +1727,15 @@ if test "x$enable_imkafka" = "xyes"; then
 			AC_MSG_ERROR([could not find rdkafka library])
 		])
 	])
+	PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
+		AC_CHECK_LIB([lz4], [LZ4_compress], [
+			AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
+			LIBRDKAFKA_LIBS=-llz4
+		], [
+			AC_MSG_ERROR([could not find liblz4 library])
+		])
+	])
+
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
 fi
 
