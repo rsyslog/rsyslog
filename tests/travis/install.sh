@@ -12,7 +12,7 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	set -ex
 	WANT_MAXMIND=1.2.0
 	curl -Ls https://github.com/maxmind/libmaxminddb/releases/download/${WANT_MAXMIND}/libmaxminddb-${WANT_MAXMIND}.tar.gz | tar -xz
-	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  &> /dev/null ; sudo make install &> /dev/null)
+	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; sudo make install &> /dev/null)
 	set +x
 else
 	sudo apt-get install -qq libmaxminddb-dev
@@ -23,8 +23,7 @@ if [ "x$KAFKA" == "xYES" ]; then
 	set -ex
 	git clone https://github.com/edenhill/librdkafka
 	echo $CFLAGS
-	#(cd librdkafka ; ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu ; sudo make install)
-	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g"; make ; sudo make install)
+	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make  > /dev/null ; sudo make install > /dev/null)
 	find /usr -name rdkafka.h
 	find /usr -name rdkafka.pc
 	ls -l /usr/lib/pkgconfig
