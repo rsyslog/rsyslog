@@ -311,6 +311,7 @@ CODESTARTdoAction
 		str_split(&membuf);
 	}
 
+	dbgprintf("RRRR: membuf: '%s'\n", membuf);
 	total_json = json_tokener_parse(membuf);
 	fclose(memstream);
 	free(membuf);
@@ -334,6 +335,7 @@ CODESTARTdoAction
 		char *path[10] = {NULL};
 		const char *sep = "!";
 
+		/* find lowest level JSON object */
 		char *s = strtok(buf, sep);
 		for (; s != NULL; j++) {
 			path[j] = s;
@@ -344,18 +346,24 @@ CODESTARTdoAction
 		}
 
 		j--;
+		const int jmax = j;
 		for (;j >= 0 ;j--) {
 			if (j > 0) {
 				json1[j] = json_object_new_object();
+				dbgprintf("RRRR: j=%d, add '%s' to '%s'\n", j, json_object_to_json_string(json), json_object_to_json_string(temp_json));
 				json_object_get(temp_json);
 				json_object_object_add(json1[j], path[j], temp_json);
 				temp_json = json1[j];
 			} else {
+				dbgprintf("RRRR: j=%d, add '%s' to '%s'\n", j, json_object_to_json_string(json), json_object_to_json_string(temp_json));
 				json_object_get(temp_json);
 				json_object_object_add(json, path[j], temp_json);
 			}
 		}
-
+		/* clean up interim json objects */
+		for (j = 1 ; j <= jmax ; j++) {
+			json_object_put(json1[j]);
+		}
 	}
 
 finalize_it:
@@ -366,7 +374,6 @@ finalize_it:
 	json_object_put(keyjson);
 	if(total_json != NULL)
 		json_object_put(total_json);
-
 ENDdoAction
 
 
