@@ -67,10 +67,5 @@ doesn't require a lot of time - even a single mouse click helps. Learn
 Related Links
 -------------
 
-.. [1] `rsyslog Website <http://www.rsyslog.com/>`_ 
 .. [2] `rsyslog Sponsor's Page <http://www.rsyslog.com/sponsors>`_
-.. [3] `Professional rsyslog Support <http://www.rsyslog.com/professional-services>`_
 .. [4] `Regular expression checker/generator tool for rsyslog <http://www.rsyslog.com/tool-regex>`_
-.. [5] `Rainer's twitter feed <http://twitter.com/rgerhards>`_
-.. [6] `Rainer's Blog <http://blog.gerhards.net/>`_
-
