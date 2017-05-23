@@ -552,10 +552,13 @@ endif
 
 if ENABLE_RELP
 TESTS += sndrcv_relp.sh \
-         sndrcv_relp_tls.sh \
          sndrcv_relp_dflt_pt.sh \
 	 imrelp-basic.sh \
 	 imrelp-manyconn.sh
+if ENABLE_GNUTLS
+TESTS += \
+         sndrcv_relp_tls.sh
+endif
 endif
 
 if ENABLE_OMUDPSPOOF
