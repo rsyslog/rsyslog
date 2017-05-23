@@ -5,8 +5,8 @@ pmnull: Syslog Null Parser Module
 
 When a message is received it is tried to match a set of parsers to get
 properties populated. This parser module sets all attributes to "" but rawmsg.
-It is used as a performance improvment since there are no CPU cycles wasted on
-parsing the message.
+There usually should be no need to use this module. It may be useful to
+process certain known-not-syslog messages.
 
 Parser Parameters
 -----------------
