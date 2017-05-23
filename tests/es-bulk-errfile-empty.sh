@@ -12,6 +12,7 @@ echo \[es-bulk-errfile-empty\]: basic test for elasticsearch functionality
 if [ -f rsyslog.errorfile ]
 then
     echo "error: error file exists!"
+    cat rsyslog.errorfile
     exit 1
 fi
 . $srcdir/diag.sh seq-check  0 9999
