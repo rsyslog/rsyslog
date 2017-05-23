@@ -258,7 +258,7 @@ BEGINdoAction_NoStrings
 	smsg_t *pMsg   = ppMsg[0];
 	struct json_object *json = NULL;
 	struct json_object *keyjson = NULL;
-	char *pszValue;
+	const char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
 	json_object *total_json = NULL;
 	MMDB_entry_data_list_s *entry_data_list = NULL;
@@ -277,6 +277,9 @@ CODESTARTdoAction
 	}
 	/* key found, so get the value */
 	pszValue = (char*)json_object_get_string(keyjson);
+	if(pszValue == NULL) { /* json null object returns NULL! */
+		pszValue = "";
+	}
 
 	int gai_err, mmdb_err;
 	MMDB_lookup_result_s result = MMDB_lookup_string(&pWrkrData->mmdb, pszValue, &gai_err, &mmdb_err);
