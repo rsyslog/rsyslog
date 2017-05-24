@@ -639,19 +639,28 @@ case $1 in
 		rm -rf $dep_work_dir/kafka
 		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
-		echo "Starting Kafka instance $2"
+		echo "Starting Kafka instance $dep_work_kafka_config"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 		./msleep 4000
 
 		# Check if kafka instance came up!
 		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
-		# kafkapid=$(ps aux | grep -i '$dep_work_kafka_config' | grep java | grep -v grep | awk '{print $2}')
 		if [[ "" !=  "$kafkapid" ]];
 		then
 			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
 		else
-			echo "Failed to start Kafka instance for $dep_work_kafka_config"
-			. $srcdir/diag.sh error-exit 1
+			echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+			./msleep 4000
+
+			kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+			if [[ "" !=  "$kafkapid" ]];
+			then
+				echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+			else
+				echo "Failed to start Kafka instance for $dep_work_kafka_config"
+				. $srcdir/diag.sh error-exit 1
+			fi
 		fi
 		;;
 	 'stop-kafka')

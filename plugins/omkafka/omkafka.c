@@ -513,13 +513,34 @@ finalize_it:
 }
 
 static void
+deliveryCallbackEx(rd_kafka_t __attribute__((unused)) *rk,
+	const rd_kafka_message_t *rkmessage,
+	void *opaque)
+{
+	instanceData *const pData = (instanceData *) opaque;
+
+	if (rkmessage->err) {
+		DBGPRINTF("omkafka: kafka deliveryEx FAIL on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload );
+		writeDataError(pData, (char*) rkmessage->payload, rkmessage->len, rkmessage->err);
+
+		/* Retry directly
+		if (!pData->bIsSuspended) {
+			iRet = writeKafka(pData, ppString[0], ppString[1], ppString[2]);
+		}
+*/
+	} else {
+		DBGPRINTF("omkafka: kafka deliveryEx SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload);
+	}
+}
+
+/* LEGACY CODE | Maybe removed before release
+static void
 deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	   void *payload, size_t len,
 	   int error_code,
 	   void *opaque, void __attribute__((unused)) *msg_opaque)
 {
 	instanceData *const pData = (instanceData *) opaque;
-	// int msgid = 0; //*(int *)msg_opaque;
 
 	if(error_code != 0) {
 		DBGPRINTF("omkafka: kafka delivery FAIL on msg '%.*s'\n", (int)len-1, (char*)payload);
@@ -528,6 +549,7 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)len-1, (char*)payload);
 	}
 }
+*/
 
 static void
 kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
@@ -688,7 +710,8 @@ openKafka(instanceData *const __restrict__ pData)
 		}
 	}
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
-	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);
+	rd_kafka_conf_set_dr_msg_cb(conf, deliveryCallbackEx);
+/* depreceated, maybe removed at release 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);*/
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
 # if RD_KAFKA_VERSION >= 0x00090001
 	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
