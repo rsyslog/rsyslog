@@ -906,6 +906,11 @@ processKafkaParam(char *const param,
 	++val; /* now points to begin of value */
 	CHKmalloc(*name = strdup(param));
 	CHKmalloc(*paramval = strdup(val));
+
+	/* free the memory */
+	if(NULL != param){
+		free(param);
+	}
 finalize_it:
 	RETiRet;
 }
