@@ -298,6 +298,9 @@ CODESTARTdoAction
 
 	/* key found, so get the value */
 	pszValue = (char*)json_object_get_string(keyjson);
+	if(pszValue == NULL) { /* json null object returns NULL! */
+		pszValue = "";
+	}
 
 	if(pData->pszValue) {
 		/* value also given for count */
