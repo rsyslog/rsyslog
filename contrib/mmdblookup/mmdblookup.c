@@ -3,6 +3,7 @@
  * MaxMindDB.
  *
  * Copyright 2013 Rao Chenlin.
+ * Copyright 2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -79,9 +80,9 @@ static modConfData_t *runModConf  = NULL;
 /* tables for interfacing with the v6 config system
  * action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "key",      eCmdHdlrGetWord, 0 },
-	{ "mmdbfile", eCmdHdlrGetWord, 0 },
-	{ "fields",   eCmdHdlrArray,   0 },
+	{ "key",      eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "mmdbfile", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+	{ "fields",   eCmdHdlrArray,   CNFPARAM_REQUIRED },
 };
 static struct cnfparamblk actpblk = {
 	CNFPARAMBLK_VERSION,
@@ -186,30 +187,17 @@ CODESTARTnewActInst
 			continue;
 		if (!strcmp(actpblk.descr[i].name, "key")) {
 			pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
-			continue;
-		}
-		if (!strcmp(actpblk.descr[i].name, "mmdbfile")) {
+		} else if (!strcmp(actpblk.descr[i].name, "mmdbfile")) {
 			pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL);
-			continue;
-		}
-		if (!strcmp(actpblk.descr[i].name, "fields")) {
+		} else if (!strcmp(actpblk.descr[i].name, "fields")) {
 			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
 			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j)
 				pData->fieldList.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+		} else {
+			dbgprintf("mmdblookup: program error, non-handled"
+				" param '%s'\n", actpblk.descr[i].name);
 		}
-		dbgprintf("mmdblookup: program error, non-handled"
-			" param '%s'\n", actpblk.descr[i].name);
-	}
-
-	if (pData->pszKey == NULL) {
-		dbgprintf("mmdblookup: action requires a key");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
-
-	if (pData->pszMmdbFile == NULL) {
-		dbgprintf("mmdblookup: action requires a mmdbfile");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 CODE_STD_FINALIZERnewActInst
@@ -227,7 +215,9 @@ CODESTARTtryResume
 ENDtryResume
 
 
-void str_split(char **membuf){
+void
+str_split(char **membuf)
+{
 	char *buf  = *membuf;
 	char tempbuf[strlen(buf)];
 	memset(tempbuf, 0, strlen(buf));
@@ -248,7 +238,6 @@ void str_split(char **membuf){
 	}
 
 	tempbuf[strlen(tempbuf) + 1] = '\n';
-	memset(*membuf, 0, strlen(*membuf))	;
 	memcpy(*membuf, tempbuf, strlen(tempbuf));
 }
 
@@ -256,15 +245,12 @@ void str_split(char **membuf){
 BEGINdoAction_NoStrings
 	smsg_t **ppMsg = (smsg_t **) pMsgData;
 	smsg_t *pMsg   = ppMsg[0];
-	struct json_object *json = NULL;
 	struct json_object *keyjson = NULL;
 	const char *pszValue;
 	instanceData *const pData = pWrkrData->pData;
 	json_object *total_json = NULL;
 	MMDB_entry_data_list_s *entry_data_list = NULL;
 CODESTARTdoAction
-	json = json_object_new_object();
-
 	/* key is given, so get the property json */
 	msgPropDescr_t pProp;
 	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
@@ -316,59 +302,34 @@ CODESTARTdoAction
 	fclose(memstream);
 	free(membuf);
 
-	if (pData->fieldList.nmemb < 1) {
-		DBGPRINTF("fieldList.name is empty!...\n");
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
 	/* extract and amend fields (to message) as configured */
 	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
-		memset(buf, 0, sizeof(buf));
 		strcpy(buf, (char *)pData->fieldList.name[i]);
 		dbgprintf("RRRR: buf: '%s'\n", buf);
 
-		struct json_object *json1[5] = {NULL};
 		json_object *temp_json = total_json;
 		json_object *sub_obj   = temp_json;
 		int j = 0;
-		char *path[10] = {NULL};
-		const char *sep = "!";
+		const char *SEP = "!";
 
 		/* find lowest level JSON object */
-		char *s = strtok(buf, sep);
+		char *s = strtok(buf, SEP);
 		for (; s != NULL; j++) {
-			path[j] = s;
-			s = strtok(NULL, sep);
-
-			json_object_object_get_ex(temp_json, path[j], &sub_obj);
+			json_object_object_get_ex(temp_json, s, &sub_obj);
 			temp_json = sub_obj;
+			dbgprintf("RRRR: s=%s temp_json=%s\n", s, json_object_to_json_string(temp_json));
+			s = strtok(NULL, SEP);
 		}
-
-		j--;
-		const int jmax = j;
-		for (;j >= 0 ;j--) {
-			if (j > 0) {
-				json1[j] = json_object_new_object();
-				dbgprintf("RRRR: j=%d, add '%s' to '%s'\n", j, json_object_to_json_string(json), json_object_to_json_string(temp_json));
-				json_object_get(temp_json);
-				json_object_object_add(json1[j], path[j], temp_json);
-				temp_json = json1[j];
-			} else {
-				dbgprintf("RRRR: j=%d, add '%s' to '%s'\n", j, json_object_to_json_string(json), json_object_to_json_string(temp_json));
-				json_object_get(temp_json);
-				json_object_object_add(json, path[j], temp_json);
-			}
-		}
-		/* clean up interim json objects */
-		for (j = 1 ; j <= jmax ; j++) {
-			json_object_put(json1[j]);
-		}
+		/* temp_json now contains the value we want to have, so set it */
+		json_object_get(temp_json);
+		char varname[256];
+		snprintf(varname, sizeof(varname), "%s%s%s", JSON_IPLOOKUP_NAME,
+			(*pData->pszKey == '!') ? "" : "!", pData->pszKey);
+		msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME "!ip!city", temp_json, 0, 0);
 	}
 
 finalize_it:
-	if (json)
-		msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME, json, 0, 0);
 	if(entry_data_list != NULL)
 		MMDB_free_entry_data_list(entry_data_list);
 	json_object_put(keyjson);
