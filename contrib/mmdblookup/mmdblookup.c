@@ -38,6 +38,7 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
 
 #include "maxminddb.h"
 
@@ -57,7 +58,8 @@ typedef struct _instanceData {
 	char *pszMmdbFile;
 	struct {
 		int     nmemb;
-		uchar **name;
+		char **name;
+		char  **varname;
 	} fieldList;
 } instanceData;
 
@@ -147,8 +149,10 @@ CODESTARTfreeInstance
 	if(pData->fieldList.name != NULL) {
 		for(int i = 0 ; i < pData->fieldList.nmemb ; ++i) {
 			free(pData->fieldList.name[i]);
+			free(pData->fieldList.varname[i]);
 		}
 		free(pData->fieldList.name);
+		free(pData->fieldList.varname);
 	}
 	free(pData->pszKey);
 	free(pData->pszMmdbFile);
@@ -192,8 +196,29 @@ CODESTARTnewActInst
 		} else if (!strcmp(actpblk.descr[i].name, "fields")) {
 			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
-			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j)
-				pData->fieldList.name[j] = (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+			CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
+			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j) {
+				char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				char *varname = NULL;
+				char *name;
+				if(*param == ':') {
+					char *b = strchr(param+1, ':');
+					if(b == NULL) {
+						parser_errmsg("mmdblookup: missing closing colon: '%s'", param);
+						ABORT_FINALIZE(RS_RET_ERR);
+					}
+					*b = '\0'; /* split name & varname */
+					varname = param+1;
+					name = b+1;
+				} else {
+					name = param;
+				}
+				if(*name == '!')
+					++name;
+				CHKmalloc(pData->fieldList.name[j] = strdup(name));
+				CHKmalloc(pData->fieldList.varname[j] = strdup(varname == NULL ? name : varname));
+				free(param);
+			}
 		} else {
 			dbgprintf("mmdblookup: program error, non-handled"
 				" param '%s'\n", actpblk.descr[i].name);
@@ -324,9 +349,9 @@ CODESTARTdoAction
 		/* temp_json now contains the value we want to have, so set it */
 		json_object_get(temp_json);
 		char varname[256];
-		snprintf(varname, sizeof(varname), "%s%s%s", JSON_IPLOOKUP_NAME,
-			(*pData->pszKey == '!') ? "" : "!", pData->pszKey);
-		msgAddJSON(pMsg, (uchar *)JSON_IPLOOKUP_NAME "!ip!city", temp_json, 0, 0);
+		snprintf(varname, sizeof(varname), "%s!%s", JSON_IPLOOKUP_NAME,
+			pData->fieldList.varname[i]);
+		msgAddJSON(pMsg, (uchar *)varname, temp_json, 0, 0);
 	}
 
 finalize_it:
