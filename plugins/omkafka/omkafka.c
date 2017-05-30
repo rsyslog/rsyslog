@@ -133,6 +133,7 @@ typedef struct _instanceData {
 	rd_kafka_t *rk;
 	int closeTimeout;
 	int bReopenOnHup;
+	int bResubmitOnFailure;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -146,7 +147,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "topic", eCmdHdlrString, CNFPARAM_REQUIRED },
 	{ "dynatopic", eCmdHdlrBinary, 0 },
 	{ "dynatopic.cachesize", eCmdHdlrInt, 0 },
-	{ "partitions.auto", eCmdHdlrBinary, 0 }, /* use librdkafka's automatic partitioning function */
+	{ "partitions.auto", eCmdHdlrBinary, 0 },	/* use librdkafka's automatic partitioning function */
 	{ "partitions.number", eCmdHdlrPositiveInt, 0 },
 	{ "partitions.usefixed", eCmdHdlrNonNegInt, 0 }, /* expert parameter, "nails" partition */
 	{ "broker", eCmdHdlrArray, 0 },
@@ -156,7 +157,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "key", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "closeTimeout", eCmdHdlrPositiveInt, 0 },
-	{ "reopenOnHup", eCmdHdlrBinary, 0 }
+	{ "reopenOnHup", eCmdHdlrBinary, 0 },
+	{ "resubmitOnFailure", eCmdHdlrBinary, 0 }	/* Resubmit message into kafaj queue on failure */
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -512,44 +514,145 @@ finalize_it:
 	RETiRet;
 }
 
+/* must be called with read(rkLock) */
+static rsRetVal
+writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
+{
+	DEFiRet;
+	const int partition = getPartition(pData);
+	rd_kafka_topic_t *rkt = NULL;
+	pthread_rwlock_t *dynTopicLock = NULL;
+#if RD_KAFKA_VERSION >= 0x00090400
+	rd_kafka_resp_err_t msg_kafka_response;
+	int64_t ttMsgTimestamp;
+#else
+	int msg_enqueue_status = 0;
+#endif
+
+	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n", pData->key, msg, msgTimestamp);
+
+	if(pData->dynaTopic) {
+		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
+		CHKiRet(prepareDynTopic(pData, topic, &rkt, &dynTopicLock));
+	} else {
+		rkt = pData->pTopic;
+	}
+
+#if RD_KAFKA_VERSION >= 0x00090400
+	if (msgTimestamp == NULL) {
+		/* Resubmitted items don't have a timestamp :/*/
+		ttMsgTimestamp = time(NULL);
+	} else {
+		ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
+		ttMsgTimestamp *= 1000; /* Timestamp in Milliseconds for kafka */
+	}
+	DBGPRINTF("omkafka: rd_kafka_producev timestamp=%s/%" PRId64 "\n", msgTimestamp, ttMsgTimestamp);
+
+	/* Using new kafka producev API, includes Timestamp! */
+	if (pData->key == NULL) {
+		msg_kafka_response = rd_kafka_producev(pData->rk,
+						RD_KAFKA_V_RKT(rkt),
+						RD_KAFKA_V_PARTITION(partition),
+						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
+						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
+						RD_KAFKA_V_END);
+	} else {
+		msg_kafka_response = rd_kafka_producev(pData->rk,
+						RD_KAFKA_V_RKT(rkt),
+						RD_KAFKA_V_PARTITION(partition),
+						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
+						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
+						RD_KAFKA_V_KEY(pData->key,strlen((char*)pData->key)),
+						RD_KAFKA_V_END);
+	}
+
+	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR ) {
+		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+			"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+			"partition %d: %s\n",
+			rd_kafka_topic_name(rkt), partition,
+			rd_kafka_err2str(msg_kafka_response));
+	}
+#else
+
+	DBGPRINTF("omkafka: rd_kafka_produce\n");
+	/* Using old kafka produce API */
+	msg_enqueue_status = rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
+										  msg, strlen((char*)msg), pData->key,
+										  pData->key == NULL ? 0 : strlen((char*)pData->key),
+										  NULL);
+	if(msg_enqueue_status == -1) {
+		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+			"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
+			"partition %d: %s\n",
+			rd_kafka_topic_name(rkt), partition,
+			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+	}
+#endif
+
+	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+	if (pData->dynaTopic) {
+		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
+	}
+	DBGPRINTF("omkafka: writeKafka kafka outqueue length: %d, callbacks called %d\n",
+			  rd_kafka_outq_len(pData->rk), callbacksCalled);
+
+#if RD_KAFKA_VERSION >= 0x00090400
+	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
+#else
+	if (msg_enqueue_status == -1) {
+#endif
+		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
+		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
+		/* ABORT_FINALIZE isn't absolutely necessary as of now,
+		   because this is the last line anyway, but its useful to ensure
+		   correctness in case we add more stuff below this line at some point*/
+	}
+
+finalize_it:
+	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
+	if(iRet != RS_RET_OK) {
+		iRet = RS_RET_SUSPENDED;
+	}
+    STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
+	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
+	RETiRet;
+}
+
 static void
-deliveryCallbackEx(rd_kafka_t __attribute__((unused)) *rk,
+deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	const rd_kafka_message_t *rkmessage,
 	void *opaque)
 {
 	instanceData *const pData = (instanceData *) opaque;
+	DEFiRet;
 
 	if (rkmessage->err) {
-		DBGPRINTF("omkafka: kafka deliveryEx FAIL on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload );
-		writeDataError(pData, (char*) rkmessage->payload, rkmessage->len, rkmessage->err);
+		/* Put into kafka queue, again if configured! */
+		if (pData->bResubmitOnFailure) {
+			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' - RETRY!\n",
+				rd_kafka_topic_name(rkmessage->rkt),
+				(int)(rkmessage->len-1), (char*)rkmessage->payload,
+				(int)(rkmessage->key_len), (char*)rkmessage->key);
 
-		/* Retry directly
-		if (!pData->bIsSuspended) {
-			iRet = writeKafka(pData, ppString[0], ppString[1], ppString[2]);
+			iRet = writeKafka(pData, (uchar*) rkmessage->payload, NULL, (uchar*)rd_kafka_topic_name(rkmessage->rkt));
+			if(iRet != RS_RET_OK) {
+				DBGPRINTF("omkafka: kafka delivery failed to resubmit message with status %d.\n", iRet);
+			}
+		} else {
+			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s'\n",
+				rd_kafka_topic_name(rkmessage->rkt),
+				(int)(rkmessage->len-1), (char*)rkmessage->payload,
+				(int)(rkmessage->key_len), (char*)rkmessage->key);
+			writeDataError(pData, (char*) rkmessage->payload, rkmessage->len, rkmessage->err);
 		}
-*/
+
 	} else {
-		DBGPRINTF("omkafka: kafka deliveryEx SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload);
+		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)(rkmessage->len-1), (char*)rkmessage->payload);
 	}
 }
-
-/* LEGACY CODE | Maybe removed before release
-static void
-deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
-	   void *payload, size_t len,
-	   int error_code,
-	   void *opaque, void __attribute__((unused)) *msg_opaque)
-{
-	instanceData *const pData = (instanceData *) opaque;
-
-	if(error_code != 0) {
-		DBGPRINTF("omkafka: kafka delivery FAIL on msg '%.*s'\n", (int)len-1, (char*)payload);
-		writeDataError(pData, (char*) payload, len, error_code);
-	} else {
-		DBGPRINTF("omkafka: kafka delivery SUCCESS on msg '%.*s'\n", (int)len-1, (char*)payload);
-	}
-}
-*/
 
 static void
 kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
@@ -710,8 +813,7 @@ openKafka(instanceData *const __restrict__ pData)
 		}
 	}
 	rd_kafka_conf_set_opaque(conf, (void *) pData);
-	rd_kafka_conf_set_dr_msg_cb(conf, deliveryCallbackEx);
-/* depreceated, maybe removed at release 	rd_kafka_conf_set_dr_cb(conf, deliveryCallback);*/
+	rd_kafka_conf_set_dr_msg_cb(conf, deliveryCallback);
 	rd_kafka_conf_set_error_cb(conf, errorCallback);
 # if RD_KAFKA_VERSION >= 0x00090001
 	rd_kafka_conf_set_log_cb(conf, kafkaLogger);
@@ -795,6 +897,7 @@ CODESTARTcreateInstance
 	pData->pTopic = NULL;
 	pData->bReportErrs = 1;
 	pData->bReopenOnHup = 1;
+	pData->bResubmitOnFailure = 0;
 	CHKiRet(pthread_mutex_init(&pData->mutErrFile, NULL));
 	CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
 	CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
@@ -884,110 +987,6 @@ CODESTARTtryResume
 finalize_it:
 	DBGPRINTF("omkafka: tryResume returned %d\n", iRet);
 ENDtryResume
-
-
-/* must be called with read(rkLock) */
-static rsRetVal
-writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
-{
-	DEFiRet;
-	const int partition = getPartition(pData);
-	rd_kafka_topic_t *rkt = NULL;
-	pthread_rwlock_t *dynTopicLock = NULL;
-#if RD_KAFKA_VERSION >= 0x00090400
-	rd_kafka_resp_err_t msg_kafka_response;
-	int64_t ttMsgTimestamp;
-#else
-	int msg_enqueue_status = 0;
-#endif
-
-	DBGPRINTF("omkafka: trying to send: key:'%s', msg:'%s', timestamp:'%s'\n", pData->key, msg, msgTimestamp);
-
-	if(pData->dynaTopic) {
-		DBGPRINTF("omkafka: topic to insert to: %s\n", topic);
-		CHKiRet(prepareDynTopic(pData, topic, &rkt, &dynTopicLock));
-	} else {
-		rkt = pData->pTopic;
-	}
-
-#if RD_KAFKA_VERSION >= 0x00090400
-	ttMsgTimestamp = atoi((char*)msgTimestamp); /* Convert timestamp into int */
-	ttMsgTimestamp *= 1000; /* Timestamp in Milliseconds for kafka */
-	DBGPRINTF("omkafka: rd_kafka_producev timestamp=%s/%" PRId64 "\n", msgTimestamp, ttMsgTimestamp);
-
-	/* Using new kafka producev API, includes Timestamp! */
-	if (pData->key == NULL) {
-		msg_kafka_response = rd_kafka_producev(pData->rk,
-						RD_KAFKA_V_RKT(rkt),
-						RD_KAFKA_V_PARTITION(partition),
-						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
-						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
-						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
-						RD_KAFKA_V_END);
-	} else {
-		msg_kafka_response = rd_kafka_producev(pData->rk,
-						RD_KAFKA_V_RKT(rkt),
-						RD_KAFKA_V_PARTITION(partition),
-						RD_KAFKA_V_VALUE(msg, strlen((char*)msg)),
-						RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
-						RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
-						RD_KAFKA_V_KEY(pData->key,strlen((char*)pData->key)),
-						RD_KAFKA_V_END);
-	}
-
-	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR ) {
-		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
-			"partition %d: %s\n",
-			rd_kafka_topic_name(rkt), partition,
-			rd_kafka_err2str(msg_kafka_response));
-	}
-#else
-
-	DBGPRINTF("omkafka: rd_kafka_produce\n");
-	/* Using old kafka produce API */
-	msg_enqueue_status = rd_kafka_produce(rkt, partition, RD_KAFKA_MSG_F_COPY,
-										  msg, strlen((char*)msg), pData->key,
-										  pData->key == NULL ? 0 : strlen((char*)pData->key),
-										  NULL);
-	if(msg_enqueue_status == -1) {
-		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
-			"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
-			"partition %d: %s\n",
-			rd_kafka_topic_name(rkt), partition,
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
-	}
-#endif
-
-	const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
-	if (pData->dynaTopic) {
-		pthread_rwlock_unlock(dynTopicLock);/* dynamic topic can't be used beyond this pt */
-	}
-	DBGPRINTF("omkafka: writeKafka kafka outqueue length: %d, callbacks called %d\n",
-			  rd_kafka_outq_len(pData->rk), callbacksCalled);
-
-#if RD_KAFKA_VERSION >= 0x00090400
-	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
-#else
-	if (msg_enqueue_status == -1) {
-#endif
-		STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
-		ABORT_FINALIZE(RS_RET_KAFKA_PRODUCE_ERR);
-		/* ABORT_FINALIZE isn't absolutely necessary as of now,
-		   because this is the last line anyway, but its useful to ensure
-		   correctness in case we add more stuff below this line at some point*/
-	}
-
-finalize_it:
-	DBGPRINTF("omkafka: writeKafka returned %d\n", iRet);
-	if(iRet != RS_RET_OK) {
-		iRet = RS_RET_SUSPENDED;
-	}
-    STATSCOUNTER_SETMAX_NOMUT(ctrQueueSize, rd_kafka_outq_len(pData->rk));
-	STATSCOUNTER_INC(ctrTopicSubmit, mutCtrTopicSubmit);
-	RETiRet;
-}
-
 
 BEGINdoAction
 CODESTARTdoAction
@@ -1135,6 +1134,8 @@ CODESTARTnewActInst
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "reopenOnHup")) {
 			pData->bReopenOnHup = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "resubmitOnFailure")) {
+			pData->bResubmitOnFailure = pvals[i].val.d.n;
 		} else {
 			dbgprintf("omkafka: program error, non-handled param '%s'\n", actpblk.descr[i].name);
 		}
