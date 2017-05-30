@@ -4719,7 +4719,6 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	uchar *leaf;
 	DEFiRet;
 
-dbgprintf("RRRR: addJSON name '%s'\n", name);
 	if(name[0] == '!') {
 		pjroot = &pM->json;
 		MsgLock(pM);
@@ -4768,7 +4767,6 @@ dbgprintf("RRRR: addJSON name '%s'\n", name);
 		 * before adding. rgerhards, 2012-09-17
 		 */
 		if (force_reset || (leafnode == NULL)) {
-dbgprintf("RRRR: addJSON leaf '%s' add: '%s'\n", leaf, json_object_to_json_string(json));
 			json_object_object_add(parent, (char*)leaf, json);
 		} else {
 			if(json_object_get_type(json) == json_type_object) {

@@ -59,7 +59,7 @@ typedef struct _instanceData {
 	struct {
 		int     nmemb;
 		char **name;
-		char  **varname;
+		char **varname;
 	} fieldList;
 } instanceData;
 
@@ -71,6 +71,7 @@ typedef struct wrkrInstanceData {
 struct modConfData_s {
 	/* our overall config object */
 	rsconf_t *pConf;
+	const char *container;
 };
 
 /* modConf ptr to use for the current load process */
@@ -78,6 +79,16 @@ static modConfData_t *loadModConf = NULL;
 /* modConf ptr to use for the current exec process */
 static modConfData_t *runModConf  = NULL;
 
+
+/* module-global parameters */
+static struct cnfparamdescr modpdescr[] = {
+	{ "container", eCmdHdlrGetWord, 0 },
+};
+static struct cnfparamblk modpblk =
+	{ CNFPARAMBLK_VERSION,
+	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+	  modpdescr
+	};
 
 /* tables for interfacing with the v6 config system
  * action (instance) parameters */
@@ -118,6 +129,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
+	free((void*)runModConf->container);
 ENDfreeCnf
 
 
@@ -164,6 +176,44 @@ CODESTARTfreeWrkrInstance
 	MMDB_close(&pWrkrData->mmdb);
 ENDfreeWrkrInstance
 
+
+BEGINsetModCnf
+	struct cnfparamvals *pvals = NULL;
+	int i;
+CODESTARTsetModCnf
+	loadModConf->container = NULL;
+	pvals = nvlstGetParams(lst, &modpblk, NULL);
+	if(pvals == NULL) {
+		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "mmdblookup: error processing module "
+						"config parameters missing [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(Debug) {
+		dbgprintf("module (global) param blk for mmdblookup:\n");
+		cnfparamsPrint(&modpblk, pvals);
+	}
+
+	for(i = 0 ; i < modpblk.nParams ; ++i) {
+		if(!pvals[i].bUsed)
+			continue;
+		if(!strcmp(modpblk.descr[i].name, "container")) {
+			loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else {
+			dbgprintf("mmdblookup: program error, non-handled "
+					  "param '%s' in setModCnf\n", modpblk.descr[i].name);
+		}
+	}
+
+	if(loadModConf->container == NULL) {
+		CHKmalloc(loadModConf->container = strdup(JSON_IPLOOKUP_NAME));
+	}
+
+finalize_it:
+	if(pvals != NULL)
+		cnfparamvalsDestruct(pvals, &modpblk);
+ENDsetModCnf
+
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
@@ -195,8 +245,8 @@ CODESTARTnewActInst
 			pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "fields")) {
 			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
-			CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(uchar *)));
+			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(char *)));
+			CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(char *)));
 			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j) {
 				char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 				char *varname = NULL;
@@ -216,7 +266,11 @@ CODESTARTnewActInst
 				if(*name == '!')
 					++name;
 				CHKmalloc(pData->fieldList.name[j] = strdup(name));
-				CHKmalloc(pData->fieldList.varname[j] = strdup(varname == NULL ? name : varname));
+				char vnamebuf[1024];
+				snprintf(vnamebuf, sizeof(vnamebuf),
+					"%s!%s", loadModConf->container, 
+					(varname == NULL) ? name : varname);
+				CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
 				free(param);
 			}
 		} else {
@@ -322,7 +376,7 @@ CODESTARTdoAction
 		str_split(&membuf);
 	}
 
-	dbgprintf("RRRR: membuf: '%s'\n", membuf);
+	DBGPRINTF("maxmindb returns: '%s'\n", membuf);
 	total_json = json_tokener_parse(membuf);
 	fclose(memstream);
 	free(membuf);
@@ -331,7 +385,6 @@ CODESTARTdoAction
 	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
 		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
 		strcpy(buf, (char *)pData->fieldList.name[i]);
-		dbgprintf("RRRR: buf: '%s'\n", buf);
 
 		json_object *temp_json = total_json;
 		json_object *sub_obj   = temp_json;
@@ -343,15 +396,11 @@ CODESTARTdoAction
 		for (; s != NULL; j++) {
 			json_object_object_get_ex(temp_json, s, &sub_obj);
 			temp_json = sub_obj;
-			dbgprintf("RRRR: s=%s temp_json=%s\n", s, json_object_to_json_string(temp_json));
 			s = strtok(NULL, SEP);
 		}
 		/* temp_json now contains the value we want to have, so set it */
 		json_object_get(temp_json);
-		char varname[256];
-		snprintf(varname, sizeof(varname), "%s!%s", JSON_IPLOOKUP_NAME,
-			pData->fieldList.varname[i]);
-		msgAddJSON(pMsg, (uchar *)varname, temp_json, 0, 0);
+		msgAddJSON(pMsg, (uchar *)pData->fieldList.varname[i], temp_json, 0, 0);
 	}
 
 finalize_it:
@@ -386,6 +435,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
