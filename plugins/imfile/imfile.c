@@ -1677,7 +1677,7 @@ in_setupDirWatch(const int dirIdx)
 	int dirnamelen = 0;
 	char* psztmp;
 
-	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
+	wd = inotify_add_watch(ino_fd, (char*)dirs[dirIdx].dirName, IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 	if(wd < 0) {
 		/* check for wildcard in directoryname, if last character is a wildcard we remove it and try again! */
 		dirnamelen = ustrlen(dirs[dirIdx].dirName);
@@ -1706,7 +1706,7 @@ in_setupDirWatch(const int dirIdx)
 			}
 
 			/* Try to add inotify watch again */
-			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM);
+			wd = inotify_add_watch(ino_fd, dirnametrunc, IN_CREATE|IN_DELETE|IN_MOVED_FROM|IN_MOVED_TO);
 			if(wd < 0) {
 				DBGPRINTF("imfile: in_setupDirWatch: Found wildcard in directory '%s', "
 					"could not create dir watch for '%s' with error %d\n",
@@ -2236,7 +2236,7 @@ in_handleDirEvent(struct inotify_event *const ev, const int dirIdx)
 {
 	DBGPRINTF("imfile: in_handleDirEvent dir event for (Idx %d)%s (mask %x)\n", dirIdx, dirs[dirIdx].dirName, ev->mask);
 	if((ev->mask & IN_CREATE)) {
-		if((ev->mask & IN_ISDIR))
+		if((ev->mask & IN_ISDIR) || (ev->mask & IN_MOVED_TO))
 			in_handleDirEventDirCREATE(ev, dirIdx); /* Create new Dir */
 		else
 			in_handleDirEventFileCREATE(ev, dirIdx); /* Create new File */
