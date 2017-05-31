@@ -34,6 +34,7 @@ export RSYSLOG_DEBUGLOG="log2"
 echo \[sndrcv_kafka_fail.sh\]: Inject messages into rsyslog sender instance  
 . $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
 
+
 echo \[sndrcv_kafka_fail.sh\]: Starting kafka cluster instance 
 . $srcdir/diag.sh start-kafka
 
@@ -43,12 +44,15 @@ sleep 5
 echo \[sndrcv_kafka_fail.sh\]: Inject messages into rsyslog sender instance  
 . $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1001
 
-echo \[sndrcv_kafka_fail.sh\]: Sleep to give rsyslog instances time to process data ...
-sleep 10
+echo \[sndrcv_kafka_fail.sh\]: Sleep to give rsyslog sender time to send data ...
+sleep 5
 
 echo \[sndrcv_kafka_fail.sh\]: Stopping sender instance [imkafka]
 . $srcdir/diag.sh shutdown-when-empty 2
 . $srcdir/diag.sh wait-shutdown 2
+
+echo \[sndrcv_kafka_fail.sh\]: Sleep to give rsyslog receiver time to receive data ...
+sleep 5
 
 echo \[sndrcv_kafka_fail.sh\]: Stopping receiver instance [omkafka]
 . $srcdir/diag.sh shutdown-when-empty
