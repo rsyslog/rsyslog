@@ -41,7 +41,7 @@ size_t ProtectedQueue_count(ProtectedQueue* this);
 
 typedef struct WorkerThreadContext_st {
 	bool (*workerFunc)(void*);
-	bool (*timeoutFunc)();
+	bool (*timeoutFunc)(void);
 	ProtectedQueue* queue;
 	unsigned timeout;
 } WorkerThreadContext;
