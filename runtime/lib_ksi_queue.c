@@ -19,9 +19,7 @@ void RingBuffer_free(RingBuffer* this) {
 	free(this);
 }
 
-bool RingBuffer_popFront(RingBuffer* this, void** item);
-
-bool RingBuffer_grow(RingBuffer* this) {
+static bool RingBuffer_grow(RingBuffer* this) {
 	void **pTmp = calloc(this->size * RB_GROW_FACTOR, sizeof (void*));
 	void *pTmpItem;
 	if (!pTmp)
@@ -144,8 +142,8 @@ size_t ProtectedQueue_popFrontBatch(ProtectedQueue* this, void** items, size_t b
 /* Waits for a new work item or timeout (if specified). Returns 0 in case of exit
    condition, 1 if item became available and ETIMEDOUT in case of timeout. */
 int ProtectedQueue_waitForItem(ProtectedQueue* this, void** item, uint64_t timeout) {
-	pthread_mutex_lock(&this->mutex);
 	struct timespec ts;
+	pthread_mutex_lock(&this->mutex);
 
 	if (timeout > 0) {
 		clock_gettime(CLOCK_REALTIME, &ts);

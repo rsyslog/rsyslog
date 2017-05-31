@@ -203,7 +203,7 @@ SetCnfParam(void *pT, struct nvlst *lst)
 		}
 	}
 
-	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : "SHA2-256") != KSI_OK)
+	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "SHA2-256") != KSI_OK)
 		goto finalize_it;
 
 	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK)

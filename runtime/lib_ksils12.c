@@ -97,10 +97,11 @@ void *signer_thread(void *arg);
 static void __attribute__((format(printf, 2, 3)))
 report(rsksictx ctx, const char *errmsg, ...) {
 	char buf[1024];
+	int r;
 	va_list args;
 	va_start(args, errmsg);
 
-	int r = vsnprintf(buf, sizeof (buf), errmsg, args);
+	r = vsnprintf(buf, sizeof (buf), errmsg, args);
 	buf[sizeof(buf)-1] = '\0';
 
 	if(ctx->logFunc == NULL)
@@ -244,11 +245,12 @@ static int
 tlvWriteInt64TLV(FILE *f, int flags, uint16_t tlvtype, uint64_t val) {
 	unsigned char buf[8];
 	uint8_t count = tlvGetIntSize(val);
+	uint64_t nTmp;
 
 	if (tlvWriteHeader(f, flags, tlvtype, count) != 0)
 		return RSGTE_IO;
 
-	uint64_t nTmp = val;
+	nTmp = val;
 	for (int i = count - 1; i >= 0; i--) {
 		buf[i] = 0xFF & nTmp;
 		nTmp = nTmp >> 8;
@@ -464,7 +466,7 @@ ksiCloseSigFile(ksifile ksi) {
 	return 0;
 }
 
-int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
+static int mkpath(char* path, mode_t mode, uid_t uid, gid_t gid) {
 
 	for (char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
 		*p = '\0';
@@ -587,7 +589,7 @@ seedIVKSI(ksifile ksi)
 {
 	int hashlen;
 	int fd;
-	char *rnd_device = ksi->ctx->random_source ? ksi->ctx->random_source : "/dev/urandom";
+	const char *rnd_device = ksi->ctx->random_source ? ksi->ctx->random_source : "/dev/urandom";
 
 	hashlen = KSI_getHashLength(ksi->hashAlg);
 	ksi->IV = malloc(hashlen); /* do NOT zero-out! */
@@ -604,7 +606,7 @@ seedIVKSI(ksifile ksi)
 	}
 }
 
-void create_signer_thread(rsksictx ctx) {
+static void create_signer_thread(rsksictx ctx) {
 	if (!ctx->thread_started) {
 		if (pthread_mutex_init(&ctx->module_lock, 0))
 			report(ctx, "pthread_mutex_init: %s", strerror(errno));
@@ -952,7 +954,7 @@ done:
 	return r;
 }
 
-int
+static int
 sigblkCheckTimeOut(rsksictx ctx) {
 	int ret = 0;
 	time_t now;
@@ -1120,13 +1122,12 @@ bool add_queue_item(rsksictx ctx, QITEM_type type, void *arg, uint64_t intarg1, 
 
 //This version of signing thread discards all the requests except last one (no aggregation/pipelining used)
 
-void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
+static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	QueueItem *item = NULL;
 	QueueItem *lastItem = NULL;
 	unsigned char *der = NULL;
 	size_t lenDer = 0;
 	int r = KSI_OK;
-	int ret = 0;
 	KSI_Signature *sig = NULL;
 
 	while (ProtectedQueue_peekFront(ctx->signer_queue, (void**) &item) && item->type == QITEM_SIGNATURE_REQUEST) {
@@ -1149,7 +1150,6 @@ void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	r = KSI_Signature_signAggregated(ksi_ctx, lastItem->arg, lastItem->intarg2, &sig);
 	if (r != KSI_OK) {
 		reportKSIAPIErr(ctx, NULL, "KSI_Signature_createAggregated", r);
-		ret = 1;
 		goto signing_failed;
 	}
 
@@ -1157,7 +1157,6 @@ void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	r = KSI_Signature_serialize(sig, &der, &lenDer);
 	if (r != KSI_OK) {
 		reportKSIAPIErr(ctx, NULL, "KSI_Signature_serialize", r);
-		ret = 1;
 		goto signing_failed;
 		lenDer = 0;
 	}
