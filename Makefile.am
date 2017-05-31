@@ -244,7 +244,7 @@ SUBDIRS += contrib/mmsequence
 endif
 
 if ENABLE_MMDBLOOKUP
-SUBDIRS += contrib/mmdblookup
+SUBDIRS += plugins/mmdblookup
 endif
 
 

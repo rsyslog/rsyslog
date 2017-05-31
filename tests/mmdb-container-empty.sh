@@ -5,7 +5,7 @@
 . $srcdir/diag.sh add-conf '
 template(name="outfmt" type="string" string="%$!src_geoip%\n")
 
-module(load="../contrib/mmdblookup/.libs/mmdblookup" container="!")
+module(load="../plugins/mmdblookup/.libs/mmdblookup" container="!")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="testing")

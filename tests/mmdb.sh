@@ -11,7 +11,7 @@ echo \[mmdb.sh\]: test for mmdb
 . $srcdir/diag.sh add-conf '
 template(name="outfmt" type="string" string="%$!iplocation%\n")
 
-module(load="../contrib/mmdblookup/.libs/mmdblookup")
+module(load="../plugins/mmdblookup/.libs/mmdblookup")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="testing")
