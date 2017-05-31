@@ -96,25 +96,7 @@ man1_MANS += rsgtutil.1
 CLEANFILES += rsgtutil.1
 EXTRA_DIST+= rsgtutil.1
 endif
-if ENABLE_GT_KSI
-rsgtutil_CPPFLAGS += $(GT_KSI_CFLAGS) -DENABLEKSI
-rsgtutil_LDADD += ../runtime/librsksi.la $(GT_KSI_LIBS)
-endif
 else
-if ENABLE_GT_KSI
-bin_PROGRAMS += rsgtutil
-rsgtutil = rsgtutil.c
-rsgtutil_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS) -DENABLEKSI
-rsgtutil_LDADD = ../runtime/librsksi.la $(GT_KSI_LIBS)
-if ENABLE_GENERATE_MAN_PAGES
-RSTMANFILE = rsgtutil.rst
-rsgtutil.1: $(RSTMANFILE) 
-	$(AM_V_GEN) $(RST2MAN) $(RSTMANFILE) $@
-man1_MANS += rsgtutil.1
-CLEANFILES += rsgtutil.1
-EXTRA_DIST+= rsgtutil.1
-endif
-endif
 endif
 if ENABLE_LIBGCRYPT
 bin_PROGRAMS += rscryutil
