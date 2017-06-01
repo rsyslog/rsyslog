@@ -12,16 +12,30 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - imfile bugfix: files mv-ed in into directory were not handled
   Thanks to Zachary M. Zhao for the patch.
   see also https://github.com/rsyslog/rsyslog/issues/1588
+- imfile bugfix: multiline timeout did not work if state file exists
+  The timeout feature for multiline reads does not correctly work for
+  files for which a state file existed. This is usually the case for files
+  that had been processed by a previous run and that still exist on the
+  new start. For all other files, especially those monitored by a
+  wildcard and newly created after the rsyslog start, timeout worked as
+  expected.
+  closes https://github.com/rsyslog/rsyslog/issues/1445
+- mmdblookup
+  * upgraded from "contrib" to "fully supported" state
+  * refactored and simplified code
+  * added ability to specify custom names for extracted fields
+  * added ability to specify container name for extracted fields
+  * bugfix: fixed multiple memory leaks
 - imptcp: add new parameter "flowControl"
 - imrelp: add "maxDataSize" config parameter
   Thanks to Nathan Brown for the patch.
 - omhiredis: fix build warnings
   Thanks to Brian Knox for the fix.
-- bugfix mmdblookup: fixed multiple memory leaks
 - lmsig_ksi-ls12 bugfix: build problems on some platforms
 - testbench/CI enhancements
   * re-enable and add kafka tests
     Kafka tests were disabled in 8.27.0 (a regression from imkafka).
+  * better testbench coverage for mmdblookup
   * lmsig_ksi-ls12 is now being built at least on Centos7
 ------------------------------------------------------------------------------
 Version 8.27.0 [v8-stable] 2017-05-16
