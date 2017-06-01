@@ -403,7 +403,7 @@ static rsRetVal createSocket(instanceConf_t* info, void** sock) {
 
     /* Do the bind/connect... */
     if (info->action==ACTION_CONNECT) {
-        rv = zsocket_connect(*sock, info->description);
+        rv = zsocket_connect(*sock, "%s", info->description);
         if (rv == -1) {
             errmsg.LogError(0,
                             RS_RET_INVALID_PARAMS,
@@ -413,7 +413,7 @@ static rsRetVal createSocket(instanceConf_t* info, void** sock) {
         }
         DBGPRINTF("imzmq3: connect for %s successful\n",info->description);
     } else {
-        rv = zsocket_bind(*sock, info->description);
+        rv = zsocket_bind(*sock, "%s", info->description);
         if (rv == -1) {
             errmsg.LogError(0,
                             RS_RET_INVALID_PARAMS,
