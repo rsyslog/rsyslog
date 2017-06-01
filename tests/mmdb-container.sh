@@ -1,17 +1,11 @@
-#!/bin/bash 
-# added 2014-11-17 by singh.janmejay 
+#!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0 
-echo =============================================================================== 
-echo \[mmdb.sh\]: test for mmdb
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout"
-#export RSYSLOG_DEBUGLOG="log"
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
-template(name="outfmt" type="string" string="%$!iplocation%\n")
+template(name="outfmt" type="string" string="%$!mmdb_root%\n")
 
-module(load="../plugins/mmdblookup/.libs/mmdblookup")
+module(load="../plugins/mmdblookup/.libs/mmdblookup" container="!mmdb_root")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 module(load="../plugins/imptcp/.libs/imptcp")
 input(type="imptcp" port="13514" ruleset="testing")
@@ -26,4 +20,4 @@ ruleset(name="testing") {
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 . $srcdir/diag.sh content-check '{ "city": "Beijing" }'
-. $srcdir/diag.sh exit 
+. $srcdir/diag.sh exit

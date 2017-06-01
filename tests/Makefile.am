@@ -522,10 +522,13 @@ endif
 
 if ENABLE_MMDBLOOKUP
 TESTS += \
-    mmdb.sh
+    mmdb.sh \
+    mmdb-container.sh \
+    mmdb-container-empty.sh
 if HAVE_VALGRIND
 TESTS += \
-    mmdb-vg.sh
+    mmdb-vg.sh \
+    mmdb-multilevel-vg.sh
 endif
 endif
 
@@ -942,8 +945,10 @@ EXTRA_DIST= \
 	mmdb.sh \
 	mmdb.rb \
 	test.mmdb \
-	testsuites/mmdb.conf \
 	mmdb-vg.sh \
+	mmdb-container.sh \
+	mmdb-container-empty.sh \
+	mmdb-multilevel-vg.sh \
 	incltest.sh \
 	testsuites/incltest.conf \
 	incltest_dir.sh \
