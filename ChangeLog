@@ -32,6 +32,10 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - omhiredis: fix build warnings
   Thanks to Brian Knox for the fix.
 - lmsig_ksi-ls12 bugfix: build problems on some platforms
+- regression fix: local hostname was not always detected properly...
+  ... on early start (w/o network). Introduced in 8.27.0.
+  Thanks to github user jvymazal for the patch and whissi for
+  reporting and helping with the analysis.
 - bugfix: format security issues in zmq3 modules
   see also: https://github.com/rsyslog/rsyslog/pull/1565
   Thanks to Thomas D. (whissi) for the patch.
