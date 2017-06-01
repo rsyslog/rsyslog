@@ -161,7 +161,7 @@ klogWillRunPrePrivDrop(modConfData_t *pModConf)
 	char errmsg[2048];
 	DEFiRet;
 
-	fklog = open(_PATH_KLOG, O_RDONLY, 0);
+	fklog = open(_PATH_KLOG, O_RDONLY|O_CLOEXEC, 0);
 	if (fklog < 0) {
 		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
