@@ -663,7 +663,6 @@ openFileWithoutStateFile(lstn_t *const __restrict__ pLstn)
 			CHKiRet(strm.SeekCurrOffs(pLstn->pStrm));
 		}
 	}
-	strmSetReadTimeout(pLstn->pStrm, pLstn->readTimeout);
 
 finalize_it:
 	RETiRet;
@@ -683,6 +682,7 @@ openFile(lstn_t *const __restrict__ pLstn)
 	DBGPRINTF("imfile: breopenOnTruncate %d for '%s'\n",
 		pLstn->reopenOnTruncate, pLstn->pszFileName);
 	CHKiRet(strm.SetbReopenOnTruncate(pLstn->pStrm, pLstn->reopenOnTruncate));
+	strmSetReadTimeout(pLstn->pStrm, pLstn->readTimeout);
 
 finalize_it:
 	RETiRet;

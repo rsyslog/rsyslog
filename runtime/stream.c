@@ -873,6 +873,9 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
 	/* note: order of evaluation is choosen so that the most inexpensive
 	 * processing flow is used.
 	 */
+	DBGPRINTF("strmReadMultiline_isTimedOut: prevMsgSeg %p, readTimeout %d, "
+		"lastRead %lld\n", pThis->prevMsgSegment, pThis->readTimeout,
+		(long long) pThis->lastRead);
 	return(   (pThis->readTimeout)
 	       && (pThis->prevMsgSegment != NULL)
 	       && (getTime(NULL) > pThis->lastRead + pThis->readTimeout) );
@@ -1013,6 +1016,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->bPrevWasNL = 0;
 	pThis->fileNotFoundError = 1;
 	pThis->noRepeatedErrorOutput = 0;
+	pThis->lastRead = getTime(NULL);
 ENDobjConstruct(strm)
 
 
