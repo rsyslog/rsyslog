@@ -274,7 +274,7 @@ if ENABLE_KSI_LS12
    lmsig_ksi_ls12_la_SOURCES = lmsig_ksi-ls12.c lmsig_ksi-ls12.h lib_ksils12.c \
 			lib_ksils12.h lib_ksi_queue.c lib_ksi_queue.h
    lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
-   lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version
+   lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version $(GT_KSI_LS12_LIBS)
 endif
 
 update-systemd:
