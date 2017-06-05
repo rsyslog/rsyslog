@@ -161,9 +161,10 @@ wtiCancelThrd(wti_t *pThis)
 		DBGOPRINT((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 		/* now wait until the thread terminates... */
-		while(wtiGetState(pThis)) {
+		while(!pthread_kill(pThis->thrdID, 0)) {
 			srSleep(0, 10000);
 		}
+	wtiSetState(pThis, 0);
 	}
 
 	RETiRet;
