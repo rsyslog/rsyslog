@@ -594,6 +594,11 @@ TESTS += \
 	omruleset-queue.sh
 endif
 
+if ENABLE_PMSNARE
+TESTS += \
+	pmsnare.sh
+endif
+
 if ENABLE_EXTENDED_TESTS
 # random.sh is temporarily disabled as it needs some work
 # to rsyslog core to complete in reasonable time
@@ -1529,8 +1534,21 @@ EXTRA_DIST= \
 	testsuites/sndrcv_tls_anon_sender.conf \
 	testsuites/sndrcv_tls_anon_rcvr.conf \
 	omtcl.sh \
-	omtcl.tcl
-
+	omtcl.tcl \
+	pmsnare.sh \
+	testsuites/pmsnare_default.conf \
+	testsuites/pmsnare_ccoff.conf \
+	testsuites/pmsnare_ccdefault.conf \
+	testsuites/pmsnare_cccstyle.conf \
+	testsuites/pmsnare_ccbackslash.conf \
+	testsuites/pmsnare_modoverride.conf \
+	testsuites/sample.pmsnare_default \
+	testsuites/sample.pmsnare_ccoff \
+	testsuites/sample.pmsnare_ccdefault \
+	testsuites/sample.pmsnare_cccstyle \
+	testsuites/sample.pmsnare_ccbackslash \
+	testsuites/sample.pmsnare_modoverride
+	
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
@@ -1579,4 +1597,3 @@ nettester_LDADD = $(SOL_LIBS)
 #rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 #rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS) $(SOL_LIBS)
 #rscript_LDFLAGS = -export-dynamic
-
