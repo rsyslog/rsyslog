@@ -101,6 +101,22 @@ plugin only if there is hard need to do so.**
 
    Retrieves the trusted systemd parameter, _PID, instead of the user 
    systemd parameter, SYSLOG_PID, which is the default.
+   This option override the "usepid" option.
+   This is now deprecated. It is better to use usepid="syslog" instead.
+
+-  **usepid** [**both**/syslog/system]
+   Sets the PID source from journal.
+
+   *syslog*
+      *imjournal* retrieves SYSLOG_PID from journal as PID number.
+
+   *system*
+      *imjournal* retrieves _PID from journal as PID number.
+
+   *both*
+      *imjournal* trying to retrieve SYSLOG_PID first. When it is not
+      available, it is also trying to retrive _PID. When none of them is available,
+      message is parsed without PID number.
 
 -  **IgnoreNonValidStatefile** [**on**/off]
    
