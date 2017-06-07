@@ -396,6 +396,7 @@ persistJournalState (void)
 			if (fprintf(sf, "%s", cursor) < 0) {
 				iRet = RS_RET_IO_ERROR;
 			}
+			fsync(fileno(sf));
 			fclose(sf);
 			free(cursor);
                        /* change the name of the file to the configured one */
