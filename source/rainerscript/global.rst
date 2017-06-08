@@ -88,7 +88,7 @@ The following parameters can be set:
 
 .. _global_janitorInterval:
 
-- **janitorInterval** [minutes], available since 8.3.3
+- **janitor.interval** [minutes], available since 8.3.3
 
   Sets the interval at which the
   :doc:`janitor process <../concepts/janitor>`
