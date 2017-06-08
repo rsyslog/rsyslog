@@ -299,7 +299,7 @@ rd_kafka_topic_t** topic) {
 	if(topicconf == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 						"omkafka: error creating kafka topic conf obj: %s\n",
-						rd_kafka_err2str(rd_kafka_errno2err(errno)));
+						rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	for(int i = 0 ; i < pData->nTopicConfParams ; ++i) {
@@ -324,7 +324,7 @@ rd_kafka_topic_t** topic) {
 	if(rkt == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 						"omkafka: error creating kafka topic: %s\n",
-						rd_kafka_err2str(rd_kafka_errno2err(errno)));
+						rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 	*topic = rkt;
@@ -548,6 +548,7 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	const int partition = getPartition(pData);
 	rd_kafka_topic_t *rkt = NULL;
 	pthread_rwlock_t *dynTopicLock = NULL;
+	failedmsg_entry* fmsgEntry;
 #if RD_KAFKA_VERSION >= 0x00090400
 	rd_kafka_resp_err_t msg_kafka_response;
 	int64_t ttMsgTimestamp;
@@ -595,11 +596,27 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 	}
 
 	if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR ) {
-		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+		/* Put into kafka queue, again if configured! */
+		if (pData->bResubmitOnFailure) {
+			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+			"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+				rd_kafka_topic_name(rkt), partition, msg_kafka_response,
+				rd_kafka_err2str(msg_kafka_response), msg);
+
+			/* Create new Listitem */
+			CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
+			fmsgEntry->payload = (uchar*)strdup((char*)msg);
+			fmsgEntry->topicname = (uchar*)strdup(rd_kafka_topic_name(rkt));
+
+			/* Insert at the head. */
+			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+		} else {
+			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
 			"partition %d: %d/%s\n",
 			rd_kafka_topic_name(rkt), partition, msg_kafka_response,
 			rd_kafka_err2str(msg_kafka_response));
+		}
 	}
 #else
 
@@ -610,11 +627,27 @@ writeKafka(instanceData *pData, uchar *msg, uchar *msgTimestamp, uchar *topic)
 										  pData->key == NULL ? 0 : strlen((char*)pData->key),
 										  NULL);
 	if(msg_enqueue_status == -1) {
-		errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+		/* Put into kafka queue, again if configured! */
+		if (pData->bResubmitOnFailure) {
+			DBGPRINTF("omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
+			"partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+				rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+				rd_kafka_err2str(rd_kafka_last_error()), msg);
+
+			/* Create new Listitem */
+			CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
+			fmsgEntry->payload = (uchar*)strdup((char*)msg);
+			fmsgEntry->topicname = (uchar*)strdup(rd_kafka_topic_name(rkt));
+
+			/* Insert at the head. */
+			LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+		} else {
+			errmsg.LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
 			"omkafka: Failed to produce to topic '%s' (rd_kafka_produce) "
 			"partition %d: %d/%s\n",
-			rd_kafka_topic_name(rkt), partition, errno,
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+			rd_kafka_topic_name(rkt), partition, rd_kafka_last_error(),
+			rd_kafka_err2str(rd_kafka_last_error()));
+		}
 	}
 #endif
 
@@ -820,7 +853,7 @@ openKafka(instanceData *const __restrict__ pData)
 	if(conf == NULL) {
 		errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 			"omkafka: error creating kafka conf obj: %s\n",
-			rd_kafka_err2str(rd_kafka_errno2err(errno)));
+			rd_kafka_err2str(rd_kafka_last_error()));
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
 

@@ -46,7 +46,7 @@ echo \[sndrcv_kafka_multi.sh\]: Stopping receiver instance [imkafka]
 . $srcdir/diag.sh wait-shutdown 2
 
 # Do the final sequence check
-. $srcdir/diag.sh seq-check 1 $TESTMESSAGES
+. $srcdir/diag.sh seq-check 1 $TESTMESSAGES -d
 
 echo \[sndrcv_kafka.sh\]: stop kafka instances
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk1' '22181'

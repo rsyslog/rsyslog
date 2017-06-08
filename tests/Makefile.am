@@ -330,10 +330,12 @@ endif
 if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
-#TESTS += \
-# @alorbach: these tests do not work out. Please fix and re-enable.
-#	sndrcv_kafka.sh \
+TESTS += \
+	sndrcv_kafka.sh 
+# Tests below need to be stable first!
 #	sndrcv_kafka_multi.sh
+#	sndrcv_kafka_fail.sh
+#	sndrcv_kafka_failresume.sh
 endif
 endif
 endif
@@ -1335,12 +1337,20 @@ EXTRA_DIST= \
 	testsuites/mysql-actq-mt.conf \
 	sndrcv_kafka.sh \
 	sndrcv_kafka_multi.sh \
+	sndrcv_kafka_fail.sh \
+	sndrcv_kafka_failresume.sh \
+	testsuites/sndrcv_kafka_rcvr.conf \
+	testsuites/sndrcv_kafka_sender.conf \
+	testsuites/sndrcv_kafka_multi_rcvr.conf \
+	testsuites/sndrcv_kafka_multi_sender.conf \
 	testsuites/kafka-server.properties \
+	testsuites/kafka-server.dep_wrk1.properties \
+	testsuites/kafka-server.dep_wrk2.properties \
+	testsuites/kafka-server.dep_wrk3.properties \
 	testsuites/zoo.cfg \
-	omkafka_static.sh \
-	testsuites/omkafka_static.conf \
-	omkafka_multiple.sh \
-	testsuites/omkafka_multiple.conf \
+	testsuites/zoo.dep_wrk1.cfg \
+	testsuites/zoo.dep_wrk2.cfg \
+	testsuites/zoo.dep_wrk3.cfg \
 	mmpstrucdata.sh \
 	mmpstrucdata-vg.sh \
 	testsuites/mmpstrucdata.conf \

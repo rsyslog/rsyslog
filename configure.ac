@@ -1694,6 +1694,17 @@ AC_ARG_ENABLE(kafka_tests,
 )
 AM_CONDITIONAL(ENABLE_KAFKA_TESTS, test x$enable_kafka_tests = xyes)
 
+AC_ARG_ENABLE(kafka_static,
+        [AS_HELP_STRING([--enable-kafka-static],[Enable static library linking for Kafka modules. Removes dependency for rdkafka.so. @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_kafka_static="yes" ;;
+          no) enable_kafka_static="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-kafka-static) ;;
+         esac],
+        [enable_kafka_static=no]
+)
+AM_CONDITIONAL(ENABLE_KAFKA_STATIC, test x$enable_kafka_static = xyes)
+
 # omkafka works with older library
 if test "x$enable_omkafka" = "xyes"; then
 	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka],, [
@@ -1706,15 +1717,19 @@ if test "x$enable_omkafka" = "xyes"; then
 			])
 		])
 	])
-	PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
-		AC_CHECK_LIB([lz4], [LZ4_compress], [
-			AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
-			LIBRDKAFKA_LIBS=-llz4
-		], [
-			AC_MSG_ERROR([could not find liblz4 library])
-		])
-	])
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+
+	# Add additional dependencies if statically linking rdkafka
+	if test "x$enable_kafka_static" = "xyes"; then
+		PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
+			AC_CHECK_LIB([lz4], [LZ4_compress], [
+				AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
+				LIBRDKAFKA_LIBS=-llz4
+			], [
+				AC_MSG_ERROR([could not find liblz4 library])
+			])
+		])
+	fi
 fi
 
 # imkafka needs newer library
@@ -1727,16 +1742,19 @@ if test "x$enable_imkafka" = "xyes"; then
 			AC_MSG_ERROR([could not find rdkafka library])
 		])
 	])
-	PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
-		AC_CHECK_LIB([lz4], [LZ4_compress], [
-			AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
-			LIBRDKAFKA_LIBS=-llz4
-		], [
-			AC_MSG_ERROR([could not find liblz4 library])
-		])
-	])
-
 	AC_CHECK_HEADERS([librdkafka/rdkafka.h])
+
+	# Add additional dependencies if statically linking rdkafka
+	if test "x$enable_kafka_static" = "xyes"; then
+		PKG_CHECK_MODULES([LIBLZ4], [liblz4],, [
+			AC_CHECK_LIB([lz4], [LZ4_compress], [
+				AC_MSG_WARN([liblz4 is missing but library present, using -llz4])
+				LIBRDKAFKA_LIBS=-llz4
+			], [
+				AC_MSG_ERROR([could not find liblz4 library])
+			])
+		])
+	fi
 fi
 
 if test "x$enable_omkafka" = "xyes" && test "x$enable_imkafka" = "xyes"; then
@@ -2126,6 +2144,7 @@ echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
+echo "    kafka static linking enabled:             $enable_kafka_static"
 echo
 echo "---{ input plugins }---"
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"

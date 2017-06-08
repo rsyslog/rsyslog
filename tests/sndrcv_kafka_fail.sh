@@ -34,7 +34,6 @@ export RSYSLOG_DEBUGLOG="log2"
 echo \[sndrcv_kafka_fail.sh\]: Inject messages into rsyslog sender instance  
 . $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
 
-
 echo \[sndrcv_kafka_fail.sh\]: Starting kafka cluster instance 
 . $srcdir/diag.sh start-kafka
 
@@ -59,7 +58,7 @@ echo \[sndrcv_kafka_fail.sh\]: Stopping receiver instance [omkafka]
 . $srcdir/diag.sh wait-shutdown
 
 # Do the final sequence check
-. $srcdir/diag.sh seq-check 1 $TESTMESSAGESFULL
+. $srcdir/diag.sh seq-check 1 $TESTMESSAGESFULL -d
 
 echo \[sndrcv_kafka_fail.sh\]: stop kafka instance
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk' '22181'

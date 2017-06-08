@@ -603,7 +603,7 @@ case $1 in
 
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
-				exit 1
+				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
@@ -631,7 +631,7 @@ case $1 in
 
 		if [ ! -f $dep_kafka_cached_file ]; then
 				echo "Dependency-cache does not have kafka package, did you download dependencies?"
-				exit 1
+				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
@@ -660,7 +660,7 @@ case $1 in
 				echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
 			else
 				echo "Failed to start Kafka instance for $dep_work_kafka_config"
-				. $srcdir/diag.sh error-exit 1
+				. $srcdir/diag.sh error-exit 77
 			fi
 		fi
 		;;
