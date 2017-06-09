@@ -1306,8 +1306,7 @@ AC_ARG_ENABLE(ksi-ls12,
         [enable_ksi_ls12=no]
 )
 if test "x$enable_ksi_ls12" = "xyes"; then
-	PKG_CHECK_MODULES(GT_KSI, libksi >= 3.13.0)
-	AC_CHECK_LIB([ksi], [KSI_Signature_signAggregatedWithPolicy], [], [AC_MSG_FAILURE([Could not find libksi])])
+	PKG_CHECK_MODULES(GT_KSI_LS12, libksi >= 3.13.0)
 fi
 AM_CONDITIONAL(ENABLE_KSI_LS12, test x$enable_ksi_ls12 = xyes)
 
