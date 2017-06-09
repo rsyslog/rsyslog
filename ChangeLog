@@ -29,6 +29,20 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - imptcp: add new parameter "flowControl"
 - imrelp: add "maxDataSize" config parameter
   Thanks to Nathan Brown for the patch.
+- omsnare: allow different tab escapes
+  Thanks to Shane P. Lawrence for the patch.
+- omelasticsearch: converted to use libfastjson instead of json-c
+  json-c was used for historical purposes, and it's source included
+  within the rsyslog source tree. We now use libfastjson inside all
+  components.
+- imjournal: _PID fallback
+  * added fallback for _PID proprety when SYSLOG_PID is not available
+  * introduced new option "usepid" which sets which property should
+    rsyslog use, it has 3 states system|syslog|both, default is both
+  * deprecated "usepidfromsystem" option, still can be used
+    and override the "usepid"
+  * it is possible to revert previous default with usepid="syslog"
+  Thanks to Radovan Sroka for the patch
 - omhiredis: fix build warnings
   Thanks to Brian Knox for the fix.
 - lmsig_ksi-ls12 bugfix: build problems on some platforms
@@ -39,6 +53,8 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - bugfix: format security issues in zmq3 modules
   see also: https://github.com/rsyslog/rsyslog/pull/1565
   Thanks to Thomas D. (whissi) for the patch.
+- bugfix build system: add libksi only to those binaries that need it
+  Thanks to Allan Park for the patch.
 - testbench/CI enhancements
   * re-enable and add kafka tests
     Kafka tests were disabled in 8.27.0 (a regression from imkafka).
