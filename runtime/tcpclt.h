@@ -31,6 +31,7 @@
 typedef struct tcpclt_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
 	TCPFRAMINGMODE tcp_framing;
+	uchar tcp_framingDelimiter;
 	char *prevMsg;
 	short bResendLastOnRecon; /* should the last message be resent on a successful reconnect? */
 	size_t lenPrevMsg;
@@ -58,8 +59,10 @@ BEGINinterface(tcpclt) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetFraming)(tcpclt_t*, TCPFRAMINGMODE framing);
 	/* v3, 2009-07-14*/
 	rsRetVal (*SetRebindInterval)(tcpclt_t*, int iRebindInterval);
+	/* v4, 2017-06-10*/
+	rsRetVal (*SetFramingDelimiter)(tcpclt_t*, uchar tcp_framingDelimiter);
 ENDinterface(tcpclt)
-#define tcpcltCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define tcpcltCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
