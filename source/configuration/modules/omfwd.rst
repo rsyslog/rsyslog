@@ -84,6 +84,14 @@ Action Parameters
    receiver supports octet-counted framing, it is suggested to use that
    framing mode.
 
+-  **TCP\_FrameDelimiter** [default 10]
+
+   Sets a custom frame delimiter for TCP transmission when running TCP\_Framing
+   in "traditional" mode. The delimiter has to be a number between 0 and 255
+   (representing the ASCII-code of said character). The default value for this
+   parameter is 10, representing a '\\n'. When using Graylog, the parameter
+   must be set to 0.
+
 -  **ZipLevel** 0..9 [default 0]
 
    Compression level for messages.
