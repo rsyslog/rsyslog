@@ -128,7 +128,6 @@ static rsRetVal
 buildInstance(instanceData *pData)
 {
 	DEFiRet;
-	dbgprintf("test: %s\n", (char*)pData->rule);
 	if((pData->ctxln = ln_initCtx()) == NULL) {
 		errmsg.LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
 				"liblognorm ctx, cannot activate action");
@@ -137,7 +136,6 @@ buildInstance(instanceData *pData)
 	ln_setCtxOpts(pData->ctxln, loadModConf->allow_regex);
 	ln_setErrMsgCB(pData->ctxln, errCallBack, NULL);
 	if(pData->rule !=NULL && pData->rulebase == NULL) {
-		dbgprintf("Pascal: vor if %s\n", pData->rule);
 		if(ln_loadSamplesFromString(pData->ctxln, (char*) pData->rule) !=0) {
 			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rule '%s' "
 					"could not be loaded cannot activate action", pData->rule);
@@ -146,7 +144,6 @@ buildInstance(instanceData *pData)
 		}
 		free(pData->rule);
 		pData->rule = NULL;
-		dbgprintf("Pascal: nach if\n");
 	} else if(pData->rule ==NULL && pData->rulebase != NULL) {
 		if(ln_loadSamples(pData->ctxln, (char*) pData->rulebase) != 0) {
 			errmsg.LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
