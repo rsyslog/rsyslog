@@ -138,7 +138,7 @@ static rsRetVal
 SetDrvrName(nssel_t *pThis, uchar *pszName)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
+	ISOBJ_TYPE_assert(pThis, nssel);
 	if(pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;
