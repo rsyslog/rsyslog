@@ -107,7 +107,11 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
 				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
 				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
-			assert(0); /* trigger assertion, messge we already have */ \
+			fprintf(stderr, "%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
+				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
+				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
+			fflush(stderr); \
+			assert(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
 		} \
 		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0)

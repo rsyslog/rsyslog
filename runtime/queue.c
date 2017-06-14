@@ -174,7 +174,7 @@ static inline qDeqID getNextDeqID(qqueue_t *pQueue)
 /* return the top element of the to-delete list or NULL, if the
  * list is empty.
  */
-static inline toDeleteLst_t *tdlPeek(qqueue_t *pQueue)
+static toDeleteLst_t *tdlPeek(qqueue_t *pQueue)
 {
 	ISOBJ_TYPE_assert(pQueue, qqueue);
 	return pQueue->toDeleteLst;
