@@ -48,6 +48,7 @@
 #include "ruleset.h"
 #include "glbl.h"
 #include "statsobj.h"
+#include "srUtils.h"
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -436,6 +437,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i,j;
+	FILE *fp;
 CODESTARTnewInpInst
 	DBGPRINTF("newInpInst (imrelp)\n");
 
@@ -481,10 +483,37 @@ CODESTARTnewInpInst
 			inst->bEnableTLSZip = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tls.cacert")) {
 			inst->caCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)inst->caCertFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				inst->caCertFile, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.mycert")) {
 			inst->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)inst->myCertFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				inst->myCertFile, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
 			inst->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)inst->myPrivKeyFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				inst->myPrivKeyFile, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
 			inst->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(inst->permittedPeers.name =
