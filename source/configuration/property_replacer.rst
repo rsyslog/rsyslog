@@ -1,8 +1,8 @@
 The Property Replacer
 =====================
 
-**The property replacer is a core component in rsyslogd's string template
-system.** A syslog message has a number of well-defined properties.
+**The property replacer is a core component in rsyslogd's** `string template
+system <templates.html>`_. A syslog message has a number of well-defined properties.
 Each of this properties can be accessed **and** manipulated by
 the property replacer. With it, it is easy to use only part of a
 property value or manipulate the value, e.g. by converting all
