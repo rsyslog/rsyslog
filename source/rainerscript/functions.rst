@@ -130,6 +130,30 @@ field(str, delim, matchnbr)
    
    set $!usr!field = field($msg, "#011", 2); -- the second field, delmited by "#011"
 
+exec\_template
+--------------
+
+   Sets a variable through the execution of a template. Basically this permits to easily
+   extract some part of a property and use it later as any other variable.
+
+::
+
+   template(name="extract" type="string" string="%msg:F:5%")
+   set $!xyz = exec_template("extract");
+
+the variable xyz can now be used to apply some filtering :
+
+::
+
+   if $!xyz contains 'abc' then {action()}
+
+or to build dynamically a file path :
+
+::
+
+   template(name="DynaFile" type="string" string="/var/log/%$!xyz%-data/%timereported%-%$!xyz%.log")
+
+**Read more about it here :** `<http://www.rsyslog.com/how-to-use-set-variable-and-exec_template>`_
 
 prifilt(constant)
 -----------------
@@ -185,3 +209,4 @@ ipv42num
    the expected address format may include spaces in the beginning and end, but must not
    contain any other characters in between (except dots). If the format does include these, the
    function results in an error and returns -1.
+
