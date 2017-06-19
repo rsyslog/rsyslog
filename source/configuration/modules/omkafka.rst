@@ -169,6 +169,34 @@ comma-delimited list of values as shown here:
    is used as librdkafka unload-timeout while unloading the module
    (for shutdown, for instance).
 
+.. function::  resubmitOnFailure [boolean]
+
+   *Default: off*
+
+   *Available since: 8.28.0*
+
+   If enabled, failed messages will be resubmit automatically when kafka is able to send 
+   messages again. To prevent message loss, this option should be enabled.
+
+.. function::  keepFailedMessages [boolean]
+
+   *Default: off*
+
+   *Available since: 8.28.0*
+
+   If enabled, failed messages will be saved and loaded on shutdown/startup and resend after startup if 
+   the kafka server is able to receive messages again. This setting requires resubmitOnFailure to be enabled as well.
+   
+.. function::  failedMsgFile [filename]
+
+   *Default: none*
+
+   *Available since: 8.28.0*
+
+   Filename where the failed messages should be stored into.
+   Needs to be set when keepFailedMessages is enabled, otherwise failed messages won't be saved.
+
+
 
 Caveats/Known Bugs
 ------------------
