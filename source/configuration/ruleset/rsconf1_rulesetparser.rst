@@ -7,7 +7,7 @@ $RulesetParser
 
 **Available since:** 5.3.4+
 
-**Default:** rsyslog.rfc5424 followed by rsyslog.rfc5425
+**Default:** rsyslog.rfc5424 followed by rsyslog.rfc3164
 
 **Description:**
 
