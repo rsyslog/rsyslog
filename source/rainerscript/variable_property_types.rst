@@ -25,6 +25,9 @@ message property where as the very similar looking
 bang or dot character immediately following the dollar sign is used by
 rsyslog to separate the different types.
 
+Note that the trailing semicolon is needed to indicate the end of expression.
+If it is not given, config load will fail with a syntax error message.
+
 Check the following usage examples to understand how these statements behave:
 
 **set**
