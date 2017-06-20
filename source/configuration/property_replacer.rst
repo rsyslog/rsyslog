@@ -177,21 +177,23 @@ options are defined:
   example US-ASCII LF is replaced by "\\n".
   The json option cannot be used together with either jsonf or csv options.
 
-**jsonf**
+**jsonf**\[:outname\]
   (available in 6.3.9+)
-  This signifies that the property should be expressed as a json <b>f</b>ield.
-  That means not only the property is written, but rather a complete json field in
+  This signifies that the property should be expressed as a JSON field.
+  That means not only the property is written, but rather a complete JSON field in
   the format
 
   ``"fieldname"="value"``
 
-  where "filedname" is given in the *outname* property (or the property name
-  if none was assigned)
-  and value is the end result of property replacer operation. Note that value supports
-  all property replacer options, like substrings, case converson and the like.
-  Values are properly json-escaped. However, field names are (currently) not. It is
-  expected that proper field names are configured.
+  where "fieldname" is given in the *outname* property (or the property name
+  if none was assigned) and value is the end result of property replacer operation. 
+  Note that value supports all property replacer options, like substrings, case 
+  converson and the like. Values are properly JSON-escaped, however field names are 
+  (currently) not, so it is expected that proper field names are configured.
   The jsonf option cannot be used together with either json or csv options.
+
+  For more information you can read `this article from Rainer's blog 
+  <http://blog.gerhards.net/2012/04/rsyslog-templates-json.html>`_.
 
 **csv**
   formats the resulting field (after all modifications) in CSV format as
