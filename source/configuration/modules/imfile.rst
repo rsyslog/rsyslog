@@ -373,6 +373,13 @@ Input Parameters
    This is used to turn on or off the addition of metadata to the
    message object.
 
+.. function:: addCeeTag [on/off]
+
+   **Default: off**
+
+   This is used to turn on or off the addition of the "@cee:" cookie to the
+   message object.
+
 .. function:: stateFile [name-of-state-file]
 
    **Default: unset**
