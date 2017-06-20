@@ -155,7 +155,7 @@ rsksifileConstruct(rsksictx ctx) {
 	ksi->ctx = ctx;
 	ksi->hashAlg = ctx->hashAlg;
 	ksi->blockTimeLimit = ctx->blockTimeLimit;
-	ksi->blockSizeLimit = (1 << ctx->blockLevelLimit) - 1;
+	ksi->blockSizeLimit = 1 << (ctx->blockLevelLimit - 1);
 	ksi->bKeepRecordHashes = ctx->bKeepRecordHashes;
 	ksi->bKeepTreeHashes = ctx->bKeepTreeHashes;
 	ksi->lastLeaf[0] = ctx->hashAlg;
@@ -1030,13 +1030,28 @@ signing_done:
 	return ret;
 }
 
+unsigned
+sigblkCalcLevel(unsigned leaves) {
+    unsigned level = 0;
+    unsigned c = leaves;
+    while (c > 1) {
+        level++;
+        c >>= 1;
+    }
+
+    if (1 << level < (int)leaves)
+        level++;
+
+    return level;
+}
+
 int
 sigblkFinishKSI(ksifile ksi)
 {
 	KSI_DataHash *root, *rootDel;
 	int8_t j;
 	int ret = 0;
-	int level = 0;
+	unsigned level = 0;
 
 	if (ksi->nRecords == 0)
 		goto done;
@@ -1056,7 +1071,8 @@ sigblkFinishKSI(ksifile ksi)
 		}
 	}
 
-	level = j;
+        //Multiplying leaves count by 2 to account for blinding masks
+        level=sigblkCalcLevel(2 * ksi->nRecords);
 
 	//in case of async mode we append the root hash to signer queue
 	if (ksi->ctx->syncMode == LOGSIG_ASYNCHRONOUS) {
