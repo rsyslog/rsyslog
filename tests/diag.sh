@@ -78,11 +78,12 @@ case $1 in
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
+		rm -f log log* # RSyslog debug output 
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
-		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state*
+		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
@@ -602,7 +603,7 @@ case $1 in
 
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
-				exit 1
+				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
@@ -630,7 +631,7 @@ case $1 in
 
 		if [ ! -f $dep_kafka_cached_file ]; then
 				echo "Dependency-cache does not have kafka package, did you download dependencies?"
-				exit 1
+				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
@@ -639,9 +640,29 @@ case $1 in
 		rm -rf $dep_work_dir/kafka
 		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
-		echo "Starting Kafka instance $2"
+		echo "Starting Kafka instance $dep_work_kafka_config"
 		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		./msleep 2000
+		./msleep 4000
+
+		# Check if kafka instance came up!
+		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+		if [[ "" !=  "$kafkapid" ]];
+		then
+			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+		else
+			echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+			./msleep 4000
+
+			kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+			if [[ "" !=  "$kafkapid" ]];
+			then
+				echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+			else
+				echo "Failed to start Kafka instance for $dep_work_kafka_config"
+				. $srcdir/diag.sh error-exit 77
+			fi
+		fi
 		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then

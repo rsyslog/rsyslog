@@ -314,7 +314,7 @@ checkInstance(instanceConf_t *inst)
 		if(inst->bReportErrs) {
 			errmsg.LogError(0, RS_RET_KAFKA_ERROR,
 				"imkafka: error creating kafka conf obj: %s\n",
-				rd_kafka_err2str(rd_kafka_errno2err(errno)));
+				rd_kafka_err2str(rd_kafka_last_error()));
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}

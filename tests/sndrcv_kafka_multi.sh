@@ -6,11 +6,15 @@ export TESTMESSAGES=10000
 echo ===============================================================================
 echo \[sndrcv_kafka_multi.sh\]: Create multiple kafka/zookeeper instances and static topic
 . $srcdir/diag.sh download-kafka
-. $srcdir/diag.sh stop-zookeeper
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk3'
 . $srcdir/diag.sh stop-kafka '.dep_wrk1'
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'
-. $srcdir/diag.sh start-zookeeper '.multi'
+. $srcdir/diag.sh start-zookeeper '.dep_wrk1'
+. $srcdir/diag.sh start-zookeeper '.dep_wrk2'
+. $srcdir/diag.sh start-zookeeper '.dep_wrk3'
 . $srcdir/diag.sh start-kafka '.dep_wrk1'
 . $srcdir/diag.sh start-kafka '.dep_wrk2'
 . $srcdir/diag.sh start-kafka '.dep_wrk3'
@@ -31,7 +35,7 @@ export RSYSLOG_DEBUGLOG="log2"
 . $srcdir/diag.sh tcpflood -m$TESTMESSAGES -i1
 
 echo \[sndrcv_kafka_multi.sh\]: Sleep to give rsyslog instances time to process data ...
-sleep 10 
+sleep 20 
 
 echo \[sndrcv_kafka_multi.sh\]: Stopping sender instance [omkafka]
 . $srcdir/diag.sh shutdown-when-empty
@@ -42,11 +46,13 @@ echo \[sndrcv_kafka_multi.sh\]: Stopping receiver instance [imkafka]
 . $srcdir/diag.sh wait-shutdown 2
 
 # Do the final sequence check
-. $srcdir/diag.sh seq-check 1 $TESTMESSAGES
+. $srcdir/diag.sh seq-check 1 $TESTMESSAGES -d
 
 echo \[sndrcv_kafka.sh\]: stop kafka instances
 . $srcdir/diag.sh delete-kafka-topic 'static' '.dep_wrk1' '22181'
 . $srcdir/diag.sh stop-kafka '.dep_wrk1'
 . $srcdir/diag.sh stop-kafka '.dep_wrk2'
 . $srcdir/diag.sh stop-kafka '.dep_wrk3'
-. $srcdir/diag.sh stop-zookeeper '.multi'
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk1'
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk2'
+. $srcdir/diag.sh stop-zookeeper '.dep_wrk3'
