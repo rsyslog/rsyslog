@@ -2,6 +2,13 @@
 Version 8.28.0 [v8-stable] 2017-06-27
 - NEW BUILD REQUIREMENT: librelp 1.2.14 (to build relp components)
   This was necessary because imrelp requires an API introduced in 1.2.14.
+- omkafka: large refactor of kafka subsystem
+  This offers improvements and greatly increases reliablity.
+  Closes https://github.com/rsyslog/rsyslog/issues/1559
+  Closes https://github.com/rsyslog/rsyslog/issues/1584
+  Closes https://github.com/rsyslog/rsyslog/issues/1515
+  Closes https://github.com/rsyslog/rsyslog/issues/1052
+  May fix https://github.com/rsyslog/rsyslog/issues/1230
 - imfile: add capability to truncate oversize messages or split into multiple
   also in this case an error message is emitted. Both of these actions are
   configurable. This also solves memory issues when an endregex does not
