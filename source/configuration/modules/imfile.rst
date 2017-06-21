@@ -200,14 +200,14 @@ Input Parameters
 
    The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
-   128 for "local0"). Textual form is suggested. Default  is "local0".
+   16 for "local0"). Textual form is suggested. Default  is "local0".
 
 .. index:: 
    single: imfile; Severity
 .. function:: Severity [syslogSeverity]
 
    The syslog severity to be assigned to lines read. Can be specified
-   in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
+   in textual   form (e.g. "info", "warning", ...) or as numbers (e.g. 6
    for "info"). Textual form is suggested. Default is "notice".
 
 .. index:: 
