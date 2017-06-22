@@ -421,7 +421,7 @@ Input Parameters
    **Default: off**
 
    This is used to tell rsyslog to seek to the end/tail of input files
-   (discard old logs)**at its first start(freshStart)** and process only new 
+   (discard old logs) **at its first start(freshStart)** and process only new 
    log messages.
    
    When deploy rsyslog to a large number of servers, we may only care about 
