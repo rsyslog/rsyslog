@@ -2,6 +2,7 @@
 Version 8.28.0 [v8-stable] 2017-06-27
 - NEW BUILD REQUIREMENT: librelp 1.2.14 (to build relp components)
   This was necessary because imrelp requires an API introduced in 1.2.14.
+- omfwd: add parameter "tcp_frameDelimiter"
 - omkafka: large refactor of kafka subsystem
   This offers improvements and greatly increases reliablity.
   Closes https://github.com/rsyslog/rsyslog/issues/1559
@@ -9,6 +10,10 @@ Version 8.28.0 [v8-stable] 2017-06-27
   Closes https://github.com/rsyslog/rsyslog/issues/1515
   Closes https://github.com/rsyslog/rsyslog/issues/1052
   May fix https://github.com/rsyslog/rsyslog/issues/1230
+- imfile: improved handling of atomically renamed file (w/ wildcards)
+  if a file is atomically renamed, the state file is also being renamed,
+  so processing continues as if the original name were kept.
+  see also: https://github.com/rsyslog/rsyslog/issues/1417
 - imfile: add capability to truncate oversize messages or split into multiple
   also in this case an error message is emitted. Both of these actions are
   configurable. This also solves memory issues when an endregex does not
@@ -16,17 +21,6 @@ Version 8.28.0 [v8-stable] 2017-06-27
   previously buffered, which could cause big problems in case e.g. the
   endregex was simply wrong and never matched. For the later, see also
   https://github.com/rsyslog/rsyslog/issues/1552
-- imfile bugfix: files mv-ed in into directory were not handled
-  Thanks to Zachary M. Zhao for the patch.
-  see also https://github.com/rsyslog/rsyslog/issues/1588
-- imfile bugfix: multiline timeout did not work if state file exists
-  The timeout feature for multiline reads does not correctly work for
-  files for which a state file existed. This is usually the case for files
-  that had been processed by a previous run and that still exist on the
-  new start. For all other files, especially those monitored by a
-  wildcard and newly created after the rsyslog start, timeout worked as
-  expected.
-  closes https://github.com/rsyslog/rsyslog/issues/1445
 - mmdblookup
   * upgraded from "contrib" to "fully supported" state
   * refactored and simplified code
@@ -52,6 +46,17 @@ Version 8.28.0 [v8-stable] 2017-06-27
   Thanks to Radovan Sroka for the patch
 - omhiredis: fix build warnings
   Thanks to Brian Knox for the fix.
+- imfile bugfix: files mv-ed in into directory were not handled
+  Thanks to Zachary M. Zhao for the patch.
+  see also https://github.com/rsyslog/rsyslog/issues/1588
+- imfile bugfix: multiline timeout did not work if state file exists
+  The timeout feature for multiline reads does not correctly work for
+  files for which a state file existed. This is usually the case for files
+  that had been processed by a previous run and that still exist on the
+  new start. For all other files, especially those monitored by a
+  wildcard and newly created after the rsyslog start, timeout worked as
+  expected.
+  closes https://github.com/rsyslog/rsyslog/issues/1445
 - lmsig_ksi-ls12 bugfix: build problems on some platforms
 - regression fix: local hostname was not always detected properly...
   ... on early start (w/o network). Introduced in 8.27.0.
@@ -61,6 +66,8 @@ Version 8.28.0 [v8-stable] 2017-06-27
   see also: https://github.com/rsyslog/rsyslog/pull/1565
   Thanks to Thomas D. (whissi) for the patch.
 - bugfix build system: add libksi only to those binaries that need it
+  Thanks to Allan Park for the patch.
+- bugfix KSI ls12 components: invalid tree height calculation
   Thanks to Allan Park for the patch.
 - testbench/CI enhancements
   * re-enable and add kafka tests
