@@ -161,7 +161,7 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 
 	/* Build frame based on selected framing */
 	if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
-		if((*(msg+len-1) != '\n')) {
+		if((*(msg+len-1) != pThis->tcp_framingDelimiter)) {
 			/* in the malloc below, we need to add 2 to the length. The
 			 * reason is that we a) add one character and b) len does
 			 * not take care of the '\0' byte. Up until today, it was just
@@ -180,7 +180,7 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 				 * rgerhards 2005-07-22
 				 */
 				if(len > 1) {
-					*(msg+len-1) = '\n';
+					*(msg+len-1) = pThis->tcp_framingDelimiter;
 				} else {
 					/* we simply can not do anything in
 					 * this case (its an error anyhow...).
@@ -189,7 +189,7 @@ TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 			} else {
 				/* we got memory, so we can copy the message */
 				memcpy(buf, msg, len); /* do not copy '\0' */
-				*(buf+len) = '\n';
+				*(buf+len) = pThis->tcp_framingDelimiter;
 				*(buf+len+1) = '\0';
 				msg = buf; /* use new one */
 				++len; /* care for the \n */
@@ -395,6 +395,13 @@ SetFraming(tcpclt_t *pThis, TCPFRAMINGMODE framing)
 	RETiRet;
 }
 static rsRetVal
+SetFramingDelimiter(tcpclt_t *pThis, uchar tcp_framingDelimiter)
+{
+	DEFiRet;
+	pThis->tcp_framingDelimiter = tcp_framingDelimiter;
+	RETiRet;
+}
+static rsRetVal
 SetRebindInterval(tcpclt_t *pThis, int iRebindInterval)
 {
 	DEFiRet;
@@ -406,6 +413,7 @@ SetRebindInterval(tcpclt_t *pThis, int iRebindInterval)
 /* Standard-Constructor
  */
 BEGINobjConstruct(tcpclt) /* be sure to specify the object type also in END macro! */
+	pThis->tcp_framingDelimiter = '\n';
 ENDobjConstruct(tcpclt)
 
 
@@ -458,6 +466,7 @@ CODESTARTobjQueryInterface(tcpclt)
 	pIf->SetSendFrame = SetSendFrame;
 	pIf->SetSendPrepRetry = SetSendPrepRetry;
 	pIf->SetFraming = SetFraming;
+	pIf->SetFramingDelimiter = SetFramingDelimiter;
 	pIf->SetRebindInterval = SetRebindInterval;
 
 finalize_it:

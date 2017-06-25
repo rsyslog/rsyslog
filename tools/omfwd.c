@@ -56,6 +56,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -102,6 +103,7 @@ typedef struct _instanceData {
 	int iUDPSendDelay;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
+	uchar tcp_framingDelimiter;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 #	define COMPRESS_NEVER 0
 #	define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
@@ -164,6 +166,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "protocol", eCmdHdlrGetWord, 0 },
 	{ "networknamespace", eCmdHdlrGetWord, 0 },
 	{ "tcp_framing", eCmdHdlrGetWord, 0 },
+	{ "tcp_framedelimiter", eCmdHdlrInt, 0 },
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "compression.stream.flushontxend", eCmdHdlrBinary, 0 },
@@ -1029,6 +1032,7 @@ initTCP(wrkrInstanceData_t *pWrkrData)
 		CHKiRet(tcpclt.SetSendFrame(pWrkrData->pTCPClt, TCPSendFrame));
 		CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pWrkrData->pTCPClt, pData->tcp_framing));
+		CHKiRet(tcpclt.SetFramingDelimiter(pWrkrData->pTCPClt, pData->tcp_framingDelimiter));
 		CHKiRet(tcpclt.SetRebindInterval(pWrkrData->pTCPClt, pData->iRebindInterval));
 	}
 finalize_it:
@@ -1044,6 +1048,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->networkNamespace = NULL;
 	pData->originalNamespace = -1;
 	pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
+	pData->tcp_framingDelimiter = '\n';
 	pData->pszStrmDrvr = NULL;
 	pData->pszStrmDrvrAuthMode = NULL;
 	pData->iStrmDrvrMode = 0;
@@ -1187,6 +1192,13 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
 			pData->errsToReport = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "tcp_framedelimiter")) {
+			if(pvals[i].val.d.n > 255) {
+				parser_errmsg("tcp_frameDelimiter must be below 255 but is %d",
+					(int) pvals[i].val.d.n);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			pData->tcp_framingDelimiter = (uchar) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
@@ -1259,6 +1271,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
+	pData->tcp_framingDelimiter = '\n';
 
 	++p; /* eat '@' */
 	if(*p == '@') { /* indicator for TCP! */
