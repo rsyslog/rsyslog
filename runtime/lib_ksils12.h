@@ -188,6 +188,7 @@ void rsksiCtxDel(rsksictx ctx);
 void sigblkInitKSI(ksifile ksi);
 int sigblkAddRecordKSI(ksifile ksi, const unsigned char *rec, const size_t len);
 int sigblkAddLeaf(ksifile ksi, const unsigned char *rec, const size_t len, bool metadata);
+unsigned sigblkCalcLevel(unsigned leaves);
 int sigblkFinishKSI(ksifile ksi);
 int sigblkAddMetadata(ksifile ksi, const char *key, const char *value);
 int sigblkCreateMask(ksifile ksi, KSI_DataHash **m);
