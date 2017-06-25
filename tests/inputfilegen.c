@@ -17,14 +17,18 @@ int main(int argc, char* argv[])
 	int c, i;
 	int space = 0;
 	int nmsgs = DEFMSGS;
+	int nmsgstart = 0;
 	int nchars = NOEXTRADATA;
 	int errflg = 0;
 	char *extradata = NULL;
 
-	while((c=getopt(argc, argv, "pm:d:")) != -1) {
+	while((c=getopt(argc, argv, "pm:i:d:")) != -1) {
 		switch(c) {
 		case 'm':
 			nmsgs = atoi(optarg);
+			break;
+		case 'i':
+			nmsgstart = atoi(optarg);
 			break;
 		case 'd':
 			nchars = atoi(optarg);
@@ -51,7 +55,7 @@ int main(int argc, char* argv[])
 		memset(extradata, 'X', nchars);
 		extradata[nchars] = '\0';
 	}
-	for(i = 0; i < nmsgs; ++i) {
+	for(i = nmsgstart; i < (nmsgs+nmsgstart); ++i) {
 		printf("msgnum:%8.8d:", i);
 		if(space==1) {
 			printf("\n ");
