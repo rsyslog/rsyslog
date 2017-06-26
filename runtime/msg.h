@@ -203,6 +203,7 @@ int getPRIi(const smsg_t * const pM);
 void getRawMsg(smsg_t *pM, uchar **pBuf, int *piLen);
 rsRetVal msgAddJSON(smsg_t *pM, uchar *name, struct json_object *json, int force_reset, int sharedReference);
 rsRetVal msgAddMetadata(smsg_t *msg, uchar *metaname, uchar *metaval);
+rsRetVal msgAddMultiMetadata(smsg_t *msg, const uchar **metaname, const uchar **metaval, const int count);
 rsRetVal MsgGetSeverity(smsg_t *pThis, int *piSeverity);
 rsRetVal MsgDeserialize(smsg_t *pMsg, strm_t *pStrm);
 rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__restrict__ const json);
