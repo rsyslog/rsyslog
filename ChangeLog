@@ -44,6 +44,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
     and override the "usepid"
   * it is possible to revert previous default with usepid="syslog"
   Thanks to Radovan Sroka for the patch
+- multiple modules: add better error messages when regcomp is failing
 - omhiredis: fix build warnings
   Thanks to Brian Knox for the fix.
 - imfile bugfix: files mv-ed in into directory were not handled
