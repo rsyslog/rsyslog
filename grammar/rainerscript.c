@@ -4200,8 +4200,11 @@ initFunc_re_match(struct cnffunc *func)
 	regex = es_str2cstr(((struct cnfstringval*) func->expr[1])->estr, NULL);
 	
 	if((localRet = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
-		if(regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0) {
-			parser_errmsg("cannot compile regex '%s'", regex);
+		int errcode;
+		if((errcode = regexp.regcomp(re, (char*) regex, REG_EXTENDED) != 0)) {
+			char errbuff[512];
+			regexp.regerror(errcode, re, errbuff, sizeof(errbuff));
+			parser_errmsg("cannot compile regex '%s': %s", regex, errbuff);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else { /* regexp object could not be loaded */

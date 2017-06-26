@@ -42,6 +42,7 @@
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "regexp.h"
+#include "errmsg.h"
 
 
 /* ################################################################# *
@@ -594,7 +595,14 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 		if (*cache == NULL) {
 			*cache = calloc(sizeof(regex_t), 1);
-			regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
+			int errcode;
+			if((errcode = regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1),
+				(iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB))) {
+				char errbuff[512];
+				regexp.regerror(errcode, *cache, errbuff, sizeof(errbuff));
+				LogError(0, NO_ERRCODE, "Error in regular expression: %s\n", errbuff);
+				ABORT_FINALIZE(RS_RET_NOT_FOUND);
+			}
 		}
 		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
 		if(ret != 0)

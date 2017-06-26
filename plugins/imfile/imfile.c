@@ -1088,11 +1088,15 @@ addListner(instanceConf_t *inst)
 	pThis->iPersistStateInterval = inst->iPersistStateInterval;
 	pThis->readMode = inst->readMode;
 	pThis->startRegex = inst->startRegex; /* no strdup, as it is read-only */
-	if(pThis->startRegex != NULL)
-		if(regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED)) {
-			DBGPRINTF("imfile: error regex compile\n");
+	if(pThis->startRegex != NULL) {
+		const int errcode = regcomp(&pThis->end_preg, (char*)pThis->startRegex, REG_EXTENDED);
+		if(errcode != 0) {
+			char errbuff[512];
+			regerror(errcode, &pThis->end_preg, errbuff, sizeof(errbuff));
+			LogError(0, NO_ERRCODE, "imfile: %s\n", errbuff);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
+	}
 	pThis->discardTruncatedMsg = inst->discardTruncatedMsg;
 	pThis->msgDiscardingError = inst->msgDiscardingError;
 	pThis->bRMStateOnDel = inst->bRMStateOnDel;

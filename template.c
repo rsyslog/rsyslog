@@ -1094,8 +1094,11 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 					int iOptions;
 					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
-					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0) {
-						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
+					int errcode;
+					if((errcode = regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0)) {
+						char errbuff[512];
+						regexp.regerror(errcode, &(pTpe->data.field.re), errbuff, sizeof(errbuff));
+						DBGPRINTF("Template.c: Error in regular expression: %s\n", errbuff);
 						pTpe->data.field.has_regex = 2;
 					}
 				} else {
