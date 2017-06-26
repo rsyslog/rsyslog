@@ -4900,6 +4900,28 @@ finalize_it:
 	RETiRet;
 }
 
+rsRetVal
+msgAddMultiMetadata(smsg_t *const __restrict__ pMsg,
+	       const uchar ** __restrict__ metaname,
+	       const uchar ** __restrict__ metaval,
+	       const int count)
+{
+	DEFiRet;
+	int i = 0 ;
+	struct json_object *const json = json_object_new_object();
+	CHKmalloc(json);
+	for ( i = 0 ; i < count ; i++ ) {
+		struct json_object *const jval = json_object_new_string((char*)metaval[i]);
+		if(jval == NULL) {
+			json_object_put(json);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+ 		}
+		json_object_object_add(json, (const char *const)metaname[i], jval);
+	}
+	iRet = msgAddJSON(pMsg, (uchar*)"!metadata", json, 0, 0);
+finalize_it:
+	RETiRet;
+}
 
 static struct json_object *
 jsonDeepCopy(struct json_object *src)
