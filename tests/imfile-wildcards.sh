@@ -36,7 +36,6 @@ sleep 1
 . $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 . $srcdir/diag.sh wait-shutdown	# we need to wait until rsyslogd is finished!
 . $srcdir/diag.sh content-check-with-count "HEADER msgnum:00000000" $IMFILEINPUTFILES
-. $srcdir/diag.sh content-check-with-count "HEADER msgnum:00000000" $IMFILEINPUTFILES
 for i in `seq 1 $IMFILEINPUTFILES`;
 do
 	. $srcdir/diag.sh content-check-with-count "filename: ./rsyslog.input.$i.log" 1
