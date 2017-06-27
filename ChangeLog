@@ -1,4 +1,6 @@
 ------------------------------------------------------------------------------
+Version 8.29.0 [v8-stable] 2017-08-08
+------------------------------------------------------------------------------
 Version 8.28.0 [v8-stable] 2017-06-27
 - NEW BUILD REQUIREMENT: librelp 1.2.14 (to build relp components)
   This was necessary because imrelp requires an API introduced in 1.2.14.
