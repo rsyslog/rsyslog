@@ -30,6 +30,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - imptcp: add new parameter "flowControl"
 - imrelp: add "maxDataSize" config parameter
   Thanks to Nathan Brown for the patch.
+- multiple modules: gtls: improve error if certificate file can't be opened
 - omsnare: allow different tab escapes
   Thanks to Shane P. Lawrence for the patch.
 - omelasticsearch: converted to use libfastjson instead of json-c
