@@ -25,7 +25,7 @@ Version 8.28.0 [v8-stable] 2017-06-27
   * upgraded from "contrib" to "fully supported" state
   * refactored and simplified code
   * added ability to specify custom names for extracted fields
-  * added ability to specify container name for extracted fields
+  * added ability to spehttp://www.landesrecht-bw.de/jportal/portal/t/6el/page/bsbawueprod.psml/action/portlets.jw.MainAction?p1=0&eventSubmit_doNavigate=searchInSubtreeTOC&showdoccase=1&doc.hl=0&doc.id=jlr-UmwVwGBWrahmen&doc.part=R&toc.poskey=#focuspointcify container name for extracted fields
   * bugfix: fixed multiple memory leaks
 - imptcp: add new parameter "flowControl"
 - imrelp: add "maxDataSize" config parameter
@@ -51,6 +51,9 @@ Version 8.28.0 [v8-stable] 2017-06-27
 - imfile bugfix: files mv-ed in into directory were not handled
   Thanks to Zachary M. Zhao for the patch.
   see also https://github.com/rsyslog/rsyslog/issues/1588
+- omprog bugfix: execve() incorrectly called
+  this caused failures on some but not all platforms
+  Thanks to 張君天(Chun-Tien Chang) and Matthew Seaman for the patch.
 - imfile bugfix: multiline timeout did not work if state file exists
   The timeout feature for multiline reads does not correctly work for
   files for which a state file existed. This is usually the case for files
