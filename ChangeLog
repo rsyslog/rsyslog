@@ -59,6 +59,12 @@ Version 8.28.0 [v8-stable] 2017-06-27
   expected.
   closes https://github.com/rsyslog/rsyslog/issues/1445
 - lmsig_ksi-ls12 bugfix: build problems on some platforms
+- core bugfix: invalid object type assertion
+  This lead to aborts due to failing assertion. Note that this could only
+  happen during debugging runs which includes runtime instrumentation,
+  something that never should be done in a stable production build.
+  So this did not affect ordinary users, only developers in with
+  deep debugging settings.
 - regression fix: local hostname was not always detected properly...
   ... on early start (w/o network). Introduced in 8.27.0.
   Thanks to github user jvymazal for the patch and whissi for
