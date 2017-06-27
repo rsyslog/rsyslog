@@ -1250,6 +1250,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
+	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
 	if (! pData->bIsOpen)
 		CHKiRet(setupKafkaHandle(pData, 0));
@@ -1268,6 +1269,19 @@ CODESTARTdoAction
 		if(iRet != RS_RET_OK) {
 			DBGPRINTF("omkafka: doAction failed to submit FAILED messages with status %d\n", iRet);
 
+			if (pData->bResubmitOnFailure) {
+				DBGPRINTF("omkafka: also adding MSG '%.*s' for topic '%s' to failed for RETRY!\n",
+					(int)(strlen((char*)ppString[0])-1), ppString[0],
+					pData->dynaTopic ? ppString[2] : pData->topic);
+
+				/* Create new Listitem */
+				CHKmalloc(fmsgEntry = malloc(sizeof(struct s_failedmsg_entry)));
+				fmsgEntry->payload = (uchar*)strdup((char*)ppString[0]);
+				fmsgEntry->topicname = (uchar*)strdup( pData->dynaTopic ? (char*)ppString[2] : (char*)pData->topic);
+
+				/* Insert at the head. */
+				LIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+			}
 			/* Unlock now */
 			pthread_rwlock_unlock(&pData->rkLock);
 
@@ -1276,10 +1290,7 @@ CODESTARTdoAction
 	}
 
 	/* support dynamic topic */
-	if(pData->dynaTopic)
-		iRet = writeKafka(pData, ppString[0], ppString[1], ppString[2]);
-	else
-		iRet = writeKafka(pData, ppString[0], ppString[1], pData->topic);
+	iRet = writeKafka(pData, ppString[0], ppString[1], pData->dynaTopic ? ppString[2] : pData->topic);
 
 	/* Unlock now */
 	pthread_rwlock_unlock(&pData->rkLock);
