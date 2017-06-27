@@ -27,7 +27,8 @@ that picks up JSON from whereever it may occur in the message. This is
 intentional, but future versions may support config parameters to relax
 the format requirements.
 
-**Action specific Configuration Directives**:
+Action Parameters
+~~~~~~~~~~~~~~~~~
 
 - **cookie** [string] defaults to "@cee:"
 
@@ -39,7 +40,24 @@ the format requirements.
   in front of the JSON. No non-whitespace characters are permitted
   after the JSON. If such is required, mmnormalize must be used.
 
-**Sample:**
+Check parsing result
+~~~~~~~~~~~~~~~~~~~~
+
+You can check whether rsyslogd was able to successfully parse the message by reading the
+$parsesuccess variable :
+
+::
+
+  action(type="mmjsonparse")
+  if $parsesuccess == "OK" then {
+     action(type="omfile" File="/tmp/output")
+  }
+  else if $parsesuccess == "FAIL" then {
+     action(type="omfile" File="/tmp/parsing_failure")
+  }
+
+Example
+~~~~~~~
 
 This activates the module and applies normalization to all messages::
 
