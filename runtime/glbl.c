@@ -1084,6 +1084,7 @@ glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
+	FILE *fp;
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
@@ -1108,14 +1109,41 @@ glblDoneLoadCnf(void)
 			free(pszDfltNetstrmDrvrKeyFile);
 			pszDfltNetstrmDrvrKeyFile = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pszDfltNetstrmDrvrKeyFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pszDfltNetstrmDrvrKeyFile, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
 			free(pszDfltNetstrmDrvrCertFile);
 			pszDfltNetstrmDrvrCertFile = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pszDfltNetstrmDrvrCertFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pszDfltNetstrmDrvrCertFile, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			free(pszDfltNetstrmDrvrCAF);
 			pszDfltNetstrmDrvrCAF = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pszDfltNetstrmDrvrCAF, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pszDfltNetstrmDrvrCAF, errStr);
+			}
+			fclose(fp);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			free(pszDfltNetstrmDrvr);
 			pszDfltNetstrmDrvr = (uchar*)
