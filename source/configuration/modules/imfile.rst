@@ -200,14 +200,14 @@ Input Parameters
 
    The syslog facility to be assigned to lines read. Can be specified
    in textual form (e.g. "local0", "local1", ...) or as numbers (e.g.
-   128 for "local0"). Textual form is suggested. Default  is "local0".
+   16 for "local0"). Textual form is suggested. Default  is "local0".
 
 .. index:: 
    single: imfile; Severity
 .. function:: Severity [syslogSeverity]
 
    The syslog severity to be assigned to lines read. Can be specified
-   in textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4
+   in textual   form (e.g. "info", "warning", ...) or as numbers (e.g. 6
    for "info"). Textual form is suggested. Default is "notice".
 
 .. index:: 
@@ -373,6 +373,13 @@ Input Parameters
    This is used to turn on or off the addition of metadata to the
    message object.
 
+.. function:: addCeeTag [on/off]
+
+   **Default: off**
+
+   This is used to turn on or off the addition of the "@cee:" cookie to the
+   message object.
+
 .. function:: stateFile [name-of-state-file]
 
    **Default: unset**
@@ -414,7 +421,7 @@ Input Parameters
    **Default: off**
 
    This is used to tell rsyslog to seek to the end/tail of input files
-   (discard old logs)**at its first start(freshStart)** and process only new 
+   (discard old logs) **at its first start(freshStart)** and process only new 
    log messages.
    
    When deploy rsyslog to a large number of servers, we may only care about 

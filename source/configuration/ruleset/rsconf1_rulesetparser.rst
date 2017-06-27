@@ -7,12 +7,12 @@ $RulesetParser
 
 **Available since:** 5.3.4+
 
-**Default:** rsyslog.rfc5424 followed by rsyslog.rfc5425
+**Default:** rsyslog.rfc5424 followed by rsyslog.rfc3164
 
 **Description:**
 
 This directive permits to specify which `message
-parsers <messageparser.html>`_ should be used for the ruleset in
+parsers <../../concepts/messageparser.html>`_ should be used for the ruleset in
 question. It no ruleset is explicitely specified, the default ruleset is
 used. Message parsers are contained in (loadable) parser modules with
 the most common cases (RFC3164 and RFC5424) being build-in into

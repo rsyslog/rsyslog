@@ -1,9 +1,14 @@
 Variable (Property) types
 =========================
 
-All rsyslog properties (see the :doc:`property
-replacer <../configuration/property_replacer>` page for a list) can be used in
-RainerScript. In addition, it also supports local variables. Local
+All rsyslog properties (see the :doc:`properties
+<../configuration/properties>` page for a list) can be used in
+RainerScript by prefixing them with "$", for example :
+::
+
+   set $.x!host = $hostname;
+
+In addition, it also supports local variables. Local
 variables are local to the current message, but are NOT message
 properties (e.g. the "$!" all JSON property does not contain them).
 
@@ -24,6 +29,9 @@ message property where as the very similar looking
 "$.path1!path2!varname" specifies a three-level deep local variable. The
 bang or dot character immediately following the dollar sign is used by
 rsyslog to separate the different types.
+
+Note that the trailing semicolon is needed to indicate the end of expression.
+If it is not given, config load will fail with a syntax error message.
 
 Check the following usage examples to understand how these statements behave:
 
