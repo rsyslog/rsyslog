@@ -21,15 +21,8 @@ fi
 # As travis has no xenial images, we always need to install librdkafka from source
 if [ "x$KAFKA" == "xYES" ]; then 
 	sudo apt-get install -qq liblz4-dev
-	set -ex
 	git clone https://github.com/edenhill/librdkafka
-	echo $CFLAGS
 	(unset CFLAGS; cd librdkafka ; ./configure --prefix=/usr --CFLAGS="-g" > /dev/null ; make  > /dev/null ; sudo make install > /dev/null)
-	find /usr -name rdkafka.h
-	find /usr -name rdkafka.pc
-	ls -l /usr/lib/pkgconfig
-	cat /usr/include/librdkafka/rdkafka.h
-	set +x
 fi
 #if [ "x$KAFKA" == "xYES" ]; then sudo apt-get install -qq librdkafka-dev ; fi
 
