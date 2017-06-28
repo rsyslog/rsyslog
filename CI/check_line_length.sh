@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+set -o xtrace
 mkdir _tmp_stylecheck
 cd _tmp_stylecheck
 git clone https://github.com/rsyslog/codestyle
