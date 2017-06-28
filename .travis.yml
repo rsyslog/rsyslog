@@ -104,6 +104,6 @@ before_install:
 install:
 
 script:
-  - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "${AD_PPA}x" == "x" ] ; then CI/check_line_length.sh ; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then CI/check_line_length.sh ; fi
   - if [ "$TRAVIS_OS_NAME" == "linux" ] ; then tests/travis/run.sh ; fi
   - if [ "$TRAVIS_OS_NAME" == "osx" ]   ; then tests/travis/run-osx.sh ; fi
