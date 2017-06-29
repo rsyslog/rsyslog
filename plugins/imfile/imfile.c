@@ -747,7 +747,8 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->startRegex == NULL) {
 			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
 		} else {
-			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg, pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError));
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg,
+				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
@@ -2363,7 +2364,8 @@ in_processEvent(struct inotify_event *ev)
 				}
 
 				/* Store statefile name for later MOVED_TO event along with COOKIE */
-				pLstn->masterLstn->movedfrom_statefile = (uchar*) strdup((char*) getStateFileName(pLstn, statefile, sizeof(statefile), NULL) );
+				pLstn->masterLstn->movedfrom_statefile = (uchar*)strdup((char*) getStateFileName(pLstn,
+					statefile, sizeof(statefile), NULL) );
 				pLstn->masterLstn->movedfrom_cookie = ev->cookie;
 
 				/* do NOT remove statefile in this case!*/

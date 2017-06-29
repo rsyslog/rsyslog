@@ -690,7 +690,8 @@ finalize_it:
  * check the status of response from ES
  */
 static int checkReplyStatus(fjson_object* ok) {
-	return (ok == NULL || !fjson_object_is_type(ok, fjson_type_int) || fjson_object_get_int(ok) < 0 || fjson_object_get_int(ok) > 299);
+	return (ok == NULL || !fjson_object_is_type(ok, fjson_type_int) || fjson_object_get_int(ok) < 0 ||
+		fjson_object_get_int(ok) > 299);
 }
 
 /*

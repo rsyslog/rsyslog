@@ -222,7 +222,8 @@ ENDinterface(strm)
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int fileNum, off64_t offs, off64_t *bytesDel);
-rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF, sbool discardTruncatedMsg, sbool msgDiscardingError);
+rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg,
+	sbool bEscapeLF, sbool discardTruncatedMsg, sbool msgDiscardingError);
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
 void strmDebugOutBuf(const strm_t *const pThis);
 void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);

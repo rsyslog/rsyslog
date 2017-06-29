@@ -888,7 +888,8 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF, const sbool discardTruncatedMsg, const sbool msgDiscardingError)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
+	const sbool discardTruncatedMsg, const sbool msgDiscardingError)
 {
         uchar c;
 	uchar finished = 0;

@@ -692,7 +692,8 @@ deliveryCallback(rd_kafka_t __attribute__((unused)) *rk,
 	if (rkmessage->err) {
 		/* Put into kafka queue, again if configured! */
 		if (pData->bResubmitOnFailure) {
-			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' - adding to FAILED MSGs for RETRY!\n",
+			DBGPRINTF("omkafka: kafka delivery FAIL on Topic '%s', msg '%.*s', key '%.*s' -"
+				" adding to FAILED MSGs for RETRY!\n",
 				rd_kafka_topic_name(rkmessage->rkt),
 				(int)(rkmessage->len-1), (char*)rkmessage->payload,
 				(int)(rkmessage->key_len), (char*)rkmessage->key);
