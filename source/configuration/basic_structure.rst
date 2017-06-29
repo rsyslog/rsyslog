@@ -27,7 +27,7 @@ Processing Principles
 
 - additional rulesets can be user-defined
 
-- each ruleset contains zero or many rules
+- each ruleset contains zero or more rules
 
   * while it is permitted to have zero rules inside a ruleset,
     this obviously makes no sense
@@ -92,7 +92,7 @@ Rsyslog supports three different types of configuration statements
 concurrently:
 
 -  **sysklogd** - this is the plain old format, taught everywhere and
-   still pretty useful for simple use cases. Note that some very few
+   still pretty useful for simple use cases. Note that some
    constructs are no longer supported because they are incompatible with
    newer features. These are mentioned in the compatibility docs.
 -  **legacy rsyslog** - these are statements that begin with a dollar
