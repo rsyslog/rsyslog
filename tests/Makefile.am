@@ -278,25 +278,6 @@ TESTS +=  \
 	fac_local0-vg.sh
 endif # HAVE_VALGRIND
 
-if ENABLE_USERTOOLS
-if ENABLE_GT_KSI
-TESTS +=  \
-	ksi-verify-short.sh \
-	ksi-verify-long.sh \
-	ksi-verify-cnstr-short.sh \
-	ksi-verify-cnstr-long.sh \
-	ksi-extract-verify-short.sh \
-	ksi-extract-verify-long.sh 
-if HAVE_VALGRIND
-TESTS +=  \
-	ksi-verify-short-vg.sh \
-	ksi-verify-long-vg.sh \
-	ksi-extract-verify-short-vg.sh \
-	ksi-extract-verify-long-vg.sh 
-endif
-endif
-endif
-
 if ENABLE_OMJOURNAL
 TESTS +=  \
 	omjournal-abort-template.sh \
@@ -1527,18 +1508,6 @@ EXTRA_DIST= \
 	json_var_case.sh \
 	testsuites/json_var_case.conf \
 	cfg.sh \
-	testsuites/ksi-sample.log \
-	testsuites/ksi-sample.log.ksisig \
-	ksi-verify-short.sh \
-	ksi-verify-long.sh \
-	ksi-extract-verify-short.sh \
-	ksi-extract-verify-long.sh \
-	ksi-verify-cnstr-short.sh \
-	ksi-verify-cnstr-long.sh \
-	ksi-verify-short-vg.sh \
-	ksi-verify-long-vg.sh \
-	ksi-extract-verify-short-vg.sh \
-	ksi-extract-verify-long-vg.sh \
 	empty-prop-comparison.sh \
 	sndrcv_tls_anon_rebind.sh \
 	testsuites/sndrcv_tls_anon_rebind_sender.conf \

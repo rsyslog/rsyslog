@@ -251,21 +251,6 @@ lmtcpclt_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmtcpclt_la_LIBADD = 
 
 
-
-#
-# support library for guardtime KSI
-#
-if ENABLE_GT_KSI
-   noinst_LTLIBRARIES +=  librsksi.la
-   librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h librsgt_common.h
-   librsksi_la_CPPFLAGS =  $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
-   pkglib_LTLIBRARIES += lmsig_ksi.la
-   lmsig_ksi_la_SOURCES = lmsig_ksi.c lmsig_ksi.h
-   lmsig_ksi_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
-   lmsig_ksi_la_LDFLAGS = -module -avoid-version
-   lmsig_ksi_la_LIBADD = librsksi.la $(GT_KSI_LIBS)
-endif
-
 #
 # support library for Guardtime KSI-LS12
 #
