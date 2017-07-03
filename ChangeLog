@@ -1,5 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.29.0 [v8-stable] 2017-08-08
+- lmsig_ksi: removed pre-KSI_LS12 components
+  As of GuardTime, the provider, these no longer work due to backend
+  changes. The lmsig_ksi_ls12 module shall be used instead. This is
+  available since 8.27.0.
 ------------------------------------------------------------------------------
 Version 8.28.0 [v8-stable] 2017-06-27
 - NEW BUILD REQUIREMENT: librelp 1.2.14 (to build relp components)
