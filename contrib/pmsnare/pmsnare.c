@@ -286,7 +286,8 @@ CODESTARTparse2
 	 *
 	 * - Find out if the first separator is a tab.
 	 * - If it is, see if the second word is one of our expected tags.
-	 *   - If so, flag as Snare and replace the first tab with space so that hostname and syslog tag are going to be parsed properly
+	 *   - If so, flag as Snare and replace the first tab with space so that
+	 *     hostname and syslog tag are going to be parsed properly
 	 *   - Else not a snare message, abort.
 	 * - Else assume valid 3164 timestamp, move over to the syslog tag.
 	 * - See if syslog header is followed by tab and one of our expected tags.
@@ -351,7 +352,8 @@ CODESTARTparse2
 		 */
 
 		/* go back to the beginning of the message */
-		lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI; /* offAfterPRI is already the number of PRI chars (do not add one!) */
+		lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+		/* offAfterPRI is already the number of PRI chars (do not add one!) */
 		p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI;
 
 		/* skip over timestamp and space (15 chars + space). */
