@@ -411,6 +411,7 @@ TESTS +=  \
 	imptcp_addtlframedelim.sh \
 	imptcp_conndrop.sh \
 	imptcp_no_octet_counted.sh \
+	imptcp_multi_line.sh \
 	imptcp_spframingfix.sh \
 	imptcp_nonProcessingPoller.sh \
 	imptcp_veryLargeOctateCountedMessages.sh \
@@ -1031,6 +1032,8 @@ EXTRA_DIST= \
 	imptcp_conndrop-vg.sh \
 	imptcp_conndrop.sh \
 	testsuites/imptcp_conndrop.conf \
+	imptcp_multi_line.sh \
+	testsuites/imptcp_multi_line.testdata \
 	imptcp_no_octet_counted.sh \
 	testsuites/imptcp_no_octet_counted.conf \
 	testsuites/no_octet_counted.testdata \

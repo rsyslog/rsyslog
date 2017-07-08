@@ -131,6 +131,7 @@ struct instanceConf_s {
 	int bSuppOctetFram;		/* support octet-counted framing? */
 	int bSPFramingFix;
 	int iAddtlFrameDelim;
+	sbool multiLine;
 	uint8_t compressionMode;
 	uchar *pszBindPort;		/* port to bind to */
 	uchar *pszBindAddr;		/* IP to bind socket to */
@@ -204,7 +205,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "keepalive.interval", eCmdHdlrInt, 0 },
 	{ "addtlframedelimiter", eCmdHdlrInt, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "multiline", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -237,6 +239,7 @@ struct ptcpsrv_s {
 	int	bFailOnPerms;	/* fail creation if chown fails? */
 	sbool bUnixSocket;
 	int iAddtlFrameDelim;
+	sbool multiLine;
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
@@ -994,14 +997,25 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 				 * rgerhards, 2006-12-04
 				 */
 			}
-
 			if ((c == '\n')
 				   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
 					   && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
 				   ) { /* record delimiter? */
-				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-				++(*pnMsgs);
-				pThis->inputState = eAtStrtFram;
+				if(pThis->pLstn->pSrv->multiLine) {
+					if((buffLen == 1) || ((*buff)[1] == '<')) {
+						doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+						++(*pnMsgs);
+						pThis->inputState = eAtStrtFram;
+					} else {
+						if(pThis->iMsg < iMaxLine) {
+							*(pThis->pMsg + pThis->iMsg++) = c;
+						}
+					}
+				} else {
+					doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+					++(*pnMsgs);
+					pThis->inputState = eAtStrtFram;
+				}
 			} else {
 				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
 				 * If we have a message that is larger than the max msg size, we truncate it. This is the best
@@ -1472,6 +1486,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
 	inst->ratelimitInterval = 0; /* off */
 	inst->compressionMode = COMPRESS_SINGLE_MSG;
+	inst->multiLine = 0;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -1561,6 +1576,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 		CHKmalloc(pSrv->port = ustrdup(inst->pszBindPort));
 	}
 	pSrv->iAddtlFrameDelim = inst->iAddtlFrameDelim;
+	pSrv->multiLine = inst->multiLine;
 	pSrv->maxFrameSize = inst->maxFrameSize;
 	if (inst->pszBindAddr == NULL) {
 		pSrv->lstnIP = NULL;
@@ -2041,6 +2057,8 @@ CODESTARTnewInpInst
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "multiline")) {
+			inst->multiLine = (sbool) pvals[i].val.d.n;
 		} else {
 			dbgprintf("imptcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
