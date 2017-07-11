@@ -97,6 +97,7 @@ TESTS +=  \
 	no-parser-errmsg.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
+	msgdup.sh \
 	empty-ruleset.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
@@ -975,6 +976,7 @@ EXTRA_DIST= \
 	testsuites/da-mainmsg-q.conf \
 	diskqueue-fsync.sh \
 	testsuites/diskqueue-fsync.conf \
+	msgdup.sh \
 	empty-ruleset.sh \
 	testsuites/empty-ruleset.conf \
 	imtcp-discard-truncated-msg.sh \
