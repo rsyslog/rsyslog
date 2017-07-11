@@ -23,6 +23,7 @@ Note that **configurations can be built interactively** via the online
    timezone
    examples
    index_directives
+   rsyslog_statistic_counter
    modules/index
    output_channels
    droppriv

@@ -293,6 +293,17 @@ the input they are specified with.
    Experimental parameter which caues rsyslog to recognise a new message
    only if the line feed is followed by a '<' or if there are no more characters.
 
+Statistic Counter
+-----------------
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener. The statistic is
+named "imtcp" , followed by the bound address, listener port and IP
+version in parenthesis. For example, the counter for a listener on port
+514, bound to all interfaces and listening on IPv6 is called
+"imptcp(\*/514/IPv6)".
+
+The following properties are maintained for each listener:
+-  **submitted** - total number of messages submitted for processing since startup
 
 Caveats/Known Bugs
 ------------------

@@ -181,6 +181,30 @@ This module supports module parameters, only.
    restart). Note that such lower bound logic requires *resetCounters*
    to be set to off.
 
+Statistic Counter
+-----------------
+
+The impstats plugin gathers some internal :doc:`statistics <../rsyslog_statistic_counter>`.
+They have different names depending on the actual statistics. Obviously, they do not
+relate to the plugin itself but rather to a broader object – most notably the
+rsyslog process itself. The "resource-usage" counter maintains process
+statistics. They base on the getrusage() system call. The counters are
+named like getrusage returned data memebers. So for details, looking them
+up in "man getrusage" is highly recommended, especially as value may be
+different depending on the platform. A getrusage() call is done immediately
+before the counter is emitted. The follwowing individual counters are
+maintained:
+
+-  **utime** - this is the user time in microseconds (thus the timeval structure combined)
+-  **stime** - again, time given in microseconds
+-  **maxrss**
+-  **minflt**
+-  **majflt**
+-  **inblock**
+-  **outblock**
+-  **nvcsw**
+-  **nivcsw**
+
 Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
