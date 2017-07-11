@@ -62,6 +62,7 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "errmsg.h"
 
 #ifdef OS_SOLARIS
 #	define	s6_addr32	_S6_un._S6_u32
@@ -1245,12 +1246,13 @@ closeUDPListenSockets(int *pSockArr)
  * similar for sndbuf.
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, const int sndbuf, int ipfreebind, char *device)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 	int actrcvbuf;
+	int actsndbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
@@ -1375,6 +1377,36 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 				close(*s);
 				*s = -1;
 				continue;
+			}
+		}
+
+		if(sndbuf != 0) {
+#			if defined(SO_SNDBUFFORCE)
+			if(setsockopt(*s, SOL_SOCKET, SO_SNDBUFFORCE, &sndbuf, sizeof(sndbuf)) < 0)
+#			endif
+			{
+				/* if we fail, try to do it the regular way. Experiments show that at 
+				 * least some platforms do not return an error here, but silently set
+				 * it to the max permitted value. So we do our error check a bit
+				 * differently by querying the size below.
+				 */
+				setsockopt(*s, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+			}
+		}
+
+		if(Debug || sndbuf != 0) {
+			optlen = sizeof(actsndbuf);
+			if(getsockopt(*s, SOL_SOCKET, SO_SNDBUF, &actsndbuf, &optlen) == 0) {
+				dbgprintf("socket %d, actual os socket sndbuf size %d\n", *s, actsndbuf);
+				LogError(0, RS_RET_ERR,"socket %d, actual os socket sndbuf size %d", *s, actsndbuf);
+				if(sndbuf != 0 && actsndbuf/2 != sndbuf) {
+					errmsg.LogError(errno, NO_ERRCODE,
+						"cannot set os socket sndbuf size %d for socket %d, value now is %d",
+						sndbuf, *s, actsndbuf/2);
+				}
+			} else {
+				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
+					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
 
