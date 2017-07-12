@@ -1392,20 +1392,18 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, co
 				 */
 				setsockopt(*s, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
 			}
-		}
-
-		if(Debug || sndbuf != 0) {
+			/* report socket buffer sizes */
 			optlen = sizeof(actsndbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_SNDBUF, &actsndbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual os socket sndbuf size %d\n", *s, actsndbuf);
-				LogError(0, RS_RET_ERR,"socket %d, actual os socket sndbuf size %d", *s, actsndbuf);
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket sndbuf size is %d", *s, actsndbuf);
 				if(sndbuf != 0 && actsndbuf/2 != sndbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
-						"cannot set os socket sndbuf size %d for socket %d, value now is %d",
-						sndbuf, *s, actsndbuf/2);
+						"could not set os socket sndbuf size %d for socket %d, "
+						"value now is %d", sndbuf, *s, actsndbuf/2);
 				}
 			} else {
-				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
 					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
@@ -1422,19 +1420,17 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, co
 				 */
 				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 			}
-		}
-
-		if(Debug || rcvbuf != 0) {
 			optlen = sizeof(actrcvbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
 				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
 						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
 						rcvbuf, *s, actrcvbuf/2);
 				}
 			} else {
-				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
 					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
@@ -1483,8 +1479,8 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, co
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
+		errmsg.LogError(0, NO_ERRCODE, "No UDP socket could successfully be initialized, "
+			 "some functionality may be disabled.\n");
 		/* we do NOT need to free any sockets, because there were none... */
         	free(socks);
 		return(NULL);
