@@ -1239,7 +1239,10 @@ closeUDPListenSockets(int *pSockArr)
  * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
- * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+ * Note: server sockets are created in non-blocking mode, client ones
+ * are blocking.
+ * param rcvbuf indicates desired rcvbuf size; 0 means OS default,
+ * similar for sndbuf.
  */
 static int *
 create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
@@ -1358,25 +1361,21 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 #endif
-		/* We must not block on the network socket, in case a packet
-		 * gets lost between select and recv, otherwise the process
-		 * will stall until the timeout, and other processes trying to
-		 * log will also stall.
-		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
-		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
-		 */
-		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
-			sockflags |= O_NONBLOCK;
-			/* SETFL could fail too, so get it caught by the subsequent
-			 * error check.
-			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
-		}
-		if (sockflags == -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
-                        close(*s);
-			*s = -1;
-			continue;
+		if(bIsServer) {
+			DBGPRINTF("net.c: trying to set server socket %d to non-blocking mode\n", *s);
+			if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+				sockflags |= O_NONBLOCK;
+				/* SETFL could fail too, so get it caught by the subsequent
+				 * error check.
+				 */
+				sockflags = fcntl(*s, F_SETFL, sockflags);
+			}
+			if (sockflags == -1) {
+				LogError(errno, NO_ERRCODE, "net.c: socket %d fcntl(O_NONBLOCK)", *s);
+				close(*s);
+				*s = -1;
+				continue;
+			}
 		}
 
 		if(rcvbuf != 0) {
