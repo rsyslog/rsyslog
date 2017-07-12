@@ -301,7 +301,7 @@ addListner(instanceConf_t *inst)
 
 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, inst->ipfreebind, inst->pszBindDevice);
+	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, 0, inst->ipfreebind, inst->pszBindDevice);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */

@@ -148,7 +148,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*PrintAllowedSenders)(int iListToPrint);
 	void (*clearAllowedSenders)(uchar*);
 	void (*debugListenInfo)(int fd, char *type);
-	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int ipfreebind, char *device);
+	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf, int sndbuf, int ipfreebind, char *device);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
 	rsRetVal (*getLocalHostname)(uchar**);
