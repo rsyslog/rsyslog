@@ -1252,7 +1252,13 @@ closeUDPListenSockets(int *pSockArr)
  * similar for sndbuf.
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, const int sndbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname,
+	uchar *pszPort,
+	int bIsServer,
+	int rcvbuf,
+	const int sndbuf,
+	int ipfreebind,
+	char *device)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
