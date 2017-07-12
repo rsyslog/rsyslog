@@ -428,7 +428,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	sbool bSendSuccess;
 	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
-	int lasterr_sock;
+	int lasterr_sock = -1;
 	char errStr[1024];
 
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
