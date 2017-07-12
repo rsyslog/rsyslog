@@ -164,7 +164,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "compression.stream.flushontxend", eCmdHdlrBinary, 0 },
-	{ "maxerrormessages", eCmdHdlrInt, 0 },
+	{ "maxerrormessages", eCmdHdlrInt, CNFPARAM_DEPRECATED },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
@@ -354,7 +354,6 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->errsToReport = 5;
 	if(cs.pszStrmDrvr != NULL)
 		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
 	if(cs.pszStrmDrvrAuthMode != NULL)
@@ -368,7 +367,6 @@ BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	dbgprintf("DDDD: createWrkrInstance: pWrkrData %p\n", pWrkrData);
 	pWrkrData->offsSndBuf = 0;
-	pWrkrData->errsToReport = pData->errsToReport;
 	iRet = initTCP(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -422,6 +420,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	sbool bSendSuccess;
 	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
+	int lasterr_sock;
 	char errStr[1024];
 
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
@@ -452,8 +451,9 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 				} else {
 					reInit = RSTRUE;
 					lasterrno = errno;
-					DBGPRINTF("sendto() error: %d = %s.\n",
-						lasterrno,
+					lasterr_sock = pWrkrData->pSockArray[i+1];
+					DBGPRINTF("omfwd: socket %d: sendto() error: %d = %s.\n",
+						lasterr_sock, lasterrno,
 						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
 				}
 			}
@@ -471,21 +471,10 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 			if(pWrkrData->pData->iUDPSendDelay > 0) {
 				srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
 				        pWrkrData->pData->iUDPSendDelay % 1000000);
-				}
-		} else {
-			dbgprintf("error forwarding via udp, suspending\n");
-			if(pWrkrData->errsToReport > 0) {
-				errmsg.LogError(lasterrno, RS_RET_ERR_UDPSEND,
-						"omfwd: error %d sending "
-						"via udp", lasterrno);
-				if(pWrkrData->errsToReport == 1) {
-					errmsg.LogMsg(0, RS_RET_LAST_ERRREPORT, LOG_WARNING, "omfwd: "
-							"max number of error message emitted "
-							"- further messages will be "
-							"suppressed");
-				}
-				--pWrkrData->errsToReport;
 			}
+		} else {
+			LogError(lasterrno, RS_RET_ERR_UDPSEND,
+				"omfwd: socket %d: error %d sending via udp", lasterr_sock, lasterrno);
 			iRet = RS_RET_SUSPENDED;
 		}
 	}
@@ -970,7 +959,6 @@ setInstParamDefaults(instanceData *pData)
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
-	pData->errsToReport = 5;
 }
 
 BEGINnewActInst
@@ -1094,8 +1082,6 @@ CODESTARTnewActInst
 					 "forwardig action - NOT turning on compression.",
 					 complevel);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
-			pData->errsToReport = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
