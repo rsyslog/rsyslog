@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2016 Adiscon GmbH.
+ * Copyright 2010-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -36,6 +36,10 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#ifdef OS_LINUX
+#include <sys/types.h>
+#include <dirent.h>
+#endif
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -117,6 +121,9 @@ static struct cnfparamblk modpblk =
 
 
 /* resource use stats counters */
+#ifdef OS_LINUX
+static int st_openfiles;
+#endif
 static intctr_t st_ru_utime;
 static intctr_t st_ru_stime;
 static int st_ru_maxrss;
@@ -145,6 +152,35 @@ CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
+
+
+#ifdef OS_LINUX
+/* count number of open files (linux specific) */
+static void
+countOpenFiles(void)
+{
+	char proc_path[MAXFNAME];
+	DIR *dp;
+	struct dirent *files;
+
+	st_openfiles = 0;
+	snprintf(proc_path, sizeof(proc_path), "/proc/%d/fd", glblGetOurPid());
+	if((dp = opendir(proc_path)) == NULL) {
+		LogError(errno, RS_RET_ERR, "impstats: error reading %s\n", proc_path);
+		goto done;
+	}
+	while((files=readdir(dp)) != NULL) {
+		if(!strcmp(files->d_name, ".") || !strcmp(files->d_name, ".."))
+			continue;
+		st_openfiles++;
+	}
+	closedir(dp);
+
+done:
+	return;
+}
+#endif
+
 
 static void
 initConfigSettings(void)
@@ -269,6 +305,9 @@ generateStatsMsgs(void)
 		dbgprintf("impstats: getrusage() failed with error %d, zeroing out\n", errno);
 		memset(&ru, 0, sizeof(ru));
 	}
+#	ifdef OS_LINUX
+	countOpenFiles();
+#	endif
 	st_ru_utime = ru.ru_utime.tv_sec * 1000000 + ru.ru_utime.tv_usec;
 	st_ru_stime = ru.ru_stime.tv_sec * 1000000 + ru.ru_stime.tv_usec;
 	st_ru_maxrss = ru.ru_maxrss;
@@ -457,6 +496,10 @@ CODESTARTactivateCnf
 		ctrType_Int, CTR_FLAG_NONE, &st_ru_nvcsw));
 	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("nivcsw"),
 		ctrType_Int, CTR_FLAG_NONE, &st_ru_nivcsw));
+#	ifdef OS_LINUX
+	CHKiRet(statsobj.AddCounter(statsobj_resources, UCHAR_CONSTANT("openfiles"),
+		ctrType_Int, CTR_FLAG_NONE, &st_openfiles));
+#	endif
 	CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
 finalize_it:
 	if(iRet != RS_RET_OK) {
