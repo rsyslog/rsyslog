@@ -122,6 +122,8 @@ int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
 int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 int glblUnloadModules = 1;
 int bPermitSlashInProgramname = 0;
+int glblIntMsgRateLimitItv = 5;
+int glblIntMsgRateLimitBurst = 500;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -175,7 +177,9 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
-	{ "umask", eCmdHdlrFileCreateMode, 0 }
+	{ "umask", eCmdHdlrFileCreateMode, 0 },
+	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
+	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1225,6 +1229,10 @@ glblDoneLoadCnf(void)
 		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
 		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
+		        glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
+		       glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
 				char *const var =

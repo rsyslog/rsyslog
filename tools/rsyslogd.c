@@ -550,7 +550,7 @@ rsyslogd_InitStdRatelimiters(void)
 	CHKiRet(ratelimitNew(&dflt_ratelimiter, "rsyslogd", "dflt"));
 	/* TODO: add linux-type limiting capability */
 	CHKiRet(ratelimitNew(&internalMsg_ratelimiter, "rsyslogd", "internal_messages"));
-	ratelimitSetLinuxLike(internalMsg_ratelimiter, 5, 500);
+	ratelimitSetLinuxLike(internalMsg_ratelimiter, glblIntMsgRateLimitItv, glblIntMsgRateLimitBurst);
 	/* TODO: make internalMsg ratelimit settings configurable */
 finalize_it:
 	RETiRet;
