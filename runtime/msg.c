@@ -1123,7 +1123,7 @@ smsg_t* MsgDup(smsg_t* pOld)
 			pNew->iLenTAG = pOld->iLenTAG;
 		}
 	}
-	if(pOld->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+	if(pOld->pszRawMsg == pOld->szRawMsg) {
 		memcpy(pNew->szRawMsg, pOld->szRawMsg, pOld->iLenRawMsg + 1);
 		pNew->pszRawMsg = pNew->szRawMsg;
 	} else {
