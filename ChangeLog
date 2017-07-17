@@ -1,5 +1,23 @@
 ------------------------------------------------------------------------------
 Version 8.29.0 [v8-stable] 2017-08-08
+- bugfix core: messsage garbled after message modification
+  The MsgDup() function will return a garbled message object under these
+  conditions: The message was originally created with message length equal or
+  larger to CONF_RAWMSG_BUFSIZE. This makes rsyslog store the message in
+  dynamically allocated buffer space. Then, a component reduces the message
+  size to a size lower than CONGF_RAWMSG_BUFSIZE. A frequent sample is the
+  parser removing a known-bad LF at the end of the messages. Then, MsgDup is
+  executed. It checks the message size and finds that it is below
+  CONF_RAWMSG_BUFSIZE, which make it copy the msg object internal buffer
+  instead of the dynamically allocated one. That buffer was not written to in
+  the first place, so unitialized data is copied. Note that no segfault can
+  happen, as the copied location was properly allocated, just not used in
+  this processing flow. In the end result, the new message object contains
+  garbage data. Whenever the new object is used (e.g. in a async ruleset or
+  action) that garbage will be used. Whenever the old object is accessed,
+  correct data will be used. Both types of access can happen inside the
+  same processing flow, which makes the problem appear to be random.
+  closes https://github.com/rsyslog/rsyslog/issues/1658
 - lmsig_ksi: removed pre-KSI_LS12 components
   As of GuardTime, the provider, these no longer work due to backend
   changes. The lmsig_ksi_ls12 module shall be used instead. This is
