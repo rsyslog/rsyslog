@@ -1224,6 +1224,67 @@ finalize_it:
 }
 
 
+/* return the IP address (IPv4/6) for the provided interface. Returns
+ * RS_RET_NOT_FOUND if interface can not be found in interface list.
+ * The family must be correct (AF_INET vs. AF_INET6, AF_UNSPEC means
+ * either of *these two*).
+ * The function re-queries the interface list (at least in theory).
+ * However, it caches entries in order to avoid too-frequent requery.
+ * rgerhards, 2012-03-06
+ */
+#if !defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
+/* Problem with the warnings: they seem to stem back from the way the API is structured */
+#endif
+static rsRetVal
+getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
+{
+#ifdef _AIX
+	struct ifaddrs_rsys * ifaddrs = NULL;
+	struct ifaddrs_rsys * ifa;
+#else
+	struct ifaddrs * ifaddrs = NULL;
+	struct ifaddrs * ifa;
+#endif
+	void * pAddr;
+	DEFiRet;
+
+ 	if(getifaddrs(&ifaddrs) != 0) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
+		if(strcmp(ifa->ifa_name, (char*)szif))
+			continue;
+		if(   (family == AF_INET6 || family == AF_UNSPEC)
+		   && ifa->ifa_addr->sa_family == AF_INET6) {
+			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
+		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
+			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
+			break;
+		} 
+	}
+
+	if(ifaddrs != NULL)
+		freeifaddrs(ifaddrs);
+
+	if(ifa == NULL)
+		iRet = RS_RET_NOT_FOUND;
+
+finalize_it:
+	RETiRet;
+
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
+
+
 /* closes the UDP listen sockets (if they exist) and frees
  * all dynamically assigned memory. 
  */
@@ -1241,17 +1302,21 @@ closeUDPListenSockets(int *pSockArr)
 }
 
 
-/* creates the UDP listen sockets
+/* creates the UDP server and client sockets
  * hostname and/or pszPort may be NULL, but not both!
+ * mipIntf is the multicast IP interface for server listeners
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
  * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+ * param device causes a socket bind to the device
+ * param mcastttl is client socket IP multicast ttl
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname, uchar *pszPort, uchar *mipIntf,
+	int bIsServer, int rcvbuf, int ipfreebind, char *device, int mcastttl)
 {
         struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks, on = 1;
+        int error, maxs, *s, *socks, on = 1, isIpMcast = 0;
 	int sockflags;
 	int actrcvbuf;
 	socklen_t optlen;
@@ -1263,19 +1328,19 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_DGRAM;
- #if defined (_AIX)
+	hints.ai_family = glbl.GetDefPFFamily();
+	hints.ai_socktype = SOCK_DGRAM;
+#if defined (_AIX)
 /* AIXPORT : SOCK_DGRAM has the protocol IPPROTO_UDP 
  *           getaddrinfo needs this hint on AIX
  */
-        hints.ai_protocol = IPPROTO_UDP;
+	hints.ai_protocol = IPPROTO_UDP;
 #endif
-        error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
-        if(error) {
-               errmsg.LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
-	       errmsg.LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
-	       return NULL;
+	error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
+	if(error) {
+		errmsg.LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
+		errmsg.LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
+		return NULL;
 	}
 
         /* Count max number of sockets we may open */
@@ -1414,6 +1479,11 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 
+		isIpMcast = r->ai_family == AF_INET &&
+			r->ai_protocol == IPPROTO_UDP &&
+			ntohl(SIN(r->ai_addr)->sin_addr.s_addr) >= 0xE0000000 &&
+			ntohl(SIN(r->ai_addr)->sin_addr.s_addr) <= 0xEFFFFFFF;
+
 		if(bIsServer) {
 
 			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
@@ -1440,6 +1510,60 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 						continue;
 					}
 				}
+				close(*s);
+				*s = -1;
+				continue;
+			}
+
+			/* Determine multicast interface. */
+			struct in_addr mipIntfAddr = {INADDR_ANY};
+			if (isIpMcast && mipIntf != NULL) {
+				int ret = -1;
+				uchar myIP[128] = {0};
+
+				/* First try to resolve the interface by address,
+				 * then by name.
+				 */
+				ret = inet_pton(AF_INET, (const char *)mipIntf, &mipIntfAddr);
+				if (ret != 1 && getIFIPAddr(mipIntf,
+					AF_INET, myIP, (int)sizeof(myIP)) == RS_RET_OK) {
+					ret = inet_pton(AF_INET, (const char *)myIP, &mipIntfAddr);
+				}
+
+				if (ret != 1) {
+				errmsg.LogError(0, RS_RET_ERR, "IP address for interface "
+					"'%s' cannnot be obtained for IP multicast socket."
+					"  Failed socket setup.", mipIntf);
+				close(*s);
+				*s = -1;
+				continue;
+				}
+			}
+
+			/* Join group for multicast sockets. */
+			if (isIpMcast) {
+				struct ip_mreqn mjoin = {
+				.imr_multiaddr.s_addr = SIN(r->ai_addr)->sin_addr.s_addr,
+				.imr_address.s_addr = mipIntfAddr.s_addr,
+				0,
+				};
+
+				if (setsockopt(*s, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+				&mjoin, sizeof(mjoin))) {
+					errmsg.LogError(errno, NO_ERRCODE,
+					"setsockopt(IP_ADD_MEMBERSHIP)");
+				close(*s);
+					*s = -1;
+					continue;
+				}
+			}
+
+		/* Multicast client socket. */
+		} else if (isIpMcast) {
+			if (setsockopt(*s, IPPROTO_IP, IP_MULTICAST_TTL,
+				&mcastttl, sizeof(mcastttl))) {
+				errmsg.LogError(errno, NO_ERRCODE,
+					"setsockopt(IP_MULTICAST_TTL) %d", mcastttl);
 				close(*s);
 				*s = -1;
 				continue;
@@ -1534,67 +1658,6 @@ finalize_it:
 	}
 	RETiRet;
 }
-
-
-/* return the IP address (IPv4/6) for the provided interface. Returns
- * RS_RET_NOT_FOUND if interface can not be found in interface list.
- * The family must be correct (AF_INET vs. AF_INET6, AF_UNSPEC means
- * either of *these two*).
- * The function re-queries the interface list (at least in theory).
- * However, it caches entries in order to avoid too-frequent requery.
- * rgerhards, 2012-03-06
- */
-#if !defined(_AIX)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align" /* TODO: how can we fix these warnings? */
-/* Problem with the warnings: they seem to stem back from the way the API is structured */
-#endif
-static rsRetVal
-getIFIPAddr(uchar *szif, int family, uchar *pszbuf, int lenBuf)
-{
-#ifdef _AIX
-	struct ifaddrs_rsys * ifaddrs = NULL;
-	struct ifaddrs_rsys * ifa;
-#else
-	struct ifaddrs * ifaddrs = NULL;
-	struct ifaddrs * ifa;
-#endif
-	void * pAddr;
-	DEFiRet;
-
- 	if(getifaddrs(&ifaddrs) != 0) {
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	for (ifa = ifaddrs; ifa != NULL; ifa = ifa->ifa_next) {
-		if(strcmp(ifa->ifa_name, (char*)szif))
-			continue;
-		if(   (family == AF_INET6 || family == AF_UNSPEC)
-		   && ifa->ifa_addr->sa_family == AF_INET6) {
-			pAddr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
-			inet_ntop(AF_INET6, pAddr, (char*)pszbuf, lenBuf);
-			break;
-		} else if(/*   (family == AF_INET || family == AF_UNSPEC)
-		         &&*/ ifa->ifa_addr->sa_family == AF_INET) {
-			pAddr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-			inet_ntop(AF_INET, pAddr, (char*)pszbuf, lenBuf);
-			break;
-		} 
-	}
-
-	if(ifaddrs != NULL)
-		freeifaddrs(ifaddrs);
-
-	if(ifa == NULL)
-		iRet = RS_RET_NOT_FOUND;
-
-finalize_it:
-	RETiRet;
-
-}
-#if !defined(_AIX)
-#pragma GCC diagnostic pop
-#endif
 
 
 /* queryInterface function

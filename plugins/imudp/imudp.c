@@ -101,6 +101,7 @@ static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitte
 static struct configSettings_s {
 	uchar *pszBindAddr;		/* IP to bind socket to */
 	char  *pszBindDevice;		/* Device to bind socket to */
+	uchar *pszBindIntf;		/* Interface to join multicast socket to */
 	uchar *pszSchedPolicy;		/* scheduling policy string */
 	uchar *pszBindRuleset;		/* name of Ruleset to bind to */
 	int iSchedPrio;			/* scheduling priority */
@@ -110,6 +111,7 @@ static struct configSettings_s {
 struct instanceConf_s {
 	uchar *pszBindAddr;		/* IP to bind socket to */
 	char  *pszBindDevice;		/* Device to bind socket to */
+	uchar *pszBindIntf;		/* Interface to join multicast socket to */
 	uchar *pszBindPort;		/* Port to bind socket to */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	uchar *inputname;
@@ -183,6 +185,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "name.appendport", eCmdHdlrBinary, 0 },
 	{ "address", eCmdHdlrString, 0 },
 	{ "device", eCmdHdlrString, 0 },
+	{ "udp.multicastinterface", eCmdHdlrString, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "rcvbufsize", eCmdHdlrSize, 0 },
@@ -213,6 +216,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszBindPort = NULL;
 	inst->pszBindAddr = NULL;
 	inst->pszBindDevice = NULL;
+	inst->pszBindIntf = NULL;
 	inst->pszBindRuleset = NULL;
 	inst->inputname = NULL;
 	inst->bAppendPortToInpname = 0;
@@ -258,6 +262,11 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	} else {
 		CHKmalloc(inst->pszBindDevice = strdup(cs.pszBindDevice));
 	}
+	if((cs.pszBindIntf == NULL) || (cs.pszBindIntf[0] == '\0')) {
+		inst->pszBindIntf = NULL;
+	} else {
+		CHKmalloc(inst->pszBindIntf = ustrdup(cs.pszBindIntf));
+	}
 	if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
 		inst->pszBindRuleset = NULL;
 	} else {
@@ -301,7 +310,8 @@ addListner(instanceConf_t *inst)
 
 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
 
-	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf, inst->ipfreebind, inst->pszBindDevice);
+	newSocks = net.create_udp_socket(bindAddr, port, inst->pszBindIntf, 1,
+		inst->rcvbuf, inst->ipfreebind, inst->pszBindDevice, -1);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		/* ready to copy */
@@ -946,6 +956,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
 			inst->pszBindAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "device")) {
 			inst->pszBindDevice = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "udp.multicastinterface")) {
+			inst->pszBindIntf = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
 			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
@@ -1017,6 +1029,7 @@ CODESTARTbeginCnfLoad
 	cs.pszSchedPolicy = NULL;
 	cs.pszBindAddr = NULL;
 	cs.pszBindDevice = NULL;
+	cs.pszBindIntf = NULL;
 	cs.iSchedPrio = SCHED_PRIO_UNSET;
 	cs.iTimeRequery = TIME_REQUERY_DFLT;
 ENDbeginCnfLoad
@@ -1095,6 +1108,7 @@ finalize_it:
 	free(cs.pszSchedPolicy);
 	free(cs.pszBindAddr);
 	free(cs.pszBindDevice);
+	free(cs.pszBindIntf);
 ENDendCnfLoad
 
 
@@ -1162,6 +1176,7 @@ CODESTARTfreeCnf
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
 		free(inst->pszBindDevice);
+		free(inst->pszBindIntf);
 		free(inst->inputname);
 		free(inst->dfltTZ);
 		del = inst;
@@ -1321,6 +1336,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	cs.pszBindAddr = NULL;
 	free(cs.pszBindDevice);
 	cs.pszBindDevice = NULL;
+	free(cs.pszBindIntf);
+	cs.pszBindIntf = NULL;
 	free(cs.pszSchedPolicy);
 	cs.pszSchedPolicy = NULL;
 	free(cs.pszBindRuleset);
@@ -1355,6 +1372,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 		addInstance, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &cs.pszBindAddr, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservermulticastinterface", 0, eCmdHdlrGetWord,
+		NULL, &cs.pszBindIntf, STD_LOADABLE_MODULE_ID));
 	/* module-global config params - will be disabled in configs that are loaded
 	 * via module(...).
 	 */
