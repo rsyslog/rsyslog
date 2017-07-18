@@ -619,6 +619,11 @@ struct actWrkrIParams {
 #  define O_CLOEXEC 0
 #endif
 
+#ifndef SOCK_CLOEXEC
+/* of course, this limits the functionality... */
+#  define SOCK_CLOEXEC 0
+#endif
+
 /* some constants */
 #define MUTEX_ALREADY_LOCKED	0
 #define LOCK_MUTEX		1

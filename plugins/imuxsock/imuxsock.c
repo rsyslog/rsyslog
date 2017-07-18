@@ -499,7 +499,7 @@ createLogSocket(lstn_t *pLstn)
 		makeFileParentDirs((uchar*)pLstn->sockName, ustrlen(pLstn->sockName), 0755, -1, -1, 0);
 	}
 	strncpy(sunx.sun_path, (char*)pLstn->sockName, sizeof(sunx.sun_path));
-	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	pLstn->fd = socket(AF_UNIX, SOCK_DGRAM|SOCK_CLOEXEC, 0);
 	if(pLstn->fd < 0 || bind(pLstn->fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
 	    chmod((char*)pLstn->sockName, 0666) < 0) {
 		errmsg.LogError(errno, NO_ERRCODE, "cannot create '%s'", pLstn->sockName);
