@@ -286,6 +286,13 @@ the input they are specified with.
    Flow control is used to throttle the sender if the receiver queue is
    near-full preserving some space for input that can not be throttled.
 
+.. function:: multiLine <on/off>
+
+   *Default: off*
+
+   Experimental parameter which caues rsyslog to recognise a new message
+   only if the line feed is followed by a '<' or if there are no more characters.
+
 
 Caveats/Known Bugs
 ------------------
