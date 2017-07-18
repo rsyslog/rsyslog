@@ -62,6 +62,7 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "errmsg.h"
 
 #ifdef OS_SOLARIS
 #include <arpa/nameser_compat.h>
@@ -1245,15 +1246,25 @@ closeUDPListenSockets(int *pSockArr)
  * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
- * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+ * Note: server sockets are created in non-blocking mode, client ones
+ * are blocking.
+ * param rcvbuf indicates desired rcvbuf size; 0 means OS default,
+ * similar for sndbuf.
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname,
+	uchar *pszPort,
+	int bIsServer,
+	int rcvbuf,
+	const int sndbuf,
+	int ipfreebind,
+	char *device)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 	int actrcvbuf;
+	int actsndbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
@@ -1364,25 +1375,49 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 #endif
-		/* We must not block on the network socket, in case a packet
-		 * gets lost between select and recv, otherwise the process
-		 * will stall until the timeout, and other processes trying to
-		 * log will also stall.
-		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
-		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
-		 */
-		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
-			sockflags |= O_NONBLOCK;
-			/* SETFL could fail too, so get it caught by the subsequent
-			 * error check.
-			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
+		if(bIsServer) {
+			DBGPRINTF("net.c: trying to set server socket %d to non-blocking mode\n", *s);
+			if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+				sockflags |= O_NONBLOCK;
+				/* SETFL could fail too, so get it caught by the subsequent
+				 * error check.
+				 */
+				sockflags = fcntl(*s, F_SETFL, sockflags);
+			}
+			if (sockflags == -1) {
+				LogError(errno, NO_ERRCODE, "net.c: socket %d fcntl(O_NONBLOCK)", *s);
+				close(*s);
+				*s = -1;
+				continue;
+			}
 		}
-		if (sockflags == -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
-                        close(*s);
-			*s = -1;
-			continue;
+
+		if(sndbuf != 0) {
+#			if defined(SO_SNDBUFFORCE)
+			if(setsockopt(*s, SOL_SOCKET, SO_SNDBUFFORCE, &sndbuf, sizeof(sndbuf)) < 0)
+#			endif
+			{
+				/* if we fail, try to do it the regular way. Experiments show that at 
+				 * least some platforms do not return an error here, but silently set
+				 * it to the max permitted value. So we do our error check a bit
+				 * differently by querying the size below.
+				 */
+				setsockopt(*s, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+			}
+			/* report socket buffer sizes */
+			optlen = sizeof(actsndbuf);
+			if(getsockopt(*s, SOL_SOCKET, SO_SNDBUF, &actsndbuf, &optlen) == 0) {
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket sndbuf size is %d", *s, actsndbuf);
+				if(sndbuf != 0 && actsndbuf/2 != sndbuf) {
+					errmsg.LogError(errno, NO_ERRCODE,
+						"could not set os socket sndbuf size %d for socket %d, "
+						"value now is %d", sndbuf, *s, actsndbuf/2);
+				}
+			} else {
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
+					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+			}
 		}
 
 		if(rcvbuf != 0) {
@@ -1397,19 +1432,17 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 				 */
 				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 			}
-		}
-
-		if(Debug || rcvbuf != 0) {
 			optlen = sizeof(actrcvbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
 				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
 						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
 						rcvbuf, *s, actrcvbuf/2);
 				}
 			} else {
-				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
 					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
@@ -1458,8 +1491,8 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
+		errmsg.LogError(0, NO_ERRCODE, "No UDP socket could successfully be initialized, "
+			 "some functionality may be disabled.\n");
 		/* we do NOT need to free any sockets, because there were none... */
         	free(socks);
 		return(NULL);
