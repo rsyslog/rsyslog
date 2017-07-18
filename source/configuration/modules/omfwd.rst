@@ -107,17 +107,14 @@ Action Parameters
    with 9 being the strongest compression (taking up most processing
    time) and 0 being no compression at all (taking up no extra
    processing time).
--  **maxErrorMessages** integer [default 5], available since 7.5.4
 
-   This sets the maximum number of error messages that omfwd emits
-   during regular operations. The reason for such an upper limit is that
-   error messages are conveyed back to rsyslog's input message stream.
-   So if there would be no limit, an endless loop could be initiated if
-   the failing action would need to process its own error messages and
-   the emit a new one. This is also the reason why the default is very
-   conservatively low. Note that version prior to 7.5.4 did not report
-   any error messages for the same reason. Also note that with the
-   initial implementation only errors during UDP forwarding are logged.
+-  **maxErrorMessages** depricated in 8.29.0, do not use
+
+   This was used to do some very rough "rate limiting" in versions
+   prioer to 8.29.0 and actually stemed back to when there were no
+   real rate-limiting capabilities in rsyslog core. Starting with 8.29.0
+   this setting is ignored and the rsyslog internal message rate limiter
+   is used instead.
 
 -  **compression.mode** *mode*
 
