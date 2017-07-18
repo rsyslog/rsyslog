@@ -51,10 +51,16 @@ Version 8.29.0 [v8-stable] 2017-08-08
   this is a case where we really want the default retry logic. So for the time being,
   it is appropriate to not handle EAGAIN in a special case any longer.
   closes https://github.com/rsyslog/rsyslog/issues/1665
-- core/queue bugfix: Fix behaviour of PersistStateInterval
-  If PersistStateInterval=1, then each log line read should cause the state file
-  to be updated, but this was not happening because nRecords was being post-increment.
-  Thanks to Anthony Howe for the patch.
+- core/queue bugfixes:
+  * Fix behaviour of PersistStateInterval
+    If PersistStateInterval=1, then each log line read should cause the state file
+    to be updated, but this was not happening because nRecords was being post-increment.
+    Thanks to Anthony Howe for the patch.
+  * potential problem during deserialization
+    if queue object deserialization fails, invalid memory blocks might be
+    free'ed.
+    For more information see https://github.com/rsyslog/rsyslog/pull/1647
+    Thanks to Derek Smith for the patch.
 - core bugfix: messsage garbled after message modification
   The MsgDup() function will return a garbled message object under these
   conditions: The message was originally created with message length equal or
