@@ -182,6 +182,7 @@ TESTS +=  \
 	imuxsock_logger_root.sh \
 	imuxsock_traillf_root.sh \
 	imuxsock_ccmiddle_root.sh \
+	imklog_permitnonkernelfacility_root.sh \
 	discard-rptdmsg.sh \
 	discard-allmark.sh \
 	discard.sh \
@@ -1299,6 +1300,7 @@ EXTRA_DIST= \
 	imuxsock_ccmiddle.sh \
 	testsuites/imuxsock_ccmiddle.conf \
 	imuxsock_ccmiddle_root.sh \
+	imklog_permitnonkernelfacility_root.sh \
 	imuxsock_ccmiddle_syssock.sh \
 	testsuites/imuxsock_ccmiddle_root.conf \
 	testsuites/imuxsock_ccmiddle_syssock.conf \
