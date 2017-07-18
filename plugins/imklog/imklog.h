@@ -55,7 +55,7 @@ int klogFacilIntMsg(void);
 
 /* the functions below may be called by the drivers */
 rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf,2, 3)));
-rsRetVal Syslog(syslog_pri_t priority, uchar *msg, struct timeval *tp);
+rsRetVal Syslog(modConfData_t *pModConf, syslog_pri_t priority, uchar *msg, struct timeval *tp);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
