@@ -755,7 +755,7 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pLstn, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
-		if(pLstn->iPersistStateInterval > 0 && pLstn->nRecords++ >= pLstn->iPersistStateInterval) {
+		if(pLstn->iPersistStateInterval > 0 && ++pLstn->nRecords >= pLstn->iPersistStateInterval) {
 			persistStrmState(pLstn);
 			pLstn->nRecords = 0;
 		}
