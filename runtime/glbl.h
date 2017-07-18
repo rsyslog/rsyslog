@@ -116,6 +116,8 @@ extern int glblSenderStatsTimeout;
 extern int glblSenderKeepTrack;
 extern int glblUnloadModules;
 extern short janitorInterval;
+extern int glblIntMsgRateLimitItv;
+extern int glblIntMsgRateLimitBurst;
 
 #define glblGetOurPid() glbl_ourpid
 #define glblSetOurPid(pid) { glbl_ourpid = (pid); }
