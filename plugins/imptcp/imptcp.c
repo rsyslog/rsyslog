@@ -1427,10 +1427,11 @@ closeSess(ptcpsess_t *pSess)
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: session on socket %d closed "
 						       "with iRet %d.\n", sock, iRet);
 	}
+	STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
+
 	/* unlinked, now remove structure */
 	destructSess(pSess);
 
-	STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 	DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
 	RETiRet;
 }
