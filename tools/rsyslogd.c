@@ -933,9 +933,11 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug == DEBUG_FULL || !doFork) && ourConf->globals.bErrMsgToStderr) || iConfigVerify) {
+	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
+	if(((Debug == DEBUG_FULL || !doFork) && emit_to_stderr) || iConfigVerify) {
 		if(pri2sev(pri) == LOG_ERR)
-			fprintf(stderr, "rsyslogd: %s\n", (bufModMsg == NULL) ? (char*)msg : bufModMsg);
+			fprintf(stderr, "rsyslogd: %s\n",
+				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}
 
 finalize_it:
@@ -1249,18 +1251,17 @@ initAll(int argc, char **argv)
 
 	/* doing some core initializations */
 
-	/* get our host and domain names - we need to do this early as we may emit
-	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
-	 */
-	queryLocalHostname();
-
-	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
+	/* get our host and domain names - we need to do this early as we may emit
+	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
+	 * But we need to have imInternal up first!
+	 */
+	queryLocalHostname();
 
 	/* END core initializations - we now come back to carrying out command line options*/
 

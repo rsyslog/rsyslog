@@ -1194,8 +1194,9 @@ getLocalHostname(uchar **ppName)
 			/* If we get one of errors above, network is probably
 			 * not working yet, so we fall back to local hostname below
 			 */
-			dbgprintf("getaddrinfo: %s\n", gai_strerror(error));
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+			LogError(0, RS_RET_ERR, "getaddrinfo failed obtaining local "
+				"hostname - using '%s' instead; error: %s",
+				hnbuf, gai_strerror(error));
 		}
 		if (res != NULL) {
 			/* When AI_CANONNAME is set first member of res linked-list */

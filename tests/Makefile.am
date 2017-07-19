@@ -12,6 +12,16 @@ liboverride_gethostname_la_SOURCES = override_gethostname.c
 liboverride_gethostname_la_CFLAGS =
 liboverride_gethostname_la_LDFLAGS = -avoid-version -shared
 
+pkglib_LTLIBRARIES += liboverride_gethostname_nonfqdn.la
+liboverride_gethostname_nonfqdn_la_SOURCES = override_gethostname_nonfqdn.c
+liboverride_gethostname_nonfqdn_la_CFLAGS =
+liboverride_gethostname_nonfqdn_la_LDFLAGS = -avoid-version -shared
+
+pkglib_LTLIBRARIES += liboverride_getaddrinfo.la
+liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
+liboverride_getaddrinfo_la_CFLAGS =
+liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
+
 # TODO: reenable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
@@ -22,6 +32,7 @@ TESTS = $(TESTRUNS)
 
 TESTS +=  \
 	empty-hostname.sh \
+	hostname-getaddrinfo-fail.sh \
 	prop-programname.sh \
 	prop-programname-with-slashes.sh \
 	hostname-with-slash-pmrfc5424.sh \
@@ -640,6 +651,7 @@ test_files = testbench.h runtime-dummy.c
 EXTRA_DIST= \
 	internal-errmsg-memleak.sh \
 	empty-hostname.sh \
+	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	pmrfc3164-msgFirstSpace.sh \
