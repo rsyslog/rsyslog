@@ -213,6 +213,7 @@ the listener port in parenthesis. For example, the counter for a listener
 on port 514 with no set name is called "imtcp(514)".
 
 The following properties are maintained for each listener:
+
 -  **submitted** - total number of messages submitted for processing since startup
 
 Caveats/Known Bugs

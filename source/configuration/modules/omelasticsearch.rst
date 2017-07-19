@@ -218,11 +218,14 @@ Parameters are:
 
 -  **submitted** - number of messages submitted for processing (with both
    success and error result)
+
 -  **fail.httprequests** - the number of times a http request failed. Note
    that a single http request may be used to submit multiple messages, so this
    number may be (much) lower than fail.http.
+
 -  **fail.http** - number of message failures due to connection like-problems
    (things like remote server down, broken link etc)
+
 -  **fail.es** - number of failures due to elasticsearch error reply; Note that
    this counter does NOT count the number of failed messages but the number of
    times a failure occured (a potentially much smaller number). Counting messages

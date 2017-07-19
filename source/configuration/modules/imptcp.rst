@@ -303,6 +303,7 @@ version in parenthesis. For example, the counter for a listener on port
 "imptcp(\*/514/IPv6)".
 
 The following properties are maintained for each listener:
+
 -  **submitted** - total number of messages submitted for processing since startup
 
 Caveats/Known Bugs
