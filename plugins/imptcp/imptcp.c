@@ -306,6 +306,9 @@ struct ptcplstn_s {
 	intctr_t rcvdBytes;
 	intctr_t rcvdDecompressed;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+	STATSCOUNTER_DEF(ctrSessOpen, mutCtrSessOpen)
+	STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
+	STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
 };
 
 
@@ -553,7 +556,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		}
 		if(sockflags == -1) {
 			DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-            close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
@@ -825,14 +828,17 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 	if(pLstn->pSrv->bEmitMsgOnOpen) {
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: connection established with host: %s", propGetSzStr(*peerName));
 	}
+
+	STATSCOUNTER_INC(pLstn->ctrSessOpen, pThis->pLstn->mutCtrSessOpen);
 	*newSock = iNewSock;
 
 finalize_it:
 	DBGPRINTF("iRet: %d\n", iRet);
 	if(iRet != RS_RET_OK) {
-		if(iRet != -3006 && pLstn->pSrv->bEmitMsgOnOpen) {
-			LogError(0, NO_ERRCODE, "imptcp: connection couldn't be established with host: %s", propGetSzStr(*peerName));
+		if(iRet != RS_RET_NO_MORE_DATA && pLstn->pSrv->bEmitMsgOnOpen) {
+			LogError(0, NO_ERRCODE, "imptcp: connection could not be established with host: %s", propGetSzStr(*peerName));
 		}
+		STATSCOUNTER_INC(pLstn->ctrSessOpenErr, pThis->pLstn->mutCtrSessOpenErr);
 		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock != -1)
 			close(iNewSock);
@@ -1230,32 +1236,6 @@ finalize_it:
 }
 
 
-/* remove a socket from the epoll set. Note that the epd parameter
- * is not really required -- it is used to satisfy older kernels where
- * epoll_ctl() required a non-NULL pointer even though the ptr is never used.
- * For simplicity, we supply the same pointer we had when we created the
- * event (it's simple because we have it at hand).
- */
-static rsRetVal
-removeEPollSock(int sock, epolld_t *epd)
-{
-	DEFiRet;
-
-	DBGPRINTF("imptcp: removing socket %d from epoll[%d] set\n", sock, epollfd);
-
-	if(epoll_ctl(epollfd, EPOLL_CTL_DEL, sock, &(epd->ev)) != 0) {
-		char errStr[1024];
-		int eno = errno;
-		errmsg.LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll DEL: %s",
-			        eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-		ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* add a listener to the server 
  */
 static rsRetVal
@@ -1287,6 +1267,15 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	STATSCOUNTER_INIT(pLstn->ctrSubmit, pLstn->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSubmit)));
+	STATSCOUNTER_INIT(pLstn->ctrSessOpen, pLstn->mutCtrSessOpen);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.opened"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessClose)));
+	STATSCOUNTER_INIT(pLstn->ctrSessOpenErr, pLstn->mutCtrSessOpenErr);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.openfailed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessClose)));
+	STATSCOUNTER_INIT(pLstn->ctrSessClose, pLstn->mutCtrSessClose);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.closed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessOpen)));
 	/* the following counters are not protected by mutexes; we accept
 	 * that they may not be 100% correct */
 	pLstn->rcvdBytes = 0,
@@ -1407,20 +1396,19 @@ done:	RETiRet;
 }
 
 /* close/remove a session
- * NOTE: we must first remove the fd from the epoll set and then close it -- else we
- * get an error "bad file descriptor" from epoll.
+ * NOTE: we do not need to remove the socket from the epoll set, as according
+ * to the epoll man page it is automatically removed on close (Q6). The only
+ * exception is duplicated file handles, which we do not create.
  */
 static rsRetVal
 closeSess(ptcpsess_t *pSess)
 {
-	int sock;
 	DEFiRet;
 	
 	if(pSess->compressionMode >= COMPRESS_STREAM_ALWAYS)
 		doZipFinish(pSess);
 
-	sock = pSess->sock;
-	CHKiRet(removeEPollSock(sock, pSess->epd));
+	const int sock = pSess->sock;
 	close(sock);
 
 	pthread_mutex_lock(&pSess->pLstn->pSrv->mutSessLst);
@@ -1442,7 +1430,7 @@ closeSess(ptcpsess_t *pSess)
 	/* unlinked, now remove structure */
 	destructSess(pSess);
 
-finalize_it:
+	STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 	DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
 	RETiRet;
 }
