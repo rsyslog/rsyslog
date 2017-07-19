@@ -484,6 +484,7 @@ operation not carried out */
 	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
 	RS_RET_DIR_CHOWN_ERROR = -2437, /**< error during chown() */
 	RS_RET_JSON_UNUSABLE = -2438, /**< JSON object is NULL or otherwise unusable */
+	RS_RET_OPERATION_STATUS = -2439, /**< operational status (info) message, no error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
