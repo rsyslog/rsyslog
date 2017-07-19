@@ -204,6 +204,17 @@ Input Parameters
    Specifies the rate-limiting burst in number of messages. Default is 
    10,000. 
 
+Statistic Counter
+-----------------
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener. The statistic is named
+after the given input name (or "imtcp" if none is configured), followed by
+the listener port in parenthesis. For example, the counter for a listener
+on port 514 with no set name is called "imtcp(514)".
+
+The following properties are maintained for each listener:
+-  **submitted** - total number of messages submitted for processing since startup
+
 Caveats/Known Bugs
 ------------------
 

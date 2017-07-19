@@ -417,6 +417,54 @@ selects whether a static or dynamic file (name) shall be written to.
 
    Currently, there only is one provider called ":doc:`gcry <../cryprov_gcry>`".
 
+Statistic Counter
+-----------------
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each
+dynafile cache. Dynafile cache performance is critical for overall system performance,
+so reviewing these counters on a busy system (especially one experiencing performance
+problems) is advisable. The statistic is named "dynafile cache", followed by the
+template name used for this dynafile action.
+
+The following properties are maintained for each dynafile:
+
+-  **request** - total number of requests made to obtain a dynafile
+-  **level0** - requests for the current active file, so no real cache
+   lookup needed to be done. These are extremely good.
+-  **missed** - cache misses, where the required file did not reside in
+   cache. Even with a perfect cache, there will be at least one miss per
+   file. That happens when the file is being accessed for the first time
+   and brought into cache. So "missed" will always be at least as large
+   as the number of different files processed. 
+-  **evicted** - the number of times a file needed to be evicted from
+   the cache as it ran out of space. These can simply happen when
+   date-based files are used, and the previous date files are being
+   removed from the cache as time progresses. It is better, though, to
+   set an appropriate "closeTimeout" (counter described below), so that
+   files are removed from the cache after they become no longer accessed.
+   It is bad if active files need to be evicted from the cache. This is a
+   very costly operation as an evict requires to close the file (thus a
+   full flush, no matter of its buffer state) and a later access requires
+   a re-open – and the eviction of another file, as the cache obviously has
+   run out of free entries. If this happens frequently, it can severely
+   affect performance. So a high eviction rate is a sign that the dynafile
+   cache size should be increased. If it is already very high, it is
+   recommended to re-think about the design of the file store, at least if
+   the eviction process causes real performance problems.
+-  **maxused** - the maximum number of cache entries ever used. This can
+   be used to trim the cache down to a value that’s actually useful but
+   does not waste resources. Note that when date-based files are used and
+   rsyslog is run for an extended period of time, the cache gradually fills
+   up to the max configured value as older files are migrated out of it.
+   This will make "maxused" questionable after some time. Frequently enough
+   purging the cache can prevent this (usually, once a day is sufficient).
+-  **closetimeouts** - available since 8.3.3 – tells how often a file was
+   closed due to timeout settings ("closeTimeout" action parameter). These
+   are cases where dynafiles or static files have been closed by rsyslog due
+   to inactivity. Note that if no "closeTimeout" is specified for the action,
+   this counter always is zero. A high or low number in itself doesn’t mean
+   anything good or bad. It totally depends on the use case, so no general
+   advise can be given. 
 
 Caveats/Known Bugs
 ------------------

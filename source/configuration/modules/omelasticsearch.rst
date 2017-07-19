@@ -12,7 +12,8 @@ omelasticsearch: Elasticsearch Output Module
 This module provides native support for logging to
 `Elasticsearch <http://www.elasticsearch.org/>`_.
 
-**Action Parameters**:
+Action Parameters
+-----------------
 
 .. _server:
 
@@ -208,7 +209,40 @@ readability):
   reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
   be succesful.
 
-**Samples:**
+Statistic Counter
+-----------------
+
+This plugin maintains global :doc:`statistics <../rsyslog_statistic_counter>`,
+which accumulate all action instances. The statistic is named "omelasticsearch".
+Parameters are:
+
+-  **submitted** - number of messages submitted for processing (with both
+   success and error result)
+-  **fail.httprequests** - the number of times a http request failed. Note
+   that a single http request may be used to submit multiple messages, so this
+   number may be (much) lower than fail.http.
+-  **fail.http** - number of message failures due to connection like-problems
+   (things like remote server down, broken link etc)
+-  **fail.es** - number of failures due to elasticsearch error reply; Note that
+   this counter does NOT count the number of failed messages but the number of
+   times a failure occured (a potentially much smaller number). Counting messages
+   would be quite performance-intense and is thus not done.
+
+**The fail.httprequests and fail.http counters reflect only failures that
+omelasticsearch detected.** Once it detects problems, it (usually, depends on
+circumstances) tell the rsyslog core that it wants to be suspended until the
+situation clears (this is a requirement for rsyslog output modules). Once it is
+suspended, it does NOT receive any further messages. Depending on the user
+configuration, messages will be lost during this period. Those lost messages will
+NOT be counted by impstats (as it does not see them).
+
+Note that some previous (pre 7.4.5) versions of this plugin had different counters.
+These were experimental and confusing. The only ones really used were "submits",
+which were the number of successfully processed messages and "connfail" which were
+equivalent to "failed.http".
+
+Samples
+-------
 
 The following sample does the following:
 

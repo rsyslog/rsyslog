@@ -248,6 +248,39 @@ Input Parameters
    setsockopt() call with SO\_RCVBUF (and SO\_RCVBUFFORCE if it is
    available).
 
+Statistic Counter
+-----------------
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener and for each worker thread.
+
+The listener statistic is named starting with "imudp", followed followed by the
+listener IP, a colon and port in parenthesis. For example, the counter for a
+listener on port 514 (on all IPs) with no set name is called "imudp(\*:514)".
+
+If an "inputname" is defined for a listener, that inputname is used instead of
+"imudp" as statistic name. For example, if the inputname is set to "myudpinut",
+that corresponding statistic name in above case would be "myudpinput(\*:514)".
+This has been introduced in 7.5.3.
+
+The following properties are maintained for each listener:
+-  **submitted** - total number of messages submitted for processing since startup
+
+The worker thread (in short: worker) statistic is named "imudp(wX)" where "X" is
+the worker thread ID, which is an monotonically increasing integer starting at 0.
+This means the first worker will have the name "imudp(w0″), the second "imudp(w1)"
+and so on. Note that workers are all equal. It doesn’t really matter which worker
+processes which messages, so the actual worker ID is not of much concern. More
+interesting is to check how the load is spread between the worker. Also note that
+there is no fixed worker-to-listener relationship: all workers process messages
+from all listeners.
+
+Note: worker thread statistics are available starting with rsyslog 7.5.5.
+
+The following properties are maintained for each worker thread:
+-  **called.recvmmsg** - number of recvmmsg() OS calls done
+-  **called.recvmsg** - number of recvmsg() OS calls done
+-  **msgs.received** - number of actual messages received
+
 See Also
 --------
 

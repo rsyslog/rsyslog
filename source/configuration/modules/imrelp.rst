@@ -187,6 +187,18 @@ Input Parameters
    This has only effect if keep-alive is enabled. The functionality may
    not be available on all platforms.
 
+Statistic Counter
+-----------------
+
+This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener.
+The statistic by default is named "imrelp" , followed by the listener port in
+parenthesis. For example, the counter for a listener on port 514 is called "imprelp(514)".
+If the input is given a name, that input name is used instead of "imrelp". This counter is
+available starting rsyslog 7.5.1
+
+The following properties are maintained for each listener:
+-  **submitted** - total number of messages submitted for processing since startup
+
 Caveats/Known Bugs
 ------------------
 
