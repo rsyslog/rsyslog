@@ -506,7 +506,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		}
 		if(sockflags == -1) {
 			DBGPRINTF("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-            close(sock);
+			close(sock);
 			sock = -1;
 			continue;
 		}
