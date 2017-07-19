@@ -94,7 +94,7 @@ static configSettings_t cs;
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
 	{ "rulebase", eCmdHdlrGetWord, 0 },
-	{ "rule", eCmdHdlrArray, 0 },
+	{ "rule", eCmdHdlrArray, 0 },	    
 	{ "path", eCmdHdlrGetWord, 0 },
 	{ "userawmsg", eCmdHdlrBinary, 0 },
 	{ "variable", eCmdHdlrGetWord, 0 }
