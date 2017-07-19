@@ -1131,32 +1131,6 @@ finalize_it:
 }
 
 
-/* remove a socket from the epoll set. Note that the epd parameter
- * is not really required -- it is used to satisfy older kernels where
- * epoll_ctl() required a non-NULL pointer even though the ptr is never used.
- * For simplicity, we supply the same pointer we had when we created the
- * event (it's simple because we have it at hand).
- */
-static rsRetVal
-removeEPollSock(int sock, epolld_t *epd)
-{
-	DEFiRet;
-
-	DBGPRINTF("imptcp: removing socket %d from epoll[%d] set\n", sock, epollfd);
-
-	if(epoll_ctl(epollfd, EPOLL_CTL_DEL, sock, &(epd->ev)) != 0) {
-		char errStr[1024];
-		int eno = errno;
-		errmsg.LogError(0, RS_RET_EPOLL_CTL_FAILED, "os error (%d) during epoll DEL: %s",
-			        eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-		ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* add a listener to the server 
  */
 static rsRetVal
@@ -1308,20 +1282,19 @@ done:	RETiRet;
 }
 
 /* close/remove a session
- * NOTE: we must first remove the fd from the epoll set and then close it -- else we
- * get an error "bad file descriptor" from epoll.
+ * NOTE: we do not need to remove the socket from the epoll set, as according
+ * to the epoll man page it is automatically removed on close (Q6). The only
+ * exception is duplicated file handles, which we do not create.
  */
 static rsRetVal
 closeSess(ptcpsess_t *pSess)
 {
-	int sock;
 	DEFiRet;
 	
 	if(pSess->compressionMode >= COMPRESS_STREAM_ALWAYS)
 		doZipFinish(pSess);
 
-	sock = pSess->sock;
-	CHKiRet(removeEPollSock(sock, pSess->epd));
+	const int sock = pSess->sock;
 	close(sock);
 
 	pthread_mutex_lock(&pSess->pLstn->pSrv->mutSessLst);
@@ -1339,7 +1312,6 @@ closeSess(ptcpsess_t *pSess)
 	/* unlinked, now remove structure */
 	destructSess(pSess);
 
-finalize_it:
 	DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
 	RETiRet;
 }
