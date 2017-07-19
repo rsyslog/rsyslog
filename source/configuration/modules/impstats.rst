@@ -204,6 +204,7 @@ maintained:
 -  **outblock**
 -  **nvcsw**
 -  **nivcsw**
+-  **openfiles** number of file handles used by rsyslog; includes actual files, sockets and others
 
 Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
