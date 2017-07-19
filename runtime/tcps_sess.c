@@ -362,6 +362,10 @@ processDataRcvd(tcps_sess_t *pThis,
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	int iMaxLine = glbl.GetMaxLine();
+	uchar *propPeerName = NULL;
+	int lenPeerName = 0;
+	uchar *propPeerIP = NULL;
+	int lenPeerIP = 0;
 
 	if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && c >= '0' && c <= '9') {
@@ -389,25 +393,32 @@ processDataRcvd(tcps_sess_t *pThis,
 			*(pThis->pMsg + pThis->iMsg++) = c;
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
+			prop.GetString(pThis->fromHost, &propPeerName, &lenPeerName);
+			prop.GetString(pThis->fromHost, &propPeerIP, &lenPeerIP);
 			if(c != ' ') {
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "delimiter is not SP but has ASCII value %d.", c);
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+						"peer: (hostname) %s, (ip) %s: delimiter is not SP but has "
+						"ASCII value %d.", propPeerName, propPeerIP, c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-					    "invalid octet count %d.", pThis->iOctetsRemain);
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+						"peer: (hostname) %s, (ip) %s: invalid octet count %d.",
+						propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
-					        "max msg size is %d, truncating...", pThis->iOctetsRemain, iMaxLine);
+				errmsg.LogError(0, NO_ERRCODE, "received oversize message from peer: "
+						"(hostname) %s, (ip) %s: size is %d bytes, max msg size "
+						"is %d, truncating...", propPeerName, propPeerIP,
+						pThis->iOctetsRemain, iMaxLine);
 			}
 			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
-						"frame too large: %d, change to octet stuffing", pThis->iOctetsRemain);
+				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+						"peer: (hostname) %s, (ip) %s: frame too large: %d, change "
+						"to octet stuffing", propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else {
 				pThis->iMsg = 0;
