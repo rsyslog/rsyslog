@@ -273,6 +273,9 @@ struct ptcplstn_s {
 	intctr_t rcvdBytes;
 	intctr_t rcvdDecompressed;
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+	STATSCOUNTER_DEF(ctrSessOpen, mutCtrSessOpen)
+	STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
+	STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
 };
 
 
@@ -772,10 +775,12 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
+	STATSCOUNTER_INC(pLstn->ctrSessOpen, pThis->pLstn->mutCtrSessOpen);
 	*newSock = iNewSock;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		STATSCOUNTER_INC(pLstn->ctrSessOpenErr, pThis->pLstn->mutCtrSessOpenErr);
 		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock != -1)
 			close(iNewSock);
@@ -1162,6 +1167,15 @@ addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6)
 	STATSCOUNTER_INIT(pLstn->ctrSubmit, pLstn->mutCtrSubmit);
 	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("submitted"),
 		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSubmit)));
+	STATSCOUNTER_INIT(pLstn->ctrSessOpen, pLstn->mutCtrSessOpen);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.opened"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessClose)));
+	STATSCOUNTER_INIT(pLstn->ctrSessOpenErr, pLstn->mutCtrSessOpenErr);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.openfailed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessClose)));
+	STATSCOUNTER_INIT(pLstn->ctrSessClose, pLstn->mutCtrSessClose);
+	CHKiRet(statsobj.AddCounter(pLstn->stats, UCHAR_CONSTANT("sessions.closed"),
+		ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pLstn->ctrSessOpen)));
 	/* the following counters are not protected by mutexes; we accept
 	 * that they may not be 100% correct */
 	pLstn->rcvdBytes = 0,
@@ -1312,6 +1326,7 @@ closeSess(ptcpsess_t *pSess)
 	/* unlinked, now remove structure */
 	destructSess(pSess);
 
+	STATSCOUNTER_INC(pSess->pLstn->ctrSessClose, pSess->pLstn->mutCtrSessClose);
 	DBGPRINTF("imptcp: session on socket %d closed with iRet %d.\n", sock, iRet);
 	RETiRet;
 }
