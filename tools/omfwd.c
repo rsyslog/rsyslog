@@ -249,7 +249,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omfwd default template already set via module "
+		LogError(0, RS_RET_ERR, "omfwd default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -323,7 +323,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.pszTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfwd: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omfwd: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -755,20 +755,20 @@ static rsRetVal changeToNs(instanceData *pData)
 		/* keep file descriptor of original network namespace */
 		pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
 		if (pData->originalNamespace < 0) {
-			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
 		/* build network namespace path */
 		if (asprintf(&nsPath, "/var/run/netns/%s", pData->networkNamespace) == -1) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed\n");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 
 		/* keep file descriptor of destination network namespace */
 		destinationNs = open(nsPath, 0);
 		if (destinationNs < 0) {
-			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'\n",
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'\n",
 					pData->networkNamespace);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
@@ -1074,7 +1074,7 @@ CODESTARTnewActInst
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1102,7 +1102,7 @@ CODESTARTnewActInst
 			} else if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"tcp", 3)) {
 				localRet = loadTCPSupport();
 				if(localRet != RS_RET_OK) {
-					errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
+					LogError(0, localRet, "could not activate network stream modules for TCP "
 							"(internal error %d) - are modules missing?", localRet);
 					ABORT_FINALIZE(localRet);
 				}
@@ -1110,7 +1110,7 @@ CODESTARTnewActInst
 			} else {
 				uchar *str;
 				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_INVLD_PROTOCOL,
+				LogError(0, RS_RET_INVLD_PROTOCOL,
 						"omfwd: invalid protocol \"%s\"", str);
 				free(str);
 				ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
@@ -1125,7 +1125,7 @@ CODESTARTnewActInst
 			} else {
 				uchar *str;
 				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_CNF_INVLD_FRAMING,
+				LogError(0, RS_RET_CNF_INVLD_FRAMING,
 						"omfwd: invalid framing \"%s\"", str);
 				free(str);
 				ABORT_FINALIZE(RS_RET_CNF_INVLD_FRAMING );
@@ -1181,7 +1181,7 @@ CODESTARTnewActInst
 				pData->compressionLevel = complevel;
 				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
-				errmsg.LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
+				LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
 					 "forwardig action - NOT turning on compression.",
 					 complevel);
 			}
@@ -1213,14 +1213,14 @@ CODESTARTnewActInst
 			} else if(!strcasecmp(cstr, "single")) {
 				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
+				LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
 					 "parameter (given is '%s')", cstr);
 				free(cstr);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			free(cstr);
 		} else {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
+			LogError(0, RS_RET_INTERNAL_ERROR,
 				"omfwd: program error, non-handled parameter '%s'\n",
 				actpblk.descr[i].name);
 		}
@@ -1245,7 +1245,7 @@ CODESTARTnewActInst
 		pData->bSendToAll = send_to_all;
 	} else {
 		if(pData->protocol == FORW_TCP) {
-			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
+			LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
 					"cannot be used with tcp transport -- ignored");
 		}
 	}
@@ -1272,7 +1272,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == '@') { /* indicator for TCP! */
 		localRet = loadTCPSupport();
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
+			LogError(0, localRet, "could not activate network stream modules for TCP "
 					"(internal error %d) - are modules missing?", localRet);
 			ABORT_FINALIZE(localRet);
 		}
@@ -1312,7 +1312,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					pData->compressionLevel = iLevel;
 					pData->compressionMode = COMPRESS_SINGLE_MSG;
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
+					LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
@@ -1321,7 +1321,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -1337,7 +1337,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
+			LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
 	}
 
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
@@ -1368,7 +1368,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = MALLOC(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
+			LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
