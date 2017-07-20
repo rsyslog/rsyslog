@@ -528,7 +528,8 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* error! */
-		dbgprintf("TCPSendBuf error %d, destruct TCP Connection!\n", iRet);
+		LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
+			iRet, pWrkrData->pData->target, pWrkrData->pData->port);
 		DestructTCPInstanceData(pWrkrData);
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -843,11 +844,12 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_DGRAM;
 		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
-			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->target, pData->port, iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_SUSPENDED,
+				"omfwd: could not get addrinfo for hostname '%s':'%s': %d%s\n",
+				pData->target, pData->port, iErr, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		dbgprintf("%s found, resuming.\n", pData->target);
+		DBGPRINTF("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
 		if(pWrkrData->pSockArray == NULL) {
 			CHKiRet(changeToNs(pData));
@@ -956,7 +958,8 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		iRet = tcpclt.Send(pWrkrData->pTCPClt, pWrkrData, (char *)psz, l);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
-			dbgprintf("error forwarding via tcp, suspending\n");
+			LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending action",
+				pWrkrData->pData->target, pWrkrData->pData->port);
 			DestructTCPInstanceData(pWrkrData);
 			iRet = RS_RET_SUSPENDED;
 		}
