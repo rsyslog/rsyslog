@@ -368,6 +368,7 @@ endif
 
 if ENABLE_IMPSTATS
 TESTS +=  \
+	impstats-hup.sh \
 	dynstats.sh \
 	dynstats_overflow.sh \
 	dynstats_reset.sh \
@@ -1372,6 +1373,7 @@ EXTRA_DIST= \
 	dynstats_overflow-vg.sh \
 	dynstats_reset.sh \
 	dynstats_reset-vg.sh \
+	impstats-hup.sh \
 	dynstats.sh \
 	dynstats-vg.sh \
 	dynstats_prevent_premature_eviction.sh \

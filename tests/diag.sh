@@ -483,6 +483,17 @@ case $1 in
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
 		;;
+   'content-check')
+		# this does a content check which permits regex
+		grep "$2" $3
+		if [ "$?" -ne "0" ]; then
+		    echo "----------------------------------------------------------------------"
+		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo "file contents:"
+		    cat $3
+		    . $srcdir/diag.sh error-exit 1
+		fi
+		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
 		if [ "$?" -ne "0" ]; then
