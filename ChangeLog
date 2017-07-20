@@ -7,6 +7,10 @@ Version 8.29.0 [v8-stable] 2017-08-08
   This is the case e.g. for oversize messages.
 - imtcp: framing-related error messages now also indicate remote peer
   This is the case e.g. for oversize messages.
+- imptcp: add session statistics conunter
+    - session.opened
+    - session.openfailed
+    - session.closed
 - impstats: add new ressoure counter "openfiles"
 - omfwd/udp: improve error reporting, depricate maxerrormessages parameter
   Generally improved udp-related error messages (e.g. they now contain the
@@ -27,6 +31,14 @@ Version 8.29.0 [v8-stable] 2017-08-08
 - core: make rsyslog internal message rate-limiter configurable
   New parameters "internalmsg.ratelimit.interval" and "internalmsg.ratelimit.burst"
   have been added.
+- imptcp bugfix: potential socket leak on session shutdown
+  imptcp first tries to remove a to-be-shut-down socket from the
+  epoll set, and errors out if that does not work. In that case, the
+  underlying socket will be leaked.
+  This patch refactors the code; most importantly, it is not necessary
+  to remove the socket from the epoll set, as this happens automatically
+  on close. As such, we simply remove that part of the code, which
+  also removes the root cause of the socket leak.
 - omfwd/omudpspoof bugfix: switch udp client sockets to nonblocking mode
   On very busy systems, we see "udp send error 11" inside the logs, and the requesting
   action is being suspended (and later resumed). During the suspension period (in
