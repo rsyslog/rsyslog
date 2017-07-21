@@ -550,7 +550,7 @@ TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sb
 		pWrkrData->zstrm.zfree = Z_NULL;
 		pWrkrData->zstrm.opaque = Z_NULL;
 		/* see note in file header for the params we use with deflateInit2() */
-		zRet = deflateInit(&pWrkrData->zstrm, 9);
+		zRet = deflateInit(&pWrkrData->zstrm, pWrkrData->pData->compressionLevel);
 		if(zRet != Z_OK) {
 			DBGPRINTF("error %d returned from zlib/deflateInit()\n", zRet);
 			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
