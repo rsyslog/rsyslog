@@ -74,6 +74,7 @@
 #include "ruleset.h"
 #include "ratelimit.h"
 #include "unicode-helper.h"
+#include "hashtable.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -156,9 +157,19 @@ addNewLstnPort(tcpsrv_t *const pThis, const uchar *const pszPort,
 	CHKiRet(prop.ConstructFinalize(pEntry->pInputName));
 
 	/* support statistics gathering */
-	CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
-	ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
-	ratelimitSetThreadSafe(pEntry->ratelimiter);
+	CHKiRet(ratelimitNew(&pEntry->dflt_ratelimiter, "tcperver", NULL));
+	ratelimitSetLinuxLike(pEntry->dflt_ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+	ratelimitSetThreadSafe(pEntry->dflt_ratelimiter);
+	if (pThis->ratelimitInterval > 0) {
+		pEntry->ht_ratelimit = create_hashtable(1000, hash_from_string, key_equals_string,
+				(void(*)(void*))ratelimitDestruct);
+		if (pEntry->ht_ratelimit == NULL) {
+			DBGPRINTF("imtcp: cannot allocate hashtable for ratelimiting")
+		}
+	} else {
+		pEntry->ht_ratelimit = NULL;
+	}
+	pEntry->ratelimitKey = pThis->ratelimitKey;
 
 	CHKiRet(statsobj.Construct(&(pEntry->stats)));
 	snprintf((char*)statname, sizeof(statname), "%s(%s)", pThis->pszInputName, pszPort);
@@ -182,8 +193,8 @@ finalize_it:
 			if(pEntry->pInputName != NULL) {
 				prop.Destruct(&pEntry->pInputName);
 			}
-			if(pEntry->ratelimiter != NULL) {
-				ratelimitDestruct(pEntry->ratelimiter);
+			if(pEntry->dflt_ratelimiter != NULL) {
+				ratelimitDestruct(pEntry->dflt_ratelimiter);
 			}
 			if(pEntry->stats != NULL) {
 				statsobj.Destruct(&pEntry->stats);
@@ -331,7 +342,7 @@ deinit_tcp_listener(tcpsrv_t *const pThis)
 	while(pEntry != NULL) {
 		free(pEntry->pszPort);
 		prop.Destruct(&pEntry->pInputName);
-		ratelimitDestruct(pEntry->ratelimiter);
+		ratelimitDestruct(pEntry->dflt_ratelimiter);
 		statsobj.Destruct(&(pEntry->stats));
 		pDel = pEntry;
 		pEntry = pEntry->pNext;
@@ -999,6 +1010,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->bSPFramingFix = 0;
 	pThis->ratelimitInterval = 0;
 	pThis->ratelimitBurst = 10000;
+	pThis->ratelimitKey = NULL;
 	pThis->bUseFlowControl = 1;
 	pThis->pszDrvrName = NULL;
 ENDobjConstruct(tcpsrv)
@@ -1310,11 +1322,27 @@ finalize_it:
 
 /* Set the linux-like ratelimiter settings */
 static rsRetVal
-SetLinuxLikeRatelimiters(tcpsrv_t *pThis, int ratelimitInterval, int ratelimitBurst)
+SetLinuxLikeRatelimiters(tcpsrv_t *pThis, int ratelimitInterval, int ratelimitBurst, uchar* ratelimitKey)
 {
 	DEFiRet;
 	pThis->ratelimitInterval = ratelimitInterval;
 	pThis->ratelimitBurst = ratelimitBurst;
+	if (ratelimitKey && !strcmp("appname", (char *) ratelimitKey)) {
+		pThis->ratelimitKey = getAPPNAME;
+		DBGPRINTF("Ratelimiting based on appname\n");
+	}
+	else if (ratelimitKey && !strcmp("programname", (char *) ratelimitKey)) {
+		pThis->ratelimitKey = ((ratelimitKey_t*) getProgramName);
+		DBGPRINTF("Ratelimiting based on appname\n");
+	}
+	else if (ratelimitKey && !strcmp("hostname", (char *) ratelimitKey)) {
+		pThis->ratelimitKey = getHOSTNAME;
+		DBGPRINTF("Ratelimiting based on hostname\n");
+	}
+	else if (ratelimitKey && !strcmp("procid", (char *) ratelimitKey)) {
+		pThis->ratelimitKey = getPROCID;
+		DBGPRINTF("Ratelimiting based on hostname\n");
+	}
 	RETiRet;
 }
 

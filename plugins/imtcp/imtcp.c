@@ -118,6 +118,7 @@ struct instanceConf_s {
 	sbool bSPFramingFix;
 	int ratelimitInterval;
 	int ratelimitBurst;
+	uchar *ratelimitKey;
 	int bSuppOctetFram;
 	struct instanceConf_s *next;
 };
@@ -188,7 +189,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "ratelimit.key", eCmdHdlrString, 0 },
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -285,6 +287,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bSPFramingFix = 0;
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
+	inst->ratelimitKey = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
@@ -386,7 +389,8 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imtcp"));
 	CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar*)"" : inst->dfltTZ));
 	CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
-	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
+	CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst,
+		inst->ratelimitKey));
 	tcpsrv.configureTCPListen(pOurTcpsrv, inst->pszBindPort, inst->bSuppOctetFram, inst->pszBindAddr);
 
 finalize_it:
@@ -439,6 +443,8 @@ CODESTARTnewInpInst
 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.key")) {
+			inst->ratelimitKey = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("imtcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);

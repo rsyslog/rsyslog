@@ -49,6 +49,8 @@
 #include "prop.h"
 #include "ratelimit.h"
 #include "debug.h"
+#include "hashtable.h"
+#include "parser.h"
 
 
 /* static data */
@@ -57,6 +59,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(parser)
 
 
 /* forward definitions */
@@ -219,6 +222,38 @@ SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar
 }
 
 
+static rsRetVal
+findRatelimiter(tcpLstnPortList_t *pLstn, char *key, ratelimit_t **prl)
+{
+	DEFiRet;
+	ratelimit_t *rl = NULL;
+	int ret;
+
+	if (pLstn->ht_ratelimit == NULL) {
+		*prl = NULL;
+		FINALIZE;
+	}
+
+	rl = hashtable_search(pLstn->ht_ratelimit, key);
+	if (rl == NULL) {
+		DBGPRINTF("creating new ratelimiter for %s\n", key);
+		CHKiRet(ratelimitNew(&rl, "tcpserver", key));
+		ratelimitSetLinuxLike(rl, 2, 10);
+		ret = hashtable_insert(pLstn->ht_ratelimit, key, rl);
+		if (ret == 0)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+	DBGPRINTF("found ratelimiter for %s\n", key);
+	*prl = rl;
+	rl = NULL;
+finalize_it:
+	if(rl != NULL)
+		ratelimitDestruct(rl);
+	if(*prl == NULL)
+		*prl = pLstn->dflt_ratelimiter;
+	RETiRet;
+}
+
 /* This is a helper for submitting the message to the rsyslog core.
  * It does some common processing, including resetting the various
  * state variables to a "processed" state.
@@ -234,9 +269,12 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 {
 	smsg_t *pMsg;
 	DEFiRet;
+	ratelimit_t *ratelimiter = NULL;
+	char *ratelimitKey;
+	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	
+
 	if(pThis->iMsg == 0) {
 		DBGPRINTF("discarding zero-sized message\n");
 		FINALIZE;
@@ -261,7 +299,20 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 
 	STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-	ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+
+	if (pThis->pLstnInfo->ratelimitKey != NULL) {
+		pMsg->msgFlags  = PARSE_HOSTNAME;
+		if ((localRet = parser.ParseMsg(pMsg)) != RS_RET_OK)  {
+			DBGPRINTF("Message discarded, parsing error %d\n", localRet);
+			ABORT_FINALIZE(RS_RET_DISCARDMSG);
+		}
+		ratelimitKey = pThis->pLstnInfo->ratelimitKey(pMsg, LOCK_MUTEX);
+		findRatelimiter(pThis->pLstnInfo, ratelimitKey, &ratelimiter);
+		ratelimitAddMsg(ratelimiter, pMultiSub, pMsg);
+	} else {
+		DBGPRINTF("Default ratelimiting\n");
+		ratelimitAddMsg(pThis->pLstnInfo->dflt_ratelimiter, pMultiSub, pMsg);
+	}
 
 finalize_it:
 	/* reset status variables */
@@ -581,6 +632,7 @@ CODESTARTObjClassExit(tcps_sess)
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
+	objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(tcps_sess)
 
 
@@ -593,6 +645,7 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(parser, CORE_COMPONENT));
 
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	objRelease(glbl, CORE_COMPONENT);

@@ -34,6 +34,8 @@ typedef enum ETCPsyslogFramingAnomaly {
 } eTCPsyslogFramingAnomaly;
 
 
+typedef char *(ratelimitKey_t)(smsg_t *pM, sbool bLockMutex);
+
 /* list of tcp listen ports */
 struct tcpLstnPortList_s {
 	uchar *pszPort;			/**< the ports the listener shall listen on */
@@ -43,7 +45,9 @@ struct tcpLstnPortList_s {
 	ruleset_t *pRuleset;		/**< associated ruleset */
 	statsobj_t *stats;		/**< associated stats object */
 	sbool bSuppOctetFram;	/**< do we support octect-counted framing? (if no->legay only!)*/
-	ratelimit_t *ratelimiter;
+	ratelimit_t *dflt_ratelimiter;	/* default ratelimiter */
+	struct hashtable *ht_ratelimit;	/* hashtable for rate-limiting */
+	ratelimitKey_t *ratelimitKey;
 	uchar dfltTZ[8];		/**< default TZ if none in timestamp; '\0' =No Default */
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
@@ -87,6 +91,7 @@ struct tcpsrv_s {
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	int ratelimitInterval;
 	int ratelimitBurst;
+	char *(*ratelimitKey)(smsg_t *pM, sbool bLockMutex);
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
@@ -162,7 +167,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
 	/* added v13 -- rgerhards, 2012-10-15 */
-	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst);
+	rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, int interval, int burst, uchar* key);
 	/* added v14 -- rgerhards, 2013-07-28 */
 	rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
 	/* added v15 -- rgerhards, 2013-09-17 */
