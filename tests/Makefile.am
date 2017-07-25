@@ -628,6 +628,7 @@ TESTS += \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
 	imfile-wildcards-dirs-multi.sh \
+	imfile-wildcards-dirs-multi2.sh \
 	imfile-rename.sh
 if HAVE_VALGRIND
 TESTS += \
@@ -1237,11 +1238,13 @@ EXTRA_DIST= \
 	imfile-wildcards-dirs.sh \
 	imfile-wildcards-dirs2.sh \
 	imfile-wildcards-dirs-multi.sh \
+	imfile-wildcards-dirs-multi2.sh \
 	imfile-rename.sh \
 	testsuites/imfile-wildcards.conf \
 	testsuites/imfile-wildcards-simple.conf \
 	testsuites/imfile-wildcards-dirs.conf \
 	testsuites/imfile-wildcards-dirs-multi.conf \
+	testsuites/imfile-wildcards-dirs-multi2.conf \
 	dynfile_invld_async.sh \
 	dynfile_invld_sync.sh \
 	dynfile_cachemiss.sh \

@@ -1053,6 +1053,9 @@ addListner(instanceConf_t *inst)
 	sbool hasWildcard;
 
 	hasWildcard = containsGlobWildcard((char*)inst->pszFileBaseName);
+	DBGPRINTF("imfile: addListner file '%s', wildcard detected: %s\n",
+		  inst->pszFileBaseName, (hasWildcard ? "TRUE" : "FALSE"));
+
 	if(hasWildcard) {
 		if(runModConf->opMode == OPMODE_POLLING) {
 			errmsg.LogError(0, RS_RET_IMFILE_WILDCARD,
@@ -1716,6 +1719,8 @@ in_setupDirWatch(const int dirIdx)
 		memcpy(dirnametrunc, dirs[dirIdx].dirName, dirnamelen); /* Copy mem */
 
 		hasWildcard = containsGlobWildcard(dirnametrunc);
+		DBGPRINTF("imfile: in_setupDirWatch dir '%s', wildcard detected: %s\n",
+			  dirnametrunc, (hasWildcard ? "TRUE" : "FALSE"));
 		if(hasWildcard) {
 			/* Set NULL Byte to FIRST wildcard occurrence */
 			psztmp = strchr(dirnametrunc, '*');
@@ -1928,11 +1933,15 @@ done:	return;
 static void
 in_setupFileWatchStatic(lstn_t *pLstn)
 {
+	sbool hasWildcard;
+
 	DBGPRINTF("imfile: adding file '%s' to configured table\n",
 		  pLstn->pszFileName);
 	dirsAddFile(pLstn, CONFIGURED_FILE);
 
-	if(pLstn->hasWildcard) {
+	/* perform wildcard check on static files manually */
+	hasWildcard = containsGlobWildcard((char*)pLstn->pszFileName);
+	if(hasWildcard) {
 		DBGPRINTF("imfile: file '%s' has wildcard, doing initial "
 			  "expansion\n", pLstn->pszFileName);
 		glob_t files;
