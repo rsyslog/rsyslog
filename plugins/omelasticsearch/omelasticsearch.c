@@ -1297,7 +1297,6 @@ static void
 curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsignedCerts)
 {
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
-	curl_easy_setopt(handle, CURLOPT_NOBODY, TRUE);
 	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, timeout);
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 
