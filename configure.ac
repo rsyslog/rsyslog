@@ -1346,13 +1346,6 @@ if test "x${IP}" = "xno"; then
 fi
 AM_CONDITIONAL(ENABLE_IP, test "x${IP}" = "xyes")
 
-AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
-if test "x$enable_testbench" = "xyes"; then
-	if test "x$enable_imdiag" != "xyes"; then
-		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
-	fi
-fi
-
 
 # valgrind-testbench
 AC_ARG_WITH([valgrind_testbench],
@@ -1482,6 +1475,17 @@ AC_ARG_ENABLE(omstdout,
         [enable_omstdout=no]
 )
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+if test "x$enable_testbench" = "xyes"; then
+	if test "x$enable_imdiag" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
+	fi
+	if test "x$enable_omstdout" != "xyes"; then
+		AC_MSG_ERROR("--enable-testbench requires --enable-omstdout")
+	fi
+fi
+
 
 # settings for omjournal
 AC_ARG_ENABLE(omjournal,
