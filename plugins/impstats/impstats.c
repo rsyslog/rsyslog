@@ -135,6 +135,8 @@ static int st_ru_nvcsw;
 static int st_ru_nivcsw;
 static statsobj_t *statsobj_resources;
 
+static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 BEGINmodExit
 CODESTARTmodExit
 	prop.Destruct(&pInputName);
@@ -234,13 +236,20 @@ doLogToFile(const char *ln, const size_t lenLn)
 	time_t t;
 	char timebuf[32];
 
+	pthread_mutex_lock(&hup_mutex);
+
 	if(lenLn == 0)
 		goto done;
+
 	if(runModConf->logfd == -1) {
 		runModConf->logfd = open(runModConf->logfile, O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC, S_IRUSR|S_IWUSR);
 		if(runModConf->logfd == -1) {
-			dbgprintf("error opening stats file %s\n", runModConf->logfile);
+			DBGPRINTF("impstats: error opening stats file %s\n",
+				runModConf->logfile);
 			goto done;
+		} else {
+			DBGPRINTF("impstats: opened stats file %s\n",
+				runModConf->logfile);
 		}
 	}
 
@@ -262,7 +271,9 @@ doLogToFile(const char *ln, const size_t lenLn)
 			dbgprintf("error writing stats file %s, nwritten %lld, expected %lld\n",
 				  runModConf->logfile, (long long) nwritten, (long long) nexpect);
 	}
-done:	return;
+done:
+	pthread_mutex_unlock(&hup_mutex);
+	return;
 }
 
 
@@ -451,6 +462,27 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* to use HUP, we need to have an instanceData type, as this was
+ * originally designed for actions. However, we do not, and cannot,
+ * use the content. The core will always provide a NULL pointer.
+ */
+typedef struct _instanceData {
+	int dummy;
+} instanceData;
+BEGINdoHUP
+CODESTARTdoHUP
+	DBGPRINTF("impstats: received HUP\n")
+	pthread_mutex_lock(&hup_mutex);
+	if(runModConf->logfd != -1) {
+		DBGPRINTF("impstats: closing log file due to HUP\n");
+		close(runModConf->logfd);
+		runModConf->logfd = -1;
+	}
+	pthread_mutex_unlock(&hup_mutex);
+ENDdoHUP
+
+
 BEGINcheckCnf
 CODESTARTcheckCnf
 	if(pModConf->iStatsInterval == 0) {
@@ -554,6 +586,7 @@ CODEqueryEtryPt_STD_IMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
 CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
 CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)

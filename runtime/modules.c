@@ -663,6 +663,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			} else if(localRet != RS_RET_OK) {
 				ABORT_FINALIZE(localRet);
 			}
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
+
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
@@ -941,6 +945,25 @@ static void modPrintList(void)
 			break;
 		}
 		dbgprintf("\n");
+		pMod = GetNxt(pMod); /* done, go next */
+	}
+}
+
+
+/* HUP all modules that support it - except for actions, which
+ * need (and have) specialised HUP handling.
+ */
+void
+modDoHUP(void)
+{
+	modInfo_t *pMod;
+
+	pMod = GetNxt(NULL);
+	while(pMod != NULL) {
+		if(pMod->eType != eMOD_OUT && pMod->doHUP != NULL) {
+			DBGPRINTF("HUPing module %s\n", (char*) modGetName(pMod));
+			pMod->doHUP(NULL);
+		}
 		pMod = GetNxt(pMod); /* done, go next */
 	}
 }
