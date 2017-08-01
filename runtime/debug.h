@@ -92,8 +92,8 @@ rsRetVal dbgClassExit(void);
 void dbgSetDebugFile(uchar *fn);
 void dbgSetDebugLevel(int level);
 void sigsegvHdlr(int signum);
-void dbgoprint(obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-void dbgprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+void r_dbgprintf(const char *srcname, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
@@ -119,8 +119,10 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #	define DBGPRINTF(...) {}
 #	define DBGOPRINT(...) {}
 #else
-#	define DBGPRINTF(...) if(Debug) { dbgprintf(__VA_ARGS__); }
-#	define DBGOPRINT(...) if(Debug) { dbgoprint(__VA_ARGS__); }
+#	define DBGPRINTF(...) if(Debug) { r_dbgprintf(__FILE__, __VA_ARGS__); }
+#	define DBGOPRINT(...) if(Debug) { r_dbgoprint(__FILE__, __VA_ARGS__); }
+#	define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
+#	define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 #endif
 #ifdef RTINST
 #define BEGINfunc static dbgFuncDB_t *pdbgFuncDB;

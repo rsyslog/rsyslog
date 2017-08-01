@@ -166,6 +166,30 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 
 /* ------------------------------ callbacks ------------------------------ */
 
+#if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+static void __attribute__((format(printf, 1, 2)))
+imrelp_dbgprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1]; //this function has to be able to
+					//generate a buffer longer than that of r_dbgprintf, so r_dbgprintf can properly truncate
+
+	if(!(Debug && debugging_on)) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	r_dbgprintf("imrelp.c", "%s", pszWriteBuf);
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic warning "-Wformat-nonliteral"
+#endif
+
+
 static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
@@ -327,7 +351,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	DEFiRet;
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
-		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
+		CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))imrelp_dbgprintf));
 		CHKiRet(relpEngineSetFamily(pRelpEngine, glbl.GetDefPFFamily()));
 		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Required));
 		CHKiRet(relpEngineSetSyslogRcv2(pRelpEngine, onSyslogRcv));

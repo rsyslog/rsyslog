@@ -626,7 +626,7 @@ struct actWrkrIParams {
 
 /* The following prototype is convenient, even though it may not be the 100%
 correct place.. -- rgerhards 2008-01-07 */
-void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
+//void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
 
 
 #include "debug.h"

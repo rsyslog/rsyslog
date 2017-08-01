@@ -145,6 +145,30 @@ ENDinitConfVars
  * if it is unspecified. So far, we use 514 as default (what probably
  * is not a really bright idea, but kept for backward compatibility).
  */
+
+#if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+static void __attribute__((format(printf, 1, 2)))
+omrelp_dbgprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1]; //this function has to be able to
+					//generate a buffer longer than that of r_dbgprintf, so r_dbgprintf can properly truncate
+	if(!(Debug && debugging_on)) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	r_dbgprintf("omrelp.c", "%s", pszWriteBuf);
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic warning "-Wformat-nonliteral"
+#endif
+
+
 static uchar *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
@@ -654,7 +678,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))omrelp_dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));
