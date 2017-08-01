@@ -12,6 +12,8 @@ Version 8.29.0 [v8-stable] 2017-08-08
     - session.openfailed
     - session.closed
 - impstats: add new ressoure counter "openfiles"
+- pmnormalize: new parser module
+  Parser module that uses liblognorm to parse incoming messages.
 - omfwd/udp: improve error reporting, depricate maxerrormessages parameter
   Generally improved udp-related error messages (e.g. they now contain the
   socket number, which makes it easier to related them to errors reported by
@@ -31,6 +33,19 @@ Version 8.29.0 [v8-stable] 2017-08-08
 - core: make rsyslog internal message rate-limiter configurable
   New parameters "internalmsg.ratelimit.interval" and "internalmsg.ratelimit.burst"
   have been added.
+- imfile bugfix: wildcard detection issue on path wildcards
+  Wildcards mode was not properly detected when wildcards
+  were only used in a directory name on startup.
+  This caused imfile not to create a propper dynamic filewatch.
+  closes: https://github.com/rsyslog/rsyslog/issues/1672
+- omfwd bugfix: always give reason for suspension
+  In many cases, no error message were emitted when omfwd
+  went into action suspension, which was confusing for end
+  users. This patch enables explicit error messages in all
+  those cases.
+  closes https://github.com/rsyslog/rsyslog/issues/782
+- omfwd bugfix: configured compression level was not properly used
+  Thanks to Harshvardhan Shrivastava for the patch.
 - imptcp bugfix: potential socket leak on session shutdown
   imptcp first tries to remove a to-be-shut-down socket from the
   epoll set, and errors out if that does not work. In that case, the
@@ -69,6 +84,16 @@ Version 8.29.0 [v8-stable] 2017-08-08
   it is appropriate to not handle EAGAIN in a special case any longer.
   closes https://github.com/rsyslog/rsyslog/issues/1665
 - imklog: fix permitnonkernelfacility not working
+- impstats bugfix: impstats does not handle HUP
+  If the parameter "log.file" is specified, impstats writes its own
+  log file. However, HUP is not handled for this file, which makes
+  the functionality unusable with log rotation. It is also counter-
+  intuitive for users.
+  This patch enables correct HUP processing. As a sideline, it also
+  introduces a generic HUP processing framework for non-action type
+  of loadable modules.
+  closes https://github.com/rsyslog/rsyslog/issues/1662
+  closes https://github.com/rsyslog/rsyslog/issues/1663
 - core bugfix: segfault after configuration errors
 - core/queue bugfixes:
   * Fix behaviour of PersistStateInterval
@@ -102,6 +127,14 @@ Version 8.29.0 [v8-stable] 2017-08-08
   As of GuardTime, the provider, these no longer work due to backend
   changes. The lmsig_ksi_ls12 module shall be used instead. This is
   available since 8.27.0.
+- testbench bugfix: hang in tests if omstdout is not present
+  Many tests depend on omstdout. Given the fact that omstdout
+  is really only useful for the testbench (at least that's the intent),
+  we now require --enable-omstdout if --enable-testbench is given.
+  The alternative would have been to disable all those tests that
+  need it, which would have lead to considerable less testbench
+  coverage.
+  closes https://github.com/rsyslog/rsyslog/issues/1649
 ------------------------------------------------------------------------------
 Version 8.28.0 [v8-stable] 2017-06-27
 - NEW BUILD REQUIREMENT: librelp 1.2.14 (to build relp components)
