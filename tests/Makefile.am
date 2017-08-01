@@ -461,6 +461,16 @@ TESTS +=  \
 	pmnull-withparams.sh
 endif
 
+if ENABLE_PMNORMALIZE
+TESTS +=  \
+	pmnormalize-basic.sh \
+	pmnormalize-rule.sh
+if HAVE_VALGRIND
+TESTS += \
+	pmnormalize-rule-vg.sh
+endif
+endif
+
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
 	msgvar-concurrency-array-event.tags.sh \
@@ -922,6 +932,11 @@ EXTRA_DIST= \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh \
+	pmnormalize-rule.sh \
+	pmnormalize-rule-vg.sh\
+	testsuites/pmnormalize-rule-vg.conf \
+	testsuites/pmnormalize_basic.rulebase \
+	pmnormalize-basic.sh \
 	rawmsg-after-pri.sh \
 	testsuites/rawmsg-after-pri.conf \
 	rs_optimizer_pri.sh \

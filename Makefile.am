@@ -99,6 +99,10 @@ if ENABLE_PMNULL
 SUBDIRS += plugins/pmnull
 endif
 
+if ENABLE_PMNORMALIZE
+SUBDIRS += plugins/pmnormalize
+endif
+
 if ENABLE_PMAIXFORWARDEDFROM
 SUBDIRS += contrib/pmaixforwardedfrom
 endif
