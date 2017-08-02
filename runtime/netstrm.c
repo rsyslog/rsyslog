@@ -280,6 +280,16 @@ SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
 	RETiRet;
 }
 
+/* gnutls priority string */
+static rsRetVal
+SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetGnutlsPriorityString(pThis->pDrvrData, gnutlsPriorityString);
+	RETiRet;
+}
+
 /* check connection - slim wrapper for NSD driver function */
 static rsRetVal
 CheckConnection(netstrm_t *pThis)
@@ -387,6 +397,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

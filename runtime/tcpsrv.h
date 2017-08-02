@@ -61,6 +61,7 @@ struct tcpsrv_s {
 	int iKeepAliveTime;	/**< socket layer KEEPALIVE timeout */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
+	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
@@ -172,8 +173,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
 	/* added v18 */
 	rsRetVal (*SetbSPFramingFix)(tcpsrv_t*, sbool);
+	/* added v19 -- PascalWithopf, 2017-08-08 */
+	rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t*, uchar*);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 19 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

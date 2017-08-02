@@ -95,6 +95,7 @@ typedef struct _instanceData {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	uchar *gnutlsPriorityString;
 
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
@@ -144,6 +145,7 @@ typedef struct configSettings_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	uchar *gnutlsPriorityString;
 	permittedPeers_t *pPermPeers;
 } configSettings_t;
 static configSettings_t cs;
@@ -177,6 +179,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
 	{ "keepalive.time", eCmdHdlrPositiveInt, 0 },
 	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 },
+	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
@@ -717,6 +720,9 @@ static rsRetVal TCPSendInit(void *pvData)
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
 		}
 		/* params set, now connect */
+		if(pData->gnutlsPriorityString != NULL) {
+			CHKiRet(netstrm.SetGnutlsPriorityString(pWrkrData->pNetstrm, pData->gnutlsPriorityString));
+		}
 		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->target, pData->device));
 
@@ -1049,6 +1055,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iKeepAliveProbes = 0;
 	pData->iKeepAliveIntvl = 0;
 	pData->iKeepAliveTime = 0;
+	pData->gnutlsPriorityString = NULL;
 	pData->bResendLastOnRecon = 0; 
 	pData->bSendToAll = -1;  /* unspecified */
 	pData->iUDPSendDelay = 0;
@@ -1137,6 +1144,8 @@ CODESTARTnewActInst
 			pData->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "keepalive.time")) {
 			pData->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
+			pData->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
 			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdrivermode")) {

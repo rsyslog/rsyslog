@@ -472,6 +472,9 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	}
 
 	/* we found a free spot and can construct our session object */
+	if(pThis->gnutlsPriorityString != NULL) {
+		CHKiRet(netstrm.SetGnutlsPriorityString(pNewStrm, pThis->gnutlsPriorityString));
+	}
 	CHKiRet(tcps_sess.Construct(&pSess));
 	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
 	CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
@@ -1168,6 +1171,15 @@ SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
+SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal)
+{
+	DEFiRet;
+	DBGPRINTF("tcpsrv: gnutlsPriorityString set to %s\n", iVal);
+	pThis->gnutlsPriorityString = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
 {
 	DEFiRet;
@@ -1423,6 +1435,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetOrigin = SetOrigin;
