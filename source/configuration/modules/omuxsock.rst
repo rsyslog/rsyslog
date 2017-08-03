@@ -3,7 +3,7 @@ omuxsock: Unix sockets Output Module
 
 **Module Name:    omuxsock**
 
-**Available since:   ** 4.7.3, 5.5.7
+**Available since**: 4.7.3, 5.5.7
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 

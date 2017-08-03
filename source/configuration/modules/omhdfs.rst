@@ -3,7 +3,7 @@ omhdfs: Hadoop Filesystem Output Module
 
 **Module Name:    omhdfs**
 
-**Available since:   ** 5.7.1
+**Available since:**: 5.7.1
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 

@@ -3,7 +3,7 @@ omprog: Program integration Output module
 
 **Module Name:    omprog**
 
-**Available since:   ** 4.3.0
+**Available since**: 4.3.0
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 
