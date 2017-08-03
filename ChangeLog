@@ -14,6 +14,10 @@ Version 8.29.0 [v8-stable] 2017-08-08
 - impstats: add new ressoure counter "openfiles"
 - pmnormalize: new parser module
   Parser module that uses liblognorm to parse incoming messages.
+- core/queue: provide informational messages on thread startup and shutdown
+  This provides better insight into operational state of rsyslog and is useful
+  in monitoring system health. Note that this causes the emission of messages
+  not previously seen. They are of syslog.informational priority.
 - omfwd/udp: improve error reporting, depricate maxerrormessages parameter
   Generally improved udp-related error messages (e.g. they now contain the
   socket number, which makes it easier to related them to errors reported by
@@ -33,6 +37,27 @@ Version 8.29.0 [v8-stable] 2017-08-08
 - core: make rsyslog internal message rate-limiter configurable
   New parameters "internalmsg.ratelimit.interval" and "internalmsg.ratelimit.burst"
   have been added.
+- omelasticsearch bugfixes and changed ES5 API support:
+  * avoid 404 during health check
+    Omleasticsearch responds differently to HTTP HEAD and GET requests and
+    returns correct state only on GET requests. This patch works around
+    that ES bug and always does a GET request even when technically a HEAD
+    request would be sufficient.
+  * avoid ES5 warnings while sending json
+    ES5 is generating warnings when sending json without the proper header:
+    $ curl -i -H "Content-Type: text/json" -XGET 'http://elasticsearch5:9200/' \
+      -d '{}\n'
+    HTTP/1.1 200 OK
+    Warning: 299 Elasticsearch-5.4.3-eed30a8 "Content type detection for rest
+    requests is deprecated. Specify the content type using the [Content-Type]
+    header." "Wed, 26 Jul 2017 14:33:28 GMT"
+    no issue on previous version.
+    Now, the header is set as application/json. It works for all versions
+    (tested on ES2 and ES5) we also handle the bulkmode where it should be
+    set to application/x-ndjson
+    closes https://github.com/rsyslog/rsyslog/issues/1546
+  * bugfix for memomry leak while writing error file
+  Thanks to William Dauchy for providing the patches
 - imfile bugfix: wildcard detection issue on path wildcards
   Wildcards mode was not properly detected when wildcards
   were only used in a directory name on startup.
