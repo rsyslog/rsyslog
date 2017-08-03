@@ -40,6 +40,7 @@ These assume default installs of Python for Windows and Linux
   3.  Run: git checkout v5-stable
 5.  Run: sphinx-build -b html source build
 6.  open rsyslog-doc/build/index.html in a browser
+(note that in step 5 you have to run the command in the root directory of the project)
 
 ###Generate HTML Documentation on Windows
 
