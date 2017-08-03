@@ -1720,6 +1720,46 @@ doRandomGen(struct svar *__restrict__ const sourceVal) {
 	return x % max;
 }
 
+static es_str_t*
+lTrim(char *str)
+{
+	int len = strlen(str);
+	int i;
+	es_str_t *estr = NULL;
+
+	for(i = 0; i < len; i++) {
+		if(str[i] != ' ') {
+			break;
+		}
+	}
+
+	if(i != (len - 1)) {
+		estr = es_newStrFromCStr(str + i, strlen(str) - i);
+	}
+
+	return(estr);
+}
+
+static es_str_t*
+rTrim(char *str)
+{
+	int len = strlen(str);
+	int i;
+	es_str_t *estr = NULL;
+
+	for(i = (len - 1); i > -1; i--) {
+		if(str[i] != ' ') {
+			break;
+		}
+	}
+
+	if(i != 0) {
+		estr = es_newStrFromCStr(str, (i + 1));
+	}
+
+	return(estr);
+}
+
 
 static long long
 ipv42num(char *str)
@@ -1898,6 +1938,24 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		ret->d.estr = num2ipv4(&r[0]);
 		ret->datatype = 'S';
 		varFreeMembers(&r[0]);
+		break;
+	case CNFFUNC_LTRIM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'S';
+		ret->d.estr = lTrim(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
+		break;
+	case CNFFUNC_RTRIM:
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		str = (char*)var2CString(&r[0], &bMustFree);
+		ret->datatype = 'S';
+		ret->d.estr = rTrim(str);
+		varFreeMembers(&r[0]);
+		if(bMustFree)
+			free(str);
 		break;
 	case CNFFUNC_GETENV:
 		/* note: the optimizer shall have replaced calls to getenv()
@@ -4132,6 +4190,10 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("getenv", 1, CNFFUNC_GETENV);
 	} else if(FUNC_NAME("num2ipv4")) {
 		GENERATE_FUNC("num2ipv4", 1, CNFFUNC_NUM2IPV4);
+	} else if(FUNC_NAME("ltrim")) {
+		GENERATE_FUNC("ltrim", 1, CNFFUNC_LTRIM);
+	} else if(FUNC_NAME("rtrim")) {
+		GENERATE_FUNC("rtrim", 1, CNFFUNC_RTRIM);
 	} else if(FUNC_NAME("tolower")) {
 		GENERATE_FUNC("tolower", 1, CNFFUNC_TOLOWER);
 	} else if(FUNC_NAME("cstr")) {
