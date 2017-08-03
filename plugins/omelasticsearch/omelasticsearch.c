@@ -1039,7 +1039,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		rendered = (char*)fjson_object_to_json_string(ctx.errRoot);
+		rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot));
 	}
 
 
@@ -1069,6 +1069,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object 
 finalize_it:
 	if(bMutLocked)
 		pthread_mutex_unlock(&pData->mutErrFile);
+	free(rendered);
 	fjson_object_put(ctx.errRoot);
 	RETiRet;
 }
