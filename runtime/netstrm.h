@@ -75,14 +75,16 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveProbes)(netstrm_t *pThis, int keepAliveProbes);
 	rsRetVal (*SetKeepAliveTime)(netstrm_t *pThis, int keepAliveTime);
 	rsRetVal (*SetKeepAliveIntvl)(netstrm_t *pThis, int keepAliveIntvl);
+	rsRetVal (*SetGnutlsPriorityString)(netstrm_t *pThis, uchar *priorityString);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 8 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
  * interface version 6 changed signature of GetRemoteIP() -- rgerhards, 2013-01-21
  * interface version 7 added KeepAlive parameter set functions
  * interface version 8 changed signature of Connect() -- dsa, 2016-11-14
+ * interface version 9 added SetGnutlsPriorityString -- PascalWithopf, 2017-08-08
  * */
 
 /* prototypes */
