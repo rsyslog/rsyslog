@@ -158,6 +158,18 @@ Module Parameters
    is cut off is processed as the next message. When this parameter is activated,
    the part that is cut off after a truncation is discarded and not processed.
 
+.. function:: gnutlsPriorityString <string>
+
+   *Default is NULL*
+
+   *Available since 8.29.0*
+
+   The GnuTLS priority strings specify the TLS session's handshake algorithms and
+   options. These strings are intended as a user-specified override of the library
+   defaults. If this parameter is NULL, the default settings are used. More
+   information about priority Strings
+   `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+
 Input Parameters
 ^^^^^^^^^^^^^^^^
 

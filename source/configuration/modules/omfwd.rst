@@ -282,6 +282,18 @@ Action Parameters
    was introduced in order to support some testbench tests. Be sure
    to think twice before you use it in producetion.
 
+-  **gnutlsPriorityString** string
+
+   **Default:** NULL
+
+   **Available since:** 8.29.0
+
+   The GnuTLS priority strings specify the TLS session's handshake algorithms and
+   options. These strings are intended as a user-specified override of the library
+   defaults. If this parameter is NULL, the default settings are used. More
+   information about priority Strings
+   `here <https://gnutls.org/manual/html_node/Priority-Strings.html>`_.
+ 
 See Also
 --------
 
