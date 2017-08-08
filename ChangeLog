@@ -32,6 +32,8 @@ Version 8.29.0 [v8-stable] 2017-08-08
   runtime. In contrast, this also means that users will see more error
   messages from rsyslog, but that should actually improve the end user
   experience.
+- core: add parameters debug.file and debug.whitelist
+  allows to generate debug log output only of specific files
 - core/net.c: improve UDP socket creation error messages
 - omfwd/udp: add "udp.sendbuf" parameter
 - core: make rsyslog internal message rate-limiter configurable
