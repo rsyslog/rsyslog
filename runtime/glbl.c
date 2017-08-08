@@ -124,6 +124,9 @@ int glblUnloadModules = 1;
 int bPermitSlashInProgramname = 0;
 int glblIntMsgRateLimitItv = 5;
 int glblIntMsgRateLimitBurst = 500;
+char** glblDbgFiles = NULL;
+size_t glblDbgFilesNum = 0;
+int glblDbgWhitelist = 1;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -179,7 +182,9 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
 	{ "umask", eCmdHdlrFileCreateMode, 0 },
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
-	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 }
+	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
+	{ "debug.files", eCmdHdlrArray, 0 },
+	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -882,6 +887,13 @@ glblFindTimezoneInfo(char *id)
 /* handle the timezone() object. Each incarnation adds one additional
  * zone info to the global table of time zones.
  */
+
+int
+bs_arrcmp_glblDbgFiles(const void *s1, const void *s2)
+{
+	return strcmp((char*)s1, *(char**)s2);
+}
+
 void
 glblProcessTimezone(struct cnfobj *o)
 {
@@ -1037,6 +1049,12 @@ static int
 qs_arrcmp_tzinfo(const void *s1, const void *s2)
 {
 	return strcmp(((tzinfo_t*)s1)->id, ((tzinfo_t*)s2)->id);
+}
+
+static int
+qs_arrcmp_glblDbgFiles(const void *s1, const void *s2)
+{
+	return strcmp(*((char**)s1), *((char**)s2));
 }
 
 /* set an environment variable */
@@ -1240,6 +1258,15 @@ glblDoneLoadCnf(void)
 				do_setenv(var);
 				free(var);
 			}
+		} else if(!strcmp(paramblk.descr[i].name, "debug.files")) {
+			glblDbgFilesNum = cnfparamvals[i].val.d.ar->nmemb;
+			glblDbgFiles = (char**) malloc(cnfparamvals[i].val.d.ar->nmemb * sizeof(char*));
+			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
+				glblDbgFiles[j] = es_str2cstr(cnfparamvals[i].val.d.ar->arr[j], NULL);
+			}
+			qsort(glblDbgFiles, glblDbgFilesNum, sizeof(char*), qs_arrcmp_glblDbgFiles);
+		} else if(!strcmp(paramblk.descr[i].name, "debug.whitelist")) {
+		        glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else {

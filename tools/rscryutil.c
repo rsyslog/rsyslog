@@ -58,7 +58,7 @@ static int optionForce = 0;
  * in order to satisfy the needs of the common code.
  */
 int Debug = 0;
-void dbgprintf(const char *fmt __attribute__((unused)), ...) {};
+void r_dbgprintf(const char *srcname __attribute__((unused)), const char *fmt __attribute__((unused)), ...) {};
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused)));
 /* prototype (avoid compiler warning) */
 void srSleep(int a __attribute__((unused)), int b __attribute__((unused))) {};
