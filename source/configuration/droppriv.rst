@@ -1,7 +1,7 @@
 Dropping privileges in rsyslog
 ==============================
 
-**Available since:   ** 4.1.1
+**Available since**: 4.1.1
 
 **Description**:
 

@@ -3,7 +3,7 @@ Support module for external message modification modules
 
 **Module Name:    mmexternal**
 
-**Available since:   ** 8.3.0
+**Available since**: 8.3.0
 
 **Author:**\ Rainer Gerhards <rgerhards@adiscon.com>
 

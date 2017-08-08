@@ -229,6 +229,33 @@ The following parameters can be set:
   that it makes valgrind stack traces readable. In previous versions, the
   same functionality was only available via a special build option.
 
+- **debug.files** [ARRAY of filenames] available 8.29.0+
+
+  **Default:** none
+
+  This can be used to configure rsyslog to only show debug-output generated in
+  certain files. If the option is set, but no filename is given, the
+  debug-output will behave as if the option is turned off.
+
+  Do note however that due to the way the configuration works, this might not
+  effect the first few debug-outputs, while rsyslog is reading in the configuration.
+  For optimal results we recommend to put this parameter at the very start of
+  your configuration to minmize unwanted output.
+
+  See debug.whitelist for more information.
+
+- **debug.whitelist** [on/off] available 8.29.0+
+
+  **Default:** on
+
+  This parameter is an assisting parameter of  debug.files. If debug.files
+  is used in the configuration, debug.whitelist is a switch for the files named
+  to be either white- or blacklisted from displaying debug-output. If it is set to
+  on, the listed files will generate debug-output, but no other files will.
+  The reverse principle applies if the parameter is set to off.
+
+  See debug.files for more information.
+
 - **environment** [ARRAY of environment variable=value strings] available 8.23.0+
 
   **Default:** none
