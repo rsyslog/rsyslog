@@ -210,3 +210,14 @@ ipv42num
    contain any other characters in between (except dots). If the format does include these, the
    function results in an error and returns -1.
 
+ltrim
+--------
+
+   Removes any spaces at the start of a given string. Input is a string, output
+   is the same string starting with the first non-space charakter.
+
+rtrim
+--------
+
+   Removes any spaces at the end of a given string. Input is a string, output
+   is the same string ending with the last non-space charakter.
