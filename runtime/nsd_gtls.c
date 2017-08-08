@@ -1302,6 +1302,19 @@ finalize_it:
 	RETiRet;
 }
 
+/* gnutls priority string
+ */
+static rsRetVal
+SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	pThis->gnutlsPriorityString = gnutlsPriorityString;
+	RETiRet;
+}
+
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
@@ -1690,6 +1703,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
+	const char *error_position;
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 #	endif
@@ -1726,8 +1740,19 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		FINALIZE; /* we have an error case! */
 	}
 
-	/* Use default priorities */
-	CHKgnutls(gnutls_set_default_priority(pThis->sess));
+	/*priority string setzen*/
+	if(pThis->gnutlsPriorityString != NULL) {
+		if(gnutls_priority_set_direct(pThis->sess,
+					(const char*) pThis->gnutlsPriorityString,
+					&error_position)==GNUTLS_E_INVALID_REQUEST) {
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+					" Priority String: \"%s\"\n", error_position);
+		}
+	} else {
+		/* Use default priorities */
+		CHKgnutls(gnutls_set_default_priority(pThis->sess));
+	}
+
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	/* The gnutls_certificate_type_set_priority function is deprecated
 	 * and not available in recent GnuTLS versions. However, there is no
@@ -1811,6 +1836,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

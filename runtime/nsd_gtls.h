@@ -56,6 +56,7 @@ struct nsd_gtls_s {
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
 	permittedPeers_t *pPermPeers; /* permitted peers */
+	uchar *gnutlsPriorityString;	/* gnutls priority string */
 	gnutls_x509_crt_t ourCert;	/**< our certificate, if in client mode (unused in server mode) */
 	gnutls_x509_privkey_t ourKey;	/**< our private key, if in client mode (unused in server mode) */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */

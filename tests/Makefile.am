@@ -544,6 +544,7 @@ if ENABLE_GNUTLS
 TESTS +=  \
 	imtcp_conndrop_tls.sh \
 	sndrcv_tls_anon.sh \
+	sndrcv_tls_priorityString.sh \
 	imtcp-tls-basic.sh \
 	sndrcv_tls_anon_rebind.sh
 if HAVE_VALGRIND
@@ -1554,6 +1555,9 @@ EXTRA_DIST= \
 	sndrcv_tls_anon.sh \
 	testsuites/sndrcv_tls_anon_sender.conf \
 	testsuites/sndrcv_tls_anon_rcvr.conf \
+	sndrcv_tls_priorityString.sh \
+	testsuites/sndrcv_tls_priorityString_sender.conf \
+	testsuites/sndrcv_tls_priorityString_rcvr.conf \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare.sh \

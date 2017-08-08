@@ -11,6 +11,8 @@ Version 8.29.0 [v8-stable] 2017-08-08
     - session.opened
     - session.openfailed
     - session.closed
+- imtcp: add ability to specify GnuTLS priority string
+  This permits to set cipher details on a very low level.
 - impstats: add new ressoure counter "openfiles"
 - pmnormalize: new parser module
   Parser module that uses liblognorm to parse incoming messages.
@@ -34,6 +36,8 @@ Version 8.29.0 [v8-stable] 2017-08-08
   experience.
 - core: add parameters debug.file and debug.whitelist
   allows to generate debug log output only of specific files
+  Background information available at:
+  https://www.linkedin.com/pulse/improving-rsyslog-debug-output-jan-gerhards
 - core/net.c: improve UDP socket creation error messages
 - omfwd/udp: add "udp.sendbuf" parameter
 - core: make rsyslog internal message rate-limiter configurable
