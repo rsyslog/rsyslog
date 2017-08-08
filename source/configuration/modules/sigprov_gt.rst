@@ -5,7 +5,7 @@ GuardTime Log Signature Provider (gt)
 
 **Author:** Rainer Gerhards <rgerhards@adiscon.com>
 
-**Supported Since:** since 7.3.9
+**Supported:** from 7.3.9 to 8.26.0
 
 **Description**:
 
