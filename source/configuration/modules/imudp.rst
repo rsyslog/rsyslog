@@ -263,6 +263,7 @@ that corresponding statistic name in above case would be "myudpinput(\*:514)".
 This has been introduced in 7.5.3.
 
 The following properties are maintained for each listener:
+
 -  **submitted** - total number of messages submitted for processing since startup
 
 The worker thread (in short: worker) statistic is named "imudp(wX)" where "X" is
@@ -277,8 +278,11 @@ from all listeners.
 Note: worker thread statistics are available starting with rsyslog 7.5.5.
 
 The following properties are maintained for each worker thread:
+
 -  **called.recvmmsg** - number of recvmmsg() OS calls done
+
 -  **called.recvmsg** - number of recvmsg() OS calls done
+
 -  **msgs.received** - number of actual messages received
 
 See Also

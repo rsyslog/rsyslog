@@ -218,7 +218,9 @@ Statistic Counter
 This plugin maintains a global :doc:`statistics <../rsyslog_statistic_counter>` with the following properties:
 
 -  **submitted** - total number of messages submitted for processing since startup
+
 -  **ratelimit.discarded** - number of messages discarded due to rate limiting
+
 -  **ratelimit.numratelimiters** - number of currently active rate limiters
    (smal data structures used for the rate limiting logic)
 

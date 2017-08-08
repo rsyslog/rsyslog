@@ -429,13 +429,16 @@ template name used for this dynafile action.
 The following properties are maintained for each dynafile:
 
 -  **request** - total number of requests made to obtain a dynafile
+
 -  **level0** - requests for the current active file, so no real cache
    lookup needed to be done. These are extremely good.
+
 -  **missed** - cache misses, where the required file did not reside in
    cache. Even with a perfect cache, there will be at least one miss per
    file. That happens when the file is being accessed for the first time
    and brought into cache. So "missed" will always be at least as large
-   as the number of different files processed. 
+   as the number of different files processed.
+
 -  **evicted** - the number of times a file needed to be evicted from
    the cache as it ran out of space. These can simply happen when
    date-based files are used, and the previous date files are being
@@ -451,6 +454,7 @@ The following properties are maintained for each dynafile:
    cache size should be increased. If it is already very high, it is
    recommended to re-think about the design of the file store, at least if
    the eviction process causes real performance problems.
+
 -  **maxused** - the maximum number of cache entries ever used. This can
    be used to trim the cache down to a value that’s actually useful but
    does not waste resources. Note that when date-based files are used and
@@ -458,6 +462,7 @@ The following properties are maintained for each dynafile:
    up to the max configured value as older files are migrated out of it.
    This will make "maxused" questionable after some time. Frequently enough
    purging the cache can prevent this (usually, once a day is sufficient).
+
 -  **closetimeouts** - available since 8.3.3 – tells how often a file was
    closed due to timeout settings ("closeTimeout" action parameter). These
    are cases where dynafiles or static files have been closed by rsyslog due
