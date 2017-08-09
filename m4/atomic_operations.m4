@@ -9,7 +9,7 @@
 #
 AC_DEFUN([RS_ATOMIC_OPERATIONS],
 [AC_CACHE_CHECK([whether the compiler provides atomic builtins], [ap_cv_atomic_builtins],
-[AC_TRY_RUN([
+[AC_COMPILE_IFELSE([
 int main()
 {
     unsigned long val = 1010, tmp, *mem = &val;
