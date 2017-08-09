@@ -9,7 +9,7 @@
 #
 AC_DEFUN([RS_ATOMIC_OPERATIONS_64BIT],
 [AC_CACHE_CHECK([whether the compiler provides atomic builtins for 64 bit data types], [ap_cv_atomic_builtins_64],
-[AC_TRY_RUN([
+[AC_COMPILE_IFELSE([
 int main()
 {
     unsigned long long val = 1010, tmp, *mem = &val;
