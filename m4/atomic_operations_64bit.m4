@@ -9,7 +9,7 @@
 #
 AC_DEFUN([RS_ATOMIC_OPERATIONS_64BIT],
 [AC_CACHE_CHECK([whether the compiler provides atomic builtins for 64 bit data types], [ap_cv_atomic_builtins_64],
-[AC_TRY_RUN([
+[AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 int main()
 {
     unsigned long long val = 1010, tmp, *mem = &val;
@@ -44,7 +44,7 @@ int main()
         return 1;
 
     return 0;
-}], [ap_cv_atomic_builtins_64=yes], [ap_cv_atomic_builtins_64=no], [ap_cv_atomic_builtins_64=no])])
+}])], [ap_cv_atomic_builtins_64=yes], [ap_cv_atomic_builtins_64=no], [ap_cv_atomic_builtins_64=no])])
 
 if test "$ap_cv_atomic_builtins_64" = "yes"; then
     AC_DEFINE(HAVE_ATOMIC_BUILTINS64, 1, [Define if compiler provides 64 bit atomic builtins])
