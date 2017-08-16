@@ -650,7 +650,7 @@ gtlsInitSession(nsd_gtls_t *pThis)
 	pThis->bIsInitiator = 0;
 
 	/* avoid calling all the priority functions, since the defaults are adequate. */
-	CHKgnutls(gnutls_set_default_priority(session));
+
 	CHKgnutls(gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred));
 
 	/* request client certificate if any.  */
@@ -1240,7 +1240,6 @@ finalize_it:
 	RETiRet;
 }
 
-
 /* Set the authentication mode. For us, the following is supported:
  * anon - no certificate checks whatsoever (discouraged, but supported)
  * x509/certvalid - (just) check certificate validity
@@ -1303,6 +1302,7 @@ finalize_it:
 }
 
 /* gnutls priority string
+ * PascalWithopf 2017-08-16
  */
 static rsRetVal
 SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
@@ -1493,6 +1493,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	int gnuRet;
 	nsd_gtls_t *pNew = NULL;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	const char *error_position;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
@@ -1510,6 +1511,19 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
 	pNew->authMode = pThis->authMode;
 	pNew->pPermPeers = pThis->pPermPeers;
+	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
+	/* here is the priorityString set */
+	if(pNew->gnutlsPriorityString != NULL) {
+		if(gnutls_priority_set_direct(pNew->sess,
+					(const char*) pNew->gnutlsPriorityString,
+					&error_position)==GNUTLS_E_INVALID_REQUEST) {
+			errmsg.LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
+					" Priority String: \"%s\"\n", error_position);
+		}
+	} else {
+		/* Use default priorities */
+		CHKgnutls(gnutls_set_default_priority(pNew->sess));
+	}
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
