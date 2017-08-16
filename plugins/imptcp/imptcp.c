@@ -828,7 +828,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: connection established with host: %s", propGetSzStr(*peerName));
 	}
 
-	STATSCOUNTER_INC(pLstn->ctrSessOpen, pThis->pLstn->mutCtrSessOpen);
+	STATSCOUNTER_INC(pLstn->ctrSessOpen, pLstn->mutCtrSessOpen);
 	*newSock = iNewSock;
 
 finalize_it:
@@ -837,7 +837,7 @@ finalize_it:
 		if(iRet != RS_RET_NO_MORE_DATA && pLstn->pSrv->bEmitMsgOnOpen) {
 			LogError(0, NO_ERRCODE, "imptcp: connection could not be established with host: %s", propGetSzStr(*peerName));
 		}
-		STATSCOUNTER_INC(pLstn->ctrSessOpenErr, pThis->pLstn->mutCtrSessOpenErr);
+		STATSCOUNTER_INC(pLstn->ctrSessOpenErr, pLstn->mutCtrSessOpenErr);
 		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock != -1)
 			close(iNewSock);
