@@ -65,7 +65,7 @@ def onExit():
 This is plumbing that DOES NOT need to be CHANGED
 -------------------------------------------------------
 Implementor's note: Python seems to very agressively
-buffer stdouot. The end result was that rsyslog does not
+buffer stdout. The end result was that rsyslog does not
 receive the script's messages in a timely manner (sometimes
 even never, probably due to races). To prevent this, we
 flush stdout after we have done processing. This is especially
