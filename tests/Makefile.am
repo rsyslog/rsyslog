@@ -239,6 +239,15 @@ TESTS +=  \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	mmanon_random_32_ipv4.sh \
+	mmanon_random_cons_32_ipv4.sh \
+	mmanon_recognize_ipv4.sh \
+	mmanon_zero_12_ipv4.sh \
+	mmanon_zero_33_ipv4.sh \
+	mmanon_zero_8_ipv4.sh \
+	mmanon_simple_12_ipv4.sh \
+	mmanon_simple_33_ipv4.sh \
+	mmanon_simple_8_ipv4.sh \
 	empty-prop-comparison.sh \
 	rs_optimizer_pri.sh \
 	cee_simple.sh \
@@ -826,6 +835,15 @@ EXTRA_DIST= \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	mmanon_random_32_ipv4.sh \
+	mmanon_random_cons_32_ipv4.sh \
+	mmanon_recognize_ipv4.sh \
+	mmanon_zero_12_ipv4.sh \
+	mmanon_zero_33_ipv4.sh \
+	mmanon_zero_8_ipv4.sh \
+	mmanon_simple_12_ipv4.sh \
+	mmanon_simple_33_ipv4.sh \
+	mmanon_simple_8_ipv4.sh \
 	testsuites/rscript_ne_var.conf \
 	rscript_eq.sh \
 	testsuites/rscript_eq.conf \
