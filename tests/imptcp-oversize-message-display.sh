@@ -17,7 +17,7 @@ action(type="omfile" file="rsyslog.out.log")
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
-grep "error:.*150.*\"ghijklmn test8 test9 test10 test\"" rsyslog.out.log > /dev/null
+grep "imptcp:.*150.*\"ghijklmn test8 test9 test10 test\"" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
@@ -25,7 +25,7 @@ if [ $? -ne 0 ]; then
         . $srcdir/diag.sh error-exit 1
 fi
 
-grep "error:.*22.*\"sstetstetsytetestetste\"" rsyslog.out.log > /dev/null
+grep "imptcp:.*22.*\"sstetstetsytetestetste\"" rsyslog.out.log > /dev/null
 if [ $? -ne 0 ]; then
         echo
         echo "FAIL: expected error message from imptcp truncation not found. rsyslog.out.log is:"
