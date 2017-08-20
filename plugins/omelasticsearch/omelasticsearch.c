@@ -746,9 +746,12 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 		}
 		fjson_object_object_get_ex(item, "create", &result);
 		if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'result' item for #%d\n", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
+			fjson_object_object_get_ex(item, "index", &result);
+			if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+					  "cannot obtain 'result' item for #%d\n", i);
+				ABORT_FINALIZE(RS_RET_DATAFAIL);
+			}
 		}
 
 		fjson_object_object_get_ex(result, "status", &ok);
