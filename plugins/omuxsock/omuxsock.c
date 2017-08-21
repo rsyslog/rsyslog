@@ -271,15 +271,8 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len)
 	}
 
 	if(pData->sock != INVLD_SOCK) {
-		/* we need to track if we have success sending to the remote
-		 * peer. Success is indicated by at least one sendto() call
-		 * succeeding. We track this be bSendSuccess. We can not simply
-		 * rely on lsent, as a call might initially work, but a later
-		 * call fails. Then, lsent has the error status, even though
-		 * the sendto() succeeded. -- rgerhards, 2007-06-22
-		 */
 		lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, sizeof(pData->addr));
-		if(lenSent == len) {
+		if(lenSent != len) {
 			int eno = errno;
 			char errStr[1024];
 			DBGPRINTF("omuxsock suspending: sendto(), socket %d, error: %d = %s.\n",
