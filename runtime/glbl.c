@@ -1189,7 +1189,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
-			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			cCCEscapeChar = tmp[0];
+			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
 			bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
