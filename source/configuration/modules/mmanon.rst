@@ -30,18 +30,26 @@ Currently none.
 
 **Action Confguration Parameters**:
 
--  **mode** - default "rewrite"
+-  **ipv4.mode** - default "zero"
 
-   There exists the "simple" and "rewrite" mode. In simple mode, only
-   octets as whole can be anonymized and the length of the message is
-   never changed. This means that when the last three octets of the
-   address 10.1.12.123 are anonymized, the result will be 10.0.00.000.
-   This means that the length of the original octets is still visible
-   and may be used to draw some privacy-evasive conclusions. This mode
-   is slightly faster than "overwrite" mode, and this may matter in high
+   There exist the "simple", "random", "random-consitent", and "zero"
+   modes. In simple mode, only octets as whole can be anonymized
+   and the length of the message is never changed. This means
+   that when the last three octets of the address 10.1.12.123 are
+   anonymized, the result will be 10.0.00.000. This means that
+   the length of the original octets is still visible and may be used
+   to draw some privacy-evasive conclusions. This mode is slightly
+   faster than the other modes, and this may matter in high
    throughput environments.
-   The default "rewrite" mode will do full anonymization of any number
-   of bits and it will also normlize the address, so that no information
+
+   The modes "random" and "random-consistent" are very similar, in
+   that they both anonymize ip-addresses by randomizing the last bits (any
+   number) of a given address. However, while "random" mode assigns a new
+   random ip-address for every address in a message, "random-consitent" will
+   assign the same randomized address to every instance of the same original address.
+
+   The default "zero" mode will do full anonymization of any number
+   of bits and it will also normalize the address, so that no information
    about the original IP address is available. So in the above example,
    10.1.12.123 would be anonymized to 10.0.0.0.
 
@@ -61,14 +69,12 @@ Currently none.
    (so we favor stronger anonymization in that case). For example, a bit
    value of 12 will become 16 in simple mode (an error message is also
    emitted).
--  **replacementChar** - default "x"
+
+-  **ipv4.replaceChar** - default "x"
 
    In simple mode, this sets the character that the to-be-anonymized
-   part of the IP address is to be overwritten with. In rewrite mode,
-   this parameter is **not permitted**, as in this case we need not
-   necessarily rewrite full octets. As such, the anonymized part is
-   always zero-filled and replacementChar is of no use. If it is
-   specified, an error message is emitted and the parameter ignored.
+   part of the IP address is to be overwritten with. In any other
+   mode the parameter is ignored if set.
 
 **See Also**
 
@@ -78,6 +84,7 @@ Currently none.
 **Caveats/Known Bugs:**
 
 -  **only IPv4** is supported
+-  will **not** anonymize addresses in the header
 
 **Samples:**
 
