@@ -437,7 +437,9 @@ wtpStartWrkr(wtp_t *pThis)
 {
 	wti_t *pWti;
 	int i;
+#ifndef DEBUGLESS
 	int iState;
+#endif
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
@@ -460,7 +462,10 @@ wtpStartWrkr(wtp_t *pThis)
 
 	pWti = pThis->pWrkr[i];
 	wtiSetState(pWti, WRKTHRD_RUNNING);
-	iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
+#ifndef DEBUGLESS
+	iState = 
+#endif
+		pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void*) pWti);
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",

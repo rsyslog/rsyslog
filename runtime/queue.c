@@ -241,7 +241,7 @@ finalize_it:
 
 /* methods */
 
-static const char *
+static const char DL_UNUSED *
 getQueueTypeName(queueType_t t)
 {
 	const char *r;
@@ -267,7 +267,7 @@ getQueueTypeName(queueType_t t)
 }
 
 void
-qqueueDbgPrint(qqueue_t *pThis)
+qqueueDbgPrint(qqueue_t DL_UNUSED *pThis)
 {
 	dbgoprint((obj_t*) pThis, "parameter dump:\n");
 	dbgoprint((obj_t*) pThis, "queue.filename '%s'\n",

@@ -482,8 +482,13 @@ static void
 tellChildReady(const int pipefd, const char *const msg)
 {
 	dbgprintf("rsyslogd: child signaling OK\n");
+#ifndef DEBUGLESS
 	const int nWritten = write(pipefd, msg, strlen(msg));
 	dbgprintf("rsyslogd: child signalled OK, nWritten %d\n", (int) nWritten);
+#else
+	// The if() is to silence the "ignoring return value of 'write'" warning.
+	if (write(pipefd, msg, strlen(msg))) {};
+#endif
 	close(pipefd);
 	sleep(1);
 }
@@ -1174,7 +1179,9 @@ initAll(int argc, char **argv)
 	int iHelperUOpt;
 	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
+#ifndef DEBUGLESS
 	char cwdbuf[128]; /* buffer to obtain/display current working directory */
+#endif
 	int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
 	DEFiRet;
 

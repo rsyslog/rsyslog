@@ -210,7 +210,9 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 	uchar szErr[512];
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
+#ifndef DEBUGLESS
 	int errnoSave;
+#endif
 	int ttyf;
 	int wrRet;
 	STRUCTUTMP ut;
@@ -267,7 +269,9 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 				wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
 				if(Debug && wrRet == -1) {
 					/* we record the state to the debug log */
+#ifndef DEBUGLESS
 					errnoSave = errno;
+#endif
 					rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
 					dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
 						  p, errnoSave, szErr);

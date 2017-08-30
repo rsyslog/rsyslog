@@ -2231,12 +2231,13 @@ void tplPrintList(rsconf_t *conf)
 	pTpl = conf->templates.root;
 	while(pTpl != NULL) {
 		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatEscape == SQL_ESCAPE)
+		if(pTpl->optFormatEscape == SQL_ESCAPE) {
 			dbgprintf("[SQL-Format (MySQL)] ");
-		else if(pTpl->optFormatEscape == JSON_ESCAPE)
+		} else if(pTpl->optFormatEscape == JSON_ESCAPE) {
 			dbgprintf("[JSON-Escaped Format] ");
-		else if(pTpl->optFormatEscape == STDSQL_ESCAPE)
+		} else if(pTpl->optFormatEscape == STDSQL_ESCAPE) {
 			dbgprintf("[SQL-Format (standard SQL)] ");
+		}
 		if(pTpl->optCaseSensitive)
 			dbgprintf("[Case Sensitive Vars] ");
 		dbgprintf("\n");

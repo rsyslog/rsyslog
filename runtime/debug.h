@@ -118,6 +118,9 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #ifdef DEBUGLESS
 #	define DBGPRINTF(...) {}
 #	define DBGOPRINT(...) {}
+#	define dbgprintf(...) {}
+#   define dbgoprint(...) {}
+#   define DL_UNUSED __attribute__((unused))
 #else
 #	define DBGPRINTF(...) if(Debug) { r_dbgprintf(__FILE__, __VA_ARGS__); }
 #	define DBGOPRINT(...) if(Debug) { r_dbgoprint(__FILE__, __VA_ARGS__); }

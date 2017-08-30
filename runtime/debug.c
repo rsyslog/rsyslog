@@ -233,7 +233,7 @@ dbgFuncDBGetMutexInfo(dbgFuncDB_t *pFuncDB, pthread_mutex_t *pmut)
  * shall be printed.
  */
 static void
-dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, const char *pszHdrText, pthread_t thrd)
+dbgFuncDBPrintActiveMutexes(dbgFuncDB_t *pFuncDB, const char DL_UNUSED *pszHdrText, pthread_t thrd)
 {
 	int i;
 	char pszThrdName[64];
@@ -356,8 +356,9 @@ static void dbgMutLogDelEntry(dbgMutLog_t *pLog)
 
 
 /* print a single mutex log entry */
-static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
+static void dbgMutLogPrintOne(dbgMutLog_t DL_UNUSED *pLog)
 {
+#ifndef DEBUGLESS
 	const char *strmutop;
 	char buf[64];
 	char pszThrdName[64];
@@ -381,6 +382,7 @@ static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
 		  strmutop, pLog->pFuncDB->file,
 		  (pLog->mutexOp == MUTOP_LOCK) ? pLog->lockLn : pLog->pFuncDB->line,
 		  pszThrdName);
+#endif
 }
 
 /* print the complete mutex log */
@@ -439,7 +441,7 @@ static dbgMutLog_t *dbgMutLogFindFromBack(pthread_mutex_t *pmut, dbgMutLog_t *pL
 
 
 /* find lock aquire for mutex from back of list */
-static dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
+static dbgMutLog_t DL_UNUSED * dbgMutLogFindHolder(pthread_mutex_t *pmut)
 {
 	dbgMutLog_t *pLog;
 
@@ -455,8 +457,9 @@ static dbgMutLog_t *dbgMutLogFindHolder(pthread_mutex_t *pmut)
 
 /* report wait on a mutex and add it to the mutex log */
 static void
-dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+dbgMutexPreLockLog(pthread_mutex_t DL_UNUSED *pmut, dbgFuncDB_t DL_UNUSED *pFuncDB, int DL_UNUSED ln)
 {
+#ifndef DEBUGLESS
 	dbgMutLog_t *pHolder;
 	char pszBuf[128];
 	char pszHolderThrdName[64];
@@ -478,6 +481,7 @@ dbgMutexPreLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 		dbgprintf("%s:%d:%s: mutex %p waiting on lock, held by %s\n", pFuncDB->file, ln, pFuncDB->func,
 		(void*)pmut, pszHolder);
 	pthread_mutex_unlock(&mutMutLog);
+#endif
 }
 
 
@@ -506,7 +510,7 @@ dbgMutexLockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int lockLn)
 
 /* if we unlock, we just remove the lock aquired entry from the log list */
 static void
-dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int unlockLn)
+dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t DL_UNUSED *pFuncDB, int DL_UNUSED unlockLn)
 {
 	dbgMutLog_t *pLog;
 
@@ -637,7 +641,7 @@ dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 /* ------------------------- malloc/free tracking code ------------------------- */ 
 
 /* wrapper for free() */
-void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
+void dbgFree(void *pMem, dbgFuncDB_t DL_UNUSED *pFuncDB, int ln, int iStackPtr)
 {
 	dbgRecordExecLocation(iStackPtr, ln);
 	if(bLogAllocFree) {
@@ -781,8 +785,9 @@ static void dbgCallStackPrintAll(void)
  * rgerhards, 2008-01-22
  */
 void __attribute__((noreturn))
-sigsegvHdlr(int signum)
+sigsegvHdlr(int DL_UNUSED signum)
 {
+#ifndef DEBUGLESS
 	const char *signame;
 	struct sigaction sigAct;
 
@@ -810,7 +815,7 @@ sigsegvHdlr(int signum)
 	}
 
 	dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
-
+#endif
 	/* and finally abort... */
 	/* TODO: think about restarting rsyslog in this case: may be a good idea,
 	 * but may also be a very bad one (restart loops!)
@@ -1154,10 +1159,11 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	pthread_self());
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
 		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
-			if(iRet == RS_RET_NO_IRET)
+			if(iRet == RS_RET_NO_IRET) {
 				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
-			else 
+			} else {
 				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+			}
 		}
 	}
 	pThrd->stackPtr = iStackPtrRestore;
