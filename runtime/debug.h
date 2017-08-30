@@ -126,6 +126,7 @@ extern int altdbg;	/* and the handle for alternate debug output */
 #	define DBGOPRINT(...) if(Debug) { r_dbgoprint(__FILE__, __VA_ARGS__); }
 #	define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #	define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
+#   define DL_UNUSED
 #endif
 #ifdef RTINST
 #define BEGINfunc static dbgFuncDB_t *pdbgFuncDB;
