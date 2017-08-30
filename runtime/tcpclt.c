@@ -80,7 +80,9 @@ CreateSocket(struct addrinfo *addrDest)
 					/* this is normal - will complete later select */
 					return fd;
 				} else {
+#ifndef DEBUGLESS
 					char errStr[1024];
+#endif
 					dbgprintf("create tcp connection failed, reason %s",
 						rs_strerror_r(errno, errStr, sizeof(errStr)));
 				}
@@ -92,7 +94,9 @@ CreateSocket(struct addrinfo *addrDest)
 			close(fd);
 		}
 		else {
+#ifndef DEBUGLESS
 			char errStr[1024];
+#endif
 			dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
 		}		
 		r = r->ai_next;

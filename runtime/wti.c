@@ -61,7 +61,7 @@ pthread_key_t thrd_wti_key;
 /* get the header for debug messages
  * The caller must NOT free or otherwise modify the returned string!
  */
-static uchar *
+static uchar DL_UNUSED *
 wtiGetDbgHdr(wti_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, wti);

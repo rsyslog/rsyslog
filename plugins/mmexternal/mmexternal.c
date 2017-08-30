@@ -176,7 +176,9 @@ writeOutputDebug(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	const char *__restrict__ const buf,
 	const ssize_t lenBuf)
 {
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 	ssize_t r;
 
 	if(pWrkrData->pData->outputFileName == NULL)
@@ -216,7 +218,9 @@ static void
 processProgramReply(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *const pMsg)
 {
 	rsRetVal iRet;
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 	ssize_t r;
 	int numCharsRead;
 	char *newptr;
@@ -388,7 +392,9 @@ cleanup(wrkrInstanceData_t *pWrkrData)
 {
 	int status;
 	int ret;
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 	DEFiRet;
 
 	assert(pWrkrData->bIsRunning == 1);
@@ -452,7 +458,9 @@ callExtProg(wrkrInstanceData_t *__restrict__ const pWrkrData, smsg_t *__restrict
 	int lenWrite;
 	int writeOffset;
 	int i_iov;
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 	struct iovec iov[2];
 	const uchar *inputstr = NULL; /* string to be processed by external program */
 	DEFiRet;

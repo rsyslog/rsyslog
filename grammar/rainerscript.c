@@ -71,7 +71,7 @@ struct cnffunc * cnffuncNew_prifilt(int fac);
  * NOTE: This function MUST be updated if new tokens are defined in the
  *       grammar.
  */
-static const char *
+static const char DL_UNUSED *
 tokenToString(const int token)
 {
 	const char *tokstr;
@@ -2887,10 +2887,11 @@ pmaskPrint(uchar *pmask, int indent)
 	doIndent(indent);
 	dbgprintf("pmask: ");
 	for (i = 0; i <= LOG_NFACILITIES; i++)
-		if (pmask[i] == TABLE_NOPRI)
+		if (pmask[i] == TABLE_NOPRI) {
 			dbgprintf(" X ");
-		else
+		} else {
 			dbgprintf("%2X ", pmask[i]);
+		}
 	dbgprintf("\n");
 }
 
@@ -4621,7 +4622,7 @@ cnfparamGetIdx(struct cnfparamblk *params, const char *name)
 
 
 void
-cstrPrint(const char *text, es_str_t *estr)
+cstrPrint(const char DL_UNUSED *text, es_str_t *estr)
 {
 	char *str;
 	str = es_str2cstr(estr, NULL);

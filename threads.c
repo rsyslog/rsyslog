@@ -184,6 +184,12 @@ rsRetVal thrdTerminateAll(void)
 static void* thrdStarter(void *arg)
 {
 	DEFiRet;
+
+#ifdef DEBUGLESS
+	// Silence unused variable warning
+	if (iRet) {}
+#endif
+
 	thrdInfo_t *pThis = (thrdInfo_t*) arg;
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	uchar thrdName[32] = "in:";

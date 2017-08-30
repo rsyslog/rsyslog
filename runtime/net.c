@@ -822,9 +822,9 @@ PrintAllowedSenders(int iListToPrint)
 		dbgprintf("\tNo restrictions set.\n");
 	} else {
 		while(pSender != NULL) {
-			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
+			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME)) {
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
-			else {
+			} else {
 				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
 						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
@@ -1068,8 +1068,10 @@ should_use_so_bsdcompat(void)
 
 	init_done = 1;
 	if (uname(&myutsname) < 0) {
+#ifndef DEBUGLESS
 		char errStr[1024];
 		dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
+#endif
 		return 1;
 	}
 	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
@@ -1100,8 +1102,9 @@ should_use_so_bsdcompat(void)
  * a debug aid. rgerhards, 2007-07-02
  */
 static void
-debugListenInfo(int fd, char *type)
+debugListenInfo(int DL_UNUSED fd, char DL_UNUSED *type)
 {
+#ifndef DEBUGLESS
 	const char *szFamily;
 	int port;
 	struct sockaddr_storage sa;
@@ -1132,6 +1135,7 @@ debugListenInfo(int fd, char *type)
 	 * or do any serious error reporting.
 	 */
 	dbgprintf("Listening on syslogd socket %d - could not obtain peer info.\n", fd);
+#endif
 }
 
 
@@ -1267,7 +1271,9 @@ create_udp_socket(uchar *hostname,
 	int actrcvbuf;
 	int actsndbuf;
 	socklen_t optlen;
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 
 	assert(!((pszPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));

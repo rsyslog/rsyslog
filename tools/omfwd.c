@@ -432,7 +432,9 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
 	int lasterr_sock = -1;
+#ifndef DEBUGLESS
 	char errStr[1024];
+#endif
 
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");

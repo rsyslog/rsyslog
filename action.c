@@ -583,7 +583,7 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal)
  * returned string must not be modified.
  * rgerhards, 2009-05-07
  */
-static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
+static uchar DL_UNUSED *getActStateName(action_t * const pThis, wti_t * const pWti)
 {
 	switch(getActionState(pWti, pThis)) {
 		case ACT_STATE_RDY:

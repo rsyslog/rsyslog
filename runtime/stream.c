@@ -95,7 +95,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 /* output (current) file name for debug log purposes. Falls back to various
  * levels of impreciseness if more precise name is not known.
  */
-static const char *
+static const char DL_UNUSED *
 getFileDebugName(const strm_t *const pThis)
 {
 	  return (pThis->pszCurrFName == NULL) ?
