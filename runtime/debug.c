@@ -910,7 +910,7 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t len
 /* write the debug message. This is a helper to dbgprintf and dbgoprint which
  * contains common code. added 2008-09-26 rgerhards
  */
-static void
+static void DBGL_UNUSED
 dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, size_t lenMsg)
 {
 	uchar *pszObjName = NULL;
@@ -937,7 +937,7 @@ dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, size_t lenMsg)
 #pragma GCC diagnostic warning "-Wclobbered"
 #endif 
 
-static int
+static int DBGL_UNUSED
 checkDbgFile(const char *srcname)
 {
 
@@ -964,7 +964,8 @@ checkDbgFile(const char *srcname)
  * from one vararg function into another. I don't dig in this, it is OK for the
  * time being. -- rgerhards, 2008-01-29
  */
-void
+#ifndef DEBUGLESS
+ void
 r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 {
 	va_list ap;
@@ -1002,11 +1003,12 @@ r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 	}
 	dbgprint(pObj, pszWriteBuf, srcname, lenWriteBuf);
 }
-
+#endif
 
 /* print some debug output when no object is given
  * WARNING: duplicate code, see dbgoprint above!
  */
+#ifndef DEBUGLESS
 void
 r_dbgprintf(const char *srcname, const char *fmt, ...)
 {
@@ -1036,6 +1038,7 @@ r_dbgprintf(const char *srcname, const char *fmt, ...)
 	}
 	dbgprint(NULL, pszWriteBuf, srcname, lenWriteBuf);
 }
+#endif
 
 /* handler called when a function is entered. This function creates a new
  * funcDB on the heap if the passed-in pointer is NULL.
