@@ -17,8 +17,13 @@ message, if they exist.
 
 *How are IP-Addresses defined?*
 
-We assume that an IP address consists of four octets in dotted notation,
+We assume that an IPv4 address consists of four octets in dotted notation,
 where each of the octets has a value between 0 and 255, inclusively.
+
+An IPv6 is defined by being bewtween zero and eight hex values between 0
+and ffff. These are separated by ':'. Leading zeros in blocks can be omitted
+and blocks full of zeros can be abbreviated by using '::'. However, this
+can ony happen once in an IP address.
 
  
 
@@ -29,6 +34,13 @@ Currently none.
  
 
 **Action Confguration Parameters**:
+
+Parameters starting with 'IPv4.' will configure IPv4 anonymization,
+while 'IPv6.' parameters do the same for IPv6 anonymization.
+
+-  **ipv4.enable** - default "on"
+
+   Allows to enable or disable the anonymization of IPv4 addresses.
 
 -  **ipv4.mode** - default "zero"
 
@@ -55,7 +67,7 @@ Currently none.
 
 -  **ipv4.bits** - default "16"
 
-   This set the number of bits that should be anonymized (bits are from
+   This sets the number of bits that should be anonymized (bits are from
    the right, so lower bits are anonymized first). This setting permits
    to save network information while still anonymizing user-specific
    data. The more bits you discard, the better the anonymization
@@ -76,6 +88,40 @@ Currently none.
    part of the IP address is to be overwritten with. In any other
    mode the parameter is ignored if set.
 
+-  **ipv6.enable** - default "on"
+
+   Allows to enable or disable the anonymization of IPv6 addresses.
+
+-  **ipv6.anonmode** - default "zero"
+
+   This defines the mode, in which IPv6 addresses will be anonymized.
+   There exist the "random", "random-consitent", and "zero" modes.
+
+   The modes "random" and "random-consistent" are very similar, in
+   that they both anonymize ip-addresses by randomizing the last bits (any
+   number) of a given address. However, while "random" mode assigns a new
+   random ip-address for every address in a message, "random-consitent" will
+   assign the same randomized address to every instance of the same original address.
+
+   The default "zero" mode will do full anonymization of any number
+   of bits and it will also normalize the address, so that no information
+   about the original IP address is available.
+
+   Also note that an anonymmized IPv6 address will be normalized, meaning
+   there will be no abbreviations, leading zeros will **not** be displayed,
+   and capital letters in the hex numerals will be lowercase.
+
+-  **ipv6.bits** - default "96"
+
+   This sets the number of bits that should be anonymized (bits are from
+   the right, so lower bits are anonymized first). This setting permits
+   to save network information while still anonymizing user-specific
+   data. The more bits you discard, the better the anonymization
+   obviously is. The default of 96 bits reflects what German data
+   privacy rules consider as being sufficinetly anonymized. We assume,
+   this can also be used as a rough but conservative guideline for other
+   countries.
+
 **See Also**
 
 -  `Howto anonymize messages that go to specific
@@ -83,7 +129,6 @@ Currently none.
 
 **Caveats/Known Bugs:**
 
--  **only IPv4** is supported
 -  will **not** anonymize addresses in the header
 
 **Samples:**
@@ -95,9 +140,9 @@ variables before anonymization).
 
 ::
 
-  module(load="mmanon") 
+  module(load="mmanon")
   action(type="omfile" file="/path/to/non-anon.log")
-  action(type="mmanon") 
+  action(type="mmanon" ipv6.enable="off")
   action(type="omfile" file="/path/to/anon.log")
 
 This next snippet is almost identical to the first one, but here we
@@ -112,10 +157,10 @@ simple mode.
 ::
 
   module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
-  action(type="mmanon" ipv4.bits="32" mode="simple" replacementChar="\*")
+  action(type="mmanon" ipv4.bits="32" ipv4.mode="simple" replacementChar="\*" ipv6.enable="off")
   action(type="omfile" file="/path/to/anon.log")
 
-The next snippet is also based on the first one, but anonimzes an "odd"
+The next snippet is also based on the first one, but anonymizes an "odd"
 number of bits, 12. The value of 12 is used by some folks as a
 compromise between keeping privacy and still permiting to gain some more
 in-depth insight from log files. Note that anonymizing 12 bits may be
@@ -124,8 +169,38 @@ insufficient to fulfill legal requirements (if such exist).
 ::
 
   module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
-  action(type="mmanon" ipv4.bits="12") action(type="omfile"
+  action(type="mmanon" ipv4.bits="12" ipv6.enable="off") action(type="omfile"
   file="/path/to/anon.log")
+
+You can also anonymize IPv4 and IPv6 in one go using a configuration like this.
+
+::
+
+  module(load="mmanon") action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon" ipv4.bits="12" ipv6.bits="128" ipv6.anonmode="random") action(type="omfile"
+  file="/path/to/anon.log")
+
+It is also possible to use the default configuration for both types of anonymization.
+This will result in IPv4 addresses being anonymized in zero mode anonymizing 16 bits.
+IPv6 addresses will also be anonymized in zero mode anonymizing 96 bits.
+
+::
+
+  module(load="mmanon")
+  action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon")
+  action(type="omfile" file="/path/to/anon.log")
+
+Another option is to only anonymize IPv6 addresses. When doing this you have to
+disable IPv4 aonymization. This example will lead to only IPv6 addresses anonymized
+(using the random-consistent mode).
+
+::
+
+  module(load="mmanon")
+  action(type="omfile" file="/path/to/non-anon.log")
+  action(type="mmanon" ipv4.enable="off" ipv6.anonmode="random-consistent")
+  action(type="omfile" file="/path/to/anon.log")
 
 This documentation is part of the `rsyslog <http://www.rsyslog.com/>`_
 project.
