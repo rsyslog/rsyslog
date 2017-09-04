@@ -52,7 +52,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsd_t **ppThis);
 	rsRetVal (*Destruct)(nsd_t **ppThis);
 	rsRetVal (*Abort)(nsd_t *pThis);
-	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
+	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
 	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
@@ -85,7 +85,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveTime)(nsd_t *pThis, int keepAliveTime);
 	rsRetVal (*SetGnutlsPriorityString)(nsd_t *pThis, uchar *gnutlsPriorityString);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()
  * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -93,6 +93,7 @@ ENDinterface(nsd)
  * interface version 8 added keep alive parameter set functions
  * interface version 9 changed signature of Connect() -- dsa, 2016-11-14
  * interface version 10 added SetGnutlsPriorityString() -- PascalWithopf, 2017-08-08
+ * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
  */
 
 /* interface  for the select call */

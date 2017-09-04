@@ -55,7 +55,7 @@ struct strmsrv_s {
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
-	rsRetVal (*pRcvData)(strms_sess_t*, char*, size_t, ssize_t *);
+	rsRetVal (*pRcvData)(strms_sess_t*, char*, size_t, ssize_t *, int *);
 	rsRetVal (*OpenLstnSocks)(struct strmsrv_s*);
 	rsRetVal (*pOnListenDeinit)(void*);
 	rsRetVal (*OnDestruct)(void*);

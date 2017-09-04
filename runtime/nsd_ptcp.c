@@ -575,22 +575,24 @@ finalize_it:
  * never blocks, not even when called on a blocking socket. That is important
  * for client sockets, which are set to block during send, but should not
  * block when trying to read data. If *pLenBuf is -1, an error occured and
- * errno holds the exact error cause.
+ * oserr holds the exact error cause.
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
+Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	char errStr[1024];
 	DEFiRet;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	assert(oserr != NULL);
 /*  AIXPORT : MSG_DONTWAIT not supported */ 
 #if defined (_AIX)
 #define MSG_DONTWAIT    MSG_NONBLOCK
 #endif
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+	*oserr = errno;
 
 	if(*pLenBuf == 0) {
 		ABORT_FINALIZE(RS_RET_CLOSED);

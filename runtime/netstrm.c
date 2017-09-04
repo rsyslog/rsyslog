@@ -161,16 +161,15 @@ finalize_it:
  * never blocks, not even when called on a blocking socket. That is important
  * for client sockets, which are set to block during send, but should not
  * block when trying to read data. If *pLenBuf is -1, an error occured and
- * errno holds the exact error cause.
+ * oserr holds the exact error cause.
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
+Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-//printf("Rcv %p\n", pThis);
-	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
+	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr);
 	RETiRet;
 }
 
