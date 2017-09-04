@@ -36,6 +36,8 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "parserif.h"
+
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -47,27 +49,31 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 
-/* precomputed table of IPv4 anonymization masks */
-static const uint32_t ipv4masks[33] = {
-	0xffffffff, 0xfffffffe, 0xfffffffc, 0xfffffff8,
-	0xfffffff0, 0xffffffe0, 0xffffffc0, 0xffffff80,
-	0xffffff00, 0xfffffe00, 0xfffffc00, 0xfffff800,
-	0xfffff000, 0xffffe000, 0xffffc000, 0xffff8000,
-	0xffff0000, 0xfffe0000, 0xfffc0000, 0xfff80000,
-	0xfff00000, 0xffe00000, 0xffc00000, 0xff800000,
-	0xff000000, 0xfe000000, 0xfc000000, 0xf8000000,
-	0xf0000000, 0xe0000000, 0xc0000000, 0x80000000,
-	0x00000000
-	};
+// enumerator for the mode
+enum mode {ZERO, RANDOMINT, SIMPLE};
+
+union node {
+	struct {
+		union node* more;
+		union node* less;
+	} pointer;
+	struct {
+		char ip_high[16];
+		char ip_low[16];
+	} ips;
+};
+
 
 /* define operation modes we have */
 #define SIMPLE_MODE 0	 /* just overwrite */
 #define REWRITE_MODE 1	 /* rewrite IP address, canoninized */
 typedef struct _instanceData {
-	char replChar;
-	int8_t mode;
 	struct {
 		int8_t bits;
+		union node* Root;
+		int randConsis;
+		enum mode mode;
+		uchar replaceChar;
 	} ipv4;
 } instanceData;
 
@@ -85,9 +91,11 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
+	{ "ipv4.mode", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "replacementchar", eCmdHdlrGetChar, 0 },
-	{ "ipv4.bits", eCmdHdlrInt, 0 },
+	{ "ipv4.bits", eCmdHdlrPositiveInt, 0 },
+	{ "ipv4.replacechar", eCmdHdlrGetChar, 0},
+	{ "replacementchar", eCmdHdlrGetChar, 0}
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -133,8 +141,25 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+static void
+delTree(union node* node, const int layer)
+{
+	if(node == NULL){
+		return;
+	}
+	if(layer == 31){
+		free(node);
+	} else {
+		delTree(node->pointer.more, layer + 1);
+		delTree(node->pointer.less, layer + 1);
+		free(node);
+	}
+}
+
+
 BEGINfreeInstance
 CODESTARTfreeInstance
+	delTree(pData->ipv4.Root, 0);
 ENDfreeInstance
 
 
@@ -146,15 +171,16 @@ ENDfreeWrkrInstance
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->mode = REWRITE_MODE;
-	pData->replChar = 'x';
-	pData->ipv4.bits = 16;
+		pData->ipv4.bits = 16;
+		pData->ipv4.Root = NULL;
+		pData->ipv4.randConsis = 0;
+		pData->ipv4.mode = ZERO;
+		pData->ipv4.replaceChar = 'x';
 }
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-	sbool bHadBitsErr;
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmanon)\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
@@ -169,62 +195,60 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "mode")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"simple",
-					 sizeof("simple")-1)) {
-				pData->mode = SIMPLE_MODE;
-			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rewrite",
+		if(!strcmp(actpblk.descr[i].name, "ipv4.mode") || !strcmp(actpblk.descr[i].name, "mode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"zero",
+					 sizeof("zero")-1)) {
+				pData->ipv4.mode = ZERO;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"random",
+					 sizeof("random")-1)) {
+				pData->ipv4.mode = RANDOMINT;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"simple",
+					 sizeof("simple")-1) ||
+					!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"rewrite",
 					 sizeof("rewrite")-1)) {
-				pData->mode = REWRITE_MODE;
-			} else {
-				char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_INVLD_MODE,
-					"mmanon: invalid anonymization mode '%s' - ignored",
-					cstr);
-				free(cstr);
+				pData->ipv4.mode = SIMPLE;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"random-consistent",
+					 sizeof("random-consistent")-1)) {
+				pData->ipv4.mode = RANDOMINT;
+				pData->ipv4.randConsis = 1;
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "replacementchar")) {
-			pData->replChar = es_getBufAddr(pvals[i].val.d.estr)[0];
 		} else if(!strcmp(actpblk.descr[i].name, "ipv4.bits")) {
-			pData->ipv4.bits = (int8_t) pvals[i].val.d.n;
+			if((int8_t) pvals[i].val.d.n <= 32) {
+				pData->ipv4.bits = (int8_t) pvals[i].val.d.n;
+			} else {
+				pData->ipv4.bits = 32;
+				parser_errmsg("warning: invalid number of ipv4.bits (%d), corrected to 32", (int8_t) pvals[i].val.d.n);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "ipv4.replacechar") || !strcmp(actpblk.descr[i].name, "replacementchar")) {
+			uchar* tmp = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+			pData->ipv4.replaceChar = tmp[0];
+			free(tmp);
 		} else {
-			dbgprintf("mmanon: program error, non-handled "
+			dbgprintf("program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
 
-	if(pData->mode == SIMPLE_MODE) {
-		bHadBitsErr = 0;
-		if(pData->ipv4.bits < 8) {
+	int bHadBitsErr = 0;
+	if(pData->ipv4.mode == SIMPLE) {
+		if(pData->ipv4.bits < 8 && pData->ipv4.bits > -1) {
 			pData->ipv4.bits = 8;
 			bHadBitsErr = 1;
-		} else if(pData->ipv4.bits < 16) {
+		} else if(pData->ipv4.bits < 16 && pData->ipv4.bits > 8) {
 			pData->ipv4.bits = 16;
 			bHadBitsErr = 1;
-		} else if(pData->ipv4.bits < 24) {
+		} else if(pData->ipv4.bits < 24 && pData->ipv4.bits > 16) {
 			pData->ipv4.bits = 24;
 			bHadBitsErr = 1;
-		} else if(pData->ipv4.bits != 32) {
+		} else if((pData->ipv4.bits != 32 && pData->ipv4.bits > 24) || pData->ipv4.bits < 0) {
 			pData->ipv4.bits = 32;
 			bHadBitsErr = 1;
 		}
-		if(bHadBitsErr)
-			errmsg.LogError(0, RS_RET_INVLD_ANON_BITS,
+		if(bHadBitsErr) {
+			LogError(0, RS_RET_INVLD_ANON_BITS,
 				"mmanon: invalid number of ipv4 bits "
 				"in simple mode, corrected to %d",
 				pData->ipv4.bits);
-	} else { /* REWRITE_MODE */
-		if(pData->ipv4.bits < 1 || pData->ipv4.bits > 32) {
-			pData->ipv4.bits = 32;
-			errmsg.LogError(0, RS_RET_INVLD_ANON_BITS,
-				"mmanon: invalid number of ipv4 bits "
-				"in rewrite mode, corrected to %d",
-				pData->ipv4.bits);
-		}
-		if(pData->replChar != 'x') {
-			errmsg.LogError(0, RS_RET_REPLCHAR_IGNORED,
-				"mmanon: replacementChar parameter is ignored "
-				"in rewrite mode");
 		}
 	}
 
@@ -242,122 +266,273 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-
-static int
-getnum(uchar *msg, int lenMsg, int *idx)
+/* returns -1 if no integer found, else integer */
+static int64_t
+getPosInt(const uchar *const __restrict__ buf,
+	const size_t buflen,
+	size_t *const __restrict__ nprocessed)
 {
-	int num = 0;
-	int i = *idx;
-
-	while(i < lenMsg && msg[i] >= '0' && msg[i] <= '9') {
-		num = num * 10 + msg[i] - '0';
-		++i;
+	int64_t val = 0;
+	size_t i;
+	for(i = 0 ; i < buflen ; i++) {
+		if('0' <= buf[i] && buf[i] <= '9')
+			val = val*10 + buf[i]-'0';
+		else
+			break;
 	}
-
-	*idx = i;
-	return num;
+	*nprocessed = i;
+	if(i == 0)
+		val = -1;
+	return val;
 }
 
+/* 1 - is IPv4, 0 not */
 
-/* write an IP address octet to the output position */
 static int
-writeOctet(uchar *msg, int idx, int *nxtidx, uint8_t octet)
+syntax_ipv4(const uchar *const __restrict__ buf,
+	const size_t buflen,
+	size_t *const __restrict__ nprocessed)
 {
-	if(octet > 99) {
-		msg[idx++] = '0' + octet / 100;
-		octet = octet % 100;
-	}
-	if(octet > 9) {
-		msg[idx++] = '0' + octet / 10;
-		octet = octet % 10;
-	}
-	msg[idx++] =  '0' + octet;
+	int64_t val;
+	size_t nproc;
+	size_t i;
+	int r = 0;
 
-	if(nxtidx != NULL) {
-		if(idx + 1 != *nxtidx) {
-			/* we got shorter, fix it! */
-			msg[idx] = '.';
-			*nxtidx = idx + 1;
-		}
-	}
-	return idx;
-}
-
-/* currently works for IPv4 only! */
-static void
-anonip(instanceData *pData, uchar *msg, int *pLenMsg, int *idx)
-{
-	int i = *idx;
-	int octet;
-	uint32_t ipv4addr;
-	int ipstart[4];
-	int j;
-	int endpos;
-	int lenMsg = *pLenMsg;
-
-	while(i < lenMsg && (msg[i] <= '0' || msg[i] > '9')) {
-		++i; /* skip to first number */
-	}
-	if(i >= lenMsg)
+	val = getPosInt(buf, buflen, &i);
+	if(val < 0 || val > 255)
 		goto done;
-	
-	/* got digit, let's see if ip */
-	ipstart[0] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr = octet << 24;
-	++i;
-	ipstart[1] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr |= octet << 16;
-	++i;
-	ipstart[2] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255 || msg[i] != '.') goto done;
-	ipv4addr |= octet << 8;
-	++i;
-	ipstart[3] = i;
-	octet = getnum(msg, lenMsg, &i);
-	if(octet > 255) goto done;
-	ipv4addr |= octet;
 
-	/* OK, we now found an ip address */
-	if(pData->mode == SIMPLE_MODE) {
-		if(pData->ipv4.bits == 8)
-			j = ipstart[3];
-		else if(pData->ipv4.bits == 16)
-			j = ipstart[2];
-		else if(pData->ipv4.bits == 24)
-			j = ipstart[1];
-		else /* due to our checks, this *must* be 32 */
-			j = ipstart[0];
-		while(j < i) {
-			if(msg[j] != '.')
-				msg[j] = pData->replChar;
-			++j;
-		}
-	} else { /* REWRITE_MODE */
-		ipv4addr &= ipv4masks[pData->ipv4.bits];
-		if(pData->ipv4.bits > 24)
-			writeOctet(msg, ipstart[0], &(ipstart[1]), ipv4addr >> 24);
-		if(pData->ipv4.bits > 16)
-			writeOctet(msg, ipstart[1], &(ipstart[2]), (ipv4addr >> 16) & 0xff);
-		if(pData->ipv4.bits > 8)
-			writeOctet(msg, ipstart[2], &(ipstart[3]), (ipv4addr >> 8) & 0xff);
-		endpos = writeOctet(msg, ipstart[3], NULL, ipv4addr & 0xff);
-		/* if we had truncation, we need to shrink the msg */
-		dbgprintf("existing i %d, endpos %d\n", i, endpos);
-		if(i - endpos > 0) {
-			*pLenMsg = lenMsg - (i - endpos);
-			memmove(msg+endpos, msg+i, lenMsg - i + 1);
-			/* correct index for next search! */
-			i -= (i - endpos);
+	if(buf[i] != '.') goto done;
+	i++;
+	val = getPosInt(buf+i, buflen-i, &nproc);
+	if(val < 0 || val > 255)
+		goto done;
+	i += nproc;
+
+	if(buf[i] != '.') goto done;
+	i++;
+	val = getPosInt(buf+i, buflen-i, &nproc);
+	if(val < 0 || val > 255)
+		goto done;
+	i += nproc;
+
+	if(buf[i] != '.') goto done;
+	i++;
+	val = getPosInt(buf+i, buflen-i, &nproc);
+	if(val < 0 || val > 255)
+		goto done;
+	i += nproc;
+
+	//printf("IP Addr[%zd]: '%s'\n", i, buf);
+	*nprocessed = i;
+	r = 1;
+
+done:
+	return r;
+}
+
+static unsigned
+ipv42num(const char *str)
+{
+	unsigned num[4] = {0, 0, 0, 0};
+	unsigned value = -1;
+	size_t len = strlen(str);
+	int cyc = 0;
+	for(unsigned i = 0 ; i < len ; i++) {
+		switch(str[i]){
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			num[cyc] = num[cyc]*10+(str[i]-'0');
+			break;
+		case '.':
+			cyc++;
+			break;
 		}
 	}
 
-done:	*idx = i;
-	return;
+	value = num[0]*256*256*256+num[1]*256*256+num[2]*256+num[3];
+	return(value);
+}
+
+
+static unsigned
+code_int(unsigned ip, instanceData *pData){
+	unsigned random;
+	unsigned long long shiftIP_subst = ip;
+	// variable needed because shift operation of 32nd bit in unsigned does not work
+	switch(pData->ipv4.mode){
+	case ZERO:
+		shiftIP_subst = ((shiftIP_subst>>(pData->ipv4.bits))<<(pData->ipv4.bits));
+		return (unsigned)shiftIP_subst;
+	case RANDOMINT:
+		shiftIP_subst = ((shiftIP_subst>>(pData->ipv4.bits))<<(pData->ipv4.bits));
+		// multiply the random number between 0 and 1 with a mask of (2^n)-1:
+		random = (unsigned)((rand()/(double)RAND_MAX)*((1ull<<(pData->ipv4.bits))-1));
+		return (unsigned)shiftIP_subst + random;
+	case SIMPLE:  //can't happen, since this case is caught at the start of anonipv4()
+	default:
+		LogError(0, RS_RET_INTERNAL_ERROR, "mmanon: unexpected code path reached in code_int function");
+		return 0;
+	}
+}
+
+
+static int
+num2ipv4(unsigned num, char *str) {
+	int numip[4];
+	size_t len;
+	for(int i = 0 ; i < 4 ; i++){
+		numip[i] = num % 256;
+		num = num / 256;
+	}
+	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
+	return len;
+}
+
+
+static void
+getipv4(uchar *start, size_t end, char *address)
+{
+	size_t i;
+	for(i = 0; i < end; i++){
+		address[i] = *(start+i);
+	}
+	address[i] = '\0';
+}
+
+
+static char*
+findip(char* address, instanceData *pData)
+{
+	int i;
+	unsigned num;
+	union node* current;
+	union node* Last;
+	int MoreLess;
+	char* CurrentCharPtr;
+
+	current = pData->ipv4.Root;
+	num = ipv42num(address);
+	for(i = 0; i < 31; i++){
+		if(pData->ipv4.Root == NULL) {
+			current = (union node*)calloc(1, sizeof(union node));
+			pData->ipv4.Root = current;
+		}
+		Last = current;
+		if((num >> (31 - i)) & 1){
+			current = current->pointer.more;
+			MoreLess = 1;
+		} else {
+			current = current->pointer.less;
+			MoreLess = 0;
+		}
+		if(current == NULL){
+			current = (union node*)calloc(1, sizeof(union node));
+			if(MoreLess == 1){
+				Last->pointer.more = current;
+			} else {
+				Last->pointer.less = current;
+			}
+		}
+	}
+	if(num & 1){
+		CurrentCharPtr = current->ips.ip_high;
+	} else {
+		CurrentCharPtr = current->ips.ip_low;
+	}
+	if(CurrentCharPtr[0] != '\0'){
+		return CurrentCharPtr;
+	} else {
+		num = code_int(num, pData);
+		num2ipv4(num, CurrentCharPtr);
+		return CurrentCharPtr;
+	}
+}
+
+
+static void
+process_IPv4 (char* address, instanceData *pData)
+{
+	char* current;
+	unsigned num;
+
+	if(pData->ipv4.randConsis){
+		current = findip(address, pData);
+		strcpy(address, current);
+	}else {
+		num = ipv42num(address);
+		num = code_int(num, pData);
+		num2ipv4(num, address);
+	}
+}
+
+
+static void
+simpleAnon(instanceData *pData, uchar *msg, int *hasChanged, int iplen)
+{
+	int maxidx = iplen - 1;
+
+	int j = -1;
+	for(int i = (pData->ipv4.bits / 8); i > 0; i--) {
+		j++;
+		while('0' <= msg[maxidx - j] && msg[maxidx - j] <= '9') {
+			if(msg[maxidx - j] != pData->ipv4.replaceChar) {
+				msg[maxidx - j] = pData->ipv4.replaceChar;
+				*hasChanged = 1;
+			}
+			j++;
+		}
+	}
+}
+
+
+static void
+anonipv4(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
+{
+	char address[16];
+	char caddress[16];
+	int offset = *idx;
+	uchar* msgcpy = *msg;
+	size_t iplen;
+	size_t caddresslen;
+	int oldLen = *pLenMsg;
+
+	if(syntax_ipv4((*msg) + offset, *pLenMsg - offset, &iplen)) {
+		if(pData->ipv4.mode == SIMPLE) {
+			simpleAnon(pData, *msg + *idx, hasChanged, iplen);
+			*idx += iplen;
+			return;
+		}
+
+		getipv4(*msg + offset, iplen, address);
+		offset = offset + iplen; //iplen includes the character on offset
+		strcpy(caddress, address);
+		process_IPv4(caddress, pData);
+		caddresslen = strlen(caddress);
+		*hasChanged = 1;
+
+		if(caddresslen != strlen(address)) {
+			*pLenMsg = *pLenMsg + (caddresslen - strlen(address));
+			*msg = (uchar*) malloc(*pLenMsg);
+			memcpy(*msg, msgcpy, *idx);
+		}
+		memcpy(*msg + *idx, caddress, caddresslen);
+		*idx = *idx + caddresslen;
+		if(*idx < *pLenMsg) {
+			memcpy(*msg + *idx, msgcpy + offset, oldLen - offset);
+		}
+		if(msgcpy != *msg) {
+			free(msgcpy);
+		}
+	}
 }
 
 
@@ -367,14 +542,18 @@ BEGINdoAction_NoStrings
 	uchar *msg;
 	int lenMsg;
 	int i;
+	int hasChanged = 0;
 CODESTARTdoAction
 	lenMsg = getMSGLen(pMsg);
-	msg = getMSG(pMsg);
-	for(i = 0 ; i < lenMsg ; ++i) {
-		anonip(pWrkrData->pData, msg, &lenMsg, &i);
+	msg = (uchar*)strdup((char*)getMSG(pMsg));
+
+	for(i = 0 ; i <= lenMsg - 7 ; ++i) {
+		anonipv4(pWrkrData->pData, &msg, &lenMsg, &i, &hasChanged);
 	}
-	if(lenMsg != getMSGLen(pMsg))
-		setMSGLen(pMsg, lenMsg);
+	if(hasChanged) {
+		MsgReplaceMSG(pMsg, msg, lenMsg);
+	}
+	free(msg);
 ENDdoAction
 
 
