@@ -10,6 +10,13 @@ Version 8.30.0 [v8-stable] 2017-10-10
     closes https://github.com/rsyslog/rsyslog/issues/1717
 - RainerScript: add ltrim and rtrim functions
   closes https://github.com/rsyslog/rsyslog/issues/1711
+- omelasticsearch bugfix: incompatibility with newer ElasticSearch version
+  ElasticSearch changed its API in newer versions. When "bulkmode" is enabled
+  in omelasticsearch, rsyslog seems to consider all responses from Elasticsearch
+  as errors, even the successful ones. As a consequence, every single request
+  ends up being logged into the error file.
+  closes https://github.com/rsyslog/rsyslog/issues/1731
+  Thanks to Vincent Quéméner for the patch.
 - imptcp bugfix: invalid mutex addressing on some platforms
   code did not compile on platforms without atomic instructions
   Thanks to github user petiepooo for the patch
