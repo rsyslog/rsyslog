@@ -1,5 +1,12 @@
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-10
+- NEW BUILD REQUIREMENT
+  when building imjournal, libsystemd-journal >= 234 is now required
+  This is to support the imjournal enhancement
+- imjournal: made switching to persistent journal in runtime possible
+  with this patch imjournal can continue logging after switch to
+  persistent journal without need to restart rsyslog service
+  Thanks to github user jvymazal for the patch
 - mmanon: complete refactor and enhancements
   - add pseudonymization mode
   - add address randomization mode
@@ -14,6 +21,8 @@ Version 8.30.0 [v8-stable] 2017-10-10
   closes https://github.com/rsyslog/rsyslog/issues/1711
 - imptcp: include module name in error msg
 - imtcp: include module name in error msg
+- imtcp bugfix: parameter priorityString was ignored
+  defaults were always used
 - core bugfix: race on worker thread termination during shutdown
   The testbench got some occasionally failing tests. Review of
   them brought up the idea that there is a race during worker
