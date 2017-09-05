@@ -3,6 +3,8 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - mmanon: complete refactor and enhancements
   - add pseudonymization mode
   - add address randomization mode
+  - add support for IPv6 (this also supports various replacement modes)
+    closes https://github.com/rsyslog/rsyslog/issues/1614
   also fixes bugs
   - in IPv4 address recognition
     closes https://github.com/rsyslog/rsyslog/issues/1720
@@ -10,6 +12,8 @@ Version 8.30.0 [v8-stable] 2017-10-10
     closes https://github.com/rsyslog/rsyslog/issues/1717
 - RainerScript: add ltrim and rtrim functions
   closes https://github.com/rsyslog/rsyslog/issues/1711
+- imptcp: include module name in error msg
+- imtcp: include module name in error msg
 - omelasticsearch bugfix: incompatibility with newer ElasticSearch version
   ElasticSearch changed its API in newer versions. When "bulkmode" is enabled
   in omelasticsearch, rsyslog seems to consider all responses from Elasticsearch
