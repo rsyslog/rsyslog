@@ -416,6 +416,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
+        d_pthread_mutex_lock(&pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
@@ -424,6 +425,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+        d_pthread_mutex_unlock(&pThis->mutWtp);
 	pthread_exit(0);
 }
 #if !defined(_AIX)
