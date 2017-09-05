@@ -1001,8 +1001,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 						|| currBuffChar != pThis->pLstn->pSrv->iAddtlFrameDelim))) {
 					i++;
 				}
-				LogError(0, NO_ERRCODE, "error: message received is at least %d byte larger than max msg"
-					" size; message will be split starting at: \"%.*s\"\n", i, (i < 32) ? i : 32, *buff);
+				LogError(0, NO_ERRCODE, "imptcp %s: message received is at least %d byte larger than "
+					"max msg size; message will be split starting at: \"%.*s\"\n",
+					pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
 				++(*pnMsgs);
 				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {

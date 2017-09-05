@@ -396,29 +396,30 @@ processDataRcvd(tcps_sess_t *pThis,
 			prop.GetString(pThis->fromHost, &propPeerName, &lenPeerName);
 			prop.GetString(pThis->fromHost, &propPeerIP, &lenPeerIP);
 			if(c != ' ') {
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 						"peer: (hostname) %s, (ip) %s: delimiter is not SP but has "
-						"ASCII value %d.", propPeerName, propPeerIP, c);
+						"ASCII value %d.", pThis->pSrv->pszInputName, propPeerName, propPeerIP, c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 						"peer: (hostname) %s, (ip) %s: invalid octet count %d.",
-						propPeerName, propPeerIP, pThis->iOctetsRemain);
+						pThis->pSrv->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				errmsg.LogError(0, NO_ERRCODE, "received oversize message from peer: "
+				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: received oversize message from peer: "
 						"(hostname) %s, (ip) %s: size is %d bytes, max msg size "
-						"is %d, truncating...", propPeerName, propPeerIP,
-						pThis->iOctetsRemain, iMaxLine);
+						"is %d, truncating...", pThis->pSrv->pszInputName, propPeerName,
+						propPeerIP, pThis->iOctetsRemain, iMaxLine);
 			}
 			if(pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
-				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message from "
+				errmsg.LogError(0, NO_ERRCODE, "imtcp %s: Framing Error in received TCP message from "
 						"peer: (hostname) %s, (ip) %s: frame too large: %d, change "
-						"to octet stuffing", propPeerName, propPeerIP, pThis->iOctetsRemain);
+						"to octet stuffing", pThis->pSrv->pszInputName, propPeerName, propPeerIP,
+						pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
 			} else {
 				pThis->iMsg = 0;
