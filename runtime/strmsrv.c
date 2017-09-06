@@ -120,14 +120,14 @@ doOpenLstnSocks(strmsrv_t *pSrv)
 
 
 static rsRetVal
-doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
+doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
 {
 	DEFiRet;
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
 finalize_it:
 	RETiRet;
 }
@@ -536,6 +536,7 @@ Run(strmsrv_t *pThis)
 	nssel_t *pSel;
 	ssize_t iRcvd;
 	rsRetVal localRet;
+	int oserr;
 
 	ISOBJ_TYPE_assert(pThis, strmsrv);
 
@@ -584,7 +585,7 @@ Run(strmsrv_t *pThis)
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iSTRMSess]->pStrm);
 
 				/* Receive message */
-				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd);
+				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd, &oserr);
 				switch(iRet) {
 				case RS_RET_CLOSED:
 					pThis->pOnRegularClose(pThis->pSessions[iSTRMSess]);
@@ -607,9 +608,8 @@ Run(strmsrv_t *pThis)
 					}
 					break;
 				default:
-					errno = 0;
-					errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
-							pThis->pSessions[iSTRMSess]->pStrm);
+					LogError(oserr, iRet, "netstream session %p will be closed due to error\n",
+						pThis->pSessions[iSTRMSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
 					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;

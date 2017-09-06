@@ -574,11 +574,12 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	DEFiRet;
 	uchar *pszPeer;
 	int lenPeer;
+	int oserr = 0;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
 	/* Receive message */
-	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd);
+	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd, &oserr);
 	switch(iRet) {
 	case RS_RET_CLOSED:
 		if(pThis->bEmitMsgOnClose) {
@@ -600,15 +601,13 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			 * We are instructed to terminate the session.
 			 */
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			errmsg.LogError(0, localRet, "Tearing down TCP Session from %s - see "
-					    "previous messages for reason(s)\n", pszPeer);
+			LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
-		errno = 0;
 		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-		errmsg.LogError(0, iRet, "netstream session %p from %s will be closed due to error\n",
+		errmsg.LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
@@ -1053,7 +1052,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;

@@ -1580,7 +1580,7 @@ finalize_it:
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
@@ -1591,7 +1591,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
 		FINALIZE;
 	}
 
@@ -1619,6 +1619,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
+		*oserr = errno;
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 

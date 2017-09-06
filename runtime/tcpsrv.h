@@ -90,7 +90,7 @@ struct tcpsrv_s {
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
-	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *);
+	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);
 	rsRetVal (*OpenLstnSocks)(struct tcpsrv_s*);
 	rsRetVal (*pOnListenDeinit)(void*);
 	rsRetVal (*OnDestruct)(void*);
@@ -132,7 +132,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));
-	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*));
+	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*));
 	rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetCBOnDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnRegularClose)(tcpsrv_t*, rsRetVal (*) (tcps_sess_t*));
@@ -176,12 +176,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v19 -- PascalWithopf, 2017-08-08 */
 	rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t*, uchar*);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 19 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
  * for v12: param bSuppOctetFram added to configureTCPListen
+ * for v20: add oserr to setCBRcvData signature -- rgerhards, 2017-09-04
  */
 
 
