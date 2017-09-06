@@ -441,6 +441,8 @@ case $1 in
 		    echo content-check-with-count success, \"$2\" occured $3 times
 		else
 		    echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
+		    echo file rsyslog.out.log content is:
+		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
