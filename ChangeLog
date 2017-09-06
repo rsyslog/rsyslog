@@ -19,6 +19,11 @@ Version 8.30.0 [v8-stable] 2017-10-10
     closes https://github.com/rsyslog/rsyslog/issues/1717
 - RainerScript: add ltrim and rtrim functions
   closes https://github.com/rsyslog/rsyslog/issues/1711
+- core: report module name when suspending action
+  Thanks to Orion Poplawski for the patch.
+- tcpsrv subsystem: improvate clarity of some error messages
+  operating system error message are added to some messages, providing
+  better advise of what actually is the error cause
 - imptcp: include module name in error msg
 - imtcp: include module name in error msg
 - imtcp bugfix: parameter priorityString was ignored
