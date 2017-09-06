@@ -514,7 +514,9 @@ pollJournal(void)
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
-		iRet = loadJournalState();
+		if(cs.stateFile != NULL){
+			iRet = loadJournalState();
+		}
 		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
 	} else if (jr < 0) {
 		char errStr[256];
