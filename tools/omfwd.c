@@ -1157,7 +1157,6 @@ CODESTARTnewActInst
 			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
-			uchar save;
 			uchar *p;
 			int lenStr;
 			str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1170,8 +1169,6 @@ CODESTARTnewActInst
 				if(*p == ',') {
 					*p = '\0';
 				}
-				save = *(p+1); /* we always have this, at least the \0 byte at EOS */
-				*(p+1) = '\0';
 				if(*start == '\0') {
 					DBGPRINTF("omfwd: ignoring empty permitted peer\n");
 				} else {
@@ -1181,7 +1178,6 @@ CODESTARTnewActInst
 				start = p+1;
 				if(lenStr)
 					--lenStr;
-				*(p+1) = save;
 			}
 			free(str);
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
