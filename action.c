@@ -714,8 +714,8 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-			      "action '%s' suspended, next retry is %s",
-			      pThis->pszName, timebuf);
+			      "action '%s' suspended (module '%s'), next retry is %s",
+			      pThis->pszName, pThis->pMod->pszName, timebuf);
 	}
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
 		  "duration %d\n",
