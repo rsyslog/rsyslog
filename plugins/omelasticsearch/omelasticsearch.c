@@ -1326,16 +1326,11 @@ curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf)
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
-#define CONTENT_JSON_BULK "Content-Type: application/x-ndjson; charset=utf-8"
 
 static rsRetVal
 curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
-	if (pData->bulkmode) {
-		pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON_BULK);
-	} else {
-		pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
-	}
+	pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
 	pWrkrData->curlPostHandle = curl_easy_init();
 	if (pWrkrData->curlPostHandle == NULL) {
 		return RS_RET_OBJ_CREATION_FAILED;
