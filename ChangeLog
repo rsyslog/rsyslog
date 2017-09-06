@@ -38,6 +38,9 @@ Version 8.30.0 [v8-stable] 2017-10-10
   shutdown (v8.29), the timing got more complex and now this
   seemed to occasionally surface.
   closes https://github.com/rsyslog/rsyslog/issues/1754
+- omelasticsearch: avoid ES5 warnings while sending json in bulkmode
+  do this by adding proper content type header to ES request
+  Thanks to William Dauchy for the patch
 - omelasticsearch bugfix: incompatibility with newer ElasticSearch version
   ElasticSearch changed its API in newer versions. When "bulkmode" is enabled
   in omelasticsearch, rsyslog seems to consider all responses from Elasticsearch
