@@ -28,6 +28,17 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imtcp: include module name in error msg
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
+- core bugfix: memory corruption during configuration parsing
+  when omfwd is used with the $streamdriverpermittedpeers legacy
+  parameter, a memory corruption can occur. This depends on the
+  length of the provided strings and probably the malloc subsystem.
+  Once config parsing succeeds, no problem can happen.
+  Thanks to Brent Douglas for initially reporting this issue and
+  providing great analysis.
+  Thanks to github user bwdoll for analyzing this bug and providing
+  a suggested fix (which is almost what this commit includes).
+  closes https://github.com/rsyslog/rsyslog/issues/1408
+  closes https://github.com/rsyslog/rsyslog/issues/1474
 - core bugfix: race on worker thread termination during shutdown
   The testbench got some occasionally failing tests. Review of
   them brought up the idea that there is a race during worker
