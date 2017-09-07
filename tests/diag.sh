@@ -369,9 +369,10 @@ case $1 in
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
+		echo .qi file:
+		cat test-spool/mainq.qi
 		if test ! -f test-spool/mainq.qi; then
 		  echo "error: mainq.qi does not exist where expected to do so!"
-		  ls -l test-spool
 		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
