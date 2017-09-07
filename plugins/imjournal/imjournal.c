@@ -475,11 +475,17 @@ pollJournal(void)
 	DEFiRet;
 	struct pollfd pollfd;
 	int pr = 0;
+#ifdef NEW_JOURNAL
 	int jr = 0;
+#endif
 
 	pollfd.fd = sd_journal_get_fd(j);
 	pollfd.events = sd_journal_get_events(j);
+#ifdef NEW_JOURNAL
 	pr = poll(&pollfd, 1, POLL_TIMEOUT);
+#else
+	pr = poll(&pollfd, 1, -1);
+#endif
 	if (pr == -1) {
 		if (errno == EINTR) {
 			/* EINTR is also received during termination
@@ -495,7 +501,12 @@ pollJournal(void)
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
+#ifndef NEW_JOURNAL
+	assert(pr == 1);
 
+	pr = sd_journal_process(j);
+	if (pr < 0) {
+#else
 	jr = sd_journal_process(j);
 
 	if (pr == 1 && jr == SD_JOURNAL_INVALIDATE) {
@@ -517,6 +528,7 @@ pollJournal(void)
 		iRet = loadJournalState();
 		LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal reloaded...");
 	} else if (jr < 0) {
+#endif
 		char errStr[256];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		LogError(0, RS_RET_ERR,
