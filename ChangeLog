@@ -28,6 +28,13 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imtcp: include module name in error msg
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
+- queue bugfix: file write error message was incorrect
+  when a queue was restarted from disk file, it almost always
+  emitted a message claiming
+  "file opened for non-append write, but already contains xxx bytes"
+  This message was wrong and did not indicate a real error condition.
+  The predicate check was incorrect.
+  closes https://github.com/rsyslog/rsyslog/issues/170 (kind of)
 - core bugfix: memory corruption during configuration parsing
   when omfwd is used with the $streamdriverpermittedpeers legacy
   parameter, a memory corruption can occur. This depends on the
