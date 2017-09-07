@@ -42,7 +42,7 @@ These assume default installs of Python for Windows and Linux
 6.  open rsyslog-doc/build/index.html in a browser
 (note that in step 5 you have to run the command in the root directory of the project)
 
-###Generate HTML Documentation on Windows
+### Generate HTML Documentation on Windows
 
 1.  Download the pip installer from here: https://raw.github.com/pypa/pip/master/contrib/get-pip.py
 2.  Download and install Git for windows if you don’t already have Git:
