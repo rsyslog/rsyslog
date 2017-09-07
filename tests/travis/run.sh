@@ -5,12 +5,19 @@ set -v  # we want to see the execution steps
 set -e  # abort on first failure
 #set -x  # debug aid
 
+echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
+echo "CLANG:            $CLANG"
+
+# first check code style. We do this only when STAT_AN is enabled,
+# so that we do not do it in each and every run. While once is sufficient,
+# STAT_AN for now gives us sufficient runtime reduction.
+if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
+
+
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 source tests/travis/install.sh
 source /etc/lsb-release
 
-echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
-echo "CLANG:            $CLANG"
 
 # we turn off leak sanitizer at this time because it reports some
 # pretty irrelevant problems in startup code. In the longer term,
