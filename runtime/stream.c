@@ -367,11 +367,11 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
 		pThis->iCurrOffs = offset;
-	} else if(pThis->tOperationsMode == STREAMMODE_WRITE) {
+	} else if(pThis->tOperationsMode == STREAMMODE_WRITE_TRUNC) {
 		if(offset != 0) {
-			LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
+			LogError(0, 0, "file '%s' opened for truncate write, but "
 				"already contains %zd bytes\n",
-				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, (ssize_t) offset);
+				pThis->pszCurrFName, (ssize_t) offset);
 		}
 	}
 
