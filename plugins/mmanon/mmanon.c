@@ -93,6 +93,7 @@ typedef struct _instanceData {
 
 typedef struct wrkrInstanceData {
 	instanceData *pData;
+	unsigned randstatus;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -151,6 +152,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
+	pWrkrData->randstatus = time(NULL);
 ENDcreateWrkrInstance
 
 
@@ -560,18 +562,18 @@ ipv42num(const char *str)
 
 
 static unsigned
-code_int(unsigned ip, instanceData *pData){
+code_int(unsigned ip, wrkrInstanceData_t *pWrkrData){
 	unsigned random;
 	unsigned long long shiftIP_subst = ip;
 	// variable needed because shift operation of 32nd bit in unsigned does not work
-	switch(pData->ipv4.mode) {
+	switch(pWrkrData->pData->ipv4.mode) {
 	case ZERO:
-		shiftIP_subst = ((shiftIP_subst>>(pData->ipv4.bits))<<(pData->ipv4.bits));
+		shiftIP_subst = ((shiftIP_subst>>(pWrkrData->pData->ipv4.bits))<<(pWrkrData->pData->ipv4.bits));
 		return (unsigned)shiftIP_subst;
 	case RANDOMINT:
-		shiftIP_subst = ((shiftIP_subst>>(pData->ipv4.bits))<<(pData->ipv4.bits));
+		shiftIP_subst = ((shiftIP_subst>>(pWrkrData->pData->ipv4.bits))<<(pWrkrData->pData->ipv4.bits));
 		// multiply the random number between 0 and 1 with a mask of (2^n)-1:
-		random = (unsigned)((rand()/(double)RAND_MAX)*((1ull<<(pData->ipv4.bits))-1));
+		random = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1ull<<(pWrkrData->pData->ipv4.bits))-1));
 		return (unsigned)shiftIP_subst + random;
 	case SIMPLE:  //can't happen, since this case is caught at the start of anonipv4()
 	default:
@@ -607,7 +609,7 @@ getip(uchar *start, size_t end, char *address)
 
 
 static char*
-findip(char* address, instanceData *pData)
+findip(char* address, wrkrInstanceData_t *pWrkrData)
 {
 	int i;
 	unsigned num;
@@ -616,12 +618,12 @@ findip(char* address, instanceData *pData)
 	int MoreLess;
 	char* CurrentCharPtr;
 
-	current = pData->ipv4.Root;
+	current = pWrkrData->pData->ipv4.Root;
 	num = ipv42num(address);
 	for(i = 0; i < 31; i++){
-		if(pData->ipv4.Root == NULL) {
+		if(pWrkrData->pData->ipv4.Root == NULL) {
 			current = (union node*)calloc(1, sizeof(union node));
-			pData->ipv4.Root = current;
+			pWrkrData->pData->ipv4.Root = current;
 		}
 		Last = current;
 		if((num >> (31 - i)) & 1){
@@ -648,7 +650,7 @@ findip(char* address, instanceData *pData)
 	if(CurrentCharPtr[0] != '\0'){
 		return CurrentCharPtr;
 	} else {
-		num = code_int(num, pData);
+		num = code_int(num, pWrkrData);
 		num2ipv4(num, CurrentCharPtr);
 		return CurrentCharPtr;
 	}
@@ -656,33 +658,33 @@ findip(char* address, instanceData *pData)
 
 
 static void
-process_IPv4 (char* address, instanceData *pData)
+process_IPv4 (char* address, wrkrInstanceData_t *pWrkrData)
 {
 	char* current;
 	unsigned num;
 
-	if(pData->ipv4.randConsis){
-		current = findip(address, pData);
+	if(pWrkrData->pData->ipv4.randConsis){
+		current = findip(address, pWrkrData);
 		strcpy(address, current);
 	}else {
 		num = ipv42num(address);
-		num = code_int(num, pData);
+		num = code_int(num, pWrkrData);
 		num2ipv4(num, address);
 	}
 }
 
 
 static void
-simpleAnon(instanceData *pData, uchar *msg, int *hasChanged, int iplen)
+simpleAnon(wrkrInstanceData_t *const pWrkrData, uchar *const msg, int *const hasChanged, int iplen)
 {
 	int maxidx = iplen - 1;
 
 	int j = -1;
-	for(int i = (pData->ipv4.bits / 8); i > 0; i--) {
+	for(int i = (pWrkrData->pData->ipv4.bits / 8); i > 0; i--) {
 		j++;
 		while('0' <= msg[maxidx - j] && msg[maxidx - j] <= '9') {
-			if(msg[maxidx - j] != pData->ipv4.replaceChar) {
-				msg[maxidx - j] = pData->ipv4.replaceChar;
+			if(msg[maxidx - j] != pWrkrData->pData->ipv4.replaceChar) {
+				msg[maxidx - j] = pWrkrData->pData->ipv4.replaceChar;
 				*hasChanged = 1;
 			}
 			j++;
@@ -692,7 +694,7 @@ simpleAnon(instanceData *pData, uchar *msg, int *hasChanged, int iplen)
 
 
 static void
-anonipv4(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
+anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
 {
 	char address[16];
 	char caddress[16];
@@ -703,8 +705,8 @@ anonipv4(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChang
 	int oldLen = *pLenMsg;
 
 	if(syntax_ipv4((*msg) + offset, *pLenMsg - offset, &iplen)) {
-		if(pData->ipv4.mode == SIMPLE) {
-			simpleAnon(pData, *msg + *idx, hasChanged, iplen);
+		if(pWrkrData->pData->ipv4.mode == SIMPLE) {
+			simpleAnon(pWrkrData, *msg + *idx, hasChanged, iplen);
 			*idx += iplen;
 			return;
 		}
@@ -713,7 +715,7 @@ anonipv4(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChang
 		getip(*msg + offset, iplen, address);
 		offset += iplen;
 		strcpy(caddress, address);
-		process_IPv4(caddress, pData);
+		process_IPv4(caddress, pWrkrData);
 		caddresslen = strlen(caddress);
 		*hasChanged = 1;
 
@@ -735,76 +737,77 @@ anonipv4(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChang
 
 
 static void
-code_ipv6_int(struct ipv6_int* ip, instanceData *pData)
+code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 {
 	unsigned long long randlow = 0;
 	unsigned long long randhigh = 0;
 	unsigned tmpRand;
 	int fullbits;
 
-	if(pData->ipv6.bits == 128) { //has to be handled separately, since shift 128 bits doesn't work on unsigned long long
+	if(pWrkrData->pData->ipv6.bits == 128) { //has to be handled separately, since shift
+						 //128 bits doesn't work on unsigned long long
 		ip->high = 0;
 		ip->low = 0;
-	} else if(pData->ipv6.bits > 64) {
+	} else if(pWrkrData->pData->ipv6.bits > 64) {
 		ip->low = 0;
-		ip->high = (ip->high >> (pData->ipv6.bits - 64)) <<  (pData->ipv6.bits - 64);
-	} else if(pData->ipv6.bits == 64) {
+		ip->high = (ip->high >> (pWrkrData->pData->ipv6.bits - 64)) <<  (pWrkrData->pData->ipv6.bits - 64);
+	} else if(pWrkrData->pData->ipv6.bits == 64) {
 		ip->low = 0;			
 	} else {
-		ip->low = (ip->low >> pData->ipv6.bits) << pData->ipv6.bits;			
+		ip->low = (ip->low >> pWrkrData->pData->ipv6.bits) << pWrkrData->pData->ipv6.bits;			
 	}
-	switch(pData->ipv6.anonmode) {
+	switch(pWrkrData->pData->ipv6.anonmode) {
 	case ZERO:
 		break;
 	case RANDOMINT:
-		if(pData->ipv6.bits == 128) {
+		if(pWrkrData->pData->ipv6.bits == 128) {
 			for(int i = 0; i < 8; i++) {
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->high <<= 8;
 				ip->high |= tmpRand;
 
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
-		} else if(pData->ipv6.bits > 64) {
+		} else if(pWrkrData->pData->ipv6.bits > 64) {
 			for(int i = 0; i < 8; i++) {
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
 
-			pData->ipv6.bits -= 64;
-			fullbits = pData->ipv6.bits / 8;
-			pData->ipv6.bits = pData->ipv6.bits % 8;
+			pWrkrData->pData->ipv6.bits -= 64;
+			fullbits = pWrkrData->pData->ipv6.bits / 8;
+			pWrkrData->pData->ipv6.bits = pWrkrData->pData->ipv6.bits % 8;
 			while(fullbits > 0) {
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				randhigh <<= 8;
 				randhigh |= tmpRand;
 				fullbits--;
 			}
-			tmpRand = (unsigned)((rand()/(double)RAND_MAX)*((1 << pData->ipv6.bits) - 1));
-			randhigh <<= pData->ipv6.bits;
+			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << pWrkrData->pData->ipv6.bits) - 1));
+			randhigh <<= pWrkrData->pData->ipv6.bits;
 			randhigh |= tmpRand;
 
 			ip->high |= randhigh;
-		} else if(pData->ipv6.bits == 64) {
+		} else if(pWrkrData->pData->ipv6.bits == 64) {
 			for(int i = 0; i < 8; i++) {
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
 		} else {
-			fullbits = pData->ipv6.bits / 8;
-			pData->ipv6.bits = pData->ipv6.bits % 8;
+			fullbits = pWrkrData->pData->ipv6.bits / 8;
+			pWrkrData->pData->ipv6.bits = pWrkrData->pData->ipv6.bits % 8;
 			while(fullbits > 0) {
-				tmpRand = (unsigned)((rand()/(double)RAND_MAX)*0xff);
+				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				randlow <<= 8;
 				randlow |= tmpRand;
 				fullbits--;
 			}
-			tmpRand = (unsigned)((rand()/(double)RAND_MAX)*((1 << pData->ipv6.bits) - 1));
-			randlow <<= pData->ipv6.bits;
+			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << pWrkrData->pData->ipv6.bits) - 1));
+			randlow <<= pWrkrData->pData->ipv6.bits;
 			randlow |= tmpRand;
 
 			ip->low |= randlow;
@@ -919,13 +922,13 @@ hash_from_key_fn (void* k)
 
 
 static void
-findIPv6(struct ipv6_int* num, char* address, instanceData* pData)
+findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrData)
 {
-	if(pData->ipv6.hash == NULL) {
-		pData->ipv6.hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL);
+	if(pWrkrData->pData->ipv6.hash == NULL) {
+		pWrkrData->pData->ipv6.hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL);
 	}
 
-	char* val = (char*)(hashtable_search(pData->ipv6.hash, num));
+	char* val = (char*)(hashtable_search(pWrkrData->pData->ipv6.hash, num));
 
 	if(val != NULL) {
 		strcpy(address, val);
@@ -934,26 +937,26 @@ findIPv6(struct ipv6_int* num, char* address, instanceData* pData)
 		hashKey->low = num->low;
 		hashKey->high = num->high;
 
-		code_ipv6_int(num, pData);
+		code_ipv6_int(num, pWrkrData);
 		num2ipv6(num, address);
 		char* hashString = strdup(address);
 
-		hashtable_insert(pData->ipv6.hash, hashKey, hashString);
+		hashtable_insert(pWrkrData->pData->ipv6.hash, hashKey, hashString);
 	}
 }
 
 
 static void
-process_IPv6 (char* address, instanceData *pData, size_t iplen)
+process_IPv6 (char* address, wrkrInstanceData_t *pWrkrData, size_t iplen)
 {
 	struct ipv6_int* num;
 
 	num = ipv62num(address, iplen);
 
-	if(pData->ipv6.randConsis) {
-		findIPv6(num, address, pData);
+	if(pWrkrData->pData->ipv6.randConsis) {
+		findIPv6(num, address, pWrkrData);
 	} else {
-		code_ipv6_int(num, pData);
+		code_ipv6_int(num, pWrkrData);
 		num2ipv6(num, address);
 	}
 	free(num);
@@ -961,7 +964,7 @@ process_IPv6 (char* address, instanceData *pData, size_t iplen)
 
 
 static void
-anonipv6(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
+anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
 {
 	size_t iplen = 0;
 	int offset = *idx;
@@ -970,13 +973,12 @@ anonipv6(instanceData *pData, uchar **msg, int *pLenMsg, int *idx, int *hasChang
 	unsigned caddresslen;
 	size_t oldLen = *pLenMsg;
 
-
 	int syn = syntax_ipv6(*msg + offset, *pLenMsg - offset, &iplen);
 	if(syn) {
 		assert(iplen < sizeof(address));
 		getip(*msg + offset, iplen, address);
 		offset += iplen;
-		process_IPv6(address, pData, iplen);
+		process_IPv6(address, pWrkrData, iplen);
 
 		caddresslen = strlen(address);
 		*hasChanged = 1;
@@ -1011,10 +1013,10 @@ CODESTARTdoAction
 
 	for(i = 0 ; i <= lenMsg - 2 ; i++) {
 		if(pWrkrData->pData->ipv4.enable) {
-			anonipv4(pWrkrData->pData, &msg, &lenMsg, &i, &hasChanged);
+			anonipv4(pWrkrData, &msg, &lenMsg, &i, &hasChanged);
 		}
 		if(pWrkrData->pData->ipv6.enable) {
-			anonipv6(pWrkrData->pData, &msg, &lenMsg, &i, &hasChanged);
+			anonipv6(pWrkrData, &msg, &lenMsg, &i, &hasChanged);
 		}
 	}
 	if(hasChanged) {
@@ -1055,7 +1057,6 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	srand(time(NULL));
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmanon: module compiled with rsyslog version %s.\n", VERSION);
