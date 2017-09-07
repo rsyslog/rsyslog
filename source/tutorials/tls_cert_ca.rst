@@ -3,15 +3,15 @@ Setting up the CA
 
 The first step is to set up a certificate authority (CA). It must be
 maintained by a trustworthy person (or group) and approves the
-indentities of all machines. It does so by issuing their certificates.
+identities of all machines. It does so by issuing their certificates.
 In a small setup, the administrator can provide the CA function. What is
-important is the the CA's private key is well-protocted and machine 
+important is the the CA's private key is well-protected and machine 
 certificates are only issued if it is know they are valid (in a 
 single-admin case that means the admin should not issue certificates to 
 anyone else except himself).
 
 The CA creates a so-called self-signed certificate. That is, it approves
-its own authenticy. This sounds useless, but the key point to understand
+its own authenticity. This sounds useless, but the key point to understand
 is that every machine will be provided a copy of the CA's certificate.
 Accepting this certificate is a matter of trust. So by configuring the
 CA certificate, the administrator tells
@@ -40,7 +40,7 @@ installed by default).
        certtool --generate-privkey --outfile ca-key.pem
 
    This takes a short while. Be sure to do some work on your
-   workstation, it waits for radom input. Switching between windows is
+   workstation, it waits for random input. Switching between windows is
    sufficient ;)
    
 

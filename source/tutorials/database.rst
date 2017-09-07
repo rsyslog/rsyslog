@@ -38,7 +38,7 @@ and make them write the data directly to the database. In this paper, I
 use that "direct write" approach. I think it is superior, because the
 syslogd itself knows the status of the database connection and thus can
 handle it intelligently (well ... hopefully ;)). I use rsyslogd to
-acomplish this, simply because I have initiated the rsyslog project with
+accomplish this, simply because I have initiated the rsyslog project with
 database-awareness as one goal.
 
 **One word of caution:** while message storage in the database provides
@@ -151,7 +151,7 @@ run the script with your favorite SQL client. Double-check that the
 table was successfully created.
 
 It is important to note that the correct database encoding must be used
-so that the database will accept strings independend of the string
+so that the database will accept strings independent of the string
 encoding. This is an important part because it can not be guarantied
 that all syslog messages will have a defined character encoding. This is
 especially true if the rsyslog-Server will collect messages from
@@ -168,7 +168,7 @@ is done by placing the
 
     ``$ModLoad ommysql``
 
-directive at the begining of /etc/rsyslog.conf for MySQL and
+directive at the beginning of /etc/rsyslog.conf for MySQL and
 
     ``$ModLoad ompgsql``
 

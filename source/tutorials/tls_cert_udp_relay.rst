@@ -5,7 +5,7 @@ In this step, we configure the UDP relay ada.example.net. As a reminder,
 that machine relays messages from a local router, which only supports
 UDP syslog, to the central syslog server. The router does not talk
 directly to it, because we would like to have TLS protection for its
-sensitve logs. If the router and the syslog relay are on a sufficiently
+sensitive logs. If the router and the syslog relay are on a sufficiently
 secure private network, this setup can be considered reasonable secure.
 In any case, it is the best alternative among the possible configuration
 scenarios.
@@ -31,7 +31,7 @@ These were essentially the same steps as for any `TLS syslog
 client <tls_cert_client.html>`_. We now need to add the capability to
 forward the router logs:
 
--  make sure that the firewall rules permit message recpetion on UDP
+-  make sure that the firewall rules permit message recepetion on UDP
    port 514 (if you use a non-standard port for UDP syslog, make sure
    that port number is permitted).
 -  you may want to limit who can send syslog messages via UDP. A great

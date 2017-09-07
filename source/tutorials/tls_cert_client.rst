@@ -29,8 +29,8 @@ Steps to do:
    use a single name only, because there is only one central server. No
    using wildcards make sure that we will exclusively talk to that
    server (otherwise, a compromised client may take over its role). If
-   you load-balance to different server identies, you obviously need to
-   allow all of them. It still is suggested to use explcit names.
+   you load-balance to different server identities, you obviously need to
+   allow all of them. It still is suggested to use explicit names.
 
 **At this point, please be reminded once again that your security needs
 may be quite different from what we assume in this tutorial. Evaluate
