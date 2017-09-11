@@ -21,6 +21,8 @@ if test "$unamestr" = "AIX"; then
 	GNUTLS_CFLAGS="-I/usr/include"
 	RELP_LIBS="-L/usr/lib/ -lrelp"
 	RELP_CFLAGS="-I/usr/include"
+	LIBMAXMINDDB_LIBS="-L/usr/lib/ -lmaxminddb"
+	LIBMAXMINDDB_CFLAGS="-I/usr/include"
 	CC="xlc_r"
 	AC_PREFIX_DEFAULT(/usr)
 	export  ac_cv_func_malloc_0_nonnull=yes
