@@ -44,10 +44,10 @@ TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a s
 
 #START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
