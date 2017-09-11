@@ -533,11 +533,15 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
 /* enqueue the read file line as a message. The provided string is
  * not freed - thuis must be done by the caller.
  */
+#define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20 
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 			cstr_t *const __restrict__ cstrLine)
 {
 	DEFiRet;
 	smsg_t *pMsg;
+ 	uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES+1];
+ 	const uchar *metadata_names[2] = {(uchar *)"filename",(uchar *)"fileoffset"} ;
+ 	const uchar *metadata_values[2] ;
 
 	if(rsCStrLen(cstrLine) == 0) {
 		/* we do not process empty lines */
@@ -565,8 +569,12 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	if(pLstn->addMetadata)
-		msgAddMetadata(pMsg, (uchar*)"filename", pLstn->pszFileName);
+	if(pLstn->addMetadata) {
+ 		metadata_values[0] = pLstn->pszFileName;
+ 		snprintf((char *)file_offset,MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld",pLstn->pStrm->iCurrOffs);
+ 		metadata_values[1] = file_offset ;
+ 		msgAddMultiMetadata(pMsg, metadata_names, metadata_values ,2);
+	}
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;
