@@ -44,10 +44,10 @@ TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a s
 
 #START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
@@ -411,7 +411,7 @@ case $1 in
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 
 		fi
 		;;
    'seq-check2') # do the usual sequence check to see if everything was properly received. This is
@@ -676,6 +676,33 @@ case $1 in
 			fi
 		fi
 		;;
+	 'dump-kafka-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no kafka debuglog"
+		else
+			echo "Dumping server.log from Kafka instance $2"
+			echo "========================================="
+			cat $dep_work_dir/kafka/logs/server.log
+			echo "========================================="
+		fi
+		;;
+		
+	 'dump-zookeeper-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		echo "Dumping zookeeper.out from Zookeeper instance $2"
+		echo "========================================="
+		cat $dep_work_dir/zk/zookeeper.out
+		echo "========================================="
+		;;
 	 'stop-kafka')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
@@ -763,7 +790,7 @@ case $1 in
 
 		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
-   'error-exit') # this is called if we had an error and need to abort. Here, we
+	'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
 		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
@@ -798,6 +825,13 @@ case $1 in
 			./msleep 4000
 			RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 			rm IN_AUTO_DEBUG
+		fi
+		# Extended debug output for dependencies started by testbench
+		if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
+			# Dump Zookeeper log
+			. $srcdir/diag.sh dump-zookeeper-serverlog
+			# Dump Kafka log
+			. $srcdir/diag.sh dump-kafka-serverlog
 		fi
 		exit $2
 		;;

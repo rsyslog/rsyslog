@@ -3,6 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 export TESTMESSAGES=1000
 export TESTMESSAGESFULL=1000
+export EXTRA_EXITCHECK=dumpkafkalogs
 echo ===============================================================================
 echo \[sndrcv_kafka.sh\]: Create kafka/zookeeper instance and static topic
 . $srcdir/diag.sh download-kafka
