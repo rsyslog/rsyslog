@@ -597,11 +597,11 @@ case $1 in
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Downloading zookeeper"
-				wget $dep_zk_url -O $dep_zk_cached_file
+				wget -q $dep_zk_url -O $dep_zk_cached_file
 		fi
 		if [ ! -f $dep_kafka_cached_file ]; then
 				echo "Downloading kafka"
-				wget $dep_kafka_url -O $dep_kafka_cached_file
+				wget -q $dep_kafka_url -O $dep_kafka_cached_file
 		fi
 		;;
 	 'start-zookeeper')
