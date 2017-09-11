@@ -420,9 +420,10 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
+#define UDP_MAX_MSGSIZE 65507 /* limit per RFC definition */
 static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	uchar *__restrict__ const msg,
-	const size_t len)
+	size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
@@ -432,7 +433,6 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
 	int lasterr_sock = -1;
-	char errStr[1024];
 
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
@@ -444,50 +444,76 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		CHKiRet(doTryResume(pWrkrData));
 	}
 
-	if(pWrkrData->pSockArray != NULL) {
-		/* we need to track if we have success sending to the remote
-		 * peer. Success is indicated by at least one sendto() call
-		 * succeeding. We track this be bSendSuccess. We can not simply
-		 * rely on lsent, as a call might initially work, but a later
-		 * call fails. Then, lsent has the error status, even though
-		 * the sendto() succeeded. -- rgerhards, 2007-06-22
-		 */
-		bSendSuccess = RSFALSE;
-		for (r = pWrkrData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *pWrkrData->pSockArray; i++) {
-				lsent = sendto(pWrkrData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
-				if (lsent == (ssize_t) len) {
+	if(pWrkrData->pSockArray == NULL) {
+		FINALIZE;
+	}
+
+
+	if(len > UDP_MAX_MSGSIZE) {
+		LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE, "omfwd/udp: message is %u "
+			"bytes long, but UDP can send at most %d bytes (by RFC limit) "
+			"- truncating message", (unsigned) len, UDP_MAX_MSGSIZE);
+		len = UDP_MAX_MSGSIZE;
+	}
+
+	/* we need to track if we have success sending to the remote
+	 * peer. Success is indicated by at least one sendto() call
+	 * succeeding. We track this be bSendSuccess. We can not simply
+	 * rely on lsent, as a call might initially work, but a later
+	 * call fails. Then, lsent has the error status, even though
+	 * the sendto() succeeded. -- rgerhards, 2007-06-22
+	 */
+	bSendSuccess = RSFALSE;
+	for (r = pWrkrData->f_addr; r; r = r->ai_next) {
+		int runSockArrayLoop = 1;
+		for (i = 0; runSockArrayLoop && (i < *pWrkrData->pSockArray) ; i++) {
+			int try_send = 1;
+			size_t lenThisTry = len;
+			while(try_send) {
+				lsent = sendto(pWrkrData->pSockArray[i+1], msg, lenThisTry, 0,
+						r->ai_addr, r->ai_addrlen);
+				if (lsent == (ssize_t) lenThisTry) {
 					bSendSuccess = RSTRUE;
-					break;
+					try_send = 0;
+					runSockArrayLoop = 0;
+				} else if(errno == EMSGSIZE) {
+					const size_t newlen = (lenThisTry > 1024) ? lenThisTry - 1024 : 512;
+					LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
+						"omfwd/udp: send failed due to message being too "
+						"large for this system. Message size was %u bytes. "
+						"Truncating to %u bytes and retrying.",
+						(unsigned) lenThisTry, (unsigned) newlen);
+					lenThisTry = newlen;
 				} else {
 					reInit = RSTRUE;
 					lasterrno = errno;
 					lasterr_sock = pWrkrData->pSockArray[i+1];
-					DBGPRINTF("omfwd: socket %d: sendto() error: %d = %s.\n",
-						lasterr_sock, lasterrno,
-						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
+					LogError(lasterrno, RS_RET_ERR_UDPSEND,
+						"omfwd/udp: socket %d: sendto() error",
+						lasterr_sock);
+					try_send = 0;
 				}
 			}
-			if (lsent == (ssize_t) len && !pWrkrData->pData->bSendToAll)
-			       break;
 		}
+		if (lsent == (ssize_t) len && !pWrkrData->pData->bSendToAll)
+		       break;
+	}
 
-		/* one or more send failures; close sockets and re-init */
-		if (reInit == RSTRUE) {
-			CHKiRet(closeUDPSockets(pWrkrData));
-		}
+	/* one or more send failures; close sockets and re-init */
+	if (reInit == RSTRUE) {
+		CHKiRet(closeUDPSockets(pWrkrData));
+	}
 
-		/* finished looping */
-		if(bSendSuccess == RSTRUE) {
-			if(pWrkrData->pData->iUDPSendDelay > 0) {
-				srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
-				        pWrkrData->pData->iUDPSendDelay % 1000000);
-			}
-		} else {
-			LogError(lasterrno, RS_RET_ERR_UDPSEND,
-				"omfwd: socket %d: error %d sending via udp", lasterr_sock, lasterrno);
-			iRet = RS_RET_SUSPENDED;
+	/* finished looping */
+	if(bSendSuccess == RSTRUE) {
+		if(pWrkrData->pData->iUDPSendDelay > 0) {
+			srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
+				pWrkrData->pData->iUDPSendDelay % 1000000);
 		}
+	} else {
+		LogError(lasterrno, RS_RET_ERR_UDPSEND,
+			"omfwd: socket %d: error %d sending via udp", lasterr_sock, lasterrno);
+		iRet = RS_RET_SUSPENDED;
 	}
 
 finalize_it:
