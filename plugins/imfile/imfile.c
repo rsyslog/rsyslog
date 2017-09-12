@@ -533,11 +533,16 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
 /* enqueue the read file line as a message. The provided string is
  * not freed - thuis must be done by the caller.
  */
+#define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
-			cstr_t *const __restrict__ cstrLine)
+			cstr_t *const __restrict__ cstrLine,
+			const int64 strtOffs)
 {
 	DEFiRet;
 	smsg_t *pMsg;
+	uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES+1];
+	const uchar *metadata_names[2] = {(uchar *)"filename",(uchar *)"fileoffset"} ;
+	const uchar *metadata_values[2] ;
 
 	if(rsCStrLen(cstrLine) == 0) {
 		/* we do not process empty lines */
@@ -565,8 +570,12 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetTAG(pMsg, pLstn->pszTag, pLstn->lenTag);
 	msgSetPRI(pMsg, pLstn->iFacility | pLstn->iSeverity);
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	if(pLstn->addMetadata)
-		msgAddMetadata(pMsg, (uchar*)"filename", pLstn->pszFileName);
+	if(pLstn->addMetadata) {
+		metadata_values[0] = pLstn->pszFileName;
+		snprintf((char *)file_offset,MAX_OFFSET_REPRESENTATION_NUM_BYTES+1, "%lld", strtOffs);
+		metadata_values[1] = file_offset ;
+		msgAddMultiMetadata(pMsg, metadata_names, metadata_values ,2);
+	}
 	ratelimitAddMsg(pLstn->ratelimiter, &pLstn->multiSub, pMsg);
 finalize_it:
 	RETiRet;
@@ -729,6 +738,7 @@ static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
+	int64 strtOffs;
 	DEFiRet;
 
 	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
@@ -745,15 +755,16 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
 		if(pLstn->startRegex == NULL) {
-			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF, pLstn->trimLineOverBytes));
+			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF,
+				pLstn->trimLineOverBytes, &strtOffs));
 		} else {
 			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg,
-				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError));
+				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
-		CHKiRet(enqLine(pLstn, pCStr)); /* process line */
+		CHKiRet(enqLine(pLstn, pCStr, strtOffs)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 		if(pLstn->iPersistStateInterval > 0 && ++pLstn->nRecords >= pLstn->iPersistStateInterval) {
 			persistStrmState(pLstn);

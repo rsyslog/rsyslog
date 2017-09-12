@@ -736,7 +736,8 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+	uint32_t trimLineOverBytes, int64 *const strtOffs)
 {
         uchar c;
 	uchar finished;
@@ -853,12 +854,19 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 	}
 
 finalize_it:
-        if(iRet != RS_RET_OK && *ppCStr != NULL) {
-		if(cstrLen(*ppCStr) > 0) {
-		/* we may have an empty string in an unsuccsfull poll or after restart! */
-			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+        if(iRet == RS_RET_OK) {
+		if(strtOffs != NULL) {
+			*strtOffs = pThis->strtOffs;
 		}
-                cstrDestruct(ppCStr);
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+	} else {
+		if(*ppCStr != NULL) {
+			if(cstrLen(*ppCStr) > 0) {
+			/* we may have an empty string in an unsuccesfull poll or after restart! */
+				rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+			}
+			cstrDestruct(ppCStr);
+		}
 	}
 
         RETiRet;
@@ -889,7 +897,7 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
  */
 rsRetVal
 strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
-	const sbool discardTruncatedMsg, const sbool msgDiscardingError)
+	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
 {
         uchar c;
 	uchar finished = 0;
@@ -985,16 +993,21 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 	} while(finished == 0);
 
 finalize_it:
-	if(   pThis->readTimeout
-	   && (iRet != RS_RET_OK)
-	   && (pThis->prevMsgSegment != NULL)
-	   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
-		CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
-		cstrDestruct(&pThis->prevMsgSegment);
-		pThis->lastRead = tCurr;
-		dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
-			FINALIZE;
-		iRet = RS_RET_OK;
+	*strtOffs = pThis->strtOffs;
+	if(iRet == RS_RET_OK) {
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+	} else {
+		if(   pThis->readTimeout
+		   && (pThis->prevMsgSegment != NULL)
+		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
+			CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
+			cstrDestruct(&pThis->prevMsgSegment);
+			pThis->lastRead = tCurr;
+			pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+			dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
+				FINALIZE;
+			iRet = RS_RET_OK;
+		}
 	}
         RETiRet;
 }
@@ -1013,6 +1026,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
+	pThis->strtOffs = 0;
 	pThis->ignoringMsg = 0;
 	pThis->bPrevWasNL = 0;
 	pThis->fileNotFoundError = 1;
@@ -1736,7 +1750,7 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, (long long) offs);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	pThis->iCurrOffs = offs; /* we are now at *this* offset */
+	pThis->strtOffs = pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
 finalize_it:
@@ -1788,7 +1802,7 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 	} else {
 		*bytesDel = 0;
 	}
-	pThis->iCurrOffs = offs;
+	pThis->strtOffs = pThis->iCurrOffs = offs;
 
 finalize_it:
 	RETiRet;
@@ -1813,7 +1827,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 
 	/* As the cryprov may use CBC or similiar things, we need to read skip data */
 	targetOffs = pThis->iCurrOffs;
-	pThis->iCurrOffs = 0;
+	pThis->strtOffs = pThis->iCurrOffs = 0;
 	DBGOPRINT((obj_t*) pThis, "encrypted, doing skip read of %lld bytes\n",
 		(long long) targetOffs);
 	while(targetOffs != pThis->iCurrOffs) {
@@ -2134,6 +2148,9 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->inode;
 	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
 
+	l = pThis->strtOffs;
+	objSerializeSCALAR_VAR(pStrm, strtOffs, INT64, l);
+
 	if(pThis->prevLineSegment != NULL) {
 		cstrFinalize(pThis->prevLineSegment);
 		objSerializePTR(pStrm, prevLineSegment, CSTR);
@@ -2246,6 +2263,8 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		pThis->iCurrOffs = pProp->val.num;
  	} else if(isProp("inode")) {
 		pThis->inode = (ino_t) pProp->val.num;
+ 	} else if(isProp("strtOffs")) {
+		pThis->strtOffs = pProp->val.num;
  	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
  	} else if(isProp("fileNotFoundError")) {
