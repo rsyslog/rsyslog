@@ -17,6 +17,11 @@ Version 8.30.0 [v8-stable] 2017-10-10
     closes https://github.com/rsyslog/rsyslog/issues/1720
   - in IPv4 simple mode to-be-anonymized bits can get wrong
     closes https://github.com/rsyslog/rsyslog/issues/1717
+- imfile: add "fileoffset" metadata
+  This permits to send the offset from which the message was read together
+  with the message text.
+  Thanks to github user derekjsonar for the initial implementation which
+  we extended to use the message start offset.
 - RainerScript: add ltrim and rtrim functions
   closes https://github.com/rsyslog/rsyslog/issues/1711
 - core: report module name when suspending action
@@ -35,6 +40,23 @@ Version 8.30.0 [v8-stable] 2017-10-10
   This message was wrong and did not indicate a real error condition.
   The predicate check was incorrect.
   closes https://github.com/rsyslog/rsyslog/issues/170 (kind of)
+- omkafka bugfix: invalid load of failedmsg file on startup if disabled
+  error "rsyslogd: omkafka: could not load failed messages from "
+  "file (null) error -2027 - failed messages will not be resend."
+  occurs because, depite `keepFailedMessages="off"` as a default,
+  omkafka still tries to check for and load a `(none)` file which
+  triggers an IO error of sorts according to the 2027 link above.
+  Obviously, it probably shouldn't try load the file if
+  `keepFailedMessages` is not enabled.
+  Thanks to github user JPvRiel for a very good error report and
+  analysis.
+  closes https://github.com/rsyslog/rsyslog/issues/1765
+- imudp bugfix: UDP oversize message not properly handled
+  When a message larger than supported by the UDP stack is to be sent,
+  EMSGSIZE is returned, but not specifically handled. That in turn
+  will lead to action suspension. However, this does not make sense
+  because messages over the UDP max message size simply cannot be sent.
+  closes https://github.com/rsyslog/rsyslog/issues/1654
 - core bugfix: memory corruption during configuration parsing
   when omfwd is used with the $streamdriverpermittedpeers legacy
   parameter, a memory corruption can occur. This depends on the
