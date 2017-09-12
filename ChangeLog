@@ -1,8 +1,9 @@
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-10
 - NEW BUILD REQUIREMENT
-  when building imjournal, libsystemd-journal >= 234 is now required
-  This is to support the imjournal enhancement
+  when building imjournal, libsystemd-journal >= 234 is now recommended
+  This is to support the imjournal enhancement. Note that it is possible
+  to build with lower version, but this will degrade imjournal functionality.
 - imjournal: made switching to persistent journal in runtime possible
   with this patch imjournal can continue logging after switch to
   persistent journal without need to restart rsyslog service
@@ -33,6 +34,9 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imtcp: include module name in error msg
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
+- core bugfix: --enable-debugless build was broken
+  This was a regression from the v8.29.0 debug enhancements
+  Thanks to Stephen Workman for the patch.
 - queue bugfix: file write error message was incorrect
   when a queue was restarted from disk file, it almost always
   emitted a message claiming
