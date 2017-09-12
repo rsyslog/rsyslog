@@ -743,24 +743,25 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 	unsigned long long randhigh = 0;
 	unsigned tmpRand;
 	int fullbits;
+	int bits = pWrkrData->pData->ipv6.bits;
 
-	if(pWrkrData->pData->ipv6.bits == 128) { //has to be handled separately, since shift
+	if(bits == 128) { //has to be handled separately, since shift
 						 //128 bits doesn't work on unsigned long long
 		ip->high = 0;
 		ip->low = 0;
-	} else if(pWrkrData->pData->ipv6.bits > 64) {
+	} else if(bits > 64) {
 		ip->low = 0;
-		ip->high = (ip->high >> (pWrkrData->pData->ipv6.bits - 64)) <<  (pWrkrData->pData->ipv6.bits - 64);
-	} else if(pWrkrData->pData->ipv6.bits == 64) {
+		ip->high = (ip->high >> (bits - 64)) <<  (bits - 64);
+	} else if(bits == 64) {
 		ip->low = 0;			
 	} else {
-		ip->low = (ip->low >> pWrkrData->pData->ipv6.bits) << pWrkrData->pData->ipv6.bits;			
+		ip->low = (ip->low >> bits) << bits;
 	}
 	switch(pWrkrData->pData->ipv6.anonmode) {
 	case ZERO:
 		break;
 	case RANDOMINT:
-		if(pWrkrData->pData->ipv6.bits == 128) {
+		if(bits == 128) {
 			for(int i = 0; i < 8; i++) {
 				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->high <<= 8;
@@ -770,44 +771,44 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
-		} else if(pWrkrData->pData->ipv6.bits > 64) {
+		} else if(bits > 64) {
 			for(int i = 0; i < 8; i++) {
 				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
 
-			pWrkrData->pData->ipv6.bits -= 64;
-			fullbits = pWrkrData->pData->ipv6.bits / 8;
-			pWrkrData->pData->ipv6.bits = pWrkrData->pData->ipv6.bits % 8;
+			bits -= 64;
+			fullbits = bits / 8;
+			bits = bits % 8;
 			while(fullbits > 0) {
 				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				randhigh <<= 8;
 				randhigh |= tmpRand;
 				fullbits--;
 			}
-			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << pWrkrData->pData->ipv6.bits) - 1));
-			randhigh <<= pWrkrData->pData->ipv6.bits;
+			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << bits) - 1));
+			randhigh <<= bits;
 			randhigh |= tmpRand;
 
 			ip->high |= randhigh;
-		} else if(pWrkrData->pData->ipv6.bits == 64) {
+		} else if(bits == 64) {
 			for(int i = 0; i < 8; i++) {
 				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				ip->low <<= 8;
 				ip->low |= tmpRand;
 			}
 		} else {
-			fullbits = pWrkrData->pData->ipv6.bits / 8;
-			pWrkrData->pData->ipv6.bits = pWrkrData->pData->ipv6.bits % 8;
+			fullbits = bits / 8;
+			bits = bits % 8;
 			while(fullbits > 0) {
 				tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*0xff);
 				randlow <<= 8;
 				randlow |= tmpRand;
 				fullbits--;
 			}
-			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << pWrkrData->pData->ipv6.bits) - 1));
-			randlow <<= pWrkrData->pData->ipv6.bits;
+			tmpRand = (unsigned)((rand_r(&(pWrkrData->randstatus))/(double)RAND_MAX)*((1 << bits) - 1));
+			randlow <<= bits;
 			randlow |= tmpRand;
 
 			ip->low |= randlow;
