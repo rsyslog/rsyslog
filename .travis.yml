@@ -87,6 +87,10 @@ matrix:
        # we run this test without assert() enabled, so that we get "production timing"
        dist: trusty
        env: AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
+     - os: linux
+       compiler: "gcc"
+       dist: trusty
+       env: DEBUGLESS="YES", CFLAGS="-g -O2 -std=c99 -Werror -W -Wall -Wextra -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -Wno-unused-function"
 
 services:
   - elasticsearch
