@@ -1464,8 +1464,10 @@ CODESTARTnewActInst
 	}
 	pthread_mutex_unlock(&closeTimeoutMut);
 
-	/* Load failed messages here, do NOT check for IRET!*/
-	loadFailedMsgs(pData);
+	/* Load failed messages here (If enabled), do NOT check for IRET!*/
+	if (pData->bKeepFailedMessages) {
+		loadFailedMsgs(pData);
+	}
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
