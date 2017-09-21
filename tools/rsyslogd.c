@@ -1178,6 +1178,10 @@ initAll(int argc, char **argv)
 	int parentPipeFD = 0; /* fd of pipe to parent, if auto-backgrounding */
 	DEFiRet;
 
+	/* prepare internal signaling */
+	hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
+	hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
+
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
 	 * the parameters down below in the correct order. For example, we must know the
@@ -1454,8 +1458,6 @@ initAll(int argc, char **argv)
 		hdlr_enable(SIGQUIT, SIG_IGN);
 	}
 	hdlr_enable(SIGTERM, rsyslogdDoDie);
-	hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
-	hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
 	hdlr_enable(SIGCHLD, hdlr_sigchld);
 	hdlr_enable(SIGHUP, hdlr_sighup);
 
