@@ -34,6 +34,12 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imtcp: include module name in error msg
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
+- core bugfix: rsyslog aborts if errmsg is generated in early startup
+  Note that the segfault can occur only during early startup. Once
+  rsyslog has started, everything works reliably. This condition can
+  especially be triggerred by specifying invalid TLS default certificates.
+  closes https://github.com/rsyslog/rsyslog/issues/1783
+  closes https://github.com/rsyslog/rsyslog/issues/1786
 - core bugfix: --enable-debugless build was broken
   This was a regression from the v8.29.0 debug enhancements
   Thanks to Stephen Workman for the patch.
