@@ -423,11 +423,9 @@ CODESTARTnewActInst
 		}
 	}
 
-	dbgprintf("Pascal: vor Fehler\n");
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
-	dbgprintf("Pascal: nach Fehler\n");
 CODE_STD_FINALIZERnewActInst
 	if(bDestructPValsOnExit)
 		cnfparamvalsDestruct(pvals, &actpblk);
