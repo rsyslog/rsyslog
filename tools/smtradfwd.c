@@ -74,7 +74,7 @@ CODESTARTstrgen
 	pPRI = getPRI(pMsg);
 	lenPRI = strlen(pPRI);
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
+	pHOSTNAME = (uchar*) getHOSTNAME(pMsg, 0);
 	lenHOSTNAME = getHOSTNAMELen(pMsg);
 	getTAG(pMsg, &pTAG, &lenTAG);
 	if(lenTAG > 32)

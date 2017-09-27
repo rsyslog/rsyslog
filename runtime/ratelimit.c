@@ -83,7 +83,7 @@ doLastMessageRepeatedNTimes(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep
 	if( ratelimit->pMsg != NULL &&
 	    getMSGLen(pMsg) == getMSGLen(ratelimit->pMsg) &&
 	    !ustrcmp(getMSG(pMsg), getMSG(ratelimit->pMsg)) &&
-	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(ratelimit->pMsg)) &&
+	    !strcmp(getHOSTNAME(pMsg, 0), getHOSTNAME(ratelimit->pMsg, 0)) &&
 	    !strcmp(getPROCID(pMsg, LOCK_MUTEX), getPROCID(ratelimit->pMsg, LOCK_MUTEX)) &&
 	    !strcmp(getAPPNAME(pMsg, LOCK_MUTEX), getAPPNAME(ratelimit->pMsg, LOCK_MUTEX))) {
 		ratelimit->nsupp++;
@@ -225,7 +225,7 @@ ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **p
 	 * treshold (the value is >=) are subject to ratelimiting. */
 	if(ratelimit->interval && (pMsg->iSeverity >= ratelimit->severity)) {
 		char namebuf[512]; /* 256 for FGDN adn 256 for APPNAME should be enough */
-		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg),
+		snprintf(namebuf, sizeof namebuf, "%s:%s", getHOSTNAME(pMsg, 0),
 			getAPPNAME(pMsg, 0));
 		if(withinRatelimit(ratelimit, pMsg->ttGenTime, namebuf) == 0) {
 			msgDestruct(&pMsg);

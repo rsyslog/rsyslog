@@ -2335,7 +2335,7 @@ msgGetJSONMESG(smsg_t *__restrict__ const pMsg)
 	jval = json_object_new_string((char*)pRes);
 	json_object_object_add(json, "timereported", jval);
 
-	jval = json_object_new_string(getHOSTNAME(pMsg));
+	jval = json_object_new_string(getHOSTNAME(pMsg, 0));
 	json_object_object_add(json, "hostname", jval);
 
 	getTAG(pMsg, &pRes, &bufLen);
@@ -2515,24 +2515,23 @@ int getHOSTNAMELen(smsg_t * const pM)
 }
 
 
-const char *getHOSTNAME(smsg_t * const pM)
+char *getHOSTNAME(smsg_t * const pM, sbool bLockMutex)
 {
+	UNUSED(bLockMutex);
 	if(pM == NULL)
-		return "";
-	else
-		if(pM->pszHOSTNAME == NULL) {
-			resolveDNS(pM);
-			if(pM->rcvFrom.pRcvFrom == NULL) {
-				return "";
-			} else {
-				uchar *psz;
-				int len;
-				prop.GetString(pM->rcvFrom.pRcvFrom, &psz, &len);
-				return (char*) psz;
-			}
+		return (char*) "";
+	if(pM->pszHOSTNAME == NULL) {
+		resolveDNS(pM);
+		if(pM->rcvFrom.pRcvFrom == NULL) {
+			return (char*) "";
 		} else {
-			return (char*) pM->pszHOSTNAME;
+			uchar *psz;
+			int len;
+			prop.GetString(pM->rcvFrom.pRcvFrom, &psz, &len);
+			return (char*) psz;
 		}
+	}
+	return (char*) pM->pszHOSTNAME;
 }
 
 
@@ -3478,7 +3477,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			}
 			break;
 		case PROP_HOSTNAME:
-			pRes = (uchar*)getHOSTNAME(pMsg);
+			pRes = (uchar*)getHOSTNAME(pMsg, 0);
 			bufLen = getHOSTNAMELen(pMsg);
 			break;
 		case PROP_SYSLOGTAG:

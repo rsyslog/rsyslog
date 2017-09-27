@@ -214,9 +214,11 @@ rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__rest
 rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
 const uchar* msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
+#define UNUSED(x) (void)(x)
+
 /* TODO: remove these five (so far used in action.c) */
 uchar *getMSG(smsg_t *pM);
-const char *getHOSTNAME(smsg_t *pM);
+char *getHOSTNAME(smsg_t *pM, sbool bLockMutex);
 char *getPROCID(smsg_t *pM, sbool bLockMutex);
 char *getAPPNAME(smsg_t *pM, sbool bLockMutex);
 void setMSGLen(smsg_t *pM, int lenMsg);
