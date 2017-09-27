@@ -1515,8 +1515,6 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKiRet(createInstance(&inst));
 	if(pNewVal == NULL || *pNewVal == '\0') {
 		errmsg.LogError(0, NO_ERRCODE, "imptcp: port number must be specified, listener ignored");
-	}
-	if((pNewVal == NULL) || (pNewVal == '\0')) {
 		inst->pszBindPort = NULL;
 	} else {
 		CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));
