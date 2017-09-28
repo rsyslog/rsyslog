@@ -55,10 +55,11 @@ MODULE_TYPE_NOKEEP
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-
+#define _DB_MAXDBSRVPORTLEN 5
 typedef struct _instanceData {
 	PGconn	*f_hpgsql;			/* handle to PgSQL */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	f_dbsrvport[_DB_MAXDBSRVPORTLEN+1];	/* port of PostgrSQL server */
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
@@ -179,7 +180,7 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 	const char *PgConnectionOptions = "-c standard_conforming_strings=on";
 
 	/* Connect to database */
-	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, PgConnectionOptions, NULL,
+	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, pData->f_dbsrvport, PgConnectionOptions, NULL,
 				pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
 		reportDBError(pData, bSilent);
 		closePgSQL(pData); /* ignore any error we may get */
@@ -342,7 +343,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 
 	/* sur5r 2007-10-18: added support for PgSQL
-	 * :ompgsql:server,dbname,userid,password
+	 * :ompgsql:server,port,dbname,userid,password
 	 * Now we read the PgSQL connection properties 
 	 * and verify that the properties are valid.
 	 */
@@ -350,6 +351,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		iPgSQLPropErr++;
 	dbgprintf("%p:%s\n",p,p);
 	if(*pData->f_dbsrv == '\0')
+		iPgSQLPropErr++;
+	if(getSubString(&p, pData->f_dbsrvport, _DB_MAXDBSRVPORTLEN+1, ','))
+		iPgSQLPropErr++;
+	if(*pData->f_dbsrvport == '\0')
 		iPgSQLPropErr++;
 	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
 		iPgSQLPropErr++;
