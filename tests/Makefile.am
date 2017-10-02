@@ -498,7 +498,6 @@ TESTS += msgvar-concurrency-array.sh \
 	mmnormalize_processing_test2.sh \
 	mmnormalize_processing_test3.sh \
 	mmnormalize_processing_test4.sh
-endif
 
 if ENABLE_IMPTCP
 TESTS +=  \
@@ -511,6 +510,7 @@ endif
 if LOGNORM_REGEX_SUPPORTED
 TESTS += \
 	mmnormalize_regex.sh
+endif
 endif
 
 if ENABLE_MMJSONPARSE
