@@ -343,7 +343,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 
 	/* sur5r 2007-10-18: added support for PgSQL
-	 * :ompgsql:server,port,dbname,userid,password
+	 * :ompgsql:server,dbname,userid,password,server_port
 	 * Now we read the PgSQL connection properties 
 	 * and verify that the properties are valid.
 	 */
@@ -351,10 +351,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		iPgSQLPropErr++;
 	dbgprintf("%p:%s\n",p,p);
 	if(*pData->f_dbsrv == '\0')
-		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbsrvport, _DB_MAXDBSRVPORTLEN+1, ','))
-		iPgSQLPropErr++;
-	if(*pData->f_dbsrvport == '\0')
 		iPgSQLPropErr++;
 	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
 		iPgSQLPropErr++;
@@ -364,8 +360,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		iPgSQLPropErr++;
 	if(*pData->f_dbuid == '\0')
 		iPgSQLPropErr++;
-	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ','))
 		iPgSQLPropErr++;
+	if(*pData->f_dbpwd == '\0')
+		iPgSQLPropErr++;
+	if(getSubString(&p, pData->f_dbsrvport, _DB_MAXDBSRVPORTLEN+1, ';'))
+		iPgSQLPropErr++;
+	if(*pData->f_dbsrvport == '\0')
+		pData->f_dbsrvport[0] = '\0';
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
