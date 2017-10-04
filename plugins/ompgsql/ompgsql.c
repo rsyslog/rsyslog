@@ -365,8 +365,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*pData->f_dbpwd == '\0')
 		iPgSQLPropErr++;
 	if(getSubString(&p, pData->f_dbsrvport, _DB_MAXDBSRVPORTLEN+1, ';'))
-		iPgSQLPropErr++;
-	if(*pData->f_dbsrvport == '\0')
 		pData->f_dbsrvport[0] = '\0';
 	/* now check for template
 	 * We specify that the SQL option must be present in the template.
