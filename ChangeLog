@@ -32,6 +32,7 @@ Version 8.30.0 [v8-stable] 2017-10-10
   better advise of what actually is the error cause
 - imptcp: include module name in error msg
 - imtcp: include module name in error msg
+- tls improvement: better error message if certificate file cannot be read
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
 - core bugfix: rsyslog aborts if errmsg is generated in early startup
@@ -50,6 +51,7 @@ Version 8.30.0 [v8-stable] 2017-10-10
   This message was wrong and did not indicate a real error condition.
   The predicate check was incorrect.
   closes https://github.com/rsyslog/rsyslog/issues/170 (kind of)
+- omrelp bugfix:  segfault when rebindinterval parameter is used
 - omkafka bugfix: invalid load of failedmsg file on startup if disabled
   error "rsyslogd: omkafka: could not load failed messages from "
   "file (null) error -2027 - failed messages will not be resend."
