@@ -124,12 +124,12 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	pBuf->data = NULL;
 
 	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
-		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
+		errmsg.LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 	}
 
 	if(fstat(fd, &stat_st) == -1) {
-		errmsg.LogError(0, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
+		errmsg.LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 	}
 
