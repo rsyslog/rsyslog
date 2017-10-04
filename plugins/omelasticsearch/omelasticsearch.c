@@ -75,6 +75,7 @@ STATSCOUNTER_DEF(indexESFail, mutIndexESFail)
 
 #	define META_STRT "{\"index\":{\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
+#       define META_PIPELINE "\",\"pipeline\":\""
 #	define META_PARENT "\",\"_parent\":\""
 #	define META_ID "\", \"_id\":\""
 #	define META_END  "\"}}\n"
@@ -95,6 +96,7 @@ typedef struct _instanceData {
 	uchar *authBuf;
 	uchar *searchIndex;
 	uchar *searchType;
+	uchar *pipelineName;
 	uchar *parent;
 	uchar *tplName;
 	uchar *timeout;
@@ -139,6 +141,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "searchindex", eCmdHdlrGetWord, 0 },
 	{ "searchtype", eCmdHdlrGetWord, 0 },
+	{ "pipelinename", eCmdHdlrGetWord, 0 },
 	{ "parent", eCmdHdlrGetWord, 0 },
 	{ "dynsearchindex", eCmdHdlrBinary, 0 },
 	{ "dynsearchtype", eCmdHdlrBinary, 0 },
@@ -211,6 +214,7 @@ CODESTARTfreeInstance
 		free(pData->authBuf);
 	free(pData->searchIndex);
 	free(pData->searchType);
+	free(pData->pipelineName);
 	free(pData->parent);
 	free(pData->tplName);
 	free(pData->timeout);
@@ -254,7 +258,8 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
 	dbgprintf("\tsearch index='%s'\n", pData->searchIndex);
-	dbgprintf("\tsearch index='%s'\n", pData->searchType);
+	dbgprintf("\tsearch type='%s'\n", pData->searchType);
+	dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
 	dbgprintf("\tparent='%s'\n", pData->parent);
 	dbgprintf("\ttimeout='%s'\n", pData->timeout);
 	dbgprintf("\tdynamic search index=%d\n", pData->dynSrchIdx);
@@ -481,6 +486,7 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 {
 	uchar *searchIndex = 0;
 	uchar *searchType;
+	uchar *pipelineName;
 	uchar *parent;
 	uchar *bulkId;
 	char* baseUrl;
@@ -497,6 +503,9 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
+	separator = '?';
+	pipelineName = pData->pipelineName;
+
 	if(bulkmode) {
 		r = es_addBuf(&url, "_bulk", sizeof("_bulk")-1);
 		parent = NULL;
@@ -505,9 +514,13 @@ setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
 		if(r == 0) r = es_addChar(&url, '/');
 		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
+		if(pipelineName != NULL) {
+			if(r == 0) r = es_addChar(&url, separator);
+			if(r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=")-1);
+			if(r == 0) r = es_addBuf(&url, (char*)pipelineName, ustrlen(pipelineName));
+			separator = '&';
+		}
 	}
-
-	separator = '?';
 
 	if(pData->timeout != NULL) {
 		if(r == 0) r = es_addChar(&url, separator);
@@ -548,6 +561,7 @@ computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
+	uchar *pipelineName = pWrkrData->pData->pipelineName;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
 	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
@@ -557,6 +571,9 @@ computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	}
 	if(bulkId != NULL) {
 		r += sizeof(META_ID)-1 + ustrlen(bulkId);
+	}
+	if(pipelineName != NULL) {
+		r += sizeof(META_PIPELINE)-1 + ustrlen(pipelineName);
 	}
 
 	return r;
@@ -576,6 +593,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
+	uchar *pipelineName = pWrkrData->pData->pipelineName;
 	DEFiRet;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
@@ -588,6 +606,10 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	if(parent != NULL) {
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)parent, ustrlen(parent));
+	}
+	if(pipelineName != NULL) {
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PIPELINE, sizeof(META_PIPELINE)-1);
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)pipelineName, ustrlen(pipelineName));
 	}
 	if(bulkId != NULL) {
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_ID, sizeof(META_ID)-1);
@@ -1362,6 +1384,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->authBuf = NULL;
 	pData->searchIndex = NULL;
 	pData->searchType = NULL;
+	pData->pipelineName = NULL;
 	pData->parent = NULL;
 	pData->timeout = NULL;
 	pData->dynSrchIdx = 0;
@@ -1416,6 +1439,8 @@ CODESTARTnewActInst
 			pData->searchIndex = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "searchtype")) {
 			pData->searchType = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "pipelinename")) {
+			pData->pipelineName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "parent")) {
 			pData->parent = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "dynsearchindex")) {
