@@ -239,6 +239,7 @@ TESTS +=  \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_format_time.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \
@@ -843,6 +844,7 @@ EXTRA_DIST= \
 	rscript_ne_var.sh \
 	rscript_num2ipv4.sh \
 	rscript_trim.sh \
+	rscript_format_time.sh \
 	mmanon_random_32_ipv4.sh \
 	mmanon_random_cons_32_ipv4.sh \
 	mmanon_recognize_ipv4.sh \

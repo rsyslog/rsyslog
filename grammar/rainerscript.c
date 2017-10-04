@@ -2122,6 +2122,50 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		if(bMustFree) free(str);
 		varFreeMembers(&r[1]);
 		break;
+	case CNFFUNC_FORMAT_TIME: {
+		time_t unixtime;
+		struct tm lt;
+		char   result[64];
+		char  *formatstr = NULL, *endptr = NULL;
+
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+		cnfexprEval(func->expr[1], &r[1], usrptr);
+
+		str = (char*) var2CString(&r[0], &bMustFree);
+		formatstr = (char*) es_str2cstr(r[1].d.estr, NULL);
+
+
+		// TODO: Error checking, and account for different
+		//       possible sizes of time_t 32/64 bit.
+		errno = 0;
+		unixtime = (time_t) strtoll(str, &endptr, 10);
+
+		printf("STR: %s, FORMATSTR: %s, NUM: %ld\n", str, formatstr, unixtime);
+
+		localtime_r(&unixtime, &lt);
+
+		if (strncmp(formatstr, "rfc3164", 7) == 0 || strncmp(formatstr, "rfc3164", 7) == 0) {
+			strftime(result, 64, "%b %e %H:%M:%S", &lt);
+		} else if (strncmp(formatstr, "rfc3339", 7) == 0 || strncmp(formatstr, "RFC3339", 7) == 0) {
+			strftime(result, 64, "%Y-%m-%dT%H:%M:%S%z", &lt);
+			strcpy(result + 22, ":00"); // <-- FIXME: Testing only, does not account for all TZs
+		} else {
+			strcpy(result, "NOT IMPLEMENTED");
+		}
+		
+		printf("%ld -> '%s'\n", unixtime, result);
+
+		ret->datatype = 'S';
+		ret->d.estr = es_newStrFromCStr(result, strlen(result));
+
+		if (bMustFree) free(str);
+		free(formatstr);
+
+		varFreeMembers(&r[0]);
+		varFreeMembers(&r[1]);
+
+		break;
+	}
 	default:
 		if(Debug) {
 			char *fname = es_str2cstr(func->fname, NULL);
@@ -4230,6 +4274,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 			"but is %d.");
 	} else if(FUNC_NAME("random")) {
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
+	} else if(FUNC_NAME("format_time")) {
+		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
 	} else {
 		return CNFFUNC_INVALID;
 	}
