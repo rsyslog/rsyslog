@@ -1258,6 +1258,54 @@ timeConvertToUTC(const struct syslogTime *const __restrict__ local,
 	timeval2syslogTime(&tp, utc, 1);
 }
 
+/**
+ * Format a UNIX timestamp.
+ * TODO: Add support for fractional seconds...
+ */
+static int
+formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfrac,
+	const char *format, char *pBuf, size_t pBufMax) {
+
+	struct tm lt;
+	int retVal = -1;
+
+	assert(format != NULL);
+	assert(pBuf != NULL);
+
+	if (localtime_r(&unixtime, &lt) == NULL) {
+		DBGPRINTF("Unexpected error calling localtime_r().\n");
+		return -1;
+	}
+
+	// Do our conversions
+	if (strcmp(format, "date-rfc3164") == 0) {
+		strftime(pBuf, pBufMax, "%b %e %H:%M:%S", &lt);
+		retVal = strlen(pBuf);
+	} else if (strcmp(format, "date-rfc3339") == 0) {
+		strftime(pBuf, pBufMax, "%Y-%m-%dT%H:%M:%S%z", &lt);
+
+		// %z gives +hhmm or -hhmm, when we need +hh:mm or -hh:mm or 'Z'
+		if (strcmp(pBuf + 20, "0000") == 0) {
+			pBuf[19] = 'Z';
+			pBuf[20] = '\0';
+		} else {
+			// Insert colon
+			pBuf[25] = pBuf[24];
+			pBuf[24] = pBuf[23];
+			pBuf[23] = pBuf[22];
+			pBuf[22] = ':';
+		}
+
+		retVal = strlen(pBuf);
+	} else {
+		if (strftime(pBuf, pBufMax, format, &lt) > 0)
+			retVal = 0;
+		DBGPRINTF("Error formatting time: %ld with %s.\n", unixtime, format);
+	}
+
+	return retVal;
+}
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -1284,6 +1332,7 @@ CODESTARTobjQueryInterface(datetime)
 	pIf->formatTimestamp3164 = formatTimestamp3164;
 	pIf->formatTimestampUnix = formatTimestampUnix;
 	pIf->syslogTime2time_t = syslogTime2time_t;
+	pIf->formatUnixTimeFromTime_t = formatUnixTimeFromTime_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
 

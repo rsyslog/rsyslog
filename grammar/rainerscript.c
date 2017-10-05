@@ -45,6 +45,7 @@
 #include "queue.h"
 #include "srUtils.h"
 #include "regexp.h"
+#include "datetime.h"
 #include "obj.h"
 #include "modules.h"
 #include "ruleset.h"
@@ -58,6 +59,7 @@
 
 DEFobjCurrIf(obj)
 DEFobjCurrIf(regexp)
+DEFobjCurrIf(datetime)
 
 struct cnfexpr* cnfexprOptimize(struct cnfexpr *expr);
 static void cnfstmtOptimizePRIFilt(struct cnfstmt *stmt);
@@ -2124,7 +2126,6 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		break;
 	case CNFFUNC_FORMAT_TIME: {
 		time_t unixtime;
-		struct tm lt;
 		const int res_max = 64;
 		char   result[res_max];
 		char  *formatstr = NULL, *endptr = NULL;
@@ -2138,35 +2139,19 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		// TODO: Error checking, and account for different
 		//       possible sizes of time_t 32/64 bit.
 		errno = 0;
-		unixtime = (time_t) strtoll(str, &endptr, 10);
+		unixtime = (time_t) strtoull(str, &endptr, 10);
 
-		localtime_r(&unixtime, &lt);
+		ret->datatype = 'S';
 
-		if (strncmp(formatstr, "rfc3164", 7) == 0) {
-			strftime(result, res_max, "%b %e %H:%M:%S", &lt);
-		} else if (strncmp(formatstr, "rfc3339", 7) == 0) {
-			strftime(result, res_max, "%Y-%m-%dT%H:%M:%S%z", &lt);
-			
-			if (strcmp(result + 20, "0000") == 0) {
-				result[19] = 'Z';
-				result[20] = '\0';
-			} else {
-				// Insert colon
-				result[25] = result[24];
-				result[24] = result[23];
-				result[23] = result[22];
-				result[22] = ':';
-			}
-
+		if (objUse(datetime, CORE_COMPONENT) != RS_RET_OK) {
+			ret->d.estr = es_newStr(0);
 		} else {
-			if (strftime(result, res_max, formatstr, &lt) == 0) {
+			if (datetime.formatUnixTimeFromTime_t(unixtime, 0, formatstr, result, res_max) == -1) {
 				strncpy(result, str, res_max);
 				result[res_max - 1] = '\0';
 			}
+			ret->d.estr = es_newStrFromCStr(result, strlen(result));
 		}
-		
-		ret->datatype = 'S';
-		ret->d.estr = es_newStrFromCStr(result, strlen(result));
 
 		if (bMustFree) free(str);
 		free(formatstr);
