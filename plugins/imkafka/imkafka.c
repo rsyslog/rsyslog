@@ -421,6 +421,9 @@ checkInstance(instanceConf_t *inst)
 	inst->bIsConnected = 1;
 
 finalize_it:
+	errmsg.LogError(0, RS_RET_KAFKA_NO_VALID_BROKERS,
+		"imkafka: no valid brokers specified: %s\n", inst->brokers);
+
 	RETiRet;
 }
 
@@ -671,7 +674,8 @@ CODESTARTrunInput
 			if(glbl.GetGlobalInputTermState() == 1)
 				break; /* terminate input! */
 
-			if(inst->bIsSubscribed == 0 ) {
+			// Try to add consumer only if connected! */
+			if(inst->bIsConnected == 1 && inst->bIsSubscribed == 0 ) {
 				addConsumer(runModConf, inst);
 			}
 			if(inst->bIsSubscribed == 1 ) {

@@ -941,6 +941,14 @@ finalize_it:
 		if (pData->rk != NULL) {
 			closeKafka(pData);
 		}
+
+		/* Parameter Error's cannot be resumed, so we need to disable the action */
+		if (iRet == RS_RET_PARAM_ERROR) {
+			iRet = RS_RET_DISABLE_ACTION;
+			errmsg.LogError(0, iRet,
+				"omkafka: action will be disabled due invalid kafka configuration parameters\n");
+		}
+
 	}
 	pthread_rwlock_unlock(&pData->rkLock);
 	RETiRet;
