@@ -1514,7 +1514,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *const pNe
 	DEFiRet;
 
 	if(pNewVal == NULL || *pNewVal == '\0') {
-		parser_errmsg(0, NO_ERRCODE, "imptcp: port number must be specified, listener ignored");
+		parser_errmsg("imptcp: port number must be specified, listener ignored");
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
 
@@ -2015,7 +2015,7 @@ CODESTARTnewInpInst
 			if(max <= 200000000) {
 				inst->maxFrameSize = max;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'maxFrameSize' "
+				parser_errmsg("imptcp: invalid value for 'maxFrameSize' "
 						"parameter given is %d, max is 200000000", max);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
@@ -2032,7 +2032,7 @@ CODESTARTnewInpInst
 			} else if(!strcasecmp(cstr, "none")) {
 				inst->compressionMode = COMPRESS_NEVER;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'compression.mode' "
+				parser_errmsg("imptcp: invalid value for 'compression.mode' "
 					 "parameter (given is '%s')", cstr);
 				free(cstr);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -2068,7 +2068,7 @@ CODESTARTnewInpInst
 		char *bindPort = (char *) inst->pszBindPort;
 		char *bindPath = (char *) inst->pszBindPath;
 		if ((bindPort == NULL || strlen(bindPort) < 1) && (bindPath == NULL || strlen (bindPath) < 1)) {
-			errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: Must have either port or path defined");
+			parser_errmsg("imptcp: Must have either port or path defined");
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
