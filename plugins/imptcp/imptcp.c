@@ -70,6 +70,7 @@
 #include "datetime.h"
 #include "ruleset.h"
 #include "msg.h"
+#include "parserif.h"
 #include "statsobj.h"
 #include "ratelimit.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
@@ -1507,18 +1508,19 @@ finalize_it:
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  */
-static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *const pNewVal)
 {
 	instanceConf_t *inst;
 	DEFiRet;
 
-	CHKiRet(createInstance(&inst));
 	if(pNewVal == NULL || *pNewVal == '\0') {
-		errmsg.LogError(0, NO_ERRCODE, "imptcp: port number must be specified, listener ignored");
-		inst->pszBindPort = NULL;
-	} else {
-		CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));
+		parser_errmsg("imptcp: port number must be specified, listener ignored");
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 	}
+
+	/* if we reach this point, a valid port is given in pNewVal */
+	CHKiRet(createInstance(&inst));
+	CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));
 	if((cs.lstnIP == NULL) || (cs.lstnIP[0] == '\0')) {
 		inst->pszBindAddr = NULL;
 	} else {
@@ -2013,7 +2015,7 @@ CODESTARTnewInpInst
 			if(max <= 200000000) {
 				inst->maxFrameSize = max;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'maxFrameSize' "
+				parser_errmsg("imptcp: invalid value for 'maxFrameSize' "
 						"parameter given is %d, max is 200000000", max);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
@@ -2030,7 +2032,7 @@ CODESTARTnewInpInst
 			} else if(!strcasecmp(cstr, "none")) {
 				inst->compressionMode = COMPRESS_NEVER;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: invalid value for 'compression.mode' "
+				parser_errmsg("imptcp: invalid value for 'compression.mode' "
 					 "parameter (given is '%s')", cstr);
 				free(cstr);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -2066,7 +2068,7 @@ CODESTARTnewInpInst
 		char *bindPort = (char *) inst->pszBindPort;
 		char *bindPath = (char *) inst->pszBindPath;
 		if ((bindPort == NULL || strlen(bindPort) < 1) && (bindPath == NULL || strlen (bindPath) < 1)) {
-			errmsg.LogError(0, RS_RET_PARAM_ERROR, "imptcp: Must have either port or path defined");
+			parser_errmsg("imptcp: Must have either port or path defined");
 			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
