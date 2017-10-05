@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <assert.h>
+#include <string.h>
 #ifdef HAVE_SYS_TIME_H
 #	include <sys/time.h>
 #endif
@@ -1267,7 +1268,6 @@ formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfr
 	const char *format, char *pBuf, size_t pBufMax) {
 
 	struct tm lt;
-	int retVal = -1;
 
 	assert(format != NULL);
 	assert(pBuf != NULL);
@@ -1280,7 +1280,6 @@ formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfr
 	// Do our conversions
 	if (strcmp(format, "date-rfc3164") == 0) {
 		strftime(pBuf, pBufMax, "%b %e %H:%M:%S", &lt);
-		retVal = strlen(pBuf);
 	} else if (strcmp(format, "date-rfc3339") == 0) {
 		strftime(pBuf, pBufMax, "%Y-%m-%dT%H:%M:%S%z", &lt);
 
@@ -1296,14 +1295,12 @@ formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfr
 			pBuf[22] = ':';
 		}
 
-		retVal = strlen(pBuf);
-	} else {
-		if (strftime(pBuf, pBufMax, format, &lt) > 0)
-			retVal = 0;
+	} else if (strftime(pBuf, pBufMax, format, &lt) == 0) {
 		DBGPRINTF("Error formatting time: %ld with %s.\n", unixtime, format);
+		return -1;
 	}
 
-	return retVal;
+	return strlen(pBuf);
 }
 
 /* queryInterface function
