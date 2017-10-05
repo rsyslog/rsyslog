@@ -103,6 +103,10 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imptcp bugfix: invalid mutex addressing on some platforms
   code did not compile on platforms without atomic instructions
   Thanks to github user petiepooo for the patch
+- imptcp bugfix: do not accept missing port in legacy listener definition
+  If legacy listener definition was used, a missing port was accepted during
+  the config read phase but errored out upon listener activation. This now
+  errors out directly when processing the config directive.
 ------------------------------------------------------------------------------
 Version 8.29.0 [v8-stable] 2017-08-08
 - imptcp: add experimental parameter "multiline"
