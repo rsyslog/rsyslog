@@ -49,7 +49,7 @@ const int bDetectYearAfterTime);
 	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
 	time_t (*syslogTime2time_t)(const struct syslogTime *ts);
 	/* v11, 2017-10-05 */
-	int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, size_t pBufMax);
+	int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, uint pBufMax);
 ENDinterface(datetime)
 #define datetimeCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* interface changes:
@@ -65,7 +65,7 @@ ENDinterface(datetime)
  * 9 - ParseTIMESTAMP3164 has addtl parameter to permit year parsing
  * 10 - functions having addtl paramater inUTC to emit time in UTC:
  *      timeval2syslogTime, getCurrtime
- * 11 - Add formatUnixTime
+ * 11 - Add formatUnixTimeFromTime_t
  */
 
 #define PARSE3164_TZSTRING 1

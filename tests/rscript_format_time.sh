@@ -16,11 +16,6 @@ set $!datetime!rfc3339 = format_time(1507165811, "date-rfc3339");
 set $!datetime!rfc3164Neg = format_time(-1507165811, "date-rfc3164");
 set $!datetime!rfc3339Neg = format_time(-1507165811, "date-rfc3339");
 
-set $!datetime!strftime = format_time(1507165811, "%Y-%m-%d");
-set $!datetime!inv1 = format_time(1507165811, "");
-set $!datetime!inv2 = format_time(1507165811, "%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y%Y");
-set $!datetime!inv3 = format_time(1507165811, "deadbeef");
-
 set $!datetime!str1 = format_time("1507165811", "date-rfc3339");
 set $!datetime!strinv1 = format_time("ABC", "date-rfc3339");
 
@@ -34,7 +29,7 @@ local4.* :omstdout:;outfmt
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
-EXPECTED='{ "rfc3164": "Oct  5 01:10:11", "rfc3339": "2017-10-05T01:10:11Z", "rfc3164Neg": "Mar 29 22:49:49", "rfc3339Neg": "1922-03-29T22:49:49Z", "strftime": "2017-10-05", "inv1": "1507165811", "inv2": "1507165811", "inv3": "deadbeef", "str1": "2017-10-05T01:10:11Z", "strinv1": "ABC" }'
+EXPECTED='{ "rfc3164": "Oct  5 01:10:11", "rfc3339": "2017-10-05T01:10:11Z", "rfc3164Neg": "Mar 29 22:49:49", "rfc3339Neg": "1922-03-29T22:49:49Z", "str1": "2017-10-05T01:10:11Z", "strinv1": "ABC" }'
 
 echo "$EXPECTED" | cmp -b rsyslog.out.log
 

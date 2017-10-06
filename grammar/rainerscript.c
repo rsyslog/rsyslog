@@ -2133,8 +2133,18 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		cnfexprEval(func->expr[0], &r[0], usrptr);
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 
-		// TODO: Account for different possible sizes of time_t 32/64 bit.
 		unixtime = var2Number(&r[0], &retval);
+
+		// Make sure that the timestamp we got can fit into
+		// time_t on older systems.
+		if (sizeof(time_t) == sizeof(int)) {
+			if (unixtime < INT_MIN || unixtime > INT_MAX) {
+				DBGPRINTF(
+					"Timestamp value %lld is out of range for this system (time_t is 32bits)!", unixtime
+				);
+				retval = 0;
+			}
+		}
 
 		// We want the string form too so we can return it as the
 		// default if we run into problems parsing the number.

@@ -87,6 +87,10 @@ static const time_t yearInSecs[] = {
 	3944678399, 3976214399, 4007836799, 4039372799, 4070908799,
 	4102444799};
 
+static const char* monthNames[12] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
+
 /* ------------------------------ methods ------------------------------ */
 
 
@@ -994,9 +998,6 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 static int
 formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 {
-	static const char* monthNames[12] =
-				      { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	int iDay;
 	assert(ts != NULL);
 	assert(pBuf != NULL);
@@ -1262,15 +1263,24 @@ timeConvertToUTC(const struct syslogTime *const __restrict__ local,
 /**
  * Format a UNIX timestamp.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
- static int
-formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, size_t pBufMax) {
+static int
+formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, uint pBufMax) {
 	struct tm lt;
 
 	assert(format != NULL);
 	assert(pBuf != NULL);
 
+	// Let's not depend on debug asserts to save the day in the wild!
+	if (format == NULL) {
+		DBGPRINTF("format is NULL!");
+		return -1;
+	}
+	if (pBuf == NULL) {
+		DBGPRINTF("pBuf is NULL!");
+		return -1;
+	}
+
+	// Convert to struct tm
 	if (gmtime_r(&unixtime, &lt) == NULL) {
 		DBGPRINTF("Unexpected error calling gmtime_r().\n");
 		return -1;
@@ -1278,30 +1288,35 @@ formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, size_t
 
 	// Do our conversions
 	if (strcmp(format, "date-rfc3164") == 0) {
-		strftime(pBuf, pBufMax, "%b %e %H:%M:%S", &lt);
-	} else if (strcmp(format, "date-rfc3339") == 0) {
-		strftime(pBuf, pBufMax, "%Y-%m-%dT%H:%M:%S%z", &lt);
-
-		// %z gives +hhmm or -hhmm, when we need +hh:mm or -hh:mm or 'Z'
-		if (strcmp(pBuf + 20, "0000") == 0) {
-			pBuf[19] = 'Z';
-			pBuf[20] = '\0';
-		} else {
-			// Insert colon
-			pBuf[25] = pBuf[24];
-			pBuf[24] = pBuf[23];
-			pBuf[23] = pBuf[22];
-			pBuf[22] = ':';
+		if (pBufMax < 16) {
+			DBGPRINTF("pBufMax is too small! Expected >= 16, got %u", pBufMax);
+			return -1;
 		}
 
-	} else if (strftime(pBuf, pBufMax, format, &lt) == 0) {
-		DBGPRINTF("Error formatting time: %ld with '%s'.\n", unixtime, format);
-		return -1;
+		// Unlikely to run into this situation, but you never know...
+		if (lt.tm_mon < 0 || lt.tm_mon > 11) {
+			DBGPRINTF("lt.tm_mon is out of range. Value: %d\n", lt.tm_mon);
+			return -1;
+		}
+
+		// MMM dd HH:mm:ss
+		sprintf(pBuf, "%s %2d %.2d:%.2d:%.2d",
+			monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
+		);
+	} else if (strcmp(format, "date-rfc3339") == 0) {
+		if (pBufMax < 26) {
+			DBGPRINTF("pBufMax is too small! Expected >= 26, got %u", pBufMax);
+			return -1;
+		}
+
+		// YYYY-MM-DDTHH:mm:ss+00:00
+		sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ",
+			lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
+		);
 	}
 
 	return strlen(pBuf);
 }
-#pragma GCC diagnostic pop
 
 /* queryInterface function
  * rgerhards, 2008-03-05
