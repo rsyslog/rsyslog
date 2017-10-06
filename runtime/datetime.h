@@ -49,7 +49,7 @@ const int bDetectYearAfterTime);
 	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
 	time_t (*syslogTime2time_t)(const struct syslogTime *ts);
 	/* v11, 2017-10-05 */
-	int (*formatUnixTimeFromTime_t)(time_t time, uint secfrac, const char *format, char *pBuf, size_t max);
+	int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, size_t pBufMax);
 ENDinterface(datetime)
 #define datetimeCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* interface changes:

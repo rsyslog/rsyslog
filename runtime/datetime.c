@@ -1261,19 +1261,18 @@ timeConvertToUTC(const struct syslogTime *const __restrict__ local,
 
 /**
  * Format a UNIX timestamp.
- * TODO: Add support for fractional seconds...
  */
-static int
-formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfrac,
-	const char *format, char *pBuf, size_t pBufMax) {
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+ static int
+formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, size_t pBufMax) {
 	struct tm lt;
 
 	assert(format != NULL);
 	assert(pBuf != NULL);
 
-	if (localtime_r(&unixtime, &lt) == NULL) {
-		DBGPRINTF("Unexpected error calling localtime_r().\n");
+	if (gmtime_r(&unixtime, &lt) == NULL) {
+		DBGPRINTF("Unexpected error calling gmtime_r().\n");
 		return -1;
 	}
 
@@ -1296,12 +1295,13 @@ formatUnixTimeFromTime_t(time_t unixtime, __attribute__((__unused__)) uint secfr
 		}
 
 	} else if (strftime(pBuf, pBufMax, format, &lt) == 0) {
-		DBGPRINTF("Error formatting time: %ld with %s.\n", unixtime, format);
+		DBGPRINTF("Error formatting time: %ld with '%s'.\n", unixtime, format);
 		return -1;
 	}
 
 	return strlen(pBuf);
 }
+#pragma GCC diagnostic pop
 
 /* queryInterface function
  * rgerhards, 2008-03-05

@@ -2125,30 +2125,30 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		varFreeMembers(&r[1]);
 		break;
 	case CNFFUNC_FORMAT_TIME: {
-		time_t unixtime;
-		const int res_max = 64;
-		char   result[res_max];
-		char  *formatstr = NULL, *endptr = NULL;
+		long long unixtime;
+		const int resMax = 64;
+		char   result[resMax];
+		char  *formatstr = NULL;
 
 		cnfexprEval(func->expr[0], &r[0], usrptr);
 		cnfexprEval(func->expr[1], &r[1], usrptr);
 
+		// TODO: Account for different possible sizes of time_t 32/64 bit.
+		unixtime = var2Number(&r[0], &retval);
+
+		// We want the string form too so we can return it as the
+		// default if we run into problems parsing the number.
 		str = (char*) var2CString(&r[0], &bMustFree);
 		formatstr = (char*) es_str2cstr(r[1].d.estr, NULL);
-
-		// TODO: Error checking, and account for different
-		//       possible sizes of time_t 32/64 bit.
-		errno = 0;
-		unixtime = (time_t) strtoull(str, &endptr, 10);
 
 		ret->datatype = 'S';
 
 		if (objUse(datetime, CORE_COMPONENT) != RS_RET_OK) {
 			ret->d.estr = es_newStr(0);
 		} else {
-			if (datetime.formatUnixTimeFromTime_t(unixtime, 0, formatstr, result, res_max) == -1) {
-				strncpy(result, str, res_max);
-				result[res_max - 1] = '\0';
+			if (!retval || datetime.formatUnixTimeFromTime_t(unixtime, formatstr, result, resMax) == -1) {
+				strncpy(result, str, resMax);
+				result[resMax - 1] = '\0';
 			}
 			ret->d.estr = es_newStrFromCStr(result, strlen(result));
 		}
