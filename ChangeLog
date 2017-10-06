@@ -35,8 +35,16 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - tls improvement: better error message if certificate file cannot be read
 - omfwd: slightly improved error messages during config parsing
   They now contain config file/line number information where this was missing.
+- ommysql improvements
+  * Return specifc code for unrecoverable errors. This makes retry processing
+    more performant and robust.
+  * Update to utilize native v8 transactional interface. Previously, it used
+    the v7 interface with v8 emulation.
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
+- template/bugfix: invalid template option conflict detection
+  This prevented "option.casesenstive" to be used with the SQL and JSON
+  options.
 - core bugfix: rsyslog aborts if errmsg is generated in early startup
   Note that the segfault can occur only during early startup. Once
   rsyslog has started, everything works reliably. This condition can
