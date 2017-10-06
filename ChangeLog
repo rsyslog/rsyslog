@@ -33,6 +33,8 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - imptcp: include module name in error msg
 - imtcp: include module name in error msg
 - tls improvement: better error message if certificate file cannot be read
+- omfwd: slightly improved error messages during config parsing
+  They now contain config file/line number information where this was missing.
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
 - core bugfix: rsyslog aborts if errmsg is generated in early startup
@@ -63,6 +65,10 @@ Version 8.30.0 [v8-stable] 2017-10-10
   Thanks to github user JPvRiel for a very good error report and
   analysis.
   closes https://github.com/rsyslog/rsyslog/issues/1765
+- kafka bugfix: problem on invalid kafka configuration values
+  omkafka ended up in an endless loop and high cpu.
+  imkafka tried to subscribe to a not connected kafka server.
+  closes https://github.com/rsyslog/rsyslog/issues/1806
 - imudp bugfix: UDP oversize message not properly handled
   When a message larger than supported by the UDP stack is to be sent,
   EMSGSIZE is returned, but not specifically handled. That in turn
