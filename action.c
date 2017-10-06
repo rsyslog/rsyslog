@@ -594,8 +594,8 @@ static uchar *getActStateName(action_t * const pThis, wti_t * const pWti)
 			return (uchar*) "rtry";
 		case ACT_STATE_SUSP:
 			return (uchar*) "susp";
-		case ACT_STATE_COMM:
-			return (uchar*) "comm";
+		case ACT_STATE_DATAFAIL:
+			return (uchar*) "datafail";
 		default:
 			return (uchar*) "ERROR/UNKNWON";
 	}
@@ -609,7 +609,6 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
 	switch(getActionState(pWti, pThis)) {
 		case ACT_STATE_RDY:
 			iRet = RS_RET_OK;
@@ -628,6 +627,9 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 		case ACT_STATE_SUSP:
 			iRet = RS_RET_ACTION_FAILED;
 			break;
+		case ACT_STATE_DATAFAIL:
+			iRet = RS_RET_DATAFAIL;
+			break;
 		default:
 			DBGPRINTF("Invalid action engine state %u, program error\n",
 				  getActionState(pWti, pThis));
@@ -635,6 +637,7 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 			break;
 	}
 
+DBGPRINTF("RRRRRRRR: getReturnCode, state %d, code %d\n", getActionState(pWti, pThis), iRet);
 	RETiRet;
 }
 
@@ -646,8 +649,8 @@ static inline void
 actionSetState(action_t * const pThis, wti_t * const pWti, uint8_t newState)
 {
 	setActionState(pWti, pThis, newState);
-	DBGPRINTF("Action %d transitioned to state: %s\n",
-		  pThis->iActionNbr, getActStateName(pThis, pWti));
+	DBGPRINTF("action[%s] transitioned to state: %s\n",
+		  pThis->pszName, getActStateName(pThis, pWti));
 }
 
 /* Handles the transient commit state. So far, this is
@@ -793,8 +796,8 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 			DBGPRINTF("actionDoRetry: %s check for max retries, iResumeRetryCount "
 				  "%d, iRetries %d\n",
 				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
-			actionSuspend(pThis, pWti);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
+				actionSuspend(pThis, pWti);
 				if(getActionNbrResRtry(pWti, pThis) < 20)
 					incActionNbrResRtry(pWti, pThis);
 			} else {
@@ -878,14 +881,16 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 	}
 
 	if(getActionState(pWti, pThis) == ACT_STATE_RTRY) {
-		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
-			datetime.GetTime(&ttNow);
 		CHKiRet(actionDoRetry(pThis, pWti));
 	}
 
-	if(Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY ||getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
-		DBGPRINTF("actionTryResume: action %p state: %s, next retry (if applicable): %u [now %u]\n",
-			pThis, getActStateName(pThis, pWti), (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
+	if(Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY ||
+		getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
+		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
+			datetime.GetTime(&ttNow);
+		dbgprintf("actionTryResume: action[%s] state: %s, next retry (if applicable): %u [now %u]\n",
+			pThis->pszName, getActStateName(pThis, pWti),
+			(unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
 	}
 
 finalize_it:
@@ -1099,8 +1104,17 @@ handleActionExecResult(action_t *__restrict__ const pThis,
 			actionDisable(pThis);
 			break;
 		case RS_RET_SUSPENDED:
-		default:/* error happened - if it hits us here, we treat it as suspension */
 			actionRetry(pThis, pWti);
+			break;
+		default:/* error happened - if it hits us here, we assume the message cannot
+			 * be processed but an retry makes no sense. Usually, this should be
+			 * return code RS_RET_DATAFAIL. -- rgerhards, 2017-10-06
+			 */
+			LogError(0, ret, "action '%s' (module '%s') "
+				"message lost, could not be processed. Check for "
+				"additional error messages before this one.",
+				pThis->pszName, pThis->pMod->pszName);
+			actionSetState(pThis, pWti, ACT_STATE_DATAFAIL);
 			break;
 	}
 	iRet = getReturnCode(pThis, pWti);
@@ -1146,18 +1160,15 @@ actionCallCommitTransaction(action_t * const pThis,
 {
 	DEFiRet;
 
-	ASSERT(pThis != NULL);
-
-	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, action %s, "
-		  "nMsgs %u\n",
-		  getActStateName(pThis, pWti), pThis->pszName, nparams);
+	DBGPRINTF("entering actionCallCommitTransaction[%s], state: %s, nMsgs %u\n",
+		  pThis->pszName, getActStateName(pThis, pWti), nparams);
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
 		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
 		    iparams, nparams);
-	DBGPRINTF("actionCallCommitTransaction state: %s, action %s "
+	DBGPRINTF("actionCallCommitTransaction[%s] state: %s "
 		"mod commitTransaction returned %d\n",
-		getActStateName(pThis, pWti), pThis->pszName, iRet);
+		pThis->pszName, getActStateName(pThis, pWti), iRet);
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
@@ -1184,7 +1195,7 @@ finalize_it:
 }
 
 
-/* the following functions simulates a potential future new omo callback */
+/* the following function uses the new-style transactional interface */
 static rsRetVal
 doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
 	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
@@ -1214,6 +1225,7 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 		}
 	}
 finalize_it:
+dbgprintf("RRRRRRRR: doTransaction iRet %d\n", iRet);
 	if(iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
 		iRet = RS_RET_OK; /* this is expected for transactional action! */
 	RETiRet;
@@ -1258,6 +1270,8 @@ DBGPRINTF("actionTryCommit[%s] past doTransaction\n", pThis->pszName);
 			default:/* permanent failure of this message - no sense in retrying. This is
 				 * not yet handled (but easy TODO)
 				 */
+				DBGPRINTF("action[%s]: actionTryCommit receveived iRet %d\n",
+					pThis->pszName, iRet);
 				FINALIZE;
 		}
 	}
@@ -1300,10 +1314,10 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 
 	*new_nMsgs = 0;
 	for(unsigned i = 0 ; i < nMsgs ; ++i) {
-		// TODO: get actual param count!
+		setActionResumeInRow(pWti, pThis, 0); // make sure we do not trigger OK-as-SUSPEND handling
 		memcpy(&oneParam, &actParam(wrkrInfo->p.tx.iparams, 1, i, 0), sizeof(oneParam));
 		ret = actionTryCommit(pThis, pWti, &oneParam, 1);
-		dbgprintf("msg %d, iRet %d, content: '%s'\n", i, ret, oneParam.param);
+DBGPRINTF("msg %d, iRet %d, content: '%s'\n", i, ret, oneParam.param);
 		if(ret == RS_RET_SUSPENDED) {
 			memcpy(new_iparams + *new_nMsgs, &oneParam, sizeof(oneParam));
 			++(*new_nMsgs);
@@ -1321,6 +1335,10 @@ static rsRetVal
 actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
+	/* Variables that permit us to override the batch of messages */
+	unsigned nMsgs;
+	actWrkrIParams_t *iparams = NULL;
+	int needfree_iparams = 0; // work-around for clang static analyzer false positive
 	DEFiRet;
 
 	DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
@@ -1351,25 +1369,28 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		FINALIZE;
 	}
 
-	/* OK, we are unhappy. Now let's go message by message in its own transaction.
-	 * We hope to find some "hard" (non-temporary) errors. If so, these messages
-	 * are discarded. Unfortunately, the detection of this requires cooperation
-	 * from the output module, and not all of them are very cooperative.
+	/* check if this was a single-message batch. If it had a datafail error, we
+	 * are done. If it is a multi-message batch, we need to sort out the individual
+	 * message states.
 	 */
-	/* Variables that permit us to override the batch of messages */
-	unsigned nMsgs;
-	actWrkrIParams_t *iparams;
-
-	DBGPRINTF("actionCommit[%s]: somewhat unhappy, full batch of %d msgs returned "
-		"status %d. Trying messages as individual actions.\n",
-		pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
 	if(wrkrInfo->p.tx.currIParam == 1) {
-		nMsgs = wrkrInfo->p.tx.currIParam;
+		needfree_iparams = 0;
 		iparams = wrkrInfo->p.tx.iparams;
+		nMsgs = wrkrInfo->p.tx.currIParam;
+		if(iRet == RS_RET_DATAFAIL) {
+			FINALIZE;
+		}
 	} else {
+		DBGPRINTF("actionCommit[%s]: somewhat unhappy, full batch of %d msgs returned "
+			"status %d. Trying messages as individual actions.\n",
+			pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
 		CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * wrkrInfo->p.tx.currIParam));
-		/* only multi-msg batches make sense to try msg-by-msg ;-) */
+		needfree_iparams = 1;
 		actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+	}
+
+	if(nMsgs == 0) {
+		ABORT_FINALIZE(RS_RET_OK); // here, we consider everyting OK
 	}
 
 	/* We still have some messages with suspend error. So now let's do our
@@ -1400,13 +1421,17 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 			  iRet == RS_RET_ACTION_FAILED) {
 			bDone = 1;
 		}
-		if(getActionState(pWti, pThis) == ACT_STATE_RDY ||
+		if(getActionState(pWti, pThis) == ACT_STATE_RDY  ||
 		   getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 			bDone = 1;
 		}
 	} while(!bDone);
 finalize_it:
-	pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam = 0; /* reset to beginning */
+	DBGPRINTF("actionCommit[%s]: done, iRet %d\n", pThis->pszName, iRet);
+	if(needfree_iparams) {
+		free(iparams);
+	}
+	wrkrInfo->p.tx.currIParam = 0; /* reset to beginning */
 	RETiRet;
 }
 
