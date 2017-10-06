@@ -787,28 +787,28 @@ static rsRetVal changeToNs(instanceData *pData)
 		/* keep file descriptor of original network namespace */
 		pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
 		if (pData->originalNamespace < 0) {
-			LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
 		/* build network namespace path */
 		if (asprintf(&nsPath, "/var/run/netns/%s", pData->networkNamespace) == -1) {
-			LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 
 		/* keep file descriptor of destination network namespace */
 		destinationNs = open(nsPath, 0);
 		if (destinationNs < 0) {
-			LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'\n",
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'",
 					pData->networkNamespace);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
 		/* actually change in the destination network namespace */
 		if((iErr = (setns(destinationNs, CLONE_NEWNET))) != 0) {
-			dbgprintf("could not change to namespace '%s': %d%s\n",
-				  pData->networkNamespace, iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_IO_ERROR, "could not change to namespace '%s': %s",
+				  pData->networkNamespace, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 		close(destinationNs);
@@ -838,8 +838,8 @@ static rsRetVal returnToOriginalNs(instanceData *pData)
 	if(pData->networkNamespace && pData->originalNamespace >= 0) {
 		/* actually change to the original network namespace */
 		if((iErr = (setns(pData->originalNamespace, CLONE_NEWNET))) != 0) {
-			dbgprintf("could not return to original namespace: %d%s\n",
-				  iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_IO_ERROR, "could not return to original namespace: %s",
+				  gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
@@ -877,8 +877,8 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		hints.ai_socktype = SOCK_DGRAM;
 		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
 			LogError(0, RS_RET_SUSPENDED,
-				"omfwd: could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				pData->target, pData->port, iErr, gai_strerror(iErr));
+				"omfwd: could not get addrinfo for hostname '%s':'%s': %s",
+				pData->target, pData->port, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		DBGPRINTF("%s found, resuming.\n", pData->target);
@@ -1252,7 +1252,7 @@ CODESTARTnewActInst
 			free(cstr);
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR,
-				"omfwd: program error, non-handled parameter '%s'\n",
+				"omfwd: program error, non-handled parameter '%s'",
 				actpblk.descr[i].name);
 		}
 	}
@@ -1400,7 +1400,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->port = MALLOC(i + 1);
 		if(pData->port == NULL) {
 			LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
-				 "using default port, results may not be what you intend\n");
+				 "using default port, results may not be what you intend");
 			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
 			memcpy(pData->port, tmp, i);
