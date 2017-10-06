@@ -171,6 +171,20 @@ The following parameters can be set:
   syslogtag. In those cases, the programname is truncated at the
   first slash. If this setting is changed to "on", slashes are
   permitted and will not terminate programname parsing.
+  
+  - **parser.permitSlashInProgramName** [on/off] available in 8.25.0+
+
+  **Default:** off
+
+  This controls whether slashes in the static part of the tag are 
+  permitted or not. If this setting is off, a value of 
+  "app/foo[1234]" in the tag will result in a programname of "app". 
+  If an application stores an absolute path name like 
+  "/app/foo[1234]", the programname property will become empty ("").
+  If you need to actually store slashes as part of the programname,
+  this setting should be changed to "on" to permit this. Then, a 
+  syslogtag of "/app/foo[1234]" will result in programname being
+  "/app/foo".
 
 - **senders.keepTrack** [on/off] available 8.17.0+
 

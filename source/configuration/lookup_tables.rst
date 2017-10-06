@@ -53,7 +53,7 @@ Note that index integer numbers are represented by unsigned 32 bits.
 Lookup Table File Format
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Lookup table files contain a single JSON object. This object contains of a header and a table part.
+Lookup table files contain a single JSON object. This object consists of a header and a table part.
 
 **Header**
 
@@ -89,10 +89,9 @@ This is a sample of how an ip-to-office mapping may look like:
         {"index" : "10.0.2.3", "value" : "B" }]}
 
 				
-Note: In the example above, if a different IP comes in, the value "unk" is returend thanks to the nomatch parameter in the first line.
+Note: In the example above, if a different IP comes in, the value "unk" is returned thanks to the nomatch parameter in the first line.
 
-Lookup tables can be access via the ``lookup()`` built-in function. Common usage pattern is to set a local variable to
-the lookup result and later use that variable in templates.
+Lookup tables can be accessed via the ``lookup()`` built-in function. A common usage pattern is to set a local variable to the lookup result and later use that variable in templates.
 
 
 

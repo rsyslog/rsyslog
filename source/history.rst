@@ -66,7 +66,7 @@ want to put on users not actually requiring it). Search the file
 syslogd.c and search for "IHE" - you will find easy and precise
 instructions on what you need to change (it's just one line of code!).
 Please note that RFC 3195/COOKED supports 1K message sizes only. It'll
-probably support longer messages in the future, but it is our believe
+probably support longer messages in the future, but it is our belief
 that using larger messages with current RFC 3195 is a violation of the
 standard.
 
