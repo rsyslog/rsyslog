@@ -2000,7 +2000,6 @@ tplProcessCnf(struct cnfobj *o)
 	if(o_sql) ++numopts;
 	if(o_stdsql) ++numopts;
 	if(o_json) ++numopts;
-	if(o_casesensitive) ++numopts;
 	if(numopts > 1) {
 		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
 			"options of sql, stdsql or json specified", name);
