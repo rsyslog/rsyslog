@@ -448,7 +448,7 @@ The equivalent string template looks like this:
 Note that the template string itself must be on a single line.
 
 Standard Template for writing to the MySQL database
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
