@@ -1006,7 +1006,7 @@ BEGINcommitTransaction
 CODESTARTcommitTransaction
 	CHKiRet(doTryResume(pWrkrData));
 
-	dbgprintf(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
+	DBGPRINTF(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
 		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	for(i = 0 ; i < nParams ; ++i) {
