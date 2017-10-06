@@ -106,7 +106,7 @@ comma-delimited list of values as shown here:
    must be correct. Otherwise, some errors may occur or some partitions
    may never receive data.
 
-.. function::  partitions.usedFixed [positiveInteger]
+.. function::  partitions.useFixed [positiveInteger]
 
    *Default: none*
 
