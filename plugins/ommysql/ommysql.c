@@ -255,6 +255,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
 		CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
 		if(mysql_query(pWrkrData->hmysql, (char*)psz)) { /* re-try insert */
 			/* we failed, giving up for now */
+			DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
 			reportDBError(pWrkrData, 0);
 			closeMySQL(pWrkrData); /* free ressources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -279,26 +280,30 @@ ENDtryResume
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
-finalize_it:
+	// NOTHING TO DO IN HERE
 ENDbeginTransaction
 
-BEGINdoAction
-CODESTARTdoAction
-	dbgprintf("\n");
-	CHKiRet(writeMySQL(pWrkrData, ppString[0]));
-	iRet = RS_RET_DEFER_COMMIT;
-finalize_it:
-ENDdoAction
+BEGINcommitTransaction
+CODESTARTcommitTransaction
+	DBGPRINTF("ommysql: commitTransaction\n");
+	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
 
-BEGINendTransaction
-CODESTARTendTransaction
-	if(mysql_commit(pWrkrData->hmysql) != 0)	{	
-		dbgprintf("mysql server error: transaction not committed\n");		
+	for(unsigned i = 0 ; i < nParams ; ++i) {
+		iRet = writeMySQL(pWrkrData, actParam(pParams, 1, i, 0).param);
+		if(iRet != RS_RET_OK
+			&& iRet != RS_RET_DEFER_COMMIT
+			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
+			FINALIZE;
+		}
+	}
+
+	if(mysql_commit(pWrkrData->hmysql) != 0) {
+		DBGPRINTF("ommysql: server error: transaction not committed\n");
+		reportDBError(pWrkrData, 0);
 		iRet = RS_RET_SUSPENDED;
 	}
-ENDendTransaction
-
+finalize_it:
+ENDcommitTransaction
 
 static inline void
 setInstParamDefaults(instanceData *pData)
@@ -453,10 +458,9 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
