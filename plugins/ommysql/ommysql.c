@@ -35,6 +35,7 @@
 #include <time.h>
 #include <netdb.h>
 #include <mysql.h>
+#include <mysqld_error.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -238,7 +239,7 @@ finalize_it:
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
+static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz)
 {
 	DEFiRet;
 
@@ -250,7 +251,12 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
 
 	/* try insert */
 	if(mysql_query(pWrkrData->hmysql, (char*)psz)) {
-		/* error occured, try to re-init connection and retry */
+		if(mysql_errno(pWrkrData->hmysql) == ER_PARSE_ERROR) {
+			reportDBError(pWrkrData, 0);
+			LogError(0, RS_RET_DATAFAIL, "The unparsable statement was: %s", psz);
+			ABORT_FINALIZE(RS_RET_DATAFAIL);
+		}
+		/* potentially recoverable error occured, try to re-init connection and retry */
 		closeMySQL(pWrkrData); /* close the current handle */
 		CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
 		if(mysql_query(pWrkrData->hmysql, (char*)psz)) { /* re-try insert */
