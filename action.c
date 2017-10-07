@@ -1135,21 +1135,23 @@ actionCallDoAction(action_t *__restrict__ const pThis,
 /* call the commitTransaction output plugin entry point */
 static rsRetVal
 actionCallCommitTransaction(action_t * const pThis,
-	const actWrkrInfo_t *const wrkrInfo,
-	wti_t *const pWti)
+	wti_t *const pWti,
+	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 
-	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, actionNbr %d, "
+	DBGPRINTF("entering actionCallCommitTransaction(), state: %s, action %s, "
 		  "nMsgs %u\n",
-		  getActStateName(pThis, pWti), pThis->iActionNbr,
-		  wrkrInfo->p.tx.currIParam);
+		  getActStateName(pThis, pWti), pThis->pszName, nparams);
 
 	iRet = pThis->pMod->mod.om.commitTransaction(
 		    pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData,
-		    wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
+		    iparams, nparams);
+	DBGPRINTF("actionCallCommitTransaction state: %s, action %s "
+		"mod commitTransaction returned %d\n",
+		getActStateName(pThis, pWti), pThis->pszName, iRet);
 	iRet = handleActionExecResult(pThis, pWti, iRet);
 	RETiRet;
 }
@@ -1178,7 +1180,8 @@ finalize_it:
 
 /* the following functions simulates a potential future new omo callback */
 static rsRetVal
-doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
+doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
+	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
 {
 	actWrkrInfo_t *wrkrInfo;
 	int i;
@@ -1187,16 +1190,16 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
 		DBGPRINTF("doTransaction: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);
-		CHKiRet(actionCallCommitTransaction(pThis, wrkrInfo, pWti));
+		CHKiRet(actionCallCommitTransaction(pThis, pWti, iparams, nparams));
 	} else { /* note: this branch is for compatibility with old TX modules */
-		DBGPRINTF("doTransaction: action %d, currIParam %d\n",
-			   pThis->iActionNbr, wrkrInfo->p.tx.currIParam);
+		DBGPRINTF("doTransaction: action '%s', currIParam %d\n",
+			   pThis->pszName, wrkrInfo->p.tx.currIParam);
 		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
 			/* Note: we provide the message's base iparam - actionProcessMessage()
 			 * uses this as *base* address.
 			 */
 			iRet = actionProcessMessage(pThis,
-				&actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0), pWti);
+				&actParam(iparams, pThis->iNumTpls, i, 0), pWti);
 			if(iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED &&
 			   iRet != RS_RET_OK)
 				--i; /* we need to re-submit */
@@ -1213,13 +1216,16 @@ finalize_it:
 
 /* Commit try committing (do not handle retry processing and such) */
 static rsRetVal
-actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
+actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
+	actWrkrIParams_t *__restrict__ const iparams, const int nparams)
 {
 	DEFiRet;
 
+	DBGPRINTF("actionTryCommit[%s] enter\n", pThis->pszName);
 	CHKiRet(actionPrepare(pThis, pWti));
 
-	CHKiRet(doTransaction(pThis, pWti));
+	CHKiRet(doTransaction(pThis, pWti, iparams, nparams));
+DBGPRINTF("actionTryCommit[%s] past doTransaction\n", pThis->pszName);
 
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
@@ -1252,6 +1258,7 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
+DBGPRINTF("actionTryCommit[%s] exit %d\n", pThis->pszName, iRet);
 	RETiRet;
 }
 
@@ -1275,6 +1282,30 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, wti_t *__restrict__ con
 }
 
 
+static rsRetVal
+actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti,
+	actWrkrIParams_t *const new_iparams, unsigned *new_nMsgs)
+{
+	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
+	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
+	actWrkrIParams_t oneParam;
+	rsRetVal ret;
+	DEFiRet;
+
+	*new_nMsgs = 0;
+	for(unsigned i = 0 ; i < nMsgs ; ++i) {
+		// TODO: get actual param count!
+		memcpy(&oneParam, &actParam(wrkrInfo->p.tx.iparams, 1, i, 0), sizeof(oneParam));
+		ret = actionTryCommit(pThis, pWti, &oneParam, 1);
+		dbgprintf("msg %d, iRet %d, content: '%s'\n", i, ret, oneParam.param);
+		if(ret == RS_RET_SUSPENDED) {
+			memcpy(new_iparams + *new_nMsgs, &oneParam, sizeof(oneParam));
+			++(*new_nMsgs);
+		}
+	}
+	RETiRet;
+}
+
 /* Note: we currently need to return an iRet, as this is used in 
  * direct mode. TODO: However, it may be worth further investigating this,
  * as it looks like there is no ultimate consumer of this code.
@@ -1283,38 +1314,74 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, wti_t *__restrict__ con
 static rsRetVal
 actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
-	sbool bDone;
+	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	DEFiRet;
 
+	DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
 	if(!pThis->isTransactional ||
 	   pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0 ||
 	   getActionState(pWti, pThis) == ACT_STATE_SUSP
 	   ) {
 		FINALIZE;
 	}
+	DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
 
-	/* even more TODO:
-		This is the place where retry processing needs to go in. If the action
-		permanently fails, we should - as a new feature - add the capability to
-		write an error file. This is already done be omelasticsearch, and IMHO
-		pretty useful.
-		For the time being, I do NOT implement all of this (not even retry!)
-		as I want to get the rest of the engine to SISD (non-SIMD ;)) so that
-		I know any potential suprises and complications that arise out of this.
-		When this is done, I can come back here and complete this work. Obviously,
-		many features do not work in the mean time (but it is not planned to release
-		any of these partial implementations).
-		rgerhards, 2013-11-04
+/* even more TODO:
+	This is the place where retry processing needs to go in. If the action
+	permanently fails, we should - as a new feature - add the capability to
+	write an error file. This is already done be omelasticsearch, and IMHO
+	pretty useful.
+	rgerhards, 2013-11-04
+ */
+ 	/* we now do one try at commiting the whole batch. Usually, this will
+	 * succeed. If so, we are happy and done. If not, we dig into the details
+	 * of finding out if we have a non-temporary error and try to handle this
+	 * as well as retry processing. Due to this logic we do a bit more retries
+	 * than configured (if temporary failure), but this unavoidable and should
+	 * do no real harm. - rgerhards, 2017-10-06
 	 */
-	bDone = 0;
+	iRet = actionTryCommit(pThis, pWti, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
+	if(iRet == RS_RET_OK) {
+		FINALIZE;
+	}
+
+	/* OK, we are unhappy. Now let's go message by message in its own transaction.
+	 * We hope to find some "hard" (non-temporary) errors. If so, these messages
+	 * are discarded. Unfortunately, the detection of this requires cooperation
+	 * from the output module, and not all of them are very cooperative.
+	 */
+	/* Variables that permit us to override the batch of messages */
+	unsigned nMsgs;
+	actWrkrIParams_t *iparams;
+
+	DBGPRINTF("actionCommit[%s]: somewhat unhappy, full batch of %d msgs returned "
+		"status %d. Trying messages as individual actions.\n",
+		pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
+	if(wrkrInfo->p.tx.currIParam == 1) {
+		nMsgs = wrkrInfo->p.tx.currIParam;
+		iparams = wrkrInfo->p.tx.iparams;
+	} else {
+		CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * wrkrInfo->p.tx.currIParam));
+		/* only multi-msg batches make sense to try msg-by-msg ;-) */
+		actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+	}
+
+	/* We still have some messages with suspend error. So now let's do our
+	 * "regular" retry and suspend processing.
+	 */
+	DBGPRINTF("actionCommit[%s]: unhappy, we still have %d uncommited messages.\n",
+		pThis->pszName, nMsgs);
+	int bDone = 0;
 	do {
-		iRet = actionTryCommit(pThis, pWti);
-		DBGPRINTF("actionCommit, action %d, in retry loop, iRet %d\n",
-			pThis->iActionNbr, iRet);
+		iRet = actionTryCommit(pThis, pWti, iparams, nMsgs);
+		DBGPRINTF("actionCommit[%s]: in retry loop, iRet %d\n",
+			pThis->pszName, iRet);
 		if(iRet == RS_RET_FORCE_TERM) {
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		} else if(iRet == RS_RET_SUSPENDED) {
 			iRet = actionDoRetry(pThis, pWti);
+			DBGPRINTF("actionCommit[%s]: actionDoRetry returned %d\n",
+				pThis->pszName, iRet);
 			if(iRet == RS_RET_FORCE_TERM) {
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			} else if(iRet != RS_RET_OK) {
