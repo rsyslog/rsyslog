@@ -45,7 +45,6 @@ typedef struct actWrkrInfo {
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct {
 		unsigned actState : 3;
-		unsigned bJustResumed : 1;
 	} flags;
 	union {
 		struct {
@@ -105,9 +104,6 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 #define getActionState(pWti, pAction) (((uint8_t) (pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState))
 #define setActionState(pWti, pAction, newState) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.actState = \
 (newState))
-#define getActionJustResumed(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed))
-#define setActionJustResumed(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].flags.bJustResumed = \
-(val))
 #define getActionResumeInRow(pWti, pAction) (((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow))
 #define setActionResumeInRow(pWti, pAction, val) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow = (val))
 #define incActionResumeInRow(pWti, pAction) ((pWti)->actWrkrInfo[(pAction)->iActionNbr].uResumeOKinRow++)

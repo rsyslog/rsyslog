@@ -660,12 +660,38 @@ static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 }
 
 
+/* we need to defer setting the action's own bReportSuspension state until
+ * after the full config has been processed. So the most simple case to do
+ * that is here. It's not a performance problem, as it happens infrequently.
+ * it's not a threading race problem, as always the same value will be written.
+ * As we need to do this in several places, we have moved the code to its own
+ * helper function.
+ */
+static void
+setSuspendMessageConfVars(action_t *__restrict__ const pThis)
+{
+	if(pThis->bReportSuspension == -1)
+		pThis->bReportSuspension = bActionReportSuspension;
+	if(pThis->bReportSuspensionCont == -1) {
+		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
+		if(pThis->bReportSuspensionCont == -1)
+			pThis->bReportSuspensionCont = 1;
+	}
+}
+
+
 /* set action to "rtry" state.
  * rgerhards, 2007-08-02
  */
 static void actionRetry(action_t * const pThis, wti_t * const pWti)
 {
+	setSuspendMessageConfVars(pThis);
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
+	LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+	      "action '%s' suspended (module '%s'), retry %d. There should "
+	      "be messages before this one giving the reason for suspension.",
+	      pThis->pszName, pThis->pMod->pszName,
+	      getActionNbrResRtry(pWti, pThis));
 	incActionResumeInRow(pWti, pThis);
 }
 
@@ -684,18 +710,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	int suspendDuration;
 	char timebuf[32];
 
-	/* we need to defer setting the action's own bReportSuspension state until
-	 * after the full config has been processed. So the most simple case to do
-	 * that is here. It's not a performance problem, as it happens infrequently.
-	 * it's not a threading race problem, as always the same value will be written.
-	 */
-	if(pThis->bReportSuspension == -1)
-		pThis->bReportSuspension = bActionReportSuspension;
-	if(pThis->bReportSuspensionCont == -1) {
-		pThis->bReportSuspensionCont = bActionReportSuspensionCont;
-		if(pThis->bReportSuspensionCont == -1)
-			pThis->bReportSuspension = 1;
-	}
+	setSuspendMessageConfVars(pThis);
 
 	/* note: we can NOT use a cached timestamp, as time may have evolved
 	 * since caching, and this would break logic (and it actually did so!)
@@ -714,8 +729,10 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 		ctime_r(&pThis->ttResumeRtry, timebuf);
 		timebuf[strlen(timebuf)-1] = '\0'; /* strip LF */
 		errmsg.LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-			      "action '%s' suspended (module '%s'), next retry is %s",
-			      pThis->pszName, pThis->pMod->pszName, timebuf);
+			      "action '%s' suspended (module '%s'), next retry is %s, retry nbr %d. "
+			      "There should be messages before this one giving the reason for suspension.",
+			      pThis->pszName, pThis->pMod->pszName, timebuf,
+			      getActionNbrResRtry(pWti, pThis));
 	}
 	DBGPRINTF("action '%s' suspended, earliest retry=%lld (now %lld), iNbrResRtry %d, "
 		  "duration %d\n",
@@ -770,15 +787,14 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
 			}
-			setActionJustResumed(pWti, pThis, 1);
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
 			DBGPRINTF("actionDoRetry: %s check for max retries, iResumeRetryCount "
 				  "%d, iRetries %d\n",
 				  pThis->pszName, pThis->iResumeRetryCount, iRetries);
+			actionSuspend(pThis, pWti);
 			if((pThis->iResumeRetryCount != -1 && iRetries >= pThis->iResumeRetryCount)) {
-				actionSuspend(pThis, pWti);
 				if(getActionNbrResRtry(pWti, pThis) < 20)
 					incActionNbrResRtry(pWti, pThis);
 			} else {
@@ -1057,16 +1073,6 @@ static void
 actionSetActionWorked(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 {
 	setActionResumeInRow(pWti, pThis, 0);
-
-	if(getActionJustResumed(pWti, pThis)) {
-		/* OK, we *really* could resume, so tell user! */
-		if(pThis->bReportSuspension) {
-			errmsg.LogMsg(0, RS_RET_RESUMED, LOG_INFO, "action '%s' "
-				      "resumed (module '%s')",
-				      pThis->pszName, pThis->pMod->pszName);
-		}
-		setActionJustResumed(pWti, pThis, 0);
-	}
 }
 
 static rsRetVal
