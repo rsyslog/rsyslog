@@ -167,7 +167,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pWrkrData->hmysql == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain MySQL handle");
+		LogError(0, NO_ERRCODE, "ommysql: unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
 		uMySQLErrno = mysql_errno(pWrkrData->hmysql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uMySQLErrno,
@@ -176,7 +176,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
 			pWrkrData->uLastMySQLErrno = uMySQLErrno;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "ommysql: %s", errMsg);
 		}
 	}
 		
@@ -227,7 +227,11 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		mysql_autocommit(pWrkrData->hmysql, 0);
+		if(mysql_autocommit(pWrkrData->hmysql, 0)) {
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommysql: activating autocommit failed, "
+				"some data may be duplicated\n");
+			reportDBError(pWrkrData, 0);
+		}
 	}
 
 finalize_it:
@@ -246,9 +250,9 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
 	/* see if we are ready to proceed */
 	if(pWrkrData->hmysql == NULL) {
 		CHKiRet(initMySQL(pWrkrData, 0));
-		
 	}
 
+DBGPRINTF("ommysql: about to write: '%s'\n", psz);
 	/* try insert */
 	if(mysql_query(pWrkrData->hmysql, (char*)psz)) {
 		if(mysql_errno(pWrkrData->hmysql) == ER_PARSE_ERROR) {
@@ -306,8 +310,9 @@ CODESTARTcommitTransaction
 	if(mysql_commit(pWrkrData->hmysql) != 0) {
 		DBGPRINTF("ommysql: server error: transaction not committed\n");
 		reportDBError(pWrkrData, 0);
-		iRet = RS_RET_SUSPENDED;
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
+	DBGPRINTF("ommysql: transaction committed\n");
 finalize_it:
 ENDcommitTransaction
 
