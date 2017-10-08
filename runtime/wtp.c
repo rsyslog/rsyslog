@@ -505,11 +505,6 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
-	DBGPRINTF("%s: high activity - starting %d additional worker thread(s), "
-		"num workers currently %d.",
-		wtpGetDbgHdr(pThis), nMissing,
-		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd,
-			&pThis->mutCurNumWrkThrd) );
 	if(nMissing > 0) {
 		if(ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
 			LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
