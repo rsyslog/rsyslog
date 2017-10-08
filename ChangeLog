@@ -38,6 +38,7 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - ommysql improvements
   * Return specifc code for unrecoverable errors. This makes retry processing
     more performant and robust.
+  * error messages improved
   * Update to utilize native v8 transactional interface. Previously, it used
     the v7 interface with v8 emulation.
 - imtcp bugfix: parameter priorityString was ignored
