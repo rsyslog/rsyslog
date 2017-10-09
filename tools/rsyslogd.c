@@ -1738,7 +1738,7 @@ mainloop(void)
 				child = waitpid(-1, NULL, WNOHANG);
 				DBGPRINTF("rsyslogd: mainloop waitpid (with-no-hang) returned %u\n", (unsigned) child);
 				if (child != -1 && child != 0) {
-					errmsg.LogError(0, RS_RET_OK, "Child %d has terminated, reaped "
+					LogMsg(0, RS_RET_OK, LOG_INFO, "Child %d has terminated, reaped "
 						"by main-loop.", (unsigned) child);
 				}
 			} while(child > 0);
