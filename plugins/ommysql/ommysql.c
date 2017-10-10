@@ -252,12 +252,18 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
 		CHKiRet(initMySQL(pWrkrData, 0));
 	}
 
-DBGPRINTF("ommysql: about to write: '%s'\n", psz);
 	/* try insert */
 	if(mysql_query(pWrkrData->hmysql, (char*)psz)) {
-		if(mysql_errno(pWrkrData->hmysql) == ER_PARSE_ERROR) {
+		const int mysql_err = mysql_errno(pWrkrData->hmysql);
+		/* We assume server error codes are non-recoverable, mainly data errors.
+		 * This also means we need to differentiate between client and server error
+		 * codes. Unfortunately, the API does not provide a specified function for
+		 * this. Howerver, error codes 2000..2999 are currently client error codes.
+		 * So we use this as guideline.
+		 */
+		if(mysql_err < 2000 || mysql_err > 2999) {
 			reportDBError(pWrkrData, 0);
-			LogError(0, RS_RET_DATAFAIL, "The unparsable statement was: %s", psz);
+			LogError(0, RS_RET_DATAFAIL, "The error statement was: %s", psz);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
 		/* potentially recoverable error occured, try to re-init connection and retry */
@@ -303,6 +309,10 @@ CODESTARTcommitTransaction
 		if(iRet != RS_RET_OK
 			&& iRet != RS_RET_DEFER_COMMIT
 			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
+			if(mysql_rollback(pWrkrData->hmysql) != 0) {
+				DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
+			}
+			closeMySQL(pWrkrData);
 			FINALIZE;
 		}
 	}
