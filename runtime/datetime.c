@@ -1264,21 +1264,13 @@ timeConvertToUTC(const struct syslogTime *const __restrict__ local,
  * Format a UNIX timestamp.
  */
 static int
-formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, uint pBufMax) {
+formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf,
+	__attribute__((unused)) uint pBufMax) {
+
 	struct tm lt;
 
 	assert(format != NULL);
 	assert(pBuf != NULL);
-
-	// Let's not depend on debug asserts to save the day in the wild!
-	if (format == NULL) {
-		DBGPRINTF("format is NULL!");
-		return -1;
-	}
-	if (pBuf == NULL) {
-		DBGPRINTF("pBuf is NULL!");
-		return -1;
-	}
 
 	// Convert to struct tm
 	if (gmtime_r(&unixtime, &lt) == NULL) {
@@ -1288,10 +1280,7 @@ formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, uint p
 
 	// Do our conversions
 	if (strcmp(format, "date-rfc3164") == 0) {
-		if (pBufMax < 16) {
-			DBGPRINTF("pBufMax is too small! Expected >= 16, got %u", pBufMax);
-			return -1;
-		}
+		assert(pBufMax >= 16);
 
 		// Unlikely to run into this situation, but you never know...
 		if (lt.tm_mon < 0 || lt.tm_mon > 11) {
@@ -1304,10 +1293,7 @@ formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf, uint p
 			monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
 		);
 	} else if (strcmp(format, "date-rfc3339") == 0) {
-		if (pBufMax < 26) {
-			DBGPRINTF("pBufMax is too small! Expected >= 26, got %u", pBufMax);
-			return -1;
-		}
+		assert(pBufMax >= 26);
 
 		// YYYY-MM-DDTHH:mm:ss+00:00
 		sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ",

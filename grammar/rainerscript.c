@@ -52,6 +52,7 @@
 #include "msg.h"
 #include "wti.h"
 #include "unicode-helper.h"
+#include "errmsg.h"
 
 #if !defined(_AIX)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -2139,8 +2140,9 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		// time_t on older systems.
 		if (sizeof(time_t) == sizeof(int)) {
 			if (unixtime < INT_MIN || unixtime > INT_MAX) {
-				DBGPRINTF(
-					"Timestamp value %lld is out of range for this system (time_t is 32bits)!", unixtime
+				LogMsg(
+					0, RS_RET_VAL_OUT_OF_RANGE, LOG_WARNING, 
+					"Timestamp value %lld is out of range for this system (time_t is 32bits)!\n", unixtime
 				);
 				retval = 0;
 			}
