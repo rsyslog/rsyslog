@@ -51,7 +51,6 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
-	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
