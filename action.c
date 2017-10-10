@@ -63,7 +63,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -637,7 +637,6 @@ static rsRetVal getReturnCode(action_t * const pThis, wti_t * const pWti)
 			break;
 	}
 
-DBGPRINTF("RRRRRRRR: getReturnCode, state %d, code %d\n", getActionState(pWti, pThis), iRet);
 	RETiRet;
 }
 
@@ -934,44 +933,6 @@ finalize_it:
 }
 
 
-#if 0 // TODO: remove?
-/* debug-print the contents of an action object
- * rgerhards, 2007-08-02
- */
-static rsRetVal actionDbgPrint(action_t *pThis)
-{
-	DEFiRet;
-	char *sz;
-
-	dbgprintf("%s: ", module.GetStateName(pThis->pMod));
-	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	dbgprintf("\n");
-	dbgprintf("\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
-	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
-#if 0 // do we need this ???
-	if(getActionState(pWti, pThis) == ACT_STATE_SUSP) {
-		dbgprintf("\tresume next retry: %u, number retries: %d",
-			  (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
-	}
-#endif
-	dbgprintf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
-	if(pThis->submitToActQ == doSubmitToActionQComplexBatch) {
-			sz = "slow, but feature-rich";
-	} else if(pThis->submitToActQ == doSubmitToActionQNotAllMarkBatch) {
-			sz = "fast, but supports partial mark messages";
-	} else if(pThis->submitToActQ == doSubmitToActionQBatch) {
-			sz = "firehose (fastest)";
-	} else {
-			sz = "unknown (need to update debug display?)";
-	}
-	dbgprintf("\tsubmission mode: %s\n", sz);
-	dbgprintf("\n");
-
-	RETiRet;
-}
-#endif
-
-
 /* prepare the calling parameters for doAction()
  * rgerhards, 2009-05-07
  */
@@ -1225,7 +1186,6 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 		}
 	}
 finalize_it:
-dbgprintf("RRRRRRRR: doTransaction iRet %d\n", iRet);
 	if(iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED)
 		iRet = RS_RET_OK; /* this is expected for transactional action! */
 	RETiRet;
