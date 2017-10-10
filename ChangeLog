@@ -41,6 +41,21 @@ Version 8.30.0 [v8-stable] 2017-10-10
   * error messages improved
   * Update to utilize native v8 transactional interface. Previously, it used
     the v7 interface with v8 emulation.
+  * treat server and client-generated messages differently
+    Server-generated error messages are considered non-recoverable, while
+    client generated once point into connection problems (which simply can
+    be retried). This is part of the improvements towards better
+    message-induced errors. Previous commits did only handle SQL parsing
+    errors, now we aim to address all of the message-induced error. We assume
+    that all server-generated errors are such - mysql API unfortunately does
+    not provide a clear indication of what type if error this is and it is
+    out of question to check for hundereds of error codes.
+    closes https://github.com/rsyslog/rsyslog/issues/1830
+- ommysql bugfix: do not duplicate entries on failed transaction
+  If a multi-message batch contains data errors, messages may be
+  duplicated as connection close is implicit commit (not rollback).
+  This patch introduces a specific rollback request in those cases.
+  closes https://github.com/rsyslog/rsyslog/issues/1829
 - imtcp bugfix: parameter priorityString was ignored
   defaults were always used
 - template/bugfix: invalid template option conflict detection
