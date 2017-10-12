@@ -61,6 +61,17 @@ Version 8.30.0 [v8-stable] 2017-10-10
 - template/bugfix: invalid template option conflict detection
   This prevented "option.casesenstive" to be used with the SQL and JSON
   options.
+- core/ratelimit bugfix: race can lead to segfault
+  There was a race in iminternalAddMsg(), where the mutex is
+  released and after that the passed message object is accessed.
+  If the mainloop iterates in between, the msg may have already
+  been deleted by this time, resulting in a segfault.
+  Most importantly, there is no need to release the mutex lock
+  early, as suggested by current code. Inside mainloop the mutex
+  is acquired when it is time to do so, so at worst we'll have a
+  very slight wait there (which really does not matter at all).
+  This only happens if a large number of internal messages are emitted.
+  closes https://github.com/rsyslog/rsyslog/issues/1828
 - core bugfix: rsyslog aborts if errmsg is generated in early startup
   Note that the segfault can occur only during early startup. Once
   rsyslog has started, everything works reliably. This condition can
