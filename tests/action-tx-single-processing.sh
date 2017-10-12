@@ -4,7 +4,7 @@ mysql --user=rsyslog --password=testbench < testsuites/mysql-truncate.sql
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '
 $ModLoad ../plugins/ommysql/.libs/ommysql
-global(internalmsg.ratelimit.burst="30")
+global(errormessagestostderr.maxnumber="50")
 
 template(type="string" name="tpl" string="insert into SystemEvents (Message, Facility) values (\"%msg%\", %$!facility%)" option.sql="on")
 template(type="string" name="tpl2" string="%$.num%|%$!facility%|insert into SystemEvents (Message, Facility) values (\"%msg%\", %$!facility%)\n" option.sql="on")
