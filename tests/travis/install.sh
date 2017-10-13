@@ -35,3 +35,15 @@ if [ "$CC" == "clang" ]; then export NO_VALGRIND="--without-valgrind-testbench";
 if [ "$CC" == "clang" ]; then sudo apt-get install -qq $CLANG_PKG ; fi
 if [ "x$KAFKA" == "xYES" ]; then export ENABLE_KAFKA="--enable-omkafka --enable-imkafka --enable-kafka-tests" ; fi
 if [ "x$DEBUGLESS" == "xYES" ]; then export ENABLE_DEBUGLESS="--enable-debugless" ; fi
+
+#
+# uncomment the following if AND ONLY If you need yet-unreleased packages
+# from the v8-devel repo. Be sure to reset this once the new release has
+# been crafted!
+sudo add-apt-repository ppa:adiscon/v8-devel -y
+sudo apt-get update
+# now come the actual overrides
+sudo apt-get install libfastjson-dev
+#
+
+# end package override code
