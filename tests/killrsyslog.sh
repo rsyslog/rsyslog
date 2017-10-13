@@ -1,5 +1,7 @@
 #!/bin/bash
 #check if rsyslog instance exists and, if so, kill it
+echo initial ps
+ps -ef|grep rsyslog
 if [ -e "rsyslog.pid" ]
 then
   echo rsyslog.pid exists, trying to shut down rsyslogd process `cat rsyslog.pid`.
@@ -14,3 +16,5 @@ then
   sleep 1
   rm rsyslog2.pid
 fi
+echo terminal ps
+ps -ef|grep rsyslog
