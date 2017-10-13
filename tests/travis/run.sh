@@ -18,6 +18,7 @@ echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************
 source tests/travis/install.sh
 source /etc/lsb-release
 
+tests/killrsyslog.sh
 
 # we turn off leak sanitizer at this time because it reports some
 # pretty irrelevant problems in startup code. In the longer term,
