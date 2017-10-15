@@ -10,7 +10,7 @@ Abstract
 **In this paper, I describe how to encrypt**
 `syslog <http://www.monitorware.com/en/topics/syslog/>`_ 
 **messages on the network.**
-Encryption is vital to keep the confidiental content of
+Encryption is vital to keep the confidential content of
 syslog messages secure. I describe the overall approach and provide an
 HOWTO do it with `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
 
@@ -43,7 +43,7 @@ and the `unreliability of TCP
 syslog <http://rgerhards.blogspot.com/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_).
 
 `Rsyslog supports syslog via GSSAP <gssapi.html>`_\ I since long to
-overcome these limitatinos. However, syslog via GSSAPI is a
+overcome these limitations. However, syslog via GSSAPI is a
 rsyslog-exclusive transfer mode and it requires a proper Kerberos
 environment. As such, it isn't a really universal solution. The
 `IETF <http://www.ietf.org/>`_ has begun standardizing syslog over plain
@@ -63,7 +63,7 @@ of syslog-transport-tls.
 Please note that in theory it should be compatible with other, non IETF
 syslog-transport-tls implementations. If you would like to run it with
 something else, please let us know so that we can create a compatibility
-list (and implement compatbility where it doesn't yet exist). 
+list (and implement compatibility where it doesn't yet exist). 
 
 Overall System Setup
 --------------------
@@ -136,7 +136,7 @@ follows:
 
 This is all you need to do. You can use the rest of your rsyslog.conf
 together with this configuration. The way messages are received does not
-interfer with any other option, so you are able to do anything else you
+interfere with any other option, so you are able to do anything else you
 like without any restrictions.
 
 Restart rsyslogd. The server should now be fully operational.
@@ -162,9 +162,9 @@ Note that we use the regular TCP forwarding syntax (@@) here. There is
 nothing special, because the encryption is handled by the netstream
 driver. So I have just forwarded every message (\*.\*) for simplicity -
 you can use any of rsyslog's filtering capabilities (like
-epxression-based filters or regular expressions). Note that the "(o)"
+expression-based filters or regular expressions). Note that the "(o)"
 part is not strictly necessary. It selects octet-based framing, which
-provides compatiblity to IETF's syslog-transport-tls draft. Besides
+provides compatibility to IETF's syslog-transport-tls draft. Besides
 compatibility, this is also a more reliable transfer mode, so I suggest
 to always use it.
 
@@ -212,7 +212,7 @@ itself can (and must) be distributed. To generate it, do the following:
        certtool --generate-privkey --outfile ca-key.pem
 
    This takes a short while. Be sure to do some work on your
-   workstation, it waits for radom input. Switching between windows is
+   workstation, it waits for random input. Switching between windows is
    sufficient ;)
 
 #. now create the (self-signed) CA certificate itself:
@@ -226,7 +226,7 @@ itself can (and must) be distributed. To generate it, do the following:
    certificate validity, keep in mind that you need to recreate all
    certificates when this one expires. So it may be a good idea to use a
    long period, eg. 3650 days (roughly 10 years). You need to specify
-   that the certificates belongs to an authrity. The certificate is used
+   that the certificates belongs to an authority. The certificate is used
    to sign other certificates.
 
 #. You need to distribute this certificate to all peers and you need to
@@ -248,11 +248,11 @@ certificate. So as a general rule of thumb, you need to create a
 certificate for each instance of rsyslogd that you run. That instance
 also needs the private key, so that it can properly decrypt the traffic.
 Safeguard the peer's private key file. If somebody gets hold of it, it
-can malicously pretend to be the compromised host. If such happens,
+can maliciously pretend to be the compromised host. If such happens,
 regenerate the certificate and make sure you use a different name
 instead of the compromised one (if you use name-based authentication). 
 
-These are the steps to generate the indivudual certificates (repeat: you
+These are the steps to generate the individual certificates (repeat: you
 need to do this for every instance, do NOT share the certificates
 created in this step):
 
@@ -286,7 +286,7 @@ created in this step):
 
        certtool --generate-certificate --load-request request.pem --outfile cert.pem \ --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem
 
-   Answer questions as follows: Cert does not belogn to an authority; it
+   Answer questions as follows: Cert does not belong to an authority; it
    is a TLS web server and client certificate; the dnsName MUST be the
    name of the peer in question (e.g. centralserver.example.net) - this
    is the name used for authenticating the peers. Please note that you
@@ -302,7 +302,7 @@ $DefaultNetstreamDriverCertFile /path/to/cert.pem and
 $DefaultNetstreamDriverKeyFile /path/to/key.pem configuration
 directives. Make sure that nobody has access to key.pem, as that would
 breach security. And, once again: do NOT use these files on more than
-one instance. Doing so would prevent you from distinguising between the
+one instance. Doing so would prevent you from distinguishing between the
 instances and thus would disable useful authentication.
 
 Troubleshooting Certificates
@@ -322,7 +322,7 @@ where "cert.pem" can be replaced by the various certificate pem files
 Conclusion
 ----------
 
-With minumal effort, you can set up a secure logging infrastructure
+With minimal effort, you can set up a secure logging infrastructure
 employing TLS encrypted syslog message transmission.
 
 Feedback requested

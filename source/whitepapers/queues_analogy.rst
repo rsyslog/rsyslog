@@ -31,7 +31,7 @@ data flow. It is not perfect, but may aid in understanding this picture.
 
 For our needs, the important fact to know is that messages enter rsyslog
 on "the left side" (for example, via UDP), are being preprocessed, put
-into the so-called main queue, taken off that queue, be filtered and be
+into the so-called main queue, taken off that queue, filtered and be
 placed into one or several action queues (depending on filter results).
 They leave rsyslog on "the right side" where output modules (like the
 file or database writer) consume them.
@@ -88,7 +88,7 @@ only "handle" (display or process) what is sent to them.
 
 Now let's look at the action queues: here, the active part, the
 producer, is the Parser and Filter Engine. The passive part is the
-Action Processor. The later does any processing that is necessary to
+Action Processor. The latter does any processing that is necessary to
 call the output plugin, in particular it processes the template to
 create the plugin calling parameters (either a string or vector of
 arguments). From the action queue's point of view, Action Processor and
@@ -310,12 +310,12 @@ running in rsyslog at a given time (assuming again that inputs utilize
 only one thread per plugin, a not-so-safe assumption).
 
 A quick side-note: I gave the lower bound for *t\_m* as zero, which is
-somewhat in contrast to what I wrote at the begin of the last paragraph.
+somewhat in contrast to what I wrote at the beginning of the last paragraph.
 Zero is actually correct, because rsyslog stops all worker threads when
 there is no work to do. This is also true for the action queues. So the
 ultimate lower bound for a rsyslog output system without any work to
 carry out actually is zero. But this bound will never be reached when
-there is continuous flow of activity. And, if you are curios: if the
+there is continuous flow of activity. And, if you are curious: if the
 number of workers is zero, the worker wakeup process is actually handled
 within the threading context of the "left-hand-side" (or producer) of
 the queue. After being started, the worker begins to play the active

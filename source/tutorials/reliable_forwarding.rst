@@ -14,7 +14,7 @@ being installed on the client system and it is recommended to have it
 installed on the server system. Please note that industry-standard
 `plain TCP syslog protocol is not fully
 reliable <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_
-(thus the "quite reliable"). If you need a truely reliable solution, you
+(thus the "quite reliable"). If you need a truly reliable solution, you
 need to look into RELP (natively supported by rsyslog).*
 
 The Intention
@@ -87,7 +87,7 @@ problem these days).
 Please note that actual spool files are only created if the remote
 server is down **and** there is no more space in the in-memory queue. By
 default, a short failure of the remote server will never result in the
-creation of a disk file as a couple of hundered messages can be held in
+creation of a disk file as a couple of hundred messages can be held in
 memory by default. [These parameters can be fine-tuned. However, then
 you need to either fully understand how the queue works (`read elaborate
 doc <http://www.rsyslog.com/doc-queues.html>`_) or use `professional
@@ -143,7 +143,7 @@ done. You can also specify a port there (or drop the port from server1).
 When there are multiple action queues, they all work independently.
 Thus, if server1 goes down, server2 still receives data in real-time.
 The client will **not** block and wait for server1 to come back online.
-Similarily, server1's operation will not be affected by server2's state.
+Similarly, server1's operation will not be affected by server2's state.
 
 Some Final Words on Reliability ...
 -----------------------------------
@@ -152,7 +152,7 @@ Using plain TCP syslog provides a lot of reliability over UDP syslog.
 However, plain TCP syslog is **not** a fully reliable transport. In
 order to get full reliability, you need to use the RELP protocol.
 
-Folow the next link to learn more about `the problems you may encounter
+Follow the next link to learn more about `the problems you may encounter
 with plain tcp
 syslog <http://blog.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_.
 

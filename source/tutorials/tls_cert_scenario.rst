@@ -19,7 +19,7 @@ the corporate network. All systems (except the router) use
 Please note that the CA must not necessarily be connected to the rest of
 the network. Actually, it may be considered a security plus if it is
 not. If the CA is reachable via the regular network, it should be
-sufficiently secured (firewal rules et al). Keep in mind that if the
+sufficiently secured (firewall rules et al). Keep in mind that if the
 CA's security is breached, your overall system security is breached.
 
 In case the CA is compromised, you need to regenerate the CA's

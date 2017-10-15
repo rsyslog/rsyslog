@@ -38,7 +38,7 @@ Our policy offers these security benefits:
    sender can check if it indeed is sending to the expected receiver
 -  the mutual authentication prevents man-in-the-middle attacks
 
-Our secrity goals are achived via public/private key security. As such,
+Our security goals are achieved via public/private key security. As such,
 it is vital that private keys are well protected and not accessible to
 third parties.
 
@@ -46,9 +46,9 @@ If private keys have become known to third parties, the system does not
 provide any security at all. Also, our solution bases on X.509
 certificates and a (very limited) chain of trust. We have one instance
 (the CA) that issues all machine certificates. The machine certificate
-indentifies a particular machine. While in theory (and practice), there
+identifies a particular machine. While in theory (and practice), there
 could be several "sub-CA" that issues machine certificates for a
-specific adminitrative domain, we do not include this in our "simple yet
+specific administrative domain, we do not include this in our "simple yet
 secure" setup. If you intend to use this, rsyslog supports it, but then
 you need to dig a bit more into the documentation (or use the forum to
 ask). In general, if you depart from our simple model, you should have
@@ -59,7 +59,7 @@ Please note that security never comes without effort. In the scenario
 described here, we have limited the effort as much as possible. What
 remains is some setup work for the central CA, the certificate setup for
 each machine as well as a few configuration commands that need to be
-applied to all of them. Proably the most important limiting factor in
+applied to all of them. Probably the most important limiting factor in
 our setup is that all senders and receivers must support IETF's
 syslog-transport-tls standard (which is not finalized yet). We use
 mandatory-to-implement technology, yet you may have trouble finding all
@@ -71,7 +71,7 @@ when rsyslog is the only implementation of said standard.
 Fortunately, rsyslog supports almost every protocol that is out there
 in the syslog world. So in cases where transport-tls is not available on
 a sender, we recommend to use rsyslog as the initial relay. In that
-mode, the not-capabe sender sends to rsyslog via another protocol, which
+mode, the not-capable sender sends to rsyslog via another protocol, which
 then relays the message via transport-tls to either another interim
 relay or the final destination (which, of course, must by transport-tls
 capable). In such a scenario, it is best to try see what the sender
@@ -80,7 +80,7 @@ with it. Often you can even combine it with stunnel, which then, too,
 enables a secure delivery to the first rsyslog relay. If all of that is
 not possible, you can (and often must...) resort to UDP. Even though
 this is now lossy and insecure, this is better than not having the
-ability to listen to that device at all. It may even be reasonale secure
+ability to listen to that device at all. It may even be reasonable secure
 if the uncapable sender and the first rsyslog relay communicate via a
 private channel, e.g. a dedicated network link.
 
@@ -128,7 +128,7 @@ totally unsuitable for your environment.
 In the example, we created a rsyslog certificate authority (CA). Guard
 the CA's files. You need them whenever you need to create a new machine
 certificate. We also saw how to generate the machine certificates
-themselfs and distribute them to the individual machines. Also, you have
+themselves and distribute them to the individual machines. Also, you have
 found some configuration samples for a server, a client and a syslog
 relay. Hopefully, this will enable you to set up a similar system in
 many environments.

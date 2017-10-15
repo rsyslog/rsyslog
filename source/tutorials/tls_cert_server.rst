@@ -3,7 +3,7 @@ Setting up the Central Server
 
 In this step, we configure the central server. We assume it accepts
 messages only via TLS protected plain tcp based syslog from those peers
-that are explicitely permitted to send to it. The picture below show our
+that are explicitly permitted to send to it. The picture below show our
 configuration. This step configures the server central.example.net.
 
 .. figure:: tls_cert_100.jpg
@@ -38,7 +38,7 @@ Steps to do:
    messages are accepted. See sample rsyslog.conf below.
 
 In this setup, we use wildcards to ease adding new systems. We permit
-the server to accept messages from systems whos names match
+the server to accept messages from systems whose names match
 \*.example.net.
 
 ::
@@ -47,7 +47,7 @@ the server to accept messages from systems whos names match
 
 This will match zuse.example.net and turing.example.net, but NOT
 pascal.otherdepartment.example.net. If the later would be desired, you
-can (and need) to include additional permitted peer config statments:
+can (and need) to include additional permitted peer config statements:
 
 ::
 
@@ -58,7 +58,7 @@ can (and need) to include additional permitted peer config statments:
 As can be seen with example.com, the different permitted peers need NOT
 to be in a single domain tree. Also, individual machines can be
 configured. For example, if only zuse, turing and ada should be able to
-talk to the server, you can achive this by:
+talk to the server, you can achieve this by:
 
 ::
 

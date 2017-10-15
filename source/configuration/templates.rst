@@ -353,11 +353,11 @@ sensitive. The default is "off", where all property name references are
 first converted to lowercase during template definition. With this
 option turned "on", property names are looked up as defined in the
 template. Use this option if you have JSON (``$!*``), local (``!.*``),
-or global (``$!\\*``) properties which container uppercase letters. The
+or global (``$!\\*``) properties which contain uppercase letters. The
 normal Rsyslog properties are case-insensitive, so this option is not
 needed for properly referencing those properties.
 
-The use the options **option.sql**, **option.stdsql**, and
+Use of the options **option.sql**, **option.stdsql**, and
 **option.json** are mutually exclusive. Using more than one at the same
 time can cause unpredictable behaviour.
 
@@ -447,8 +447,8 @@ The equivalent string template looks like this:
 
 Note that the template string itself must be on a single line.
 
-Standard Template for write to the MySQL database
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Standard Template for writing to the MySQL database
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
