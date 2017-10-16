@@ -467,8 +467,8 @@ action is used. This is done by placing the
 directive some place above the first use of the database write (we
 recommend doing at the the beginning of the config file).
 
-Discard
-~~~~~~~
+Discard / Stop
+~~~~~~~~~~~~~~
 
 If the discard action is carried out, the received message is
 immediately discarded. No further processing of it occurs. Discard has
@@ -484,13 +484,13 @@ discard actions early in your log files. This often plays well with
 property-based filters, giving you great freedom in specifying what you
 do not want.
 
-Discard is just the single tilde character with no further parameters:
+Discard is just the word stop with no further parameters:
 
-~
+stop
 
 For example,
 
-\*.\*   ~
+\*.\*   stop
 
 discards everything (ok, you can achive the same by not running rsyslogd
 at all...).
