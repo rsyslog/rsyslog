@@ -116,7 +116,7 @@ field(str, delim, matchnbr)
    version 7.3.7, a full string can be used as delimiter. If a single
    character is being used as delimiter, delim is the numerical ascii
    value of the field delimiter character (so that non-printable
-   characters can by specified). If a string is used as delmiter, a
+   characters can by specified). If a string is used as delimiter, a
    multi-character string (e.g. "#011") is to be specified.
 
    Note that when a single character is specified as string
@@ -128,7 +128,7 @@ field(str, delim, matchnbr)
    
    set $!usr!field = field($msg, 32, 3);  -- the third field, delimited by space
    
-   set $!usr!field = field($msg, "#011", 2); -- the second field, delmited by "#011"
+   set $!usr!field = field($msg, "#011", 2); -- the second field, delimited by "#011"
 
 exec\_template
 --------------
@@ -163,11 +163,11 @@ prifilt(constant)
    as a **constant string**. Dynamic string evaluation is not permitted
    (for performance reasons).
 
-dyn_inc(bucket_name_litteral_string, str)
+dyn_inc(bucket_name_literal_string, str)
 -----------------------------------------
 
    Increments counter identified by ``str`` in dyn-stats bucket identified
-   by ``bucket_name_litteral_string``. Returns 0 when increment is successful,
+   by ``bucket_name_literal_string``. Returns 0 when increment is successful,
    any other return value indicates increment failed.
 
    Counters updated here are reported by **impstats**.
@@ -180,7 +180,7 @@ dyn_inc(bucket_name_litteral_string, str)
 
    **Read more about it here** :doc:`Dynamic Stats<../configuration/dyn_stats>`
    
-lookup(table_name_litteral_string, key)
+lookup(table_name_literal_string, key)
 ---------------------------------------
 
    Lookup tables are a powerful construct to obtain *class* information based
@@ -200,7 +200,7 @@ num2ipv4
    Converts an integer into an IPv4-address and returns the address as string.
    Input is an integer with a value between 0 and 4294967295. The output format
    is '>decimal<.>decimal<.>decimal<.>decimal<' and '-1' if the integer input is invalid
-   ot the function encounters a problem.
+   or if the function encounters a problem.
 
 ipv42num
 --------
@@ -214,10 +214,58 @@ ltrim
 --------
 
    Removes any spaces at the start of a given string. Input is a string, output
-   is the same string starting with the first non-space charakter.
+   is the same string starting with the first non-space character.
 
 rtrim
 --------
 
    Removes any spaces at the end of a given string. Input is a string, output
-   is the same string ending with the last non-space charakter.
+   is the same string ending with the last non-space character.
+
+format_time(unix_timestamp, format_str)
+---------------------------------------
+
+   Converts a UNIX timestamp to a formatted RFC 3164 or RFC 3339 date/time string.
+   The first parameter is expected to be an integer value representing the number of
+   seconds since 1970-01-01T00:00:0Z (UNIX epoch). The second parameter can be one of
+   ``"date-rfc3164"`` or ``"date-rfc3339"``. The output is a string containing
+   the formatted date/time. Date/time strings are expressed in **UTC** (no time zone
+   conversion is provided).
+
+   * **Note**: If the input to the function is NOT a proper UNIX timestamp, a string
+     containing the *original value of the parameter* will be returned instead of a
+     formatted date/time string.
+
+::
+
+   format_time(1507165811, "date-rfc3164")
+
+produces
+
+::
+
+   Oct  5 01:10:11
+
+and
+
+::
+
+   format_time(1507165811, "date-rfc3339")
+
+produces
+
+::
+
+   2017-10-05T01:10:11Z
+
+In the case of an invalid UNIX timestamp:
+
+::
+
+   format_time("foo", "date-rfc3339")
+
+it produces the original value:
+
+::
+
+   foo
