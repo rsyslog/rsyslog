@@ -3,7 +3,7 @@ $MainMsgQueueSize
 
 **Type:** global configuration directive
 
-**Default:** 10000
+**Default:** 100000
 
 **Description:**
 

@@ -33,6 +33,7 @@ read the :doc:`queues <../concepts/queues>` documentation.
    For more information on the current status of this restriction see
    the `rsyslog FAQ: "lower bound for queue
    sizes" <http://www.rsyslog.com/lower-bound-for-queue-sizes/>`_.
+   default 1000
 -  **queue.dequeuebatchsize** number
    default 128
 -  **queue.maxdiskspace** number
@@ -46,8 +47,9 @@ read the :doc:`queues <../concepts/queues>` documentation.
    processing, because disk queue mode is very considerably slower than
    in-memory queue mode. Going to disk should be reserved for cases
    where an output action destination is offline for some period.
+   default computed from queue.size
 -  **queue.lowwatermark** number
-   default 2000
+   default computed from queue.size
 -  **queue.fulldelaymark** number 
    Number of messages when the queue should block delayable messages. 
    Messages are NO LONGER PROCESSED until the queue has sufficient space 
@@ -59,9 +61,11 @@ read the :doc:`queues <../concepts/queues>` documentation.
    out of space. Please note that if you use a DA queue, setting the 
    fulldelaymark BELOW the highwatermark makes the queue never activate 
    disk mode for delayable inputs. So this is probably not what you want.
+   default computed from queue.size
 -  **queue.lightdelaymark** number
+   default computed from queue.size
 -  **queue.discardmark** number
-   default 9750
+   default computed from queue.size
 -  **queue.discardseverity** number
    \*numerical\* severity! default 8 (nothing discarded)
 -  **queue.checkpointinterval** number
