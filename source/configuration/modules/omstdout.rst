@@ -9,12 +9,12 @@ omstdout: stdout output module (testbench tool)
 
 **Description**:
 
-This module writes any messages that are passed to it to stdout. It was
-developed for the rsyslog test suite. However, there may (limited) other
-uses exists. Please not that we do not put too much effort into the
-quality of this module as we do not expect it to be used in real
-deployments. If you do, please drop us a note so that we can enhance its
-priority!
+This module writes any messages that are passed to it to stdout. It
+was developed for the rsyslog test suite. However, there may (limited)
+exist some other usages. Please note we do not put too much effort on
+the quality of this module as we do not expect it to be used in real
+deployments. If you do, please drop us a note so that we can enhance
+its priority!
 
 **Configuration Directives**:
 
