@@ -339,3 +339,14 @@ The following parameters can be set:
   testbench. It permits to reduce spamming the test log while still
   providing the ability to see initial error messages. Might also be
   useful for some practical deployments.
+
+- **variables.caseSensitve** [boolean (on/off)] available 8.30.0+
+
+  **Default:** off
+
+  This permits to make variables case-sensitive, what might be required
+  for some exotic input data where case is the only difference in
+  field names. Note that in rsyslog versions prior to 8.30, the default was
+  "on", which very often led to user confusion. There normally should be no
+  need to switch it back to "on", except for the case to be mentioned.
+  This is also the reason why we switched the default.
