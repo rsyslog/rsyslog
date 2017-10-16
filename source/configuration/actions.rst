@@ -484,7 +484,7 @@ discard actions early in your log files. This often plays well with
 property-based filters, giving you great freedom in specifying what you
 do not want.
 
-Discard is just the word stop with no further parameters:
+Discard is just the word "stop" with no further parameters:
 
 stop
 
@@ -494,6 +494,9 @@ For example,
 
 discards everything (ok, you can achive the same by not running rsyslogd
 at all...).
+
+Note that in legacy configuration the tilde character "~" can also be
+used instead of the word "stop".
 
 Output Channel
 ~~~~~~~~~~~~~~
