@@ -7,6 +7,31 @@ Version 8.30.0 [v8-stable] 2017-10-10
   * when building imjournal, libsystemd-journal >= 234 is now recommended
     This is to support the imjournal enhancement. Note that it is possible
     to build with lower version, but this will degrade imjournal functionality.
+- CHANGE OF BEHAVIOUR: all variables are now case-insensitive by default
+  Formerly, JSON based variables ($!, $., $/) were case-sensitive.
+  Turn old default back on: global(variables.casesensitve="on")
+  See ChangeLog entry below for more details.
+- core: handle (JSON) variables in case-insensitive way
+  The variable system inside rsyslog is JSON based (for easy consumption
+  of JSON input, the prime source of structured data). In JSON, keys
+  ("variable names") are case-sensitive. This causes constant problems
+  inside rsyslog configurations. A major nit is that case-insensitivity
+  option inside templates (even if turned on) does not work with JSON
+  keys because they of inner workings*1.
+  It is much more natural to treat keys in a case-INsensitive way (e.g.
+  "$!Key" and "$!key" are the same). We do not expect any real problems
+  out of this, as key names only differing in case is highly unlikely.
+  However, as it is possible we provide a way to enable case-sensitivity
+  via the global(variables.casesensitve="on") global config object.
+  Note that the default is to do case-insensitive matches. The reason
+  is that this is the right thing to do in almost all cases, and we do
+  not envision any problems at all in existing deployments.
+  *1 Note: case-insensitivity in rsyslog is achieved by converting all
+  names to lower case. So that the higher speed of strcmp() can be used.
+  The template option does actually that, convert the template keys to
+  lower case. Unfortunately, this does not work with JSON, as JSON keys
+  are NOT converted to lower case.
+  closes https://github.com/rsyslog/rsyslog/issues/1805
 - imjournal: made switching to persistent journal in runtime possible
   with this patch imjournal can continue logging after switch to
   persistent journal without need to restart rsyslog service
