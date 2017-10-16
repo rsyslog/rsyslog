@@ -329,3 +329,13 @@ The following parameters can be set:
   only for developers so there should hardly be a need to set them for a
   regular user. Also, many settings (e.g. debug) are also available as
   configuration objects.
+
+- **errorMessagesToStderr.maxNumber** [positive integer] available 8.30.0+
+
+  **Default:** unlimited
+
+  This permits to put a hard limit on the number of messages that can
+  go to stderr. If for nothing else, this capability is helpful for the
+  testbench. It permits to reduce spamming the test log while still
+  providing the ability to see initial error messages. Might also be
+  useful for some practical deployments.
