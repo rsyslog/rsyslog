@@ -224,6 +224,9 @@ rtrim
 
 format_time(unix_timestamp, format_str)
 ---------------------------------------
+   **NOTE: this is EXPERIMENTAL code** - it may be removed or altered in
+   later versions than 8.30.0. Please watch the ChangeLog closely for
+   updates.
 
    Converts a UNIX timestamp to a formatted RFC 3164 or RFC 3339 date/time string.
    The first parameter is expected to be an integer value representing the number of
