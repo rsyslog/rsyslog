@@ -137,13 +137,13 @@ To understand queue parameters, read
 -  **$MainMsgQueueDequeueSlowdown** <number> [number is timeout in
    *micro*\ seconds (1000000us is 1sec!), default 0 (no delay). Simple
    rate-limiting!]
--  **$MainMsgQueueDiscardMark** <number> [default 98000]
+-  **$MainMsgQueueDiscardMark** <number> [default 98% of queue size]
 -  **$MainMsgQueueDiscardSeverity** <severity> [either a textual or
    numerical severity! default 4 (warning)]
 -  **$MainMsgQueueFileName** <name>
--  **$MainMsgQueueHighWaterMark** <number> [default 80000]
+-  **$MainMsgQueueHighWaterMark** <number> [default 90% of queue size]
 -  **$MainMsgQueueImmediateShutdown** [on/**off**]
--  **$MainMsgQueueLowWaterMark** <number> [default 20000]
+-  **$MainMsgQueueLowWaterMark** <number> [default 70% of queue size]
 -  **$MainMsgQueueMaxFileSize** <size\_nbr>, default 1m
 -  **$MainMsgQueueTimeoutActionCompletion** <number> [number is timeout in
    ms (1000ms is 1sec!), default 1000, 0 means immediate!]
@@ -157,4 +157,4 @@ To understand queue parameters, read
 -  **$MainMsgQueueSaveOnShutdown**  [on/**off**]
 -  **$MainMsgQueueWorkerThreads** <number>, num worker threads, default 1,
    recommended 1
--  **$MainMsgQueueWorkerThreadMinumumMessages** <number>, default 100
+-  **$MainMsgQueueWorkerThreadMinumumMessages** <number>, default queue size/number of workers
