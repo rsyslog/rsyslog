@@ -183,6 +183,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "umask", eCmdHdlrFileCreateMode, 0 },
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
+	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
@@ -1257,6 +1258,8 @@ glblDoneLoadCnf(void)
 				do_setenv(var);
 				free(var);
 			}
+		} else if(!strcmp(paramblk.descr[i].name, "errormessagestostderr.maxnumber")) {
+		        loadConf->globals.maxErrMsgToStderr = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.files")) {
 			glblDbgFilesNum = cnfparamvals[i].val.d.ar->nmemb;
 			glblDbgFiles = (char**) malloc(cnfparamvals[i].val.d.ar->nmemb * sizeof(char*));

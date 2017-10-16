@@ -67,6 +67,7 @@ struct globals_s {
 	int bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
 	int bErrMsgToStderr;	/* print error messages to stderr
 				  (in addition to everything else)? */
+	int maxErrMsgToStderr;	/* how many messages to forward at most to stderr? */
 	int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
 				      config) if there was any issue in conf */
 	int uidDropPriv;	/* user-id to which priveleges should be dropped to */

@@ -934,10 +934,30 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * supressor statement.
 	 */
 	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
-	if(((Debug == DEBUG_FULL || !doFork) && emit_to_stderr) || iConfigVerify) {
+	int emit_supress_msg = 0;
+	if(Debug == DEBUG_FULL || !doFork) {
+		emit_to_stderr = 1;
+	}
+	if(ourConf != NULL && ourConf->globals.maxErrMsgToStderr != -1) {
+		if(emit_to_stderr && ourConf->globals.maxErrMsgToStderr != -1 && ourConf->globals.maxErrMsgToStderr) {
+			--ourConf->globals.maxErrMsgToStderr;
+			if(ourConf->globals.maxErrMsgToStderr == 0)
+				emit_supress_msg = 1;
+		} else {
+			emit_to_stderr = 0;
+		}
+	}
+	if(emit_to_stderr || iConfigVerify) {
 		if(pri2sev(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n",
 				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
+	}
+	if(emit_supress_msg) {
+		fprintf(stderr, "rsyslogd: configured max number of error messages "
+			"to stderr reached, further messages will not be output\n"
+			"Consider adjusting\n"
+			"    global(errorMessagesToStderr.maxNumber=\"xx\")\n"
+			"if you want more.\n");
 	}
 
 finalize_it:

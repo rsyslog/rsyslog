@@ -51,7 +51,6 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
-	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
@@ -366,7 +365,8 @@ TESTS +=  \
 	mysql-basic-cnf6.sh \
 	mysql-asyn.sh \
 	mysql-actq-mt.sh \
-	mysql-actq-mt-withpause.sh
+	mysql-actq-mt-withpause.sh \
+	action-tx-single-processing.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	mysql-basic-vg.sh \
@@ -1194,6 +1194,7 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	testsuites/sndrcv_gzip_sender.conf \
 	testsuites/sndrcv_gzip_rcvr.conf \
+	./action-tx-single-processing.sh \
 	pipeaction.sh \
 	testsuites/pipeaction.conf \
 	omprog-cleanup.sh \
