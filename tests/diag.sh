@@ -61,6 +61,10 @@ dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+		# for (solaris) load debugging, uncomment next 2 lines:
+		#export LD_DEBUG=all
+		#ldd ../tools/rsyslogd
+
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  

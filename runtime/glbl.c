@@ -178,6 +178,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
+	{ "variables.casesensitive", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
 	{ "umask", eCmdHdlrFileCreateMode, 0 },
@@ -1124,6 +1125,11 @@ glblDoneLoadCnf(void)
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setWorkDir(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "variables.casesensitive")) {
+			const int val = (int) cnfparamvals[i].val.d.n;
+			fjson_global_do_case_sensitive_comparison(val);
+			DBGPRINTF("global/config: set case sensitive variables to %d\n",
+				val);
 		} else if(!strcmp(paramblk.descr[i].name, "localhostname")) {
 			free(LocalHostNameOverride);
 			LocalHostNameOverride = (uchar*)

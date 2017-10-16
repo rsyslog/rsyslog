@@ -1890,11 +1890,10 @@ int
 main(int argc, char **argv)
 {
 #if defined(_AIX)
-	/* AIXPORT : start
-	* SRC support : fd 0 (stdin) must be the SRC socket
-	* startup.  fd 0 is duped to a new descriptor so that stdin can be used
-	* internally by rsyslogd.
-	*/
+	/* SRC support : fd 0 (stdin) must be the SRC socket
+	 * startup.  fd 0 is duped to a new descriptor so that stdin can be used
+	 * internally by rsyslogd.
+	 */
 
 	strncpy(progname,argv[0], sizeof(progname)-1);
 	addrsz = sizeof(srcaddr);
@@ -1903,16 +1902,16 @@ main(int argc, char **argv)
 		src_exists = FALSE;
 	}
 	if (src_exists) 
-		if(dup2(0, SRC_FD) == -1)
-		{
+		if(dup2(0, SRC_FD) == -1) {
 			fprintf(stderr, "%s: dup2 failed exiting now...\n", progname);
 			/* In the unlikely event of dup2 failing we exit */
 			exit(-1);
 		}
 #endif
-	/* AIXPORT : src end */
-	/* use faster hash function inside json lib */
-	json_global_set_string_hash(JSON_C_STR_HASH_PERLLIKE);
+
+	/* disable case-sensitive comparisons in variable subsystem: */
+	fjson_global_do_case_sensitive_comparison(0);
+
 	const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
 	if(log_dflt != NULL && !strcmp(log_dflt, "1"))
 		bProcessInternalMessages = 1;
