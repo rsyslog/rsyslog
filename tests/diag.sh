@@ -65,6 +65,21 @@ case $1 in
 		#export LD_DEBUG=all
 		#ldd ../tools/rsyslogd
 
+		# environment debug
+		#find / -name "librelp.so*"
+		#ps -ef |grep syslog
+		#netstat -a | grep LISTEN
+
+		# cleanup of hanging instances from previous runs
+		# practice has shown this is pretty useful!
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		do
+			echo "ERROR: left-over previous instance $pid, killing it"
+			ps -fp $pid
+			kill -9 $pid
+		done
+		# end cleanup
+
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  

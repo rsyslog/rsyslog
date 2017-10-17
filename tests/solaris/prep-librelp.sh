@@ -5,10 +5,9 @@ mkdir local_env
 mkdir local_env/install
 cd local_env
 pwd
-#git clone git://github.com/rsyslog/librelp
-git clone git://github.com/rgerhards/librelp
+git clone git://github.com/rsyslog/librelp
 cd librelp
-git checkout solaris
+git log -2
 env | grep FLAGS
 autoreconf -fvi
 ./configure --prefix=$PWD_HOME/local_env/install
