@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------------
+Version 8.31.0 [v8-stable] 2017-11-28
+- testbench:
+  * harden tests against hanging previous instances
+  * re-enable RELP tests on Solaris
+------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17
 - NEW BUILD REQUIREMENTS
   * libfastjson 0.99.7 is now mandatory
