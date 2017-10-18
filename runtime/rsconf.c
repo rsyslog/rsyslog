@@ -226,7 +226,6 @@ freeCnf(rsconf_t *pThis)
 	}
 }
 
-
 /* destructor for the rsconf object */
 PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
