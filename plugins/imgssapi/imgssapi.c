@@ -326,6 +326,12 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	RETiRet;
 }
 
+/* I suppress the following function from clang static analyzer,
+ * as it most probably has a false positive. Maybe someone with
+ * better understanding might try to fix this warning:
+ * imgssapi.c:363:5: warning: Potential leak of memory pointed to by 'pGSrv'
+ */
+#ifndef __clang_analyzer__
 static rsRetVal
 actGSSListener(uchar *port)
 {
@@ -367,6 +373,7 @@ finalize_it:
 	}
 	RETiRet;
 }
+#endif // #ifndef __clang_analyzer__
 
 
 /* returns 0 if all went OK, -1 if it failed */
@@ -419,6 +426,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	gss_sess_t *pGSess;
         uchar *pszPeer = NULL;
 	int lenPeer = 0;
+	char *buf = NULL;
         
 	assert(pSess != NULL);
         
@@ -426,13 +434,6 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	pGSess = (gss_sess_t*) pSess->pUsr;
 	allowedMethods = pGSrv->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
-		/* Buffer to store raw message in case that
-		 * gss authentication fails halfway through. This buffer
-		 * is currently dynamically allocated, for performance
-		 * reasons we should look for a better way to do it.
-		 * rgerhars, 2008-09-02
-		 */
-		char *buf;
 		int ret = 0;
 		CHKmalloc(buf = (char*) MALLOC(glbl.GetMaxLine() + 1));
 
@@ -578,6 +579,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	}
 	
 finalize_it:
+	free(buf);
 	RETiRet;
 }
 
