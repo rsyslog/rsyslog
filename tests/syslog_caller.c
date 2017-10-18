@@ -10,7 +10,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2010-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -34,6 +34,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include <string.h>
+#include <syslog.h>
 #ifdef HAVE_LIBLOGGING_STDLOG
 #include <liblogging/stdlog.h>
 #endif
