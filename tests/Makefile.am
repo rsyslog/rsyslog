@@ -48,6 +48,7 @@ TESTS +=  \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	nested-call-shutdown.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
@@ -701,6 +702,7 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
 	validation-run.sh \

@@ -1336,8 +1336,8 @@ cancelWorkers(qqueue_t *pThis)
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
-static rsRetVal
-ShutdownWorkers(qqueue_t *pThis)
+rsRetVal
+qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
 
@@ -2653,7 +2653,7 @@ CODESTARTobjDestruct(qqueue)
 		 */
 		if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL
 		   && pThis->pWtpReg != NULL)
-			ShutdownWorkers(pThis);
+			qqueueShutdownWorkers(pThis);
 
 		if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
 			CHKiRet(DoSaveOnShutdown(pThis));
