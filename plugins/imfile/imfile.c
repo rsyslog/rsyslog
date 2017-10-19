@@ -732,7 +732,9 @@ static void pollFileCancelCleanup(void *pArg)
 
 /* poll a file, need to check file rollover etc. open file if not open */
 #if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wempty-body"
+#pragma GCC diagnostic ignored "-Wclobbered"
 #endif
 static rsRetVal
 pollFile(lstn_t *pLstn, int *pbHadFileData)
@@ -784,6 +786,8 @@ finalize_it:
 }
 #if !defined(_AIX)
 #pragma GCC diagnostic warning "-Wempty-body"
+#pragma GCC diagnostic warning "-Wclobbered"
+#pragma GCC diagnostic warning "-Wunknown-pragmas"
 #endif
 
 
