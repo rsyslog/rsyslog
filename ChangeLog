@@ -3,8 +3,31 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - [io]mgssapi: fix build problems (regression from 8.30.0)
+- omfile: hande file open error via SUSPEND mode
+  For a while, an open file error lead to suspension as the error was
+  not detected by the rule engine. This has changed with fixes
+  in 8.30.0. I asked users what they prefer (and expect) and
+  everyone meant it should still be handled via suspension. See
+  github tracker below for more details.
+  closes https://github.com/rsyslog/rsyslog/issues/1832
 - mmanon fix: make build under gcc 7
   Thanks to William Dauchy for the patch
+- core bugfix: potential segfault when shutting down rsyslog
+  when rulesets are nested a segfault can occur when shutting down
+  rsyslog. the reason is that rule sets are destructed in load order,
+  which means a "later" ruleset may still be active when an "earlier"
+  one was already destructed. In these cases, a "call" can invalidly
+  call into the earlier ruleset, which is destructed and so leads to
+  invalid memory access. If a segfault actually happens depends on the
+  OS, but it is highly probable.
+  The cure is to split the queue shutdown sequence. In a first step,
+  all worker threads are terminated and the queue set to enqOnly.
+  While some are terminated, it is still possible that the others
+  enqueue messages into the queue (which are then just placed into the
+  queue, not processed). After this happens, a call can no longer
+  be issued (as there are no more workers). So then we can destruct
+  the rulesets in any order.
+  closes https://github.com/rsyslog/rsyslog/issues/1122
 - testbench:
   * added compile-check for [io]mgssapi
   * harden tests against hanging previous instances
