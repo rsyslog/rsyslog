@@ -3134,8 +3134,7 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 		}
 		break;
 	case S_FOREACH:
-		doIndent(indent); dbgprintf("FOREACH %s IN\n",
-									stmt->d.s_foreach.iter->var);
+		doIndent(indent); dbgprintf("FOREACH %s IN\n", stmt->d.s_foreach.iter->var);
 		cnfexprPrint(stmt->d.s_foreach.iter->collection, indent+1);
 		if(subtree) {
 			doIndent(indent); dbgprintf("DO\n");
@@ -3154,9 +3153,10 @@ cnfstmtPrintOnly(struct cnfstmt *stmt, int indent, sbool subtree)
 				  stmt->d.s_unset.varname);
 		break;
     case S_RELOAD_LOOKUP_TABLE:
-		doIndent(indent); dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
-									stmt->d.s_reload_lookup_table.table_name,
-									stmt->d.s_reload_lookup_table.stub_value);
+		doIndent(indent);
+		dbgprintf("RELOAD_LOOKUP_TABLE table(%s) (stub with '%s' on error)",
+			stmt->d.s_reload_lookup_table.table_name,
+			stmt->d.s_reload_lookup_table.stub_value);
 		break;
 	case S_PRIFILT:
 		doIndent(indent); dbgprintf("PRIFILT '%s'\n", stmt->printable);
@@ -3368,13 +3368,13 @@ cnfstmtDestruct(struct cnfstmt *stmt)
 			cstrDestruct(&stmt->d.s_propfilt.pCSCompValue);
 		cnfstmtDestructLst(stmt->d.s_propfilt.t_then);
 		break;
-    case S_RELOAD_LOOKUP_TABLE:
-        if (stmt->d.s_reload_lookup_table.table_name != NULL) {
-			free(stmt->d.s_reload_lookup_table.table_name);
-        }
-        if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
-			free(stmt->d.s_reload_lookup_table.stub_value);
-        }
+	case S_RELOAD_LOOKUP_TABLE:
+		if (stmt->d.s_reload_lookup_table.table_name != NULL) {
+				free(stmt->d.s_reload_lookup_table.table_name);
+		}
+		if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
+				free(stmt->d.s_reload_lookup_table.stub_value);
+		}
 		break;
 	default:
 		DBGPRINTF("error: unknown stmt type during destruct %u\n",
