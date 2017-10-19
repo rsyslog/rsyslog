@@ -3375,6 +3375,7 @@ cnfstmtDestruct(struct cnfstmt *stmt)
         if (stmt->d.s_reload_lookup_table.stub_value != NULL) {
 			free(stmt->d.s_reload_lookup_table.stub_value);
         }
+		break;
 	default:
 		DBGPRINTF("error: unknown stmt type during destruct %u\n",
 			(unsigned) stmt->nodetype);
@@ -3476,6 +3477,7 @@ cnfstmtNewReloadLookupTable(struct cnffparamlst *fparams)
 				"failed to allocate memory for lookup-table stub-value\n");
 				failed = 1;
 			}
+			CASE_FALLTHROUGH
 		case 1:
 			param = fparams;
 			if (param->expr->nodetype != 'S') {
