@@ -62,7 +62,6 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
-DEFobjCurrIf(errmsg)
 
 struct modConfData_s {
 	int bIgnPrevMsg;
@@ -372,7 +371,7 @@ readjournal(void)
 
 		/* ... but we know better than to trust the specs */
 		if (equal_sign == NULL) {
-			errmsg.LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
+			LogError(0, RS_RET_ERR, "SD_JOURNAL_FOREACH_DATA()"
 				"returned a malformed field (has no '='): '%s'", (char*)get);
 			continue; /* skip the entry */
 		}
@@ -444,21 +443,21 @@ persistJournalState (void)
                                char errStr[256];
                                rs_strerror_r(errno, errStr, sizeof(errStr));
                                iRet = RS_RET_IO_ERROR;
-                               errmsg.LogError(0, iRet, "rename() failed: "
+                               LogError(0, iRet, "rename() failed: "
                                        "'%s', new path: '%s'\n", errStr, cs.stateFile);
                        }
 
 		} else {
 			char errStr[256];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "fopen() failed: "
+			LogError(0, RS_RET_FOPEN_FAILURE, "fopen() failed: "
 				"'%s', path: '%s'\n", errStr, tmp_sf);
 			iRet = RS_RET_FOPEN_FAILURE;
 		}
 	} else {
 		char errStr[256];
 		rs_strerror_r(-(ret), errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR, "sd_journal_get_cursor() failed: '%s'\n", errStr);
+		LogError(0, RS_RET_ERR, "sd_journal_get_cursor() failed: '%s'\n", errStr);
 		iRet = RS_RET_ERR;
 	}
 	RETiRet;
@@ -546,12 +545,12 @@ skipOldMessages(void)
 	DEFiRet;
 
 	if ((r = sd_journal_seek_tail(j)) < 0) {
-		errmsg.LogError(-r, RS_RET_ERR,
+		LogError(-r, RS_RET_ERR,
 			"imjournal: sd_journal_seek_tail() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if ((r = sd_journal_previous(j)) < 0) {
-		errmsg.LogError(-r, RS_RET_ERR,
+		LogError(-r, RS_RET_ERR,
 			"imjournal: sd_journal_previous() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -571,7 +570,7 @@ loadJournalState(void)
 		char *new_stateFile;
 
 		if (-1 == asprintf(&new_stateFile, "%s/%s", (char *)glbl.GetWorkDir(), cs.stateFile)) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY, "imjournal: asprintf failed\n");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		free (cs.stateFile);
@@ -587,7 +586,7 @@ loadJournalState(void)
 
 			if (fscanf(r_sf, "%128s\n", readCursor) != EOF) {
 				if (sd_journal_seek_cursor(j, readCursor) != 0) {
-					errmsg.LogError(0, RS_RET_ERR, "imjournal: "
+					LogError(0, RS_RET_ERR, "imjournal: "
 						"couldn't seek to cursor `%s'\n", readCursor);
 					iRet = RS_RET_ERR;
 				} else {
@@ -605,17 +604,17 @@ loadJournalState(void)
 					* with persistent journal.
 					* */
 					if (sd_journal_get_cursor(j, &tmp_cursor) < 0) {
-						errmsg.LogError(0, RS_RET_IO_ERROR, "imjournal: "
+						LogError(0, RS_RET_IO_ERROR, "imjournal: "
 						"loaded invalid cursor, seeking to the head of journal\n");
 						if (sd_journal_seek_head(j) < 0) {
-							errmsg.LogError(0, RS_RET_ERR, "imjournal: "
+							LogError(0, RS_RET_ERR, "imjournal: "
 							"sd_journal_seek_head() failed, when cursor is invalid\n");
 							iRet = RS_RET_ERR;
 						}
 					}
 				}
 			} else {
-				errmsg.LogError(0, RS_RET_IO_ERROR, "imjournal: "
+				LogError(0, RS_RET_IO_ERROR, "imjournal: "
 					"fscanf on state file `%s' failed\n", cs.stateFile);
 				iRet = RS_RET_IO_ERROR;
 			}
@@ -625,14 +624,14 @@ loadJournalState(void)
                         if (iRet != RS_RET_OK && cs.bIgnoreNonValidStatefile) {
                                 /* ignore state file errors */
                                 iRet = RS_RET_OK;
-                                errmsg.LogError(0, NO_ERRCODE,
+                                LogError(0, NO_ERRCODE,
                                         "imjournal: ignoring invalid state file");
                                 if (cs.bIgnorePrevious) {
                                         skipOldMessages();
                                 }
                         }
 		} else {
-			errmsg.LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
+			LogError(0, RS_RET_FOPEN_FAILURE, "imjournal: "
 					"open on state file `%s' failed\n", cs.stateFile);
 		}
 	} else if (cs.bIgnorePrevious) {
@@ -667,7 +666,7 @@ CODESTARTrunInput
 	if (cs.bUseJnlPID != -1) {
 		free(cs.usePid);
 		cs.usePid = strdup("system");
-		errmsg.LogError(0, RS_RET_DEPRECATED,
+		LogError(0, RS_RET_DEPRECATED,
 		"\"usepidfromsystem\" is depricated, use \"usepid\" instead");
 	}
 
@@ -682,7 +681,7 @@ CODESTARTrunInput
 		pidFieldName = "SYSLOG_PID";
 		bPidFallBack = 1;
 		if (cs.usePid && (strcmp(cs.usePid, "both") != 0)) {
-			errmsg.LogError(0, RS_RET_OK, "option \"usepid\""
+			LogError(0, RS_RET_OK, "option \"usepid\""
 			" should contain one of system|syslog|both and no '%s'",cs.usePid);
 		}
 	}
@@ -695,7 +694,7 @@ CODESTARTrunInput
 
 		r = sd_journal_next(j);
 		if (r < 0) {
-			errmsg.LogError(-r, RS_RET_ERR,
+			LogError(-r, RS_RET_ERR,
 				"imjournal: sd_journal_next() failed");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -785,7 +784,6 @@ CODESTARTmodExit
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -795,7 +793,7 @@ BEGINsetModCnf
 CODESTARTsetModCnf
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
 				"config parameters [module(...)]");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -873,7 +871,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(parser, CORE_COMPONENT));
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.CreateStringProp(&pInputName, UCHAR_CONSTANT("imjournal"), sizeof("imjournal") - 1));
