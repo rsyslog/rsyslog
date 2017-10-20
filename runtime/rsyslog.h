@@ -50,6 +50,8 @@ extern int src_exists;
 	#define CASE_FALLTHROUGH
 #endif
 
+#define ATTR_NORETURN __attribute__ ((noreturn))
+
 /* ############################################################# *
  * #                 Some constant values                      # *
  * ############################################################# */
