@@ -514,8 +514,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->caCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.mycert")) {
 			inst->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)inst->myCertFile, "r");
@@ -525,8 +526,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.myprivkey")) {
 			inst->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)inst->myPrivKeyFile, "r");
@@ -536,8 +538,9 @@ CODESTARTnewInpInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				inst->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(inppblk.descr[i].name, "tls.permittedpeer")) {
 			inst->permittedPeers.nmemb = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(inst->permittedPeers.name =
