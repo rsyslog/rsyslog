@@ -3,7 +3,7 @@
  * To test under Linux:
  * emmit log message into systemd journal
  *
- * Copyright (C) 2008-2016 Adiscon GmbH
+ * Copyright (C) 2008-2017 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -119,15 +119,18 @@ static rsRetVal persistJournalState(void);
 static rsRetVal loadJournalState(void);
 
 static rsRetVal openJournal(void) {
+	int r;
 	DEFiRet;
 
-	if (sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY) < 0)
+	if ((r = sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY)) < 0) {
+		LogError(-r, RS_RET_IO_ERROR,
+			"imjournal: sd_journal_open() failed");
 		iRet = RS_RET_IO_ERROR;
+	}
 	RETiRet;
 }
 
 static void closeJournal(void) {
-
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
@@ -304,12 +307,12 @@ readjournal(void)
 				facility += ((char *)get)[17] - '0';
 			}
 			if (facility < 0 || 23 < facility) {
-				dbgprintf("The value of the 'FACILITY' field is "
+				LogError(0, RS_RET_ERR, "The value of the 'FACILITY' field is "
 					"out of bounds: %d, resetting\n", facility);
 				facility = cs.iDfltFacility;
 			}
 		} else {
-			dbgprintf("The value of the 'FACILITY' field has an "
+			LogError(0, RS_RET_ERR, "imjournal: The value of the 'FACILITY' field has an "
 				"unexpected length: %zu\n", length);
 		}
 	}
@@ -516,14 +519,7 @@ pollJournal(void)
 		closeJournal();
 		cs.stateFile = tmp;
 
-		iRet = openJournal();
-		if (iRet != RS_RET_OK) {
-			char errStr[256];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			LogError(0, RS_RET_IO_ERROR,
-				"sd_journal_open() failed: '%s'", errStr);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
+		CHKiRet(openJournal());
 
 		if(cs.stateFile != NULL){
 			iRet = loadJournalState();
@@ -534,7 +530,7 @@ pollJournal(void)
 		char errStr[256];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		LogError(0, RS_RET_ERR,
-			"sd_journal_process() failed: '%s'", errStr);
+			"imjournal: sd_journal_process() failed: '%s'", errStr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -546,22 +542,17 @@ finalize_it:
 static rsRetVal
 skipOldMessages(void)
 {
+	int r;
 	DEFiRet;
 
-	if (sd_journal_seek_tail(j) < 0) {
-		char errStr[256];
-
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR,
-			"sd_journal_seek_tail() failed: '%s'", errStr);
+	if ((r = sd_journal_seek_tail(j)) < 0) {
+		errmsg.LogError(-r, RS_RET_ERR,
+			"imjournal: sd_journal_seek_tail() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if (sd_journal_previous(j) < 0) {
-		char errStr[256];
-
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		errmsg.LogError(0, RS_RET_ERR,
-			"sd_journal_previous() failed: '%s'", errStr);
+	if ((r = sd_journal_previous(j)) < 0) {
+		errmsg.LogError(-r, RS_RET_ERR,
+			"imjournal: sd_journal_previous() failed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -704,11 +695,8 @@ CODESTARTrunInput
 
 		r = sd_journal_next(j);
 		if (r < 0) {
-			char errStr[256];
-
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			errmsg.LogError(0, RS_RET_ERR,
-				"sd_journal_next() failed: '%s'", errStr);
+			errmsg.LogError(-r, RS_RET_ERR,
+				"imjournal: sd_journal_next() failed");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
