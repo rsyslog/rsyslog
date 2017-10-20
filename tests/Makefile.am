@@ -591,7 +591,8 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-manyconn.sh
 if ENABLE_GNUTLS
 TESTS += \
-         sndrcv_relp_tls.sh
+         sndrcv_relp_tls.sh \
+         relp_tls_certificate_not_found.sh
 endif
 endif
 
@@ -1176,6 +1177,7 @@ EXTRA_DIST= \
 	sndrcv_relp_tls.sh \
 	testsuites/sndrcv_relp_tls_sender.conf \
 	testsuites/sndrcv_relp_tls_rcvr.conf \
+	relp_tls_certificate_not_found.sh \
 	sndrcv_relp_dflt_pt.sh \
 	testsuites/sndrcv_relp_dflt_pt_rcvr.conf \
 	testsuites/sndrcv_relp_dflt_pt_sender.conf \
