@@ -324,7 +324,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(pNewVal == NULL || *pNewVal == '\0') {
 		errmsg.LogError(0, NO_ERRCODE, "imrelp: port number must be specified, listener ignored");
 	}
-	if((pNewVal == NULL) || (pNewVal == '\0')) {
+	if((pNewVal == NULL) || (*pNewVal == '\0')) {
 		inst->pszBindPort = NULL;
 	} else {
 		CHKmalloc(inst->pszBindPort = ustrdup(pNewVal));

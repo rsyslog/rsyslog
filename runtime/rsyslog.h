@@ -43,6 +43,12 @@ extern int src_exists;
 #endif
 /* src end */
 
+/* define a couple of attributes to improve cross-platform builds */
+#if __GNUC__ > 6
+	#define CASE_FALLTHROUGH __attribute__((fallthrough));
+#else
+	#define CASE_FALLTHROUGH
+#endif
 
 /* ############################################################# *
  * #                 Some constant values                      # *
