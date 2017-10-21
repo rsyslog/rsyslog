@@ -18,7 +18,7 @@ Current Features
 -  native support for `writing to MySQL databases <rsyslog_mysql.html>`_
 -  native support for writing to Postgres databases
 -  direct support for Firebird/Interbase, OpenTDS (MS SQL, Sybase),
-   SQLLite, Ingres, Oracle, and mSQL via libdbi, a database abstraction
+   SQLite, Ingres, Oracle, and mSQL via libdbi, a database abstraction
    layer (almost as good as native)
 -  native support for `sending mail messages <ommail.html>`_ (first seen
    in 3.17.0)
@@ -124,7 +124,7 @@ consider sponsoring the implementation. This is also a great way to show
 your commitment to the open source community. Plus, it can be
 financially attractive: just think about how much less it may be to
 sponsor a feature instead of purchasing a commercial implementation.
-Also, the benefit of being recognised as a sponsor may even drive new
+Also, the benefit of being recognized as a sponsor may even drive new
 customers to your business!**
 
 -  port it to more \*nix variants (eg AIX and HP UX) - this needs

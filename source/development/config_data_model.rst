@@ -9,7 +9,7 @@ management systems.
 
 Objects
 =======
-Most config objects life in a flat space and are global to rsyslog.
+Most config objects live in a flat space and are global to rsyslog.
 However, actual rule processing is done via a script-like language.
 These config scripts need to be represented via a tree structure.
 
@@ -52,7 +52,7 @@ This includes elements from the global() as well as main_queue() config
 statements. As of this writing, some global parameter can only be set
 by legacy statements.
 
-Note that main_queue() actually is a full queue defintion.
+Note that main_queue() actually is a full queue definition.
 
 Modules
 ^^^^^^^
@@ -90,7 +90,7 @@ is only required in special cases.
 
 Hierarchical Elements
 ---------------------
-These are used for rule exection. They are somewhat hard to fit into a
+These are used for rule execution. They are somewhat hard to fit into a
 traditional config scheme, as they provide full tree-like branching
 structure.
 
@@ -126,7 +126,7 @@ Expression Evaluation
 A full expression evaluation engine is available who does the typical
 programming-language type of expression processing. The usual mathematical,
 boolean and string operations are supported, as well as functions. As of
-this writing, functions are hardcoded into rsyslog but may in the future
+this writing, functions are hard-coded into rsyslog but may in the future
 be part of a loadable module. Evaluations can access all rsyslog properties
 and variables. They may be nested arbitrarily deep.
 
@@ -145,7 +145,7 @@ control-of-flow boils down to
 
 Where "stop" terminates processing of this message. The conditional statements 
 contain subbranches, where "if" contains both "then" and "else" subbranches
-and the other two only the "then" subranch (Note: inside the execution
+and the other two only the "then" subbranch (Note: inside the execution
 engine, the others may also have "else" branches, but these are result 
 of the rsyslog config optimizer run and cannot configured by the user).
 

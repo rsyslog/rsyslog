@@ -13,7 +13,7 @@ $RulesetParser
 
 This directive permits to specify which `message
 parsers <../../concepts/messageparser.html>`_ should be used for the ruleset in
-question. It no ruleset is explicitely specified, the default ruleset is
+question. It no ruleset is explicitly specified, the default ruleset is
 used. Message parsers are contained in (loadable) parser modules with
 the most common cases (RFC3164 and RFC5424) being build-in into
 rsyslogd.
@@ -65,10 +65,10 @@ currently none known
 
 **Example:**
 
-This example assumes there are two devices emiting malformed messages
+This example assumes there are two devices emitting malformed messages
 via UDP. We have two custom parsers for them, named "device1.parser" and
 "device2.parser". In addition to that, we have a number of other devices
-sending wellformed messages, also via UDP.
+sending well-formed messages, also via UDP.
 
 The solution is to listen for data from the two devices on two special
 ports (10514 and 10515 in this example), create a ruleset for each and

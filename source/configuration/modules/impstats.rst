@@ -18,7 +18,7 @@ counters increase when processing these messages. This must be taken into
 consideration when testing and troubleshooting.
 
 Note that loading this module has some impact on rsyslog performance.
-Depending on settings, this impact may be noticable for high-load
+Depending on settings, this impact may be noticeable for high-load
 environments, but in general the overhead is pretty light.
 
 **Note that there is a** `rsyslog statistics online
@@ -32,7 +32,7 @@ The rsyslog website has an overview of available `rsyslog
 statistic counters <http://rsyslog.com/rsyslog-statistic-counter/>`_. 
 When browsing this page, please be sure to take note of which rsyslog
 version is required to provide a specific counter. Counters are 
-continously being added, and older versions do not support everything.
+continuously being added, and older versions do not support everything.
 
 
 Configuration Directives
@@ -41,8 +41,8 @@ Configuration Directives
 The configuration directives for this module are designed for tailoring
 the method and process for outputting the rsyslog statistics to file.
 
-Module Confguration Parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Module Configuration Parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This module supports module parameters, only.
 
@@ -93,7 +93,7 @@ This module supports module parameters, only.
    Specifies the format of emitted stats messages. The default of
    "legacy" is compatible with pre v6-rsyslog. The other options provide
    support for structured formats (note the "cee" is actually "project
-   lumberack" logging).
+   lumberjack" logging).
 
     
    The json-elasticsearch format supports the broken ElasticSearch
@@ -125,7 +125,7 @@ This module supports module parameters, only.
    for some reasons (e.g. full queues) the regular syslog stream method
    shall not be used solely. Note that turning on file logging does NOT
    turn off syslog logging. If that is desired log.syslog="off" must be
-   explicitely set.
+   explicitly set.
 
 .. function:: Ruleset [ruleset]
 
@@ -137,12 +137,12 @@ This module supports module parameters, only.
 
    *Requires v8.4.1 or above*
 
-   This is a utility setting for folks who postprocess impstats logs
+   This is a utility setting for folks who post-process impstats logs
    and would like to know the begin and end of a block of statistics.
    When "bracketing" is set to "on", impstats issues a "BEGIN" message
    before the first counter is issued, then all counter values
-   are issued, and then an "END" message follows. As such, if and only iff messages
-   are kept in sequence, a block of stats countes can easily be identified
+   are issued, and then an "END" message follows. As such, if and only if messages
+   are kept in sequence, a block of stats counts can easily be identified
    by those BEGIN and END messages.
 
    **Note well:** in general, sequence of syslog messages is **not**
@@ -166,7 +166,7 @@ This module supports module parameters, only.
 
    *However*, bracketing may still be useful for many use cases. First
    and foremost, while there are many scenarios in which messages become
-   reorderded, in practice it happens relatively seldom. So most of the
+   reordered, in practice it happens relatively seldom. So most of the
    time the statistics records will come in as expected and actually
    will be bracketed by the BEGIN and END messages. Consequently, if
    an application can handle occasional out-of-order delivery (e.g. by
@@ -177,7 +177,7 @@ This module supports module parameters, only.
    records and use the previous values for ones missing in the current
    block. To guard against two or more blocks being mixed, it may also
    be a good idea to never reset a value to a lower bound, except when
-   that lower bound is seen consistantly (which happens due to a
+   that lower bound is seen consistently (which happens due to a
    restart). Note that such lower bound logic requires *resetCounters*
    to be set to off.
 
@@ -189,10 +189,10 @@ They have different names depending on the actual statistics. Obviously, they do
 relate to the plugin itself but rather to a broader object – most notably the
 rsyslog process itself. The "resource-usage" counter maintains process
 statistics. They base on the getrusage() system call. The counters are
-named like getrusage returned data memebers. So for details, looking them
+named like getrusage returned data members. So for details, looking them
 up in "man getrusage" is highly recommended, especially as value may be
 different depending on the platform. A getrusage() call is done immediately
-before the counter is emitted. The follwowing individual counters are
+before the counter is emitted. The following individual counters are
 maintained:
 
 -  **utime** - this is the user time in microseconds (thus the timeval structure combined)
@@ -210,7 +210,7 @@ Legacy Configuration Directives
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A limited set of parameters can also be set via the legacy configuration
-syntax. Note that this is intended as an upward compatibilit layer, so
+syntax. Note that this is intended as an upward compatibility layer, so
 newer features are intentionally **not** available via legacy
 directives.
 
@@ -292,4 +292,3 @@ See Also
 -  `impstats delayed or
    lost <http://www.rsyslog.com/impstats-delayed-or-lost/>`_ - cause and
    cure
-

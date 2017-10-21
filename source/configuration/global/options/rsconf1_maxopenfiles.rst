@@ -12,7 +12,7 @@ $MaxOpenFiles
 Set the maximum number of files that the rsyslog process can have open
 at any given time. Note that this includes open tcp sockets, so this
 setting is the upper limit for the number of open TCP connections as
-well. If you expect a large nubmer of concurrent connections, it is
+well. If you expect a large number of concurrent connections, it is
 suggested that the number is set to the max number connected plus 1000.
 Please note that each dynafile also requires up to 100 open file
 handles.

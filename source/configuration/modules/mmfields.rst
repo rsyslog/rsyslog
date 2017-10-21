@@ -16,7 +16,7 @@ inside the structured data part (more precisely: they become Lumberjack
 [JSON] properties).
 
 Using this module is of special advantage if a field-based log format is
-to be processed, like for example CEF **and** and either a large number
+to be processed, like for example CEF **and** either a large number
 of fields is needed or a specific field is used multiple times inside
 filters. In these scenarios, mmfields potentially offers better
 performance than the property replacer of the RainerScript field
@@ -30,12 +30,12 @@ most important if only a smaller subset of the fields is actually
 needed.
 
 In any case, mmfields provides a very handy and easy to use way to parse
-structured data into a it's individual data items. Again, a primiary use
+structured data into a it's individual data items. Again, a primary use
 case was support for CEF (Common Event Format), which is made extremely
 easy to do with this module.
 
 This module is implemented via the action interface. Thus it can be
-conditionally used depending on some prequisites.
+conditionally used depending on some prerequisites.
 
  
 
@@ -45,7 +45,7 @@ Currently none.
 
  
 
-**Action Confguration Parameters**:
+**Action Configuration Parameters**:
 
 -  **separator** - separatorChar (default ',')
    This is the character used to separate fields. Currently, only a
@@ -79,7 +79,7 @@ separator character of comma is being used.
            type=string
            string="%$!%\\n")
   action(type="mmfields")
-  action(type="mmfile"
+  action(type="omfile"
          file="/path/to/logfile"
          template="ftpl")
 
@@ -96,7 +96,7 @@ json path.
   action(type="mmfields"
          separator=":"
          jsonRoot="!mmfields")
-         action(type="mmfile"
+         action(type="omfile"
          file="/path/to/logfile"
          template="ftpl")
 

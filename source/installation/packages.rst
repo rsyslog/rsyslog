@@ -17,7 +17,7 @@ the distribution-provided packages is easy and a good idea. If you need
 new features, better performance and sometimes even a fix for a bug that
 the distro did not backport, you can use alternative packages. Please also note
 that the project team does not support outdated versions. While we probably
-can help with simple config questions, for anything else we concentracte on
+can help with simple config questions, for anything else we concentrate on
 current versions.
 
 The rsyslog project offers current packages for a number of "big" distributions.
@@ -37,14 +37,14 @@ Almost all distributions package rsyslog in multiple packages. This is also
 the way Adiscon packages are created. The reason is that rsyslog has so many
 input and output plugins that enable it to connect to different systems
 like MySQL, HDFS, ElasticSearch and so on. If everything were provided in a
-single giantic package, you would need to install all of these dependencies,
+single gigantic package, you would need to install all of these dependencies,
 even though they are mostly not needed.
 
 For that reason, rsyslog comes with multiple packages:
 
 * *core package* (usually just called "rsyslog") - this contains core
   technology that is required as a base for all other packages. It also
-  contains modules like the file writer or syslog forwareder that is extremely
+  contains modules like the file writer or syslog forwarder that is extremely
   often used and has little dependencies.
 * *feature package* (usually called "rsyslog-feature") - there are
   multiple of these packages. What exactly is available and how it is

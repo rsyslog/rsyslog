@@ -3,9 +3,9 @@ troubleshooting problems
 
 **Having trouble with** `rsyslog <http://www.rsyslog.com>`_? This page
 provides some tips on where to look for help and what to do if you need
-to ask for assistance. This page is continously being expanded.
+to ask for assistance. This page is continuously being expanded.
 
-Useful troubleshooting ressources are:
+Useful troubleshooting resources are:
 
 -  The `rsyslog documentation <http://www.rsyslog.com/doc>`_ - note that
    the online version always covers the most recent development version.
@@ -30,7 +30,7 @@ A common trouble source are `ill-formed syslog
 messages <syslog_parsing.html>`_, which lead to to all sorts of
 interesting problems, including malformed hostnames and dates. Read the
 quoted guide to find relief. A common symptom is that the %HOSTNAME%
-property is used for generating dynafile names, but some glibberish
+property is used for generating dynafile names, but some gibberish
 shows up. This is caused by the malformed syslog messages, so be sure to
 read the :doc:`guide on syslog parsing <../whitepapers/syslog_parsing>`
 if you face that problem. Just
@@ -45,7 +45,7 @@ Configuration Problems
 
 Rsyslog has support for
 configuration checking. It offers a special command line switch (-N<*value*>)
-that puts it into "config verfication mode". In that mode, it interprets
+that puts it into "config verification mode". In that mode, it interprets
 and checks the configuration file, but does not startup. This mode can be
 used in parallel to a running instance of rsyslogd.
 
@@ -145,7 +145,7 @@ or other parts of the system configuration. Things to check are
   been received by the OS (an app like netcat or rsyslog will never
   see them)
 
-- if that doesn't help, you a network monitor (or tcpdump, Wireshark, ...)
+- if that doesn't help, use a network monitor (or tcpdump, Wireshark, ...)
   to verify that the network packet at least reaches the system.
 
 If you saw the test message arrive at the central server, the problem
@@ -210,7 +210,7 @@ Debug Log
 ---------
 
 If you ask for help, there are chances that we need to ask for an
-rsyslog debug log. The debug log is a detailled report of what rsyslog
+rsyslog debug log. The debug log is a detailed report of what rsyslog
 does during processing. As such, it may even be useful for your very own
 troubleshooting. People have seen things inside their debug log that
 enabled them to find problems they did not see before. So having a look
@@ -305,13 +305,13 @@ fairly easy to locate.
   
 Active support from the user base is very important to help us track
 down those things. Most often, serious problems are the result of some
-memory misadressing. During development, we routinely use valgrind, a
+memory misaddressing. During development, we routinely use valgrind, a
 very well and capable memory debugger. This helps us to create pretty
 clean code. But valgrind can not detect everything, most importantly not
-code pathes that are never executed. So of most use for us is
+code paths that are never executed. So of most use for us is
 information about aborts and abort locations.
 
-Unfortunately, faults rooted in adressing errors typically show up only
+Unfortunately, faults rooted in addressing errors typically show up only
 later, so the actual abort location is in an unrelated spot. To help
 track down the original spot, `libc later than 5.4.23 offers
 support <http://www.gnu.org/software/hello/manual/libc/Heap-Consistency-Checking.html>`_

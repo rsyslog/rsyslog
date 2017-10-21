@@ -9,7 +9,7 @@ development or who would like to use the latest, not-yet-released code.
 The later may especially be the case if you are asked to try out an
 experimental version.
 
-Building from the repsitory is not much different than building from the
+Building from the repository is not much different than building from the
 source tarball, but some files are missing because they are output files
 and thus do not belong into the repository.
 

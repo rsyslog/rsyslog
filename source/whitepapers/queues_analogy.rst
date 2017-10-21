@@ -30,8 +30,8 @@ tutorial <http://www.rsyslog.com/Article350.phtml>`_ available on the
 data flow. It is not perfect, but may aid in understanding this picture.
 
 For our needs, the important fact to know is that messages enter rsyslog
-on "the left side" (for example, via UDP), are being preprocessed, put
-into the so-called main queue, taken off that queue, filtered and be
+on "the left side" (for example, via UDP), are preprocessed, put
+into the so-called main queue, taken off that queue, filtered and are
 placed into one or several action queues (depending on filter results).
 They leave rsyslog on "the right side" where output modules (like the
 file or database writer) consume them.
@@ -163,7 +163,7 @@ lanes.** We assume that cars all have the same length. So, units of
 cars, the length is always one (which is nice, as we don't need to care
 about that factor any longer ;)). A turning lane has finite capacity of
 *n* cars. As long as the number of cars wanting to take a turn is less
-than or eqal to *n*, "straigth traffic" is not blocked (or the other way
+than or equal to *n*, "straight traffic" is not blocked (or the other way
 round, traffic is blocked if at least *n + 1* cars want to take a
 turn!). We can now find an optimal value for *n*: it is a function of
 the probability that a car wants to turn and the cost of the turning
