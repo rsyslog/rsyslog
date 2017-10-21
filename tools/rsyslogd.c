@@ -1918,6 +1918,7 @@ main(int argc, char **argv)
 	dbgClassInit();
 	initAll(argc, argv);
 	sd_notify(0, "READY=1");
+	DBGPRINTF("----RSYSLOGD INITIALIZED\n");
 
 	mainloop();
 	deinitAll();
