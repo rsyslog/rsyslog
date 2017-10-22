@@ -2,7 +2,7 @@
  * Parse all fields of the message into structured data inside the
  * JSON tree.
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -189,7 +189,7 @@ parsePARAM_VALUE(uchar *sdbuf, int lenbuf, int *curridx, uchar *fieldbuf)
 				} else if(sdbuf[i] == '\\') {
 					fieldbuf[j++] = '\\';
 				} else if(sdbuf[i] == ']') {
-					fieldbuf[j++] = '"';
+					fieldbuf[j++] = ']';
 				} else {
 					fieldbuf[j++] = '\\';
 					fieldbuf[j++] = sdbuf[i];
