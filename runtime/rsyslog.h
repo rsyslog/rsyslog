@@ -58,6 +58,9 @@ extern int src_exists;
 #define CONST_LEN_TIMESTAMP_3164 15 		/* number of chars (excluding \0!) in a RFC3164 timestamp */
 #define CONST_LEN_TIMESTAMP_3339 32 		/* number of chars (excluding \0!) in a RFC3339 timestamp */
 
+#define CONST_LEN_CEE_COOKIE 5
+#define CONST_CEE_COOKIE "@cee:"
+
 /* ############################################################# *
  * #                    Config Settings                        # *
  * ############################################################# */
