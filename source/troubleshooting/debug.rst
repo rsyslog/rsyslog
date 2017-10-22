@@ -68,7 +68,7 @@ There are two environment variables that set several debug settings:
       not enable debug output itself. You need to send SIGUSR1 to turn
       it on when desired.
    -  **OutputTidToStderr** - if present, makes rsyslog output
-      information about the thread id (tid) of newly create processesto
+      information about the thread id (tid) of newly created processes to
       stderr. Note that not necessarily all new threads are reported
       (depends on the code, e.g. of plugins). This is only available
       under Linux. This usually does NOT work when privileges have been
@@ -97,7 +97,7 @@ What makes matters worse is that during this startup phase (and never
 again later!) some of the base debug structure needs to be created, at
 least if the build is configured for that (many of these things only
 happen in --enable-rtinst mode). So if we do not initialize the debug
-system **before** actually startig up the rsyslog core, we get a number
+system **before** actually starting up the rsyslog core, we get a number
 of data structures wrong.
 
 For these reasons, we utilize environment variables to initialize and
@@ -113,11 +113,11 @@ Enabling Debug via rsyslog.conf
 
 As described in the previous paragraph, enabling debug via rsyslog.conf
 may not be perfect for some debugging needs, but basic debug output will
-work - and that is what most often is requried. There are limited
+work - and that is what most often is required. There are limited
 options available, but these cover the most important use cases.
 
 Debug processing is done via legacy config statements. There currently
-is no plan to move these over to the v6+ config system. Availabe
+is no plan to move these over to the v6+ config system. Available
 settings are
 
 -  $DebugFile <filename> - sets the debug file name
@@ -148,8 +148,8 @@ To create this setup, you need to
    interactively
 
 These settings enable the capability to react to SIGUSR1. The signal
-will toggle debug status when received. So send it one to turn debug
-loggin on, and send it again to turn debug logging off again. The third
+will toggle debug status when received. So send it once to turn debug
+logging on, and send it again to turn debug logging off again. The third
 time it will be turned on again ... and so on.
 
 On a typical system, you can signal rsyslogd as follows:
@@ -172,7 +172,7 @@ debug logging turned on vs. off. The on-demand debug log functionality
 is considered to be very valuable to analyze hard-to-find bugs that only
 manifest after a long runtime. Turning debug logging on a failing
 instance may reveal the cause of the failure. However, depending on the
-failure, debug logging may not even be successfully be turned on. Also
+failure, debug logging may not even be successfully turned on. Also
 note that with this rsyslog version we cannot obtain any debug
 information on events that happened *before* debug logging was turned
 on.
@@ -198,14 +198,14 @@ Interpreting the Logs
 
 Debug logs are primarily meant for rsyslog developers. But they may
 still provide valuable information to users. Just be warned that logs
-sometimes contains informaton the looks like an error, but actually is
+sometimes contains information the looks like an error, but actually is
 none. We put a lot of extra information into the logs, and there are
 some cases where it is OK for an error to happen, we just wanted to
 record it inside the log. The code handles many cases automatically. So,
 in short, the log may not make sense to you, but it (hopefully) makes
 sense to a developer. Note that we developers often need many lines of
 the log file, it is relatively rare that a problem can be diagnosed by
-looking at just a couple of (hundered) log records.
+looking at just a couple of (hundred) log records.
 
 Security Risks
 --------------

@@ -25,8 +25,7 @@ The following command sends all syslog messages to a remote server via TCP port 
 ::
 
         Module (path="builtin:ompipe") 
-        *.* action(type="ompipe"
-        Pipe="NameofPipe")
+        *.* action(type="ompipe" Pipe="NameofPipe")
     
 **Legacy Configuration Directives:**
 

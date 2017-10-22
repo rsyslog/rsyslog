@@ -114,7 +114,7 @@ by default, a different size can be set via
 the"*$<object>QueueMaxFileSize*\ " config directive. Note that the size
 limit is not a sharp one: rsyslog always writes one complete queue
 entry, even if it violates the size limit. So chunks are actually a
-little but (usually less than 1k) larger then the configured size. Each
+little bit (usually less than 1k) larger then the configured size. Each
 chunk also has a different size for the same reason. If you observe
 different chunk sizes, you can relax: this is not a problem.
 
@@ -200,7 +200,7 @@ occasional message burst. Memory permitting, it could be limited to e.g.
 queue may have a too large static memory footprint in such cases.
 
 **In general, it is advised to use LinkedList mode if in doubt**. The
-processing overhead compared to FixedArray is low and may be outweigh by
+processing overhead compared to FixedArray is low and may be outweighed by
 the reduction in memory use. Paging in most-often-unused pointer array
 pages can be much slower than dynamically allocating them.
 
@@ -446,7 +446,7 @@ Processing Timeframes
 Queues can be set to dequeue (process) messages only during certain
 timeframes. This is useful if you, for example, would like to transfer
 the bulk of messages only during off-peak hours, e.g. when you have only
-limited bandwidth on the network path the the central server.
+limited bandwidth on the network path to the central server.
 
 Currently, only a single timeframe is supported and, even worse, it can
 only be specified by the hour. It is not hard to extend rsyslog's

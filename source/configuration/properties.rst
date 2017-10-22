@@ -4,14 +4,14 @@ rsyslog Properties
 Data items in rsyslog are called "properties". They can have different
 origin. The most important ones are those that stem from received
 messages. But there are also others. Whenever you want to access data items,
-you need to access the resprective property.
+you need to access the respective property.
 
 Properties are used in
 
 - :doc:`templates <templates>`
 - conditional statements
 
-The property name is case-insensitive (prior to 3.17.0, they were case-senstive).
+The property name is case-insensitive (prior to 3.17.0, they were case-sensitive).
 
 Message Properties
 ------------------
@@ -159,14 +159,14 @@ The following message properties exist:
   shutdown and error messages. This property is considered useful when
   trying to filter messages based on where they originated - e.g. locally
   generated messages ("rsyslogd", "imuxsock", "imklog") should go to a
-  different place than messages generated somewhere.
+  different place than messages generated somewhere else.
 
 **jsonmesg**
 
   *Available since rsyslog 8.3.0*
 
   The whole message object as JSON representation. Note that the JSON
-  string will *not* include and LF and it will contain *all other message
+  string will *not* include an LF and it will contain *all other message
   properties* specified here as respective JSON containers. It also includes
   all message variables in the "$!" subtree (this may be null if none are
   present).
@@ -174,7 +174,7 @@ The following message properties exist:
   This property is primarily meant as an interface to other systems and
   tools that want access to the full property set (namely external
   plugins). Note that it contains the same data items potentially multiple
-  times. For example, parts of the syslog tag will by containened in the
+  times. For example, parts of the syslog tag will by contained in the
   rawmsg, syslogtag, and programname properties. As such, this property
   has some additional overhead. Thus, it is suggested to be used only
   when there is actual need for it.
@@ -230,12 +230,12 @@ Time-Related System Properties
 All of these system properties exist in a local time variant (e.g. \$now)
 and a variant that emits UTC (e.g. \$now-utc). The UTC variant is always
 available by appending "-utc". Note that within a single template, only
-the localtime or UTC variant should be used. It is possible to mix both
-variants within a single template. However, in this case it is **not**
-guaranteed that both variants given exactly the same time. The technical
-reason behind is that rsyslog needs to re-query system time when the
-variant is changed. So we strongly recommend not mixing both variants in
-the same template.
+the localtime or UTC variant should be used. While it is possible to mix
+both variants within a single template, it is **not** guaranteed that
+they will provide exactly the same time. The technical reason is that
+rsyslog needs to re-query system time when the variant is changed. Because
+of this, we strongly recommend not mixing both variants in the same
+template.
 
 Note that use in different templates will generate a consistent timestamp
 within each template. However, as $now always provides local system time
@@ -263,7 +263,7 @@ may have different time stamp. To avoid this, use *timegenerated* instead.
 
 **$qhour**
   The current quarter hour we are in. Much like $HHOUR, but values range
-  from 0 to 3 (for the four quater hours that are in each hour)
+  from 0 to 3 (for the four quarter hours that are in each hour)
 
 **$minute**
   The current minute (2-digit)

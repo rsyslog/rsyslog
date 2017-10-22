@@ -16,10 +16,10 @@ Getting Started and Samples
 The best to get started with rsyslog plugin development is by looking at
 existing plugins. All that start with "om" are **o**\ utput
 **m**\ odules. That means they are primarily thought of being message
-sinks. In theory, however, output plugins may aggergate other
+sinks. In theory, however, output plugins may aggregate other
 functionality, too. Nobody has taken this route so far so if you would
 like to do that, it is highly suggested to post your plan on the rsyslog
-mailing list, first (so that we can offer advise).
+mailing list, first (so that we can offer advice).
 
 The rsyslog distribution tarball contains the omstdout plugin which is
 extremely well targeted for getting started. Just note that this plugin

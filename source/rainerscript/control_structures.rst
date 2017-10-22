@@ -16,7 +16,7 @@ if
 ::
 
    if ($msg contains "important") then {
-      if ( $. foo != "" ) then set $.foo = $.bar & $.baz;
+      if ( $.foo != "" ) then set $.foo = $.bar & $.baz;
       action(type="omfile" file="/var/log/important.log" template="outfmt")
    }
 

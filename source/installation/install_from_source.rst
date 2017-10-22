@@ -54,7 +54,7 @@ system:
 * make
 * libtool
 * rst2man (part of Python docutils) if you want to generate the man files
-* Bison and Flex (preferrably, otherwise yacc and lex)
+* Bison and Flex (preferably, otherwise yacc and lex)
 * zlib development package (usually *libz-dev*)
 * json-c (usually named *libjson0-dev* or similar)
 * libuuid (usually *uuid-dev*, if not present use --disable-uuid)
@@ -75,13 +75,13 @@ These are reported during the ./configure run.
 
 **Important**: you need the **development** version of the packages in
 question. That is the version which is used by developers to build software
-that uses the respecitive package. Usually, they are separate from the
+that uses the respective package. Usually, they are separate from the
 regular user package. So if you just install the regular package but not
 the development one, ./configure will fail.
 
 As a concrete example, you may want to build ommysql. It obviously requires
 a package like *mysql-client*, but that is just the regular package and not
-sufficient to buid rsyslog succesfully. To do so, you need to also install
+sufficient to buid rsyslog successfully. To do so, you need to also install
 something named like *mysql-client-dev*.
 
 Usually, the regular package is
@@ -134,7 +134,7 @@ you are upgrading from stock syslogd, /etc/syslog.conf is probably a
 good starting point. Rsyslogd understands stock syslogd syntax, so you
 can simply copy over /etc/syslog.conf to /etc/rsyslog.conf. Note since
 version 3 rsyslog requires to load plug-in modules to perform useful
-work (more about `compatibilty notes v3 <v3compatibility.html>`_). To
+work (more about `compatibility notes v3 <v3compatibility.html>`_). To
 load the most common plug-ins, add the following to the top of
 rsyslog.conf:
 

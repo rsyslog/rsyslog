@@ -121,7 +121,7 @@ field(str, delim, matchnbr)
 
    Note that when a single character is specified as string
    ``field($msg, ",", 3)`` a string-based extraction is done, which is
-   more performance intense than the equivalent single-character
+   more performance intensive than the equivalent single-character
    ``field($msg, 44 ,3)`` extraction. Eg.
 
 ::

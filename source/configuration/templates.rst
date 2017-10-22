@@ -22,7 +22,7 @@ are available.
 Template processing
 -------------------
 
-Due to lack of standarization regarding logs formats, when a template is 
+Due to lack of standardization regarding logs formats, when a template is 
 specified it's supposed to include HEADER, as defined in `RFC5424 <https://tools.ietf.org/html/rfc5424>`_
 
 It's very important to have this in mind, and also how to understand how 

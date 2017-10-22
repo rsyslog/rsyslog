@@ -120,8 +120,8 @@ instance**
 
 This means a plugin must not try to establish any connections or the
 like before any of its processing entry points (like beginTransaction or
-doAction) is called. This was generally also the case von v7, but was
-not enforced in all cases. In v8, creating action creation fails if
+doAction) is called. This was generally also the case with v7, but was
+not enforced in all cases. In v8, creating action fails if
 anything but RS\_RET\_OK is returned.
 
 string generator interface
