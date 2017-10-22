@@ -531,7 +531,7 @@ getStateFileName(lstn_t *const __restrict__ pLstn,
 
 
 /* enqueue the read file line as a message. The provided string is
- * not freed - thuis must be done by the caller.
+ * not freed - this must be done by the caller.
  */
 #define MAX_OFFSET_REPRESENTATION_NUM_BYTES 20
 static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
@@ -543,8 +543,9 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	uchar file_offset[MAX_OFFSET_REPRESENTATION_NUM_BYTES+1];
 	const uchar *metadata_names[2] = {(uchar *)"filename",(uchar *)"fileoffset"} ;
 	const uchar *metadata_values[2] ;
+	const size_t msgLen = cstrLen(cstrLine);
 
-	if(rsCStrLen(cstrLine) == 0) {
+	if(msgLen == 0) {
 		/* we do not process empty lines */
 		FINALIZE;
 	}
@@ -553,7 +554,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, pInputName);
 	if (pLstn->addCeeTag) {
-		size_t msgLen = cstrLen(cstrLine);
+		/* Make sure we account for terminating null byte */
 		size_t ceeMsgSize = msgLen + CONST_LEN_CEE_COOKIE + 1;
 		char *ceeMsg;
 		CHKmalloc(ceeMsg = MALLOC(ceeMsgSize));
@@ -562,7 +563,7 @@ static rsRetVal enqLine(lstn_t *const __restrict__ pLstn,
 		MsgSetRawMsg(pMsg, ceeMsg, ceeMsgSize);
 		free(ceeMsg);
 	} else {
-		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), cstrLen(cstrLine));
+		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStrNoNULL(cstrLine), msgLen);
 	}
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
