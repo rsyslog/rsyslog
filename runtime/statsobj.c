@@ -365,7 +365,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	CHKiRet(cstrConstruct(&pcstr));
 
 	if (fmt == statsFmt_CEE)
-		CHKiRet(rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT("@cee: "), 6));
+		CHKiRet(rsCStrAppendStrWithLen(pcstr, UCHAR_CONSTANT(CONST_CEE_COOKIE" "), CONST_LEN_CEE_COOKIE + 1));
 
 	CHKmalloc(root = json_object_new_object());
 
