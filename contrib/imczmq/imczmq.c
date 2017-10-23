@@ -264,7 +264,7 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal rcvData(){
+static rsRetVal rcvData(void){
 	DEFiRet;
 	
 	if(!listenerList) {
