@@ -51,6 +51,7 @@ extern int src_exists;
 #endif
 
 #define ATTR_NORETURN __attribute__ ((noreturn))
+#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
 
 /* ############################################################# *
  * #                 Some constant values                      # *
