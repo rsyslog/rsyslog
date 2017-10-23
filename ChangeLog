@@ -6,6 +6,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - [io]mgssapi: fix build problems (regression from 8.30.0)
+- imfile: some small performance enhancements
+  Thanks to Peter Portante for the patch
 - omfile: hande file open error via SUSPEND mode
   For a while, an open file error lead to suspension as the error was
   not detected by the rule engine. This has changed with fixes
@@ -36,7 +38,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
 - testbench:
-  * added compile-check for [io]mgssapi
+  * added compile-check for [io]mgssapi, mmcount
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
 - build: make compile warning-free under gcc 7
