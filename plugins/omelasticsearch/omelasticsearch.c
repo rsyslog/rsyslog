@@ -422,10 +422,12 @@ ENDtryResume
 
 /* get the current index and type for this message */
 static void
-getIndexTypeAndParent(instanceData *pData, uchar **tpls,
-		      uchar **srchIndex, uchar **srchType, uchar **parent,
-		      uchar **bulkId)
+getIndexTypeAndParent(const instanceData *const pData, uchar **const tpls,
+		      uchar **const srchIndex, uchar **const srchType, uchar **const parent,
+		      uchar **const bulkId)
 {
+DBGPRINTF("getIndexTypeAndParent: computeMessageSize: pData->searchIndex %p\n", pData->searchIndex);
+//DBGPRINTF("getIndexTypeAndParent: computeMessageSize: pData->searchIndex %s\n", pData->searchIndex);
 	if(tpls == NULL) {
 		*srchIndex = pData->searchIndex;
 		*parent = pData->parent;
@@ -435,6 +437,8 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 	}
 
 	if(pData->dynSrchIdx) {
+DBGPRINTF("getIndexTypeAndParent: computeMessageSize: tpls[1] %p\n", tpls[1]);
+//DBGPRINTF("getIndexTypeAndParent: computeMessageSize: tpls[1] %s\n", tpls[1]);
 		*srchIndex = tpls[1];
 		if(pData->dynSrchType) {
 			*srchType = tpls[2];
@@ -493,14 +497,17 @@ getIndexTypeAndParent(instanceData *pData, uchar **tpls,
 			}
 		}
 	}
-done:	return;
+done:
+	//assert(srchIndex != NULL);
+	//assert(srchType != NULL);
+	return;
 }
 
 
 static rsRetVal
 setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 {
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent;
 	uchar *bulkId;
@@ -561,16 +568,22 @@ finalize_it:
  * the batched request to elasticsearch
  */
 static size_t
-computeMessageSize(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
+computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
+	const uchar *const message,
+	uchar **const tpls)
 {
 	size_t r = sizeof(META_STRT)-1 + sizeof(META_TYPE)-1 + sizeof(META_END)-1 + sizeof("\n")-1;
 
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId);
+DBGPRINTF("computeMessageSize: message %p, searchIndex %p, searchType%p\n", message, searchIndex, searchType);
+DBGPRINTF("computeMessageSize: searchType %s\n", searchType);
+DBGPRINTF("computeMessageSize: searchIndex %s\n", searchIndex);
+DBGPRINTF("computeMessageSize: message %s\n", message);
 	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
 
 	if(parent != NULL) {
@@ -593,7 +606,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
-	uchar *searchIndex = 0;
+	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
 	uchar *bulkId = NULL;
@@ -1167,6 +1180,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 {
 	CURLcode code;
 	CURL *curl = pWrkrData->curlPostHandle;
+	char errbuf[CURL_ERROR_SIZE] = "";
 	DEFiRet;
 
 	pWrkrData->reply = NULL;
@@ -1178,28 +1192,31 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, pWrkrData);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
 	code = curl_easy_perform(curl);
-	if (   code == CURLE_COULDNT_RESOLVE_HOST
-	    || code == CURLE_COULDNT_RESOLVE_PROXY
-	    || code == CURLE_COULDNT_CONNECT
-	    || code == CURLE_WRITE_ERROR
-	   ) {
+	DBGPRINTF("curl returned %lld\n", (long long) code);
+	if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
 		STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
 		indexHTTPFail += nmsgs;
-		DBGPRINTF("omelasticsearch: we are suspending ourselfs due "
-			  "to failure %lld of curl_easy_perform()\n",
-			  (long long) code);
+		LogError(0, RS_RET_SUSPENDED,
+			"omelasticsearch: we are suspending ourselfs due "
+			"to server failure %lld: %s", (long long) code, errbuf);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
-	if(pWrkrData->replyLen > 0) {
-		pWrkrData->reply[pWrkrData->replyLen] = '\0';
-		/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+	if(pWrkrData->reply == NULL) {
+		DBGPRINTF("omelasticsearch: pWrkrData reply==NULL, replyLen = '%d'\n",
+			pWrkrData->replyLen);
+	} else {
+		DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
+		if(pWrkrData->replyLen > 0) {
+			pWrkrData->reply[pWrkrData->replyLen] = '\0';
+			/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+		}
+		DBGPRINTF("omelasticsearch: pWrkrData reply: '%s'\n", pWrkrData->reply);
+		CHKiRet(checkResult(pWrkrData, message));
 	}
-	DBGPRINTF("omelasticsearch: pWrkrData reply: '%s'\n", pWrkrData->reply);
 
-	CHKiRet(checkResult(pWrkrData, message));
 finalize_it:
 	incrementServerIndex(pWrkrData);
 	free(pWrkrData->reply);
@@ -1237,7 +1254,8 @@ CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
 	if(pWrkrData->pData->bulkmode) {
-		size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
+		//DBGPRINTF("Calling computeMessageSize: %p, %p, %p\n", pWrkrData, ppString[0], ppString);
+		const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
 		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
 		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
@@ -1606,6 +1624,9 @@ CODESTARTnewActInst
 		pData->searchIndex = (uchar*) strdup("system");
 	if(pData->searchType == NULL)
 		pData->searchType = (uchar*) strdup("events");
+	//assert(pData->searchIndex != NULL);
+	//assert(pData->searchType != NULL);
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 	if (serverParam)
