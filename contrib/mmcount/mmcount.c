@@ -221,14 +221,14 @@ CODESTARTtryResume
 ENDtryResume
 
 static int *
-getCounter(struct hashtable *ht, char *str) {
+getCounter(struct hashtable *ht, const char *str) {
 	unsigned int key;
 	int *pCounter;
 	unsigned int *pKey;
 
 	/* we dont store str as key, instead we store hash of the str
 	   as key to reduce memory usage */
-	key = hash_from_string(str);
+	key = hash_from_string((char*)str);
 	pCounter = hashtable_search(ht, &key);
 	if(pCounter) {
 		return pCounter;
@@ -264,7 +264,7 @@ BEGINdoAction
 	struct json_object *json = NULL;
 	es_str_t *estr = NULL;
 	struct json_object *keyjson = NULL;
-	char *pszValue;
+	const char *pszValue;
 	int *pCounter;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
