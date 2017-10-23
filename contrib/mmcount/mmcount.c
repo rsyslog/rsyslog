@@ -258,8 +258,9 @@ getCounter(struct hashtable *ht, const char *str) {
 	return pCounter;
 }
 
-BEGINdoAction
-	smsg_t *pMsg;
+BEGINdoAction_NoStrings
+	smsg_t **ppMsg = (smsg_t **) pMsgData;
+	smsg_t *pMsg = ppMsg[0];
 	char *appname;
 	struct json_object *json = NULL;
 	es_str_t *estr = NULL;
@@ -268,7 +269,6 @@ BEGINdoAction
 	int *pCounter;
 	instanceData *const pData = pWrkrData->pData;
 CODESTARTdoAction
-	pMsg = (smsg_t*) ppString[0];
 	appname = getAPPNAME(pMsg, LOCK_MUTEX);
 
 	pthread_mutex_lock(&pData->mut);
