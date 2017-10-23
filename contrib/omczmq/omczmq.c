@@ -120,7 +120,7 @@ static struct cnfparamblk actpblk = {
 
 static rsRetVal initCZMQ(instanceData* pData) {
 	DEFiRet;
-    putenv("ZSYS_SIGHANDLER=false");
+	putenv((char*)"ZSYS_SIGHANDLER=false");
 	pData->sock = zsock_new(pData->sockType);
 	if(!pData->sock) {
 		errmsg.LogError(0, RS_RET_NO_ERRCODE,
@@ -205,7 +205,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
+static rsRetVal outputCZMQ(uchar** ppString, instanceData* pData) {
 	DEFiRet;
 
 	if(NULL == pData->sock) {

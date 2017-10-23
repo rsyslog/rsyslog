@@ -502,7 +502,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	putenv("ZSYS_SIGHANDLER=false");
+	putenv((char*)"ZSYS_SIGHANDLER=false");
 ENDactivateCnfPrePrivDrop
 
 
