@@ -245,7 +245,8 @@ eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
 	DEFiRet;
 
 	CHKiRet(eiGetRecord(gf, rectype, value));
-	if(strcmp(rectype, "IV")) {
+	const char *const cmp_IV = "IV"; // work-around for static analyzer
+	if(strcmp(rectype, cmp_IV)) {
 		DBGPRINTF("no IV record found when expected, record type "
 			"seen is '%s'\n", rectype);
 		ABORT_FINALIZE(RS_RET_ERR);
