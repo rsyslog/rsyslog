@@ -298,6 +298,7 @@ readjournal(void)
 
 	/* Get syslog facility */
 	if (sd_journal_get_data(j, "SYSLOG_FACILITY", &get, &length) >= 0) {
+		// Note: the journal frequently contains invalid facilities!
 		if (length == 17 || length == 18) {
 			facility = ((char *)get)[16] - '0';
 			if (length == 18) {
@@ -305,13 +306,13 @@ readjournal(void)
 				facility += ((char *)get)[17] - '0';
 			}
 			if (facility < 0 || 23 < facility) {
-				LogError(0, RS_RET_ERR, "The value of the 'FACILITY' field is "
+				DBGPRINTF("The value of the 'FACILITY' field is "
 					"out of bounds: %d, resetting\n", facility);
 				facility = cs.iDfltFacility;
 			}
 		} else {
-			LogError(0, RS_RET_ERR, "imjournal: The value of the 'FACILITY' field has an "
-				"unexpected length: %zu\n", length);
+			DBGPRINTF("The value of the 'FACILITY' field has an "
+				"unexpected length: %zu value: '%s'\n", length, (const char*)get);
 		}
 	}
 
@@ -632,6 +633,16 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+tryRecover(void) {
+	LogMsg(0, RS_RET_OK, LOG_INFO, "imjournal: trying to recover from unexpected "
+		"journal error");
+	closeJournal();
+	srSleep(10, 0);	// do not hammer machine with too-frequent retries
+	openJournal();
+}
+
+
 BEGINrunInput
 	int count = 0;
 CODESTARTrunInput
@@ -683,16 +694,22 @@ CODESTARTrunInput
 		r = sd_journal_next(j);
 		if (r < 0) {
 			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-			ABORT_FINALIZE(RS_RET_ERR);
+			tryRecover();
+			continue;
 		}
 
 		if (r == 0) {
 			/* No new messages, wait for activity. */
-			CHKiRet(pollJournal());
+			if(pollJournal() != RS_RET_OK) {
+				tryRecover();
+			}
 			continue;
 		}
 
-		CHKiRet(readjournal());
+		if(readjournal() != RS_RET_OK) {
+			tryRecover();
+			continue;
+		}
 		if (cs.stateFile) { /* can't persist without a state file */
 			/* TODO: This could use some finer metric. */
 			count++;
