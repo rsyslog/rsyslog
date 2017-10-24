@@ -619,8 +619,8 @@ finalize_it:
 
 /* process a single workset item
  */
-static rsRetVal
-processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
+static rsRetVal ATTR_NONNULL(1)
+processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *pUsr)
 {
 	tcps_sess_t *pNewSess = NULL;
 	DEFiRet;
@@ -652,17 +652,22 @@ finalize_it:
 
 /* worker to process incoming requests
  */
-static void *
-wrkr(void *myself)
+static void * ATTR_NONNULL(1)
+wrkr(void *const myself)
 {
-	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
+	struct wrkrInfo_s *const me = (struct wrkrInfo_s*) myself;
 	
 	pthread_mutex_lock(&wrkrMut);
 	while(1) {
+		// wait for work, in which case pSrv will be populated
 		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
-		if(glbl.GetGlobalInputTermState() == 1) {
+		if(me->pSrv == NULL) {
+			// only possible if glbl.GetGlobalInputTermState() == 1
+			// we need to query me->opSrv to avoid clang static
+			// analyzer false positive! -- rgerhards, 2017-10-23
+			assert(glbl.GetGlobalInputTermState() == 1);
 			--wrkrRunning;
 			break;
 		}

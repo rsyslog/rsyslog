@@ -392,10 +392,24 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 			}
 			CHKmalloc(pThis->table.str->entries[i].key = ustrdup((uchar*) json_object_get_string(jindex)));
 			value = (uchar*) json_object_get_string(jvalue);
-			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals,
-			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-			assert(canonicalValueRef != NULL);
+			uchar **found  = (uchar**) bsearch(value, pThis->interned_vals,
+				pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			if(found == NULL) {
+				LogError(0, RS_RET_INTERNAL_ERROR, "lookup.c:build_StringTable(): "
+					"internal error, bsearch returned NULL for '%s'", value);
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
+			// I give up, I see no way to remove false positive -- rgerhards, 2017-10-24
+			#ifndef __clang_analyzer__
+			canonicalValueRef = *found;
+			if(canonicalValueRef == NULL) {
+				LogError(0, RS_RET_INTERNAL_ERROR, "lookup.c:build_StringTable(): "
+					"internal error, canonicalValueRef returned from bsearch "
+					"is NULL for '%s'", value);
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
 			pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
+			#endif
 		}
 		qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 	}

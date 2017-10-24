@@ -273,7 +273,7 @@ gtlsClientCertCallback(gnutls_session_t session,
  * rgerhards, 2008-05-21
  */
 static rsRetVal
-gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
+gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr)
 {
 	uchar szBufA[1024];
 	uchar *szBuf = szBufA;
@@ -1009,7 +1009,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	DEFiRet;
 	const char *pszErrCause;
 	int gnuRet;
-	cstr_t *pStr;
+	cstr_t *pStr = NULL;
 	unsigned stateCert;
 	const gnutls_datum_t *cert_list;
 	unsigned cert_list_size = 0;

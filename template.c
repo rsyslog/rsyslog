@@ -1441,6 +1441,12 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 	/* sanity check */
+	if(value == NULL) {
+		LogError(0, RS_RET_INTERNAL_ERROR, "createConstantTpe(): "
+			"internal error, variable 'value'==NULL, which is "
+			"not permitted.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));

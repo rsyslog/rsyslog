@@ -785,8 +785,8 @@ finalize_it:
 /* accept an incoming connection request
  * rgerhards, 2008-04-22
  */
-static rsRetVal
-AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerIP)
+static rsRetVal ATTR_NONNULL()
+AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, prop_t **peerIP)
 {
 	int sockflags;
 	struct sockaddr_storage addr;
@@ -795,6 +795,7 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 
 	DEFiRet;
 
+	*peerName = NULL; /* ensure we know if we don't have one! */
 	iNewSock = accept(pLstn->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
 		if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EMFILE)
@@ -826,7 +827,9 @@ AcceptConnReq(ptcplstn_t *pLstn, int *newSock, prop_t **peerName, prop_t **peerI
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	if(pLstn->pSrv->bEmitMsgOnOpen) {
-		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imptcp: connection established with host: %s", propGetSzStr(*peerName));
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+			"imptcp: connection established with host: %s",
+			propGetSzStr(*peerName));
 	}
 
 	STATSCOUNTER_INC(pLstn->ctrSessOpen, pLstn->mutCtrSessOpen);
@@ -836,7 +839,10 @@ finalize_it:
 	DBGPRINTF("iRet: %d\n", iRet);
 	if(iRet != RS_RET_OK) {
 		if(iRet != RS_RET_NO_MORE_DATA && pLstn->pSrv->bEmitMsgOnOpen) {
-			LogError(0, NO_ERRCODE, "imptcp: connection could not be established with host: %s", propGetSzStr(*peerName));
+			LogError(0, NO_ERRCODE, "imptcp: connection could not be "
+				"established with host: %s",
+				*peerName == NULL ? "(could not query)"
+					: (const char*)propGetSzStr(*peerName));
 		}
 		STATSCOUNTER_INC(pLstn->ctrSessOpenErr, pLstn->mutCtrSessOpenErr);
 		/* the close may be redundant, but that doesn't hurt... */
