@@ -6,7 +6,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - [io]mgssapi: fix build problems (regression from 8.30.0)
-- [io]czmq: fix build problems on some platforms (namely gcc 7)
+- [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - imfile: some small performance enhancements
   Thanks to Peter Portante for the patch
 - omfile: hande file open error via SUSPEND mode
@@ -38,6 +38,15 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- iczmq bugfix: potential memory leak
+- imptcp bugfix: potential misadressing
+  When during a connection request the remote peer could not be
+  identified, imptcp could misadress memory if it is configured
+  to emit messages on connection open.
+  Detected by clang 5.0 static analyzer.
+- core/nsd_gtls: fix potential unitialized data access
+  could occur during certificate check
+  found by clang 5.0 static analyzer
 - testbench:
   * added compile-check for [io]mgssapi, mmcount
   * harden tests against hanging previous instances
