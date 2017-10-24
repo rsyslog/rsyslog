@@ -2296,7 +2296,9 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
 					"queue \"%s\": queue.fullDelayMark "
 					"is set below high water mark. This will result in DA mode "
-					" NOT being activated for full delayable messages",
+					" NOT being activated for full delayable messages: In many "
+					"cases this is a configuration error, please check if this "
+					"is really what you want",
 					obj.GetName((obj_t*) pThis));
 		}
 	}
