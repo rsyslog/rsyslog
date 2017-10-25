@@ -118,20 +118,20 @@ static sd_journal *j;
 static rsRetVal persistJournalState(void);
 static rsRetVal loadJournalState(void);
 
-static rsRetVal openJournal(sd_journal* jj) {
+static rsRetVal openJournal(void) {
 	DEFiRet;
 
-	if (sd_journal_open(&jj, SD_JOURNAL_LOCAL_ONLY) < 0)
+	if (sd_journal_open(&j, SD_JOURNAL_LOCAL_ONLY) < 0)
 		iRet = RS_RET_IO_ERROR;
 	RETiRet;
 }
 
-static void closeJournal(sd_journal* jj) {
+static void closeJournal(void) {
 
 	if (cs.stateFile) { /* can't persist without a state file */
 		persistJournalState();
 	}
-	sd_journal_close(jj);
+	sd_journal_close(j);
 }
 
 
@@ -513,10 +513,10 @@ pollJournal(void)
 		/* do not persist stateFile sd_journal_get_cursor will fail! */
 		char* tmp = cs.stateFile;
 		cs.stateFile = NULL;
-		closeJournal(j);
+		closeJournal();
 		cs.stateFile = tmp;
 
-		iRet = openJournal(j);
+		iRet = openJournal();
 		if (iRet != RS_RET_OK) {
 			char errStr[256];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -773,13 +773,13 @@ ENDfreeCnf
 /* open journal */
 BEGINwillRun
 CODESTARTwillRun
-	iRet = openJournal(j);
+	iRet = openJournal();
 ENDwillRun
 
 /* close journal */
 BEGINafterRun
 CODESTARTafterRun
-	closeJournal(j);
+	closeJournal();
 	ratelimitDestruct(ratelimiter);
 ENDafterRun
 
