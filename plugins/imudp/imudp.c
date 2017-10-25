@@ -351,6 +351,10 @@ addListner(instanceConf_t *inst)
 				lcnfLast = newlcnfinfo;
 			}
 		}
+	} else {
+		errmsg.LogError(0, NO_ERRCODE, "imudp: Could not create udp listener,"
+				" ignoring port %s bind-address %s.",
+				port, bindAddr);
 	}
 
 finalize_it:
