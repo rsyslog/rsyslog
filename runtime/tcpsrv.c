@@ -408,7 +408,8 @@ create_tcp_socket(tcpsrv_t *pThis)
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
 			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port "
-			"%s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
+			"%s bind-address %s.", pEntry->pszPort,
+			(pEntry->pszAddr == NULL) ? "(null)" : (const char*)pEntry->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}
@@ -1180,7 +1181,8 @@ static rsRetVal
 SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal)
 {
 	DEFiRet;
-	DBGPRINTF("tcpsrv: gnutlsPriorityString set to %s\n", iVal);
+	DBGPRINTF("tcpsrv: gnutlsPriorityString set to %s\n",
+		(iVal == NULL) ? "(null)" : (const char*) iVal);
 	pThis->gnutlsPriorityString = iVal;
 	RETiRet;
 }
