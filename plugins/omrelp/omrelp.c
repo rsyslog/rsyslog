@@ -378,8 +378,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->caCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.mycert")) {
 			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)pData->myCertFile, "r");
@@ -389,8 +390,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myCertFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
 			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			fp = fopen((const char*)pData->myPrivKeyFile, "r");
@@ -400,8 +402,9 @@ CODESTARTnewActInst
 				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
 				"error: certificate file %s couldn't be accessed: %s\n",
 				pData->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
 			}
-			fclose(fp);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
 			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
