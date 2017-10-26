@@ -782,11 +782,10 @@ static rsRetVal
 lookupDoReload(lookup_ref_t *pThis)
 {
 	DEFiRet;
-	CHKiRet(lookupReloadOrStub(pThis, NULL));
-finalize_it:
+	iRet = lookupReloadOrStub(pThis, NULL);
 	if ((iRet != RS_RET_OK) &&
 		(pThis->stub_value_for_reload_failure != NULL)) {
-		CHKiRet(lookupDoStub(pThis, pThis->stub_value_for_reload_failure));
+		iRet = lookupDoStub(pThis, pThis->stub_value_for_reload_failure);
 	}
 	freeStubValueForReloadFailure(pThis);
 	RETiRet;
