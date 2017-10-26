@@ -27,6 +27,9 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
 	mangle_qi
+if ENABLE_IMJOURNAL
+check_PROGRAMS += journal_print
+endif
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -310,6 +313,11 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh
 endif # HAVE_VALGRIND
+
+if ENABLE_IMJOURNAL
+TESTS +=  \
+	imjournal-basic.sh
+endif
 
 if ENABLE_OMJOURNAL
 TESTS +=  \
@@ -953,6 +961,7 @@ EXTRA_DIST= \
 	now-utc.sh \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
+	imjournal-basic.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
 	omjournal-basic-template.sh \
@@ -1645,6 +1654,10 @@ minitcpsrv_LDADD = $(SOL_LIBS)
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
 syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
+
+journal_print_SOURCES = journal_print.c
+journal_print_CPPFLAGS = $(LIBSYSTEMD_JOURNAL_CFLAGS)
+journal_print_LDADD = $(LIBSYSTEMD_JOURNAL_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)
