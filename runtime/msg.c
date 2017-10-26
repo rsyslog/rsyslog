@@ -2998,8 +2998,6 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	struct json_object *field;
 	DEFiRet;
 
-	if(*pbMustBeFreed)
-		free(*pRes);
 	*pRes = NULL;
 
 	if(pProp->id == PROP_CEE) {
