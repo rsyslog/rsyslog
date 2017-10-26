@@ -3,7 +3,7 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2016 Adiscon GmbH.
+ * Copyright 2010-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -358,6 +358,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 	cstr_t *pcstr;
 	ctr_t *pCtr;
 	json_object *root, *values;
+	int locked = 0;
 	DEFiRet;
 
 	root = values = NULL;
@@ -384,6 +385,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
+	locked = 1;
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
 		if (fmt == statsFmt_JSON_ES) {
 			/* work-around for broken Elasticsearch JSON implementation:
@@ -404,12 +406,17 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 		resetResettableCtr(pCtr, bResetCtrs);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
+	locked = 0;
 	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
 	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
 
 finalize_it:
+	if(locked) {
+		pthread_mutex_unlock(&pThis->mutCtr);
+	}
+
 	if (root != NULL) {
 		json_object_put(root);
 	}
