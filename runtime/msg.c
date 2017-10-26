@@ -479,6 +479,7 @@ static void MsgSetRcvFromWithoutAddRef(smsg_t *pThis, prop_t *new)
 static void
 MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *rulesetName)
 {
+	/* coverity[checked_return] */ // KEEP TOGETHER WITH NEXT LINE!
 	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
