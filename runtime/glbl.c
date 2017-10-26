@@ -908,6 +908,11 @@ glblProcessTimezone(struct cnfobj *o)
 	int i;
 
 	pvals = nvlstGetParams(o->nvlst, &timezonepblk, NULL);
+	if(pvals == NULL) {
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing timezone "
+				"config parameters");
+		goto done;
+	}
 	if(Debug) {
 		dbgprintf("timezone param blk after glblProcessTimezone:\n");
 		cnfparamsPrint(&timezonepblk, pvals);
