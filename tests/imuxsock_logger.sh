@@ -2,6 +2,11 @@
 echo \[imuxsock_logger.sh\]: test imuxsock
 
 uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 if [ `uname` = "SunOS" ] ; then
    echo "Solaris: FIX ME LOGGER"
    exit 77

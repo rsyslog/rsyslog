@@ -3,6 +3,13 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 # Note: the aim of this test is to test against misadressing, so we do
 # not actually check the output
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[json_null.sh\]: test for json containung \"null\" value
 . $srcdir/diag.sh init

@@ -1,6 +1,12 @@
 #!/bin/bash
 # add 2017-04-28 by Pascal Withopf, released under ASL 2.0
+
 uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 if [ `uname` = "SunOS" ] ; then
    echo "Solaris: inotify isn't supported on Solaris"
    exit 77

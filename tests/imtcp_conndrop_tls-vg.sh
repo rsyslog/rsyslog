@@ -3,6 +3,13 @@
 # added 2011-06-09 by Rgerhards
 #
 # This file is part of the rsyslog project, released  under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ====================================================================================
 echo TEST: \[imtcp_conndrop_tls-vg.sh\]: test imtcp/tls with random connection drops
 . $srcdir/diag.sh init
