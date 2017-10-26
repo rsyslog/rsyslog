@@ -1254,7 +1254,6 @@ CODESTARTdoAction
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
 	if(pWrkrData->pData->bulkmode) {
-		//DBGPRINTF("Calling computeMessageSize: %p, %p, %p\n", pWrkrData, ppString[0], ppString);
 		const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
 		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
