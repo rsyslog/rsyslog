@@ -1277,18 +1277,19 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 {
 	actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	const unsigned nMsgs = wrkrInfo->p.tx.currIParam;
-	actWrkrIParams_t oneParam;
+	actWrkrIParams_t oneParamSet[CONF_OMOD_NUMSTRINGS_MAXSIZE];
 	rsRetVal ret;
 	DEFiRet;
 
 	*new_nMsgs = 0;
 	for(unsigned i = 0 ; i < nMsgs ; ++i) {
 		setActionResumeInRow(pWti, pThis, 0); // make sure we do not trigger OK-as-SUSPEND handling
-		memcpy(&oneParam, &actParam(wrkrInfo->p.tx.iparams, 1, i, 0), sizeof(oneParam));
-		ret = actionTryCommit(pThis, pWti, &oneParam, 1);
-DBGPRINTF("msg %d, iRet %d, content: '%s'\n", i, ret, oneParam.param);
+		memcpy(&oneParamSet, &actParam(wrkrInfo->p.tx.iparams, 1, i, 0),
+			sizeof(actWrkrIParams_t) * pThis->iNumTpls);
+		ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
 		if(ret == RS_RET_SUSPENDED) {
-			memcpy(new_iparams + *new_nMsgs, &oneParam, sizeof(oneParam));
+			memcpy(new_iparams + *new_nMsgs, &oneParamSet,
+				sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 			++(*new_nMsgs);
 		}
 	}
@@ -1353,7 +1354,8 @@ actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti)
 		DBGPRINTF("actionCommit[%s]: somewhat unhappy, full batch of %d msgs returned "
 			"status %d. Trying messages as individual actions.\n",
 			pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
-		CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * wrkrInfo->p.tx.currIParam));
+		CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * pThis->iNumTpls
+			* wrkrInfo->p.tx.currIParam));
 		needfree_iparams = 1;
 		actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
 	}
