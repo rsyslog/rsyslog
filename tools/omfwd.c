@@ -812,11 +812,11 @@ static rsRetVal changeToNs(instanceData *pData)
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 		close(destinationNs);
-		free(nsPath);
 		dbgprintf("omfwd: changed to network namespace '%s'\n", pData->networkNamespace);
 	}
 
 finalize_it:
+	free(nsPath);
 #else /* #ifdef HAVE_SETNS */
 		dbgprintf("omfwd: OS does not support network namespaces\n");
 #endif /* #ifdef HAVE_SETNS */
