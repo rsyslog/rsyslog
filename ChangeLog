@@ -25,6 +25,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   everyone meant it should still be handled via suspension. See
   github tracker below for more details.
   closes https://github.com/rsyslog/rsyslog/issues/1832
+- imudp: improve error reporting
+  When udp listener cannot be created, an error message containing
+  the ip-address and port is put out.
+  closes https://github.com/rsyslog/rsyslog/issues/1899
 - [io]mrelp bugfix: segfault on startup if configured cert not readable
   When the certificate file specified in the omrelp/imrelp configuration
   can't be accessed, e.g. because it doesn't exist or you don't have
@@ -66,6 +70,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * added compile-check for [io]mgssapi, mmcount
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
+  * added basic test for imjournal
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17
