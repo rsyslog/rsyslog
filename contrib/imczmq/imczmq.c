@@ -376,7 +376,6 @@ BEGINrunInput
 CODESTARTrunInput
 	CHKiRet(rcvData());
 finalize_it:
-	RETiRet;
 ENDrunInput
 
 
