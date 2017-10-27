@@ -355,7 +355,7 @@ accumulatedValue(ctr_t *pCtr) {
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
-	cstr_t *pcstr;
+	cstr_t *pcstr = NULL;
 	ctr_t *pCtr;
 	json_object *root, *values;
 	int locked = 0;
@@ -411,12 +411,16 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
+	pcstr = NULL;
 
 finalize_it:
 	if(locked) {
 		pthread_mutex_unlock(&pThis->mutCtr);
 	}
 
+	if (pcstr != NULL) {
+		cstrDestruct(&pcstr);
+	}
 	if (root != NULL) {
 		json_object_put(root);
 	}
