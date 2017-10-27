@@ -347,6 +347,8 @@ decrypt(const char *name)
 
 err:
 	fprintf(stderr, "error %d processing file %s\n", r, name);
+	if(eifp != NULL)
+		fclose(eifp);
 	if(logfp != NULL)
 		fclose(logfp);
 }
