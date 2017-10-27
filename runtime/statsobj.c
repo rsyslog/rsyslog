@@ -530,10 +530,10 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *const usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
-	cstr_t *cstr;
+	cstr_t *cstr = NULL;
 	DEFiRet;
 
 	for(o = objRoot ; o != NULL ; o = o->next) {
@@ -557,6 +557,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t
 	getSenderStats(cb, usrptr, fmt, bResetCtrs);
 
 finalize_it:
+	if(cstr != NULL) {
+		rsCStrDestruct(&cstr);
+	}
 	RETiRet;
 }
 
