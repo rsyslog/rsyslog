@@ -41,6 +41,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   This was invalidly formatted as '"'. Thanks to github user
   wu3396 for the error report including the patch idea.
   closes https://github.com/rsyslog/rsyslog/issues/1826
+- core bugfix: potential segfault during startup
+  A NULL pointer could be accessed if there was a problem with the
+  timezone parameters.  Affects only startup, once started, no problem
+  existed.
+  Detected by Coverty scan; CID 185414
 - core bugfix: potential segfault when shutting down rsyslog
   when rulesets are nested a segfault can occur when shutting down
   rsyslog. the reason is that rule sets are destructed in load order,
@@ -66,6 +71,25 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - core/nsd_gtls: fix potential unitialized data access
   could occur during certificate check
   found by clang 5.0 static analyzer
+- stats bugfix: potential program hang
+  due to missing unlock. This could only occur if pstats was set to
+  CEE-format logging (very uncommon) AND if the system runs out of
+  memory (in which case other things go pretty bad as well).
+  found by Coverty scan
+- omfwd bugfix: memory leak if network namespaces are used
+  very seldom used feature, occurs only during error case
+  found by Coverty scan.
+- core: potential misadressing when accessing JSON properties
+  When a JSON property is accessed in template processing, memory may
+  have been misadressed or a double-free may occur while obtaining the
+  propety.
+  This was detected by a Coverty scan.
+- fixed several minor and cosmetic issues found by Coverty scan
+  includding false positives. For details see "$ git log". All noteworthy
+  issues are seperately mentioned in this ChangeLog. The ones not mentioned
+  are for example problems that can only occur during out of memory
+  conditions, under which it is extremely likely tha the rsyslog process
+  will be killed in any case
 - testbench:
   * added compile-check for [io]mgssapi, mmcount
   * harden tests against hanging previous instances
