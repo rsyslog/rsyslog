@@ -4,6 +4,13 @@
 # in practice.
 # see also https://github.com/rsyslog/rsyslog/issues/1658
 # Copyright (C) 2017 by Rainer Gerhards, released under ASL 2.0 (2017-07-11)
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 if [ `uname` = "SunOS" ] ; then
    echo "This test currently does not work on all flavors of Solaris."
    exit 77

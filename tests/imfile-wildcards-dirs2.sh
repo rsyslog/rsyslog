@@ -3,6 +3,11 @@
 echo [imfile-wildcards-dirs2.sh]
 
 uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 if [ `uname` = "SunOS" ] ; then
    echo "Solaris does not support inotify."
    exit 77

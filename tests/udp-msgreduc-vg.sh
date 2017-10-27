@@ -2,6 +2,13 @@
 # check if valgrind violations occur. Correct output is not checked.
 # added 2011-03-01 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[udp-msgreduc-vg.sh\]: testing imtcp multiple listeners
 . $srcdir/diag.sh init
