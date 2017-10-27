@@ -3,7 +3,7 @@
 #set -v
 
 export CC=clang-5.0
-export SCANBUILD=scan-build-5.0
+export SCANBUILD="scan-build-5.0 --use-cc $CC"
 #export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 echo "CC $CC, SCANBUILD $SCANBUILD"
 
