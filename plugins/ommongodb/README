@@ -1,6 +1,6 @@
 plugin to use MongoDB as backend.
 
-tested in ubuntu 10.04 and ubuntu 10.10
+tested in ubuntu 10.04, ubuntu 10.10 and FreeBSD 11.1
 
 configuration:
 
@@ -20,6 +20,9 @@ capability to specify a field name (outname parameter).
 A very basic example is:
 
 *.*     action(type="ommongodb" db="logs" collection="syslog")
+
+A more complex example:
+*.*     action(type="ommongodb" uristr="mongodb://vulture:9091,vulture2:9091/?replicaset=Vulture&ssl=true" ssl_cert="/var/db/mongodb/mongod.pem" ssl_ca="/var/db/mongodb/ca.pem" db="logs" collection="syslog")
 
 Please see the script clean-mongo-syslog for an example of how to
 purge old records from MongoDB using PyMongo.  It can be run
