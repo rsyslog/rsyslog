@@ -380,7 +380,7 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
 		if(newlen > pThis->iBufSize) {
 			uchar *const newbuf = (uchar*) realloc(pThis->pBuf, newlen + 1);
 			if(newbuf == NULL) {
-				RSFREEOBJ(pThis);
+				/* we keep the old value, best we can do */
 				return RS_RET_OUT_OF_MEMORY;
 			}
 			pThis->pBuf = newbuf;
