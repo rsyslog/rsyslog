@@ -549,6 +549,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 CODESTARTnewActInst
+	dbgprintf("ommongodb: Getting configuration.\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -556,6 +557,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
+	dbgprintf("ommongodb: Parsing configuration directives.\n");
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
@@ -602,7 +604,9 @@ CODESTARTnewActInst
 	/*
 	 * If we don't have a uristr, we need to build it
 	 */
+	dbgprintf("ommongodb: Checking the uristr.\n");
 	if(pData->uristr == NULL){
+		dbgprintf("ommongodb: No uristr, building one.\n");
 		char* tmp = NULL;
 		if(pData->server == NULL)
 			CHKmalloc(pData->server = (char*)strdup("127.0.0.1"));
@@ -631,6 +635,7 @@ CODESTARTnewActInst
 		CHKmalloc(pData->uristr = malloc(uri_len + 1));
 		tmp = stpncpy(pData->uristr, "mongodb://", 10);
 		if(pData->uid && pData->pwd){
+			dbgprintf("ommongodb: Adding uid & pwd to uristr.\n");
 			tmp = stpncpy(tmp, pData->uid, uid);
 			*tmp = ':';
 			++tmp;
@@ -638,6 +643,7 @@ CODESTARTnewActInst
 			*tmp = '@';
 			++tmp;
 		}
+		dbgprintf("ommongodb: Adding server & port to uristr.\n");
 		tmp = stpncpy(tmp, pData->server, server);
 		*tmp = ':';
 		++tmp;
@@ -647,6 +653,7 @@ CODESTARTnewActInst
 		if(pData->uid && pData->pwd)
 			tmp = stpncpy(tmp, "?authMechanism=PLAIN", 20);
 		if(pData->ssl_ca && pData->ssl_cert){
+			dbgprintf("ommongodb: Adding ssl to uristr.\n");
 			if(pData->uid && pData->pwd)
 				tmp = stpncpy(tmp, "&ssl=true", 9);
 			else
@@ -654,7 +661,8 @@ CODESTARTnewActInst
 		}
 		*tmp = '\0';
 	}
-
+	dbgprintf("ommongodb: The uristr: %s\n", pData->uristr);
+	dbgprintf("ommongodb: End of the configuration.\n");
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
