@@ -609,13 +609,17 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 	/* the copies below are clumpsy, but there is no way around given the
 	 * anomalies in dirname() and basename() [they MODIFY the provided buffer...]
 	 */
-	uchar szNameBuf[MAXFNAME];
-	uchar szDirName[MAXFNAME];
-	uchar szBaseName[MAXFNAME];
+	uchar szNameBuf[MAXFNAME+1];
+	uchar szDirName[MAXFNAME+1];
+	uchar szBaseName[MAXFNAME+1];
 	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	szNameBuf[MAXFNAME] = '\0';
 	ustrncpy(szDirName, (uchar*)dirname((char*)szNameBuf), MAXFNAME);
+	szDirName[MAXFNAME] = '\0';
 	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	szNameBuf[MAXFNAME] = '\0';
 	ustrncpy(szBaseName, (uchar*)basename((char*)szNameBuf), MAXFNAME);
+	szBaseName[MAXFNAME] = '\0';
 
 	CHKiRet(strm.Construct(&pData->pStrm));
 	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
