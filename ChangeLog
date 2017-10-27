@@ -95,6 +95,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
   * added basic test for imjournal
+- CI: improved test coverage on FreeBSD
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17
