@@ -304,7 +304,7 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 
 static rsRetVal
 addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
-	json_object *v = NULL;
+	json_object *v;
 	DEFiRet;
 
 	/*We should migrate libfastjson to support uint64_t in addition to int64_t.
@@ -314,11 +314,9 @@ addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
 
 	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
-	if (iRet != RS_RET_OK) {
-		if (v != NULL) {
-			json_object_put(v);
-		}
-	}
+	/* v cannot be NULL in error case, as this would only happen during malloc fail,
+	 * which itself sets it to NULL -- so not doing cleanup here.
+	 */
 	RETiRet;
 }
 
