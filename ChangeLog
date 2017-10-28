@@ -62,6 +62,12 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- omelasticsearch bugfix: output from libcurl to stdout
+  omelasticsearch made libcurl output messages to stdout. This
+  commit fixes that. It also automatically enables libcurl verbose
+  mode during debug runs - it needs to be seen if this is smart or
+  not (previously, code needed to be commented in).
+  closes https://github.com/rsyslog/rsyslog/issues/1909
 - iczmq bugfix: potential memory leak
 - imptcp bugfix: potential misadressing
   When during a connection request the remote peer could not be
