@@ -306,7 +306,8 @@ openSocket(instanceData *pData)
 	/* set up server address structure */
 	memset(&pData->addr, 0, sizeof(pData->addr));
         pData->addr.sun_family = AF_UNIX;
-        strcpy(pData->addr.sun_path, (char*)pData->sockName);
+        strncpy(pData->addr.sun_path, (char*)pData->sockName, sizeof(pData->addr.sun_path));
+	pData->addr.sun_path[sizeof(pData->addr.sun_path)-1] = '\0';
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
