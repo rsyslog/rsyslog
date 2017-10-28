@@ -1,2 +1,4 @@
 build
 .project
+.vscode
+*.pyc
