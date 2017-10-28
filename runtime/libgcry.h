@@ -49,7 +49,7 @@ struct gcryfile_s {
 				0 means -> end of block, new one must be started. */
 };
 
-int gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen);
+int gcryGetKeyFromFile(const char *fn, char **key, unsigned *keylen);
 int rsgcryInit(void);
 void rsgcryExit(void);
 int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen);
