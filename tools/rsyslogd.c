@@ -1557,11 +1557,15 @@ processImInternal(void)
  * function for new plugins. -- rgerhards, 2009-10-12
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
-	prop_t *pInputName, struct syslogTime *stTime, time_t ttGenTime, ruleset_t *pRuleset)
+parseAndSubmitMessage(const uchar *const hname, const uchar *const hnameIP, const uchar *const msg,
+	const int len, const int flags, const flowControl_t flowCtlType,
+	prop_t *const pInputName,
+	const struct syslogTime *const stTime,
+	const time_t ttGenTime,
+	ruleset_t *const pRuleset)
 {
 	prop_t *pProp = NULL;
-	smsg_t *pMsg;
+	smsg_t *pMsg = NULL;
 	DEFiRet;
 
 	/* we now create our own message object and submit it to the queue */
@@ -1584,6 +1588,12 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	CHKiRet(submitMsg2(pMsg));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		DBGPRINTF("parseAndSubmitMessage() error, discarding msg: %s\n", msg);
+		if(pMsg != NULL) {
+			msgDestruct(&pMsg);
+		}
+	}
 	RETiRet;
 }
 
