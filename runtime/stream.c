@@ -379,7 +379,9 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if(iRet == RS_RET_OK) {
+		assert(pThis->fd != -1);
+	} else {
 		if(pThis->pszCurrFName != NULL) {
 			free(pThis->pszCurrFName);
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
