@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2016 Rainer Gerhards and Adiscon
+ * Copyright 2004-2017 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -636,8 +636,6 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	prop_t *ip;
 	prop_t *fqdn;
 	prop_t *localName;
-	prop_t *propFromHost = NULL;
-	prop_t *propFromHostIP = NULL;
 	int bIsPermitted;
 	smsg_t *pMsg;
 	int i;
@@ -672,10 +670,6 @@ preprocessBatch(batch_t *pBatch, int *pbShutdownImmediate) {
 	}
 
 finalize_it:
-	if(propFromHost != NULL)
-		prop.Destruct(&propFromHost);
-	if(propFromHostIP != NULL)
-		prop.Destruct(&propFromHostIP);
 	RETiRet;
 }
 
