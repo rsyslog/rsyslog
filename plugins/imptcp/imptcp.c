@@ -645,8 +645,8 @@ static rsRetVal
 getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool bUXServer)
 {
 	int error;
-	uchar szIP[NI_MAXHOST] = "";
-	uchar szHname[NI_MAXHOST] = "";
+	uchar szIP[NI_MAXHOST+1] = "";
+	uchar szHname[NI_MAXHOST+1] = "";
 	struct addrinfo hints, *res;
 	sbool bMaliciousHName = 0;
 	
@@ -656,8 +656,10 @@ getPeerNames(prop_t **peerName, prop_t **peerIP, struct sockaddr *pAddr, sbool b
 	*peerIP = NULL;
 
 	if (bUXServer) {
-		strcpy((char *) szHname, (char *) glbl.GetLocalHostName());
-		strcpy((char *) szIP, (char *) glbl.GetLocalHostIP());
+		strncpy((char *) szHname, (char *) glbl.GetLocalHostName(), NI_MAXHOST);
+		strncpy((char *) szIP, (char *) glbl.GetLocalHostIP(), NI_MAXHOST);
+		szHname[NI_MAXHOST] = '\0';
+		szIP[NI_MAXHOST] = '\0';
 	} else {
 		error = getnameinfo(pAddr, SALEN(pAddr), (char *) szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
 		if (error) {
