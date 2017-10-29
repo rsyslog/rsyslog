@@ -228,8 +228,10 @@ tplToString(struct template *__restrict__ const pTpl,
 			iBuf += iLenVal;
 		}
 
-		if(bMustBeFreed)
+		if(bMustBeFreed) {
 			free(pVal);
+			bMustBeFreed = 0;
+		}
 
 		pTpe = pTpe->pNext;
 	}
@@ -246,6 +248,11 @@ tplToString(struct template *__restrict__ const pTpl,
 	iparam->lenStr = iBuf;
 	
 finalize_it:
+	if(bMustBeFreed) {
+		free(pVal);
+		bMustBeFreed = 0;
+	}
+
 	RETiRet;
 }
 
