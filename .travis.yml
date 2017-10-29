@@ -37,6 +37,7 @@ addons:
     - python-docutils 
     - openjdk-7-jdk
     - wget
+    - libkrb5-dev
     #- libgrok1
     #- libgrok-dev
     #- faketime

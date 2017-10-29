@@ -138,7 +138,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 	DEFiRet;
 	
 	DBGPRINTF("imczmq: addListener called..\n");	
-	struct listener_t* pData;
+	struct listener_t* pData = NULL;
 	CHKmalloc(pData=(struct listener_t*)MALLOC(sizeof(struct listener_t)));
 	pData->ruleset = iconf->pBindRuleset;
 
@@ -261,10 +261,13 @@ static rsRetVal addListener(instanceConf_t* iconf){
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(pData);
+	}
 	RETiRet;
 }
 
-static rsRetVal rcvData(){
+static rsRetVal rcvData(void){
 	DEFiRet;
 	
 	if(!listenerList) {
@@ -373,7 +376,6 @@ BEGINrunInput
 CODESTARTrunInput
 	CHKiRet(rcvData());
 finalize_it:
-	RETiRet;
 ENDrunInput
 
 
@@ -502,7 +504,7 @@ ENDcheckCnf
 BEGINactivateCnfPrePrivDrop
 CODESTARTactivateCnfPrePrivDrop
 	runModConf = pModConf;
-	putenv("ZSYS_SIGHANDLER=false");
+	putenv((char*)"ZSYS_SIGHANDLER=false");
 ENDactivateCnfPrePrivDrop
 
 

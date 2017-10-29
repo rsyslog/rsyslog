@@ -479,6 +479,7 @@ static void MsgSetRcvFromWithoutAddRef(smsg_t *pThis, prop_t *new)
 static void
 MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *rulesetName)
 {
+	/* coverity[checked_return] */ // KEEP TOGETHER WITH NEXT LINE!
 	rulesetGetRuleset(runConf, &(pMsg->pRuleset), rsCStrGetSzStrNoNULL(rulesetName));
 }
 
@@ -879,7 +880,7 @@ finalize_it:
  * udp input).
  * rgerhards, 2008-10-06
  */
-rsRetVal msgConstructWithTime(smsg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime)
+rsRetVal msgConstructWithTime(smsg_t **ppThis, const struct syslogTime *stTime, const time_t ttGenTime)
 {
 	DEFiRet;
 
@@ -2998,8 +2999,6 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	struct json_object *field;
 	DEFiRet;
 
-	if(*pbMustBeFreed)
-		free(*pRes);
 	*pRes = NULL;
 
 	if(pProp->id == PROP_CEE) {

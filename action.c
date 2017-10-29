@@ -822,8 +822,9 @@ finalize_it:
 
 
 static rsRetVal
-actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
+actionCheckAndCreateWrkrInstance(action_t * const pThis, const wti_t *const pWti)
 {
+	int locked = 0;
 	DEFiRet;
 	if(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
 		DBGPRINTF("wti %p: we need to create a new action worker instance for "
@@ -836,23 +837,31 @@ actionCheckAndCreateWrkrInstance(action_t * const pThis, wti_t * const pWti)
 		/* maintain worker data table -- only needed if wrkrHUP is requested! */
 
 		pthread_mutex_lock(&pThis->mutWrkrDataTable);
+		locked = 1;
 		int freeSpot;
 		for(freeSpot = 0 ; freeSpot < pThis->wrkrDataTableSize ; ++freeSpot)
 			if(pThis->wrkrDataTable[freeSpot] == NULL)
 				break;
 		if(pThis->nWrkr == pThis->wrkrDataTableSize) {
-			// TODO: check realloc, fall back to old table if it fails. Better than nothing...
-			pThis->wrkrDataTable = realloc(pThis->wrkrDataTable,
+			void *const newTable = realloc(pThis->wrkrDataTable,
 				(pThis->wrkrDataTableSize + 1) * sizeof(void*));
+			if(newTable == NULL) {
+				DBGPRINTF("actionCheckAndCreateWrkrInstance: out of "
+					"memory realloc wrkrDataTable\n")
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			}
+			pThis->wrkrDataTable = newTable;
 			pThis->wrkrDataTableSize++;
 		}
 		pThis->wrkrDataTable[freeSpot] = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
 		pThis->nWrkr++;
-		pthread_mutex_unlock(&pThis->mutWrkrDataTable);
 		DBGPRINTF("wti %p: created action worker instance %d for "
 			  "action %d\n", pWti, pThis->nWrkr, pThis->iActionNbr);
 	}
 finalize_it:
+	if(locked) {
+		pthread_mutex_unlock(&pThis->mutWrkrDataTable);
+	}
 	RETiRet;
 }
 

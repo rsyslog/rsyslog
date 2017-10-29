@@ -1,4 +1,116 @@
 ------------------------------------------------------------------------------
+Version 8.31.0 [v8-stable] 2017-11-28
+- omprog: added error handling and transaction support for external plugins
+  This permits much better integration of external output modules.
+  Special thanks to Joan Sala for providing this work!
+- core: emit error message on abnormal input thread termination
+  This indicates a serious issue of which the user should be notified.
+  Was not done so far and caused grief when troubleshooting issues.
+- omfwd bugfix: generate error message on connection failure
+- imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
+- imjournal bugfix: module was defunctional
+  The open function was broken by commit 92ac801, resulting in
+  no data being ever read from the journal.
+  patch bases on the idea of Radovan Sroka given here:
+  https://github.com/rsyslog/rsyslog/issues/1895#issuecomment-339017357
+  but follows the current imjournal-paradigm of having the journal
+  handle inside a global variable.
+  see also https://github.com/rsyslog/rsyslog/issues/1895
+  closes https://github.com/rsyslog/rsyslog/issues/1897
+- [io]mgssapi: fix build problems (regression from 8.30.0)
+- [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
+- imfile: some small performance enhancements
+  Thanks to Peter Portante for the patch
+- omfile: hande file open error via SUSPEND mode
+  For a while, an open file error lead to suspension as the error was
+  not detected by the rule engine. This has changed with fixes
+  in 8.30.0. I asked users what they prefer (and expect) and
+  everyone meant it should still be handled via suspension. See
+  github tracker below for more details.
+  closes https://github.com/rsyslog/rsyslog/issues/1832
+- imudp: improve error reporting
+  When udp listener cannot be created, an error message containing
+  the ip-address and port is put out.
+  closes https://github.com/rsyslog/rsyslog/issues/1899
+- [io]mrelp bugfix: segfault on startup if configured cert not readable
+  When the certificate file specified in the omrelp/imrelp configuration
+  can't be accessed, e.g. because it doesn't exist or you don't have
+  permission to do so, a Segmentation Fault will appear when you start
+  Rsyslog. This commit fixes that problem.
+  closes https://github.com/rsyslog/rsyslog/issues/1869
+- mmanon fix: make build under gcc 7
+  Thanks to William Dauchy for the patch
+- mmpstrucdata bugfix: formatting error of ']' char
+  This was invalidly formatted as '"'. Thanks to github user
+  wu3396 for the error report including the patch idea.
+  closes https://github.com/rsyslog/rsyslog/issues/1826
+- core bugfix: potential segfault during startup
+  A NULL pointer could be accessed if there was a problem with the
+  timezone parameters.  Affects only startup, once started, no problem
+  existed.
+  Detected by Coverty scan; CID 185414
+- core bugfix: potential segfault when shutting down rsyslog
+  when rulesets are nested a segfault can occur when shutting down
+  rsyslog. the reason is that rule sets are destructed in load order,
+  which means a "later" ruleset may still be active when an "earlier"
+  one was already destructed. In these cases, a "call" can invalidly
+  call into the earlier ruleset, which is destructed and so leads to
+  invalid memory access. If a segfault actually happens depends on the
+  OS, but it is highly probable.
+  The cure is to split the queue shutdown sequence. In a first step,
+  all worker threads are terminated and the queue set to enqOnly.
+  While some are terminated, it is still possible that the others
+  enqueue messages into the queue (which are then just placed into the
+  queue, not processed). After this happens, a call can no longer
+  be issued (as there are no more workers). So then we can destruct
+  the rulesets in any order.
+  closes https://github.com/rsyslog/rsyslog/issues/1122
+- omelasticsearch bugfix: output from libcurl to stdout
+  omelasticsearch made libcurl output messages to stdout. This
+  commit fixes that. It also automatically enables libcurl verbose
+  mode during debug runs - it needs to be seen if this is smart or
+  not (previously, code needed to be commented in).
+  closes https://github.com/rsyslog/rsyslog/issues/1909
+- iczmq bugfix: potential memory leak
+- imptcp bugfix: potential misadressing
+  When during a connection request the remote peer could not be
+  identified, imptcp could misadress memory if it is configured
+  to emit messages on connection open.
+  Detected by clang 5.0 static analyzer.
+- imptcp: potential buffer overflow
+  if the local hostname or IP is larger than NI_MAXHOST-1, an internal
+  buffer is overflowed. This is irrespective of any input data.
+  Detected by Coverity scan, CID 185390
+- core/nsd_gtls: fix potential unitialized data access
+  could occur during certificate check
+  found by clang 5.0 static analyzer
+- stats bugfix: potential program hang
+  due to missing unlock. This could only occur if pstats was set to
+  CEE-format logging (very uncommon) AND if the system runs out of
+  memory (in which case other things go pretty bad as well).
+  found by Coverty scan
+- omfwd bugfix: memory leak if network namespaces are used
+  very seldom used feature, occurs only during error case
+  found by Coverty scan.
+- core: potential misadressing when accessing JSON properties
+  When a JSON property is accessed in template processing, memory may
+  have been misadressed or a double-free may occur while obtaining the
+  propety.
+  This was detected by a Coverty scan.
+- fixed several minor and cosmetic issues found by Coverty scan
+  includding false positives. For details see "$ git log". All noteworthy
+  issues are seperately mentioned in this ChangeLog. The ones not mentioned
+  are for example problems that can only occur during out of memory
+  conditions, under which it is extremely likely tha the rsyslog process
+  will be killed in any case
+- testbench:
+  * added compile-check for [io]mgssapi, mmcount
+  * harden tests against hanging previous instances
+  * re-enable RELP tests on Solaris
+  * added basic test for imjournal
+- CI: improved test coverage on FreeBSD
+- build: make compile warning-free under gcc 7
+------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17
 - NEW BUILD REQUIREMENTS
   * libfastjson 0.99.7 is now mandatory

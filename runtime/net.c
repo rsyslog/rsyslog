@@ -381,11 +381,12 @@ finalize_it:
  * *pbIsMatching is set to 0 if there is no match and something else otherwise.
  * rgerhards, 2008-05-27 */
 static rsRetVal
-PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching)
+PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
+	const uchar *pszNameToMatch,
+	int *const pbIsMatching)
 {
-	permittedPeerWildcard_t *pWildcard;
-	uchar *pC;
-	uchar *pStart; /* start of current domain component */
+	const permittedPeerWildcard_t *pWildcard;
+	const uchar *pC;
 	size_t iWildcard, iName; /* work indexes for backward comparisons */
 	DEFiRet;
 
@@ -413,7 +414,7 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 			*pbIsMatching = 0;
 			FINALIZE;
 		}
-		pStart = pC;
+		const uchar *const pStart = pC; /* start of current domain component */
 		while(*pC != '\0' && *pC != '.') {
 			++pC;
 		}
@@ -436,10 +437,13 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
 				iWildcard = 0;
 				while(iWildcard < pWildcard->lenDomainPart) {
+					// I give up, I see now way to remove false positive -- rgerhards, 2017-10-23
+					#ifndef __clang_analyzer__
 					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
 						*pbIsMatching = 0;
 						FINALIZE;
 					}
+					#endif
 					++iName;
 					++iWildcard;
 				}

@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  * 
- * Copyright 2007-2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -754,11 +754,14 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	hints.ai_family = family;
 	hints.ai_socktype = SOCK_STREAM;
 	if(getaddrinfo((char*)host, (char*)port, &hints, &res) != 0) {
-		dbgprintf("error %d in getaddrinfo\n", errno);
+		LogError(errno, RS_RET_IO_ERROR, "cannot resolve hostname '%s'",
+			host);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	
 	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+		LogError(errno, RS_RET_IO_ERROR, "cannot bind socket for %s:%s",
+			host, port);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -773,6 +776,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	}
 
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+		LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s",
+			host, port);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 

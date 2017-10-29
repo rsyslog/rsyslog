@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2016-09-20 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[omprog-cleanup-vg.sh\]: test for cleanup in omprog with valgrind
 . $srcdir/diag.sh init

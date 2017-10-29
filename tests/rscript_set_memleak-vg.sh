@@ -4,6 +4,13 @@
 # https://github.com/rsyslog/rsyslog/issues/1376
 # Copyright 2017-01-24 by Rainer Gerhards
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

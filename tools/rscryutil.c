@@ -347,6 +347,8 @@ decrypt(const char *name)
 
 err:
 	fprintf(stderr, "error %d processing file %s\n", r, name);
+	if(eifp != NULL)
+		fclose(eifp);
 	if(logfp != NULL)
 		fclose(logfp);
 }
@@ -379,12 +381,11 @@ write_keyfile(char *fn)
 }
 
 static void
-getKeyFromFile(char *fn)
+getKeyFromFile(const char *fn)
 {
-	int r;
-	r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
+	const int r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
 	if(r != 0) {
-		fprintf(stderr, "Error %d reading key from file '%s'\n", r, fn);
+		perror(fn);
 		exit(1);
 	}
 }

@@ -7,6 +7,13 @@
 # is because it is not so easy to pick it up from the system log and other
 # tests already cover this szenario.
 # add 2017-05-10 by Rainer Gerhards, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

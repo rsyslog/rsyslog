@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -162,7 +162,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
-	{ "streamdriver.mode", eCmdHdlrPositiveInt, 0 },
+	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.name", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },

@@ -27,6 +27,9 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
 	mangle_qi
+if ENABLE_IMJOURNAL
+check_PROGRAMS += journal_print
+endif
 TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
@@ -48,9 +51,11 @@ TESTS +=  \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	nested-call-shutdown.sh \
 	invalid_nested_include.sh \
 	omfwd-keepalive.sh \
 	omfile-read-only-errmsg.sh \
+	omfile-read-only.sh \
 	omfile_both_files_set.sh \
 	msgvar-concurrency.sh \
 	localvar-concurrency.sh \
@@ -308,6 +313,11 @@ TESTS +=  \
 	multiple_lookup_tables-vg.sh \
 	fac_local0-vg.sh
 endif # HAVE_VALGRIND
+
+if ENABLE_IMJOURNAL
+TESTS +=  \
+	imjournal-basic.sh
+endif
 
 if ENABLE_OMJOURNAL
 TESTS +=  \
@@ -589,7 +599,8 @@ TESTS += sndrcv_relp.sh \
 	 imrelp-manyconn.sh
 if ENABLE_GNUTLS
 TESTS += \
-         sndrcv_relp_tls.sh
+         sndrcv_relp_tls.sh \
+         relp_tls_certificate_not_found.sh
 endif
 endif
 
@@ -701,6 +712,7 @@ EXTRA_DIST= \
 	glbl_setenv_err.sh \
 	glbl_setenv_err_too_long.sh \
 	glbl_setenv.sh \
+	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	invalid_nested_include.sh \
 	validation-run.sh \
@@ -949,6 +961,7 @@ EXTRA_DIST= \
 	now-utc.sh \
 	testsuites/now-utc.conf \
 	faketime_common.sh \
+	imjournal-basic.sh \
 	omjournal-abort-template.sh \
 	omjournal-abort-no-template.sh \
 	omjournal-basic-template.sh \
@@ -1173,6 +1186,7 @@ EXTRA_DIST= \
 	sndrcv_relp_tls.sh \
 	testsuites/sndrcv_relp_tls_sender.conf \
 	testsuites/sndrcv_relp_tls_rcvr.conf \
+	relp_tls_certificate_not_found.sh \
 	sndrcv_relp_dflt_pt.sh \
 	testsuites/sndrcv_relp_dflt_pt_rcvr.conf \
 	testsuites/sndrcv_relp_dflt_pt_sender.conf \
@@ -1640,6 +1654,10 @@ minitcpsrv_LDADD = $(SOL_LIBS)
 syslog_caller_SOURCES = syslog_caller.c
 syslog_caller_CPPFLAGS = $(LIBLOGGING_STDLOG_CFLAGS)
 syslog_caller_LDADD = $(SOL_LIBS) $(LIBLOGGING_STDLOG_LIBS)
+
+journal_print_SOURCES = journal_print.c
+journal_print_CPPFLAGS = $(LIBSYSTEMD_JOURNAL_CFLAGS)
+journal_print_LDADD = $(LIBSYSTEMD_JOURNAL_LIBS)
 
 diagtalker_SOURCES = diagtalker.c
 diagtalker_LDADD = $(SOL_LIBS)

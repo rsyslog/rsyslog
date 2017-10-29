@@ -1336,8 +1336,8 @@ cancelWorkers(qqueue_t *pThis)
  * longer, because we no longer can persist the queue in parallel to waiting
  * on worker timeouts.
  */
-static rsRetVal
-ShutdownWorkers(qqueue_t *pThis)
+rsRetVal
+qqueueShutdownWorkers(qqueue_t *const pThis)
 {
 	DEFiRet;
 
@@ -2296,7 +2296,9 @@ qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 			LogMsg(0, RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR, LOG_WARNING,
 					"queue \"%s\": queue.fullDelayMark "
 					"is set below high water mark. This will result in DA mode "
-					" NOT being activated for full delayable messages",
+					" NOT being activated for full delayable messages: In many "
+					"cases this is a configuration error, please check if this "
+					"is really what you want",
 					obj.GetName((obj_t*) pThis));
 		}
 	}
@@ -2653,7 +2655,7 @@ CODESTARTobjDestruct(qqueue)
 		 */
 		if(pThis->qType != QUEUETYPE_DIRECT && !pThis->bEnqOnly && pThis->pqParent == NULL
 		   && pThis->pWtpReg != NULL)
-			ShutdownWorkers(pThis);
+			qqueueShutdownWorkers(pThis);
 
 		if(pThis->bIsDA && getPhysicalQueueSize(pThis) > 0 && pThis->bSaveOnShutdown) {
 			CHKiRet(DoSaveOnShutdown(pThis));

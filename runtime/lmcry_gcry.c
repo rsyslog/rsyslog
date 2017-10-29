@@ -2,7 +2,7 @@
  *
  * An implementation of the cryprov interface for libgcrypt.
  * 
- * Copyright 2013 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2013-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "module-template.h"
 #include "glbl.h"
@@ -175,8 +176,8 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	if(keyfile != NULL) {
 		r = gcryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
 		if(r != 0) {
-			errmsg.LogError(0, RS_RET_ERR, "error %d reading keyfile %s\n",
-				r, keyfile);
+			errmsg.LogError(errno, RS_RET_ERR, "error reading keyfile %s",
+				keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}

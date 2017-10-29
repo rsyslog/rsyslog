@@ -1,6 +1,13 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released  under ASL 2.0
 # rgerhards, 2013-11-22
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[mmpstrucdata.sh\]: testing mmpstrucdata
 . $srcdir/diag.sh init

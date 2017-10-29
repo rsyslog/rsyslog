@@ -455,6 +455,7 @@ isValidHexNum(const uchar *const __restrict__ buf,
 				(*nprocessed)++;
 				return -1;
 			}
+			CASE_FALLTHROUGH
 		default:
 			return cyc;
 		}

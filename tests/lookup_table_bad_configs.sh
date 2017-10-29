@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2015-12-02 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[lookup_table_bad_configs.sh\]: test for sparse-array lookup-table and HUP based reloading of it
 . $srcdir/diag.sh init

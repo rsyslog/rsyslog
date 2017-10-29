@@ -43,12 +43,24 @@ extern int src_exists;
 #endif
 /* src end */
 
+/* define a couple of attributes to improve cross-platform builds */
+#if __GNUC__ > 6
+	#define CASE_FALLTHROUGH __attribute__((fallthrough));
+#else
+	#define CASE_FALLTHROUGH
+#endif
+
+#define ATTR_NORETURN __attribute__ ((noreturn))
+#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
 
 /* ############################################################# *
  * #                 Some constant values                      # *
  * ############################################################# */
 #define CONST_LEN_TIMESTAMP_3164 15 		/* number of chars (excluding \0!) in a RFC3164 timestamp */
 #define CONST_LEN_TIMESTAMP_3339 32 		/* number of chars (excluding \0!) in a RFC3339 timestamp */
+
+#define CONST_LEN_CEE_COOKIE 5
+#define CONST_CEE_COOKIE "@cee:"
 
 /* ############################################################# *
  * #                    Config Settings                        # *

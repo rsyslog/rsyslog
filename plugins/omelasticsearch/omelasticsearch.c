@@ -281,6 +281,26 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+/* elasticsearch POST result string ... useful for debugging */
+static size_t
+curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	char *p = (char *)ptr;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
+	char *buf;
+	size_t newlen;
+
+	newlen = pWrkrData->replyLen + size*nmemb;
+	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
+		DBGPRINTF("omelasticsearch: realloc failed in curlResult\n");
+		return 0; /* abort due to failure */
+	}
+	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
+	pWrkrData->replyLen = newlen;
+	pWrkrData->reply = buf;
+	return size*nmemb;
+}
+
 /* Build basic URL part, which includes hostname and port as follows:
  * http://hostname:port/ based on a server param
  * Newly creates a cstr for this purpose.
@@ -377,6 +397,7 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 		}
 
 		curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlResult);
 		res = curl_easy_perform(curl);
 		free(healthUrl);
 
@@ -1238,26 +1259,6 @@ CODESTARTendTransaction
 finalize_it:
 ENDendTransaction
 
-/* elasticsearch POST result string ... useful for debugging */
-static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	char *p = (char *)ptr;
-	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
-	char *buf;
-	size_t newlen;
-
-	newlen = pWrkrData->replyLen + size*nmemb;
-	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
-		DBGPRINTF("omelasticsearch: realloc failed in curlResult\n");
-		return 0; /* abort due to failure */
-	}
-	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
-	pWrkrData->replyLen = newlen;
-	pWrkrData->reply = buf;
-	return size*nmemb;
-}
-
 static rsRetVal
 computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
 	int r;
@@ -1295,8 +1296,9 @@ curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsign
 	if(allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-	/* Only enable for debugging
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
+	if(Debug) {
+		curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE);
+	}
 }
 
 static void
