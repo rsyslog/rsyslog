@@ -644,7 +644,7 @@ destructUnlinkedCounters(ctr_t *ctr) {
 void
 checkGoneAwaySenders(const time_t tCurr)
 {
-	struct hashtable_itr *itr;
+	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
 	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
 	struct tm tm;
@@ -676,6 +676,7 @@ checkGoneAwaySenders(const time_t tCurr)
 	}
 
 	pthread_mutex_unlock(&mutSenders);
+	free(itr);
 }
 
 /* destructor for the statsobj object */
