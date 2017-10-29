@@ -312,7 +312,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		iRet = parsQuotedCStr(pPars, &stmt->d.s_propfilt.pCSCompValue);
 		if(iRet != RS_RET_OK) {
 			parser_errmsg("error %d compare value property", iRet);
-			rsParsDestruct(pPars);
 			FINALIZE;
 		}
 	}

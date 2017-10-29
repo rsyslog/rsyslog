@@ -263,7 +263,6 @@ BEGINdoAction_NoStrings
 	smsg_t *pMsg = ppMsg[0];
 	char *appname;
 	struct json_object *json = NULL;
-	es_str_t *estr = NULL;
 	struct json_object *keyjson = NULL;
 	const char *pszValue;
 	int *pCounter;
@@ -320,9 +319,6 @@ CODESTARTdoAction
 	}
 finalize_it:
 	pthread_mutex_unlock(&pData->mut);
-	if(estr) {
-		es_deleteStr(estr);
-	}
 
 	if(json) {
 		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json, 0, 0);
