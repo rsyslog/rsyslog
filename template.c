@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2016 Rainer Gerhards and Adiscon
+ * Copyright 2004-2017 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -1432,6 +1432,10 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkConstant, pvals);
 	
 	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
