@@ -395,9 +395,6 @@ setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms)
 	int attr_initialized = 0, mutex_initialized = 0, cond_initialized = 0;
 	DEFiRet;
 
-	subpTimeOut->timeout_armed = 1;
-	subpTimeOut->waiter_tid = syscall(SYS_gettid);
-	subpTimeOut->timeout_ms = timeout_ms;
 	CHKiConcCtrl(pthread_attr_init(&subpTimeOut->thd_attr));
 	attr_initialized = 1;
 	CHKiConcCtrl(pthread_mutex_init(&subpTimeOut->lock, NULL));
@@ -406,6 +403,12 @@ setupSubprocessTimeout(subprocess_timeout_desc_t *subpTimeOut, long timeout_ms)
 	cond_initialized = 1;
 	CHKiRet(timeoutComp(&subpTimeOut->timeout, timeout_ms));
 	CHKiConcCtrl(pthread_create(&subpTimeOut->thd, &subpTimeOut->thd_attr, killSubprocessOnTimeout, subpTimeOut));
+	/* mutex look to keep Coverity scan happen - not really necessary */
+	pthread_mutex_lock(&subpTimeOut->lock);
+	subpTimeOut->timeout_armed = 1;
+	subpTimeOut->waiter_tid = syscall(SYS_gettid);
+	subpTimeOut->timeout_ms = timeout_ms;
+	pthread_mutex_unlock(&subpTimeOut->lock);
 finalize_it:
 	if (iRet != RS_RET_OK) {
 		if (attr_initialized) pthread_attr_destroy(&subpTimeOut->thd_attr);
