@@ -1181,7 +1181,7 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	} else { /* note: this branch is for compatibility with old TX modules */
 		DBGPRINTF("doTransaction: action '%s', currIParam %d\n",
 			   pThis->pszName, wrkrInfo->p.tx.currIParam);
-		for(i = 0 ; i < wrkrInfo->p.tx.currIParam ; ++i) {
+		for(i = 0 ; i < nparams ; ++i) {
 			/* Note: we provide the message's base iparam - actionProcessMessage()
 			 * uses this as *base* address.
 			 */
@@ -1212,7 +1212,6 @@ actionTryCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pW
 	CHKiRet(actionPrepare(pThis, pWti));
 
 	CHKiRet(doTransaction(pThis, pWti, iparams, nparams));
-DBGPRINTF("actionTryCommit[%s] past doTransaction\n", pThis->pszName);
 
 	if(getActionState(pWti, pThis) == ACT_STATE_ITX) {
 		iRet = pThis->pMod->mod.om.endTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
@@ -1247,7 +1246,6 @@ DBGPRINTF("actionTryCommit[%s] past doTransaction\n", pThis->pszName);
 	iRet = getReturnCode(pThis, pWti);
 
 finalize_it:
-DBGPRINTF("actionTryCommit[%s] exit %d\n", pThis->pszName, iRet);
 	RETiRet;
 }
 
@@ -1284,7 +1282,7 @@ actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const pThis, wti_t *__
 	*new_nMsgs = 0;
 	for(unsigned i = 0 ; i < nMsgs ; ++i) {
 		setActionResumeInRow(pWti, pThis, 0); // make sure we do not trigger OK-as-SUSPEND handling
-		memcpy(&oneParamSet, &actParam(wrkrInfo->p.tx.iparams, 1, i, 0),
+		memcpy(&oneParamSet, &actParam(wrkrInfo->p.tx.iparams, pThis->iNumTpls, i, 0),
 			sizeof(actWrkrIParams_t) * pThis->iNumTpls);
 		ret = actionTryCommit(pThis, pWti, oneParamSet, 1);
 		if(ret == RS_RET_SUSPENDED) {

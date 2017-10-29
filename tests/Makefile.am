@@ -467,6 +467,10 @@ TESTS +=  \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh
 endif
+if HAVE_VALGRIND
+TESTS +=  \
+	es-basic-vg.sh
+endif
 endif
 
 if ENABLE_MMPSTRUCDATA
