@@ -62,9 +62,12 @@ gcryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keyle
 	if((*key = malloc(sb.st_size)) == NULL) goto done;
 	if(read(fd, *key, sb.st_size) != sb.st_size) goto done;
 	*keylen = sb.st_size;
-	close(fd);
 	r = 0;
-done:	return r;
+done:
+	if(fd >= 0) {
+		close(fd);
+	}
+	return r;
 }
 
 
