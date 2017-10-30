@@ -44,6 +44,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   This was invalidly formatted as '"'. Thanks to github user
   wu3396 for the error report including the patch idea.
   closes https://github.com/rsyslog/rsyslog/issues/1826
+- mmexternalb bugfix: memory leak
+- core/stats bugfix: memory leak if sender stats or tracking are enabled
 - core bugfix: potential segfault during startup
   A NULL pointer could be accessed if there was a problem with the
   timezone parameters.  Affects only startup, once started, no problem
@@ -65,6 +67,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- template object bugfix: NULL pointer access on invalid parameters
+  could happen only during startup
+  Detected by Coverity scan, CID 185376
+- omjournal bugfix: NULL pointer access on invalid parameters
+  could happen only during startup
 - omelasticsearch bugfix: output from libcurl to stdout
   omelasticsearch made libcurl output messages to stdout. This
   commit fixes that. It also automatically enables libcurl verbose
