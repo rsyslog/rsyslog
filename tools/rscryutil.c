@@ -403,7 +403,7 @@ getRandomKey(void)
 	 * unavailability of /dev/urandom is just a theoretic thing, it
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
 		if(read(fd, cry_key, randomKeyLen)) {}; /* keep compiler happy */
 		close(fd);
 	}
