@@ -1002,13 +1002,14 @@ finalize_it:
 		if(   pThis->readTimeout
 		   && (pThis->prevMsgSegment != NULL)
 		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
-			CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
-			cstrDestruct(&pThis->prevMsgSegment);
-			pThis->lastRead = tCurr;
-			pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
-			dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
-				FINALIZE;
-			iRet = RS_RET_OK;
+			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrDestruct(&pThis->prevMsgSegment);
+				pThis->lastRead = tCurr;
+				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+				dbgprintf("stream: generated msg based on timeout: %s\n",
+					cstrGetSzStrNoNULL(*ppCStr));
+				iRet = RS_RET_OK;
+			}
 		}
 	}
         RETiRet;

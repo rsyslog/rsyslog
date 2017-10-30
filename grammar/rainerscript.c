@@ -257,7 +257,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d parsing filter property", iRet);
-		rsParsDestruct(pPars);
 		FINALIZE;
 	}
 	CHKiRet(msgPropDescrFill(&stmt->d.s_propfilt.prop, cstrGetSzStrNoNULL(pCSPropName),
@@ -267,7 +266,6 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		parser_errmsg("error %d compare operation property - ignoring selector", iRet);
-		rsParsDestruct(pPars);
 		FINALIZE;
 	}
 
