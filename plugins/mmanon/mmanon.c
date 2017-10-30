@@ -608,10 +608,12 @@ getip(uchar *start, size_t end, char *address)
 	address[i] = '\0';
 }
 
-
-static char*
+/* in case of error with malloc causing abort of function, the
+ string at the target of address remains the same*/
+static rsRetVal
 findip(char* address, wrkrInstanceData_t *pWrkrData)
 {
+	DEFiRet;
 	int i;
 	unsigned num;
 	union node* current;
@@ -623,7 +625,7 @@ findip(char* address, wrkrInstanceData_t *pWrkrData)
 	num = ipv42num(address);
 	for(i = 0; i < 31; i++){
 		if(pWrkrData->pData->ipv4.Root == NULL) {
-			current = (union node*)calloc(1, sizeof(union node));
+			CHKmalloc(current = (union node*)calloc(1, sizeof(union node)));
 			pWrkrData->pData->ipv4.Root = current;
 		}
 		Last = current;
@@ -635,7 +637,7 @@ findip(char* address, wrkrInstanceData_t *pWrkrData)
 			MoreLess = 0;
 		}
 		if(current == NULL){
-			current = (union node*)calloc(1, sizeof(union node));
+			CHKmalloc(current = (union node*)calloc(1, sizeof(union node)));
 			if(MoreLess == 1){
 				Last->pointer.more = current;
 			} else {
@@ -649,24 +651,24 @@ findip(char* address, wrkrInstanceData_t *pWrkrData)
 		CurrentCharPtr = current->ips.ip_low;
 	}
 	if(CurrentCharPtr[0] != '\0'){
-		return CurrentCharPtr;
+		strcpy(address, CurrentCharPtr);
 	} else {
 		num = code_int(num, pWrkrData);
 		num2ipv4(num, CurrentCharPtr);
-		return CurrentCharPtr;
+		strcpy(address, CurrentCharPtr);
 	}
+finalize_it:
+	RETiRet;
 }
 
 
 static void
 process_IPv4 (char* address, wrkrInstanceData_t *pWrkrData)
 {
-	char* current;
 	unsigned num;
 
 	if(pWrkrData->pData->ipv4.randConsis){
-		current = findip(address, pWrkrData);
-		strcpy(address, current);
+		findip(address, pWrkrData);
 	}else {
 		num = ipv42num(address);
 		num = code_int(num, pWrkrData);
