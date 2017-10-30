@@ -821,12 +821,12 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 	}
 }
 
-
-static struct ipv6_int* //separate function from recognising ipv6, since the recognition might get more
-ipv62num(char* address, size_t iplen)  //complex. This function always stays the same, since it
-					//always gets an valid ipv6 input
+//separate function from recognising ipv6, since the recognition might get more
+//complex. This function always stays
+//the same, since it always gets an valid ipv6 input
+static void
+ipv62num(char* const address, const size_t iplen, struct ipv6_int* const ip)
 {
-	struct ipv6_int* ip = (struct ipv6_int*) calloc(1, sizeof(struct ipv6_int));
 	int num[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 	int cyc = 0;
 	int dots = 0;
@@ -877,8 +877,6 @@ ipv62num(char* address, size_t iplen)  //complex. This function always stays the
 		ip->low |= num[i];
 		i++;
 	}
-
-	return ip;
 }
 
 
@@ -951,17 +949,16 @@ findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrDat
 static void
 process_IPv6 (char* address, wrkrInstanceData_t *pWrkrData, size_t iplen)
 {
-	struct ipv6_int* num;
+	struct ipv6_int num = {0, 0};
 
-	num = ipv62num(address, iplen);
+	ipv62num(address, iplen, &num);
 
 	if(pWrkrData->pData->ipv6.randConsis) {
-		findIPv6(num, address, pWrkrData);
+		findIPv6(&num, address, pWrkrData);
 	} else {
-		code_ipv6_int(num, pWrkrData);
-		num2ipv6(num, address);
+		code_ipv6_int(&num, pWrkrData);
+		num2ipv6(&num, address);
 	}
-	free(num);
 }
 
 
