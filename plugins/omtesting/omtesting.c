@@ -177,7 +177,8 @@ static rsRetVal doSleep(instanceData *pData)
 static rsRetVal doRandFail(void)
 {
 	DEFiRet;
-	/* coverity[dc.weak_crypto] -- this is NOT used for security purposes,
+	/* coverity[dc.weak_crypto]
+	 * this is NOT used for security purposes,
 	 * so weak PRNG is OK - rgerhards, 2017-10-30
 	 */
 	if((rand() >> 4) < (RAND_MAX >> 5)) { /* rougly same probability */
