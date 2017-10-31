@@ -293,7 +293,11 @@ openPipe(wrkrInstanceData_t *pWrkrData)
 		/* set our fd to be non-blocking */
 		flags = fcntl(pWrkrData->fdPipeErr, F_GETFL);
 		flags |= O_NONBLOCK;
-		fcntl(pWrkrData->fdPipeErr, F_SETFL, flags);
+		if(fcntl(pWrkrData->fdPipeErr, F_SETFL, flags) == -1) {
+			LogError(errno, RS_RET_ERR, "omprog: set pipe fd to "
+				"nonblocking failed");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
 
 	pWrkrData->bIsRunning = 1;
