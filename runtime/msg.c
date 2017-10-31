@@ -3069,14 +3069,14 @@ msgGetJSONPropJSONorString(smsg_t * const pMsg, msgPropDescr_t *pProp, struct js
 	*pjson = NULL, *pcstr = NULL;
 
 	if(pProp->id == PROP_CEE) {
+		MsgLock(pMsg);
 		jroot = pMsg->json;
-		MsgLock(pMsg);
 	} else if(pProp->id == PROP_LOCAL_VAR) {
-		jroot = pMsg->localvars;
 		MsgLock(pMsg);
+		jroot = pMsg->localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
-		jroot = global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
+		jroot = global_var_root;
 	} else {
 		DBGPRINTF("msgGetJSONPropJSONorString; invalid property id %d\n",
 			  pProp->id);
@@ -3127,14 +3127,14 @@ msgGetJSONPropJSON(smsg_t * const pMsg, msgPropDescr_t *pProp, struct json_objec
 	*pjson = NULL;
 
 	if(pProp->id == PROP_CEE) {
+		MsgLock(pMsg);
 		jroot = pMsg->json;
-		MsgLock(pMsg);
 	} else if(pProp->id == PROP_LOCAL_VAR) {
-		jroot = pMsg->localvars;
 		MsgLock(pMsg);
+		jroot = pMsg->localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
-		jroot = global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
+		jroot = global_var_root;
 	} else {
 		DBGPRINTF("msgGetJSONPropJSON; invalid property id %d\n",
 			  pProp->id);
@@ -4738,19 +4738,19 @@ msgAddJSON(smsg_t * const pM, uchar *name, struct json_object *json, int force_r
 	DEFiRet;
 
 	if(name[0] == '!') {
+		MsgLock(pM);
 		pjroot = &pM->json;
-		MsgLock(pM);
 	} else if(name[0] == '.') {
-		pjroot = &pM->localvars;
 		MsgLock(pM);
+		pjroot = &pM->localvars;
 	} else if (name[0] == '/') { /* globl var */
+		pthread_mutex_lock(&glblVars_lock);
 		pjroot = &global_var_root;
 		if (sharedReference) {
 			given = json;
 			json = jsonDeepCopy(json);
 			json_object_put(given);
 		}
-		pthread_mutex_lock(&glblVars_lock);
 	} else {
 		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, Local or Global variable).", name);
 		ABORT_FINALIZE(RS_RET_INVLD_SETOP);
