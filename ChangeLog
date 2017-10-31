@@ -51,6 +51,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
   timezone parameters.  Affects only startup, once started, no problem
   existed.
   Detected by Coverty scan; CID 185414
+- core bugfix: potential race in variable handling
+  Root of variable tree is accessed prior to locking access to it.
+  This introduces a race that may result in various kinds of
+  misadressing.
+  Found while reviewing code, no bug report exists.
 - core bugfix: potential segfault when shutting down rsyslog
   when rulesets are nested a segfault can occur when shutting down
   rsyslog. the reason is that rule sets are destructed in load order,
