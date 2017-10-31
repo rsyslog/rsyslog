@@ -1507,6 +1507,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template entry config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkProperty, pvals);
 	
 	for(i = 0 ; i < pblkProperty.nParams ; ++i) {

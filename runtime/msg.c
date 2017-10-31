@@ -2997,22 +2997,24 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	struct json_object *jroot;
 	struct json_object *parent;
 	struct json_object *field;
+	int need_unlock = 1;
 	DEFiRet;
 
 	*pRes = NULL;
 
 	if(pProp->id == PROP_CEE) {
+		MsgLock(pMsg);
 		jroot = pMsg->json;
-		MsgLock(pMsg);
 	} else if(pProp->id == PROP_LOCAL_VAR) {
-		jroot = pMsg->localvars;
 		MsgLock(pMsg);
+		jroot = pMsg->localvars;
 	} else if(pProp->id == PROP_GLOBAL_VAR) {
-		jroot = global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
+		jroot = global_var_root;
 	} else {
 		DBGPRINTF("msgGetJSONPropVal; invalid property id %d\n",
 			  pProp->id);
+		need_unlock = 0;
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -3033,10 +3035,12 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	}
 
 finalize_it:
-	if(pProp->id == PROP_GLOBAL_VAR)
-		pthread_mutex_unlock(&glblVars_lock);
-	else
-		MsgUnlock(pMsg);
+	if(need_unlock) {
+		if(pProp->id == PROP_GLOBAL_VAR)
+			pthread_mutex_unlock(&glblVars_lock);
+		else
+			MsgUnlock(pMsg);
+	}
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
@@ -4822,14 +4826,14 @@ msgDelJSON(smsg_t * const pM, uchar *name)
 	DEFiRet;
 
 	if(name[0] == '!') {
+		MsgLock(pM);
 		jroot = &pM->json;
-		MsgLock(pM);
 	} else if(name[0] == '.') {
-		jroot = &pM->localvars;
 		MsgLock(pM);
+		jroot = &pM->localvars;
 	} else if (name[0] == '/') { /* globl var */
-		jroot = &global_var_root;
 		pthread_mutex_lock(&glblVars_lock);
+		jroot = &global_var_root;
 	} else {
 		DBGPRINTF("Passed name %s is unknown kind of variable (It is not CEE, "
 			  "Local or Global variable).", name);
