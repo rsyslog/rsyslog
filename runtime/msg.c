@@ -2997,6 +2997,7 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	struct json_object *jroot;
 	struct json_object *parent;
 	struct json_object *field;
+	int need_unlock = 1;
 	DEFiRet;
 
 	*pRes = NULL;
@@ -3013,6 +3014,7 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	} else {
 		DBGPRINTF("msgGetJSONPropVal; invalid property id %d\n",
 			  pProp->id);
+		need_unlock = 0;
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -3033,10 +3035,12 @@ getJSONPropVal(smsg_t * const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size
 	}
 
 finalize_it:
-	if(pProp->id == PROP_GLOBAL_VAR)
-		pthread_mutex_unlock(&glblVars_lock);
-	else
-		MsgUnlock(pMsg);
+	if(need_unlock) {
+		if(pProp->id == PROP_GLOBAL_VAR)
+			pthread_mutex_unlock(&glblVars_lock);
+		else
+			MsgUnlock(pMsg);
+	}
 	if(*pRes == NULL) {
 		/* could not find any value, so set it to empty */
 		*pRes = (unsigned char*)"";
