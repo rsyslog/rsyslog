@@ -104,6 +104,15 @@ Version 8.31.0 [v8-stable] 2017-11-28
   have been misadressed or a double-free may occur while obtaining the
   propety.
   This was detected by a Coverty scan.
+- gcry crypto provider bugfixes: potential misadressing and memory leak
+  If the config parameters were invalid, a misadressing could occur. If so,
+  this happens only during startup.
+  Also, a memory leak existed when the crypto provider errored out. This could
+  build up if it were used in frequently-changing dynafiles. This was
+  detected by Coverity scan, CID 185360.
+- core/file stream object bugfix: memory leak
+  If a multiline read errored out, a line buffer could be leaked.
+  Detected by Coverity scan, CID 185328
 - fixed several minor and cosmetic issues found by Coverty scan
   includding false positives. For details see "$ git log". All noteworthy
   issues are seperately mentioned in this ChangeLog. The ones not mentioned
