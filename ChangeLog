@@ -6,6 +6,11 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - core: emit error message on abnormal input thread termination
   This indicates a serious issue of which the user should be notified.
   Was not done so far and caused grief when troubleshooting issues.
+- core: refactored locking for json variable access
+  refactored the method so that it consistent in all functions and easier
+  to follow. Most importantly, now an as simple as possible locking paradigm
+  of lock ... unlock within the function. Hopefully easier to understand
+  both for humans and static code analyzers.
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
