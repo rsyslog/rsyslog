@@ -136,11 +136,11 @@ CODESTARTdoAction
 		 */
 		iParam = 0;
 		iBuf = 0;
-		while(szParams[iParam] != NULL && iBuf < (int)sizeof(szBuf)) {
+		while(szParams[iParam] != NULL && iBuf < (int)sizeof(szBuf)-1) {
 			if(iParam > 0)
 				szBuf[iBuf++] = ','; /* all but first need a delimiter */
 			iParamVal = 0;
-			while(szParams[iParam][iParamVal] != '\0' && iBuf < (int) sizeof(szBuf)) {
+			while(szParams[iParam][iParamVal] != '\0' && iBuf < (int) sizeof(szBuf)-1) {
 				szBuf[iBuf++] = szParams[iParam][iParamVal++];
 			}
 			++iParam;
