@@ -278,8 +278,7 @@ static rsRetVal rcvData(void){
 		}
 	}
 
-	zactor_t *authActor;
-	zcert_t *serverCert;
+	zactor_t *authActor = NULL;
 
 	if(runModConf->authenticator == 1) {
 		authActor = zactor_new(zauth, NULL);
@@ -368,7 +367,6 @@ finalize_it:
 	}
 	zlist_destroy(&listenerList);
 	zactor_destroy(&authActor);
-	zcert_destroy(&serverCert);
 	RETiRet;
 }
 
