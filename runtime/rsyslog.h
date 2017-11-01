@@ -524,7 +524,13 @@ operation not carried out */
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
 #endif
 
-# define CHKiConcCtrl(code) if (code != 0) { iRet = RS_RET_CONC_CTRL_ERR; errno = code; goto finalize_it; }
+# define CHKiConcCtrl(code)  { int tmp_CC; \
+	if ((tmp_CC = code) != 0) { \
+		iRet = RS_RET_CONC_CTRL_ERR; \
+		errno = tmp_CC; \
+		goto finalize_it; \
+	} \
+}
 
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
