@@ -823,6 +823,7 @@ case $1 in
 				CORE=`ls core*`
 				echo "set pagination off" >gdb.in
 				echo "core $CORE" >>gdb.in
+				echo "bt" >> gdb.in
 				echo "info thread" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
 				echo "q" >> gdb.in
