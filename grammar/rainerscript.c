@@ -2198,6 +2198,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	   var->prop.id == PROP_GLOBAL_VAR   ) {
 		localRet = msgGetJSONPropJSONorString((smsg_t*)usrptr, &var->prop, &json, &cstr);
 		if(json != NULL) {
+			assert(cstr == NULL);
 			ret->datatype = 'J';
 			ret->d.json = (localRet == RS_RET_OK) ? json : NULL;
 			DBGPRINTF("rainerscript: (json) var %d:%s: '%s'\n",
