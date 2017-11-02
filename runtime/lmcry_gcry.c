@@ -84,7 +84,8 @@ errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmcry_gcry)
-	pThis->ctx = gcryCtxNew();
+	CHKmalloc(pThis->ctx = gcryCtxNew());
+finalize_it:
 ENDobjConstruct(lmcry_gcry)
 
 
