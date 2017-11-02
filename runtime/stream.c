@@ -379,7 +379,9 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if(iRet == RS_RET_OK) {
+		assert(pThis->fd != -1);
+	} else {
 		if(pThis->pszCurrFName != NULL) {
 			free(pThis->pszCurrFName);
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
@@ -994,19 +996,23 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 
 finalize_it:
 	*strtOffs = pThis->strtOffs;
+	if(thisLine != NULL) {
+		cstrDestruct(&thisLine);
+	}
 	if(iRet == RS_RET_OK) {
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
 	} else {
 		if(   pThis->readTimeout
 		   && (pThis->prevMsgSegment != NULL)
 		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
-			CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
-			cstrDestruct(&pThis->prevMsgSegment);
-			pThis->lastRead = tCurr;
-			pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
-			dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
-				FINALIZE;
-			iRet = RS_RET_OK;
+			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrDestruct(&pThis->prevMsgSegment);
+				pThis->lastRead = tCurr;
+				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+				dbgprintf("stream: generated msg based on timeout: %s\n",
+					cstrGetSzStrNoNULL(*ppCStr));
+				iRet = RS_RET_OK;
+			}
 		}
 	}
         RETiRet;

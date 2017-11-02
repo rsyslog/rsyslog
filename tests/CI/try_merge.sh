@@ -1,7 +1,9 @@
 #!/bin/bash
 oldbranch=`git rev-parse --abbrev-ref HEAD`
-git config --global user.email "buildbot@rsyslog.com"
-git config --global user.name "buildbot"
+# note: we usually do not have permissons to modify git config --global,
+# so we do it just to the local context, which is fine with us.
+git config user.email "buildbot@rsyslog.com"
+git config user.name "buildbot"
 
 # we need to make sure we can pull in new code from the main
 # repo. Travis, for example, checks us out into a different repo.

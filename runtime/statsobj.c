@@ -3,7 +3,7 @@
  * This object provides a statistics-gathering facility inside rsyslog. This
  * functionality will be pragmatically implemented and extended.
  *
- * Copyright 2010-2016 Adiscon GmbH.
+ * Copyright 2010-2017 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -304,7 +304,7 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 
 static rsRetVal
 addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
-	json_object *v = NULL;
+	json_object *v;
 	DEFiRet;
 
 	/*We should migrate libfastjson to support uint64_t in addition to int64_t.
@@ -314,11 +314,9 @@ addCtrForReporting(json_object *to, const uchar* field_name, intctr_t value) {
 
 	json_object_object_add(to, (const char*) field_name, v);
 finalize_it:
-	if (iRet != RS_RET_OK) {
-		if (v != NULL) {
-			json_object_put(v);
-		}
-	}
+	/* v cannot be NULL in error case, as this would only happen during malloc fail,
+	 * which itself sets it to NULL -- so not doing cleanup here.
+	 */
 	RETiRet;
 }
 
@@ -355,9 +353,10 @@ accumulatedValue(ctr_t *pCtr) {
 static rsRetVal
 getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, const int8_t bResetCtrs)
 {
-	cstr_t *pcstr;
+	cstr_t *pcstr = NULL;
 	ctr_t *pCtr;
 	json_object *root, *values;
+	int locked = 0;
 	DEFiRet;
 
 	root = values = NULL;
@@ -384,6 +383,7 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 
 	/* now add all counters to this line */
 	pthread_mutex_lock(&pThis->mutCtr);
+	locked = 1;
 	for(pCtr = pThis->ctrRoot ; pCtr != NULL ; pCtr = pCtr->next) {
 		if (fmt == statsFmt_JSON_ES) {
 			/* work-around for broken Elasticsearch JSON implementation:
@@ -404,12 +404,21 @@ getStatsLineCEE(statsobj_t *pThis, cstr_t **ppcstr, const statsFmtType_t fmt, co
 		resetResettableCtr(pCtr, bResetCtrs);
 	}
 	pthread_mutex_unlock(&pThis->mutCtr);
+	locked = 0;
 	CHKiRet(rsCStrAppendStr(pcstr, (const uchar*) json_object_to_json_string(root)));
 
 	cstrFinalize(pcstr);
 	*ppcstr = pcstr;
+	pcstr = NULL;
 
 finalize_it:
+	if(locked) {
+		pthread_mutex_unlock(&pThis->mutCtr);
+	}
+
+	if (pcstr != NULL) {
+		cstrDestruct(&pcstr);
+	}
 	if (root != NULL) {
 		json_object_put(root);
 	}
@@ -476,7 +485,7 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 	statsFmtType_t fmt,
 	const int8_t bResetCtrs)
 {
-	struct hashtable_itr *itr;
+	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
 	char fmtbuf[2048];
 
@@ -508,6 +517,7 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 		} while (hashtable_iterator_advance(itr));
 	}
 
+	free(itr);
 	pthread_mutex_unlock(&mutSenders);
 }
 
@@ -519,10 +529,10 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
  * line. If the callback reports an error, processing is stopped.
  */
 static rsRetVal
-getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
+getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *const usrptr, statsFmtType_t fmt, const int8_t bResetCtrs)
 {
 	statsobj_t *o;
-	cstr_t *cstr;
+	cstr_t *cstr = NULL;
 	DEFiRet;
 
 	for(o = objRoot ; o != NULL ; o = o->next) {
@@ -546,6 +556,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *usrptr, statsFmtType_t
 	getSenderStats(cb, usrptr, fmt, bResetCtrs);
 
 finalize_it:
+	if(cstr != NULL) {
+		rsCStrDestruct(&cstr);
+	}
 	RETiRet;
 }
 
@@ -631,7 +644,7 @@ destructUnlinkedCounters(ctr_t *ctr) {
 void
 checkGoneAwaySenders(const time_t tCurr)
 {
-	struct hashtable_itr *itr;
+	struct hashtable_itr *itr = NULL;
 	struct sender_stats *stat;
 	const time_t rqdLast = tCurr - glblSenderStatsTimeout;
 	struct tm tm;
@@ -663,6 +676,7 @@ checkGoneAwaySenders(const time_t tCurr)
 	}
 
 	pthread_mutex_unlock(&mutSenders);
+	free(itr);
 }
 
 /* destructor for the statsobj object */

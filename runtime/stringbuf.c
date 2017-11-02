@@ -11,7 +11,7 @@
  * e.g. search. Further refactoring and simplificytin may make
  * sense.
  *
- * Copyright (C) 2005-2016 Adiscon GmbH
+ * Copyright (C) 2005-2017 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -59,7 +59,7 @@ DEFobjCurrIf(regexp)
 
 
 rsRetVal
-cstrConstruct(cstr_t **ppThis)
+cstrConstruct(cstr_t **const ppThis)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -80,7 +80,7 @@ finalize_it:
  * rgerhards 2005-09-15
  */
 rsRetVal
-rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz)
+rsCStrConstructFromszStr(cstr_t **const ppThis, const uchar *const sz)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -109,7 +109,7 @@ finalize_it:
 static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt,
 va_list ap) __attribute__((format(printf,2, 0)));
 static rsRetVal
-rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap)
+rsCStrConstructFromszStrv(cstr_t **const ppThis, const char *const fmt, va_list ap)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -160,7 +160,7 @@ rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...)
  * rgerhards 2010-12-03
  */
 rsRetVal
-cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str)
+cstrConstructFromESStr(cstr_t **const ppThis, es_str_t *const str)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -186,7 +186,7 @@ finalize_it:
 /* construct from CStr object.
  * rgerhards 2005-10-18
  */
-rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
+rsRetVal rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom)
 {
 	DEFiRet;
 	cstr_t *pThis;
@@ -211,12 +211,10 @@ finalize_it:
 }
 
 
-void rsCStrDestruct(cstr_t **ppThis)
+void rsCStrDestruct(cstr_t **const ppThis)
 {
-	cstr_t *pThis = *ppThis;
-
-	free(pThis->pBuf);
-	RSFREEOBJ(pThis);
+	free((*ppThis)->pBuf);
+	RSFREEOBJ(*ppThis);
 	*ppThis = NULL;
 }
 
@@ -281,7 +279,7 @@ finalize_it:
 /* append a string of known length. In this case, we make sure we do at most
  * one additional memory allocation.
  */
-rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, const uchar* psz, size_t iStrLen)
+rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar*const  psz, const size_t iStrLen)
 {
 	DEFiRet;
 
@@ -307,7 +305,7 @@ finalize_it:
  * need to change existing code.
  * rgerhards, 2007-07-03
  */
-rsRetVal rsCStrAppendStr(cstr_t *pThis, const uchar* psz)
+rsRetVal rsCStrAppendStr(cstr_t *const pThis, const uchar*const  psz)
 {
 	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*) psz));
 }
@@ -380,7 +378,7 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
 		if(newlen > pThis->iBufSize) {
 			uchar *const newbuf = (uchar*) realloc(pThis->pBuf, newlen + 1);
 			if(newbuf == NULL) {
-				RSFREEOBJ(pThis);
+				/* we keep the old value, best we can do */
 				return RS_RET_OUT_OF_MEMORY;
 			}
 			pThis->pBuf = newbuf;

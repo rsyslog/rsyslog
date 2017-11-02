@@ -1246,11 +1246,12 @@ SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize)
 
 
 static rsRetVal
-SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
+SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	strcpy((char*)pThis->dfltTZ, (char*)tz);
+	strncpy((char*)pThis->dfltTZ, (char*)tz, sizeof(pThis->dfltTZ));
+	pThis->dfltTZ[sizeof(pThis->dfltTZ)-1] = '\0';
 	RETiRet;
 }
 

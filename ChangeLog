@@ -1,8 +1,16 @@
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- omprog: added error handling and transaction support for external plugins
+  This permits much better integration of external output modules.
+  Special thanks to Joan Sala for providing this work!
 - core: emit error message on abnormal input thread termination
   This indicates a serious issue of which the user should be notified.
   Was not done so far and caused grief when troubleshooting issues.
+- core: refactored locking for json variable access
+  refactored the method so that it consistent in all functions and easier
+  to follow. Most importantly, now an as simple as possible locking paradigm
+  of lock ... unlock within the function. Hopefully easier to understand
+  both for humans and static code analyzers.
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
@@ -16,6 +24,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   closes https://github.com/rsyslog/rsyslog/issues/1897
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
+- imczmq bugfix: segfault
+  happened in a call to
+    371: zcert_destroy(&serverCert) called from rcvData().
+  Thanks to ~achiketa Prachanda for the patch.
 - imfile: some small performance enhancements
   Thanks to Peter Portante for the patch
 - omfile: hande file open error via SUSPEND mode
@@ -25,6 +37,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   everyone meant it should still be handled via suspension. See
   github tracker below for more details.
   closes https://github.com/rsyslog/rsyslog/issues/1832
+- imudp: improve error reporting
+  When udp listener cannot be created, an error message containing
+  the ip-address and port is put out.
+  closes https://github.com/rsyslog/rsyslog/issues/1899
 - [io]mrelp bugfix: segfault on startup if configured cert not readable
   When the certificate file specified in the omrelp/imrelp configuration
   can't be accessed, e.g. because it doesn't exist or you don't have
@@ -37,6 +53,18 @@ Version 8.31.0 [v8-stable] 2017-11-28
   This was invalidly formatted as '"'. Thanks to github user
   wu3396 for the error report including the patch idea.
   closes https://github.com/rsyslog/rsyslog/issues/1826
+- mmexternalb bugfix: memory leak
+- core/stats bugfix: memory leak if sender stats or tracking are enabled
+- core bugfix: potential segfault during startup
+  A NULL pointer could be accessed if there was a problem with the
+  timezone parameters.  Affects only startup, once started, no problem
+  existed.
+  Detected by Coverty scan; CID 185414
+- core bugfix: potential race in variable handling
+  Root of variable tree is accessed prior to locking access to it.
+  This introduces a race that may result in various kinds of
+  misadressing.
+  Found while reviewing code, no bug report exists.
 - core bugfix: potential segfault when shutting down rsyslog
   when rulesets are nested a segfault can occur when shutting down
   rsyslog. the reason is that rule sets are destructed in load order,
@@ -53,19 +81,64 @@ Version 8.31.0 [v8-stable] 2017-11-28
   be issued (as there are no more workers). So then we can destruct
   the rulesets in any order.
   closes https://github.com/rsyslog/rsyslog/issues/1122
+- template object bugfix: NULL pointer access on invalid parameters
+  could happen only during startup
+  Detected by Coverity scan, CID 185376
+- omjournal bugfix: NULL pointer access on invalid parameters
+  could happen only during startup
+- omelasticsearch bugfix: output from libcurl to stdout
+  omelasticsearch made libcurl output messages to stdout. This
+  commit fixes that. It also automatically enables libcurl verbose
+  mode during debug runs - it needs to be seen if this is smart or
+  not (previously, code needed to be commented in).
+  closes https://github.com/rsyslog/rsyslog/issues/1909
 - iczmq bugfix: potential memory leak
 - imptcp bugfix: potential misadressing
   When during a connection request the remote peer could not be
   identified, imptcp could misadress memory if it is configured
   to emit messages on connection open.
   Detected by clang 5.0 static analyzer.
+- imptcp: potential buffer overflow
+  if the local hostname or IP is larger than NI_MAXHOST-1, an internal
+  buffer is overflowed. This is irrespective of any input data.
+  Detected by Coverity scan, CID 185390
 - core/nsd_gtls: fix potential unitialized data access
   could occur during certificate check
   found by clang 5.0 static analyzer
+- stats bugfix: potential program hang
+  due to missing unlock. This could only occur if pstats was set to
+  CEE-format logging (very uncommon) AND if the system runs out of
+  memory (in which case other things go pretty bad as well).
+  found by Coverty scan
+- omfwd bugfix: memory leak if network namespaces are used
+  very seldom used feature, occurs only during error case
+  found by Coverty scan.
+- core: potential misadressing when accessing JSON properties
+  When a JSON property is accessed in template processing, memory may
+  have been misadressed or a double-free may occur while obtaining the
+  propety.
+  This was detected by a Coverty scan.
+- gcry crypto provider bugfixes: potential misadressing and memory leak
+  If the config parameters were invalid, a misadressing could occur. If so,
+  this happens only during startup.
+  Also, a memory leak existed when the crypto provider errored out. This could
+  build up if it were used in frequently-changing dynafiles. This was
+  detected by Coverity scan, CID 185360.
+- core/file stream object bugfix: memory leak
+  If a multiline read errored out, a line buffer could be leaked.
+  Detected by Coverity scan, CID 185328
+- fixed several minor and cosmetic issues found by Coverty scan
+  includding false positives. For details see "$ git log". All noteworthy
+  issues are seperately mentioned in this ChangeLog. The ones not mentioned
+  are for example problems that can only occur during out of memory
+  conditions, under which it is extremely likely tha the rsyslog process
+  will be killed in any case
 - testbench:
   * added compile-check for [io]mgssapi, mmcount
   * harden tests against hanging previous instances
   * re-enable RELP tests on Solaris
+  * added basic test for imjournal
+- CI: improved test coverage on FreeBSD
 - build: make compile warning-free under gcc 7
 ------------------------------------------------------------------------------
 Version 8.30.0 [v8-stable] 2017-10-17

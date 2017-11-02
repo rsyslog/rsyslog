@@ -50,7 +50,7 @@ rsRetVal cstrConstruct(cstr_t **ppThis);
 #define rsCStrConstruct(x) cstrConstruct((x))
 rsRetVal cstrConstructFromESStr(cstr_t **ppThis, es_str_t *str);
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, const uchar *sz);
-rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
+rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, const cstr_t *pFrom);
 rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 /**

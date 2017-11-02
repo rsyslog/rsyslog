@@ -3,6 +3,13 @@
 # correctly parsed.
 # This file is part of the rsyslog project, released  under ASL 2.0
 # rgerhards, 2015-04-30
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[mmpstrucdata-invalid.sh\]: testing mmpstrucdata with invalid SD
 . $srcdir/diag.sh init

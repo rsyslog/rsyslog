@@ -1,5 +1,12 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[failover-no-rptd.sh\]: rptd test for failover functionality - no failover
 . $srcdir/diag.sh init

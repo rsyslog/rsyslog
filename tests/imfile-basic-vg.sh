@@ -1,5 +1,12 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo [imfile-basic.sh]
 . $srcdir/diag.sh init
 # generate input file first. Note that rsyslog processes it as

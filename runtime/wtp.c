@@ -157,6 +157,8 @@ CODESTARTobjDestruct(wtp)
 	pThis->pWrkr = NULL;
 
 	/* actual destruction */
+	d_pthread_mutex_lock(&pThis->mutWtp); /* make sure nobody is still using the mutex */
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_cond_destroy(&pThis->condThrdInitDone);
 	pthread_mutex_destroy(&pThis->mutWtp);

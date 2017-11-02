@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2011-02-28 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[imtcp-tls-basic-vg.sh\]: testing imtcp in TLS mode - basic test
 . $srcdir/diag.sh init

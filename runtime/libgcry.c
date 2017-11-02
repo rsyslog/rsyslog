@@ -1,6 +1,6 @@
 /* gcry.c - rsyslog's libgcrypt based crypto provider
  *
- * Copyright 2013-2016 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * We need to store some additional information in support of encryption.
  * For this, we create a side-file, which is named like the actual log
@@ -578,7 +578,7 @@ seedIV(gcryfile gf, uchar **iv)
 	 * unavailability of /dev/urandom is just a theoretic thing, it
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
 		if(read(fd, *iv, gf->blkLength)) {}; /* keep compiler happy */
 		close(fd);
 	}

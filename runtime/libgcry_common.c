@@ -42,38 +42,32 @@
  * @param[out] keylen - length of buffer
  * @returns 0 if OK, something else otherwise (we do not use
  *            iRet as this is also called from non-rsyslog w/o runtime)
+ *	      on error, errno is set and can be queried
  * The key length is limited to 64KiB to prevent DoS.
  * Note well: key is a blob, not a C string (NUL may be present!)
  */
 int
-gcryGetKeyFromFile(char *fn, char **key, unsigned *keylen)
+gcryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keylen)
 {
 	struct stat sb;
-	int fd;
-	int r;
+	int r = -1;
 
-	if(stat(fn, &sb) == -1) {
-		r = 1; goto done;
-	}
-	if((sb.st_mode & S_IFMT) != S_IFREG) {
-		r = 2; goto done;
-	}
+	const int fd = open(fn, O_RDONLY);
+	if(fd < 0) goto done;
+	if(fstat(fd, &sb) == -1) goto done;
 	if(sb.st_size > 64*1024) {
-		r = 3; goto done;
+		errno = EMSGSIZE;
+		goto done;
 	}
-	if((*key = malloc(sb.st_size)) == NULL) {
-		r = -1; goto done;
-	}
-	if((fd = open(fn, O_RDONLY)) < 0) {
-		r = 4; goto done;
-	}
-	if(read(fd, *key, sb.st_size) != sb.st_size) {
-		r = 5; goto done;
-	}
+	if((*key = malloc(sb.st_size)) == NULL) goto done;
+	if(read(fd, *key, sb.st_size) != sb.st_size) goto done;
 	*keylen = sb.st_size;
-	close(fd);
 	r = 0;
-done:	return r;
+done:
+	if(fd >= 0) {
+		close(fd);
+	}
+	return r;
 }
 
 

@@ -6,7 +6,7 @@
  * is an option in imuxsock to ignore messages from ourselves 
  * (actually from our pid). So there are some module-interdependencies.
  *
- * Copyright 2013-2016 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -45,6 +45,7 @@
 #include <systemd/sd-journal.h>
 #include "unicode-helper.h"
 #include <sys/uio.h>
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -141,6 +142,12 @@ BEGINnewActInst
 CODESTARTnewActInst
 	DBGPRINTF("newActInst (mmjournal)\n");
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing module "
+				"config parameters [module(...)]");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
