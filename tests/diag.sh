@@ -45,11 +45,14 @@ TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a s
 #START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
+dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.tar.gz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
+dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.3.tar.gz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
+dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
 
 #	TODO Make dynamic work dir for multiple instances
@@ -161,10 +164,16 @@ case $1 in
 		curl -XDELETE localhost:9200/rsyslog_testbench
 		;;
    'es-getdata') # read data from ES to a local file so that we can process
+		if [ "x$3" == "x" ]; then
+			es_get_port=9200
+		else
+			es_get_port=$3
+		fi
+
    		# it with out regular tooling.
 		# Note: param 2 MUST be number of records to read (ES does
 		# not return the full set unless you tell it explicitely).
-		curl localhost:9200/rsyslog_testbench/_search?size=$2 > work
+		curl localhost:$es_get_port/rsyslog_testbench/_search?size=$2 > work
 		python $srcdir/es_response_get_msgnum.py > rsyslog.out.log
 		;;
    'getpid')
@@ -664,7 +673,17 @@ case $1 in
 			fi
 		fi
 		;;
-    'start-zookeeper')
+	 'download-elasticsearch')
+		if [ ! -d $dep_cache_dir ]; then
+				echo "Creating dependency cache dir"
+				mkdir $dep_cache_dir
+		fi
+		if [ ! -f $dep_es_cached_file ]; then
+				echo "Downloading ElasticSearch"
+				wget -q $dep_es_url -O $dep_es_cached_file
+		fi
+		;;
+	 'start-zookeeper')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 			dep_work_tk_config="zoo.cfg"
@@ -736,6 +755,48 @@ case $1 in
 			fi
 		fi
 		;;
+	 'start-elasticsearch')
+		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
+		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
+
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_es_config="es.yml"
+			dep_work_es_pidfile="es.pid"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_es_config="es$2.yml"
+			dep_work_es_pidfile="es$2.pid"
+		fi
+
+		if [ ! -f $dep_es_cached_file ]; then
+				echo "Dependency-cache does not have elasticsearch package, did you download dependencies?"
+				exit 77
+		fi
+		if [ ! -d $dep_work_dir ]; then
+				echo "Creating dependency working directory"
+				mkdir -p $dep_work_dir
+		fi
+		if [ -d $dep_work_dir/es ]; then
+				start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5
+				./msleep 2000
+		fi
+		rm -rf $dep_work_dir/es
+		(cd $dep_work_dir && tar -zxvf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+		cp $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
+
+		if [ ! -d $dep_work_dir/es/data ]; then
+				echo "Creating elastic search directories"
+				mkdir -p $dep_work_dir/es/data
+				mkdir -p $dep_work_dir/es/logs
+				mkdir -p $dep_work_dir/es/tmp
+		fi
+
+		echo "Starting ElasticSearch instance $2"
+		(cd $srcdir && start-stop-daemon --start -b --pidfile "$dep_work_es_pidfile" -m --exec "$dep_work_dir/es/bin/elasticsearch" --)
+
+		./msleep 2000
+		;;
 	 'dump-kafka-serverlog')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
@@ -787,6 +848,20 @@ case $1 in
 		(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
 		./msleep 2000
 		rm -rf $dep_work_dir/zk
+		;;
+	 'stop-elasticsearch')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_es_pidfile="es.pid"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_es_pidfile="es$2.pid"
+		fi
+		(cd $srcdir && start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5)
+
+		./msleep 2000
+		rm -f $dep_work_es_pidfile
+		rm -rf $dep_work_dir/es
 		;;
 	 'create-kafka-topic')
 		if [ "x$3" == "x" ]; then
