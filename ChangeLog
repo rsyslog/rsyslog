@@ -11,6 +11,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
   to follow. Most importantly, now an as simple as possible locking paradigm
   of lock ... unlock within the function. Hopefully easier to understand
   both for humans and static code analyzers.
+- core/dnscache: refactor locking
+  keep a simple lock ... unlock scheme within the function. That is
+  easier to follow for both humans as well as static analyzers.
+  Also removes Coverity scan CID 185419
 - omfwd bugfix: generate error message on connection failure
 - imtcp bugfix: "streamdriver.mode" parameter could not be set to 0
 - imjournal bugfix: module was defunctional
@@ -127,6 +131,10 @@ Version 8.31.0 [v8-stable] 2017-11-28
 - core/file stream object bugfix: memory leak
   If a multiline read errored out, a line buffer could be leaked.
   Detected by Coverity scan, CID 185328
+- imdiag bugfix: double mutex unlock when working with stats
+  Note: while this could potentially lead to a program hang, it affected
+  only testbench execution as imdiag is a testbench-only tool.
+  Detected by Coverity scan, CID 185348 and 185350
 - fixed several minor and cosmetic issues found by Coverty scan
   includding false positives. For details see "$ git log". All noteworthy
   issues are seperately mentioned in this ChangeLog. The ones not mentioned
