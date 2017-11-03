@@ -1,7 +1,7 @@
 # this installs some components that we cannot install any other way
 source /etc/lsb-release
 # the following packages are not yet available via travis package
-sudo apt-get install -qq faketime libdbd-mysql libmongo-client-dev autoconf-archive
+sudo apt-get install -qq faketime libdbd-mysql libmongoc-dev autoconf-archive
 if [ "x$GROK" == "xYES" ]; then sudo apt-get install -qq libgrok1 libgrok-dev ; fi
 sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev liblogging-stdlog-dev libksi1 libksi1-dev \
 	liblognorm-dev \
