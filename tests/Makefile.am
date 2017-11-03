@@ -469,7 +469,9 @@ TESTS +=  \
 endif
 if HAVE_VALGRIND
 TESTS +=  \
-	es-basic-vg.sh
+	es-basic-vg.sh \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
 endif
 endif
 
@@ -1058,6 +1060,9 @@ EXTRA_DIST= \
 	testsuites/es-bulk-errfile-popul-erronly-interleaved.conf \
 	es-bulk-errfile-popul-def-interleaved.sh \
 	testsuites/es-bulk-errfile-popul-def-interleaved.conf \
+	es-basic-vg.sh \
+	es-basic-bulk-vg.sh \
+	es-basic-ha-vg.sh
 	linkedlistqueue.sh \
 	testsuites/linkedlistqueue.conf \
 	da-mainmsg-q.sh \

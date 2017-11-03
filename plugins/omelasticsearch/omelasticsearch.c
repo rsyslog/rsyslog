@@ -362,6 +362,11 @@ incrementServerIndex(wrkrInstanceData_t *pWrkrData)
 	pWrkrData->serverIndex = (pWrkrData->serverIndex + 1) % pWrkrData->pData->numServers;
 }
 
+
+/* checks if connection to ES can be established; also iterates over
+ * potential servers to support high availability (HA) feature. If it
+ * needs to switch server, will record new one in curl handle.
+ */
 static rsRetVal ATTR_NONNULL()
 checkConn(wrkrInstanceData_t *const pWrkrData)
 {
@@ -517,7 +522,7 @@ done:
 }
 
 
-static rsRetVal
+static rsRetVal ATTR_NONNULL()
 setPostURL(wrkrInstanceData_t *pWrkrData, instanceData *pData, uchar **tpls)
 {
 	uchar *searchIndex = NULL;
@@ -1202,8 +1207,14 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
 
-	//CHKiRet(checkConn(pWrkrData));
+	if(pWrkrData->pData->numServers > 1) {
+		/* needs to be called to support ES HA feature */
+		CHKiRet(checkConn(pWrkrData));
+	}
 	CHKiRet(setPostURL(pWrkrData, pWrkrData->pData, tpls));
+
+	pWrkrData->reply = NULL;
+	pWrkrData->replyLen = 0;
 
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
@@ -1272,18 +1283,21 @@ CODESTARTdoAction
 	if(pWrkrData->pData->bulkmode) {
 		const size_t nBytes = computeMessageSize(pWrkrData, ppString[0], ppString);
 
-		/* If max bytes is set and this next message will put us over the limit, submit the current buffer and reset */
-		if (pWrkrData->pData->maxbytes > 0 && es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
-			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial batch of %d "
-			"elements.\n", pWrkrData->batch.nmemb);
+		/* If max bytes is set and this next message will put us over the limit,
+		* submit the current buffer and reset */
+		if(pWrkrData->pData->maxbytes > 0
+			&& es_strlen(pWrkrData->batch.data) + nBytes > pWrkrData->pData->maxbytes ) {
+			dbgprintf("omelasticsearch: maxbytes limit reached, submitting partial "
+			"batch of %d elements.\n", pWrkrData->batch.nmemb);
 			CHKiRet(submitBatch(pWrkrData));
 			initializeBatch(pWrkrData);
 		}
 		CHKiRet(buildBatch(pWrkrData, ppString[0], ppString));
 
-		/* If there is only one item in the batch, all previous items have been submitted or this is the first item
-		   for this transaction. Return previous committed so that all items leading up to the current (exclusive)
-		   are not replayed should a failure occur anywhere else in the transaction. */
+		/* If there is only one item in the batch, all previous items have been
+	 	 * submitted or this is the first item for this transaction. Return previous
+		 * committed so that all items leading up to the current (exclusive)
+		 * are not replayed should a failure occur anywhere else in the transaction. */
 		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
 		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]),
@@ -1299,7 +1313,8 @@ CODESTARTendTransaction
 	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData));
 	} else {
-		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, nothing to send. \n");
+		dbgprintf("omelasticsearch: endTransaction, pWrkrData->batch.data is NULL, "
+			"nothing to send. \n");
 	}
 finalize_it:
 ENDendTransaction
@@ -1644,8 +1659,6 @@ CODESTARTnewActInst
 		pData->searchIndex = (uchar*) strdup("system");
 	if(pData->searchType == NULL)
 		pData->searchType = (uchar*) strdup("events");
-	//assert(pData->searchIndex != NULL);
-	//assert(pData->searchType != NULL);
 
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
