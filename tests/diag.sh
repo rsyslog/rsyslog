@@ -778,8 +778,9 @@ case $1 in
 				mkdir -p $dep_work_dir
 		fi
 		if [ -d $dep_work_dir/es ]; then
-				start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5
-				./msleep 2000
+			kill $(cat $dep_work_es_pidfile)
+			#start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5
+			./msleep 2000
 		fi
 		rm -rf $dep_work_dir/es
 		(cd $dep_work_dir && tar -zxvf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
@@ -793,8 +794,28 @@ case $1 in
 		fi
 
 		echo "Starting ElasticSearch instance $2"
-		(cd $srcdir && start-stop-daemon --start -b --pidfile "$dep_work_es_pidfile" -m --exec "$dep_work_dir/es/bin/elasticsearch" --)
+		(	
+			cd $srcdir 
+			$dep_work_dir/es/bin/elasticsearch & #> es_output.log
+			echo "Starting instance $2 started with PID $!"
+			echo $! > $dep_work_es_pidfile
 
+			# Wait for startup with hardcoded timeout
+			timeoutend=30
+			timeseconds=0
+			# Loop until elasticsearch port is reachable or until timeout is reached!
+			until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:19200 | grep 'rsyslog-testbench'`" != "" ]; do
+				echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
+				sleep 1
+				let "timeseconds = $timeseconds + 1"
+
+				if [ "$timeseconds" -gt "$timeoutend" ]; then 
+					echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+					break
+				fi
+			done
+			exit; 
+		)
 		./msleep 2000
 		;;
 	 'dump-kafka-serverlog')
@@ -857,7 +878,7 @@ case $1 in
 			dep_work_dir=$(readlink -f $srcdir/$2)
 			dep_work_es_pidfile="es$2.pid"
 		fi
-		(cd $srcdir && start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5)
+		(cd $srcdir && kill $(cat $dep_work_es_pidfile) )
 
 		./msleep 2000
 		rm -f $dep_work_es_pidfile
