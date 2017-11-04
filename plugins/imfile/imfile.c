@@ -730,23 +730,13 @@ static void pollFileCancelCleanup(void *pArg)
 }
 
 
-/* poll a file, need to check file rollover etc. open file if not open */
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wempty-body"
-#pragma GCC diagnostic ignored "-Wclobbered"
-#endif
-static rsRetVal
-pollFile(lstn_t *pLstn, int *pbHadFileData)
+/* pollFile needs to be split due to the unfortunate pthread_cancel_push() macros. */
+static rsRetVal ATTR_NONNULL(1, 3)
+pollFileReal(lstn_t *pLstn, int *pbHadFileData, cstr_t **pCStr)
 {
-	cstr_t *pCStr = NULL;
 	int64 strtOffs;
 	DEFiRet;
 
-	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
-	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
-	 */
-	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
 	int nProcessed = 0;
 	if(pLstn->pStrm == NULL) {
 		CHKiRet(openFile(pLstn)); /* open file */
@@ -757,17 +747,17 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 		if(pLstn->maxLinesAtOnce != 0 && nProcessed >= pLstn->maxLinesAtOnce)
 			break;
 		if(pLstn->startRegex == NULL) {
-			CHKiRet(strm.ReadLine(pLstn->pStrm, &pCStr, pLstn->readMode, pLstn->escapeLF,
+			CHKiRet(strm.ReadLine(pLstn->pStrm, pCStr, pLstn->readMode, pLstn->escapeLF,
 				pLstn->trimLineOverBytes, &strtOffs));
 		} else {
-			CHKiRet(strmReadMultiLine(pLstn->pStrm, &pCStr, &pLstn->end_preg,
+			CHKiRet(strmReadMultiLine(pLstn->pStrm, pCStr, &pLstn->end_preg,
 				pLstn->escapeLF, pLstn->discardTruncatedMsg, pLstn->msgDiscardingError, &strtOffs));
 		}
 		++nProcessed;
 		if(pbHadFileData != NULL)
 			*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
-		CHKiRet(enqLine(pLstn, pCStr, strtOffs)); /* process line */
-		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
+		CHKiRet(enqLine(pLstn, *pCStr, strtOffs)); /* process line */
+		rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
 		if(pLstn->iPersistStateInterval > 0 && ++pLstn->nRecords >= pLstn->iPersistStateInterval) {
 			persistStrmState(pLstn);
 			pLstn->nRecords = 0;
@@ -776,19 +766,28 @@ pollFile(lstn_t *pLstn, int *pbHadFileData)
 
 finalize_it:
 	multiSubmitFlush(&pLstn->multiSub);
-	pthread_cleanup_pop(0);
 
-	if(pCStr != NULL) {
-		rsCStrDestruct(&pCStr);
+	if(*pCStr != NULL) {
+		rsCStrDestruct(pCStr);
 	}
 
 	RETiRet;
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#pragma GCC diagnostic warning "-Wclobbered"
-#pragma GCC diagnostic warning "-Wunknown-pragmas"
-#endif
+
+/* poll a file, need to check file rollover etc. open file if not open */
+static rsRetVal ATTR_NONNULL(1)
+pollFile(lstn_t *pLstn, int *pbHadFileData)
+{
+	cstr_t *pCStr = NULL;
+	DEFiRet;
+	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
+	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
+	 */
+	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
+	iRet = pollFileReal(pLstn, pbHadFileData, &pCStr);
+	pthread_cleanup_pop(0);
+	RETiRet;
+}
 
 
 /* create input instance, set default parameters, and
