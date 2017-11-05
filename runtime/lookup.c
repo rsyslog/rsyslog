@@ -392,10 +392,24 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 			}
 			CHKmalloc(pThis->table.str->entries[i].key = ustrdup((uchar*) json_object_get_string(jindex)));
 			value = (uchar*) json_object_get_string(jvalue);
-			canonicalValueRef = *(uchar**) bsearch(value, pThis->interned_vals,
-			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-			assert(canonicalValueRef != NULL);
+			uchar **found  = (uchar**) bsearch(value, pThis->interned_vals,
+				pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			if(found == NULL) {
+				LogError(0, RS_RET_INTERNAL_ERROR, "lookup.c:build_StringTable(): "
+					"internal error, bsearch returned NULL for '%s'", value);
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
+			// I give up, I see no way to remove false positive -- rgerhards, 2017-10-24
+			#ifndef __clang_analyzer__
+			canonicalValueRef = *found;
+			if(canonicalValueRef == NULL) {
+				LogError(0, RS_RET_INTERNAL_ERROR, "lookup.c:build_StringTable(): "
+					"internal error, canonicalValueRef returned from bsearch "
+					"is NULL for '%s'", value);
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
 			pThis->table.str->entries[i].interned_val_ref = canonicalValueRef;
+			#endif
 		}
 		qsort(pThis->table.str->entries, pThis->nmemb, sizeof(lookup_string_tab_entry_t), qs_arrcmp_strtab);
 	}
@@ -768,11 +782,10 @@ static rsRetVal
 lookupDoReload(lookup_ref_t *pThis)
 {
 	DEFiRet;
-	CHKiRet(lookupReloadOrStub(pThis, NULL));
-finalize_it:
+	iRet = lookupReloadOrStub(pThis, NULL);
 	if ((iRet != RS_RET_OK) &&
 		(pThis->stub_value_for_reload_failure != NULL)) {
-		CHKiRet(lookupDoStub(pThis, pThis->stub_value_for_reload_failure));
+		iRet = lookupDoStub(pThis, pThis->stub_value_for_reload_failure);
 	}
 	freeStubValueForReloadFailure(pThis);
 	RETiRet;
@@ -958,7 +971,11 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	strcpy(reloader_thd_name, reloader_prefix);
 	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
-	pthread_setname_np(lu->reloader, reloader_thd_name);
+  #ifndef __APPLE__
+     pthread_setname_np(lu->reloader, reloader_thd_name);
+  #else
+     pthread_setname_np(reloader_thd_name); // must check
+  #endif
 #endif
 	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
 	DBGPRINTF("lookup table '%s' loaded from file '%s'\n", lu->name, lu->filename);

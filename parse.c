@@ -3,7 +3,7 @@
  *
  * begun 2005-09-15 rgerhards
  *
- * Copyright 2005-2012 Adiscon GmbH.
+ * Copyright 2005-2017 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -377,7 +377,7 @@ finalize_it:
 rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 {
 	register uchar *pC;
-	uchar *pszIP;
+	uchar *pszIP = NULL;
 	uchar *pszTmp;
 	struct addrinfo hints, *res = NULL;
 	cstr_t *pCStr;
@@ -418,7 +418,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	if (*((char*)pszIP) == '[') {
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
 		if (pszTmp == NULL) {
-			free (pszIP);
 			free (*pIP);
 			ABORT_FINALIZE(RS_RET_INVALID_IP);
 		}
@@ -440,7 +439,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP+1);
 			break;
 		default:
-			free (pszIP);
 			free (*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -451,7 +449,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free((*pIP)->addr.NetAddr);
 				free((*pIP)->addr.HostWildcard);
-				free (pszIP);
 				free (*pIP);
 				FINALIZE;
 			}
@@ -478,7 +475,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP);
 			break;
 		default:
-			free (pszIP);
 			free (*pIP);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -489,7 +485,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free((*pIP)->addr.NetAddr);
 				free((*pIP)->addr.HostWildcard);
-				free (pszIP);
 				free (*pIP);
 				FINALIZE;
 			}
@@ -500,7 +495,6 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			*pBits = 32;
 		}
 	}
-	free(pszIP); /* no longer needed */
 
 	/* skip to next processable character */
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
@@ -512,6 +506,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	iRet = RS_RET_OK;
 
 finalize_it:
+	free(pszIP);
 	RETiRet;
 }
 #endif  /* #ifdef SYSLOG_INET */

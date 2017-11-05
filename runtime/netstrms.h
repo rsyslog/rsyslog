@@ -33,6 +33,7 @@ struct netstrms_s {
 	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	int iDrvrMode;		/**< current default driver mode */
 	uchar *pszDrvrAuthMode;	/**< current driver authentication mode */
+	uchar *gnutlsPriorityString; /**< priorityString for connection */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 
 	nsd_if_t Drvr;		/**< our stream driver */
@@ -52,6 +53,8 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	int      (*GetDrvrMode)(netstrms_t *pThis);
 	uchar*   (*GetDrvrAuthMode)(netstrms_t *pThis);
 	permittedPeers_t* (*GetDrvrPermPeers)(netstrms_t *pThis);
+	rsRetVal (*SetDrvrGnutlsPriorityString)(netstrms_t *pThis, uchar*);
+	uchar*   (*GetDrvrGnutlsPriorityString)(netstrms_t *pThis);
 ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

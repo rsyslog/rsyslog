@@ -375,7 +375,12 @@ callForeachObject(struct cnfstmt *stmt, json_object *arr, smsg_t *pMsg, wti_t *p
 finalize_it:
 	if (keys != NULL) free(keys);
 	if (entry != NULL) json_object_put(entry);
-	if (key != NULL) json_object_put(key);
+	/* "fix" Coverity scan issue CID 185393: key currently can NOT be NULL
+	 * However, instead of just removing the
+	 *   if (key != NULL) json_object_put(key);
+	 * we put an assertion in its place.
+	 */
+	assert(key == NULL);
 	
 	RETiRet;
 }
@@ -826,6 +831,19 @@ CODESTARTobjDestruct(ruleset)
 ENDobjDestruct(ruleset)
 
 
+/* helper for Destructor, shut down queue workers */
+DEFFUNC_llExecFunc(doShutdownQueueWorkers)
+{
+	DEFiRet;
+	ruleset_t *const pThis = (ruleset_t*) pData;
+	DBGPRINTF("shutting down queue workers for ruleset %p, name %s, queue %p\n",
+		pThis, pThis->pszName, pThis->pQueue);
+	ISOBJ_TYPE_assert(pThis, ruleset);
+	if(pThis->pQueue != NULL) {
+		qqueueShutdownWorkers(pThis->pQueue);
+	}
+	RETiRet;
+}
 /* destruct ALL rule sets that reside in the system. This must
  * be callable before unloading this module as the module may
  * not be unloaded before unload of the actions is required. This is
@@ -836,6 +854,15 @@ static rsRetVal
 destructAllActions(rsconf_t *conf)
 {
 	DEFiRet;
+
+DBGPRINTF("rulesetDestructAllActions\n");
+	/* we first need to stop all queue workers, else we
+	 * may run into trouble with "call" statements calling
+	 * into then-destroyed rulesets.
+	 * see: https://github.com/rsyslog/rsyslog/issues/1122
+	 */
+DBGPRINTF("RRRRRR: rsconfDestruct - queue shutdown\n");
+	llExecFunc(&(conf->rulesets.llRulesets), doShutdownQueueWorkers, NULL);
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
 	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList, rulesetKeyDestruct, strcasecmp));

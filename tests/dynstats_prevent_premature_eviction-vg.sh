@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2016-04-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction-vg.sh\]: test for ensuring metrics are not evicted before unused-ttl with valgrind
 . $srcdir/diag.sh init

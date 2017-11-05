@@ -5,12 +5,19 @@ set -v  # we want to see the execution steps
 set -e  # abort on first failure
 #set -x  # debug aid
 
+echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
+echo "CLANG:            $CLANG"
+
+# first check code style. We do this only when STAT_AN is enabled,
+# so that we do not do it in each and every run. While once is sufficient,
+# STAT_AN for now gives us sufficient runtime reduction.
+if [ "x$STAT_AN" == "xYES" ] ; then CI/check_line_length.sh ; fi
+
+
 echo "****************************** BEGIN ACTUAL SCRIPT STEP ******************************"
 source tests/travis/install.sh
 source /etc/lsb-release
 
-echo "DISTRIB_CODENAME: $DISTRIB_CODENAME"
-echo "CLANG:            $CLANG"
 
 # we turn off leak sanitizer at this time because it reports some
 # pretty irrelevant problems in startup code. In the longer term,
@@ -39,7 +46,7 @@ if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then export CC="
 $CC -v
 env
 if [ "$DISTRIB_CODENAME" != "precise" ]; then AMQP1="--enable-omamqp1"; fi
-export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omrelp-default-port=13515 --enable-omtcl --enable-mmdblookup $JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $NO_VALGRIND $GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
+export CONFIG_FLAGS="--prefix=/opt/rsyslog --build=x86_64-pc-linux-gnu --host=x86_64-pc-linux-gnu --mandir=/usr/share/man --infodir=/usr/share/info --datadir=/usr/share --sysconfdir=/etc --localstatedir=/var/lib --disable-dependency-tracking --enable-silent-rules --libdir=/usr/lib64 --docdir=/usr/share/doc/rsyslog --disable-generate-man-pages --enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-mmrm1stspace --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp --disable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql --enable-mysql-tests --enable-usertools --enable-gt-ksi --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omrelp-default-port=13515 --enable-omtcl --enable-mmdblookup --enable-gssapi-krb5 --enable-mmcount $JOURNAL_OPT $HIREDIS_OPT $ENABLE_KAFKA $ENABLE_DEBUGLESS $NO_VALGRIND $GROK $ES_TEST_CONFIGURE_OPT $CONFIGURE_FLAGS $AMQP1"
 ./configure  $CONFIG_FLAGS
 export USE_AUTO_DEBUG="off" # set to "on" to enable this for travis
 make -j

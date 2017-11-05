@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(_AIX) || defined(__FreeBSD__) 
+#if defined(_AIX) || defined(__FreeBSD__) || defined(__APPLE__) 
 #include <sys/wait.h>
 #else
 #include <wait.h>
@@ -506,8 +506,7 @@ finalize_it:
 	/* we need to free json input strings, only. All others point to memory
 	 * inside the msg object, which is destroyed when the msg is destroyed.
 	 */
-	if(pWrkrData->pData->inputProp == INPUT_JSON)
-		free((void*)inputstr);
+	free((void*)inputstr);
 	RETiRet;
 }
 

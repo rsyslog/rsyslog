@@ -408,7 +408,8 @@ create_tcp_socket(tcpsrv_t *pThis)
 		localRet = initTCPListener(pThis, pEntry);
 		if(localRet != RS_RET_OK) {
 			errmsg.LogError(0, localRet, "Could not create tcp listener, ignoring port "
-			"%s bind-address %s.", pEntry->pszPort, pEntry->pszAddr);
+			"%s bind-address %s.", pEntry->pszPort,
+			(pEntry->pszAddr == NULL) ? "(null)" : (const char*)pEntry->pszAddr);
 		}
 		pEntry = pEntry->pNext;
 	}
@@ -472,6 +473,9 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	}
 
 	/* we found a free spot and can construct our session object */
+	if(pThis->gnutlsPriorityString != NULL) {
+		CHKiRet(netstrm.SetGnutlsPriorityString(pNewStrm, pThis->gnutlsPriorityString));
+	}
 	CHKiRet(tcps_sess.Construct(&pSess));
 	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
 	CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
@@ -571,11 +575,12 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	DEFiRet;
 	uchar *pszPeer;
 	int lenPeer;
+	int oserr = 0;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
 	/* Receive message */
-	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd);
+	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd, &oserr);
 	switch(iRet) {
 	case RS_RET_CLOSED:
 		if(pThis->bEmitMsgOnClose) {
@@ -597,15 +602,13 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			 * We are instructed to terminate the session.
 			 */
 			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-			errmsg.LogError(0, localRet, "Tearing down TCP Session from %s - see "
-					    "previous messages for reason(s)\n", pszPeer);
+			LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
-		errno = 0;
 		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
-		errmsg.LogError(0, iRet, "netstream session %p from %s will be closed due to error\n",
+		errmsg.LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
 		break;
@@ -617,8 +620,8 @@ finalize_it:
 
 /* process a single workset item
  */
-static rsRetVal
-processWorksetItem(tcpsrv_t *pThis, nspoll_t *pPoll, int idx, void *pUsr)
+static rsRetVal ATTR_NONNULL(1)
+processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *pUsr)
 {
 	tcps_sess_t *pNewSess = NULL;
 	DEFiRet;
@@ -650,17 +653,22 @@ finalize_it:
 
 /* worker to process incoming requests
  */
-static void *
-wrkr(void *myself)
+static void * ATTR_NONNULL(1)
+wrkr(void *const myself)
 {
-	struct wrkrInfo_s *me = (struct wrkrInfo_s*) myself;
+	struct wrkrInfo_s *const me = (struct wrkrInfo_s*) myself;
 	
 	pthread_mutex_lock(&wrkrMut);
 	while(1) {
+		// wait for work, in which case pSrv will be populated
 		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &wrkrMut);
 		}
-		if(glbl.GetGlobalInputTermState() == 1) {
+		if(me->pSrv == NULL) {
+			// only possible if glbl.GetGlobalInputTermState() == 1
+			// we need to query me->opSrv to avoid clang static
+			// analyzer false positive! -- rgerhards, 2017-10-23
+			assert(glbl.GetGlobalInputTermState() == 1);
 			--wrkrRunning;
 			break;
 		}
@@ -967,7 +975,9 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->iSessMax = TCPSESS_MAX_DEFAULT;
 	pThis->iLstnMax = TCPLSTN_MAX_DEFAULT;
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	pThis->maxFrameSize = 200000;
 	pThis->bDisableLFDelim = 0;
+	pThis->discardTruncatedMsg = 0;
 	pThis->OnMsgReceive = NULL;
 	pThis->dfltTZ[0] = '\0';
 	pThis->bSPFramingFix = 0;
@@ -994,6 +1004,8 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
 	if(pThis->pPermPeers != NULL)
 		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
+	if(pThis->gnutlsPriorityString != NULL)
+		CHKiRet(netstrms.SetDrvrGnutlsPriorityString(pThis->pNS, pThis->gnutlsPriorityString));
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
 	/* set up listeners */
@@ -1046,7 +1058,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;
@@ -1166,6 +1178,16 @@ SetKeepAliveTime(tcpsrv_t *pThis, int iVal)
 }
 
 static rsRetVal
+SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal)
+{
+	DEFiRet;
+	DBGPRINTF("tcpsrv: gnutlsPriorityString set to %s\n",
+		(iVal == NULL) ? "(null)" : (const char*) iVal);
+	pThis->gnutlsPriorityString = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
 {
 	DEFiRet;
@@ -1188,6 +1210,19 @@ SetbDisableLFDelim(tcpsrv_t *pThis, int bVal)
 }
 
 
+/* discard the truncated msg part
+ * -- PascalWithopf, 2017-04-20
+ */
+static rsRetVal
+SetDiscardTruncatedMsg(tcpsrv_t *pThis, int discard)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->discardTruncatedMsg = discard;
+	RETiRet;
+}
+
+
 /* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
 static rsRetVal
 SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
@@ -1199,12 +1234,24 @@ SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
 }
 
 
+/* Set max frame size for octet counted -- PascalWithopf, 2017-04-20*/
 static rsRetVal
-SetDfltTZ(tcpsrv_t *pThis, uchar *tz)
+SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	strcpy((char*)pThis->dfltTZ, (char*)tz);
+	pThis->maxFrameSize = maxFrameSize;
+	RETiRet;
+}
+
+
+static rsRetVal
+SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	strncpy((char*)pThis->dfltTZ, (char*)tz, sizeof(pThis->dfltTZ));
+	pThis->dfltTZ[sizeof(pThis->dfltTZ)-1] = '\0';
 	RETiRet;
 }
 
@@ -1397,13 +1444,16 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
 	pIf->SetKeepAliveTime = SetKeepAliveTime;
+	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetOrigin = SetOrigin;
 	pIf->SetDfltTZ = SetDfltTZ;
 	pIf->SetbSPFramingFix = SetbSPFramingFix;
 	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
+	pIf->SetMaxFrameSize = SetMaxFrameSize;
 	pIf->SetbDisableLFDelim = SetbDisableLFDelim;
+	pIf->SetDiscardTruncatedMsg = SetDiscardTruncatedMsg;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetUseFlowControl = SetUseFlowControl;
 	pIf->SetLstnMax = SetLstnMax;

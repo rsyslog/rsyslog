@@ -8,6 +8,13 @@
 # This file is part of the rsyslog project, released  under GPLv3
 echo ===============================================================================
 echo \[rulesetmultiqueu.sh\]: testing multiple queues via rulesets
+
+uname
+if [ `uname` = "SunOS" ] ; then
+   echo "This test currently does not work on all flavors of Solaris."
+   exit 77
+fi
+
 . $srcdir/diag.sh init
 rm -f rsyslog.out1.log rsyslog.out2.log rsyslog.out3.log
 . $srcdir/diag.sh startup rulesetmultiqueue.conf

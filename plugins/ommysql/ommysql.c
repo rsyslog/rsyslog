@@ -35,6 +35,7 @@
 #include <time.h>
 #include <netdb.h>
 #include <mysql.h>
+#include <mysqld_error.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -166,7 +167,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pWrkrData->hmysql == NULL) {
-		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain MySQL handle");
+		LogError(0, NO_ERRCODE, "ommysql: unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
 		uMySQLErrno = mysql_errno(pWrkrData->hmysql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uMySQLErrno,
@@ -175,7 +176,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
 			pWrkrData->uLastMySQLErrno = uMySQLErrno;
-			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
+			LogError(0, NO_ERRCODE, "ommysql: %s", errMsg);
 		}
 	}
 		
@@ -226,7 +227,11 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 			closeMySQL(pWrkrData); /* ignore any error we may get */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		mysql_autocommit(pWrkrData->hmysql, 0);
+		if(mysql_autocommit(pWrkrData->hmysql, 0)) {
+			LogMsg(0, NO_ERRCODE, LOG_WARNING, "ommysql: activating autocommit failed, "
+				"some data may be duplicated\n");
+			reportDBError(pWrkrData, 0);
+		}
 	}
 
 finalize_it:
@@ -238,23 +243,35 @@ finalize_it:
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, uchar *psz)
+static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz)
 {
 	DEFiRet;
 
 	/* see if we are ready to proceed */
 	if(pWrkrData->hmysql == NULL) {
 		CHKiRet(initMySQL(pWrkrData, 0));
-		
 	}
 
 	/* try insert */
 	if(mysql_query(pWrkrData->hmysql, (char*)psz)) {
-		/* error occured, try to re-init connection and retry */
+		const int mysql_err = mysql_errno(pWrkrData->hmysql);
+		/* We assume server error codes are non-recoverable, mainly data errors.
+		 * This also means we need to differentiate between client and server error
+		 * codes. Unfortunately, the API does not provide a specified function for
+		 * this. Howerver, error codes 2000..2999 are currently client error codes.
+		 * So we use this as guideline.
+		 */
+		if(mysql_err < 2000 || mysql_err > 2999) {
+			reportDBError(pWrkrData, 0);
+			LogError(0, RS_RET_DATAFAIL, "The error statement was: %s", psz);
+			ABORT_FINALIZE(RS_RET_DATAFAIL);
+		}
+		/* potentially recoverable error occured, try to re-init connection and retry */
 		closeMySQL(pWrkrData); /* close the current handle */
 		CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
 		if(mysql_query(pWrkrData->hmysql, (char*)psz)) { /* re-try insert */
 			/* we failed, giving up for now */
+			DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
 			reportDBError(pWrkrData, 0);
 			closeMySQL(pWrkrData); /* free ressources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -279,26 +296,35 @@ ENDtryResume
 
 BEGINbeginTransaction
 CODESTARTbeginTransaction
-	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
-finalize_it:
+	// NOTHING TO DO IN HERE
 ENDbeginTransaction
 
-BEGINdoAction
-CODESTARTdoAction
-	dbgprintf("\n");
-	CHKiRet(writeMySQL(pWrkrData, ppString[0]));
-	iRet = RS_RET_DEFER_COMMIT;
-finalize_it:
-ENDdoAction
+BEGINcommitTransaction
+CODESTARTcommitTransaction
+	DBGPRINTF("ommysql: commitTransaction\n");
+	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
 
-BEGINendTransaction
-CODESTARTendTransaction
-	if(mysql_commit(pWrkrData->hmysql) != 0)	{	
-		dbgprintf("mysql server error: transaction not committed\n");		
-		iRet = RS_RET_SUSPENDED;
+	for(unsigned i = 0 ; i < nParams ; ++i) {
+		iRet = writeMySQL(pWrkrData, actParam(pParams, 1, i, 0).param);
+		if(iRet != RS_RET_OK
+			&& iRet != RS_RET_DEFER_COMMIT
+			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
+			if(mysql_rollback(pWrkrData->hmysql) != 0) {
+				DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
+			}
+			closeMySQL(pWrkrData);
+			FINALIZE;
+		}
 	}
-ENDendTransaction
 
+	if(mysql_commit(pWrkrData->hmysql) != 0) {
+		DBGPRINTF("ommysql: server error: transaction not committed\n");
+		reportDBError(pWrkrData, 0);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+	DBGPRINTF("ommysql: transaction committed\n");
+finalize_it:
+ENDcommitTransaction
 
 static inline void
 setInstParamDefaults(instanceData *pData)
@@ -453,10 +479,9 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
 

@@ -8,7 +8,7 @@
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2017 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -57,6 +57,7 @@
 #include "obj.h"
 #include "unicode-helper.h"
 #include "glbl.h"
+#include "errmsg.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -156,6 +157,8 @@ CODESTARTobjDestruct(wtp)
 	pThis->pWrkr = NULL;
 
 	/* actual destruction */
+	d_pthread_mutex_lock(&pThis->mutWtp); /* make sure nobody is still using the mutex */
+	d_pthread_mutex_unlock(&pThis->mutWtp);
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_cond_destroy(&pThis->condThrdInitDone);
 	pthread_mutex_destroy(&pThis->mutWtp);
@@ -317,8 +320,14 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), (unsigned long) pWti,
-		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+		wtpGetDbgHdr(pThis), (unsigned long) pWti,
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+	if(ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
+		LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
+			"%s: worker thread %lx terminated, now %d active worker threads",
+			wtpGetDbgHdr(pThis), (unsigned long) pWti,
+			ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+	}
 
 	ENDfunc
 }
@@ -409,6 +418,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
+        d_pthread_mutex_lock(&pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
@@ -417,6 +427,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
+        d_pthread_mutex_unlock(&pThis->mutWtp);
 	pthread_exit(0);
 }
 #if !defined(_AIX)
@@ -457,8 +468,8 @@ wtpStartWrkr(wtp_t *pThis)
 	ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
 	DBGPRINTF("%s: started with state %d, num workers now %d\n",
-		  wtpGetDbgHdr(pThis), iState,
-		  ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+		wtpGetDbgHdr(pThis), iState,
+		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
         /* wait for the new thread to initialize its signal mask and
          * cancelation cleanup handler before proceeding
@@ -497,8 +508,14 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 	nMissing = nMaxWrkr - ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
 	if(nMissing > 0) {
-		DBGPRINTF("%s: high activity - starting %d additional worker thread(s).\n",
-			  wtpGetDbgHdr(pThis), nMissing);
+		if(ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
+			LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
+				"%s: high activity - starting %d additional worker thread(s), "
+				"currently %d active worker threads.",
+				wtpGetDbgHdr(pThis), nMissing,
+				ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd,
+					&pThis->mutCurNumWrkThrd) );
+		}
 		/* start the rqtd nbr of workers */
 		for(i = 0 ; i < nMissing ; ++i) {
 			CHKiRet(wtpStartWrkr(pThis));

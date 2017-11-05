@@ -823,7 +823,7 @@ sigsegvHdlr(int signum)
  * 2009-05-20 rgerhards
  */
 static void
-do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
+do_dbgprint(uchar *pszObjName, char *pszMsg, const char *pszFileName, size_t lenMsg)
 {
 	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = 0;
@@ -882,6 +882,8 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 			lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszObjName);
 			offsWriteBuf += lenWriteBuf;
 		}
+		lenWriteBuf = snprintf(pszWriteBuf + offsWriteBuf, sizeof(pszWriteBuf) - offsWriteBuf, "%s: ", pszFileName);
+		offsWriteBuf += lenWriteBuf;
 	}
 #endif
 	if(lenMsg > sizeof(pszWriteBuf) - offsWriteBuf) 
@@ -900,16 +902,22 @@ do_dbgprint(uchar *pszObjName, char *pszMsg, size_t lenMsg)
 	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
 }
 
-#if !defined(_AIX)
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wempty-body"
-#pragma GCC diagnostic ignored "-Wclobbered"
-#endif
+static void
+dbgprintfWithCancelHdlr(uchar *const pszObjName, char *pszMsg,
+	const char *pszFileName, const size_t lenMsg)
+{
+	pthread_mutex_lock(&mutdbgprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+	do_dbgprint(pszObjName, pszMsg, pszFileName, lenMsg);
+	pthread_cleanup_pop(1);
+}
 /* write the debug message. This is a helper to dbgprintf and dbgoprint which
  * contains common code. added 2008-09-26 rgerhards
+ * Note: We need to split the function due to the bad nature of POSIX
+ * cancel cleanup handlers.
  */
-static void
-dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
+static void DBGL_UNUSED
+dbgprint(obj_t *pObj, char *pszMsg, const char *pszFileName, const size_t lenMsg)
 {
 	uchar *pszObjName = NULL;
 
@@ -923,26 +931,39 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 		pszObjName = obj.GetName(pObj);
 	}
 
-	pthread_mutex_lock(&mutdbgprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
-
-	do_dbgprint(pszObjName, pszMsg, lenMsg);
-
-	pthread_cleanup_pop(1);
+	dbgprintfWithCancelHdlr(pszObjName, pszMsg, pszFileName, lenMsg);
 }
-#if !defined(_AIX)
-#pragma GCC diagnostic warning "-Wempty-body"
-#pragma GCC diagnostic warning "-Wclobbered"
-#endif 
 
+static int DBGL_UNUSED
+checkDbgFile(const char *srcname)
+{
+
+	if(glblDbgFilesNum == 0) {
+		return 1;
+	}
+	if(glblDbgWhitelist) {
+		if(bsearch(srcname, glblDbgFiles, glblDbgFilesNum, sizeof(char*), bs_arrcmp_glblDbgFiles) == NULL) {
+			return 0;
+		} else {
+			return 1;
+		}
+	} else {
+		if(bsearch(srcname, glblDbgFiles, glblDbgFilesNum, sizeof(char*), bs_arrcmp_glblDbgFiles) != NULL) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
+}
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it
  * into a single function as we have variable arguments and I don't know how to call
  * from one vararg function into another. I don't dig in this, it is OK for the
  * time being. -- rgerhards, 2008-01-29
  */
-void
-dbgoprint(obj_t *pObj, const char *fmt, ...)
+#ifndef DEBUGLESS
+ void
+r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024];
@@ -951,6 +972,10 @@ dbgoprint(obj_t *pObj, const char *fmt, ...)
 	if(!(Debug && debugging_on))
 		return;
 	
+	if(!checkDbgFile(srcname)) {
+		return;
+	}
+
 	/* a quick and very dirty hack to enable us to display just from those objects
 	 * that we are interested in. So far, this must be changed at compile time (and
 	 * chances are great it is commented out while you read it. Later, this shall
@@ -973,23 +998,29 @@ dbgoprint(obj_t *pObj, const char *fmt, ...)
 		pszWriteBuf[sizeof(pszWriteBuf) - 1] = '\0';
 		lenWriteBuf = sizeof(pszWriteBuf);
 	}
-	dbgprint(pObj, pszWriteBuf, lenWriteBuf);
+	dbgprint(pObj, pszWriteBuf, srcname, lenWriteBuf);
 }
-
+#endif
 
 /* print some debug output when no object is given
- * WARNING: duplicate code, see dbgoprin above!
+ * WARNING: duplicate code, see dbgoprint above!
  */
+#ifndef DEBUGLESS
 void
-dbgprintf(const char *fmt, ...)
+r_dbgprintf(const char *srcname, const char *fmt, ...)
 {
 	va_list ap;
 	char pszWriteBuf[32*1024];
 	size_t lenWriteBuf;
 
-	if(!(Debug && debugging_on))
+	if(!(Debug && debugging_on)) {
 		return;
-	
+	}
+
+	if(!checkDbgFile(srcname)) {
+		return;
+	}
+
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	va_end(ap);
@@ -1002,8 +1033,9 @@ dbgprintf(const char *fmt, ...)
 		pszWriteBuf[sizeof(pszWriteBuf) - 1] = '\0';
 		lenWriteBuf = sizeof(pszWriteBuf);
 	}
-	dbgprint(NULL, pszWriteBuf, lenWriteBuf);
+	dbgprint(NULL, pszWriteBuf, srcname, lenWriteBuf);
 }
+#endif
 
 /* handler called when a function is entered. This function creates a new
  * funcDB on the heap if the passed-in pointer is NULL.

@@ -1,6 +1,5 @@
 #!/bin/bash
 # adddd 2016-06-08 by RGerhards, released under ASL 2.0
-
 . $srcdir/diag.sh init
 . $srcdir/diag.sh generate-conf
 . $srcdir/diag.sh add-conf '

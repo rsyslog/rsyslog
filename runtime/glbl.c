@@ -122,6 +122,11 @@ int glblSenderStatsTimeout = 12 * 60 * 60; /* 12 hr timeout for senders */
 int glblSenderKeepTrack = 0;  /* keep track of known senders? */
 int glblUnloadModules = 1;
 int bPermitSlashInProgramname = 0;
+int glblIntMsgRateLimitItv = 5;
+int glblIntMsgRateLimitBurst = 500;
+char** glblDbgFiles = NULL;
+size_t glblDbgFilesNum = 0;
+int glblDbgWhitelist = 1;
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -173,9 +178,15 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.aclresolvehostname", eCmdHdlrBinary, 0 },
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
+	{ "variables.casesensitive", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
-	{ "umask", eCmdHdlrFileCreateMode, 0 }
+	{ "umask", eCmdHdlrFileCreateMode, 0 },
+	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
+	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
+	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
+	{ "debug.files", eCmdHdlrArray, 0 },
+	{ "debug.whitelist", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -199,8 +210,8 @@ static struct cnfparamvals *cnfparamvals = NULL;
  * each time a new config load begins (TODO: create interface?)
  */
 
-static int
-GetMaxLine(void)
+int
+glblGetMaxLine(void)
 {
 	return(iMaxLine);
 }
@@ -734,7 +745,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDefPFFamily = getDefPFFamily;
 	pIf->SetDisableDNS = setDisableDNS;
 	pIf->GetDisableDNS = getDisableDNS;
-	pIf->GetMaxLine = GetMaxLine;
+	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->SetOption_DisallowWarning = setOption_DisallowWarning;
 	pIf->GetOption_DisallowWarning = getOption_DisallowWarning;
 	pIf->SetParseHOSTNAMEandTAG = setParseHOSTNAMEandTAG;
@@ -878,6 +889,13 @@ glblFindTimezoneInfo(char *id)
 /* handle the timezone() object. Each incarnation adds one additional
  * zone info to the global table of time zones.
  */
+
+int
+bs_arrcmp_glblDbgFiles(const void *s1, const void *s2)
+{
+	return strcmp((char*)s1, *(char**)s2);
+}
+
 void
 glblProcessTimezone(struct cnfobj *o)
 {
@@ -890,6 +908,11 @@ glblProcessTimezone(struct cnfobj *o)
 	int i;
 
 	pvals = nvlstGetParams(o->nvlst, &timezonepblk, NULL);
+	if(pvals == NULL) {
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing timezone "
+				"config parameters");
+		goto done;
+	}
 	if(Debug) {
 		dbgprintf("timezone param blk after glblProcessTimezone:\n");
 		cnfparamsPrint(&timezonepblk, pvals);
@@ -1021,9 +1044,9 @@ glblDestructMainqCnfObj(void)
 	/* Only destruct if not NULL! */
 	if (mainqCnfObj != NULL) {
 		nvlstChkUnused(mainqCnfObj->nvlst);
+		cnfobjDestruct(mainqCnfObj);
+		mainqCnfObj = NULL;
 	}
-	cnfobjDestruct(mainqCnfObj);
-	mainqCnfObj = NULL;
 }
 
 /* comparison function for qsort() and string array compare
@@ -1033,6 +1056,12 @@ static int
 qs_arrcmp_tzinfo(const void *s1, const void *s2)
 {
 	return strcmp(((tzinfo_t*)s1)->id, ((tzinfo_t*)s2)->id);
+}
+
+static int
+qs_arrcmp_glblDbgFiles(const void *s1, const void *s2)
+{
+	return strcmp(*((char**)s1), *((char**)s2));
 }
 
 /* set an environment variable */
@@ -1084,6 +1113,7 @@ glblDoneLoadCnf(void)
 {
 	int i;
 	unsigned char *cstr;
+	FILE *fp;
 	DEFiRet;
 	CHKiRet(objUse(net, CORE_COMPONENT));
 
@@ -1100,22 +1130,51 @@ glblDoneLoadCnf(void)
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setWorkDir(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "variables.casesensitive")) {
+			const int val = (int) cnfparamvals[i].val.d.n;
+			fjson_global_do_case_sensitive_comparison(val);
+			DBGPRINTF("global/config: set case sensitive variables to %d\n",
+				val);
 		} else if(!strcmp(paramblk.descr[i].name, "localhostname")) {
 			free(LocalHostNameOverride);
 			LocalHostNameOverride = (uchar*)
 				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriverkeyfile")) {
 			free(pszDfltNetstrmDrvrKeyFile);
-			pszDfltNetstrmDrvrKeyFile = (uchar*)
-				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)fn, "r");
+			if(fp == NULL) {
+				LogError(errno, RS_RET_NO_FILE_ACCESS,
+					"error: defaultnetstreamdriverkeyfile '%s' "
+					"could not be accessed", fn);
+			} else {
+				fclose(fp);
+				pszDfltNetstrmDrvrKeyFile = fn;
+			}
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercertfile")) {
 			free(pszDfltNetstrmDrvrCertFile);
-			pszDfltNetstrmDrvrCertFile = (uchar*)
-				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)fn, "r");
+			if(fp == NULL) {
+				LogError(errno, RS_RET_NO_FILE_ACCESS,
+					"error: defaultnetstreamdrivercertfile '%s' "
+					"could not be accessed", fn);
+			} else {
+				fclose(fp);
+				pszDfltNetstrmDrvrCertFile = fn;
+			}
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			free(pszDfltNetstrmDrvrCAF);
-			pszDfltNetstrmDrvrCAF = (uchar*)
-				es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			uchar *const fn = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)fn, "r");
+			if(fp == NULL) {
+				LogError(errno, RS_RET_NO_FILE_ACCESS,
+					"error: defaultnetstreamdrivercafile file '%s' "
+					"could not be accessed", fn);
+			} else {
+				fclose(fp);
+				pszDfltNetstrmDrvrCAF = fn;
+			}
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			free(pszDfltNetstrmDrvr);
 			pszDfltNetstrmDrvr = (uchar*)
@@ -1139,7 +1198,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "debug.unloadmodules")) {
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
-			cCCEscapeChar = (uchar) *es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			cCCEscapeChar = tmp[0];
+			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
 			bDropTrailingLF = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
@@ -1197,6 +1258,10 @@ glblDoneLoadCnf(void)
 		        setDisableDNS(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "net.permitwarning")) {
 		        setOption_DisallowWarning(!((int) cnfparamvals[i].val.d.n));
+		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
+		        glblIntMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
+		       glblIntMsgRateLimitItv = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "environment")) {
 			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
 				char *const var =
@@ -1204,6 +1269,17 @@ glblDoneLoadCnf(void)
 				do_setenv(var);
 				free(var);
 			}
+		} else if(!strcmp(paramblk.descr[i].name, "errormessagestostderr.maxnumber")) {
+		        loadConf->globals.maxErrMsgToStderr = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "debug.files")) {
+			glblDbgFilesNum = cnfparamvals[i].val.d.ar->nmemb;
+			glblDbgFiles = (char**) malloc(cnfparamvals[i].val.d.ar->nmemb * sizeof(char*));
+			for(int j = 0 ; j <  cnfparamvals[i].val.d.ar->nmemb ; ++j) {
+				glblDbgFiles[j] = es_str2cstr(cnfparamvals[i].val.d.ar->arr[j], NULL);
+			}
+			qsort(glblDbgFiles, glblDbgFilesNum, sizeof(char*), qs_arrcmp_glblDbgFiles);
+		} else if(!strcmp(paramblk.descr[i].name, "debug.whitelist")) {
+		        glblDbgWhitelist = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "umask")) {
 		        loadConf->globals.umask = (int) cnfparamvals[i].val.d.n;
 		} else {

@@ -41,7 +41,7 @@
 #if defined(__FreeBSD__)
 #include <unistd.h>
 #endif
-#include "cJSON/cjson.h"
+#include <json.h>
 #include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -273,6 +273,26 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+/* elasticsearch POST result string ... useful for debugging */
+static size_t
+curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	char *p = (char *)ptr;
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
+	char *buf;
+	size_t newlen;
+
+	newlen = pWrkrData->replyLen + size*nmemb;
+	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
+		DBGPRINTF("omelasticsearch: realloc failed in curlResult\n");
+		return 0; /* abort due to failure */
+	}
+	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
+	pWrkrData->replyLen = newlen;
+	pWrkrData->reply = buf;
+	return size*nmemb;
+}
+
 /* Build basic URL part, which includes hostname and port as follows:
  * http://hostname:port/ based on a server param
  * Newly creates a cstr for this purpose.
@@ -369,6 +389,7 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 		}
 
 		curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlResult);
 		res = curl_easy_perform(curl);
 		free(healthUrl);
 
@@ -611,29 +632,29 @@ finalize_it:
  * Dumps entire bulk request and response in error log
  */
 static rsRetVal
-getDataErrorDefault(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,char **rendered)
+getDataErrorDefault(wrkrInstanceData_t *pWrkrData,fjson_object **pReplyRoot,uchar *reqmsg,char **rendered)
 {
 	DEFiRet;
-	cJSON *req=0;
-	cJSON *errRoot=0;
-	cJSON *replyRoot = *pReplyRoot;
+	fjson_object *req=NULL;
+	fjson_object *errRoot=NULL;
+	fjson_object *replyRoot = *pReplyRoot;
 
-	if((req=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	cJSON_AddItemToObject(req, "url", cJSON_CreateString((char*)pWrkrData->restURL));
-	cJSON_AddItemToObject(req, "postdata", cJSON_CreateString((char*)reqmsg));
+	if((req=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	fjson_object_object_add(req, "url", fjson_object_new_string((char*)pWrkrData->restURL));
+	fjson_object_object_add(req, "postdata", fjson_object_new_string((char*)reqmsg));
 
-	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	cJSON_AddItemToObject(errRoot, "request", req);
-	cJSON_AddItemToObject(errRoot, "reply", replyRoot);
-	*rendered = cJSON_Print(errRoot);
+	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	fjson_object_object_add(errRoot, "request", req);
+	fjson_object_object_add(errRoot, "reply", replyRoot);
+	*rendered = strdup((char*)fjson_object_to_json_string(errRoot));
 
-	req=0;
-	cJSON_Delete(errRoot);
+	req=NULL;
+	fjson_object_put(errRoot);
 
 	*pReplyRoot = NULL; /* tell caller not to delete once again! */
 
 	finalize_it:
-		cJSON_Delete(req);
+		fjson_object_put(req);
 		RETiRet;
 }
 
@@ -689,8 +710,9 @@ finalize_it:
 /*
  * check the status of response from ES
  */
-static int checkReplyStatus(cJSON* ok) {
-	return (ok == NULL || ok->type != cJSON_Number || ok->valueint < 0 || ok->valueint > 299);
+static int checkReplyStatus(fjson_object* ok) {
+	return (ok == NULL || !fjson_object_is_type(ok, fjson_type_int) || fjson_object_get_int(ok) < 0 ||
+		fjson_object_get_int(ok) > 299);
 }
 
 /*
@@ -698,7 +720,7 @@ static int checkReplyStatus(cJSON* ok) {
  */
 typedef struct exeContext{
 	int statusCheckOnly;
-	cJSON *errRoot;
+	fjson_object *errRoot;
 	rsRetVal (*prepareErrorFileContent)(struct exeContext *ctx,int itemStatus,char *request,char *response);
 
 
@@ -708,25 +730,24 @@ typedef struct exeContext{
  * get content to be written in error file using context passed
  */
 static rsRetVal
-parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRoot,uchar *reqmsg,context *ctx)
+parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **pReplyRoot,uchar *reqmsg,context *ctx)
 {
 	DEFiRet;
-	cJSON *replyRoot = *pReplyRoot;
+	fjson_object *replyRoot = *pReplyRoot;
 	int i;
 	int numitems;
-	cJSON *items=0;
+	fjson_object *items=NULL;
 
 
 	/*iterate over items*/
-	items = cJSON_GetObjectItem(replyRoot, "items");
-	if(items == NULL || items->type != cJSON_Array) {
+	if(!fjson_object_object_get_ex(replyRoot, "items", &items)) {
 		DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
 			  "bulkmode insert does not return array, reply is: %s\n",
 			  pWrkrData->reply);
 		ABORT_FINALIZE(RS_RET_DATAFAIL);
 	}
 
-	numitems = cJSON_GetArraySize(items);
+	numitems = fjson_object_array_length(items);
 
 	DBGPRINTF("omelasticsearch: Entire request %s\n",reqmsg);
 	const char *lastReqRead= (char*)reqmsg;
@@ -734,32 +755,35 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 	DBGPRINTF("omelasticsearch: %d items in reply\n", numitems);
 	for(i = 0 ; i < numitems ; ++i) {
 
-		cJSON *item=0;
-		cJSON *result=0;
-		cJSON *ok=0;
+		fjson_object *item=NULL;
+		fjson_object *result=NULL;
+		fjson_object *ok=NULL;
 		int itemStatus=0;
-		item = cJSON_GetArrayItem(items, i);
+		item = fjson_object_array_get_idx(items, i);
 		if(item == NULL)  {
 			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
 				  "cannot obtain reply array item %d\n", i);
 			ABORT_FINALIZE(RS_RET_DATAFAIL);
 		}
-		result = item->child;
-		if(result == NULL || result->type != cJSON_Object) {
-			DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
-				  "cannot obtain 'result' item for #%d\n", i);
-			ABORT_FINALIZE(RS_RET_DATAFAIL);
+		fjson_object_object_get_ex(item, "create", &result);
+		if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
+			fjson_object_object_get_ex(item, "index", &result);
+			if(result == NULL || !fjson_object_is_type(result, fjson_type_object)) {
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: "
+					  "cannot obtain 'result' item for #%d\n", i);
+				ABORT_FINALIZE(RS_RET_DATAFAIL);
+			}
 		}
 
-		ok = cJSON_GetObjectItem(result, "status");
+		fjson_object_object_get_ex(result, "status", &ok);
 		itemStatus = checkReplyStatus(ok);
-
+		
 		char *request =0;
 		char *response =0;
 		if(ctx->statusCheckOnly)
 		{
 			if(itemStatus) {
-				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, ok->valueint);
+				DBGPRINTF("omelasticsearch: error in elasticsearch reply: item %d, status is %d\n", i, fjson_object_get_int(ok));
 				DBGPRINTF("omelasticsearch: status check found error.\n");
 				ABORT_FINALIZE(RS_RET_DATAFAIL);
 			}
@@ -772,13 +796,12 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 				DBGPRINTF("omelasticsearch: Couldn't get post request\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
-
-			response = cJSON_PrintUnformatted(result);
+			response = (char*)fjson_object_to_json_string_ext(result, FJSON_TO_STRING_PLAIN);
 
 			if(response==NULL)
 			{
 				free(request);/*as its has been assigned.*/
-				DBGPRINTF("omelasticsearch: Error getting cJSON_PrintUnformatted. Cannot continue\n");
+				DBGPRINTF("omelasticsearch: Error getting fjson_object_to_string_ext. Cannot continue\n");
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 
@@ -787,7 +810,6 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,cJSON **pReplyRo
 
 			/*free memory in any case*/
 			free(request);
-			free(response);
 
 			if(ret != RS_RET_OK)
 			{
@@ -812,23 +834,23 @@ getDataErrorOnly(context *ctx,int itemStatus,char *request,char *response)
 	DEFiRet;
 	if(itemStatus)
 	{
-		cJSON *onlyErrorResponses =0;
-		cJSON *onlyErrorRequests=0;
+		fjson_object *onlyErrorResponses =NULL;
+		fjson_object *onlyErrorRequests=NULL;
 
-		if((onlyErrorResponses=cJSON_GetObjectItem(ctx->errRoot, "reply")) == NULL)
+		if(!fjson_object_object_get_ex(ctx->errRoot, "reply", &onlyErrorResponses))
 		{
 			DBGPRINTF("omelasticsearch: Failed to get reply json array. Invalid context. Cannot continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		cJSON_AddItemToArray(onlyErrorResponses, cJSON_CreateString(response));
+		fjson_object_array_add(onlyErrorResponses, fjson_object_new_string(response));
 
-		if((onlyErrorRequests=cJSON_GetObjectItem(ctx->errRoot, "request")) == NULL)
+		if(!fjson_object_object_get_ex(ctx->errRoot, "request", &onlyErrorRequests))
 		{
 			DBGPRINTF("omelasticsearch: Failed to get request json array. Invalid context. Cannot continue\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
-		cJSON_AddItemToArray(onlyErrorRequests, cJSON_CreateString(request));
+		fjson_object_array_add(onlyErrorRequests, fjson_object_new_string(request));
 
 	}
 
@@ -847,24 +869,24 @@ getDataInterleaved(context *ctx,
 	char *response)
 {
 	DEFiRet;
-	cJSON *interleaved =0;
-	if((interleaved=cJSON_GetObjectItem(ctx->errRoot, "response")) == NULL)
+	fjson_object *interleaved =NULL;
+	if(!fjson_object_object_get_ex(ctx->errRoot, "response", &interleaved))
 	{
 		DBGPRINTF("omelasticsearch: Failed to get response json array. Invalid context. Cannot continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	cJSON *interleavedNode=0;
+	fjson_object *interleavedNode=NULL;
 	/*create interleaved node that has req and response json data*/
-	if((interleavedNode=cJSON_CreateObject()) == NULL)
+	if((interleavedNode=fjson_object_new_object()) == NULL)
 	{
 		DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	cJSON_AddItemToObject(interleavedNode,"request", cJSON_CreateString(request));
-	cJSON_AddItemToObject(interleavedNode,"reply", cJSON_CreateString(response));
+	fjson_object_object_add(interleavedNode,"request", fjson_object_new_string(request));
+	fjson_object_object_add(interleavedNode,"reply", fjson_object_new_string(response));
 
-	cJSON_AddItemToArray(interleaved, interleavedNode);
+	fjson_object_array_add(interleaved, interleavedNode);
 
 
 
@@ -898,24 +920,24 @@ static rsRetVal
 initializeErrorOnlyConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
-	cJSON *errRoot=0;
-	cJSON *onlyErrorResponses =0;
-	cJSON *onlyErrorRequests=0;
-	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	fjson_object *errRoot=NULL;
+	fjson_object *onlyErrorResponses =NULL;
+	fjson_object *onlyErrorRequests=NULL;
+	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
 
-	if((onlyErrorResponses=cJSON_CreateArray()) == NULL) {
-		cJSON_Delete(errRoot);
+	if((onlyErrorResponses=fjson_object_new_array()) == NULL) {
+		fjson_object_put(errRoot);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if((onlyErrorRequests=cJSON_CreateArray()) == NULL) {
-		cJSON_Delete(errRoot);
-		cJSON_Delete(onlyErrorResponses);
+	if((onlyErrorRequests=fjson_object_new_array()) == NULL) {
+		fjson_object_put(errRoot);
+		fjson_object_put(onlyErrorResponses);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
-	cJSON_AddItemToObject(errRoot,"request",onlyErrorRequests);
-	cJSON_AddItemToObject(errRoot, "reply", onlyErrorResponses);
+	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
+	fjson_object_object_add(errRoot,"request",onlyErrorRequests);
+	fjson_object_object_add(errRoot, "reply", onlyErrorResponses);
 	ctx->errRoot = errRoot;
 	ctx->prepareErrorFileContent= &getDataErrorOnly;
 	finalize_it:
@@ -929,17 +951,17 @@ static rsRetVal
 initializeInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
-	cJSON *errRoot=0;
-	cJSON *interleaved =0;
-	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	if((interleaved=cJSON_CreateArray()) == NULL) {
-		cJSON_Delete(errRoot);
+	fjson_object *errRoot=NULL;
+	fjson_object *interleaved =NULL;
+	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	if((interleaved=fjson_object_new_array()) == NULL) {
+		fjson_object_put(errRoot);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 
-	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
-	cJSON_AddItemToObject(errRoot,"response",interleaved);
+	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
+	fjson_object_object_add(errRoot,"response",interleaved);
 	ctx->errRoot = errRoot;
 	ctx->prepareErrorFileContent= &getDataInterleaved;
 	finalize_it:
@@ -951,17 +973,17 @@ static rsRetVal
 initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
 	DEFiRet;
 	ctx->statusCheckOnly=0;
-	cJSON *errRoot=0;
-	cJSON *interleaved =0;
-	if((errRoot=cJSON_CreateObject()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
-	if((interleaved=cJSON_CreateArray()) == NULL) {
-		cJSON_Delete(errRoot);
+	fjson_object *errRoot=NULL;
+	fjson_object *interleaved =NULL;
+	if((errRoot=fjson_object_new_object()) == NULL) ABORT_FINALIZE(RS_RET_ERR);
+	if((interleaved=fjson_object_new_array()) == NULL) {
+		fjson_object_put(errRoot);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 
-	cJSON_AddItemToObject(errRoot, "url", cJSON_CreateString((char*)pWrkrData->restURL));
-	cJSON_AddItemToObject(errRoot,"response",interleaved);
+	fjson_object_object_add(errRoot, "url", fjson_object_new_string((char*)pWrkrData->restURL));
+	fjson_object_object_add(errRoot,"response",interleaved);
 	ctx->errRoot = errRoot;
 	ctx->prepareErrorFileContent= &getDataErrorOnlyInterleaved;
 	finalize_it:
@@ -974,7 +996,7 @@ initializeErrorInterleavedConext(wrkrInstanceData_t *pWrkrData,context *ctx){
  * needs to be closed, HUP must be sent.
  */
 static rsRetVal
-writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pReplyRoot, uchar *reqmsg)
+writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, fjson_object **pReplyRoot, uchar *reqmsg)
 {
 	char *rendered = NULL;
 	size_t toWrite;
@@ -1041,7 +1063,7 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 			DBGPRINTF("omelasticsearch: error creating file content.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
-		rendered = cJSON_Print(ctx.errRoot);
+		rendered = strdup((char*)fjson_object_to_json_string(ctx.errRoot));
 	}
 
 
@@ -1071,14 +1093,14 @@ writeDataError(wrkrInstanceData_t *pWrkrData, instanceData *pData, cJSON **pRepl
 finalize_it:
 	if(bMutLocked)
 		pthread_mutex_unlock(&pData->mutErrFile);
-	cJSON_Delete(ctx.errRoot);
 	free(rendered);
+	fjson_object_put(ctx.errRoot);
 	RETiRet;
 }
 
 
 static rsRetVal
-checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
+checkResultBulkmode(wrkrInstanceData_t *pWrkrData, fjson_object *root)
 {
 	DEFiRet;
 	context ctx;
@@ -1098,11 +1120,11 @@ checkResultBulkmode(wrkrInstanceData_t *pWrkrData, cJSON *root)
 static rsRetVal
 checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
-	cJSON *root;
-	cJSON *status;
+	fjson_object *root;
+	fjson_object *status;
 	DEFiRet;
 
-	root = cJSON_Parse(pWrkrData->reply);
+	root = fjson_tokener_parse(pWrkrData->reply);
 	if(root == NULL) {
 		DBGPRINTF("omelasticsearch: could not parse JSON result \n");
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -1111,10 +1133,7 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	if(pWrkrData->pData->bulkmode) {
 		iRet = checkResultBulkmode(pWrkrData, root);
 	} else {
-		status = cJSON_GetObjectItem(root, "status");
-		/* as far as we know, no "status" means all went well */
-		if(status != NULL &&
-		   (status->type == cJSON_Number || status->valueint >= 0 || status->valueint <= 299)) {
+		if(fjson_object_object_get_ex(root, "status", &status)) {
 			iRet = RS_RET_DATAFAIL;
 		}
 	}
@@ -1130,7 +1149,7 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 
 finalize_it:
 	if(root != NULL)
-		cJSON_Delete(root);
+		fjson_object_put(root);
 	if(iRet != RS_RET_OK) {
 		STATSCOUNTER_INC(indexESFail, mutIndexESFail);
 	}
@@ -1252,26 +1271,6 @@ CODESTARTendTransaction
 finalize_it:
 ENDendTransaction
 
-/* elasticsearch POST result string ... useful for debugging */
-static size_t
-curlResult(void *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	char *p = (char *)ptr;
-	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t*) userdata;
-	char *buf;
-	size_t newlen;
-
-	newlen = pWrkrData->replyLen + size*nmemb;
-	if((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
-		DBGPRINTF("omelasticsearch: realloc failed in curlResult\n");
-		return 0; /* abort due to failure */
-	}
-	memcpy(buf+pWrkrData->replyLen, p, size*nmemb);
-	pWrkrData->replyLen = newlen;
-	pWrkrData->reply = buf;
-	return size*nmemb;
-}
-
 static rsRetVal
 computeAuthHeader(char* uid, char* pwd, uchar** authBuf) {
 	int r;
@@ -1303,15 +1302,15 @@ static void
 curlCheckConnSetup(CURL *handle, HEADER *header, long timeout, sbool allowUnsignedCerts)
 {
 	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, header);
-	curl_easy_setopt(handle, CURLOPT_NOBODY, TRUE);
 	curl_easy_setopt(handle, CURLOPT_TIMEOUT_MS, timeout);
 	curl_easy_setopt(handle, CURLOPT_NOSIGNAL, TRUE);
 
 	if(allowUnsignedCerts)
 		curl_easy_setopt(handle, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-	/* Only enable for debugging
-	curl_easy_setopt(curl, CURLOPT_VERBOSE, TRUE); */
+	if(Debug) {
+		curl_easy_setopt(handle, CURLOPT_VERBOSE, TRUE);
+	}
 }
 
 static void
@@ -1328,10 +1327,12 @@ curlPostSetup(CURL *handle, HEADER *header, uchar* authBuf)
 	}
 }
 
+#define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
+
 static rsRetVal
 curlSetup(wrkrInstanceData_t *pWrkrData, instanceData *pData)
 {
-	pWrkrData->curlHeader = curl_slist_append(NULL, "Content-Type: text/json; charset=utf-8");
+	pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
 	pWrkrData->curlPostHandle = curl_easy_init();
 	if (pWrkrData->curlPostHandle == NULL) {
 		return RS_RET_OBJ_CREATION_FAILED;

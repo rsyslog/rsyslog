@@ -62,8 +62,10 @@
 #include "net.h"
 #include "dnscache.h"
 #include "prop.h"
+#include "errmsg.h"
 
 #ifdef OS_SOLARIS
+#include <arpa/nameser_compat.h>
 #	define	s6_addr32	_S6_un._S6_u32
 	typedef unsigned int	u_int32_t;
 #endif
@@ -379,11 +381,12 @@ finalize_it:
  * *pbIsMatching is set to 0 if there is no match and something else otherwise.
  * rgerhards, 2008-05-27 */
 static rsRetVal
-PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching)
+PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
+	const uchar *pszNameToMatch,
+	int *const pbIsMatching)
 {
-	permittedPeerWildcard_t *pWildcard;
-	uchar *pC;
-	uchar *pStart; /* start of current domain component */
+	const permittedPeerWildcard_t *pWildcard;
+	const uchar *pC;
 	size_t iWildcard, iName; /* work indexes for backward comparisons */
 	DEFiRet;
 
@@ -411,7 +414,7 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 			*pbIsMatching = 0;
 			FINALIZE;
 		}
-		pStart = pC;
+		const uchar *const pStart = pC; /* start of current domain component */
 		while(*pC != '\0' && *pC != '.') {
 			++pC;
 		}
@@ -434,10 +437,13 @@ PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *
 				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
 				iWildcard = 0;
 				while(iWildcard < pWildcard->lenDomainPart) {
+					// I give up, I see now way to remove false positive -- rgerhards, 2017-10-23
+					#ifndef __clang_analyzer__
 					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
 						*pbIsMatching = 0;
 						FINALIZE;
 					}
+					#endif
 					++iName;
 					++iWildcard;
 				}
@@ -612,6 +618,7 @@ clearAllowedSenders(uchar *pszType)
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
+	struct addrinfo *restmp = NULL;
 	DEFiRet;
 
 	assert(ppRoot != NULL);
@@ -673,7 +680,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
-			struct addrinfo hints, *res, *restmp;
+			struct addrinfo hints, *res;
 			struct NetAddr allowIP;
 			
 			memset (&hints, 0, sizeof (struct addrinfo));
@@ -697,7 +704,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				}
 			}
 			
-			for (restmp = res ; res != NULL ; res = res->ai_next) {
+			restmp = res;
+			for ( ; res != NULL ; res = res->ai_next) {
 				switch (res->ai_family) {
 				case AF_INET: /* add IPv4 */
 					iSignificantBits = 32;
@@ -758,7 +766,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					break;
 				}
 			}
-			freeaddrinfo (restmp);
 		} else {
 			/* wildcards in hostname - we need to add a text-based ACL.
 			 * For this, we already have everything ready and just need
@@ -769,6 +776,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	}
 
 finalize_it:
+	if(restmp != NULL) {
+		freeaddrinfo (restmp);
+	}
 	RETiRet;
 }
 
@@ -1180,26 +1190,29 @@ getLocalHostname(uchar **ppName)
 	}
 
 	char *dot = strstr(hnbuf, ".");
+	struct addrinfo *res = NULL;
 	if(!empty_hostname && dot == NULL) {
 		/* we need to (try) to find the real name via resolver */
-		struct hostent *hent = gethostbyname((char*)hnbuf);
-		if(hent) {
-			int i = 0;
-			if(hent->h_aliases) {
-				const size_t hnlen = strlen(hnbuf);
-				for(i = 0; hent->h_aliases[i]; i++) {
-					if(!strncmp(hent->h_aliases[i], hnbuf, hnlen)
-					   && hent->h_aliases[i][hnlen] == '.') {
-						break; /* match! */
-					}
-				}
+		struct addrinfo flags;
+		memset(&flags, 0, sizeof(flags));
+		flags.ai_flags = AI_CANONNAME;
+		int error = getaddrinfo((char*)hnbuf, NULL, &flags, &res);
+		if (error != 0 &&
+		    error != EAI_NONAME && error != EAI_AGAIN && error != EAI_FAIL) {
+			/* If we get one of errors above, network is probably
+			 * not working yet, so we fall back to local hostname below
+			 */
+			LogError(0, RS_RET_ERR, "getaddrinfo failed obtaining local "
+				"hostname - using '%s' instead; error: %s",
+				hnbuf, gai_strerror(error));
+		}
+		if (res != NULL) {
+			/* When AI_CANONNAME is set first member of res linked-list */
+			/* should contain what we need */
+			if (res->ai_canonname != NULL && res->ai_canonname[0] != '\0') {
+				CHKmalloc(fqdn = (uchar*)strdup(res->ai_canonname));
+				dot = strstr((char*)fqdn, ".");
 			}
-			if(hent->h_aliases && hent->h_aliases[i]) {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_aliases[i]));
-			} else {
-				CHKmalloc(fqdn = (uchar*)strdup(hent->h_name));
-			}
-			dot = strstr((char*)fqdn, ".");
 		}
 	}
 
@@ -1214,6 +1227,9 @@ getLocalHostname(uchar **ppName)
 
 	*ppName = fqdn;
 finalize_it:
+	if (res != NULL) {
+		freeaddrinfo(res);
+	}
 	RETiRet;
 }
 
@@ -1239,15 +1255,25 @@ closeUDPListenSockets(int *pSockArr)
  * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
- * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+ * Note: server sockets are created in non-blocking mode, client ones
+ * are blocking.
+ * param rcvbuf indicates desired rcvbuf size; 0 means OS default,
+ * similar for sndbuf.
  */
 static int *
-create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, int ipfreebind, char *device)
+create_udp_socket(uchar *hostname,
+	uchar *pszPort,
+	int bIsServer,
+	int rcvbuf,
+	const int sndbuf,
+	int ipfreebind,
+	char *device)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 	int actrcvbuf;
+	int actsndbuf;
 	socklen_t optlen;
 	char errStr[1024];
 
@@ -1358,25 +1384,49 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 			}
 		}
 #endif
-		/* We must not block on the network socket, in case a packet
-		 * gets lost between select and recv, otherwise the process
-		 * will stall until the timeout, and other processes trying to
-		 * log will also stall.
-		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
-		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
-		 */
-		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
-			sockflags |= O_NONBLOCK;
-			/* SETFL could fail too, so get it caught by the subsequent
-			 * error check.
-			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
+		if(bIsServer) {
+			DBGPRINTF("net.c: trying to set server socket %d to non-blocking mode\n", *s);
+			if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+				sockflags |= O_NONBLOCK;
+				/* SETFL could fail too, so get it caught by the subsequent
+				 * error check.
+				 */
+				sockflags = fcntl(*s, F_SETFL, sockflags);
+			}
+			if (sockflags == -1) {
+				LogError(errno, NO_ERRCODE, "net.c: socket %d fcntl(O_NONBLOCK)", *s);
+				close(*s);
+				*s = -1;
+				continue;
+			}
 		}
-		if (sockflags == -1) {
-			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
-                        close(*s);
-			*s = -1;
-			continue;
+
+		if(sndbuf != 0) {
+#			if defined(SO_SNDBUFFORCE)
+			if(setsockopt(*s, SOL_SOCKET, SO_SNDBUFFORCE, &sndbuf, sizeof(sndbuf)) < 0)
+#			endif
+			{
+				/* if we fail, try to do it the regular way. Experiments show that at 
+				 * least some platforms do not return an error here, but silently set
+				 * it to the max permitted value. So we do our error check a bit
+				 * differently by querying the size below.
+				 */
+				setsockopt(*s, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+			}
+			/* report socket buffer sizes */
+			optlen = sizeof(actsndbuf);
+			if(getsockopt(*s, SOL_SOCKET, SO_SNDBUF, &actsndbuf, &optlen) == 0) {
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket sndbuf size is %d", *s, actsndbuf);
+				if(sndbuf != 0 && actsndbuf/2 != sndbuf) {
+					errmsg.LogError(errno, NO_ERRCODE,
+						"could not set os socket sndbuf size %d for socket %d, "
+						"value now is %d", sndbuf, *s, actsndbuf/2);
+				}
+			} else {
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
+					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
+			}
 		}
 
 		if(rcvbuf != 0) {
@@ -1391,19 +1441,17 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 				 */
 				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
 			}
-		}
-
-		if(Debug || rcvbuf != 0) {
 			optlen = sizeof(actrcvbuf);
 			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
-				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
+				LogMsg(0, NO_ERRCODE, LOG_INFO,
+					"socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
 				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
 					errmsg.LogError(errno, NO_ERRCODE,
 						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
 						rcvbuf, *s, actrcvbuf/2);
 				}
 			} else {
-				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
+				DBGPRINTF("could not obtain os socket rcvbuf size for socket %d: %s\n",
 					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
 			}
 		}
@@ -1452,8 +1500,8 @@ create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf, in
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
+		errmsg.LogError(0, NO_ERRCODE, "No UDP socket could successfully be initialized, "
+			 "some functionality may be disabled.\n");
 		/* we do NOT need to free any sockets, because there were none... */
         	free(socks);
 		return(NULL);

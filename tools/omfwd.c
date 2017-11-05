@@ -56,6 +56,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+#include "parserif.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
@@ -94,14 +95,17 @@ typedef struct _instanceData {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	uchar *gnutlsPriorityString;
 
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for UDP-based delivery */
 	int bSendToAll;
 	int iUDPSendDelay;
+	int UDPSendBuf;
 	/* following fields for TCP-based delivery */
 	TCPFRAMINGMODE tcp_framing;
+	uchar tcp_framingDelimiter;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
 #	define COMPRESS_NEVER 0
 #	define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
@@ -141,6 +145,7 @@ typedef struct configSettings_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	uchar *gnutlsPriorityString;
 	permittedPeers_t *pPermPeers;
 } configSettings_t;
 static configSettings_t cs;
@@ -164,15 +169,17 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "protocol", eCmdHdlrGetWord, 0 },
 	{ "networknamespace", eCmdHdlrGetWord, 0 },
 	{ "tcp_framing", eCmdHdlrGetWord, 0 },
+	{ "tcp_framedelimiter", eCmdHdlrInt, 0 },
 	{ "ziplevel", eCmdHdlrInt, 0 },
 	{ "compression.mode", eCmdHdlrGetWord, 0 },
 	{ "compression.stream.flushontxend", eCmdHdlrBinary, 0 },
-	{ "maxerrormessages", eCmdHdlrInt, 0 },
+	{ "maxerrormessages", eCmdHdlrInt, CNFPARAM_DEPRECATED },
 	{ "rebindinterval", eCmdHdlrInt, 0 },
 	{ "keepalive", eCmdHdlrBinary, 0 },
 	{ "keepalive.probes", eCmdHdlrPositiveInt, 0 },
 	{ "keepalive.time", eCmdHdlrPositiveInt, 0 },
 	{ "keepalive.interval", eCmdHdlrPositiveInt, 0 },
+	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
@@ -180,6 +187,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
+	{ "udp.sendbuf", eCmdHdlrSize, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -244,7 +252,7 @@ setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
 
 	if(loadModConf != NULL && loadModConf->tplName != NULL) {
 		free(newVal);
-		errmsg.LogError(0, RS_RET_ERR, "omfwd default template already set via module "
+		LogError(0, RS_RET_ERR, "omfwd default template already set via module "
 			"global parameter - can no longer be changed");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -318,7 +326,7 @@ CODESTARTsetModCnf
 		if(!strcmp(modpblk.descr[i].name, "template")) {
 			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			if(cs.pszTplName != NULL) {
-				errmsg.LogError(0, RS_RET_DUP_PARAM, "omfwd: warning: default template "
+				LogError(0, RS_RET_DUP_PARAM, "omfwd: warning: default template "
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
@@ -356,7 +364,6 @@ ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->errsToReport = 5;
 	if(cs.pszStrmDrvr != NULL)
 		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)cs.pszStrmDrvr));
 	if(cs.pszStrmDrvrAuthMode != NULL)
@@ -370,7 +377,6 @@ BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	dbgprintf("DDDD: createWrkrInstance: pWrkrData %p\n", pWrkrData);
 	pWrkrData->offsSndBuf = 0;
-	pWrkrData->errsToReport = pData->errsToReport;
 	iRet = initTCP(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -414,18 +420,19 @@ ENDdbgPrintInstInfo
 /* Send a message via UDP
  * rgehards, 2007-12-20
  */
+#define UDP_MAX_MSGSIZE 65507 /* limit per RFC definition */
 static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 	uchar *__restrict__ const msg,
-	const size_t len)
+	size_t len)
 {
 	DEFiRet;
 	struct addrinfo *r;
 	int i;
-	unsigned lsent = 0;
+	ssize_t lsent = 0;
 	sbool bSendSuccess;
 	sbool reInit = RSFALSE;
 	int lasterrno = ENOENT;
-	char errStr[1024];
+	int lasterr_sock = -1;
 
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
 		dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
@@ -437,60 +444,76 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		CHKiRet(doTryResume(pWrkrData));
 	}
 
-	if(pWrkrData->pSockArray != NULL) {
-		/* we need to track if we have success sending to the remote
-		 * peer. Success is indicated by at least one sendto() call
-		 * succeeding. We track this be bSendSuccess. We can not simply
-		 * rely on lsent, as a call might initially work, but a later
-		 * call fails. Then, lsent has the error status, even though
-		 * the sendto() succeeded. -- rgerhards, 2007-06-22
-		 */
-		bSendSuccess = RSFALSE;
-		for (r = pWrkrData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *pWrkrData->pSockArray; i++) {
-			       lsent = sendto(pWrkrData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
-				if (lsent == len) {
+	if(pWrkrData->pSockArray == NULL) {
+		FINALIZE;
+	}
+
+
+	if(len > UDP_MAX_MSGSIZE) {
+		LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE, "omfwd/udp: message is %u "
+			"bytes long, but UDP can send at most %d bytes (by RFC limit) "
+			"- truncating message", (unsigned) len, UDP_MAX_MSGSIZE);
+		len = UDP_MAX_MSGSIZE;
+	}
+
+	/* we need to track if we have success sending to the remote
+	 * peer. Success is indicated by at least one sendto() call
+	 * succeeding. We track this be bSendSuccess. We can not simply
+	 * rely on lsent, as a call might initially work, but a later
+	 * call fails. Then, lsent has the error status, even though
+	 * the sendto() succeeded. -- rgerhards, 2007-06-22
+	 */
+	bSendSuccess = RSFALSE;
+	for (r = pWrkrData->f_addr; r; r = r->ai_next) {
+		int runSockArrayLoop = 1;
+		for (i = 0; runSockArrayLoop && (i < *pWrkrData->pSockArray) ; i++) {
+			int try_send = 1;
+			size_t lenThisTry = len;
+			while(try_send) {
+				lsent = sendto(pWrkrData->pSockArray[i+1], msg, lenThisTry, 0,
+						r->ai_addr, r->ai_addrlen);
+				if (lsent == (ssize_t) lenThisTry) {
 					bSendSuccess = RSTRUE;
-					break;
+					try_send = 0;
+					runSockArrayLoop = 0;
+				} else if(errno == EMSGSIZE) {
+					const size_t newlen = (lenThisTry > 1024) ? lenThisTry - 1024 : 512;
+					LogError(0, RS_RET_UDP_MSGSIZE_TOO_LARGE,
+						"omfwd/udp: send failed due to message being too "
+						"large for this system. Message size was %u bytes. "
+						"Truncating to %u bytes and retrying.",
+						(unsigned) lenThisTry, (unsigned) newlen);
+					lenThisTry = newlen;
 				} else {
 					reInit = RSTRUE;
 					lasterrno = errno;
-					DBGPRINTF("sendto() error: %d = %s.\n",
-						lasterrno,
-						rs_strerror_r(lasterrno, errStr, sizeof(errStr)));
+					lasterr_sock = pWrkrData->pSockArray[i+1];
+					LogError(lasterrno, RS_RET_ERR_UDPSEND,
+						"omfwd/udp: socket %d: sendto() error",
+						lasterr_sock);
+					try_send = 0;
 				}
 			}
-			if (lsent == len && !pWrkrData->pData->bSendToAll)
-			       break;
 		}
+		if (lsent == (ssize_t) len && !pWrkrData->pData->bSendToAll)
+		       break;
+	}
 
-		/* one or more send failures; close sockets and re-init */
-		if (reInit == RSTRUE) {
-			CHKiRet(closeUDPSockets(pWrkrData));
-		}
+	/* one or more send failures; close sockets and re-init */
+	if (reInit == RSTRUE) {
+		CHKiRet(closeUDPSockets(pWrkrData));
+	}
 
-		/* finished looping */
-		if(bSendSuccess == RSTRUE) {
-			if(pWrkrData->pData->iUDPSendDelay > 0) {
-				srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
-				        pWrkrData->pData->iUDPSendDelay % 1000000);
-				}
-		} else {
-			dbgprintf("error forwarding via udp, suspending\n");
-			if(pWrkrData->errsToReport > 0) {
-				errmsg.LogError(lasterrno, RS_RET_ERR_UDPSEND,
-						"omfwd: error %d sending "
-						"via udp", lasterrno);
-				if(pWrkrData->errsToReport == 1) {
-					errmsg.LogMsg(0, RS_RET_LAST_ERRREPORT, LOG_WARNING, "omfwd: "
-							"max number of error message emitted "
-							"- further messages will be "
-							"suppressed");
-				}
-				--pWrkrData->errsToReport;
-			}
-			iRet = RS_RET_SUSPENDED;
+	/* finished looping */
+	if(bSendSuccess == RSTRUE) {
+		if(pWrkrData->pData->iUDPSendDelay > 0) {
+			srSleep(pWrkrData->pData->iUDPSendDelay / 1000000,
+				pWrkrData->pData->iUDPSendDelay % 1000000);
 		}
+	} else {
+		LogError(lasterrno, RS_RET_ERR_UDPSEND,
+			"omfwd: socket %d: error %d sending via udp", lasterr_sock, lasterrno);
+		iRet = RS_RET_SUSPENDED;
 	}
 
 finalize_it:
@@ -534,7 +557,8 @@ TCPSendBufUncompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		/* error! */
-		dbgprintf("TCPSendBuf error %d, destruct TCP Connection!\n", iRet);
+		LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
+			iRet, pWrkrData->pData->target, pWrkrData->pData->port);
 		DestructTCPInstanceData(pWrkrData);
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -556,7 +580,7 @@ TCPSendBufCompressed(wrkrInstanceData_t *pWrkrData, uchar *buf, unsigned len, sb
 		pWrkrData->zstrm.zfree = Z_NULL;
 		pWrkrData->zstrm.opaque = Z_NULL;
 		/* see note in file header for the params we use with deflateInit2() */
-		zRet = deflateInit(&pWrkrData->zstrm, 9);
+		zRet = deflateInit(&pWrkrData->zstrm, pWrkrData->pData->compressionLevel);
 		if(zRet != Z_OK) {
 			DBGPRINTF("error %d returned from zlib/deflateInit()\n", zRet);
 			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
@@ -723,6 +747,9 @@ static rsRetVal TCPSendInit(void *pvData)
 			CHKiRet(netstrm.SetDrvrPermPeers(pWrkrData->pNetstrm, pData->pPermPeers));
 		}
 		/* params set, now connect */
+		if(pData->gnutlsPriorityString != NULL) {
+			CHKiRet(netstrm.SetGnutlsPriorityString(pWrkrData->pNetstrm, pData->gnutlsPriorityString));
+		}
 		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->target, pData->device));
 
@@ -760,36 +787,38 @@ static rsRetVal changeToNs(instanceData *pData)
 		/* keep file descriptor of original network namespace */
 		pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
 		if (pData->originalNamespace < 0) {
-			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net\n");
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net");
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
 		/* build network namespace path */
 		if (asprintf(&nsPath, "/var/run/netns/%s", pData->networkNamespace) == -1) {
-			errmsg.LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed\n");
+			LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed");
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 
 		/* keep file descriptor of destination network namespace */
 		destinationNs = open(nsPath, 0);
 		if (destinationNs < 0) {
-			errmsg.LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'\n",
+			LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'",
 					pData->networkNamespace);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
 		/* actually change in the destination network namespace */
 		if((iErr = (setns(destinationNs, CLONE_NEWNET))) != 0) {
-			dbgprintf("could not change to namespace '%s': %d%s\n",
-				  pData->networkNamespace, iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_IO_ERROR, "could not change to namespace '%s': %s",
+				  pData->networkNamespace, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
-		close(destinationNs);
-		free(nsPath);
 		dbgprintf("omfwd: changed to network namespace '%s'\n", pData->networkNamespace);
 	}
 
 finalize_it:
+	free(nsPath);
+	if(destinationNs >= 0) {
+		close(destinationNs);
+	}
 #else /* #ifdef HAVE_SETNS */
 		dbgprintf("omfwd: OS does not support network namespaces\n");
 #endif /* #ifdef HAVE_SETNS */
@@ -811,8 +840,8 @@ static rsRetVal returnToOriginalNs(instanceData *pData)
 	if(pData->networkNamespace && pData->originalNamespace >= 0) {
 		/* actually change to the original network namespace */
 		if((iErr = (setns(pData->originalNamespace, CLONE_NEWNET))) != 0) {
-			dbgprintf("could not return to original namespace: %d%s\n",
-				  iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_IO_ERROR, "could not return to original namespace: %s",
+				  gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 
@@ -849,15 +878,17 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_DGRAM;
 		if((iErr = (getaddrinfo(pData->target, pData->port, &hints, &res))) != 0) {
-			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
-				  pData->target, pData->port, iErr, gai_strerror(iErr));
+			LogError(0, RS_RET_SUSPENDED,
+				"omfwd: could not get addrinfo for hostname '%s':'%s': %s",
+				pData->target, pData->port, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
-		dbgprintf("%s found, resuming.\n", pData->target);
+		DBGPRINTF("%s found, resuming.\n", pData->target);
 		pWrkrData->f_addr = res;
 		if(pWrkrData->pSockArray == NULL) {
 			CHKiRet(changeToNs(pData));
-			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0, 0, pData->device);
+			pWrkrData->pSockArray = net.create_udp_socket((uchar*)pData->target,
+				NULL, 0, 0, pData->UDPSendBuf, 0, pData->device);
 			CHKiRet(returnToOriginalNs(pData));
 		}
 		if(pWrkrData->pSockArray != NULL) {
@@ -961,7 +992,8 @@ processMsg(wrkrInstanceData_t *__restrict__ const pWrkrData,
 		iRet = tcpclt.Send(pWrkrData->pTCPClt, pWrkrData, (char *)psz, l);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
-			dbgprintf("error forwarding via tcp, suspending\n");
+			LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending action",
+				pWrkrData->pData->target, pWrkrData->pData->port);
 			DestructTCPInstanceData(pWrkrData);
 			iRet = RS_RET_SUSPENDED;
 		}
@@ -976,7 +1008,7 @@ BEGINcommitTransaction
 CODESTARTcommitTransaction
 	CHKiRet(doTryResume(pWrkrData));
 
-	dbgprintf(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
+	DBGPRINTF(" %s:%s/%s\n", pWrkrData->pData->target, pWrkrData->pData->port,
 		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	for(i = 0 ; i < nParams ; ++i) {
@@ -1029,6 +1061,7 @@ initTCP(wrkrInstanceData_t *pWrkrData)
 		CHKiRet(tcpclt.SetSendFrame(pWrkrData->pTCPClt, TCPSendFrame));
 		CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pWrkrData->pTCPClt, pData->tcp_framing));
+		CHKiRet(tcpclt.SetFramingDelimiter(pWrkrData->pTCPClt, pData->tcp_framingDelimiter));
 		CHKiRet(tcpclt.SetRebindInterval(pWrkrData->pTCPClt, pData->iRebindInterval));
 	}
 finalize_it:
@@ -1044,6 +1077,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->networkNamespace = NULL;
 	pData->originalNamespace = -1;
 	pData->tcp_framing = TCP_FRAMING_OCTET_STUFFING;
+	pData->tcp_framingDelimiter = '\n';
 	pData->pszStrmDrvr = NULL;
 	pData->pszStrmDrvrAuthMode = NULL;
 	pData->iStrmDrvrMode = 0;
@@ -1052,14 +1086,15 @@ setInstParamDefaults(instanceData *pData)
 	pData->iKeepAliveProbes = 0;
 	pData->iKeepAliveIntvl = 0;
 	pData->iKeepAliveTime = 0;
+	pData->gnutlsPriorityString = NULL;
 	pData->bResendLastOnRecon = 0; 
 	pData->bSendToAll = -1;  /* unspecified */
 	pData->iUDPSendDelay = 0;
+	pData->UDPSendBuf = 0;
 	pData->pPermPeers = NULL;
 	pData->compressionLevel = 9;
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
-	pData->errsToReport = 5;
 }
 
 BEGINnewActInst
@@ -1074,7 +1109,7 @@ CODESTARTnewActInst
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
-		errmsg.LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
+		LogError(0, RS_RET_MISSING_CNFPARAMS, "omfwd: either the \"file\" or "
 				"\"dynfile\" parameter must be given");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1102,7 +1137,7 @@ CODESTARTnewActInst
 			} else if(!es_strcasebufcmp(pvals[i].val.d.estr, (uchar*)"tcp", 3)) {
 				localRet = loadTCPSupport();
 				if(localRet != RS_RET_OK) {
-					errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
+					LogError(0, localRet, "could not activate network stream modules for TCP "
 							"(internal error %d) - are modules missing?", localRet);
 					ABORT_FINALIZE(localRet);
 				}
@@ -1110,7 +1145,7 @@ CODESTARTnewActInst
 			} else {
 				uchar *str;
 				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_INVLD_PROTOCOL,
+				LogError(0, RS_RET_INVLD_PROTOCOL,
 						"omfwd: invalid protocol \"%s\"", str);
 				free(str);
 				ABORT_FINALIZE(RS_RET_INVLD_PROTOCOL);
@@ -1125,7 +1160,7 @@ CODESTARTnewActInst
 			} else {
 				uchar *str;
 				str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-				errmsg.LogError(0, RS_RET_CNF_INVLD_FRAMING,
+				LogError(0, RS_RET_CNF_INVLD_FRAMING,
 						"omfwd: invalid framing \"%s\"", str);
 				free(str);
 				ABORT_FINALIZE(RS_RET_CNF_INVLD_FRAMING );
@@ -1140,6 +1175,8 @@ CODESTARTnewActInst
 			pData->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "keepalive.time")) {
 			pData->iKeepAliveTime = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
+			pData->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
 			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdrivermode")) {
@@ -1148,7 +1185,6 @@ CODESTARTnewActInst
 			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriverpermittedpeers")) {
 			uchar *start, *str;
-			uchar save;
 			uchar *p;
 			int lenStr;
 			str = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1161,8 +1197,6 @@ CODESTARTnewActInst
 				if(*p == ',') {
 					*p = '\0';
 				}
-				save = *(p+1); /* we always have this, at least the \0 byte at EOS */
-				*(p+1) = '\0';
 				if(*start == '\0') {
 					DBGPRINTF("omfwd: ignoring empty permitted peer\n");
 				} else {
@@ -1172,7 +1206,6 @@ CODESTARTnewActInst
 				start = p+1;
 				if(lenStr)
 					--lenStr;
-				*(p+1) = save;
 			}
 			free(str);
 		} else if(!strcmp(actpblk.descr[i].name, "ziplevel")) {
@@ -1181,18 +1214,25 @@ CODESTARTnewActInst
 				pData->compressionLevel = complevel;
 				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
-				errmsg.LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
+				LogError(0, NO_ERRCODE, "Invalid ziplevel %d specified in "
 					 "forwardig action - NOT turning on compression.",
 					 complevel);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "maxerrormessages")) {
-			pData->errsToReport = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "tcp_framedelimiter")) {
+			if(pvals[i].val.d.n > 255) {
+				parser_errmsg("tcp_frameDelimiter must be below 255 but is %d",
+					(int) pvals[i].val.d.n);
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+			pData->tcp_framingDelimiter = (uchar) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
 			pData->bSendToAll = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.senddelay")) {
 			pData->iUDPSendDelay = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "udp.sendbuf")) {
+			pData->UDPSendBuf = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "compression.stream.flushontxend")) {
@@ -1206,15 +1246,15 @@ CODESTARTnewActInst
 			} else if(!strcasecmp(cstr, "single")) {
 				pData->compressionMode = COMPRESS_SINGLE_MSG;
 			} else {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
+				LogError(0, RS_RET_PARAM_ERROR, "omfwd: invalid value for 'compression.mode' "
 					 "parameter (given is '%s')", cstr);
 				free(cstr);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 			free(cstr);
 		} else {
-			errmsg.LogError(0, RS_RET_INTERNAL_ERROR,
-				"omfwd: program error, non-handled parameter '%s'\n",
+			LogError(0, RS_RET_INTERNAL_ERROR,
+				"omfwd: program error, non-handled parameter '%s'",
 				actpblk.descr[i].name);
 		}
 	}
@@ -1238,7 +1278,7 @@ CODESTARTnewActInst
 		pData->bSendToAll = send_to_all;
 	} else {
 		if(pData->protocol == FORW_TCP) {
-			errmsg.LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
+			LogError(0, RS_RET_PARAM_ERROR, "omfwd: parameter udp.sendToAll "
 					"cannot be used with tcp transport -- ignored");
 		}
 	}
@@ -1259,12 +1299,13 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	CHKiRet(createInstance(&pData));
+	pData->tcp_framingDelimiter = '\n';
 
 	++p; /* eat '@' */
 	if(*p == '@') { /* indicator for TCP! */
 		localRet = loadTCPSupport();
 		if(localRet != RS_RET_OK) {
-			errmsg.LogError(0, localRet, "could not activate network stream modules for TCP "
+			LogError(0, localRet, "could not activate network stream modules for TCP "
 					"(internal error %d) - are modules missing?", localRet);
 			ABORT_FINALIZE(localRet);
 		}
@@ -1304,7 +1345,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					pData->compressionLevel = iLevel;
 					pData->compressionMode = COMPRESS_SINGLE_MSG;
 				} else {
-					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
+					LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
@@ -1313,7 +1354,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -1329,7 +1370,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
+			LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
 	}
 
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
@@ -1360,8 +1401,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = MALLOC(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
-				 "using default port, results may not be what you intend\n");
+			LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
+				 "using default port, results may not be what you intend");
 			/* we leave f_forw.port set to NULL, this is then handled below */
 		} else {
 			memcpy(pData->port, tmp, i);

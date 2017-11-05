@@ -609,13 +609,17 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 	/* the copies below are clumpsy, but there is no way around given the
 	 * anomalies in dirname() and basename() [they MODIFY the provided buffer...]
 	 */
-	uchar szNameBuf[MAXFNAME];
-	uchar szDirName[MAXFNAME];
-	uchar szBaseName[MAXFNAME];
+	uchar szNameBuf[MAXFNAME+1];
+	uchar szDirName[MAXFNAME+1];
+	uchar szBaseName[MAXFNAME+1];
 	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	szNameBuf[MAXFNAME] = '\0';
 	ustrncpy(szDirName, (uchar*)dirname((char*)szNameBuf), MAXFNAME);
+	szDirName[MAXFNAME] = '\0';
 	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	szNameBuf[MAXFNAME] = '\0';
 	ustrncpy(szBaseName, (uchar*)basename((char*)szNameBuf), MAXFNAME);
+	szBaseName[MAXFNAME] = '\0';
 
 	CHKiRet(strm.Construct(&pData->pStrm));
 	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
@@ -1062,9 +1066,8 @@ CODESTARTcommitTransaction
 	}
 
 finalize_it:
-	if (pData->bDynamicName &&
-	    (iRet == RS_RET_FILE_OPEN_ERROR || iRet == RS_RET_FILE_NOT_FOUND) )
-		iRet = RS_RET_OK;
+	if(iRet == RS_RET_FILE_OPEN_ERROR || iRet == RS_RET_FILE_NOT_FOUND)
+		iRet = pData->bDynamicName ? RS_RET_OK : RS_RET_SUSPENDED;
 	pthread_mutex_unlock(&pData->mutWrite);
 ENDcommitTransaction
 
@@ -1528,7 +1531,7 @@ INITLegCnfVars
 
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omfile: %susing transactional output interface.\n", bCoreSupportsBatching ? "" : "not ");
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, setDynaFileCacheSize,
 		NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &cs.iZipLevel,
 		STD_LOADABLE_MODULE_ID));

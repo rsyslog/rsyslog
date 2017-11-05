@@ -251,8 +251,17 @@ doPhysOpen(strm_t *pThis)
 	if(pThis->fd == -1) {
 		const rsRetVal errcode = (errno_save == ENOENT)
 			? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
-		LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+		if(pThis->fileNotFoundError) {
+			if(pThis->noRepeatedErrorOutput == 0) {
+				LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+				pThis->noRepeatedErrorOutput = 1;
+			}
+		} else {
+			DBGPRINTF("file '%s': open error", pThis->pszCurrFName);
+		}
 		ABORT_FINALIZE(errcode);
+	} else {
+		pThis->noRepeatedErrorOutput = 0;
 	}
 
 	if(pThis->tOperationsMode == STREAMMODE_READ) {
@@ -276,6 +285,7 @@ doPhysOpen(strm_t *pThis)
 			(pThis->tOperationsMode == STREAMMODE_READ) ? 'r' : 'w'));
 		pThis->cryprov->SetDeleteOnClose(pThis->cryprovFileData, pThis->bDeleteOnClose);
 	}
+
 finalize_it:
 	RETiRet;
 }
@@ -357,11 +367,11 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
 	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
 		pThis->iCurrOffs = offset;
-	} else if(pThis->tOperationsMode == STREAMMODE_WRITE) {
+	} else if(pThis->tOperationsMode == STREAMMODE_WRITE_TRUNC) {
 		if(offset != 0) {
-			LogError(0, 0, "queue '%s', file '%s' opened for non-append write, but "
+			LogError(0, 0, "file '%s' opened for truncate write, but "
 				"already contains %zd bytes\n",
-				obj.GetName((obj_t*) pThis), pThis->pszCurrFName, offset);
+				pThis->pszCurrFName, (ssize_t) offset);
 		}
 	}
 
@@ -369,7 +379,9 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", pThis->fd);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if(iRet == RS_RET_OK) {
+		assert(pThis->fd != -1);
+	} else {
 		if(pThis->pszCurrFName != NULL) {
 			free(pThis->pszCurrFName);
 			pThis->pszCurrFName = NULL; /* just to prevent mis-adressing down the road... */
@@ -726,7 +738,8 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * a line, but following lines that are indented are part of the same log entry
  */
 static rsRetVal
-strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+	uint32_t trimLineOverBytes, int64 *const strtOffs)
 {
         uchar c;
 	uchar finished;
@@ -843,12 +856,24 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint
 	}
 
 finalize_it:
-        if(iRet != RS_RET_OK && *ppCStr != NULL) {
-		if(cstrLen(*ppCStr) > 0) {
-		/* we may have an empty string in an unsuccsfull poll or after restart! */
-			rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr);
+        if(iRet == RS_RET_OK) {
+		if(strtOffs != NULL) {
+			*strtOffs = pThis->strtOffs;
 		}
-                cstrDestruct(ppCStr);
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+	} else {
+		if(*ppCStr != NULL) {
+			if(cstrLen(*ppCStr) > 0) {
+			/* we may have an empty string in an unsuccesfull poll or after restart! */
+				if(rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr) != RS_RET_OK) {
+					/* we cannot do anything against this, but we can at least
+					 * ensure we do not have any follow-on errors.
+					 */
+					 pThis->prevLineSegment = NULL;
+				}
+			}
+			cstrDestruct(ppCStr);
+		}
 	}
 
         RETiRet;
@@ -863,6 +888,9 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
 	/* note: order of evaluation is choosen so that the most inexpensive
 	 * processing flow is used.
 	 */
+	DBGPRINTF("strmReadMultiline_isTimedOut: prevMsgSeg %p, readTimeout %d, "
+		"lastRead %lld\n", pThis->prevMsgSegment, pThis->readTimeout,
+		(long long) pThis->lastRead);
 	return(   (pThis->readTimeout)
 	       && (pThis->prevMsgSegment != NULL)
 	       && (getTime(NULL) > pThis->lastRead + pThis->readTimeout) );
@@ -875,13 +903,15 @@ strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis)
  * added 2015-05-12 rgerhards
  */
 rsRetVal
-strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF)
+strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEscapeLF,
+	const sbool discardTruncatedMsg, const sbool msgDiscardingError, int64 *const strtOffs)
 {
         uchar c;
 	uchar finished = 0;
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
+	int maxMsgSize = glblGetMaxLine();
         DEFiRet;
 
 	do {
@@ -911,44 +941,84 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, const sbool bEs
 			/* in this case, the *previous* message is complete and we are
 			 * at the start of a new one.
 			 */
-			if(pThis->prevMsgSegment != NULL) {
-				/* may be NULL in initial poll! */
-				finished = 1;
-				*ppCStr = pThis->prevMsgSegment;
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment != NULL) {
+					/* may be NULL in initial poll! */
+					finished = 1;
+					*ppCStr = pThis->prevMsgSegment;
+				}
 			}
 			CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
-			
+			pThis->ignoringMsg = 0;
 		} else {
-			if(pThis->prevMsgSegment == NULL) {
-				/* may be NULL in initial poll or after timeout! */
-				CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
-			} else {
-				if(bEscapeLF) {
-					rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+			if(pThis->ignoringMsg == 0) {
+				if(pThis->prevMsgSegment == NULL) {
+					/* may be NULL in initial poll or after timeout! */
+					CHKiRet(rsCStrConstructFromCStr(&pThis->prevMsgSegment, thisLine));
 				} else {
-					cstrAppendChar(pThis->prevMsgSegment, '\n');
-				}
-				if(cstrLen(thisLine) > 0) {
-					CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
-					/* we could do this faster, but for now keep it simple */
-				}
+					if(bEscapeLF) {
+						rsCStrAppendStrWithLen(pThis->prevMsgSegment, (uchar*)"\\n", 2);
+					} else {
+						cstrAppendChar(pThis->prevMsgSegment, '\n');
+					}
 
+
+					int currLineLen = cstrLen(thisLine);
+					if(currLineLen > 0) {
+						int len;
+						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) < maxMsgSize) {
+							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
+							/* we could do this faster, but for now keep it simple */
+						} else {
+							len = currLineLen-(len-maxMsgSize);
+							for(int z=0; z<len; z++) {
+								cstrAppendChar(pThis->prevMsgSegment, thisLine->pBuf[z]);
+							}
+							finished = 1;
+							*ppCStr = pThis->prevMsgSegment;
+							CHKiRet(rsCStrConstructFromszStr(&pThis->prevMsgSegment, thisLine->pBuf+len));
+							if(discardTruncatedMsg == 1) {
+								pThis->ignoringMsg = 1;
+							}
+							if(msgDiscardingError == 1) {
+								if(discardTruncatedMsg == 1) {
+									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
+											"larger than max msg size; rest of message "
+											"will not be processed");
+								} else {
+									errmsg.LogError(0, RS_RET_ERR, "imfile error: message received is "
+											"larger than max msg size; message will be "
+											"split and processed as another message");
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 		cstrDestruct(&thisLine);
 	} while(finished == 0);
 
 finalize_it:
-	if(   pThis->readTimeout
-	   && (iRet != RS_RET_OK)
-	   && (pThis->prevMsgSegment != NULL)
-	   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
-		CHKiRet(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment));
-		cstrDestruct(&pThis->prevMsgSegment);
-		pThis->lastRead = tCurr;
-		dbgprintf("stream: generated msg based on timeout: %s\n", cstrGetSzStrNoNULL(*ppCStr));
-			FINALIZE;
-		iRet = RS_RET_OK;
+	*strtOffs = pThis->strtOffs;
+	if(thisLine != NULL) {
+		cstrDestruct(&thisLine);
+	}
+	if(iRet == RS_RET_OK) {
+		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+	} else {
+		if(   pThis->readTimeout
+		   && (pThis->prevMsgSegment != NULL)
+		   && (tCurr > pThis->lastRead + pThis->readTimeout)) {
+			if(rsCStrConstructFromCStr(ppCStr, pThis->prevMsgSegment) == RS_RET_OK) {
+				cstrDestruct(&pThis->prevMsgSegment);
+				pThis->lastRead = tCurr;
+				pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
+				dbgprintf("stream: generated msg based on timeout: %s\n",
+					cstrGetSzStrNoNULL(*ppCStr));
+				iRet = RS_RET_OK;
+			}
+		}
 	}
         RETiRet;
 }
@@ -967,7 +1037,12 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
+	pThis->strtOffs = 0;
+	pThis->ignoringMsg = 0;
 	pThis->bPrevWasNL = 0;
+	pThis->fileNotFoundError = 1;
+	pThis->noRepeatedErrorOutput = 0;
+	pThis->lastRead = getTime(NULL);
 ENDobjConstruct(strm)
 
 
@@ -1434,7 +1509,7 @@ finalize_it:
  * have it). -- rgerhards, 2009-06-08
  */
 #undef SYNCCALL
-#ifdef HAVE_FDATASYNC
+#if defined(HAVE_FDATASYNC) && !defined(__APPLE__)
 #	define SYNCCALL(x) fdatasync(x)
 #else
 #	define SYNCCALL(x) fsync(x)
@@ -1686,7 +1761,7 @@ static rsRetVal strmSeek(strm_t *pThis, off64_t offs)
 		DBGPRINTF("strmSeek: error %lld seeking to offset %lld\n", i, (long long) offs);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	pThis->iCurrOffs = offs; /* we are now at *this* offset */
+	pThis->strtOffs = pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
 finalize_it:
@@ -1738,7 +1813,7 @@ strmMultiFileSeek(strm_t *pThis, unsigned int FNum, off64_t offs, off64_t *bytes
 	} else {
 		*bytesDel = 0;
 	}
-	pThis->iCurrOffs = offs;
+	pThis->strtOffs = pThis->iCurrOffs = offs;
 
 finalize_it:
 	RETiRet;
@@ -1763,7 +1838,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 
 	/* As the cryprov may use CBC or similiar things, we need to read skip data */
 	targetOffs = pThis->iCurrOffs;
-	pThis->iCurrOffs = 0;
+	pThis->strtOffs = pThis->iCurrOffs = 0;
 	DBGOPRINT((obj_t*) pThis, "encrypted, doing skip read of %lld bytes\n",
 		(long long) targetOffs);
 	while(targetOffs != pThis->iCurrOffs) {
@@ -1937,6 +2012,12 @@ static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 	return RS_RET_OK;
 }
 
+static rsRetVal strmSetFileNotFoundError(strm_t *pThis, int pFileNotFoundError)
+{
+	pThis->fileNotFoundError = pFileNotFoundError;
+	return RS_RET_OK;
+}
+
 
 /* set the stream's file prefix
  * The passed-in string is duplicated. So if the caller does not need
@@ -2078,6 +2159,9 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = pThis->inode;
 	objSerializeSCALAR_VAR(pStrm, inode, INT64, l);
 
+	l = pThis->strtOffs;
+	objSerializeSCALAR_VAR(pStrm, strtOffs, INT64, l);
+
 	if(pThis->prevLineSegment != NULL) {
 		cstrFinalize(pThis->prevLineSegment);
 		objSerializePTR(pStrm, prevLineSegment, CSTR);
@@ -2190,8 +2274,12 @@ static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 		pThis->iCurrOffs = pProp->val.num;
  	} else if(isProp("inode")) {
 		pThis->inode = (ino_t) pProp->val.num;
+ 	} else if(isProp("strtOffs")) {
+		pThis->strtOffs = pProp->val.num;
  	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
+ 	} else if(isProp("fileNotFoundError")) {
+		CHKiRet(strmSetFileNotFoundError(pThis, pProp->val.num));
  	} else if(isProp("iMaxFiles")) {
 		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.num));
  	} else if(isProp("iFileNumDigits")) {
@@ -2255,6 +2343,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->WriteChar = strmWriteChar;
 	pIf->WriteLong = strmWriteLong;
 	pIf->SetFName = strmSetFName;
+	pIf->SetFileNotFoundError = strmSetFileNotFoundError;
 	pIf->SetDir = strmSetDir;
 	pIf->Flush = strmFlush;
 	pIf->RecordBegin = strmRecordBegin;

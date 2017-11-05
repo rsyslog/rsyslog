@@ -242,14 +242,14 @@ static rsRetVal initZMQ(instanceData* pData) {
     if (pData->action == ACTION_BIND) {
         /* bind asserts, so no need to test return val here
            which isn't the greatest api -- oh well */
-        if(-1 == zsocket_bind(pData->socket, (char*)pData->description)) {
+        if(-1 == zsocket_bind(pData->socket, "%s", (char*)pData->description)) {
             errmsg.LogError(0, RS_RET_NO_ERRCODE, "omzmq3: bind failed for %s: %s",
                             pData->description, zmq_strerror(errno));
             ABORT_FINALIZE(RS_RET_NO_ERRCODE);
         }
         DBGPRINTF("omzmq3: bind to %s successful\n",pData->description);
     } else {
-        if(-1 == zsocket_connect(pData->socket, (char*)pData->description)) {
+        if(-1 == zsocket_connect(pData->socket, "%s", (char*)pData->description)) {
             errmsg.LogError(0, RS_RET_NO_ERRCODE, "omzmq3: connect failed for %s: %s", 
                             pData->description, zmq_strerror(errno));
             ABORT_FINALIZE(RS_RET_NO_ERRCODE);

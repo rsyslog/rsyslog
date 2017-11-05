@@ -203,5 +203,6 @@ rsRetVal modulesProcessCnf(struct cnfobj *o);
 uchar *modGetName(modInfo_t *pThis);
 rsRetVal addModToCnfList(cfgmodules_etry_t **pNew, cfgmodules_etry_t *pLast);
 rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast);
+void modDoHUP(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */

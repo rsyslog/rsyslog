@@ -139,7 +139,7 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 	char *serverpasswd;
 	DEFiRet;
 
-	server = (pWrkrData->pData->server == NULL) ? "127.0.0.1" : 
+	server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" : 
 			(char*) pWrkrData->pData->server;
 	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, 
 			pWrkrData->pData->port);
@@ -170,7 +170,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWrkrData)
+static rsRetVal writeHiredis(uchar* key, uchar *message, wrkrInstanceData_t *pWrkrData)
 {
 	DEFiRet;
 
@@ -284,7 +284,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->serverpassword = NULL;
 	pData->tplName = NULL;
 	pData->mode = OMHIREDIS_MODE_TEMPLATE;
-	pData->modeDescription = "template";
+	pData->modeDescription = (char *)"template";
 	pData->key = NULL;
 }
 

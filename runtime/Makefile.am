@@ -78,8 +78,6 @@ librsyslog_la_SOURCES = \
 	lookup.h \
 	cfsysline.c \
 	cfsysline.h \
-	sd-daemon.c \
-	sd-daemon.h \
 	\
 	../action.h \
 	../action.c \
@@ -88,6 +86,9 @@ librsyslog_la_SOURCES = \
 	\
 	../parse.c \
 	../parse.h \
+	\
+	sd-daemon.c \
+	sd-daemon.h \
 	\
 	hashtable.c \
 	hashtable.h \
@@ -102,6 +103,9 @@ librsyslog_la_SOURCES = \
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 #
+#if OS_LINUX
+#librsyslog_la_SOURCES += \
+#endif
 
 if WITH_MODDIRS
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\"
@@ -109,8 +113,8 @@ else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(JSON_C_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(JSON_C_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS} ${LIBLOGGING_STDLOG_CFLAGS} -I\$(top_srcdir)/tools
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS} ${LIBLOGGING_STDLOG_LIBS}
 
 #
 # regular expression support
@@ -247,21 +251,16 @@ lmtcpclt_la_LDFLAGS = -module -avoid-version $(LIBLOGGING_STDLOG_LIBS)
 lmtcpclt_la_LIBADD = 
 
 
-
 #
-# support library for guardtime KSI
+# support library for Guardtime KSI-LS12
 #
-if ENABLE_GT_KSI
-   noinst_LTLIBRARIES +=  librsksi.la
-   librsksi_la_SOURCES = librsksi.c librsksi_read.c librsksi.h librsgt_common.h
-   librsksi_la_CPPFLAGS =  $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
-   pkglib_LTLIBRARIES += lmsig_ksi.la
-   lmsig_ksi_la_SOURCES = lmsig_ksi.c lmsig_ksi.h
-   lmsig_ksi_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_CFLAGS)
-   lmsig_ksi_la_LDFLAGS = -module -avoid-version
-   lmsig_ksi_la_LIBADD = librsksi.la $(GT_KSI_LIBS)
+if ENABLE_KSI_LS12
+   pkglib_LTLIBRARIES += lmsig_ksi_ls12.la
+   lmsig_ksi_ls12_la_SOURCES = lmsig_ksi-ls12.c lmsig_ksi-ls12.h lib_ksils12.c \
+			lib_ksils12.h lib_ksi_queue.c lib_ksi_queue.h
+   lmsig_ksi_ls12_la_CPPFLAGS = $(RSRT_CFLAGS) $(GT_KSI_LS12_CFLAGS)
+   lmsig_ksi_ls12_la_LDFLAGS = -module -avoid-version $(GT_KSI_LS12_LIBS)
 endif
-
 
 update-systemd:
 	curl http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c > sd-daemon.c

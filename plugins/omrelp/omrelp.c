@@ -23,11 +23,11 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
  *       -or-
  *       see COPYING.ASL20 in the source distribution
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -138,13 +138,37 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars 
+CODESTARTinitConfVars
 ENDinitConfVars
 
 /* We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use 514 as default (what probably
  * is not a really bright idea, but kept for backward compatibility).
  */
+
+#if !defined(_AIX)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+static void __attribute__((format(printf, 1, 2)))
+omrelp_dbgprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char pszWriteBuf[32*1024+1]; //this function has to be able to
+					//generate a buffer longer than that of r_dbgprintf, so r_dbgprintf can properly truncate
+	if(!(Debug && debugging_on)) {
+		return;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	va_end(ap);
+	r_dbgprintf("omrelp.c", "%s", pszWriteBuf);
+}
+#if !defined(_AIX)
+#pragma GCC diagnostic warning "-Wformat-nonliteral"
+#endif
+
+
 static uchar *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
@@ -311,6 +335,7 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i,j;
+	FILE *fp;
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -346,10 +371,40 @@ CODESTARTnewActInst
 			pData->pristring = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.cacert")) {
 			pData->caCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->caCertFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pData->caCertFile, errStr);
+			} else {
+				fclose(fp);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.mycert")) {
 			pData->myCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->myCertFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pData->myCertFile, errStr);
+			} else {
+				fclose(fp);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.myprivkey")) {
 			pData->myPrivKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			fp = fopen((const char*)pData->myPrivKeyFile, "r");
+			if(fp == NULL) {
+				char errStr[1024];
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				errmsg.LogError(0, RS_RET_NO_FILE_ACCESS,
+				"error: certificate file %s couldn't be accessed: %s\n",
+				pData->myPrivKeyFile, errStr);
+			} else {
+				fclose(fp);
+			}
 		} else if(!strcmp(actpblk.descr[i].name, "tls.authmode")) {
 			pData->authmode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "tls.permittedpeer")) {
@@ -514,8 +569,10 @@ ENDdoAction
 
 BEGINendTransaction
 CODESTARTendTransaction
-	dbgprintf("omrelp: endTransaction\n");
-	relpCltHintBurstEnd(pWrkrData->pRelpClt);
+	DBGPRINTF("omrelp: endTransaction, connected %d\n", pWrkrData->bIsConnected);
+	if(pWrkrData->bIsConnected) {
+		relpCltHintBurstEnd(pWrkrData->pRelpClt);
+	}
 ENDendTransaction
 
 BEGINparseSelectorAct
@@ -612,7 +669,7 @@ BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES 
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_TXIF_OMOD_QUERIES
 CODEqueryEtryPt_SetShutdownImmdtPtr
@@ -626,7 +683,7 @@ INITLegCnfVars
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
-	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))dbgprintf));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, (void (*)(char *, ...))omrelp_dbgprintf));
 	CHKiRet(relpEngineSetOnAuthErr(pRelpEngine, onAuthErr));
 	CHKiRet(relpEngineSetOnGenericErr(pRelpEngine, onGenericErr));
 	CHKiRet(relpEngineSetOnErr(pRelpEngine, onErr));

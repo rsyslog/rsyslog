@@ -1,6 +1,6 @@
 /* gcry.c - rsyslog's libgcrypt based crypto provider
  *
- * Copyright 2013-2016 Adiscon GmbH.
+ * Copyright 2013-2017 Adiscon GmbH.
  *
  * We need to store some additional information in support of encryption.
  * For this, we create a side-file, which is named like the actual log
@@ -245,7 +245,8 @@ eiGetIV(gcryfile gf, uchar *iv, size_t leniv)
 	DEFiRet;
 
 	CHKiRet(eiGetRecord(gf, rectype, value));
-	if(strcmp(rectype, "IV")) {
+	const char *const cmp_IV = "IV"; // work-around for static analyzer
+	if(strcmp(rectype, cmp_IV)) {
 		DBGPRINTF("no IV record found when expected, record type "
 			"seen is '%s'\n", rectype);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -432,8 +433,10 @@ gcryCtxNew(void)
 {
 	gcryctx ctx;
 	ctx = calloc(1, sizeof(struct gcryctx_s));
-	ctx->algo = GCRY_CIPHER_AES128;
-	ctx->mode = GCRY_CIPHER_MODE_CBC;
+	if(ctx != NULL) {
+		ctx->algo = GCRY_CIPHER_AES128;
+		ctx->mode = GCRY_CIPHER_MODE_CBC;
+	}
 	return ctx;
 }
 
@@ -577,7 +580,7 @@ seedIV(gcryfile gf, uchar **iv)
 	 * unavailability of /dev/urandom is just a theoretic thing, it
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	if((fd = open("/dev/urandom", O_RDONLY)) > 0) {
+	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
 		if(read(fd, *iv, gf->blkLength)) {}; /* keep compiler happy */
 		close(fd);
 	}

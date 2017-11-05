@@ -1,16 +1,23 @@
 #!/bin/bash
 # added 2016-04-13 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[dynstats_prevent_premature_eviction.sh\]: test for ensuring metrics are not evicted before unused-ttl
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup dynstats_reset.conf
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'
-. $srcdir/diag.sh msleep 800
+. $srcdir/diag.sh msleep 1000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_1
-. $srcdir/diag.sh msleep 400
+. $srcdir/diag.sh msleep 2000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_2
-. $srcdir/diag.sh msleep 900
+. $srcdir/diag.sh msleep 2000
 . $srcdir/diag.sh injectmsg-litteral $srcdir/testsuites/dynstats_input_3
 . $srcdir/diag.sh wait-queueempty
 . $srcdir/diag.sh wait-for-stats-flush 'rsyslog.out.stats.log'

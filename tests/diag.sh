@@ -12,6 +12,10 @@
 # variables:
 # RS_SORTCMD    Sort command to use (must support -g option). If unset,
 #		"sort" is used. E.g. Solaris needs "gsort"
+# RS_CMPCMD     cmp command to use. If unset, "cmd" is used.
+#               E.g. Solaris needs "gcmp"
+# RS_HEADCMD    head command to use. If unset, "head" is used.
+#               E.g. Solaris needs "ghead"
 #
 
 # environment variables:
@@ -36,30 +40,55 @@
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 #export RSYSLOG_DEBUGLOG="log"
-TB_TIMEOUT_STARTSTOP=3000 # timeout for start/stop rsyslogd in tenths (!) of a second 3000 => 5 min
+TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
-#START: ext dependency config
+#START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.9.0.1/kafka_2.11-0.9.0.1.tgz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
-dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
-dep_kafka_cached_file=$dep_cache_dir/kafka_2.11-0.9.0.1.tgz
-
-dep_kafka_work_dir=$dep_work_dir/kafka
+dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
-
-dep_zk_work_dir=$dep_work_dir/zk
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
-
 dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
-#END: ext dependency config
+
+#	TODO Make dynamic work dir for multiple instances
+dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+#dep_kafka_work_dir=$dep_work_dir/kafka
+#dep_zk_work_dir=$dep_work_dir/zk
+
+#END: ext kafka config
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+		# for (solaris) load debugging, uncomment next 2 lines:
+		#export LD_DEBUG=all
+		#ldd ../tools/rsyslogd
+
+		# environment debug
+		#find / -name "librelp.so*"
+		#ps -ef |grep syslog
+		#netstat -a | grep LISTEN
+
+		# cleanup of hanging instances from previous runs
+		# practice has shown this is pretty useful!
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		do
+			echo "ERROR: left-over previous instance $pid, killing it"
+			ps -fp $pid
+			kill -9 $pid
+		done
+		# end cleanup
+
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD=sort
 		fi  
+		if [ -z $RS_CMPCMD ]; then
+			RS_CMPCMD=cmp
+		fi
+		if [ -z $RS_HEADCMD ]; then
+			RS_HEADCMD=head
+		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
 		echo "------------------------------------------------------------"
 		echo "Test: $0"
@@ -68,11 +97,12 @@ case $1 in
 		cp $srcdir/testsuites/diag-common2.conf diag-common2.conf
 		rm -f rsyslogd.started work-*.conf rsyslog.random.data
 		rm -f rsyslogd2.started work-*.conf
+		rm -f log log* # RSyslog debug output 
 		rm -f work rsyslog.out.log rsyslog2.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool test-logdir stat-file1
 		rm -f rsyslog.out.*.log work-presort rsyslog.pipe
 		rm -f -r rsyslog.input.*
-		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state*
+		rm -f rsyslog.input rsyslog.empty rsyslog.input.* imfile-state* omkafka-failed.data
 		rm -f testconf.conf HOSTNAME
 		rm -f rsyslog.errorfile tmp.qi
 		rm -f core.* vgcore.*
@@ -99,7 +129,8 @@ case $1 in
    'exit')	# cleanup
 		# detect any left-over hanging instance
 		nhanging=0
-		for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		#for pid in $(ps -eo pid,cmd|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
+		for pid in $(ps -eo pid,args|grep '/tools/[r]syslogd' |sed -e 's/\( *\)\([0-9]*\).*/\2/');
 		do
 			echo "ERROR: left-over instance $pid, killing it"
 			ps -fp $pid
@@ -164,8 +195,7 @@ case $1 in
 		$valgrind ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 2>/dev/null &
 		. $srcdir/diag.sh wait-startup $3
 		;;
-   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
-   		# returns only after successful startup, $3 is the instance (blank or 2!)
+   'startup-vg-waitpid-only') # same as startup-vg, BUT we do NOT wait on the startup message!
 		if [ "x$2" == "x" ]; then
 		    CONF_FILE="testconf.conf"
 		    echo $CONF_FILE is:
@@ -178,6 +208,11 @@ case $1 in
 		    exit 1
 		fi
 		valgrind $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=full ../tools/rsyslogd -C -n -irsyslog$3.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+		. $srcdir/diag.sh wait-startup-pid $3
+		;;
+   'startup-vg') # start rsyslogd with default params under valgrind control. $2 is the config file name to use
+		# returns only after successful startup, $3 is the instance (blank or 2!)
+		. $srcdir/diag.sh startup-vg-waitpid-only $2 $3
 		. $srcdir/diag.sh wait-startup $3
 		echo startup-vg still running
 		;;
@@ -198,7 +233,7 @@ case $1 in
    	$srcdir/msleep $2
 		;;
 
-   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+   'wait-startup-pid') # wait for rsyslogd startup, PID only ($2 is the instance)
 		i=0
 		while test ! -f rsyslog$2.pid; do
 			./msleep 100 # wait 100 milliseconds
@@ -209,6 +244,10 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
+		echo "rsyslogd$2 started, start msg not yet seen, pid " `cat rsyslog$2.pid`
+		;;
+   'wait-startup') # wait for rsyslogd startup ($2 is the instance)
+		. $srcdir/diag.sh wait-startup-pid $2
 		i=0
 		while test ! -f rsyslogd$2.started; do
 			./msleep 100 # wait 100 milliseconds
@@ -225,7 +264,7 @@ case $1 in
 			   . $srcdir/diag.sh error-exit 1
 			fi
 		done
-		echo "rsyslogd$2 started with pid " `cat rsyslog$2.pid`
+		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
@@ -349,9 +388,10 @@ case $1 in
    'check-mainq-spool') # check if mainqueue spool files exist, if not abort (we just check .qi).
 		echo There must exist some files now:
 		ls -l test-spool
+		echo .qi file:
+		cat test-spool/mainq.qi
 		if test ! -f test-spool/mainq.qi; then
 		  echo "error: mainq.qi does not exist where expected to do so!"
-		  ls -l test-spool
 		  . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -390,7 +430,7 @@ case $1 in
 		./chkseq -fwork -s$2 -e$3 $4 $5 $6 $7
 		if [ "$?" -ne "0" ]; then
 		  echo "sequence error detected"
-		  . $srcdir/diag.sh error-exit 1
+		  . $srcdir/diag.sh error-exit 1 
 		fi
 		;;
    'seq-check2') # do the usual sequence check to see if everything was properly received. This is
@@ -421,6 +461,8 @@ case $1 in
 		    echo content-check-with-count success, \"$2\" occured $3 times
 		else
 		    echo content-check-with-count failed, expected \"$2\" to occure $3 times, but found it $count times
+		    echo file rsyslog.out.log content is:
+		    cat rsyslog.out.log
 		    . $srcdir/diag.sh error-exit 1
 		fi
 		;;
@@ -462,6 +504,17 @@ case $1 in
 				./msleep 10
 		done
 		echo "dyn-stats reset for bucket ${3} registered"
+		;;
+   'content-check')
+		# this does a content check which permits regex
+		grep "$2" $3
+		if [ "$?" -ne "0" ]; then
+		    echo "----------------------------------------------------------------------"
+		    echo content-check failed to find "'$2'" inside "'$3'"
+		    echo "file contents:"
+		    cat $3
+		    . $srcdir/diag.sh error-exit 1
+		fi
 		;;
    'custom-content-check') 
 		cat $3 | grep -qF "$2"
@@ -550,7 +603,7 @@ case $1 in
 		echo "\$IncludeConfig diag-common.conf" > testconf.conf
 		;;
    'add-conf')   # start a standard test rsyslog.conf
-		echo "$2" >> testconf.conf
+		printf "%s" "$2" >> testconf.conf
 		;;
    'require-journalctl')   # check if journalctl exists on the system
 		if ! hash journalctl 2>/dev/null ; then
@@ -565,59 +618,149 @@ case $1 in
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Downloading zookeeper"
-				wget $dep_zk_url -O $dep_zk_cached_file
+				wget -q $dep_zk_url -O $dep_zk_cached_file
 		fi
 		if [ ! -f $dep_kafka_cached_file ]; then
 				echo "Downloading kafka"
-				wget $dep_kafka_url -O $dep_kafka_cached_file
+				wget -q $dep_kafka_url -O $dep_kafka_cached_file
 		fi
 		;;
-	 'start-kafka')
+	 'start-zookeeper')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_tk_config="zoo.cfg"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_tk_config="zoo$2.cfg"
+		fi
+
 		if [ ! -f $dep_zk_cached_file ]; then
 				echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
-				exit 1
-		fi
-		if [ ! -f $dep_kafka_cached_file ]; then
-				echo "Dependency-cache does not have kafka package, did you download dependencies?"
-				exit 1
+				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
 				echo "Creating dependency working directory"
 				mkdir -p $dep_work_dir
 		fi
-		if [ -d $dep_kafka_work_dir ]; then
-				(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
-				./msleep 4000
-		fi
-		if [ -d $dep_zk_work_dir ]; then
-				(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+		if [ -d $dep_work_dir/zk ]; then
+				(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
 				./msleep 2000
 		fi
-		rm -rf $dep_kafka_work_dir
-		rm -rf $dep_zk_work_dir
-		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names)
-		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names)
-		cp $srcdir/testsuites/zoo.cfg $dep_zk_work_dir/conf/
-		(cd $dep_zk_work_dir && ./bin/zkServer.sh start)
+		rm -rf $dep_work_dir/zk
+		(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
+		cp $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
+		echo "Starting Zookeeper instance $2"
+		(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
+		./msleep 2000
+		;;
+	 'start-kafka')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_work_kafka_config="kafka-server.properties"
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+			dep_work_kafka_config="kafka-server$2.properties"
+		fi
+
+		if [ ! -f $dep_kafka_cached_file ]; then
+				echo "Dependency-cache does not have kafka package, did you download dependencies?"
+				exit 77
+		fi
+		if [ ! -d $dep_work_dir ]; then
+				echo "Creating dependency working directory"
+				mkdir -p $dep_work_dir
+		fi
+		rm -rf $dep_work_dir/kafka
+		(cd $dep_work_dir && tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
+		cp $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
+		echo "Starting Kafka instance $dep_work_kafka_config"
+		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 		./msleep 4000
-		cp $srcdir/testsuites/kafka-server.properties $dep_kafka_work_dir/config/
-		(cd $dep_kafka_work_dir && ./bin/kafka-server-start.sh -daemon ./config/kafka-server.properties)
-		./msleep 8000
+
+		# Check if kafka instance came up!
+		kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+		if [[ "" !=  "$kafkapid" ]];
+		then
+			echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+		else
+			echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+			./msleep 4000
+
+			kafkapid=`ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}'`
+			if [[ "" !=  "$kafkapid" ]];
+			then
+				echo "Kafka instance $dep_work_kafka_config started with PID $kafkapid"
+			else
+				echo "Failed to start Kafka instance for $dep_work_kafka_config"
+				. $srcdir/diag.sh error-exit 77
+			fi
+		fi
+		;;
+	 'dump-kafka-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no kafka debuglog"
+		else
+			echo "Dumping server.log from Kafka instance $2"
+			echo "========================================="
+			cat $dep_work_dir/kafka/logs/server.log
+			echo "========================================="
+		fi
+		;;
+		
+	 'dump-zookeeper-serverlog')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		echo "Dumping zookeeper.out from Zookeeper instance $2"
+		echo "========================================="
+		cat $dep_work_dir/zk/zookeeper.out
+		echo "========================================="
 		;;
 	 'stop-kafka')
-		if [ ! -d $dep_kafka_work_dir ]; then
-				echo "Kafka work-dir does not exist, did you start kafka?"
-				exit 1
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
 		fi
-		(cd $dep_kafka_work_dir && ./bin/kafka-server-stop.sh)
-		./msleep 4000
-		(cd $dep_zk_work_dir && ./bin/zkServer.sh stop)
+		if [ ! -d $dep_work_dir/kafka ]; then
+			echo "Kafka work-dir $dep_work_dir/kafka does not exist, no action needed"
+		else
+			echo "Stopping Kafka instance $2"
+			(cd $dep_work_dir/kafka && ./bin/kafka-server-stop.sh)
+			./msleep 2000
+			rm -rf $dep_work_dir/kafka
+		fi
+		;;
+	 'stop-zookeeper')
+		if [ "x$2" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$2)
+		fi
+		(cd $dep_work_dir/zk && ./bin/zkServer.sh stop)
 		./msleep 2000
-		rm -rf $dep_kafka_work_dir
-		rm -rf $dep_zk_work_dir
+		rm -rf $dep_work_dir/zk
 		;;
 	 'create-kafka-topic')
-		if [ ! -d $dep_kafka_work_dir ]; then
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+		if [ ! -d $dep_work_dir/kafka ]; then
 				echo "Kafka work-dir does not exist, did you start kafka?"
 				exit 1
 		fi
@@ -625,11 +768,39 @@ case $1 in
 				echo "Topic-name not provided."
 				exit 1
 		fi
-		(cd $dep_kafka_work_dir && ./bin/kafka-topics.sh --create --zookeeper localhost:2181/kafka --topic $2 --partitions 2 --replication-factor 1)
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --create --zookeeper localhost:$dep_work_port/kafka --topic $2 --partitions 2 --replication-factor 1)
+		;;
+	 'delete-kafka-topic')
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+
+		echo "deleting kafka-topic $2"
+		(cd $dep_work_dir/kafka && ./bin/kafka-topics.sh --delete --zookeeper localhost:$dep_work_port/kafka --topic $2)
 		;;
 	 'dump-kafka-topic')
+		if [ "x$3" == "x" ]; then
+			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
+			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka.log)
+		else
+			dep_work_dir=$(readlink -f $srcdir/$3)
+			dep_kafka_log_dump=$(readlink -f $srcdir/rsyslog.out.kafka$3.log)
+		fi
+		if [ "x$4" == "x" ]; then
+			dep_work_port='2181'
+		else
+			dep_work_port=$4
+		fi
+
 		echo "dumping kafka-topic $2"
-		if [ ! -d $dep_kafka_work_dir ]; then
+		if [ ! -d $dep_work_dir/kafka ]; then
 				echo "Kafka work-dir does not exist, did you start kafka?"
 				exit 1
 		fi
@@ -638,9 +809,9 @@ case $1 in
 				exit 1
 		fi
 
-		(cd $dep_kafka_work_dir && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:2181/kafka --topic $2 > $dep_kafka_log_dump)
+		(cd $dep_work_dir/kafka && ./bin/kafka-console-consumer.sh --timeout-ms 2000 --from-beginning --zookeeper localhost:$dep_work_port/kafka --topic $2 > $dep_kafka_log_dump)
 		;;
-   'error-exit') # this is called if we had an error and need to abort. Here, we
+	'error-exit') # this is called if we had an error and need to abort. Here, we
                 # try to gather as much information as possible. That's most important
 		# for systems like Travis-CI where we cannot debug on the machine itself.
 		# our $2 is the to-be-used exit code. if $3 is "stacktrace", call gdb.
@@ -675,6 +846,13 @@ case $1 in
 			./msleep 4000
 			RSYSLOG_DEBUG=$RSYSLOG_DEBUG_SAVE
 			rm IN_AUTO_DEBUG
+		fi
+		# Extended debug output for dependencies started by testbench
+		if [[ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ]]; then
+			# Dump Zookeeper log
+			. $srcdir/diag.sh dump-zookeeper-serverlog
+			# Dump Kafka log
+			. $srcdir/diag.sh dump-kafka-serverlog
 		fi
 		exit $2
 		;;

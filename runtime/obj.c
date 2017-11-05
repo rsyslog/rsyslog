@@ -664,6 +664,14 @@ rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_PROPFRAME);
 
 finalize_it:
+	/* ensure the type of var is reset back to VARTYPE_NONE since
+	* the deconstruct method of var might free unallocated memory
+	*/
+	if(iRet != RS_RET_OK && iRet != RS_RET_NO_PROPLINE) {
+		if(step <= 2) {
+			pProp->varType = VARTYPE_NONE;
+		}
+	}
 	if(Debug && iRet != RS_RET_OK && iRet != RS_RET_NO_PROPLINE) {
 		strm.GetCurrOffset(pStrm, &offs);
 		dbgprintf("error %d deserializing property name, offset %lld, step %d\n",

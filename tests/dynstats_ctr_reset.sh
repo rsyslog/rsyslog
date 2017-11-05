@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2015-11-16 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[dynstats_ctr_reset.sh\]: test to ensure correctness of stats-ctr reset
 . $srcdir/diag.sh init

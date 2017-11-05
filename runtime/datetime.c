@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <assert.h>
+#include <string.h>
 #ifdef HAVE_SYS_TIME_H
 #	include <sys/time.h>
 #endif
@@ -50,7 +51,10 @@ DEFobjCurrIf(errmsg)
 static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 
 /* the following table saves us from computing an additional date to get
- * the ordinal day of the year - at least from 1967-2099 */
+ * the ordinal day of the year - at least from 1967-2099
+ * Note: non-2038+ compliant systems (Solaris) will generate compiler
+ * warnings on the post 2038-rollover years.
+ */
 static const int yearInSec_startYear = 1967;
 /* for x in $(seq 1967 2099) ; do
  *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)
@@ -82,6 +86,10 @@ static const time_t yearInSecs[] = {
 	3786911999, 3818447999, 3849983999, 3881606399, 3913142399,
 	3944678399, 3976214399, 4007836799, 4039372799, 4070908799,
 	4102444799};
+
+static const char* monthNames[12] = {
+	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
 
 /* ------------------------------ methods ------------------------------ */
 
@@ -990,9 +998,6 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 static int
 formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
 {
-	static const char* monthNames[12] =
-				      { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 	int iDay;
 	assert(ts != NULL);
 	assert(pBuf != NULL);
@@ -1255,6 +1260,50 @@ timeConvertToUTC(const struct syslogTime *const __restrict__ local,
 	timeval2syslogTime(&tp, utc, 1);
 }
 
+/**
+ * Format a UNIX timestamp.
+ */
+static int
+formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf,
+	__attribute__((unused)) uint pBufMax) {
+
+	struct tm lt;
+
+	assert(format != NULL);
+	assert(pBuf != NULL);
+
+	// Convert to struct tm
+	if (gmtime_r(&unixtime, &lt) == NULL) {
+		DBGPRINTF("Unexpected error calling gmtime_r().\n");
+		return -1;
+	}
+
+	// Do our conversions
+	if (strcmp(format, "date-rfc3164") == 0) {
+		assert(pBufMax >= 16);
+
+		// Unlikely to run into this situation, but you never know...
+		if (lt.tm_mon < 0 || lt.tm_mon > 11) {
+			DBGPRINTF("lt.tm_mon is out of range. Value: %d\n", lt.tm_mon);
+			return -1;
+		}
+
+		// MMM dd HH:mm:ss
+		sprintf(pBuf, "%s %2d %.2d:%.2d:%.2d",
+			monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
+		);
+	} else if (strcmp(format, "date-rfc3339") == 0) {
+		assert(pBufMax >= 26);
+
+		// YYYY-MM-DDTHH:mm:ss+00:00
+		sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ",
+			lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
+		);
+	}
+
+	return strlen(pBuf);
+}
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -1281,6 +1330,7 @@ CODESTARTobjQueryInterface(datetime)
 	pIf->formatTimestamp3164 = formatTimestamp3164;
 	pIf->formatTimestampUnix = formatTimestampUnix;
 	pIf->syslogTime2time_t = syslogTime2time_t;
+	pIf->formatUnixTimeFromTime_t = formatUnixTimeFromTime_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
 

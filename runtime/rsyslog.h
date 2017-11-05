@@ -43,12 +43,24 @@ extern int src_exists;
 #endif
 /* src end */
 
+/* define a couple of attributes to improve cross-platform builds */
+#if __GNUC__ > 6
+	#define CASE_FALLTHROUGH __attribute__((fallthrough));
+#else
+	#define CASE_FALLTHROUGH
+#endif
+
+#define ATTR_NORETURN __attribute__ ((noreturn))
+#define ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
 
 /* ############################################################# *
  * #                 Some constant values                      # *
  * ############################################################# */
 #define CONST_LEN_TIMESTAMP_3164 15 		/* number of chars (excluding \0!) in a RFC3164 timestamp */
 #define CONST_LEN_TIMESTAMP_3339 32 		/* number of chars (excluding \0!) in a RFC3339 timestamp */
+
+#define CONST_LEN_CEE_COOKIE 5
+#define CONST_CEE_COOKIE "@cee:"
 
 /* ############################################################# *
  * #                    Config Settings                        # *
@@ -483,6 +495,10 @@ operation not carried out */
 	RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
 	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
 	RS_RET_DIR_CHOWN_ERROR = -2437, /**< error during chown() */
+	RS_RET_JSON_UNUSABLE = -2438, /**< JSON object is NULL or otherwise unusable */
+	RS_RET_OPERATION_STATUS = -2439, /**< operational status (info) message, no error */
+	RS_RET_UDP_MSGSIZE_TOO_LARGE = -2440, /**< a message is too large to be sent via UDP */
+	RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is requried */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -508,7 +524,13 @@ operation not carried out */
 #	define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
 #endif
 
-# define CHKiConcCtrl(code) if (code != 0) { iRet = RS_RET_CONC_CTRL_ERR; errno = code; goto finalize_it; }
+# define CHKiConcCtrl(code)  { int tmp_CC; \
+	if ((tmp_CC = code) != 0) { \
+		iRet = RS_RET_CONC_CTRL_ERR; \
+		errno = tmp_CC; \
+		goto finalize_it; \
+	} \
+}
 
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
@@ -625,7 +647,7 @@ struct actWrkrIParams {
 
 /* The following prototype is convenient, even though it may not be the 100%
 correct place.. -- rgerhards 2008-01-07 */
-void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
+//void dbgprintf(const char *, ...) __attribute__((format(printf, 1, 2)));
 
 
 #include "debug.h"
@@ -658,7 +680,11 @@ void dfltErrLogger(const int, const int, const uchar *errMsg);
  * a dummy variable. This requires review of where in code empty structs
  * are already defined. -- rgerhards, 2010-07-26
  */
+#ifdef OS_SOLARIS
+#define EMPTY_STRUCT  int remove_me_when_first_real_member_is_added;
+#else
 #define EMPTY_STRUCT
+#endif
 
 /* TODO: remove this -- this is only for transition of the config system */
 extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not

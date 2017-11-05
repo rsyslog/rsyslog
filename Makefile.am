@@ -99,6 +99,10 @@ if ENABLE_PMNULL
 SUBDIRS += plugins/pmnull
 endif
 
+if ENABLE_PMNORMALIZE
+SUBDIRS += plugins/pmnormalize
+endif
+
 if ENABLE_PMAIXFORWARDEDFROM
 SUBDIRS += contrib/pmaixforwardedfrom
 endif
@@ -192,7 +196,11 @@ SUBDIRS += plugins/ommail
 endif
 
 if ENABLE_OMKAFKA
-SUBDIRS += plugins/omkafka
+SUBDIRS += plugins/omkafka 
+endif
+
+if ENABLE_IMKAFKA
+SUBDIRS += plugins/imkafka
 endif
 
 if ENABLE_OMPROG
@@ -240,7 +248,7 @@ SUBDIRS += contrib/mmsequence
 endif
 
 if ENABLE_MMDBLOOKUP
-SUBDIRS += contrib/mmdblookup
+SUBDIRS += plugins/mmdblookup
 endif
 
 

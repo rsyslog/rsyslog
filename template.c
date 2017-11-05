@@ -1,7 +1,7 @@
 /* This is the template processing code of rsyslog.
  * begun 2004-11-17 rgerhards
  *
- * Copyright 2004-2016 Rainer Gerhards and Adiscon
+ * Copyright 2004-2017 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -153,7 +153,7 @@ finalize_it:
 rsRetVal
 tplToString(struct template *__restrict__ const pTpl,
 	    smsg_t *__restrict__ const pMsg,
-	    actWrkrIParams_t *__restrict const iparam,
+	    actWrkrIParams_t *__restrict__ const iparam,
 	    struct syslogTime *const ttNow)
 {
 	DEFiRet;
@@ -178,8 +178,6 @@ tplToString(struct template *__restrict__ const pTpl,
 		if(iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
 			CHKiRet(ExtendBuf(iparam, iLenVal + 1));
 		memcpy(iparam->param, pVal, iLenVal+1);
-		if(bMustBeFreed)
-			free(pVal);
 		FINALIZE;
 	}
 	
@@ -228,8 +226,10 @@ tplToString(struct template *__restrict__ const pTpl,
 			iBuf += iLenVal;
 		}
 
-		if(bMustBeFreed)
+		if(bMustBeFreed) {
 			free(pVal);
+			bMustBeFreed = 0;
+		}
 
 		pTpe = pTpe->pNext;
 	}
@@ -246,6 +246,11 @@ tplToString(struct template *__restrict__ const pTpl,
 	iparam->lenStr = iBuf;
 	
 finalize_it:
+	if(bMustBeFreed) {
+		free(pVal);
+		bMustBeFreed = 0;
+	}
+
 	RETiRet;
 }
 
@@ -1094,8 +1099,11 @@ do_Parameter(uchar **pp, struct template *pTpl)
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 					int iOptions;
 					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
-					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0) {
-						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
+					int errcode;
+					if((errcode = regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0)) {
+						char errbuff[512];
+						regexp.regerror(errcode, &(pTpe->data.field.re), errbuff, sizeof(errbuff));
+						DBGPRINTF("Template.c: Error in regular expression: %s\n", errbuff);
 						pTpe->data.field.has_regex = 2;
 					}
 				} else {
@@ -1422,6 +1430,10 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkConstant, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkConstant, pvals);
 	
 	for(i = 0 ; i < pblkConstant.nParams ; ++i) {
@@ -1438,6 +1450,12 @@ createConstantTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 	/* sanity check */
+	if(value == NULL) {
+		LogError(0, RS_RET_INTERNAL_ERROR, "createConstantTpe(): "
+			"internal error, variable 'value'==NULL, which is "
+			"not permitted.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
 
 	/* apply */
 	CHKmalloc(pTpe = tpeConstruct(pTpl));
@@ -1489,6 +1507,10 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 
 	/* pull params */
 	pvals = nvlstGetParams(o->nvlst, &pblkProperty, NULL);
+	if(pvals == NULL) {
+		parser_errmsg("error processing template entry config parameters");
+		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
 	cnfparamsPrint(&pblkProperty, pvals);
 	
 	for(i = 0 ; i < pblkProperty.nParams ; ++i) {
@@ -1997,7 +2019,6 @@ tplProcessCnf(struct cnfobj *o)
 	if(o_sql) ++numopts;
 	if(o_stdsql) ++numopts;
 	if(o_json) ++numopts;
-	if(o_casesensitive) ++numopts;
 	if(numopts > 1) {
 		errmsg.LogError(0, RS_RET_ERR, "template '%s' has multiple incompatible "
 			"options of sql, stdsql or json specified", name);

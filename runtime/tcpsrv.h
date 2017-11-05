@@ -61,6 +61,7 @@ struct tcpsrv_s {
 	int iKeepAliveTime;	/**< socket layer KEEPALIVE timeout */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
+	uchar *gnutlsPriorityString;	/**< priority string for gnutls */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrName;	/**< name of stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
@@ -80,14 +81,16 @@ struct tcpsrv_s {
 	tcpLstnPortList_t *pLstnPorts;	/**< head pointer for listen ports */
 
 	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
+	int maxFrameSize;	/**< max frame size for octet counted*/
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
+	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	int ratelimitInterval;
 	int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
-	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *);
+	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);
 	rsRetVal (*OpenLstnSocks)(struct tcpsrv_s*);
 	rsRetVal (*pOnListenDeinit)(void*);
 	rsRetVal (*OnDestruct)(void*);
@@ -124,11 +127,12 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
 	rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t*, int);
+	rsRetVal (*SetMaxFrameSize)(tcpsrv_t*, int);
 	rsRetVal (*SetInputName)(tcpsrv_t*, uchar*);
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));
-	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*));
+	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*));
 	rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetCBOnDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnRegularClose)(tcpsrv_t*, rsRetVal (*) (tcps_sess_t*));
@@ -151,6 +155,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v9 -- rgerhards, 2010-03-01 */
 	rsRetVal (*SetbDisableLFDelim)(tcpsrv_t*, int);
 	/* added v10 -- rgerhards, 2011-04-01 */
+	rsRetVal (*SetDiscardTruncatedMsg)(tcpsrv_t*, int);
 	rsRetVal (*SetUseFlowControl)(tcpsrv_t*, int);
 	/* added v11 -- rgerhards, 2011-05-09 */
 	rsRetVal (*SetKeepAlive)(tcpsrv_t*, int);
@@ -168,13 +173,16 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetKeepAliveTime)(tcpsrv_t*, int);
 	/* added v18 */
 	rsRetVal (*SetbSPFramingFix)(tcpsrv_t*, sbool);
+	/* added v19 -- PascalWithopf, 2017-08-08 */
+	rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t*, uchar*);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 20 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
  * for v12: param bSuppOctetFram added to configureTCPListen
+ * for v20: add oserr to setCBRcvData signature -- rgerhards, 2017-09-04
  */
 
 

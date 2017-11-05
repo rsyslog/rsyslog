@@ -107,7 +107,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
 void
 dfltErrLogger(const int severity, const int iErr, const uchar *errMsg)
 {
-	fprintf(stderr, "rsyslog runtime error(%d,%d): %s\n", severity, iErr, errMsg);
+	fprintf(stderr, "rsyslog internal message (%d,%d): %s\n", severity, iErr, errMsg);
 }
 
 

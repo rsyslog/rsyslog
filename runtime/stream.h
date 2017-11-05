@@ -160,6 +160,10 @@ typedef struct strm_s {
 	sbool	bIsTTY;		/* is this a tty file? */
 	cstr_t *prevLineSegment; /* for ReadLine, previous, unprocessed part of file */
 	cstr_t *prevMsgSegment; /* for ReadMultiLine, previous, yet unprocessed part of msg */
+	int64 strtOffs;		/* start offset in file for current line/msg */
+	int fileNotFoundError;
+	int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
+	int ignoringMsg;
 } strm_t;
 
 
@@ -175,6 +179,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Write)(strm_t *const pThis, const uchar *const pBuf, size_t lenBuf);
 	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
 	rsRetVal (*WriteLong)(strm_t *pThis, long i);
+	rsRetVal (*SetFileNotFoundError)(strm_t *pThis, int pFileNotFoundError);
 	rsRetVal (*SetFName)(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 	rsRetVal (*SetDir)(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 	rsRetVal (*Flush)(strm_t *pThis);
@@ -199,7 +204,8 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 	/* v6 added */
-	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, uint32_t trimLineOverBytes);
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF,
+		uint32_t trimLineOverBytes, int64 *const strtOffs);
 	/* v7 added  2012-09-14 */
 	INTERFACEpropSetMeth(strm, bVeryReliableZip, int);
 	/* v8 added  2013-03-21 */
@@ -208,17 +214,19 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t*);
 	INTERFACEpropSetMeth(strm, cryprovData, void*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 12 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
 /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
 /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
 /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
+/* V13, 2017-09-06: added new parameter strtoffs to ReadLine() */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
 rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int fileNum, off64_t offs, off64_t *bytesDel);
-rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg, sbool bEscapeLF);
+rsRetVal strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *preg,
+	sbool bEscapeLF, sbool discardTruncatedMsg, sbool msgDiscardingError, int64 *const strtOffs);
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis);
 void strmDebugOutBuf(const strm_t *const pThis);
 void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);

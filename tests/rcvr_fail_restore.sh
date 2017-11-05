@@ -1,6 +1,13 @@
 #!/bin/bash
 # Copyright (C) 2011 by Rainer Gerhards
 # This file is part of the rsyslog project, released  under GPLv3
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[rcvr_fail_restore.sh\]: test failed receiver restore case
 . $srcdir/diag.sh init

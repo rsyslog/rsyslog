@@ -1,6 +1,13 @@
 #!/bin/bash
 # added 2016-03-31 by singh.janmejay
 # This file is part of the rsyslog project, released under ASL 2.0
+
+uname
+if [ `uname` = "FreeBSD" ] ; then
+   echo "This test currently does not work on FreeBSD."
+   exit 77
+fi
+
 echo ===============================================================================
 echo \[json_object_sucide_in_loop-vg.sh\]: basic test for looping over json object and unsetting it while inside the loop-body
 . $srcdir/diag.sh init json_object_suicide_in_loop-vg.sh
