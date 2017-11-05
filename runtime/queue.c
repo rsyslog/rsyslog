@@ -305,7 +305,7 @@ qqueueDbgPrint(qqueue_t *pThis)
 static inline int
 getPhysicalQueueSize(qqueue_t *pThis)
 {
-	return pThis->iQueueSize;
+	return (int) PREFER_FETCH_32BIT(pThis->iQueueSize);
 }
 
 
