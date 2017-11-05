@@ -30,7 +30,7 @@ check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq msleep randomgen 
 if ENABLE_IMJOURNAL
 check_PROGRAMS += journal_print
 endif
-TESTS = $(TESTRUNS)
+TESTS = $(TESTRUNS) 
 #TESTS = $(TESTRUNS) cfg.sh
 
 TESTS +=  \
@@ -353,7 +353,7 @@ if ENABLE_OMKAFKA
 if ENABLE_IMKAFKA
 if ENABLE_KAFKA_TESTS
 TESTS += \
-	sndrcv_kafka.sh
+	sndrcv_kafka.sh 
 # Tests below need to be stable first!
 #	sndrcv_kafka_multi.sh
 #	sndrcv_kafka_fail.sh
@@ -1637,7 +1637,7 @@ EXTRA_DIST= \
 	testsuites/sample.pmsnare_cccstyle \
 	testsuites/sample.pmsnare_ccbackslash \
 	testsuites/sample.pmsnare_modoverride
-
+	
 ourtail_SOURCES = ourtail.c
 msleep_SOURCES = msleep.c
 omrelp_dflt_port_SOURCES = omrelp_dflt_port.c
