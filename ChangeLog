@@ -31,6 +31,12 @@ Version 8.31.0 [v8-stable] 2017-11-28
   handle inside a global variable.
   see also https://github.com/rsyslog/rsyslog/issues/1895
   closes https://github.com/rsyslog/rsyslog/issues/1897
+- imjournal: refactor error handling, fix error messages
+  imjournal did not try to recover from errors and used the error state
+  returned by journal functions incorrectly, resulting in misleading
+  error messages. Fixed this and also increased the number of error
+  messages so that it now is easier to diagnose problems with this module.
+  Also a little bit of internal brush-up.
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - imczmq bugfix: segfault
