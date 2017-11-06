@@ -325,6 +325,8 @@ checkInstance(instanceConf_t *inst)
 
 	/* Set custom configuration parameters */
 	for(int i = 0 ; i < inst->nConfParams ; ++i) {
+		/* Avoid false positives in CLANG */
+		assert( inst->confParams == NULL);
 		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
 			inst->confParams[i].name,
 			inst->confParams[i].val);
