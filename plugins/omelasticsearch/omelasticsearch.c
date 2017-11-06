@@ -177,6 +177,14 @@ CODESTARTcreateWrkrInstance
 	pWrkrData->curlCheckConnHandle = NULL;
 	pWrkrData->serverIndex = 0;
 	pWrkrData->restURL = NULL;
+    /**
+    * `pWrkrData->reply` should always point to real memory
+    * 1) we init it at an application start
+    * 2) we clear it before every curl request (in two places: `checkConn` & `curlPost`)
+    * 3) we just reallocate it in all other places
+    */
+    pWrkrData->reply = NULL;
+    pWrkrData->replyLen = 0;
 	if(pData->bulkmode) {
 		pWrkrData->batch.currTpl1 = NULL;
 		pWrkrData->batch.currTpl2 = NULL;
@@ -368,6 +376,9 @@ checkConn(wrkrInstanceData_t *pWrkrData)
 	int i;
 	int r;
 	DEFiRet;
+
+    pWrkrData->reply = realloc(pWrkrData->reply, 0); /* clear the curl response buffer */
+    pWrkrData->replyLen = 0;
 
 	curl = pWrkrData->curlCheckConnHandle;
 	urlBuf = es_newStr(256);
@@ -777,7 +788,7 @@ parseRequestAndResponseForContext(wrkrInstanceData_t *pWrkrData,fjson_object **p
 
 		fjson_object_object_get_ex(result, "status", &ok);
 		itemStatus = checkReplyStatus(ok);
-		
+
 		char *request =0;
 		char *response =0;
 		if(ctx->statusCheckOnly)
@@ -1169,11 +1180,11 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	CURL *curl = pWrkrData->curlPostHandle;
 	DEFiRet;
 
-	pWrkrData->reply = NULL;
-	pWrkrData->replyLen = 0;
-
 	CHKiRet(checkConn(pWrkrData));
 	CHKiRet(setPostURL(pWrkrData, pWrkrData->pData, tpls));
+
+    pWrkrData->reply = realloc(pWrkrData->reply, 0);  /* clear the curl response buffer */
+    pWrkrData->replyLen = 0;
 
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, pWrkrData);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, (char *)message);
@@ -1202,7 +1213,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	CHKiRet(checkResult(pWrkrData, message));
 finalize_it:
 	incrementServerIndex(pWrkrData);
-	free(pWrkrData->reply);
 	RETiRet;
 }
 
