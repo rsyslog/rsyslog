@@ -89,6 +89,14 @@ typedef struct _instanceData {
 		int randConsis;
 		struct hashtable* hash;
 	} ipv6;
+
+	struct {
+		sbool enable;
+		uint8_t bits;
+		enum mode anonmode;
+		int randConsis;
+		struct hashtable* hash;
+	} embeddedIPv4;
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -114,7 +122,10 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "replacementchar", eCmdHdlrGetChar, 0},
 	{ "ipv6.enable", eCmdHdlrBinary, 0 },
 	{ "ipv6.anonmode", eCmdHdlrGetWord, 0 },
-	{ "ipv6.bits", eCmdHdlrPositiveInt, 0 }
+	{ "ipv6.bits", eCmdHdlrPositiveInt, 0 },
+	{ "embeddedipv4.enable", eCmdHdlrBinary, 0 },
+	{ "embeddedipv4.anonmode", eCmdHdlrGetWord, 0 },
+	{ "embeddedipv4.bits", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -183,6 +194,9 @@ CODESTARTfreeInstance
 	if(pData->ipv6.hash != NULL) {
 		hashtable_destroy(pData->ipv6.hash, 1);
 	}
+	if(pData->embeddedIPv4.hash != NULL) {
+		hashtable_destroy(pData->embeddedIPv4.hash, 1);
+	}
 ENDfreeInstance
 
 
@@ -206,6 +220,12 @@ setInstParamDefaults(instanceData *pData)
 		pData->ipv6.anonmode = ZERO;
 		pData->ipv6.randConsis = 0;
 		pData->ipv6.hash = NULL;
+
+		pData->embeddedIPv4.enable = 1;
+		pData->embeddedIPv4.bits = 96;
+		pData->embeddedIPv4.anonmode = ZERO;
+		pData->embeddedIPv4.randConsis = 0;
+		pData->embeddedIPv4.hash = NULL;
 }
 
 BEGINnewActInst
@@ -277,6 +297,29 @@ CODESTARTnewActInst
 					 sizeof("random-consistent")-1)) {
 				pData->ipv6.anonmode = RANDOMINT;
 				pData->ipv6.randConsis = 1;
+			} else {
+				parser_errmsg("mmanon: configuration error, unknown option for ipv6.anonmode, will use \"zero\"\n");
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "embeddedipv4.enable")) {
+			pData->embeddedIPv4.enable = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "embeddedipv4.bits")) {
+			if((uint8_t) pvals[i].val.d.n <= 128) {
+				pData->embeddedIPv4.bits = (uint8_t) pvals[i].val.d.n;
+			} else {
+				pData->embeddedIPv4.bits = 128;
+				parser_errmsg("warning: invalid number of embeddedipv4.bits (%d), corrected to 128", (int) pvals[i].val.d.n);
+			}
+		} else if(!strcmp(actpblk.descr[i].name, "embeddedipv4.anonmode")) {
+			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"zero",
+					 sizeof("zero")-1)) {
+				pData->embeddedIPv4.anonmode = ZERO;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"random",
+					 sizeof("random")-1)) {
+				pData->embeddedIPv4.anonmode = RANDOMINT;
+			} else if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"random-consistent",
+					 sizeof("random-consistent")-1)) {
+				pData->embeddedIPv4.anonmode = RANDOMINT;
+				pData->embeddedIPv4.randConsis = 1;
 			} else {
 				parser_errmsg("mmanon: configuration error, unknown option for ipv6.anonmode, will use \"zero\"\n");
 			}
@@ -413,7 +456,8 @@ done:
 static int
 isValidHexNum(const uchar *const __restrict__ buf,
 	const size_t buflen,
-	size_t *const __restrict__ nprocessed)
+	size_t *const __restrict__ nprocessed,
+	int handleDot)
 {
 	size_t idx = 0;
 	int cyc = 0;
@@ -446,21 +490,29 @@ isValidHexNum(const uchar *const __restrict__ buf,
 		case 'F':
 			cyc++;
 			if(cyc == 5) {
-				return 0;
+				cyc = 0;
+				goto done;
 			}
 			(*nprocessed)++;
 			break;
+		case '.':
+			if(handleDot && cyc == 0) {
+				(*nprocessed)++;
+				cyc = -2;
+			}
+			goto done;
 		case ':':
 			if(cyc == 0) {
 				(*nprocessed)++;
-				return -1;
+				cyc = -1;
 			}
-			CASE_FALLTHROUGH
+			goto done;
 		default:
-			return cyc;
+			goto done;
 		}
 		idx++;
 	}
+done:
 	return cyc;
 }
 
@@ -478,7 +530,7 @@ syntax_ipv6(const uchar *const __restrict__ buf,
 	int isIP = 0;
 
 	while(*nprocessed < buflen) {
-		numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed);
+		numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 0);
 		if(numLen > 0) {  //found a valid num
 			if((ipParts == 7 && hadAbbrev) || ipParts > 7) {
 				isIP = 0;
@@ -740,13 +792,15 @@ anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 
 
 static void
-code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
+code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData, int useEmbedded)
 {
 	unsigned long long randlow = 0;
 	unsigned long long randhigh = 0;
 	unsigned tmpRand;
 	int fullbits;
-	int bits = pWrkrData->pData->ipv6.bits;
+
+	int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
+	enum mode anonmode = useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
 
 	if(bits == 128) { //has to be handled separately, since shift
 						 //128 bits doesn't work on unsigned long long
@@ -760,7 +814,7 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 	} else {
 		ip->low = (ip->low >> bits) << bits;
 	}
-	switch(pWrkrData->pData->ipv6.anonmode) {
+	switch(anonmode) {
 	case ZERO:
 		break;
 	case RANDOMINT:
@@ -822,6 +876,7 @@ code_ipv6_int(struct ipv6_int* ip, wrkrInstanceData_t *pWrkrData)
 		LogError(0, RS_RET_INTERNAL_ERROR, "mmanon: unexpected code path reached in code_int function");
 	}
 }
+
 
 //separate function from recognising ipv6, since the recognition might get more
 //complex. This function always stays
@@ -924,41 +979,82 @@ hash_from_key_fn (void* k)
 
 
 static void
-findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrData)
+num2embedded (struct ipv6_int* ip, char* address)
 {
-	if(pWrkrData->pData->ipv6.hash == NULL) {
-		pWrkrData->pData->ipv6.hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL);
+	int num[8];
+	int i;
+
+	for(i = 7; i > 3; i--) {
+		num[i] = ip->low & 0xffff;
+		ip->low >>= 16;
+	}
+	while(i > -1) {
+		num[i] = ip->high & 0xffff;
+		ip->high >>= 16;
+		i--;
 	}
 
-	char* val = (char*)(hashtable_search(pWrkrData->pData->ipv6.hash, num));
+	snprintf(address, 46, "%x:%x:%x:%x:%x:%x:%d.%d.%d.%d", num[0], num[1], num[2], num[3], num[4], num[5],
+		(num[6] & 0xff00) >> 8, num[6] & 0xff, (num[7] & 0xff00) >> 8, num[7] & 0xff);
+}
+
+
+static rsRetVal
+findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrData, int useEmbedded)
+{
+	struct ipv6_int* hashKey = NULL;
+	DEFiRet;
+	struct hashtable* hash = useEmbedded? pWrkrData->pData->embeddedIPv4.hash : pWrkrData->pData->ipv6.hash;
+
+
+	if(hash == NULL) {
+		hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL);
+		if(useEmbedded) {
+			pWrkrData->pData->embeddedIPv4.hash = hash;
+		} else {
+			pWrkrData->pData->ipv6.hash = hash;
+		}
+	}
+
+	char* val = (char*)(hashtable_search(hash, num));
 
 	if(val != NULL) {
 		strcpy(address, val);
 	} else {
-		struct ipv6_int* hashKey = (struct ipv6_int*) malloc(sizeof(struct ipv6_int));
+		CHKmalloc(hashKey = (struct ipv6_int*) malloc(sizeof(struct ipv6_int)));
 		hashKey->low = num->low;
 		hashKey->high = num->high;
 
-		code_ipv6_int(num, pWrkrData);
-		num2ipv6(num, address);
-		char* hashString = strdup(address);
+		if(useEmbedded) {
+			code_ipv6_int(num, pWrkrData, 1);
+			num2embedded(num, address);
+		} else {
+			code_ipv6_int(num, pWrkrData, 0);
+			num2ipv6(num, address);
+		}
+		char* hashString;
+		CHKmalloc(hashString = strdup(address));
 
-		hashtable_insert(pWrkrData->pData->ipv6.hash, hashKey, hashString);
+		hashtable_insert(hash, hashKey, hashString);
+		hashKey = NULL;
 	}
+finalize_it:
+	free(hashKey);
+	RETiRet;
 }
 
 
 static void
-process_IPv6 (char* address, wrkrInstanceData_t *pWrkrData, size_t iplen)
+process_IPv6 (char* address, wrkrInstanceData_t *pWrkrData, const size_t iplen)
 {
 	struct ipv6_int num = {0, 0};
 
 	ipv62num(address, iplen, &num);
 
 	if(pWrkrData->pData->ipv6.randConsis) {
-		findIPv6(&num, address, pWrkrData);
+		findIPv6(&num, address, pWrkrData, 0);
 	} else {
-		code_ipv6_int(&num, pWrkrData);
+		code_ipv6_int(&num, pWrkrData, 0);
 		num2ipv6(&num, address);
 	}
 }
@@ -1001,6 +1097,196 @@ anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int
 }
 
 
+static size_t
+findV4Start(const uchar *const __restrict__ buf, size_t dotPos)
+{
+	while(dotPos > 0) {
+		if(buf[dotPos] == ':') {
+			return dotPos + 1;
+		}
+		dotPos--;
+	}
+	return -1; //should not happen
+}
+
+
+static int
+syntax_embedded(const uchar *const __restrict__ buf,
+	const size_t buflen,
+	size_t *const __restrict__ nprocessed,
+	size_t * v4Start)
+{
+	int lastSep = 0;
+	sbool hadAbbrev = 0;
+	int ipParts = 0;
+	int numLen;
+	int isIP = 0;
+	size_t ipv4Len;
+
+	while(*nprocessed < buflen) {
+		numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 1);
+		if(numLen > 0) {  //found a valid num
+			if((ipParts == 6 && hadAbbrev) || ipParts > 6) {  //is 6 since the first part of 
+									  //IPv4 will also result in a valid hexvalue
+				isIP = 0;
+				goto done;
+			}
+			if (ipParts == 0 && lastSep && !hadAbbrev) {
+				isIP = 0;
+				goto done;
+			}
+			lastSep = 0;
+			ipParts++;
+		} else if (numLen == -1) {  //':'
+			if(lastSep) {
+				if(hadAbbrev) {
+					isIP = 0;
+					goto done;
+				} else {
+					hadAbbrev = 1;
+				}
+			}
+			lastSep = 1;
+		} else if (numLen == -2) {  //'.'
+			if (lastSep || (ipParts <= 1 && !hadAbbrev)) {
+				isIP = 0;
+				goto done;
+			}
+			*v4Start = findV4Start(buf, (*nprocessed) - 1);
+			if(syntax_ipv4(buf + (*v4Start), buflen, &ipv4Len)) {
+				*nprocessed += (ipv4Len - ((*nprocessed) - (*v4Start)));
+				isIP = 1;
+				goto done;
+			} else {
+				isIP = 0;
+				goto done;
+			}
+		} else {  //no valid num
+			isIP = 0;
+			goto done;
+		}
+	}
+
+	isIP = 0;
+
+done:
+	return isIP;
+}
+
+
+static void
+embedded2num(char* address, size_t v4Start, struct ipv6_int* ip)
+{
+	int num[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	int cyc = 0;
+	int dots = 0;
+	int val;
+	unsigned i;
+
+	unsigned v4Val = ipv42num(address + v4Start);
+	num[7] = v4Val & 0xffff;
+	num[6] = (v4Val & 0xffff0000) >> 16;
+
+	for(i = 0; i < v4Start && dots < 2; i++) {
+		val = getHexVal(address[i]);
+		if(val == -1) {
+			dots++;
+			if(dots < 2) {
+				cyc++;
+			}
+		} else {
+			num[cyc] = num[cyc] * 16 + val;
+			dots = 0;
+		}
+	}
+	if(dots == 2) {
+		if(i < v4Start) {
+			int shift = 0;
+			cyc = 5;
+			for(unsigned j = v4Start - 1; j >= i; j--) {
+				val = getHexVal(address[j]);
+				if(val == -1) {
+					cyc--;
+					shift = 0;
+				} else {
+					val <<= shift;
+					shift += 4;
+					num[cyc] += val;
+				}
+			}
+		} else {
+			while(cyc < 6) {
+				num[cyc] = 0;
+				cyc++;
+			}
+		}
+	}
+
+	for(i = 0; i < 4; i++) {
+		ip->high <<= 16;
+		ip->high |= num[i];
+	}
+	while(i < 8) {
+		ip->low <<= 16;
+		ip->low |= num[i];
+		i++;
+	}
+}
+
+
+static void
+process_embedded (char* address, wrkrInstanceData_t *pWrkrData, size_t v4Start)
+{
+	struct ipv6_int num = {0, 0};
+
+	embedded2num(address, v4Start, &num);
+
+	if(pWrkrData->pData->embeddedIPv4.randConsis) {
+		findIPv6(&num, address, pWrkrData, 1);
+	} else {
+		code_ipv6_int(&num, pWrkrData, 1);
+		num2embedded(&num, address);
+	}
+}
+
+
+static void
+anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged)
+{
+	size_t iplen = 0;
+	int offset = *idx;
+	char address[46];
+	uchar* msgcpy = *msg;
+	unsigned caddresslen;
+	size_t oldLen = *pLenMsg;
+	size_t v4Start;
+
+	int syn = syntax_embedded(*msg + offset, *pLenMsg - offset, &iplen, &v4Start);
+	if(syn) {
+		assert(iplen < sizeof(address));
+		getip(*msg + offset, iplen, address);
+		offset += iplen;
+		process_embedded(address, pWrkrData, v4Start);
+
+		caddresslen = strlen(address);
+		*hasChanged = 1;
+
+		if(caddresslen != iplen) {
+			*pLenMsg = *pLenMsg + (caddresslen - iplen);
+			*msg = (uchar*) malloc(*pLenMsg);
+			memcpy(*msg, msgcpy, *idx);
+		}
+		memcpy(*msg + *idx, address, caddresslen);
+		*idx = *idx + caddresslen;
+		if(*idx < *pLenMsg) {
+			memcpy(*msg + *idx, msgcpy + offset, oldLen - offset);
+		}
+		if(msgcpy != *msg) {
+			free(msgcpy);
+		}
+	}
+}
+
 BEGINdoAction_NoStrings
 	smsg_t **ppMsg = (smsg_t **) pMsgData;
 	smsg_t *pMsg = ppMsg[0];
@@ -1013,6 +1299,9 @@ CODESTARTdoAction
 	msg = (uchar*)strdup((char*)getMSG(pMsg));
 
 	for(i = 0 ; i <= lenMsg - 2 ; i++) {
+		if(pWrkrData->pData->embeddedIPv4.enable) {
+			anonEmbedded(pWrkrData, &msg, &lenMsg, &i, &hasChanged);
+		}
 		if(pWrkrData->pData->ipv4.enable) {
 			anonipv4(pWrkrData, &msg, &lenMsg, &i, &hasChanged);
 		}
