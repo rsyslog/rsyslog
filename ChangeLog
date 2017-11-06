@@ -1,5 +1,10 @@
 ------------------------------------------------------------------------------
 Version 8.31.0 [v8-stable] 2017-11-28
+- mmanon: add support for IPv6 adresses with embedded IPv4 address
+  While this format is uncommon, it may still be present in logs and as
+  such should be supported. It is configurable via individual settings,
+  though. Especially the number of bits to anonymize may be desired to
+  be different than in pure IPv6.
 - omprog: added error handling and transaction support for external plugins
   This permits much better integration of external output modules.
   Special thanks to Joan Sala for providing this work!
