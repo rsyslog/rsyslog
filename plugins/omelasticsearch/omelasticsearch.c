@@ -177,7 +177,13 @@ CODESTARTcreateWrkrInstance
 	pWrkrData->curlCheckConnHandle = NULL;
 	pWrkrData->serverIndex = 0;
 	pWrkrData->restURL = NULL;
-    pWrkrData->reply = NULL; /* init curl response buffer */
+    /**
+    * `pWrkrData->reply` should always point to real memory
+    * 1) we init it at an application start
+    * 2) we clear it before every curl request (in two places: `checkConn` & `curlPost`)
+    * 3) we just reallocate it in all other places
+    */
+    pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
 	if(pData->bulkmode) {
 		pWrkrData->batch.currTpl1 = NULL;
