@@ -29,7 +29,8 @@ and ffff. These are separated by ':'. Leading zeros in blocks can be omitted
 and blocks full of zeros can be abbreviated by using '::'. However, this
 can ony happen once in an IP address.
 
- 
+An IPv6 address with embedded IPv4 is an IPv6 address where the last two blocks
+have been replaced by an IPv4 address. (see also: RFC4291, 2.2.3) 
 
 **Module Configuration Parameters**:
 
@@ -116,6 +117,40 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
    and capital letters in the hex numerals will be lowercase.
 
 -  **ipv6.bits** - default "96"
+
+   This sets the number of bits that should be anonymized (bits are from
+   the right, so lower bits are anonymized first). This setting permits
+   to save network information while still anonymizing user-specific
+   data. The more bits you discard, the better the anonymization
+   obviously is. The default of 96 bits reflects what German data
+   privacy rules consider as being sufficinetly anonymized. We assume,
+   this can also be used as a rough but conservative guideline for other
+   countries.
+
+-  **embeddedipv4.enable** - default "on"
+
+   Allows to enable or disable the anonymization of IPv6 addresses with embedded IPv4.
+
+-  **embeddedipv4.anonmode** - default "zero"
+
+   This defines the mode, in which IPv6 addresses will be anonymized.
+   There exist the "random", "random-consitent", and "zero" modes.
+
+   The modes "random" and "random-consistent" are very similar, in
+   that they both anonymize ip-addresses by randomizing the last bits (any
+   number) of a given address. However, while "random" mode assigns a new
+   random ip-address for every address in a message, "random-consitent" will
+   assign the same randomized address to every instance of the same original address.
+
+   The default "zero" mode will do full anonymization of any number
+   of bits and it will also normalize the address, so that no information
+   about the original IP address is available.
+
+   Also note that an anonymmized IPv6 address will be normalized, meaning
+   there will be no abbreviations, leading zeros will **not** be displayed,
+   and capital letters in the hex numerals will be lowercase.
+
+-  **embeddedipv4.bits** - default "96"
 
    This sets the number of bits that should be anonymized (bits are from
    the right, so lower bits are anonymized first). This setting permits
