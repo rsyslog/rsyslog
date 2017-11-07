@@ -338,8 +338,7 @@ static rsRetVal
 prepareTopic(instanceData *__restrict__ const pData, const uchar *__restrict__ const newTopicName)
 {
 	DEFiRet;
-	CHKiRet(createTopic(pData, newTopicName, &pData->pTopic));
-finalize_it:
+	iRet = createTopic(pData, newTopicName, &pData->pTopic);
 	if(iRet != RS_RET_OK) {
 		if(pData->pTopic != NULL) {
 			closeTopic(pData);
@@ -1028,7 +1027,7 @@ persistFailedMsgs(instanceData *const __restrict__ pData)
 		DBGPRINTF("omkafka: persistFailedMsgs We do not need to persist failed messages.\n");
 	}
 finalize_it:
-	if(fdMsgFile == -1) {
+	if(fdMsgFile != -1) {
 		close(fdMsgFile);
 	}
 	if(iRet != RS_RET_OK) {
@@ -1123,7 +1122,8 @@ finalize_it:
 		}
 	} else {
 		DBGPRINTF("omkafka: loadFailedMsgs unlinking '%s'\n", (char*)pData->failedMsgFile);
-		if(unlink((char*)pData->failedMsgFile) != 0) {
+		if(	stat((char*) pData->failedMsgFile, &stat_buf) == 0 && /* Delete file if still exists! */
+			unlink((char*)pData->failedMsgFile) != 0) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
 			errmsg.LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs failed to remove "
