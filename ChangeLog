@@ -42,6 +42,8 @@ Version 8.31.0 [v8-stable] 2017-11-28
   error messages. Fixed this and also increased the number of error
   messages so that it now is easier to diagnose problems with this module.
   Also a little bit of internal brush-up.
+- omkafka: fix file handle leak, which could occur when local buffering
+  of messages was needed
 - [io]mgssapi: fix build problems (regression from 8.30.0)
 - [io]czmq: fix build problems on some platforms (namely gcc 7, clang 5)
 - imczmq bugfix: segfault
