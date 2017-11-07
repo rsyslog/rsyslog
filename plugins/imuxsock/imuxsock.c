@@ -553,6 +553,7 @@ openLogSocket(lstn_t *pLstn)
 
 	if (pLstn->fd == -1) {
 		CHKiRet(createLogSocket(pLstn));
+		assert(pLstn->fd != -1); /* else createLogSocket() should have failed! */
 	}
 
 #	ifdef HAVE_SCM_CREDENTIALS
