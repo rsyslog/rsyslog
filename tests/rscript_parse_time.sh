@@ -1,8 +1,16 @@
 #!/bin/bash
 # Added 2017-10-28 by Stephen Workman, released under ASL 2.0
 
+# Because this script tests functionality that depends on the current date,
+# we cannot use static values for the expected results. They have to be
+# calculated. Also, because we cannot depend on the GNU version of the
+# 'date' command on all of our test systems (think FreeBSD, and Solaris),
+# we need a method of converting given date/time strings to UNIX timestamps.
+# For that we use an external Python 2.x script to do the job.
+
 getts="python $srcdir/rscript_parse_time_get-ts.py"
 
+# Run the Python script's self-tests
 $getts selftest
 
 if [[ $? -ne 0 ]]; then
@@ -10,6 +18,14 @@ if [[ $? -ne 0 ]]; then
   . $srcdir/diag.sh error-exit 1
 fi
 
+# Since the RFC 3164 date/time format does not include a year, we need to
+# try to "guess" an appropriate one based on the incoming date and the
+# current date. So, we'll use a reasonable spread of RFC 3164 date/time 
+# strings to ensure that we test as much of our year "guessing" as
+# possible. Since this uses the CURRENT DATE (as in, the date this)
+# script was invoked, we need to calculate our expected results to
+# compare them with the values returned by the parse_time() RainerScript
+# function.
 rfc3164_1="Oct  5 01:10:11"
 rfc3164_1_r=$($getts "$rfc3164_1")
 
@@ -55,7 +71,7 @@ input(type="imtcp" port="13514")
 
 # $DebugLevel 2
 
-# RFC 3164 Parse Tests
+# RFC 3164 Parse Tests (using fixed input values - see above)
 set $!datetime!rfc3164_1  = parse_time("'"$rfc3164_1"'");
 set $!datetime!rfc3164_2  = parse_time("'"$rfc3164_2"'");
 set $!datetime!rfc3164_3  = parse_time("'"$rfc3164_3"'");
@@ -69,11 +85,12 @@ set $!datetime!rfc3164_10 = parse_time("'"$rfc3164_10"'");
 set $!datetime!rfc3164_11 = parse_time("'"$rfc3164_11"'");
 set $!datetime!rfc3164_12 = parse_time("'"$rfc3164_12"'");
 
-# RFC 3339 Parse Tests
+# RFC 3339 Parse Tests (these provide their own year)
 set $!datetime!rfc3339    = parse_time("2017-10-05T01:10:11Z");
 set $!datetime!rfc3339tz1 = parse_time("2017-10-05T01:10:11+04:00");
 set $!datetime!rfc3339tz2 = parse_time("2017-10-05T01:10:11+00:00");
 
+# Test invalid date strings, these should return 0
 set $!datetime!inval1 = parse_time("not a date/time");
 set $!datetime!inval2 = parse_time("2017-10-05T01:10:11");
 set $!datetime!inval3 = parse_time("2017-SOMETHING: 42");
@@ -84,10 +101,11 @@ local4.* :omstdout:;outfmt
 '
 
 . $srcdir/diag.sh startup
-. $srcdir/diag.sh tcpflood -m1 -y | sed 's|\r||'
+. $srcdir/diag.sh tcpflood -m1 -y
 . $srcdir/diag.sh shutdown-when-empty
 . $srcdir/diag.sh wait-shutdown
 
+# Our fixed and calculated expected results
 EXPECTED='{ "rfc3164_1": '"$rfc3164_1_r"', "rfc3164_2": '"$rfc3164_2_r"', "rfc3164_3": '"$rfc3164_3_r"', "rfc3164_4": '"$rfc3164_4_r"', "rfc3164_5": '"$rfc3164_5_r"', "rfc3164_6": '"$rfc3164_6_r"', "rfc3164_7": '"$rfc3164_7_r"', "rfc3164_8": '"$rfc3164_8_r"', "rfc3164_9": '"$rfc3164_9_r"', "rfc3164_10": '"$rfc3164_10_r"', "rfc3164_11": '"$rfc3164_11_r"', "rfc3164_12": '"$rfc3164_12_r"', "rfc3339": 1507165811, "rfc3339tz1": 1507151411, "rfc3339tz2": 1507165811, "inval1": 0, "inval2": 0, "inval3": 0 }'
 
 # FreeBSD's cmp does not support reading from STDIN
