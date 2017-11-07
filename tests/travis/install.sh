@@ -31,7 +31,7 @@ if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libhiredis
 if [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo apt-get install -qq libsystemd-journal-dev; export JOURNAL_OPT="--enable-imjournal --enable-omjournal"; fi
 if [ "$DISTRIB_CODENAME" != "precise" ]; then sudo apt-get install -qq --force-yes libqpid-proton3-dev ;fi
 if [ "$CC" == "clang" ] && [ "$DISTRIB_CODENAME" == "trusty" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
-sudo bash -c "echo \"deb http://apt.llvm.org/jessie/ llvm-toolchain-jessie-5.0 main\" > /etc/apt/sources.list.d/llvm.list" &&\
+sudo bash -c "echo \"deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main\" > /etc/apt/sources.list.d/llvm.list" &&\
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - &&\
 sudo apt update -yy  &&\
 sudo apt install clang-5.0; fi
