@@ -837,8 +837,13 @@ doGetGID(struct nvlst *valnode, struct cnfparamdescr *param,
 	char stringBuf[2048]; /* 2048 has been proven to be large enough */
 
 	cstr = es_str2cstr(valnode->val.d.estr, NULL);
-	getgrnam_r(cstr, &wrkBuf, stringBuf, sizeof(stringBuf), &resultBuf);
+	const int e = getgrnam_r(cstr, &wrkBuf, stringBuf,
+		sizeof(stringBuf), &resultBuf);
 	if(resultBuf == NULL) {
+		if(e != 0) {
+			LogError(e, RS_RET_ERR, "parameter '%s': error to "
+				"obtaining group id for '%s'", param->name, cstr);
+		}
 		parser_errmsg("parameter '%s': ID for group %s could not "
 		  "be found", param->name, cstr);
 		r = 0;
