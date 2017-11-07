@@ -534,8 +534,8 @@ CODESTARTnewInpInst
 			es_deleteStr(es);
 		} else if(!strcmp(inppblk.descr[i].name, "confparam")) {
 			inst->nConfParams = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*pvals[i].val.d.ar->nmemb));
-			for(int j = 0; j < pvals[i].val.d.ar->nmemb; j++) {
+			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*inst->nConfParams));
+			for(int j = 0; j < inst->nConfParams; j++) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 				CHKiRet(processKafkaParam(cstr, &inst->confParams[j].name,
 								&inst->confParams[j].val));
