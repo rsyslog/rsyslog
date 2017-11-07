@@ -963,6 +963,7 @@ checkFailedMessages(instanceData *const __restrict__ pData)
 	/* Loop through failed messages, reprocess them first! */
 	while (!LIST_EMPTY(&pData->failedmsg_head)) {
 		fmsgEntry = LIST_FIRST(&pData->failedmsg_head);
+		assert(fmsgEntry == NULL); /* Avoids false positives in CLANG*/
 		/* Put back into kafka! */
 		iRet = writeKafka(pData, (uchar*) fmsgEntry->payload, NULL, fmsgEntry->topicname);
 		if(iRet != RS_RET_OK) {
@@ -1053,6 +1054,8 @@ loadFailedMsgs(instanceData *const __restrict__ pData)
 	cstr_t *pCStr = NULL;
 	uchar *puStr;
 	char *pStrTabPos;
+
+	assert(pData->failedMsgFile != NULL);
 
 	/* check if the file exists */
 	if(stat((char*) pData->failedMsgFile, &stat_buf) == -1) {
@@ -1473,7 +1476,7 @@ CODESTARTnewActInst
 	pthread_mutex_unlock(&closeTimeoutMut);
 
 	/* Load failed messages here (If enabled), do NOT check for IRET!*/
-	if (pData->bKeepFailedMessages) {
+	if (pData->bKeepFailedMessages && pData->failedMsgFile != NULL) {
 		loadFailedMsgs(pData);
 	}
 
