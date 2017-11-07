@@ -301,8 +301,8 @@ finalize_it:
 
 /* this function checks instance parameters and does some required pre-processing
  */
-static rsRetVal
-checkInstance(instanceConf_t *inst)
+static rsRetVal ATTR_NONNULL()
+checkInstance(instanceConf_t *const inst)
 {
 	DEFiRet;
 	int nBrokers;
@@ -323,26 +323,24 @@ checkInstance(instanceConf_t *inst)
 	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
 # endif
 
-	/* Only if confParams is set */
-	if(inst->confParams == NULL) {
-		/* Set custom configuration parameters */
-		for(int i = 0 ; i < inst->nConfParams ; ++i) {
-			DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
-				inst->confParams[i].name,
-				inst->confParams[i].val);
-			if(rd_kafka_conf_set(inst->conf,
-						 inst->confParams[i].name,
-						 inst->confParams[i].val,
-						 kafkaErrMsg, sizeof(kafkaErrMsg))
-			   != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
-							"parameter '%s=%s': %s",
-							inst->confParams[i].name,
-							inst->confParams[i].val, kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	/* Set custom configuration parameters */
+	for(int i = 0 ; i < inst->nConfParams ; ++i) {
+		assert(inst->confParams+i != NULL); /* invariant: nConfParams MUST exist! */
+		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
+			inst->confParams[i].name,
+			inst->confParams[i].val);
+		if(rd_kafka_conf_set(inst->conf,
+					 inst->confParams[i].name,
+					 inst->confParams[i].val,
+					 kafkaErrMsg, sizeof(kafkaErrMsg))
+		   != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+						"parameter '%s=%s': %s",
+						inst->confParams[i].name,
+						inst->confParams[i].val, kafkaErrMsg);
 			}
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 
