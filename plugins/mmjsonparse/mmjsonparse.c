@@ -280,6 +280,8 @@ CODESTARTnewActInst
 		if(!strcmp(actpblk.descr[i].name, "cookie")) {
 			free(pData->cookie);
 			pData->cookie = es_str2cstr(pvals[i].val.d.estr, NULL);
+			if(pData->cookie[0] == '\'') /* cookie enclosed in single quotes leads to segfault when used */
+				ABORT_FINALIZE(RS_RET_JSON_PARSE_ERR);
 		} else if(!strcmp(actpblk.descr[i].name, "container")) {
 			free(pData->container);
 			pData->container = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
