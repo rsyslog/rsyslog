@@ -323,25 +323,26 @@ checkInstance(instanceConf_t *inst)
 	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
 # endif
 
-	/* Set custom configuration parameters */
-	for(int i = 0 ; i < inst->nConfParams ; ++i) {
-		/* Avoid false positives in CLANG */
-		assert( inst->confParams != NULL);
-		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
-			inst->confParams[i].name,
-			inst->confParams[i].val);
-		if(rd_kafka_conf_set(inst->conf,
-				     inst->confParams[i].name,
-				     inst->confParams[i].val,
-				     kafkaErrMsg, sizeof(kafkaErrMsg))
-	 	   != RD_KAFKA_CONF_OK) {
-			if(inst->bReportErrs) {
-				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
-						"parameter '%s=%s': %s",
-						inst->confParams[i].name,
-						inst->confParams[i].val, kafkaErrMsg);
+	/* Only if confParams is set */
+	if(inst->confParams == NULL) {
+		/* Set custom configuration parameters */
+		for(int i = 0 ; i < inst->nConfParams ; ++i) {
+			DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
+				inst->confParams[i].name,
+				inst->confParams[i].val);
+			if(rd_kafka_conf_set(inst->conf,
+						 inst->confParams[i].name,
+						 inst->confParams[i].val,
+						 kafkaErrMsg, sizeof(kafkaErrMsg))
+			   != RD_KAFKA_CONF_OK) {
+				if(inst->bReportErrs) {
+					errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+							"parameter '%s=%s': %s",
+							inst->confParams[i].name,
+							inst->confParams[i].val, kafkaErrMsg);
+				}
+				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
-			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 
@@ -533,8 +534,8 @@ CODESTARTnewInpInst
 			es_deleteStr(es);
 		} else if(!strcmp(inppblk.descr[i].name, "confparam")) {
 			inst->nConfParams = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*pvals[i].val.d.ar->nmemb));
-			for(int j = 0; j < pvals[i].val.d.ar->nmemb; j++) {
+			CHKmalloc(inst->confParams = malloc(sizeof(struct kafka_params)*inst->nConfParams));
+			for(int j = 0; j < inst->nConfParams; j++) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 				CHKiRet(processKafkaParam(cstr, &inst->confParams[j].name,
 								&inst->confParams[j].val));
