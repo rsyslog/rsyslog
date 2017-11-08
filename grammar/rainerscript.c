@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libestr.h>
+#include <time.h>
 #include "rsyslog.h"
 #include "rainerscript.h"
 #include "conf.h"
@@ -1872,6 +1873,28 @@ done:
 	return(estr);
 }
 
+/*
+ * Uses the given (current) year/month to decide which year
+ * the incoming month likely belongs in.
+ *
+ * cy - Current Year (actual)
+ * cm - Current Month (actual)
+ * im - "Incoming" Month
+ */
+static int
+estimateYear(int cy, int cm, int im) {
+	im += 12;
+
+	if ((im - cm) == 1) {
+		if (cm == 12 && im == 13)
+			return cy + 1;
+	}
+
+	if ((im - cm) > 13)
+		return cy - 1;
+
+	return cy;
+}
 
 /* Perform a function call. This has been moved out of cnfExprEval in order
  * to keep the code small and easier to maintain.
@@ -2173,6 +2196,45 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		varFreeMembers(&r[0]);
 		varFreeMembers(&r[1]);
 		
+		break;
+	}
+	case CNFFUNC_PARSE_TIME: {
+		cnfexprEval(func->expr[0], &r[0], usrptr);
+
+		str = (char*) var2CString(&r[0], &bMustFree);
+
+		ret->datatype = 'N';
+		ret->d.n = 0;
+
+		if (objUse(datetime, CORE_COMPONENT) == RS_RET_OK) {
+			struct syslogTime s;
+			int len = strlen(str);
+			uchar *pszTS = (uchar*) str;
+
+			memset(&s, 0, sizeof(struct syslogTime));
+
+			// Attempt to parse the date/time string
+			if (datetime.ParseTIMESTAMP3339(&s, (uchar**) &pszTS, &len) == RS_RET_OK) {
+				ret->d.n = datetime.syslogTime2time_t(&s);
+			} else if (datetime.ParseTIMESTAMP3164(&s, (uchar**) &pszTS, &len,
+						NO_PARSE3164_TZSTRING, NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+
+				time_t t = time(NULL);
+				struct tm tm;
+
+				// Get the current UTC date
+				gmtime_r(&t, &tm);
+
+				// Since properly formatted RFC 3164 timestamps do not have a YEAR
+				// specified, we have to assume one that seems reasonable - SW.
+				s.year = estimateYear(tm.tm_year + 1900, tm.tm_mon + 1, s.month);
+
+				ret->d.n = datetime.syslogTime2time_t(&s);
+			}
+		}
+
+		if(bMustFree) free(str);
+		varFreeMembers(&r[0]);
 		break;
 	}
 	default:
@@ -4288,6 +4350,8 @@ funcName2ID(es_str_t *fname, unsigned short nParams)
 		GENERATE_FUNC("random", 1, CNFFUNC_RANDOM);
 	} else if(FUNC_NAME("format_time")) {
 		GENERATE_FUNC("format_time", 2, CNFFUNC_FORMAT_TIME);
+	} else if(FUNC_NAME("parse_time")) {
+		GENERATE_FUNC("parse_time", 1, CNFFUNC_PARSE_TIME);
 	} else {
 		return CNFFUNC_INVALID;
 	}
