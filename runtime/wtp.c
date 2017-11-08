@@ -383,21 +383,11 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	pThis = pWti->pWtp;
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	/* block all signals */
+	/* block all signals except SIGTTIN and SIGSEGV */
 	sigfillset(&sigSet);
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
-
-	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGTTIN);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-
-#ifdef _AIX /*AIXPORT unblock SIGSEGV so that the process core dumps on segmentation fault */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGSEGV);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-#endif /*AIXPORT*/
-
 
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
 	/* set thread name - we ignore if the call fails, has no harsh consequences... */

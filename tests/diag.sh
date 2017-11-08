@@ -821,12 +821,15 @@ case $1 in
 				echo trying to analyze core for main rsyslogd binary
 				echo note: this may not be the correct file, check it
 				CORE=`ls core*`
-				echo "set pagination off" >gdb.in
-				echo "core $CORE" >>gdb.in
+				#echo "set pagination off" >gdb.in
+				#echo "core $CORE" >>gdb.in
+				echo "bt" >> gdb.in
+				echo "echo === THREAD INFO ===" >> gdb.in
 				echo "info thread" >> gdb.in
+				echo "echo === thread apply all bt full ===" >> gdb.in
 				echo "thread apply all bt full" >> gdb.in
 				echo "q" >> gdb.in
-				gdb ../tools/rsyslogd < gdb.in
+				gdb ../tools/rsyslogd $CORE -batch -x gdb.in
 				CORE=
 				rm gdb.in
 			fi

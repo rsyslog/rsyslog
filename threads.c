@@ -206,21 +206,13 @@ thrdStarter(void *const arg)
 	}
 #	endif
 
-	/* block all signals */
+	/* block all signals except SIGTTIN and SIGSEGV */
 	sigset_t sigSet;
 	sigfillset(&sigSet);
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
-	/* but ignore SIGTTN, which we (ab)use to signal the thread to shutdown -- rgerhards, 2009-07-20 */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGTTIN);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-
-	/* AIXPORT unblock SIGSEGV so that the process core dumps on segmentation fault */
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGSEGV);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-	/* AIXPORT */
 	/* setup complete, we are now ready to execute the user code. We will not
 	 * regain control until the user code is finished, in which case we terminate
 	 * the thread.
