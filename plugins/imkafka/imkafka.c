@@ -301,8 +301,8 @@ finalize_it:
 
 /* this function checks instance parameters and does some required pre-processing
  */
-static rsRetVal
-checkInstance(instanceConf_t *inst)
+static rsRetVal ATTR_NONNULL()
+checkInstance(instanceConf_t *const inst)
 {
 	DEFiRet;
 	int nBrokers;
@@ -323,26 +323,23 @@ checkInstance(instanceConf_t *inst)
 	rd_kafka_conf_set_log_cb(inst->conf, kafkaLogger);
 # endif
 
-	/* Only if confParams is set */
-	if(inst->confParams == NULL) {
-		/* Set custom configuration parameters */
-		for(int i = 0 ; i < inst->nConfParams ; ++i) {
-			DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
-				inst->confParams[i].name,
-				inst->confParams[i].val);
-			if(rd_kafka_conf_set(inst->conf,
-						 inst->confParams[i].name,
-						 inst->confParams[i].val,
-						 kafkaErrMsg, sizeof(kafkaErrMsg))
-			   != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
-							"parameter '%s=%s': %s",
-							inst->confParams[i].name,
-							inst->confParams[i].val, kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	/* Set custom configuration parameters */
+	for(int i = 0 ; i < inst->nConfParams ; ++i) {
+		assert(inst->confParams+i != NULL); /* invariant: nConfParams MUST exist! */
+		DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
+			inst->confParams[i].name,
+			inst->confParams[i].val);
+		if(rd_kafka_conf_set(inst->conf,
+			inst->confParams[i].name,
+			inst->confParams[i].val,
+			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_PARAM_ERROR, "imkafka: error in kafka "
+					"parameter '%s=%s': %s",
+					inst->confParams[i].name,
+					inst->confParams[i].val, kafkaErrMsg);
 			}
+			ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 		}
 	}
 
@@ -353,41 +350,38 @@ checkInstance(instanceConf_t *inst)
 	if (inst->consumergroup != NULL) {
 		DBGPRINTF("imkafka: setting consumergroup: '%s'\n", inst->consumergroup);
 		if (rd_kafka_conf_set(inst->conf, "group.id", (char*) inst->consumergroup,
-							  kafkaErrMsg, sizeof(kafkaErrMsg)) !=
-			RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error assigning consumergroup %s to kafka config: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error assigning consumergroup %s to "
+					"kafka config: %s\n", inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
 
 		/* Set default for auto offset reset */
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset",
-									"smallest",
-									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			"smallest", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error setting kafka auto.offset.reset on %s: %s\n",
+					inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 		/* Consumer groups always use broker based offset storage */
 		if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method",
-									"broker",
-									kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
-				if(inst->bReportErrs) {
-					errmsg.LogError(0, RS_RET_KAFKA_ERROR,
-						"imkafka: error setting kafka offset.store.method on %s: %s\n",
-						inst->consumergroup,
-						kafkaErrMsg);
-				}
-				ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
+			"broker", kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+			if(inst->bReportErrs) {
+				errmsg.LogError(0, RS_RET_KAFKA_ERROR,
+					"imkafka: error setting kafka offset.store.method on %s: %s\n",
+					inst->consumergroup,
+					kafkaErrMsg);
+			}
+			ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 		}
 
 		/* Set default topic config for pattern-matched topics. */
@@ -407,9 +401,9 @@ checkInstance(instanceConf_t *inst)
 		}
 		ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
 	}
-# if RD_KAFKA_VERSION < 0x00090001
-	rd_kafka_set_logger(inst->rk, kafkaLogger);
-# endif
+	#if RD_KAFKA_VERSION < 0x00090001
+		rd_kafka_set_logger(inst->rk, kafkaLogger);
+	#endif
 
    	DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
 	if((nBrokers = rd_kafka_brokers_add(inst->rk, (char*)inst->brokers)) == 0) {
@@ -773,7 +767,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("imkafka: version %s initializing\n", VERSION);
 
 ENDmodInit
-
-
-/* vim:set ai:
- */

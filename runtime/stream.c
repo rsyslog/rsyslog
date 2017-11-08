@@ -444,7 +444,13 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 	/* if we have a signature provider, we must make sure that the crypto
 	 * state files are opened and proper close processing happens. */
 	if(pThis->cryprov != NULL && pThis->fd == -1) {
-		strmOpenFile(pThis);
+		const rsRetVal localRet = strmOpenFile(pThis);
+		if(localRet != RS_RET_OK) {
+			LogError(0, localRet, "could not open file %s, this "
+				"may result in problems with encryption - "
+				"unfortunately, we cannot do anything against "
+				"this.", pThis->pszCurrFName);
+		}
 	}
 
 	/* the file may already be closed (or never have opened), so guard
