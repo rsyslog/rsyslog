@@ -1008,7 +1008,7 @@ findIPv6(struct ipv6_int* num, char* address, wrkrInstanceData_t *const pWrkrDat
 
 
 	if(hash == NULL) {
-		hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL);
+		CHKmalloc(hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
 		if(useEmbedded) {
 			pWrkrData->pData->embeddedIPv4.hash = hash;
 		} else {
