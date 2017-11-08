@@ -92,4 +92,4 @@ transport.tcp.port: 19300
 #action.destructive_requires_name: true
 
 # Limit memory usage
-indices.fielddata.cache.size:  20% 
+indices.fielddata.cache.size:  20%

@@ -44,12 +44,17 @@ TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a s
 
 #START: ext kafka config
 dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
-dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
-dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.tar.gz
-dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
 dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
+dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
+dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
+if [ -z "$ES_DOWNLOAD" ]; then
+	dep_es_url=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.3.tar.gz
+	dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.3.tar.gz
+else
+	dep_es_url="https://artifacts.elastic.co/downloads/elasticsearch/$ES_DOWNLOAD"
+	dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
+fi
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
-dep_es_cached_file=$dep_cache_dir/elasticsearch-5.6.3.tar.gz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
 dep_es_dir_xform_pattern='s#^[^/]\+#es#g'
@@ -295,6 +300,35 @@ case $1 in
 			fi
 		done
 		echo "rsyslogd$2 startup msg seen, pid " `cat rsyslog$2.pid`
+		;;
+   'wait-pid-termination')  # wait for the pid in pid file $2 to terminate, abort on timeout
+		i=0
+		out_pid=`cat $2`
+		if [[ "x$out_pid" == "x" ]]
+		then
+			terminated=1
+		else
+			terminated=0
+		fi
+		while [[ $terminated -eq 0 ]]; do
+			ps -p $out_pid &> /dev/null
+			if [[ $? != 0 ]]
+			then
+				terminated=1
+			fi
+			./msleep 100 # wait 100 milliseconds
+			let "i++"
+			if test $i -gt $TB_TIMEOUT_STARTSTOP
+			then
+			   echo "ABORT! Timeout waiting on shutdown"
+			   echo "on PID file $2"
+			   echo "Instance is possibly still running and may need"
+			   echo "manual cleanup."
+			   exit 1
+			fi
+		done
+		unset terminated
+		unset out_pid
 		;;
    'wait-shutdown')  # actually, we wait for rsyslog.pid to be deleted. $2 is the
    		# instance
@@ -755,7 +789,7 @@ case $1 in
 			fi
 		fi
 		;;
-	 'start-elasticsearch')
+	 'start-elasticsearch') # $2, if set, is the number of additional ES instances
 		# Heap Size (limit to 128MB for testbench! defaults is way to HIGH)
 		export ES_JAVA_OPTS="-Xms128m -Xmx128m"
 
@@ -770,7 +804,8 @@ case $1 in
 		fi
 
 		if [ ! -f $dep_es_cached_file ]; then
-				echo "Dependency-cache does not have elasticsearch package, did you download dependencies?"
+				echo "Dependency-cache does not have elasticsearch package, did "
+				echo "you download dependencies?"
 				exit 77
 		fi
 		if [ ! -d $dep_work_dir ]; then
@@ -778,12 +813,14 @@ case $1 in
 				mkdir -p $dep_work_dir
 		fi
 		if [ -d $dep_work_dir/es ]; then
-			kill $(cat $dep_work_es_pidfile)
-			#start-stop-daemon --stop --pidfile "$dep_work_es_pidfile" --retry=TERM/20/KILL/5
-			./msleep 2000
+			if [ -e $dep_work_es_pidfile ]; then
+				kill -SIGTERM $(cat $dep_work_es_pidfile)
+				. $srcdir/diag.sh wait-pid-termination $dep_work_es_pidfile
+			fi
 		fi
 		rm -rf $dep_work_dir/es
-		(cd $dep_work_dir && tar -zxvf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
+		echo TEST USES ELASTICSEARCH BINARY $dep_es_cached_file
+		(cd $dep_work_dir && tar -zxf $dep_es_cached_file --xform $dep_es_dir_xform_pattern --show-transformed-names) > /dev/null
 		cp $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
 
 		if [ ! -d $dep_work_dir/es/data ]; then
@@ -796,17 +833,21 @@ case $1 in
 		echo "Starting ElasticSearch instance $2"
 		(	
 			cd $srcdir 
-			$dep_work_dir/es/bin/elasticsearch & #> es_output.log
-			echo "Starting instance $2 started with PID $!"
-			echo $! > $dep_work_es_pidfile
+			# THIS IS THE ACTUAL START of ES
+			$dep_work_dir/es/bin/elasticsearch -p $dep_work_es_pidfile -d
+			./msleep 2000
+			#$dep_work_dir/es/bin/elasticsearch & #> es_output.log
+			#echo $! > $dep_work_es_pidfile
+			echo "Starting instance $2 started with PID" `cat $dep_work_es_pidfile`
 
 			# Wait for startup with hardcoded timeout
 			timeoutend=30
 			timeseconds=0
-			# Loop until elasticsearch port is reachable or until timeout is reached!
+			# Loop until elasticsearch port is reachable or until
+			# timeout is reached!
 			until [ "`curl --silent --show-error --connect-timeout 1 http://localhost:19200 | grep 'rsyslog-testbench'`" != "" ]; do
 				echo "--- waiting for startup: 1 ( $timeseconds ) seconds"
-				sleep 1
+				./msleep 1000
 				let "timeseconds = $timeseconds + 1"
 
 				if [ "$timeseconds" -gt "$timeoutend" ]; then 
@@ -878,9 +919,10 @@ case $1 in
 			dep_work_dir=$(readlink -f $srcdir/$2)
 			dep_work_es_pidfile="es$2.pid"
 		fi
-		(cd $srcdir && kill $(cat $dep_work_es_pidfile) )
-
-		./msleep 2000
+		if [ -e $dep_work_es_pidfile ]; then
+			(cd $srcdir && kill $(cat $dep_work_es_pidfile) )
+			. $srcdir/diag.sh wait-pid-termination $dep_work_es_pidfile
+		fi
 		rm -f $dep_work_es_pidfile
 		rm -rf $dep_work_dir/es
 		;;
