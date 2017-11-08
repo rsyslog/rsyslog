@@ -578,8 +578,6 @@ finalize_it:
 		freeaddrinfo(res);
 
 	if(iRet != RS_RET_OK) {
-		if(sock != -1)
-			close(sock);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		if(pNewNsd != NULL)
