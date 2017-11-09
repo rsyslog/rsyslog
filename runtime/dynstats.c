@@ -227,7 +227,9 @@ finalize_it:
 			LogError(errno, RS_RET_INTERNAL_ERROR, "error trying to "
 				"initialize hash-table for dyn-stats bucket named: %s", b->name);
 		} else {
+			assert(0); /* "can" not happen -- triggers Coverity CID 184307:
 			hashtable_destroy(new_table, 0);
+			We keep this as guard should code above change in the future */
 		}
 		if (b->table == NULL) {
 			if (survivor_table == NULL) {
