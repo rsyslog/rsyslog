@@ -43,10 +43,10 @@
 TB_TIMEOUT_STARTSTOP=1200 # timeout for start/stop rsyslogd in tenths (!) of a second 1200 => 2 min
 
 #START: ext kafka config
-dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.8/zookeeper-3.4.8.tar.gz
+dep_zk_url=http://www-us.apache.org/dist/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
 dep_kafka_url=http://www-us.apache.org/dist/kafka/0.10.2.1/kafka_2.12-0.10.2.1.tgz
 dep_cache_dir=$(readlink -f $srcdir/.dep_cache)
-dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.8.tar.gz
+dep_zk_cached_file=$dep_cache_dir/zookeeper-3.4.10.tar.gz
 dep_kafka_cached_file=$dep_cache_dir/kafka_2.12-0.10.2.1.tgz
 dep_kafka_dir_xform_pattern='s#^[^/]\+#kafka#g'
 dep_zk_dir_xform_pattern='s#^[^/]\+#zk#g'
@@ -625,7 +625,7 @@ case $1 in
 				wget $dep_zk_url -O $dep_zk_cached_file
 				if [ $? -ne 0 ]
 				then
-					. $srcdir/diag.sh error-exit 77
+					. $srcdir/diag.sh error-exit 1
 				fi
 			fi
 		fi
@@ -638,7 +638,7 @@ case $1 in
 				wget $dep_kafka_url -O $dep_kafka_cached_file
 				if [ $? -ne 0 ]
 				then
-					. $srcdir/diag.sh error-exit 77
+					. $srcdir/diag.sh error-exit 1
 				fi
 			fi
 		fi
