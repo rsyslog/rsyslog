@@ -103,6 +103,7 @@ report(rsksictx ctx, const char *errmsg, ...) {
 
 	r = vsnprintf(buf, sizeof (buf), errmsg, args);
 	buf[sizeof(buf)-1] = '\0';
+	va_end(args);
 
 	if(ctx->logFunc == NULL)
 		return;
@@ -600,8 +601,8 @@ seedIVKSI(ksifile ksi)
 	 * unavailability of /dev/urandom is just a theoretic thing, it
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
-	if ((fd = open(rnd_device, O_RDONLY)) > 0) {
-		if(read(fd, ksi->IV, hashlen)) {}; /* keep compiler happy */
+	if ((fd = open(rnd_device, O_RDONLY)) >= 0) {
+		if(read(fd, ksi->IV, hashlen) == hashlen) {}; /* keep compiler happy */
 		close(fd);
 	}
 }
@@ -1003,8 +1004,8 @@ sigblkSign(ksifile ksi, KSI_DataHash *hash, int level)
 	if (r != KSI_OK) {
 		reportKSIAPIErr(ksi->ctx, ksi, "KSI_Signature_serialize", r);
 		ret = 1;
-		goto signing_done;
 		lenDer = 0;
+		goto signing_done;
 	}
 
 signing_done:
@@ -1173,8 +1174,8 @@ static void process_requests(rsksictx ctx, KSI_CTX *ksi_ctx, FILE* outfile) {
 	r = KSI_Signature_serialize(sig, &der, &lenDer);
 	if (r != KSI_OK) {
 		reportKSIAPIErr(ctx, NULL, "KSI_Signature_serialize", r);
-		goto signing_failed;
 		lenDer = 0;
+		goto signing_failed;
 	}
 
 signing_failed:
@@ -1237,7 +1238,8 @@ void *signer_thread(void *arg) {
 		/* Handle other types of work items */
 		if (ProtectedQueue_popFront(ctx->signer_queue, (void**) &item) != 0) {
 			if (item->type == QITEM_CLOSE_FILE) {
-				fclose(ksiFile);
+				if (ksiFile)
+					fclose(ksiFile);
 				ksiFile = NULL;
 			} else if (item->type == QITEM_NEW_FILE) {
 				ksiFile = (FILE*) item->arg;
