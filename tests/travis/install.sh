@@ -7,7 +7,7 @@ sudo apt-get install -qq --force-yes libestr-dev librelp-dev libfastjson-dev lib
 	liblognorm-dev \
 	libcurl4-gnutls-dev
 sudo apt-get install -qq python-docutils
-
+env
 if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; then
 	set -ex
 	WANT_MAXMIND=1.2.0
@@ -15,7 +15,6 @@ if [ "$DISTRIB_CODENAME" == "trusty" ] || [ "$DISTRIB_CODENAME" == "precise" ]; 
 	(cd libmaxminddb-${WANT_MAXMIND} ; ./configure --prefix=/usr CC=gcc CFLAGS="-Wall -Wextra -g -pipe -std=gnu99"  > /dev/null ; sudo make install &> /dev/null)
 	
 	sudo apt-get install -qq libssl-dev
-	sudo find / -name "*pthread*"
 	wget https://github.com/mongodb/mongo-c-driver/releases/download/1.1.5/mongo-c-driver-1.1.5.tar.gz
 	tar -xzf mongo-c-driver-1.1.5.tar.gz
 	cd mongo-c-driver-1.1.5/
