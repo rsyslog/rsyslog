@@ -322,14 +322,16 @@ wtpWrkrExecCleanup(wti_t *pWti)
 	wtiSetState(pWti, WRKTHRD_STOPPED);
 	ATOMIC_DEC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 
+	/* note: numWorkersNow is only for message generation, so we do not try
+	 * hard to get it 100% accurate (as curently done, it is not).
+	 */
+	const int numWorkersNow = ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd);
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
-		wtpGetDbgHdr(pThis), (unsigned long) pWti,
-		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
-	if(ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0) {
+		wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
+	if(numWorkersNow > 0) {
 		LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
 			"%s: worker thread %lx terminated, now %d active worker threads",
-			wtpGetDbgHdr(pThis), (unsigned long) pWti,
-			ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
+			wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
 	}
 
 	ENDfunc
@@ -402,17 +404,18 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	dbgOutputTID((char*)thrdName);
 #	endif
 
-	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
-
         /* let the parent know we're done with initialization */
         d_pthread_mutex_lock(&pThis->mutWtp);
 	wtiSetState(pWti, WRKTHRD_RUNNING);
         pthread_cond_broadcast(&pThis->condThrdInitDone);
         d_pthread_mutex_unlock(&pThis->mutWtp);
 
+	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pWti);
+
 	wtiWorker(pWti);
 	pthread_cleanup_pop(0);
         d_pthread_mutex_lock(&pThis->mutWtp);
+	pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
 	wtpWrkrExecCleanup(pWti);
 
 	ENDfunc
@@ -421,7 +424,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	 * segfault. So we need to do the broadcast as actually the last action in our processing
 	 */
 	pthread_cond_broadcast(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-        d_pthread_mutex_unlock(&pThis->mutWtp);
+	pthread_cleanup_pop(1); /* unlock mutex */
 	pthread_exit(0);
 }
 #if !defined(_AIX)
