@@ -611,21 +611,39 @@ case $1 in
 		    exit 77
 		fi
 		;;
-	 'download-kafka')
+   'download-kafka')
 		if [ ! -d $dep_cache_dir ]; then
-				echo "Creating dependency cache dir"
-				mkdir $dep_cache_dir
+			echo "Creating dependency cache dir"
+			mkdir $dep_cache_dir
 		fi
 		if [ ! -f $dep_zk_cached_file ]; then
-				echo "Downloading zookeeper"
-				wget -q $dep_zk_url -O $dep_zk_cached_file
+			echo "Downloading zookeeper"
+			wget -q $dep_zk_url -O $dep_zk_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
+				wget $dep_zk_url -O $dep_zk_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 77
+				fi
+			fi
 		fi
 		if [ ! -f $dep_kafka_cached_file ]; then
-				echo "Downloading kafka"
-				wget -q $dep_kafka_url -O $dep_kafka_cached_file
+			echo "Downloading kafka"
+			wget -q $dep_kafka_url -O $dep_kafka_cached_file
+			if [ $? -ne 0 ]
+			then
+				echo error during wget, retry:
+				wget $dep_kafka_url -O $dep_kafka_cached_file
+				if [ $? -ne 0 ]
+				then
+					. $srcdir/diag.sh error-exit 77
+				fi
+			fi
 		fi
 		;;
-	 'start-zookeeper')
+    'start-zookeeper')
 		if [ "x$2" == "x" ]; then
 			dep_work_dir=$(readlink -f $srcdir/.dep_wrk)
 			dep_work_tk_config="zoo.cfg"
