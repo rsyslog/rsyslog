@@ -5,7 +5,8 @@ echo ======================================================================
 if [ -n "$(find /usr/include -name 'inotify.h' -print -quit)" ]; then
 	echo [imfile-readmode2.sh]
 else
-	exit 77 # no inotify available, skip this test
+	echo [imfile-readmode2.sh FORCED]
+#	exit 77 # no inotify available, skip this test
 fi
 . $srcdir/diag.sh init
 . $srcdir/diag.sh startup imfile-readmode2.conf
