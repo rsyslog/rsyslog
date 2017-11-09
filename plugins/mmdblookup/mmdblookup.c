@@ -368,7 +368,7 @@ CODESTARTdoAction
 	size_t  memlen;
 	char   *membuf;
 	FILE   *memstream;
-	memstream = open_memstream(&membuf, &memlen);
+	CHKmalloc(memstream = open_memstream(&membuf, &memlen));
 
 	if (entry_data_list != NULL && memstream != NULL) {
 		MMDB_dump_entry_data_list(memstream, entry_data_list, 2);
