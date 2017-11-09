@@ -1576,7 +1576,9 @@ stopWorkerPool(void)
 {
 	int i;
 	for(i = 0 ; i < wrkrMax ; ++i) {
+		pthread_mutex_lock(&wrkrMut);
 		pthread_cond_signal(&wrkrInfo[i].run); /* awake wrkr if not running */
+		pthread_mutex_unlock(&wrkrMut);
 		pthread_join(wrkrInfo[i].tid, NULL);
 		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, wrkrInfo[i].numCalled);
 		pthread_cond_destroy(&wrkrInfo[i].run);
