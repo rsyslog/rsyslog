@@ -557,6 +557,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		pNewNsd = NULL;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
+		/* sock has been handed over by SetSock() above, so invalidate it here
+		 * coverity scan falsely identifies this as ressource leak
+		 */
 		sock = -1;
 		++numSocks;
 	}
